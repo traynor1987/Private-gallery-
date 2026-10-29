@@ -210,7 +210,7 @@ jobs:
   private-apps-checkpoint:
     if: github.event_name == 'push' && github.ref == 'refs/heads/release/1.7.8-private-apps'
     runs-on: ubuntu-24.04
-    timeout-minutes: 20
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v5
@@ -223,17 +223,33 @@ jobs:
           key: privateapps178-${{ runner.os }}-${{ hashFiles('**/*.gradle*', 'gradle/libs.versions.toml', 'gradle/wrapper/gradle-wrapper.properties') }}
           restore-keys: privacy1751-${{ runner.os }}-
       - name: Install Android 17 compile SDK
-        run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-37.1" "build-tools;36.0.0"
+        run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-37.1" "build-tools;36.0.0" "emulator"
       - name: Catalogue host checks
         run: bash scripts/check_private_apps178.sh
       - name: Compile application and run catalogue JVM tests
-        run: ./gradlew :app:testDebugUnitTest --tests 'uk.co.traynor.privategallery.core.privateapps.*' --stacktrace
+        run: ./gradlew :app:testDebugUnitTest --tests 'uk.co.traynor.privategallery.core.privateapps.*' :app:assembleDebug :app:assembleDebugAndroidTest --stacktrace
+      - name: Enable emulator acceleration
+        run: sudo chmod 666 /dev/kvm
+      - name: Focused library UI and authentication tests
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: '37.0'
+          target: google_atd
+          arch: x86_64
+          profile: pixel_2
+          cores: 4
+          ram-size: 4096M
+          heap-size: 512M
+          disk-size: 8G
+          disable-animations: false
+          emulator-options: -no-window -gpu swiftshader -no-snapshot -noaudio -no-boot-anim -feature -HardwareDecoder
+          script: ./gradlew :app:connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=uk.co.traynor.privategallery.ui.PrivateAppsUi178Test,uk.co.traynor.privategallery.PrivateAppsAuthority178Test --stacktrace
       - name: Record development source
         if: always()
         run: |
           mkdir -p app/build/privateapps178
           git rev-parse HEAD > app/build/privateapps178/source-sha.txt
-          echo 'DEVELOPMENT CHECKPOINT ONLY; NO ANDROID RUNTIME OR RELEASE APPROVAL' > app/build/privateapps178/status.txt
+          echo 'DEVELOPMENT CHECKPOINT; FOCUSED UI/AUTH ONLY; NO TRANSPORT OR RELEASE APPROVAL' > app/build/privateapps178/status.txt
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -242,3 +258,5 @@ jobs:
             app/build/privateapps178
             app/build/test-results/testDebugUnitTest
             app/build/reports/tests/testDebugUnitTest
+            app/build/outputs/androidTest-results
+            app/build/reports/androidTests

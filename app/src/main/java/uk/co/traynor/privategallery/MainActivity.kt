@@ -1628,6 +1628,24 @@ class MainActivity : FragmentActivity() {
         }
     }
 
+    /** Creates no new browser or network path. A stale handle can never inherit another unlock. */
+    internal fun privateAppsController():uk.co.traynor.privategallery.core.privateapps.PrivateAppsController? {
+        check(android.os.Looper.myLooper()==android.os.Looper.getMainLooper())
+        val identity=sessionKey ?: return null
+        val epoch=phoneTransferGeneration
+        val presentation=browserPresentationGeneration
+        val authentication=session.captureAuthenticationEpoch()
+        val current={ !hideContent && !retained.hidden.selected && session.isAuthenticationCurrent(authentication) && sessionKey===identity &&
+            phoneTransferGeneration==epoch && browserPresentationGeneration==presentation && route==Route.BROWSER &&
+            lifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.STARTED) }
+        if(!current())return null
+        val store=uk.co.traynor.privategallery.core.privateapps.PrimaryPrivateAppAccess(
+            File(filesDir,"private-apps"),identity,{sessionKey},current,{checkNotNull(sessionKey).copyOf()},phoneTransferGate)
+        return uk.co.traynor.privategallery.core.privateapps.PrivateAppsController(store.owner(),current,
+            {action,bytes,id ->uk.co.traynor.privategallery.core.privateapps.PrivateAppCommands.execute(store,action,bytes,id)},
+            {url ->check(current());check(browserV2Session.mediaNetworkingAllowed());browserV2Session.newTab(url);Unit})
+    }
+
     private fun loadBrowserHistory(onLoaded: (List<uk.co.traynor.privategallery.core.browser.v2.BrowserHistoryEntry>) -> Unit) {
         if (hideContent) { onLoaded(emptyList()); return }
         val key = sessionKey?.copyOf() ?: return

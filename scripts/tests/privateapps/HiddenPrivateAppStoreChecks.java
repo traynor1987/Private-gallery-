@@ -27,6 +27,10 @@ public final class HiddenPrivateAppStoreChecks {
   check(resumed.read().apps.equals(List.of(app)));
   rejects(()->resumed.update(c->{session.lock();return c.remove(app.id());}));
   unlock(session);check(new HiddenPrivateAppStore(root.toFile(),session,session.authority(),false).read().apps.equals(List.of(app)));
+  var active=new java.util.concurrent.atomic.AtomicBoolean(true);
+  var fenced=new HiddenPrivateAppStore(root.toFile(),session,session.authority(),false,active::get,Runnable::run);
+  rejects(()->fenced.update(c->{active.set(false);return c.remove(app.id());}));
+  check(new HiddenPrivateAppStore(root.toFile(),session,session.authority(),false).read().apps.equals(List.of(app)));
   session.lock();try(var files=Files.walk(root)){for(Path p:files.sorted(Comparator.reverseOrder()).toList())Files.delete(p);}
   System.out.println("HiddenPrivateAppStore checks PASS");
  }

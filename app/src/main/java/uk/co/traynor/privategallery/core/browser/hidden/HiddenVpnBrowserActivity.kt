@@ -449,11 +449,26 @@ class HiddenVpnBrowserActivity:ComponentActivity() {
         uploadItems=emptyList();confirmUploads=emptyList();selectedUploads=emptySet();uploadView=null
         callback?.onReceiveValue(null)
     }
+    private var privateAppsOpen by mutableStateOf(false)
+    private val privateAppsController by lazy {
+        val owner=if(mode==HiddenConnectionPolicy.Mode.TOR_ONLY)uk.co.traynor.privategallery.core.privateapps.PrivateAppStore.Owner.HIDDEN_TOR else uk.co.traynor.privategallery.core.privateapps.PrivateAppStore.Owner.HIDDEN_VPN
+        uk.co.traynor.privategallery.core.privateapps.PrivateAppsController(owner,{ready && live()},
+            {action,bytes,id ->call(HiddenVpnBrowserBroker.PRIVATE_APPS,write={parcel ->
+                parcel.writeInt(action);parcel.writeInt(bytes?.size ?: -1);if(bytes!=null)parcel.writeByteArray(bytes);parcel.writeString(id)
+            },read={parcel ->
+                val size=parcel.readInt();require(size in 0..uk.co.traynor.privategallery.core.privateapps.PrivateAppCatalog.MAX_BYTES)
+                val data=ByteArray(size)
+                try{parcel.readByteArray(data);uk.co.traynor.privategallery.core.privateapps.PrivateAppCatalog.decode(data,mode==HiddenConnectionPolicy.Mode.TOR_ONLY)}finally{data.fill(0)}
+            })},
+            {url ->check(ready && live());check(HiddenConnectionPolicy.safeUrl(url,mode));cancelUpload();cancelWebsiteDialog();checkNotNull(newTab());navigate(url)})
+    }
     @Composable private fun Browser() {
+        if(privateAppsOpen)PrivateAppsLibrary(privateAppsController,{privateAppsOpen=false})
         Column(Modifier.fillMaxSize().systemBarsPadding().imePadding()) {
             Row(Modifier.fillMaxWidth().padding(horizontal=12.dp)) {
                 Text("Hidden Browser · ${mode.indicator}",Modifier.weight(1f).padding(vertical=16.dp),style=MaterialTheme.typography.titleMedium)
                 if(uk.co.traynor.privategallery.ui.PrivacyShieldPreferences(this@HiddenVpnBrowserActivity).let {it.enabled && it.quickLock})TextButton(onClick={panic()}){Text("Quick lock")}
+                TextButton(onClick={if(ready && live()){cancelUpload();cancelWebsiteDialog();privateAppsOpen=true}},enabled=ready){Text("Private Apps")}
                 TextButton(onClick={terminate()}){Text("Done")}
             }
             val focus=LocalFocusManager.current;val keyboard=LocalSoftwareKeyboardController.current
@@ -556,6 +571,7 @@ class HiddenVpnBrowserActivity:ComponentActivity() {
         ready=false;handler.removeCallbacksAndMessages(null);cancelWebsiteDialog();cancelUpload()
         thumbnailCache.snapshot().values.forEach {if(it.isMutable && !it.isRecycled)it.eraseColor(android.graphics.Color.TRANSPARENT)}
         thumbnailCache.evictAll()
+        privateAppsOpen=false
         views.toList().forEach {runCatching {it.settings.blockNetworkLoads=true;it.stopLoading();it.destroy()}};views.clear();pageDeadlines.clear();current=null;libraryItems=emptyList();libraryKind=null
         profile?.serviceWorkerController?.serviceWorkerWebSettings?.blockNetworkLoads=true
         // Parent revokes transport before a single asynchronous deletion operation is started.

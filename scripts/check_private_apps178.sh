@@ -11,3 +11,4 @@ java com.sun.tools.javac.Main -d "$classes" \
 java -cp "$classes" PrivateAppPolicyChecks
 java -cp "$classes" PrivateAppCatalogChecks
 java -cp "$classes" HiddenPrivateAppStoreChecks
+java -cp "$classes" PrivateAppCommandChecks

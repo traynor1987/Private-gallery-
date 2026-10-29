@@ -39,8 +39,9 @@ internal class HiddenVpnBrowserBroker(
     private val hardAt=java.util.concurrent.atomic.AtomicLong(-1)
     private val hardReason=java.util.concurrent.atomic.AtomicInteger(DEATH)
     private val authority=session.authority()
-    private val library=HiddenBrowserLibrary(context.noBackupFilesDir,session,authority,mode==HiddenConnectionPolicy.Mode.VPN_ONLY)
     private val gate=Any()
+    private val privateApps=uk.co.traynor.privategallery.core.privateapps.HiddenPrivateAppStore(context.noBackupFilesDir,session,authority,mode==HiddenConnectionPolicy.Mode.TOR_ONLY,{valid()},{commit ->synchronized(gate){check(valid());commit.run()}})
+    private val library=HiddenBrowserLibrary(context.noBackupFilesDir,session,authority,mode==HiddenConnectionPolicy.Mode.VPN_ONLY)
     private val worker=Executors.newSingleThreadExecutor()
     private val calls=ConcurrentHashMap.newKeySet<Call>()
     private val downloading=AtomicBoolean()
@@ -218,6 +219,19 @@ internal class HiddenVpnBrowserBroker(
             } else {
                 caller()
                 when(code) {
+                    PRIVATE_APPS -> {
+                        require(data.dataAvail()<=uk.co.traynor.privategallery.core.privateapps.PrivateAppCommands.MAX_COMMAND_BYTES+128)
+                        val action=data.readInt();val size=data.readInt()
+                        require(size in -1..uk.co.traynor.privategallery.core.privateapps.PrivateAppCommands.MAX_COMMAND_BYTES)
+                        val bytes=if(size<0)null else ByteArray(size).also{data.readByteArray(it)}
+                        try {
+                            val id=data.readString().orEmpty();require(data.dataAvail()==0)
+                            val state=uk.co.traynor.privategallery.core.privateapps.PrivateAppCommands.execute(privateApps,action,bytes,id)
+                            val encoded=state.encode()
+                            try {synchronized(gate){check(valid());result.writeNoException();result.writeInt(encoded.size);result.writeByteArray(encoded)}}
+                            finally{encoded.fill(0)}
+                        }finally{bytes?.fill(0)}
+                    }
                     LIBRARY -> {
                         val action=data.readInt()
                         val url=data.readString().orEmpty()
@@ -512,6 +526,7 @@ internal class HiddenVpnBrowserBroker(
         const val CLEANED=IBinder.FIRST_CALL_TRANSACTION+6
         const val PREVIEW=IBinder.FIRST_CALL_TRANSACTION+7
         const val LIBRARY=IBinder.FIRST_CALL_TRANSACTION+8
+        const val PRIVATE_APPS=IBinder.FIRST_CALL_TRANSACTION+10
         const val PANIC=IBinder.FIRST_CALL_TRANSACTION+9
         const val CHILD_DESCRIPTOR="uk.co.traynor.privategallery.HiddenVpnChild"
         const val CHILD_SHUTDOWN=IBinder.FIRST_CALL_TRANSACTION

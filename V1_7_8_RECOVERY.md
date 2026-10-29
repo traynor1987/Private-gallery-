@@ -59,3 +59,17 @@ Previous1.7.7 branch remains64d4c213fe3b3a92ecd946e334e8a918851636c9. Comparison
 NEXT: implement authenticated owner-bound catalogue adapters at MainActivity/Hidden broker entry, then shared Private Apps Library/add/edit/remove/launch UI; use existing browser contexts. Preserve stale-handle rejection and verify callbacks across lock/re-unlock/vault switches. PWA/session/document features remain later work under the original1.7.8 specification.
 
 All earlier pending-compilation statements above are historical and superseded by this verified sprint result. Final documentation/evidence commit does not alter tested application source and must not trigger another compilation run.
+
+## Final17% UI/integration sprint — candidate awaiting grouped checks
+
+Baseline5257521930d23e64096113a0a4653a8b3c8c8dba verified against remote. Versions and branch unchanged.
+
+Added MainActivity factory capturing Primary key identity, authentication epoch, phone-transfer generation and browser presentation generation. It refuses locked, Hidden-selected, hidden-content, wrong-route and background contexts. Existing PrimaryPrivateAppAccess owns key copies and fenced commits. Primary launch uses existing BrowserV2Session and refuses unavailable authorised networking.
+
+Added bounded PRIVATE_APPS command to the existing authenticated Hidden broker. Commands are single-entry add/edit, remove or read, validated in parent and committed through HiddenSession plus live-broker gate. Child receives bounded encoded catalogue only; keys stay in parent. Hidden launch uses its existing native WebView/profile and selected immutable VPN/Tor transport, with no new network client or policy changes.
+
+Added shared themed PrivateAppsLibrary with adaptive grid, safe letter placeholders, empty state, URL/name add/edit, confirmed removal and Open. Browser entry remains available for return. UI clears state and closes on authority loss; no saved-instance catalogue state. Opening the library cancels outstanding upload selections. Request buffers are wiped. Icons remain placeholders; no remote icon fetch/decode.
+
+Four Java host check programs pass locally including command validation and broker-revoked-before-commit preservation. Added controller JVM tests for stale launch and revoked publication. Added actual MainActivity factory and Compose CRUD/launch/revocation instrumentation tests for the disposable test package. One grouped existing-workflow job will compile/JVM-test and run only these two instrumentation classes on API37. Results pending; do not infer runtime proof yet.
+
+Not a release: no PWA discovery, dedicated app chrome, per-app session controls, documents or new download capability. Runtime real VPN/Tor traffic and native Hidden broker instrumentation remain later gates. Full Fold/light-theme physical acceptance remains pending.1.7.7 evidence and signing controls remain untouched.

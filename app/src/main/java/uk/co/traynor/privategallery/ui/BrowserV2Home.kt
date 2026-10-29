@@ -288,6 +288,8 @@ internal fun BrowserV2Home(
     val latestScrollChrome by rememberUpdatedState(scrollChrome)
     val ui = remember { BrowserUiState() }
     val context = LocalContext.current
+    var privateApps by remember { mutableStateOf<uk.co.traynor.privategallery.core.privateapps.PrivateAppsController?>(null) }
+
     val focusManager = androidx.compose.ui.platform.LocalFocusManager.current
     val controlsPinned by rememberUpdatedState(ui.addressFocused || ui.overflow || ui.tabSwitcher || ui.bookmarksOpen || ui.historyOpen || ui.settingsOpen || ui.findOpen || ui.webVideoView || ui.fullscreen != null || connectionPresentation.blocked)
     fun openSettings() { if (browserSettings != null) ui.settingsOpen = true else onOpenBrowserSettings() }
@@ -703,6 +705,8 @@ internal fun BrowserV2Home(
         if (!staticContentHost) session.recordAcceptanceUiEvent("REAL_MODE_ENTERED")
     }
     SideEffect { session.recordAcceptanceUiEvent("BROWSER_V2_COMPOSED") }
+    privateApps?.let {controller ->PrivateAppsLibrary(controller,{privateApps=null})}
+
     Box(
         modifier = modifier.fillMaxSize()
             .then(if (acceptanceProbeEnabled) Modifier.background(Color(0xFF00A000)) else Modifier)
@@ -724,6 +728,11 @@ internal fun BrowserV2Home(
                     .semantics { testTag = "browser-v2-chrome" },
             ) {
                 SideEffect { session.recordAcceptanceUiEvent("BROWSER_CHROME_COMPOSED") }
+                if(context is uk.co.traynor.privategallery.MainActivity)TextButton(onClick={
+                    cancelUpload();privateApps=context.privateAppsController()
+                    if(privateApps==null)ui.message="Unlock Primary and reopen the browser."
+                }){Text("Private Apps")}
+
                 if (acceptanceProbeEnabled) AcceptanceProbeLabel("BROWSER_CHROME", Color(0xFF0000CC))
                 if (active.loading) LinearProgressIndicator(Modifier.fillMaxWidth())
                 BrowserAddressBar(ui.address, {
