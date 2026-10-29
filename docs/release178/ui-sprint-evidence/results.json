@@ -1,0 +1,51 @@
+{
+  "run": 40912786141,
+  "job": 123584924803,
+  "artifact": 12915211952,
+  "sha256": "12b4fad24f8efb6331777a4320d9d915fb1b6e907ae7a614c882826ad0fedfcc",
+  "results": [
+    {
+      "file": "test-results/testDebugUnitTest/TEST-uk.co.traynor.privategallery.core.privateapps.PrimaryPrivateAppStoreTest.xml",
+      "name": "uk.co.traynor.privategallery.core.privateapps.PrimaryPrivateAppStoreTest",
+      "tests": "1",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-10-29T16:36:29.676Z",
+      "hostname": "runnervm48cm3",
+      "time": "0.096"
+    },
+    {
+      "file": "test-results/testDebugUnitTest/TEST-uk.co.traynor.privategallery.core.privateapps.PrivateAppStoreIntegrationTest.xml",
+      "name": "uk.co.traynor.privategallery.core.privateapps.PrivateAppStoreIntegrationTest",
+      "tests": "4",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-10-29T16:36:29.776Z",
+      "hostname": "runnervm48cm3",
+      "time": "0.079"
+    },
+    {
+      "file": "test-results/testDebugUnitTest/TEST-uk.co.traynor.privategallery.core.privateapps.PrivateAppsControllerTest.xml",
+      "name": "uk.co.traynor.privategallery.core.privateapps.PrivateAppsControllerTest",
+      "tests": "2",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-10-29T16:36:29.858Z",
+      "hostname": "runnervm48cm3",
+      "time": "0.015"
+    },
+    {
+      "file": "outputs/androidTest-results/connected/debug/TEST-test(AVD) - 17-_app-.xml",
+      "tests": "2",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "5.847",
+      "timestamp": "2026-10-29T16:38:35",
+      "hostname": "localhost"
+    }
+  ]
+}

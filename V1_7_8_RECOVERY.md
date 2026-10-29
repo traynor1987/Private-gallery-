@@ -1,6 +1,6 @@
 # Private Gallery 1.7.8 recovery
 
-Status: STORAGE SPRINT VERIFIED (HOST + COMPILE/JVM) / UI AND BROWSER CONSUMERS UNFINISHED / NOT APPROVED FOR SIGNING.
+Status: AUTHENTICATED LIBRARY SPRINT VERIFIED (HOST + COMPILE/JVM + TWO API37 TESTS) / RELEASE INCOMPLETE / NOT APPROVED FOR SIGNING.
 
 Authoritative starting HEAD: 64d4c213fe3b3a92ecd946e334e8a918851636c9 on release/1.7.7-recently-deleted.
 Frozen 1.7.7 application: 25aae6d59f79c455e47acc73a5c99f9c8f15242a.
@@ -73,3 +73,21 @@ Added shared themed PrivateAppsLibrary with adaptive grid, safe letter placehold
 Four Java host check programs pass locally including command validation and broker-revoked-before-commit preservation. Added controller JVM tests for stale launch and revoked publication. Added actual MainActivity factory and Compose CRUD/launch/revocation instrumentation tests for the disposable test package. One grouped existing-workflow job will compile/JVM-test and run only these two instrumentation classes on API37. Results pending; do not infer runtime proof yet.
 
 Not a release: no PWA discovery, dedicated app chrome, per-app session controls, documents or new download capability. Runtime real VPN/Tor traffic and native Hidden broker instrumentation remain later gates. Full Fold/light-theme physical acceptance remains pending.1.7.7 evidence and signing controls remain untouched.
+
+## Verified UI/integration sprint handoff
+
+Tested implementation: c9bc6eaa881b09b862196496d2ebf769a8e2a423, descended from5257521930d23e64096113a0a4653a8b3c8c8dba. Final evidence-only commit is discoverable as HEAD of release/1.7.8-private-apps; application/scripts/workflow must remain identical to tested implementation.
+
+Single grouped run40912786141 / job123584924803 SUCCESS; historical broad job SKIPPED. Application, JVM and Android test APK compilation passed. Seven targeted JVM tests and two API37 instrumentation tests passed with zero failures/errors/skips, independently confirmed from downloaded XML. Four Java host programs passed locally and in CI. Artifact12915211952 SHA25612b4fad24f8efb6331777a4320d9d915fb1b6e907ae7a614c882826ad0fedfcc was independently downloaded/hash-checked and source-bound. Durable XML, source SHA and result manifest: docs/release178/ui-sprint-evidence.
+
+Completed: authenticated Primary Activity catalogue factory; bounded authenticated Hidden broker catalogue commands; immutable owner-bound controller; shared responsive themed library with safe placeholder tiles, empty state, add/edit/remove confirmation and launch; browser entries for return; stale-authority UI cleanup and fenced Hidden writes. Saved websites use existing authorised Primary or selected Hidden VPN/Tor browser paths. No additional WebView or network stack. Independent source review identified and resolved two issues before testing: stored requireAuthentication entries now fail closed until fresh-auth flow exists, and nested edit/remove dialogs explicitly use SecureOn.
+
+Evidence boundaries: Android UI test uses encrypted Primary fixture storage and launch callback, not live internet. Activity test exercises the actual factory with synthetic authenticated state and same-key lock/unlock epoch revocation, not production PIN entry. Host/JVM coverage includes separate owners, encrypted restart, corruption, bounded commands and revoked commits. No new real Hidden Binder lifecycle, VPN/Tor traffic, DNS leak, upload/download or Fold physical evidence is claimed. Source review is not a substitute for those gates.
+
+Remaining: PWA/manifest discovery, website/custom icons, UI reorder/favourites, dedicated app chrome, per-open authentication, honest enforceable session controls, download/document/screenshot and upload lifecycle integration, full Hidden runtime isolation/routing checks, light-theme/Fold/large-text physical validation, complete security review and original-key upgrade/signing gates. Primary tabs share their existing cookie profile; Hidden tabs share the current ephemeral Hidden profile. Catalogue persistence does not retain Hidden cookies or provide per-app cookie isolation. Existing Hidden cleanup policy remains unchanged.
+
+Exact next task: add focused synthetic native Hidden broker instrumentation exercising authenticated library CRUD, selected VPN/Tor launch and lock/revocation through real broker/process boundaries; verify no cross-mode catalogue publication or transport fallback. Then continue bounded PWA/icon discovery and remaining Private Apps controls. Do not repeat the completed catalogue foundation or this successful compilation/UI batch without a relevant change.
+
+Preservation checked: remote release/1.7.7-recently-deleted remains64d4c213fe3b3a92ecd946e334e8a918851636c9; app/build.gradle.kts, V1_7_7_RECOVERY.md, docs/release177, .github/workflows/acceptance1762.yml and scripts/upgrade are unchanged against that release. Version remains1.7.7/code46 pending later authorised release metadata assignment. Physical1.7.7 acceptance remains pending. No production signing, replacement keys, uninstall, application-data clearing or release APK publication occurred.
+
+Earlier candidate/pending-result statements are historical and superseded by this handoff. Only documentation/evidence is added after the tested source; no second workflow is needed.
