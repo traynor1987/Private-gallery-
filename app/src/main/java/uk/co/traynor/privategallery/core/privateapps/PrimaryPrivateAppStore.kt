@@ -13,12 +13,13 @@ class PrimaryPrivateAppStore(
  private val key:ByteArray,
  private val current:()->Boolean,
  private val commit:((()->Unit)->Unit),
-) {
+) : PrivateAppStore {
  private val file=File(root,"primary-private-apps-v1.enc")
- fun read():PrivateAppCatalog=synchronized(GATE){check(current());readUnlocked().also{check(current())}}
- fun update(action:(PrivateAppCatalog)->PrivateAppCatalog):PrivateAppCatalog=synchronized(GATE) {
+ override fun owner()=PrivateAppStore.Owner.PRIMARY
+ override fun read():PrivateAppCatalog=synchronized(GATE){check(current());readUnlocked().also{check(current())}}
+ override fun update(action:java.util.function.UnaryOperator<PrivateAppCatalog>):PrivateAppCatalog=synchronized(GATE) {
   check(current())
-  val next=PrivateAppCatalog(false,action(readUnlocked()).apps)
+  val next=PrivateAppCatalog(false,action.apply(readUnlocked()).apps)
   check(current())
   val bytes=next.encode()
   var pending:File?=null

@@ -7,7 +7,7 @@ import java.util.*;
 import java.util.function.UnaryOperator;
 
 /** Independent encrypted definitions; no WebView profile or login persistence. */
-public final class HiddenPrivateAppStore {
+public final class HiddenPrivateAppStore implements PrivateAppStore {
  private static final Object GATE=new Object();
  private final HiddenSession session;
  private final HiddenSession.Authority authority;
@@ -19,6 +19,7 @@ public final class HiddenPrivateAppStore {
   records=new HiddenRecordStore(new File(root,"hidden-private-apps-v1"));
   id=tor?"8925faed-2c5f-4975-a05e-c58fbbfe1701":"8925faed-2c5f-4975-a05e-c58fbbfe1702";
  }
+ public Owner owner(){return tor?Owner.HIDDEN_TOR:Owner.HIDDEN_VPN;}
  public PrivateAppCatalog read(){return access(null);}
  public PrivateAppCatalog update(UnaryOperator<PrivateAppCatalog> action){return access(Objects.requireNonNull(action));}
  private PrivateAppCatalog access(UnaryOperator<PrivateAppCatalog> action) {

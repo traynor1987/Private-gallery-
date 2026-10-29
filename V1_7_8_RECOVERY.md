@@ -31,3 +31,17 @@ Independent foundation review found root-URL scope rejection, trailing-dot onion
 Required remaining work: full Primary/Hidden UI and encrypted catalogue integration; PWA discovery/metadata/icon transport with bounded decode; per-app session/authentication controls with honest shared-profile limitations; documents and allowed screenshots; download/upload app ownership, cancellation/recovery; focused Android synthetic PWA/storage/transport/lifecycle tests; independent whole-change security review; exact-source freeze; original-key46→47 upgrade verification including Recently Deleted; signing and artifact verification. All milestones after foundation remain incomplete. No new GitHub workflow launched. No signing secrets accessed. No APK produced.
 
 Caller requirement: Primary current/commit closures MUST capture immutable session/key/generation authority, not only an unlocked boolean. This must be verified at eventual integration. Icon Base64 validation is not bitmap validation: renderer must bound dimensions and reject malformed image content.
+
+## Limited-budget storage sprint — compilation pending
+
+Starting remote HEAD independently recovered as dd9a25977bea5cdaee1df82f80d2f7e7181f7cb7. No new branch or version change.
+
+Correction to preceding handoff: pushing the foundation automatically triggered existing fast-development run40906416716, completed SUCCESS. Earlier wording that no workflow ran / Primary remained uncompiled was stale. This sprint does not reuse that result for changed source.
+
+Implemented shared PrivateAppStore contract with immutable PRIMARY/HIDDEN_VPN/HIDDEN_TOR ownership. Existing Primary/Hidden encrypted formats are preserved. PrimaryPrivateAppAccess captures authentication identity, validates under the caller-supplied revocation/commit gate, copies keys only for each operation, and wipes those copies even after failure. Hidden retains its existing HiddenSession authority. No current-vault fallback or cookie/credential API is introduced.
+
+Added shared Primary/Hidden CRUD/restart JVM coverage, Primary stale-handle lock/unlock rejection, revoked update preservation, corruption refusal, additive first-use behaviour preserving old browser files, Hidden authenticated ciphertext mode-swap refusal and corruption preservation. Three Java host programs pass after changes; new Kotlin/JVM suite pending remote execution.
+
+The existing fast-development workflow now selects one narrow private-apps-checkpoint job only on this branch; its historical broad job is excluded here. One grouped invocation compiles app/test sources and runs only core.privateapps JVM tests. No emulator, full regression, signing or APK publication. Historical release workflow files and1.7.7 evidence untouched.
+
+Budget scope: finish and verify catalogue storage first. UI/browser binding is not implemented in this sprint candidate. Exact next task: capture Primary access from MainActivity's immutable sessionKey identity plus phoneTransferGeneration under phoneTransferGate; expose Hidden handle through its existing authenticated broker; then build shared Private Apps Library/add/edit/remove UI using these handles. Callback publication and launch must recheck originating authority, not current selection. Do not claim runtime isolation or UI completion from catalogue tests.

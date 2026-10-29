@@ -14,6 +14,13 @@ public final class HiddenPrivateAppStoreChecks {
   var app=new PrivateAppCatalog.App(UUID.randomUUID().toString(),"Secret title","https://example.test/private","","browser","",true,false,true);
   vpn.update(c->c.upsert(app));check(vpn.read().apps.equals(List.of(app)));check(tor.read().apps.isEmpty());
   try(var files=Files.walk(root)){for(Path p:files.filter(Files::isRegularFile).toList())check(!new String(Files.readAllBytes(p),java.nio.charset.StandardCharsets.ISO_8859_1).contains("Secret title"));}
+  // Swapping encrypted VPN metadata into Tor must fail even with the same vault key.
+  Path vpnFile=root.resolve("hidden-private-apps-v1/metadata-8925faed-2c5f-4975-a05e-c58fbbfe1702.enc");
+  Path torFile=root.resolve("hidden-private-apps-v1/metadata-8925faed-2c5f-4975-a05e-c58fbbfe1701.enc");
+  Files.copy(vpnFile,torFile);rejects(tor::read);rejects(()->tor.update(c->c.upsert(app)));Files.delete(torFile);
+  byte[] original=Files.readAllBytes(vpnFile),corrupt=original.clone();corrupt[corrupt.length-1]^=1;Files.write(vpnFile,corrupt);
+  rejects(vpn::read);rejects(()->vpn.update(c->c.remove(app.id())));check(Arrays.equals(corrupt,Files.readAllBytes(vpnFile)));
+  Files.write(vpnFile,original);
   session.lock();rejects(vpn::read);rejects(()->vpn.update(c->c.remove(app.id())));
   unlock(session);rejects(vpn::read);
   var resumed=new HiddenPrivateAppStore(root.toFile(),session,session.authority(),false);
