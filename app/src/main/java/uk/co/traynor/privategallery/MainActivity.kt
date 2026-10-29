@@ -1576,7 +1576,7 @@ class MainActivity : FragmentActivity() {
                 if(primaryKey!=null)runCatching {synchronized(previewCacheLock){val repo=AndroidVaultRepository(applicationContext,primaryKey,{commit ->synchronized(phoneTransferGate){
                     check(sessionKey===owner && session.isUnlocked && !hideContent && phoneTransferGeneration==generation)
                     commit()
-                }})
+                }},{sessionKey===owner && session.isUnlocked && !hideContent && phoneTransferGeneration==generation})
                     expirePrimaryTrash(repo,recover)
                 }}
                 if(!hideContent)runCatching {if(recover)hiddenRepo?.reconcile() else hiddenRepo?.deleteExpiredRecentlyDeleted()}
@@ -2856,10 +2856,10 @@ class MainActivity : FragmentActivity() {
         }.invokeOnCompletion {key.fill(0)}
     }
     private fun expirePrimaryTrash(repo:AndroidVaultRepository,recover:Boolean=false) = synchronized(previewCacheLock) {
-        val days=repo.retentionDays()
-        val candidates=repo.recentlyDeleted().filter {uk.co.traynor.privategallery.core.vault.RecentlyDeletedPolicy.expired(it.deletedAtEpochMillis,System.currentTimeMillis(),days)}.map {it.id}
-        candidates.forEach(::invalidatePreview)
-        try {if(recover)repo.reconcile() else repo.deleteExpiredRecentlyDeleted()}
+        val cutoff=System.currentTimeMillis()
+        var candidates=emptyList<String>()
+        val revoke:(List<String>)->Unit={ids ->candidates=ids;ids.forEach(::invalidatePreview)}
+        try {if(recover)repo.reconcileAt(cutoff,revoke) else repo.expireRecentlyDeleted(cutoff,revoke)}
         finally {
             val remaining=runCatching {repo.recentlyDeleted().mapTo(hashSetOf()){it.id}}.getOrNull()
             if(remaining!=null && candidates.any {it !in remaining})runOnUiThread {cameraRevision++}

@@ -1,6 +1,6 @@
 # Private Gallery 1.7.7 — recovery
 
-Status: RECOVERED / NOT IMPLEMENTED / NOT APPROVED FOR SIGNING.
+Status: IMPLEMENTED CANDIDATE / ANDROID RUNTIME PENDING / NOT APPROVED FOR SIGNING.
 
 Baseline branch release/1.7.6.2-ui-browser-polish at 8915d2e6f3915573afeaf850205f302c07eab7eb.
 Code45 application source 97e94452ceb9c5262521d7552f0c25eeb07374eb; release control a19d19603c8ccbfaa1449113ba61592f5249c19e.
@@ -27,3 +27,9 @@ Local200 Python host tests pass. Android tests are authored but not executed loc
 Run40883312782/job123480301984 on0a87491ea7d01400539022166bc1c4d3646bc249: host gates PASS; Kotlin compile FAIL (activity referenced composable-only cropRevision; four optional callback lambdas inferred Unit?). No Android instrumentation ran. Fix uses existing activity cameraRevision and explicit Unit callbacks. Cleanup step also failed because no transport fixture was started; do not mislabel as transport failure.
 
 Final draft review identified an additional expiry-cache publication race in retention-setting/load-triggered expiry. All Primary expiry call sites now share serialized expiry and short preview publication/revocation gate. Three focused behavior tests added for mid-read restore revocation, interruption after logical deletion/orphan-preview cleanup, and active-import staging preservation. Still NOT_APPROVED_FOR_SIGNING; future runtime results must be attributed to exact source. No signer access.
+
+## Grouped run2 — build passes; branch guard blocks runtime
+
+Run40884745904/job123485336262 on4405081dd3d46dbd54bc9646c834ab8963544033: host checks, compilation, JVM tests and lint PASS. Owned-VPN setup exited at its exact-branch guard before any fixture or instrumentation started; setup and cleanup still admitted only1.7.6.2. Both guards now explicitly admit1.7.7 in addition to the preserved old branch. No transport behavior failure or pass is inferred.
+
+Next grouped candidate includes exact expiry-ID revocation under the repository metadata snapshot, the original two-argument repository constructor ABI for baseline-compiled upgrade instrumentation, and an actual-touch initial Hidden VPN address-bar assertion. Existing production workflow prepared for1.7.7 with frozen source deliberately unset; signing stays blocked until exact-source runtime evidence and independent approval exist. No credentials accessed.

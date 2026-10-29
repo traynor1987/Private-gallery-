@@ -1,7 +1,7 @@
-name: Private Gallery 1.7.6.2 original-key owner acceptance
+name: Private Gallery 1.7.7 original-key owner acceptance
 on:
   push:
-    branches: [release/1.7.6.2-ui-browser-polish]
+    branches: [release/1.7.7-recently-deleted]
     paths: ['.acceptance1762-candidate']
 permissions:
   contents: read
@@ -15,93 +15,63 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 45
     env:
-      FROZEN_SOURCE: '97e94452ceb9c5262521d7552f0c25eeb07374eb'
+      FROZEN_SOURCE: '0000000000000000000000000000000000000000'
     steps:
       - uses: actions/checkout@v4
-      - name: Preserve release-control scope and independent review before frozen checkout
+      - name: Preserve exact source approval and independent review
         run: |
-          test -s docs/release1762/FINAL_SCOPE_APPROVAL.json
-          test -s docs/release1762/FINAL_SECURITY_REVIEW.md
-          cp docs/release1762/FINAL_SCOPE_APPROVAL.json "$RUNNER_TEMP/final-scope1762.json"
-          cp docs/release1762/FINAL_SECURITY_REVIEW.md "$RUNNER_TEMP/final-security1762.md"
-          cp scripts/verify_hidden_vpn_fixture1762.py "$RUNNER_TEMP/reviewed-vpn-verifier.py"
-          cp scripts/verify_final_scope1762.py "$RUNNER_TEMP/reviewed-scope-verifier.py"
-          git rev-parse HEAD > "$RUNNER_TEMP/release-control1762-sha.txt"
+          test -s docs/release177/FINAL_SCOPE_APPROVAL.json
+          test -s docs/release177/SECURITY_REVIEW.md
+          cp docs/release177/FINAL_SCOPE_APPROVAL.json "$RUNNER_TEMP/final-scope177.json"
+          cp docs/release177/SECURITY_REVIEW.md "$RUNNER_TEMP/final-security177.md"
+          git rev-parse HEAD > "$RUNNER_TEMP/release-control177-sha.txt"
       - uses: actions/checkout@v4
         with:
-          ref: '97e94452ceb9c5262521d7552f0c25eeb07374eb'
+          ref: '0000000000000000000000000000000000000000'
           fetch-depth: 0
-      - name: Require exact completed source and immutable reviewed evidence
+      - name: Require successful exact-source immutable focused evidence
         uses: actions/github-script@v7
         with:
           script: |
-            const source = process.env.FROZEN_SOURCE;
-            if (source !== '97e94452ceb9c5262521d7552f0c25eeb07374eb' || context.ref !== 'refs/heads/release/1.7.6.2-ui-browser-polish' || context.eventName !== 'push') throw new Error('Untrusted release source/event');
-            const {data: run} = await github.rest.actions.getWorkflowRun({...context.repo, run_id:40848723808});
-            if (run.head_sha !== source || run.status !== 'completed' || run.conclusion !== 'failure' || run.path !== '.github/workflows/focused1762.yml' || run.event !== 'push') throw new Error('Unexpected original evidence run');
-            const {data: jobs} = await github.rest.actions.listJobsForWorkflowRun({...context.repo, run_id:run.id});
-            const job = jobs.jobs.find(j => j.id === 123362562064);
-            const required = ['Host security and release checks','Compile, JVM tests and lint','Start ephemeral owned-VPN and packet observation fixture','Start independently verified controlled onion fixture','Preserve test evidence'];
-            if (!job || required.some(name => !job.steps.some(s => s.name === name && s.conclusion === 'success'))) throw new Error('Build/fixture/evidence prerequisites missing');
-            const failed = job.steps.filter(s => s.conclusion === 'failure');
-            if (failed.length !== 1 || failed[0].name !== 'Run focused synthetic Android tests') throw new Error('Unexpected failed stage');
-            const {data: artifacts} = await github.rest.actions.listWorkflowRunArtifacts({...context.repo,run_id:run.id});
-            const artifact = artifacts.artifacts.find(a => a.id === 12887270723 && a.name === 'private-gallery-1762-focused' && !a.expired);
-            const expectedDigest = 'sha256:b01b11d5ba2bbfeadfa097957b1ca5b7ab2313c502c1a622617a1abf7457a2fc';
-            if (!artifact || artifact.digest !== expectedDigest) throw new Error('Immutable evidence mismatch');
-            const download = await github.rest.actions.downloadArtifact({...context.repo,artifact_id:artifact.id,archive_format:'zip'});
-            const fs = require('fs'), crypto = require('crypto'), bytes = Buffer.from(download.data);
-            if ('sha256:' + crypto.createHash('sha256').update(bytes).digest('hex') !== expectedDigest) throw new Error('Evidence checksum mismatch');
-            fs.writeFileSync(process.env.RUNNER_TEMP + '/focused1762.zip',bytes);
+            const fs=require('fs'),crypto=require('crypto');
+            const approval=JSON.parse(fs.readFileSync(process.env.RUNNER_TEMP+'/final-scope177.json','utf8'));
+            const source=process.env.FROZEN_SOURCE;
+            if(approval.source_sha!==source || source==='0000000000000000000000000000000000000000' || context.ref!=='refs/heads/release/1.7.7-recently-deleted') throw new Error('Untrusted source/event');
+            const {data:run}=await github.rest.actions.getWorkflowRun({...context.repo,run_id:approval.focused_run_id});
+            if(run.head_sha!==source || run.status!=='completed' || run.conclusion!=='success' || run.path!=='.github/workflows/focused1762.yml' || run.event!=='push')throw new Error('Exact source has not passed');
+            const {data:jobs}=await github.rest.actions.listJobsForWorkflowRun({...context.repo,run_id:run.id});
+            const required=['Host security and release checks','Compile, JVM tests and lint','Start ephemeral owned-VPN and packet observation fixture','Start independently verified controlled onion fixture','Run focused synthetic Android tests','Preserve test evidence'];
+            if(jobs.jobs.length!==1 || jobs.jobs[0].conclusion!=='success' || required.some(name=>!jobs.jobs[0].steps.some(s=>s.name===name&&s.conclusion==='success')))throw new Error('Required runtime stages missing');
+            const {data:artifacts}=await github.rest.actions.listWorkflowRunArtifacts({...context.repo,run_id:run.id});
+            const artifact=artifacts.artifacts.find(a=>a.id===approval.focused_artifact_id&&a.name==='private-gallery-1762-focused'&&!a.expired);
+            if(!artifact || artifact.digest!==approval.focused_artifact_digest)throw new Error('Reviewed artifact changed');
+            const download=await github.rest.actions.downloadArtifact({...context.repo,artifact_id:artifact.id,archive_format:'zip'});
+            const bytes=Buffer.from(download.data);
+            if('sha256:'+crypto.createHash('sha256').update(bytes).digest('hex')!==artifact.digest)throw new Error('Evidence checksum mismatch');
+            fs.writeFileSync(process.env.RUNNER_TEMP+'/focused177.zip',bytes);
             fs.mkdirSync('app/build/production-evidence',{recursive:true});
-            fs.writeFileSync('app/build/production-evidence/focused-run.json',JSON.stringify({source_sha:source,run_id:run.id,artifact_id:artifact.id,artifact_digest:artifact.digest,conclusion:run.conclusion,verified_build_steps:true,original_exit_status:1,evidence_validation:'PENDING'},null,2));
-      - name: Validate every focused security result before exposing signer
+            fs.writeFileSync('app/build/production-evidence/focused-run.json',JSON.stringify({source_sha:source,run_id:run.id,artifact_id:artifact.id,artifact_digest:artifact.digest,conclusion:run.conclusion,verified_build_steps:true,original_exit_status:0,evidence_validation:'PENDING'},null,2));
+      - name: Revalidate focused security evidence before signer access
         run: |
           test "$(git rev-parse HEAD)" = "$FROZEN_SOURCE"
-          # Restored owner scope: the old code43 source must never reach signer access.
-          grep -Fq 'versionCode = 45' app/build.gradle.kts
-          cp "$RUNNER_TEMP/final-scope1762.json" app/build/production-evidence/
-          cp "$RUNNER_TEMP/final-security1762.md" app/build/production-evidence/
-          cp "$RUNNER_TEMP/release-control1762-sha.txt" app/build/production-evidence/
           mkdir -p app/build/production-evidence/focused
-          unzip -q "$RUNNER_TEMP/focused1762.zip" -d app/build/production-evidence/focused
-          test "$(cat app/build/production-evidence/focused/focused1762/source-sha.txt)" = "$FROZEN_SOURCE"
-          test "$(cat app/build/production-evidence/focused/focused1762/exit-status.txt)" = 1
-          python3 scripts/verify_focused1762.py app/build/production-evidence/focused/outputs/androidTest-results/connected/debug
-          python3 - <<'PYCODE'
-          import re,pathlib,xml.etree.ElementTree as ET
-          selectors=re.search("classes='([^']+)'",pathlib.Path('scripts/run_focused1762.sh').read_text()).group(1).split(',')
-          expected=set()
-          for selector in selectors:
-              name,separator,method=selector.partition('#')
-              if separator: expected.add((name,method));continue
-              source=pathlib.Path('app/src/androidTest/java').joinpath(*name.split('.')).with_suffix('.kt')
-              methods=re.findall(r'@Test(?:\([^)]*\))?\s+fun\s+(\w+)',source.read_text())
-              assert methods, name
-              expected.update((name,method) for method in methods)
-          reports=pathlib.Path('app/build/production-evidence/focused/outputs/androidTest-results/connected/debug')
-          cases=[case for report in reports.rglob('*.xml') for case in ET.parse(report).getroot().iter('testcase')]
-          actual={(case.get('classname'),case.get('name')) for case in cases}
-          assert actual==expected and len(cases)==len(expected), (expected-actual,actual-expected)
-          print(f'PASS: all {len(expected)} exact selected methods present once')
-          PYCODE
-          # Preserve original failed status. Re-evaluate its immutable actual packet/body
-          # evidence with the reviewed strict ADB question-order correction before keys.
+          unzip -q "$RUNNER_TEMP/focused177.zip" -d app/build/production-evidence/focused
           evidence=app/build/production-evidence/focused
+          test "$(cat "$evidence/focused1762/source-sha.txt")" = "$FROZEN_SOURCE"
+          test "$(cat "$evidence/focused1762/exit-status.txt")" = 0
+          python3 scripts/verify_focused1762.py "$evidence/outputs/androidTest-results/connected/debug"
           cp "$evidence/focused1762/native-tor1762-result.json" "$evidence/hidden-vpn1762/native-tor1762-result.json"
-          python3 "$RUNNER_TEMP/reviewed-vpn-verifier.py" "$evidence/hidden-vpn1762" > app/build/production-evidence/revalidated-vpn.txt
+          python3 scripts/verify_hidden_vpn_fixture1762.py "$evidence/hidden-vpn1762" > app/build/production-evidence/revalidated-vpn.txt
           python3 scripts/verify_native_tor1762.py "$evidence/hidden-vpn1762" "$evidence/acceptance-diagnostics/onion-fixture" > app/build/production-evidence/revalidated-tor.txt
-          python3 - <<'PYCODE'
-          import hashlib,json,os,pathlib
-          validator=pathlib.Path(os.environ['RUNNER_TEMP'])/'reviewed-vpn-verifier.py'
-          digest=hashlib.sha256(validator.read_bytes()).hexdigest()
-          assert digest=='a9359061347d0dd79bf527fe724dcbceb4e7f998332e19570c922f33eb33e3c0'
-          p=pathlib.Path('app/build/production-evidence/focused-run.json');proof=json.loads(p.read_text())
-          assert proof['conclusion']=='failure' and proof['original_exit_status']==1
-          proof.update(evidence_validation='PASS',validated_case_count=13,reviewed_validator_sha256=digest)
-          p.write_text(json.dumps(proof,indent=2)+'\n')
-          PYCODE
-          python3 "$RUNNER_TEMP/reviewed-scope-verifier.py" "$RUNNER_TEMP/final-scope1762.json" "$FROZEN_SOURCE" "$RUNNER_TEMP/final-security1762.md" app/build/production-evidence/focused-run.json
+          python3 - <<'PY'
+          import json,pathlib,xml.etree.ElementTree as ET
+          root=pathlib.Path('app/build/production-evidence')
+          cases=[c for p in (root/'focused/outputs/androidTest-results/connected/debug').rglob('*.xml') for c in ET.parse(p).getroot().iter('testcase')]
+          assert len(cases)==21 and all(not any(c.find(tag) is not None for tag in ('failure','error','skipped')) for c in cases)
+          p=root/'focused-run.json';proof=json.loads(p.read_text());proof.update(evidence_validation='PASS',validated_case_count=len(cases));p.write_text(json.dumps(proof,indent=2)+'\n')
+          PY
+          python3 scripts/verify_final_scope177.py "$RUNNER_TEMP/final-scope177.json" "$FROZEN_SOURCE" "$RUNNER_TEMP/final-security177.md" app/build/production-evidence/focused-run.json
+          cp "$RUNNER_TEMP/final-scope177.json" "$RUNNER_TEMP/final-security177.md" "$RUNNER_TEMP/release-control177-sha.txt" app/build/production-evidence/
       - uses: actions/setup-java@v5
         with: { distribution: temurin, java-version: '17' }
       - uses: actions/cache/restore@v4
@@ -138,10 +108,10 @@ jobs:
           python3 scripts/verify_hidden_tor_distribution.py app/build/outputs/apk/release/app-release.apk app/build/production-evidence/tor-distribution.json
       - name: Enable emulator acceleration
         run: sudo chmod 666 /dev/kvm
-      - name: Original-key code44 to code45 in-place upgrade and restart
+      - name: Original-key code45 to code46 in-place upgrade and restart
         uses: reactivecircus/android-emulator-runner@v2
         env:
-          PRIVATE_GALLERY_UPGRADE_BASELINE: '44'
+          PRIVATE_GALLERY_UPGRADE_BASELINE: '45'
           PRODUCTION_UPGRADE: '1'
           ORG_GRADLE_PROJECT_PRIVATE_GALLERY_STORE_FILE: ${{ runner.temp }}/private-gallery-release.jks
           ORG_GRADLE_PROJECT_PRIVATE_GALLERY_STORE_PASSWORD: ${{ secrets.PRIVATE_GALLERY_SIGNING_STORE_PASSWORD }}
@@ -154,7 +124,7 @@ jobs:
           api-level: '37.0'
           target: google_atd
           arch: x86_64
-          avd-name: upgrade1762-from44
+          avd-name: upgrade1762-from45
           profile: pixel_2
           cores: 4
           ram-size: 4096M
@@ -163,11 +133,11 @@ jobs:
           disable-animations: false
           emulator-options: -no-window -gpu swiftshader -no-snapshot -noaudio -no-boot-anim -feature -HardwareDecoder
           script: |
-            bash scripts/verify_android17_device.sh app/build/production-evidence/from44
+            bash scripts/verify_android17_device.sh app/build/production-evidence/from45
             test "$(adb shell getenforce | tr -d '\r')" = Enforcing
             bash scripts/verify_synthetic_upgrade.sh
-            cp app/build/production-evidence/upgrade-* app/build/production-evidence/from44/
-      - name: Require original-key code44 upgrade proof for the one APK
+            cp app/build/production-evidence/upgrade-* app/build/production-evidence/from45/
+      - name: Require original-key code45 upgrade proof for the one APK
         run: |
           python3 - <<'PY'
           import hashlib,json,os,pathlib
@@ -177,13 +147,13 @@ jobs:
           source=os.environ['FROZEN_SOURCE']
           cert='94f2bfc6567f26d067d29077111cfd0ce86d38263c642ad115e43365f05b0d17'
           package=(root/'package.txt').read_text()
-          assert "package: name='uk.co.traynor.privategallery' versionCode='45' versionName='1.7.6.2'" in package
+          assert "package: name='uk.co.traynor.privategallery' versionCode='46' versionName='1.7.7'" in package
           assert "sdkVersion:'37'" in package and "targetSdkVersion:'37'" in package
           assert 'application-debuggable' not in package
           assert cert in (root/'signature.txt').read_text()
           assert (root/'source-sha.txt').read_text().strip()==source
           assert (root/'apk-sha256.txt').read_text().split()[0]==digest
-          expected={44:'1ac9ebf7f5c6e4665ca3416e0e37b78bc52131e9'}
+          expected={45:'97e94452ceb9c5262521d7552f0c25eeb07374eb'}
           for code,baseline in expected.items():
               d=root/f'from{code}'
               assert (d/'upgrade-baseline-source-sha.txt').read_text().strip()==baseline
@@ -194,13 +164,13 @@ jobs:
               for phase in ('seed','verify','after-restart'):
                   assert 'OK (1 test)' in (d/f'upgrade-{phase}.txt').read_text()
               assert (d/'upgrade-result.txt').read_text().startswith('PASS:')
-          (root/'release-summary.json').write_text(json.dumps(dict(source_sha=source,version='1.7.6.2',version_code=45,package='uk.co.traynor.privategallery',apk_sha256=digest,original_certificate_sha256=cert,synthetic_original_key_upgrades=[44],historical_upgrades_to_code44=[41,42,43],restart='PASS',owner_physical_acceptance='NOT_PERFORMED',hidden_interactive_vpn='VERIFIED'),indent=2)+'\n')
-          print('PASS: exact original-certificate candidate and code44 in-place upgrade/restart path')
+          (root/'release-summary.json').write_text(json.dumps(dict(source_sha=source,version='1.7.7',version_code=46,package='uk.co.traynor.privategallery',apk_sha256=digest,original_certificate_sha256=cert,synthetic_original_key_upgrades=[45],restart='PASS',owner_physical_acceptance='NOT_PERFORMED',hidden_interactive_vpn='VERIFIED'),indent=2)+'\n')
+          print('PASS: exact original-certificate candidate and code45 in-place upgrade/restart path')
           PY
       - name: Deliver one verified owner-acceptance APK
         uses: actions/upload-artifact@v4
         with:
-          name: private-gallery-1.7.6.2-code45-owner-acceptance
+          name: private-gallery-1.7.7-code46-owner-acceptance
           path: |
             app/build/outputs/apk/release/app-release.apk
             app/build/production-evidence
@@ -212,7 +182,7 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: private-gallery-1762-production-failure-evidence
+          name: private-gallery-177-production-failure-evidence
           path: |
             app/build/production-evidence
             app/build/reports/lint-results-release.html

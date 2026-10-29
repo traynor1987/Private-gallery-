@@ -29,7 +29,7 @@ sealed interface ImportResult {
 }
 
 /** Android adapter for local-first vault operations. */
-class AndroidVaultRepository(
+class AndroidVaultRepository @JvmOverloads constructor(
     private val context: Context,
     private val vaultKey: ByteArray,
     private val publish: ((() -> Unit) -> Unit) = { it() },
@@ -92,10 +92,14 @@ class AndroidVaultRepository(
         }))
     }
 
-    fun deleteExpiredRecentlyDeleted(now: Long = System.currentTimeMillis()) = synchronized(METADATA_LOCK) {
-        snapshot().items.filter { it.state == VaultItemState.TRASHED &&
-            RecentlyDeletedPolicy.expired(it.deletedAtEpochMillis, now, retentionDays()) }
-            .forEach { deleteFromVault(it) }
+    fun deleteExpiredRecentlyDeleted(now: Long = System.currentTimeMillis()) = expireRecentlyDeleted(now) {}
+
+    /** Select and revoke the exact purge set under the same metadata/retention snapshot. */
+    internal fun expireRecentlyDeleted(now:Long,beforeDelete:(List<String>)->Unit) = synchronized(METADATA_LOCK) {
+        val days=retentionDays()
+        val expired=snapshot().items.filter {it.state==VaultItemState.TRASHED && RecentlyDeletedPolicy.expired(it.deletedAtEpochMillis,now,days)}
+        beforeDelete(expired.map {it.id})
+        expired.forEach {deleteFromVault(it)}
     }
 
     /** Holds metadata stable while ciphertext is authenticated and copied to a user-selected document. */
@@ -556,7 +560,10 @@ class AndroidVaultRepository(
     }
 
     /** Removes interrupted ciphertext only; source gallery media is untouched. */
-    fun reconcile() {
+    fun reconcile() = reconcileAt(System.currentTimeMillis())
+
+    internal fun reconcileAt(expiryCutoff:Long,beforeExpiry:(List<String>)->Unit={}) {
+        check(authorized()) {"Vault operation revoked"}
         payloads.reconcileInterruptedWrites()
         synchronized(METADATA_LOCK) {
             val current = snapshot()
@@ -572,7 +579,7 @@ class AndroidVaultRepository(
             val retained=snapshot().items.mapTo(hashSetOf()) {it.id}
             presentation.retainMedia(retained)
             publish {uk.co.traynor.privategallery.core.media.EncryptedPreviewCache(File(root,"previews")).retain(retained)}
-            deleteExpiredRecentlyDeleted()
+            expireRecentlyDeleted(expiryCutoff,beforeExpiry)
         }
     }
 

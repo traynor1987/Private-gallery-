@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
-[[ "${GITHUB_ACTIONS:-}" == true && "${GITHUB_REF:-}" == refs/heads/release/1.7.6.2-ui-browser-polish ]]
+[[ "${GITHUB_ACTIONS:-}" == true && ( "${GITHUB_REF:-}" == refs/heads/release/1.7.6.2-ui-browser-polish || "${GITHUB_REF:-}" == refs/heads/release/1.7.7-recently-deleted ) ]]
 # Dedicated disposable runner only. No production VPN configuration or signing credentials.
 umask 077
 fixture_root="$RUNNER_TEMP/private-gallery-vpn1762"

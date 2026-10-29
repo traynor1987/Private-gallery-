@@ -259,6 +259,26 @@ class HiddenVpnLive1762Test {
                     broker!!.launch()
                 }
                 waitFor("Native empty tab has visible instructions instead of a white page") {nodes().any {it.text?.toString()=="Browse privately with VPN Only" && it.isVisibleToUser}}
+                var addressTouched=false
+                waitFor("Empty native tab address bar accepts a real touch") {
+                    var field=nodes().firstOrNull {it.contentDescription?.toString()=="Go"}
+                    while(field!=null && !field.isEditable)field=field.parent
+                    val input=field ?: return@waitFor false
+                    if(!input.isVisibleToUser || !input.isEnabled)return@waitFor false
+                    if(input.isFocused && addressTouched)return@waitFor true
+                    val bounds=android.graphics.Rect();input.getBoundsInScreen(bounds)
+                    val screen=android.graphics.Rect();automation.rootInActiveWindow?.getBoundsInScreen(screen)
+                    if(bounds.isEmpty || !screen.contains(bounds))return@waitFor false
+                    val down=android.os.SystemClock.uptimeMillis()
+                    for(action in listOf(android.view.MotionEvent.ACTION_DOWN,android.view.MotionEvent.ACTION_UP)) {
+                        val event=android.view.MotionEvent.obtain(down,android.os.SystemClock.uptimeMillis(),action,bounds.exactCenterX(),bounds.exactCenterY(),0)
+                        event.source=android.view.InputDevice.SOURCE_TOUCHSCREEN
+                        try {check(automation.injectInputEvent(event,true))}finally{event.recycle()}
+                    }
+                    addressTouched=true
+                    false
+                }
+                captureUi("initial-address-bar-after-real-touch")
                 val secureOrigin = "https://native-phase.fixture.invalid"
                 navigate("$secureOrigin/parity-one")
                 waitFor("First actual page navigation") {observed(network,origin){it.optString("path")=="/parity-one"}}
