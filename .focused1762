@@ -1,2 +1,2 @@
 full
-Same six final cases: confirm actual page rendering and completed IME hide before existing viewport sequence. Preserve all actual touch/per-viewport POST/mode/cookie/body/DNS/revocation assertions and deadlines; no production change/new scenario. Version1.7.6.2/code44.
+Same six final cases for retained native WebView configuration redraw/layout candidate; all real touch/per-viewport POST/security assertions unchanged. No new scenario, deadline or transport/capture/auth relaxation. Version1.7.6.2/code44; signing remains gated.

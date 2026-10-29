@@ -550,6 +550,13 @@ class HiddenVpnBrowserActivity:ComponentActivity() {
         // kernel lock release before deleting the whole explicitly owned data/cache roots.
         if(Application.getProcessName().endsWith(":hidden_vpn_browser"))Process.killProcess(Process.myPid())
     }
+    override fun onConfigurationChanged(newConfig:android.content.res.Configuration) {
+        super.onConfigurationChanged(newConfig)
+        // Retain the authenticated WebView/profile across Fold changes, but refresh its
+        // legacy View rendering after the host configuration/Compose bounds change.
+        if(!live())return
+        current?.let {view ->view.requestLayout();view.invalidate()}
+    }
     override fun onResume(){super.onResume();captureGuard.resume()}
     override fun onPause(){captureGuard.pause();super.onPause()}
     override fun onWindowFocusChanged(hasFocus:Boolean){super.onWindowFocusChanged(hasFocus);captureGuard.focusChanged(hasFocus)}
