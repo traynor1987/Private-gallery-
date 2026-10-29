@@ -12,6 +12,7 @@ import android.os.Bundle
 import android.os.ParcelFileDescriptor
 import android.os.Process
 import android.view.accessibility.AccessibilityNodeInfo
+import android.view.accessibility.AccessibilityWindowInfo
 import androidx.activity.ComponentActivity
 import androidx.test.core.app.ActivityScenario
 import androidx.test.platform.app.InstrumentationRegistry
@@ -210,7 +211,7 @@ class HiddenVpnLive1762Test {
         // The later Primary-cookie isolation read initializes its WebView provider. Do that
         // before opening the child, outside the live child accessibility traversal.
         instrumentation.runOnMainSync {android.webkit.CookieManager.getInstance()}
-        val info=automation.serviceInfo;info.flags=info.flags or AccessibilityServiceInfo.FLAG_REPORT_VIEW_IDS;automation.serviceInfo=info
+        val info=automation.serviceInfo;info.flags=info.flags or AccessibilityServiceInfo.FLAG_REPORT_VIEW_IDS or AccessibilityServiceInfo.FLAG_RETRIEVE_INTERACTIVE_WINDOWS;automation.serviceInfo=info
         shell("appops set ${context.packageName} ACTIVATE_VPN allow")
         assertNull("CI must grant Android's VPN consent before backend startup",VpnService.prepare(context))
         val configuration=shell("cat $configPath")
@@ -425,7 +426,24 @@ class HiddenVpnLive1762Test {
                     } finally {plaintext.fill(0)}
                 }
                 navigate(secureOrigin)
-                waitFor("Native page before Fold viewport changes") {nodes().any {it.text?.toString()=="Run JavaScript POST"}}
+                waitFor("Native page before Fold viewport changes") {
+                    val root=automation.rootInActiveWindow ?: return@waitFor false
+                    val windows=automation.windows
+                    if(windows.none {it.id==root.windowId && it.type==AccessibilityWindowInfo.TYPE_APPLICATION && it.isActive && it.root?.packageName?.toString()==context.packageName} ||
+                        windows.any {it.type==AccessibilityWindowInfo.TYPE_INPUT_METHOD})return@waitFor false
+                    val visible=nodes()
+                    if(visible.none {it.contentDescription?.toString()=="Reload" && it.isVisibleToUser} ||
+                        visible.any {it.contentDescription?.toString()=="Stop"})return@waitFor false
+                    val button=visible.firstOrNull {it.windowId==root.windowId && it.text?.toString()=="Run JavaScript POST" && it.isVisibleToUser && it.isEnabled} ?: return@waitFor false
+                    var document:AccessibilityNodeInfo?=button
+                    var depth=0
+                    while(document!=null && document.className?.toString()!="android.webkit.WebView" && depth++<40)document=document.parent
+                    if(document==null || document.className?.toString()!="android.webkit.WebView" || !document.isVisibleToUser)return@waitFor false
+                    val screen=android.graphics.Rect();root.getBoundsInScreen(screen)
+                    val buttonBounds=android.graphics.Rect();button.getBoundsInScreen(buttonBounds)
+                    val documentBounds=android.graphics.Rect();document.getBoundsInScreen(documentBounds)
+                    !buttonBounds.isEmpty && buttonBounds.intersect(screen) && !documentBounds.isEmpty && documentBounds.intersect(screen)
+                }
                 val processes=context.getSystemService(android.app.ActivityManager::class.java)
                 fun childPid()=processes.runningAppProcesses.orEmpty().singleOrNull {it.processName==context.packageName+":hidden_vpn_browser"}?.pid
                 val admittedPid=childPid();assertNotNull(admittedPid)
