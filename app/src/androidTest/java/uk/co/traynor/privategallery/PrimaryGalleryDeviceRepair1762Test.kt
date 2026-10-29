@@ -65,6 +65,31 @@ class PrimaryGalleryDeviceRepair1762Test {
             }
             assertTrue("Cross-vault Primary preview completes",previewReady.await(15,TimeUnit.SECONDS))
             assertTrue("Authenticated Primary image has a thumbnail",checkNotNull(preview).isSuccess)
+            // Expiry through the actual retention-setting and load callbacks must retire decoded previews.
+            for(viaSetting in listOf(true,false)) {
+                val expired=(repository.importVerified(VaultImportSource("expiry.png","image/png",{plain.inputStream()},createDistinctCopy=true)) as ImportResult.Imported).item
+                repository.retentionDays(0);repository.moveToRecentlyDeleted(expired.id,1000)
+                val ready=CountDownLatch(1);var decoded:android.graphics.Bitmap?=null
+                compose.runOnIdle {activity.loadTrashPreview(expired){decoded=it.getOrThrow();ready.countDown()}}
+                assertTrue(ready.await(15,TimeUnit.SECONDS));assertNotNull(decoded)
+                val expiredDone=CountDownLatch(1)
+                if(viaSetting)compose.runOnIdle {activity.saveTrashRetention(7){expiredDone.countDown()}}
+                else {
+                    repository.retentionDays(7)
+                    compose.runOnIdle {
+                        val callback:(List<VaultItem>)->Unit={assertTrue(it.none {entry->entry.id==expired.id});expiredDone.countDown()}
+                        MainActivity::class.java.getDeclaredMethod("loadRecentlyDeleted",kotlin.jvm.functions.Function1::class.java).apply{isAccessible=true}.invoke(activity,callback)
+                    }
+                }
+                assertTrue(expiredDone.await(15,TimeUnit.SECONDS))
+                compose.runOnIdle {
+                    @Suppress("UNCHECKED_CAST")
+                    val previews=MainActivity::class.java.getDeclaredField("previewKeys").apply{isAccessible=true}.get(activity) as Map<String,String>
+                    assertFalse("Expiry retires decoded cache identity",previews.containsKey(expired.id))
+                    assertEquals("Expiry clears mutable decoded pixels",android.graphics.Color.TRANSPARENT,checkNotNull(decoded).getPixel(0,0))
+                }
+                assertTrue(repository.recentlyDeleted().none {it.id==expired.id})
+            }
             compose.runOnIdle {state.hidden.select()}
             assertTrue("Primary media cannot appear behind Hidden",items().isEmpty())
             compose.runOnIdle {state.hidden.outside();select.invoke(activity,true)}
