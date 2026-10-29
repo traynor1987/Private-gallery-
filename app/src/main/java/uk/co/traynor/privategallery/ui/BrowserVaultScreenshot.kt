@@ -63,7 +63,19 @@ internal object BrowserVaultScreenshot {
             if(safe!="true" || !allowed(rect,true) || rect!=bounds()){reject();return@evaluateJavascript}
             val bitmap=try {Bitmap.createBitmap(rect!!.width(),rect.height(),Bitmap.Config.ARGB_8888)}catch(_:Throwable){reject();return@evaluateJavascript}
             fun wipeBitmap(){try{bitmap.eraseColor(Color.TRANSPARENT)}finally{bitmap.recycle()}}
+            val deadline=android.os.SystemClock.uptimeMillis()+1500
+            fun copyFrame() {
+            if(finished.get() || !allowed(rect,true) || rect!=bounds()){wipeBitmap();reject();return}
             try {PixelCopy.request(window,rect!!,bitmap,{status ->
+                // A committed frame can precede the source buffer becoming readable. Retry
+                // only NO_DATA, bounded and fenced by the original viewport and authority.
+                // Secure/invalid sources and all other platform failures remain refusals.
+                if(status==PixelCopy.ERROR_SOURCE_NO_DATA && android.os.SystemClock.uptimeMillis()<deadline &&
+                    allowed(rect,true) && rect==bounds()) {
+                    view.invalidate();window.decorView.invalidate()
+                    handler.postDelayed({copyFrame()},32)
+                    return@request
+                }
                 var output:BrowserScreenshotBuffer?=null
                 try {
                     // Keep only non-content diagnostics; never conflate a missing frame with
@@ -86,6 +98,8 @@ internal object BrowserVaultScreenshot {
                 } catch(failure:Throwable){reject(failure)}
                 finally {output?.wipe();wipeBitmap()}
             },handler)} catch(failure:Throwable){wipeBitmap();reject(failure)}
+            }
+            copyFrame()
         }}catch(_:Exception){handler.removeCallbacks(timeout);reject()}
     }
 

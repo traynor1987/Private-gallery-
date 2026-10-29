@@ -177,7 +177,7 @@ internal fun PrivateAppAuthentication(request:PrivateAppAuthenticationRequest) {
             if(failed)Text("Authentication failed or is temporarily unavailable.",color=MaterialTheme.colorScheme.error)
         }},confirmButton={TextButton(enabled=!busy && pin.length>=6,onClick={
             val input=pin.toCharArray();inputOwner.set(input);pin="";busy=true
-            scope.launch {
+            scope.launch(Dispatchers.Main.immediate) {
                 try {
                     // Presentation authority may inspect native views: validate it only on Main.
                     // The verifier independently fences its credential/key or broker authority on IO.

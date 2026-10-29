@@ -622,6 +622,18 @@ class HiddenVpnBrowserActivity:ComponentActivity() {
                     (view.parent as? android.view.ViewGroup)?.removeView(view)
                     android.widget.FrameLayout(this@HiddenVpnBrowserActivity).apply {
                         clipChildren=true;clipToPadding=true
+                        addOnLayoutChangeListener { _, left, top, right, bottom, oldLeft, oldTop, oldRight, oldBottom ->
+                            if(right-left != oldRight-oldLeft || bottom-top != oldBottom-oldTop) {
+                                // Publish native descendant geometry only after Compose has applied
+                                // the new Fold bounds; configuration callbacks precede this layout.
+                                view.post {
+                                    if(live() && view === current && view.isAttachedToWindow) {
+                                        view.requestLayout();view.invalidate()
+                                        view.sendAccessibilityEvent(android.view.accessibility.AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED)
+                                    }
+                                }
+                            }
+                        }
                         addView(view,android.widget.FrameLayout.LayoutParams(android.view.ViewGroup.LayoutParams.MATCH_PARENT,android.view.ViewGroup.LayoutParams.MATCH_PARENT))
                     }
                 },modifier=Modifier.fillMaxSize())};failures[view]?.let {detail ->BrowserPageError(detail,{failures.remove(view);view.reload()},{library();menu=true})}}
