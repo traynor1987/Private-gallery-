@@ -3,6 +3,18 @@
 import json,re,sys,time
 from pathlib import Path
 
+def host_fixture_adb_multicast(record):
+ # The fixture owns203.0.113.10 on host lo. Host adb joins mDNS on that
+ # address; these exact TTL1 local reports/queries are not Android origin routes.
+ # Keep every other occurrence subject to the original WireGuard-only assertion.
+ lines=record.splitlines()
+ if len(lines)<2 or not re.match(r'^\d{4}-\d\d-\d\d \S+ lo\s+(?:In|Out)\s+IP \(tos [^,]+, ttl 1,',lines[0]):return False
+ endpoint=lines[1].strip()
+ if 'proto IGMP (2)' in lines[0]:
+  return endpoint=='203.0.113.10 > 224.0.0.22: igmp v3 report, 1 group record(s) [gaddr 224.0.0.251 to_ex { }]'
+ if 'proto UDP (17)' not in lines[0]:return False
+ return re.fullmatch(r'203\.0\.113\.10\.5353 > 224\.0\.0\.251\.5353: (?:\[bad udp cksum 0x[0-9a-f]+ -> 0x[0-9a-f]+!\] )?0 \[3q\] ANY ANY \(QM\)\? _adb\._tcp\.local\. ANY ANY \(QM\)\? _adb-tls-connect\._tcp\.local\. ANY ANY \(QM\)\? _adb-tls-pairing\._tcp\.local\. \(99\)',endpoint) is not None
+
 root=Path(sys.argv[1])
 deadline=time.monotonic()+5
 while True:
@@ -49,7 +61,7 @@ records=re.split(r'(?=^\d{4}-\d\d-\d\d )',packets,flags=re.M)
 fixture_dns=[record for record in records if re.search(r'\bfixture\.invalid\.',record)]
 assert fixture_dns,'No packet-level fixture DNS evidence'
 assert all('pg1762' in record for record in fixture_dns),'Fixture DNS appeared outside WireGuard interface'
-origin_packets=[record for record in records if '203.0.113.10' in record]
+origin_packets=[record for record in records if '203.0.113.10' in record and not host_fixture_adb_multicast(record)]
 assert origin_packets and all('pg1762' in record for record in origin_packets),'Origin traffic attempted a non-WireGuard route'
 assert (root/'traffic.pcap').stat().st_size>24,'Missing packet capture'
 (root/'result.txt').write_text('PASS: actual JavaScript POST, HTML form POST and multipart bodies; WireGuard-only origin and fixture DNS observed; in-flight revocation fixture exercised. Instrumentation results separately required for cancellation/profile/mode-switch assertions.\n')
