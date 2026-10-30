@@ -519,8 +519,10 @@ class HiddenVpnBrowserActivity:ComponentActivity() {
                                 val pipes=ParcelFileDescriptor.createReliablePipe()
                                 try {
                                     check(authorized())
-                                    call(HiddenVpnBrowserBroker.SCREENSHOT,write={it.writeInt(1);it.writeTypedObject(pipes[0],0)},read={Unit})
-                                    pipes[0].close()
+                                    // Transfer the reliable read endpoint silently. A normal local
+                                    // close publishes a premature peer status and can make the
+                                    // receiver observe a dead peer instead of the writer's completion.
+                                    call(HiddenVpnBrowserBroker.SCREENSHOT,write={it.writeInt(1);it.writeTypedObject(pipes[0],android.os.Parcelable.PARCELABLE_WRITE_RETURN_VALUE)},read={Unit})
                                     ParcelFileDescriptor.AutoCloseOutputStream(pipes[1]).use {output ->source.openStream().use {input ->
                                         val buffer=ByteArray(16*1024)
                                         try {while(true){check(authorized());val count=input.read(buffer);if(count<0)break;output.write(buffer,0,count)}}finally{buffer.fill(0)}

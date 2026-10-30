@@ -1,0 +1,22 @@
+{
+  "source_sha": "15d52ac703e4f72c922533a75062bbd625538d8d",
+  "run_id": 40983340614,
+  "artifact_id": 12946740479,
+  "artifact_sha256": "97beb47e22fa6560a8efcd753b940871475516b3599e16e7ab64721d5fb5b9de",
+  "tests": 38,
+  "passed": 36,
+  "failed": 2,
+  "skipped": 0,
+  "failures": [
+    {
+      "classname": "uk.co.traynor.privategallery.core.browser.hidden.HiddenPrivateAppsLive178Test",
+      "name": "vpnCatalogueCrudLaunchAndRevocationUseAuthenticatedSeparateProcess",
+      "failure": "java.lang.AssertionError: Actual child screenshot pipe persists authenticated encrypted PNG\nat uk.co.traynor.privategallery.core.browser.hidden.HiddenPrivateAppsLive178Test.waitFor(HiddenPrivateAppsLive178Test.kt:63)\nat uk.co.traynor.privategallery.core.browser.hidden.HiddenPrivateAppsLive178Test.exercise(HiddenPrivateAppsLive178Test.kt:326)\nat uk.co.traynor.privategallery.core.browser.hidden.HiddenPrivateAppsLive178Test.vpnCatalogueCrudLaunchAndRevocationUseAuthenticatedSeparateProcess(HiddenPrivateAppsLive178Test.kt:498)\n"
+    },
+    {
+      "classname": "uk.co.traynor.privategallery.core.browser.hidden.HiddenPrivateAppsLive178Test",
+      "name": "torCatalogueCrudOnionLaunchAndRevocationUseAuthenticatedSeparateProcess",
+      "failure": "java.lang.AssertionError: Actual onion HTTP document is ready before metadata discovery\nat uk.co.traynor.privategallery.core.browser.hidden.HiddenPrivateAppsLive178Test.waitFor(HiddenPrivateAppsLive178Test.kt:63)\nat uk.co.traynor.privategallery.core.browser.hidden.HiddenPrivateAppsLive178Test.exercise$openChild(HiddenPrivateAppsLive178Test.kt:242)\nat uk.co.traynor.privategallery.core.browser.hidden.HiddenPrivateAppsLive178Test.exercise(HiddenPrivateAppsLive178Test.kt:250)\nat uk.co.traynor.privategallery.core.browser.hidden.HiddenPrivateAppsLive178Test.torCatalogueCrudOnionLaunchAndRevocationUseAuthenticatedSeparateProcess(HiddenPrivateAppsLive178Test.kt:533)\n"
+    }
+  ]
+}

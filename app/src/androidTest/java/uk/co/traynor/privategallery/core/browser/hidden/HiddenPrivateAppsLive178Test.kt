@@ -219,7 +219,21 @@ class HiddenPrivateAppsLive178Test {
                 broker = HiddenVpnBrowserBroker(owned, session, network, authorized, { ended.set(true) },
                     mode = mode, torUnixPath = path, hiddenCaptureAllowed={true})
             }
-            if (torMode) checkNotNull(broker).verifyTorReady()
+            if (torMode) {
+                val host=checkNotNull(URI(launchUrl).host)
+                val expected=checkNotNull(InstrumentationRegistry.getArguments().getString("hiddenOnionProbeExpected"))
+                // A new packaged Tor instance needs its own controlled-origin readiness,
+                // independent of the previously retired test's circuit or bootstrap status.
+                HiddenTorSockets.open(checkNotNull(path),host,80).use {stream ->
+                    stream.output.write("GET / HTTP/1.1\r\nHost: $host\r\nConnection: close\r\n\r\n".toByteArray());stream.output.flush()
+                    val bytes=stream.input.readNBytes(4097)
+                    assertTrue("Controlled readiness response is bounded",bytes.size<=4096)
+                    val raw=try{bytes.toString(Charsets.UTF_8)}finally{bytes.fill(0)}
+                    assertEquals("200",raw.lineSequence().first().split(' ').getOrNull(1))
+                    assertEquals(expected,raw.substringAfter("\r\n\r\n").trim())
+                }
+                checkNotNull(broker).verifyTorReady()
+            }
             scenario.onActivity { checkNotNull(broker).launch() }
             waitFor("Actual claimed child enforces selected transport security") {
                 checkNotNull(broker).childSecuritySnapshot() == ((!torMode) to true)
