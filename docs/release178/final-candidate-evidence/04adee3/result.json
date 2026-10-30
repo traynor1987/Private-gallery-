@@ -1,0 +1,21 @@
+{
+  "source_sha": "04adee3edee6549a73d90d111de557a87d717b70",
+  "run_id": 41062911250,
+  "job_id": 124086861823,
+  "artifact_id": 12981937120,
+  "artifact_sha256": "d3ef43bf10065d90cd24b289dfac1dffcef7ec15c485a05c0c2b658e43e0e762",
+  "original_conclusion": "failure",
+  "android": {
+    "tests": 38,
+    "failures": 4,
+    "errors": 0,
+    "skipped": 0
+  },
+  "jvm": {
+    "tests": 29,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "failure": "All4native cases refused newrealaccessibilityserviceprecondition beforebrowser;34othersPASS inclSettings. Pregradleserviceactivation notvalidatedafterAPKinstall/instrumentationstartup."
+}
