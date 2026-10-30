@@ -1,0 +1,11 @@
+{
+  "source_sha": "04b91ae01c64323aac02975672d6046dfba62e30",
+  "decision": "PASS",
+  "original_exit_status": 0,
+  "network": {
+    "owned_vpn": "PASS",
+    "native_tor": "PASS",
+    "dns_and_packet_observation": "PASS",
+    "revocation": "PASS"
+  }
+}

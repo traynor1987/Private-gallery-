@@ -228,8 +228,8 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 45
     env:
-      # Deliberately disabled until exact-source gates and independent review pass.
-      FROZEN_SOURCE: '0000000000000000000000000000000000000000'
+      # Exact tested source; independent approval and original-key upgrade gates remain mandatory.
+      FROZEN_SOURCE: '04b91ae01c64323aac02975672d6046dfba62e30'
     steps:
       - uses: actions/checkout@v4
       - name: Preserve exact 1.7.8 approval and reviewed controls

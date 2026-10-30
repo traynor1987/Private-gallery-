@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="uk.co.traynor.privategallery.core.privateapps.PrivateAppsControllerTest" tests="2" skipped="0" failures="0" errors="0" timestamp="2026-10-30T14:46:10.952Z" hostname="runnervm48cm3" time="0.023">
+  <properties/>
+  <testcase name="revoke_before_callback_prevents_publication_and_wipes_request" classname="uk.co.traynor.privategallery.core.privateapps.PrivateAppsControllerTest" time="0.008"/>
+  <testcase name="launch_resolves_saved_id_and_revoked_controller_cannot_navigate" classname="uk.co.traynor.privategallery.core.privateapps.PrivateAppsControllerTest" time="0.015"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>
