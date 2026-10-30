@@ -1,0 +1,21 @@
+{
+  "source_sha": "1f2ee050ab5e3c503cb17af32f38df2c27dee15d",
+  "run_id": 41071359489,
+  "job_id": 124116039126,
+  "artifact_id": 12985327628,
+  "artifact_sha256": "d8c5da68eb98964adef2a7c59ded55bdf892a1393725cc50dc1ad833ade42627",
+  "original_conclusion": "failure",
+  "android": {
+    "tests": 38,
+    "failures": 1,
+    "errors": 0,
+    "skipped": 0
+  },
+  "jvm": {
+    "tests": 29,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "failure": "OnlySettingscombinedfixture Hiddenauth-tag absent afterin-placePrimarytoHiddencontroller/windowreplacement. All4complete nativecasesPASS. Aggregatepacketgate notexecuted."
+}

@@ -37,7 +37,7 @@ class PrivateAppSessionSettings178Test {
   compose.waitUntil(5000){rejected==2}
   compose.runOnIdle {assertEquals(1,accepted)}
  }
- @Test fun shared_profile_effects_require_explicit_confirmation_and_hidden_has_no_retention_toggle() {
+ @Test fun primary_shared_profile_effects_require_explicit_confirmation() {
   val entry=PrivateAppCatalog.App(UUID.randomUUID().toString(),"Shared App","https://example.test/","","browser","",false,true,false)
   var value=PrivateAppCatalog(false,listOf(entry));var keep=false;var clears=0;var show by mutableStateOf(true)
   val store=object:PrivateAppStore {
@@ -46,11 +46,8 @@ class PrivateAppSessionSettings178Test {
    override fun update(change:UnaryOperator<PrivateAppCatalog>):PrivateAppCatalog {value=change.apply(value);return value}
   }
   val primary=PrivateAppsController(store.owner(),{true},{a,b,id->PrivateAppCommands.execute(store,a,b,id)},{},keepSignedIn={keep},changeKeepSignedIn={keep=it},clearProfile={clears++})
-  val hidden=PrivateAppsController(PrivateAppStore.Owner.HIDDEN_VPN,{true},{_,_,_->value},{},clearProfile={clears++})
-  var controller by mutableStateOf(primary)
-  compose.setContent {PrivateGalleryTheme(AppTheme.LIGHT){if(show)key(controller){
-   val displayed=controller
-   PrivateAppSettings(displayed,entry.id(),{}, {},{if(controller===displayed)show=false})
+  compose.setContent {PrivateGalleryTheme(AppTheme.LIGHT){if(show){
+   PrivateAppSettings(primary,entry.id(),{}, {},{show=false})
   }}}
   compose.waitUntil(5000){compose.onAllNodesWithTag("private-app-retention-toggle").fetchSemanticsNodes().isNotEmpty()}
   compose.onNodeWithTag("private-app-retention-toggle").performScrollTo().performClick()
@@ -63,10 +60,17 @@ class PrivateAppSessionSettings178Test {
   compose.onNodeWithText("Cancel").performClick();compose.runOnIdle {assertEquals(0,clears)}
   compose.onNodeWithText("Clear shared browser session and data").performScrollTo().performClick()
   compose.onNodeWithText("Confirm").performClick()
-  // Clearing closes the original dialog. Observe that publication before opening a
-  // different owner's dialog; the callback side effect alone is not window disposal.
+  // The actual Primary clear closes this owner's original dialog.
   compose.waitUntil(5000){clears==1 && compose.onAllNodesWithText("Private app settings").fetchSemanticsNodes().isEmpty()}
-  compose.runOnIdle {assertEquals(1,clears);controller=hidden;show=true}
+  compose.runOnIdle {assertEquals(1,clears)}
+ }
+ @Test fun hidden_settings_have_authentication_but_no_retention_toggle() {
+  val entry=PrivateAppCatalog.App(UUID.randomUUID().toString(),"Shared App","https://example.test/","","browser","",false,true,false)
+  val value=PrivateAppCatalog(false,listOf(entry))
+  val hidden=PrivateAppsController(PrivateAppStore.Owner.HIDDEN_VPN,{true},{_,_,_->value},{},clearProfile={})
+  // A browser/controller has one immutable owner. Use a fresh actual dialog rather
+  // than replacing Primary with Hidden inside the same test-owned window.
+  compose.setContent {PrivateGalleryTheme(AppTheme.LIGHT){PrivateAppSettings(hidden,entry.id(),{}, {},{})}}
   compose.waitUntil(5000){compose.onAllNodesWithTag("private-app-auth-toggle").fetchSemanticsNodes().isNotEmpty()}
   compose.onNodeWithTag("private-app-retention-toggle").assertDoesNotExist()
  }

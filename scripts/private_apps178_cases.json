@@ -129,7 +129,7 @@
   },
   {
     "classname": "uk.co.traynor.privategallery.ui.PrivateAppSessionSettings178Test",
-    "name": "shared_profile_effects_require_explicit_confirmation_and_hidden_has_no_retention_toggle"
+    "name": "primary_shared_profile_effects_require_explicit_confirmation"
   },
   {
     "classname": "uk.co.traynor.privategallery.ui.PrivateAppsUi178Test",
@@ -150,5 +150,9 @@
   {
     "classname": "uk.co.traynor.privategallery.HideContent1761Test",
     "name": "concealedTabsRestartAndPanicRetainFlagWithoutDeletingSyntheticState"
+  },
+  {
+    "classname": "uk.co.traynor.privategallery.ui.PrivateAppSessionSettings178Test",
+    "name": "hidden_settings_have_authentication_but_no_retention_toggle"
   }
 ]

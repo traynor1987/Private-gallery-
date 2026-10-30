@@ -352,6 +352,9 @@ jobs:
           test "$(git rev-parse HEAD)" = "$FROZEN_SOURCE"
           ./gradlew lintRelease assembleRelease --stacktrace
           bash scripts/verify_production_candidate.sh
+          "$ANDROID_HOME/build-tools/36.0.0/aapt" dump xmltree app/build/outputs/apk/release/app-release.apk AndroidManifest.xml > app/build/production-evidence/release-manifest.txt
+          test -s app/build/production-evidence/release-manifest.txt
+          ! grep -Fq 'CiAccessibilityService178' app/build/production-evidence/release-manifest.txt
           python3 scripts/verify_local_ai_distribution.py app/build/outputs/apk/release/app-release.apk
           python3 scripts/verify_hidden_tor_distribution.py app/build/outputs/apk/release/app-release.apk app/build/production-evidence/tor-distribution.json
       - name: Preserve reviewed upgrade fixture from release control
