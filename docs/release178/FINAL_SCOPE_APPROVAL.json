@@ -33,10 +33,10 @@
     "decision": "APPROVED",
     "critical_open": 0,
     "important_open": 0,
-    "report_sha256": "79bd76c79ec0e215286b6fce937cf1efd53dd3e345f2d557ab0d71c53cedcb7d"
+    "report_sha256": "2dfd80e26f2a45bcfe920c3fa602c6140d2e01f5d79cf142912d8013de9bdb03"
   },
   "case_manifest_sha256": "b4fb7b96cb568e55442758d212783c33879ffdc3eb6b9bcac680b2046e00568f",
-  "upgrade_fixture_sha256": "cda89804a84f88ad5de5d0bf912efe79fb33ca283427d7ea8cf7d3f40bc87429",
+  "upgrade_fixture_sha256": "71f707a77216e3294e7cbb93d2f544bdb89c61c3d8435009f85a7b1d20ade43e",
   "validator_sha256": "6bfbb5898f9a1eeafb1a8067b352dbae3a818e290d2cfda18b6b671159987b21",
   "focused_run_id": 41074139917,
   "focused_artifact_id": 12987700481,

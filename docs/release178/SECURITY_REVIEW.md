@@ -76,7 +76,7 @@ SyntheticAPI37width/theme/font/Fold cases do not establish physicalSamsungfoldin
 |---|---|
 | scripts/private_apps178_cases.json —39exact cases | b4fb7b96cb568e55442758d212783c33879ffdc3eb6b9bcac680b2046e00568f |
 | scripts/verify_final_scope178.py | 6bfbb5898f9a1eeafb1a8067b352dbae3a818e290d2cfda18b6b671159987b21 |
-| docs/release178/UpgradeFixtureTest.kt | cda89804a84f88ad5de5d0bf912efe79fb33ca283427d7ea8cf7d3f40bc87429 |
+| docs/release178/UpgradeFixtureTest.kt | 71f707a77216e3294e7cbb93d2f544bdb89c61c3d8435009f85a7b1d20ade43e |
 | scripts/verify_upgrade178_baseline.py | 7e93c9b75d93e2cb7cd7477d4eebc0d2419016fe3a39b275604fef6cfe8b5445 |
 | scripts/verify_synthetic_upgrade178.sh | b96b4e4cdcab16a5e2ee148f0dc5c68534415b54f4eaf36c06e3d3267fd6452c |
 | scripts/verify_hidden_vpn_fixture1762.py | 2e9827e1869a8ed52b22dd5161cd34c72404c6dc6a75e8a8bc9e4ad5d0b49676 |
@@ -85,6 +85,14 @@ SyntheticAPI37width/theme/font/Fold cases do not establish physicalSamsungfoldin
 Final upgrade fixture was reviewed as control-only instrumentation, captured/hash-checked before frozen application checkout. It supersedes the old fixture hash without changing tested application identity. Actual existing camera APIs seed distinct encrypted nondefault configurations/audio in both vaults before ciphertext snapshot; six real Primary browser preferences and a persistent Secure synthetic cookie are seeded/asserted with Main-thread CookieManager calls, off-Main bounded callback wait/flush and restart check. No real credential/network/camera hardware is required; Hidden cookies remain ephemeral. Baseline camera API unchanged. This is preparation, not executed upgrade evidence.
 
 Acceptance178 remains disabled without approved exact-source marker/report/control hashes and API-bound successful workflow/artifact identity. It must use the exact archived original signed1.7.7 APK: source 25aae6d59f79c455e47acc73a5c99f9c8f15242a, run40899438953/artifact 12908558722, archiveSHA25616873a3b24abcb311d21ca11e93e1af1707be42946a817770e4b9d629e790869, APK SHA256696e80071497501d8da6cd8dd3e2c9728a63b0d4abc9e88c4ab46338fef97a2e, original certificate94f2bfc6567f26d067d29077111cfd0ce86d38263c642ad115e43365f05b0d17. No rebuilt baseline substitute. Same signed candidate must pass original-key46→47 in-place upgrade/restart and artifact/certificate/hash verification before delivery. No execution of that final upgrade or verified signed APK is claimed here. Physical owner acceptance remains OWNER_REQUIRED.
+
+## Upgrade control compilation correction
+
+Signing/upgrade run 41077235746, acceptance178 job 124136609755, stopped at upgrade-instrumentation compilation before baseline/candidate adb installation. The release coordinator reports frozen-source evidence, original baseline identity/certificate, signer identity, release lint/build/package, debug-service manifest absence and distribution checks passed. Reported failure artifact 12988277663 has SHA256 3a24bed44d710d372ef162e949dab27e66b778b064cfa1d918659bf2035ce98d; this reviewer has not yet independently inspected that archive.
+
+The reviewer independently inspected the exact one-character control-only fix in docs/release178/UpgradeFixtureTest.kt: an omitted outer result.put closing parenthesis in deletedSnapshot is restored. This preserves all recorded Recently Deleted fields and assertions. The syntax defect was missed in the earlier source review; no executed upgrade claim had been made. Corrected fixture SHA256 is 71f707a77216e3294e7cbb93d2f544bdb89c61c3d8435009f85a7b1d20ade43e, now the reviewed control pin above.
+
+Frozen application 04b91ae01c64323aac02975672d6046dfba62e30 and its successful 39 Android/29 JVM/packet evidence are unchanged, so the application-source approval remains valid for the controlled signing/upgrade stage with this corrected fixture. Compilation and exact original-key baseline-to-candidate upgrade/restart remain mandatory and unverified; no delivery approval follows from this correction. The failed signing/upgrade run remains failed and must not be represented as completed preservation evidence.
 
 ## Final machine-readable decision
 ```json

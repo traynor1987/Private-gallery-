@@ -1,0 +1,21 @@
+{
+  "control_sha": "c4db959d7c00367f7291af1dbbb82ab1bfbbb794",
+  "source_sha": "04b91ae01c64323aac02975672d6046dfba62e30",
+  "run_id": 41077235746,
+  "job_id": 124136609755,
+  "artifact_id": 12988277663,
+  "artifact_sha256": "3a24bed44d710d372ef162e949dab27e66b778b064cfa1d918659bf2035ce98d",
+  "conclusion": "failure",
+  "failure": "Release-control upgrade fixture Kotlin202 missing outer result.put closing parenthesis; compilation stopped before baseline/candidate installations.",
+  "passed": [
+    "exact runtime/security gate",
+    "exact original177 baseline identity/certificate",
+    "original signing key",
+    "lintRelease",
+    "production APK package/version/API/certificate/hash",
+    "release manifest no debug accessibility service",
+    "AI/Tor distribution"
+  ],
+  "upgrade": "NOT_EXECUTED",
+  "delivery": "NOT_PUBLISHED"
+}

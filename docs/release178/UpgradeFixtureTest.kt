@@ -199,7 +199,7 @@ class UpgradeFixtureTest {
             .put("state",item.state.name).put("deleted",item.deletedAtEpochMillis)
             .put("name",item.displayName).put("mime",item.mimeType)
             .put("imported",item.importedAtEpochMillis).put("size",item.plaintextSize)
-            .put("hash",hash(item.plaintextSha256)).put("nonce",hash(item.payloadNonce))
+            .put("hash",hash(item.plaintextSha256)).put("nonce",hash(item.payloadNonce)))
         }
     }
     private fun assertRecentlyDeleted(expected:JSONObject,deleted:List<VaultItem>,active:List<VaultItem>) {
