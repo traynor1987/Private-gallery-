@@ -39,7 +39,11 @@ internal object BrowserVaultScreenshot {
                 try { complete(result) } catch(failure: Throwable) { result.getOrNull()?.onConsumed?.invoke();throw failure }
             } else result.getOrNull()?.onConsumed?.invoke()
         }
-        fun reject(cause:Throwable?=null) = finish(Result.failure(IllegalStateException(BrowserScreenshotPolicy.REFUSAL,cause)))
+        fun reject(cause:Throwable?=null,stage:String="capture") {
+            if(uk.co.traynor.privategallery.BuildConfig.DEBUG)android.util.Log.i("PrivateAppsScreenshot",
+                "Refused stage=$stage secure=${window.attributes.flags and WindowManager.LayoutParams.FLAG_SECURE != 0} focus=${window.decorView.hasWindowFocus()} attached=${view.isAttachedToWindow} shown=${view.isShown} cause=${cause?.javaClass?.simpleName}")
+            finish(Result.failure(IllegalStateException(BrowserScreenshotPolicy.REFUSAL,cause)))
+        }
         fun bounds():Rect? {
             val local=Rect()
             if(!view.getLocalVisibleRect(local))return null
@@ -54,14 +58,15 @@ internal object BrowserVaultScreenshot {
             window.decorView.hasWindowFocus(),view.isAttachedToWindow && view.isShown,
             safe && !hasSurface(view),rect?.width() ?: 0,rect?.height() ?: 0) }.getOrDefault(false)
         val rect=bounds()
-        if(!allowed(rect,true) || !view.settings.javaScriptEnabled){reject();return}
+        if(!allowed(rect,true)){reject(stage="window-policy");return}
+        if(!view.settings.javaScriptEnabled){reject(stage="javascript-disabled");return}
         // Inspection never changes site settings. JavaScript-disabled documents are unsupported.
         val timeout=Runnable {reject()};handler.postDelayed(timeout,2000)
         try {view.evaluateJavascript(SAFE_DOCUMENT) { safe ->
             handler.removeCallbacks(timeout)
             if(finished.get())return@evaluateJavascript
-            if(safe!="true" || !allowed(rect,true) || rect!=bounds()){reject();return@evaluateJavascript}
-            val bitmap=try {Bitmap.createBitmap(rect!!.width(),rect.height(),Bitmap.Config.ARGB_8888)}catch(_:Throwable){reject();return@evaluateJavascript}
+            if(safe!="true" || !allowed(rect,true) || rect!=bounds()){reject(stage="inspection-or-viewport");return@evaluateJavascript}
+            val bitmap=try {Bitmap.createBitmap(rect!!.width(),rect.height(),Bitmap.Config.ARGB_8888)}catch(_:Throwable){reject(stage="inspection-or-viewport");return@evaluateJavascript}
             fun wipeBitmap(){try{bitmap.eraseColor(Color.TRANSPARENT)}finally{bitmap.recycle()}}
             val deadline=android.os.SystemClock.uptimeMillis()+1500
             fun copyFrame() {
@@ -95,7 +100,7 @@ internal object BrowserVaultScreenshot {
                         publishIfAllowed={commit ->check(authorized());commit()})
                     output=null
                     finish(Result.success(source))
-                } catch(failure:Throwable){reject(failure)}
+                } catch(failure:Throwable){reject(failure,stage="pixelcopy-$status-or-commit")}
                 finally {output?.wipe();wipeBitmap()}
             },handler)} catch(failure:Throwable){wipeBitmap();reject(failure)}
             }

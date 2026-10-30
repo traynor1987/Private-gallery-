@@ -318,6 +318,9 @@ class HiddenPrivateAppsLive178Test {
                 visible("App home") && visible("Private app settings") && visible("Private Apps library")
             }
             if(!torMode) {
+                waitFor("Screenshot fixture has finished the original app document") {
+                    visible("Refresh app") && !visible("Stop app loading") && visible("Download app document")
+                }
                 val count=repository.items().size
                 click("Screenshot to Vault");click("Save screenshot")
                 waitFor("Actual child screenshot pipe persists authenticated encrypted PNG",30) {repository.items().size==count+1}
@@ -375,7 +378,7 @@ class HiddenPrivateAppsLive178Test {
             // App home starts a fresh document; the prior selection cannot silently submit.
             // Already consented bytes are not recallable; session revocation separately closes descriptors.
             click("App home")
-            waitFor("App home renders after grant cancellation") {visible("Download app document")}
+            waitFor("App home renders after grant cancellation") {visible("Download app document") && visible("Refresh app") && !visible("Stop app loading")}
             assertEquals(beforeUpload,documentPosts())
             clickWeb("Choose app document")
             waitFor("Fresh navigation requires a fresh document selection") {visible(uploadDocument.displayName)}

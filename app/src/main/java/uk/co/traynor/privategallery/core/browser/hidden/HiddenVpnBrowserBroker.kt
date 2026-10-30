@@ -378,6 +378,9 @@ internal class HiddenVpnBrowserBroker(
                                             repo.verify(item.id)
                                         }
                                     }
+                                    if(uk.co.traynor.privategallery.BuildConfig.DEBUG)outcome.exceptionOrNull()?.let {
+                                        android.util.Log.w("PrivateAppsScreenshot","Encrypted screenshot save failed: ${it.javaClass.simpleName}")
+                                    }
                                     if(valid())downloadStatus=if(outcome.isSuccess)"Screenshot verified and saved encrypted in Hidden Vault." else "Screenshot could not be saved. No capture was exported."
                                 } finally {main.removeCallbacks(expiry);screenshotReaders.remove(input);runCatching {input.close()};screenshotting.set(false)}
                             }
@@ -500,7 +503,7 @@ internal class HiddenVpnBrowserBroker(
             .proxy(java.net.Proxy(java.net.Proxy.Type.HTTP,java.net.InetSocketAddress(java.net.InetAddress.getByAddress(byteArrayOf(127,0,0,1)),proxy.port)))
             .proxyAuthenticator(object:Authenticator {override fun authenticate(route:Route?,response:Response):Request? = if(response.request.header("Proxy-Authorization")!=null)null else response.request.newBuilder().header("Proxy-Authorization",Credentials.basic("hidden",proxy.password)).build()})
             .dns(object:Dns {override fun lookup(hostname:String):List<java.net.InetAddress> = throw java.net.UnknownHostException("Tor origin DNS prohibited")})
-            .followRedirects(false).retryOnConnectionFailure(false).callTimeout(30,TimeUnit.SECONDS).build()
+            .followRedirects(false).retryOnConnectionFailure(false).connectTimeout(30,TimeUnit.SECONDS).readTimeout(30,TimeUnit.SECONDS).callTimeout(30,TimeUnit.SECONDS).build()
         val call=client.newCall(Request.Builder().url("https://example.com/").build())
         try {
             synchronized(gate){check(valid());calls.add(call)}

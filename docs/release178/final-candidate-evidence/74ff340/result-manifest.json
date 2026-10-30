@@ -1,0 +1,27 @@
+{
+  "source_sha": "74ff34027b2290ef9f87238254a87b491ebec258",
+  "run_id": 40979560705,
+  "artifact_id": 12943953446,
+  "artifact_sha256": "e072c825de3e58d39758d4e39fd6ca42d4dee02655c706acadd4bd2e589e9f4d",
+  "tests": 38,
+  "passed": 35,
+  "failed": 3,
+  "skipped": 0,
+  "failures": [
+    {
+      "classname": "uk.co.traynor.privategallery.ui.BrowserVaultScreenshotTest",
+      "name": "visibleWebsiteOnlyAndWipedAfterConsumption",
+      "failure": "java.lang.IllegalStateException: cannot erase immutable bitmaps\nat android.graphics.Bitmap.eraseColor(Bitmap.java:2360)\nat uk.co.traynor.privategallery.ui.BrowserVaultScreenshotTest.visibleWebsiteOnlyAndWipedAfterConsumption$lambda$0(BrowserVaultScreenshotTest.kt:73)\nat uk.co.traynor.privategallery.ui.BrowserVaultScreenshotTest$$ExternalSyntheticLambda16.invoke(D8$$SyntheticClass:0)\nat uk.co.traynor.privategallery.ui.BrowserVaultScreenshotTest.fixture(BrowserVaultScreenshotTest.kt:50)\nat uk.co.traynor.privategallery.ui.BrowserVaultScreenshotTest.fixture$default(BrowserVaultScreenshotTest.kt:19)\nat uk.co.traynor.privategallery.ui.BrowserVaultScreenshotTest.visibleWebsiteOnlyAndWipedAfterConsumption(BrowserVaultScreenshotTest.kt:66)\n"
+    },
+    {
+      "classname": "uk.co.traynor.privategallery.core.browser.hidden.HiddenPrivateAppsLive178Test",
+      "name": "vpnCatalogueCrudLaunchAndRevocationUseAuthenticatedSeparateProcess",
+      "failure": "java.lang.AssertionError: Actual child screenshot pipe persists authenticated encrypted PNG\nat uk.co.traynor.privategallery.core.browser.hidden.HiddenPrivateAppsLive178Test.waitFor(HiddenPrivateAppsLive178Test.kt:63)\nat uk.co.traynor.privategallery.core.browser.hidden.HiddenPrivateAppsLive178Test.exercise(HiddenPrivateAppsLive178Test.kt:323)\nat uk.co.traynor.privategallery.core.browser.hidden.HiddenPrivateAppsLive178Test.vpnCatalogueCrudLaunchAndRevocationUseAuthenticatedSeparateProcess(HiddenPrivateAppsLive178Test.kt:490)\n"
+    },
+    {
+      "classname": "uk.co.traynor.privategallery.core.browser.hidden.HiddenPrivateAppsLive178Test",
+      "name": "torCatalogueCrudOnionLaunchAndRevocationUseAuthenticatedSeparateProcess",
+      "failure": "java.net.SocketTimeoutException: timeout\nat okio.SocketAsyncTimeout.newTimeoutException(JvmOkio.kt:146)\nat okio.AsyncTimeout.access$newTimeoutException(AsyncTimeout.kt:161)\nat okio.AsyncTimeout$source$1.read(AsyncTimeout.kt:339)\nat okio.RealBufferedSource.indexOf(RealBufferedSource.kt:430)\nat okio.RealBufferedSource.readUtf8LineStrict(RealBufferedSource.kt:323)\nat okhttp3.internal.http1.HeadersReader.readLine(HeadersReader.kt:29)\nat okhttp3.internal.http1.Http1ExchangeCodec.readResponseHeaders(Http1ExchangeCodec.kt:180)\nat okhttp3.internal.connection.RealConnection.createTunnel(RealConnection.kt:457)\nat okhttp3.internal.connection.RealConnection.connectTunnel(RealConnection.kt:262)\nat okhttp3.internal.connection.RealConnection.connect(RealConnection.kt:201)\nat okhttp3.internal.connection.ExchangeFinder.findConnection(ExchangeFinder.kt:226)\nat okhttp3.internal.connection.ExchangeFinder.findHealthyConnection(ExchangeFinder.kt:106)\nat okhttp3.internal.connection.ExchangeFinder.find(ExchangeFinder.kt:74)\nat okhttp3.internal.connection.RealCall.initExchange$okhttp(RealCall.kt:255)\nat okhttp3.internal.connection.ConnectInterceptor.intercept(ConnectInterceptor.kt:32)\nat okhttp3.internal.http.RealInterceptorChain.proceed(RealInterceptorChain.kt:109)\nat okhttp3.internal.cache.CacheInterceptor.intercept(CacheInterceptor.kt:95)\nat okhttp3.internal.http.RealInterceptorChain.proceed(RealInterceptorChain.kt:109)\nat okhttp3.internal.http.BridgeInterceptor.intercept(BridgeInterceptor.kt:83)\nat okhttp3.internal.http.RealInterceptorChain.proceed(RealInterceptorChain.kt:109)\nat okhttp3.internal.http.RetryAndFollowUpInterceptor.intercept(RetryAndFollowUpInterceptor.kt:76)\nat okhttp3.internal.http.RealInterceptorChain.proceed(RealInterceptorChain.kt:109)\nat okhttp3.internal.connection.RealCall.getResponseWithInterceptorChain$okhttp(RealCall.kt:201)\nat okhttp3.internal.connection.RealCall.execute(RealCall.kt:154)\nat uk.co.traynor.privategallery.core.browser.hidden.HiddenVpnBrowserBroker.verifyTorReady(HiddenVpnBrowserBroker.kt:507)\nat uk.co.traynor.privategallery.core.browser.hidden.HiddenPrivateAppsLive178Test.exercise$openChild(HiddenPrivateAppsLive178Test.kt:222)\nat uk.co.traynor.privategallery.core.browser.hidden.HiddenPrivateAppsLive178Test.exercise(HiddenPrivateAppsLive178Test.kt:250)\nat uk.co.traynor.privategallery.core.browser.hidden.HiddenPrivateAppsLive178Test.torCatalogueCrudOnionLaunchAndRevocationUseAuthenticatedSeparateProcess(HiddenPrivateAppsLive178Test.kt:525)\n... 8 trimmed\nCaused by: java.net.SocketException: Socket closed\nat java.net.SocketInputStream.read(SocketInputStream.java:188)\nat java.net.SocketInputStream.read(SocketInputStream.java:143)\nat okio.InputStreamSource.read(JvmOkio.kt:93)\nat okio.AsyncTimeout$source$1.read(AsyncTimeout.kt:128)\n... 34 more\n"
+    }
+  ]
+}

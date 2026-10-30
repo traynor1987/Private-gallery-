@@ -68,7 +68,7 @@ class BrowserVaultScreenshotTest {
         try {
             assertEquals("image/png",source.mimeType)
             assertTrue(source.vaultOnly)
-            val bitmap=checkNotNull(source.openStream().use(BitmapFactory::decodeStream))
+            val bitmap=checkNotNull(source.openStream().use{BitmapFactory.decodeStream(it,null,BitmapFactory.Options().apply{inMutable=true})})
             try {assertEquals(240,bitmap.width);assertEquals(200,bitmap.height);assertEquals(Color.RED,bitmap.getPixel(120,150))}
             finally {bitmap.eraseColor(Color.TRANSPARENT);bitmap.recycle()}
         } finally {source.onConsumed()}
