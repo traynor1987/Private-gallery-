@@ -12,13 +12,26 @@ classify = namespace['host_fixture_adb_multicast']
 
 
 def packet(questions, count=3, size=69):
-    return ('2026-10-30 09:21:56.607341 lo    In  IP (tos 0x0, ttl 1, id 54526, offset 0, flags [DF], proto UDP (17), length 97)\n'
+    return ('2026-10-30 09:21:56.607341 lo    In  IP (tos 0x0, ttl 1, id 54526, offset 0, flags [DF], proto UDP (17), length '+str(size+28)+')\n'
             '    203.0.113.10.5353 > 224.0.0.251.5353: [bad udp cksum 0x1d65 -> 0x7ce4!] 0 ['+str(count)+'q] '+questions+' ('+str(size)+')\n')
 
 
 class HostMdnsClassificationTest(unittest.TestCase):
     def test_exact_host_android_lookup(self):
         self.assertTrue(classify(packet('AAAA ANY (QM)? Android.local. A ANY (QM)? Android.local. AAAA ANY (QM)? Android.local.')))
+
+    def test_standard_two_question_android_lookup(self):
+        valid = packet('AAAA ANY (QM)? Android.local. A ANY (QM)? Android.local.', 2, 50)
+        self.assertTrue(classify(valid))
+        for old, new in [('(50)', '(51)'), ('length 78)', 'length 79)'),
+                         ('A ANY (QM)?', 'AAAA ANY (QM)?'),
+                         ('Android.local.', 'fixture.invalid.'), ('[2q]', '[3q]')]:
+            self.assertFalse(classify(valid.replace(old, new)))
+        self.assertFalse(classify(valid.replace(' (50)', ' TXT ANY (QM)? Android.local. (50)')))
+
+    def test_standard_adb_emulator_lookup(self):
+        q = 'SRV ANY (QM)? adb-EMULATOR37X2X13X0-7QJ9fS._adb._tcp.local. AAAA ANY (QM)? Android_D4U1E2V7.local. A ANY (QM)? Android_D4U1E2V7.local.'
+        self.assertTrue(classify(packet(q, 3, 118)))
 
     def test_exact_host_adb_emulator_lookup_question_order(self):
         parts = ['SRV ANY (QM)? adb-EMULATOR37X2X13X0-7QJ9fS._adb._tcp.local.',
