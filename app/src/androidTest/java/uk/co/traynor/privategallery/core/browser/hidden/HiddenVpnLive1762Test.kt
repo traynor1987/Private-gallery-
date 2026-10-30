@@ -129,6 +129,7 @@ class HiddenVpnLive1762Test {
             previousBounds=android.graphics.Rect(bounds)
             stable
         }
+        android.util.Log.i("HiddenVpnLive1762","Synthetic touch control=$text window=$window bounds=$bounds")
         val at=android.os.SystemClock.uptimeMillis()
         for(action in intArrayOf(android.view.MotionEvent.ACTION_DOWN,android.view.MotionEvent.ACTION_UP)) {
             val event=android.view.MotionEvent.obtain(at,android.os.SystemClock.uptimeMillis(),action,bounds.exactCenterX(),bounds.exactCenterY(),0)
@@ -481,7 +482,19 @@ class HiddenVpnLive1762Test {
                     }
                 }
                 shell(if(displayOverride==null)"wm size reset" else "wm size $displayOverride")
+                fun completedRootRequests():Int {
+                    val events=evidence(network,origin).getJSONArray("events")
+                    return (0 until events.length()).count {events.getJSONObject(it).let {e ->e.optString("method")=="GET" && e.optString("path")=="/" && e.optBoolean("tls")}}
+                }
+                val beforeRestoreNavigation=completedRootRequests()
                 navigate(secureOrigin)
+                waitFor("Fresh root document completes after restoring the Fold viewport") {
+                    val visible=nodes()
+                    completedRootRequests()>beforeRestoreNavigation &&
+                        visible.any {it.contentDescription?.toString()=="Reload" && it.isVisibleToUser} &&
+                        visible.none {it.contentDescription?.toString()=="Stop" && it.isVisibleToUser} &&
+                        visible.any {it.text?.toString()=="Start continuous RTC" && it.isVisibleToUser}
+                }
                 click("Start continuous RTC")
                 waitFor("Continuous native UDP probe started") {observed(network,origin){it.optBoolean("continuous_started")}}
                 waitFor("At least three fresh STUN datagrams before Hidden revocation") {

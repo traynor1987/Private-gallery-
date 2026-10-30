@@ -487,6 +487,11 @@ class HiddenPrivateAppsLive178Test {
                 network != null
             }
             val pinned = checkNotNull(network)
+            // Capabilities can arrive before netd installs this Network's resolver config.
+            waitFor("The same app-owned VPN Network has its fixture DNS resolver ready") {
+                manager.getNetworkCapabilities(pinned)?.ownerUid==Process.myUid() &&
+                    pinned.getAllByName("native-phase.fixture.invalid").single().hostAddress=="203.0.113.10"
+            }
             assertEquals("203.0.113.10", pinned.getAllByName("native-phase.fixture.invalid").single().hostAddress)
             val launchUrl = "https://native-phase.fixture.invalid/private-apps178-${UUID.randomUUID()}"
             ActivityScenario.launch(ComponentActivity::class.java).use { scenario ->

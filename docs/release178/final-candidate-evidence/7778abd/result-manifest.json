@@ -1,0 +1,27 @@
+{
+  "source_sha": "7778abd09b511ebe1f439f458d9b1be98899d6d2",
+  "run_id": 40981145252,
+  "artifact_id": 12945846004,
+  "artifact_sha256": "ddbe6bc99a6920a775bd007f4c2bf7d96c823df7fb069e87e254209411e23cb6",
+  "tests": 38,
+  "passed": 35,
+  "failed": 3,
+  "skipped": 0,
+  "failures": [
+    {
+      "classname": "uk.co.traynor.privategallery.core.browser.hidden.HiddenVpnLive1762Test",
+      "name": "nativeChildPostsFormsUploadsAndRevokesOnOwnedVpn",
+      "failure": "java.lang.AssertionError: Continuous native UDP probe started\nat org.junit.Assert.fail(Assert.java:89)\nat org.junit.Assert.assertTrue(Assert.java:42)\nat uk.co.traynor.privategallery.core.browser.hidden.HiddenVpnLive1762Test.waitFor(HiddenVpnLive1762Test.kt:44)\nat uk.co.traynor.privategallery.core.browser.hidden.HiddenVpnLive1762Test.waitFor$default(HiddenVpnLive1762Test.kt:39)\nat uk.co.traynor.privategallery.core.browser.hidden.HiddenVpnLive1762Test.nativeChildPostsFormsUploadsAndRevokesOnOwnedVpn(HiddenVpnLive1762Test.kt:486)\n"
+    },
+    {
+      "classname": "uk.co.traynor.privategallery.core.browser.hidden.NativeTorIsolation1762Test",
+      "name": "packagedTorNativeFormsUploadsDownloadsAndNetworkSink",
+      "failure": "java.lang.AssertionError: Tor script probe rendered within native page deadline\nat org.junit.Assert.fail(Assert.java:89)\nat org.junit.Assert.assertTrue(Assert.java:42)\nat uk.co.traynor.privategallery.core.browser.hidden.NativeTorIsolation1762Test.waitFor(NativeTorIsolation1762Test.kt:37)\nat uk.co.traynor.privategallery.core.browser.hidden.NativeTorIsolation1762Test.packagedTorNativeFormsUploadsDownloadsAndNetworkSink(NativeTorIsolation1762Test.kt:153)\n"
+    },
+    {
+      "classname": "uk.co.traynor.privategallery.core.browser.hidden.HiddenPrivateAppsLive178Test",
+      "name": "vpnCatalogueCrudLaunchAndRevocationUseAuthenticatedSeparateProcess",
+      "failure": "java.net.UnknownHostException: Unable to resolve host \"native-phase.fixture.invalid\": No address associated with hostname\nat java.net.Inet6AddressImpl.lookupHostByName(Inet6AddressImpl.java:156)\nat java.net.Inet6AddressImpl.lookupAllHostAddr(Inet6AddressImpl.java:103)\nat java.net.InetAddress.getAllByNameOnNet(InetAddress.java:1684)\nat android.net.Network.getAllByName(Network.java:141)\nat uk.co.traynor.privategallery.core.browser.hidden.HiddenPrivateAppsLive178Test.vpnCatalogueCrudLaunchAndRevocationUseAuthenticatedSeparateProcess(HiddenPrivateAppsLive178Test.kt:490)\n... 8 trimmed\nCaused by: android.system.GaiException: android_getaddrinfo failed: EAI_NODATA (No address associated with hostname)\nat libcore.io.Linux.android_getaddrinfo(Native Method)\nat libcore.io.ForwardingOs.android_getaddrinfo(ForwardingOs.java:134)\nat libcore.io.BlockGuardOs.android_getaddrinfo(BlockGuardOs.java:222)\nat libcore.io.ForwardingOs.android_getaddrinfo(ForwardingOs.java:134)\nat java.net.Inet6AddressImpl.lookupHostByName(Inet6AddressImpl.java:135)\n... 13 more\n"
+    }
+  ]
+}

@@ -134,6 +134,17 @@ class NativeTorIsolation1762Test {
                     tor?.unixReady()==true
                 }
                 val path=config.unixPath
+                // Bootstrap is not fixture availability. Establish this controlled onion through
+                // the real app-private SOCKS path before asking WebView to render the probe.
+                val expected=checkNotNull(InstrumentationRegistry.getArguments().getString("hiddenOnionProbeExpected"))
+                HiddenTorSockets.open(path,host,80).use {stream ->
+                    stream.output.write("GET / HTTP/1.1\r\nHost: $host\r\nConnection: close\r\n\r\n".toByteArray());stream.output.flush()
+                    val bytes=stream.input.readNBytes(4097)
+                    assertTrue("Controlled readiness response is bounded",bytes.size<=4096)
+                    val raw=try {bytes.toString(Charsets.UTF_8)}finally{bytes.fill(0)}
+                    assertEquals("Controlled onion returns HTTP200 through the owned private Tor path","200",raw.lineSequence().first().split(' ').getOrNull(1))
+                    assertEquals("Controlled onion fixture payload is ready",expected,raw.substringAfter("\r\n\r\n").trim())
+                }
                 val repoContext=object:ContextWrapper(context){override fun getNoBackupFilesDir()=storage}
                 val repo=HiddenRepository(repoContext,session)
                 val bitmap=Bitmap.createBitmap(8,8,Bitmap.Config.ARGB_8888)
