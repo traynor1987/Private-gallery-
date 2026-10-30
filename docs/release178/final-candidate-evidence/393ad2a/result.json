@@ -1,0 +1,21 @@
+{
+  "source_sha": "393ad2a226368e40b78b0cebb629c3dbba4fcc9c",
+  "run_id": 41054173289,
+  "job_id": 124057391289,
+  "artifact_id": 12976652546,
+  "artifact_sha256": "8628f007ae191e1bf27166869271c6e8b36443fc9cd8c43d5203ed4fa555add0",
+  "original_conclusion": "failure",
+  "android": {
+    "tests": 38,
+    "failures": 1,
+    "errors": 0,
+    "skipped": 0
+  },
+  "jvm": {
+    "tests": 29,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "failure": "VPN PrivateApps after freshAppHome: Choose app document not visible/stable, line400. Only2chooser callbacks; thirdnotinvoked. No UI timeoutdump existed; offscreenrestoredscroll plausible, not proven."
+}

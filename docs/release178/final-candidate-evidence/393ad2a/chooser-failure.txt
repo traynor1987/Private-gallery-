@@ -1,0 +1,4 @@
+10-30 12:32:35.736  6495  6495 I NativeChooser1762: callback mode=0 permission=0 acceptCount=1 current=true live=true
+10-30 12:32:37.495  6495  6495 I NativeChooser1762: callback mode=0 permission=0 acceptCount=1 current=true live=true
+10-30 12:33:10.805  4714  4730 E TestRunner: java.lang.AssertionError: Visible stable website action: Choose app document
+10-30 12:33:10.805  4714  4730 E TestRunner: 	at uk.co.traynor.privategallery.core.browser.hidden.HiddenPrivateAppsLive178Test.exercise(HiddenPrivateAppsLive178Test.kt:400)

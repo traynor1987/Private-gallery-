@@ -91,16 +91,55 @@ class HiddenPrivateAppsLive178Test {
     private fun clickWeb(label:String) {
         val bounds=android.graphics.Rect()
         var previous:android.graphics.Rect?=null
-        waitFor("Visible stable website action: $label") {
-            val root=automation.rootInActiveWindow ?: return@waitFor false
-            val node=nodes().firstOrNull{it.windowId==root.windowId && it.isVisibleToUser && it.isEnabled &&
-                (it.text?.toString()==label || it.contentDescription?.toString()==label)} ?: return@waitFor false
-            node.getBoundsInScreen(bounds)
-            val window=android.graphics.Rect();root.getBoundsInScreen(window)
-            val visible=!bounds.isEmpty && bounds.intersect(window)
-            val stable=visible && previous==bounds
-            previous=if(visible)android.graphics.Rect(bounds) else null
-            stable
+        var scrollRequested=false
+        var targetSeen=false
+        var visibleSeen=false
+        var inWindowSeen=false
+        var scrollAccepted=false
+        try {
+            waitFor("Visible stable website action: $label") {
+                val freshNodes=nodes()
+                val root=automation.rootInActiveWindow ?: return@waitFor false
+                val node=freshNodes.firstOrNull{it.windowId==root.windowId && it.isEnabled &&
+                    (it.text?.toString()==label || it.contentDescription?.toString()==label)} ?: return@waitFor false
+                targetSeen=true
+                node.getBoundsInScreen(bounds)
+                val window=android.graphics.Rect();root.getBoundsInScreen(window)
+                val visible=node.isVisibleToUser && !bounds.isEmpty && bounds.intersect(window)
+                visibleSeen=visibleSeen || node.isVisibleToUser
+                inWindowSeen=inWindowSeen || visible
+                if(!visible) {
+                    previous=null
+                    if(!scrollRequested) {
+                        scrollRequested=true
+                        scrollAccepted=node.performAction(AccessibilityNodeInfo.AccessibilityAction.ACTION_SHOW_ON_SCREEN.id)
+                    }
+                    return@waitFor false
+                }
+                val stable=previous==bounds
+                previous=android.graphics.Rect(bounds)
+                stable
+            }
+        } catch(failure:AssertionError) {
+            // Synthetic fixture diagnostics contain geometry/flags only, never page text,
+            // URLs, form contents, credentials, or a protected-window screenshot.
+            runCatching {
+                val output=File(checkNotNull(InstrumentationRegistry.getArguments().getString("additionalTestOutputDir")))
+                check(output.isDirectory || output.mkdirs())
+                val geometry=JSONArray()
+                nodes().take(500).forEach {node ->
+                    val rect=android.graphics.Rect();node.getBoundsInScreen(rect)
+                    geometry.put(JSONObject().put("class",node.className?.toString())
+                        .put("visible",node.isVisibleToUser).put("enabled",node.isEnabled)
+                        .put("target",node.text?.toString()==label || node.contentDescription?.toString()==label)
+                        .put("window",node.windowId).put("bounds",rect.toShortString()))
+                }
+                File(output,"private-apps-touch178-failure.json").writeText(JSONObject()
+                    .put("target_seen",targetSeen).put("visible_seen",visibleSeen).put("in_window_seen",inWindowSeen)
+                    .put("scroll_requested",scrollRequested).put("scroll_accepted",scrollAccepted)
+                    .put("last_bounds",bounds.toShortString()).put("nodes",geometry).toString())
+            }
+            throw failure
         }
         val down=SystemClock.uptimeMillis()
         for(action in intArrayOf(android.view.MotionEvent.ACTION_DOWN,android.view.MotionEvent.ACTION_UP)) {
