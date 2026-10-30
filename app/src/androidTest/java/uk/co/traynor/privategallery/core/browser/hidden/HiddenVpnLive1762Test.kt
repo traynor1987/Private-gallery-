@@ -196,7 +196,7 @@ class HiddenVpnLive1762Test {
         }
         clickNative("Go")
     }
-    private fun evidence(network:Network,origin:String):JSONObject = (network.openConnection(URL("$origin/evidence")) as java.net.HttpURLConnection).let {connection ->
+    private fun evidence(network:Network,origin:String):JSONObject = (network.openConnection(URL("http://203.0.113.10/evidence")) as java.net.HttpURLConnection).let {connection ->
         connection.connectTimeout=3000;connection.readTimeout=3000
         try {connection.inputStream.use {JSONObject(it.readBytes().toString(Charsets.UTF_8))}} finally {connection.disconnect()}
     }
@@ -254,9 +254,9 @@ class HiddenVpnLive1762Test {
             // Capabilities publication precedes netd resolver installation.
             waitFor("The same app-owned VPN Network has its fixture DNS resolver ready") {
                 manager.getNetworkCapabilities(network)?.ownerUid==Process.myUid() &&
-                    network.getAllByName("fixture.invalid").single().hostAddress=="203.0.113.10"
+                    uk.co.traynor.privategallery.core.vpn.OwnedVpnDns.lookup(context,network,"fixture.invalid"){allowed.get() && engine.ownsTunnel && engine.state==VpnConnectionState.CONNECTED}.single().hostAddress=="203.0.113.10"
             }
-            assertEquals("203.0.113.10",network.getAllByName("fixture.invalid").single().hostAddress)
+            assertEquals("203.0.113.10",uk.co.traynor.privategallery.core.vpn.OwnedVpnDns.lookup(context,network,"fixture.invalid"){allowed.get() && engine.ownsTunnel && engine.state==VpnConnectionState.CONNECTED}.single().hostAddress)
             ActivityScenario.launch(ComponentActivity::class.java).use {scenario ->
                 var parentTask=-1
                 scenario.onActivity {parentTask=it.taskId}

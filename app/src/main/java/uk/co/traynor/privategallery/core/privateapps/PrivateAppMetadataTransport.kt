@@ -9,10 +9,10 @@ import uk.co.traynor.privategallery.core.browser.hidden.HiddenVpnProxy
 
 /** Short-lived metadata reader on an already-authorised Network or Hidden proxy. Never ambient DNS/sockets. */
 internal object PrivateAppMetadataTransport {
- fun vpn(network:Network,current:()->Boolean)=OkHttpClient.Builder().proxy(Proxy.NO_PROXY).socketFactory(network.socketFactory)
+ fun vpn(context:android.content.Context,network:Network,current:()->Boolean)=OkHttpClient.Builder().proxy(Proxy.NO_PROXY).socketFactory(network.socketFactory)
   .dns(object:Dns {override fun lookup(hostname:String):List<InetAddress> {
    check(current());require(!hostname.endsWith(".onion",true))
-   return network.getAllByName(hostname).toList().also{check(current());require(it.isNotEmpty() && it.all(HiddenVpnProxy::publicAddress))}
+   return uk.co.traynor.privategallery.core.vpn.OwnedVpnDns.lookup(context,network,hostname,current).also{check(current());require(it.isNotEmpty() && it.all(HiddenVpnProxy::publicAddress))}
   }})
  fun hiddenProxy(port:Int,password:String)=OkHttpClient.Builder()
   .proxy(Proxy(Proxy.Type.HTTP,InetSocketAddress(InetAddress.getByAddress(byteArrayOf(127,0,0,1)),port)))

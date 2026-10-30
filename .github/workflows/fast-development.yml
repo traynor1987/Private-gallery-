@@ -233,7 +233,7 @@ jobs:
       - name: Catalogue host checks
         run: |
           bash scripts/check_private_apps178.sh
-          PYTHONDONTWRITEBYTECODE=1 python3 -m unittest scripts.tests.test_vpn_host_mdns1762
+          PYTHONDONTWRITEBYTECODE=1 python3 -m unittest scripts.tests.test_vpn_host_mdns1762 scripts.tests.test_hidden_vpn_fixture1762
       - name: Compile application and run catalogue JVM tests
         run: ./gradlew :app:testDebugUnitTest --tests 'uk.co.traynor.privategallery.core.privateapps.*' --tests 'uk.co.traynor.privategallery.core.vault.VaultDocumentPolicyTest' :app:assembleDebug :app:assembleDebugAndroidTest --stacktrace
       - name: Prepare isolated Private Apps transport fixtures

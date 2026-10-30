@@ -45,9 +45,11 @@ def question(packet):
     if cls!=1: raise ValueError('IN only')
     return '.'.join(labels).lower(),kind,pos+4
 
-def fixture_answer(packet):
+def fixture_answer(packet,tcp=False):
     name,kind,end=question(packet)
     if name!='fixture.invalid' and not name.endswith('.fixture.invalid'): return None
+    if name=='tcp-dns-phase.fixture.invalid' and not tcp:
+        return packet[:2]+struct.pack('!HHHHH',0x8380,1,0,0,0)+packet[12:end]
     answer=b''
     if kind==1: answer=b'\xc0\x0c'+struct.pack('!HHIH',1,1,0,4)+socket.inet_aton('203.0.113.10')
     # IPv4-only tunnel: AAAA receives an authoritative empty answer, never a bypass address.
@@ -146,20 +148,36 @@ class Fixture:
                 if self.path=='/form-result' and b'fixture-form-body' in body:return self.reply(b'<h1>Form POST verified</h1>')
                 if self.path=='/uploaded' and b'\x89PNG\r\n\x1a\n' in body:return self.reply(b'<h1>Multipart upload verified</h1>')
                 return self.reply(b'Unexpected synthetic body',400)
+        def dns_response(packet,source,transport):
+            name,kind,_=question(packet);fixture.record(kind='dns',source=source,name=name,qtype=kind,transport=transport)
+            if name=='slow-dns-phase.fixture.invalid':time.sleep(3)
+            response=fixture_answer(packet,tcp=transport=='tcp')
+            if response is None:
+                # The fixture server forwards non-synthetic names; clients still use its VPN address.
+                if kind==28:response=packet[:2]+struct.pack('!HHHHH',0x8180,1,0,0,0)+packet[12:question(packet)[2]]
+                else:
+                    with socket.socket(socket.AF_INET,socket.SOCK_DGRAM) as upstream:
+                        upstream.settimeout(5);upstream.sendto(packet,(forward_dns,53));response=upstream.recv(4096)
+            return response
         class DNS(socketserver.BaseRequestHandler):
             def handle(self):
                 packet,sock=self.request
+                try:sock.sendto(dns_response(packet,self.client_address[0],'udp'),self.client_address)
+                except (ValueError,IndexError,UnicodeError,OSError):return
+        class DNSTCP(socketserver.BaseRequestHandler):
+            def handle(self):
+                def exact(count):
+                    data=b''
+                    while len(data)<count:
+                        part=self.request.recv(count-len(data))
+                        if not part:raise ValueError('truncated DNS TCP request')
+                        data+=part
+                    return data
                 try:
-                    name,kind,_=question(packet);fixture.record(kind='dns',source=self.client_address[0],name=name,qtype=kind)
-                    response=fixture_answer(packet)
-                    if response is None:
-                        # The existing real HTTPS readiness probe must also traverse this VPN.
-                        # Forward IPv4 DNS only; the IPv4-only WireGuard profile blocks IPv6.
-                        if kind==28:response=packet[:2]+struct.pack('!HHHHH',0x8180,1,0,0,0)+packet[12:question(packet)[2]]
-                        else:
-                            with socket.socket(socket.AF_INET,socket.SOCK_DGRAM) as upstream:
-                                upstream.settimeout(5);upstream.sendto(packet,(forward_dns,53));response=upstream.recv(4096)
-                    sock.sendto(response,self.client_address)
+                    self.request.settimeout(5);count=struct.unpack('!H',exact(2))[0]
+                    if not 17<=count<=4096:return
+                    response=dns_response(exact(count),self.client_address[0],'tcp')
+                    self.request.sendall(struct.pack('!H',len(response))+response)
                 except (ValueError,IndexError,UnicodeError,OSError):return
         class STUN(socketserver.BaseRequestHandler):
             def handle(self):
@@ -180,6 +198,8 @@ class Fixture:
             threading.Thread(target=httpsd.serve_forever,daemon=True).start()
         dns=socketserver.ThreadingUDPServer((dns_ip,53),DNS)
         threading.Thread(target=dns.serve_forever,daemon=True).start()
+        dns_tcp=socketserver.ThreadingTCPServer((dns_ip,53),DNSTCP)
+        threading.Thread(target=dns_tcp.serve_forever,daemon=True).start()
         (self.folder/'ready').write_text('ready\n')
         httpd.serve_forever()
 

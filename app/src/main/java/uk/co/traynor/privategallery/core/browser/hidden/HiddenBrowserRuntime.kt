@@ -124,7 +124,7 @@ internal class HiddenBrowserRuntime(
                         while(network==null) {check(authorized());delay(500);network=activity.hiddenOwnedVpnNetwork()}
                         val pinned=network
                         pinnedVpn=pinned
-                        transport=HiddenHttpTransport.vpn(pinned) {authorized() && policy.canEstablish(epoch) && activity.hiddenOwnedVpnNetwork()==pinned}
+                        transport=HiddenHttpTransport.vpn(activity,pinned) {authorized() && policy.canEstablish(epoch) && activity.hiddenOwnedVpnNetwork()==pinned}
                         detail="Verifying HTTPS and DNS over the pinned WireGuard Network"
                         withContext(Dispatchers.IO) {checkNotNull(transport).verifyReady()}
                         check(policy.ready(epoch,false,true))

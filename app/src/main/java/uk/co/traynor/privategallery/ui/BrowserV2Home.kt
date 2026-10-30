@@ -547,7 +547,7 @@ internal fun BrowserV2Home(
                 ui.downloadBusy=true;ui.downloadBytes=0;ui.downloadTotal=-1
                 val handler=android.os.Handler(android.os.Looper.getMainLooper())
                 var progressAt=0L
-                val source=browserV2DownloadSource(url,userAgent,contentDisposition,mime,network,
+                val source=browserV2DownloadSource(context.applicationContext,url,userAgent,contentDisposition,mime,network,
                     {cancellation.get() || !current()},
                     {bytes,total ->val now=android.os.SystemClock.elapsedRealtime();if(now-progressAt>=100 || bytes==total || bytes==0L){progressAt=now;handler.post {if(ui.downloadCancelled===cancellation){ui.downloadBytes=bytes;ui.downloadTotal=total}}}},
                     {handler.post {if(ui.downloadCancelled===cancellation)ui.downloadBusy=false}})
@@ -1148,7 +1148,7 @@ private fun AcceptanceProbeLabel(label: String, color: Color) {
 
 /** The download is opened only after the WebView download callback and imported through Vault. */
 private fun browserV2DownloadSource(
-    url: String, userAgent: String, contentDisposition: String, mimeType: String, network:android.net.Network,
+    context:android.content.Context,url: String, userAgent: String, contentDisposition: String, mimeType: String, network:android.net.Network,
     cancelled: () -> Boolean, progress: (Long,Long) -> Unit, consumed: () -> Unit,
 ): VaultImportSource {
     require(BrowserNavigationPolicy.isWebUrl(url)) { "Unsupported download URL" }
@@ -1156,7 +1156,7 @@ private fun browserV2DownloadSource(
     val capturedCookie=CookieManager.getInstance().getCookie(url)
     return VaultImportSource(name,mimeType,openStream={
         check(!cancelled())
-        val client=uk.co.traynor.privategallery.core.privateapps.PrivateAppMetadataTransport.vpn(network){!cancelled()}
+        val client=uk.co.traynor.privategallery.core.privateapps.PrivateAppMetadataTransport.vpn(context,network){!cancelled()}
             .followRedirects(false).followSslRedirects(false).retryOnConnectionFailure(false).cache(null)
             .connectTimeout(15,java.util.concurrent.TimeUnit.SECONDS).readTimeout(15,java.util.concurrent.TimeUnit.SECONDS)
             .callTimeout(30,java.util.concurrent.TimeUnit.MINUTES).build()

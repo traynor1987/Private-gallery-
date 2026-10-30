@@ -17,6 +17,13 @@ class HiddenVpnFixtureTest(unittest.TestCase):
   request+=b'\0'+struct.pack('!HHIH',41,1232,0,0)
   reply=fixture.fixture_answer(bytes(request))
   self.assertEqual(1,struct.unpack_from('!H',reply,6)[0]);self.assertEqual(0,struct.unpack_from('!H',reply,10)[0])
+ def test_controlled_tcp_fallback_preserves_question_and_identity(self):
+  request=query('tcp-dns-phase.fixture.invalid')
+  udp=fixture.fixture_answer(request);tcp=fixture.fixture_answer(request,tcp=True)
+  self.assertTrue(struct.unpack_from('!H',udp,2)[0]&0x200)
+  self.assertFalse(struct.unpack_from('!H',tcp,2)[0]&0x200)
+  self.assertEqual(request[:2],tcp[:2]);self.assertEqual(socket.inet_aton('203.0.113.10'),tcp[-4:])
+  self.assertEqual(0,struct.unpack_from('!H',udp,6)[0])
  def test_non_fixture_dns_is_forwarded_not_fabricated(self):
   self.assertIsNone(fixture.fixture_answer(query('example.com')))
  def test_malformed_questions_are_rejected(self):

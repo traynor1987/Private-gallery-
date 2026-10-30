@@ -32,10 +32,10 @@ internal class HiddenHttpTransport private constructor(
                 .proxy(Proxy(Proxy.Type.SOCKS, InetSocketAddress(InetAddress.getByAddress(byteArrayOf(127,0,0,1)), port)))
                 .dns(object:Dns { override fun lookup(hostname:String):List<InetAddress> = throw UnknownHostException("Local DNS prohibited") }), HiddenConnectionPolicy.Mode.TOR_ONLY, authorized, beforeExecute)
         }
-        fun vpn(network: Network, authorized: () -> Boolean): HiddenHttpTransport = HiddenHttpTransport(
+        fun vpn(context:android.content.Context,network: Network, authorized: () -> Boolean): HiddenHttpTransport = HiddenHttpTransport(
             OkHttpClient.Builder().proxy(Proxy.NO_PROXY).socketFactory(network.socketFactory).dns(object:Dns {
                 override fun lookup(hostname:String):List<InetAddress> =
-                if(hostname.endsWith(".onion",true)) throw UnknownHostException("Onion requires Tor") else network.getAllByName(hostname).filter { !it.isAnyLocalAddress && !it.isLoopbackAddress && !it.isLinkLocalAddress && !it.isSiteLocalAddress && !it.isMulticastAddress }
+                if(hostname.endsWith(".onion",true)) throw UnknownHostException("Onion requires Tor") else uk.co.traynor.privategallery.core.vpn.OwnedVpnDns.lookup(context,network,hostname,authorized).filter { !it.isAnyLocalAddress && !it.isLoopbackAddress && !it.isLinkLocalAddress && !it.isSiteLocalAddress && !it.isMulticastAddress }
                     .also { if(it.isEmpty()) throw UnknownHostException("Private destinations prohibited") }
             }), HiddenConnectionPolicy.Mode.VPN_ONLY, authorized)
         const val RESULT_HEADER = "X-Private-Gallery-Result"

@@ -1,0 +1,12 @@
+{
+  "source_sha": "a552c80c30c51efa487f309c11ddff98c2f3cc8a",
+  "run_id": 41034297017,
+  "artifact_id": 12967597781,
+  "artifact_sha256": "555c61e7850914a5c4b24e6bff171605127886a488f584b1c0aaabeedec8748b",
+  "android_tests": 38,
+  "passed": 38,
+  "jvm_tests": 27,
+  "workflow_conclusion": "failure",
+  "blocking_stage": "Fixture DNS outside WireGuard; observed early Android resolverNet fallback",
+  "decision": "NOT_APPROVED"
+}

@@ -18,6 +18,8 @@ Display preferences support app-style chrome; manifest scope is shown, not enfor
 
 Primary apps and ordinary Primary browser tabs share the existing Primary WebView profile. Keep signed in and clear session/data apply to that entire profile, with explicit confirmation. They are not per-app cookie isolation. Complete profile clearing requires a compatible WebView and prevents fresh renderer entry until clearing completes.
 
+VPN browsing requires a reachable DNS server configured in the VPN profile. DNS requests stay on the captured owned VPN; unavailable DNS stops the request.
+
 Hidden VPN and Hidden Tor use the existing independently authenticated transport/process boundaries. Tabs within an active Hidden browser share its ephemeral profile. Closing or revoking that browser clears its logins; persistent Hidden login is unsupported. Primary and Hidden encrypted catalogues are separate. Require PIN protects opening a saved entry, not direct navigation to the same website. Reset removes saved presentation choices; removal deletes the encrypted definition. Neither silently deletes shared cookies or downloaded vault files; use the explicitly scoped shared-profile clear control when needed.
 
 ## Transfers and screenshots

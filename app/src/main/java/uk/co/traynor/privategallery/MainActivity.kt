@@ -1734,7 +1734,7 @@ class MainActivity : FragmentActivity() {
                 val network=checkNotNull(hiddenOwnedVpnNetwork()) {"Owned VPN required for metadata"}
                 val allowed={current() && browserV2Session.mediaNetworkingAllowed() && hiddenOwnedVpnNetwork()==network}
                 uk.co.traynor.privategallery.core.privateapps.PrivateAppMetadataTransport.discover(url,false,
-                    uk.co.traynor.privategallery.core.privateapps.PrivateAppMetadataTransport.vpn(network,allowed),allowed)
+                    uk.co.traynor.privategallery.core.privateapps.PrivateAppMetadataTransport.vpn(this@MainActivity,network,allowed),allowed)
             }, onLaunchApp={app ->
                 check(current());check(browserV2Session.mediaNetworkingAllowed())
                 browserV2Session.openPrivateApp(app)

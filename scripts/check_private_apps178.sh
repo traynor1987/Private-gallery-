@@ -5,6 +5,7 @@ classes=$(mktemp -d)
 trap 'rm -rf "$classes"' EXIT
 java com.sun.tools.javac.Main -d "$classes" \
  app/src/main/java/uk/co/traynor/privategallery/core/privateapps/*.java \
+ app/src/main/java/uk/co/traynor/privategallery/core/vpn/VpnDnsMessage.java \
  app/src/main/java/uk/co/traynor/privategallery/core/browser/v2/BrowserScreenshotPolicy.java \
  app/src/main/java/uk/co/traynor/privategallery/core/browser/v2/BrowserScreenshotBuffer.java \
  scripts/tests/browser/BrowserScreenshotChecks.java \
@@ -17,3 +18,5 @@ java -cp "$classes" HiddenPrivateAppStoreChecks
 java -cp "$classes" PrivateAppCommandChecks
 java -cp "$classes" PrivateAppIconSourceChecks
 java -cp "$classes" BrowserScreenshotChecks
+
+java -cp "$classes" VpnDnsMessageChecks

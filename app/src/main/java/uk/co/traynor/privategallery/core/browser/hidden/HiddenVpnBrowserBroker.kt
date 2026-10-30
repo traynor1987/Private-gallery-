@@ -61,7 +61,7 @@ internal class HiddenVpnBrowserBroker(
     private var pickerQuery:HiddenUploadPickerQuery?=null
     val token=UUID.randomUUID().toString()
     private val storage=HiddenVpnStorageCleanup.prepare(context.applicationContext,token)
-    private val proxy=try {if(mode==HiddenConnectionPolicy.Mode.TOR_ONLY)HiddenVpnProxy.tor(checkNotNull(torUnixPath),::valid) else HiddenVpnProxy(network,::valid)} catch(failure:Throwable) {storage.close();HiddenVpnStorageCleanup.cleanAsync(context.applicationContext);throw failure}
+    private val proxy=try {if(mode==HiddenConnectionPolicy.Mode.TOR_ONLY)HiddenVpnProxy.tor(checkNotNull(torUnixPath),::valid) else HiddenVpnProxy(context,network,::valid)} catch(failure:Throwable) {storage.close();HiddenVpnStorageCleanup.cleanAsync(context.applicationContext);throw failure}
     private val main=Handler(Looper.getMainLooper())
     @Volatile private var child:IBinder?=null
     private var childPid=0
@@ -522,7 +522,7 @@ internal class HiddenVpnBrowserBroker(
             .dns(object:Dns {
                 override fun lookup(hostname:String):List<java.net.InetAddress> {
                     check(valid());require(!hostname.endsWith(".onion",true))
-                    return network.getAllByName(hostname).toList().also {require(it.isNotEmpty() && it.all(HiddenVpnProxy::publicAddress))}
+                    return uk.co.traynor.privategallery.core.vpn.OwnedVpnDns.lookup(context,network,hostname,::active).also {require(it.isNotEmpty() && it.all(HiddenVpnProxy::publicAddress))}
                 }
             })
         val client=builder

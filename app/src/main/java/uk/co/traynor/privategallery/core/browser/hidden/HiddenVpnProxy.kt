@@ -21,7 +21,7 @@ internal class HiddenVpnProxy(
     private val mode:HiddenConnectionPolicy.Mode=HiddenConnectionPolicy.Mode.VPN_ONLY,
     private val torUnixPath:String?=null,
 ) : Closeable {
-    constructor(network:Network,authorized:()->Boolean):this(network.socketFactory,{network.getAllByName(it).toList()},authorized)
+    constructor(context:android.content.Context,network:Network,authorized:()->Boolean):this(network.socketFactory,{uk.co.traynor.privategallery.core.vpn.OwnedVpnDns.lookup(context,network,it,authorized)},authorized)
     val password = java.util.UUID.randomUUID().toString()
     private val credential = java.util.Base64.getEncoder().encodeToString(("hidden:"+password).toByteArray(Charsets.UTF_8))
     private val closed = AtomicBoolean()

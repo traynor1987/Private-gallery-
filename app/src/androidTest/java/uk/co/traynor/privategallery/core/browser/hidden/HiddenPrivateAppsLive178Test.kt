@@ -510,20 +510,40 @@ class HiddenPrivateAppsLive178Test {
             // Capabilities can arrive before netd installs this Network's resolver config.
             waitFor("The same app-owned VPN Network has its fixture DNS resolver ready") {
                 manager.getNetworkCapabilities(pinned)?.ownerUid==Process.myUid() &&
-                    pinned.getAllByName("native-phase.fixture.invalid").single().hostAddress=="203.0.113.10"
+                    uk.co.traynor.privategallery.core.vpn.OwnedVpnDns.lookup(context,pinned,"native-phase.fixture.invalid"){engine.ownsTunnel && engine.state==VpnConnectionState.CONNECTED}.single().hostAddress=="203.0.113.10"
             }
-            assertEquals("203.0.113.10", pinned.getAllByName("native-phase.fixture.invalid").single().hostAddress)
+            assertEquals("203.0.113.10", uk.co.traynor.privategallery.core.vpn.OwnedVpnDns.lookup(context,pinned,"native-phase.fixture.invalid"){engine.ownsTunnel && engine.state==VpnConnectionState.CONNECTED}.single().hostAddress)
+            fun dnsEvents():JSONArray {
+                // Numeric observation endpoint must not itself exercise Android resolver fallback.
+                val connection=pinned.openConnection(URL("http://203.0.113.10/evidence")) as HttpURLConnection
+                connection.connectTimeout=3000;connection.readTimeout=3000
+                return try {connection.inputStream.use {JSONObject(it.readBytes().toString(Charsets.UTF_8)).getJSONArray("events")}}finally{connection.disconnect()}
+            }
+            val dnsAllowed={engine.ownsTunnel && engine.state==VpnConnectionState.CONNECTED}
+            assertEquals("Truncated DNS uses the same owned VPN TCP path","203.0.113.10",
+                uk.co.traynor.privategallery.core.vpn.OwnedVpnDns.lookup(context,pinned,"tcp-dns-phase.fixture.invalid",dnsAllowed).single().hostAddress)
+            val dnsRevoked=AtomicBoolean(false)
+            val dnsWorker=java.util.concurrent.Executors.newSingleThreadExecutor()
+            try {
+                val pending=dnsWorker.submit<List<java.net.InetAddress>> {
+                    uk.co.traynor.privategallery.core.vpn.OwnedVpnDns.lookup(context,pinned,"slow-dns-phase.fixture.invalid"){dnsAllowed() && !dnsRevoked.get()}
+                }
+                waitFor("Pending bound DNS request observed before authority revocation") {
+                    val events=dnsEvents();(0 until events.length()).any {events.getJSONObject(it).optString("name")=="slow-dns-phase.fixture.invalid"}
+                }
+                assertFalse("DNS authority is revoked while the real response remains pending",pending.isDone)
+                val revokedAt=SystemClock.elapsedRealtime();dnsRevoked.set(true)
+                val failure=assertThrows(java.util.concurrent.ExecutionException::class.java) {pending.get(1500,java.util.concurrent.TimeUnit.MILLISECONDS)}
+                assertTrue("Revoked DNS cannot publish an address",failure.cause is java.net.UnknownHostException)
+                assertTrue("Revocation interrupts the pending DNS socket promptly",SystemClock.elapsedRealtime()-revokedAt<1000)
+            } finally {dnsRevoked.set(true);dnsWorker.shutdownNow()}
             val launchUrl = "https://native-phase.fixture.invalid/private-apps178-${UUID.randomUUID()}"
             ActivityScenario.launch(ComponentActivity::class.java).use { scenario ->
                 exercise(scenario, pinned, HiddenConnectionPolicy.Mode.VPN_ONLY, {
                     engine.ownsTunnel && engine.state == VpnConnectionState.CONNECTED &&
                         manager.getNetworkCapabilities(pinned)?.hasTransport(NetworkCapabilities.TRANSPORT_VPN) == true
                 }, null, launchUrl, "VPN fixture ready") {
-                    val connection = pinned.openConnection(URL("http://fixture.invalid/evidence")) as HttpURLConnection
-                    connection.connectTimeout = 3000
-                    connection.readTimeout = 3000
-                    try { connection.inputStream.use { JSONObject(it.readBytes().toString(Charsets.UTF_8)).getJSONArray("events") } }
-                    finally { connection.disconnect() }
+                    dnsEvents()
                 }
             }
         } finally { engine.disconnect() }
