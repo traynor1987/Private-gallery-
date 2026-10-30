@@ -243,7 +243,7 @@ jobs:
       - name: Enable emulator acceleration
         run: sudo chmod 666 /dev/kvm
       - name: Focused library UI and authentication tests
-        uses: reactivecircus/android-emulator-runner@660ac26f5bd4cb6c1d98b2143e66ded57bee724f # upstream API37 command-line tools22 fix
+        uses: reactivecircus/android-emulator-runner@v2 # packaged runtime; command-line tools22 installed explicitly above
         with:
           api-level: '37.0'
           target: google_apis
