@@ -1,0 +1,31 @@
+{
+  "source_sha": "8690c93bcb581b05f654d90d0875e88a71d93651",
+  "run_id": 41038963560,
+  "artifact_id": 12969432944,
+  "artifact_sha256": "dabc19f4ec2d01dc691cebfec2cb82c7007245d220c8856dd82208bf77fb88a1",
+  "android_tests": 38,
+  "passed": 35,
+  "jvm_tests": 27,
+  "workflow_conclusion": "failure",
+  "failures": [
+    {
+      "name": "nativeChildPostsFormsUploadsAndRevokesOnOwnedVpn",
+      "classname": "uk.co.traynor.privategallery.core.browser.hidden.HiddenVpnLive1762Test",
+      "time": "37.573",
+      "failure": "java.lang.AssertionError: First actual page navigation\nat org.junit.Assert.fail(Assert.java:89)\nat org.junit.Assert.assertTrue(Assert.java:42)\nat uk.co.traynor.privategallery.core.browser.hidden.HiddenVpnLive1762Test.waitFor(HiddenVpnLive1762Test.kt:44)\nat uk.co.traynor.privategallery.core.browser.hidden.HiddenVpnLive1762Test.waitFor$default(HiddenVpnLive1762Test.kt:39)\nat uk.co.traynor.privategallery.core.browser.hidden.HiddenVpnLive1762Test.nativeChildPostsFormsUploadsAndRevokesOnOwnedVpn(HiddenVpnLive1762Test.kt:301)\n"
+    },
+    {
+      "name": "vpnCatalogueCrudLaunchAndRevocationUseAuthenticatedSeparateProcess",
+      "classname": "uk.co.traynor.privategallery.core.browser.hidden.HiddenPrivateAppsLive178Test",
+      "time": "32.233",
+      "failure": "java.lang.AssertionError: Pending bound DNS request observed before authority revocation\nat uk.co.traynor.privategallery.core.browser.hidden.HiddenPrivateAppsLive178Test.waitFor(HiddenPrivateAppsLive178Test.kt:63)\nat uk.co.traynor.privategallery.core.browser.hidden.HiddenPrivateAppsLive178Test.waitFor$default(HiddenPrivateAppsLive178Test.kt:56)\nat uk.co.traynor.privategallery.core.browser.hidden.HiddenPrivateAppsLive178Test.vpnCatalogueCrudLaunchAndRevocationUseAuthenticatedSeparateProcess(HiddenPrivateAppsLive178Test.kt:531)\n... 8 trimmed\nCaused by: java.io.IOException: Cleartext HTTP traffic to 203.0.113.10 not permitted\nat com.android.okhttp.HttpHandler$CleartextURLFilter.checkURLPermitted(HttpHandler.java:127)\nat com.android.okhttp.internal.huc.HttpURLConnectionImpl.execute(HttpURLConnectionImpl.java:462)\nat com.android.okhttp.internal.huc.HttpURLConnectionImpl.getResponse(HttpURLConnectionImpl.java:411)\nat com.android.okhttp.internal.huc.HttpURLConnectionImpl.getInputStream(HttpURLConnectionImpl.java:248)\nat uk.co.traynor.privategallery.core.browser.hidden.HiddenPrivateAppsLive178Test.vpnCatalogueCrudLaunchAndRevocationUseAuthenticatedSeparateProcess$dnsEvents(HiddenPrivateAppsLive178Test.kt:520)\nat uk.co.traynor.privategallery.core.browser.hidden.HiddenPrivateAppsLive178Test.vpnCatalogueCrudLaunchAndRevocationUseAuthenticatedSeparateProcess$lambda$9(HiddenPrivateAppsLive178Test.kt:532)\nat uk.co.traynor.privategallery.core.browser.hidden.HiddenPrivateAppsLive178Test$$ExternalSyntheticLambda31.invoke(D8$$SyntheticClass:0)\nat uk.co.traynor.privategallery.core.browser.hidden.HiddenPrivateAppsLive178Test.waitFor(HiddenPrivateAppsLive178Test.kt:60)\n... 11 more\n"
+    },
+    {
+      "name": "torCatalogueCrudOnionLaunchAndRevocationUseAuthenticatedSeparateProcess",
+      "classname": "uk.co.traynor.privategallery.core.browser.hidden.HiddenPrivateAppsLive178Test",
+      "time": "90.627",
+      "failure": "java.lang.AssertionError: Fresh navigation requires a fresh document selection\nat uk.co.traynor.privategallery.core.browser.hidden.HiddenPrivateAppsLive178Test.waitFor(HiddenPrivateAppsLive178Test.kt:63)\nat uk.co.traynor.privategallery.core.browser.hidden.HiddenPrivateAppsLive178Test.waitFor$default(HiddenPrivateAppsLive178Test.kt:56)\nat uk.co.traynor.privategallery.core.browser.hidden.HiddenPrivateAppsLive178Test.exercise(HiddenPrivateAppsLive178Test.kt:398)\nat uk.co.traynor.privategallery.core.browser.hidden.HiddenPrivateAppsLive178Test.torCatalogueCrudOnionLaunchAndRevocationUseAuthenticatedSeparateProcess(HiddenPrivateAppsLive178Test.kt:573)\n"
+    }
+  ],
+  "decision": "NOT_APPROVED"
+}

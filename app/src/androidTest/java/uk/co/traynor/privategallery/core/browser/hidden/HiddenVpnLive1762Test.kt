@@ -196,9 +196,9 @@ class HiddenVpnLive1762Test {
         }
         clickNative("Go")
     }
-    private fun evidence(network:Network,origin:String):JSONObject = (network.openConnection(URL("http://203.0.113.10/evidence")) as java.net.HttpURLConnection).let {connection ->
-        connection.connectTimeout=3000;connection.readTimeout=3000
-        try {connection.inputStream.use {JSONObject(it.readBytes().toString(Charsets.UTF_8))}} finally {connection.disconnect()}
+    private fun evidence(network:Network,origin:String):JSONObject {
+        require(origin=="http://fixture.invalid")
+        return OwnedVpnFixtureClient178.evidence(instrumentation.targetContext,network)
     }
     private fun observed(network:Network,origin:String,predicate:(JSONObject)->Boolean):Boolean {
         val events=evidence(network,origin).getJSONArray("events")
@@ -536,13 +536,8 @@ class HiddenVpnLive1762Test {
                 assertTrue("Revocation is not the retired3/5second graceful timeout",deathObserved-lockReturn<1000)
                 assertEquals("Underlying WireGuard remains connected",VpnConnectionState.CONNECTED,engine.state)
                 assertEquals(network,pinned)
-                val barrier=(network.openConnection(URL("$origin/probe-revocation")) as java.net.HttpURLConnection)
-                try {
-                    barrier.connectTimeout=3000;barrier.readTimeout=3000;barrier.requestMethod="POST";barrier.doOutput=true
-                    barrier.outputStream.use {it.write("child-revoked-udp-barrier".toByteArray())}
-                    assertEquals("Parent can still use the exact VPN after child revocation",200,barrier.responseCode)
-                    barrier.inputStream.close()
-                }finally{barrier.disconnect()}
+                assertEquals("Parent can still use the exact VPN after child revocation",200,
+                    OwnedVpnFixtureClient178.revocationBarrier(context,network))
                 Thread.sleep(1000)
                 val after=evidence(network,origin).getJSONArray("events")
                 val events=(0 until after.length()).map {after.getJSONObject(it)}

@@ -29,9 +29,7 @@ import uk.co.traynor.privategallery.core.privateapps.PrimaryPrivateAppStore
 import uk.co.traynor.privategallery.core.privateapps.PrivateAppCatalog
 import uk.co.traynor.privategallery.core.vpn.*
 import java.io.File
-import java.net.HttpURLConnection
 import java.net.URI
-import java.net.URL
 import java.security.MessageDigest
 import java.util.UUID
 import java.util.concurrent.atomic.AtomicBoolean
@@ -64,6 +62,7 @@ class HiddenPrivateAppsLive178Test {
     }
 
     private fun nodes(): List<AccessibilityNodeInfo> {
+        automation.clearCache()
         val result = mutableListOf<AccessibilityNodeInfo>()
         fun visit(node: AccessibilityNodeInfo?) {
             if (node == null) return
@@ -391,8 +390,12 @@ class HiddenPrivateAppsLive178Test {
             click(uploadDocument.displayName);click("Allow upload")
             // App home starts a fresh document; the prior selection cannot silently submit.
             // Already consented bytes are not recallable; session revocation separately closes descriptors.
+            val beforeAppHome=requestCount(events(),requestPath)
             click("App home")
-            waitFor("App home renders after grant cancellation") {visible("Download app document") && visible("Refresh app") && !visible("Stop app loading")}
+            waitFor("Fresh App home document completes after grant cancellation") {
+                requestCount(events(),requestPath)>beforeAppHome &&
+                    visible("Download app document") && visible("Refresh app") && !visible("Stop app loading")
+            }
             assertEquals(beforeUpload,documentPosts())
             clickWeb("Choose app document")
             waitFor("Fresh navigation requires a fresh document selection") {visible(uploadDocument.displayName)}
@@ -513,12 +516,7 @@ class HiddenPrivateAppsLive178Test {
                     uk.co.traynor.privategallery.core.vpn.OwnedVpnDns.lookup(context,pinned,"native-phase.fixture.invalid"){engine.ownsTunnel && engine.state==VpnConnectionState.CONNECTED}.single().hostAddress=="203.0.113.10"
             }
             assertEquals("203.0.113.10", uk.co.traynor.privategallery.core.vpn.OwnedVpnDns.lookup(context,pinned,"native-phase.fixture.invalid"){engine.ownsTunnel && engine.state==VpnConnectionState.CONNECTED}.single().hostAddress)
-            fun dnsEvents():JSONArray {
-                // Numeric observation endpoint must not itself exercise Android resolver fallback.
-                val connection=pinned.openConnection(URL("http://203.0.113.10/evidence")) as HttpURLConnection
-                connection.connectTimeout=3000;connection.readTimeout=3000
-                return try {connection.inputStream.use {JSONObject(it.readBytes().toString(Charsets.UTF_8)).getJSONArray("events")}}finally{connection.disconnect()}
-            }
+            fun dnsEvents():JSONArray = OwnedVpnFixtureClient178.evidence(context,pinned).getJSONArray("events")
             val dnsAllowed={engine.ownsTunnel && engine.state==VpnConnectionState.CONNECTED}
             assertEquals("Truncated DNS uses the same owned VPN TCP path","203.0.113.10",
                 uk.co.traynor.privategallery.core.vpn.OwnedVpnDns.lookup(context,pinned,"tcp-dns-phase.fixture.invalid",dnsAllowed).single().hostAddress)

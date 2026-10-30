@@ -1,0 +1,50 @@
+[
+  {
+    "time": 1793355631.4400713,
+    "kind": "dns",
+    "source": "10.91.0.2",
+    "name": "tcp-dns-phase.fixture.invalid",
+    "qtype": 1,
+    "transport": "udp"
+  },
+  {
+    "time": 1793355631.443934,
+    "kind": "dns",
+    "source": "10.91.0.2",
+    "name": "tcp-dns-phase.fixture.invalid",
+    "qtype": 1,
+    "transport": "tcp"
+  },
+  {
+    "time": 1793355631.4472215,
+    "kind": "dns",
+    "source": "10.91.0.2",
+    "name": "tcp-dns-phase.fixture.invalid",
+    "qtype": 28,
+    "transport": "udp"
+  },
+  {
+    "time": 1793355631.4521346,
+    "kind": "dns",
+    "source": "10.91.0.2",
+    "name": "tcp-dns-phase.fixture.invalid",
+    "qtype": 28,
+    "transport": "tcp"
+  },
+  {
+    "time": 1793355631.45634,
+    "kind": "dns",
+    "source": "10.91.0.2",
+    "name": "slow-dns-phase.fixture.invalid",
+    "qtype": 1,
+    "transport": "udp"
+  },
+  {
+    "time": 1793355634.4603684,
+    "kind": "dns",
+    "source": "10.91.0.2",
+    "name": "slow-dns-phase.fixture.invalid",
+    "qtype": 28,
+    "transport": "udp"
+  }
+]

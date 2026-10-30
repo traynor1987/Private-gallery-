@@ -1,6 +1,6 @@
 # 1.7.8 completion tracker
 
-Latest completed candidate: `a552c80c30c51efa487f309c11ddff98c2f3cc8a`, version 1.7.8/code 47, Android 17/API 37. Run `41034297017` passed all 38 Android and 27 JVM cases, then FAILED strict DNS packet validation. A production bound-socket DNS correction is reviewed but awaits new exact-source compilation/runtime/packet evidence. Signing, original-key upgrade/restart and delivery remain blocked. Historical individual passes do not approve changed source.
+Latest completed candidate: `8690c93bcb581b05f654d90d0875e88a71d93651`, version 1.7.8/code 47, Android 17/API 37. The DNS correction compiled and 27 JVM cases passed; run `41038963560` ran 38 Android cases with 35 pass and 3 failures. Reviewed test-only corrections require new exact-source runtime/packet proof. DNS approval, original-key upgrade/restart, signing and delivery remain blocked.
 
 | Area | Implemented behaviour | Verification status |
 | --- | --- | --- |
@@ -133,3 +133,14 @@ ActualVPNPrivateApps case now additionally exercises forcedUDP-truncation→same
 SevenhostJava programmes including DNSwire/CNAME/IP4/IP6/wrongID/question/flags/truncation/pointer/aliasloop/additional-address poisoning checksPASS;26focusedPython checksPASS including fixtureTCPcontract and strictmDNSnegativecases. Independentactualsource review found no concrete Critical/Important defect in the correctedresolver/integrations; observedDNSfinding remains Important pending exactcompilation/runtime/packetproof. ExistingCI hoststage runs codec and fixturechecks before compilation. Original177source/evidence, reviewedupgradefixture cda898,version1.7.8/code47 and disabledsigner preserved. Next newexactsourcegroup mandatory, then finalindependentdisposition andoriginalkeyupgrade/sign/deliver. No signeraccess or178APKdelivered.
 
 Additional affected VPN/TLS/Tor fixture host checks:10PASS. Combined focusedPython total36PASS; seven Java host programmesPASS. These remain host evidence, not Android compilation or DNS packet approval.
+
+
+## Bound DNS compiled; HTTPS observation and fresh-document fixture corrections
+
+Exact8690c93bcb581b05f654d90d0875e88a71d93651/run41038963560/job124006705823 compiled newproductionDNS/testAPKs and passed27JVM;38Androidcases35PASS3FAIL,0errors/skips. Artifact12969432944 independently hashchecked dabc19f4ec2d01dc691cebfec2cb82c7007245d220c8856dd82208bf77fb88a1. XML/result/actualDNSfixtureevents archived under final-candidate-evidence/8690c93. RealUDP→TCP A/AAAA queries observed from10.91.0.2. This is component evidence only: instrumentation failed before aggregatepacket rendering/validators; no fullDNSclosure or approvalclaimed.
+
+Two failures share invalidobservationprecondition: numericHTTP203.0.113.10 is denied by existingdebugcleartextpolicy, so NativeVPN Firstpage predicate and PrivateApps pendingDNSobserver cannot read events. Newtest-only OwnedVpnFixtureClient178 uses existingtrusted https://native-phase.fixture.invalid with productionOwnedVpnDns/capturedsocketfactory, normalcert+hostnamevalidation, no redirects/retries/cache, boundedtime/body andclientcleanup. No cleartextexemption or TLSbypass added. Parentpost-child-death marker uses sameclient/retainedNetwork/exactbody200assertion.
+
+TorPrivateApps thirdchooser callback is actuallyreceived current/live at10:21:59.588, then lateAppHome navigation invalidatesit. Oldheading/Refresh condition could observe previoussameURLdocument before navigationstart. Now wait originGETcount increment plusfinishednativechrome/heading beforefreshchooser; refreshUiAutomationcache forcurrenthierarchy. OriginalnoPOST-before-consent/freshselection/exactuploadbytes/revocationassertions remain. No clickretry or fakeoriginresponse.
+
+Independentreview of actualnewclient/twotestdiff found no Critical/Important issue or weakening. SevenhostJava programmes and36focusedPythonchecksPASS. ProductionDNSsource unchanged since8690; its Important finding remains open pendingnewexactfullruntime+strictpacketproof. OriginalWireGuardprofile policy requiresIPv4fulltunnel;reviewconfirmed A-firstDNSdoes notintroduceunsupportedIPv6-onlyprofile regression. Finalscopevalidator/38manifest/cda898upgradefixture andoriginal177preserved. Signingstilldisabled; no signeraccess or178APKdelivery.
