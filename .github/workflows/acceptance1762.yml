@@ -242,7 +242,7 @@ jobs:
           cp docs/release178/SECURITY_REVIEW.md "$RUNNER_TEMP/final-security178.md"
           cp scripts/verify_final_scope178.py "$RUNNER_TEMP/verify_final_scope178.py"
           cp scripts/private_apps178_cases.json "$RUNNER_TEMP/private_apps178_cases.json"
-          cp scripts/upgrade178/UpgradeFixtureTest.kt "$RUNNER_TEMP/UpgradeFixture178.kt"
+          cp docs/release178/UpgradeFixtureTest.kt "$RUNNER_TEMP/UpgradeFixture178.kt"
           sha256sum "$RUNNER_TEMP/UpgradeFixture178.kt" > "$RUNNER_TEMP/upgrade-fixture178-sha256.txt"
           PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s scripts/tests -p test_final_scope178.py
           git rev-parse HEAD > "$RUNNER_TEMP/release-control178-sha.txt"
