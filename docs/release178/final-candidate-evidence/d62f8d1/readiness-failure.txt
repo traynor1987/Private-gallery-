@@ -1,0 +1,11 @@
+10-30 12:47:44.712  4564  4588 I HiddenVpnLive1762: Synthetic touch control=Run JavaScript POST window=12 bounds=Rect(8, 298 - 150, 320)
+10-30 12:47:45.136  4564  4588 I HiddenVpnLive1762: Synthetic touch control=Run worker POST window=12 bounds=Rect(8, 339 - 128, 361)
+10-30 12:47:45.522  4564  4588 I HiddenVpnLive1762: Synthetic touch control=Frame alert window=12 bounds=Rect(531, 415 - 615, 437)
+10-30 12:47:46.541  4564  4588 I HiddenVpnLive1762: Synthetic touch control=Confirm window=12 bounds=Rect(1007, 544 - 1071, 566)
+10-30 12:47:47.666  4564  4588 I HiddenVpnLive1762: Synthetic touch control=Prompt window=12 bounds=Rect(1074, 544 - 1135, 566)
+10-30 12:47:51.191  4564  4588 I HiddenVpnLive1762: Synthetic touch control=Run WebSocket window=12 bounds=Rect(8, 544 - 117, 566)
+10-30 12:47:51.671  4564  4588 I HiddenVpnLive1762: Synthetic touch control=Run RTC route probe window=12 bounds=Rect(120, 544 - 259, 566)
+10-30 12:48:00.323  4564  4588 I HiddenVpnLive1762: Synthetic touch control=Run JavaScript POST window=12 bounds=Rect(8, 298 - 150, 320)
+10-30 12:48:02.593  4564  4588 I HiddenVpnLive1762: Synthetic touch control=Submit form window=12 bounds=Rect(207, 342 - 297, 364)
+10-30 12:48:36.703  4564  4588 E TestRunner: java.lang.AssertionError: Fresh document is complete before HTML action Choose Hidden upload
+10-30 12:48:36.703  4564  4588 E TestRunner: 	at uk.co.traynor.privategallery.core.browser.hidden.HiddenVpnLive1762Test.nativeChildPostsFormsUploadsAndRevokesOnOwnedVpn$lambda$9$navigateDocument(HiddenVpnLive1762Test.kt:310)

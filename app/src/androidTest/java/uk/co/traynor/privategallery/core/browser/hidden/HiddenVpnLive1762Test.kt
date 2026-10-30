@@ -307,12 +307,38 @@ class HiddenVpnLive1762Test {
                         }}
                     }
                     val before=count();navigate(url)
-                    waitFor("Fresh document is complete before HTML action $control") {
-                        val visible=nodes()
-                        count()>before && visible.any {it.contentDescription?.toString()=="Reload" && it.isVisibleToUser} &&
-                            visible.none {it.contentDescription?.toString()=="Stop" && it.isVisibleToUser} &&
-                            visible.any {it.text?.toString()==control && it.isVisibleToUser && it.isEnabled}
+                    var scrollRequested=false
+                    var state=JSONObject()
+                    try {
+                        waitFor("Fresh document is complete before HTML action $control") {
+                            val current=nodes()
+                            val fresh=count()>before
+                            val reload=current.any {it.contentDescription?.toString()=="Reload" && it.isVisibleToUser}
+                            val stop=current.any {it.contentDescription?.toString()=="Stop" && it.isVisibleToUser}
+                            val target=current.firstOrNull {it.text?.toString()==control && it.isEnabled}
+                            val bounds=android.graphics.Rect();target?.getBoundsInScreen(bounds)
+                            state=JSONObject().put("fresh_origin_get",fresh).put("reload_visible",reload)
+                                .put("stop_visible",stop).put("target_present",target!=null)
+                                .put("target_visible",target?.isVisibleToUser==true).put("target_bounds",bounds.toShortString())
+                                .put("scroll_requested",scrollRequested)
+                            // A reloaded document can restore scroll. Establish visibility before
+                            // retaining the original ready assertion and subsequent single touch.
+                            if(fresh && reload && !stop && target!=null && !scrollRequested) {
+                                scrollRequested=true
+                                state.put("scroll_accepted",target.performAction(AccessibilityNodeInfo.AccessibilityAction.ACTION_SHOW_ON_SCREEN.id))
+                                return@waitFor false
+                            }
+                            fresh && reload && !stop && target?.isVisibleToUser==true
+                        }
+                    } catch(failure:AssertionError) {
+                        runCatching {
+                            val output=java.io.File(checkNotNull(InstrumentationRegistry.getArguments().getString("additionalTestOutputDir")))
+                            check(output.isDirectory || output.mkdirs())
+                            java.io.File(output,"native-document-readiness178-failure.json").writeText(state.toString())
+                        }
+                        throw failure
                     }
+
                 }
 
                 navigate("$secureOrigin/parity-one")

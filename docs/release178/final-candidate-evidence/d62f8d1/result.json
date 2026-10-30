@@ -1,0 +1,21 @@
+{
+  "source_sha": "d62f8d140c1e5818892e04ba3999a6a324e45b65",
+  "run_id": 41056876664,
+  "job_id": 124066519659,
+  "artifact_id": 12978122872,
+  "artifact_sha256": "80fc1c8eb187c882be75315122bae63405e03b3008da9f90e73d78b3dd30399f",
+  "original_conclusion": "failure",
+  "android": {
+    "tests": 38,
+    "failures": 1,
+    "errors": 0,
+    "skipped": 0
+  },
+  "jvm": {
+    "tests": 29,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "failure": "NativeVPN navigateDocument uploadready precondition line310; GET/upload observed, nochooserattempt. BothPrivateAppsVPN/TorPASS. Exactmissingreadycondition notdumped."
+}
