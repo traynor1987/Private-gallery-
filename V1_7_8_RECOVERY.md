@@ -1,6 +1,14 @@
 # Private Gallery 1.7.8 recovery
 
-Status: DEDICATED CONTROLS + REAL HIDDEN VPN/TOR APP LIFECYCLE VERIFIED / ORIGINAL RELEASE SCOPE INCOMPLETE / NOT APPROVED FOR SIGNING.
+Current status: FINAL VERIFICATION IN PROGRESS / NOT APPROVED FOR SIGNING.
+
+Latest completed application/test candidate: `68affd18cf4efd700cd4e9a058b225b61c9cff68` on `release/1.7.8-private-apps`, version 1.7.8/code 47, Android 17/API 37. Grouped run `41031983054` passed all 38 Android and 27 JVM cases but FAILED its packet postprocessor on host-local mDNS attribution. The reviewed narrow classifier correction and new negative tests require a new exact-source grouped run; original failure remains recorded below. Complete current-source packet/runtime approval, independent disposition, original-key code46→47 upgrade/restart and one signed APK delivery remain mandatory. Physical Samsung Galaxy Z Fold acceptance is owner-required.
+
+Reviewed final upgrade control: `docs/release178/UpgradeFixtureTest.kt`, SHA-256 `cda89804a84f88ad5de5d0bf912efe79fb33ca283427d7ea8cf7d3f40bc87429`. Production gate remains disabled. No final 1.7.8 APK has been delivered.
+
+## Historical development record
+
+The entries below preserve earlier checkpoints and their then-current limitations; current status above and the latest entries take precedence.
 
 Authoritative starting HEAD: 64d4c213fe3b3a92ecd946e334e8a918851636c9 on release/1.7.7-recently-deleted.
 Frozen 1.7.7 application: 25aae6d59f79c455e47acc73a5c99f9c8f15242a.
@@ -248,3 +256,12 @@ Exactb2457eedb86a1462f81ead3f42574b689b1ee1bf/run41029870034/job123976748091 com
 NativeVPN failed initialsameNetworkDNSassert in0.465s beforechildlaunch: resolver configuration net102 was asynchronously installed09:06:25.226. Apply existingPrivateAppsVPN precondition consistently: previousapp-ownedNetwork gone before connect, then exact203.0.113.10 resolution through originalsamepinnedNetwork before unchangedfinalassert. No alternateNetwork, routeclearing or DNSoverride. Tor strengthenednavigation now exposes priorprecondition: ACTION_FOCUS never established realCompose inputfocus; timeouttree still shows emptyeditable, beforeGo/scriptprobe. Use onephysicaltouch on freshstablevisibleeditable bounds in originalactivewindow, then require focused/exactpublishedURL before singleGo. Refresh UiAutomationcache, preserving actualnativeprovider and allprotocolassertions. No newproductionchange. These corrections require runtimeconfirmation and are not claimedPASS.
 
 Independentreview agrees these are validfixtureconditions with no securityweakening. SixhostJava programmes and15focusedPythonchecksPASS locally. Reviewedfinalupgradefixture remainsdocs/release178/UpgradeFixtureTest.kt SHA256cda89804a84f88ad5de5d0bf912efe79fb33ca283427d7ea8cf7d3f40bc87429; sourceand177preserved. Nextgroupedexact38+packet/DNSgate, finalindependentreview, originalkeyupgrade/restart/signing remainmandatory. Frozenproductiongatezeros/markerabsent; no178APKdelivered.
+
+
+## All38Android pass; host-local mDNS attribution corrected, aggregate still blocked
+
+Exact68affd18cf4efd700cd4e9a058b225b61c9cff68/run41031983054/job123983634373 compiled and passed27JVM and ALL38Androidcases,0failures/errors/skips. Artifact12967430131 independently downloaded/hashchecked7231bb23e8101128d01b0f856d4be7e76fab55afbd9370bb35ed452dce045813. RenderedAPI37/tools22/15stableSurfaceFlinger and emptyfinalcrashbuffer confirmed. Independent nativeTor packet/DNS/revocation validator PASS. Aggregateworkflow nevertheless FAILED at originalVPN packetvalidator; no final-gates or approval manufactured. XML/result/hostpacketheadings archived under final-candidate-evidence/68affd1.
+
+Exactly8rejectedrecords are hostlo In TTL1 UDP203.0.113.10:5353→224.0.0.251:5353:4Android.local A/AAAA queries and4adb-emulator SRV + Android_hostname A/AAAA queries. Fixture explicitly owns203.0.113.10 on hostlo; existingclassifier already distinguished exacthostadb servicebrowse/IGMP, but did not recognize these additionalhostadb lookup shapes. No rejectedunicastHTTP/TLS/originDNS/STUN found. Preserve strict hostlo/TTL1/source/destination/port checks, exact3q69bytes Android.local A1AAAA2, exact4q146bytes knownEMULATOR37X2X13X0 adbservice plus sameAndroid_8charhostname A1AAAA2. Fullquestionreconstruction/count/length and boundednames required; no blanketlo/port exception. All apporiginHTTP/STUNsource, fixtureDNSinterface and actualunicast WireGuard assertions remainunchanged.
+
+Added5focused classifier tests first(twoexpectedpositive failures on originalclassifier), then correctedrecognizer;20focusedPython and6hostJava programmes PASS. Negativecases retain rejection of otherinterfaces/TTL/protocols/endpoints/ports/names/qtypes/counts/lengths/mixedhosts. Existinggroupedworkflow hoststage now runs these5tests. Independent actualdiff review and correctedVPN/Tor/38 revalidation PASS, but original68workflowfailure is retained. One newexact-sourcegroup is required before review/signing; no priorfailedexit is reclassified as0. Productionapp andAndroidtest source unchanged in thisbatch. Final reviewedupgradefixture cda898 remainsbound; original177preserved. Signing remainsdisabled andno178APKdelivered.

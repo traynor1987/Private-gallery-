@@ -231,7 +231,9 @@ jobs:
           "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --version | tee app/build/privateapps178/command-tools-version.txt
           "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-37.1" "build-tools;36.0.0" "emulator"
       - name: Catalogue host checks
-        run: bash scripts/check_private_apps178.sh
+        run: |
+          bash scripts/check_private_apps178.sh
+          PYTHONDONTWRITEBYTECODE=1 python3 -m unittest scripts.tests.test_vpn_host_mdns1762
       - name: Compile application and run catalogue JVM tests
         run: ./gradlew :app:testDebugUnitTest --tests 'uk.co.traynor.privategallery.core.privateapps.*' --tests 'uk.co.traynor.privategallery.core.vault.VaultDocumentPolicyTest' :app:assembleDebug :app:assembleDebugAndroidTest --stacktrace
       - name: Prepare isolated Private Apps transport fixtures

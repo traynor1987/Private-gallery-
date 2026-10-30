@@ -13,10 +13,24 @@ def host_fixture_adb_multicast(record):
  if 'proto IGMP (2)' in lines[0]:
   return endpoint=='203.0.113.10 > 224.0.0.22: igmp v3 report, 1 group record(s) [gaddr 224.0.0.251 to_ex { }]'
  if 'proto UDP (17)' not in lines[0]:return False
- match=re.fullmatch(r'203\.0\.113\.10\.5353 > 224\.0\.0\.251\.5353: (?:\[bad udp cksum 0x[0-9a-f]+ -> 0x[0-9a-f]+!\] )?0 \[3q\] (.+) \(99\)',endpoint)
+ match=re.fullmatch(r'203\.0\.113\.10\.5353 > 224\.0\.0\.251\.5353: (?:\[bad udp cksum 0x[0-9a-f]+ -> 0x[0-9a-f]+!\] )?0 \[(3|4)q\] (.+) \((69|99|146)\)',endpoint)
  if match is None:return False
- questions=re.findall(r'ANY ANY \(QM\)\? (_adb(?:-tls-connect|-tls-pairing)?\._tcp\.local\.)',match.group(1))
- return len(questions)==3 and set(questions)=={'_adb._tcp.local.','_adb-tls-connect._tcp.local.','_adb-tls-pairing._tcp.local.'} and ' '.join('ANY ANY (QM)? '+name for name in questions)==match.group(1)
+ count=int(match.group(1));body=match.group(2);size=int(match.group(3))
+ questions=re.findall(r'(ANY|AAAA|A|SRV) ANY \(QM\)\? (\S+)',body)
+ if len(questions)!=count or ' '.join(kind+' ANY (QM)? '+name for kind,name in questions)!=body:return False
+ if count==3 and size==99:
+  return sorted(questions)==sorted(('ANY',name) for name in ('_adb._tcp.local.','_adb-tls-connect._tcp.local.','_adb-tls-pairing._tcp.local.'))
+ # Host adb also resolves its discovered emulator. These exact multicast
+ # question shapes still require host lo, TTL1 and both fixed5353 endpoints.
+ if count==3 and size==69:
+  return sorted(questions)==[('A','Android.local.'),('AAAA','Android.local.'),('AAAA','Android.local.')]
+ if count==4 and size==146:
+  service=[name for kind,name in questions if kind=='SRV']
+  addresses=[(kind,name) for kind,name in questions if kind!='SRV']
+  if len(service)!=1 or not re.fullmatch(r'adb-EMULATOR37X2X13X0-[A-Za-z0-9]{6}\._adb\._tcp\.local\.',service[0]):return False
+  names={name for _,name in addresses}
+  return len(names)==1 and re.fullmatch(r'Android_[A-Z0-9]{8}\.local\.',next(iter(names))) is not None and sorted(kind for kind,_ in addresses)==['A','AAAA','AAAA']
+ return False
 
 
 root=Path(sys.argv[1])

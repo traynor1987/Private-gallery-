@@ -1,0 +1,13 @@
+{
+  "source_sha": "68affd18cf4efd700cd4e9a058b225b61c9cff68",
+  "run_id": 41031983054,
+  "artifact_id": 12967430131,
+  "artifact_sha256": "7231bb23e8101128d01b0f856d4be7e76fab55afbd9370bb35ed452dce045813",
+  "android_tests": 38,
+  "passed": 38,
+  "jvm_tests": 27,
+  "workflow_conclusion": "failure",
+  "blocking_stage": "verify_hidden_vpn_fixture1762.py host mDNS attribution",
+  "revalidation_with_reviewed_corrected_classifier": "PASS, not original-source approval",
+  "decision": "NOT_APPROVED"
+}

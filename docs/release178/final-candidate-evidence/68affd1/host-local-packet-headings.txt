@@ -1,0 +1,41 @@
+2026-10-30 09:19:43.714305 lo    In  IP (tos 0xc0, ttl 1, id 0, offset 0, flags [DF], proto IGMP (2), length 40, options (RA))
+    203.0.113.10 > 224.0.0.22: igmp v3 report, 1 group record(s) [gaddr 224.0.0.251 to_ex { }]
+
+2026-10-30 09:19:44.012808 lo    In  IP (tos 0x0, ttl 1, id 45549, offset 0, flags [DF], proto UDP (17), length 127)
+    203.0.113.10.5353 > 224.0.0.251.5353: [bad udp cksum 0x1d83 -> 0xd2f6!] 0 [3q] ANY ANY (QM)? _adb-tls-pairing._tcp.local. ANY ANY (QM)? _adb._tcp.local. ANY ANY (QM)? _adb-tls-connect._tcp.local. (99)
+
+2026-10-30 09:19:44.329290 lo    In  IP (tos 0xc0, ttl 1, id 0, offset 0, flags [DF], proto IGMP (2), length 40, options (RA))
+    203.0.113.10 > 224.0.0.22: igmp v3 report, 1 group record(s) [gaddr 224.0.0.251 to_ex { }]
+
+2026-10-30 09:21:44.033337 lo    In  IP (tos 0x0, ttl 1, id 50052, offset 0, flags [DF], proto UDP (17), length 127)
+    203.0.113.10.5353 > 224.0.0.251.5353: [bad udp cksum 0x1d83 -> 0xd2f6!] 0 [3q] ANY ANY (QM)? _adb-tls-pairing._tcp.local. ANY ANY (QM)? _adb._tcp.local. ANY ANY (QM)? _adb-tls-connect._tcp.local. (99)
+
+2026-10-30 09:21:56.607341 lo    In  IP (tos 0x0, ttl 1, id 54526, offset 0, flags [DF], proto UDP (17), length 97)
+    203.0.113.10.5353 > 224.0.0.251.5353: [bad udp cksum 0x1d65 -> 0x7ce4!] 0 [3q] AAAA ANY (QM)? Android.local. A ANY (QM)? Android.local. AAAA ANY (QM)? Android.local. (69)
+
+2026-10-30 09:22:02.601327 lo    In  IP (tos 0x0, ttl 1, id 58474, offset 0, flags [DF], proto UDP (17), length 97)
+    203.0.113.10.5353 > 224.0.0.251.5353: [bad udp cksum 0x1d65 -> 0x7ce4!] 0 [3q] AAAA ANY (QM)? Android.local. A ANY (QM)? Android.local. AAAA ANY (QM)? Android.local. (69)
+
+2026-10-30 09:22:08.601339 lo    In  IP (tos 0x0, ttl 1, id 61894, offset 0, flags [DF], proto UDP (17), length 97)
+    203.0.113.10.5353 > 224.0.0.251.5353: [bad udp cksum 0x1d65 -> 0x7ce4!] 0 [3q] AAAA ANY (QM)? Android.local. A ANY (QM)? Android.local. AAAA ANY (QM)? Android.local. (69)
+
+2026-10-30 09:22:14.602472 lo    In  IP (tos 0x0, ttl 1, id 64994, offset 0, flags [DF], proto UDP (17), length 97)
+    203.0.113.10.5353 > 224.0.0.251.5353: [bad udp cksum 0x1d65 -> 0x7ce4!] 0 [3q] AAAA ANY (QM)? Android.local. A ANY (QM)? Android.local. AAAA ANY (QM)? Android.local. (69)
+
+2026-10-30 09:23:44.109354 lo    In  IP (tos 0x0, ttl 1, id 43410, offset 0, flags [DF], proto UDP (17), length 127)
+    203.0.113.10.5353 > 224.0.0.251.5353: [bad udp cksum 0x1d83 -> 0xd2f6!] 0 [3q] ANY ANY (QM)? _adb-tls-pairing._tcp.local. ANY ANY (QM)? _adb._tcp.local. ANY ANY (QM)? _adb-tls-connect._tcp.local. (99)
+
+2026-10-30 09:24:06.472579 lo    In  IP (tos 0x0, ttl 1, id 49873, offset 0, flags [DF], proto UDP (17), length 174)
+    203.0.113.10.5353 > 224.0.0.251.5353: [bad udp cksum 0x1db2 -> 0x917a!] 0 [4q] SRV ANY (QM)? adb-EMULATOR37X2X13X0-7QJ9fS._adb._tcp.local. AAAA ANY (QM)? Android_D4U1E2V7.local. AAAA ANY (QM)? Android_D4U1E2V7.local. A ANY (QM)? Android_D4U1E2V7.local. (146)
+
+2026-10-30 09:24:12.457727 lo    In  IP (tos 0x0, ttl 1, id 52833, offset 0, flags [DF], proto UDP (17), length 174)
+    203.0.113.10.5353 > 224.0.0.251.5353: [bad udp cksum 0x1db2 -> 0x917a!] 0 [4q] AAAA ANY (QM)? Android_D4U1E2V7.local. A ANY (QM)? Android_D4U1E2V7.local. SRV ANY (QM)? adb-EMULATOR37X2X13X0-7QJ9fS._adb._tcp.local. AAAA ANY (QM)? Android_D4U1E2V7.local. (146)
+
+2026-10-30 09:24:18.459424 lo    In  IP (tos 0x0, ttl 1, id 55968, offset 0, flags [DF], proto UDP (17), length 174)
+    203.0.113.10.5353 > 224.0.0.251.5353: [bad udp cksum 0x1db2 -> 0x917a!] 0 [4q] SRV ANY (QM)? adb-EMULATOR37X2X13X0-7QJ9fS._adb._tcp.local. AAAA ANY (QM)? Android_D4U1E2V7.local. AAAA ANY (QM)? Android_D4U1E2V7.local. A ANY (QM)? Android_D4U1E2V7.local. (146)
+
+2026-10-30 09:24:24.459961 lo    In  IP (tos 0x0, ttl 1, id 61023, offset 0, flags [DF], proto UDP (17), length 174)
+    203.0.113.10.5353 > 224.0.0.251.5353: [bad udp cksum 0x1db2 -> 0x917a!] 0 [4q] AAAA ANY (QM)? Android_D4U1E2V7.local. A ANY (QM)? Android_D4U1E2V7.local. SRV ANY (QM)? adb-EMULATOR37X2X13X0-7QJ9fS._adb._tcp.local. AAAA ANY (QM)? Android_D4U1E2V7.local. (146)
+
+2026-10-30 09:25:44.181473 lo    In  IP (tos 0x0, ttl 1, id 11528, offset 0, flags [DF], proto UDP (17), length 127)
+    203.0.113.10.5353 > 224.0.0.251.5353: [bad udp cksum 0x1d83 -> 0xd2f6!] 0 [3q] ANY ANY (QM)? _adb-tls-pairing._tcp.local. ANY ANY (QM)? _adb._tcp.local. ANY ANY (QM)? _adb-tls-connect._tcp.local. (99)
