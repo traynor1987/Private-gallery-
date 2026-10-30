@@ -48,7 +48,10 @@ class PrivateAppSessionSettings178Test {
   val primary=PrivateAppsController(store.owner(),{true},{a,b,id->PrivateAppCommands.execute(store,a,b,id)},{},keepSignedIn={keep},changeKeepSignedIn={keep=it},clearProfile={clears++})
   val hidden=PrivateAppsController(PrivateAppStore.Owner.HIDDEN_VPN,{true},{_,_,_->value},{},clearProfile={clears++})
   var controller by mutableStateOf(primary)
-  compose.setContent {PrivateGalleryTheme(AppTheme.LIGHT){if(show)key(controller){PrivateAppSettings(controller,entry.id(),{}, {},{show=false})}}}
+  compose.setContent {PrivateGalleryTheme(AppTheme.LIGHT){if(show)key(controller){
+   val displayed=controller
+   PrivateAppSettings(displayed,entry.id(),{}, {},{if(controller===displayed)show=false})
+  }}}
   compose.waitUntil(5000){compose.onAllNodesWithTag("private-app-retention-toggle").fetchSemanticsNodes().isNotEmpty()}
   compose.onNodeWithTag("private-app-retention-toggle").performScrollTo().performClick()
   compose.runOnIdle {assertFalse(keep)}

@@ -44,7 +44,7 @@ import java.util.concurrent.atomic.AtomicBoolean
  */
 class HiddenPrivateAppsLive178Test {
     private val instrumentation = InstrumentationRegistry.getInstrumentation()
-    private val automation get() = instrumentation.uiAutomation
+    private val automation get() = FixtureAccessibility178.automation(instrumentation)
     private val context get() = instrumentation.targetContext
 
     private fun shell(command: String) = ParcelFileDescriptor.AutoCloseInputStream(
@@ -613,9 +613,8 @@ class HiddenPrivateAppsLive178Test {
                     HiddenTorSockets.open(config.unixPath, host, 80).use { stream ->
                         stream.output.write("GET /evidence HTTP/1.1\r\nHost: $host\r\nConnection: close\r\n\r\n".toByteArray())
                         stream.output.flush()
-                        val raw = stream.input.readBytes().toString(Charsets.UTF_8)
-                        require(raw.startsWith("HTTP/1.1 200") || raw.startsWith("HTTP/1.0 200"))
-                        JSONObject(raw.substringAfter("\r\n\r\n")).getJSONArray("events")
+                        val body=FixtureHttpResponse178.read(stream.input)
+                        JSONObject(body).getJSONArray("events")
                     }
                 }
             }

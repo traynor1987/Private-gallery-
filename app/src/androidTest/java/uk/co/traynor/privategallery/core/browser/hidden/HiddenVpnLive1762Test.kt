@@ -34,7 +34,7 @@ import uk.co.traynor.privategallery.core.vpn.*
  * No assumptions/skips once hiddenVpnConfig is supplied. Host packet/DNS evidence is separate. */
 class HiddenVpnLive1762Test {
     private val instrumentation=InstrumentationRegistry.getInstrumentation()
-    private val automation get()=instrumentation.uiAutomation
+    private val automation get()=FixtureAccessibility178.automation(instrumentation)
     private fun shell(command:String):String = ParcelFileDescriptor.AutoCloseInputStream(automation.executeShellCommand(command)).use {it.readBytes().toString(Charsets.UTF_8)}
     private fun waitFor(message:String,seconds:Int=30,predicate:()->Boolean) {
         val deadline=android.os.SystemClock.elapsedRealtime()+seconds*1000L

@@ -3,5 +3,10 @@
   <!-- Only reserved .invalid mock origins may use HTTP in protocol-fixture tests. -->
   <application android:networkSecurityConfig="@xml/hidden_test_network_security" tools:replace="android:networkSecurityConfig">
     <activity android:name="uk.co.traynor.privategallery.PrivacyPauseFixtureActivity" android:exported="false" android:theme="@android:style/Theme.Material.Light.Dialog.NoActionBar" />
+    <service android:name="uk.co.traynor.privategallery.CiAccessibilityService178"
+        android:exported="true" android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
+      <intent-filter><action android:name="android.accessibilityservice.AccessibilityService" /></intent-filter>
+      <meta-data android:name="android.accessibilityservice" android:resource="@xml/ci_accessibility178" />
+    </service>
   </application>
 </manifest>

@@ -24,7 +24,7 @@ import uk.co.traynor.privategallery.core.hidden.HiddenSession
 /** Real packaged Tor + sink + protected relay proxy + JS-off native child. Never legacy GET proof. */
 class NativeTorIsolation1762Test {
     private val instrumentation=InstrumentationRegistry.getInstrumentation()
-    private val automation get()=instrumentation.uiAutomation
+    private val automation get()=FixtureAccessibility178.automation(instrumentation)
     private fun shell(command:String)=ParcelFileDescriptor.AutoCloseInputStream(automation.executeShellCommand(command)).use {it.readBytes().toString(Charsets.UTF_8)}
     private fun waitFor(message:String,seconds:Int=30,predicate:()->Boolean) {
         val deadline=SystemClock.elapsedRealtime()+seconds*1000L

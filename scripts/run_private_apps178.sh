@@ -25,6 +25,11 @@ python3 scripts/debug_apk_identity1762.py app/build/outputs/apk/debug/app-debug.
 adb push "$RUNNER_TEMP/private-gallery-vpn1762/client.conf" /data/local/tmp/hidden-vpn1762.conf
 adb shell chmod 600 /data/local/tmp/hidden-vpn1762.conf
 native_package=$(python3 scripts/debug_apk_identity1762.py app/build/outputs/apk/debug/app-debug.apk)
+# A real inert AT service keeps Chromium's native AX provider enabled. UiAutomation
+# alone can disappear from Chromium's initialized enabled-service list.
+adb install -r app/build/outputs/apk/debug/app-debug.apk
+adb shell settings put secure enabled_accessibility_services "$native_package/uk.co.traynor.privategallery.CiAccessibilityService178"
+adb shell settings put secure accessibility_enabled 1
 bash scripts/reset_native_browser_evidence1762.sh "$native_package"
 adb shell wm size 1200x1800
 adb shell wm density 160

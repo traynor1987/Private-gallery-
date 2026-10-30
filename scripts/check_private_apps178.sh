@@ -11,6 +11,8 @@ java com.sun.tools.javac.Main -d "$classes" \
  scripts/tests/browser/BrowserScreenshotChecks.java \
  app/src/main/java/uk/co/traynor/privategallery/core/hidden/HiddenSession.java \
  app/src/main/java/uk/co/traynor/privategallery/core/hidden/HiddenRecordStore.java \
+ app/src/androidTest/java/uk/co/traynor/privategallery/core/browser/hidden/FixtureHttpResponse178.java \
+ scripts/tests/fixtures/FixtureHttpResponse178Checks.java \
  scripts/tests/privateapps/*.java
 java -cp "$classes" PrivateAppPolicyChecks
 java -cp "$classes" PrivateAppCatalogChecks
@@ -20,3 +22,5 @@ java -cp "$classes" PrivateAppIconSourceChecks
 java -cp "$classes" BrowserScreenshotChecks
 
 java -cp "$classes" VpnDnsMessageChecks
+
+java -cp "$classes" FixtureHttpResponse178Checks

@@ -1,0 +1,25 @@
+{
+  "source_sha": "91bfcf038855227dbfcdd34a9e9cc03085d23125",
+  "run_id": 41059260504,
+  "job_id": 124074556185,
+  "artifact_id": 12979002828,
+  "artifact_sha256": "15bd4d0dc439a54d704ee9208411c4890a8742249ec0a833352154e36075635b",
+  "original_conclusion": "failure",
+  "android": {
+    "tests": 38,
+    "failures": 3,
+    "errors": 0,
+    "skipped": 0
+  },
+  "jvm": {
+    "tests": 29,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "failures": [
+    "Settingsfixture switchedHidden thenauthtoggleabsent67",
+    "NativeVPN freshformGET andReload/noStop butemptyWebViewAXsubtree",
+    "TorPrivateApps realSOCKS /evidence observerreadBytes EAGAIN616"
+  ]
+}
