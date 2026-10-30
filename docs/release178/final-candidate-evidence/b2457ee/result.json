@@ -1,0 +1,23 @@
+{
+  "source_sha": "b2457eedb86a1462f81ead3f42574b689b1ee1bf",
+  "run_id": 41029870034,
+  "artifact_id": 12964899562,
+  "artifact_sha256": "23c68e17b3707e41221bbc46437a6ef2d5b1e31af057926dcb73e539971de7f4",
+  "tests": 38,
+  "passed": 36,
+  "failures": [
+    {
+      "name": "nativeChildPostsFormsUploadsAndRevokesOnOwnedVpn",
+      "classname": "uk.co.traynor.privategallery.core.browser.hidden.HiddenVpnLive1762Test",
+      "time": "0.465",
+      "failure": "java.net.UnknownHostException: Unable to resolve host \"fixture.invalid\": No address associated with hostname\nat java.net.Inet6AddressImpl.lookupHostByName(Inet6AddressImpl.java:156)\nat java.net.Inet6AddressImpl.lookupAllHostAddr(Inet6AddressImpl.java:103)\nat java.net.InetAddress.getAllByNameOnNet(InetAddress.java:1684)\nat android.net.Network.getAllByName(Network.java:141)\nat uk.co.traynor.privategallery.core.browser.hidden.HiddenVpnLive1762Test.nativeChildPostsFormsUploadsAndRevokesOnOwnedVpn(HiddenVpnLive1762Test.kt:248)\n... 31 trimmed\nCaused by: android.system.GaiException: android_getaddrinfo failed: EAI_NODATA (No address associated with hostname)\nat libcore.io.Linux.android_getaddrinfo(Native Method)\nat libcore.io.ForwardingOs.android_getaddrinfo(ForwardingOs.java:134)\nat libcore.io.BlockGuardOs.android_getaddrinfo(BlockGuardOs.java:222)\nat libcore.io.ForwardingOs.android_getaddrinfo(ForwardingOs.java:134)\nat java.net.Inet6AddressImpl.lookupHostByName(Inet6AddressImpl.java:135)\n... 36 more\n"
+    },
+    {
+      "name": "packagedTorNativeFormsUploadsDownloadsAndNetworkSink",
+      "classname": "uk.co.traynor.privategallery.core.browser.hidden.NativeTorIsolation1762Test",
+      "time": "48.852",
+      "failure": "java.lang.AssertionError: Native Tor address publication\nat org.junit.Assert.fail(Assert.java:89)\nat org.junit.Assert.assertTrue(Assert.java:42)\nat uk.co.traynor.privategallery.core.browser.hidden.NativeTorIsolation1762Test.waitFor(NativeTorIsolation1762Test.kt:37)\nat uk.co.traynor.privategallery.core.browser.hidden.NativeTorIsolation1762Test.waitFor$default(NativeTorIsolation1762Test.kt:29)\nat uk.co.traynor.privategallery.core.browser.hidden.NativeTorIsolation1762Test.navigate(NativeTorIsolation1762Test.kt:80)\nat uk.co.traynor.privategallery.core.browser.hidden.NativeTorIsolation1762Test.packagedTorNativeFormsUploadsDownloadsAndNetworkSink(NativeTorIsolation1762Test.kt:166)\n"
+    }
+  ],
+  "decision": "NOT_APPROVED"
+}

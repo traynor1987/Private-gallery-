@@ -37,6 +37,7 @@ class NativeTorIsolation1762Test {
         assertTrue(message,satisfied)
     }
     private fun nodes():List<AccessibilityNodeInfo> {
+        automation.clearCache()
         val result=mutableListOf<AccessibilityNodeInfo>()
         fun visit(node:AccessibilityNodeInfo?){if(node==null)return;result+=node;repeat(node.childCount){visit(node.getChild(it))}}
         visit(automation.rootInActiveWindow);return result
@@ -77,9 +78,30 @@ class NativeTorIsolation1762Test {
             try {assertTrue("Web touch delivered",automation.injectInputEvent(event,true))}finally{event.recycle()}
         }
     }
-    private fun navigate(url:String){waitFor("Native Tor address publication"){
+    private fun navigate(url:String){
+      var focusTouched=false
+      var previousFocusBounds:android.graphics.Rect?=null
+      waitFor("Native Tor address publication"){
         val field=nodes().firstOrNull {it.isEditable && it.isVisibleToUser && it.isEnabled} ?: return@waitFor false
-        if(!field.isFocused) {field.performAction(AccessibilityNodeInfo.ACTION_FOCUS);return@waitFor false}
+        if(!field.isFocused) {
+            if(!focusTouched) {
+                val bounds=android.graphics.Rect();field.getBoundsInScreen(bounds)
+                val root=automation.rootInActiveWindow ?: return@waitFor false
+                val screen=android.graphics.Rect();root.getBoundsInScreen(screen)
+                if(root.windowId!=field.windowId || bounds.isEmpty || !screen.contains(bounds))return@waitFor false
+                val stable=previousFocusBounds==bounds
+                previousFocusBounds=android.graphics.Rect(bounds)
+                if(!stable)return@waitFor false
+                val at=android.os.SystemClock.uptimeMillis()
+                for(action in intArrayOf(android.view.MotionEvent.ACTION_DOWN,android.view.MotionEvent.ACTION_UP)) {
+                    val event=android.view.MotionEvent.obtain(at,android.os.SystemClock.uptimeMillis(),action,bounds.exactCenterX(),bounds.exactCenterY(),0)
+                    event.source=android.view.InputDevice.SOURCE_TOUCHSCREEN
+                    try {assertTrue("Address focus touch delivered",automation.injectInputEvent(event,true))}finally{event.recycle()}
+                }
+                focusTouched=true
+            }
+            return@waitFor false
+        }
         if(field.text?.toString()!=url) {
             field.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT,Bundle().apply {putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE,url)})
             return@waitFor false

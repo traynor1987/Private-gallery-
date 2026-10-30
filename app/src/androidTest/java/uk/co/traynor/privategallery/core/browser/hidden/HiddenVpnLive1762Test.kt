@@ -237,6 +237,12 @@ class HiddenVpnLive1762Test {
                 HiddenVpnBrowserBroker.admissionRetired() && !HiddenVpnBrowserBroker.hasDedicatedProcess(context) &&
                     !HiddenTorIsolationService.hasTorProcess(context) && HiddenTorIsolationService.released()
             }
+            val previousNetworks=context.getSystemService(ConnectivityManager::class.java)
+            waitFor("Previous app-owned VPN Network has actually retired") {
+                previousNetworks.allNetworks.none {previousNetworks.getNetworkCapabilities(it)?.let {caps ->
+                    caps.hasTransport(NetworkCapabilities.TRANSPORT_VPN) && caps.ownerUid==Process.myUid()
+                }==true}
+            }
             engine.connect(imported.profile)
             waitFor("Authenticated WireGuard peer handshake",90){engine.ownsTunnel && engine.state==VpnConnectionState.CONNECTED}
             val manager=context.getSystemService(ConnectivityManager::class.java)
@@ -245,6 +251,11 @@ class HiddenVpnLive1762Test {
                 pinned=manager.allNetworks.singleOrNull {candidate ->manager.getNetworkCapabilities(candidate)?.let {it.hasTransport(NetworkCapabilities.TRANSPORT_VPN) && it.ownerUid==Process.myUid()}==true};pinned!=null
             }
             val network=checkNotNull(pinned)
+            // Capabilities publication precedes netd resolver installation.
+            waitFor("The same app-owned VPN Network has its fixture DNS resolver ready") {
+                manager.getNetworkCapabilities(network)?.ownerUid==Process.myUid() &&
+                    network.getAllByName("fixture.invalid").single().hostAddress=="203.0.113.10"
+            }
             assertEquals("203.0.113.10",network.getAllByName("fixture.invalid").single().hostAddress)
             ActivityScenario.launch(ComponentActivity::class.java).use {scenario ->
                 var parentTask=-1
