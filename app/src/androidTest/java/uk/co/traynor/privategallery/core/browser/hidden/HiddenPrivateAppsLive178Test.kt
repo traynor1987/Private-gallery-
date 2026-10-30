@@ -223,7 +223,7 @@ class HiddenPrivateAppsLive178Test {
                 val expected=checkNotNull(InstrumentationRegistry.getArguments().getString("hiddenOnionProbeExpected"))
                 // A new packaged Tor instance needs its own controlled-origin readiness,
                 // independent of the previously retired test's circuit or bootstrap status.
-                HiddenTorSockets.open(checkNotNull(path),host,80).use {stream ->
+                HiddenTorSockets.open(checkNotNull(path),host,80,handshakeTimeoutMs=60_000).use {stream ->
                     stream.output.write("GET / HTTP/1.1\r\nHost: $host\r\nConnection: close\r\n\r\n".toByteArray());stream.output.flush()
                     val bytes=stream.input.readNBytes(4097)
                     assertTrue("Controlled readiness response is bounded",bytes.size<=4096)

@@ -164,7 +164,7 @@ class NativeTorIsolation1762Test {
                 // Bootstrap is not fixture availability. Establish this controlled onion through
                 // the real app-private SOCKS path before asking WebView to render the probe.
                 val expected=checkNotNull(InstrumentationRegistry.getArguments().getString("hiddenOnionProbeExpected"))
-                HiddenTorSockets.open(path,host,80).use {stream ->
+                HiddenTorSockets.open(path,host,80,handshakeTimeoutMs=60_000).use {stream ->
                     stream.output.write("GET / HTTP/1.1\r\nHost: $host\r\nConnection: close\r\n\r\n".toByteArray());stream.output.flush()
                     val bytes=stream.input.readNBytes(4097)
                     assertTrue("Controlled readiness response is bounded",bytes.size<=4096)

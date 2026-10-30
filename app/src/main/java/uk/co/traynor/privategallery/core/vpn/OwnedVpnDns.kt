@@ -8,7 +8,6 @@ import android.net.NetworkCapabilities
 import android.os.Process
 import android.os.SystemClock
 import java.io.Closeable
-import java.io.DataInputStream
 import java.io.DataOutputStream
 import java.net.*
 import java.security.SecureRandom
@@ -55,12 +54,21 @@ internal object OwnedVpnDns {
                     register(socket)
                     try {
                         checkActive();network.bindSocket(socket)
-                        socket.connect(InetSocketAddress(servers.first(),53));socket.soTimeout=remaining()
+                        socket.connect(InetSocketAddress(servers.first(),53));socket.soTimeout=100
                         checkActive();socket.send(DatagramPacket(query,query.size))
                         val buffer=ByteArray(4097)
                         try {
-                            val packet=DatagramPacket(buffer,buffer.size);socket.receive(packet);checkActive()
-                            require(packet.length in 12..4096);buffer.copyOf(packet.length)
+                            val receiveDeadline=minOf(deadline,SystemClock.elapsedRealtime()+3_000)
+                            fun receive():ByteArray {
+                                while(true) {
+                                    checkActive();if(SystemClock.elapsedRealtime()>=receiveDeadline)throw SocketTimeoutException()
+                                    val packet=DatagramPacket(buffer,buffer.size)
+                                    try {socket.receive(packet)}catch(_:SocketTimeoutException){continue}
+                                    checkActive();if(SystemClock.elapsedRealtime()>=receiveDeadline)throw SocketTimeoutException()
+                                    require(packet.length in 12..4096);return buffer.copyOf(packet.length)
+                                }
+                            }
+                            receive()
                         } finally {buffer.fill(0)}
                     } finally {resources.remove(socket)}
                 }
@@ -70,11 +78,27 @@ internal object OwnedVpnDns {
                     return Socket().use {socket ->
                         register(socket)
                         try {
-                            checkActive();network.bindSocket(socket);socket.connect(InetSocketAddress(servers.first(),53),remaining());socket.soTimeout=remaining()
+                            checkActive();network.bindSocket(socket);socket.connect(InetSocketAddress(servers.first(),53),remaining());socket.soTimeout=100
                             checkActive();val output=DataOutputStream(socket.getOutputStream());output.writeShort(query.size);output.write(query);output.flush()
-                            val input=DataInputStream(socket.getInputStream());val count=input.readUnsignedShort();require(count in 12..4096)
-                            val buffer=ByteArray(count)
-                            try {input.readFully(buffer);checkActive();VpnDnsMessage.answers(buffer,name,type,id).also {checkActive()}}finally{buffer.fill(0)}
+                            val input=socket.getInputStream()
+                            val receiveDeadline=minOf(deadline,SystemClock.elapsedRealtime()+3_000)
+                            fun exact(count:Int):ByteArray {
+                                val bytes=ByteArray(count);var offset=0
+                                try {
+                                    while(offset<count) {
+                                        checkActive();if(SystemClock.elapsedRealtime()>=receiveDeadline)throw SocketTimeoutException()
+                                        val n=try {input.read(bytes,offset,count-offset)}catch(_:SocketTimeoutException){continue}
+                                        checkActive();if(SystemClock.elapsedRealtime()>=receiveDeadline)throw SocketTimeoutException()
+                                        require(n>0);offset+=n
+                                    }
+                                    checkActive();if(SystemClock.elapsedRealtime()>=receiveDeadline)throw SocketTimeoutException()
+                                    return bytes
+                                } catch(failure:Throwable){bytes.fill(0);throw failure}
+                            }
+                            val prefix=exact(2)
+                            val count=try {((prefix[0].toInt() and 255) shl 8) or (prefix[1].toInt() and 255)}finally{prefix.fill(0)}
+                            require(count in 12..4096);val buffer=exact(count)
+                            try {VpnDnsMessage.answers(buffer,name,type,id).also {checkActive()}}finally{buffer.fill(0)}
                         } finally {resources.remove(socket)}
                     }
                 } finally {reply.fill(0)}

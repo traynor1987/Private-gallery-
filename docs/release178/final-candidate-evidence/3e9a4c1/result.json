@@ -1,0 +1,25 @@
+{
+  "source_sha": "3e9a4c124b218a9b2f3401ebd9886a9b0bbe11b7",
+  "run_id": 41044093012,
+  "artifact_id": 12972671101,
+  "artifact_sha256": "effef4e8a5e62f13b253191ecbe244dd3e336452643f8b8de9ffbbb136256d97",
+  "android_tests": 38,
+  "passed": 36,
+  "jvm_tests": 27,
+  "workflow_conclusion": "failure",
+  "failures": [
+    {
+      "name": "packagedTorNativeFormsUploadsDownloadsAndNetworkSink",
+      "classname": "uk.co.traynor.privategallery.core.browser.hidden.NativeTorIsolation1762Test",
+      "time": "40.664",
+      "failure": "java.io.IOException: Try again\nat android.net.LocalSocketImpl.read_native(Native Method)\nat android.net.LocalSocketImpl.-$$Nest$mread_native(LocalSocketImpl.java:0)\nat android.net.LocalSocketImpl$SocketInputStream.read(LocalSocketImpl.java:88)\nat java.io.DataInputStream.readUnsignedByte(DataInputStream.java:296)\nat uk.co.traynor.privategallery.core.browser.hidden.HiddenTorSockets.open(HiddenTorSockets.kt:40)\nat uk.co.traynor.privategallery.core.browser.hidden.HiddenTorSockets.open$default(HiddenTorSockets.kt:25)\nat uk.co.traynor.privategallery.core.browser.hidden.NativeTorIsolation1762Test.packagedTorNativeFormsUploadsDownloadsAndNetworkSink(NativeTorIsolation1762Test.kt:167)\n"
+    },
+    {
+      "name": "vpnCatalogueCrudLaunchAndRevocationUseAuthenticatedSeparateProcess",
+      "classname": "uk.co.traynor.privategallery.core.browser.hidden.HiddenPrivateAppsLive178Test",
+      "time": "2.295",
+      "failure": "java.lang.AssertionError: unexpected exception type thrown; expected:<java.util.concurrent.ExecutionException> but was:<java.util.concurrent.TimeoutException>\nat org.junit.Assert.assertThrows(Assert.java:1020)\nat org.junit.Assert.assertThrows(Assert.java:981)\nat uk.co.traynor.privategallery.core.browser.hidden.HiddenPrivateAppsLive178Test.vpnCatalogueCrudLaunchAndRevocationUseAuthenticatedSeparateProcess(HiddenPrivateAppsLive178Test.kt:534)\n... 8 trimmed\nCaused by: java.util.concurrent.TimeoutException\nat java.util.concurrent.FutureTask.get(FutureTask.java:206)\nat uk.co.traynor.privategallery.core.browser.hidden.HiddenPrivateAppsLive178Test.vpnCatalogueCrudLaunchAndRevocationUseAuthenticatedSeparateProcess$lambda$9(HiddenPrivateAppsLive178Test.kt:534)\nat uk.co.traynor.privategallery.core.browser.hidden.HiddenPrivateAppsLive178Test$$ExternalSyntheticLambda33.run(D8$$SyntheticClass:0)\nat org.junit.Assert.assertThrows(Assert.java:1001)\n... 11 more\n"
+    }
+  ],
+  "decision": "NOT_APPROVED"
+}

@@ -22,7 +22,8 @@ internal object HiddenTorSockets {
             socket.close()
         }
     }
-    fun open(path:String,host:String,port:Int,register:(Closeable)->Unit={}):Duplex {
+    fun open(path:String,host:String,port:Int,register:(Closeable)->Unit={},handshakeTimeoutMs:Int=30_000):Duplex {
+        require(handshakeTimeoutMs==30_000 || (uk.co.traynor.privategallery.BuildConfig.DEBUG && handshakeTimeoutMs==60_000))
         require(port in 1..65535)
         val name=java.net.IDN.toASCII(host).toByteArray(Charsets.US_ASCII);require(name.size in 1..255)
         val socket=LocalSocket();val duplex=Duplex(socket);register(duplex)
@@ -33,13 +34,15 @@ internal object HiddenTorSockets {
             duplex.checkOpen()
             socket.connect(LocalSocketAddress(path,LocalSocketAddress.Namespace.FILESYSTEM))
             duplex.checkOpen()
-            socket.soTimeout=30_000
+            socket.soTimeout=handshakeTimeoutMs
             val input=DataInputStream(socket.inputStream);val output=socket.outputStream
             output.write(byteArrayOf(5,1,0));output.flush();require(input.readUnsignedByte()==5 && input.readUnsignedByte()==0)
             output.write(byteArrayOf(5,1,0,3,name.size.toByte()));output.write(name);output.write(byteArrayOf((port ushr 8).toByte(),port.toByte()));output.flush()
             require(input.readUnsignedByte()==5 && input.readUnsignedByte()==0 && input.readUnsignedByte()==0)
             val count=when(input.readUnsignedByte()){1->4;4->16;3->input.readUnsignedByte();else->throw java.io.IOException("Invalid Tor SOCKS response")}
             val ignored=ByteArray(count+2);input.readFully(ignored)
+            // The longer debug fixture budget applies only to cold SOCKS setup.
+            socket.soTimeout=30_000
             return duplex
         }catch(failure:Throwable){duplex.close();throw failure}
     }
