@@ -1,0 +1,19 @@
+{
+  "source_sha": "130b8dcd10174ee8da0a141196c305b1bca03a15",
+  "run_id": 41041422600,
+  "artifact_id": 12970892710,
+  "artifact_sha256": "0cf2d2e94f7745b52983b8dea9855a6f47996662bf67e77259659c36684b1842",
+  "android_tests": 38,
+  "passed": 37,
+  "jvm_tests": 27,
+  "workflow_conclusion": "failure",
+  "failures": [
+    {
+      "name": "nativeChildPostsFormsUploadsAndRevokesOnOwnedVpn",
+      "classname": "uk.co.traynor.privategallery.core.browser.hidden.HiddenVpnLive1762Test",
+      "time": "85.827",
+      "failure": "java.lang.AssertionError: Native HTML form reaches fixture\nat org.junit.Assert.fail(Assert.java:89)\nat org.junit.Assert.assertTrue(Assert.java:42)\nat uk.co.traynor.privategallery.core.browser.hidden.HiddenVpnLive1762Test.waitFor(HiddenVpnLive1762Test.kt:44)\nat uk.co.traynor.privategallery.core.browser.hidden.HiddenVpnLive1762Test.nativeChildPostsFormsUploadsAndRevokesOnOwnedVpn(HiddenVpnLive1762Test.kt:432)\n"
+    }
+  ],
+  "decision": "NOT_APPROVED"
+}

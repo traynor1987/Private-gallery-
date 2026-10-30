@@ -297,6 +297,24 @@ class HiddenVpnLive1762Test {
                 }
                 captureUi("initial-address-bar-after-real-touch")
                 val secureOrigin = "https://native-phase.fixture.invalid"
+                fun navigateDocument(url:String,control:String) {
+                    val uri=java.net.URI(url);val path=uri.rawPath.orEmpty().ifEmpty {"/"}
+                    val tls=uri.scheme=="https"
+                    fun count():Int {
+                        val events=evidence(network,origin).getJSONArray("events")
+                        return (0 until events.length()).count {events.getJSONObject(it).let {event ->
+                            event.optString("method")=="GET" && event.optString("path")==path && event.optBoolean("tls")==tls
+                        }}
+                    }
+                    val before=count();navigate(url)
+                    waitFor("Fresh document is complete before HTML action $control") {
+                        val visible=nodes()
+                        count()>before && visible.any {it.contentDescription?.toString()=="Reload" && it.isVisibleToUser} &&
+                            visible.none {it.contentDescription?.toString()=="Stop" && it.isVisibleToUser} &&
+                            visible.any {it.text?.toString()==control && it.isVisibleToUser && it.isEnabled}
+                    }
+                }
+
                 navigate("$secureOrigin/parity-one")
                 waitFor("First actual page navigation") {observed(network,origin){it.optString("path")=="/parity-one"}}
                 waitFor("Fixture page is rendered before rejected address entry") {nodes().any {it.text?.toString()=="Run JavaScript POST" && it.isVisibleToUser}}
@@ -336,7 +354,7 @@ class HiddenVpnLive1762Test {
                     val events=evidence(network,origin).getJSONArray("events")
                     (0 until events.length()).count {events.getJSONObject(it).optString("path")=="/parity-error"}>=2
                 }
-                navigate(secureOrigin)
+                navigateDocument(secureOrigin,"Run JavaScript POST")
                 waitFor("Fixture document is rendered before Find") {nodes().any {it.text?.toString()=="Run JavaScript POST" && it.isVisibleToUser} && nodes().any {it.contentDescription?.toString()=="Reload"}}
                 click("Browser settings");click("Find in page")
                 var findField:AccessibilityNodeInfo?=null
@@ -364,8 +382,8 @@ class HiddenVpnLive1762Test {
                 click("Browser settings")
                 waitFor("Restored desktop tab reports its own setting") {nodes().any {it.text?.toString()=="Desktop layout on"}}
                 click("Back to Browser")
-                navigate(secureOrigin)
-                click("Run JavaScript POST")
+                navigateDocument(secureOrigin,"Run JavaScript POST")
+                click("Run JavaScript POST",websiteTouch=true)
                 waitFor("Dedicated child task preserves its parent task") {
                     val tasks=context.getSystemService(android.app.ActivityManager::class.java).appTasks.mapNotNull {it.taskInfo}
                     val child=android.content.ComponentName(context,HiddenVpnBrowserActivity::class.java)
@@ -374,20 +392,20 @@ class HiddenVpnLive1762Test {
                 waitFor("HTTPS CONNECT carries JavaScript POST and exact body",30) {
                     observed(network,origin){it.optString("path")=="/post" && it.optBoolean("javascript_body") && it.optBoolean("tls")}
                 }
-                click("Run worker POST")
+                click("Run worker POST",websiteTouch=true)
                 waitFor("Service worker sends POST over the same authenticated VPN proxy",30) {
                     observed(network,origin){it.optString("path")=="/worker-post" && it.optBoolean("worker_body") && it.optBoolean("tls")}
                 }
-                click("Frame alert")
+                click("Frame alert",websiteTouch=true)
                 waitFor("Website modal names the actual iframe origin") {
                     nodes().any {it.text?.toString()=="https://dialog-frame.fixture.invalid"}
                 }
                 click("OK")
-                click("Confirm")
+                click("Confirm",websiteTouch=true)
                 waitFor("Native website confirmation names the request") {nodes().any {it.text?.toString()=="Fixture confirm"}}
                 click("Cancel")
                 waitFor("Cancellation returns to the native website") {nodes().any {it.text?.toString()=="cancelled"}}
-                click("Prompt")
+                click("Prompt",websiteTouch=true)
                 waitFor("Native prompt response field") {nodes().any {it.text?.toString()=="Fixture prompt"}}
                 waitFor("Prompt editable receives explicit response") {
                     nodes().firstOrNull {it.isEditable}?.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT,Bundle().apply {putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE,"native-profile-prompt")})==true
@@ -399,11 +417,11 @@ class HiddenVpnLive1762Test {
                 waitFor("Two native tabs are listed") {nodes().any {it.text?.toString()=="2 open · up to 8 tabs"}}
                 closeSelectedTabAndReturn()
                 waitFor("Closing selected tab restores actual page address") {nodes().any {it.isEditable && it.text?.toString()?.startsWith(secureOrigin)==true}}
-                click("Run WebSocket")
+                click("Run WebSocket",websiteTouch=true)
                 waitFor("Native secure WebSocket frame crosses the authenticated VPN proxy",30) {
                     observed(network,origin){it.optString("kind")=="websocket" && it.optBoolean("tls") && it.optBoolean("exact_body")}
                 }
-                click("Run RTC route probe")
+                click("Run RTC route probe",websiteTouch=true)
                 waitFor("WebRTC route probe completes without a failed API probe",30) {
                     observed(network,origin){it.optBoolean("probe_complete")}
                 }
@@ -426,9 +444,9 @@ class HiddenVpnLive1762Test {
                 instrumentation.runOnMainSync {
                     assertNull("Hidden child cookies must not enter Primary default profile",android.webkit.CookieManager.getInstance().getCookie(secureOrigin))
                 }
-                navigate(origin);click("Run JavaScript POST")
+                navigateDocument(origin,"Run JavaScript POST");click("Run JavaScript POST",websiteTouch=true)
                 waitFor("Native JavaScript fetch transmits the exact POST body over VPN",30) {observed(network,origin){it.optString("path")=="/post" && it.optBoolean("javascript_body")}}
-                navigate("$origin/form");click("Submit form")
+                navigateDocument("$origin/form","Submit form");click("Submit form",websiteTouch=true)
                 waitFor("Native HTML form reaches fixture",30){observed(network,origin){it.optString("path")=="/form-result" && it.optBoolean("form_body")}}
                 val formEventsBefore=evidence(network,origin).getJSONArray("events").let {events ->(0 until events.length()).count {events.getJSONObject(it).optString("path")=="/form-result"}}
                 click("Reload")
@@ -439,7 +457,7 @@ class HiddenVpnLive1762Test {
                 waitFor("Second reload still requires confirmation") {nodes().any {it.text?.toString()=="Resend form data?"}}
                 click("Resend")
                 waitFor("Explicit resend performs exactly another form request") {evidence(network,origin).getJSONArray("events").let {events ->(0 until events.length()).count {events.getJSONObject(it).optString("path")=="/form-result"}}>formEventsBefore}
-                navigate("$origin/upload");click("Choose Hidden upload")
+                navigateDocument("$origin/upload","Choose Hidden upload");click("Choose Hidden upload",websiteTouch=true)
                 waitFor("Hidden vault chooser") {nodes().any {it.text?.toString()=="CI eligible upload.png" || it.contentDescription?.toString()=="CI eligible upload.png"}}
                 waitFor("Eligible encrypted Hidden thumbnail is available in the shared picker") {
                     var tile=nodes().firstOrNull {it.contentDescription?.toString()=="CI eligible upload.png" && it.isVisibleToUser && it.isEnabled}
@@ -447,7 +465,7 @@ class HiddenVpnLive1762Test {
                     tile?.let {it.isVisibleToUser && it.isEnabled && it.stateDescription?.toString()=="Preview loaded"}==true
                 }
                 assertFalse("Restricted item never appears in egress chooser",nodes().any {it.text?.toString()=="CI restricted upload.png" || it.contentDescription?.toString()=="CI restricted upload.png"})
-                click("CI eligible upload.png");clickNative("Allow upload");click("Upload media")
+                click("CI eligible upload.png");clickNative("Allow upload");click("Upload media",websiteTouch=true)
                 waitFor("Multipart body reaches VPN fixture",30) {observed(network,origin){it.optString("path")=="/uploaded" && it.optBoolean("multipart_png")}}
                 navigate("$origin/media.png")
                 waitFor("A browser download requires explicit confirmation") {nodes().any {it.text?.toString()=="Save this GET file URL?"}}
@@ -463,7 +481,7 @@ class HiddenVpnLive1762Test {
                         assertEquals("5e3d382db4dd83d59aa5742793ad6b7903409e865c83bcbc54835049f043bc15",digest)
                     } finally {plaintext.fill(0)}
                 }
-                navigate(secureOrigin)
+                navigateDocument(secureOrigin,"Run JavaScript POST")
                 waitFor("Native page before Fold viewport changes") {
                     val root=automation.rootInActiveWindow ?: return@waitFor false
                     val windows=automation.windows
@@ -491,7 +509,7 @@ class HiddenVpnLive1762Test {
                     assertEquals("Fold transition must retain the admitted immutable-network process",admittedPid,childPid())
                     assertEquals(true to true,broker!!.childSecuritySnapshot())
                     val before=evidence(network,origin).getJSONArray("events").length()
-                    click("Run JavaScript POST")
+                    click("Run JavaScript POST",websiteTouch=true)
                     waitFor("Native traffic still uses VPN after Fold viewport change") {
                         val events=evidence(network,origin).getJSONArray("events")
                         (before until events.length()).any {events.getJSONObject(it).let {event ->event.optString("path")=="/post" && event.optBoolean("javascript_body") && event.optBoolean("tls")}}

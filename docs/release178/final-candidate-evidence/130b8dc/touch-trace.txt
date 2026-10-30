@@ -1,0 +1,10 @@
+10-30 10:41:00.589  4599  4669 I HiddenVpnLive1762: Synthetic touch control=Run JavaScript POST window=12 bounds=Rect(8, 298 - 150, 320)
+10-30 10:41:01.048  4599  4669 I HiddenVpnLive1762: Synthetic touch control=Run worker POST window=12 bounds=Rect(8, 339 - 128, 361)
+10-30 10:41:01.433  4599  4669 I HiddenVpnLive1762: Synthetic touch control=Frame alert window=12 bounds=Rect(531, 415 - 615, 437)
+10-30 10:41:02.427  4599  4669 I HiddenVpnLive1762: Synthetic touch control=Confirm window=12 bounds=Rect(1007, 544 - 1071, 566)
+10-30 10:41:03.512  4599  4669 I HiddenVpnLive1762: Synthetic touch control=Prompt window=12 bounds=Rect(1074, 544 - 1135, 566)
+10-30 10:41:07.031  4599  4669 I HiddenVpnLive1762: Synthetic touch control=Run WebSocket window=12 bounds=Rect(8, 544 - 117, 566)
+10-30 10:41:07.525  4599  4669 I HiddenVpnLive1762: Synthetic touch control=Run RTC route probe window=12 bounds=Rect(120, 544 - 259, 566)
+10-30 10:41:15.314  4599  4669 I HiddenVpnLive1762: Synthetic touch control=Run JavaScript POST window=12 bounds=Rect(8, 298 - 150, 320)
+10-30 10:41:16.518  4599  4669 I HiddenVpnLive1762: Address input fieldPresent=true focused=true textMatches=true focusAttempted=true focusAccepted=true textAttempted=true textAccepted=true
+10-30 10:41:48.582  4599  4669 E TestRunner: java.lang.AssertionError: Native HTML form reaches fixture

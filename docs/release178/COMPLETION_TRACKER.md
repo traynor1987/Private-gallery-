@@ -1,6 +1,6 @@
 # 1.7.8 completion tracker
 
-Latest completed candidate: `8690c93bcb581b05f654d90d0875e88a71d93651`, version 1.7.8/code 47, Android 17/API 37. The DNS correction compiled and 27 JVM cases passed; run `41038963560` ran 38 Android cases with 35 pass and 3 failures. Reviewed test-only corrections require new exact-source runtime/packet proof. DNS approval, original-key upgrade/restart, signing and delivery remain blocked.
+Latest completed candidate: `130b8dcd10174ee8da0a141196c305b1bca03a15`, version 1.7.8/code 47, Android 17/API 37. Run `41041422600` passed 27 JVM and 37/38 Android cases; all Private Apps VPN/Tor/DNS-lifecycle cases passed. Native HTML touch/readiness correction requires new exact-source full runtime/packet proof. Security approval, original-key upgrade/restart, signing and delivery remain blocked.
 
 | Area | Implemented behaviour | Verification status |
 | --- | --- | --- |
@@ -144,3 +144,12 @@ Two failures share invalidobservationprecondition: numericHTTP203.0.113.10 is de
 TorPrivateApps thirdchooser callback is actuallyreceived current/live at10:21:59.588, then lateAppHome navigation invalidatesit. Oldheading/Refresh condition could observe previoussameURLdocument before navigationstart. Now wait originGETcount increment plusfinishednativechrome/heading beforefreshchooser; refreshUiAutomationcache forcurrenthierarchy. OriginalnoPOST-before-consent/freshselection/exactuploadbytes/revocationassertions remain. No clickretry or fakeoriginresponse.
 
 Independentreview of actualnewclient/twotestdiff found no Critical/Important issue or weakening. SevenhostJava programmes and36focusedPythonchecksPASS. ProductionDNSsource unchanged since8690; its Important finding remains open pendingnewexactfullruntime+strictpacketproof. OriginalWireGuardprofile policy requiresIPv4fulltunnel;reviewconfirmed A-firstDNSdoes notintroduceunsupportedIPv6-onlyprofile regression. Finalscopevalidator/38manifest/cda898upgradefixture andoriginal177preserved. Signingstilldisabled; no signeraccess or178APKdelivery.
+
+
+## Remaining Native HTML action classification corrected consistently
+
+Exact130b8dcd10174ee8da0a141196c305b1bca03a15/run41041422600/job124014889459 passed27JVM and38Androidcases37PASS1FAIL,0errors/skips. Artifact12970892710 independently hashchecked0cf2d2e94f7745b52983b8dea9855a6f47996662bf67e77259659c36684b1842; XML/result/touchtrace archived under final-candidate-evidence/130b8dc. Both completePrivateApps VPN/Tor casesPASS, including new realDNS TCPfallback/pendingrevocation, screenshots, transfers andfreshAppHome selection. OtheraffectedcasesPASS. Aggregatepacketgate remainsunexecuted because NativeVPN instrumentationfailed; no signingapproval.
+
+Solefailure: NativeHTML form POST. Trace has physicaltouches for precedingHTMLbuttons but NO Submitform physicaltouch. Existingautohelper again inferred nativeACTION_CLICK when WebViewparentchain was absent, the same proven container-noop defect corrected earlier forcontinuousRTC. Allknown controlledHTML callsites now explicitly use existingfreshvisible/stablebound singlephysicaltouch path; nativechrome/dialog/chooser callsites retain nativeactions. Knownroot/form/upload transitions now observe a freshGET matchingpath/TLS plusfinishedReload/noStop/visibleenabledtarget before HTMLtouch. InvalidURI/error/media navigation remainsunchanged. Originalactualbody/TLS/form-resend/egress/hash/STUN/revocation assertions retained; no injectedJavaScript/clickretry/fakeoriginresponse or productionchange.
+
+Independentactualdiff review found no Critical/Important new issue or weakening. SevenJava hostprogrammes and36focusedPythonchecksPASS. ProductionDNS unchanged8690, with Important releaseevidence requirement stillopen pending exactfull38+strictpacketvalidation. Original177, reviewedcda898upgradefixture and disabledproductiongate preserved. Next exactcoherentgroup remainsmandatory before independentAPPROVED disposition, originalkey46→47 upgrade/restart andone signedAPKdelivery.
