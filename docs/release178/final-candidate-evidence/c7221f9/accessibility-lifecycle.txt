@@ -1,0 +1,2 @@
+10-30 13:48:06.868  4799  4799 I CiAccessibility178: connected
+10-30 13:48:06.879  4799  4818 I CiAccessibility178: configured previousEnabled=false

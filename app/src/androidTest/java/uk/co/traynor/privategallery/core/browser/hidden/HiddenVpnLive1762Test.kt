@@ -367,8 +367,14 @@ class HiddenVpnLive1762Test {
                     assertFalse("Rejected input does not retire session",ended.get())
                 }
                 assertEquals("Rejected explicit addresses never initiate search-provider DNS",searchDnsBefore,searchDnsCount())
-                navigate("$secureOrigin/parity-two")
-                waitFor("Second actual page navigation") {observed(network,origin){it.optString("path")=="/parity-two"}}
+                navigateDocument("$secureOrigin/parity-two","Run JavaScript POST")
+                waitFor("Second committed page has usable history before System Back") {
+                    val current=nodes()
+                    var back=current.firstOrNull {it.contentDescription?.toString()=="Back" && it.isVisibleToUser}
+                    while(back!=null && !back.isClickable)back=back.parent
+                    back?.isEnabled==true && current.any {it.isEditable && !it.isFocused &&
+                        it.text?.toString()=="$secureOrigin/parity-two"}
+                }
                 instrumentation.sendKeyDownUpSync(android.view.KeyEvent.KEYCODE_BACK)
                 waitFor("System Back traverses WebView instead of retiring child") {nodes().any {it.isEditable && it.text?.toString()=="$secureOrigin/parity-one"}}
                 assertFalse("Web back preserves owned session",ended.get())

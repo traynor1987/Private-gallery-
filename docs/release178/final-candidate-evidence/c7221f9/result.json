@@ -1,0 +1,21 @@
+{
+  "source_sha": "c7221f96a90d9182b27b864bf7a3e1f40b9edc8a",
+  "run_id": 41065172080,
+  "job_id": 124094340540,
+  "artifact_id": 12982059498,
+  "artifact_sha256": "15912c3011b5d8a0de6a8c53ffd7f2772041364d892e87ffeafe9ae84bd2f2df",
+  "original_conclusion": "failure",
+  "android": {
+    "tests": 38,
+    "failures": 1,
+    "errors": 0,
+    "skipped": 0
+  },
+  "jvm": {
+    "tests": 29,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "failure": "NativeVPN SystemBack beforecommittedhistory; testawaitedonlyoriginGET. Snapshotchildretiredblankparent. Allother37PASS, realserviceconnected andbothcompletePrivateAppsjourneysPASS."
+}
