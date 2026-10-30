@@ -107,21 +107,31 @@ class PrivateAppCustomIconsTest {
    catalog
   },{},requestIcon={selection=it})
   compose.setContent {PrivateAppsLibrary(controller,{})}
+  fun openFixtureEditor() {
+   compose.waitUntil(5000) {
+    compose.onAllNodesWithText("Edit Private App").fetchSemanticsNodes().isEmpty() &&
+     compose.onAllNodes(hasContentDescription("Edit Fixture") and isEnabled()).fetchSemanticsNodes().size==1
+   }
+   compose.onNodeWithContentDescription("Edit Fixture").performClick()
+   compose.waitUntil(5000){compose.onAllNodesWithText("Edit Private App").fetchSemanticsNodes().size==1}
+  }
   compose.waitUntil(5000){compose.onAllNodesWithContentDescription("Edit Fixture").fetchSemanticsNodes().isNotEmpty()}
-  compose.onNodeWithContentDescription("Edit Fixture").performClick()
+  openFixtureEditor()
   compose.onNodeWithText("Choose icon").performClick()
   compose.runOnIdle{checkNotNull(selection).invoke(png())}
   compose.waitUntil(5000){compose.onAllNodesWithText("Replace icon").fetchSemanticsNodes().isNotEmpty()}
   compose.onNodeWithText("Save").performClick()
   compose.waitUntil(5000){catalog.apps.single().icon().isNotEmpty()}
   val first=catalog.apps.single().icon()
-  compose.onNodeWithContentDescription("Edit Fixture").performClick()
+  openFixtureEditor()
+  compose.waitUntil(5000){compose.onAllNodesWithText("Replace icon").fetchSemanticsNodes().size==1}
   compose.onNodeWithText("Replace icon").performClick()
   compose.runOnIdle{checkNotNull(selection).invoke(png(color=Color.RED))}
   compose.waitUntil(5000){compose.onAllNodesWithText("Icon ready. Save to apply.").fetchSemanticsNodes().isNotEmpty()}
   compose.onNodeWithText("Cancel").performClick()
   compose.runOnIdle{assertEquals(first,catalog.apps.single().icon())}
-  compose.onNodeWithContentDescription("Edit Fixture").performClick()
+  openFixtureEditor()
+  compose.waitUntil(5000){compose.onAllNodesWithText("Replace icon").fetchSemanticsNodes().size==1}
   compose.onNodeWithText("Replace icon").performClick()
   val late=checkNotNull(selection)
   compose.onNodeWithText("Clear icon").performClick()

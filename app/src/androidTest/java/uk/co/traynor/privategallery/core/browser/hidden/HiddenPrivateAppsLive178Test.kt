@@ -486,6 +486,12 @@ class HiddenPrivateAppsLive178Test {
             as VpnProfileImportResult.Accepted).profile
         val engine = WireGuardVpnEngine(OfficialWireGuardBackend(context))
         try {
+            val previousNetworks=context.getSystemService(ConnectivityManager::class.java)
+            waitFor("Previous app-owned VPN Network has actually retired") {
+                previousNetworks.allNetworks.none {previousNetworks.getNetworkCapabilities(it)?.let {caps ->
+                    caps.hasTransport(NetworkCapabilities.TRANSPORT_VPN) && caps.ownerUid==Process.myUid()
+                }==true}
+            }
             engine.connect(profile)
             waitFor("Official WireGuard authenticated peer handshake", 90) {
                 engine.ownsTunnel && engine.state == VpnConnectionState.CONNECTED

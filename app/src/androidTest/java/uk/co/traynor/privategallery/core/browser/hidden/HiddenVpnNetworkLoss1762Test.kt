@@ -79,9 +79,14 @@ class HiddenVpnNetworkLoss1762Test {
             waitFor("Previous native browser admission lease is retired",15) {
                 synchronized(registry) {owner.get(null)==null} && !HiddenVpnBrowserBroker.hasDedicatedProcess(context)
             }
+            val manager=context.getSystemService(ConnectivityManager::class.java)
+            waitFor("Previous app-owned VPN Network has actually retired") {
+                manager.allNetworks.none {manager.getNetworkCapabilities(it)?.let {caps ->
+                    caps.hasTransport(NetworkCapabilities.TRANSPORT_VPN) && caps.ownerUid==Process.myUid()
+                }==true}
+            }
             engine.connect(imported.profile)
             waitFor("Real WireGuard handshake",90){engine.ownsTunnel && engine.state==VpnConnectionState.CONNECTED}
-            val manager=context.getSystemService(ConnectivityManager::class.java)
             var network:Network?=null
             waitFor("One immutable app-owned VPN Network") {
                 network=manager.allNetworks.singleOrNull{manager.getNetworkCapabilities(it)?.let{caps->caps.hasTransport(NetworkCapabilities.TRANSPORT_VPN)&&caps.ownerUid==Process.myUid()}==true};network!=null

@@ -1,0 +1,22 @@
+{
+  "source_sha": "e6501f6f21f98033ecbbd703a8c3750ef847a63f",
+  "run_id": 40986948125,
+  "artifact_id": 12948460047,
+  "artifact_sha256": "f56c2bd4985e1238799013cd70aafc7aee6b268fa8f8e2dba36338ce76a02177",
+  "tests": 38,
+  "passed": 36,
+  "failed": 2,
+  "skipped": 0,
+  "failures": [
+    {
+      "classname": "uk.co.traynor.privategallery.ui.PrivateAppCustomIconsTest",
+      "name": "replace_clear_cancel_and_late_selection_preserve_saved_catalogue",
+      "failure": "java.lang.AssertionError: Failed to inject touch input.\nReason: Expected exactly '1' node but could not find any node that satisfies: (Text + EditableText contains 'Replace icon' (ignoreCase: false))\n\nat androidx.compose.ui.test.SemanticsNodeInteraction.fetchOneOrThrow(SemanticsNodeInteraction.kt:178)\nat androidx.compose.ui.test.SemanticsNodeInteraction.fetchOneOrThrow$default(SemanticsNodeInteraction.kt:150)\nat androidx.compose.ui.test.SemanticsNodeInteraction.fetchSemanticsNode(SemanticsNodeInteraction.kt:84)\nat androidx.compose.ui.test.ActionsKt.performTouchInput(Actions.kt:394)\nat androidx.compose.ui.test.Actions_androidKt.performClickImpl(Actions.android.kt:20)\nat androidx.compose.ui.test.ActionsKt.performClick(Actions.kt:54)\nat uk.co.traynor.privategallery.ui.PrivateAppCustomIconsTest.replace_clear_cancel_and_late_selection_preserve_saved_catalogue(PrivateAppCustomIconsTest.kt:119)\n"
+    },
+    {
+      "classname": "uk.co.traynor.privategallery.core.browser.hidden.HiddenVpnNetworkLoss1762Test",
+      "name": "lostOwnedNetworkRetiresNativeChildAndCannotReuseOldCapability",
+      "failure": "java.lang.IllegalStateException: Check failed.\nat uk.co.traynor.privategallery.core.browser.hidden.HiddenVpnBrowserBroker.launch(HiddenVpnBrowserBroker.kt:152)\nat uk.co.traynor.privategallery.core.browser.hidden.HiddenVpnNetworkLoss1762Test.lostOwnedNetworkRetiresNativeChildAndCannotReuseOldCapability$lambda$5$0(HiddenVpnNetworkLoss1762Test.kt:94)\nat uk.co.traynor.privategallery.core.browser.hidden.HiddenVpnNetworkLoss1762Test.$r8$lambda$7WAGYE4rpiCX3_FCMuau3XqBtWg(HiddenVpnNetworkLoss1762Test.kt:0)\nat uk.co.traynor.privategallery.core.browser.hidden.HiddenVpnNetworkLoss1762Test$$ExternalSyntheticLambda4.perform(D8$$SyntheticClass:0)\nat androidx.test.core.app.ActivityScenario.lambda$onActivity$2$androidx-test-core-app-ActivityScenario(ActivityScenario.java:794)\nat androidx.test.core.app.ActivityScenario$$ExternalSyntheticLambda2.run(D8$$SyntheticClass:0)\nat java.util.concurrent.Executors$RunnableAdapter.call(Executors.java:520)\nat java.util.concurrent.FutureTask.run(FutureTask.java:328)\nat android.app.Instrumentation$SyncRunnable.run(Instrumentation.java:2657)\nat android.os.Handler.handleCallback(Handler.java:1095)\nat android.os.Handler.dispatchMessageImpl(Handler.java:135)\nat android.os.Handler.dispatchMessage(Handler.java:125)\nat android.os.Looper.loopOnce(Looper.java:296)\nat android.os.Looper.loop(Looper.java:397)\nat android.app.ActivityThread.main(ActivityThread.java:9523)\nat java.lang.reflect.Method.invoke(Native Method)\nat com.android.internal.os.RuntimeInit$MethodAndArgsCaller.run(RuntimeInit.java:575)\nat com.android.internal.os.ZygoteInit.main(ZygoteInit.java:939)\n"
+    }
+  ]
+}
