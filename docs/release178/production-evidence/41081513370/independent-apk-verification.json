@@ -1,0 +1,20 @@
+{
+  "source_sha": "04b91ae01c64323aac02975672d6046dfba62e30",
+  "control_sha": "67296943557d6caf55f1ab5840f3c7eaa8b18b84",
+  "run_id": 41081513370,
+  "artifact_id": 12990222572,
+  "artifact_sha256": "5ea6025721ad51530249592213ec7d8a8682682e52eba84ba65587e86b68f82e",
+  "apk_sha256": "21066bd7153520c688c5a6b6034fca549b33df391762e64a5070eecfeb342d3d",
+  "apk_bytes": 105454166,
+  "embedded_certificate_sha256": "94f2bfc6567f26d067d29077111cfd0ce86d38263c642ad115e43365f05b0d17",
+  "package": "uk.co.traynor.privategallery",
+  "version": "1.7.8",
+  "version_code": 47,
+  "upgrade_from46": "PASS",
+  "restart": "PASS",
+  "physical_acceptance": "OWNER_REQUIRED",
+  "independent_v2_signed_data_signature": "PASS",
+  "independent_v2_whole_apk_digest": "PASS",
+  "v2_signature_algorithm": "RSA PKCS1v1.5 SHA512 (0x0104)",
+  "signature_format_reference": "https://source.android.com/docs/security/features/apksigning/v2"
+}

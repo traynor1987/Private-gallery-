@@ -1,0 +1,1 @@
+PASS: isolated packaged-Tor native forms/uploads/verified GET media, JavaScript-off, private cookies, actual v4/v6/UDP/DNS sink attempts and in-flight revocation. Separate Android assertions and source review are required; this does not prove physical-device acceptance.
