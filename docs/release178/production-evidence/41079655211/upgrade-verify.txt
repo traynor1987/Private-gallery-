@@ -1,0 +1,25 @@
+
+uk.co.traynor.privategallery.upgrade.UpgradeFixtureTest:
+Error in verify(uk.co.traynor.privategallery.upgrade.UpgradeFixtureTest):
+java.lang.AssertionError: Preserve Recently Deleted 717450ce-efd8-4f8e-a084-da92dc11c8f3/size expected: java.lang.Integer<112> but was: java.lang.Long<112>
+	at org.junit.Assert.fail(Assert.java:89)
+	at org.junit.Assert.failNotEquals(Assert.java:835)
+	at org.junit.Assert.assertEquals(Assert.java:120)
+	at uk.co.traynor.privategallery.upgrade.UpgradeFixtureTest.assertRecentlyDeleted(UpgradeFixtureTest.kt:215)
+	at uk.co.traynor.privategallery.upgrade.UpgradeFixtureTest.verify(UpgradeFixtureTest.kt:267)
+
+
+Time: 1.272
+There was 1 failure:
+1) verify(uk.co.traynor.privategallery.upgrade.UpgradeFixtureTest)
+java.lang.AssertionError: Preserve Recently Deleted 717450ce-efd8-4f8e-a084-da92dc11c8f3/size expected: java.lang.Integer<112> but was: java.lang.Long<112>
+	at org.junit.Assert.fail(Assert.java:89)
+	at org.junit.Assert.failNotEquals(Assert.java:835)
+	at org.junit.Assert.assertEquals(Assert.java:120)
+	at uk.co.traynor.privategallery.upgrade.UpgradeFixtureTest.assertRecentlyDeleted(UpgradeFixtureTest.kt:215)
+	at uk.co.traynor.privategallery.upgrade.UpgradeFixtureTest.verify(UpgradeFixtureTest.kt:267)
+
+FAILURES!!!
+Tests run: 1,  Failures: 1
+
+

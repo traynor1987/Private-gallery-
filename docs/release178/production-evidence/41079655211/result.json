@@ -1,0 +1,14 @@
+{
+  "control_sha": "fa42b406d4bf820e3e2b307ea60be7efd6a4e991",
+  "source_sha": "04b91ae01c64323aac02975672d6046dfba62e30",
+  "run_id": 41079655211,
+  "job_id": 124145118404,
+  "artifact_id": 12988748815,
+  "artifact_sha256": "c1f77e570843397fff75f317c2383717ec3a8e94482043f3be41273e5ec86f26",
+  "conclusion": "failure",
+  "seed": "PASS",
+  "candidate_installed": true,
+  "verify": "FAIL: JSON expected Integer112 versus Long112 for RecentlyDeleted size, same numeric value; comparison representation invalid.",
+  "restart": "NOT_EXECUTED",
+  "delivery": "NOT_PUBLISHED"
+}

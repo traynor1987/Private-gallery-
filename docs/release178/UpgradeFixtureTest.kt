@@ -202,6 +202,13 @@ class UpgradeFixtureTest {
             .put("hash",hash(item.plaintextSha256)).put("nonce",hash(item.payloadNonce)))
         }
     }
+    /** JSON text may box the same integral value as Int or Long after restart. */
+    private fun assertSnapshotValue(label:String,expected:Any,actual:Any) {
+        if(expected is Int || expected is Long) {
+            assertTrue("$label remains an integral JSON number",actual is Int || actual is Long)
+            assertEquals(label,(expected as Number).toLong(),(actual as Number).toLong())
+        } else assertEquals(label,expected,actual)
+    }
     private fun assertRecentlyDeleted(expected:JSONObject,deleted:List<VaultItem>,active:List<VaultItem>) {
         assertEquals(2,expected.length())
         assertEquals(setOf("image/png","video/mp4"),deleted.map {it.mimeType}.toSet())
@@ -212,7 +219,7 @@ class UpgradeFixtureTest {
             assertTrue(checkNotNull(item.deletedAtEpochMillis)>0)
             assertFalse("Trashed media must stay out of the active gallery",active.any {it.id==item.id})
             val prior=expected.getJSONObject(item.id);val current=actual.getJSONObject(item.id)
-            prior.keys().forEach { field -> assertEquals("Preserve Recently Deleted ${item.id}/$field",prior.get(field),current.get(field)) }
+            prior.keys().forEach { field -> assertSnapshotValue("Preserve Recently Deleted ${item.id}/$field",prior.get(field),current.get(field)) }
         }
     }
     /** Run again after reads/reconcile: only the explicitly changed presentation sort may differ. */
@@ -247,7 +254,7 @@ class UpgradeFixtureTest {
     }
     private fun assertDates(expected:JSONObject,actual:JSONObject) {
         assertEquals(expected.length(),actual.length())
-        expected.keys().forEach {id->for(field in listOf("added","captured"))assertEquals("Preserve original presentation $id/$field",expected.getJSONObject(id).get(field),actual.getJSONObject(id).get(field))}
+        expected.keys().forEach {id->for(field in listOf("added","captured"))assertSnapshotValue("Preserve original presentation $id/$field",expected.getJSONObject(id).get(field),actual.getJSONObject(id).get(field))}
     }
     @Test fun verify() {
         guard()

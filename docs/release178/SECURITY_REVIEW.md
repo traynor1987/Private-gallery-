@@ -76,7 +76,7 @@ SyntheticAPI37width/theme/font/Fold cases do not establish physicalSamsungfoldin
 |---|---|
 | scripts/private_apps178_cases.json —39exact cases | b4fb7b96cb568e55442758d212783c33879ffdc3eb6b9bcac680b2046e00568f |
 | scripts/verify_final_scope178.py | 6bfbb5898f9a1eeafb1a8067b352dbae3a818e290d2cfda18b6b671159987b21 |
-| docs/release178/UpgradeFixtureTest.kt | 71f707a77216e3294e7cbb93d2f544bdb89c61c3d8435009f85a7b1d20ade43e |
+| docs/release178/UpgradeFixtureTest.kt | 29a7618f7ab4f46d01223e4be54b86fe8ee21ad1abb87d1c2b27a86bfd9a46da |
 | scripts/verify_upgrade178_baseline.py | 7e93c9b75d93e2cb7cd7477d4eebc0d2419016fe3a39b275604fef6cfe8b5445 |
 | scripts/verify_synthetic_upgrade178.sh | b96b4e4cdcab16a5e2ee148f0dc5c68534415b54f4eaf36c06e3d3267fd6452c |
 | scripts/verify_hidden_vpn_fixture1762.py | 2e9827e1869a8ed52b22dd5161cd34c72404c6dc6a75e8a8bc9e4ad5d0b49676 |
@@ -93,6 +93,14 @@ Signing/upgrade run 41077235746, acceptance178 job 124136609755, stopped at upgr
 The reviewer independently inspected the exact one-character control-only fix in docs/release178/UpgradeFixtureTest.kt: an omitted outer result.put closing parenthesis in deletedSnapshot is restored. This preserves all recorded Recently Deleted fields and assertions. The syntax defect was missed in the earlier source review; no executed upgrade claim had been made. Corrected fixture SHA256 is 71f707a77216e3294e7cbb93d2f544bdb89c61c3d8435009f85a7b1d20ade43e, now the reviewed control pin above.
 
 Frozen application 04b91ae01c64323aac02975672d6046dfba62e30 and its successful 39 Android/29 JVM/packet evidence are unchanged, so the application-source approval remains valid for the controlled signing/upgrade stage with this corrected fixture. Compilation and exact original-key baseline-to-candidate upgrade/restart remain mandatory and unverified; no delivery approval follows from this correction. The failed signing/upgrade run remains failed and must not be represented as completed preservation evidence.
+
+## Upgrade control integral JSON comparison correction
+
+The release coordinator reports run 41079655211/job 124145118404 passed instrumentation compilation, installed the exact archived original code46 APK, seeded its fixture successfully (one test), and installed the same-key signed code47 candidate. Upgrade verification then failed comparing boxed Integer112 with Long112 for a Recently Deleted size field after JSON serialization; this is not evidence of a changed numeric value. Reported failure artifact12988748815 SHA256c1f77e570843397fff75f317c2383717ec3a8e94482043f3be41273e5ec86f26 has not yet been independently inspected by this reviewer.
+
+The reviewer independently inspected the fixture-only comparator change: expected Int/Long requires actual Int/Long and compares exact toLong values. It accepts neither floating-point nor string coercion; all other values retain object equality. Missing fields still throw via JSONObject.get. The comparator is applied consistently to Recently Deleted snapshots and nullable added/captured timestamps; identity/state/hash/nonce/retention/ciphertext assertions remain unchanged. This preserves the intended data-value assertion across JSON boxing representations rather than relaxing preservation checks.
+
+The reviewed current fixture SHA256 is29a7618f7ab4f46d01223e4be54b86fe8ee21ad1abb87d1c2b27a86bfd9a46da, replacing the earlier syntax-corrected control pin above. Frozen application04b91ae01c64323aac02975672d6046dfba62e30 and its successful39Android/29JVM/packet evidence are unchanged, so application-source approval remains valid for the controlled signing/upgrade stage. The failed upgrade run remains failed; complete verification plus process restart and signed-artifact checks remain mandatory before delivery. No successful full preservation result is asserted here.
 
 ## Final machine-readable decision
 ```json
