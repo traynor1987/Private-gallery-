@@ -1,0 +1,19 @@
+{
+  "source_sha": "5e9095728f9d29c28a2088b8659189c6da089e2a",
+  "run_id": 41047906712,
+  "artifact_id": 12973553730,
+  "artifact_sha256": "038779d1df3e7df3087a6767768604053496e535d35806fbe8f2aa3ee4459965",
+  "android_tests": 38,
+  "passed": 37,
+  "jvm_tests": 27,
+  "workflow_conclusion": "failure",
+  "failures": [
+    {
+      "name": "torCatalogueCrudOnionLaunchAndRevocationUseAuthenticatedSeparateProcess",
+      "classname": "uk.co.traynor.privategallery.core.browser.hidden.HiddenPrivateAppsLive178Test",
+      "time": "82.39",
+      "failure": "java.lang.AssertionError: Actual broker discovery validates controlled manifest\nat uk.co.traynor.privategallery.core.browser.hidden.HiddenPrivateAppsLive178Test.waitFor(HiddenPrivateAppsLive178Test.kt:61)\nat uk.co.traynor.privategallery.core.browser.hidden.HiddenPrivateAppsLive178Test.exercise(HiddenPrivateAppsLive178Test.kt:271)\nat uk.co.traynor.privategallery.core.browser.hidden.HiddenPrivateAppsLive178Test.torCatalogueCrudOnionLaunchAndRevocationUseAuthenticatedSeparateProcess(HiddenPrivateAppsLive178Test.kt:571)\n"
+    }
+  ],
+  "decision": "NOT_APPROVED"
+}

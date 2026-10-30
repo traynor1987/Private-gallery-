@@ -12,7 +12,7 @@ Primary custom icons use explicit photo selection, subject to the existing backg
 
 Discovery supports public same-origin manifest name/short name, start URL, scope, display metadata and bounded raster icons, with favicon fallback. Compatible metadata offers Private Web App; unsupported metadata offers Private Website. Saved apps remain inside Private Gallery. No public Android installation or launcher shortcut is created.
 
-Display preferences support app-style chrome; manifest scope is shown, not enforced as a new security sandbox. Public metadata discovery sends no site login cookies. Redirected, cross-origin, login-protected or unsupported resources may fall back to manual website mode. There is no background push, offline guarantee, Chrome installation API or service-worker installation promise. Hidden Tor keeps JavaScript disabled; JavaScript-dependent services may not work.
+Display preferences support app-style chrome; manifest scope is shown, not enforced as a new security sandbox. Public metadata discovery sends no site login cookies. Redirected, cross-origin, login-protected or unsupported resources may fall back to manual website mode. Temporary connection or server failures are reported as unavailable; saving the website manually remains available. There is no background push, offline guarantee, Chrome installation API or service-worker installation promise. Hidden Tor keeps JavaScript disabled; JavaScript-dependent services may not work.
 
 ## Login and storage boundaries
 

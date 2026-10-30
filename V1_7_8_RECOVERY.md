@@ -2,7 +2,7 @@
 
 Current status: FINAL VERIFICATION IN PROGRESS / NOT APPROVED FOR SIGNING.
 
-Latest completed application/test candidate: `3e9a4c124b218a9b2f3401ebd9886a9b0bbe11b7`, version 1.7.8/code 47, Android 17/API 37. Run `41044093012` passed 27 JVM and 36/38 Android cases, including the complete native VPN protocol case. Reviewed DNS cancellation and debug controlled-Tor readiness corrections below require fresh exact-source full runtime/packet proof. Signing, original-key code46→47 upgrade/restart and APK delivery remain blocked. Physical Fold acceptance is owner-required.
+Latest completed application/test candidate: `5e9095728f9d29c28a2088b8659189c6da089e2a`, version 1.7.8/code 47, Android 17/API 37. Run `41047906712` passed 27 JVM and 37/38 Android cases, including DNS revocation and full native VPN/Tor protocols. Tor Private Apps manifest discovery remains failed; reviewed accurate-unavailability reporting and non-content diagnostics below require new exact-source compilation/29-JVM/38-Android/strict-packet evidence. Signing, original-key code46→47 upgrade/restart and APK delivery remain blocked. Physical Fold acceptance is owner-required.
 
 Reviewed final upgrade control: `docs/release178/UpgradeFixtureTest.kt`, SHA-256 `cda89804a84f88ad5de5d0bf912efe79fb33ca283427d7ea8cf7d3f40bc87429`. Production gate remains disabled. No final 1.7.8 APK has been delivered.
 
@@ -311,3 +311,14 @@ ActualpendingDNSrevocation test timedout Future.get1500 rather than returning fa
 NativeTor failed its controlled-root precondition in HiddenTorSockets.open SOCKSCONNECTresponse (line40, EAGAIN/Tryagain), BEFORE anyHTTPresponse. Do not misattribute to HTTP EOF or inject a readyresult. The explicit handshake readtimeout parameter defaults30seconds;60seconds is accepted ONLY in DEBUG and used by the two controlled-root readiness exchanges. Successfulhandshake resetsdataread timeout30seconds. Productionproxy calls/default30seconds, nativeUIloaddeadline, actualTor functional/event requests, status200/exactpayload/JSoff/route/revocation assertions and nofallback remainunchanged. No connectionretry introduced.
 
 Independentactualdiff review found no Critical/Important newdefect; deadlinepostread checks tightened perreview. SevenJava hostprogrammes and36focusedPythonchecksPASS. DNSauthority/cancellation findings remain open pending fresh exactcompilation/runtime/strictpacketproof. Original177,38manifest,finalscopevalidator andcda898upgradefixture preserved. Signerdisabled; no178APKdelivered.
+
+
+## DNS cancellation passes; accurate PWA unavailability reporting and diagnostics
+
+Exact5e9095728f9d29c28a2088b8659189c6da089e2a/run41047906712/job124036443692 passed27JVM;38Androidcases37PASS1FAIL,0errors/skips. Artifact12973553730 independently hashchecked038779d1df3e7df3087a6767768604053496e535d35806fbe8f2aa3ee4459965; XML/result/onionevents archived under final-candidate-evidence/5e90957. ActualpendingDNS cancellation/<1second assertion nowPASS, as do fullNativeVPN andNativeTor protocolcases. RemainingTorPrivateApps failure is controlledmanifestdiscovery. Backendobserves page/manifest/favicon, no manifesticonrequest: failureoccurred beforemetadataassignment. Currentevidence does NOT establish timeout versusresponse/MIME/validation cause. Aggregatepacketgate remainsblocked.
+
+Sourceaudit identified inaccurate compatibilityreporting: parser runCatching silently classified page/manifest networkIOException as no compatiblemanifest. Now propagate thoseIOexceptions to existingUI Discoveryunavailable/manualsave path. Invalid/unsafe/nonIOmetadata stillfallsback to website; iconfailure stillplaceholder. TemporaryHTTP408/429/5xx is likewiseunavailable withno requestretry. Added2JVM methods forpage/manifestSocketTimeout andtemporaryHTTP exact-one-call behaviour (expectedtotal29; remoteexecution pending, NOT claimedlocallypassed).
+
+Add DEBUG-only fixedfetch/parsepage/manifest/iconphase, exceptionCLASS, numericstatus/bytecount, fixedMIMEclassification andelapsedtime. NeverURL/host/body/credentials/exceptionmessage. Pureparserreporter defaultsnoop; loggingfailurecannotchangebusinesslogic orJVMstubs. No timeout,route,cookie,auth,redirect,bounds or assertion changed:8sconnect/read,12scall,45swholeoperation remain. DiagnoseactualTorboundary beforeanybudgetchange; no retry-to-green.
+
+Independentactualdiff review found no Critical/Important issue. ExistingsevenJava hostprogrammes and36Pythonchecks remainvalid; newKotlinregression/compilation andexact38runtime/strictpackets mandatory. Original177,38manifest,finalscopevalidator,cda898upgradefixture anddisabledsigner preserved. No originalkey178upgrade or signedAPKdelivery yet.

@@ -17,6 +17,16 @@ class PrivateAppMetadataTransportTest {
   val app=PrivateAppMetadataTransport.discover("https://example.test/",false,builder,{true})
   assertEquals("",app.scope());assertEquals(listOf("https://example.test/","https://example.test/favicon.ico"),seen)
  }
+ @Test fun temporary_http_failure_reports_unavailable_without_retry() {
+  for(code in listOf(408,429,503)) {
+   var calls=0
+   val builder=OkHttpClient.Builder().addInterceptor {chain ->calls++
+    Response.Builder().request(chain.request()).protocol(Protocol.HTTP_1_1).code(code).message("Synthetic temporary failure").body("".toResponseBody()).build()
+   }
+   assertThrows(java.io.IOException::class.java){PrivateAppMetadataTransport.discover("https://example.test/",false,builder,{true})}
+   assertEquals(1,calls)
+  }
+ }
  @Test fun rejects_before_request_when_authority_is_revoked() {
   var calls=0
   val builder=OkHttpClient.Builder().addInterceptor{calls++;error("No requests")}

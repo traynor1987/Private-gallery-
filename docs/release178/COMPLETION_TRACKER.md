@@ -1,6 +1,6 @@
 # 1.7.8 completion tracker
 
-Latest completed candidate: `3e9a4c124b218a9b2f3401ebd9886a9b0bbe11b7`, version 1.7.8/code 47, Android 17/API 37. Run `41044093012`: 27 JVM pass; Android 36/38 pass, complete native VPN protocol case passes. Reviewed DNS cancellation and debug cold-Tor readiness corrections require fresh exact-source full runtime/packet evidence. Security approval, original-key upgrade/restart, signing and delivery remain blocked.
+Latest completed candidate: `5e9095728f9d29c28a2088b8659189c6da089e2a`, version 1.7.8/code 47, Android 17/API 37. Run `41047906712`: 27 JVM pass; Android 37/38 pass, including DNS revocation and full native VPN/Tor protocols. Tor manifest discovery/reporting diagnosis and reviewed corrections require new exact-source evidence (29 JVM/38 Android plus strict packets). Security approval, original-key upgrade/restart, signing and delivery remain blocked.
 
 | Area | Implemented behaviour | Verification status |
 | --- | --- | --- |
@@ -164,3 +164,14 @@ ActualpendingDNSrevocation test timedout Future.get1500 rather than returning fa
 NativeTor failed its controlled-root precondition in HiddenTorSockets.open SOCKSCONNECTresponse (line40, EAGAIN/Tryagain), BEFORE anyHTTPresponse. Do not misattribute to HTTP EOF or inject a readyresult. The explicit handshake readtimeout parameter defaults30seconds;60seconds is accepted ONLY in DEBUG and used by the two controlled-root readiness exchanges. Successfulhandshake resetsdataread timeout30seconds. Productionproxy calls/default30seconds, nativeUIloaddeadline, actualTor functional/event requests, status200/exactpayload/JSoff/route/revocation assertions and nofallback remainunchanged. No connectionretry introduced.
 
 Independentactualdiff review found no Critical/Important newdefect; deadlinepostread checks tightened perreview. SevenJava hostprogrammes and36focusedPythonchecksPASS. DNSauthority/cancellation findings remain open pending fresh exactcompilation/runtime/strictpacketproof. Original177,38manifest,finalscopevalidator andcda898upgradefixture preserved. Signerdisabled; no178APKdelivered.
+
+
+## DNS cancellation passes; accurate PWA unavailability reporting and diagnostics
+
+Exact5e9095728f9d29c28a2088b8659189c6da089e2a/run41047906712/job124036443692 passed27JVM;38Androidcases37PASS1FAIL,0errors/skips. Artifact12973553730 independently hashchecked038779d1df3e7df3087a6767768604053496e535d35806fbe8f2aa3ee4459965; XML/result/onionevents archived under final-candidate-evidence/5e90957. ActualpendingDNS cancellation/<1second assertion nowPASS, as do fullNativeVPN andNativeTor protocolcases. RemainingTorPrivateApps failure is controlledmanifestdiscovery. Backendobserves page/manifest/favicon, no manifesticonrequest: failureoccurred beforemetadataassignment. Currentevidence does NOT establish timeout versusresponse/MIME/validation cause. Aggregatepacketgate remainsblocked.
+
+Sourceaudit identified inaccurate compatibilityreporting: parser runCatching silently classified page/manifest networkIOException as no compatiblemanifest. Now propagate thoseIOexceptions to existingUI Discoveryunavailable/manualsave path. Invalid/unsafe/nonIOmetadata stillfallsback to website; iconfailure stillplaceholder. TemporaryHTTP408/429/5xx is likewiseunavailable withno requestretry. Added2JVM methods forpage/manifestSocketTimeout andtemporaryHTTP exact-one-call behaviour (expectedtotal29; remoteexecution pending, NOT claimedlocallypassed).
+
+Add DEBUG-only fixedfetch/parsepage/manifest/iconphase, exceptionCLASS, numericstatus/bytecount, fixedMIMEclassification andelapsedtime. NeverURL/host/body/credentials/exceptionmessage. Pureparserreporter defaultsnoop; loggingfailurecannotchangebusinesslogic orJVMstubs. No timeout,route,cookie,auth,redirect,bounds or assertion changed:8sconnect/read,12scall,45swholeoperation remain. DiagnoseactualTorboundary beforeanybudgetchange; no retry-to-green.
+
+Independentactualdiff review found no Critical/Important issue. ExistingsevenJava hostprogrammes and36Pythonchecks remainvalid; newKotlinregression/compilation andexact38runtime/strictpackets mandatory. Original177,38manifest,finalscopevalidator,cda898upgradefixture anddisabledsigner preserved. No originalkey178upgrade or signedAPKdelivery yet.

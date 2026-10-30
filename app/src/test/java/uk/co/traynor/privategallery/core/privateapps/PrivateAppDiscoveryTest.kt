@@ -36,6 +36,20 @@ class PrivateAppDiscoveryTest {
   assertThrows(IllegalStateException::class.java){PrivateAppDiscovery.discover(page,false,{live},{live=false;PrivateAppDiscovery.Resource(bytes,"text/html")},{""})}
   assertTrue(bytes.all{it==0.toByte()})
  }
+ @Test fun network_failure_is_unavailable_not_incompatible_metadata() {
+  assertThrows(java.net.SocketTimeoutException::class.java) {
+   PrivateAppDiscovery.discover(page,false,{true},{throw java.net.SocketTimeoutException("Synthetic timeout")},{""})
+  }
+  val seen=mutableListOf<String>()
+  assertThrows(java.net.SocketTimeoutException::class.java) {
+   PrivateAppDiscovery.discover(page,false,{true},{url ->
+    seen+=url
+    if(url==page)PrivateAppDiscovery.Resource("<link rel='manifest' href='/manifest.json'>".toByteArray(),"text/html")
+    else throw java.net.SocketTimeoutException("Synthetic manifest timeout")
+   },{""})
+  }
+  assertEquals(listOf(page,manifest),seen)
+ }
  @Test fun oversize_and_malformed_documents_fail_closed_to_website() {
   val app=PrivateAppDiscovery.discover(page,false,{true},{PrivateAppDiscovery.Resource(ByteArray(PrivateAppDiscovery.MAX_DOCUMENT+1),"text/html")},{error("Do not decode")})
   assertEquals("",app.scope());assertEquals("",app.icon())

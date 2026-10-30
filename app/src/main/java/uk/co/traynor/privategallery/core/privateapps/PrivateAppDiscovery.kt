@@ -44,23 +44,30 @@ internal object PrivateAppDiscovery {
   }.orEmpty()
   return Metadata(name,start,scope,display,icon)
  }
- fun discover(page:String,tor:Boolean,current:()->Boolean,fetch:(String)->Resource,normalizeIcon:(ByteArray)->String):PrivateAppCatalog.App {
+ fun discover(page:String,tor:Boolean,current:()->Boolean,fetch:(String)->Resource,normalizeIcon:(ByteArray)->String,diagnostic:(String,Throwable)->Unit={_,_->}):PrivateAppCatalog.App {
   check(current());require(safe(page,tor))
   var metadata=Metadata(URI(page).host,page)
   var favicon=resolve(page,"/favicon.ico",tor).orEmpty()
   fun get(url:String):Resource {check(current());require(resolve(page,url,tor)!=null);return fetch(url).also{try{check(current());require(it.bytes.size<=MAX_DOCUMENT)}catch(e:Exception){it.bytes.fill(0);throw e}}}
+  var phase="fetch_page"
+  fun report(stage:String,failure:Throwable){runCatching{diagnostic(stage,failure)}}
   runCatching {
    val html=get(page)
-   val tags=try {require(html.mime in setOf("text/html","application/xhtml+xml"));links(html.bytes.toString(Charsets.UTF_8))}finally{html.bytes.fill(0)}
+   val tags=try {phase="parse_page";require(html.mime in setOf("text/html","application/xhtml+xml"));links(html.bytes.toString(Charsets.UTF_8))}finally{html.bytes.fill(0)}
    tags.firstOrNull{it["rel"].orEmpty().lowercase().split(Regex("\\s+")).contains("icon")}?.get("href")?.let {resolve(page,it,tor)}?.let{favicon=it}
    val url=tags.firstOrNull{it["rel"].orEmpty().lowercase().split(Regex("\\s+")).contains("manifest")}?.get("href")?.let{resolve(page,it,tor)} ?: return@runCatching
+   phase="fetch_manifest"
    val resource=get(url)
-   try {require(resource.mime in setOf("application/manifest+json","application/json"));metadata=manifest(page,url,resource.bytes.toString(Charsets.UTF_8),tor)}finally{resource.bytes.fill(0)}
+   try {phase="parse_manifest";require(resource.mime in setOf("application/manifest+json","application/json"));metadata=manifest(page,url,resource.bytes.toString(Charsets.UTF_8),tor)}finally{resource.bytes.fill(0)}
+  }.onFailure {failure ->
+   report(phase,failure)
+   // Network unavailability is not an incompatible manifest. Existing UI offers manual save.
+   if(failure is java.io.IOException)throw failure
   }
   check(current())
   var icon=""
   for(url in listOf(metadata.iconUrl,favicon).filter{it.isNotEmpty()}.distinct().take(2)) {
-   icon=runCatching {val resource=get(url);try {require(resource.mime.startsWith("image/") && resource.mime!="image/svg+xml");normalizeIcon(resource.bytes)}finally{resource.bytes.fill(0)}}.getOrDefault("")
+   icon=runCatching {val resource=get(url);try {require(resource.mime.startsWith("image/") && resource.mime!="image/svg+xml");normalizeIcon(resource.bytes)}finally{resource.bytes.fill(0)}}.onFailure {report("icon",it)}.getOrDefault("")
    check(current());if(icon.isNotEmpty())break
   }
   val app=PrivateAppCatalog.App(UUID.randomUUID().toString(),metadata.name,metadata.start,metadata.scope,metadata.display,icon,false,true,false)

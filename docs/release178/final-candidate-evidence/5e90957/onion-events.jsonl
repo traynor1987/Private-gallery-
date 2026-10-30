@@ -1,0 +1,31 @@
+{"cookie_present": false, "method": "GET", "path": "/"}
+{"cookie_present": false, "method": "GET", "path": "/"}
+{"cookie_present": false, "method": "GET", "path": "/script-probe"}
+{"cookie_present": false, "method": "GET", "path": "/favicon.ico"}
+{"cookie_present": false, "method": "GET", "path": "/interactive"}
+{"cookie_present": false, "method": "GET", "path": "/evidence"}
+{"form_ok": true, "length": 23, "method": "POST", "multipart_png": false, "path": "/form-result", "sha256": "93b4d313bb87f10e6c6a9d869ac7e8c2e4dcb483b170987fcb6be6a07d1dee76", "upload_sha256": null}
+{"cookie_present": false, "method": "GET", "path": "/evidence"}
+{"cookie_present": false, "method": "GET", "path": "/interactive"}
+{"cookie_present": false, "method": "GET", "path": "/evidence"}
+{"form_ok": false, "length": 298, "method": "POST", "multipart_png": true, "path": "/uploaded", "sha256": "4e68734b977053712f6eba2d857c53b26b497b13028c415fe74ef113a8c05e62", "upload_sha256": "ca24eb1e5824222288c98f29db858c7ecf5d8558ba6d22edf42a4419a7ac63f8"}
+{"cookie_present": false, "method": "GET", "path": "/evidence"}
+{"cookie_present": false, "method": "GET", "path": "/cookie"}
+{"cookie_present": false, "method": "GET", "path": "/evidence"}
+{"cookie_present": true, "method": "GET", "path": "/cookie-echo"}
+{"cookie_present": false, "method": "GET", "path": "/evidence"}
+{"cookie_present": true, "method": "GET", "path": "/media.png"}
+{"cookie_present": true, "method": "GET", "path": "/media.png"}
+{"cookie_present": false, "method": "GET", "path": "/evidence"}
+{"cookie_present": false, "method": "GET", "path": "/evidence"}
+{"cookie_present": false, "method": "GET", "path": "/evidence"}
+{"cookie_present": true, "method": "GET", "path": "/slow"}
+{"kind": "slow-start"}
+{"cookie_present": false, "method": "GET", "path": "/evidence"}
+{"kind": "slow-closed"}
+{"cookie_present": false, "method": "GET", "path": "/"}
+{"cookie_present": false, "method": "GET", "path": "/interactive"}
+{"cookie_present": false, "method": "GET", "path": "/favicon.ico"}
+{"cookie_present": false, "method": "GET", "path": "/interactive"}
+{"cookie_present": false, "method": "GET", "path": "/manifest178.json"}
+{"cookie_present": false, "method": "GET", "path": "/favicon.ico"}
