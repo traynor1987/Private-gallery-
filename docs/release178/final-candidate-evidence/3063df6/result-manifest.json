@@ -1,0 +1,17 @@
+{
+  "source_sha": "3063df603b83de3d997a447ea6bb7fac4246a969",
+  "run_id": 40985414643,
+  "artifact_id": 12947028199,
+  "artifact_sha256": "eddc6bc10d1c498b767564882f1bf299faf941d7a22712f0c6a4db93d789c326",
+  "tests": 38,
+  "passed": 37,
+  "failed": 1,
+  "skipped": 0,
+  "failures": [
+    {
+      "classname": "uk.co.traynor.privategallery.core.browser.hidden.HiddenVpnLive1762Test",
+      "name": "nativeChildPostsFormsUploadsAndRevokesOnOwnedVpn",
+      "failure": "java.lang.AssertionError: Continuous native UDP probe started\nat org.junit.Assert.fail(Assert.java:89)\nat org.junit.Assert.assertTrue(Assert.java:42)\nat uk.co.traynor.privategallery.core.browser.hidden.HiddenVpnLive1762Test.waitFor(HiddenVpnLive1762Test.kt:44)\nat uk.co.traynor.privategallery.core.browser.hidden.HiddenVpnLive1762Test.waitFor$default(HiddenVpnLive1762Test.kt:39)\nat uk.co.traynor.privategallery.core.browser.hidden.HiddenVpnLive1762Test.nativeChildPostsFormsUploadsAndRevokesOnOwnedVpn(HiddenVpnLive1762Test.kt:499)\n"
+    }
+  ]
+}

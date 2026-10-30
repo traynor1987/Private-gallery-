@@ -93,7 +93,7 @@ class HiddenVpnLive1762Test {
         }
         return false
     }
-    private fun click(text:String,index:Int=0,selectedTab:Boolean=false) {
+    private fun click(text:String,index:Int=0,selectedTab:Boolean=false,websiteTouch:Boolean=false) {
         var target:AccessibilityNodeInfo?=null
         waitFor("Visible web control $text") {
             target=nodes().filter {it.isEnabled && (!selectedTab || selectedTabAncestor(it)) && (it.text?.toString()==text || it.contentDescription?.toString()==text)}.getOrNull(index)
@@ -106,7 +106,9 @@ class HiddenVpnLive1762Test {
             if(ancestor?.className?.toString()=="android.webkit.WebView")webControl=true
             ancestor=ancestor?.parent
         }
-        if(!webControl) {
+        // After a viewport/provider refresh, a virtual node can temporarily lack its
+        // parent chain. Known HTML probes must never fall back to native ACTION_CLICK.
+        if(!webControl && !websiteTouch) {
             clickNative(text,selectedTab,index)
             return
         }
@@ -495,7 +497,7 @@ class HiddenVpnLive1762Test {
                         visible.none {it.contentDescription?.toString()=="Stop" && it.isVisibleToUser} &&
                         visible.any {it.text?.toString()=="Start continuous RTC" && it.isVisibleToUser}
                 }
-                click("Start continuous RTC")
+                click("Start continuous RTC",websiteTouch=true)
                 waitFor("Continuous native UDP probe started") {observed(network,origin){it.optBoolean("continuous_started")}}
                 waitFor("At least three fresh STUN datagrams before Hidden revocation") {
                     val events=evidence(network,origin).getJSONArray("events")
@@ -503,7 +505,7 @@ class HiddenVpnLive1762Test {
                     val start=list.lastOrNull {it.optBoolean("continuous_started")}?.optDouble("time") ?: return@waitFor false
                     list.count {it.optString("kind")=="stun" && it.optDouble("time")>=start}>=3
                 }
-                click("Start slow fetch")
+                click("Start slow fetch",websiteTouch=true)
                 waitFor("Slow HTTPS request remains active alongside RTC") {
                     val events=evidence(network,origin).getJSONArray("events")
                     val list=(0 until events.length()).map {events.getJSONObject(it)}
