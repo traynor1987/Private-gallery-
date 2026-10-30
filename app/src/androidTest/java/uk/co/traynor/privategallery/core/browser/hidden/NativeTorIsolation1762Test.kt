@@ -77,10 +77,15 @@ class NativeTorIsolation1762Test {
             try {assertTrue("Web touch delivered",automation.injectInputEvent(event,true))}finally{event.recycle()}
         }
     }
-    private fun navigate(url:String){waitFor("Native Tor address"){
-        val field=nodes().firstOrNull {it.isEditable} ?: return@waitFor false
-        field.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT,Bundle().apply {putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE,url)})
-    };clickWeb("Go")}
+    private fun navigate(url:String){waitFor("Native Tor address publication"){
+        val field=nodes().firstOrNull {it.isEditable && it.isVisibleToUser && it.isEnabled} ?: return@waitFor false
+        if(!field.isFocused) {field.performAction(AccessibilityNodeInfo.ACTION_FOCUS);return@waitFor false}
+        if(field.text?.toString()!=url) {
+            field.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT,Bundle().apply {putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE,url)})
+            return@waitFor false
+        }
+        true
+    };android.util.Log.i("NativeTor1762","Requested address published before Go=true");clickWeb("Go")}
     private fun evidence(path:String,host:String):JSONObject {
         HiddenTorSockets.open(path,host,80).use {stream ->
             stream.output.write("GET /evidence HTTP/1.1\r\nHost: $host\r\nConnection: close\r\n\r\n".toByteArray());stream.output.flush()

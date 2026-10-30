@@ -1,0 +1,29 @@
+{
+  "source_sha": "38aebb311716d0995c9378badb16ea2ec23aa3cd",
+  "run_id": 40988815578,
+  "artifact_id": 12948996376,
+  "artifact_sha256": "eb51689220ae3ae2c3c01e095b09a38044030d0b9ed4885d66794121c58fc3b9",
+  "tests": 38,
+  "passed": 35,
+  "failures": [
+    {
+      "name": "shared_profile_effects_require_explicit_confirmation_and_hidden_has_no_retention_toggle",
+      "classname": "uk.co.traynor.privategallery.ui.PrivateAppSessionSettings178Test",
+      "time": "12.249",
+      "failure": "androidx.compose.ui.test.ComposeTimeoutException: Condition still not satisfied after 5000 ms\nat androidx.compose.ui.test.AndroidComposeUiTestEnvironment$AndroidComposeUiTestImpl.waitUntil(ComposeUiTest.android.kt:441)\nat androidx.compose.ui.test.junit4.AndroidComposeTestRule.waitUntil(AndroidComposeTestRule.android.kt:306)\nat uk.co.traynor.privategallery.ui.PrivateAppSessionSettings178Test.shared_profile_effects_require_explicit_confirmation_and_hidden_has_no_retention_toggle(PrivateAppSessionSettings178Test.kt:63)\n"
+    },
+    {
+      "name": "nativeChildPostsFormsUploadsAndRevokesOnOwnedVpn",
+      "classname": "uk.co.traynor.privategallery.core.browser.hidden.HiddenVpnLive1762Test",
+      "time": "92.818",
+      "failure": "java.lang.AssertionError: Fresh root document completes after restoring the Fold viewport\nat org.junit.Assert.fail(Assert.java:89)\nat org.junit.Assert.assertTrue(Assert.java:42)\nat uk.co.traynor.privategallery.core.browser.hidden.HiddenVpnLive1762Test.waitFor(HiddenVpnLive1762Test.kt:44)\nat uk.co.traynor.privategallery.core.browser.hidden.HiddenVpnLive1762Test.waitFor$default(HiddenVpnLive1762Test.kt:39)\nat uk.co.traynor.privategallery.core.browser.hidden.HiddenVpnLive1762Test.nativeChildPostsFormsUploadsAndRevokesOnOwnedVpn(HiddenVpnLive1762Test.kt:493)\n"
+    },
+    {
+      "name": "packagedTorNativeFormsUploadsDownloadsAndNetworkSink",
+      "classname": "uk.co.traynor.privategallery.core.browser.hidden.NativeTorIsolation1762Test",
+      "time": "85.538",
+      "failure": "java.lang.AssertionError: Tor script probe rendered within native page deadline\nat org.junit.Assert.fail(Assert.java:89)\nat org.junit.Assert.assertTrue(Assert.java:42)\nat uk.co.traynor.privategallery.core.browser.hidden.NativeTorIsolation1762Test.waitFor(NativeTorIsolation1762Test.kt:37)\nat uk.co.traynor.privategallery.core.browser.hidden.NativeTorIsolation1762Test.packagedTorNativeFormsUploadsDownloadsAndNetworkSink(NativeTorIsolation1762Test.kt:164)\n"
+    }
+  ],
+  "decision": "NOT_APPROVED"
+}

@@ -59,7 +59,11 @@ class PrivateAppSessionSettings178Test {
   compose.runOnIdle {assertEquals(0,clears)}
   compose.onNodeWithText("Cancel").performClick();compose.runOnIdle {assertEquals(0,clears)}
   compose.onNodeWithText("Clear shared browser session and data").performScrollTo().performClick()
-  compose.onNodeWithText("Confirm").performClick();compose.runOnIdle {assertEquals(1,clears);controller=hidden;show=true}
+  compose.onNodeWithText("Confirm").performClick()
+  // Clearing closes the original dialog. Observe that publication before opening a
+  // different owner's dialog; the callback side effect alone is not window disposal.
+  compose.waitUntil(5000){clears==1 && compose.onAllNodesWithText("Private app settings").fetchSemanticsNodes().isEmpty()}
+  compose.runOnIdle {assertEquals(1,clears);controller=hidden;show=true}
   compose.waitUntil(5000){compose.onAllNodesWithTag("private-app-auth-toggle").fetchSemanticsNodes().isNotEmpty()}
   compose.onNodeWithTag("private-app-retention-toggle").assertDoesNotExist()
  }

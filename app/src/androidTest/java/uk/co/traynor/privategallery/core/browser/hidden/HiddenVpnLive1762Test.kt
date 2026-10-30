@@ -77,6 +77,9 @@ class HiddenVpnLive1762Test {
         }.onFailure {android.util.Log.e("HiddenVpnLive1762","UI evidence unavailable: ${it.javaClass.simpleName}")}
     }
     private fun nodes():List<AccessibilityNodeInfo> {
+        // Fold/provider refresh can leave UiAutomation's container-only cache stale.
+        // Fetch the real current hierarchy; do not manufacture or activate HTML nodes.
+        automation.clearCache()
         val result=mutableListOf<AccessibilityNodeInfo>()
         fun visit(node:AccessibilityNodeInfo?) {if(node==null)return;result+=node;repeat(node.childCount){visit(node.getChild(it))}}
         visit(automation.rootInActiveWindow);return result
