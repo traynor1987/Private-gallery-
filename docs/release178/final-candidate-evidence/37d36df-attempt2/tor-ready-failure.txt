@@ -1,0 +1,4 @@
+10-30 14:17:45.100  6944  6944 I cr_A11yState: Enabled accessibility services list updated. [uk.co.traynor.privategallery.hiddenprototype/uk.co.traynor.privategallery.CiAccessibilityService178]
+10-30 14:17:45.101  6944  6944 I cr_A11yState: Informing listeners of changes.
+10-30 14:17:45.101  6944  6944 I cr_A11yState: New AccessibilityState: State{isComplexUserInteractionServiceEnabled=false, isTouchExplorationEnabled=false, isPerformGesturesEnabled=false, isAnyAccessibilityServiceEnabled=true, isAccessibilityToolPresent=true, isTextShowPasswordEnabled=true, isOnlyAutofillRunning=false, isOnlyPasswordManagersEnabled=false, isKnownScreenReaderEnabled=false}
+10-30 14:18:15.222  6944  6944 I HiddenBrowser: Main-frame failure mode=TOR_ONLY code=-1

@@ -1,0 +1,21 @@
+{
+  "source_sha": "37d36df24036edaeb545cc26bde71ab0800d611f",
+  "run_id": 41067419793,
+  "run_attempt": 2,
+  "artifact_id": 12983999032,
+  "artifact_sha256": "3d2085d2f597444316604ea35b9c4185d0d06049e78ac5892f7771be6214113a",
+  "original_conclusion": "failure",
+  "jvm": {
+    "tests": 29,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "android": {
+    "tests": 38,
+    "failures": 1,
+    "errors": 0,
+    "skipped": 0
+  },
+  "reason": "TorPrivateAppsinitialHTTPready294fails; mainframeTOR_ONLYcode-1after30s, nointeractiveoriginGETafterrealrootwarmup. AXenabledtrue/toolpresenttrue. NativeVPNfullPASS,37otherPASS."
+}

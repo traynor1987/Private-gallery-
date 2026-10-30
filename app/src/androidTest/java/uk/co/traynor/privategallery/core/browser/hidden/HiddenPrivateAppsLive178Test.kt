@@ -284,14 +284,57 @@ class HiddenPrivateAppsLive178Test {
                 // A bootstrapped Tor daemon is not an established onion circuit. Warm the
                 // controlled origin through the real child WebView before bounded metadata
                 // discovery; do not inject responses or retry a failed discovery into green.
-                waitFor("Native Tor address accepts controlled origin") {
-                    val field=nodes().firstOrNull{it.isEditable && it.isVisibleToUser} ?: return@waitFor false
-                    field.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT,Bundle().apply {
+                fun addressField()=nodes().firstOrNull {it.isEditable && it.isVisibleToUser && it.isEnabled}
+                var touched=false
+                var focusBounds:android.graphics.Rect?=null
+                waitFor("Native Tor address is focused and publishes the complete controlled origin") {
+                    val field=addressField() ?: return@waitFor false
+                    if(!field.isFocused) {
+                        if(!touched) {
+                            val rect=android.graphics.Rect();field.getBoundsInScreen(rect)
+                            val root=automation.rootInActiveWindow ?: return@waitFor false
+                            val window=android.graphics.Rect();root.getBoundsInScreen(window)
+                            if(field.windowId!=root.windowId || rect.isEmpty || !window.contains(rect)) {
+                                focusBounds=null;return@waitFor false
+                            }
+                            val stable=focusBounds==rect
+                            focusBounds=android.graphics.Rect(rect)
+                            if(!stable)return@waitFor false
+                            val down=SystemClock.uptimeMillis()
+                            for(action in intArrayOf(android.view.MotionEvent.ACTION_DOWN,android.view.MotionEvent.ACTION_UP)) {
+                                val event=android.view.MotionEvent.obtain(down,SystemClock.uptimeMillis(),action,rect.exactCenterX(),rect.exactCenterY(),0)
+                                event.source=android.view.InputDevice.SOURCE_TOUCHSCREEN
+                                try {assertTrue("Address focus touch delivered",automation.injectInputEvent(event,true))}finally{event.recycle()}
+                            }
+                            touched=true
+                        }
+                        return@waitFor false
+                    }
+                    if(field.text?.toString()!=launchUrl)field.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT,Bundle().apply {
                         putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE,launchUrl)
                     })
+                    val fresh=addressField()
+                    fresh?.isFocused==true && fresh.text?.toString()==launchUrl
                 }
                 click("Go")
-                waitFor("Actual onion HTTP document is ready before metadata discovery",65) {visible(rendered)}
+                try {
+                    waitFor("Actual onion HTTP document is ready before metadata discovery",65) {visible(rendered)}
+                }catch(failure:AssertionError) {
+                    runCatching {
+                        val current=nodes()
+                        val output=File(checkNotNull(InstrumentationRegistry.getArguments().getString("additionalTestOutputDir")))
+                        check(output.isDirectory || output.mkdirs())
+                        File(output,"private-apps-tor-readiness178-failure.json").writeText(JSONObject()
+                            .put("address_matches",current.any {it.isEditable && it.text?.toString()==launchUrl})
+                            .put("address_focused",current.any {it.isEditable && it.isFocused})
+                            .put("reload_visible",visible("Reload")).put("stop_visible",visible("Stop"))
+                            .put("page_error",visible("Page unavailable"))
+                            .put("webview_count",current.count {it.className?.toString()=="android.webkit.WebView"})
+                            .put("webview_children",current.filter {it.className?.toString()=="android.webkit.WebView"}.sumOf {it.childCount}).toString())
+                    }
+                    throw failure
+                }
+
             }
             click("Private Apps")
             waitFor("Native catalogue belongs to selected immutable owner") { visible(ownerLabel) }

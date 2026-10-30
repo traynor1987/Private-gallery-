@@ -91,7 +91,12 @@ internal class HiddenVpnProxy(
             }
             output.flush();client.soTimeout=0
             workers.execute {try {pump(input,output);runCatching {shutdown()}} catch(_:Exception) {runCatching {upstream.close()};runCatching {client.close()}}}
-            pump(upstreamInput,client.getOutputStream())
+            try {pump(upstreamInput,client.getOutputStream())}catch(failure:Exception) {
+                if(uk.co.traynor.privategallery.BuildConfig.DEBUG && torUnixPath!=null)runCatching {
+                    android.util.Log.i("HiddenTorSocket","phase=upstream_response cause=${failure.javaClass.simpleName}")
+                }
+                throw failure
+            }
         } finally {sockets.remove(upstream);runCatching {upstream.close()}}
     }
     private fun pump(input:InputStream,output:java.io.OutputStream) {

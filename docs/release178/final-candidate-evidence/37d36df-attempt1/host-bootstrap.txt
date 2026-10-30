@@ -1,0 +1,12 @@
+Oct 30 14:00:27.000 [notice] Bootstrapped 0% (starting): Starting
+Oct 30 14:00:27.000 [notice] Bootstrapped 5% (conn): Connecting to a relay
+Oct 30 14:00:27.000 [notice] Bootstrapped 10% (conn_done): Connected to a relay
+Oct 30 14:00:27.000 [notice] Bootstrapped 14% (handshake): Handshaking with a relay
+Oct 30 14:00:27.000 [notice] Bootstrapped 15% (handshake_done): Handshake with a relay done
+Oct 30 14:00:27.000 [notice] Bootstrapped 20% (onehop_create): Establishing an encrypted directory connection
+Oct 30 14:00:28.000 [notice] Bootstrapped 25% (requesting_status): Asking for networkstatus consensus
+Oct 30 14:00:28.000 [notice] Bootstrapped 30% (loading_status): Loading networkstatus consensus
+Oct 30 14:00:29.000 [notice] Bootstrapped 40% (loading_keys): Loading authority key certs
+Oct 30 14:00:29.000 [notice] Bootstrapped 45% (requesting_descriptors): Asking for relay descriptors
+Oct 30 14:00:30.000 [notice] Bootstrapped 50% (loading_descriptors): Loading relay descriptors
+Oct 30 14:02:39.000 [notice] Bootstrapped 56% (loading_descriptors): Loading relay descriptors

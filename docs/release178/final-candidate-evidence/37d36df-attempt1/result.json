@@ -1,0 +1,15 @@
+{
+  "source_sha": "37d36df24036edaeb545cc26bde71ab0800d611f",
+  "run_id": 41067419793,
+  "run_attempt": 1,
+  "artifact_id": 12984171405,
+  "artifact_sha256": "04d45fe51c12cc648a3352be5bc11c799e4f79525a96445446d66f1e68db7339",
+  "original_conclusion": "failure",
+  "jvm": {
+    "tests": 29,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "reason": "HostTorfixturebootstrap56percent,controlreadlinetimeout240s,BEFOREAndroid. Targetedfailedjobretrydiagnosedenvironmentfailure."
+}
