@@ -1,0 +1,16 @@
+{
+  "run_id": 41154069535,
+  "job_id": 124396913878,
+  "control_sha": "15b86552dde251a4a9f5e01c85a6b29de2685dbf",
+  "application_source_sha": "843552f5aa7ee922b01abbcba1ea924f08f696ef",
+  "artifact_id": 13024817131,
+  "archive_sha256": "027e6297da482d39ff265f25db744c9719ad911de2d9c09eedc19a9ea3010d8d",
+  "decision": "FAILED",
+  "phase": "lintRelease",
+  "error": "PrivateAppsLibrary.kt112 SuspiciousIndentation after if(discovering)return",
+  "lint_errors": 1,
+  "lint_warnings": 206,
+  "upgrade": "NOT_RUN",
+  "owner_apk_published": false,
+  "keystore_cleanup": "PASS"
+}

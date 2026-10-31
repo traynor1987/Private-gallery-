@@ -109,19 +109,19 @@ internal fun PrivateAppsLibrary(controller:PrivateAppsController,onClose:()->Uni
   var checkedUrl by remember(editor){mutableStateOf(editor?.startUrl().orEmpty())}
   fun discoverWebsite() {
    if(discovering)return
-     val target=url.trim()
-     if(!PrivateAppDiscovery.safe(target,controller.owner==PrivateAppStore.Owner.HIDDEN_TOR)){invalid=true;return}
-     discovering=true;discoveryMessage="";discovered=null;checkedUrl=""
-     editorScope.launch {
-      val result=withContext(Dispatchers.IO){runCatching{controller.discover(target)}}
-      if(!controller.isCurrent()){revoke();return@launch}
-      if(editing && editor===editorIdentity && url.trim()==target) {
-       result.onSuccess {app ->discovered=app;if(name.isBlank())name=app.name();checkedUrl=app.startUrl();url=app.startUrl();invalid=false
-        discoveryMessage=app.discoveryReport()
-       }.onFailure{checkedUrl=target;discoveryMessage="Discovery unavailable on the authorised connection. Metadata is public only; sign-in pages, redirects or a timeout can prevent compatibility checks. Save as a Private Website or check again."}
-      }
-      discovering=false
-     }
+   val target=url.trim()
+   if(!PrivateAppDiscovery.safe(target,controller.owner==PrivateAppStore.Owner.HIDDEN_TOR)){invalid=true;return}
+   discovering=true;discoveryMessage="";discovered=null;checkedUrl=""
+   editorScope.launch {
+    val result=withContext(Dispatchers.IO){runCatching{controller.discover(target)}}
+    if(!controller.isCurrent()){revoke();return@launch}
+    if(editing && editor===editorIdentity && url.trim()==target) {
+     result.onSuccess {app ->discovered=app;if(name.isBlank())name=app.name();checkedUrl=app.startUrl();url=app.startUrl();invalid=false
+      discoveryMessage=app.discoveryReport()
+     }.onFailure{checkedUrl=target;discoveryMessage="Discovery unavailable on the authorised connection. Metadata is public only; sign-in pages, redirects or a timeout can prevent compatibility checks. Save as a Private Website or check again."}
+    }
+    discovering=false
+   }
   }
   // Offer the install choice without requiring the owner to know about manifest discovery.
   LaunchedEffect(url,discovering) {

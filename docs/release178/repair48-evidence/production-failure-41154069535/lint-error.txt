@@ -1,0 +1,1 @@
+PrivateAppsLibrary.kt112: SuspiciousIndentation. val target=url.trim() indented5spaces after if(discovering)return at3spaces. Oneerror; no suppression. Correct only leadingindentation of existing functionbody; whitespace-stripped tokenstream identical; no linenumber/content/controlflow change. New exactsource compile/runtime and releaseLint remainmandatory.
