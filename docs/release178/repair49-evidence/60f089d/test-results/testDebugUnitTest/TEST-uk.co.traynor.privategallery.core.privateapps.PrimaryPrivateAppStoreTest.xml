@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="uk.co.traynor.privategallery.core.privateapps.PrimaryPrivateAppStoreTest" tests="1" skipped="0" failures="0" errors="0" timestamp="2026-10-31T03:11:20.650Z" hostname="runnervm48cm3" time="0.174">
+  <properties/>
+  <testcase name="encrypted_round_trip_rejects_revocation_and_wrong_key" classname="uk.co.traynor.privategallery.core.privateapps.PrimaryPrivateAppStoreTest" time="0.171"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

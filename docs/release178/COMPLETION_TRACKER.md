@@ -344,3 +344,8 @@ Version1.7.8 retained, nextcode49, signed48 baseline pinned. Existing implementa
 ## Code49 corrected exact-source verification
 
 Source60f089d6e003fd13f8b7649feb6f44167e5028a2 / run41163111993 / job124424793963 is pending. Previous4bsource failed40/43; its original failures are preserved in repair49-evidence/failure-4b983ac. Corrected screenshot callback ownership and exact PWA EditableText assertion; added bounded non-content Tor body diagnostics without changing routing, timeouts or exact-body/privacy assertions. Independent source review0openCritical/Important; no runtime/signing approval. Local8 policy programs and27 focused host/control tests PASS. Continue through exact43-case Android/network proof, original-key archived48→49 upgrade/restart and signed artifact verification; this backup is not completion.
+
+
+## Exact code49 source approved for controlled signing
+
+Application 60f089d6e003fd13f8b7649feb6f44167e5028a2; original exact focused run 41163111993/artifact13028685306 sha256:84c4de0ca576bd2c4025205e8699520c7f0dede267da49a427aaf4fb8a55b558. Independent43Android/33JVM and strict VPN/Tor/DNS/revocation proof PASS, approved0openCritical/Important; report SHA256 5b1002937e178e9071253d42e4d3c6afd146b75aef634184dcbe5f88ab1c5393. Original-key archived48→49 in-place upgrade, restart and final artifact verification remain mandatory before delivery. Physical Fold OWNER_REQUIRED.

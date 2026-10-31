@@ -1,0 +1,75 @@
+{"cookie_present": false, "method": "GET", "path": "/"}
+{"cookie_present": false, "method": "GET", "path": "/"}
+{"cookie_present": false, "method": "GET", "path": "/script-probe"}
+{"cookie_present": false, "method": "GET", "path": "/favicon.ico"}
+{"cookie_present": false, "method": "GET", "path": "/interactive"}
+{"cookie_present": false, "method": "GET", "path": "/evidence"}
+{"declared_length": 23, "kind": "body-start", "path": "/form-result"}
+{"declared_length": 23, "kind": "body-complete", "path": "/form-result", "received_length": 23}
+{"form_ok": true, "length": 23, "method": "POST", "multipart_png": false, "path": "/form-result", "sha256": "93b4d313bb87f10e6c6a9d869ac7e8c2e4dcb483b170987fcb6be6a07d1dee76", "upload_sha256": null}
+{"cookie_present": false, "method": "GET", "path": "/evidence"}
+{"cookie_present": false, "method": "GET", "path": "/interactive"}
+{"cookie_present": false, "method": "GET", "path": "/evidence"}
+{"declared_length": 298, "kind": "body-start", "path": "/uploaded"}
+{"declared_length": 298, "kind": "body-complete", "path": "/uploaded", "received_length": 298}
+{"form_ok": false, "length": 298, "method": "POST", "multipart_png": true, "path": "/uploaded", "sha256": "207fc31c4810b8c4506a7f241f045dc2f50e2ae180f7addc2b32fc30e1776165", "upload_sha256": "ca24eb1e5824222288c98f29db858c7ecf5d8558ba6d22edf42a4419a7ac63f8"}
+{"cookie_present": false, "method": "GET", "path": "/evidence"}
+{"cookie_present": false, "method": "GET", "path": "/cookie"}
+{"cookie_present": true, "method": "GET", "path": "/cookie-echo"}
+{"cookie_present": false, "method": "GET", "path": "/evidence"}
+{"cookie_present": true, "method": "GET", "path": "/media.png"}
+{"cookie_present": true, "method": "GET", "path": "/media.png"}
+{"cookie_present": false, "method": "GET", "path": "/evidence"}
+{"cookie_present": false, "method": "GET", "path": "/evidence"}
+{"cookie_present": false, "method": "GET", "path": "/evidence"}
+{"cookie_present": true, "method": "GET", "path": "/slow"}
+{"kind": "slow-start"}
+{"cookie_present": false, "method": "GET", "path": "/evidence"}
+{"kind": "slow-closed"}
+{"cookie_present": false, "method": "GET", "path": "/"}
+{"cookie_present": false, "method": "GET", "path": "/interactive"}
+{"cookie_present": false, "method": "GET", "path": "/favicon.ico"}
+{"cookie_present": false, "method": "GET", "path": "/interactive"}
+{"cookie_present": false, "method": "GET", "path": "/manifest178.json"}
+{"cookie_present": false, "method": "GET", "path": "/media.png"}
+{"cookie_present": false, "method": "GET", "path": "/evidence"}
+{"cookie_present": false, "method": "GET", "path": "/evidence"}
+{"cookie_present": false, "method": "GET", "path": "/evidence"}
+{"cookie_present": false, "method": "GET", "path": "/evidence"}
+{"cookie_present": false, "method": "GET", "path": "/evidence"}
+{"cookie_present": false, "method": "GET", "path": "/evidence"}
+{"cookie_present": false, "method": "GET", "path": "/evidence"}
+{"cookie_present": false, "method": "GET", "path": "/evidence"}
+{"cookie_present": false, "method": "GET", "path": "/interactive"}
+{"cookie_present": false, "method": "GET", "path": "/evidence"}
+{"cookie_present": false, "method": "GET", "path": "/favicon.ico"}
+{"cookie_present": false, "method": "GET", "path": "/evidence"}
+{"cookie_present": false, "method": "GET", "path": "/evidence"}
+{"cookie_present": false, "method": "GET", "path": "/evidence"}
+{"cookie_present": false, "method": "GET", "path": "/evidence"}
+{"cookie_present": false, "method": "GET", "path": "/private-app-document178.txt"}
+{"cookie_present": false, "method": "GET", "path": "/private-app-document178.txt"}
+{"cookie_present": false, "method": "GET", "path": "/evidence"}
+{"cookie_present": false, "method": "GET", "path": "/evidence"}
+{"cookie_present": false, "method": "GET", "path": "/evidence"}
+{"cookie_present": false, "method": "GET", "path": "/evidence"}
+{"cookie_present": false, "method": "GET", "path": "/evidence"}
+{"cookie_present": false, "method": "GET", "path": "/evidence"}
+{"cookie_present": false, "method": "GET", "path": "/interactive"}
+{"cookie_present": false, "method": "GET", "path": "/evidence"}
+{"cookie_present": false, "method": "GET", "path": "/evidence"}
+{"cookie_present": false, "method": "GET", "path": "/evidence"}
+{"declared_length": 249, "kind": "body-start", "path": "/private-app-document-upload178"}
+{"declared_length": 249, "kind": "body-complete", "path": "/private-app-document-upload178", "received_length": 249}
+{"document_exact": true, "method": "POST", "path": "/private-app-document-upload178", "upload_sha256": "8cbcbd8a28857b3f3c1ca25085f63d3bc585be69102e93d74b7487dbc14329e3"}
+{"cookie_present": false, "method": "GET", "path": "/evidence"}
+{"cookie_present": false, "method": "GET", "path": "/evidence"}
+{"cookie_present": false, "method": "GET", "path": "/evidence"}
+{"cookie_present": false, "method": "GET", "path": "/evidence"}
+{"cookie_present": false, "method": "GET", "path": "/evidence"}
+{"cookie_present": false, "method": "GET", "path": "/interactive"}
+{"cookie_present": false, "method": "GET", "path": "/manifest178.json"}
+{"cookie_present": false, "method": "GET", "path": "/media.png"}
+{"cookie_present": false, "method": "GET", "path": "/"}
+{"cookie_present": false, "method": "GET", "path": "/interactive"}
+{"cookie_present": false, "method": "GET", "path": "/favicon.ico"}
