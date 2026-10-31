@@ -1,5 +1,5 @@
 {
-  "source_sha": "843552f5aa7ee922b01abbcba1ea924f08f696ef",
+  "source_sha": "41b6d065a3fbef2f711198c9c778f7100e620c8f",
   "decision": "APPROVED",
   "version": "1.7.8",
   "version_code": 48,
@@ -29,17 +29,17 @@
     "vpn_tor_dns_packet_isolation": "PASS"
   },
   "independent_review": {
-    "source_sha": "843552f5aa7ee922b01abbcba1ea924f08f696ef",
+    "source_sha": "41b6d065a3fbef2f711198c9c778f7100e620c8f",
     "decision": "APPROVED",
     "critical_open": 0,
     "important_open": 0,
-    "report_sha256": "86bde47c533c31c0de9e662ea13fea05a295cbd863ca3053bb618d409ab593a0"
+    "report_sha256": "edbd535e02c83ec773968d9826b804b5d613a141f0e0f5e16e4a10ac7067e800"
   },
   "case_manifest_sha256": "c7c9365eba76ab651c3403147bb16f1085596648335c26acc5bc903009e38472",
   "upgrade_fixture_sha256": "33687d6f0e2665c0b5f783a5af6da5fbfe4ea7b1f84625a782f64b57c5eb70cc",
   "validator_sha256": "dd572092bfee11e69c3ae5ac06b704f00eda6c9e4b0a4facbf2f72fd71b42b43",
-  "focused_run_id": 41152312292,
-  "focused_artifact_id": 13024451086,
-  "focused_artifact_digest": "sha256:c113da8e6fcfd857096fc7db4df9081d5f98360892ef2ca6bebaf7594b9be5d7",
+  "focused_run_id": 41154976989,
+  "focused_artifact_id": 13024343973,
+  "focused_artifact_digest": "sha256:da7c76d2da8d010a01094e84952402137490984d8a7e240cb8fa73fc1c65fef8",
   "physical_acceptance": "OWNER_REQUIRED"
 }

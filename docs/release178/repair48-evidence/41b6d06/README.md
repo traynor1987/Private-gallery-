@@ -1,0 +1,1 @@
+Exact41Android/33JVM success; zero failure/error/skip/duplicate. Originalrawartifact 13024343973 digest sha256:da7c76d2da8d010a01094e84952402137490984d8a7e240cb8fa73fc1c65fef8. Text copies normalized toLF forGit; originalrawdata hashes recorded. PhysicalFoldacceptance notinferred.

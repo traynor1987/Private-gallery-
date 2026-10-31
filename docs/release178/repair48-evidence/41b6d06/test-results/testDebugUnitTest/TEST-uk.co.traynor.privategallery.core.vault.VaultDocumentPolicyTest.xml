@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="uk.co.traynor.privategallery.core.vault.VaultDocumentPolicyTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-10-31T01:24:15.453Z" hostname="runnervm48cm3" time="0.038">
+  <properties/>
+  <testcase name="acceptsOnlyInertDocumentTypes" classname="uk.co.traynor.privategallery.core.vault.VaultDocumentPolicyTest" time="0.001"/>
+  <testcase name="completePdfMustHaveMatchingHeaderAndTrailer" classname="uk.co.traynor.privategallery.core.vault.VaultDocumentPolicyTest" time="0.001"/>
+  <testcase name="maliciousFilenameCannotChangeVerifiedDocumentType" classname="uk.co.traynor.privategallery.core.vault.VaultDocumentPolicyTest" time="0.001"/>
+  <testcase name="cancellationAndBoundedSizesFailBeforeEof" classname="uk.co.traynor.privategallery.core.vault.VaultDocumentPolicyTest" time="0.031"/>
+  <testcase name="utf8DocumentsAreLiteralAndRejectBinaryAndMalformedUtf8" classname="uk.co.traynor.privategallery.core.vault.VaultDocumentPolicyTest" time="0.004"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

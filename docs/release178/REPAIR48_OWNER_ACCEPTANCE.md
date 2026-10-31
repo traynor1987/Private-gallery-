@@ -1,12 +1,21 @@
-# Private Gallery1.7.8 code48 — Fold owner acceptance
+# Private Gallery 1.7.8 code 48 — Fold owner acceptance
 
-Not yet a release or physical acceptance claim. Install only the final verified original-key code48 APK over currentcode47. Never uninstall or clear data. Android17/API37 only.
+Android 17/API 37 only. Use the final verified code 48 download over the installed code 47 app. Never uninstall or clear application data. This checklist is not a claim of physical acceptance.
 
-1. Confirm version1.7.8/code48; existingPrimary/Hidden PINs, encryptedmedia, RecentlyDeleted, favourites/collections andsettings remain.
-2. Open an existingPrivateApp in eachownedmode. Appname/icon/connection header appears; no permanentaddressbar/bottomtabs/browserstart. Expandcontrols forBack/Forward/Refresh/Home/Library/Switch/settings/tools; AndroidBack nevertraps you. Enable optionaladdress or browserstyle insettings andcheck persistence/restart.
-3. Add a known compatibleprivatePWA: automaticdiscovery offers **Install as Private Web App** anddeclaredstart/name/icon. A sitewithout supportedpublicmanifest offers **Add as Private Website** with reason. Sign-in-only/redirect/crossoriginmetadata mayneed finalHTTPSaddress or websitefallback; this doesnot install anexternalAndroidapp/shortcut. Push/background/guaranteedoffline unsupported.
-4. Switchbetween twoopenapps; sameappstate remains; protectedapp stillrequestsitsvaultPIN. Closeappsession; reopening isfresh. Definitions/logins aredifferent: Primaryapps/tabs sharebrowsercookies andretentionsetting; Hiddenapps/tabs sharecurrenttemporaryprofile andallHiddenlogins clearwhenbrowsercloses. Closing/removingoneapp doesnotpromiseper-appcookieclear.
-5. Verifycover/innerscreen, portrait/landscape, fold/unfold, light/dark, largefontandkeyboard, includingloading/errors/overflow/switcher. Importantorigin/scope/connectionwarnings stayvisible. Hiddenquicklock remainsaccessiblewhenconfigured.
-6. Cancelanactiveappdownload orcloseit; noplaintextresidue/unexpectednewitem. Confirmuploadstillneedsexplicitconsent; appscannotcrossPrimary/Hidden. DisconnectVPN/Tor: browsingfailsclosed. TorJavaScript remainsdisabled. PanicExit/HideContent revokeviews andhidemetadata; unlockfresh.
+1. Confirm version 1.7.8/code 48. Check existing Primary and Hidden PINs, encrypted media, Recently Deleted, collections, favourites, browser settings and retained Primary logins.
+2. Open an existing saved app in each authorised mode. Expect its name/icon and compact connection header, direct start page, no permanent browser address bar, tab strip or large bottom toolbar, and a branded loading screen. Expand controls for Back, Forward, Refresh, Home, settings, switcher, library and browser tools. Android Back must provide a way out.
+3. Add a website and check the automatic compatibility result. Supported public same-origin metadata offers **Install as Private Web App**; otherwise **Add as Private Website** explains the limitation. Redirected, login-only, script-generated or cross-origin metadata may require the final HTTPS address or website mode. These entries run inside Private Gallery, not as separate Android packages or public shortcuts. Push, background execution and guaranteed offline operation are unsupported.
+4. Switch between two open apps and return to an existing app: its current page/draft should remain. A protected app still requires its vault PIN. Close a session and reopen it. Test the independent app-style/browser-style and address-bar preferences, including after restart. Use a disposable test entry for remove/reset checks.
+5. Check the layouts below with both light and dark themes and large text. Open the keyboard, expand/collapse controls and switch apps after folding/unfolding. Watch for clipping, generic white dialogs, stale page geometry and missing touch targets.
 
-Report exactapp/mode/action/deviceconfiguration if anycheckfails. Ownerphysicalacceptance staysREQUIRED untilperformed.
+| Display | Orientation | Checks |
+| --- | --- | --- |
+| Cover | Portrait and landscape | Header, menu, keyboard, Back, switcher |
+| Inner | Portrait and landscape | Page area, loading, menu, large text |
+| Fold/unfold transition | Both directions | Same app/session, responsive controls and website touch |
+
+6. With a harmless test document, check explicit upload consent, download cancellation and closing an app during download. No unexpected item should appear after cancellation. Disconnect the selected transport and confirm failure stays closed. Tor JavaScript remains off. Check configured Quick lock, Panic Exit and Hide Content; sensitive app names must disappear on revocation.
+
+Primary apps and tabs share the existing browser profile and its retention policy. Hidden apps and tabs share their current temporary profile; closing that browser clears its logins. Closing/removing one saved app does not mean per-app cookie erasure. Profile-wide clearing signs out all affected apps and requires its existing explicit confirmation.
+
+Record the app mode, action, display/orientation and expected/actual result for any problem. Physical code 48 Fold acceptance remains **OWNER_REQUIRED** until the owner performs these checks.
