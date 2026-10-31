@@ -264,12 +264,17 @@ class UpgradeFixtureTest {
         val ownerType=evidenceType("EvidenceCatalog\$Owner")
         val owner=ownerType.getField(label).get(null)
         val storeType=evidenceType("EvidenceEncryptedStore")
+        if(seed) {
+            val folder=File(root,"evidence-state/evidence-179-${label.lowercase()}")
+            assertFalse("No eager evidence writes before explicit candidate first use",folder.walkTopDown().any {it.isFile})
+        }
         val store=storeType.getConstructor(File::class.java,ownerType,evidenceType("EvidenceEncryptedStore\$LeaseFactory"))
             .newInstance(File(root,"evidence-state"),owner,factory)
         val recordId=java.util.UUID.nameUUIDFromBytes("upgrade179:$label:evidence".toByteArray()).toString()
         val ocrId=java.util.UUID.nameUUIDFromBytes("upgrade179:$label:ocr".toByteArray()).toString()
         val incidentId=java.util.UUID.nameUUIDFromBytes("upgrade179:$label:incident".toByteArray()).toString()
         val eventId=java.util.UUID.nameUUIDFromBytes("upgrade179:$label:event".toByteArray()).toString()
+        val analysisId=java.util.UUID.nameUUIDFromBytes("upgrade179:$label:analysis".toByteArray()).toString()
         val raw="UPGRADE-EVIDENCE-$label synthetic OCR (unverified), visible time14:05"
         val corrected="UPGRADE-EVIDENCE-$label owner-corrected transcript"
         var catalog=evidenceCall(store,"read")
@@ -291,7 +296,12 @@ class UpgradeFixtureTest {
                 var next=evidenceCall(before,"upsertEvidence",record,1000L,"REGISTER_UPGRADE_EVIDENCE")
                 next=evidenceCall(next,"saveOcr",recordId,extraction,1001L)
                 next=evidenceCall(next,"reviseOcr",recordId,ocrId,corrected,1002L)
-                evidenceCall(next,"upsertIncident",incident,1003L,"CREATE_UPGRADE_INCIDENT")
+                next=evidenceCall(next,"upsertIncident",incident,1003L,"CREATE_UPGRADE_INCIDENT")
+                val fingerprint=evidenceRecord("SourceFingerprint",5,item.id,item.mimeType,expectedHash,item.plaintextSize,false)
+                val reference=evidenceRecord("SourceReference",2,recordId,fingerprint)
+                val analysis=evidenceRecord("Analysis",12,analysisId,1004L,"SYNTHETIC (not a network AI response)","upgrade persistence",
+                    hash(raw.toByteArray()),listOf(recordId),"Synthetic advisory; source reference preserved",0L,0L,false,listOf(fingerprint),listOf(reference))
+                evidenceCall(next,"saveAnalysis",analysis,1004L)
             }
             catalog=storeType.getMethod("update",java.util.function.UnaryOperator::class.java).invoke(store,update)
         }
@@ -303,6 +313,13 @@ class UpgradeFixtureTest {
         val record=checkNotNull(records.single())
         assertEquals(recordId,evidenceCall(record,"id"));assertEquals(item.id,evidenceCall(record,"sourceId"))
         assertEquals(expectedHash,evidenceCall(record,"sha256"));assertEquals(item.plaintextSize,(evidenceCall(record,"size") as Number).toLong())
+        val metadata=evidenceCall(record,"metadata")
+        assertEquals(item.displayName,evidenceCall(metadata,"sourceName"))
+        assertEquals(item.importedAtEpochMillis,(evidenceCall(metadata,"dateAddedAt") as Number).toLong())
+        for(field in listOf("fileCreatedAt","fileModifiedAt","captureAt"))assertEquals(0L,(evidenceCall(metadata,field) as Number).toLong())
+        for(field in listOf("width","height"))assertEquals(if(label=="PRIMARY")64 else 32,(evidenceCall(metadata,field) as Number).toInt())
+        assertEquals(false,evidenceCall(metadata,"vaultOnly"))
+        assertEquals(mapOf("provenance" to "Synthetic upgrade fixture metadata; timestamps are not screenshot facts"),evidenceCall(metadata,"embedded"))
         assertEquals(corrected,evidenceCall(record,"transcript"))
         val extracts=evidenceCall(record,"ocr") as List<*>
         assertEquals(raw,evidenceCall(checkNotNull(extracts.single()),"text"))
@@ -314,7 +331,14 @@ class UpgradeFixtureTest {
         assertEquals(0L,(evidenceCall(checkNotNull(timeline.single()),"timestamp") as Number).toLong())
         assertEquals(1,(evidenceCall(catalog,"search",corrected,0L,0L,true) as List<*>).size)
         assertEquals(0,(evidenceCall(catalog,"search",("UPGRADE-EVIDENCE-" + if (label == "PRIMARY") "HIDDEN" else "PRIMARY"),0L,0L,true) as List<*>).size)
-        assertEquals(4,(evidenceCall(catalog,"audit") as List<*>).size)
+        val analysis=checkNotNull((evidenceCall(catalog,"analyses") as List<*>).single())
+        val reference=checkNotNull((evidenceCall(analysis,"sourceReferences") as List<*>).single())
+        assertEquals(recordId,evidenceCall(reference,"evidenceId"))
+        val fingerprint=evidenceCall(reference,"fingerprint")
+        assertEquals(item.id,evidenceCall(fingerprint,"sourceId"));assertEquals(expectedHash,evidenceCall(fingerprint,"sha256"))
+        assertEquals(item.mimeType,evidenceCall(fingerprint,"mime"));assertEquals(item.plaintextSize,(evidenceCall(fingerprint,"size") as Number).toLong())
+        assertEquals(false,evidenceCall(fingerprint,"vaultOnly"));assertEquals(false,evidenceCall(analysis,"applied"))
+        assertEquals(5,(evidenceCall(catalog,"audit") as List<*>).size)
         val encoded=evidenceCall(catalog,"encode") as ByteArray
         return try {hash(encoded)}finally{encoded.fill(0)}
     }

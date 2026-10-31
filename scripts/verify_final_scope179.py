@@ -24,6 +24,16 @@ REQUIRED = {
     'fold_theme_large_text_accessibility', 'packaged_ocr_model_and_native_alignment',
     'existing_media_credentials_privateapps_and_settings_preservation', 'android17_only',
 }
+CONTROL_PATHS = (
+    '.github/workflows/acceptance1762.yml', 'scripts/verify_final_scope179.py',
+    'scripts/revalidate_runtime179.py', 'scripts/compile_upgrade179_fixture.sh',
+    'scripts/verify_compiled_upgrade179.py', 'scripts/verify_synthetic_upgrade179.sh',
+    'scripts/validate_upgrade179.py', 'scripts/verify_upgrade179_baseline.py',
+    'scripts/release_configuration.sh', 'scripts/curate_release179.py',
+    'docs/release179/UpgradeFixtureTest.kt', 'scripts/evidence179_cases.json',
+)
+EVIDENCE_HASHES = {'route_proof_sha256','ocr_distribution_sha256','apk_native_alignment_sha256',
+    'final_gates_sha256','focused_gates_sha256','android_sdk_sha256','emulator_health_sha256','raw_route_hashes_sha256'}
 NETWORK = {'owned_vpn', 'native_tor', 'dns_and_packet_observation', 'revocation'}
 
 
@@ -93,6 +103,19 @@ def validate(approval, source, review, run, gates, manifest, fixture, validator)
     require(type(gates.get('original_exit_status')) is int and gates['original_exit_status'] == 0, 'Final runtime gate failed')
     require(gates.get('network') == {name: 'PASS' for name in NETWORK}, 'Incomplete network proof')
     require(run.get('network_evidence_revalidated') is True, 'Packet/protocol evidence not independently revalidated')
+    require(set(run.get('evidence_hashes',{})) == EVIDENCE_HASHES, 'Missing original runtime hash bindings')
+    require(run.get('evidence_hashes') == approval.get('evidence_hashes'), 'Unreviewed original runtime evidence')
+    for name,value in run['evidence_hashes'].items():
+        require(re.fullmatch('[a-f0-9]{64}',value) is not None and value != '0'*64, 'Invalid evidence hash '+name)
+    for name in ('route_proof_sha256','ocr_distribution_sha256','apk_native_alignment_sha256'):
+        require(gates.get(name) == run['evidence_hashes'][name], 'Final gate original proof differs '+name)
+    control=approval.get('controls',{})
+    require(set(control)==set(CONTROL_PATHS), 'Incomplete reviewed release controls')
+    require(run.get('control_hashes')==control,'Release control bytes differ from review')
+    for name,value in control.items():
+        require(re.fullmatch('[a-f0-9]{64}',value) is not None and value != '0'*64,'Invalid control hash '+name)
+    require(re.fullmatch('[a-f0-9]{40}',run.get('release_control_sha','')) is not None and run['release_control_sha']!='0'*40,'Missing release control commit')
+    require(control['scripts/verify_final_scope179.py']==digest(validator) and control['docs/release179/UpgradeFixtureTest.kt']==digest(fixture) and control['scripts/evidence179_cases.json']==digest(manifest),'Inconsistent reviewed control identity')
     require(approval.get('physical_acceptance') == 'OWNER_REQUIRED', 'Physical acceptance cannot be inferred from CI')
 
 

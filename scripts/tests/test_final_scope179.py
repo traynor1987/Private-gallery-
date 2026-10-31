@@ -32,7 +32,13 @@ class FinalScope179Test(unittest.TestCase):
                         scope={name:'PASS' for name in GATE.REQUIRED},independent_review={**decision,'report_sha256':GATE.digest(review)},
                         case_manifest_sha256=GATE.digest(manifest),upgrade_fixture_sha256=GATE.digest(fixture),validator_sha256=GATE.digest(validator),
                         focused_run_id=123,focused_artifact_id=456,focused_artifact_digest=run['artifact_digest'],physical_acceptance='OWNER_REQUIRED')
+        hashes={name:'4'*64 for name in GATE.EVIDENCE_HASHES}
+        controls={name:'5'*64 for name in GATE.CONTROL_PATHS}
+        controls.update({'scripts/verify_final_scope179.py':GATE.digest(validator),'docs/release179/UpgradeFixtureTest.kt':GATE.digest(fixture),'scripts/evidence179_cases.json':GATE.digest(manifest)})
+        approval.update(evidence_hashes=hashes,controls=controls)
+        run.update(evidence_hashes=hashes.copy(),control_hashes=controls.copy(),release_control_sha='6'*40)
         gates = dict(source_sha=source,decision='PASS',original_exit_status=0,network={name:'PASS' for name in GATE.NETWORK})
+        gates.update({name:hashes[name] for name in ('route_proof_sha256','ocr_distribution_sha256','apk_native_alignment_sha256')})
         return [approval,source,review,run,gates,manifest,fixture,validator]
 
     def test_complete_synthetic_contract(self):
@@ -40,6 +46,7 @@ class FinalScope179Test(unittest.TestCase):
 
     def test_wrong_source_review_identity_scope_controls_or_evidence_rejected(self):
         mutations = [
+            (0,'evidence_hashes',{}), (0,'controls',{}), (3,'control_hashes',{}), (3,'release_control_sha','0'*40), (3,'evidence_hashes',{}),
             (0,'decision','BLOCKED'), (0,'source_sha','3'*40), (0,'version_code',49),
             (0,'certificate_sha256','3'*64), (0,'baseline_source_sha','3'*40),
             (0,'required_upgrade_from',48), (0,'scope',{}), (0,'independent_review',{}),
@@ -91,6 +98,8 @@ class FinalScope179Test(unittest.TestCase):
         from unittest.mock import patch
         approval,source,review,run,gates,manifest,fixture,_=self.fixture()
         approval['validator_sha256']=GATE.digest((ROOT/'scripts/verify_final_scope179.py').read_bytes())
+        approval['controls']['scripts/verify_final_scope179.py']=approval['validator_sha256']
+        run['control_hashes']['scripts/verify_final_scope179.py']=approval['validator_sha256']
         with tempfile.TemporaryDirectory() as directory:
             root=Path(directory);evidence=root/'artifact';proof=evidence/'evidence179'
             results=proof/'android-results/focused';results.mkdir(parents=True)

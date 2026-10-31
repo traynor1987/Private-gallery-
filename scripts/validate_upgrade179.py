@@ -5,6 +5,10 @@ import hashlib
 import json
 from pathlib import Path
 import re
+try:
+    from verify_compiled_upgrade179 import validate as validate_compilation
+except ModuleNotFoundError:
+    from scripts.verify_compiled_upgrade179 import validate as validate_compilation
 
 CERTIFICATE='94f2bfc6567f26d067d29077111cfd0ce86d38263c642ad115e43365f05b0d17'
 BASELINE_SOURCE='4820e176dcb60a3aa2f1bfd7b36e2de19fafee11'
@@ -44,6 +48,8 @@ def validate(root,source,candidate_sha,fixture):
         signature(f'upgrade-{phase}-signature.txt')
     signature('upgrade-instrumentation-signature.txt')
     instrumentation_sha=hash_receipt('upgrade-instrumentation-sha256.txt')
+    compilation=json.loads(read('upgrade-compilation.json'))
+    validate_compilation(compilation,source,fixture,Path(__file__).with_name('compile_upgrade179_fixture.sh').read_bytes())
     require(hash_receipt('upgrade-fixture-sha256.txt')==digest(fixture),'Unreviewed fixture')
     old=b'uk.co.traynor.privategallery.hiddenprototype'
     require(fixture.count(old)==1,'Unexpected fixture target transformation')
@@ -57,7 +63,7 @@ def validate(root,source,candidate_sha,fixture):
     return dict(decision='PASS',source_sha=source,version='1.7.9',version_code=51,package='uk.co.traynor.privategallery',
         baseline_code=50,baseline_source_sha=BASELINE_SOURCE,baseline_apk_sha256=BASELINE_APK,candidate_apk_sha256=candidate_sha,
         certificate_sha256=CERTIFICATE,fixture_sha256=digest(fixture),compiled_fixture_sha256=digest(changed),instrumentation_apk_sha256=instrumentation_sha,
-        phases=['seed','verify','after-restart'],receipts=receipts,owner_physical_acceptance='NOT_PERFORMED')
+        pre_sign_instrumentation_sha256=compilation['instrumentation_apk_sha256'],compilation_sha256=receipts['upgrade-compilation.json'],phases=['seed','verify','after-restart'],receipts=receipts,owner_physical_acceptance='NOT_PERFORMED')
 
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
