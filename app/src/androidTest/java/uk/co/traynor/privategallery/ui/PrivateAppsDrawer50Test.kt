@@ -106,7 +106,29 @@ class PrivateAppsDrawer50Test {
   val key=ByteArray(32){51};var live=true;var mounted by mutableStateOf(true);var closes=0
   val apps=listOf(app("Alpha"),app("Beta"),app("Gamma"),app("Delta"))
   val store=PrimaryPrivateAppStore(root,key,{live},{it()});store.update{catalog->apps.fold(catalog){c,a->c.upsert(a)}}
-  fun controller()=PrivateAppsController(store.owner(),{live},{a,b,id->PrivateAppCommands.execute(store,a,b,id)},{})
+  val generations=java.util.concurrent.atomic.AtomicInteger()
+  val readCount=java.util.concurrent.atomic.AtomicInteger()
+  val readStatus=java.util.concurrent.atomic.AtomicReference("No READ command")
+  fun controller():PrivateAppsController {
+   val generation=generations.incrementAndGet()
+   return PrivateAppsController(store.owner(),{live},{a,b,id ->
+    if(a==PrivateAppCommands.READ) {
+     val sequence=readCount.incrementAndGet()
+     readStatus.set("generation=$generation read=$sequence started")
+     android.util.Log.i("DrawerReorder50",readStatus.get())
+     try {
+      PrivateAppCommands.execute(store,a,b,id).also {catalog ->
+       readStatus.set("generation=$generation read=$sequence complete ids=${catalog.apps.map{it.id()}}")
+       android.util.Log.i("DrawerReorder50",readStatus.get())
+      }
+     }catch(failure:Throwable) {
+      readStatus.set("generation=$generation read=$sequence failed type=${failure.javaClass.name}")
+      android.util.Log.i("DrawerReorder50",readStatus.get())
+      throw failure
+     }
+    }else PrivateAppCommands.execute(store,a,b,id)
+   },{})
+  }
   var owner by mutableStateOf(controller())
   try {
    compose.setContent{PrivateGalleryTheme{if(mounted)PrivateAppsLibrary(owner,{closes++;mounted=false})}}
@@ -127,8 +149,19 @@ class PrivateAppsDrawer50Test {
    compose.runOnIdle{assertFalse(mounted);assertEquals(1,closes)}
    // A missing Dialog alone does not prove the enclosing composition has disposed.
    compose.mainClock.advanceTimeByFrame();compose.waitForIdle()
-   compose.runOnIdle{owner=controller();mounted=true}
-   ready(apps.last().id())
+   val freshOwner=controller()
+   assertEquals("Fresh controller decrypts the full persisted order before remount",expected,freshOwner.load().apps.map{it.id()})
+   assertTrue("Fresh controller authority remains current",freshOwner.isCurrent())
+   compose.runOnIdle{owner=freshOwner;mounted=true}
+   try {ready(apps.last().id())}catch(failure:androidx.compose.ui.test.ComposeTimeoutException) {
+    android.util.Log.i("DrawerReorder50","remount timeout mounted=$mounted closes=$closes current=${owner.isCurrent()} generation=${generations.get()} reads=${readCount.get()} status=${readStatus.get()}")
+    runCatching {compose.onAllNodes(isRoot(),useUnmergedTree=true).fetchSemanticsNodes().indices.forEach {index ->
+     compose.onAllNodes(isRoot(),useUnmergedTree=true)[index].printToString().chunked(3000).forEachIndexed {chunk,text ->
+      android.util.Log.i("DrawerReorder50","synthetic semantics root=$index chunk=$chunk\n$text")
+     }
+    }}.onFailure {android.util.Log.i("DrawerReorder50","semantic diagnostics unavailable type=${it.javaClass.name}")}
+    throw failure
+   }
    compose.runOnIdle{assertTrue(mounted);assertEquals(1,closes)}
    assertEquals(expected,PrimaryPrivateAppStore(root,key,{live},{it()}).read().apps.map{it.id()})
    val first=compose.onNodeWithTag("private-app-tile-${apps.last().id()}").fetchSemanticsNode().boundsInRoot

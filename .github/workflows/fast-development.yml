@@ -253,6 +253,8 @@ jobs:
       - name: Enable emulator acceleration
         run: sudo chmod 666 /dev/kvm
       - name: Focused library UI and authentication tests
+        env:
+          PRIVATE_APPS178_DRAWER_DIAGNOSTIC: ${{ contains(github.event.head_commit.message, '[drawer-diagnostic178]') && '1' || '0' }}
         uses: reactivecircus/android-emulator-runner@v2 # packaged runtime; command-line tools22 installed explicitly above
         with:
           api-level: '37.0'

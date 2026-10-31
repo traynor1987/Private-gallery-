@@ -28,6 +28,15 @@ native_package=$(python3 scripts/debug_apk_identity1762.py app/build/outputs/apk
 bash scripts/reset_native_browser_evidence1762.sh "$native_package"
 adb shell wm size 1200x1800
 adb shell wm density 160
+# Explicit diagnostic admission never emits release gates or a full-suite claim.
+if [[ "${PRIVATE_APPS178_DRAWER_DIAGNOSTIC:-0}" == 1 ]]; then
+  rm -f app/build/privateapps178/final-gates.json
+  diagnostic_case='uk.co.traynor.privategallery.ui.PrivateAppsDrawer50Test#filtered_reorder_uses_full_persisted_order_and_survives_reopen'
+  printf '%s\n' 'DIAGNOSTIC ONLY: one drawer case; NOT release evidence' > app/build/privateapps178/diagnostic-only.txt
+  ./gradlew :app:connectedDebugAndroidTest "-Pandroid.testInstrumentationRunnerArguments.class=$diagnostic_case" --stacktrace
+  python3 scripts/verify_selected_android1762.py app/build/outputs/androidTest-results/connected/debug "$diagnostic_case"
+  exit 0
+fi
 classes='uk.co.traynor.privategallery.ui.PrivateAppsDrawer50Test,uk.co.traynor.privategallery.ui.PrivateAppScreenshot49Test,uk.co.traynor.privategallery.ui.PrivateAppPresentation48Test,uk.co.traynor.privategallery.ui.PrivateAppCustomIconsTest,uk.co.traynor.privategallery.ui.BrowserVaultScreenshotTest,uk.co.traynor.privategallery.ui.PrivateAppSessionSettings178Test,uk.co.traynor.privategallery.core.browser.v2.PrivateAppSessionFence178Test,uk.co.traynor.privategallery.core.hidden.HiddenDocumentLifecycleTest,uk.co.traynor.privategallery.core.vault.VaultDocumentRepositoryTest,uk.co.traynor.privategallery.core.browser.hidden.HiddenDownloadTest,uk.co.traynor.privategallery.core.browser.hidden.HiddenVpnLive1762Test,uk.co.traynor.privategallery.core.browser.hidden.HiddenVpnNetworkLoss1762Test,uk.co.traynor.privategallery.core.browser.hidden.NativeTorIsolation1762Test,uk.co.traynor.privategallery.ui.PrivateAppsUi178Test,uk.co.traynor.privategallery.ui.PrivateAppControls178Test,uk.co.traynor.privategallery.PrivateAppsAuthority178Test,uk.co.traynor.privategallery.core.browser.hidden.HiddenPrivateAppsLive178Test,uk.co.traynor.privategallery.PrivacyShield175Test#panicRevokesBothSessionsWipesKeyAndNeverReopensHidden,uk.co.traynor.privategallery.HideContent1761Test#concealedTabsRestartAndPanicRetainFlagWithoutDeletingSyntheticState'
 ./gradlew :app:connectedDebugAndroidTest "-Pandroid.testInstrumentationRunnerArguments.class=$classes" \
  -Pandroid.testInstrumentationRunnerArguments.hiddenVpnConfig=/data/local/tmp/hidden-vpn1762.conf \
