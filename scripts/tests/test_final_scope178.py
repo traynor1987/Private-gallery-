@@ -3,6 +3,7 @@ import copy
 import hashlib
 import importlib.util
 import json
+import re
 from pathlib import Path
 import tempfile
 import unittest
@@ -87,7 +88,24 @@ class FinalScope178Test(unittest.TestCase):
         text=(ROOT/'.github/workflows/acceptance1762.yml').read_text()
         new=text.split('\n  acceptance178:\n',1)[1]
         self.assertIn('test "$FROZEN_SOURCE" != '+'0'*40,new)
-        self.assertIn("FROZEN_SOURCE: '' # Pending exact-source review",new)
+        frozen=re.search(r"FROZEN_SOURCE: '([^']*)'",new).group(1)
+        if not frozen:
+            self.assertIn("FROZEN_SOURCE: '' # Pending exact-source review",new)
+        else:
+            self.assertRegex(frozen,r'^[a-f0-9]{40}$')
+            self.assertNotEqual(frozen,'0'*40)
+            self.assertEqual((ROOT/'.acceptance178-candidate').read_text().splitlines()[0],frozen)
+            approval=json.loads((ROOT/'docs/release178/FINAL_REPAIR49_APPROVAL.json').read_text())
+            review=(ROOT/'docs/release178/SECURITY_REVIEW49.md').read_bytes()
+            self.assertEqual(approval['source_sha'],frozen)
+            self.assertEqual(approval['decision'],'APPROVED')
+            independent=approval['independent_review']
+            self.assertEqual({k:independent[k]for k in ('source_sha','decision','critical_open','important_open')},
+                             dict(source_sha=frozen,decision='APPROVED',critical_open=0,important_open=0))
+            self.assertEqual(independent['report_sha256'],hashlib.sha256(review).hexdigest())
+            blocks=re.findall(rb'^## Final machine-readable decision\s*\n```json\n(.*?)\n```',review,re.M|re.S)
+            self.assertEqual(len(blocks),1)
+            self.assertEqual(json.loads(blocks[0]),{k:independent[k]for k in ('source_sha','decision','critical_open','important_open')})
         self.assertIn('FINAL_REPAIR49_APPROVAL.json',new)
         self.assertIn('SECURITY_REVIEW49.md',new)
         self.assertIn("versionCode='48' versionName='1.7.8'\" app/build/production-evidence/original178code48-package.txt",new)
