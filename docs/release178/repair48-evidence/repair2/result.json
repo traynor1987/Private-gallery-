@@ -1,0 +1,10 @@
+{
+  "source_sha": "43747791d7ef0358a32b406d8679bc8d2bed9a1d",
+  "run_id": 41150294341,
+  "artifact_id": 13023305307,
+  "archive_sha256": "b1044906b2445b3761e7c88afbf7598fb20a194ce3c8bd5ee8dd7c44b1e967d2",
+  "workflow_result": "CANCELLED_SUPERSEDED_SOURCE",
+  "jvm_cases": 31,
+  "jvm_failed_error_skipped": 0,
+  "release_approval": false
+}

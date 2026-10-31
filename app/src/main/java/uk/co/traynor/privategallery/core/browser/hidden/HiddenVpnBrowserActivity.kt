@@ -629,7 +629,7 @@ class HiddenVpnBrowserActivity:ComponentActivity() {
                 {cancelUpload();cancelWebsiteDialog();navigate(app.startUrl())},::openPrivateApps,
                 {cancelUpload();cancelWebsiteDialog();privateAppSwitcher=true},
                 {cancelUpload();cancelWebsiteDialog();privateAppSettingsId=app.id()},onScreenshot=::requestScreenshot,onExpanded={appControlsExpanded=it},onBrowserTools={library();menu=true},onQuickLock=if(uk.co.traynor.privategallery.ui.PrivacyShieldPreferences(this@HiddenVpnBrowserActivity).let {it.enabled && it.quickLock})({panic()})else null)
-            if(app==null || !appStyle || (app.addressBar() && appControlsExpanded))BrowserAddressBar(address,{address=it},ready,busy,{navigate(address)},{current?.let {if(busy){pageDeadlines[it]?.visible();it.stopLoading();loadingTabs[it]=false;busy=false;pageLoadProgress=100}else {failures.remove(it);it.reload()}}},{addressFocused=it})
+            if(app==null || (app.addressBar() && (!appStyle || appControlsExpanded)))BrowserAddressBar(address,{address=it},ready,busy,{navigate(address)},{current?.let {if(busy){pageDeadlines[it]?.visible();it.stopLoading();loadingTabs[it]=false;busy=false;pageLoadProgress=100}else {failures.remove(it);it.reload()}}},{addressFocused=it})
             if(busy) {
                 LinearProgressIndicator(progress={pageLoadProgress/100f},modifier=Modifier.fillMaxWidth())
                 Text(if(appStyle)"Opening ${app?.name()}…" else "Loading website…",Modifier.padding(horizontal=8.dp),style=MaterialTheme.typography.bodySmall)

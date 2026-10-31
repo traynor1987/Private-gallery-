@@ -158,5 +158,9 @@
   {
     "classname": "uk.co.traynor.privategallery.core.browser.v2.PrivateAppSessionFence178Test",
     "name": "reopening_same_private_app_retains_renderer_and_closing_session_removes_binding"
+  },
+  {
+    "classname": "uk.co.traynor.privategallery.ui.PrivateAppPresentation48Test",
+    "name": "presentation_and_address_preferences_are_independent_without_permanent_app_toolbars"
   }
 ]

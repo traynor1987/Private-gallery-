@@ -1,0 +1,15 @@
+{
+  "source_sha": "269a79c5d2cf99b189dff8f296141a8a0533933d",
+  "run_id": 41150752350,
+  "job_id": 124386480552,
+  "artifact_id": 13022633895,
+  "archive_sha256": "02ba99137723ee74ade598a234330c4213fc8e18933ad4882d46022438ee1613",
+  "android_cases": 40,
+  "jvm_cases": 33,
+  "failures": 0,
+  "errors": 0,
+  "skips": 0,
+  "strict_network_revalidation": "PASS",
+  "release_approval": false,
+  "reason": "Independent address preference in browser-style mode still requires final correction/new exact-source UI case"
+}

@@ -800,7 +800,7 @@ internal fun BrowserV2Home(
 
                 if (acceptanceProbeEnabled) AcceptanceProbeLabel("BROWSER_CHROME", Color(0xFF0000CC))
                 if (active.loading) LinearProgressIndicator(Modifier.fillMaxWidth())
-                if(activePrivateApp==null || !appStyle || (activePrivateApp.addressBar() && appControlsExpanded))BrowserAddressBar(ui.address, {
+                if(activePrivateApp==null || (activePrivateApp.addressBar() && (!appStyle || appControlsExpanded)))BrowserAddressBar(ui.address, {
                     ui.address=it;session.recordAcceptanceUiEvent("OMNIBOX_TEXT_CHANGED")
                 }, !connectionPresentation.blocked, active.loading, {
                     session.recordAcceptanceUiEvent("OMNIBOX_SUBMIT")
