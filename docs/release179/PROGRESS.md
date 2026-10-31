@@ -137,3 +137,5 @@ First actual grouped runtime41237030300 cancelled45min:121/142nonroute complete,
 Runtime correction batch firstreview RUNTIME179_FIX1:0Critical/1Important R179-1 peerClosed latch also signals timeout/check/localerror viafinally. Originalintegrationworker resumed narrowfixround1/5, preserveactualclientread/CancellationException/no-publication/one-request conditions, positiveEOF/reset only andnegativeprobes. No newsourceCIuntilscopedreview.
 
 Runtimebatch fixround1/5 R179-1 ADDRESSED byfreshRUNTIME179_PEERCLOSE_FIX1,no newdefects; narrowrealJDKTLSnegativeprobe passes idle/unexpected/localclose rejected,genuineEOF positive. Completebatchsourceaccepted, all153cases preserved. Preparingone corrected-source groupedCI, no duplicateoldsource run/no productionapproval. Allstate/unknownoriginalbulk/Hiddenhanglimits remain runtimegates.
+
+Corrected153case grouped run41242395860/job124658786946 ated836f92 inprogress; exactremoteSHA/all20blobs independentlyverified. HostchecksPASS, currentcompilationinprogress; unrelatedfast/178jobsskipped. Recoveryrefreshedwithexactrun/source/status/continuation. No signing/upgradeapproval.
