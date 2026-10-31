@@ -67,11 +67,11 @@ class EvidenceLocker179UiTest {
    compose.onNodeWithText("Library").performClick();compose.evidenceNode(hasContentDescription("Select evidence alpha179.txt")).performClick()
    click("Add selected to incident");click("Synthetic incident179")
    compose.waitUntil(15000){controller.state.value.catalog?.incidents()?.singleOrNull()?.evidenceIds()?.contains(corrected.id())==true&&!controller.state.value.busy}
-   compose.onNodeWithTag("evidence-search").performTextReplacement("unique179")
-   compose.onNodeWithText("alpha179.txt").assertExists();compose.onNodeWithText("beta179.txt").assertDoesNotExist()
-   compose.onNodeWithTag("evidence-search").performTextClearance()
+   compose.evidenceNode(hasTestTag("evidence-search") and hasSetTextAction()).performTextReplacement("unique179")
+   compose.evidenceNode(hasText("alpha179.txt") and hasClickAction()).assertExists();compose.onNodeWithText("beta179.txt").assertDoesNotExist()
+   compose.evidenceNode(hasTestTag("evidence-search") and hasSetTextAction()).performTextClearance()
    compose.evidenceNode(hasContentDescription("Select evidence alpha179.txt")).performClick()
-   click("Remove references");compose.onNodeWithText("Confirm").performClick();waitReady(controller,1)
+   compose.evidenceNode(hasText("Remove references") and hasClickAction()).performClick();compose.evidenceNode(hasText("Confirm") and hasClickAction()).performClick();waitReady(controller,1)
    assertEquals(2,AndroidVaultRepository(f.context,f.key).items().size)
    val original=f.access.reader().readVerified(f.ids.first()){_,input->input.readBytes()};try{assertTrue(String(original).contains("arrange delivery"))}finally{original.fill(0)}
    compose.runOnIdle{controller.close()}

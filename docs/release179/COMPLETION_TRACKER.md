@@ -1,6 +1,6 @@
 # 1.7.9 completion gates
 
-Implementation ledger, not release approval. No 1.7.9 production APK exists. Reviewed security correction backup `d854b713fa5907e87c3662635cdaeee4973a3069`; first Android17 run41237030300 on earlierddd0source was cancelled45min after121completions/18failures andoneHiddenpickerstall. Runtimefix1 source reviewed and run41242395860 completed149nonroute135PASS14FAIL0skip; fourOwnedRouteunreached. Runtimefix2 diagnosisactive; no finalruntimeapproval. See PROGRESS/recovery for latest exact source.
+Implementation ledger, not release approval. No 1.7.9 production APK exists. Reviewed security correction backup `d854b713fa5907e87c3662635cdaeee4973a3069`; first Android17 run41237030300 on earlierddd0source was cancelled45min after121completions/18failures andoneHiddenpickerstall. Runtimefix1 source reviewed and run41242395860 completed149nonroute135PASS14FAIL0skip; fourOwnedRouteunreached. Third run41248625435 atddc0 completed149 nonroute147PASS/2FAIL/0skip; four routes unreached. Runtimefix3 test changes source-accepted; runner Important R179-F3-1 correction accepted by fresh RUNTIME179_RUNNER_FIX1,11focused host controlsPASS. No final runtime approval. See PROGRESS/recovery for latest exact source.
 
 | Requirement | Verified evidence | Remaining gate |
 |---|---|---|
@@ -8,10 +8,10 @@ Implementation ledger, not release approval. No 1.7.9 production APK exists. Rev
 | Version identity | 1.7.9/code51, min/target37; initial remote maximum50 audit | Recheck unused code before freeze |
 | Encrypted evidence/incidents | Model/store130, authority21, history40/wiping19/migration486 host assertions; scoped review fixes accepted | Actual API37 isolation/session workflows |
 | Originals/metadata/integrity | Reference-only sources, EOF SHA256, provenance, reviewed access fixes | Actual API37 races and preservation |
-| OCR | Pinned offline Tesseract/model host checks; app/all instrumentation compile; packaged native/model alignment passed | Oldsource14OCRcases finished/no failureevent; corrected final suite and native receipts mandatory |
+| OCR | Pinned offline Tesseract/model host checks; app/all instrumentation compile; packaged native/model alignment passed | Actual14 OCR cases PASS in ddc0 originalXML; final full-source suite and native receipts mandatory |
 | Grouping/search/timeline | Host model tests, owner-review/edit UI, manual-order regressions; integration review accepted | Actual owner workflows |
-| Optional AI | Explicit exact-payload consent, protected credentials, strict JSON52 host checks; authentication High source fix independently accepted | Oldsource8credentialcases finished/no failureevent; explicitMain UI and no-filename fixes need final runtime, owned route proof |
-| Export/report/open | Format66 and migration/history/buffer checks; EXPORT179_FIX2 source accepted; encrypted default, historical lineage, PDF/JSON/originals, bounded authenticated open | Oldsource24archivecases finished/no failureevent; new snapshot/late-tag regressions and valid-fixture SAF runtime mandatory |
+| Optional AI | Explicit exact-payload consent, protected credentials, strict JSON52 host checks; authentication High source fix independently accepted | Actual8credential and21AI core cases PASS in ddc0 originalXML; final full-source runtime and owned route proof still mandatory |
+| Export/report/open | Format66 and migration/history/buffer checks; EXPORT179_FIX2 source accepted; encrypted default, historical lineage, PDF/JSON/originals, bounded authenticated open | Actual28 archive cases and late-tag/snapshot/held-SAF regressions PASS in ddc0 originalXML; final full-source gates mandatory |
 | UI/Fold/theme | Bulk registration, mixed export, OCR/incident/search/timeline screens, large-text landscape tests; INTEGRATION179_FIX2 accepted; compiled | Actual theme/layout/accessibility workflows; physical Fold owner acceptance |
 | Auth/Hide/Panic/SAF | Captured authorities, generation admission, renewed same-session picker access, original-document protection; reviewed and compiled | Actual Main/session/lock/panic/SAF tests |
 | Hidden VPN/Tor/DNS | Four actual owned-route cases, raw pcap/events validator; ROUTES179_FIX1 accepted,60 host methods passed, fixtures prepared | Actual route windows/packet/receipt proof |

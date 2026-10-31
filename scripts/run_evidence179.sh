@@ -23,18 +23,22 @@ PY
 )
 run_selection() {
  local identity=$1 label=$2 gradle_status=0
+ # Keep device execution and evidence collection distinct for every caller/route.
+ selection_original_status=0
+ selection_collection_status=0
  # Clear only disposable generated instrumentation outputs, so stale XML/receipts cannot satisfy accounting.
  rm -rf app/build/outputs/androidTest-results/connected/debug app/build/outputs/connected_android_test_additional_output
  timeout --signal=TERM --kill-after=30s 15m ./gradlew :app:connectedDebugAndroidTest "-Pandroid.testInstrumentationRunnerArguments.class=$identity" \
   -Pandroid.testInstrumentationRunnerArguments.hiddenVpnConfig=/data/local/tmp/hidden-vpn1762.conf \
   "-Pandroid.testInstrumentationRunnerArguments.evidence179OnionHttpsUrl=$EVIDENCE179_ONION_HTTPS_URL" \
   "-Pandroid.testInstrumentationRunnerArguments.evidence179SourceSha=$GITHUB_SHA" --stacktrace || gradle_status=$?
+ selection_original_status=$gradle_status
  if [[ "$gradle_status" == 124 || "$gradle_status" == 137 ]]; then
   # A hung invocation fails closed before the job deadline, preserving original test artifacts.
   timeout 15s adb logcat -d -b main -b system -b crash > "$root/timeout-$label-logcat.txt" 2>&1 || true
   timeout 15s adb shell dumpsys activity lastanr > "$root/timeout-$label-lastanr.txt" 2>&1 || true
  fi
- python3 - "$label" "$gradle_status" <<'PY' || return $?
+ python3 - "$label" "$gradle_status" <<'PY' || selection_collection_status=$?
 import pathlib,shutil,sys
 source=pathlib.Path('app/build/outputs/androidTest-results/connected/debug')
 dest=pathlib.Path('app/build/evidence179/android-results')/sys.argv[1]
@@ -47,9 +51,36 @@ for path in additional.rglob('evidence179-route-*.json'):
  assert not target.exists(),'Duplicate route output'
  shutil.copyfile(path,target)
 PY
- return "$gradle_status"
+ if [[ "$gradle_status" != 0 ]]; then return "$gradle_status"; fi
+ return "$selection_collection_status"
 }
-run_selection "$selection" focused
+# BEGIN NONROUTE DIAGNOSTIC CONTINUATION
+selection_status=0
+run_selection "$selection" focused || selection_status=$?
+nonroute_status=$selection_original_status
+nonroute_collection_status=$selection_collection_status
+printf '%s\n' "$nonroute_status" > "$root/nonroute-exit-status.txt"
+printf '%s\n' "$nonroute_collection_status" > "$root/nonroute-collection-exit-status.txt"
+# A partial archive must stop before continuation validation, even when its XML is complete.
+[[ "$nonroute_collection_status" == 0 ]] || exit "$selection_status"
+if [[ "$nonroute_status" != 0 ]]; then
+ # Only a complete, normally failed test selection may continue independent observations.
+ # Missing/truncated/crashed/timed-out runs stop; this is not a passing-evidence validator.
+ [[ "$nonroute_status" == 1 ]] || exit "$nonroute_status"
+ python3 - "$root/android-results/focused" scripts/evidence179_cases.json <<'PY_COMPLETE'
+import json,pathlib,sys,xml.etree.ElementTree as ET
+manifest=json.loads(pathlib.Path(sys.argv[2]).read_text())
+expected=[(x['classname'],x['name']) for x in manifest if not x['classname'].endswith('.EvidenceOwnedRoute179Test')]
+assert expected and len(expected)==len(set(expected)),'Invalid non-route scope'
+cases=[c for path in pathlib.Path(sys.argv[1]).rglob('*.xml') for c in ET.parse(path).iter('testcase')]
+actual=[(c.get('classname'),c.get('name')) for c in cases]
+assert len(actual)==len(expected) and len(actual)==len(set(actual)) and set(actual)==set(expected),'Incomplete non-route selection'
+assert not any(c.find('skipped') is not None for c in cases),'Skipped required non-route test'
+assert any(c.find('failure') is not None or c.find('error') is not None for c in cases),'Unexplained original non-route failure'
+print('Complete failed non-route selection: independent routes may run; final runtime gates remain blocked.')
+PY_COMPLETE
+fi
+# END NONROUTE DIAGNOSTIC CONTINUATION
 python3 scripts/ci_onion_probe.py --verify preflight
 # Sequential host barriers separate actual VPN packets from Tor sink-negative windows.
 while IFS=$'\t' read -r case method; do
@@ -59,15 +90,17 @@ with open('app/build/evidence179/host-phases.jsonl','a') as out:out.write(json.d
 PY
  set +e
  run_selection "uk.co.traynor.privategallery.core.evidence.EvidenceOwnedRoute179Test#$method" "$case"
- original_status=$?
+ original_status=$selection_original_status
+ collection_status=$selection_collection_status
  peer_close_status=0
- if [[ "$original_status" == 0 ]]; then python3 scripts/wait_evidence179_peer_close.py --case "$case" || peer_close_status=$?; fi
+ if [[ "$original_status" == 0 && "$collection_status" == 0 ]]; then python3 scripts/wait_evidence179_peer_close.py --case "$case" || peer_close_status=$?; fi
  set -e
- python3 - "$case" "$original_status" "$peer_close_status" <<'PY'
+ python3 - "$case" "$original_status" "$peer_close_status" "$collection_status" <<'PY'
 import json,os,sys,time
-with open('app/build/evidence179/host-phases.jsonl','a') as out:out.write(json.dumps(dict(case=sys.argv[1],kind='end',epoch=time.time(),source_sha=os.environ['GITHUB_SHA'],original_exit_status=int(sys.argv[2]),peer_close_exit_status=int(sys.argv[3])))+'\n')
+with open('app/build/evidence179/host-phases.jsonl','a') as out:out.write(json.dumps(dict(case=sys.argv[1],kind='end',epoch=time.time(),source_sha=os.environ['GITHUB_SHA'],original_exit_status=int(sys.argv[2]),peer_close_exit_status=int(sys.argv[3]),collection_exit_status=int(sys.argv[4])))+'\n')
 PY
  [[ "$original_status" == 0 ]] || exit "$original_status"
+ [[ "$collection_status" == 0 ]] || exit "$collection_status"
  [[ "$peer_close_status" == 0 ]] || exit "$peer_close_status"
  if [[ "$case" == vpn_loss ]]; then python3 scripts/drain_evidence179_vpn.py; fi
 done < <(python3 - <<'PY'
@@ -76,6 +109,10 @@ for case,value in CASES.items():print(case+'\t'+value[0])
 PY
 )
 python3 scripts/archive_evidence179_routes.py
+# BEGIN NONROUTE FAILURE BARRIER
+# All mandatory non-route tests must pass before strict route/full-case validation or final gates.
+[[ "$nonroute_status" == 0 ]] || exit "$nonroute_status"
+# END NONROUTE FAILURE BARRIER
 python3 scripts/verify_evidence179_routes.py --android-results "$root/android-results" --vpn-root "$root/vpn" --onion-root "$root/onion" --results-root "$root" --source-sha "$GITHUB_SHA" --cases scripts/evidence179_cases.json
 # This is only the focused implementation proof. Root release controls still require upgrade/signing gates.
 python3 - <<'PY'

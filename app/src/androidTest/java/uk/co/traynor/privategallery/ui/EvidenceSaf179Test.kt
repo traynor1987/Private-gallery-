@@ -175,6 +175,7 @@ class EvidenceSaf179Test {
    val operation=generation.incrementAndGet()
    return EvidenceAccess.primary(context,key,{key},{same()&&generation.get()==operation&&foreground.get()},{key.copyOf()},gate)
   }
+  fun resumeDiagnostics():String = "lifecycle=${activity.lifecycle.currentState} foreground=${foreground.get()} pendingResumeHook=${onNextResumed!=null} reconciliations=${foregroundReconciliations.get()} accesses=${accesses.size} dismissals=${dismissals.get()} reads=${provider.reads.get()}"
   fun diagnostics():String = "foreground=${foreground.get()} accesses=${accesses.size} dismissals=${dismissals.get()} pickerLaunches=${picker.launches} reads=${provider.reads.get()} writes=${provider.writes.get()} closes=${provider.closes.get()} cancellations=${provider.cancellations.get()} providerPhase=${provider.phase.get()} exportRejected=${compose.onAllNodesWithText("Export could not complete.",substring=true).fetchSemanticsNodes().isNotEmpty()} archiveRejected=${compose.onAllNodesWithText("No report was published.",substring=true).fetchSemanticsNodes().isNotEmpty()} savingShown=${compose.onAllNodesWithText("Saving evidence export").fetchSemanticsNodes().isNotEmpty()}"
   fun show(){val registryOwner=object:ActivityResultRegistryOwner{override val activityResultRegistry=picker}
    compose.setContent{CompositionLocalProvider(LocalContext provides context,LocalActivityResultRegistryOwner provides registryOwner){PrivateGalleryTheme(AppTheme.DARK){EvidenceLockerHost(owner,true,preparePermission={Intent("synthetic.evidence179.PERMISSION")}){dismissals.incrementAndGet()}}}}
@@ -229,13 +230,17 @@ class EvidenceSaf179Test {
    val reconciliationsBeforeResume=f.foregroundReconciliations.get()
    val resumeFailure=java.util.concurrent.atomic.AtomicReference<Throwable?>(null)
    val dispatchedPendingResult=java.util.concurrent.atomic.AtomicBoolean()
+   val resumeHookCompleted=java.util.concurrent.atomic.AtomicBoolean()
+   val resumePhase=java.util.concurrent.atomic.AtomicReference("hook installed")
    instrumentation.runOnMainSync{f.onNextResumed={state->
     try{
+     resumePhase.set("callback entered")
      assertEquals(android.os.Looper.getMainLooper(),android.os.Looper.myLooper())
      assertEquals(Lifecycle.State.RESUMED,state)
      assertTrue("Actual ON_START foreground reconciliation must precede delivery",f.foregroundReconciliations.get()>reconciliationsBeforeResume)
      assertFalse("Foreground expiry must retire the captured authentication",f.hidden.isAuthenticationCurrent(f.authentication))
      assertFalse(f.hidden.isUnlocked);assertFalse(old.current());assertEquals(1,f.accesses.size)
+     resumePhase.set("expired authentication verified")
      check(f.hidden.complete(f.hidden.beginAuthentication(),f.key.copyOf()))
      assertTrue(f.hidden.isUnlocked);assertFalse(f.hidden.isAuthenticationCurrent(f.authentication))
      assertEquals("The original picker must be the only launch",1,f.picker.launches)
@@ -243,11 +248,15 @@ class EvidenceSaf179Test {
      assertEquals(0,f.provider.reads.get());assertEquals(1,f.accesses.size)
      val closedFlag=EvidenceOwnerSession::class.java.getDeclaredField("closed").apply{isAccessible=true}.get(f.owner) as java.util.concurrent.atomic.AtomicBoolean
      assertFalse("Original pending owner must still be live at dispatch",closedFlag.get())
+     resumePhase.set("dispatching original pending result")
      assertEquals("Original picker owner must not have dismissed before delivery",0,f.dismissals.get())
-     f.picker.returnDocument(f.provider.uri("source"));dispatchedPendingResult.set(true)
-    }catch(failure:Throwable){resumeFailure.set(failure)}
+     f.picker.returnDocument(f.provider.uri("source"));dispatchedPendingResult.set(true);resumePhase.set("original result dispatched")
+    }catch(failure:Throwable){resumePhase.set("callback failed");resumeFailure.set(failure)}finally{resumeHookCompleted.set(true)}
    }}
    compose.activityRule.scenario.moveToState(Lifecycle.State.RESUMED)
+   // ActivityScenario's stage publication is not completion of our lifecycle observer.
+   try{compose.waitUntil(15000){resumeHookCompleted.get()}}
+   catch(failure:ComposeTimeoutException){throw AssertionError("Resume hook did not complete: phase=${resumePhase.get()} ${f.resumeDiagnostics()}",failure)}
    resumeFailure.get()?.let{throw AssertionError("Resume-time stale-result precondition failed",it)}
    assertTrue("Old result must be dispatched in the live original resume turn",dispatchedPendingResult.get())
   }else {
