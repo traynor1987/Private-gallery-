@@ -1,0 +1,3 @@
+# One-method diagnostic — FAILED, not release evidence
+
+Source1f64d5be0757fd89f0423fd764dc2de25b8283a6/run41197440892/job124526352495. Artifact13041760946 SHA256fdd103cfa29a44cb665eadac2373f140607ada3392b290135fe92ea08de878ed. Compile/lint/35JVM pass; onlyreorder methodexecuted andfailed original5sreadiness. No final-gates.json. Freshcontroller READ2 andLibraryREAD3 decrypted expected4apps/Deltafirst, completed11:45:28.101; attimeout mountedtrue/closes1/currenttrue. NewDialog1200x1800 displayedbusyloading, disabledSearch/Add/Close andemptygrid. Thusnotlostdata/targetUUID/viewport. NoexistingtracesdistinguishcancelledMaincontinuationfrompublicationtooldstate. Nextdebug-onlyeffect/dispose/publicationtrace; nobehaviorfixwithoutcause.

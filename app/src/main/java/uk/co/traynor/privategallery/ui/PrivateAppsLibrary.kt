@@ -43,9 +43,15 @@ internal fun PrivateAppsLibrary(controller:PrivateAppsController,onClose:()->Uni
  var showInformation by remember(controller){mutableStateOf(false)}
  val close=remember(controller){onClose}
  fun current()=alive.get() && controller.isCurrent()
+ fun diagnosticTrace(event:()->String) {
+  if(uk.co.traynor.privategallery.BuildConfig.DEBUG)runCatching {
+   android.util.Log.i("DrawerLibrary50","controller=${System.identityHashCode(controller)} aliveToken=${System.identityHashCode(alive)} ${event()}")
+  }
+ }
+ SideEffect{diagnosticTrace{"OBSERVED busy=$busy count=${apps.size} alive=${alive.get()} revoked=$revoked"}}
  fun clearPresentation(){apps=emptyList();editor=null;editing=false;removal=null;message="";query="";menuId=null;selectedId=null;reorder=false;settingsId=null;showInformation=false}
  fun dismiss(){if(alive.getAndSet(false)){clearPresentation();revoked=true;close()}}
- DisposableEffect(controller){onDispose{alive.set(false)}}
+ DisposableEffect(controller){onDispose{diagnosticTrace{"DISPOSE beforeAlive=${alive.get()}"};alive.set(false)}}
  val lifecycle=androidx.lifecycle.compose.LocalLifecycleOwner.current.lifecycle
  DisposableEffect(controller,lifecycle){
   val observer=androidx.lifecycle.LifecycleEventObserver{_,event->if(event==androidx.lifecycle.Lifecycle.Event.ON_STOP)dismiss()}
@@ -63,11 +69,23 @@ internal fun PrivateAppsLibrary(controller:PrivateAppsController,onClose:()->Uni
   }
  }
  LaunchedEffect(controller){
-  val result=withContext(Dispatchers.IO){runCatching{controller.load()}}
-  if(!current()){revoke();return@LaunchedEffect}
-  result.onSuccess {apps=it.apps;initialEditId?.let {id ->editor=it.apps.firstOrNull {app->app.id()==id};editing=editor!=null};if(initialEditId==null && initialUrl!=null && PrivateAppDiscovery.safe(initialUrl,controller.owner==PrivateAppStore.Owner.HIDDEN_TOR))editing=true}
-   .onFailure {message="Private apps could not be loaded."}
-  busy=false
+  var cancellationClass="none"
+  try {
+   diagnosticTrace{"LOAD START active=$isActive current=${current()}"}
+   val result=withContext(Dispatchers.IO){runCatching{controller.load()}}
+   diagnosticTrace{"LOAD AFTER_IO success=${result.isSuccess} active=$isActive current=${current()}"}
+   if(!current()){revoke();return@LaunchedEffect}
+   result.onSuccess {apps=it.apps;initialEditId?.let {id ->editor=it.apps.firstOrNull {app->app.id()==id};editing=editor!=null};if(initialEditId==null && initialUrl!=null && PrivateAppDiscovery.safe(initialUrl,controller.owner==PrivateAppStore.Owner.HIDDEN_TOR))editing=true}
+    .onFailure {message="Private apps could not be loaded."}
+   busy=false
+   diagnosticTrace{"LOAD PUBLISHED busy=$busy count=${apps.size} active=$isActive current=${current()}"}
+  }catch(cancelled:CancellationException) {
+   cancellationClass=cancelled.javaClass.name
+   diagnosticTrace{"LOAD CANCELLED type=$cancellationClass active=$isActive current=${current()}"}
+   throw cancelled
+  }finally {
+   diagnosticTrace{"LOAD FINALLY cancellation=$cancellationClass active=$isActive current=${current()}"}
+  }
  }
  LaunchedEffect(controller){while(isActive && !revoked){delay(250);if(!current())revoke()}}
  if(revoked)return

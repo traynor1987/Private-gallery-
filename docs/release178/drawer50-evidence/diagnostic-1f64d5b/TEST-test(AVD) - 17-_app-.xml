@@ -1,0 +1,18 @@
+<?xml version='1.0' encoding='UTF-8' ?>
+<testsuites tests="1" failures="1" errors="0" skipped="0" time="22.254" timestamp="2026-10-31T11:45:39" hostname="localhost">
+  <testsuite name="uk.co.traynor.privategallery.ui.PrivateAppsDrawer50Test" tests="1" failures="1" errors="0" skipped="0" time="19.663" timestamp="2026-10-31T11:45:39" hostname="localhost">
+    <properties>
+      <property name="device" value="test(AVD) - 17" />
+      <property name="flavor" value="" />
+      <property name="project" value=":app" />
+    </properties>
+    <testcase name="filtered_reorder_uses_full_persisted_order_and_survives_reopen" classname="uk.co.traynor.privategallery.ui.PrivateAppsDrawer50Test" time="19.663">
+      <failure>androidx.compose.ui.test.ComposeTimeoutException: Condition still not satisfied after 5000 ms
+at androidx.compose.ui.test.AndroidComposeUiTestEnvironment$AndroidComposeUiTestImpl.waitUntil(ComposeUiTest.android.kt:441)
+at androidx.compose.ui.test.junit4.AndroidComposeTestRule.waitUntil(AndroidComposeTestRule.android.kt:306)
+at uk.co.traynor.privategallery.ui.PrivateAppsDrawer50Test.ready(PrivateAppsDrawer50Test.kt:25)
+at uk.co.traynor.privategallery.ui.PrivateAppsDrawer50Test.filtered_reorder_uses_full_persisted_order_and_survives_reopen(PrivateAppsDrawer50Test.kt:156)
+</failure>
+    </testcase>
+  </testsuite>
+</testsuites>

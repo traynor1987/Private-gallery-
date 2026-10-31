@@ -522,3 +522,8 @@ Sourceeee3fd5aefb8f22c02a6d97e653459748a385a10/run41193907312/job124516103035 fa
 ## Code50 diagnostic investigation after46/47
 
 33a7211583ade501cb34f104dafb9e5ac4b30a1f/run41195787680 failed46/47: nativeTor passed; same reorder remountready failedline131. Artifact13040744104 SHA2562e7c1bfb2d11aaf77e615bb76ac4384b238f4c89b96727a8344d5fb619cd06df preserved. No proven backend/product cause. Existingworkflow now supports explicit[drawer-diagnostic178] one-method investigation with synthetic READgeneration/status/semantics; emitsDIAGNOSTIC_ONLY and no final-gates.json. Cannot satisfy47case releasegate. No product behavior, timeout or securityassertions relaxed. Full exactsource47 pass stillmandatory after diagnosis/correction. Signingblocked.
+
+
+## Narrow drawer diagnostic: IO passes, loading remains
+
+1f64d5be0757fd89f0423fd764dc2de25b8283a6/run41197440892 diagnosticFAILED (onecase, not47evidence), artifact13041760946 SHA256fdd103cfa29a44cb665eadac2373f140607ada3392b290135fe92ea08de878ed. Freshcontroller/libraryREAD completeexpectedorder, mountedtrue/currenttrue/closes1; actualnewdialogremainsbusy/empty. Needdebug-onlyeffect/cancellation/publication/disposaltracestoidentifyexactcause; no timing/security/dispatch change. Signingblocked.

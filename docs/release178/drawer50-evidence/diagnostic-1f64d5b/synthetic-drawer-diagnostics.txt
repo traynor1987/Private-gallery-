@@ -1,0 +1,66 @@
+10-31 11:45:19.745  4617  4666 I DrawerReorder50: generation=1 read=1 started
+10-31 11:45:19.798  4617  4666 I DrawerReorder50: generation=1 read=1 complete ids=[e86bda23-f1cb-4790-841b-a6c181d7b90b, e8d83cdd-039c-4f99-ab7c-9ccbaa1eb75f, e8db1180-3150-42a1-9d78-9ac3106773df, ebf1810d-de00-4e06-8fd8-6cae48dc6191]
+10-31 11:45:28.042  4617  4644 I DrawerReorder50: generation=2 read=2 started
+10-31 11:45:28.043  4617  4644 I DrawerReorder50: generation=2 read=2 complete ids=[ebf1810d-de00-4e06-8fd8-6cae48dc6191, e86bda23-f1cb-4790-841b-a6c181d7b90b, e8d83cdd-039c-4f99-ab7c-9ccbaa1eb75f, e8db1180-3150-42a1-9d78-9ac3106773df]
+10-31 11:45:28.100  4617  4666 I DrawerReorder50: generation=2 read=3 started
+10-31 11:45:28.101  4617  4666 I DrawerReorder50: generation=2 read=3 complete ids=[ebf1810d-de00-4e06-8fd8-6cae48dc6191, e86bda23-f1cb-4790-841b-a6c181d7b90b, e8d83cdd-039c-4f99-ab7c-9ccbaa1eb75f, e8db1180-3150-42a1-9d78-9ac3106773df]
+10-31 11:45:33.063  4617  4644 I DrawerReorder50: remount timeout mounted=true closes=1 current=true generation=2 reads=3 status=generation=2 read=3 complete ids=[ebf1810d-de00-4e06-8fd8-6cae48dc6191, e86bda23-f1cb-4790-841b-a6c181d7b90b, e8d83cdd-039c-4f99-ab7c-9ccbaa1eb75f, e8db1180-3150-42a1-9d78-9ac3106773df]
+10-31 11:45:33.071  4617  4644 I DrawerReorder50: synthetic semantics root=0 chunk=0
+10-31 11:45:33.071  4617  4644 I DrawerReorder50: Printing with useUnmergedTree = 'true'
+10-31 11:45:33.071  4617  4644 I DrawerReorder50: Node #1 at (l=0.0, t=0.0, r=0.0, b=0.0)px
+10-31 11:45:33.088  4617  4644 I DrawerReorder50: synthetic semantics root=1 chunk=0
+10-31 11:45:33.088  4617  4644 I DrawerReorder50: Printing with useUnmergedTree = 'true'
+10-31 11:45:33.088  4617  4644 I DrawerReorder50: Node #119 at (l=0.0, t=0.0, r=1200.0, b=1800.0)px
+10-31 11:45:33.088  4617  4644 I DrawerReorder50:  |-Node #120 at (l=0.0, t=0.0, r=1200.0, b=1800.0)px
+10-31 11:45:33.088  4617  4644 I DrawerReorder50:    [IsDialog]
+10-31 11:45:33.088  4617  4644 I DrawerReorder50:     |-Node #121 at (l=0.0, t=0.0, r=1200.0, b=1800.0)px
+10-31 11:45:33.088  4617  4644 I DrawerReorder50:       IsTraversalGroup = 'true'
+10-31 11:45:33.088  4617  4644 I DrawerReorder50:        |-Node #124 at (l=16.0, t=26.0, r=1122.0, b=54.0)px
+10-31 11:45:33.088  4617  4644 I DrawerReorder50:        | Text = '[Private Apps]'
+10-31 11:45:33.088  4617  4644 I DrawerReorder50:        | Actions = [SetTextSubstitution, ShowTextSubstitution, ClearTextSubstitution, GetTextLayoutResult]
+10-31 11:45:33.088  4617  4644 I DrawerReorder50:        |-Node #125 at (l=1122.0, t=20.0, r=1184.0, b=60.0)px
+10-31 11:45:33.088  4617  4644 I DrawerReorder50:        | Role = 'Button'
+10-31 11:45:33.088  4617  4644 I DrawerReorder50:        | [Disabled]
+10-31 11:45:33.088  4617  4644 I DrawerReorder50:        | Actions = [OnClick]
+10-31 11:45:33.088  4617  4644 I DrawerReorder50:        | MergeDescendants = 'true'
+10-31 11:45:33.088  4617  4644 I DrawerReorder50:        |  |-Node #127 at (l=1134.0, t=30.0, r=1172.0, b=50.0)px
+10-31 11:45:33.088  4617  4644 I DrawerReorder50:        |    Text = '[Close]'
+10-31 11:45:33.088  4617  4644 I DrawerReorder50:        |    Actions = [SetTextSubstitution, ShowTextSubstitution, ClearTextSubstitution, GetTextLayoutResult]
+10-31 11:45:33.088  4617  4644 I DrawerReorder50:        |-Node #129 at (l=16.0, t=90.0, r=1009.0, b=110.0)px
+10-31 11:45:33.088  4617  4644 I DrawerReorder50:        | Text = '[Primary Vault]'
+10-31 11:45:33.088  4617  4644 I DrawerReorder50:        | Actions = [SetTextSubstitution, ShowTextSubstitution, ClearTextSubstitution, GetTextLayoutResult]
+10-31 11:45:33.088  4617  4644 I DrawerReorder50:        |-Node #130 at (l=1013.0, t=80.0, r=1053.0, b=120.0)px
+10-31 11:45:33.088  4617  4644 I DrawerReorder50:        | Role = 'Button'
+10-31 11:45:33.088  4617  4644 I DrawerReorder50:        | Focused = 'false'
+10-31 11:45:33.088  4617  4644 I DrawerReorder50:        | Actions = [OnClick, RequestFocus]
+10-31 11:45:33.088  4617  4644 I DrawerReorder50:        | MergeDescendants = 'true'
+10-31 11:45:33.088  4617  4644 I DrawerReorder50:        |  |-Node #131 at (l=1021.0, t=88.0, r=1045.0, b=112.0)px
+10-31 11:45:33.088  4617  4644 I DrawerReorder50:        |    ContentDescription = '[Browser session information]'
+10-31 11:45:33.088  4617  4644 I DrawerReorder50:        |    Role = 'Image'
+10-31 11:45:33.088  4617  4644 I DrawerReorder50:        |-Node #132 at (l=1057.0, t=80.0, r=1184.0, b=120.0)px
+10-31 11:45:33.088  4617  4644 I DrawerReorder50:        | Role = 'Button'
+10-31 11:45:33.088  4617  4644 I DrawerReorder50:        | [Disabled]
+10-31 11:45:33.088  4617  4644 I DrawerReorder50:        | Actions = [OnClick]
+10-31 11:45:33.088  4617  4644 I DrawerReorder50:        | MergeDescendants = 'true'
+10-31 11:45:33.088  4617  4644 I DrawerReorder50:        |  |-Node #135 at (l=1105.0, t=90.0, r=1160.0, b=110.0)px
+10-31 11:45:33.088  4617  4644 I DrawerReorder50:        |    Text = '[Add App]'
+10-31 11:45:33.088  4617  4644 I DrawerReorder50:        |    Actions = [SetTextSubstitution, ShowTextSubstitution, ClearTextSubstitution, GetTextLayoutResult]
+10-31 11:45:33.088  4617  4644 I DrawerReorder50:        |-Node #136 at (l=16.0, t=136.0, r=1184.0, b=200.0)px, Tag: 'private-app-search'
+10-31 11:45:33.088  4617  4644 I DrawerReorder50:        | EditableText = ''
+10-31 11:45:33.088  4617  4644 I DrawerReorder50:        | TextSelectionRange = 'TextRange(0, 0)'
+10-31 11:45:33.088  4617  4644 I DrawerReorder50:        | IsEditable = 'false'
+10-31 11:45:33.088  4617  4644 I DrawerReorder50:        | ImeAction = 'Default'
+10-31 11:45:33.088  4617  4644 I DrawerReorder50:        | [Disabled]
+10-31 11:45:33.088  4617  4644 I DrawerReorder50:        | Actions = [GetTextLayoutResult, SetSelection, PerformImeAction, OnClick, OnLongClick]
+10-31 11:45:33.088  4617  4644 I DrawerReorder50:        | MergeDescendants = 'true'
+10-31 11:45:33.088  4617  4644 I DrawerReorder50:        |  |-Node #147 at (l=68.0, t=160.0, r=162.0, b=184.0)px
+10-31 11:45:33.088  4617  4644 I DrawerReorder50:        |    Text = '[Search apps]'
+10-31 11:45:33.088  4617  4644 I DrawerReorder50:        |    Actions = [SetTextSubstitution, ShowTextSubstitution, ClearTextSubstitution, GetTextLayoutResult]
+10-31 11:45:33.088  4617  4644 I DrawerReorder50:        |-Node #148 at (l=16.0, t=202.0, r=1184.0, b=226.0)px
+10-31 11:45:33.088  4617  4644 I DrawerReorder50:        | ProgressBarRangeInfo = 'ProgressBarRangeInfo(current=0.0, range=0.0..0.0, steps=0)'
+10-31 11:45:33.088  4617  4644 I DrawerReorder50:        | MergeDescendants = 'true'
+10-31 11:45:33.088  4617  4644 I DrawerReorder50:        |-Node #151 at (l=16.0, t=228.0, r=1184.0, b=1784.0)px, Tag: 'private-app-grid'
+10-31 11:45:33.088  4617  4644 I DrawerReorder50:          IsTraversalGroup = 'true'
+10-31 11:45:33.088  4617  4644 I DrawerReorder50:          VerticalScrollAxisRange = 'ScrollAxisRange(value=0.0, maxValue=0.0, reverseScrolling=false)'
+10-31 11:45:33.088  4617  4644 I DrawerReorder50:          CollectionInfo = 'androidx.compose.ui.semantics.CollectionInfo@7105a'
+10-31 11:45:33.088  4617  4644 I DrawerReorder50:          Actions = [ScrollBy, ScrollByOffset, IndexForKey, ScrollToIndex, GetScrollViewportLength]
