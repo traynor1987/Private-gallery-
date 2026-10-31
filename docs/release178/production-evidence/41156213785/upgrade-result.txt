@@ -1,0 +1,1 @@
+PASS: V1.7.8 code47 -> V1.7.8 code48 candidate in-place synthetic upgrade, independent PINs, Primary and Hidden encrypted media/collections/settings/VPN preserved; package=uk.co.traynor.privategallery

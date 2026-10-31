@@ -1,10 +1,14 @@
 # 1.7.8 completion tracker
 
-## Current owner-authorized repair — code48 IN PROGRESS
+## Current release: code 48 delivered for owner acceptance
 
-Owner physically installed/tested delivered1.7.8/code47 and reports browser-like app presentation/no PWA install offer. Newrepair stays1.7.8, nextavailablecode48 (85remote branch versions auditedmaximum47). Authoritative recoveryHEAD8a92f183; installedcandidate frozen04b91ae, APK21066bd7153520c688c5a6b6034fca549b33df391762e64a5070eecfeb342d3d, originalcertificate94f2bfc6567f26d067d29077111cfd0ce86d38263c642ad115e43365f05b0d17. No competingremotechange observed.
+Private Gallery **1.7.8/code 48**, package `uk.co.traynor.privategallery`, Android 17/API 37. Frozen application source `41b6d065a3fbef2f711198c9c778f7100e620c8f`; successful signing/upgrade control `1613339778a8c29bafe699af87b40504152977b3`. All later changes in this final backup are documentation/evidence only.
 
-Implementing compact dedicated apppresentation, automatic compatibility choices, encryptedpresentation preference and polished existing-session switcher without changing transport/profile/securityarchitecture. See REPAIR48_DESIGN_PLAN.md. Local eightJavahostchecksPASS; localGradle cannotdownload uncacheddistribution(networkunreachable). Newexactsource Android/security/47→48 upgrade/signing mandatory. Code47 approval is historical and does not approve these changes. Do not sign until newgatesPASS. All historical release evidence below preserved.
+Exact final source passed **41 Android and 33 JVM tests**, zero failures/errors/skips/duplicates, strict VPN/Tor/DNS/revocation gates and independent source/runtime review with zero open Critical/Important findings. Production run `41156213785` passed lint, original-key build, identity/distribution checks, actual signed **code 47 → 48** in-place upgrade, verify and force-stop/restart verify. Existing catalogue definitions across Primary/Hidden VPN/Hidden Tor and previous encrypted state were preserved; no uninstall or data clear.
+
+One production-signed APK saved for owner download: `Private-Gallery-1.7.8-code48-owner-acceptance.apk`, 105503318 bytes, SHA256 `c9f43de796f0af15b95df54aabba686a11b4b6b6bb4eb08cf00169cccf7b7ec5`. Original certificate SHA256 `94f2bfc6567f26d067d29077111cfd0ce86d38263c642ad115e43365f05b0d17`. Root and independent reviewer verified full APK v2 RSA-SHA512 signature, chunk digest and compiled manifest. Filtered raw verification bundle is saved separately without APKs or browser screenshots.
+
+See `FINAL_HANDOFF48.md`, `FINAL_REPAIR48_EVIDENCE.json`, `SECURITY_REVIEW48.md`, `SIGNED_ARTIFACT_REVIEW48.md`, `production-evidence/41156213785` and `REPAIR48_OWNER_ACCEPTANCE.md`. Original code 47 and 1.7.7 evidence remain preserved. **Physical code 48 Galaxy Z Fold acceptance remains OWNER_REQUIRED.** Do not claim it has occurred. No 1.7.9/1.8 work.
 
 ## Historical code47 completion record
 
@@ -323,3 +327,10 @@ Correctonlyleadingindentation inexistingdiscoverWebsite body. Whitespace-strippe
 ## Lint-corrected exact source approved for controlled production retry
 
 Frozenapplication 41b6d065a3fbef2f711198c9c778f7100e620c8f. Formatting-only change to843, independentlyreviewed: sameper-line content exceptleadingindentation. Newexactrun 41154976989/artifact13024343973 sha256:da7c76d2da8d010a01094e84952402137490984d8a7e240cb8fa73fc1c65fef8 independentlyverified41Android33JVM uniquePASS0failure/error/skip; originalgates andstrictVPN/Tor/DNS/revocation/healthyAPI37 PASS. ReportSHA256 edbd535e02c83ec773968d9826b804b5d613a141f0e0f5e16e4a10ac7067e800, approved0Critical/Important; old843approval andfailedlintattempt preserved. Newapproval/report/source bindingsvalidated byunchangedstrictgate, controlledretry only; noapp/scriptchange afterruntimefreeze. Originalkey47→48upgrade/restartandproductionLint/package/cert/hash remainmandatorybeforedelivery. PhysicalFoldOWNER_REQUIRED.
+
+
+## Final code 48 production delivery — all mandatory CI gates pass
+
+Run41156213785/job124403493016 SUCCESS; one owner APK artifact13025351799 rawZIP SHA256dac16fa3c5ef0a5ba5fc8d0c8b6640c0e293e3c0407cf1379f3c9717942af416. Frozen41b6d065 and control16133397. LintRelease PASS after formatting-only correction; package1.7.8/code48/API37/nondebug/originalcertificate/debugserviceabsence/Tordistribution PASS. Exact original47 APK seeded; same signed48 installed-r, verify and force-stop/restart all OK(1test). Full encrypted media/PIN/RecentlyDeleted/collections/favourites/browserdata/settings/camera/AI/privacy preservation plus six v1 Private Apps, unchanged ciphertext before deliberate v2 style writes and reopened persistence PASS. No uninstall/data clear. Original keystore cleanup PASS.
+
+Independent signed artifact review VERIFIED_FOR_OWNER_ACCEPTANCE_DELIVERY0Critical/Important discrepancies; reportSHA87de73f3badbf4d98a2a4899afa2eb2837b8c3d68322a8139e1d7c16770e988a. Canonical source report edbd535e remains immutable. APK SHA c9f43de796f0af15b95df54aabba686a11b4b6b6bb4eb08cf00169cccf7b7ec5, original cert94f2bfc6567f26d067d29077111cfd0ce86d38263c642ad115e43365f05b0d17, actual v2 signature/chunk digest and binarymanifest independently PASS. APK and raw verification archive saved for download; original47/177 artifacts preserved. Physical Fold OWNER_REQUIRED; use acceptance checklist. This is a complete signed owner-acceptance repair candidate, not a claim of physical acceptance.

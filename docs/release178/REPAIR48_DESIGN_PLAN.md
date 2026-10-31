@@ -8,9 +8,9 @@ Approach: reuse existing authenticated browser tabs and transport, not a separat
 - [x] Backwards-compatible encrypted catalogue schema2 preserving old9fields plus appStyle and bounded discovery report; v1 readable without eager write. Host migration/commands checks.
 - [x] Compact app controls, per-app presentation, edit name/icon/start, return Library, current-session icon switcher/close, same-app reuse, existing Back/security.
 - [x] Debounced automatic bounded credentialless discovery, exact Install as Private Web App/Add as Private Website choices and accurate capability/unavailability text. Safe HTML entity URLs; original no redirects/crossorigin metadata/network fallback remains explicit.
-- [ ] Focused existing workflow: app/test compilation, privateapps/document JVM,40Androidcases, real syntheticHTTPS/onion discovery/launch/transfers/revocation, strict VPN/Tor/DNS packet gate. Local Gradle blocked uncacheddistributionnetwork; eightJava programmes pass.
-- [ ] Independent full delta review and resolve findings; source-bound runtime approval.
-- [ ] Freeze exact passing source; original archived signedcode47→48 seed/upgrade/restart including real existingcatalogues/credentials/cookies/media. No uninstall/clear.
-- [ ] Originalkey signature/package/API/hash verify, one APK delivery, GitHubbackup/recovery.
+- [x] Focused existing workflow: app/test compilation, 33 privateapps/document JVM,41Androidcases, real syntheticHTTPS/onion discovery/launch/transfers/revocation, strict VPN/Tor/DNS packet gate. Local Gradle blocked uncacheddistributionnetwork; eightJava programmes pass.
+- [x] Independent full delta review and resolve findings; source-bound runtime approval.
+- [x] Freeze exact passing source; original archived signedcode47→48 seed/upgrade/restart including real existingcatalogues/credentials/cookies/media. No uninstall/clear.
+- [x] Originalkey signature/package/API/hash verify, one APK delivery, GitHubbackup/recovery.
 
 Review focus: stale discovery after URL/editor/authority change; saved metadata origin spoofing/outofscope; app auth while switching or removing; schema1read unchangedciphertext/schema2roundtrip; Fold cover/inner/theme/largefont/IME controls. Physical Fold acceptance remainsownerrequired.
