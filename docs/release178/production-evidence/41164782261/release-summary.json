@@ -1,0 +1,15 @@
+{
+  "source_sha": "60f089d6e003fd13f8b7649feb6f44167e5028a2",
+  "version": "1.7.8",
+  "version_code": 49,
+  "package": "uk.co.traynor.privategallery",
+  "apk_sha256": "99a3dad8fb8dcaf4870e02a5ad645697415528892a1c6b3f7da32cd65ae25feb",
+  "original_certificate_sha256": "94f2bfc6567f26d067d29077111cfd0ce86d38263c642ad115e43365f05b0d17",
+  "synthetic_original_key_upgrades": [
+    48
+  ],
+  "baseline_artifact": "exact_archived_original_signed_1.7.8_code48_from_run41156213785_artifact13025351799",
+  "restart": "PASS",
+  "owner_physical_acceptance": "NOT_PERFORMED",
+  "hidden_interactive_vpn": "VERIFIED"
+}

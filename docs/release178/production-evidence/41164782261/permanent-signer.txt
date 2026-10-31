@@ -1,0 +1,1 @@
+PASS: original permanent private key available; certificate SHA256 94f2bfc6567f26d067d29077111cfd0ce86d38263c642ad115e43365f05b0d17

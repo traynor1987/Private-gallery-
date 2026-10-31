@@ -1,0 +1,8 @@
+{
+  "run_id": 41156213785,
+  "release_control_sha": "1613339778a8c29bafe699af87b40504152977b3",
+  "artifact_id": 13025351799,
+  "artifact_digest": "sha256:dac16fa3c5ef0a5ba5fc8d0c8b6640c0e293e3c0407cf1379f3c9717942af416",
+  "application_source_sha": "41b6d065a3fbef2f711198c9c778f7100e620c8f",
+  "apk_sha256": "c9f43de796f0af15b95df54aabba686a11b4b6b6bb4eb08cf00169cccf7b7ec5"
+}

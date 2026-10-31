@@ -1,0 +1,28 @@
+{
+  "decision": "SAVED_FOR_OWNER_ACCEPTANCE",
+  "source_sha": "60f089d6e003fd13f8b7649feb6f44167e5028a2",
+  "control_sha": "f7051a24e8ba240c7cde1e6113442d42962b52bb",
+  "version_name": "1.7.8",
+  "version_code": 49,
+  "apk": {
+    "filename": "Private-Gallery-1.7.8-code49-owner-acceptance.apk",
+    "bytes": 105552470,
+    "sha256": "99a3dad8fb8dcaf4870e02a5ad645697415528892a1c6b3f7da32cd65ae25feb",
+    "library_file_id": "libfile_cefa21cf8e548191b204b5824bd6055b",
+    "file_id": "file_00000000713c81f79f383228859e9658",
+    "download_url": "https://chatgpt.com/library?file_id=libfile_cefa21cf8e548191b204b5824bd6055b&account_id=personal",
+    "save_status": "succeeded",
+    "local_metadata_applied": true
+  },
+  "verification": {
+    "filename": "Private-Gallery-1.7.8-code49-verification.zip",
+    "bytes": 16722992,
+    "sha256": "96f3feb47cb91bce834709ef835cede62ca025095508f6d2b87be5a1286675c8",
+    "library_file_id": "libfile_46d6f935f5cc8191b181c11a0379dac7",
+    "file_id": "file_000000005f2481f58b318adea3b4d352",
+    "download_url": "https://chatgpt.com/library?file_id=libfile_46d6f935f5cc8191b181c11a0379dac7&account_id=personal",
+    "save_status": "succeeded",
+    "local_metadata_applied": true
+  },
+  "physical_fold_acceptance": "OWNER_REQUIRED"
+}

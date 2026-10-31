@@ -1,5 +1,9 @@
 # 1.7.8 completion tracker
 
+## Current code49 delivery status
+
+VERIFIED AND DELIVERED FOR OWNER ACCEPTANCE: source60f089d6e003fd13f8b7649feb6f44167e5028a2, productioncontrolf7051a24e8ba240c7cde1e6113442d42962b52bb, exact43Android/33JVM+strictnetworkPASS, independent0openCritical/Important, original-key archived48→49upgrade/restartPASS, actualAPKsignature/chunk/identity independentlyverified. Version1.7.8/code49; package unchanged/API37only. One signed APK and filtered evidence bundle saved; see FINAL_HANDOFF49.md and FINAL_REPAIR49_DELIVERY.json. PhysicalFoldOWNER_REQUIRED; no owner acceptance claim. Earlier status entries below are historical.
+
 ## Current release: code 48 delivered for owner acceptance
 
 Private Gallery **1.7.8/code 48**, package `uk.co.traynor.privategallery`, Android 17/API 37. Frozen application source `41b6d065a3fbef2f711198c9c778f7100e620c8f`; successful signing/upgrade control `1613339778a8c29bafe699af87b40504152977b3`. All later changes in this final backup are documentation/evidence only.
