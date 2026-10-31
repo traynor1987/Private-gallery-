@@ -1,0 +1,431 @@
+{"time": 1793448836.930354, "kind": "dns", "source": "10.91.0.2", "name": "digitalassetlinks.googleapis.com", "qtype": 1, "transport": "udp"}
+{"time": 1793448836.9516673, "kind": "dns", "source": "10.91.0.2", "name": "android.googleapis.com", "qtype": 1, "transport": "udp"}
+{"time": 1793448836.9712296, "kind": "dns", "source": "10.91.0.2", "name": "mtalk.google.com", "qtype": 1, "transport": "udp"}
+{"time": 1793448836.9933558, "kind": "dns", "source": "10.91.0.2", "name": "android.apis.google.com", "qtype": 1, "transport": "udp"}
+{"time": 1793448838.122368, "kind": "dns", "source": "10.91.0.2", "name": "firebaseremoteconfig.googleapis.com", "qtype": 1, "transport": "udp"}
+{"time": 1793448838.961667, "kind": "dns", "source": "10.91.0.2", "name": "fixture.invalid", "qtype": 1, "transport": "udp"}
+{"time": 1793448838.9650912, "kind": "dns", "source": "10.91.0.2", "name": "fixture.invalid", "qtype": 28, "transport": "udp"}
+{"time": 1793448838.9685483, "kind": "dns", "source": "10.91.0.2", "name": "fixture.invalid", "qtype": 1, "transport": "udp"}
+{"time": 1793448838.9709675, "kind": "dns", "source": "10.91.0.2", "name": "fixture.invalid", "qtype": 28, "transport": "udp"}
+{"time": 1793448843.7753968, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 1, "transport": "udp"}
+{"time": 1793448843.7840068, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 28, "transport": "udp"}
+{"time": 1793448843.8730004, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 1, "transport": "udp"}
+{"time": 1793448843.9048436, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 28, "transport": "udp"}
+{"time": 1793448844.015431, "kind": "http", "source": "10.91.0.2", "method": "GET", "path": "/parity-one", "user_agent": "Mozilla/5.0 (Linux; Android 10; K; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/145.0.0.0 Safari/537.36", "tls": true, "cookie_present": false, "basic_present": false}
+{"time": 1793448844.085405, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 1, "transport": "udp"}
+{"time": 1793448844.1047034, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 28, "transport": "udp"}
+{"time": 1793448844.2070866, "kind": "dns", "source": "10.91.0.2", "name": "content-autofill.googleapis.com", "qtype": 1, "transport": "udp"}
+{"time": 1793448844.2239718, "kind": "dns", "source": "10.91.0.2", "name": "dialog-frame.fixture.invalid", "qtype": 1, "transport": "udp"}
+{"time": 1793448844.2280848, "kind": "dns", "source": "10.91.0.2", "name": "content-autofill.googleapis.com", "qtype": 28, "transport": "udp"}
+{"time": 1793448844.2374074, "kind": "dns", "source": "10.91.0.2", "name": "dialog-frame.fixture.invalid", "qtype": 28, "transport": "udp"}
+{"time": 1793448845.159997, "kind": "http", "source": "10.91.0.2", "method": "GET", "path": "/frame", "user_agent": "Mozilla/5.0 (Linux; Android 10; K; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/145.0.0.0 Safari/537.36", "tls": true, "cookie_present": false, "basic_present": false}
+{"time": 1793448845.215994, "kind": "http", "source": "10.91.0.2", "method": "GET", "path": "/favicon.ico", "user_agent": "Mozilla/5.0 (Linux; Android 10; K; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/145.0.0.0 Safari/537.36", "tls": true, "cookie_present": false, "basic_present": false}
+{"time": 1793448845.5455086, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 1, "transport": "udp"}
+{"time": 1793448845.556128, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 28, "transport": "udp"}
+{"time": 1793448851.4955342, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 1, "transport": "udp"}
+{"time": 1793448851.4989893, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 28, "transport": "udp"}
+{"time": 1793448851.514364, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 1, "transport": "udp"}
+{"time": 1793448851.5171237, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 28, "transport": "udp"}
+{"time": 1793448852.3638694, "kind": "http", "source": "10.91.0.2", "method": "GET", "path": "/parity-two", "user_agent": "Mozilla/5.0 (Linux; Android 10; K; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/145.0.0.0 Safari/537.36", "tls": true, "cookie_present": false, "basic_present": false}
+{"time": 1793448852.4554157, "kind": "http", "source": "10.91.0.2", "method": "GET", "path": "/frame", "user_agent": "Mozilla/5.0 (Linux; Android 10; K; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/145.0.0.0 Safari/537.36", "tls": true, "cookie_present": false, "basic_present": false}
+{"time": 1793448852.5906343, "kind": "http", "source": "10.91.0.2", "method": "GET", "path": "/favicon.ico", "user_agent": "Mozilla/5.0 (Linux; Android 10; K; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/145.0.0.0 Safari/537.36", "tls": true, "cookie_present": false, "basic_present": false}
+{"time": 1793448852.8928351, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 1, "transport": "udp"}
+{"time": 1793448852.895835, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 28, "transport": "udp"}
+{"time": 1793448853.028964, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 1, "transport": "udp"}
+{"time": 1793448853.032207, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 28, "transport": "udp"}
+{"time": 1793448853.0745935, "kind": "http", "source": "10.91.0.2", "method": "GET", "path": "/parity-one", "user_agent": "Mozilla/5.0 (Linux; Android 10; K; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/145.0.0.0 Safari/537.36", "tls": true, "cookie_present": false, "basic_present": false}
+{"time": 1793448853.0985372, "kind": "http", "source": "10.91.0.2", "method": "GET", "path": "/frame", "user_agent": "Mozilla/5.0 (Linux; Android 10; K; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/145.0.0.0 Safari/537.36", "tls": true, "cookie_present": false, "basic_present": false}
+{"time": 1793448853.1456015, "kind": "http", "source": "10.91.0.2", "method": "GET", "path": "/favicon.ico", "user_agent": "Mozilla/5.0 (Linux; Android 10; K; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/145.0.0.0 Safari/537.36", "tls": true, "cookie_present": false, "basic_present": false}
+{"time": 1793448854.3262544, "kind": "http", "source": "10.91.0.2", "method": "GET", "path": "/parity-error", "user_agent": "Mozilla/5.0 (Linux; Android 10; K; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/145.0.0.0 Safari/537.36", "tls": true, "cookie_present": false, "basic_present": false}
+{"time": 1793448854.4156559, "kind": "http", "source": "10.91.0.2", "method": "GET", "path": "/favicon.ico", "user_agent": "Mozilla/5.0 (Linux; Android 10; K; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/145.0.0.0 Safari/537.36", "tls": true, "cookie_present": false, "basic_present": false}
+{"time": 1793448855.0711849, "kind": "http", "source": "10.91.0.2", "method": "GET", "path": "/parity-error", "user_agent": "Mozilla/5.0 (Linux; Android 10; K; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/145.0.0.0 Safari/537.36", "tls": true, "cookie_present": false, "basic_present": false}
+{"time": 1793448855.0723183, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 1, "transport": "udp"}
+{"time": 1793448855.0786521, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 28, "transport": "udp"}
+{"time": 1793448855.1155512, "kind": "http", "source": "10.91.0.2", "method": "GET", "path": "/favicon.ico", "user_agent": "Mozilla/5.0 (Linux; Android 10; K; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/145.0.0.0 Safari/537.36", "tls": true, "cookie_present": false, "basic_present": false}
+{"time": 1793448855.1377277, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 1, "transport": "udp"}
+{"time": 1793448855.1645582, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 28, "transport": "udp"}
+{"time": 1793448856.0393941, "kind": "http", "source": "10.91.0.2", "method": "GET", "path": "/", "user_agent": "Mozilla/5.0 (Linux; Android 10; K; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/145.0.0.0 Safari/537.36", "tls": true, "cookie_present": false, "basic_present": false}
+{"time": 1793448856.1387293, "kind": "http", "source": "10.91.0.2", "method": "GET", "path": "/frame", "user_agent": "Mozilla/5.0 (Linux; Android 10; K; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/145.0.0.0 Safari/537.36", "tls": true, "cookie_present": false, "basic_present": false}
+{"time": 1793448856.3104074, "kind": "http", "source": "10.91.0.2", "method": "GET", "path": "/favicon.ico", "user_agent": "Mozilla/5.0 (Linux; Android 10; K; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/145.0.0.0 Safari/537.36", "tls": true, "cookie_present": false, "basic_present": false}
+{"time": 1793448856.5443783, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 1, "transport": "udp"}
+{"time": 1793448856.5478668, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 28, "transport": "udp"}
+{"time": 1793448856.6946828, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 1, "transport": "udp"}
+{"time": 1793448856.6981578, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 28, "transport": "udp"}
+{"time": 1793448856.8296807, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 1, "transport": "udp"}
+{"time": 1793448856.8328264, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 28, "transport": "udp"}
+{"time": 1793448858.7187464, "kind": "http", "source": "10.91.0.2", "method": "GET", "path": "/", "user_agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36", "tls": true, "cookie_present": false, "basic_present": false}
+{"time": 1793448858.8675592, "kind": "http", "source": "10.91.0.2", "method": "GET", "path": "/frame", "user_agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36", "tls": true, "cookie_present": false, "basic_present": false}
+{"time": 1793448858.930602, "kind": "http", "source": "10.91.0.2", "method": "GET", "path": "/favicon.ico", "user_agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36", "tls": true, "cookie_present": false, "basic_present": false}
+{"time": 1793448860.2600465, "kind": "http", "source": "10.91.0.2", "method": "GET", "path": "/desktop-parity", "user_agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36", "tls": true, "cookie_present": false, "basic_present": false}
+{"time": 1793448860.270614, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 1, "transport": "udp"}
+{"time": 1793448860.2815838, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 28, "transport": "udp"}
+{"time": 1793448860.370986, "kind": "http", "source": "10.91.0.2", "method": "GET", "path": "/frame", "user_agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36", "tls": true, "cookie_present": false, "basic_present": false}
+{"time": 1793448860.5239413, "kind": "http", "source": "10.91.0.2", "method": "GET", "path": "/favicon.ico", "user_agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36", "tls": true, "cookie_present": false, "basic_present": false}
+{"time": 1793448862.423043, "kind": "http", "source": "10.91.0.2", "method": "GET", "path": "/mobile-parity", "user_agent": "Mozilla/5.0 (Linux; Android 10; K; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/145.0.0.0 Safari/537.36", "tls": true, "cookie_present": false, "basic_present": false}
+{"time": 1793448862.42766, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 1, "transport": "udp"}
+{"time": 1793448862.4315224, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 28, "transport": "udp"}
+{"time": 1793448862.5024896, "kind": "http", "source": "10.91.0.2", "method": "GET", "path": "/frame", "user_agent": "Mozilla/5.0 (Linux; Android 10; K; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/145.0.0.0 Safari/537.36", "tls": true, "cookie_present": false, "basic_present": false}
+{"time": 1793448862.5497148, "kind": "http", "source": "10.91.0.2", "method": "GET", "path": "/favicon.ico", "user_agent": "Mozilla/5.0 (Linux; Android 10; K; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/145.0.0.0 Safari/537.36", "tls": true, "cookie_present": false, "basic_present": false}
+{"time": 1793448864.5042398, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 1, "transport": "udp"}
+{"time": 1793448864.5209634, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 28, "transport": "udp"}
+{"time": 1793448865.7173786, "kind": "http", "source": "10.91.0.2", "method": "GET", "path": "/", "user_agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36", "tls": true, "cookie_present": false, "basic_present": false}
+{"time": 1793448865.766709, "kind": "http", "source": "10.91.0.2", "method": "GET", "path": "/frame", "user_agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36", "tls": true, "cookie_present": false, "basic_present": false}
+{"time": 1793448865.9366214, "kind": "http", "source": "10.91.0.2", "method": "GET", "path": "/favicon.ico", "user_agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36", "tls": true, "cookie_present": false, "basic_present": false}
+{"time": 1793448866.158648, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 1, "transport": "udp"}
+{"time": 1793448866.1622043, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 28, "transport": "udp"}
+{"time": 1793448866.2992523, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 1, "transport": "udp"}
+{"time": 1793448866.3106155, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 28, "transport": "udp"}
+{"time": 1793448866.5263867, "kind": "http", "source": "10.91.0.2", "method": "POST", "path": "/post", "tls": true, "length": 17, "sha256": "e66b2f735112e27ec19b4aa65105877e78686b4fe72110701946301669029c44", "javascript_body": true, "worker_body": false, "probe_started": false, "probe_complete": false, "continuous_started": false, "revocation_barrier": false, "form_body": false, "multipart_png": false, "content_type": "text/plain;charset=UTF-8"}
+{"time": 1793448866.5407355, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 1, "transport": "udp"}
+{"time": 1793448866.5603962, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 28, "transport": "udp"}
+{"time": 1793448866.8214183, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 1, "transport": "udp"}
+{"time": 1793448866.8281212, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 28, "transport": "udp"}
+{"time": 1793448866.8331225, "kind": "http", "source": "10.91.0.2", "method": "GET", "path": "/worker.js", "user_agent": "Mozilla/5.0 (Linux; Android 10; K; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/145.0.0.0 Safari/537.36", "tls": true, "cookie_present": false, "basic_present": false}
+{"time": 1793448866.867011, "kind": "http", "source": "10.91.0.2", "method": "POST", "path": "/worker-post", "tls": true, "length": 19, "sha256": "0666c217c3c94237448803e0c313552c5a7a138f109ed79dc7c64bb7ea64cb69", "javascript_body": false, "worker_body": true, "probe_started": false, "probe_complete": false, "continuous_started": false, "revocation_barrier": false, "form_body": false, "multipart_png": false, "content_type": "text/plain;charset=UTF-8"}
+{"time": 1793448866.9726067, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 1, "transport": "udp"}
+{"time": 1793448866.9831793, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 28, "transport": "udp"}
+{"time": 1793448871.1973193, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 1, "transport": "udp"}
+{"time": 1793448871.1993296, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 1, "transport": "udp"}
+{"time": 1793448871.218864, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 28, "transport": "udp"}
+{"time": 1793448871.219481, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 28, "transport": "udp"}
+{"time": 1793448871.2498505, "kind": "http", "source": "10.91.0.2", "method": "GET", "path": "/socket", "user_agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36", "tls": true, "cookie_present": false, "basic_present": false}
+{"time": 1793448871.2945836, "kind": "websocket", "source": "10.91.0.2", "tls": true, "exact_body": true}
+{"time": 1793448871.3710136, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 1, "transport": "udp"}
+{"time": 1793448871.383817, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 28, "transport": "udp"}
+{"time": 1793448871.5944476, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 1, "transport": "udp"}
+{"time": 1793448871.5999565, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 28, "transport": "udp"}
+{"time": 1793448871.605428, "kind": "http", "source": "10.91.0.2", "method": "POST", "path": "/probe-start", "tls": true, "length": 14, "sha256": "390e875a873f2ec53720c88bbe63e90ac97f82dd2788b91432e3a76ee65be979", "javascript_body": false, "worker_body": false, "probe_started": true, "probe_complete": false, "continuous_started": false, "revocation_barrier": false, "form_body": false, "multipart_png": false, "content_type": "text/plain;charset=UTF-8"}
+{"time": 1793448871.6202147, "kind": "dns", "source": "10.91.0.2", "name": "stun-phase.fixture.invalid", "qtype": 28, "transport": "udp"}
+{"time": 1793448871.621151, "kind": "dns", "source": "10.91.0.2", "name": "stun-phase.fixture.invalid", "qtype": 1, "transport": "udp"}
+{"time": 1793448871.631481, "kind": "stun", "source": "10.91.0.2"}
+{"time": 1793448871.728832, "kind": "http", "source": "10.91.0.2", "method": "POST", "path": "/probe-complete", "tls": true, "length": 15, "sha256": "b4e518ffc3225bc50faf712c55a6824f1aa73981ec5f949fa559ffb178a1511c", "javascript_body": false, "worker_body": false, "probe_started": false, "probe_complete": true, "continuous_started": false, "revocation_barrier": false, "form_body": false, "multipart_png": false, "content_type": "text/plain;charset=UTF-8"}
+{"time": 1793448871.7467978, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 1, "transport": "udp"}
+{"time": 1793448871.7668672, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 28, "transport": "udp"}
+{"time": 1793448872.7328126, "kind": "http", "source": "10.91.0.2", "method": "GET", "path": "/basic", "user_agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36", "tls": true, "cookie_present": false, "basic_present": false}
+{"time": 1793448873.6944697, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 1, "transport": "udp"}
+{"time": 1793448873.6984968, "kind": "http", "source": "10.91.0.2", "method": "GET", "path": "/basic", "user_agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36", "tls": true, "cookie_present": false, "basic_present": true}
+{"time": 1793448873.7163727, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 28, "transport": "udp"}
+{"time": 1793448873.7681696, "kind": "http", "source": "10.91.0.2", "method": "GET", "path": "/favicon.ico", "user_agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36", "tls": true, "cookie_present": false, "basic_present": true}
+{"time": 1793448874.85278, "kind": "http", "source": "10.91.0.2", "method": "GET", "path": "/cookie", "user_agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36", "tls": true, "cookie_present": false, "basic_present": true}
+{"time": 1793448874.9696007, "kind": "http", "source": "10.91.0.2", "method": "GET", "path": "/favicon.ico", "user_agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36", "tls": true, "cookie_present": true, "basic_present": true}
+{"time": 1793448875.378567, "kind": "http", "source": "10.91.0.2", "method": "GET", "path": "/worker.js", "user_agent": "Mozilla/5.0 (Linux; Android 10; K; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/145.0.0.0 Safari/537.36", "tls": true, "cookie_present": true, "basic_present": true}
+{"time": 1793448876.0451717, "kind": "http", "source": "10.91.0.2", "method": "GET", "path": "/cookie-echo", "user_agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36", "tls": true, "cookie_present": true, "basic_present": true}
+{"time": 1793448876.047099, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 1, "transport": "udp"}
+{"time": 1793448876.057368, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 28, "transport": "udp"}
+{"time": 1793448876.147531, "kind": "http", "source": "10.91.0.2", "method": "GET", "path": "/favicon.ico", "user_agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36", "tls": true, "cookie_present": true, "basic_present": true}
+{"time": 1793448876.2069037, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 1, "transport": "udp"}
+{"time": 1793448876.235578, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 28, "transport": "udp"}
+{"time": 1793448876.4338214, "kind": "http", "source": "10.91.0.2", "method": "GET", "path": "/worker.js", "user_agent": "Mozilla/5.0 (Linux; Android 10; K; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/145.0.0.0 Safari/537.36", "tls": true, "cookie_present": true, "basic_present": true}
+{"time": 1793448877.1137996, "kind": "dns", "source": "10.91.0.2", "name": "fixture.invalid", "qtype": 1, "transport": "udp"}
+{"time": 1793448877.1870687, "kind": "dns", "source": "10.91.0.2", "name": "fixture.invalid", "qtype": 28, "transport": "udp"}
+{"time": 1793448877.2145312, "kind": "http", "source": "10.91.0.2", "method": "GET", "path": "/", "user_agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36", "tls": false, "cookie_present": false, "basic_present": false}
+{"time": 1793448877.312717, "kind": "http", "source": "10.91.0.2", "method": "GET", "path": "/frame", "user_agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36", "tls": true, "cookie_present": false, "basic_present": false}
+{"time": 1793448877.4236355, "kind": "dns", "source": "10.91.0.2", "name": "fixture.invalid", "qtype": 1, "transport": "udp"}
+{"time": 1793448877.4372742, "kind": "dns", "source": "10.91.0.2", "name": "fixture.invalid", "qtype": 28, "transport": "udp"}
+{"time": 1793448877.4647677, "kind": "http", "source": "10.91.0.2", "method": "GET", "path": "/favicon.ico", "user_agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36", "tls": false, "cookie_present": false, "basic_present": false}
+{"time": 1793448877.5846813, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 1, "transport": "udp"}
+{"time": 1793448877.5887334, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 28, "transport": "udp"}
+{"time": 1793448877.6919081, "kind": "http", "source": "10.91.0.2", "method": "GET", "path": "/worker.js", "user_agent": "Mozilla/5.0 (Linux; Android 10; K; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/145.0.0.0 Safari/537.36", "tls": true, "cookie_present": true, "basic_present": true}
+{"time": 1793448877.7304003, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 1, "transport": "udp"}
+{"time": 1793448877.7336469, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 28, "transport": "udp"}
+{"time": 1793448877.871431, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 1, "transport": "udp"}
+{"time": 1793448877.8745298, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 28, "transport": "udp"}
+{"time": 1793448878.104464, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 1, "transport": "udp"}
+{"time": 1793448878.1139758, "kind": "dns", "source": "10.91.0.2", "name": "fixture.invalid", "qtype": 1, "transport": "udp"}
+{"time": 1793448878.1273978, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 28, "transport": "udp"}
+{"time": 1793448878.1303437, "kind": "dns", "source": "10.91.0.2", "name": "fixture.invalid", "qtype": 28, "transport": "udp"}
+{"time": 1793448878.1559994, "kind": "http", "source": "10.91.0.2", "method": "POST", "path": "/post", "tls": false, "length": 17, "sha256": "e66b2f735112e27ec19b4aa65105877e78686b4fe72110701946301669029c44", "javascript_body": true, "worker_body": false, "probe_started": false, "probe_complete": false, "continuous_started": false, "revocation_barrier": false, "form_body": false, "multipart_png": false, "content_type": "text/plain;charset=UTF-8"}
+{"time": 1793448878.1613204, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 1, "transport": "udp"}
+{"time": 1793448878.164043, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 28, "transport": "udp"}
+{"time": 1793448879.1029906, "kind": "dns", "source": "10.91.0.2", "name": "fixture.invalid", "qtype": 1, "transport": "udp"}
+{"time": 1793448879.107585, "kind": "dns", "source": "10.91.0.2", "name": "fixture.invalid", "qtype": 28, "transport": "udp"}
+{"time": 1793448879.1234565, "kind": "http", "source": "10.91.0.2", "method": "GET", "path": "/form", "user_agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36", "tls": false, "cookie_present": false, "basic_present": false}
+{"time": 1793448879.2069256, "kind": "http", "source": "10.91.0.2", "method": "GET", "path": "/frame", "user_agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36", "tls": true, "cookie_present": false, "basic_present": false}
+{"time": 1793448879.3696158, "kind": "dns", "source": "10.91.0.2", "name": "fixture.invalid", "qtype": 1, "transport": "udp"}
+{"time": 1793448879.3815126, "kind": "dns", "source": "10.91.0.2", "name": "fixture.invalid", "qtype": 28, "transport": "udp"}
+{"time": 1793448879.4265113, "kind": "http", "source": "10.91.0.2", "method": "GET", "path": "/favicon.ico", "user_agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36", "tls": false, "cookie_present": false, "basic_present": false}
+{"time": 1793448879.5943992, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 1, "transport": "udp"}
+{"time": 1793448879.6075654, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 28, "transport": "udp"}
+{"time": 1793448879.7463613, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 1, "transport": "udp"}
+{"time": 1793448879.750882, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 28, "transport": "udp"}
+{"time": 1793448879.9622898, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 1, "transport": "udp"}
+{"time": 1793448879.9717312, "kind": "dns", "source": "10.91.0.2", "name": "fixture.invalid", "qtype": 1, "transport": "udp"}
+{"time": 1793448879.9847114, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 28, "transport": "udp"}
+{"time": 1793448879.9885051, "kind": "dns", "source": "10.91.0.2", "name": "fixture.invalid", "qtype": 28, "transport": "udp"}
+{"time": 1793448880.005978, "kind": "http", "source": "10.91.0.2", "method": "POST", "path": "/form-result", "tls": false, "length": 23, "sha256": "93b4d313bb87f10e6c6a9d869ac7e8c2e4dcb483b170987fcb6be6a07d1dee76", "javascript_body": false, "worker_body": false, "probe_started": false, "probe_complete": false, "continuous_started": false, "revocation_barrier": false, "form_body": true, "multipart_png": false, "content_type": "application/x-www-form-urlencoded"}
+{"time": 1793448880.0570073, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 1, "transport": "udp"}
+{"time": 1793448880.0650501, "kind": "dns", "source": "10.91.0.2", "name": "fixture.invalid", "qtype": 1, "transport": "udp"}
+{"time": 1793448880.0793893, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 28, "transport": "udp"}
+{"time": 1793448880.1039214, "kind": "dns", "source": "10.91.0.2", "name": "fixture.invalid", "qtype": 28, "transport": "udp"}
+{"time": 1793448880.1268623, "kind": "http", "source": "10.91.0.2", "method": "GET", "path": "/favicon.ico", "user_agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36", "tls": false, "cookie_present": false, "basic_present": false}
+{"time": 1793448880.4045486, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 1, "transport": "udp"}
+{"time": 1793448880.4412854, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 28, "transport": "udp"}
+{"time": 1793448880.8895056, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 1, "transport": "udp"}
+{"time": 1793448880.907293, "kind": "dns", "source": "10.91.0.2", "name": "fixture.invalid", "qtype": 1, "transport": "udp"}
+{"time": 1793448880.9193876, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 28, "transport": "udp"}
+{"time": 1793448880.9473586, "kind": "dns", "source": "10.91.0.2", "name": "fixture.invalid", "qtype": 28, "transport": "udp"}
+{"time": 1793448881.0063975, "kind": "http", "source": "10.91.0.2", "method": "POST", "path": "/form-result", "tls": false, "length": 23, "sha256": "93b4d313bb87f10e6c6a9d869ac7e8c2e4dcb483b170987fcb6be6a07d1dee76", "javascript_body": false, "worker_body": false, "probe_started": false, "probe_complete": false, "continuous_started": false, "revocation_barrier": false, "form_body": true, "multipart_png": false, "content_type": "application/x-www-form-urlencoded"}
+{"time": 1793448881.0807672, "kind": "dns", "source": "10.91.0.2", "name": "fixture.invalid", "qtype": 1, "transport": "udp"}
+{"time": 1793448881.0877652, "kind": "dns", "source": "10.91.0.2", "name": "fixture.invalid", "qtype": 28, "transport": "udp"}
+{"time": 1793448881.1325953, "kind": "http", "source": "10.91.0.2", "method": "GET", "path": "/favicon.ico", "user_agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36", "tls": false, "cookie_present": false, "basic_present": false}
+{"time": 1793448881.1538138, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 1, "transport": "udp"}
+{"time": 1793448881.160387, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 28, "transport": "udp"}
+{"time": 1793448881.2313144, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 1, "transport": "udp"}
+{"time": 1793448881.24248, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 28, "transport": "udp"}
+{"time": 1793448882.1130502, "kind": "dns", "source": "10.91.0.2", "name": "fixture.invalid", "qtype": 1, "transport": "udp"}
+{"time": 1793448882.1162796, "kind": "dns", "source": "10.91.0.2", "name": "fixture.invalid", "qtype": 28, "transport": "udp"}
+{"time": 1793448882.1208305, "kind": "http", "source": "10.91.0.2", "method": "GET", "path": "/upload", "user_agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36", "tls": false, "cookie_present": false, "basic_present": false}
+{"time": 1793448882.1776638, "kind": "http", "source": "10.91.0.2", "method": "GET", "path": "/frame", "user_agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36", "tls": true, "cookie_present": false, "basic_present": false}
+{"time": 1793448882.3653433, "kind": "dns", "source": "10.91.0.2", "name": "fixture.invalid", "qtype": 1, "transport": "udp"}
+{"time": 1793448882.3918126, "kind": "dns", "source": "10.91.0.2", "name": "fixture.invalid", "qtype": 28, "transport": "udp"}
+{"time": 1793448882.422452, "kind": "http", "source": "10.91.0.2", "method": "GET", "path": "/favicon.ico", "user_agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36", "tls": false, "cookie_present": false, "basic_present": false}
+{"time": 1793448882.6119933, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 1, "transport": "udp"}
+{"time": 1793448882.6155934, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 28, "transport": "udp"}
+{"time": 1793448882.7514777, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 1, "transport": "udp"}
+{"time": 1793448882.7547626, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 28, "transport": "udp"}
+{"time": 1793448882.959809, "kind": "dns", "source": "10.91.0.2", "name": "fixture.invalid", "qtype": 1, "transport": "udp"}
+{"time": 1793448882.9759665, "kind": "dns", "source": "10.91.0.2", "name": "fixture.invalid", "qtype": 28, "transport": "udp"}
+{"time": 1793448883.0393822, "kind": "http", "source": "10.91.0.2", "method": "POST", "path": "/chooser-click", "tls": false, "length": 21, "sha256": "75e66a38f7c5ea58fc8c37d5431fe14fcbaa8b101a551ff8800958a74259bc80", "javascript_body": false, "worker_body": false, "probe_started": false, "probe_complete": false, "continuous_started": false, "revocation_barrier": false, "form_body": false, "multipart_png": false, "content_type": "text/plain;charset=UTF-8"}
+{"time": 1793448884.1530428, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 1, "transport": "udp"}
+{"time": 1793448884.158617, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 28, "transport": "udp"}
+{"time": 1793448884.2033846, "kind": "dns", "source": "10.91.0.2", "name": "fixture.invalid", "qtype": 1, "transport": "udp"}
+{"time": 1793448884.221698, "kind": "dns", "source": "10.91.0.2", "name": "fixture.invalid", "qtype": 28, "transport": "udp"}
+{"time": 1793448884.227881, "kind": "http", "source": "10.91.0.2", "method": "POST", "path": "/uploaded", "tls": false, "length": 297, "sha256": "db57467e72d26e846e9e0d102b0a80f43c6dc99643cbb28e14cdeb4113198045", "javascript_body": false, "worker_body": false, "probe_started": false, "probe_complete": false, "continuous_started": false, "revocation_barrier": false, "form_body": false, "multipart_png": true, "content_type": "multipart/form-data; boundary=----WebKitFormBoundaryAGCE8E05XmHVg9BB"}
+{"time": 1793448884.2463603, "kind": "dns", "source": "10.91.0.2", "name": "fixture.invalid", "qtype": 1, "transport": "udp"}
+{"time": 1793448884.2504816, "kind": "dns", "source": "10.91.0.2", "name": "fixture.invalid", "qtype": 28, "transport": "udp"}
+{"time": 1793448884.27025, "kind": "http", "source": "10.91.0.2", "method": "GET", "path": "/favicon.ico", "user_agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36", "tls": false, "cookie_present": false, "basic_present": false}
+{"time": 1793448884.307887, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 1, "transport": "udp"}
+{"time": 1793448884.311391, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 28, "transport": "udp"}
+{"time": 1793448885.156107, "kind": "dns", "source": "10.91.0.2", "name": "fixture.invalid", "qtype": 1, "transport": "udp"}
+{"time": 1793448885.1598291, "kind": "dns", "source": "10.91.0.2", "name": "fixture.invalid", "qtype": 28, "transport": "udp"}
+{"time": 1793448885.1741455, "kind": "http", "source": "10.91.0.2", "method": "GET", "path": "/media.png", "user_agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36", "tls": false, "cookie_present": false, "basic_present": false}
+{"time": 1793448885.7592936, "kind": "dns", "source": "10.91.0.2", "name": "fixture.invalid", "qtype": 1, "transport": "udp"}
+{"time": 1793448885.7770264, "kind": "dns", "source": "10.91.0.2", "name": "fixture.invalid", "qtype": 28, "transport": "udp"}
+{"time": 1793448885.7967513, "kind": "http", "source": "10.91.0.2", "method": "GET", "path": "/media.png", "user_agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36", "tls": false, "cookie_present": false, "basic_present": false}
+{"time": 1793448885.9585583, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 1, "transport": "udp"}
+{"time": 1793448885.9646535, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 28, "transport": "udp"}
+{"time": 1793448886.914398, "kind": "http", "source": "10.91.0.2", "method": "GET", "path": "/", "user_agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36", "tls": true, "cookie_present": true, "basic_present": true}
+{"time": 1793448886.9662426, "kind": "http", "source": "10.91.0.2", "method": "GET", "path": "/frame", "user_agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36", "tls": true, "cookie_present": false, "basic_present": false}
+{"time": 1793448887.1171858, "kind": "http", "source": "10.91.0.2", "method": "GET", "path": "/favicon.ico", "user_agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36", "tls": true, "cookie_present": true, "basic_present": true}
+{"time": 1793448887.3424585, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 1, "transport": "udp"}
+{"time": 1793448887.3614106, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 28, "transport": "udp"}
+{"time": 1793448887.5060246, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 1, "transport": "udp"}
+{"time": 1793448887.5102372, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 28, "transport": "udp"}
+{"time": 1793448888.693668, "kind": "http", "source": "10.91.0.2", "method": "GET", "path": "/worker.js", "user_agent": "Mozilla/5.0 (Linux; Android 10; K; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/145.0.0.0 Safari/537.36", "tls": true, "cookie_present": true, "basic_present": true}
+{"time": 1793448889.067615, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 1, "transport": "udp"}
+{"time": 1793448889.0823815, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 28, "transport": "udp"}
+{"time": 1793448889.3728724, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 1, "transport": "udp"}
+{"time": 1793448889.3735619, "kind": "http", "source": "10.91.0.2", "method": "POST", "path": "/post", "tls": true, "length": 17, "sha256": "e66b2f735112e27ec19b4aa65105877e78686b4fe72110701946301669029c44", "javascript_body": true, "worker_body": false, "probe_started": false, "probe_complete": false, "continuous_started": false, "revocation_barrier": false, "form_body": false, "multipart_png": false, "content_type": "text/plain;charset=UTF-8"}
+{"time": 1793448889.3835325, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 28, "transport": "udp"}
+{"time": 1793448889.883382, "kind": "dns", "source": "10.91.0.2", "name": "gmscompliance-pa.googleapis.com", "qtype": 1, "transport": "udp"}
+{"time": 1793448890.327098, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 1, "transport": "udp"}
+{"time": 1793448890.333358, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 28, "transport": "udp"}
+{"time": 1793448890.53948, "kind": "http", "source": "10.91.0.2", "method": "POST", "path": "/post", "tls": true, "length": 17, "sha256": "e66b2f735112e27ec19b4aa65105877e78686b4fe72110701946301669029c44", "javascript_body": true, "worker_body": false, "probe_started": false, "probe_complete": false, "continuous_started": false, "revocation_barrier": false, "form_body": false, "multipart_png": false, "content_type": "text/plain;charset=UTF-8"}
+{"time": 1793448890.5567205, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 1, "transport": "udp"}
+{"time": 1793448890.5625308, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 28, "transport": "udp"}
+{"time": 1793448890.978302, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 1, "transport": "udp"}
+{"time": 1793448890.9937205, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 28, "transport": "udp"}
+{"time": 1793448891.4708257, "kind": "http", "source": "10.91.0.2", "method": "POST", "path": "/post", "tls": true, "length": 17, "sha256": "e66b2f735112e27ec19b4aa65105877e78686b4fe72110701946301669029c44", "javascript_body": true, "worker_body": false, "probe_started": false, "probe_complete": false, "continuous_started": false, "revocation_barrier": false, "form_body": false, "multipart_png": false, "content_type": "text/plain;charset=UTF-8"}
+{"time": 1793448891.4854963, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 1, "transport": "udp"}
+{"time": 1793448891.4903018, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 28, "transport": "udp"}
+{"time": 1793448891.615627, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 1, "transport": "udp"}
+{"time": 1793448891.625413, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 28, "transport": "udp"}
+{"time": 1793448894.0413535, "kind": "http", "source": "10.91.0.2", "method": "GET", "path": "/", "user_agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36", "tls": true, "cookie_present": true, "basic_present": true}
+{"time": 1793448894.208426, "kind": "dns", "source": "10.91.0.2", "name": "www.googleapis.com", "qtype": 1, "transport": "udp"}
+{"time": 1793448894.2211854, "kind": "http", "source": "10.91.0.2", "method": "GET", "path": "/frame", "user_agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36", "tls": true, "cookie_present": false, "basic_present": false}
+{"time": 1793448894.4516556, "kind": "http", "source": "10.91.0.2", "method": "GET", "path": "/favicon.ico", "user_agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36", "tls": true, "cookie_present": true, "basic_present": true}
+{"time": 1793448894.6797056, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 1, "transport": "udp"}
+{"time": 1793448894.6850138, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 28, "transport": "udp"}
+{"time": 1793448894.7206392, "kind": "dns", "source": "10.91.0.2", "name": "www.gstatic.com", "qtype": 1, "transport": "udp"}
+{"time": 1793448894.927708, "kind": "http", "source": "10.91.0.2", "method": "POST", "path": "/probe-continuous", "tls": true, "length": 22, "sha256": "f2231ae27741042ebb089283e43d48739302c372fc1bd1ebef7ff8d6697e5c0e", "javascript_body": false, "worker_body": false, "probe_started": false, "probe_complete": false, "continuous_started": true, "revocation_barrier": false, "form_body": false, "multipart_png": false, "content_type": "text/plain;charset=UTF-8"}
+{"time": 1793448894.957353, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 1, "transport": "udp"}
+{"time": 1793448894.9667342, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 28, "transport": "udp"}
+{"time": 1793448895.0486562, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 1, "transport": "udp"}
+{"time": 1793448895.0565817, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 28, "transport": "udp"}
+{"time": 1793448895.1483734, "kind": "dns", "source": "10.91.0.2", "name": "continuous-phase.fixture.invalid", "qtype": 28, "transport": "udp"}
+{"time": 1793448895.1490664, "kind": "dns", "source": "10.91.0.2", "name": "continuous-phase.fixture.invalid", "qtype": 1, "transport": "udp"}
+{"time": 1793448895.1529324, "kind": "stun", "source": "10.91.0.2"}
+{"time": 1793448895.1985679, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 1, "transport": "udp"}
+{"time": 1793448895.204102, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 28, "transport": "udp"}
+{"time": 1793448895.330428, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 1, "transport": "udp"}
+{"time": 1793448895.3372338, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 28, "transport": "udp"}
+{"time": 1793448895.3425376, "kind": "dns", "source": "10.91.0.2", "name": "continuous-phase.fixture.invalid", "qtype": 28, "transport": "udp"}
+{"time": 1793448895.3428254, "kind": "stun", "source": "10.91.0.2"}
+{"time": 1793448895.471929, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 1, "transport": "udp"}
+{"time": 1793448895.4755213, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 28, "transport": "udp"}
+{"time": 1793448895.54163, "kind": "stun", "source": "10.91.0.2"}
+{"time": 1793448895.5421112, "kind": "dns", "source": "10.91.0.2", "name": "continuous-phase.fixture.invalid", "qtype": 28, "transport": "udp"}
+{"time": 1793448895.603693, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 1, "transport": "udp"}
+{"time": 1793448895.6069596, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 28, "transport": "udp"}
+{"time": 1793448895.7417717, "kind": "dns", "source": "10.91.0.2", "name": "continuous-phase.fixture.invalid", "qtype": 28, "transport": "udp"}
+{"time": 1793448895.7421393, "kind": "stun", "source": "10.91.0.2"}
+{"time": 1793448895.8001568, "kind": "http", "source": "10.91.0.2", "method": "GET", "path": "/slow", "user_agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36", "tls": true, "cookie_present": true, "basic_present": true}
+{"time": 1793448895.8005154, "kind": "slow-start", "source": "10.91.0.2", "path": "/slow"}
+{"time": 1793448895.805653, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 1, "transport": "udp"}
+{"time": 1793448895.811142, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 28, "transport": "udp"}
+{"time": 1793448895.8507931, "kind": "slow-closed", "source": "10.91.0.2", "path": "/slow"}
+{"time": 1793448895.9696546, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 1, "transport": "udp"}
+{"time": 1793448896.0076861, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 28, "transport": "udp"}
+{"time": 1793448896.0337098, "kind": "http", "source": "10.91.0.2", "method": "POST", "path": "/probe-revocation", "tls": true, "length": 25, "sha256": "af082e8740b470dd1e4fb742d01366696ce629e7981c62c34252aa16c856e2a1", "javascript_body": false, "worker_body": false, "probe_started": false, "probe_complete": false, "continuous_started": false, "revocation_barrier": true, "form_body": false, "multipart_png": false, "content_type": ""}
+{"time": 1793448897.1239498, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 1, "transport": "udp"}
+{"time": 1793448897.1272297, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 28, "transport": "udp"}
+{"time": 1793448898.9023955, "kind": "dns", "source": "10.91.0.2", "name": "mtalk.google.com", "qtype": 1, "transport": "udp"}
+{"time": 1793448902.3441622, "kind": "dns", "source": "10.91.0.2", "name": "fixture.invalid", "qtype": 1, "transport": "udp"}
+{"time": 1793448902.54588, "kind": "dns", "source": "10.91.0.2", "name": "fixture.invalid", "qtype": 1, "transport": "udp"}
+{"time": 1793448902.5723732, "kind": "dns", "source": "10.91.0.2", "name": "fixture.invalid", "qtype": 28, "transport": "udp"}
+{"time": 1793448902.6007135, "kind": "http", "source": "10.91.0.2", "method": "GET", "path": "/network-loss", "user_agent": "Mozilla/5.0 (Linux; Android 10; K; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/145.0.0.0 Safari/537.36", "tls": false, "cookie_present": false, "basic_present": false}
+{"time": 1793448902.601067, "kind": "slow-start", "source": "10.91.0.2", "path": "/network-loss"}
+{"time": 1793448985.6448457, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 1, "transport": "udp"}
+{"time": 1793448985.648063, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 28, "transport": "udp"}
+{"time": 1793448985.6517298, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 1, "transport": "udp"}
+{"time": 1793448985.6543674, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 28, "transport": "udp"}
+{"time": 1793448985.6576672, "kind": "dns", "source": "10.91.0.2", "name": "tcp-dns-phase.fixture.invalid", "qtype": 1, "transport": "udp"}
+{"time": 1793448985.6618454, "kind": "dns", "source": "10.91.0.2", "name": "tcp-dns-phase.fixture.invalid", "qtype": 1, "transport": "tcp"}
+{"time": 1793448985.6652956, "kind": "dns", "source": "10.91.0.2", "name": "tcp-dns-phase.fixture.invalid", "qtype": 28, "transport": "udp"}
+{"time": 1793448985.6689236, "kind": "dns", "source": "10.91.0.2", "name": "tcp-dns-phase.fixture.invalid", "qtype": 28, "transport": "tcp"}
+{"time": 1793448985.6748056, "kind": "dns", "source": "10.91.0.2", "name": "slow-dns-phase.fixture.invalid", "qtype": 1, "transport": "udp"}
+{"time": 1793448985.6757572, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 1, "transport": "udp"}
+{"time": 1793448985.6782339, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 28, "transport": "udp"}
+{"time": 1793448992.8677027, "kind": "dns", "source": "10.91.0.2", "name": "mtalk.google.com", "qtype": 1, "transport": "udp"}
+{"time": 1793448993.5037925, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 1, "transport": "udp"}
+{"time": 1793448993.507516, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 28, "transport": "udp"}
+{"time": 1793448993.5196157, "kind": "http", "source": "10.91.0.2", "method": "GET", "path": "/private-apps178-551b7455-d0eb-43a2-aed2-fd72652ce0f2", "user_agent": "okhttp/4.12.0", "tls": true, "cookie_present": false, "basic_present": false}
+{"time": 1793448993.6251287, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 1, "transport": "udp"}
+{"time": 1793448993.6875913, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 28, "transport": "udp"}
+{"time": 1793448993.7445238, "kind": "http", "source": "10.91.0.2", "method": "GET", "path": "/manifest178.json?start=/private-apps178-551b7455-d0eb-43a2-aed2-fd72652ce0f2", "user_agent": "okhttp/4.12.0", "tls": true, "cookie_present": false, "basic_present": false}
+{"time": 1793448993.8995843, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 1, "transport": "udp"}
+{"time": 1793448993.9068, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 28, "transport": "udp"}
+{"time": 1793448993.9431257, "kind": "http", "source": "10.91.0.2", "method": "GET", "path": "/media.png", "user_agent": "okhttp/4.12.0", "tls": true, "cookie_present": false, "basic_present": false}
+{"time": 1793448997.6407402, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 1, "transport": "udp"}
+{"time": 1793448997.6646764, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 28, "transport": "udp"}
+{"time": 1793448998.0187964, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 1, "transport": "udp"}
+{"time": 1793448998.027966, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 28, "transport": "udp"}
+{"time": 1793449004.4269447, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 1, "transport": "udp"}
+{"time": 1793449004.4366512, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 28, "transport": "udp"}
+{"time": 1793449004.5743694, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 1, "transport": "udp"}
+{"time": 1793449004.6146958, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 28, "transport": "udp"}
+{"time": 1793449005.4634316, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 1, "transport": "udp"}
+{"time": 1793449005.479422, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 28, "transport": "udp"}
+{"time": 1793449005.8369954, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 1, "transport": "udp"}
+{"time": 1793449005.8624258, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 28, "transport": "udp"}
+{"time": 1793449006.0730846, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 1, "transport": "udp"}
+{"time": 1793449006.0906825, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 28, "transport": "udp"}
+{"time": 1793449006.3578038, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 1, "transport": "udp"}
+{"time": 1793449006.3783712, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 28, "transport": "udp"}
+{"time": 1793449006.7167478, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 1, "transport": "udp"}
+{"time": 1793449006.7255912, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 28, "transport": "udp"}
+{"time": 1793449007.062699, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 1, "transport": "udp"}
+{"time": 1793449007.1563735, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 28, "transport": "udp"}
+{"time": 1793449007.4735284, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 1, "transport": "udp"}
+{"time": 1793449007.4863224, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 28, "transport": "udp"}
+{"time": 1793449007.820443, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 1, "transport": "udp"}
+{"time": 1793449007.8764217, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 28, "transport": "udp"}
+{"time": 1793449008.1933913, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 1, "transport": "udp"}
+{"time": 1793449008.2794182, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 28, "transport": "udp"}
+{"time": 1793449008.5443795, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 1, "transport": "udp"}
+{"time": 1793449008.7003925, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 28, "transport": "udp"}
+{"time": 1793449009.0163822, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 1, "transport": "udp"}
+{"time": 1793449009.0403602, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 28, "transport": "udp"}
+{"time": 1793449009.2747185, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 1, "transport": "udp"}
+{"time": 1793449009.290378, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 28, "transport": "udp"}
+{"time": 1793449009.546756, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 1, "transport": "udp"}
+{"time": 1793449009.5818007, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 28, "transport": "udp"}
+{"time": 1793449009.929127, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 1, "transport": "udp"}
+{"time": 1793449009.9803011, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 28, "transport": "udp"}
+{"time": 1793449010.2844088, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 1, "transport": "udp"}
+{"time": 1793449010.3263044, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 28, "transport": "udp"}
+{"time": 1793449010.656656, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 1, "transport": "udp"}
+{"time": 1793449010.732387, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 28, "transport": "udp"}
+{"time": 1793449011.190398, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 1, "transport": "udp"}
+{"time": 1793449011.2253718, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 28, "transport": "udp"}
+{"time": 1793449011.4563847, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 1, "transport": "udp"}
+{"time": 1793449011.48876, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 28, "transport": "udp"}
+{"time": 1793449011.7519717, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 1, "transport": "udp"}
+{"time": 1793449011.771383, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 28, "transport": "udp"}
+{"time": 1793449012.0924113, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 1, "transport": "udp"}
+{"time": 1793449012.1238666, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 28, "transport": "udp"}
+{"time": 1793449012.4094276, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 1, "transport": "udp"}
+{"time": 1793449012.4893901, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 28, "transport": "udp"}
+{"time": 1793449012.887388, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 1, "transport": "udp"}
+{"time": 1793449012.9333768, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 28, "transport": "udp"}
+{"time": 1793449013.1707723, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 1, "transport": "udp"}
+{"time": 1793449013.1864092, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 1, "transport": "udp"}
+{"time": 1793449013.1963668, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 28, "transport": "udp"}
+{"time": 1793449013.3293276, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 28, "transport": "udp"}
+{"time": 1793449013.3723612, "kind": "http", "source": "10.91.0.2", "method": "GET", "path": "/private-apps178-551b7455-d0eb-43a2-aed2-fd72652ce0f2", "user_agent": "Mozilla/5.0 (Linux; Android 10; K; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/145.0.0.0 Safari/537.36", "tls": true, "cookie_present": false, "basic_present": false}
+{"time": 1793449013.4915712, "kind": "http", "source": "10.91.0.2", "method": "GET", "path": "/favicon.ico", "user_agent": "Mozilla/5.0 (Linux; Android 10; K; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/145.0.0.0 Safari/537.36", "tls": true, "cookie_present": false, "basic_present": false}
+{"time": 1793449013.499921, "kind": "dns", "source": "10.91.0.2", "name": "content-autofill.googleapis.com", "qtype": 1, "transport": "udp"}
+{"time": 1793449013.5253758, "kind": "dns", "source": "10.91.0.2", "name": "content-autofill.googleapis.com", "qtype": 28, "transport": "udp"}
+{"time": 1793449013.7065647, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 1, "transport": "udp"}
+{"time": 1793449013.724195, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 28, "transport": "udp"}
+{"time": 1793449014.1702185, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 1, "transport": "udp"}
+{"time": 1793449014.175188, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 28, "transport": "udp"}
+{"time": 1793449014.235617, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 1, "transport": "udp"}
+{"time": 1793449014.2402122, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 28, "transport": "udp"}
+{"time": 1793449022.0076764, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 1, "transport": "udp"}
+{"time": 1793449022.0216973, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 28, "transport": "udp"}
+{"time": 1793449029.161138, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 1, "transport": "udp"}
+{"time": 1793449029.1829991, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 28, "transport": "udp"}
+{"time": 1793449032.518731, "kind": "http", "source": "10.91.0.2", "method": "GET", "path": "/private-app-slow178.txt", "user_agent": "Mozilla/5.0 (Linux; Android 10; K; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/145.0.0.0 Safari/537.36", "tls": true, "cookie_present": false, "basic_present": false}
+{"time": 1793449033.0341625, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 1, "transport": "udp"}
+{"time": 1793449033.0608118, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 28, "transport": "udp"}
+{"time": 1793449033.1359472, "kind": "http", "source": "10.91.0.2", "method": "GET", "path": "/private-app-slow178.txt", "user_agent": "Mozilla/5.0 (Linux; Android 10; K; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/145.0.0.0 Safari/537.36", "tls": true, "cookie_present": false, "basic_present": false}
+{"time": 1793449034.5414093, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 1, "transport": "udp"}
+{"time": 1793449034.585335, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 28, "transport": "udp"}
+{"time": 1793449034.9221387, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 1, "transport": "udp"}
+{"time": 1793449034.9316597, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 28, "transport": "udp"}
+{"time": 1793449034.9501307, "kind": "http", "source": "10.91.0.2", "method": "GET", "path": "/private-app-slow178.txt", "user_agent": "Mozilla/5.0 (Linux; Android 10; K; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/145.0.0.0 Safari/537.36", "tls": true, "cookie_present": false, "basic_present": false}
+{"time": 1793449035.2402444, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 1, "transport": "udp"}
+{"time": 1793449035.2563837, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 1, "transport": "udp"}
+{"time": 1793449035.2853818, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 28, "transport": "udp"}
+{"time": 1793449035.2937593, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 28, "transport": "udp"}
+{"time": 1793449035.490669, "kind": "http", "source": "10.91.0.2", "method": "GET", "path": "/private-app-slow178.txt", "user_agent": "Mozilla/5.0 (Linux; Android 10; K; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/145.0.0.0 Safari/537.36", "tls": true, "cookie_present": false, "basic_present": false}
+{"time": 1793449043.6229596, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 1, "transport": "udp"}
+{"time": 1793449043.6333842, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 28, "transport": "udp"}
+{"time": 1793449043.6725218, "kind": "http", "source": "10.91.0.2", "method": "GET", "path": "/private-apps178-551b7455-d0eb-43a2-aed2-fd72652ce0f2", "user_agent": "Mozilla/5.0 (Linux; Android 10; K; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/145.0.0.0 Safari/537.36", "tls": true, "cookie_present": false, "basic_present": false}
+{"time": 1793449043.8240445, "kind": "http", "source": "10.91.0.2", "method": "GET", "path": "/favicon.ico", "user_agent": "Mozilla/5.0 (Linux; Android 10; K; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/145.0.0.0 Safari/537.36", "tls": true, "cookie_present": false, "basic_present": false}
+{"time": 1793449045.076991, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 1, "transport": "udp"}
+{"time": 1793449045.0948288, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 28, "transport": "udp"}
+{"time": 1793449045.7169883, "kind": "http", "source": "10.91.0.2", "method": "GET", "path": "/private-app-document178.txt", "user_agent": "Mozilla/5.0 (Linux; Android 10; K; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/145.0.0.0 Safari/537.36", "tls": true, "cookie_present": false, "basic_present": false}
+{"time": 1793449046.081681, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 1, "transport": "udp"}
+{"time": 1793449046.0982068, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 28, "transport": "udp"}
+{"time": 1793449046.1559856, "kind": "http", "source": "10.91.0.2", "method": "GET", "path": "/private-app-document178.txt", "user_agent": "Mozilla/5.0 (Linux; Android 10; K; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/145.0.0.0 Safari/537.36", "tls": true, "cookie_present": false, "basic_present": false}
+{"time": 1793449046.3728101, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 1, "transport": "udp"}
+{"time": 1793449046.3803833, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 28, "transport": "udp"}
+{"time": 1793449046.4211419, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 1, "transport": "udp"}
+{"time": 1793449046.4241657, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 28, "transport": "udp"}
+{"time": 1793449047.4141529, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 1, "transport": "udp"}
+{"time": 1793449047.431229, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 28, "transport": "udp"}
+{"time": 1793449047.5274224, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 1, "transport": "udp"}
+{"time": 1793449047.559362, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 28, "transport": "udp"}
+{"time": 1793449048.6630964, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 1, "transport": "udp"}
+{"time": 1793449048.7171037, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 28, "transport": "udp"}
+{"time": 1793449049.012467, "kind": "http", "source": "10.91.0.2", "method": "GET", "path": "/private-apps178-551b7455-d0eb-43a2-aed2-fd72652ce0f2", "user_agent": "Mozilla/5.0 (Linux; Android 10; K; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/145.0.0.0 Safari/537.36", "tls": true, "cookie_present": false, "basic_present": false}
+{"time": 1793449049.0157542, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 1, "transport": "udp"}
+{"time": 1793449049.038792, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 28, "transport": "udp"}
+{"time": 1793449049.0468774, "kind": "http", "source": "10.91.0.2", "method": "GET", "path": "/favicon.ico", "user_agent": "Mozilla/5.0 (Linux; Android 10; K; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/145.0.0.0 Safari/537.36", "tls": true, "cookie_present": false, "basic_present": false}
+{"time": 1793449049.4219453, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 1, "transport": "udp"}
+{"time": 1793449049.4254549, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 28, "transport": "udp"}
+{"time": 1793449050.5576594, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 1, "transport": "udp"}
+{"time": 1793449050.5625165, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 28, "transport": "udp"}
+{"time": 1793449050.6210845, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 1, "transport": "udp"}
+{"time": 1793449050.626515, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 28, "transport": "udp"}
+{"time": 1793449050.6368275, "kind": "http", "source": "10.91.0.2", "method": "POST", "path": "/private-app-document-upload178", "tls": true, "document_exact": true, "upload_sha256": "8cbcbd8a28857b3f3c1ca25085f63d3bc585be69102e93d74b7487dbc14329e3"}
+{"time": 1793449050.6952448, "kind": "http", "source": "10.91.0.2", "method": "GET", "path": "/favicon.ico", "user_agent": "Mozilla/5.0 (Linux; Android 10; K; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/145.0.0.0 Safari/537.36", "tls": true, "cookie_present": false, "basic_present": false}
+{"time": 1793449050.7773466, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 1, "transport": "udp"}
+{"time": 1793449050.7907066, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 28, "transport": "udp"}
+{"time": 1793449050.8491077, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 1, "transport": "udp"}
+{"time": 1793449050.8544397, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 28, "transport": "udp"}
+{"time": 1793449050.8821893, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 1, "transport": "udp"}
+{"time": 1793449050.885173, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 28, "transport": "udp"}
+{"time": 1793449057.7093925, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 1, "transport": "udp"}
+{"time": 1793449057.7233741, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 28, "transport": "udp"}
+{"time": 1793449061.4985962, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 1, "transport": "udp"}
+{"time": 1793449061.5035112, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 28, "transport": "udp"}
+{"time": 1793449061.56489, "kind": "http", "source": "10.91.0.2", "method": "GET", "path": "/private-apps178-551b7455-d0eb-43a2-aed2-fd72652ce0f2", "user_agent": "okhttp/4.12.0", "tls": true, "cookie_present": false, "basic_present": false}
+{"time": 1793449061.6431744, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 1, "transport": "udp"}
+{"time": 1793449061.6538725, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 28, "transport": "udp"}
+{"time": 1793449061.6875312, "kind": "http", "source": "10.91.0.2", "method": "GET", "path": "/manifest178.json?start=/private-apps178-551b7455-d0eb-43a2-aed2-fd72652ce0f2", "user_agent": "okhttp/4.12.0", "tls": true, "cookie_present": false, "basic_present": false}
+{"time": 1793449061.7823842, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 1, "transport": "udp"}
+{"time": 1793449061.790116, "kind": "dns", "source": "10.91.0.2", "name": "native-phase.fixture.invalid", "qtype": 28, "transport": "udp"}
+{"time": 1793449061.8134627, "kind": "http", "source": "10.91.0.2", "method": "GET", "path": "/media.png", "user_agent": "okhttp/4.12.0", "tls": true, "cookie_present": false, "basic_present": false}

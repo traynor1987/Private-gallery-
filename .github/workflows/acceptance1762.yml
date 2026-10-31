@@ -229,7 +229,7 @@ jobs:
     timeout-minutes: 45
     env:
       # Exact tested source; independent approval and original-key upgrade gates remain mandatory.
-      FROZEN_SOURCE: '' # Pending exact-source review and approval; deliberately blocked
+      FROZEN_SOURCE: '4820e176dcb60a3aa2f1bfd7b36e2de19fafee11'
     steps:
       - uses: actions/checkout@v4
       - name: Preserve exact 1.7.8 approval and reviewed controls

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="uk.co.traynor.privategallery.core.privateapps.PrivateAppStoreIntegrationTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-10-31T12:06:57.068Z" hostname="runnervm48cm3" time="0.151">
+  <properties/>
+  <testcase name="missing_catalogue_keeps_existing_browser_records_unchanged" classname="uk.co.traynor.privategallery.core.privateapps.PrivateAppStoreIntegrationTest" time="0.026"/>
+  <testcase name="captured_primary_handle_never_inherits_a_new_unlock" classname="uk.co.traynor.privategallery.core.privateapps.PrivateAppStoreIntegrationTest" time="0.021"/>
+  <testcase name="corrupt_primary_file_cannot_be_silently_replaced" classname="uk.co.traynor.privategallery.core.privateapps.PrivateAppStoreIntegrationTest" time="0.009"/>
+  <testcase name="both_vaults_support_crud_restart_and_independent_ownership" classname="uk.co.traynor.privategallery.core.privateapps.PrivateAppStoreIntegrationTest" time="0.094"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

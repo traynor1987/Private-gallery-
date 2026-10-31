@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="uk.co.traynor.privategallery.core.privateapps.PrivateAppsControllerTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-10-31T12:06:57.228Z" hostname="runnervm48cm3" time="0.063">
+  <properties/>
+  <testcase name="move_to_publishes_once_preserves_complete_records_and_wipes_payload" classname="uk.co.traynor.privategallery.core.privateapps.PrivateAppsControllerTest" time="0.03"/>
+  <testcase name="revoke_before_callback_prevents_publication_and_wipes_request" classname="uk.co.traynor.privategallery.core.privateapps.PrivateAppsControllerTest" time="0.002"/>
+  <testcase name="drawer_launch_requires_the_original_presentation_after_delayed_authentication" classname="uk.co.traynor.privategallery.core.privateapps.PrivateAppsControllerTest" time="0.003"/>
+  <testcase name="launch_resolves_saved_id_and_revoked_controller_cannot_navigate" classname="uk.co.traynor.privategallery.core.privateapps.PrivateAppsControllerTest" time="0.026"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

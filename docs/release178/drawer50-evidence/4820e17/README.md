@@ -1,0 +1,1 @@
+Exact47 Android/35 JVM selected cases passed, zero failure/error/skip/duplicate. Original raw artifact 13042566506 sha256:5f153efbf5d330fd6f960a8a40a22a11748d6971ae8d6b5ca8184164131918f7. Text copies normalized to LF for Git; original packet data hashes recorded. Physical Fold acceptance remains OWNER_REQUIRED.

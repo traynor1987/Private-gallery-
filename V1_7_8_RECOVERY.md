@@ -1,10 +1,12 @@
 # Private Gallery 1.7.8 recovery
 
-## Current task: native Private Apps drawer / code50 verification pending
+## Current code50: exact source/runtime approved; controlled signing pending
 
-Owner added the Samsung-inspired drawer redesign after signed49 delivery. Keep version1.7.8; next code50 audited against available refs (maximum49). Existing branch/source implementation recovered from e31845df19623ddce3bdd6d649107b4f5e176442; preserve all49 app presentation, Exit, screenshots, PWA, transport/auth/encryption work. Drawer uses large icon/name tiles, direct authenticated tap, secure long-press/three-dot menus, search/Add App, and owner-permitted accessible tap-to-reorder mode. New MOVE_TO14 applies one atomic encrypted update without schema changes. Pending PIN/navigation callbacks are tied to the original drawer presentation.
+Frozen application `4820e176dcb60a3aa2f1bfd7b36e2de19fafee11`, version1.7.8/code50, Android17/API37. Drawer grid/menu/search/atomic reorder and presentation-bound launch preserve all code49 repairs/data. Main-thread publication is explicit for load/change/discovery/revocation with captured authority checks inside Main. Temporary production traces removed.
 
-Local8 policy groups and27 focused host/control tests pass; opcode14 was observed failing before implementation.47 Android cases preserve the previous43 and add drawer interaction/layout/isolation/reopen/stale-auth coverage. Firstcandidate80d61cb32d599fff3734c3d26c40f61824154933/run41190590737 failed44/47; rawartifact13039750250 SHA2560086c992aa138525b0228538010e92ba9da44ae2fc507e81f426f5ed86454f06 archivedunder drawer50-evidence/failure-80d61cb. Corrected fresh-presentation and real measured viewport tests, with production-grid extraction, require a new exact-source pass. Tor response failure remains unreclassified; routing/timeouts/security assertions unchanged. Local Gradle cannot acquire missing9.5 distribution; established CI must compile/lint/JVM and run one grouped exact-source suite. Independent source review currently has0identifiedCritical/Important; runtime approval is pending. Production50 gate is deliberately blank, marker unchanged, and requires fresh50 review/approval plus original-key actual signed49→50 preservation/restart before delivery. See docs/superpowers/specs/2026-10-31-private-apps-drawer-design.md and plans/2026-10-31-private-apps-drawer.md. No1.7.9/1.7.8.1 work.
+Exact full run41199473035/job124532229844 passes47Android/35JVM, no failures/errors/skips/duplicates, strictVPN/Tor/DNS/revocation and stable renderedAPI37. Artifact13042566506 SHA2565f153efbf5d330fd6f960a8a40a22a11748d6971ae8d6b5ca8184164131918f7 independently revalidated twice. Consolidated independent review APPROVED0openCritical/Important; report SHA2564a07bbe288ebe2448d4e0982f45779c175aad2aefdff71831b77771561eb13a9. Prior failed runs and one-case diagnostics remain nonapproval historical evidence.
+
+Production marker/control prepared for this exact frozen application. Actual archived original-key signed49→50 in-place seed/install-r/verify/force-stop/restart, release lint/build/identity/distribution, original certificate and independent final APK signature/digest review remain mandatory before delivery. No APK50 delivered yet; physical Fold OWNER_REQUIRED. No uninstall/data clear or1.7.9/1.7.8.1 work.
 
 ## Previous release: code49 verified and delivered for owner acceptance
 
@@ -532,3 +534,8 @@ Sourceeee3fd5aefb8f22c02a6d97e653459748a385a10/run41193907312/job124516103035 fa
 ## Drawer publication correction awaiting full verification
 
 Narrowtracec9da1e052dc1870e4d5ab6298642610d7959a2ac/run41198457901 onecasePASS, artifact13041862355 SHA25612700a867daf63a07560be4d586434969a567df212348df0f8c38693df500efd; DIAGNOSTICONLY, no releaseapproval. TraceprovesfirstloadpublishedonIOthread whilefreshloadpublishedonMain. DoesnotproveoffMaincausedallpriorstalls; logging-onlypassisnotafix. FinalcorrectionexplicitMain publication forload/mutation/discoveryandpollrevocation, originalcapturedauthoritycheckedinsideMain; cancellationpropagates; allproductiontracesremoved. 8hostgroups/27controltestsPASS; newexactfull47Android/JVM/strictpacketproof andindependentreviewmandatory. Signingblocked.
+
+
+## Exact code50 source approved for controlled signing
+
+Application 4820e176dcb60a3aa2f1bfd7b36e2de19fafee11; original exact focused run 41199473035/artifact13042566506 sha256:5f153efbf5d330fd6f960a8a40a22a11748d6971ae8d6b5ca8184164131918f7. Independent47Android/35JVM and strict VPN/Tor/DNS/revocation proof PASS, approved0openCritical/Important; report SHA256 4a07bbe288ebe2448d4e0982f45779c175aad2aefdff71831b77771561eb13a9. Original-key archived49→50 in-place upgrade, restart and final artifact verification remain mandatory before delivery. Physical Fold OWNER_REQUIRED.

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="uk.co.traynor.privategallery.core.privateapps.PrivateAppMetadataTransportTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-10-31T12:06:56.696Z" hostname="runnervm48cm3" time="0.336">
+  <properties/>
+  <testcase name="temporary_http_failure_reports_unavailable_without_retry" classname="uk.co.traynor.privategallery.core.privateapps.PrivateAppMetadataTransportTest" time="0.324"/>
+  <testcase name="refuses_redirects_and_never_sends_credentials" classname="uk.co.traynor.privategallery.core.privateapps.PrivateAppMetadataTransportTest" time="0.01"/>
+  <testcase name="rejects_before_request_when_authority_is_revoked" classname="uk.co.traynor.privategallery.core.privateapps.PrivateAppMetadataTransportTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

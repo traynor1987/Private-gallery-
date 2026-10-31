@@ -382,3 +382,8 @@ Sourceeee3fd5aefb8f22c02a6d97e653459748a385a10/run41193907312/job124516103035 fa
 ## Drawer publication correction awaiting full verification
 
 Narrowtracec9da1e052dc1870e4d5ab6298642610d7959a2ac/run41198457901 onecasePASS, artifact13041862355 SHA25612700a867daf63a07560be4d586434969a567df212348df0f8c38693df500efd; DIAGNOSTICONLY, no releaseapproval. TraceprovesfirstloadpublishedonIOthread whilefreshloadpublishedonMain. DoesnotproveoffMaincausedallpriorstalls; logging-onlypassisnotafix. FinalcorrectionexplicitMain publication forload/mutation/discoveryandpollrevocation, originalcapturedauthoritycheckedinsideMain; cancellationpropagates; allproductiontracesremoved. 8hostgroups/27controltestsPASS; newexactfull47Android/JVM/strictpacketproof andindependentreviewmandatory. Signingblocked.
+
+
+## Exact code50 source approved for controlled signing
+
+Application 4820e176dcb60a3aa2f1bfd7b36e2de19fafee11; original exact focused run 41199473035/artifact13042566506 sha256:5f153efbf5d330fd6f960a8a40a22a11748d6971ae8d6b5ca8184164131918f7. Independent47Android/35JVM and strict VPN/Tor/DNS/revocation proof PASS, approved0openCritical/Important; report SHA256 4a07bbe288ebe2448d4e0982f45779c175aad2aefdff71831b77771561eb13a9. Original-key archived49→50 in-place upgrade, restart and final artifact verification remain mandatory before delivery. Physical Fold OWNER_REQUIRED.

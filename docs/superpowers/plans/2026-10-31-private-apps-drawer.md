@@ -31,12 +31,12 @@
 **Files:** ui/PrivateAppsLibrary.kt, BrowserV2Home.kt, core/browser/hidden/HiddenVpnBrowserActivity.kt; PrivateAppsDrawer50Test and migrated UI/native tests.
 - [x] Write tests for tap/PIN, longpress/menu/search/settings/remove/reorder, four-column360dp, large text, separate owner/lock/reopen.
 - [x] Replace management cards with grid/menu/reorder mode; use existing editor and PrivateAppSettings; gate callbacks to original presentation.
-- [ ] Run host checks, compile/lint and one grouped Android suite; diagnose failures before retry. Preserve all previous43 mandatory cases.
+- [x] Run host checks, compile/lint and one grouped Android suite; diagnose failures before retry. Preserve all previous43 mandatory cases.
 
 ### Task3: Release verification and delivery
 **Files:** established178 release controls, UpgradeFixtureTest, version metadata, recovery/tracker/evidence reports.
 - [x] Pin exact actual signed49 APK/source/certificate, code50; preserve prior releases.
-- [ ] Review exact implementation/runtime independently, resolve Critical/Important findings; freeze exact passing SHA.
+- [x] Review exact implementation/runtime independently, resolve Critical/Important findings; freeze exact passing SHA.
 - [ ] Activate original-key49→50 seed/install-r/verify/restart and production identity/distribution gates.
 - [ ] Independently verify actual APK signature/digest/identity and upgrade logs; save one APK + filtered evidence, commit/push/independently verify remote and hand off with Fold checklist.
 
