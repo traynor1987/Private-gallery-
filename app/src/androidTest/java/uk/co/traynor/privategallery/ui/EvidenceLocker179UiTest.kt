@@ -198,8 +198,16 @@ class EvidenceLocker179UiTest {
    compose.setContent{CompositionLocalProvider(LocalContext provides f.context){PrivateGalleryTheme(AppTheme.DARK){EvidenceLocker(controller,{closed.incrementAndGet()},{},{},{},{})}}}
    compose.runOnIdle{controller.register(f.ids.first())};waitReady(controller,1)
    compose.onNodeWithText("Library").performClick();compose.onNodeWithTag("evidence-search").performTextReplacement("Alice")
-   compose.evidenceNode(hasContentDescription("Select evidence alpha179.txt")).performClick()
-   compose.evidenceNode(hasText("alpha179.txt") and hasClickAction()).performClick();waitReady(controller,1);click("Review / correct")
+   val selectAlpha=hasContentDescription("Select evidence alpha179.txt")
+   compose.evidenceNode(selectAlpha).performClick()
+   compose.evidenceNode(selectAlpha).assertIsOn()
+   // Selection updates header controls; settle that composition before locating the next touch target.
+   compose.waitForIdle()
+   val openAlpha=hasText("alpha179.txt") and hasClickAction()
+   compose.onNodeWithTag("evidence-list").performScrollToNode(openAlpha)
+   try{compose.waitUntil(10000){compose.onAllNodes(openAlpha).fetchSemanticsNodes().size==1&&compose.onNode(openAlpha).isDisplayed()}}
+   catch(failure:ComposeTimeoutException){val s=controller.state.value;throw AssertionError("Selected Hidden evidence open target: matches=${compose.onAllNodes(openAlpha).fetchSemanticsNodes().size} closed=${closed.get()} busy=${s.busy} records=${s.catalog?.evidence()?.size}",failure)}
+   compose.onNode(openAlpha).assertIsDisplayed().performClick();waitReady(controller,1);click("Review / correct")
    field("Owner-corrected text").performTextReplacement("Unsaved private179")
    compose.runOnIdle{f.hidden!!.lock()}
    compose.waitUntil(10000){closed.get()>0&&controller.state.value.catalog==null}

@@ -1,6 +1,6 @@
 # 1.7.9 completion gates
 
-Implementation ledger, not release approval. No 1.7.9 production APK exists. Reviewed security correction backup `d854b713fa5907e87c3662635cdaeee4973a3069`; first Android17 run41237030300 on earlierddd0source was cancelled45min after121completions/18failures andoneHiddenpickerstall. Runtimefix1 source reviewed and run41242395860 completed149nonroute135PASS14FAIL0skip; fourOwnedRouteunreached. Third run41248625435 atddc0 completed149 nonroute147PASS/2FAIL/0skip; four routes unreached. Runtimefix3 test changes source-accepted; runner Important R179-F3-1 correction accepted by fresh RUNTIME179_RUNNER_FIX1,11focused host controlsPASS. No final runtime approval. See PROGRESS/recovery for latest exact source.
+Implementation ledger, not release approval. No179productionAPK exists. Latest actualsource29a2a7b0/run41252039247 completed153exactunique152PASS1HiddenUIfail0skip; allfouractualownedroutecasesPASS, strictpacket/finalgatesblocked. UIcorrection sourceacceptedRUNTIME179_FIX4. Readonlyrawdiagnosis foundclassname/numericfirewall/independentclockuncertaintyblockers; narrowcalibrationdesign+reviewrequired beforecode. Allpriorvalidsource/evidencepreserved.
 
 | Requirement | Verified evidence | Remaining gate |
 |---|---|---|
@@ -14,7 +14,7 @@ Implementation ledger, not release approval. No 1.7.9 production APK exists. Rev
 | Export/report/open | Format66 and migration/history/buffer checks; EXPORT179_FIX2 source accepted; encrypted default, historical lineage, PDF/JSON/originals, bounded authenticated open | Actual28 archive cases and late-tag/snapshot/held-SAF regressions PASS in ddc0 originalXML; final full-source gates mandatory |
 | UI/Fold/theme | Bulk registration, mixed export, OCR/incident/search/timeline screens, large-text landscape tests; INTEGRATION179_FIX2 accepted; compiled | Actual theme/layout/accessibility workflows; physical Fold owner acceptance |
 | Auth/Hide/Panic/SAF | Captured authorities, generation admission, renewed same-session picker access, original-document protection; reviewed and compiled | Actual Main/session/lock/panic/SAF tests |
-| Hidden VPN/Tor/DNS | Four actual owned-route cases, raw pcap/events validator; ROUTES179_FIX1 accepted,60 host methods passed, fixtures prepared | Actual route windows/packet/receipt proof |
+| Hidden VPN/Tor/DNS | Four actual owned-route cases, raw pcap/events validator; ROUTES179_FIX1 accepted,60 host methods passed, fixtures prepared | FouractualrouteXMLPASS at29a2; fix3rawproofblockersandrunstrictpacket/receiptvalidator |
 | Focused Android17 | Exact153-case manifest; oldsource compile/OCR/native passed; original artifact13056983469 digest independently verified | Corrected-source compile/full runtime/XML/raw owned-route proof; current149-case partialXML is supporting evidence only; no153-case release pass |
 | Upgrade50→51 | Original signed50 archive; reviewed legacy-preserving reflective fixture; pre-signer compile helper and strict receipts prepared | Controls source review accepted; actual baseline fixture compile, original-key install-r/restart |
 | Security review | Foundation/access/OCR/AI/export/UI/route scoped fixes accepted | Consolidated source review twoImportant findings corrected/source-accepted; final actual runtime and same-review evidence approval pending |
