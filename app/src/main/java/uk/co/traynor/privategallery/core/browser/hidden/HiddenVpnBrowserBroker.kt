@@ -496,6 +496,7 @@ internal class HiddenVpnBrowserBroker(
                     check(read in 1..(count-done));done+=read
                 }
                 current()
+                if(uk.co.traynor.privategallery.BuildConfig.DEBUG)runCatching {android.util.Log.i("HiddenUploadRead","offset=$offset requested=$requested returned=$count")}
                 succeeded=true;return count
             } catch(_:Exception) {throw android.system.ErrnoException("Hidden upload unavailable",android.system.OsConstants.EIO)}
             finally {if(!succeeded)data.fill(0)}

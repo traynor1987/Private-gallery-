@@ -40,11 +40,11 @@ public final class FixtureHttpResponse178 {
   try {
    while(received<length) {
     int count=input.read(body,received,length-received);
-    if(count<1)throw new IOException();
+    if(count<1)throw new IOException("Fixture EOF or empty read");
     received+=count;
    }
    return new String(body,StandardCharsets.UTF_8);
-  }catch(IOException failure){throw new IOException("Fixture HTTP body bytes="+received+" expected="+length);}
+  }catch(IOException failure){throw new IOException("Fixture HTTP body bytes="+received+" expected="+length+" cause="+failure.getClass().getSimpleName());}
   finally{Arrays.fill(body,(byte)0);}
  }
 }

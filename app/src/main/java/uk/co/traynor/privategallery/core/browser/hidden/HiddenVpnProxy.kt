@@ -90,7 +90,7 @@ internal class HiddenVpnProxy(
                 output.write("Host: ${uri.rawAuthority}\r\nConnection: close\r\n\r\n".toByteArray(Charsets.ISO_8859_1))
             }
             output.flush();client.soTimeout=0
-            workers.execute {try {pump(input,output);runCatching {shutdown()}} catch(_:Exception) {runCatching {upstream.close()};runCatching {client.close()}}}
+            workers.execute {try {pump(input,output,torUnixPath!=null);runCatching {shutdown()}} catch(_:Exception) {runCatching {upstream.close()};runCatching {client.close()}}}
             try {pump(upstreamInput,client.getOutputStream())}catch(failure:Exception) {
                 if(uk.co.traynor.privategallery.BuildConfig.DEBUG && torUnixPath!=null)runCatching {
                     android.util.Log.i("HiddenTorSocket","phase=upstream_response cause=${failure.javaClass.simpleName}")
@@ -99,9 +99,14 @@ internal class HiddenVpnProxy(
             }
         } finally {sockets.remove(upstream);runCatching {upstream.close()}}
     }
-    private fun pump(input:InputStream,output:java.io.OutputStream) {
+    private fun pump(input:InputStream,output:java.io.OutputStream,requestBody:Boolean=false) {
+        var transferred=0L
+        var complete=false
         val buffer=ByteArray(32*1024)
-        try {while(true) {checkAllowed();val n=input.read(buffer);if(n<0)break;checkAllowed();output.write(buffer,0,n);output.flush()}} finally {buffer.fill(0)}
+        try {while(true) {checkAllowed();val n=input.read(buffer);if(n<0)break;checkAllowed();output.write(buffer,0,n);output.flush();transferred+=n};complete=true} finally {
+            buffer.fill(0)
+            if(requestBody && uk.co.traynor.privategallery.BuildConfig.DEBUG)runCatching {android.util.Log.i("HiddenTorSocket","phase=request_body bytes=$transferred complete=$complete")}
+        }
     }
     override fun close() {
         synchronized(admission) {if(!closed.compareAndSet(false,true))return;runCatching {server.close()};sockets.forEach {runCatching {it.close()}};sockets.clear()}

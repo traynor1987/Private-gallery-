@@ -1,0 +1,13 @@
+# Code49 physical Galaxy Z Fold acceptance
+
+Pending signed artifact delivery and owner testing. Install the verified code49 update over code48; never uninstall or clear app data.
+
+1. Confirm version1.7.8/code49. Unlock each Vault with its independent credential and confirm existing encrypted media, saved apps, settings and permitted retained Primary logins.
+2. Open a saved app: direct start page, saved name/icon, branded loading, compact controls, no permanent browser tabs/address bar in app style. Expand controls to access optional address/settings/security details; confirm out-of-scope warnings remain visible.
+3. Navigate and Back within the app. At root, Back returns to the library. Exit App returns to the library; reopen after the configured PIN check and confirm retained session. Switch apps, then Close App and reopen. Verify Exit to Gallery, Lock Vault and Panic Exit have their distinct intended results.
+4. With screenshot capture explicitly allowed by the originating Vault policy, capture authorised synthetic content. Review the protected preview; Cancel leaves no saved item. Recapture, Save screenshot, confirm the named encrypted Vault, then View Screenshot. Verify correct visible-content cropping/orientation on cover and inner screens. Protected/video/embedded and JavaScript-disabled Tor captures must remain refused; no public Gallery copy.
+5. Add a synthetic compatible PWA manually and through Add Current Website. Check Install as Private Web App versus explained Private Website fallback, start URL, icon and saved settings. This runs within Private Gallery; it is not a separate Android package and does not promise push/background/offline capabilities.
+6. Repeat supported flows in Hidden VPN/Tor; Tor JavaScript stays disabled by default. Check no Hidden names/previews appear in Primary and no app remains usable after authentication expiry, Lock, Hide Content or Panic.
+7. Check light/dark themes, cover/inner, portrait/landscape, fold/unfold, large text and keyboard. Report any unexpected blank frame, clipped action, missing connection warning or trapped navigation.
+
+Primary apps/tabs share one Primary WebView profile. Login retention and clearing affect that profile; app Close does not imply per-app cookie deletion. Hidden apps share only their current separate ephemeral Hidden profile, cleared when that browser session closes. Exit App alone keeps the current profile. Screenshot saving/viewing is confined to the captured authenticated originating Vault. Cross-vault access requires its independent authentication; no unauthenticated target selector is provided.

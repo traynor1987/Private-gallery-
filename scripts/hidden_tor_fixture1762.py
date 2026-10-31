@@ -91,7 +91,11 @@ def handler_class(base, root, payload):
                 self.close_connection = True
                 self.send_bytes(413, b'Bounded Content-Length required')
                 return
+            # Separate admission from completion: a stalled multipart body must not look
+            # like a touch that never reached the controlled origin. Synthetic fixture only.
+            self.event(kind='body-start', path=self.path, declared_length=int(length))
             body = self.rfile.read(int(length))
+            self.event(kind='body-complete', path=self.path, received_length=len(body), declared_length=int(length))
             form_ok = self.path == '/form-result' and parse_qs(body.decode('utf-8', errors='replace')).get('value') == ['fixture-form-body']
             file_bytes = None
             content_type = self.headers.get('Content-Type', '')

@@ -1,0 +1,28 @@
+{
+  "source_sha": "4b983acef451443ea9fb534818fa30199dcd572a",
+  "run_id": 41161433965,
+  "job_id": 124419877112,
+  "artifact_id": 13027917173,
+  "artifact_sha256": "eb0cc7272b2f905f461d37c742fc72a4013c91c753922b4c2fd9be5fa8676a3f",
+  "decision": "FAILED",
+  "android_cases": 43,
+  "passed": 40,
+  "failures": [
+    {
+      "classname": "uk.co.traynor.privategallery.ui.PrivateAppScreenshot49Test",
+      "name": "review_cancel_save_and_view_read_the_committed_primary_item",
+      "failure": "androidx.compose.ui.test.ComposeTimeoutException: Condition still not satisfied after 5000 ms\nat androidx.compose.ui.test.AndroidComposeUiTestEnvironment$AndroidComposeUiTestImpl.waitUntil(ComposeUiTest.android.kt:441)\nat androidx.compose.ui.test.junit4.AndroidComposeTestRule.waitUntil(AndroidComposeTestRule.android.kt:306)\nat uk.co.traynor.privategallery.ui.PrivateAppScreenshot49Test.review_cancel_save_and_view_read_the_committed_primary_item(PrivateAppScreenshot49Test.kt:70)\n"
+    },
+    {
+      "classname": "uk.co.traynor.privategallery.ui.PrivateAppsUi178Test",
+      "name": "discovers_synthetic_pwa_previews_icon_and_persists_metadata",
+      "failure": "java.lang.AssertionError: Failed to assert the following: (Text + EditableText = [https://example.test/app/])\nSemantics of the node:\nNode #994 at (l=24.0, t=142.0, r=536.0, b=206.0)px, Tag: 'private-app-url'\nEditableText = 'https://example.test/app/'\nTextSelectionRange = 'TextRange(0, 0)'\nIsEditable = 'true'\nImeAction = 'Default'\nFocused = 'false'\nText = '[Website URL]'\nActions = [GetTextLayoutResult, SetText, InsertTextAtCursor, SetSelection, PerformImeAction, OnClick, OnLongClick, PasteText, RequestFocus, SetTextSubstitution, ShowTextSubstitution, ClearTextSubstitution]\nMergeDescendants = 'true'\nHas 7 siblings\nSelector used: (TestTag = 'private-app-url')\n\nat androidx.compose.ui.test.AssertionsKt.assert(Assertions.kt:265)\nat androidx.compose.ui.test.AssertionsKt.assert$default(Assertions.kt:255)\nat androidx.compose.ui.test.AssertionsKt.assertTextEquals(Assertions.kt:185)\nat androidx.compose.ui.test.AssertionsKt.assertTextEquals$default(Assertions.kt:181)\nat uk.co.traynor.privategallery.ui.PrivateAppsUi178Test.discovers_synthetic_pwa_previews_icon_and_persists_metadata(PrivateAppsUi178Test.kt:61)\n"
+    },
+    {
+      "classname": "uk.co.traynor.privategallery.core.browser.hidden.HiddenPrivateAppsLive178Test",
+      "name": "torCatalogueCrudOnionLaunchAndRevocationUseAuthenticatedSeparateProcess",
+      "failure": "java.lang.AssertionError: Real WebView multipart upload preserves exact encrypted document bytes\nat uk.co.traynor.privategallery.core.browser.hidden.HiddenPrivateAppsLive178Test.waitFor(HiddenPrivateAppsLive178Test.kt:61)\nat uk.co.traynor.privategallery.core.browser.hidden.HiddenPrivateAppsLive178Test.exercise(HiddenPrivateAppsLive178Test.kt:541)\nat uk.co.traynor.privategallery.core.browser.hidden.HiddenPrivateAppsLive178Test.torCatalogueCrudOnionLaunchAndRevocationUseAuthenticatedSeparateProcess(HiddenPrivateAppsLive178Test.kt:718)\n... 8 trimmed\nCaused by: java.io.IOException: Fixture HTTP body bytes=3315 expected=4877\nat uk.co.traynor.privategallery.core.browser.hidden.FixtureHttpResponse178.read(FixtureHttpResponse178.java:47)\nat uk.co.traynor.privategallery.core.browser.hidden.HiddenPrivateAppsLive178Test.torCatalogueCrudOnionLaunchAndRevocationUseAuthenticatedSeparateProcess$lambda$1$5(HiddenPrivateAppsLive178Test.kt:724)\nat uk.co.traynor.privategallery.core.browser.hidden.HiddenPrivateAppsLive178Test.$r8$lambda$2dJ7Yf2fZc0pOp7Kwb7pmi39Lb8(HiddenPrivateAppsLive178Test.kt:0)\nat uk.co.traynor.privategallery.core.browser.hidden.HiddenPrivateAppsLive178Test$$ExternalSyntheticLambda20.invoke(D8$$SyntheticClass:0)\nat uk.co.traynor.privategallery.core.browser.hidden.HiddenPrivateAppsLive178Test.exercise$lambda$70(HiddenPrivateAppsLive178Test.kt:542)\nat uk.co.traynor.privategallery.core.browser.hidden.HiddenPrivateAppsLive178Test$$ExternalSyntheticLambda77.invoke(D8$$SyntheticClass:0)\nat uk.co.traynor.privategallery.core.browser.hidden.HiddenPrivateAppsLive178Test.waitFor(HiddenPrivateAppsLive178Test.kt:58)\n... 11 more\n"
+    }
+  ],
+  "signing": "BLOCKED"
+}

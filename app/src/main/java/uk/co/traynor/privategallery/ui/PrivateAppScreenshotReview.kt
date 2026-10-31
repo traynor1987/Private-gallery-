@@ -38,7 +38,8 @@ internal fun PrivateAppScreenshotReview(request:PrivateAppScreenshotRequest,onCl
     var saved by remember(request){mutableStateOf(false)}
     var viewing by remember(request){mutableStateOf(false)}
     var message by remember(request){mutableStateOf("")}
-    val close by rememberUpdatedState(onClose)
+    // Async work belongs to this capture; a late dismissal cannot close its replacement.
+    val close=remember(request){onClose}
     val lifecycle=androidx.lifecycle.compose.LocalLifecycleOwner.current.lifecycle
     fun consume(){if(consumed.compareAndSet(false,true))request.source.onConsumed()}
     fun current()=alive.get() && request.current()

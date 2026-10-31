@@ -1,6 +1,10 @@
 # Private Gallery 1.7.8 recovery
 
-## Current release: code 48 delivered for owner acceptance
+## Current repair: code49 / runtime and signing pending
+
+The owner requested further standalone app experience, Exit/root-Back and protected screenshot workflow repairs after code48. Continue version1.7.8 unchanged with next available code49. Current application/test source `4b983acef451443ea9fb534818fa30199dcd572a`; focused run `41161433965` FAILED40/43 (artifact13027917173 SHA256eb0cc7272b2f905f461d37c742fc72a4013c91c753922b4c2fd9be5fa8676a3f). See repair49-evidence/failure-4b983ac. Request-scoped screenshot close, precise PWA prefill assertion and bounded Tor transfer diagnostics are prepared for the next exact-source run; Tor completion remains unresolved until that original run passes. Do not sign or claim completion until exact-source compile/lint, 43 selected Android cases, JVM/network gates, independent consolidated review and original-key archived48→49 upgrade/restart pass. Source corrections retain existing engines and catalogue schema2. See `docs/release178/REPAIR49_PLAN.md` and `RELEASE49_PREPARATION.md`. Earlier62bcc/85e6 compilation runs were superseded before Android after ownership/regression corrections; preserve their outcomes as historical only.
+
+## Previous release: code48 delivered for owner acceptance
 
 Private Gallery **1.7.8/code 48**, package `uk.co.traynor.privategallery`, Android 17/API 37. Frozen application source `41b6d065a3fbef2f711198c9c778f7100e620c8f`; successful signing/upgrade control `1613339778a8c29bafe699af87b40504152977b3`. All later changes in this final backup are documentation/evidence only.
 

@@ -58,7 +58,8 @@ class PrivateAppsUi178Test {
   try {
    compose.setContent{PrivateGalleryTheme(AppTheme.LIGHT){PrivateAppsLibrary(controller,{},initialUrl="https://example.test/app/",initialName="Current fixture")}}
    compose.waitUntil(5000){compose.onAllNodesWithTag("private-app-url").fetchSemanticsNodes().isNotEmpty()}
-   compose.onNodeWithTag("private-app-url").assertTextEquals("https://example.test/app/")
+   compose.onNodeWithTag("private-app-url").assert(SemanticsMatcher.expectValue(
+    androidx.compose.ui.semantics.SemanticsProperties.EditableText,androidx.compose.ui.text.AnnotatedString("https://example.test/app/")))
    compose.waitUntil(5000){compose.onAllNodesWithText("Install as Private Web App").fetchSemanticsNodes().isNotEmpty()}
    compose.onNodeWithText("Install as Private Web App").performClick()
    compose.waitUntil(5000){compose.onAllNodesWithText("Synthetic PWA").fetchSemanticsNodes().isNotEmpty()}

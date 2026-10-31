@@ -44,7 +44,7 @@ class PrivateAppScreenshot49Test {
    })},
    {id ->reads++;assertEquals(receipt,id);repo.readForViewing(repo.items().single{it.id==id})})
   try {
-   compose.setContent{PrivateGalleryTheme{request?.let{PrivateAppScreenshotReview(it){request=null}}}}
+   compose.setContent{PrivateGalleryTheme{request?.let{owned ->PrivateAppScreenshotReview(owned){if(request===owned)request=null}}}}
    compose.runOnIdle{request=capture()}
    compose.waitUntil(5000){compose.onAllNodesWithContentDescription("Protected screenshot preview").fetchSemanticsNodes().isNotEmpty()}
    compose.onNodeWithText("Review screenshot").assertIsDisplayed()
@@ -64,13 +64,22 @@ class PrivateAppScreenshot49Test {
    assertProtectedDialog()
    compose.runOnIdle{assertEquals(1,reads)}
    compose.onNodeWithText("Done").performClick()
-   compose.runOnIdle{assertEquals(2,consumed)}
+   compose.runOnIdle{assertEquals(2,consumed);assertNull(request)}
+   compose.onNodeWithText("Saved screenshot").assertDoesNotExist()
+   compose.onNodeWithContentDescription("Protected screenshot preview").assertDoesNotExist()
    assertEquals(2,repo.items().size)
    compose.runOnIdle{request=capture()}
    compose.waitUntil(5000){compose.onAllNodesWithContentDescription("Protected screenshot preview").fetchSemanticsNodes().isNotEmpty()}
+   // Replace a mounted review directly: old effects/disposal must not dismiss the new capture.
+   lateinit var replacement:PrivateAppScreenshotRequest
+   compose.runOnIdle{replacement=capture();request=replacement}
+   compose.waitUntil(5000){consumed==3 && compose.onAllNodesWithContentDescription("Protected screenshot preview").fetchSemanticsNodes().isNotEmpty()}
+   compose.runOnIdle{assertSame(replacement,request);assertEquals(1,reads)}
+   compose.onNodeWithText("Review screenshot").assertIsDisplayed()
+   assertProtectedDialog()
    compose.runOnIdle{live=false}
    compose.waitUntil(5000){compose.onAllNodesWithText("Review screenshot").fetchSemanticsNodes().isEmpty()}
-   compose.runOnIdle{assertEquals(3,consumed);assertEquals(1,reads)}
+   compose.runOnIdle{assertEquals(4,consumed);assertEquals(1,reads)}
    assertEquals("Revoked preview cannot publish another item",2,repo.items().size)
    val unchanged=repo.items().single{it.id==original.id}
    assertFalse(unchanged.vaultOnly);assertEquals(original.sourceUri,unchanged.sourceUri)
@@ -88,7 +97,7 @@ class PrivateAppScreenshot49Test {
   var saves=0;var consumes=0;var reads=0
   val receipt="committed-receipt-49"
   try {
-   compose.setContent{PrivateGalleryTheme{request?.let{PrivateAppScreenshotReview(it){request=null}}}}
+   compose.setContent{PrivateGalleryTheme{request?.let{owned ->PrivateAppScreenshotReview(owned){if(request===owned)request=null}}}}
    compose.runOnIdle {request=PrivateAppScreenshotRequest(
     VaultImportSource("screenshot.png","image/png",{png.inputStream()},vaultOnly=true,onConsumed={consumes++}),
     "Primary Vault",{true},
