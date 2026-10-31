@@ -339,3 +339,8 @@ Independent signed artifact review VERIFIED_FOR_OWNER_ACCEPTANCE_DELIVERY0Critic
 ## Code49 owner experience repair — verification pending
 
 Version1.7.8 retained, nextcode49, signed48 baseline pinned. Existing implementation/schema2/security engines preserved. Repair scope: persistent Exit App, root Back→Library, distinct Close/ExitGallery/Lock/Panic actions, retained-session switching, current-page discovery prefill, protected screenshot review/cancel, distinct encrypted save and actual saved-item View with lifecycle/revocation cleanup. Source4b983acef451443ea9fb534818fa30199dcd572a;43 focused Android cases selected. Local8 policy programs and14 release-control tests PASS; source review0openCritical/Important, runtime approval PENDING. CI41161433965, original-key48→49 upgrade/restart and production signature/artifact verification must pass before completion. Physical Fold checklist: REPAIR49_OWNER_ACCEPTANCE.md; no physical acceptance claim.
+
+
+## Code49 corrected exact-source verification
+
+Source60f089d6e003fd13f8b7649feb6f44167e5028a2 / run41163111993 / job124424793963 is pending. Previous4bsource failed40/43; its original failures are preserved in repair49-evidence/failure-4b983ac. Corrected screenshot callback ownership and exact PWA EditableText assertion; added bounded non-content Tor body diagnostics without changing routing, timeouts or exact-body/privacy assertions. Independent source review0openCritical/Important; no runtime/signing approval. Local8 policy programs and27 focused host/control tests PASS. Continue through exact43-case Android/network proof, original-key archived48→49 upgrade/restart and signed artifact verification; this backup is not completion.
