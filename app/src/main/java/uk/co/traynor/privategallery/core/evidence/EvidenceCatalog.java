@@ -145,6 +145,13 @@ public final class EvidenceCatalog {
  public EvidenceCatalog rejectSuggestion(String suggestionId,long now) {digest(suggestionId);if(rejectedSuggestions.contains(suggestionId))return this;if(suggestions().stream().noneMatch(s->s.id().equals(suggestionId)))throw invalid("Suggestion unavailable");List<String> rejected=new ArrayList<>(rejectedSuggestions);rejected.add(suggestionId);return changed(evidence,incidents,analyses,rejected,now,"REJECT_SUGGESTION",List.of(suggestionId),"Suggestion rejected; no grouping applied");}
  public EvidenceCatalog acceptSuggestion(Suggestion value,String newIncidentId,String title,long now) {
   Objects.requireNonNull(value);Suggestion actual=suggestions().stream().filter(s->s.id().equals(value.id())).findFirst().orElseThrow(()->invalid("Suggestion unavailable"));if(!actual.equals(value))throw invalid("Suggestion changed");uuid(newIncidentId);if(index(incidents,newIncidentId,Incident::id)>=0)throw invalid("Incident already exists");
+  if(actual.kind().equals("ASSIGN")) {
+   Incident target=requireIncident(actual.incidentId());if(target.archived())throw invalid("Suggested incident archived");
+   List<SourceFingerprint> lineage=new ArrayList<>(target.lineage());for(String id:actual.evidenceIds())lineage.add(fingerprint(requireEvidence(id)));
+   Incident updated=withIncident(target,union(target.evidenceIds(),actual.evidenceIds()),target.events(),target.manualOrder(),target.archived(),unionSources(lineage));
+   List<Incident> groups=new ArrayList<>(incidents);groups.set(index(incidents,target.id(),Incident::id),updated);List<String> rejected=new ArrayList<>(rejectedSuggestions);rejected.add(actual.id());
+   return changed(evidence,groups,analyses,rejected,now,"ACCEPT_ASSIGN_SUGGESTION",union(List.of(actual.id(),target.id()),actual.evidenceIds()),"Owner linked suggested references; no incident merged or original changed");
+  }
   List<SourceFingerprint> sources=new ArrayList<>();for(String id:actual.evidenceIds())sources.add(fingerprint(requireEvidence(id)));Incident created=new Incident(newIncidentId,title,0,0,"","",List.of(),actual.evidenceIds(),List.of(),false,false,unionSources(sources));List<Incident> groups=new ArrayList<>(incidents);groups.add(created);List<String> rejected=new ArrayList<>(rejectedSuggestions);rejected.add(actual.id());return changed(evidence,groups,analyses,rejected,now,"ACCEPT_SUGGESTION",union(List.of(actual.id(),newIncidentId),actual.evidenceIds()),"Owner accepted grouping hint: "+String.join(", ",actual.reasons()));
  }
  public List<Event> timeline(String incidentId) {Incident incident=requireIncident(incidentId);if(incident.manualOrder())return incident.events();List<Event> values=new ArrayList<>(incident.events());values.sort(Comparator.comparing((Event e)->e.timestamp()==0).thenComparingLong(Event::timestamp));return List.copyOf(values);}
@@ -158,10 +165,43 @@ public final class EvidenceCatalog {
  public List<Suggestion> suggestions() {
   // A deterministic, bounded candidate set avoids all-pairs work on a 4096-record library.
   Map<String,LinkedHashSet<String>> signals=new TreeMap<>();Map<String,String> labels=new HashMap<>();
-  for(Evidence value:evidence){signal(signals,labels,"hash:"+value.sha256(),"Matching original SHA-256",value.id());for(String participant:value.participants())signal(signals,labels,"participant:"+participant.toLowerCase(Locale.ROOT),"Shared explicit participant",value.id());long at=value.metadata().captureAt();if(at>0)signal(signals,labels,"time:"+(at/3600000),"Source capture times in the same hour",value.id());String text=value.transcript().strip().toLowerCase(Locale.ROOT).replaceAll("\\s+"," ");if(text.length()>=16)signal(signals,labels,"text:"+sha(text.getBytes(StandardCharsets.UTF_8)),"Matching extracted/corrected text",value.id());}
+  for(Evidence value:evidence){
+   signal(signals,labels,"hash:"+value.sha256(),"Matching original SHA-256",value.id());
+   for(String participant:value.participants())signal(signals,labels,"participant:"+participant.toLowerCase(Locale.ROOT),"Shared explicit participant",value.id());
+   long at=value.metadata().captureAt();if(at>0)signal(signals,labels,"time:"+(at/3600000),"Source capture times in the same hour",value.id());
+   String text=value.transcript().strip().toLowerCase(Locale.ROOT).replaceAll("\\s+"," ");
+   if(text.length()>=16)signal(signals,labels,"text:"+sha(text.getBytes(StandardCharsets.UTF_8)),"Matching extracted/corrected text",value.id());
+   // Bounded transcript shingles suggest similarity; they never establish shared participants or facts.
+   java.util.regex.Matcher tokens=java.util.regex.Pattern.compile("[\\p{L}\\p{N}]{3,}").matcher(text);List<String> fragment=new ArrayList<>();
+   while(tokens.find()&&fragment.size()<64)fragment.add(tokens.group());
+   for(int n=0;n+2<fragment.size()&&n<32;n++){
+    List<String> phrase=fragment.subList(n,n+3);if(new HashSet<>(phrase).size()<3)continue;
+    signal(signals,labels,"fragment:"+sha(String.join(" ",phrase).getBytes(StandardCharsets.UTF_8)),"Similar transcript fragments (unverified)",value.id());
+   }
+   if(!value.ocr().isEmpty())for(ExtractedTime time:value.ocr().get(value.ocr().size()-1).times().stream().limit(32).toList()){
+    if(time.epochMillis()>0)signal(signals,labels,"ocr-time:"+(time.epochMillis()/3600000),"OCR visible timestamps in the same hour (unverified)",value.id());
+    else {String raw=time.text().strip().toLowerCase(Locale.ROOT);if(raw.matches(".*[0-9]{4}[-/][0-9]{1,2}[-/][0-9]{1,2}.*")&&raw.length()<=128)signal(signals,labels,"ocr-date:"+raw,"Matching raw OCR date claim (unverified; timezone/precision unknown)",value.id());}
+   }
+  }
   Map<String,List<String>> candidates=new TreeMap<>();Map<String,List<String>> reasons=new HashMap<>();int scanned=0;
   for(var entry:signals.entrySet()){if(++scanned>8192)break;if(entry.getValue().size()<2)continue;List<String> ids=entry.getValue().stream().sorted().limit(128).toList();String key=String.join(",",ids);candidates.putIfAbsent(key,ids);List<String> why=reasons.computeIfAbsent(key,k->new ArrayList<>());String label=labels.get(entry.getKey());if(!why.contains(label))why.add(label);if(candidates.size()>=256)break;}
-  List<Suggestion> values=new ArrayList<>();for(var entry:candidates.entrySet()){List<String> ids=entry.getValue();if(incidents.stream().anyMatch(i->!i.archived()&&i.evidenceIds().containsAll(ids)))continue;String id=sha(("evidence179:GROUP:"+entry.getKey()).getBytes(StandardCharsets.UTF_8));if(!rejectedSuggestions.contains(id))values.add(new Suggestion(id,"GROUP",ids,"","Possible related evidence",reasons.get(entry.getKey())));}return List.copyOf(values);
+  Map<String,LinkedHashSet<Incident>> associations=new HashMap<>();
+  for(Incident incident:incidents)if(!incident.archived())for(String evidenceId:incident.evidenceIds())associations.computeIfAbsent(evidenceId,k->new LinkedHashSet<>()).add(incident);
+  List<Suggestion> values=new ArrayList<>();
+  for(var entry:candidates.entrySet()){
+   if(values.size()>=256)break;List<String> ids=entry.getValue();LinkedHashSet<Incident> related=new LinkedHashSet<>();for(String id:ids)related.addAll(associations.getOrDefault(id,new LinkedHashSet<>()));
+   if(related.stream().anyMatch(i->i.evidenceIds().containsAll(ids)))continue;
+   String id=sha(("evidence179:GROUP:"+entry.getKey()).getBytes(StandardCharsets.UTF_8));
+   if(!rejectedSuggestions.contains(id))values.add(new Suggestion(id,"GROUP",ids,"","Possible related evidence",reasons.get(entry.getKey())));
+   for(Incident target:related){
+    if(values.size()>=256)break;List<String> unlinked=ids.stream().filter(e->!target.evidenceIds().contains(e)).toList();if(unlinked.isEmpty())continue;
+    String suggestionId=sha(("evidence179:ASSIGN:"+target.id()+":"+String.join(",",unlinked)).getBytes(StandardCharsets.UTF_8));
+    if(rejectedSuggestions.contains(suggestionId)||values.stream().anyMatch(v->v.id().equals(suggestionId)))continue;
+    List<String> why=new ArrayList<>(reasons.get(entry.getKey()));if(why.size()<16)why.add("Related evidence already linked to this incident; owner approval required");
+    values.add(new Suggestion(suggestionId,"ASSIGN",unlinked,target.id(),"Add related evidence to incident",why));
+   }
+  }
+  return List.copyOf(values);
  }
  private static void signal(Map<String,LinkedHashSet<String>> values,Map<String,String> labels,String key,String label,String id){if(values.size()>=8192&&!values.containsKey(key))return;LinkedHashSet<String> set=values.computeIfAbsent(key,k->new LinkedHashSet<>());if(set.size()<128)set.add(id);labels.put(key,label);}
  /** A callback may compose domain mutations, but cannot use decoded objects to rewrite history. */

@@ -55,6 +55,7 @@ interface EvidenceSources {
  fun import(uri: android.net.Uri): EvidenceOriginal
 }
 interface EvidenceRoute: AutoCloseable {
+ val owner: EvidenceCatalog.Owner
  val label: String
  val identity: String
  fun current(): Boolean
@@ -64,6 +65,7 @@ interface EvidenceRoute: AutoCloseable {
 data class EvidenceExportPlan(val catalog: EvidenceCatalog, val incidentIds: List<String>, val evidenceIds: List<String>, val digest: String, val plaintextConfirmed: Boolean)
 data class EvidenceExportReceipt(val sha256: String, val bytes: Long, val encrypted: Boolean)
 interface EvidenceSourceReader {
+ val owner: EvidenceCatalog.Owner
  fun current(): Boolean
  fun inspect(sourceId: String): EvidenceOriginal
  fun <T> readVerified(sourceId: String, consume: (EvidenceOriginal, InputStream) -> T): T
@@ -82,3 +84,9 @@ Archive-opening addendum: expectedOwner is required; decrypted schema owner must
 Root read-only timestamp helper: `EvidenceTextHints.scan(String):List<Hint>` with Hint(kind,text,epochMillis,provenance),100kinput/256hints. Values remain OCR_VISIBLE_UNVERIFIED; only explicit-offsetISO yields epoch; date-only/local/relative/clock values0; participant-candidate hints never auto-identified. OCRadapter maps hints to page-indexed ExtractedTime; participants require owner review. Scopedreview+adversarialblankinputfix passed. Root captured lease factories `EvidenceAuthorities.primary(Object,Supplier<Object>,BooleanSupplier,Supplier<byte[]>,Object):LeaseFactory` and `.hidden(HiddenSession,HiddenSession.Authority,BooleanSupplier)` pass21hostchecks/scopedreview. Caller MUSTbindimmutableauthenticationepoch/currentguard, retireundercommitboundary; callbacksnonblocking/no reverse-orderlocking.
 
 SAF/permission handoff clarification: HiddenSession operation Authority is intentionally revoked on background even within key-retention grace. An explicit external-picker ticket captures HiddenSession.Authentication (or Primary LockSession auth epoch plus key identity), not an old operation authority. On resumed return AFTER existing foreground timeout checks, require same authentication and originating selected vault, then capture a NEW operation Authority/controller. Never resume an old controller/Job or revive an expired/reauthenticated identity. Outgoing picker retains only opaque IDs/digest and completed ciphertext stage (no key/text/password/preview). Ordinary background/Hide/Panic cancels work and clears UI. Source/AI/export work requires RESUMED after timeout reconciliation. This preserves policy, rather than allowing a picker to bypass timeout.
+
+Reader and route owner are explicit; AI/export require catalog.owner==reader.owner==route.owner (route only forAI), not a label or UUID coincidence. Rootsourceadaptersonlytheir own encryptedrepository.
+
+Access-review integration addendum: controller original-preview consumers borrow bytes through `suspend withOriginalBytes(evidenceId:String,limit:Int=32MiB,consumer:suspend(ByteArray)->Unit):Unit`; adapter captures the array before outer EOF/live-state checks and wipes on every rejected/finished scope, including dispatcher cancellation. Do not return owned ByteArray/resources through a cancellable withContext result. `access.publishIfCurrent(action:()->Unit):Boolean` is Main-only and serializes current-check+publication with the existing authentication retirement monitor. UI decoded resources remain pending-owned until a successful publication; rejected/cancelled resources are wiped/recycled. `importAndRegister(uri,extract=true)` carries bounded provider claims into verified registration. Same-owner live original COMPLETE/hash/size/MIME/vaultOnly identity is rechecked after EOF and at evidence commits. Actual API37 verification remains mandatory.
+
+Contextual grouping addendum: `suggestions()` may return kind ASSIGN with a current existing incidentId and only new evidenceIds; GROUP has emptyincidentId. ASSIGN acceptance links references into that incident (not merge), oneauditedmutation withmonotoniclineage; rejects persist. Current acceptSuggestion calling convention requires a fresh unused newIncidentId UUID for BOTH kinds; ASSIGN ignores it/title, so UI must display/approveactualincidentId and passfreshUUID. Signals remain bounded/unverified hints; rawOCRdates and transcript similarity do not establish facts/participants. Editing a suggestedtarget uses explicit owner reject+assign, audited separately.

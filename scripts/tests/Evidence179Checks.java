@@ -27,7 +27,7 @@ public final class Evidence179Checks {
  static Ocr ocr(String text){return new Ocr(id(),200,"test",0,10,20,text,90,List.of(new Word(0,"word",80,0,0,5,5)),List.of(new ExtractedTime(0,"12:00",0,"zone and date unavailable",-1)),1,false);}
  static EvidenceCatalog base(Evidence... es){EvidenceCatalog c=EvidenceCatalog.empty(Owner.PRIMARY);for(Evidence e:es)c=c.upsertEvidence(e,100,"REGISTER");return c;}
  public static void main(String[] args)throws Exception {
-  codec(); originalsAndOcr(); grouping(); searchAndSuggestions(); quotas(); timelineBoundary(); analysisLineage(); eventDetachment(); successorLineage(); encryptedStore(); codecBufferWiping();
+  codec(); originalsAndOcr(); grouping(); searchAndSuggestions(); contextualSuggestions(); quotas(); timelineBoundary(); analysisLineage(); eventDetachment(); successorLineage(); encryptedStore(); codecBufferWiping();
   System.out.println("Evidence179 host checks passed: "+checks+" assertions (model/codec/lineage/search/real crypto/revocation/concurrency)");
  }
  static void codec()throws Exception {
@@ -90,6 +90,23 @@ public final class Evidence179Checks {
   List<Suggestion> suggestions=c.suggestions();yes(!suggestions.isEmpty(),"bounded signals produced no hints");Suggestion s=suggestions.get(0);yes(c.suggestions().equals(suggestions),"unstable suggestion identity");
   long revision=c.revision();EvidenceCatalog rejected=c.rejectSuggestion(s.id(),103);yes(rejected.suggestions().stream().noneMatch(x->x.id().equals(s.id()))&&c.revision()==revision,"reject mutated original/applied hint");
   EvidenceCatalog accepted=c.acceptSuggestion(s,id(),"Accepted",104);yes(accepted.incidents().size()==2&&accepted.revision()==revision+1,"accept must be one audited mutation");
+ }
+ static Evidence neutral(String name,String digest){return new Evidence(id(),id(),name,"image/png",digest,10,100,new Metadata(name,0,0,0,0,10,20,Map.of(),false),"","",List.of(),List.of(),List.of(),List.of());}
+ static void contextualSuggestions()throws Exception {
+  Evidence a=neutral("first","1".repeat(64)),b=neutral("second","2".repeat(64));
+  Ocr oa=new Ocr(id(),200,"test",0,10,20,"Please arrange delivery tomorrow morning at reception",80,List.of(),List.of(new ExtractedTime(0,"2026-10-31T10:00:00Z",1793440800000L,"OCR_VISIBLE_UNVERIFIED",-1)),1,false);
+  Ocr ob=new Ocr(id(),200,"test",0,10,20,"Please arrange delivery tomorrow morning at the main reception desk",70,List.of(),List.of(new ExtractedTime(0,"2026-10-31T10:10:00Z",1793441400000L,"OCR_VISIBLE_UNVERIFIED",-1)),1,false);
+  EvidenceCatalog c=base(a,b).saveOcr(a.id(),oa,201).saveOcr(b.id(),ob,202);
+  yes(c.suggestions().stream().anyMatch(x->x.reasons().stream().anyMatch(r->r.contains("OCR")&&r.contains("unverified"))),"OCR visible date signals missing");
+  yes(c.suggestions().stream().anyMatch(x->x.reasons().stream().anyMatch(r->r.contains("Similar transcript"))),"similar conversation fragments missing");
+  Incident target=incident("Existing incident",List.of(a.id()),List.of());c=c.upsertIncident(target,203,"CREATE");
+  Suggestion assign=c.suggestions().stream().filter(x->x.kind().equals("ASSIGN")&&x.incidentId().equals(target.id())).findFirst().orElseThrow(()->new AssertionError("existing association hint missing"));
+  yes(assign.evidenceIds().equals(List.of(b.id())),"association hint must contain only new references");
+  EvidenceCatalog applied=c.acceptSuggestion(assign,id(),"unused",204);
+  yes(applied.incidents().size()==1&&applied.incidents().get(0).evidenceIds().containsAll(List.of(a.id(),b.id())),"owner approval created duplicate/merged incident instead of linking");
+  yes(applied.revision()==c.revision()+1&&applied.audit().size()==c.audit().size()+1&&applied.evidence().equals(c.evidence()),"association acceptance must be one audited reference-only mutation");
+  yes(c.incidents().get(0).evidenceIds().equals(List.of(a.id())),"suggestion auto-applied");
+  EvidenceCatalog rejected=c.rejectSuggestion(assign.id(),205);yes(rejected.suggestions().stream().noneMatch(x->x.id().equals(assign.id())),"association rejection not retained");
  }
  static void quotas()throws Exception {
   fails(()->ocr("x".repeat(100001)),"OCR quota");fails(()->new Metadata("x",-1,0,0,0,0,0,Map.of(),false),"negative metadata");

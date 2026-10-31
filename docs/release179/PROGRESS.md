@@ -55,3 +55,8 @@ Task2: root AndroidSources/Metadata/Controller/Egress written with focused instr
 
 Task3 fixround1/5: OCR179-1 and OCR179-2 ADDRESSED by scopedindependentreview OCR179_FIX1.md;8modelhostchecksPASS. Sourceimplementationreviewclean; actualAndroidcompile/JNI/API37/ELF/APKasset gates PENDING, not complete releaseapproval.
 Task2 fixround1/5: A179-1/-2/-3 Important and A179-4 Moderate accepted; root-authored source transferred to scopedfixworker, briefwork/task-2-fix1-brief.md. Root UI/Main disjoint.
+
+Task2 fixround1/5: A179-1..4 ADDRESSED scopedsource review ACCESS179_FIX1.md, noopenCritical/Important in fix scope. Safe borrowed-byte consumer/Main publish gate and provider provenance complete in source; eight new targeted instrumentation flows UNEXECUTED until integratedAPI37. Root adaptedprotectedoriginal/thumbnail consumers.
+Originalscopeaudit: Foundationgroupingsignals lacked OCR dates/nonidenticalconversation/existing incidentassignment; root added tested contextual signals and ASSIGN suggestions withoutrewritingstore. ObservedRED missingOCRsignal → GREEN124model/store +21authority+hints. CONTEXT179_INITIAL scopedPASS0Critical/Important. Minor recorded/documentedcallingconvention: acceptSuggestion stillrequiresfresh unusednewIncidentUUID evenforASSIGN; UI passesone, ignoredforreference-onlytargetupdate. No originalautomutation.
+Task4 IN_PROGRESS /root/evidence_ai_impl, briefwork/task-4-brief.md; root ownsdisjointMain/UI/route-startup coordinator. AIworkerownsconsentedpayload/credentials/immutableconnectedrouteclients.
+Rootroute-startupcoordinator source authored beforeitsinstrumentation (processgap; no RED claim); actualcompilation/lifecycletests mandatory. No productionapprovalorCI yet.
