@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="uk.co.traynor.privategallery.core.privateapps.PrivateAppDiscoveryTest" tests="10" skipped="0" failures="0" errors="0" timestamp="2026-10-31T00:52:41.093Z" hostname="runnervm48cm3" time="0.121">
+  <properties/>
+  <testcase name="website_fallback_explains_manifest_failure_without_claiming_installation" classname="uk.co.traynor.privategallery.core.privateapps.PrivateAppDiscoveryTest" time="0.043"/>
+  <testcase name="oversize_and_malformed_documents_fail_closed_to_website" classname="uk.co.traynor.privategallery.core.privateapps.PrivateAppDiscoveryTest" time="0.006"/>
+  <testcase name="synthetic_discovery_uses_bounded_same_origin_resources_and_wipes_them" classname="uk.co.traynor.privategallery.core.privateapps.PrivateAppDiscoveryTest" time="0.029"/>
+  <testcase name="private_web_app_defaults_to_compact_presentation_and_reports_capabilities" classname="uk.co.traynor.privategallery.core.privateapps.PrivateAppDiscoveryTest" time="0.006"/>
+  <testcase name="manifest_resolves_names_scope_display_and_icon" classname="uk.co.traynor.privategallery.core.privateapps.PrivateAppDiscoveryTest" time="0.004"/>
+  <testcase name="optional_icon_budget_cannot_downgrade_valid_private_web_app_metadata" classname="uk.co.traynor.privategallery.core.privateapps.PrivateAppDiscoveryTest" time="0.007"/>
+  <testcase name="invalid_manifest_falls_back_and_revocation_never_publishes" classname="uk.co.traynor.privategallery.core.privateapps.PrivateAppDiscoveryTest" time="0.008"/>
+  <testcase name="rejects_unsafe_urls_cross_origin_and_out_of_scope_metadata" classname="uk.co.traynor.privategallery.core.privateapps.PrivateAppDiscoveryTest" time="0.003"/>
+  <testcase name="network_failure_is_unavailable_not_incompatible_metadata" classname="uk.co.traynor.privategallery.core.privateapps.PrivateAppDiscoveryTest" time="0.005"/>
+  <testcase name="document_base_and_later_valid_manifest_icon_use_bounded_same_origin_transport" classname="uk.co.traynor.privategallery.core.privateapps.PrivateAppDiscoveryTest" time="0.003"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

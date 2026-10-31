@@ -1,0 +1,1 @@
+Exact41Android/33JVM success, zero failure/error/skip/duplicate. Raw artifact13024451086 ZIP SHA256c113da8e6fcfd857096fc7db4df9081d5f98360892ef2ca6bebaf7594b9be5d7. Text copies normalized toLF forGit; original raw data hashes recorded. Physical Fold acceptance not inferred.

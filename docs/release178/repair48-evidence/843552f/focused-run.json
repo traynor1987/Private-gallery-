@@ -1,0 +1,16 @@
+{
+  "source_sha": "843552f5aa7ee922b01abbcba1ea924f08f696ef",
+  "run_id": 41152312292,
+  "artifact_id": 13024451086,
+  "artifact_digest": "sha256:c113da8e6fcfd857096fc7db4df9081d5f98360892ef2ca6bebaf7594b9be5d7",
+  "conclusion": "success",
+  "workflow_path": ".github/workflows/fast-development.yml",
+  "head_branch": "release/1.7.8-private-apps",
+  "event": "push",
+  "verified_build_steps": true,
+  "evidence_validation": "PASS",
+  "original_exit_status": 0,
+  "validated_case_count": 41,
+  "jvm_validated_case_count": 33,
+  "network_evidence_revalidated": true
+}

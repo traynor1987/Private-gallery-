@@ -229,17 +229,17 @@ jobs:
     timeout-minutes: 45
     env:
       # Exact tested source; independent approval and original-key upgrade gates remain mandatory.
-      FROZEN_SOURCE: '0000000000000000000000000000000000000000'
+      FROZEN_SOURCE: '843552f5aa7ee922b01abbcba1ea924f08f696ef'
     steps:
       - uses: actions/checkout@v4
       - name: Preserve exact 1.7.8 approval and reviewed controls
         run: |
           test "$FROZEN_SOURCE" != 0000000000000000000000000000000000000000
           test "$(head -n 1 .acceptance178-candidate)" = "$FROZEN_SOURCE"
-          test -s docs/release178/FINAL_SCOPE_APPROVAL.json
-          test -s docs/release178/SECURITY_REVIEW.md
-          cp docs/release178/FINAL_SCOPE_APPROVAL.json "$RUNNER_TEMP/final-scope178.json"
-          cp docs/release178/SECURITY_REVIEW.md "$RUNNER_TEMP/final-security178.md"
+          test -s docs/release178/FINAL_REPAIR48_APPROVAL.json
+          test -s docs/release178/SECURITY_REVIEW48.md
+          cp docs/release178/FINAL_REPAIR48_APPROVAL.json "$RUNNER_TEMP/final-scope178.json"
+          cp docs/release178/SECURITY_REVIEW48.md "$RUNNER_TEMP/final-security178.md"
           cp scripts/verify_final_scope178.py "$RUNNER_TEMP/verify_final_scope178.py"
           cp scripts/private_apps178_cases.json "$RUNNER_TEMP/private_apps178_cases.json"
           cp docs/release178/UpgradeFixtureTest.kt "$RUNNER_TEMP/UpgradeFixture178.kt"
