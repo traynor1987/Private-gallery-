@@ -507,3 +507,8 @@ Independent signed artifact review VERIFIED_FOR_OWNER_ACCEPTANCE_DELIVERY0Critic
 ## Exact code49 source approved for controlled signing
 
 Application 60f089d6e003fd13f8b7649feb6f44167e5028a2; original exact focused run 41163111993/artifact13028685306 sha256:84c4de0ca576bd2c4025205e8699520c7f0dede267da49a427aaf4fb8a55b558. Independent43Android/33JVM and strict VPN/Tor/DNS/revocation proof PASS, approved0openCritical/Important; report SHA256 5b1002937e178e9071253d42e4d3c6afd146b75aef634184dcbe5f88ab1c5393. Original-key archived48→49 in-place upgrade, restart and final artifact verification remain mandatory before delivery. Physical Fold OWNER_REQUIRED.
+
+
+## Code50 runner disk correction
+
+Source93d3b521/run41192567994 failed before Android: emulator userdata required9830.40MB, only4754.61MB free. Compile/lint and35JVM passed, no Android execution. Evidence13039008920 SHA2567c453a200d4f128c6cbce48eec6019f3b015f10c1a888b1f1d131a28faf740d8 preserved. Existing178 focused/production jobs now remove unused host tools and require16GiB before SDK/image install; no app/test/security/timeout/storage-size changes. Fresh exact47Android pass and independent approval remain required; signing blocked.
