@@ -31,6 +31,7 @@ class EvidenceAi179UiTest {
   val bytes="Selected synthetic Alice transcript179, visible date is uncertain".toByteArray()
   val repo=AndroidVaultRepository(context,key)
   val original=(repo.importVerified(VaultImportSource("selected179.txt","text/plain",{bytes.inputStream()}))as ImportResult.Imported).item
+  var showingAi by mutableStateOf(true)
   val access=EvidenceAccess.primary(context,key,{key},{true},{key.copyOf()},Any())
   val credentials=EvidenceCredentials(EvidenceCatalog.Owner.PRIMARY,access::current,{action->access.leases.acquire().use{it.commit{action()}}},object:EvidenceCredentials.Backend{
    override fun configured()=true
@@ -42,19 +43,19 @@ class EvidenceAi179UiTest {
    androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().runOnMainSync{controller=EvidenceController(context,access);controller.register(original.id)}
    runBlocking{withTimeout(15000){controller.state.first{!it.busy&&it.catalog?.evidence()?.size==1}}}
    val selected=access.store.read().evidence().single().id()
-   compose.setContent{CompositionLocalProvider(LocalContext provides context){PrivateGalleryTheme(AppTheme.DARK){EvidenceAiDialog(controller,listOf(selected),true,
+   compose.setContent{CompositionLocalProvider(LocalContext provides context){PrivateGalleryTheme(AppTheme.DARK){if(!showingAi)EvidenceLocker(controller,{},{},{},{},{}) else EvidenceAiDialog(controller,listOf(selected),true,
     createCoordinator={object:EvidenceRouteConnection{
      var route:EvidenceRoute?=null
      override suspend fun connect(mode:String):EvidenceRoute=object:EvidenceRoute{
       override val owner=EvidenceCatalog.Owner.PRIMARY;override val label="Synthetic secure route";override val identity=UUID.randomUUID().toString();var ended=false
       override fun current()=!ended&&access.current()
-      override suspend fun execute(request:AiHttpRequest):AiHttpResponse{check(current());calls.incrementAndGet();assertEquals(EvidenceAi.ENDPOINT,request.url);val advisory=org.json.JSONObject().put("summary","Synthetic advisory179. The visible timestamp is uncertain.").put("suggestions",org.json.JSONArray()).put("events",org.json.JSONArray())
+      override suspend fun execute(request:AiHttpRequest):AiHttpResponse{check(current());calls.incrementAndGet();assertEquals(EvidenceAi.ENDPOINT,request.url);val advisory=org.json.JSONObject().put("summary","Synthetic advisory179. The visible timestamp is uncertain.").put("suggestions",org.json.JSONArray()).put("events",org.json.JSONArray().put(org.json.JSONObject().put("evidence_ids",org.json.JSONArray().put(selected)).put("title","Retained structured event179").put("date_time_quote","visible date uncertain").put("provenance","VISIBLE_SOURCE_UNVERIFIED").put("uncertainty","No verified date or timezone")))
        val response=org.json.JSONObject().put("status","completed").put("output",org.json.JSONArray().put(org.json.JSONObject().put("type","message").put("content",org.json.JSONArray().put(org.json.JSONObject().put("type","output_text").put("text",advisory.toString()))))).put("usage",org.json.JSONObject().put("input_tokens",50).put("output_tokens",12))
        return AiHttpResponse(200,"application/json",response.toString().toByteArray())}
       override fun close(){ended=true}
      }.also{route=it}
      override fun close(){route?.close()}
-    }},onRequestPermission={fail("fixture must not request real VPN permission")},onClose={closed.incrementAndGet()},providedCredentials=credentials)}}}
+    }},onRequestPermission={fail("fixture must not request real VPN permission")},onClose={closed.incrementAndGet();showingAi=false},providedCredentials=credentials)}}}
    compose.waitUntil(10000){compose.onAllNodesWithText("Prepare exact upload preview").fetchSemanticsNodes().isNotEmpty()}
    compose.onNodeWithText("Prepare exact upload preview").performScrollTo().performClick()
    compose.waitUntil(15000){compose.onAllNodesWithText("Review before sending").fetchSemanticsNodes().isNotEmpty()}
@@ -77,10 +78,30 @@ class EvidenceAi179UiTest {
    compose.onNodeWithText("Create").performClick()
    compose.waitUntil(15000){controller.state.value.catalog?.incidents()?.size==1&&!controller.state.value.busy}
    val catalog=access.store.read();assertEquals("Owner-approved AI179",catalog.incidents().single().title());assertTrue(catalog.analyses().single().applied());assertTrue(catalog.incidents().single().notes().contains("AI-generated advisory"))
+   assertEquals(listOf(catalog.analyses().single().id()),catalog.incidents().single().analysisIds())
    assertArrayEquals(original.plaintextSha256,repo.items().single().plaintextSha256)
-   compose.runOnIdle{controller.close()}
+   compose.onNodeWithText("Close").performClick()
+   compose.onNodeWithText("Incidents").performClick();compose.onNodeWithText("Owner-approved AI179").performScrollTo().performClick()
+   compose.onNodeWithText("Synthetic advisory179. The visible timestamp is uncertain.").performScrollTo().assertIsDisplayed()
+   compose.runOnIdle{compose.activity.onBackPressedDispatcher.onBackPressed()}
+   compose.onNodeWithText("Library").performClick();compose.onNodeWithContentDescription("Select evidence selected179.txt").performScrollTo().performClick()
+   compose.onNodeWithText("Remove references").performScrollTo().performClick();compose.onNodeWithText("Confirm").performClick()
+   compose.waitUntil(15000){!controller.state.value.busy&&controller.state.value.catalog?.evidence()?.isEmpty()==true}
+   compose.onNodeWithText("Incidents").performClick();compose.onNodeWithText("Owner-approved AI179").performScrollTo().performClick()
+   compose.onNodeWithText("Synthetic advisory179. The visible timestamp is uncertain.").performScrollTo().assertIsDisplayed()
+   compose.onNodeWithText("Advisory event: Retained structured event179",substring=true).performScrollTo().assertIsDisplayed()
+   compose.onAllNodesWithText("Historical / unattached advisory source",substring=true).onLast().performScrollTo().assertIsDisplayed()
+   val retained=access.store.read();val incidentId=retained.incidents().single().id()
+   assertTrue(retained.incidents().single().evidenceIds().isEmpty());assertEquals(1,repo.items().size)
+   assertEquals(original.id,retained.analyses().single().sourceReferences().single().fingerprint().sourceId())
+   EvidenceEgress.requireAllowed(retained,emptyList(),listOf(incidentId),access.reader())
+   val index=EncryptedIndexStore(File(context.filesDir,"vault"));val snapshot=index.loadSnapshot(key)
+   index.saveSnapshot(snapshot.copy(items=snapshot.items.map{it.copy(vaultOnly=true)}),key)
+   try{EvidenceEgress.requireAllowed(retained,emptyList(),listOf(incidentId),access.reader());fail("retained advisory declassified") }catch(expected:SecurityException){}
+   assertEquals(1,repo.items().size)
+   compose.runOnIdle{controller.close();assertFalse(controller.current());assertEquals(EvidenceController.State(),controller.state.value)}
    compose.waitUntil(10000){closed.get()>0}
-   compose.onNodeWithText("Optional AI analysis").assertDoesNotExist()
+   compose.onNodeWithText("Optional AI analysis").assertDoesNotExist();compose.onNodeWithText("Evidence Locker").assertDoesNotExist()
   }finally{if(::controller.isInitialized)compose.runOnIdle{controller.close()};access.close();key.fill(0);bytes.fill(0);root.deleteRecursively()}
  }
 }

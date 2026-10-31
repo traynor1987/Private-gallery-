@@ -41,8 +41,12 @@ internal class EvidenceDocumentIo(private val context:Context,private val access
    }finally{release(input)}
   }finally{release(descriptor)}
  }
- fun <T> write(uri:Uri,consume:(OutputStream)->T):T {
+ fun <T> write(uri:Uri,protectedSource:Uri?=null,consume:(OutputStream)->T):T {
   check(Looper.myLooper()!==Looper.getMainLooper());require(uri.scheme=="content");checkCurrent()
+  // Establish destination ownership before opening with truncation. A provider may return
+  // the incoming archive itself, including a tree/document or canonical URI alias.
+  require(protectedSource==null||distinctDestination(context,uri,protectedSource)){"Choose a provably different destination; the original archive is protected"}
+  checkCurrent()
   try {
    val descriptor=checkNotNull(context.contentResolver.openAssetFileDescriptor(uri,"wt",signal));own(descriptor)
    try {
@@ -58,7 +62,7 @@ internal class EvidenceDocumentIo(private val context:Context,private val access
      val result=consume(guarded);guarded.flush();checkCurrent();return result
     }finally{release(output)}
    }finally{release(descriptor)}
-  }catch(failure:Throwable){requestPartialCleanup(context,uri);throw failure}
+  }catch(failure:Throwable){requestPartialCleanup(context,uri,protectedSource);throw failure}
  }
  override fun close(){
   if(!ended.compareAndSet(false,true))return
@@ -68,6 +72,29 @@ internal class EvidenceDocumentIo(private val context:Context,private val access
  }
  companion object {
   private val cleanup=Executors.newCachedThreadPool{r->Thread(r,"evidence-document-cleanup").apply{isDaemon=true}}
-  fun requestPartialCleanup(context:Context,uri:Uri){cleanup.execute{runCatching{DocumentsContract.deleteDocument(context.contentResolver,uri)}}}
+  internal fun distinctDestination(context:Context,first:Uri,second:Uri):Boolean {
+   fun matches(a:Uri,b:Uri):Boolean {
+    if(a.normalizeScheme()==b.normalizeScheme())return true
+    if(a.authority!=b.authority)return false
+    val left=runCatching{DocumentsContract.getDocumentId(a)}.getOrNull()
+    val right=runCatching{DocumentsContract.getDocumentId(b)}.getOrNull()
+    return left!=null&&left==right
+   }
+   if(matches(first,second))return false
+   val canonicalFirst=runCatching{context.contentResolver.canonicalize(first)}.getOrNull()
+   val canonicalSecond=runCatching{context.contentResolver.canonicalize(second)}.getOrNull()
+   if(canonicalFirst!=null&&matches(canonicalFirst,second)||canonicalSecond!=null&&matches(first,canonicalSecond))return false
+   if(canonicalFirst!=null&&canonicalSecond!=null&&matches(canonicalFirst,canonicalSecond))return false
+   if(!first.authority.isNullOrBlank()&&!second.authority.isNullOrBlank()&&first.authority!=second.authority)return true
+   val left=runCatching{DocumentsContract.getDocumentId(first)}.getOrNull()
+   val right=runCatching{DocumentsContract.getDocumentId(second)}.getOrNull()
+   if(first.authority==second.authority&&left!=null&&right!=null)return left!=right
+   // Non-document provider aliases require both canonical identity claims. Unknown
+   // identity denies both truncation and cleanup rather than risking the incoming file.
+   return canonicalFirst!=null&&canonicalSecond!=null&&!matches(canonicalFirst,canonicalSecond)
+  }
+  fun requestPartialCleanup(context:Context,uri:Uri,protectedSource:Uri?=null){cleanup.execute{
+   runCatching{if(protectedSource==null||distinctDestination(context,uri,protectedSource))DocumentsContract.deleteDocument(context.contentResolver,uri)}
+  }}
  }
 }

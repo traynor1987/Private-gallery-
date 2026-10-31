@@ -75,6 +75,7 @@ internal object EvidenceArchive {
   val binary=j.get("catalogBinary");require(binary is String&&binary.length<=EvidenceArchiveFormat.META)
   val encoded=Base64.decode(binary,Base64.NO_WRAP)
   val catalog=try{EvidenceCatalog.decode(encoded,owner)}finally{encoded.fill(0)}
+  require(catalog.encodingVersion()==2){"Unsupported evidence catalog schema in export"}
   require(catalog.audit().isEmpty()&&catalog.rejectedSuggestions().isEmpty())
   val sources=(catalog.evidence().map(EvidenceEgress::fingerprint)+catalog.incidents().flatMap{it.lineage()}+catalog.analyses().flatMap{it.lineage()}).distinctBy{it.sourceId()}
   require(sources.none{it.vaultOnly()}&&catalog.evidence().none{it.metadata().vaultOnly()})

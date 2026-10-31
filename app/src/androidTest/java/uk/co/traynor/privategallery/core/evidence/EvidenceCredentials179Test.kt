@@ -2,10 +2,14 @@ package uk.co.traynor.privategallery.core.evidence
 
 import android.content.Context
 import android.content.ContextWrapper
+import android.os.Handler
+import android.os.Looper
 import androidx.test.core.app.ApplicationProvider
 import java.io.File
 import java.util.UUID
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.atomic.AtomicReference
 import org.junit.Assert.*
 import org.junit.Test
 import uk.co.traynor.privategallery.core.hidden.HiddenSession
@@ -41,6 +45,14 @@ class EvidenceCredentials179Test {
  private fun failure(action:()->Unit):Throwable {
   try{action();fail("operation unexpectedly succeeded")}catch(failure:IllegalStateException){return failure}
   throw AssertionError("missing failure")
+ }
+ private fun awaitBlockedAt(thread:Thread,className:String,methodName:String) {
+  val deadline=System.nanoTime()+java.util.concurrent.TimeUnit.SECONDS.toNanos(5)
+  while(System.nanoTime()<deadline) {
+   if(thread.state==Thread.State.BLOCKED&&thread.stackTrace.any{it.className==className&&it.methodName==methodName})return
+   Thread.sleep(5)
+  }
+  fail("Worker did not block at the expected production monitor: $className.$methodName (${thread.state})")
  }
  @Test fun blockedBackendWorkDoesNotHoldCapturedPrimaryOrHiddenRetirement() {
   // Putting a slow stage/read/cleanup inside guarded must make retirement time out.
@@ -93,18 +105,123 @@ class EvidenceCredentials179Test {
  @Test fun queuedSameFileMutationDoesNotBlockRetirementOrResurrectStaleStage() {
   val gate=Any();val live=AtomicBoolean(true);val shared=EvidenceCredentials.SharedState();val backend=MemoryBackend()
   val entered=java.util.concurrent.CountDownLatch(1);val release=java.util.concurrent.CountDownLatch(1)
-  backend.stageBarrier={entered.countDown();check(release.await(5,java.util.concurrent.TimeUnit.SECONDS))}
+  val stageHeld=AtomicBoolean();val queuedThread=AtomicReference<Thread>();val queuedStarted=java.util.concurrent.CountDownLatch(1)
+  backend.stageBarrier={
+   assertTrue(Thread.holdsLock(shared.operationGate));stageHeld.set(true);entered.countDown()
+   try{check(release.await(15,java.util.concurrent.TimeUnit.SECONDS))}finally{stageHeld.set(false)}
+  }
   val guarded:((()->Unit)->Unit)={action->synchronized(gate){check(live.get());action()}}
   fun credentials()=EvidenceCredentials(EvidenceCatalog.Owner.PRIMARY,{live.get()},guarded,backend,{},shared)
   val pool=java.util.concurrent.Executors.newFixedThreadPool(3)
   try {
    val setup=pool.submit<Boolean>{runCatching{credentials().setup("fixture-new-key".toCharArray())}.isSuccess}
    assertTrue(entered.await(5,java.util.concurrent.TimeUnit.SECONDS))
-   val remove=pool.submit<Boolean>{runCatching{credentials().remove()}.isSuccess}
+   val contender=credentials()
+   val remove=pool.submit<Boolean>{queuedThread.set(Thread.currentThread());queuedStarted.countDown();runCatching{contender.remove()}.isSuccess}
+   assertTrue(queuedStarted.await(5,java.util.concurrent.TimeUnit.SECONDS))
+   // remove enters operationGate before any auth/state work. The first stage
+   // demonstrably owns that exact shared monitor while this contender is BLOCKED.
+   awaitBlockedAt(queuedThread.get(),EvidenceCredentials::class.java.name,"remove")
+   assertTrue(stageHeld.get());assertEquals(1L,release.count)
    pool.submit{synchronized(gate){live.set(false)}}.get(1,java.util.concurrent.TimeUnit.SECONDS)
+   assertTrue(stageHeld.get());assertEquals(1L,release.count)
    release.countDown();assertFalse(setup.get(5,java.util.concurrent.TimeUnit.SECONDS));assertFalse(remove.get(5,java.util.concurrent.TimeUnit.SECONDS))
    assertEquals(0,backend.commits);assertEquals("fixture-old-key",backend.snapshot()!!.toString(Charsets.US_ASCII));assertEquals(1,backend.closedStages)
-  }finally{release.countDown();pool.shutdownNow()}
+  }finally{
+   release.countDown();pool.shutdown()
+   val joined=pool.awaitTermination(10,java.util.concurrent.TimeUnit.SECONDS)
+   if(!joined)pool.shutdownNow()
+   assertTrue("Credential test workers did not join after stage release",joined)
+  }
+ }
+ @Test fun realSharedKeystoreGateDoesNotBlockMainOwnerRetirementOrAdmitStaleStage() {
+  assertFalse("This barrier test must run off Main",Looper.myLooper()===Looper.getMainLooper())
+  val base=ApplicationProvider.getApplicationContext<Context>()
+  val keyGate=AiCredentialStore::class.java.getDeclaredField("KEY_GATE").apply{isAccessible=true}.get(null)
+  for(owner in EvidenceCatalog.Owner.values()) {
+   val root=File(base.cacheDir,"evidence-key-gate-${UUID.randomUUID()}").apply{mkdirs()}
+   val context=object:ContextWrapper(base){
+    override fun getFilesDir()=File(root,"files").apply{mkdirs()}
+    override fun getNoBackupFilesDir()=File(root,"private").apply{mkdirs()}
+    override fun getApplicationContext():Context=this
+   }
+   val alias="evidence179-disposable-${UUID.randomUUID()}"
+   val store=AiCredentialStore::class.java.getDeclaredConstructor(Context::class.java,String::class.java).apply{isAccessible=true}.newInstance(context,alias)
+   val id="evidence-openai-179-"+owner.name.lowercase()
+   val original="fixture-original-key".toByteArray();val replacement="fixture-stale-key".toCharArray()
+   val vaultKey=ByteArray(32){23};val live=AtomicBoolean(true);val primaryGate=Any()
+   val hidden=HiddenSession{100L};assertTrue(hidden.complete(hidden.beginAuthentication(),ByteArray(32){29}))
+   val access=if(owner==EvidenceCatalog.Owner.PRIMARY)
+    EvidenceAccess.primary(context,vaultKey,{vaultKey},{live.get()},{vaultKey.copyOf()},primaryGate)
+   else EvidenceAccess.hidden(context,hidden){live.get()}
+   val reads=AtomicInteger();val stagesPrepared=AtomicInteger();val setupThread=AtomicReference<Thread>();val setupStarted=java.util.concurrent.CountDownLatch(1)
+   val gateHeld=java.util.concurrent.CountDownLatch(1);val releaseGate=java.util.concurrent.CountDownLatch(1);val stillHeld=AtomicBoolean()
+   val retirementDone=java.util.concurrent.CountDownLatch(1);val retirementFailure=AtomicReference<Throwable?>()
+   var retirementPosted=false
+   val backend=object:EvidenceCredentials.Backend {
+    override fun configured()=store.isConfigured(id)
+    override fun read():ByteArray?{reads.incrementAndGet();return store.read(id)}
+    override fun stage(value:ByteArray)=store.stageEvidence(id,value).also{stagesPrepared.incrementAndGet()}
+    override fun removal()=store.removeEvidence(id)
+   }
+   // Match the production captured-access commit adapter; only alias/context are disposable.
+   val credentials=EvidenceCredentials(owner,access::current,{action->access.leases.acquire().use{lease->lease.commit{access.checkCurrent();action();access.checkCurrent()}}},backend,{})
+   val pool=java.util.concurrent.Executors.newFixedThreadPool(2)
+   try {
+    store.save(id,original)
+    val canonical=File(context.noBackupFilesDir,"ai-provider-$id.enc");val originalCiphertext=canonical.readBytes()
+    val holder=pool.submit{
+     synchronized(keyGate){
+      stillHeld.set(true);gateHeld.countDown()
+      try{check(releaseGate.await(15,java.util.concurrent.TimeUnit.SECONDS))}finally{stillHeld.set(false)}
+     }
+    }
+    assertTrue(gateHeld.await(5,java.util.concurrent.TimeUnit.SECONDS))
+    val pending=pool.submit<Boolean>{setupThread.set(Thread.currentThread());setupStarted.countDown();runCatching{credentials.setup(replacement)}.isSuccess}
+    assertTrue(setupStarted.await(5,java.util.concurrent.TimeUnit.SECONDS))
+    // This is the real store key() monitor acquisition, after setup's captured
+    // auth/generation check; no fake stage barrier or production hook is used.
+    awaitBlockedAt(setupThread.get(),AiCredentialStore::class.java.name,"key")
+    assertTrue(stillHeld.get());assertEquals(1L,releaseGate.count);assertEquals(0,stagesPrepared.get())
+    retirementPosted=Handler(Looper.getMainLooper()).post{
+     try {
+      check(Looper.myLooper()===Looper.getMainLooper())
+      if(owner==EvidenceCatalog.Owner.PRIMARY)synchronized(primaryGate){live.set(false);access.close()}
+      else hidden.lock()
+     }catch(failure:Throwable){retirementFailure.set(failure)}finally{retirementDone.countDown()}
+    }
+    assertTrue("Main retirement could not be posted",retirementPosted)
+    // Asynchronous post plus finally-release prevents a regressed auth hold
+    // from deadlocking instrumentation through runOnMainSync or Main cleanup.
+    assertTrue("Main owner retirement waited for the shared Keystore gate",retirementDone.await(1,java.util.concurrent.TimeUnit.SECONDS))
+    assertNull(retirementFailure.get());assertTrue(stillHeld.get());assertEquals(1L,releaseGate.count);assertFalse(access.current())
+    releaseGate.countDown();holder.get(5,java.util.concurrent.TimeUnit.SECONDS)
+    assertFalse("Retired setup promoted its staged ciphertext",pending.get(10,java.util.concurrent.TimeUnit.SECONDS))
+    assertEquals("Real stage must complete before stale commit denial",1,stagesPrepared.get())
+    assertArrayEquals(originalCiphertext,canonical.readBytes())
+    val actual=store.read(id);try{assertArrayEquals(original,actual)}finally{actual?.fill(0)}
+    assertFalse(context.noBackupFilesDir.listFiles().orEmpty().any{it.name.contains(".stage-")||it.name.contains(".retired-")})
+    var admitted:EvidenceCredentials.Key?=null
+    try{admitted=credentials.acquireForSend(owner);fail("Retired access admitted a send key")}catch(_:IllegalStateException){}finally{admitted?.close()}
+    assertEquals(0,reads.get())
+   }finally {
+    // Release first on EVERY failure path, including Main timeout. Main can then
+    // exit even if a regression had held auth while waiting for KEY_GATE.
+    releaseGate.countDown();pool.shutdown()
+    val workersJoined=pool.awaitTermination(15,java.util.concurrent.TimeUnit.SECONDS)
+    if(!workersJoined)pool.shutdownNow()
+    val mainJoined=!retirementPosted||retirementDone.await(5,java.util.concurrent.TimeUnit.SECONDS)
+    original.fill(0);replacement.fill('\u0000');vaultKey.fill(0)
+    // Never delete an alias/file while a failed-to-join worker might still use it.
+    if(workersJoined&&mainJoined) {
+     access.close();hidden.lock();root.deleteRecursively()
+     check(alias.startsWith("evidence179-disposable-"))
+     KeyStore.getInstance("AndroidKeyStore").apply{load(null);deleteEntry(alias)}
+    }
+    assertTrue("Credential workers did not join after Keystore gate release",workersJoined)
+    assertTrue("Main retirement did not join after Keystore gate release",mainJoined)
+   }
+  }
  }
  @Test fun transitionAndDurabilityFailuresPreserveTruthAndRevokeBeforeCleanup() {
   for(removing in listOf(false,true))for(phase in listOf("transition","durability")) {

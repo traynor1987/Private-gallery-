@@ -27,7 +27,7 @@ public final class Evidence179Checks {
  static Ocr ocr(String text){return new Ocr(id(),200,"test",0,10,20,text,90,List.of(new Word(0,"word",80,0,0,5,5)),List.of(new ExtractedTime(0,"12:00",0,"zone and date unavailable",-1)),1,false);}
  static EvidenceCatalog base(Evidence... es){EvidenceCatalog c=EvidenceCatalog.empty(Owner.PRIMARY);for(Evidence e:es)c=c.upsertEvidence(e,100,"REGISTER");return c;}
  public static void main(String[] args)throws Exception {
-  codec(); originalsAndOcr(); grouping(); searchAndSuggestions(); contextualSuggestions(); quotas(); timelineBoundary(); analysisLineage(); eventDetachment(); successorLineage(); encryptedStore(); codecBufferWiping();
+  codec(); originalsAndOcr(); grouping(); searchAndSuggestions(); contextualSuggestions(); quotas(); timelineBoundary(); firstManualMove(); analysisLineage(); eventDetachment(); successorLineage(); encryptedStore(); codecBufferWiping();
   System.out.println("Evidence179 host checks passed: "+checks+" assertions (model/codec/lineage/search/real crypto/revocation/concurrency)");
  }
  static void codec()throws Exception {
@@ -120,6 +120,21 @@ public final class Evidence179Checks {
  static void timelineBoundary()throws Exception {
   Evidence a=evidence("edge",false,0);Event unknown=new Event(id(),List.of(a.id()),0,"USER","unknown","");Event known=new Event(id(),List.of(a.id()),Long.MAX_VALUE,"USER","known","");Incident i=incident("edge",List.of(a.id()),List.of(unknown,known));EvidenceCatalog c=base(a).upsertIncident(i,1,"CREATE");
   yes(c.timeline(i.id()).equals(List.of(known,unknown)),"unknown timestamps must follow every known timestamp, including Long.MAX_VALUE");
+ }
+ static void firstManualMove() {
+  Event late=new Event(id(),List.of(),300,"USER","late","");
+  Event early=new Event(id(),List.of(),100,"USER","early","");
+  Event middle=new Event(id(),List.of(),200,"USER","middle","");
+  Event unknown=new Event(id(),List.of(),0,"INFERRED","unknown","");
+  Incident i=incident("chronology",List.of(),List.of(late,unknown,middle,early));
+  EvidenceCatalog c=EvidenceCatalog.empty(Owner.PRIMARY).upsertIncident(i,1,"CREATE");
+  yes(c.moveEvent(i.id(),early.id(),0,2)==c,"boundary move must not switch chronology to insertion order");
+  EvidenceCatalog moved=c.moveEvent(i.id(),early.id(),1,2);
+  yes(moved.timeline(i.id()).equals(List.of(middle,early,late,unknown)),"first move starts at visible chronology and moves exactly one row");
+  yes(moved.incidents().get(0).manualOrder(),"first actual move records manual order");
+  yes(moved.audit().get(moved.audit().size()-1).action().equals("MOVE_EVENT"),"manual move is audited");
+  yes(moved.moveEvent(i.id(),unknown.id(),3,3)==moved,"manual last boundary remains no-op");
+  yes(moved.moveEvent(i.id(),unknown.id(),2,3).timeline(i.id()).equals(List.of(middle,early,unknown,late)),"subsequent move uses persisted manual order");
  }
  static void analysisLineage()throws Exception {
   Evidence e=evidence("restricted analysis",true,1);EvidenceCatalog c=base(e);Analysis raw=new Analysis(id(),2,"model","task",hash,List.of(e.id()),"derived restricted content",1,1,false,List.of());c=c.saveAnalysis(raw,2).removeEvidence(e.id(),3);Analysis old=c.analyses().get(0);Analysis applied=new Analysis(old.id(),old.at(),old.model(),old.task(),old.inputDigest(),old.evidenceIds(),old.text(),old.inputTokens(),old.outputTokens(),true,List.of());c=c.saveAnalysis(applied,4);

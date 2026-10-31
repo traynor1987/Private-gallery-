@@ -104,3 +104,62 @@ Existing mandatory cases retained: `encryptedRoundTripBothOwnersAndExplicitPlain
 3. Immutable JSON/transcript strings, platform PDF allocations and provider cryptographic internals are managed-runtime limitations; no universal heap erasure or secure disk deletion claim. Caller-owned partially written destinations require root SAF best-effort cleanup.
 4. UI I5 must use `analysisIds` and `associateAnalysis` as documented in the Task6 fix brief; this worker does not alter UI application/rendering. No arbitrary overlap association or original reattachment is acceptable.
 5. Legacy local v1 already-removed IDs cannot be reconstructed safely. New v2 saves retain exact mappings; old raw JSON remains preserved but may be uninterpretable after legacy deletion. Portable metadata schema2 is intentionally explicit and rejects the unreleased schema1.
+
+## Fix round2 — F1 near-limit local-v1 migration correction
+
+2026-10-31. Read independent `reviews/EXPORT179_FIX1.md` in full. Its E1/E2/E3/E5 source findings remain addressed; E4 runtime evidence is still pending. F1's new local-read regression is corrected in source for independent review. The earlier statement that local migration is merely subject to the4MiB quota was insufficient: existing valid annotations must remain readable when added v2 fields exceed that quota.
+
+### Semantics and bounded ownership
+
+A fully parsed/validated local-v1 catalogue now retains an immutable v1 serialization identity. It derives only validated still-live source mappings in memory and re-encodes all original v1 fields losslessly. No raw input byte buffer is retained. A decoder-only `EvidenceCodec.LegacyRead` capability has a private constructor and is retained only inside the codec; it cannot be obtained from a catalogue. The private serialization flag is not an exposed caller choice. Legacy construction additionally rejects associations or non-derivable historical mappings that a v1 encoding would omit.
+
+Public catalogue construction and every actual domain mutation continue to build version2 under the unchanged4,194,304-byte persisted quota. There is no automatic downgrade on encode failure. `validateSuccessor` explicitly rejects any decoded/reconstructed legacy mutation or downgrade. `EvidenceEncryptedStore` product code is unchanged: read/no-op does not rewrite, and an overquota domain mutation throws before encrypted staging or commit. An owner can explicitly shorten a note (or make another permitted size-reducing edit); if the entire v2 result and audit fit, that audited mutation migrates normally. No content is silently trimmed/dropped, no source authority is guessed, and originals are never changed.
+
+`EvidenceArchive.decodeMetadata` explicitly requires an embedded v2 catalogue for portable metadata schema2. This preserves the previous strict export acceptance boundary now that local-v1 re-encoding remains v1. New Android method `portableSchema2RejectsLegacyBinaryCatalog` prepares that boundary regression; it remains uncompiled/unrun with all other Android cases. Existing export/AI/history APIs and approved Task6 association flow are unchanged. Quota refusal UX semantics were appended to the Task6 fix brief.
+
+### Reproduction and final observed checks
+
+New `tests/evidence179/EvidenceMigration179HostTest.java` independently encodes the exact old field order, without a new-codec writer or quota bypass. It creates64 records with65,000-character notes plus one saved analysis selecting all64. Before the correction, the new test compiled and exited1 on its first read:
+
+```text
+Near-limit PRIMARY v1 bytes=4188265 maximum=4194304
+java.lang.IllegalArgumentException: Invalid evidence catalog
+Caused by: java.lang.IllegalArgumentException: Encoded evidence quota exceeded
+```
+
+The failure came from eager v2 constructor re-encoding, matching the independent review. Final focused command:
+
+```sh
+java com.sun.tools.javac.Main -Xlint:all -d /tmp/evidence179-fix2 \
+ app/src/main/java/uk/co/traynor/privategallery/core/hidden/HiddenRecordStore.java \
+ app/src/main/java/uk/co/traynor/privategallery/core/evidence/EvidenceCatalog.java \
+ app/src/main/java/uk/co/traynor/privategallery/core/evidence/EvidenceCodec.java \
+ app/src/main/java/uk/co/traynor/privategallery/core/evidence/EvidenceEncryptedStore.java \
+ tests/evidence179/EvidenceMigration179HostTest.java \
+ tests/evidence179/EvidenceHistory179HostTest.java
+java -cp /tmp/evidence179-fix2 uk.co.traynor.privategallery.core.evidence.EvidenceMigration179HostTest
+```
+
+Final compiler exit0/no warnings and test exit0:
+
+```text
+Near-limit PRIMARY v1 bytes=4188265 maximum=4194304
+Near-limit HIDDEN v1 bytes=4188264 maximum=4194304
+EvidenceMigration179HostTest PASS 486
+```
+
+The affected history suite was rerun after the product correction:
+
+```sh
+java -cp /tmp/evidence179-fix2 uk.co.traynor.privategallery.core.evidence.EvidenceHistory179HostTest
+```
+
+Observed exit0: `EvidenceHistory179HostTest PASS 40`. Unchanged wiping and format suites were not rerun or relabelled. `bash -n scripts/check_evidence179_archive.sh` passes; the existing grouped-host script now includes the migration suite and its real store dependencies.
+
+The486 assertions cover both owners: exact near-limit byte lengths; readable complete notes/accepted JSON/lineage; all64 derived reference mappings; exact canonical v1 encode/read bytes; public v2 construction and a small rename refusing overquota expansion; no mutation of the original snapshot; explicit note shortening producing bounded v2 with retained other63 records/analysis/history; audit-preserving v1 round-trip; rejection of a separately reconstructed v1 successor; real encrypted store read/no-op/refusal with zero commits, byte-identical ciphertext, original decrypted payload and no residual stage; one successful bounded v2 commit after the explicit edit; and downgrade refusal. Tests use only isolated temporary fixture stores and clean them afterwards.
+
+### Exact fix2 delta / remaining gate
+
+Product delta from frozen fix1: `EvidenceCatalog.java`, `EvidenceCodec.java`, and one explicit v2 guard in `EvidenceArchive.kt`. Added `EvidenceMigration179HostTest.java`; added one focused Android portable-binary version test; extended `scripts/check_evidence179_archive.sh`; updated EXPORT179/CONTRACTS/Task6 fix brief and appended this report. No changes to encrypted-store product code, source fingerprint rules, credentials, transport, originals or Android build/CI files. Root's disjoint Git/compile activity is not worker verification.
+
+All Android/Kotlin compilation, groupedAPI37 instrumentation, BouncyCastle known-answer and PDF runtime gates remain pending. F1 host evidence does not satisfy E4 or authorize release. No Git/CI/signing/subagents were used by this worker.

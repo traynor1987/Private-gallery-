@@ -199,7 +199,13 @@ internal class EvidenceAccess private constructor(
   }
  }
  private data class Provider(val name:String,val mime:String,val modified:Long) {
-  fun metadata(base:EvidenceCatalog.Metadata):EvidenceCatalog.Metadata=EvidenceCatalog.Metadata(name.take(200),0,modified.coerceAtLeast(0),base.dateAddedAt(),base.captureAt(),base.width(),base.height(),base.embedded()+mapOf("sourceNameProvenance"to"Authorised document provider filename claim","fileModifiedProvenance"to if(modified>0)"Document provider millisecond timestamp claim"else"Unavailable"),base.vaultOnly())
+  fun metadata(base:EvidenceCatalog.Metadata):EvidenceCatalog.Metadata = EvidenceCatalog.Metadata(
+   name.take(200),0,modified.coerceAtLeast(0),base.dateAddedAt(),base.captureAt(),base.width(),base.height(),
+   base.embedded()+mapOf(
+    "sourceNameProvenance" to "Authorised document provider filename claim",
+    "fileModifiedProvenance" to if(modified>0) "Document provider millisecond timestamp claim" else "Unavailable",
+   ),base.vaultOnly(),
+  )
  }
  private object ProviderAccess {
   fun provider(context:Context,uri:Uri):Provider {

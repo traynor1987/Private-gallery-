@@ -340,6 +340,7 @@ jobs:
       - name: Verify packaged offline OCR and native alignment
         run: |
           python3 scripts/verify_evidence179_distribution.py app/build/outputs/apk/debug/app-debug.apk x86_64 app/build/evidence179/ocr-distribution.json
+          "$ANDROID_HOME/build-tools/36.0.0/zipalign" -c -P 16 -v 4 app/build/outputs/apk/debug/app-debug.apk > app/build/evidence179/apk-native-alignment.txt
           python3 scripts/debug_apk_identity1762.py app/build/outputs/apk/debug/app-debug.apk > app/build/evidence179/debug-package.txt
       - name: Save verified compilation dependency cache
         if: steps.evidence-gradle-cache.outputs.cache-hit != 'true'

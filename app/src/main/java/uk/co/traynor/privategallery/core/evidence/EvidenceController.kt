@@ -33,16 +33,29 @@ internal class EvidenceController(context:Context,val access:EvidenceAccess):Aut
  private fun publish(change:(State)->State)=access.publishIfCurrent{mutable.value=change(mutable.value)}
  init {refresh()}
  fun current()=access.current()
- private fun perform(label:String,work:suspend ()->EvidenceCatalog) {
+ private class BulkRegistrationFailure(val sourceIds:List<String>,cause:Throwable):Exception(cause)
+ private fun perform(label:String,success:((EvidenceCatalog)->String)?=null,work:suspend ()->EvidenceCatalog) {
   scope.launch {
    mutex.withLock {
     if(!current())return@withLock
     if(!publish{it.copy(busy=true,message=null)})return@withLock
     try {
      val next=withContext(Dispatchers.IO){ensureActive();access.checkCurrent();work().also{access.checkCurrent();ensureActive()}}
-     publish{it.copy(catalog=next,busy=false,message=label)}
+     publish{it.copy(catalog=next,busy=false,message=success?.invoke(next)?:label)}
     }catch(cancelled:CancellationException){throw cancelled
-    }catch(_:Throwable){publish{it.copy(busy=false,message="Operation could not complete. No original was removed. Reopen or verify the selected evidence.")}}
+    }catch(failure:Throwable){
+     // A prior item may have committed, or promotion may have preceded an fsync failure.
+     // Reread instead of hiding committed records or blindly replaying the operation.
+     val authoritative=withContext(Dispatchers.IO){runCatching{access.store.read()}.getOrNull()}
+     val message=if(failure is BulkRegistrationFailure){
+      val committed=authoritative?.evidence()?.count{it.sourceId() in failure.sourceIds}
+      if(committed==null)"Bulk registration stopped. Reopen to review which records committed. Originals were preserved."
+      else "Bulk registration stopped: $committed of ${failure.sourceIds.size} selected originals are registered. Review the committed records before retrying. Originals were preserved."
+     }else if(failure is IllegalArgumentException&&failure.message=="Encoded evidence quota exceeded")
+      "The change was not saved: encrypted catalogue quota exceeded. Existing annotations remain readable. Explicitly shorten or remove owner annotations before trying again."
+     else "Operation could not complete. No original was removed. Reopen or verify the selected evidence."
+     publish{it.copy(catalog=authoritative?:it.catalog,busy=false,message=message)}
+    }
    }
   }
  }
@@ -63,6 +76,18 @@ internal class EvidenceController(context:Context,val access:EvidenceAccess):Aut
  /** Transforms are trusted local UI operations, never model output or imported JSON. */
  fun mutate(label:String,transform:(EvidenceCatalog)->EvidenceCatalog)=perform(label){access.store.update(transform)}
  fun register(sourceId:String,extract:Boolean=true)=perform("Evidence added; original preserved") {registerRecord(sourceId,extract)}
+ /** One reviewed, bounded owner action; each authenticated original has its own durable commit. */
+ fun registerMany(sourceIds:List<String>,extract:Boolean=true) {
+  require(sourceIds.isNotEmpty()&&sourceIds.size<=128&&sourceIds.distinct().size==sourceIds.size){"Select 1 to 128 distinct originals"}
+  val selection=sourceIds.toList()
+  perform("Bulk registration complete",success={catalog->
+   "Bulk registration complete: ${catalog.evidence().count{it.sourceId() in selection}} of ${selection.size} selected originals are registered. Originals were preserved."
+  }) {
+   try {var latest=access.store.read();for(id in selection){currentCoroutineContext().ensureActive();access.checkCurrent();latest=registerRecord(id,extract)};latest}
+   catch(cancelled:CancellationException){throw cancelled}
+   catch(failure:Throwable){throw BulkRegistrationFailure(selection,failure)}
+  }
+ }
  /** Acquire in the originating encrypted repository, then bind provider claims to its verified identity. */
  fun importAndRegister(uri:Uri,extract:Boolean=true)=perform("Evidence imported; original preserved") {
   val acquired=access.sources.import(uri)

@@ -155,8 +155,8 @@ class AiCredentialStore private constructor(private val context: Context, privat
         private const val ALIAS = "private-gallery-ai-provider-v1"
         private val KEY_GATE = Any()
         private fun syncDirectory(directory: File) {
-            val fd = android.system.Os.open(directory.path, android.system.OsConstants.O_RDONLY or android.system.OsConstants.O_DIRECTORY, 0)
-            try { android.system.Os.fsync(fd) } finally { android.system.Os.close(fd) }
+            val fd = android.system.Os.open(directory.path, android.system.OsConstants.O_RDONLY, 0)
+            try { check(android.system.OsConstants.S_ISDIR(android.system.Os.fstat(fd).st_mode)); android.system.Os.fsync(fd) } finally { android.system.Os.close(fd) }
         }
     }
 }

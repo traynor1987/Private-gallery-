@@ -1,3 +1,29 @@
+# Private Gallery 1.7.9 — current recovery status
+
+**Release incomplete. No 1.7.9 production APK, Android runtime pass, consolidated security approval or upgrade pass exists.** Keep version1.7.9/code51 on release/1.7.9-evidence-locker; recheck code unused before freeze.
+
+Latest independently fetched remote/local backup: `c732d894ae3aec3c2602477011345d17399c22f9`. Newer valid working files exist: export fix2 and active UI integration. Never reset/clean/overwrite them. Root is the sole Git writer. UI/export/auth source corrections are frozen and scoped-reviewed; next implementation worker will own actual route-proof fixtures. Root remains sole Git writer.
+
+- Authentication-locking High AI179-AUTH-1: source correction accepted by `reviews/AI179_AUTH_FIX1.md`. Keystore/disk work outside auth/state monitors, short staged promotion and generation admission, isConfigured off Main. Actual Android/Keystore/lock responsiveness remains mandatory and unrun.
+- Export source fixes: `EXPORT179_FIX1.md` accepts E1/E2/E3/E5 source changes. `EXPORT179_FIX2.md` accepts F1 lossless near-quota local-v1 reads and bounded v2 mutations. Historical references and explicit incident associations preserve advisory provenance without reattaching originals. Portable metadata schema2, crypto header1; app version unchanged. E4 Android/PDF/BC/SAF gates remain pending.
+- Latest reported focused host results: model/store124 +authority21+hints; history40, wiping19, migration486. UI worker has since added timeline regressions (model130 reported), still source/runtime integration in progress. Do not substitute these for Android execution.
+- Compile diagnostic41229152294/job124619480901 at b54bc5 failed before Kotlin on legacy SourceSet Provider wiring. Corrected typed generated-assets variant API successfully got the next run to Kotlin.
+- Compile diagnostic41230519016/job124623597311 at c732d8 failed app Kotlin on three exact diagnostics: unsupported O_DIRECTORY, two Provider.metadata string whitespace errors. Those minimal fixes and newly found Host named-callback compile fix are now prepared/scoped-reviewed, preserving directory fsync/auth semantics. No instrumentation compile/runtime has completed. Next compile batch includes them; never rerun unchanged source or unrelated suites.
+
+Continue in order without routine permission pauses:
+
+1. Task6 I1–I5/M1–M2 source fixes are accepted by INTEGRATION179_FIX2; preserve bulk/mixed export, timeline, advisory associations, transport fence and51 authored realHost/dialog/provider cases. Their compilation/runtime remains pending. Authentication test follow-up now8methods, including actual sharedKeystoreGate/Main retirement; AI179_AUTH_FIX1 source addendum accepts coverage, not execution.
+2. Back up coherent new source with expected-SHA lease and independently fetch/verify remote. Preserve all concurrent valid edits; never force-push.
+3. Complete `work/task-7a-route-brief.md` and actual VPN/Tor HTTPS/DNS/packet/revocation proof. Root has prepared bounded chunked body and exact-onion public DEBUG TLS helpers with local host/loopback tests; actual route proof is NOT implemented/run. No release trust or insecure endpoint overrides.
+4. Complete `work/task-7-brief.md`: existing workflow only, exact final case manifest and raw-source/artifact gates, real OCR model/ABI16KiB APK checks, original-key upgrade controls. Root prepared configuration/baseline/source-scope validators; signer activation/approval JSON/frozen final SHA remain absent.
+5. Grouped focused API37 execution, diagnose exact failures, consolidated independent security review0Critical/Important, exact frozen-source signing with original certificate, actual original50→51 install-r/restart preservation, independently verify final APK/signature/hash and deliver one acceptance APK. No uninstall/data clear/new signing key. Physical Fold acceptance remains OWNER_REQUIRED.
+
+Original distributed baseline remains1.7.8/code50, frozen source4820e176dcb60a3aa2f1bfd7b36e2de19fafee11, APKsha256df958e447ce1c5a9bc9b515d16de03c0d11a961ae6efb030b305b2dfe733ccf3, original certificate94f2bfc6567f26d067d29077111cfd0ce86d38263c642ad115e43365f05b0d17. Retained original archive identity verified; actual phone installed code is unobservable here. Preserve all1.7.8 branches/artifacts/data/evidence. Local Gradle bootstrap cannot reach uncached distribution; CI is required for Kotlin/Android. Neither local source review nor a failed compile permits signing.
+
+## Historical checkpoint log
+
+The entries below are historical; use current status above, actual Git HEAD, PROGRESS.md, CONTRACTS and latest reports for continuation.
+
 # Private Gallery1.7.9 Evidence Locker recovery
 
 Status: FOUNDATION HOST-VERIFIED/SCOPED-REVIEWED; ANDROID INTEGRATION IN PROGRESS, no179APK, no179runtime/security/signingapproval.

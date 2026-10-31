@@ -193,6 +193,29 @@ class EvidenceController179Test {
    access.reader().readVerified(record.sourceId()){_,input->val bytes=input.readBytes();try{assertArrayEquals(original,bytes)}finally{bytes.fill(0)}}
   }finally{controllerRef?.let{owned->instrumentation.runOnMainSync{owned.close()}}?:access.close();key.fill(0);original.fill(0);root.deleteRecursively()}
  }
+ @Test fun bulk_registration_reports_committed_prefix_on_failure_and_never_removes_originals() = kotlinx.coroutines.runBlocking {
+  val base=androidx.test.core.app.ApplicationProvider.getApplicationContext<android.content.Context>()
+  val root=java.io.File(base.cacheDir,"evidence-bulk-${UUID.randomUUID()}")
+  val context=object:android.content.ContextWrapper(base){
+   override fun getFilesDir()=java.io.File(root,"files").apply{mkdirs()}
+   override fun getNoBackupFilesDir()=java.io.File(root,"no-backup").apply{mkdirs()}
+   override fun getApplicationContext():android.content.Context=this
+  }
+  val key=ByteArray(32){17};val repo=uk.co.traynor.privategallery.core.vault.AndroidVaultRepository(context,key)
+  val ids=(1..2).map{n->(repo.importVerified(uk.co.traynor.privategallery.core.vault.VaultImportSource("bulk-$n.txt","text/plain",{"bulk-$n".byteInputStream()}))as uk.co.traynor.privategallery.core.vault.ImportResult.Imported).item.id}
+  val access=EvidenceAccess.primary(context,key,{key},{true},{key.copyOf()},Any())
+  val instrumentation=androidx.test.platform.app.InstrumentationRegistry.getInstrumentation();var owned:EvidenceController?=null
+  try {
+   instrumentation.runOnMainSync{owned=EvidenceController(context,access);owned!!.registerMany(listOf(ids.first(),UUID.randomUUID().toString(),ids.last()),extract=false)}
+   val partial=kotlinx.coroutines.withTimeout(15000){owned!!.state.first{!it.busy&&it.message?.startsWith("Bulk registration stopped")==true}}
+   assertEquals(1,partial.catalog!!.evidence().size);assertTrue(partial.message!!.contains("1 of 3"));assertEquals(2,repo.items().size)
+   instrumentation.runOnMainSync{owned!!.registerMany(ids,extract=false)}
+   val complete=kotlinx.coroutines.withTimeout(15000){owned!!.state.first{!it.busy&&it.message?.startsWith("Bulk registration complete")==true}}
+   assertEquals(2,complete.catalog!!.evidence().size);assertTrue(complete.message!!.contains("2 of 2"));assertEquals(2,repo.items().size)
+   instrumentation.runOnMainSync{try{owned!!.registerMany(List(129){UUID.randomUUID().toString()});fail("unbounded bulk admitted")}catch(expected:IllegalArgumentException){}}
+   assertEquals(2,access.store.read().evidence().size)
+  }finally{owned?.let{instrumentation.runOnMainSync{it.close()}}?:access.close();key.fill(0);root.deleteRecursively()}
+ }
  private fun original():EvidenceOriginal {
   val item=uk.co.traynor.privategallery.core.vault.VaultItem(UUID.randomUUID().toString(),"text/plain","proof.txt",1,9,
    java.security.MessageDigest.getInstance("SHA-256").digest("sensitive".toByteArray()),ByteArray(12),uk.co.traynor.privategallery.core.vault.VaultItemState.COMPLETE)

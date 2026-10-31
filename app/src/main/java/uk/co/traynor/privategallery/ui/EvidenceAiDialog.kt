@@ -74,12 +74,11 @@ import uk.co.traynor.privategallery.core.evidence.*
   controller.mutate("Owner-approved AI advisory applied separately") {catalog ->
    var current=if(catalog.analyses().any{it.id()==analysis.id()})catalog else catalog.saveAnalysis(analysis,EvidenceController.now())
    val stored=current.analyses().single{it.id()==analysis.id()}
-   if(!stored.applied())current=current.saveAnalysis(EvidenceCatalog.Analysis(stored.id(),stored.at(),stored.model(),stored.task(),stored.inputDigest(),stored.evidenceIds(),stored.text(),stored.inputTokens(),stored.outputTokens(),true,stored.lineage()),EvidenceController.now())
    val original=if(incidentId==null)EvidenceCatalog.Incident(UUID.randomUUID().toString(),title.orEmpty(),0,0,"","",emptyList(),ids,emptyList(),false,false,emptyList())else current.incidents().single{it.id()==incidentId}
    val reference="AI-generated advisory ${stored.id()} (${stored.model()}); unverified, owner-approved reference. Original evidence unchanged."
    val event=if(timeline)listOf(EvidenceCatalog.Event(UUID.randomUUID().toString(),ids,eventTime,"AI_INFERRED",eventTitle,reference+"\n"+eventNotes))else emptyList()
    val updated=EvidenceCatalog.Incident(original.id(),original.title(),original.startAt(),original.endAt(),original.description(),original.notes()+"\n"+reference,original.tags(),original.evidenceIds(),original.events()+event,original.manualOrder(),original.archived(),(original.lineage()+stored.lineage()).distinct())
-   current.upsertIncident(updated,EvidenceController.now(),if(timeline)"OWNER_APPLY_AI_TIMELINE"else"OWNER_APPLY_AI_SUMMARY")
+   current.upsertIncident(updated,EvidenceController.now(),if(timeline)"OWNER_APPLY_AI_TIMELINE"else"OWNER_APPLY_AI_SUMMARY").associateAnalysis(stored.id(),original.id(),EvidenceController.now())
   }
  }
  val details=remember(result){result?.let{runCatching{EvidenceAi.details(it)}.getOrNull()}}

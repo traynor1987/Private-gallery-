@@ -27,21 +27,21 @@ import kotlinx.coroutines.*
 import uk.co.traynor.privategallery.core.evidence.*
 import uk.co.traynor.privategallery.core.vault.VaultPdfPreview
 
-@Composable internal fun EvidenceExportDialog(controller:EvidenceController,incidentIds:List<String>,createStage:()->EvidenceOwnerSession.CipherStage,
+@Composable internal fun EvidenceExportDialog(controller:EvidenceController,incidentIds:List<String>,evidenceIds:List<String> = emptyList(),createStage:()->EvidenceOwnerSession.CipherStage,
  discardStage:(EvidenceOwnerSession.CipherStage)->Unit,onPrepared:(EvidenceOwnerSession.CipherStage,EvidenceExportPlan,EvidenceExportReceipt)->Boolean,
  onPlaintext:(EvidenceExportPlan)->Boolean,onClose:()->Unit) {
  val scope=rememberCoroutineScope{Dispatchers.Main.immediate}
  val focus=androidx.compose.ui.platform.LocalFocusManager.current
- var plan by remember(controller,incidentIds){mutableStateOf<EvidenceExportPlan?>(null)}
+ var plan by remember(controller,incidentIds,evidenceIds){mutableStateOf<EvidenceExportPlan?>(null)}
  var password by remember(controller){mutableStateOf("")};var repeat by remember(controller){mutableStateOf("")}
  var busy by remember(controller){mutableStateOf(false)};var message by remember(controller){mutableStateOf("")}
  var plaintext by remember(controller){mutableStateOf(false)};var running by remember(controller){mutableStateOf<Job?>(null)}
  var staged by remember(controller){mutableStateOf<EvidenceOwnerSession.CipherStage?>(null)}
  fun dismiss(){running?.cancel();password="";repeat="";staged?.let(discardStage);staged=null;plan=null;onClose()}
  DisposableEffect(controller){val retired=controller.access.onRetire{android.os.Handler(android.os.Looper.getMainLooper()).post{dismiss()}};onDispose{retired.close();running?.cancel();staged?.let(discardStage)}}
- LaunchedEffect(controller,incidentIds){
+ LaunchedEffect(controller,incidentIds,evidenceIds){
   try {
-   val selection=withContext(Dispatchers.IO){val catalog=controller.access.store.read();val incidents=incidentIds.map{id->catalog.incidents().single{it.id()==id}};val ids=incidents.flatMap{it.evidenceIds()+it.events().flatMap{e->e.evidenceIds()}}.distinct();EvidenceEgress.requireAllowed(catalog,ids,incidentIds,controller.access.reader());EvidenceExportPlan(catalog,incidentIds.toList(),ids,EvidenceEgress.digest(catalog),false)}
+   val selection=withContext(Dispatchers.IO){val catalog=controller.access.store.read();val incidents=incidentIds.map{id->catalog.incidents().single{it.id()==id}};require(incidentIds.distinct().size==incidentIds.size&&incidentIds.size<=128);require(evidenceIds.distinct().size==evidenceIds.size);val ids=(evidenceIds+incidents.flatMap{it.evidenceIds()+it.events().flatMap{e->e.evidenceIds()}}).distinct();require(ids.size<=128&&(incidentIds.isNotEmpty()||ids.isNotEmpty()));EvidenceEgress.requireAllowed(catalog,ids,incidentIds,controller.access.reader());EvidenceExportPlan(catalog,incidentIds.toList(),ids,EvidenceEgress.digest(catalog),false)}
    withContext(Dispatchers.Main.immediate){controller.access.publishIfCurrent{plan=selection}}
   }catch(cancelled:CancellationException){throw cancelled}catch(_:Throwable){withContext(Dispatchers.Main.immediate){controller.access.publishIfCurrent{message="Export is blocked for vault-only, unavailable, changed or foreign-vault contributors. Verify the selected incident's evidence first."}}}
  }
@@ -93,7 +93,9 @@ private val evidenceArchiveRetirement=Executors.newCachedThreadPool{r->Thread(r,
 private fun retireEvidenceArchive(archive:EvidenceOpenedArchive?){if(archive!=null)evidenceArchiveRetirement.execute{runCatching{archive.close()}}}
 
 @OptIn(ExperimentalLayoutApi::class)
-@Composable internal fun EvidenceArchiveDialog(controller:EvidenceController,source:Uri,destination:Uri?,expectedCipherDigest:String?,onPlaintextRequest:(String)->Unit,onClose:()->Unit) {
+@Composable internal fun EvidenceArchiveDialog(controller:EvidenceController,source:Uri,destination:Uri?,expectedCipherDigest:String?,
+ renderReport:(android.content.Context,ByteArray,Int,()->Boolean)->Pair<Bitmap,Int> = {context,bytes,index,current->VaultPdfPreview.page(context,bytes,index,current)},
+ onPlaintextRequest:(String)->Unit,onClose:()->Unit) {
  val context=LocalContext.current.applicationContext;val scope=rememberCoroutineScope{Dispatchers.Main.immediate}
  val focus=androidx.compose.ui.platform.LocalFocusManager.current
  val alive=remember(controller,source){AtomicBoolean(true)}
@@ -103,12 +105,12 @@ private fun retireEvidenceArchive(archive:EvidenceOpenedArchive?){if(archive!=nu
  var busy by remember(controller,source){mutableStateOf(false)};var message by remember(controller,source){mutableStateOf("")};var confirmPlain by remember(controller,source){mutableStateOf(false)}
  var running by remember(controller,source){mutableStateOf<Job?>(null)};val document=remember(controller,source){java.util.concurrent.atomic.AtomicReference<EvidenceDocumentIo?>(null)}
  fun clear(){password="";bitmap?.let(::wipeReportBitmap);bitmap=null;retireEvidenceArchive(opened);opened=null;document.get()?.close();document.set(null)}
- fun dismiss(){alive.set(false);running?.cancel();if(destination!=null&&!destinationCompleted.get())EvidenceDocumentIo.requestPartialCleanup(context,destination);clear();onClose()}
- DisposableEffect(controller,source){val retired=controller.access.onRetire{alive.set(false);document.get()?.close();android.os.Handler(android.os.Looper.getMainLooper()).post{dismiss()}};onDispose{retired.close();alive.set(false);running?.cancel();if(destination!=null&&!destinationCompleted.get())EvidenceDocumentIo.requestPartialCleanup(context,destination);document.get()?.close();retireEvidenceArchive(opened);bitmap?.let(::wipeReportBitmap)}}
+ fun dismiss(){alive.set(false);running?.cancel();if(destination!=null&&!destinationCompleted.get())EvidenceDocumentIo.requestPartialCleanup(context,destination,source);clear();onClose()}
+ DisposableEffect(controller,source){val retired=controller.access.onRetire{alive.set(false);document.get()?.close();android.os.Handler(android.os.Looper.getMainLooper()).post{dismiss()}};onDispose{retired.close();alive.set(false);running?.cancel();if(destination!=null&&!destinationCompleted.get())EvidenceDocumentIo.requestPartialCleanup(context,destination,source);document.get()?.close();retireEvidenceArchive(opened);bitmap?.let(::wipeReportBitmap)}}
  LaunchedEffect(opened,page){val archive=opened?:return@LaunchedEffect;var pending:Bitmap?=null
   try {
    var count=1
-   withContext(Dispatchers.IO){archive.withReport{report->val rendered=VaultPdfPreview.page(context,report,page){alive.get()&&controller.current()&&isActive};pending=rendered.first;count=rendered.second}}
+   withContext(Dispatchers.IO){archive.withReport{report->val rendered=renderReport(context,report,page){alive.get()&&controller.current()&&isActive};pending=rendered.first;count=rendered.second}}
    withContext(Dispatchers.Main.immediate){val previous=bitmap;if(!alive.get()||!controller.access.publishIfCurrent{bitmap=pending;pending=null;pages=count})throw CancellationException("Report view retired");previous?.let(::wipeReportBitmap)}
   }catch(cancelled:CancellationException){throw cancelled}catch(_:Throwable){withContext(Dispatchers.Main.immediate){controller.access.publishIfCurrent{message="The authenticated report could not be rendered; no plaintext file was created."}}}finally{pending?.let(::wipeReportBitmap)}
  }
@@ -147,7 +149,7 @@ private fun retireEvidenceArchive(archive:EvidenceOpenedArchive?){if(archive!=nu
  }
  if(confirmPlain)GalleryAlertDialog(onDismissRequest={confirmPlain=false},title={EvidenceDialogTitle("Confirm plaintext re-export")},text={Text("This exports the authenticated archive's readable PDF, structured metadata and originals outside the vault. It does not read or alter live vault originals. Partial provider copies cannot be securely erased. Explicitly continue?")},confirmButton={TextButton(onClick={confirmPlain=false;val archive=opened?:return@TextButton
   if(destination==null){val digest=archive.ciphertextSha256;clear();onPlaintextRequest(digest)}else {
-   busy=true;running=scope.launch(start=CoroutineStart.UNDISPATCHED){try{withContext(Dispatchers.IO){val operation=currentCoroutineContext();val io=EvidenceDocumentIo(context,controller.access){alive.get()&&operation.isActive};document.set(io);try{io.write(destination){output->archive.writePlaintext(output,true){alive.get()&&controller.current()&&operation.isActive&&io.current()}}}finally{io.close();document.set(null)}};if(!controller.access.publishIfCurrent{destinationCompleted.set(true);message="Explicitly confirmed plaintext archive ZIP saved."}){EvidenceDocumentIo.requestPartialCleanup(context,destination);throw CancellationException("Destination authority retired")}}catch(cancelled:CancellationException){throw cancelled}catch(_:Throwable){controller.access.publishIfCurrent{message="Plaintext copy failed. Partial destination cleanup was requested; deletion cannot be guaranteed."}}finally{busy=false}}
+   busy=true;running=scope.launch(start=CoroutineStart.UNDISPATCHED){try{withContext(Dispatchers.IO){val operation=currentCoroutineContext();val io=EvidenceDocumentIo(context,controller.access){alive.get()&&operation.isActive};document.set(io);try{io.write(destination,protectedSource=source){output->archive.writePlaintext(output,true){alive.get()&&controller.current()&&operation.isActive&&io.current()}}}finally{io.close();document.set(null)}};if(!controller.access.publishIfCurrent{destinationCompleted.set(true);message="Explicitly confirmed plaintext archive ZIP saved."}){EvidenceDocumentIo.requestPartialCleanup(context,destination,source);throw CancellationException("Destination authority retired")}}catch(cancelled:CancellationException){throw cancelled}catch(_:Throwable){controller.access.publishIfCurrent{message="Plaintext copy failed. Partial destination cleanup was requested; deletion cannot be guaranteed."}}finally{busy=false}}
   }
  }){Text("Confirm plaintext re-export")}},dismissButton={TextButton(onClick={confirmPlain=false}){Text("Cancel")}},properties=DialogProperties(securePolicy=SecureFlagPolicy.SecureOn))
 }

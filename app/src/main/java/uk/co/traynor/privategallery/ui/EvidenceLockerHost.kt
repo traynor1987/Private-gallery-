@@ -27,7 +27,8 @@ private class EvidencePickerTicket(
 }
 private class EvidenceArchiveRequest(val source:Uri,val destination:Uri?=null,val cipherDigest:String?=null)
 
-@Composable internal fun EvidenceLockerHost(owner:EvidenceOwnerSession,activityResumed:Boolean,onClose:()->Unit) {
+@Composable internal fun EvidenceLockerHost(owner:EvidenceOwnerSession,activityResumed:Boolean,
+ preparePermission:(Context)->android.content.Intent?={android.net.VpnService.prepare(it)},onClose:()->Unit) {
  val context=LocalContext.current.applicationContext
  val scope=rememberCoroutineScope{Dispatchers.Main.immediate}
  val lifecycle=androidx.lifecycle.compose.LocalLifecycleOwner.current.lifecycle
@@ -37,12 +38,12 @@ private class EvidenceArchiveRequest(val source:Uri,val destination:Uri?=null,va
  var delivered by remember(owner){mutableStateOf<EvidencePickerTicket?>(null)}
  var aiIds by remember(owner){mutableStateOf<List<String>?>(null)}
  var aiMode by remember(owner){mutableStateOf<String?>(null)}
- var exportIds by remember(owner){mutableStateOf<List<String>?>(null)}
+ var exportIds by remember(owner){mutableStateOf<EvidenceExportSelection?>(null)}
  var archive by remember(owner){mutableStateOf<EvidenceArchiveRequest?>(null)}
  var job by remember(owner){mutableStateOf<Job?>(null)}
  var transferring by remember(owner){mutableStateOf(false)}
  var notice by remember(owner){mutableStateOf<String?>(null)}
- fun discardDestination(ticket:EvidencePickerTicket?){if(ticket?.kind in listOf("Encrypted","Plain","Reexport"))ticket?.uri?.let{EvidenceDocumentIo.requestPartialCleanup(context,it)}}
+ fun discardDestination(ticket:EvidencePickerTicket?){if(ticket?.kind in listOf("Encrypted","Plain","Reexport"))ticket?.uri?.let{EvidenceDocumentIo.requestPartialCleanup(context,it,ticket.source)}}
  fun dismiss(){discardDestination(pending);discardDestination(delivered);job?.cancel();controller?.let{owner.retire(it)};controller=null;aiIds=null;exportIds=null;archive=null;pending?.stage?.let{owner.discard(it)};pending=null;delivered=null;owner.close();onClose()}
  fun received(uri:Uri?,accepted:Boolean){val ticket=pending?:return;if(!ticket.delivered.compareAndSet(false,true))return;ticket.uri=uri;ticket.accepted=accepted;delivered=ticket}
  val importPicker=rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()){uri->received(uri,uri!=null)}
@@ -119,11 +120,11 @@ private class EvidenceArchiveRequest(val source:Uri,val destination:Uri?=null,va
    onAi={ids->aiIds=ids;aiMode=null},onExport={ids->exportIds=ids},
    onOpenArchive={handoff(EvidencePickerTicket("Open")){importPicker.launch(arrayOf("application/octet-stream","*/*"))}})
   aiIds?.let{ids->EvidenceAiDialog(active,ids,owner.allowsSystem(),{owner.routes(active)},onRequestPermission={mode->
-   val intent=android.net.VpnService.prepare(context)
+   val intent=preparePermission(context)
    if(intent==null){aiMode=mode;notice="Android VPN permission is already granted. Prepare a fresh preview on the chosen secure transport.";aiIds=ids}
    else handoff(EvidencePickerTicket("Permission",evidenceIds=ids,mode=mode)){permissionPicker.launch(intent)}
   },onClose={aiIds=null},initialMode=aiMode)}
-  exportIds?.let{ids->EvidenceExportDialog(active,ids,createStage={owner.newCipherStage()},discardStage={owner.discard(it)},onPrepared={stage,plan,receipt->
+  exportIds?.let{ids->EvidenceExportDialog(active,ids.incidentIds,evidenceIds=ids.evidenceIds,createStage={owner.newCipherStage()},discardStage={owner.discard(it)},onPrepared={stage,plan,receipt->
    handoff(EvidencePickerTicket("Encrypted",plan.incidentIds.toList(),plan.evidenceIds.toList(),plan.digest,stage,receipt)){outputPicker.launch("private-gallery-evidence.pgevidence")}
   },onPlaintext={plan->handoff(EvidencePickerTicket("Plain",plan.incidentIds.toList(),plan.evidenceIds.toList(),plan.digest)){outputPicker.launch("private-gallery-evidence.zip")}},onClose={exportIds=null})}
   archive?.let{request->EvidenceArchiveDialog(active,request.source,request.destination,request.cipherDigest,onPlaintextRequest={cipherDigest->
@@ -138,4 +139,4 @@ private class EvidenceArchiveRequest(val source:Uri,val destination:Uri?=null,va
 
 /** Output is never held across a picker. Closing a capability cancels provider IO and denies success. */
 internal fun <T> evidenceDestination(context:Context,controller:EvidenceController,uri:Uri,write:(java.io.OutputStream)->T):T =
- EvidenceDocumentIo(context,controller.access).use{it.write(uri,write)}
+ EvidenceDocumentIo(context,controller.access).use{it.write(uri,consume=write)}

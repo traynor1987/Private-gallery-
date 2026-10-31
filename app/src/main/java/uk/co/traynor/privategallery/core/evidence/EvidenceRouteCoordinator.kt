@@ -18,6 +18,9 @@ internal class EvidenceRouteCoordinator(
  private val ownedVpn:()->Network?,private val wireGuardReleased:()->Boolean,
  private val prepareVpn:suspend ()->Unit,private val releaseWireGuard:()->Unit,
  private val primaryRequiresVpn:()->Boolean,
+ private val browserAdmissionRetired:()->Boolean={HiddenVpnBrowserBroker.admissionRetired()},
+ private val dedicatedBrowserPresent:()->Boolean={HiddenVpnBrowserBroker.hasDedicatedProcess(context)},
+ private val permissionGranted:()->Boolean={VpnService.prepare(context)==null},
 ):EvidenceRouteConnection {
  private val ended=AtomicBoolean()
  private val main=Handler(Looper.getMainLooper())
@@ -30,6 +33,8 @@ internal class EvidenceRouteCoordinator(
  private var retirement:AutoCloseable?=null
  init {retirement=access.onRetire{close()};if(ended.get())retirement?.close()}
  private fun current()=!ended.get()&&access.current()
+ private fun transportAdmissionCurrent()=current()&&browserAdmissionRetired()&&!dedicatedBrowserPresent()&&!HiddenTorIsolationService.hasTorProcess(context)&&HiddenTorIsolationService.released()
+ private fun requireTransportAdmission(){check(transportAdmissionCurrent()){"Another private transport or browser process is active, or evidence authority retired"}}
  private fun requireMain(){check(Looper.myLooper()===Looper.getMainLooper())}
  override suspend fun connect(mode:String):EvidenceRoute=withContext(Dispatchers.Main.immediate) {
   requireMain();check(current()){"Evidence transport authority retired"}
@@ -43,13 +48,13 @@ internal class EvidenceRouteCoordinator(
       EvidenceNetwork.primarySystem{current()&&!primaryRequiresVpn()}
      }
      "VPN" -> {
-      require(VpnService.prepare(context)==null){"Android VPN permission is required before connecting"}
-      check(!HiddenTorIsolationService.hasTorProcess(context)&&HiddenTorIsolationService.released()){"Another private Tor transport is active"}
-      prepareVpn();check(current())
+      requireTransportAdmission()
+      require(permissionGranted()){"Android VPN permission is required before connecting"}
+      check(current());prepareVpn();requireTransportAdmission()
       var network=ownedVpn()
-      while(network==null){check(current());delay(200);network=ownedVpn()}
+      while(network==null){requireTransportAdmission();delay(200);requireTransportAdmission();network=ownedVpn()}
       val pinned=network
-      val authorized={current()&&ownedVpn()==pinned}
+      val authorized={transportAdmissionCurrent()&&ownedVpn()==pinned}
       // Existing HTTPS+DNS readiness verification uses the identical pinned Network.
       val readiness=HiddenHttpTransport.vpn(context,pinned,authorized);probe=readiness
       try{withContext(Dispatchers.IO){readiness.verifyReady()}}finally{readiness.close();probe=null}
@@ -58,10 +63,10 @@ internal class EvidenceRouteCoordinator(
      }
      "Tor" -> {
       require(access.owner==EvidenceCatalog.Owner.HIDDEN){"Tor evidence route belongs to Hidden"}
-      require(VpnService.prepare(context)==null){"Android isolation permission is required before connecting"}
-      check(HiddenVpnBrowserBroker.admissionRetired()&&!HiddenVpnBrowserBroker.hasDedicatedProcess(context)&&!HiddenTorIsolationService.hasTorProcess(context)&&HiddenTorIsolationService.released()){"Another private transport is active"}
+      requireTransportAdmission()
+      require(permissionGranted()){"Android isolation permission is required before connecting"}
       releaseWireGuard()
-      while(!wireGuardReleased()){check(current());delay(100)}
+      while(!wireGuardReleased()){requireTransportAdmission();delay(100);requireTransportAdmission()}
       check(current())
       val boundary=HiddenTorIsolationConnection(context,{current()},{close()})
       isolation=boundary;boundary.start()

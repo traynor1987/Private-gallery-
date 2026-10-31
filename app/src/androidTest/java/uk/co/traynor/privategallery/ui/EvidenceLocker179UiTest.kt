@@ -28,7 +28,7 @@ import uk.co.traynor.privategallery.core.vault.*
 class EvidenceLocker179UiTest {
  private lateinit var controller:EvidenceController
  private val compose=createAndroidComposeRule<ComponentActivity>()
- private val viewport=BrowserViewportRule(fontScale=2f){name->if(name.contains("Landscape"))840 to 392 else if(name.contains("Inner"))840 to 900 else 320 to 840}
+ private val viewport=BrowserViewportRule(fontScale=2f){name->if(name.contains("landscape",ignoreCase=true))840 to 392 else if(name.contains("inner",ignoreCase=true))840 to 900 else 320 to 840}
  @get:Rule val rules:TestRule=RuleChain.outerRule(viewport).around(compose)
  private class Fixture(val root:File,val context:Context,val key:ByteArray,val hidden:HiddenSession?,val access:EvidenceAccess,val ids:List<String>)
  private fun fixture(secret:Boolean=false):Fixture {
@@ -49,14 +49,14 @@ class EvidenceLocker179UiTest {
    androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().runOnMainSync{controller=EvidenceController(f.context,f.access)}
    compose.setContent{CompositionLocalProvider(LocalContext provides f.context){PrivateGalleryTheme(AppTheme.LIGHT){EvidenceLocker(controller,{},{},{},{},{})}}}
    waitReady(controller,0)
-   click("Add existing evidence");click("alpha179.txt");waitReady(controller,1)
+   click("Add existing evidence");click("alpha179.txt");click("Register selected originals");waitReady(controller,1)
    compose.onNodeWithText("Library").performClick();compose.onNodeWithText("alpha179.txt").performScrollTo().performClick();waitReady(controller,1)
    click("Review / correct");field("Owner-corrected text").performTextReplacement("unique179 owner corrected Alice timestamp uncertain")
    compose.onNodeWithText("Save").performClick()
    compose.waitUntil(15000){controller.state.value.catalog?.evidence()?.singleOrNull()?.transcript()?.startsWith("unique179")==true&&!controller.state.value.busy}
    val corrected=f.access.store.read().evidence().single();assertTrue(corrected.ocr().single().text().contains("arrange delivery"));assertEquals(1,corrected.corrections().size)
    compose.runOnIdle{compose.activity.onBackPressedDispatcher.onBackPressed()}
-   click("Add evidence");click("beta179.txt");waitReady(controller,2)
+   click("Add evidence");click("beta179.txt");click("Register selected originals");waitReady(controller,2)
    compose.onNodeWithText("Incidents").performClick();click("New incident")
    field("Title").performTextReplacement("Synthetic incident179");compose.onNodeWithText("Save").performClick()
    compose.waitUntil(15000){controller.state.value.catalog?.incidents()?.size==1&&!controller.state.value.busy}
@@ -109,8 +109,74 @@ class EvidenceLocker179UiTest {
    assertEquals(2,f.access.store.read().incidents().single().evidenceIds().size);assertEquals(4,repo.items().size)
   }finally{if(::controller.isInitialized)compose.runOnIdle{controller.close()};duplicateBytes.fill(0);f.key.fill(0);f.root.deleteRecursively()}
  }
+ @Test fun firstManualMoveUsesVisibleChronologyAndDisablesBoundaries() {
+  val f=fixture()
+  val events=listOf(300L,0L,200L,100L).map{at->EvidenceCatalog.Event(UUID.randomUUID().toString(),emptyList(),at,"USER","event-$at","")}
+  val incident=EvidenceCatalog.Incident(UUID.randomUUID().toString(),"Chronology179",0,0,"","",emptyList(),emptyList(),events,false,false,emptyList())
+  f.access.store.update{it.upsertIncident(incident,1,"CREATE")}
+  try {
+   androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().runOnMainSync{controller=EvidenceController(f.context,f.access)}
+   compose.setContent{CompositionLocalProvider(LocalContext provides f.context){PrivateGalleryTheme(AppTheme.LIGHT){EvidenceLocker(controller,{},{},{},{},{})}}}
+   waitReady(controller);compose.onNodeWithText("Incidents").performClick();click("Chronology179")
+   fun arrow(at:Long,label:String)=compose.onNode(hasText(label) and hasAnyAncestor(hasTestTag("evidence-event-${events.single{it.timestamp()==at}.id()}")))
+   arrow(100,"Move earlier").performScrollTo().assertIsNotEnabled()
+   arrow(0,"Move later").performScrollTo().assertIsNotEnabled()
+   val revision=f.access.store.read().revision()
+   arrow(100,"Move later").performScrollTo().performClick()
+   compose.waitUntil(15000){!controller.state.value.busy&&controller.state.value.catalog?.revision()==revision+1}
+   assertEquals(listOf(200L,100L,300L,0L),f.access.store.read().timeline(incident.id()).map{it.timestamp()})
+   arrow(0,"Move earlier").performScrollTo().performClick()
+   compose.waitUntil(15000){!controller.state.value.busy&&controller.state.value.catalog?.revision()==revision+2}
+   assertEquals(listOf(200L,100L,0L,300L),f.access.store.read().timeline(incident.id()).map{it.timestamp()})
+  }finally{if(::controller.isInitialized)compose.runOnIdle{controller.close()};f.key.fill(0);f.root.deleteRecursively()}
+ }
+ @Test fun bulkOriginalRegistrationAndMixedExportSelectionAreOwnerReviewed() {
+  val f=fixture();var exported:EvidenceExportSelection?=null
+  val incidents=listOf("First selected179","Second selected179").map{title->EvidenceCatalog.Incident(UUID.randomUUID().toString(),title,0,0,"","",emptyList(),emptyList(),emptyList(),false,false,emptyList())}
+  f.access.store.update{initial->incidents.fold(initial){c,i->c.upsertIncident(i,1,"CREATE")}}
+  try {
+   androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().runOnMainSync{controller=EvidenceController(f.context,f.access)}
+   compose.setContent{CompositionLocalProvider(LocalContext provides f.context){PrivateGalleryTheme(AppTheme.LIGHT){EvidenceLocker(controller,{},{},{},{exported=it},{})}}}
+   waitReady(controller,0);click("Add existing evidence");click("alpha179.txt");click("beta179.txt")
+   assertTrue(f.access.store.read().evidence().isEmpty())
+   compose.onNodeWithText("Register selected originals").performClick();waitReady(controller,2)
+   assertEquals(2,f.access.sources.list().size)
+   compose.onNodeWithText("Library").performClick();compose.onNodeWithContentDescription("Select evidence beta179.txt").performScrollTo().performClick()
+   click("Export selection")
+   compose.onNodeWithContentDescription("Export incident First selected179").performScrollTo().performClick()
+   compose.onNodeWithContentDescription("Export incident Second selected179").performScrollTo().performClick()
+   assertNull(exported)
+   compose.onNodeWithText("Review export").performClick()
+   assertEquals(incidents.map{it.id()},exported!!.incidentIds)
+   assertEquals(listOf(f.access.store.read().evidence().single{it.name()=="beta179.txt"}.id()),exported!!.evidenceIds)
+   assertEquals(2,f.access.sources.list().size)
+  }finally{if(::controller.isInitialized)compose.runOnIdle{controller.close()};f.key.fill(0);f.root.deleteRecursively()}
+ }
+ @Test fun editedExtractedTimestampRemainsUserEnteredWithRawQuotePreserved() {
+  val f=fixture()
+  try {
+   androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().runOnMainSync{controller=EvidenceController(f.context,f.access);controller.register(f.ids.first(),extract=false)}
+   waitReady(controller,1)
+   val record=f.access.store.read().evidence().single()
+   val extraction=EvidenceCatalog.Ocr(UUID.randomUUID().toString(),1,"fixture",0,1,1,"visible 10:00",-1f,emptyList(),listOf(EvidenceCatalog.ExtractedTime(0,"10:00",0,"Date and timezone unavailable",-1f)),1,false)
+   val incident=EvidenceCatalog.Incident(UUID.randomUUID().toString(),"Reviewed time179",0,0,"","",emptyList(),listOf(record.id()),emptyList(),false,false,emptyList())
+   f.access.store.update{it.saveOcr(record.id(),extraction,1).upsertIncident(incident,2,"CREATE")}
+   compose.runOnIdle{controller.refresh()};waitReady(controller,1)
+   compose.setContent{CompositionLocalProvider(LocalContext provides f.context){PrivateGalleryTheme(AppTheme.LIGHT){EvidenceLocker(controller,{},{},{},{},{})}}}
+   compose.onNodeWithText("Incidents").performClick();click("Reviewed time179");click("Review time: 10:00")
+   field("Timestamp (ISO offset; blank keeps uncertain)").performTextReplacement("2026-10-31T10:00:00Z");compose.onNodeWithText("Save").performClick()
+   compose.waitUntil(15000){!controller.state.value.busy&&controller.state.value.catalog?.incidents()?.single()?.events()?.size==1}
+   val event=f.access.store.read().incidents().single().events().single()
+   assertEquals("USER",event.provenance());assertTrue(event.notes().contains("OCR page 1: 10:00"));assertTrue(event.notes().contains("Date and timezone unavailable"))
+   assertEquals(0L,f.access.store.read().evidence().single().ocr().single().times().single().epochMillis())
+   assertEquals(2,f.access.sources.list().size)
+  }finally{if(::controller.isInitialized)compose.runOnIdle{controller.close()};f.key.fill(0);f.root.deleteRecursively()}
+ }
  @Test fun landscapeDarkLargeTextIncidentFormAndExitRemainReachable() {
   val f=fixture()
+  assertTrue("Effective resource viewport must be landscape",compose.activity.resources.configuration.screenWidthDp>compose.activity.resources.configuration.screenHeightDp)
+  assertEquals(840,compose.activity.resources.configuration.screenWidthDp)
+  assertEquals(2f,compose.activity.resources.configuration.fontScale,0.001f)
   try {
    androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().runOnMainSync{controller=EvidenceController(f.context,f.access)}
    compose.setContent{CompositionLocalProvider(LocalContext provides f.context){PrivateGalleryTheme(AppTheme.DARK){EvidenceLocker(controller,{},{},{},{},{})}}}

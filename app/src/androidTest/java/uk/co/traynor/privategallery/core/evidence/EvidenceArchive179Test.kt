@@ -290,4 +290,14 @@ class EvidenceArchive179Test {
    rejected{EvidenceArchive.write(m.plan(plain),m.reader,password,output)};assertTrue("failure must occur while original is streaming",hitOriginal)
   }
  }
+
+ @Test fun portableSchema2RejectsLegacyBinaryCatalog(){
+  val encoded=ByteArrayOutputStream();DataOutputStream(encoded).use{out->
+   out.writeInt(0x50474543);out.writeInt(1);val owner="PRIMARY".toByteArray();out.writeInt(owner.size);out.write(owner);out.writeLong(0);repeat(5){out.writeInt(0)}
+  }
+  val legacy=EvidenceCatalog.decode(encoded.toByteArray(),EvidenceCatalog.Owner.PRIMARY)
+  val metadata=EvidenceArchive.metadataBytes(legacy,emptyList())
+  try{EvidenceArchive.decodeMetadata(metadata,EvidenceCatalog.Owner.PRIMARY);fail("portable schema2 accepted a legacy binary snapshot")}
+  catch(expected:IllegalArgumentException){assertEquals("Unsupported evidence catalog schema in export",expected.message)}finally{metadata.fill(0)}
+ }
 }

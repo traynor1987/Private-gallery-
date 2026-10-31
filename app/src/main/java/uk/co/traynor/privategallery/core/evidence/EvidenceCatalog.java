@@ -51,6 +51,8 @@ public final class EvidenceCatalog {
  public record Suggestion(String id,String kind,List<String> evidenceIds,String incidentId,String title,List<String> reasons) {
   public Suggestion {digest(id);kind=EvidenceCatalog.text(kind,64);evidenceIds=ids(evidenceIds,MAX_EVIDENCE);incidentId=EvidenceCatalog.text(incidentId,36);if(!incidentId.isEmpty())uuid(incidentId);title=EvidenceCatalog.text(title,1024);reasons=strings(reasons,16,256);}
  }
+ // Only a fully validated v1 decoder snapshot may retain legacy serialization.
+ private final int encodingVersion;
  private final Owner owner;
  private final long revision;
  private final List<Evidence> evidence;
@@ -59,6 +61,14 @@ public final class EvidenceCatalog {
  private final List<Analysis> analyses;
  private final List<String> rejectedSuggestions;
  public EvidenceCatalog(Owner owner,long revision,List<Evidence> evidence,List<Incident> incidents,List<Audit> audit,List<Analysis> analyses,List<String> rejectedSuggestions) {
+  this(owner,revision,evidence,incidents,audit,analyses,rejectedSuggestions,2);
+ }
+ // The permit has a private constructor and is retained only by EvidenceCodec, never by a catalogue.
+ EvidenceCatalog(Owner owner,long revision,List<Evidence> evidence,List<Incident> incidents,List<Audit> audit,List<Analysis> analyses,List<String> rejectedSuggestions,EvidenceCodec.LegacyRead permit) {
+  this(owner,revision,evidence,incidents,audit,analyses,rejectedSuggestions,Objects.requireNonNull(permit).version());
+ }
+ private EvidenceCatalog(Owner owner,long revision,List<Evidence> evidence,List<Incident> incidents,List<Audit> audit,List<Analysis> analyses,List<String> rejectedSuggestions,int encodingVersion) {
+  this.encodingVersion=encodingVersion;
   this.owner=Objects.requireNonNull(owner);nonnegative(revision);this.revision=revision;
   this.evidence=copy(evidence,MAX_EVIDENCE);this.incidents=copy(incidents,MAX_INCIDENTS);this.audit=copy(audit,MAX_AUDIT);this.analyses=copy(analyses,MAX_EVIDENCE).stream().map(a->{if(!a.sourceReferences().isEmpty())return a;List<SourceReference> refs=new ArrayList<>();for(String id:a.evidenceIds())refs.add(new SourceReference(id,fingerprint(requireEvidence(id))));return withAnalysis(a,a.evidenceIds(),a.applied(),a.lineage(),refs);}).toList();this.rejectedSuggestions=strings(rejectedSuggestions,MAX_AUDIT,64);
   unique(this.evidence,Evidence::id);unique(this.incidents,Incident::id);unique(this.audit,Audit::id);unique(this.analyses,Analysis::id);for(String rejected:this.rejectedSuggestions)digest(rejected);
@@ -66,7 +76,12 @@ public final class EvidenceCatalog {
   List<SourceFingerprint> allSources=new ArrayList<>();for(Evidence value:this.evidence)allSources.add(fingerprint(value));for(Incident value:this.incidents)allSources.addAll(value.lineage());for(Analysis value:this.analyses)allSources.addAll(value.lineage());unionSources(allSources);
   for(Incident incident:this.incidents){validateReferences(incident.evidenceIds());for(Event event:incident.events())validateReferences(event.evidenceIds());List<SourceFingerprint> required=contributions(incident);if(!incident.lineage().containsAll(required))throw invalid("Missing incident source lineage");for(String id:incident.analysisIds()){Analysis a=requireAnalysis(id);if(!a.applied()||!incident.lineage().containsAll(a.lineage()))throw invalid("Missing applied incident analysis lineage");}}
   for(Analysis analysis:this.analyses){validateReferences(analysis.evidenceIds());for(String id:analysis.evidenceIds())if(!analysis.sourceReferences().contains(new SourceReference(id,fingerprint(requireEvidence(id)))))throw invalid("Missing analysis source reference");for(SourceReference ref:analysis.sourceReferences()){int at=index(this.evidence,ref.evidenceId(),Evidence::id);if(at>=0&&!fingerprint(this.evidence.get(at)).equals(ref.fingerprint()))throw invalid("Conflicting historical evidence reference");}}
-  // Bound the complete object, including duplicated strings/lineage, before accepting any mutation.
+  if(encodingVersion==1){
+   for(Incident i:this.incidents)if(!i.analysisIds().isEmpty())throw invalid("Legacy snapshot cannot omit incident associations");
+   for(Analysis a:this.analyses){List<SourceReference> inferred=a.evidenceIds().stream().map(id->new SourceReference(id,fingerprint(requireEvidence(id)))).toList();if(!a.sourceReferences().equals(inferred))throw invalid("Legacy snapshot cannot omit historical references");}
+  }
+  // Legacy reads remain bounded in their original schema. Every domain mutation constructs v2.
+  // Do not force a size-expanding v2 rewrite merely to make existing annotations readable.
   byte[] checked=EvidenceCodec.encode(this);Arrays.fill(checked,(byte)0);
  }
  public static EvidenceCatalog empty(Owner owner){return new EvidenceCatalog(owner,0,List.of(),List.of(),List.of(),List.of(),List.of());}
@@ -77,6 +92,7 @@ public final class EvidenceCatalog {
  public List<Audit> audit(){return audit;}
  public List<Analysis> analyses(){return analyses;}
  public List<String> rejectedSuggestions(){return rejectedSuggestions;}
+ int encodingVersion(){return encodingVersion;}
  public byte[] encode(){return EvidenceCodec.encode(this);}
  public static EvidenceCatalog decode(byte[] bytes,Owner owner){return EvidenceCodec.decode(bytes,owner);}
 
@@ -157,7 +173,7 @@ public final class EvidenceCatalog {
   return changed(evidence,groups,results,rejectedSuggestions,now,"ASSOCIATE_ANALYSIS",List.of(analysisId,incidentId),"Owner applied advisory to incident; references and lineage retained");
  }
  public EvidenceCatalog moveEvent(String incidentId,String eventId,int index,long now) {
-  Incident old=requireIncident(incidentId);int from=index(old.events(),eventId,Event::id);if(from<0||index<0||index>=old.events().size())throw invalid("Invalid event destination");if(from==index&&old.manualOrder())return this;List<Event> events=new ArrayList<>(old.events());events.add(index,events.remove(from));return upsertIncident(withIncident(old,old.evidenceIds(),events,true,old.archived(),old.lineage()),now,"MOVE_EVENT");
+  Incident old=requireIncident(incidentId);List<Event> visible=timeline(incidentId);int from=index(visible,eventId,Event::id);if(from<0||index<0||index>=visible.size())throw invalid("Invalid event destination");if(from==index)return this;List<Event> events=new ArrayList<>(visible);events.add(index,events.remove(from));return upsertIncident(withIncident(old,old.evidenceIds(),events,true,old.archived(),old.lineage()),now,"MOVE_EVENT");
  }
  public EvidenceCatalog rejectSuggestion(String suggestionId,long now) {digest(suggestionId);if(rejectedSuggestions.contains(suggestionId))return this;if(suggestions().stream().noneMatch(s->s.id().equals(suggestionId)))throw invalid("Suggestion unavailable");List<String> rejected=new ArrayList<>(rejectedSuggestions);rejected.add(suggestionId);return changed(evidence,incidents,analyses,rejected,now,"REJECT_SUGGESTION",List.of(suggestionId),"Suggestion rejected; no grouping applied");}
  public EvidenceCatalog acceptSuggestion(Suggestion value,String newIncidentId,String title,long now) {
@@ -223,6 +239,7 @@ public final class EvidenceCatalog {
  private static void signal(Map<String,LinkedHashSet<String>> values,Map<String,String> labels,String key,String label,String id){if(values.size()>=8192&&!values.containsKey(key))return;LinkedHashSet<String> set=values.computeIfAbsent(key,k->new LinkedHashSet<>());if(set.size()<128)set.add(id);labels.put(key,label);}
  /** A callback may compose domain mutations, but cannot use decoded objects to rewrite history. */
  void validateSuccessor(EvidenceCatalog before) {
+  if(encodingVersion!=2)throw invalid("Evidence mutations must use the current bounded schema");
   if(owner!=before.owner||revision<=before.revision||audit.size()<=before.audit.size()||revision-before.revision!=(long)audit.size()-before.audit.size()||!audit.subList(0,before.audit.size()).equals(before.audit))throw invalid("Evidence update must preserve audit and advance one revision per audit");
   // Historical sources and newly registered live originals form the sole identity authority.
   // A new derived-object ID must not reset the identity/policy of a historical source UUID.
