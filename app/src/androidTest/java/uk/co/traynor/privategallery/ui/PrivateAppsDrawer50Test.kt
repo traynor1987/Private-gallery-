@@ -103,13 +103,13 @@ class PrivateAppsDrawer50Test {
  }
  @Test fun filtered_reorder_uses_full_persisted_order_and_survives_reopen() {
   val root=File(ApplicationProvider.getApplicationContext<android.content.Context>().cacheDir,"drawer-order-${UUID.randomUUID()}")
-  val key=ByteArray(32){51};var live=true;var mounted by mutableStateOf(true)
+  val key=ByteArray(32){51};var live=true;var mounted by mutableStateOf(true);var closes=0
   val apps=listOf(app("Alpha"),app("Beta"),app("Gamma"),app("Delta"))
   val store=PrimaryPrivateAppStore(root,key,{live},{it()});store.update{catalog->apps.fold(catalog){c,a->c.upsert(a)}}
   fun controller()=PrivateAppsController(store.owner(),{live},{a,b,id->PrivateAppCommands.execute(store,a,b,id)},{})
   var owner by mutableStateOf(controller())
   try {
-   compose.setContent{PrivateGalleryTheme{if(mounted)PrivateAppsLibrary(owner,{})}}
+   compose.setContent{PrivateGalleryTheme{if(mounted)PrivateAppsLibrary(owner,{closes++;mounted=false})}}
    ready(apps.first().id())
    compose.onNodeWithTag("private-app-search").performTextInput("Delta")
    action("Delta","Reorder")
@@ -121,9 +121,15 @@ class PrivateAppsDrawer50Test {
    val expected=listOf(apps[3],apps[0],apps[1],apps[2]).map{it.id()}
    compose.waitUntil(5000){store.read().apps.map{it.id()}==expected}
    compose.onNodeWithText("Done").performClick()
-   compose.runOnIdle{mounted=false};compose.waitForIdle()
+   compose.onNodeWithText("Close").performClick()
+   compose.onNodeWithTag("private-app-grid").assertDoesNotExist()
+   compose.onNodeWithTag("private-app-search").assertDoesNotExist()
+   compose.runOnIdle{assertFalse(mounted);assertEquals(1,closes)}
+   // A missing Dialog alone does not prove the enclosing composition has disposed.
+   compose.mainClock.advanceTimeByFrame();compose.waitForIdle()
    compose.runOnIdle{owner=controller();mounted=true}
    ready(apps.last().id())
+   compose.runOnIdle{assertTrue(mounted);assertEquals(1,closes)}
    assertEquals(expected,PrimaryPrivateAppStore(root,key,{live},{it()}).read().apps.map{it.id()})
    val first=compose.onNodeWithTag("private-app-tile-${apps.last().id()}").fetchSemanticsNode().boundsInRoot
    val second=compose.onNodeWithTag("private-app-tile-${apps.first().id()}").fetchSemanticsNode().boundsInRoot

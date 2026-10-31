@@ -512,3 +512,8 @@ Application 60f089d6e003fd13f8b7649feb6f44167e5028a2; original exact focused run
 ## Code50 runner disk correction
 
 Source93d3b521/run41192567994 failed before Android: emulator userdata required9830.40MB, only4754.61MB free. Compile/lint and35JVM passed, no Android execution. Evidence13039008920 SHA2567c453a200d4f128c6cbce48eec6019f3b015f10c1a888b1f1d131a28faf740d8 preserved. Existing178 focused/production jobs now remove unused host tools and require16GiB before SDK/image install; no app/test/security/timeout/storage-size changes. Fresh exact47Android pass and independent approval remain required; signing blocked.
+
+
+## Code50 exact runtime45/47 — focused corrections
+
+Sourceeee3fd5aefb8f22c02a6d97e653459748a385a10/run41193907312/job124516103035 failed45/47,35JVM PASS. Artifact13041075300 SHA2560eee727d171e1e58994168c65670b9217eddc78bf929456ab2a59f3d4c73d0f9 preserved. Reorder/persist assertions passed; remount readiness failed. Test now invokes realClose, confirms removal/closecount and a composition frame, then freshcontroller; order assertions unchanged. NativeTor initial controlled-onion SOCKS CONNECT timed out after60.786s (Unix/greeting succeeded); target readiness is distinct from generic circuit bootstrap. Only synthetic pre-WebView read-onlyGET fixture admission now allows2freshattempts within180s, descriptor-closingwatchdogs and before/after originalauthority/network checks; IOException-only retry, exactstatus/body/bounds/security failure immediate. Existing360s case deadline, actualWebView/POST/transport/routing/production30s timeouts unchanged. Independent change-impact review required, then fresh full47 exact-source gates; no signing approval.

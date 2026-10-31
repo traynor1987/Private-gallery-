@@ -164,14 +164,48 @@ class NativeTorIsolation1762Test {
                 // Bootstrap is not fixture availability. Establish this controlled onion through
                 // the real app-private SOCKS path before asking WebView to render the probe.
                 val expected=checkNotNull(InstrumentationRegistry.getArguments().getString("hiddenOnionProbeExpected"))
-                HiddenTorSockets.open(path,host,80,handshakeTimeoutMs=60_000).use {stream ->
-                    stream.output.write("GET / HTTP/1.1\r\nHost: $host\r\nConnection: close\r\n\r\n".toByteArray());stream.output.flush()
-                    val bytes=stream.input.readNBytes(4097)
-                    assertTrue("Controlled readiness response is bounded",bytes.size<=4096)
-                    val raw=try {bytes.toString(Charsets.UTF_8)}finally{bytes.fill(0)}
-                    assertEquals("Controlled onion returns HTTP200 through the owned private Tor path","200",raw.lineSequence().first().split(' ').getOrNull(1))
-                    assertEquals("Controlled onion fixture payload is ready",expected,raw.substringAfter("\r\n\r\n").trim())
-                }
+                // Retry only this idempotent fixture preflight, never a WebView action or POST.
+                // A wall-clock watchdog also bounds trickling reads (SO_RCVTIMEO is per-read).
+                val readinessDeadline=SystemClock.elapsedRealtime()+180_000
+                val readinessWatch=java.util.concurrent.Executors.newSingleThreadScheduledExecutor()
+                var fixtureReady=false
+                var readinessFailure:IOException?=null
+                try {
+                    for(attempt in 1..2) {
+                        assertTrue("Controlled readiness remains within its total deadline",SystemClock.elapsedRealtime()<readinessDeadline)
+                        assertTrue("Controlled readiness retains original authority and owned network",
+                            allowed.get() && session.isUnlocked && isolation?.network()==network && tor?.unixReady()==true)
+                        val active=java.util.concurrent.atomic.AtomicReference<Closeable?>(null)
+                        val remainingMillis=readinessDeadline-SystemClock.elapsedRealtime()
+                        if(remainingMillis<60_000L)break // Do not admit a 60s handshake beyond the total budget.
+                        val attemptMillis=minOf(90_000L,remainingMillis)
+                        val attemptDeadline=SystemClock.elapsedRealtime()+attemptMillis
+                        val expiry=readinessWatch.schedule({runCatching {active.get()?.close()}},attemptMillis,java.util.concurrent.TimeUnit.MILLISECONDS)
+                        try {
+                            val raw=HiddenTorSockets.open(path,host,80,register={stream ->
+                                active.set(stream)
+                                if(SystemClock.elapsedRealtime()>=attemptDeadline){stream.close();throw IOException("Controlled readiness deadline")}
+                            },handshakeTimeoutMs=60_000).use {stream ->
+                                stream.output.write("GET / HTTP/1.1\r\nHost: $host\r\nConnection: close\r\n\r\n".toByteArray());stream.output.flush()
+                                val bytes=stream.input.readNBytes(4097)
+                                try {
+                                    assertTrue("Controlled readiness response is bounded",bytes.size<=4096)
+                                    bytes.toString(Charsets.UTF_8)
+                                }finally{bytes.fill(0)}
+                            }
+                            assertTrue("Controlled readiness completed before its deadline",SystemClock.elapsedRealtime()<minOf(attemptDeadline,readinessDeadline))
+                            assertTrue("Controlled readiness response retains original authority and owned network",
+                                allowed.get() && session.isUnlocked && isolation?.network()==network && tor?.unixReady()==true)
+                            assertEquals("Controlled onion returns HTTP200 through the owned private Tor path","200",raw.lineSequence().first().split(' ').getOrNull(1))
+                            assertEquals("Controlled onion fixture payload is ready",expected,raw.substringAfter("\r\n\r\n").trim())
+                            fixtureReady=true;break
+                        }catch(failure:IOException) {
+                            readinessFailure=failure
+                            runCatching {android.util.Log.i("NativeTor1762","Controlled readiness attempt=$attempt cause=${failure.javaClass.simpleName}")}
+                        }finally{expiry.cancel(false);runCatching {active.getAndSet(null)?.close()}}
+                    }
+                }finally{readinessWatch.shutdownNow()}
+                if(!fixtureReady)throw AssertionError("Controlled onion readiness failed within two attempts and its total deadline",readinessFailure)
                 val repoContext=object:ContextWrapper(context){override fun getNoBackupFilesDir()=storage}
                 val repo=HiddenRepository(repoContext,session)
                 val bitmap=Bitmap.createBitmap(8,8,Bitmap.Config.ARGB_8888)

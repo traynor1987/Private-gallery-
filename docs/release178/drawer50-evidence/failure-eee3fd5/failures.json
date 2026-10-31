@@ -1,0 +1,14 @@
+[
+  {
+    "name": "filtered_reorder_uses_full_persisted_order_and_survives_reopen",
+    "classname": "uk.co.traynor.privategallery.ui.PrivateAppsDrawer50Test",
+    "time": "23.002",
+    "stack": "androidx.compose.ui.test.ComposeTimeoutException: Condition still not satisfied after 5000 ms\nat androidx.compose.ui.test.AndroidComposeUiTestEnvironment$AndroidComposeUiTestImpl.waitUntil(ComposeUiTest.android.kt:441)\nat androidx.compose.ui.test.junit4.AndroidComposeTestRule.waitUntil(AndroidComposeTestRule.android.kt:306)\nat uk.co.traynor.privategallery.ui.PrivateAppsDrawer50Test.ready(PrivateAppsDrawer50Test.kt:25)\nat uk.co.traynor.privategallery.ui.PrivateAppsDrawer50Test.filtered_reorder_uses_full_persisted_order_and_survives_reopen(PrivateAppsDrawer50Test.kt:126)\n"
+  },
+  {
+    "name": "packagedTorNativeFormsUploadsDownloadsAndNetworkSink",
+    "classname": "uk.co.traynor.privategallery.core.browser.hidden.NativeTorIsolation1762Test",
+    "time": "70.683",
+    "stack": "java.io.IOException: Try again\nat android.net.LocalSocketImpl.read_native(Native Method)\nat android.net.LocalSocketImpl.-$$Nest$mread_native(LocalSocketImpl.java:0)\nat android.net.LocalSocketImpl$SocketInputStream.read(LocalSocketImpl.java:88)\nat java.io.DataInputStream.readUnsignedByte(DataInputStream.java:296)\nat uk.co.traynor.privategallery.core.browser.hidden.HiddenTorSockets.open(HiddenTorSockets.kt:44)\nat uk.co.traynor.privategallery.core.browser.hidden.HiddenTorSockets.open$default(HiddenTorSockets.kt:25)\nat uk.co.traynor.privategallery.core.browser.hidden.NativeTorIsolation1762Test.packagedTorNativeFormsUploadsDownloadsAndNetworkSink(NativeTorIsolation1762Test.kt:167)\n"
+  }
+]
