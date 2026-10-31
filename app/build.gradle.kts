@@ -10,8 +10,8 @@ android {
     applicationId = "uk.co.traynor.privategallery"
     minSdk = 37
     targetSdk = 37
-    versionCode = 50
-    versionName = "1.7.8"
+    versionCode = 51
+    versionName = "1.7.9"
     resValue("string", "app_name", "Private Gallery")
     buildConfigField("boolean", "HIDDEN_PROTOTYPE", "false")
     buildConfigField("boolean", "HIDDEN_ENABLED", "true")
@@ -61,6 +61,7 @@ android {
 }
 
 dependencies {
+  implementation("cz.adaptech.tesseract4android:tesseract4android:4.9.0")
   implementation("androidx.camera:camera-camera2:1.5.3")
   implementation("androidx.camera:camera-lifecycle:1.5.3")
   implementation("androidx.camera:camera-view:1.5.3")
@@ -97,3 +98,17 @@ dependencies {
   androidTestImplementation("androidx.test:runner:1.7.0")
   androidTestImplementation("androidx.test.espresso:espresso-core:3.7.0")
 }
+
+// Pinned public OCR model, prepared only at build time and always bundled for offline use.
+val evidence179Assets = layout.buildDirectory.dir("generated/evidence179Assets")
+val prepareEvidence179Model by tasks.registering(Exec::class) {
+  val model = evidence179Assets.map { it.file("tessdata/eng.traineddata") }
+  inputs.file(rootProject.file("scripts/prepare_evidence179_model.sh"))
+  inputs.file(project.file("src/main/assets/evidence179/model-manifest.json"))
+  outputs.file(model)
+  // Validate even a previously prepared file; corrupt caches must fail closed.
+  outputs.upToDateWhen { false }
+  commandLine("bash", rootProject.file("scripts/prepare_evidence179_model.sh"), model.get().asFile)
+}
+android.sourceSets.getByName("main").assets.srcDir(evidence179Assets)
+tasks.named("preBuild").configure { dependsOn(prepareEvidence179Model) }

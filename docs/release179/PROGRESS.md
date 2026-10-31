@@ -47,3 +47,11 @@ Ruling: bundledOCRmodel fetchedonlyatBUILDtimefrompinnedofficialsource/hashandpa
 
 Task1: COMPLETE scopedreviewfix1 I1/I2ADDRESSED0openImportant/Critical; reportSHAa26267c8fc2c01d39debf88dedbc9c91167fdfc7da40a243666f6c2cf9edbbcf. Domain/store117+authority21+hints hostPASS; noAndroidreleaseapproval. RootNativeTask2leasefactories scopedPASS.
 NextindependentworkerTask3OCR; rootparallelTask2AndroidSources/controller/UI integration. Disjointfiles perbrief, onlyoneimplementationsubagentactive.
+
+Task2Androidsource tests written beforeadapter: EvidenceAccess179Test twoflows samevaultverified/read-only originals +revocation/lateplaintext. NativeauthRED/GREENalready21PASS; AndroidexecutionpendingcoherentCI becauselocalGradlebootstrapblocked. No runtimeclaim.
+
+Task3: initialreview changesrequested OCR179-1 unmonitored fallback recognition and OCR179-2 unsynchronised native cancellation tests; originalimplementer resumed fixround1/5. No Androidpass claimed.
+Task2: root AndroidSources/Metadata/Controller/Egress written with focused instrumentation first; compile/runtime pending. Source/controller review package review179-access.diff; root will not edit reviewed files during scoped review.
+
+Task3 fixround1/5: OCR179-1 and OCR179-2 ADDRESSED by scopedindependentreview OCR179_FIX1.md;8modelhostchecksPASS. Sourceimplementationreviewclean; actualAndroidcompile/JNI/API37/ELF/APKasset gates PENDING, not complete releaseapproval.
+Task2 fixround1/5: A179-1/-2/-3 Important and A179-4 Moderate accepted; root-authored source transferred to scopedfixworker, briefwork/task-2-fix1-brief.md. Root UI/Main disjoint.

@@ -1,0 +1,25 @@
+Private Gallery offline evidence OCR
+
+Bundled model: tesseract-ocr/tessdata_fast, release 4.1.0, English (eng).
+Source: https://raw.githubusercontent.com/tesseract-ocr/tessdata_fast/4.1.0/eng.traineddata
+SHA256: 7d4322bd2a7749724879683fc3912cb542f19906c83bcc1a52132556427170b2
+Size: 4113088 bytes. License: Apache License 2.0; see LICENSE-tessdata_fast-4.1.0.txt.
+The model is downloaded and checked at build time, bundled in the application,
+and checked again when installed in the application's private model directory.
+No model, evidence image, document, or transcript is fetched or sent by offline OCR.
+
+Native dependency (standard, not OpenMP):
+cz.adaptech.tesseract4android:tesseract4android:4.9.0
+https://github.com/adaptech-cz/Tesseract4Android/tree/4.9.0
+Copyright 2019 Adaptech s.r.o., Robert Pösel; wrapper also contains Google Inc.
+and tess-two/Tesseract Tools for Android work; Apache License 2.0.
+See LICENSE-Tesseract4Android-4.9.0.txt.
+Upstream bundles Tesseract 5.5.1 (Apache License 2.0), Leptonica 1.85.0
+(BSD-style), libjpeg v9f (Independent JPEG Group), and libpng 1.6.48
+(PNG Reference Library license). Full notices are included beside this file.
+This software is based in part on the work of the Independent JPEG Group.
+These upstream components are unmodified by Private Gallery.
+
+OCR output and all visible dates/names/confidence values are unverified source
+claims. User corrections preserve raw extraction history. A confidence score is
+not verification of identity, authorship, date, or authenticity.
