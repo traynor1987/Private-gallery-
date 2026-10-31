@@ -90,7 +90,9 @@ class ModelPreparation(unittest.TestCase):
         self.assertNotIn('.traineddata', [p.suffix for p in (ROOT / 'app/src/main/assets').rglob('*')])
         build = (ROOT / 'app/build.gradle.kts').read_text()
         self.assertIn('cz.adaptech.tesseract4android:tesseract4android:4.9.0', build)
-        self.assertIn('assets.srcDir(evidence179Assets)', build)
+        self.assertIn('addGeneratedSourceDirectory(', build)
+        self.assertIn('PrepareEvidence179ModelTask::assetsDirectory', build)
+        self.assertNotIn('assets.srcDir(evidence179Assets)', build)
         self.assertIn('dependsOn(prepareEvidence179Model)', build)
 
     def test_native_results_cannot_trigger_a_second_recognition(self):

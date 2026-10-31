@@ -24,7 +24,7 @@ public final class EvidenceArchiveFormatHostTest {
   reject(()->EvidenceArchiveFormat.readZip(new ByteArrayInputStream(valid),()->false,(n,in)->{}));
   byte[] badMethod=valid.clone();badMethod[8]=99;reject(()->EvidenceArchiveFormat.readZip(new ByteArrayInputStream(badMethod),()->true,(n,in)->{}));
   byte[] mismatch=valid.clone();mismatch[central+46]='X';reject(()->EvidenceArchiveFormat.readZip(new ByteArrayInputStream(mismatch),()->true,(n,in)->{}));
-  
+
   check(java.util.HexFormat.of().formatHex(h).equals("50474556494431370000000100008000000000080000000100000000000000000000000000000000000000000000000000000000"));
   for(int index:List.of(4,6,8,28)){byte[] bad=valid.clone();bad[index]=(byte)255;reject(()->EvidenceArchiveFormat.readZip(new ByteArrayInputStream(bad),()->true,(n,in)->{}));}
   for(int index:List.of(6,8,10,20,24,30,32,34,42)){byte[] bad=valid.clone();bad[central+index]^=1;reject(()->EvidenceArchiveFormat.readZip(new ByteArrayInputStream(bad),()->true,(n,in)->{}));}

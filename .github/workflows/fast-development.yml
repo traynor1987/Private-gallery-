@@ -334,7 +334,7 @@ jobs:
           bash scripts/check_evidence179.sh
           bash scripts/check_evidence179_ai_json.sh
           bash scripts/check_evidence179_archive.sh
-          PYTHONDONTWRITEBYTECODE=1 python3 -m unittest scripts.tests.test_evidence179_model scripts.tests.test_evidence179_cases scripts.tests.test_evidence179_distribution
+          PYTHONDONTWRITEBYTECODE=1 python3 -m unittest scripts.tests.test_evidence179_model scripts.tests.test_evidence179_cases scripts.tests.test_evidence179_distribution scripts.tests.test_release179_configuration scripts.tests.test_upgrade179_baseline scripts.tests.test_final_scope179
       - name: Compile integrated application and all instrumentation
         run: ./gradlew :app:testDebugUnitTest --tests 'uk.co.traynor.privategallery.core.vault.VaultDocumentPolicyTest' :app:lintDebug :app:assembleDebug :app:assembleDebugAndroidTest --stacktrace
       - name: Verify packaged offline OCR and native alignment

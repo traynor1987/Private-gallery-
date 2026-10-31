@@ -4,7 +4,6 @@ import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.Typeface
 import android.graphics.pdf.PdfDocument
-import java.io.ByteArrayOutputStream
 
 /** Ordinary PDF inside the encrypted container. Source timestamps and AI remain labelled claims. */
 internal object EvidencePdf {
@@ -24,13 +23,14 @@ internal object EvidencePdf {
    line("Description: ${i.description()}");line("Notes: ${i.notes()}");line("Tags: ${i.tags().joinToString()}")
    line("Linked evidence IDs: ${i.evidenceIds().joinToString()}");line("Timeline order: ${if(i.manualOrder())"owner manual"else"known dates chronological; unknown dates last"}")
    for(e in selected.catalog.timeline(i.id())){line("Event ${e.id()}: ${e.title()}");line("Timestamp ${e.timestamp()} — ${e.provenance()}${if(e.provenance()=="AI_INFERRED")"; ADVISORY AI; unverified"else""}");line("Evidence IDs: ${e.evidenceIds().joinToString()}");line(e.notes())}
+   line("Associated advisory IDs: ${i.analysisIds().joinToString()}")
    line("All retained contributing source IDs: ${i.lineage().joinToString{it.sourceId()}}")
   }
   for(e in selected.catalog.evidence()){
    line();line("Evidence ${e.id()}: ${e.name()}");line("Source ID: ${e.sourceId()}");line("Source filename (claim): ${e.metadata().sourceName()}")
    line("MIME ${e.mime()}; original size ${e.size()}; SHA-256 ${e.sha256()}")
    val m=e.metadata();line("Imported: ${e.importedAt()}; file created: ${m.fileCreatedAt()}; file modified: ${m.fileModifiedAt()}; added: ${m.dateAddedAt()}; capture claim: ${m.captureAt()}; dimensions ${m.width()}×${m.height()}")
-   for((key,value) in m.embedded())line("Embedded/provider claim [$key]: $value")
+   for((key,value) in m.embedded().toSortedMap())line("Embedded/provider claim [$key]: $value")
    line("Description: ${e.description()}");line("Notes: ${e.notes()}");line("Tags: ${e.tags().joinToString()}");line("Owner participants: ${e.participants().joinToString()}")
    for(o in e.ocr()){
     line("Raw OCR/extraction ${o.id()} (${o.engine()}, ${o.createdAt()}, confidence ${o.confidence()}, pages ${o.pageCount()}, partial=${o.partial()}, rotation=${o.rotation()}):")
@@ -43,7 +43,8 @@ internal object EvidencePdf {
    val d=EvidenceAi.details(a)
    line();line("ADVISORY AI — ${a.id()}; model ${a.model()}; task ${a.task()}; generated ${a.at()}")
    line("Status ${d.status}; refusal=${d.refusal}; owner applied=${a.applied()}; input/output tokens ${a.inputTokens()}/${a.outputTokens()}; cached input tokens ${d.cachedInputTokens}")
-   line("Input digest ${a.inputDigest()}; referenced evidence IDs ${a.evidenceIds().joinToString()}")
+   line("Input digest ${a.inputDigest()}; attached evidence IDs ${a.evidenceIds().joinToString()}")
+   for(r in a.sourceReferences())line("Validated reference ${r.evidenceId()} => source ${r.fingerprint().sourceId()}; ${if(selected.catalog.evidence().any{it.id()==r.evidenceId()})"attached record"else"not attached — historical analysis reference"}")
    line(d.summary)
    for(s in d.suggestions)line("AI suggestion (owner review): ${s.kind}: ${s.title}; ${s.reasons.joinToString()}; evidence IDs ${s.evidenceIds.joinToString()}")
    for(e in d.events)line("AI event (unverified): ${e.title}; quoted date ${e.dateTimeQuote?:"unknown"}; ${e.provenance}; ${e.uncertainty}; evidence IDs ${e.evidenceIds.joinToString()}")
@@ -55,7 +56,7 @@ internal object EvidencePdf {
  }
  internal fun renderSelected(selected:EvidenceArchive.Selected,reader:EvidenceSourceReader):ByteArray {
   EvidenceArchive.offMain();EvidenceArchive.allowed(selected,reader)
-  val report=text(selected);val document=PdfDocument();val output=BoundedPdf{reader.current()}
+  val report=text(selected);val document=PdfDocument();val output=EvidenceWipingBuffer(EvidenceArchiveFormat.REPORT){reader.current()}
   var page:PdfDocument.Page?=null;var number=0;var y=0f
   val paint=Paint(Paint.ANTI_ALIAS_FLAG).apply{color=Color.BLACK;textSize=10f;typeface=Typeface.create("sans-serif",Typeface.NORMAL)}
   fun nextPage(){page?.let(document::finishPage);check(reader.current());require(number<4096);number++;page=document.startPage(PdfDocument.PageInfo.Builder(595,842,number).create());y=44f;page!!.canvas.drawText("Evidence report • page $number",36f,y,paint);y+=24f}
@@ -73,11 +74,6 @@ internal object EvidencePdf {
    }
    page?.let(document::finishPage);page=null;EvidenceArchive.allowed(selected,reader);document.writeTo(output);EvidenceArchive.allowed(selected,reader)
    return output.toByteArray()
-  }finally{page?.let{runCatching{document.finishPage(it)}};document.close();output.wipe()}
- }
- private class BoundedPdf(private val current:()->Boolean):ByteArrayOutputStream(){
-  override fun write(b:Int){check(current());require(count<EvidenceArchiveFormat.REPORT);super.write(b)}
-  override fun write(b:ByteArray,off:Int,len:Int){check(current());require(count<=EvidenceArchiveFormat.REPORT-len);super.write(b,off,len)}
-  fun wipe(){buf.fill(0);reset()}
+  }finally{page?.let{runCatching{document.finishPage(it)}};document.close();output.close()}
  }
 }

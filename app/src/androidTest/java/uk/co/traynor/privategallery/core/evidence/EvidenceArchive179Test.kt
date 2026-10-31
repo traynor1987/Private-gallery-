@@ -10,13 +10,13 @@ import java.util.zip.ZipInputStream
 import uk.co.traynor.privategallery.core.vault.*
 
 class EvidenceArchive179Test {
- internal class Fixture(val owner:EvidenceCatalog.Owner=EvidenceCatalog.Owner.PRIMARY,val restricted:Boolean=false) {
-  val bytes="exact original\nwith UTF8 café".toByteArray();val id=UUID.randomUUID().toString();val source=UUID.randomUUID().toString();var active=true;var retireAfterRead=false
+ internal class Fixture(val owner:EvidenceCatalog.Owner=EvidenceCatalog.Owner.PRIMARY,val restricted:Boolean=false,initialBytes:ByteArray="exact original\nwith UTF8 café".toByteArray()) {
+  var bytes=initialBytes;val id=UUID.randomUUID().toString();val source=UUID.randomUUID().toString();var active=true;var retireAfterRead=false
   val hash=MessageDigest.getInstance("SHA-256").digest(bytes)
-  val meta=EvidenceCatalog.Metadata("source café.txt",0,2,3,0,0,0,mapOf("sourceNameProvenance" to "Provider claim"),restricted)
-  val item=VaultItem(source,"text/plain","source",1,bytes.size.toLong(),hash,ByteArray(12),VaultItemState.COMPLETE,vaultOnly=restricted)
+  var meta=EvidenceCatalog.Metadata("source café.txt",0,2,3,0,0,0,linkedMapOf("z-last" to "last metadata claim","sourceNameProvenance" to "Provider claim","a-first" to "first metadata claim"),restricted)
+  var item=VaultItem(source,"text/plain","source",1,bytes.size.toLong(),hash,ByteArray(12),VaultItemState.COMPLETE,vaultOnly=restricted)
   val ocr=EvidenceCatalog.Ocr(UUID.randomUUID().toString(),4,"UTF8_DOCUMENT",0,0,0,"raw OCR",-1f,emptyList(),emptyList(),1,false)
-  val record=EvidenceCatalog.Evidence(id,source,"title","text/plain",hash.joinToString(""){"%02x".format(it.toInt() and 255)},bytes.size.toLong(),1,meta,"description","notes",listOf("tag"),emptyList(),listOf(ocr),listOf(EvidenceCatalog.Correction(UUID.randomUUID().toString(),ocr.id(),5,"corrected transcript")))
+  var record=EvidenceCatalog.Evidence(id,source,"title","text/plain",hash.joinToString(""){"%02x".format(it.toInt() and 255)},bytes.size.toLong(),1,meta,"description","notes",listOf("tag"),emptyList(),listOf(ocr),listOf(EvidenceCatalog.Correction(UUID.randomUUID().toString(),ocr.id(),5,"corrected transcript")))
   var catalog=EvidenceCatalog.empty(owner).upsertEvidence(record,1,"IMPORT")
   val reader=object:EvidenceSourceReader {
    override val owner=this@Fixture.owner
@@ -111,6 +111,7 @@ class EvidenceArchive179Test {
    {it["evidence.json"]=String(it.getValue("evidence.json")).replace("\"owner\":\"PRIMARY\"","\"owner\":\"HIDDEN\"").toByteArray()},
    {it["evidence.json"]=("[".repeat(17)+"0"+"]".repeat(17)).toByteArray()},
    {it["evidence.json"]=org.json.JSONObject(String(it.getValue("evidence.json"))).put("unknown",true).toString().toByteArray()},
+   {it["evidence.json"]=org.json.JSONObject(String(it.getValue("evidence.json"))).put("version",1).toString().toByteArray()},
    {it["hashes.json"]="{}".toByteArray()},
    {it["originals/${f.source}.bin"]="changed original".toByteArray()},
    {it["extra.txt"]="extra".toByteArray()},
@@ -127,10 +128,10 @@ class EvidenceArchive179Test {
  }
 
  @Test fun advisoryAiAndUnattachedRetainedLineageStayLabelledWithoutReattachingOriginals(){
-  val f=Fixture();val raw="""{"summary":"Advisory finding","suggestions":[],"events":[],"_receipt":{"status":"completed","refusal":false,"cachedInputTokens":0,"advisory":true,"label":"ADVISORY AI — COMPLETED. Owner review required; no changes applied. Cached input tokens: 0."}}"""
+  val f=Fixture();val raw="""{"summary":"Advisory finding","suggestions":[{"kind":"GROUP","evidence_ids":["${f.id}"],"title":"Review","reasons":["Owner review"]}],"events":[{"evidence_ids":["${f.id}"],"title":"Visible event","date_time_quote":null,"provenance":"AI_INFERRED","uncertainty":"unknown date"}],"_receipt":{"status":"completed","refusal":false,"cachedInputTokens":0,"advisory":true,"label":"ADVISORY AI — COMPLETED. Owner review required; no changes applied. Cached input tokens: 0."}}"""
   val analysis=EvidenceCatalog.Analysis(UUID.randomUUID().toString(),5,"test model","SUMMARY","0".repeat(64),listOf(f.id),raw,10,2,false,listOf(EvidenceEgress.fingerprint(f.record)))
   val incident=EvidenceCatalog.Incident(UUID.randomUUID().toString(),"selected incident",0,0,"","",emptyList(),listOf(f.id),emptyList(),false,false,listOf(EvidenceEgress.fingerprint(f.record)))
-  f.catalog=f.catalog.saveAnalysis(analysis,5).upsertIncident(incident,6,"LINK").removeEvidence(f.id,7)
+  f.catalog=f.catalog.saveAnalysis(analysis,5).upsertIncident(incident,6,"LINK").associateAnalysis(analysis.id(),incident.id(),6).removeEvidence(f.id,7)
   val plan=EvidenceExportPlan(f.catalog,listOf(incident.id()),emptyList(),EvidenceEgress.digest(f.catalog),false)
   val selected=EvidenceArchive.select(plan,f.reader);val text=EvidencePdf.text(selected)
   assertTrue(text.contains("ADVISORY AI"));assertTrue(text.contains("Advisory finding"));assertTrue(text.contains("not attached"));assertTrue(selected.originals.isEmpty())
@@ -138,4 +139,155 @@ class EvidenceArchive179Test {
   EvidenceArchive.open(context,f.owner,ByteArrayInputStream(encrypted.toByteArray()),password){true}.use{assertEquals(0,it.originalCount)}
  }
 
+ private fun entries(bytes:ByteArray):LinkedHashMap<String,ByteArray> = linkedMapOf<String,ByteArray>().also{result->
+  ZipInputStream(ByteArrayInputStream(bytes)).use{z->while(true){val e=z.nextEntry?:break;result[e.name]=z.readBytes()}}
+ }
+ private fun rawAnalysis(ids:List<String>,summary:String="Retained A+B advisory"):String {
+  val refs=ids.joinToString(","){"\"$it\""}
+  return """{"summary":"$summary","suggestions":[{"kind":"GROUP","evidence_ids":[$refs],"title":"Review related sources","reasons":["Owner review required"]}],"events":[{"evidence_ids":[$refs],"title":"Historical source event","date_time_quote":"unknown","provenance":"AI_INFERRED","uncertainty":"Unverified chronology"}],"_receipt":{"status":"completed","refusal":false,"cachedInputTokens":0,"advisory":true,"label":"ADVISORY AI — COMPLETED. Owner review required; no changes applied. Cached input tokens: 0."}}"""
+ }
+ private class Multiple(val owner:EvidenceCatalog.Owner,count:Int=2,content:ByteArray?=null){
+  val fixtures=List(count){if(content==null)Fixture(owner)else Fixture(owner,initialBytes=content)};var active=true;var streaming=false;var failSource:String?=null;var cancelSource:String?=null;var streamFailure:String?=null
+  val reader=object:EvidenceSourceReader {
+   override val owner=this@Multiple.owner
+   override fun current()=active
+   override fun inspect(sourceId:String):EvidenceOriginal {if(failSource==sourceId)throw IOException("Unavailable source");val f=fixtures.single{it.source==sourceId};return EvidenceOriginal(f.item,f.meta)}
+   override fun <T> readVerified(sourceId:String,consume:(EvidenceOriginal,InputStream)->T):T {
+    val f=fixtures.single{it.source==sourceId}
+    val input=object:ByteArrayInputStream(f.bytes){override fun read(b:ByteArray,off:Int,len:Int):Int {
+     if(streamFailure==sourceId)throw IOException("Original reader failed")
+     val n=super.read(b,off,minOf(7,len));if(cancelSource==sourceId)active=false;return n
+    }}
+    streaming=true;try{return input.use{consume(inspect(sourceId),it)}}finally{streaming=false}
+   }
+  }
+  var catalog=fixtures.fold(EvidenceCatalog.empty(owner)){c,f->c.upsertEvidence(f.record,1,"IMPORT")}
+  fun plan(plain:Boolean=false)=EvidenceExportPlan(catalog,emptyList(),fixtures.map{it.id},EvidenceEgress.digest(catalog),plain)
+ }
+ @Test fun appliedHistoricalReferencesSurviveUnlinkAndRemovalWithoutOriginalOrUnrelatedNotes(){
+  for(owner in EvidenceCatalog.Owner.values())for(remove in listOf(false,true)){
+   val m=Multiple(owner);val a=m.fixtures[0];val b=m.fixtures[1]
+   val incident=EvidenceCatalog.Incident(UUID.randomUUID().toString(),"Selected incident",0,0,"","",emptyList(),listOf(a.id,b.id),emptyList(),false,false,listOf(EvidenceEgress.fingerprint(a.record),EvidenceEgress.fingerprint(b.record)))
+   val ai=EvidenceCatalog.Analysis(UUID.randomUUID().toString(),5,"test model","SUMMARY","0".repeat(64),listOf(a.id,b.id),rawAnalysis(listOf(a.id,b.id)),10,2,false,emptyList())
+   val unrelated=EvidenceCatalog.Analysis(UUID.randomUUID().toString(),5,"test model","SUMMARY","0".repeat(64),listOf(a.id,b.id),rawAnalysis(listOf(a.id,b.id),"UNRELATED ADVISORY SECRET"),10,2,false,emptyList())
+   val changedB=EvidenceCatalog.Evidence(b.record.id(),b.record.sourceId(),"UNRELATED B NAME",b.record.mime(),b.record.sha256(),b.record.size(),b.record.importedAt(),b.record.metadata(),"UNRELATED B DESCRIPTION","UNRELATED B NOTES",emptyList(),emptyList(),b.record.ocr(),b.record.corrections())
+   m.catalog=m.catalog.upsertEvidence(changedB,2,"NOTE").saveAnalysis(ai,5).saveAnalysis(unrelated,5).upsertIncident(incident,6,"CREATE").associateAnalysis(ai.id(),incident.id(),7).unlink(listOf(b.id),incident.id(),8)
+   if(remove)m.catalog=m.catalog.removeEvidence(b.id,9)
+   for(plain in listOf(false,true)){
+    val plan=EvidenceExportPlan(m.catalog,listOf(incident.id()),emptyList(),EvidenceEgress.digest(m.catalog),plain)
+    val selected=EvidenceArchive.select(plan,m.reader);assertEquals(listOf(ai.id()),selected.catalog.analyses().map{it.id()});assertEquals(listOf(a.source),selected.originals.map{it.sourceId()})
+    val text=EvidencePdf.text(selected);assertTrue(text.contains("Retained A+B advisory"));assertTrue(text.contains("Historical source event"));assertTrue(text.contains("${b.id} => source ${b.source}; not attached"));assertTrue(text.contains("input/output tokens 10/2"))
+    val out=ByteArrayOutputStream();EvidenceArchive.write(plan,m.reader,password,out)
+    val zip=if(plain)out.toByteArray()else EvidenceArchive.open(context,owner,ByteArrayInputStream(out.toByteArray()),password){true}.use{opened->assertEquals(1,opened.originalCount);ByteArrayOutputStream().also{opened.writePlaintext(it,true){true}}.toByteArray()}
+    val files=entries(zip);assertArrayEquals(a.bytes,files[EvidenceArchive.path(a.source)]);assertFalse(files.containsKey(EvidenceArchive.path(b.source)))
+    val json=String(files.getValue("evidence.json"));val transcript=String(files.getValue("transcript.txt"));for(secret in listOf("UNRELATED B NAME","UNRELATED B NOTES","UNRELATED B DESCRIPTION","UNRELATED ADVISORY SECRET")){assertFalse(json.contains(secret));assertFalse(transcript.contains(secret))}
+    val (decoded,sources)=EvidenceArchive.decodeMetadata(files.getValue("evidence.json"),owner);assertEquals(ai.text(),decoded.analyses().single().text());assertEquals(setOf(a.source,b.source),sources.map{it.sourceId()}.toSet());assertTrue(decoded.incidents().single().analysisIds().contains(ai.id()))
+    for(failure in 0..2){val original=b.item;when(failure){0->b.item=original.copy(vaultOnly=true);1->b.item=original.copy(plaintextSha256=ByteArray(32));2->m.failSource=b.source}
+     val denied=ByteArrayOutputStream();try{rejected{EvidenceArchive.write(plan,m.reader,password,denied)};assertEquals(0,denied.size())}finally{b.item=original;m.failSource=null}}
+   }
+  }
+ }
+ @Test fun genuinelyForeignRawAiReferencesNeverAcquireHistoricalAuthority(){
+  val f=Fixture();val foreign=UUID.randomUUID().toString()
+  val ai=EvidenceCatalog.Analysis(UUID.randomUUID().toString(),5,"test","SUMMARY","0".repeat(64),listOf(f.id),rawAnalysis(listOf(foreign)),10,2,false,emptyList())
+  f.catalog=f.catalog.saveAnalysis(ai,5)
+  val analysis=f.catalog.analyses().single();assertEquals(listOf(f.id),analysis.sourceReferences().map{it.evidenceId()})
+  try{EvidenceAi.details(analysis);fail("foreign structured reference trusted")}catch(_:EvidenceAiFailure){}
+  for(plain in listOf(false,true)){val output=ByteArrayOutputStream();try{EvidenceArchive.write(f.plan(plain),f.reader,password,output);fail("foreign reference exported")}catch(_:EvidenceAiFailure){};assertEquals(0,output.size())}
+ }
+ @Test fun reverseMetadataOrderIsCanonicalAcrossCodecWriteOpenAndReexportBothOwners(){
+  for(owner in EvidenceCatalog.Owner.values()){
+   val f=Fixture(owner);val selected=EvidenceArchive.select(f.plan(),f.reader)
+   assertEquals("z-last",f.record.metadata().embedded().keys.first())
+   val decoded=EvidenceCatalog.decode(f.catalog.encode(),owner);val dp=EvidenceExportPlan(decoded,emptyList(),listOf(f.id),EvidenceEgress.digest(decoded),false);val ds=EvidenceArchive.select(dp,f.reader)
+   assertArrayEquals(EvidenceArchive.metadataBytes(selected.catalog,selected.sources),EvidenceArchive.metadataBytes(ds.catalog,ds.sources));assertEquals(EvidencePdf.text(selected),EvidencePdf.text(ds))
+   val output=ByteArrayOutputStream();EvidenceArchive.write(f.plan(),f.reader,password,output)
+   EvidenceArchive.open(context,owner,ByteArrayInputStream(output.toByteArray()),password){true}.use{opened->val plain=ByteArrayOutputStream();opened.writePlaintext(plain,true){true};val files=entries(plain.toByteArray());assertArrayEquals(f.bytes,files[EvidenceArchive.path(f.source)]);val c=EvidenceArchive.decodeMetadata(files.getValue("evidence.json"),owner).first;assertEquals(f.meta,c.evidence().single().metadata())}
+  }
+ }
+ @Test fun originalCount128Admitted129RejectedBeforeOutput(){
+  val m=Multiple(EvidenceCatalog.Owner.PRIMARY,128);assertEquals(128,EvidenceArchive.select(m.plan(true),m.reader).originals.size)
+  val output=ByteArrayOutputStream();EvidenceArchive.write(m.plan(true),m.reader,password,output);assertEquals(128,entries(output.toByteArray()).keys.count{it.startsWith("originals/")})
+  val over=Multiple(EvidenceCatalog.Owner.HIDDEN,129);for(plain in listOf(false,true)){val denied=ByteArrayOutputStream();rejected{EvidenceArchive.write(over.plan(plain),over.reader,password,denied)};assertEquals(0,denied.size())}
+ }
+ @Test fun combinedMetadataAndManifestQuotaRejectsAndCleansStage(){
+  val f=Fixture();val files=archiveEntries(f);files["evidence.json"]=ByteArray(EvidenceArchiveFormat.META/2+1);files["hashes.json"]=ByteArray(EvidenceArchiveFormat.META/2+1)
+  val directory=File(context.noBackupFilesDir,"evidence-open-primary");val before=directory.listFiles()?.map{it.name}?.toSet().orEmpty()
+  try{EvidenceArchive.open(context,f.owner,ByteArrayInputStream(encryptedPayload(packed(files))),password){true};fail("combined quota accepted")}catch(expected:IllegalArgumentException){assertEquals("Combined metadata quota exceeded",expected.message)};assertEquals(before,directory.listFiles()?.map{it.name}?.toSet().orEmpty())
+ }
+ @Test fun writerOriginalActualSizeHashReaderFailuresAndStreamingRetirementNeverSucceed(){
+  for(plain in listOf(false,true))for(failure in 0..4){
+   val m=Multiple(EvidenceCatalog.Owner.PRIMARY,1);val f=m.fixtures.single()
+   when(failure){0->f.bytes=f.bytes.copyOf(f.bytes.size-1);1->f.bytes=f.bytes.copyOf(f.bytes.size+1);2->f.bytes=f.bytes.copyOf().also{it[0]=(it[0].toInt() xor 1).toByte()};3->m.streamFailure=f.source;4->m.cancelSource=f.source}
+   rejected{EvidenceArchive.write(m.plan(plain),m.reader,password,ByteArrayOutputStream())}
+  }
+ }
+ @Test fun wrongWriterOwnerAndDigestFailBeforeAdmission(){
+  val f=Fixture();val foreign=Fixture(EvidenceCatalog.Owner.HIDDEN)
+  for(plain in listOf(false,true)){val output=ByteArrayOutputStream();rejected{EvidenceArchive.write(f.plan(plain),foreign.reader,password,output)};assertEquals(0,output.size());rejected{EvidenceArchive.write(f.plan(plain).copy(digest="0".repeat(64)),f.reader,password,output)};assertEquals(0,output.size())}
+ }
+ @Test fun outputFailureDoesNotCloseCallerOrProduceReceipt(){
+  for(plain in listOf(false,true)){val m=Multiple(EvidenceCatalog.Owner.PRIMARY,1);var closed=false
+   val output=object:OutputStream(){override fun write(b:Int){throw IOException("destination failed")};override fun write(b:ByteArray,off:Int,len:Int){throw IOException("destination failed")};override fun close(){closed=true}}
+   rejected{EvidenceArchive.write(m.plan(plain),m.reader,password,output)};assertFalse(closed)
+  }
+ }
+ @Test fun ciphertextLimitAndProviderFailureDeleteOnlyNewStage(){
+  val f=Fixture();val out=ByteArrayOutputStream();EvidenceArchive.write(f.plan(),f.reader,password,out);val bytes=out.toByteArray()
+  val directory=File(context.noBackupFilesDir,"evidence-open-primary");val before=directory.listFiles()?.map{it.name}?.toSet().orEmpty()
+  rejected{EvidenceOpenedArchive.openForTest(context,f.owner,ByteArrayInputStream(bytes),password,{true},bytes.size.toLong()-1)}
+  assertEquals(before,directory.listFiles()?.map{it.name}?.toSet().orEmpty())
+  val input=object:ByteArrayInputStream(bytes){var reads=0;override fun read(b:ByteArray,off:Int,len:Int):Int{if(++reads>1)throw IOException("provider failed");return super.read(b,off,len)}}
+  rejected{EvidenceArchive.open(context,f.owner,input,password){true}};assertEquals(before,directory.listFiles()?.map{it.name}?.toSet().orEmpty())
+ }
+ @Test fun bothAuthenticatedPassesCancelAndSecondPassTagFaultNeverPublishOrLeavePlaintext(){
+  val f=Fixture();val out=ByteArrayOutputStream();EvidenceArchive.write(f.plan(),f.reader,password,out);val bytes=out.toByteArray()
+  val directory=File(context.noBackupFilesDir,"evidence-open-primary");val before=directory.listFiles()?.map{it.name}?.toSet().orEmpty()
+  for(stop in listOf("authenticate","parse","validated")){var active=true;var reached=false
+   rejected{EvidenceOpenedArchive.openForTest(context,f.owner,ByteArrayInputStream(bytes),password,{active},phase={phase->
+    if(phase=="staged"){val held=directory.listFiles()!!.single{it.name !in before};assertArrayEquals(bytes,held.readBytes())}
+    if(phase==stop){reached=true;active=false}
+   })};assertTrue(reached);assertEquals(before,directory.listFiles()?.map{it.name}?.toSet().orEmpty())
+  }
+  var firstAuthenticated=false;var parsed=false
+  try{EvidenceOpenedArchive.openForTest(context,f.owner,ByteArrayInputStream(bytes),password,{true},phase={phase->
+   if(phase=="authenticated"){firstAuthenticated=true;val held=directory.listFiles()!!.single{it.name !in before};android.system.Os.chmod(held.absolutePath,384);RandomAccessFile(held,"rw").use{it.seek(it.length()-1);val last=it.readByte();it.seek(it.length()-1);it.writeByte(last.toInt() xor 1)};android.system.Os.chmod(held.absolutePath,256)}
+   if(phase.startsWith("entry:"))parsed=true
+  });fail("second-pass tag fault published")}catch(expected:IOException){assertEquals("Evidence authentication failed",expected.message)}
+  assertTrue(firstAuthenticated);assertTrue(parsed);assertEquals(before,directory.listFiles()?.map{it.name}?.toSet().orEmpty())
+ }
+ @Test fun closeWaitsForBorrowThenWipesReportAndDeletesStageAndRetiredReexportRefuses(){
+  val f=Fixture();val out=ByteArrayOutputStream();EvidenceArchive.write(f.plan(),f.reader,password,out)
+  val directory=File(context.noBackupFilesDir,"evidence-open-primary");val before=directory.listFiles()?.map{it.name}?.toSet().orEmpty();var active=true
+  val opened=EvidenceArchive.open(context,f.owner,ByteArrayInputStream(out.toByteArray()),password){active};val stage=directory.listFiles()!!.single{it.name !in before}
+  var borrowed:ByteArray?=null;val entered=java.util.concurrent.CountDownLatch(1);val release=java.util.concurrent.CountDownLatch(1)
+  val borrower=Thread{try{opened.withReport{borrowed=it;entered.countDown();check(release.await(10,java.util.concurrent.TimeUnit.SECONDS))}}catch(_:IllegalStateException){}}
+  borrower.start();assertTrue(entered.await(10,java.util.concurrent.TimeUnit.SECONDS));val closer=Thread{opened.close()};closer.start()
+  // Observe close blocked on the held borrow monitor before checking its buffer lifetime.
+  val deadline=System.nanoTime()+java.util.concurrent.TimeUnit.SECONDS.toNanos(5)
+  while(closer.isAlive&&closer.state!=Thread.State.BLOCKED&&System.nanoTime()<deadline)Thread.sleep(1)
+  assertEquals(Thread.State.BLOCKED,closer.state)
+  assertTrue(stage.exists());assertTrue(borrowed!!.any{it.toInt()!=0});release.countDown();borrower.join(10000);closer.join(10000);assertFalse(borrower.isAlive);assertFalse(closer.isAlive);assertTrue(borrowed!!.all{it.toInt()==0});assertFalse(stage.exists())
+  val again=EvidenceArchive.open(context,f.owner,ByteArrayInputStream(out.toByteArray()),password){active};active=false;val denied=ByteArrayOutputStream();try{rejected{again.writePlaintext(denied,true){true}};assertEquals(0,denied.size())}finally{again.close()}
+  assertEquals(before,directory.listFiles()?.map{it.name}?.toSet().orEmpty())
+ }
+ @Test fun plaintextReexportOutputFailureReleasesStageOnClose(){
+  val f=Fixture();val out=ByteArrayOutputStream();EvidenceArchive.write(f.plan(),f.reader,password,out)
+  val directory=File(context.noBackupFilesDir,"evidence-open-primary");val before=directory.listFiles()?.map{it.name}?.toSet().orEmpty()
+  EvidenceArchive.open(context,f.owner,ByteArrayInputStream(out.toByteArray()),password){true}.use{opened->val output=object:OutputStream(){override fun write(b:Int){throw IOException("output failed")}};rejected{opened.writePlaintext(output,true){true}}}
+  assertEquals(before,directory.listFiles()?.map{it.name}?.toSet().orEmpty())
+ }
+
+
+ @Test fun outputFailureAndRevocationDuringOriginalStreamingNeverReturnReceipt(){
+  val bytes=ByteArray(192*1024).also{java.util.Random(179).nextBytes(it)}
+  for(plain in listOf(false,true))for(retire in listOf(false,true)){
+   val m=Multiple(EvidenceCatalog.Owner.PRIMARY,1,bytes);var hitOriginal=false
+   val output=object:OutputStream(){
+    override fun write(b:Int){write(byteArrayOf(b.toByte()),0,1)}
+    override fun write(b:ByteArray,off:Int,len:Int){if(m.streaming&&len>0){hitOriginal=true;if(retire)m.active=false else throw IOException("destination failed during original")}}
+   }
+   rejected{EvidenceArchive.write(m.plan(plain),m.reader,password,output)};assertTrue("failure must occur while original is streaming",hitOriginal)
+  }
+ }
 }

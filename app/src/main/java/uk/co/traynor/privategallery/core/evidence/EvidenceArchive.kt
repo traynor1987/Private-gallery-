@@ -32,13 +32,14 @@ internal object EvidenceArchive {
   val contributing=(initial+records.map(EvidenceEgress::fingerprint)).distinctBy{it.sourceId()}
   val contributingSet=contributing.toSet()
   val analyses=plan.catalog.analyses().filter{a->
-   a.lineage().isNotEmpty()&&a.lineage().all{it in contributingSet}&&a.evidenceIds().all{it in ids}&&
-    (a.evidenceIds().any{it in ids}||incidents.any{i->i.lineage().any{it in a.lineage()}})
+   a.lineage().isNotEmpty()&&a.lineage().all{it in contributingSet}&&
+    (incidents.any{a.id() in it.analysisIds()}||(a.sourceReferences().isNotEmpty()&&a.sourceReferences().all{it.evidenceId() in ids}))
   }
   val sources=(records.map(EvidenceEgress::fingerprint)+incidents.flatMap{it.lineage()}+analyses.flatMap{it.lineage()}).distinctBy{it.sourceId()}
   require(records.distinctBy{it.sourceId()}.size<=128){"Original count quota exceeded"}
   var sum=0L;for(e in records.distinctBy{it.sourceId()}){require(e.size()<=EvidenceArchiveFormat.MAX_EXPANDED-sum);sum+=e.size()}
-  val subset=EvidenceCatalog(plan.catalog.owner(),plan.catalog.revision(),records,incidents,emptyList(),analyses,emptyList())
+  val projected=analyses.map{a->EvidenceAi.details(a);EvidenceCatalog.Analysis(a.id(),a.at(),a.model(),a.task(),a.inputDigest(),a.evidenceIds().filter{it in ids},a.text(),a.inputTokens(),a.outputTokens(),a.applied(),a.lineage(),a.sourceReferences())}
+  val subset=EvidenceCatalog(plan.catalog.owner(),plan.catalog.revision(),records,incidents,emptyList(),projected,emptyList())
   return Selected(plan,subset,sources).also{allowed(it,reader)}
  }
  internal fun allowed(selected:Selected,reader:EvidenceSourceReader){
@@ -53,23 +54,24 @@ internal object EvidenceArchive {
  private fun obj(vararg pairs:Pair<String,Any?>)=JSONObject().also{j->pairs.forEach{j.put(it.first,it.second?:JSONObject.NULL)}}
  private fun array(values:Iterable<*>)=JSONArray().also{a->values.forEach{a.put(it)}}
  private fun fingerprint(f:EvidenceCatalog.SourceFingerprint)=obj("sourceId" to f.sourceId(),"mime" to f.mime(),"sha256" to f.sha256(),"size" to f.size(),"vaultOnly" to f.vaultOnly())
- private fun metadata(m:EvidenceCatalog.Metadata)=obj("sourceName" to m.sourceName(),"fileCreatedAt" to m.fileCreatedAt(),"fileModifiedAt" to m.fileModifiedAt(),"dateAddedAt" to m.dateAddedAt(),"captureAt" to m.captureAt(),"width" to m.width(),"height" to m.height(),"embedded" to JSONObject(m.embedded()),"vaultOnly" to m.vaultOnly())
+ private fun metadata(m:EvidenceCatalog.Metadata)=obj("sourceName" to m.sourceName(),"fileCreatedAt" to m.fileCreatedAt(),"fileModifiedAt" to m.fileModifiedAt(),"dateAddedAt" to m.dateAddedAt(),"captureAt" to m.captureAt(),"width" to m.width(),"height" to m.height(),"embedded" to JSONObject(m.embedded().toSortedMap()),"vaultOnly" to m.vaultOnly())
  private fun record(e:EvidenceCatalog.Evidence)=obj("id" to e.id(),"sourceId" to e.sourceId(),"name" to e.name(),"mime" to e.mime(),"sha256" to e.sha256(),"size" to e.size(),"importedAt" to e.importedAt(),"metadata" to metadata(e.metadata()),"description" to e.description(),"notes" to e.notes(),"tags" to array(e.tags()),"participants" to array(e.participants()),"ocr" to array(e.ocr().map{o->obj("id" to o.id(),"createdAt" to o.createdAt(),"engine" to o.engine(),"rotation" to o.rotation(),"width" to o.width(),"height" to o.height(),"text" to o.text(),"confidence" to o.confidence(),"pageCount" to o.pageCount(),"partial" to o.partial(),"words" to array(o.words().map{w->obj("page" to w.pageIndex(),"text" to w.text(),"confidence" to w.confidence(),"left" to w.left(),"top" to w.top(),"right" to w.right(),"bottom" to w.bottom())}),"times" to array(o.times().map{t->obj("page" to t.pageIndex(),"text" to t.text(),"epochMillis" to t.epochMillis(),"provenance" to t.provenance(),"confidence" to t.confidence())}))}),"corrections" to array(e.corrections().map{c->obj("id" to c.id(),"ocrId" to c.ocrId(),"createdAt" to c.createdAt(),"text" to c.text())}))
  internal fun metadataBytes(catalog:EvidenceCatalog,sources:List<EvidenceCatalog.SourceFingerprint>):ByteArray {
   val encoded=catalog.encode()
   try {
-   val document=obj("version" to 1,"owner" to catalog.owner().name,"catalogBinary" to Base64.encodeToString(encoded,Base64.NO_WRAP),
+   val document=obj("version" to 2,"owner" to catalog.owner().name,"catalogBinary" to Base64.encodeToString(encoded,Base64.NO_WRAP),
     "records" to array(catalog.evidence().map(::record)),
-    "incidents" to array(catalog.incidents().map{i->obj("id" to i.id(),"title" to i.title(),"startAt" to i.startAt(),"endAt" to i.endAt(),"description" to i.description(),"notes" to i.notes(),"tags" to array(i.tags()),"evidenceIds" to array(i.evidenceIds()),"manualOrder" to i.manualOrder(),"archived" to i.archived(),"lineage" to array(i.lineage().map(::fingerprint)),"events" to array(i.events().map{e->obj("id" to e.id(),"evidenceIds" to array(e.evidenceIds()),"timestamp" to e.timestamp(),"provenance" to e.provenance(),"title" to e.title(),"notes" to e.notes())}))}),
-    "analyses" to array(catalog.analyses().map{a->obj("label" to "ADVISORY AI; owner review required", "id" to a.id(),"at" to a.at(),"model" to a.model(),"task" to a.task(),"inputDigest" to a.inputDigest(),"evidenceIds" to array(a.evidenceIds()),"rawAcceptedJson" to a.text(),"inputTokens" to a.inputTokens(),"outputTokens" to a.outputTokens(),"applied" to a.applied(),"lineage" to array(a.lineage().map(::fingerprint)))}),
+    "incidents" to array(catalog.incidents().map{i->obj("id" to i.id(),"title" to i.title(),"startAt" to i.startAt(),"endAt" to i.endAt(),"description" to i.description(),"notes" to i.notes(),"tags" to array(i.tags()),"evidenceIds" to array(i.evidenceIds()),"analysisIds" to array(i.analysisIds()),"manualOrder" to i.manualOrder(),"archived" to i.archived(),"lineage" to array(i.lineage().map(::fingerprint)),"events" to array(i.events().map{e->obj("id" to e.id(),"evidenceIds" to array(e.evidenceIds()),"timestamp" to e.timestamp(),"provenance" to e.provenance(),"title" to e.title(),"notes" to e.notes())}))}),
+    "analyses" to array(catalog.analyses().map{a->obj("label" to "ADVISORY AI; owner review required", "id" to a.id(),"at" to a.at(),"model" to a.model(),"task" to a.task(),"inputDigest" to a.inputDigest(),"evidenceIds" to array(a.evidenceIds()),"sourceReferences" to array(a.sourceReferences().map{r->obj("evidenceId" to r.evidenceId(),"fingerprint" to fingerprint(r.fingerprint()))}),"rawAcceptedJson" to a.text(),"inputTokens" to a.inputTokens(),"outputTokens" to a.outputTokens(),"applied" to a.applied(),"lineage" to array(a.lineage().map(::fingerprint)))}),
     "sources" to array(sources.map{f->obj("fingerprint" to fingerprint(f),"attached" to catalog.evidence().any{it.sourceId()==f.sourceId()},"path" to if(catalog.evidence().any{it.sourceId()==f.sourceId()})path(f.sourceId())else JSONObject.NULL)}))
    val value=document.toString();EvidenceStrictJson.validate(value,16,EvidenceArchiveFormat.META)
-   return value.toByteArray(Charsets.UTF_8).also{require(it.size<=EvidenceArchiveFormat.META){"Metadata quota exceeded"}}
+   return boundedMetadata(value)
   }finally{encoded.fill(0)}
  }
+ private fun boundedMetadata(value:String):ByteArray {val bytes=value.toByteArray(Charsets.UTF_8);if(bytes.size>EvidenceArchiveFormat.META){bytes.fill(0);throw IllegalArgumentException("Metadata quota exceeded")};return bytes}
  internal fun decodeMetadata(bytes:ByteArray,owner:EvidenceCatalog.Owner):Pair<EvidenceCatalog,List<EvidenceCatalog.SourceFingerprint>> {
   val text=utf8(bytes);EvidenceStrictJson.validate(text,16,EvidenceArchiveFormat.META)
-  val j=JSONObject(text);require(j.get("version") is Int&&j.getInt("version")==1&&j.get("owner")==owner.name)
+  val j=JSONObject(text);require(j.get("version") is Int&&j.getInt("version")==2){"Unsupported evidence metadata schema"};require(j.get("owner")==owner.name)
   val binary=j.get("catalogBinary");require(binary is String&&binary.length<=EvidenceArchiveFormat.META)
   val encoded=Base64.decode(binary,Base64.NO_WRAP)
   val catalog=try{EvidenceCatalog.decode(encoded,owner)}finally{encoded.fill(0)}
@@ -84,7 +86,7 @@ internal object EvidenceArchive {
   return catalog to sources
  }
  internal fun utf8(bytes:ByteArray):String=Charsets.UTF_8.newDecoder().onMalformedInput(CodingErrorAction.REPORT).onUnmappableCharacter(CodingErrorAction.REPORT).decode(ByteBuffer.wrap(bytes)).toString()
- internal fun hashes(catalog:EvidenceCatalog,sources:List<EvidenceCatalog.SourceFingerprint>,documents:Map<String,Pair<Long,String>>):ByteArray = obj("version" to 1,"algorithm" to "SHA-256","documents" to array(documents.map{(name,value)->obj("path" to name,"bytes" to value.first,"sha256" to value.second)}),"sources" to array(sources.map{f->obj("fingerprint" to fingerprint(f),"path" to if(catalog.evidence().any{it.sourceId()==f.sourceId()})path(f.sourceId())else JSONObject.NULL,"attached" to catalog.evidence().any{it.sourceId()==f.sourceId()})})).toString().toByteArray(Charsets.UTF_8).also{require(it.size<=EvidenceArchiveFormat.META)}
+ internal fun hashes(catalog:EvidenceCatalog,sources:List<EvidenceCatalog.SourceFingerprint>,documents:Map<String,Pair<Long,String>>):ByteArray = obj("version" to 1,"algorithm" to "SHA-256","documents" to array(documents.map{(name,value)->obj("path" to name,"bytes" to value.first,"sha256" to value.second)}),"sources" to array(sources.map{f->obj("fingerprint" to fingerprint(f),"path" to if(catalog.evidence().any{it.sourceId()==f.sourceId()})path(f.sourceId())else JSONObject.NULL,"attached" to catalog.evidence().any{it.sourceId()==f.sourceId()})})).toString().let(::boundedMetadata)
  fun write(plan:EvidenceExportPlan,reader:EvidenceSourceReader,passphrase:CharArray,output:OutputStream):EvidenceExportReceipt {
   offMain();val selected=select(plan,reader);if(!plan.plaintextConfirmed)require(passphrase.size>=12){"Use at least 12 passphrase characters"}
   val metadata=metadataBytes(selected.catalog,selected.sources);var pdf:ByteArray?=null;var transcript:ByteArray?=null;var manifest:ByteArray?=null;var key:ByteArray?=null;var encrypt:EvidenceArchiveCrypto.Encrypt?=null
@@ -93,7 +95,7 @@ internal object EvidenceArchive {
    val transcriptBytes=EvidencePdf.text(selected).toByteArray(Charsets.UTF_8);transcript=transcriptBytes;require(transcriptBytes.size<=EvidenceArchiveFormat.TRANSCRIPT)
    val docs=linkedMapOf("evidence.json" to (metadata.size.toLong() to sha(metadata)),"report.pdf" to (pdfBytes.size.toLong() to sha(pdfBytes)),"transcript.txt" to (transcriptBytes.size.toLong() to sha(transcriptBytes)))
    val manifestBytes=hashes(selected.catalog,selected.sources,docs);manifest=manifestBytes
-   require(metadata.size<=EvidenceArchiveFormat.META-manifestBytes.size)
+   require(metadata.size<=EvidenceArchiveFormat.META-manifestBytes.size){"Combined metadata quota exceeded"}
    val expanded=selected.originals.sumOf{it.size()}+metadata.size+pdfBytes.size+transcriptBytes.size+manifestBytes.size;require(expanded<=EvidenceArchiveFormat.MAX_EXPANDED)
    val header=EvidenceArchiveFormat.header(ByteArray(16).also{SecureRandom().nextBytes(it)},ByteArray(12).also{SecureRandom().nextBytes(it)})
    if(!plan.plaintextConfirmed)key=EvidenceArchiveCrypto.key(passphrase,header)

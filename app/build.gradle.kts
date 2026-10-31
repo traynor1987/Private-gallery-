@@ -100,15 +100,22 @@ dependencies {
 }
 
 // Pinned public OCR model, prepared only at build time and always bundled for offline use.
-val evidence179Assets = layout.buildDirectory.dir("generated/evidence179Assets")
-val prepareEvidence179Model by tasks.registering(Exec::class) {
-  val model = evidence179Assets.map { it.file("tessdata/eng.traineddata") }
+abstract class PrepareEvidence179ModelTask : Exec() {
+  @get:org.gradle.api.tasks.OutputDirectory
+  abstract val assetsDirectory: org.gradle.api.file.DirectoryProperty
+}
+val prepareEvidence179Model by tasks.registering(PrepareEvidence179ModelTask::class) {
+  assetsDirectory.set(layout.buildDirectory.dir("generated/evidence179Assets"))
+  val model = assetsDirectory.file("tessdata/eng.traineddata")
   inputs.file(rootProject.file("scripts/prepare_evidence179_model.sh"))
   inputs.file(project.file("src/main/assets/evidence179/model-manifest.json"))
-  outputs.file(model)
   // Validate even a previously prepared file; corrupt caches must fail closed.
   outputs.upToDateWhen { false }
   commandLine("bash", rootProject.file("scripts/prepare_evidence179_model.sh"), model.get().asFile)
 }
-android.sourceSets.getByName("main").assets.srcDir(evidence179Assets)
+androidComponents.onVariants { variant ->
+  variant.sources.assets?.addGeneratedSourceDirectory(
+    prepareEvidence179Model, PrepareEvidence179ModelTask::assetsDirectory
+  )
+}
 tasks.named("preBuild").configure { dependsOn(prepareEvidence179Model) }

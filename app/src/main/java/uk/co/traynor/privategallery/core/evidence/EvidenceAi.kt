@@ -297,7 +297,7 @@ internal object EvidenceAi {
  }
  /** Read-only interpretation; no changes, ID expansion, date inference or owner approval. */
  fun details(analysis:EvidenceCatalog.Analysis):Details = try {
-  readStructure(analysis.text(),analysis.evidenceIds().toSet(),true,analysis.inputTokens()).details
+  readStructure(analysis.text(),(if(analysis.sourceReferences().isEmpty())analysis.evidenceIds()else analysis.sourceReferences().map{it.evidenceId()}).toSet(),true,analysis.inputTokens()).details
  }catch(_:Exception){throw EvidenceAiFailure("Saved analysis has an unsupported or invalid advisory structure.")}
  private class Structure(val json:JSONObject,val details:Details)
  private fun <T> frozen(values:List<T>):List<T> = Collections.unmodifiableList(ArrayList(values))
