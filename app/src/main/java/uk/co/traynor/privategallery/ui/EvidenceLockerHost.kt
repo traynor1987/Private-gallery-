@@ -67,24 +67,24 @@ private class EvidenceArchiveRequest(val source:Uri,val destination:Uri?=null,va
   lifecycle.addObserver(observer)
   onDispose{lifecycle.removeObserver(observer);discardDestination(pending);discardDestination(delivered);job?.cancel();controller?.close();pending?.stage?.close();owner.close()}
  }
- LaunchedEffect(owner,activityResumed,resumed,delivered){
-  if(!activityResumed||!resumed)return@LaunchedEffect
-  if(!owner.sameAuthentication()){dismiss();return@LaunchedEffect}
-  if(pending!=null&&delivered==null)return@LaunchedEffect
-  if(controller!=null&&delivered==null)return@LaunchedEffect
+ LaunchedEffect(owner,activityResumed,resumed,delivered){withContext(Dispatchers.Main.immediate){
+  if(!activityResumed||!resumed)return@withContext
+  if(!owner.sameAuthentication()){dismiss();return@withContext}
+  if(pending!=null&&delivered==null)return@withContext
+  if(controller!=null&&delivered==null)return@withContext
   controller?.let{owner.retire(it)};controller=null
-  val fresh=owner.newController(context)?:return@LaunchedEffect
+  val fresh=owner.newController(context)?:return@withContext
   controller=fresh
-  val ticket=delivered?:return@LaunchedEffect
+  val ticket=delivered?:return@withContext
   delivered=null;pending=null
-  if(!ticket.accepted){ticket.stage?.let{owner.discard(it)};notice=notice?:"Cancelled. No evidence record or original was removed.";return@LaunchedEffect}
+  if(!ticket.accepted){ticket.stage?.let{owner.discard(it)};notice=notice?:"Cancelled. No evidence record or original was removed.";return@withContext}
   when(ticket.kind){
    "Import"->ticket.uri?.let{fresh.importAndRegister(it)}
    "Open"->ticket.uri?.let{archive=EvidenceArchiveRequest(it)}
    "Permission"->{aiMode=ticket.mode;aiIds=ticket.evidenceIds}
    "Reexport"->ticket.uri?.let{destination->archive=EvidenceArchiveRequest(checkNotNull(ticket.source),destination,ticket.cipherDigest)}
    "Encrypted","Plain"->{
-    val destination=ticket.uri?:return@LaunchedEffect
+    val destination=ticket.uri?:return@withContext
     transferring=true
     job=scope.launch(start=CoroutineStart.UNDISPATCHED){
      try {
@@ -113,7 +113,7 @@ private class EvidenceArchiveRequest(val source:Uri,val destination:Uri?=null,va
     }
    }
   }
- }
+ }}
  CompositionLocalProvider(LocalEvidenceSecurityActions provides remember(owner){EvidenceSecurityActions(owner::lockVault,owner::panicExit,owner::hideContent)}) {
  val active=controller
  if(active!=null&&!transferring&&active.current()) {

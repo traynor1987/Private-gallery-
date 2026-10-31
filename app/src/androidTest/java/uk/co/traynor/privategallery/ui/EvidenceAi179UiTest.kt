@@ -57,23 +57,23 @@ class EvidenceAi179UiTest {
      override fun close(){route?.close()}
     }},onRequestPermission={fail("fixture must not request real VPN permission")},onClose={closed.incrementAndGet();showingAi=false},providedCredentials=credentials)}}}
    compose.waitUntil(10000){compose.onAllNodesWithText("Prepare exact upload preview").fetchSemanticsNodes().isNotEmpty()}
-   compose.onNodeWithText("Prepare exact upload preview").performScrollTo().performClick()
+   compose.evidenceNode(hasText("Prepare exact upload preview")).performClick()
    compose.waitUntil(15000){compose.onAllNodesWithText("Review before sending").fetchSemanticsNodes().isNotEmpty()}
    compose.onNodeWithText("Synthetic secure route",substring=true).assertExists()
    compose.onNodeWithText("0 explicit images",substring=true).assertExists()
    compose.onNodeWithText("Selected synthetic Alice transcript179",substring=true).assertExists()
    assertEquals(0,calls.get());assertEquals(0,keyReads.get())
-   compose.onNodeWithText("Cancel preview").performScrollTo().performClick()
+   compose.evidenceNode(hasText("Cancel preview")).performClick()
    assertEquals(0,calls.get());assertTrue(access.store.read().analyses().isEmpty())
-   compose.onNodeWithText("Prepare exact upload preview").performScrollTo().performClick()
+   compose.evidenceNode(hasText("Prepare exact upload preview")).performClick()
    compose.waitUntil(15000){compose.onAllNodesWithText("Confirm and send selected evidence").fetchSemanticsNodes().isNotEmpty()}
-   compose.onNodeWithText("Confirm and send selected evidence").performScrollTo().performClick()
+   compose.evidenceNode(hasText("Confirm and send selected evidence")).performClick()
    compose.waitUntil(15000){compose.onAllNodesWithText("Synthetic advisory179.",substring=true).fetchSemanticsNodes().isNotEmpty()}
    assertEquals(1,calls.get());assertEquals(1,keyReads.get());assertTrue(access.store.read().incidents().isEmpty())
-   compose.onNodeWithText("Save advisory").performScrollTo().performClick()
+   compose.evidenceNode(hasText("Save advisory")).performClick()
    compose.waitUntil(15000){controller.state.value.catalog?.analyses()?.size==1&&!controller.state.value.busy}
    assertFalse(access.store.read().analyses().single().applied())
-   compose.onNodeWithText("Create incident").performScrollTo().performClick();compose.onNodeWithText("Confirm").performClick()
+   compose.evidenceNode(hasText("Create incident")).performClick();compose.onNodeWithText("Confirm").performClick()
    compose.onNode(hasSetTextAction() and hasText("Title")).performTextReplacement("Owner-approved AI179")
    compose.onNodeWithText("Create").performClick()
    compose.waitUntil(15000){controller.state.value.catalog?.incidents()?.size==1&&!controller.state.value.busy}
@@ -81,16 +81,16 @@ class EvidenceAi179UiTest {
    assertEquals(listOf(catalog.analyses().single().id()),catalog.incidents().single().analysisIds())
    assertArrayEquals(original.plaintextSha256,repo.items().single().plaintextSha256)
    compose.onNodeWithText("Close").performClick()
-   compose.onNodeWithText("Incidents").performClick();compose.onNodeWithText("Owner-approved AI179").performScrollTo().performClick()
-   compose.onNodeWithText("Synthetic advisory179. The visible timestamp is uncertain.").performScrollTo().assertIsDisplayed()
+   compose.onNodeWithText("Incidents").performClick();compose.evidenceNode(hasText("Owner-approved AI179")).performClick()
+   compose.evidenceNode(hasText("Synthetic advisory179. The visible timestamp is uncertain.")).assertIsDisplayed()
    compose.runOnIdle{compose.activity.onBackPressedDispatcher.onBackPressed()}
-   compose.onNodeWithText("Library").performClick();compose.onNodeWithContentDescription("Select evidence selected179.txt").performScrollTo().performClick()
-   compose.onNodeWithText("Remove references").performScrollTo().performClick();compose.onNodeWithText("Confirm").performClick()
+   compose.onNodeWithText("Library").performClick();compose.evidenceNode(hasContentDescription("Select evidence selected179.txt")).performClick()
+   compose.evidenceNode(hasText("Remove references")).performClick();compose.onNodeWithText("Confirm").performClick()
    compose.waitUntil(15000){!controller.state.value.busy&&controller.state.value.catalog?.evidence()?.isEmpty()==true}
-   compose.onNodeWithText("Incidents").performClick();compose.onNodeWithText("Owner-approved AI179").performScrollTo().performClick()
-   compose.onNodeWithText("Synthetic advisory179. The visible timestamp is uncertain.").performScrollTo().assertIsDisplayed()
-   compose.onNodeWithText("Advisory event: Retained structured event179",substring=true).performScrollTo().assertIsDisplayed()
-   compose.onAllNodesWithText("Historical / unattached advisory source",substring=true).onLast().performScrollTo().assertIsDisplayed()
+   compose.onNodeWithText("Incidents").performClick();compose.evidenceNode(hasText("Owner-approved AI179")).performClick()
+   compose.evidenceNode(hasText("Synthetic advisory179. The visible timestamp is uncertain.")).assertIsDisplayed()
+   compose.evidenceNode(hasText("Advisory event: Retained structured event179",substring=true)).assertIsDisplayed()
+   compose.evidenceNode(hasText("Historical / unattached advisory source",substring=true),last=true).assertIsDisplayed()
    val retained=access.store.read();val incidentId=retained.incidents().single().id()
    assertTrue(retained.incidents().single().evidenceIds().isEmpty());assertEquals(1,repo.items().size)
    assertEquals(original.id,retained.analyses().single().sourceReferences().single().fingerprint().sourceId())

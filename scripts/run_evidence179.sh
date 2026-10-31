@@ -25,10 +25,15 @@ run_selection() {
  local identity=$1 label=$2 gradle_status=0
  # Clear only disposable generated instrumentation outputs, so stale XML/receipts cannot satisfy accounting.
  rm -rf app/build/outputs/androidTest-results/connected/debug app/build/outputs/connected_android_test_additional_output
- ./gradlew :app:connectedDebugAndroidTest "-Pandroid.testInstrumentationRunnerArguments.class=$identity" \
+ timeout --signal=TERM --kill-after=30s 15m ./gradlew :app:connectedDebugAndroidTest "-Pandroid.testInstrumentationRunnerArguments.class=$identity" \
   -Pandroid.testInstrumentationRunnerArguments.hiddenVpnConfig=/data/local/tmp/hidden-vpn1762.conf \
   "-Pandroid.testInstrumentationRunnerArguments.evidence179OnionHttpsUrl=$EVIDENCE179_ONION_HTTPS_URL" \
   "-Pandroid.testInstrumentationRunnerArguments.evidence179SourceSha=$GITHUB_SHA" --stacktrace || gradle_status=$?
+ if [[ "$gradle_status" == 124 || "$gradle_status" == 137 ]]; then
+  # A hung invocation fails closed before the job deadline, preserving original test artifacts.
+  timeout 15s adb logcat -d -b main -b system -b crash > "$root/timeout-$label-logcat.txt" 2>&1 || true
+  timeout 15s adb shell dumpsys activity lastanr > "$root/timeout-$label-lastanr.txt" 2>&1 || true
+ fi
  python3 - "$label" "$gradle_status" <<'PY' || return $?
 import pathlib,shutil,sys
 source=pathlib.Path('app/build/outputs/androidTest-results/connected/debug')

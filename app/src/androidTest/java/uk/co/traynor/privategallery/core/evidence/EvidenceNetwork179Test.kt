@@ -2,6 +2,9 @@ package uk.co.traynor.privategallery.core.evidence
 
 import java.io.BufferedInputStream
 import java.io.InputStream
+import java.io.EOFException
+import java.io.IOException
+import java.net.SocketException
 import java.net.InetAddress
 import java.net.InetSocketAddress
 import java.net.Proxy
@@ -33,8 +36,10 @@ class EvidenceNetwork179Test {
   val entered=CountDownLatch(1)
   val headersEntered=CountDownLatch(1)
   val responseBodyEntered=CountDownLatch(1)
-  val releaseResponse=CountDownLatch(1)
   val peerClosed=CountDownLatch(1)
+  val handlerCompleted=CountDownLatch(1)
+  val handlerFailures=CopyOnWriteArrayList<Throwable>()
+  private class PeerEof:EOFException("Observed peer EOF")
   val replies=LinkedBlockingQueue<String>()
   private val certificate=CertificateFactory.getInstance("X.509").generateCertificate(Base64.getDecoder().decode(CERT).inputStream())
   private val privateKey=KeyFactory.getInstance("RSA").generatePrivate(PKCS8EncodedKeySpec(Base64.getDecoder().decode(KEY)))
@@ -54,17 +59,23 @@ class EvidenceNetwork179Test {
     while(true){val line=line(input);if(line.isEmpty())break;headers.append(line).append('\n')}
     headersEntered.countDown()
     if(headers.toString().contains("Transfer-Encoding: chunked",true)){
-     while(true){val size=line(input).substringBefore(';').toInt(16);if(size==0){while(line(input).isNotEmpty()){};break};repeat(size){check(input.read()>=0)};check(line(input).isEmpty())}
-    }else{val length=Regex("Content-Length: ([0-9]+)",RegexOption.IGNORE_CASE).find(headers)?.groupValues?.get(1)?.toInt()?:0;repeat(length){check(input.read()>=0)}}
+     while(true){val size=line(input).substringBefore(';').toInt(16);if(size==0){while(line(input).isNotEmpty()){};break};repeat(size){readPeer(input)};check(line(input).isEmpty())}
+    }else{val length=Regex("Content-Length: ([0-9]+)",RegexOption.IGNORE_CASE).find(headers)?.groupValues?.get(1)?.toInt()?:0;repeat(length){readPeer(input)}}
     requests+=headers.toString();entered.countDown()
     val reply=replies.poll(10,TimeUnit.SECONDS)?:"HTTP/1.1 200 OK\r\nContent-Length: 2\r\nConnection: close\r\n\r\nOK"
     if(reply=="RESET"){it.setSoLinger(true,0);return@use}
     if(reply=="HOLD_RESPONSE"){
      it.outputStream.write("HTTP/1.1 200 OK\r\nContent-Length: 1024\r\nConnection: close\r\n\r\nx".toByteArray());it.outputStream.flush();responseBodyEntered.countDown()
-     check(releaseResponse.await(10,TimeUnit.SECONDS));return@use
+     readPeer(input) // Only EOF/reset is a positive close; extra input is a fixture failure.
+     throw IOException("Unexpected inbound data while response is held")
     }
     it.outputStream.write(reply.toByteArray(Charsets.US_ASCII));it.outputStream.flush()
-   }}catch(_:Exception){}finally{sockets.remove(socket);peerClosed.countDown()}
+   }}catch(observed:PeerEof){
+    observed.suppressed.forEach{handlerFailures.add(it)}
+    peerClosed.countDown()
+   }catch(failure:Exception){
+    if(peerReset(failure)){failure.suppressed.forEach{handlerFailures.add(it)};peerClosed.countDown()}else handlerFailures.add(failure)
+   }finally{sockets.remove(socket);handlerCompleted.countDown()}
   }},"evidence-test-https").apply{isDaemon=true;start()}
   fun response(code:Int=200,headers:String="",body:String="OK") {replies.put("HTTP/1.1 $code Fixture\r\nContent-Length: ${body.length}\r\nConnection: close\r\n$headers\r\n$body")}
   fun route(active:()->Boolean={true},configure:(OkHttpClient.Builder)->Unit={}):EvidenceRoute {
@@ -77,9 +88,20 @@ class EvidenceNetwork179Test {
    }
    return constructor.newInstance(EvidenceCatalog.Owner.PRIMARY,"HTTPS fixture",active,{},null,configuration) as EvidenceRoute
   }
-  override fun close(){open.set(false);releaseResponse.countDown();server.close();sockets.forEach{runCatching{it.close()}};worker.interrupt();worker.join(1000)}
+  override fun close(){open.set(false);server.close();sockets.forEach{runCatching{it.close()}};worker.interrupt();worker.join(1000)}
   companion object {
-   private fun line(input:InputStream):String {val b=StringBuilder();while(true){val c=input.read();check(c>=0&&b.length<32768);if(c==10)return b.toString().removeSuffix("\r");b.append(c.toChar())}}
+   private fun readPeer(input:InputStream):Int=input.read().also{if(it<0)throw PeerEof()}
+   private fun peerReset(failure:Throwable):Boolean {
+    var cause:Throwable?=failure
+    repeat(8){
+     val observed=cause?:return false
+     if(observed is android.system.ErrnoException&&observed.errno==android.system.OsConstants.ECONNRESET)return true
+     if(observed is SocketException&&observed.message in setOf("Connection reset","Connection reset by peer"))return true
+     cause=observed.cause
+    }
+    return false
+   }
+   private fun line(input:InputStream):String {val b=StringBuilder();while(true){val c=readPeer(input);check(b.length<32768);if(c==10)return b.toString().removeSuffix("\r");b.append(c.toChar())}}
    // Public, disposable fixture certificate and private key; never an account credential.
    private const val CERT="MIIDJTCCAg2gAwIBAgIUM84pNQq81IOLtRCDjaxpesqQhv0wDQYJKoZIhvcNAQELBQAwFDESMBAGA1UEAwwJbG9jYWxob3N0MB4XDTI2MTAzMTE1NDk0MFoXDTM2MTAyODE1NDk0MFowFDESMBAGA1UEAwwJbG9jYWxob3N0MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAoADdm+7MAu3LG+8pA+bEfbVTdBCbfp/EbC3IzwIPF75Sz0DW435wDepkLqr7feNYaL8NKQQiPpnFoMW7pW7SFdPG8Qb+WAcFzTaw0lQ9+K+P0sya4uGwxVCU9ZULu9ysKEU+VZ6JFUDkugMkC6OR/JtBguMAWIZCYddME4JBFEHuY0MOzkSiQ17B8TyTxr8XjohqxK7CLwlROtp0uGEbT8DBaF+KIfMPzZCI6iXH/TVzpe4MX/eez/Nrbnn165BlscXOMbXtK/WXnGFfagLt4wDFfESHR/MykcaCY+ucgUoczcK0WmdGgkSda6r6+FLY4Cy7Y7+fu0LLuyBbZ9NInwIDAQABo28wbTAdBgNVHQ4EFgQUiZKRgfpvT4E/Zkpax/eo74YAuhowHwYDVR0jBBgwFoAUiZKRgfpvT4E/Zkpax/eo74YAuhowDwYDVR0TAQH/BAUwAwEB/zAaBgNVHREEEzARgglsb2NhbGhvc3SHBH8AAAEwDQYJKoZIhvcNAQELBQADggEBABniduvhTM9R41OH8Rw3+VCw3pfHF39qYdC5bf1LLoo91q6ZBI1JCNkaSoPpr3dux2E/UTBMXbhq17lCWqFQLEIQqpeGVKNrck9g+yFSQq3TmfBEssepZmEI8kU/mq2Nj1rwNKisdrt4HbX0gmXEbRE3Y7i3hSGPodjd9vbFJMLi7seJE86zJDq2uguHu5iBLZPFRfdb5mK2G7dBAv2/i63dGY8EtZPZWF7LzErMU5GnLdHB82h1/5RrqOUbsEXu9UYQ77jcXTp9NfrGzM8HQwCuxYwlsKQ05VTY606hJwT6ZeItVb7r8qplx7dcFejbj6Yd1yS5Zybsi81rsGxmuZM="
    private const val KEY="MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQCgAN2b7swC7csb7ykD5sR9tVN0EJt+n8RsLcjPAg8XvlLPQNbjfnAN6mQuqvt941hovw0pBCI+mcWgxbulbtIV08bxBv5YBwXNNrDSVD34r4/SzJri4bDFUJT1lQu73KwoRT5VnokVQOS6AyQLo5H8m0GC4wBYhkJh10wTgkEUQe5jQw7ORKJDXsHxPJPGvxeOiGrErsIvCVE62nS4YRtPwMFoX4oh8w/NkIjqJcf9NXOl7gxf957P82tuefXrkGWxxc4xte0r9ZecYV9qAu3jAMV8RIdH8zKRxoJj65yBShzNwrRaZ0aCRJ1rqvr4UtjgLLtjv5+7Qsu7IFtn00ifAgMBAAECggEAPVI3nJR3kcPK7OjK4ljmA3ukAT6AKZZXtFITvOqAGExz9kRWVxfVIDAttwkGm6eu8W4PQCH6cd2DNWuyz+NaFs10WFmizt/aJF0KhYGNwqqeR17tGXj/w49vl3NI7PXU8RYgnrXEueWGA5hCj0dgItzpzZzsPAEwncjiujNYd8d1kFH5OdNMVg/r7rrshdJzl8D3R/GV6RgDdqrDIE/dEYtlavzT0z4KgyejdMHMJAc3SNYEzqJLyaY1KZ/XiNeEWx8oU3PHOaaQbPPInQJknKffifqvh5eOz2/O0vOAglQX5U6ALhotm8hQa5mnTfu3o/VPCzaz1v5FzTqg9ReEsQKBgQDWPa5aiHc6P5LpDJ2PVsf2jqZT2l4SNavwF05sirxayv+7YnSWo4rTgq+/0Ll3c0i6e18Fnk2k3b5irIstW5640fp3OwHDXzq7WyPMUFmd2hiZOpzr9ParuOZwfhWGu0RguwjMlWIvUwRcePkxVVzBNh+9Gb8YuPcNf31StbZXxwKBgQC/MM6sJCmVdWg/hdrIS5Gj02iQ/UjPa6wUJkQbY9ioU/1CqdPtvALDc1mjvZFIenrPm/Hn0POM3mIYpiifhWeZIqkmcS7+dSuGeJ+T9/xndMmYD9pUIMx0rKJnYhEf1cYHztygJGVRqxvN0RG/xizrsBMuFewHtdJn5ijrCfx4aQKBgQCkNkkC2aDRg9MeUG4gZTsGEBcLJNCAEqWEdMjGx5xR11EnFvMYV6hcMMp3MwxFs5amYVPXIZyP5us8BNb04EoLjd72LsNONhr1aolI3LmkFXxPTq7i6TN9Mk9nIC1txPJHVnULIuFMNsyb+JnAp5Zd/hdbwXVJBNVQgkzT7bYjFwKBgAi8v0UopenZorj8cgIjSfWVrLqriI9KGWQWV5h02Krgo7tPLYs4w1uRQvBzslcAmeow8z4n02mFpDACL+sSWqip59cE5yPj0OhlTM2jUJqdwLS9TLn5gb53QTi+R5AP4evrbTO4VhUEX9HpEwmTkev3cPjzMYUsrv/micor+6i5AoGBAMzOfDqdS2jkzgFIfSJJitixKRVq5PqMtG+B7w9ZEaWwWR975yXgTqujn2HbwkAXegh2bt11qqTl/J7Dzhk5TxgWekMaJPvckBgF2jwTKxQM9NQDprzChW/Omcmeokvi+nPtJZWJjMt4TE5L3Vkmi60OrGV8f239VjnwJ8gDvN/a"
@@ -128,15 +150,23 @@ class EvidenceNetwork179Test {
   }}
  }
  @Test fun coroutineCancellationDuringResponseReadDisconnectsWithoutPublishing()=runBlocking {
-  Https().use{https->https.route().use{route->
+  val clientRead=CountDownLatch(1)
+  Https().use{https->https.route(configure={builder->builder.eventListener(object:EventListener(){
+   override fun responseBodyStart(call:Call){clientRead.countDown()}
+  })}).use{route->
    https.replies.put("HOLD_RESPONSE")
    coroutineScope{
-    val call=async(Dispatchers.IO){route.execute(request(https.url))}
+    val published=AtomicBoolean(false)
+    val call=async(Dispatchers.IO){route.execute(request(https.url)).also{published.set(true)}}
     try{
      assertTrue(withContext(Dispatchers.IO){https.responseBodyEntered.await(5,TimeUnit.SECONDS)})
+     assertTrue("Client never began the held response read",withContext(Dispatchers.IO){clientRead.await(5,TimeUnit.SECONDS)})
      withTimeout(5000){call.cancelAndJoin()};try{call.await();fail("cancelled response published")}catch(_:CancellationException){}
-     assertEquals(1,https.requests.size)
-    }finally{https.releaseResponse.countDown();call.cancel()}
+     assertTrue("Cancelled response retained its TLS socket",withContext(Dispatchers.IO){https.peerClosed.await(5,TimeUnit.SECONDS)})
+     assertTrue("Peer close handler did not finish",withContext(Dispatchers.IO){https.handlerCompleted.await(5,TimeUnit.SECONDS)})
+     assertTrue("Unexpected response handler errors: ${https.handlerFailures.map{it.javaClass.simpleName}}",https.handlerFailures.isEmpty())
+     assertFalse(published.get());assertEquals(1,https.requests.size)
+    }finally{call.cancel()}
    }
   }}
  }
@@ -149,6 +179,8 @@ class EvidenceNetwork179Test {
     try{
      assertTrue(withContext(Dispatchers.IO){entered.await(5,TimeUnit.SECONDS)});call.cancel()
      assertTrue("admitted socket remained open",withContext(Dispatchers.IO){https.peerClosed.await(5,TimeUnit.SECONDS)})
+     assertTrue("Peer close handler did not finish",withContext(Dispatchers.IO){https.handlerCompleted.await(5,TimeUnit.SECONDS)})
+     assertTrue("Unexpected upload handler errors: ${https.handlerFailures.map{it.javaClass.simpleName}}",https.handlerFailures.isEmpty())
      assertEquals("writer returned before socket cancellation was observed",1L,writerExited.count)
      release.countDown();withTimeout(5000){call.join()};try{call.await();fail("cancelled upload returned")}catch(_:CancellationException){}
      assertTrue(https.requests.isEmpty())

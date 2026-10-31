@@ -94,11 +94,27 @@ class EvidenceSaf179Test {
   fun uri(id:String):Uri = if(id=="archive-alias")DocumentsContract.buildDocumentUriUsingTree(DocumentsContract.buildTreeDocumentUri("evidence179.fixture","root"),"archive")else DocumentsContract.buildDocumentUri("evidence179.fixture",id)
   fun close(){release.countDown();workers.shutdownNow()}
  }
+ /** A diagnostic timeout never passes a test or changes its authority assertions. */
+ private class GraceWatchdog(enabled:Boolean):AutoCloseable {
+  private val phase=java.util.concurrent.atomic.AtomicReference("fixture construction")
+  private val worker=if(enabled)Executors.newSingleThreadScheduledExecutor{task->Thread(task,"evidence179-grace-watchdog").apply{isDaemon=true}}else null
+  private val task=worker?.schedule({
+   android.util.Log.e("Evidence179Fixture","Hidden grace stalled: phase=${phase.get()}")
+   Thread.getAllStackTraces().forEach{(thread,stack)->
+    android.util.Log.e("Evidence179Fixture","Thread ${thread.name} state=${thread.state}")
+    stack.forEach{frame->android.util.Log.e("Evidence179Fixture","  ${frame.className}.${frame.methodName}:${frame.lineNumber}")}
+   }
+  },30,TimeUnit.SECONDS)
+  fun step(value:String){phase.set(value)}
+  override fun close(){task?.cancel(false);worker?.shutdownNow()}
+ }
  private inner class Harness(val secret:Boolean=false,val seed:Boolean=false):AutoCloseable {
-  val root=File(compose.activity.cacheDir,"evidence-saf179-${UUID.randomUUID()}").apply{mkdirs()}
-  val provider=Provider(File(root,"provider").apply{mkdirs()}).apply{attachInfo(compose.activity,ProviderInfo().apply{authority="evidence179.fixture";exported=true;grantUriPermissions=true;readPermission="android.permission.MANAGE_DOCUMENTS";writePermission="android.permission.MANAGE_DOCUMENTS"})}
+  private val activity=compose.activity
+  private val foreground=java.util.concurrent.atomic.AtomicBoolean(activity.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED))
+  val root=File(activity.cacheDir,"evidence-saf179-${UUID.randomUUID()}").apply{mkdirs()}
+  val provider=Provider(File(root,"provider").apply{mkdirs()}).apply{attachInfo(activity,ProviderInfo().apply{authority="evidence179.fixture";exported=true;grantUriPermissions=true;readPermission="android.permission.MANAGE_DOCUMENTS";writePermission="android.permission.MANAGE_DOCUMENTS"})}
   val resolver=ContentResolver.wrap(provider)
-  val context=object:ContextWrapper(compose.activity){
+  val context=object:ContextWrapper(activity){
    override fun getContentResolver()=resolver
    override fun getFilesDir()=File(root,"files").apply{mkdirs()}
    override fun getNoBackupFilesDir()=File(root,"no-backup").apply{mkdirs()}
@@ -113,13 +129,17 @@ class EvidenceSaf179Test {
   lateinit var owner:EvidenceOwnerSession
   val same={epoch.get()==1L&&(hidden==null||hidden.isAuthenticationCurrent(authentication))}
   val lifecycleObserver=LifecycleEventObserver{_,event->
+   if(event==Lifecycle.Event.ON_RESUME)foreground.set(true)
+   if(event==Lifecycle.Event.ON_PAUSE)foreground.set(false)
    if(event==Lifecycle.Event.ON_STOP)hidden?.onBackground(60_000)
    if(event==Lifecycle.Event.ON_START)hidden?.onForeground() // Same reconciliation order as Main, before RESUMED.
   }
   init {
    provider.file("source").writeText("Synthetic private picker179 transcript; no external evidence")
    if(seed){
-    val bytes=ByteArray(256*1024);java.util.Random(179).nextBytes(bytes)
+    val random=java.util.Random(179);val alphabet="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/".toByteArray(Charsets.US_ASCII)
+    val bytes=ByteArray(256*1024){alphabet[random.nextInt(alphabet.size)]}
+    check(Charsets.UTF_8.newDecoder().decode(java.nio.ByteBuffer.wrap(bytes)).length==bytes.size)
     val original=try{if(hidden==null)(AndroidVaultRepository(context,key).importVerified(VaultImportSource("seed179.txt","text/plain",{bytes.inputStream()}))as ImportResult.Imported).item else HiddenRepository(context,hidden).importMedia("seed179.txt","text/plain",bytes.inputStream())}finally{bytes.fill(0)}
     val initial=access()
     try {
@@ -128,17 +148,17 @@ class EvidenceSaf179Test {
     }finally{initial.close()}
    }
    instrumentation.runOnMainSync{
-    compose.activity.lifecycle.addObserver(lifecycleObserver)
+    activity.lifecycle.addObserver(lifecycleObserver)
     owner=EvidenceOwnerSession(if(secret)EvidenceCatalog.Owner.HIDDEN else EvidenceCatalog.Owner.PRIMARY,same,accessFactory={
-     if(!same()||!compose.activity.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED))null else access().also{accesses.add(it)}
+     if(!same()||!foreground.get())null else access().also{accesses.add(it)}
     },routeFactory={routeCreations.incrementAndGet();error("SAF fixture must not create routes")},primarySystemAllowed={false},ciphertextStaging=stageDirectory,
      lockOriginating={security.add("Lock Vault");hidden?.lock();epoch.incrementAndGet()},panic={security.add("Panic Exit");hidden?.lock();epoch.incrementAndGet()},hide={security.add("Hide Content");hidden?.revokeOperations();epoch.incrementAndGet()})
    }
   }
   private fun access():EvidenceAccess {
-   if(hidden!=null)return EvidenceAccess.hidden(context,hidden){same()&&compose.activity.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)}
+   if(hidden!=null)return EvidenceAccess.hidden(context,hidden){same()&&foreground.get()}
    val operation=generation.incrementAndGet()
-   return EvidenceAccess.primary(context,key,{key},{same()&&generation.get()==operation&&compose.activity.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)},{key.copyOf()},gate)
+   return EvidenceAccess.primary(context,key,{key},{same()&&generation.get()==operation&&foreground.get()},{key.copyOf()},gate)
   }
   fun show(){val registryOwner=object:ActivityResultRegistryOwner{override val activityResultRegistry=picker}
    compose.setContent{CompositionLocalProvider(LocalContext provides context,LocalActivityResultRegistryOwner provides registryOwner){PrivateGalleryTheme(AppTheme.DARK){EvidenceLockerHost(owner,true,preparePermission={Intent("synthetic.evidence179.PERMISSION")}){dismissals.incrementAndGet()}}}}
@@ -170,20 +190,20 @@ class EvidenceSaf179Test {
   fun openArchive(){provider.file("archive").writeBytes(archiveBytes());click("Open encrypted export");returnFromPicker(provider.uri("archive"));authenticate()}
   fun authenticate(){compose.waitUntil(15000){compose.onAllNodesWithText("Archive password").fetchSemanticsNodes().isNotEmpty()};field("Archive password").performTextReplacement(PASSWORD);click("Authenticate and open")}
   fun waitReport(){compose.waitUntil(45000){compose.onAllNodesWithContentDescription("Authenticated evidence PDF report").fetchSemanticsNodes().isNotEmpty()}}
-  override fun close(){provider.close();instrumentation.runOnMainSync{compose.activity.lifecycle.removeObserver(lifecycleObserver);owner.close()};accesses.forEach{it.close()};hidden?.lock();key.fill(0);root.deleteRecursively()}
+  override fun close(){provider.close();instrumentation.runOnMainSync{activity.lifecycle.removeObserver(lifecycleObserver);owner.close()};accesses.forEach{it.close()};hidden?.lock();key.fill(0);root.deleteRecursively()}
  }
  private fun field(label:String)=compose.onNode(hasSetTextAction() and hasText(label))
- private fun click(text:String){compose.onAllNodesWithText(text).onLast().performScrollTo().performClick()}
+ private fun click(text:String){compose.evidenceNode(hasText(text),last=true).performClick()}
  private fun assertEmptyArchivePassword(){compose.waitUntil(15000){compose.onAllNodesWithText("Archive password").fetchSemanticsNodes().isNotEmpty()};assertEquals("",field("Archive password").fetchSemanticsNode().config[androidx.compose.ui.semantics.SemanticsProperties.EditableText].text)}
  @Test fun importPickerRecreatesAuthorityOnlyAfterResumedOriginalAuthentication()=importFlow(false,false,0)
  @Test fun latePickerAfterReauthenticationCannotReadOrImportItsDocument()=importFlow(false,true,0)
  @Test fun hiddenWithinGracePickerCapturesFreshAuthorityAfterForegroundReconciliation()=importFlow(true,false,30_000)
  @Test fun hiddenExpiredPickerCannotReadDocumentAfterRealForegroundReconciliation()=importFlow(true,false,60_000)
  @Test fun hiddenReauthenticatedPickerCannotReviveOriginalAuthentication()=importFlow(true,true,60_000)
- private fun importFlow(hidden:Boolean,reauthenticate:Boolean,advance:Long){Harness(secret=hidden).use{f->
-  f.show();val old=f.accesses.single();click("Import document / image")
+ private fun importFlow(hidden:Boolean,reauthenticate:Boolean,advance:Long){GraceWatchdog(hidden&&!reauthenticate&&advance==30_000L).use{watchdog->Harness(secret=hidden).use{f->
+  watchdog.step("composing Host");f.show();watchdog.step("launching import picker");val old=f.accesses.single();click("Import document / image")
   assertEquals("OpenDocument",f.picker.contract);assertFalse(old.current());assertEquals(0,f.provider.reads.get())
-  compose.activityRule.scenario.moveToState(Lifecycle.State.CREATED);f.clock.addAndGet(advance)
+  watchdog.step("stopping Activity");compose.activityRule.scenario.moveToState(Lifecycle.State.CREATED);f.clock.addAndGet(advance)
   if(reauthenticate&&f.hidden==null)f.epoch.incrementAndGet()
   assertEquals("No provider read while stopped",0,f.provider.reads.get())
   if(reauthenticate&&f.hidden!=null){
@@ -196,16 +216,29 @@ class EvidenceSaf179Test {
    instrumentation.runOnMainSync{f.picker.returnDocument(f.provider.uri("source"))}
    instrumentation.waitForIdleSync();assertEquals("No provider read after delivery while stopped",0,f.provider.reads.get())
   }
-  compose.activityRule.scenario.moveToState(Lifecycle.State.RESUMED)
+  watchdog.step("resuming Activity");compose.activityRule.scenario.moveToState(Lifecycle.State.RESUMED)
+  watchdog.step("awaiting fresh authority and imported catalogue")
   if(reauthenticate||hidden&&advance>=60_000){compose.waitUntil(15000){f.dismissals.get()>0};assertEquals(0,f.provider.reads.get());assertEquals(1,f.accesses.size);assertFalse(f.owner.sameAuthentication())}
   else {
-   compose.waitUntil(45000){f.accesses.size==2&&runCatching{f.accesses.last().store.read().evidence().singleOrNull()?.ocr()?.isNotEmpty()==true}.getOrDefault(false)}
+   compose.waitUntil(15000){f.accesses.size==2}
    val fresh=f.accesses.last();assertTrue(fresh.current());assertFalse(old.current())
-   val record=fresh.store.read().evidence().single();assertEquals("picker179.txt",record.metadata().sourceName());assertEquals(1700000000000L,record.metadata().fileModifiedAt())
+   // A synchronous store read must not make the instrumentation wait predicate unbounded.
+   val imported=java.util.concurrent.atomic.AtomicReference<EvidenceCatalog?>(null)
+   val readFailure=java.util.concurrent.atomic.AtomicReference<Class<*>?>(null)
+   val observer=Executors.newSingleThreadScheduledExecutor{task->Thread(task,"evidence179-import-observer").apply{isDaemon=true}}
+   val poll=observer.scheduleWithFixedDelay({try{imported.set(fresh.store.read())}catch(failure:Exception){readFailure.set(failure.javaClass)}},0,50,TimeUnit.MILLISECONDS)
+   val importedCatalog=try{
+    compose.waitUntil(45000){imported.get()?.evidence()?.singleOrNull()?.ocr()?.isNotEmpty()==true}
+    checkNotNull(imported.get())
+   }catch(failure:ComposeTimeoutException){throw AssertionError("Fresh import readiness: records=${imported.get()?.evidence()?.size} readFailure=${readFailure.get()?.simpleName}",failure)}
+   finally{poll.cancel(true);observer.shutdownNow()}
+   watchdog.step("verifying imported original")
+   val record=importedCatalog.evidence().single();assertEquals("picker179.txt",record.metadata().sourceName());assertEquals(1700000000000L,record.metadata().fileModifiedAt())
    val bytes=fresh.reader().readVerified(record.sourceId()){_,input->input.readBytes()};try{assertArrayEquals(f.provider.file("source").readBytes(),bytes)}finally{bytes.fill(0)}
    assertTrue(f.provider.file("source").isFile);assertTrue(f.provider.deleted.isEmpty())
   }
- }}
+   watchdog.step("fixture cleanup")
+ }}}
  @Test fun encryptedPreparePickerFreshControllerCopiesExactSealedCiphertext() {Harness(seed=true).use{f->
   f.show();val ciphertext=f.encryptedPicker()
   try {

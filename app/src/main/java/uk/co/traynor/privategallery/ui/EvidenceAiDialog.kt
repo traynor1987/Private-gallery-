@@ -51,7 +51,8 @@ import uk.co.traynor.privategallery.core.evidence.*
  DisposableEffect(controller){val registration=controller.access.onRetire{android.os.Handler(android.os.Looper.getMainLooper()).post{dismiss()}};onDispose{registration.close();running?.cancel();preview?.close();coordinator?.close()}}
  LaunchedEffect(controller,credentials){
   val present=withContext(Dispatchers.IO){runCatching{credentials.isConfigured()}.getOrDefault(false)}
-  controller.access.publishIfCurrent{configured=present}
+  // A composition effect's continuation interceptor is not itself a Main guarantee.
+  withContext(Dispatchers.Main.immediate){controller.access.publishIfCurrent{configured=present}}
  }
  fun action(work:suspend ()->Unit){
   if(busy||!controller.current())return

@@ -154,7 +154,11 @@ internal object EvidenceNetwork {
     }
     currentCoroutineContext().ensureActive();check(current());pending=null;return result
    }catch(cancelled:CancellationException){throw cancelled}
-   catch(_:Exception){throw EvidenceAiFailure("The selected network route is unavailable or returned an invalid response.")}
+   catch(_:Exception){
+    // Cancelling a socket read may surface as IOException before the dispatcher resumes.
+    currentCoroutineContext().ensureActive()
+    throw EvidenceAiFailure("The selected network route is unavailable or returned an invalid response.")
+   }
    finally{pending?.fill(0)}
   }
   override fun close() {

@@ -40,8 +40,11 @@ class EvidenceLocker179UiTest {
   val access=if(hidden==null)EvidenceAccess.primary(context,key,{key},{true},{key.copyOf()},Any())else EvidenceAccess.hidden(context,hidden){true}
   return Fixture(root,context,key,hidden,access,ids)
  }
- private fun waitReady(controller:EvidenceController,count:Int?=null){compose.waitUntil(45000){val s=controller.state.value;!s.busy&&s.catalog!=null&&(count==null||s.catalog.evidence().size==count)}}
- private fun click(text:String){compose.onNodeWithText(text).performScrollTo().performClick()}
+ private fun waitReady(controller:EvidenceController,count:Int?=null){
+  try{compose.waitUntil(45000){val s=controller.state.value;!s.busy&&s.catalog!=null&&(count==null||s.catalog.evidence().size==count)}}
+  catch(failure:ComposeTimeoutException){val s=controller.state.value;throw AssertionError("Controller readiness: expectedCount=$count actualCount=${s.catalog?.evidence()?.size} busy=${s.busy} revision=${s.catalog?.revision()} originals=${s.originals.size}",failure)}
+ }
+ private fun click(text:String){compose.evidenceNode(hasText(text)).performClick()}
  private fun field(label:String)=compose.onNode(hasSetTextAction() and hasText(label))
  @Test fun primaryActualImportExtractCorrectIncidentSearchRemoveAndReopenPreservesOriginal() {
   val f=fixture()
@@ -49,25 +52,25 @@ class EvidenceLocker179UiTest {
    androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().runOnMainSync{controller=EvidenceController(f.context,f.access)}
    compose.setContent{CompositionLocalProvider(LocalContext provides f.context){PrivateGalleryTheme(AppTheme.LIGHT){EvidenceLocker(controller,{},{},{},{},{})}}}
    waitReady(controller,0)
-   click("Add existing evidence");click("alpha179.txt");click("Register selected originals");waitReady(controller,1)
-   compose.onNodeWithText("Library").performClick();compose.onNodeWithText("alpha179.txt").performScrollTo().performClick();waitReady(controller,1)
+   click("Add existing evidence");compose.evidenceNode(hasContentDescription("Register original alpha179.txt")).performClick().assertIsOn();click("Register selected originals");waitReady(controller,1)
+   compose.onNodeWithText("Library").performClick();compose.evidenceNode(hasText("alpha179.txt")).performClick();waitReady(controller,1)
    click("Review / correct");field("Owner-corrected text").performTextReplacement("unique179 owner corrected Alice timestamp uncertain")
    compose.onNodeWithText("Save").performClick()
    compose.waitUntil(15000){controller.state.value.catalog?.evidence()?.singleOrNull()?.transcript()?.startsWith("unique179")==true&&!controller.state.value.busy}
    val corrected=f.access.store.read().evidence().single();assertTrue(corrected.ocr().single().text().contains("arrange delivery"));assertEquals(1,corrected.corrections().size)
    compose.runOnIdle{compose.activity.onBackPressedDispatcher.onBackPressed()}
-   click("Add evidence");click("beta179.txt");click("Register selected originals");waitReady(controller,2)
+   click("Add evidence");compose.evidenceNode(hasContentDescription("Register original beta179.txt")).performClick().assertIsOn();click("Register selected originals");waitReady(controller,2)
    compose.onNodeWithText("Incidents").performClick();click("New incident")
    field("Title").performTextReplacement("Synthetic incident179");compose.onNodeWithText("Save").performClick()
    compose.waitUntil(15000){controller.state.value.catalog?.incidents()?.size==1&&!controller.state.value.busy}
    compose.runOnIdle{compose.activity.onBackPressedDispatcher.onBackPressed()}
-   compose.onNodeWithText("Library").performClick();compose.onNodeWithContentDescription("Select evidence alpha179.txt").performScrollTo().performClick()
+   compose.onNodeWithText("Library").performClick();compose.evidenceNode(hasContentDescription("Select evidence alpha179.txt")).performClick()
    click("Add selected to incident");click("Synthetic incident179")
    compose.waitUntil(15000){controller.state.value.catalog?.incidents()?.singleOrNull()?.evidenceIds()?.contains(corrected.id())==true&&!controller.state.value.busy}
    compose.onNodeWithTag("evidence-search").performTextReplacement("unique179")
    compose.onNodeWithText("alpha179.txt").assertExists();compose.onNodeWithText("beta179.txt").assertDoesNotExist()
    compose.onNodeWithTag("evidence-search").performTextClearance()
-   compose.onNodeWithContentDescription("Select evidence alpha179.txt").performScrollTo().performClick()
+   compose.evidenceNode(hasContentDescription("Select evidence alpha179.txt")).performClick()
    click("Remove references");compose.onNodeWithText("Confirm").performClick();waitReady(controller,1)
    assertEquals(2,AndroidVaultRepository(f.context,f.key).items().size)
    val original=f.access.reader().readVerified(f.ids.first()){_,input->input.readBytes()};try{assertTrue(String(original).contains("arrange delivery"))}finally{original.fill(0)}
@@ -86,25 +89,25 @@ class EvidenceLocker179UiTest {
    compose.runOnIdle{controller.register(f.ids.first());controller.register(duplicate.id)};waitReady(controller,2)
    val before=f.access.store.read();assertTrue(before.incidents().isEmpty())
    val suggestion=before.suggestions().first{it.kind()=="GROUP"};val tag="evidence-suggestion-${suggestion.id()}"
-   compose.onNode(hasText("Review / accept") and hasAnyAncestor(hasTestTag(tag))).performScrollTo().performClick()
+   compose.evidenceNode(hasText("Review / accept") and hasAnyAncestor(hasTestTag(tag))).performClick()
    field("New incident title").performTextReplacement("Approved group179");compose.onNodeWithText("Save").performClick()
    compose.waitUntil(15000){controller.state.value.catalog?.incidents()?.size==1&&!controller.state.value.busy}
    val grouped=f.access.store.read();assertEquals(2,grouped.incidents().single().evidenceIds().size);assertEquals("ACCEPT_SUGGESTION",grouped.audit().last().action())
-   compose.onNodeWithText("Incidents").performClick();compose.onNodeWithText("Approved group179").performScrollTo().performClick()
+   compose.onNodeWithText("Incidents").performClick();compose.evidenceNode(hasText("Approved group179")).performClick()
    click("Add event");field("Title").performTextReplacement("Late event179");field("Timestamp (ISO with offset; blank is uncertain)").performTextReplacement("2026-10-31T12:00:00Z");compose.onNodeWithText("Save").performClick()
    compose.waitUntil(15000){controller.state.value.catalog?.incidents()?.singleOrNull()?.events()?.size==1&&!controller.state.value.busy}
    click("Add event");field("Title").performTextReplacement("Uncertain event179");compose.onNodeWithText("Save").performClick()
    compose.waitUntil(15000){controller.state.value.catalog?.incidents()?.singleOrNull()?.events()?.size==2&&!controller.state.value.busy}
    val uncertain=f.access.store.read().incidents().single().events().single{it.title()=="Uncertain event179"}
    assertEquals(0L,uncertain.timestamp());assertEquals("USER",uncertain.provenance())
-   compose.onNode(hasText("Move earlier") and hasAnyAncestor(hasTestTag("evidence-event-${uncertain.id()}"))).performScrollTo().performClick()
+   compose.evidenceNode(hasText("Move earlier") and hasAnyAncestor(hasTestTag("evidence-event-${uncertain.id()}"))).performClick()
    compose.waitUntil(15000){controller.state.value.catalog?.incidents()?.singleOrNull()?.manualOrder()==true&&!controller.state.value.busy}
    assertEquals(uncertain.id(),f.access.store.read().incidents().single().events().first().id())
    val third=(repo.importVerified(VaultImportSource("third-copy179.txt","text/plain",{duplicateBytes.inputStream()},createDistinctCopy=true))as ImportResult.Imported).item
    compose.runOnIdle{controller.register(third.id)};waitReady(controller,3)
    compose.onNodeWithText("Home").performClick()
    val assign=f.access.store.read().suggestions().first{it.kind()=="ASSIGN"}
-   compose.onNode(hasText("Reject") and hasAnyAncestor(hasTestTag("evidence-suggestion-${assign.id()}"))).performScrollTo().performClick()
+   compose.evidenceNode(hasText("Reject") and hasAnyAncestor(hasTestTag("evidence-suggestion-${assign.id()}"))).performClick()
    compose.waitUntil(15000){controller.state.value.catalog?.rejectedSuggestions()?.contains(assign.id())==true&&!controller.state.value.busy}
    assertEquals(2,f.access.store.read().incidents().single().evidenceIds().size);assertEquals(4,repo.items().size)
   }finally{if(::controller.isInitialized)compose.runOnIdle{controller.close()};duplicateBytes.fill(0);f.key.fill(0);f.root.deleteRecursively()}
@@ -118,14 +121,14 @@ class EvidenceLocker179UiTest {
    androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().runOnMainSync{controller=EvidenceController(f.context,f.access)}
    compose.setContent{CompositionLocalProvider(LocalContext provides f.context){PrivateGalleryTheme(AppTheme.LIGHT){EvidenceLocker(controller,{},{},{},{},{})}}}
    waitReady(controller);compose.onNodeWithText("Incidents").performClick();click("Chronology179")
-   fun arrow(at:Long,label:String)=compose.onNode(hasText(label) and hasAnyAncestor(hasTestTag("evidence-event-${events.single{it.timestamp()==at}.id()}")))
-   arrow(100,"Move earlier").performScrollTo().assertIsNotEnabled()
-   arrow(0,"Move later").performScrollTo().assertIsNotEnabled()
+   fun arrow(at:Long,label:String)=compose.evidenceNode(hasText(label) and hasAnyAncestor(hasTestTag("evidence-event-${events.single{it.timestamp()==at}.id()}")))
+   arrow(100,"Move earlier").assertIsNotEnabled()
+   arrow(0,"Move later").assertIsNotEnabled()
    val revision=f.access.store.read().revision()
-   arrow(100,"Move later").performScrollTo().performClick()
+   arrow(100,"Move later").performClick()
    compose.waitUntil(15000){!controller.state.value.busy&&controller.state.value.catalog?.revision()==revision+1}
    assertEquals(listOf(200L,100L,300L,0L),f.access.store.read().timeline(incident.id()).map{it.timestamp()})
-   arrow(0,"Move earlier").performScrollTo().performClick()
+   arrow(0,"Move earlier").performClick()
    compose.waitUntil(15000){!controller.state.value.busy&&controller.state.value.catalog?.revision()==revision+2}
    assertEquals(listOf(200L,100L,0L,300L),f.access.store.read().timeline(incident.id()).map{it.timestamp()})
   }finally{if(::controller.isInitialized)compose.runOnIdle{controller.close()};f.key.fill(0);f.root.deleteRecursively()}
@@ -137,14 +140,14 @@ class EvidenceLocker179UiTest {
   try {
    androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().runOnMainSync{controller=EvidenceController(f.context,f.access)}
    compose.setContent{CompositionLocalProvider(LocalContext provides f.context){PrivateGalleryTheme(AppTheme.LIGHT){EvidenceLocker(controller,{},{},{},{exported=it},{})}}}
-   waitReady(controller,0);click("Add existing evidence");click("alpha179.txt");click("beta179.txt")
+   waitReady(controller,0);click("Add existing evidence");compose.evidenceNode(hasContentDescription("Register original alpha179.txt")).performClick().assertIsOn();compose.evidenceNode(hasContentDescription("Register original beta179.txt")).performClick().assertIsOn()
    assertTrue(f.access.store.read().evidence().isEmpty())
    compose.onNodeWithText("Register selected originals").performClick();waitReady(controller,2)
    assertEquals(2,f.access.sources.list().size)
-   compose.onNodeWithText("Library").performClick();compose.onNodeWithContentDescription("Select evidence beta179.txt").performScrollTo().performClick()
+   compose.onNodeWithText("Library").performClick();compose.evidenceNode(hasContentDescription("Select evidence beta179.txt")).performClick()
    click("Export selection")
-   compose.onNodeWithContentDescription("Export incident First selected179").performScrollTo().performClick()
-   compose.onNodeWithContentDescription("Export incident Second selected179").performScrollTo().performClick()
+   compose.evidenceNode(hasContentDescription("Export incident First selected179")).performClick()
+   compose.evidenceNode(hasContentDescription("Export incident Second selected179")).performClick()
    assertNull(exported)
    compose.onNodeWithText("Review export").performClick()
    assertEquals(incidents.map{it.id()},exported!!.incidentIds)
@@ -195,7 +198,7 @@ class EvidenceLocker179UiTest {
    compose.setContent{CompositionLocalProvider(LocalContext provides f.context){PrivateGalleryTheme(AppTheme.DARK){EvidenceLocker(controller,{closed.incrementAndGet()},{},{},{},{})}}}
    compose.runOnIdle{controller.register(f.ids.first())};waitReady(controller,1)
    compose.onNodeWithText("Library").performClick();compose.onNodeWithTag("evidence-search").performTextReplacement("Alice")
-   compose.onNodeWithContentDescription("Select evidence alpha179.txt").performScrollTo().performClick()
+   compose.evidenceNode(hasContentDescription("Select evidence alpha179.txt")).performClick()
    compose.onNodeWithText("alpha179.txt").performClick();waitReady(controller,1);click("Review / correct")
    field("Owner-corrected text").performTextReplacement("Unsaved private179")
    compose.runOnIdle{f.hidden!!.lock()}
