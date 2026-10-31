@@ -408,7 +408,23 @@ class HiddenPrivateAppsLive178Test {
                     }
                 })
             }
-            waitFor("Standalone app has compact controls") {visible("Expand app controls")}
+            waitFor("Standalone app has compact controls") {visible("Expand app controls") && visible("Exit App")}
+            val beforeExit=requestCount(events(),requestPath)
+            fun reopenRetainedApp() {
+                val retryAfter=SystemClock.elapsedRealtime()+1_100
+                waitFor("Exit retains saved app in its authorised library") {visible("Renamed owned fixture") && visible("Open")}
+                click("Open")
+                waitFor("Reopening still requires the separate Hidden PIN") {visible("Enter your separate Hidden PIN.")}
+                waitFor("Fresh PIN attempt respects broker throttling") {SystemClock.elapsedRealtime()>=retryAfter}
+                setAuthenticationPin("738295");click("Open app")
+                waitFor("Reopen retains actual rendered app and compact controls") {visible(rendered) && visible("Exit App")}
+                assertEquals("Exit preserves the active app instead of recreating its start page",beforeExit,requestCount(events(),requestPath))
+            }
+            click("Exit App")
+            reopenRetainedApp()
+            waitFor("Root Back remains available without page history") {visible("Back to Private Apps library")}
+            click("Back to Private Apps library")
+            reopenRetainedApp()
             assertFalse("App toolbar starts collapsed",visible("App home"))
             click("Expand app controls")
             waitFor("Launched Private App has actual dedicated controls") {
