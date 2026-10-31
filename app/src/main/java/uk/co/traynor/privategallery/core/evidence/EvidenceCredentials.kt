@@ -4,6 +4,7 @@ import android.content.Context
 import java.nio.CharBuffer
 import java.nio.charset.StandardCharsets
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicLong
 import uk.co.traynor.privategallery.core.editor.AiCredentialStore
 
 /** Captured originating authentication, not a global preference or a catalogue field. */
@@ -16,25 +17,32 @@ internal class EvidenceCredentials internal constructor(
  private val shared:SharedState=SharedState(),
 ) {
  internal class SharedState {
+  // Long owner/file operations never run under authentication or state monitors.
+  val operationGate=Any()
   val gate=Any()
-  var generation=0L
+  val generation=AtomicLong()
   val keys=mutableSetOf<Key>()
  }
  internal interface Backend {
   fun configured():Boolean
-  fun save(value:ByteArray)
+  fun stage(value:ByteArray):AiCredentialStore.PreparedChange
   fun read():ByteArray?
-  fun clear()
+  fun removal():AiCredentialStore.PreparedChange
  }
  constructor(context:Context,access:EvidenceAccess,onRemoved:()->Unit={}):this(access.owner,access::current,
   {action->access.leases.acquire().use{lease->lease.commit{access.checkCurrent();action();access.checkCurrent()}}},
   protectedBackend(context,access.owner),onRemoved,stateFor(context,access.owner))
  private val gate=shared.gate
- private var generation:Long
-  get()=shared.generation
-  set(value){shared.generation=value}
  private val activeKeys=shared.keys
- fun isConfigured():Boolean=synchronized(gate){check(current());backend.configured().also{check(current())}}
+ // Lock order is operationGate -> captured authentication -> state gate. No path
+ // holding state enters authentication, waits on operationGate, or calls Key/route cleanup.
+ // Key validity reads the generation atomically, without taking the state gate.
+ private fun captureGeneration():Long {var captured=0L;guarded{check(current());captured=shared.generation.get()};return captured}
+ private fun valid(captured:Long)=current()&&shared.generation.get()==captured
+ fun isConfigured():Boolean {
+  val captured=captureGeneration()
+  return backend.configured().also{guarded{check(valid(captured))}}
+ }
  /** Caller retains its input. All owned mutable copies are cleared even when authorization retires. */
  fun setup(value:CharArray) {
   require(value.isNotEmpty()&&value.size<=8192){"Enter an owner-supplied OpenAI API key"}
@@ -43,39 +51,62 @@ internal class EvidenceCredentials internal constructor(
    require(copy.all{it.code in 33..126}){"API key must contain printable non-space ASCII characters"}
    val buffer=StandardCharsets.UTF_8.encode(CharBuffer.wrap(copy))
    try{bytes=ByteArray(buffer.remaining()).also{buffer.get(it)}}finally{if(buffer.hasArray())buffer.array().fill(0)}
-   val retired=synchronized(gate){guarded{check(current());backend.save(checkNotNull(bytes));generation++;check(current())};activeKeys.toList()}
-   retired.forEach{it.revoke()}
+   synchronized(shared.operationGate) {
+    val captured=captureGeneration()
+    // Keystore lookup, encryption, file write and sync happen before commit.
+    backend.stage(checkNotNull(bytes)).use{change->promote(change,captured,false)}
+   }
   }finally{copy.fill('\u0000');bytes?.fill(0)}
  }
- fun remove() {
-  val retired=synchronized(gate){guarded{check(current());backend.clear();generation++;check(current())};activeKeys.toList()}
-  retired.forEach{it.revoke()}
-  // The coordinator closes outstanding leases/calls and clears any preview on removal.
-  onRemoved()
+ fun remove()=synchronized(shared.operationGate) {
+  val captured=captureGeneration()
+  backend.removal().use{change->promote(change,captured,true)}
  }
- internal fun <T> withSendKey(expectedOwner:EvidenceCatalog.Owner,consume:(ByteArray,()->Boolean)->T):T {
-  require(owner==expectedOwner){"Credential belongs to another vault"}
-  var key:ByteArray?=null;var captured=0L
+ private fun promote(change:AiCredentialStore.PreparedChange,captured:Long,removing:Boolean) {
+  var retired=emptyList<Key>();var attempted=false;var notificationFailure:Throwable?=null
   try {
-   synchronized(gate){guarded{check(current());captured=generation;key=backend.read();check(current())}}
-   val owned=key?:throw EvidenceAiFailure("Set up an OpenAI API key in this vault first.")
-   require(owned.isNotEmpty()&&owned.size<=8192&&owned.all{it.toInt() in 33..126}){"Stored API key is invalid"}
-   val valid={synchronized(gate){current()&&generation==captured}}
-   check(valid());return consume(owned,valid).also{check(valid())}
-  }finally{key?.fill(0)}
- }
- // A suspend request cannot borrow a key across a non-suspend callback. The send operation
- // captures this bounded disposable lease only after confirmation and wipes it in finally.
- internal fun acquireForSend(expectedOwner:EvidenceCatalog.Owner):Key {
-  var pending:Key?=null
-  try {
-   withSendKey(expectedOwner){bytes,valid->
-    val created=Key(bytes.copyOf(),valid){ended->synchronized(gate){activeKeys.remove(ended)}}
-    pending=created;synchronized(gate){check(valid());activeKeys.add(created)}
+   guarded {
+    check(valid(captured))
+    synchronized(gate) {
+     check(shared.generation.get()==captured)
+     attempted=true
+     try{change.commit()}finally {
+      // Even an uncertain/failed transition retires old send leases. A failed
+      // pre-promotion write still leaves the authoritative old ciphertext intact.
+      shared.generation.incrementAndGet();retired=activeKeys.toList();activeKeys.clear()
+     }
+    }
    }
-   return checkNotNull(pending)
+  }finally {
+   retired.forEach{it.revoke()}
+   if(removing&&attempted)notificationFailure=runCatching(onRemoved).exceptionOrNull()
   }
-  catch(failure:Throwable){pending?.close();throw failure}
+  // Directory durability and ciphertext tombstone deletion may block; neither
+  // runs under authentication/state. Failure is reported, never blindly retried.
+  try{change.finish()}catch(failure:Throwable){notificationFailure?.let{failure.addSuppressed(it)};throw failure}
+  notificationFailure?.let{throw IllegalStateException("Credential removed; preview cleanup failed.",it)}
+ }
+ internal fun acquireForSend(expectedOwner:EvidenceCatalog.Owner):Key {
+  require(owner==expectedOwner){"Credential belongs to another vault"}
+  val captured=captureGeneration()
+  var bytes:ByteArray?=null;var pending:Key?=null
+  try {
+   bytes=backend.read()?:throw EvidenceAiFailure("Set up an OpenAI API key in this vault first.")
+   val owned=checkNotNull(bytes)
+   require(owned.isNotEmpty()&&owned.size<=8192&&owned.all{it.toInt() in 33..126}){"Stored API key is invalid"}
+   // Admission and generation registration use the SAME captured authentication
+   // as the precheck. A stale completed decrypt can never become a send key.
+   guarded {
+    check(valid(captured))
+    synchronized(gate) {
+     check(shared.generation.get()==captured)
+     val created=Key(owned.copyOf(),{valid(captured)}){ended->synchronized(gate){activeKeys.remove(ended)}}
+     pending=created;activeKeys.add(created)
+    }
+   }
+   return checkNotNull(pending).also{check(it.current())}
+  }catch(failure:Throwable){pending?.close();throw failure}
+  finally{bytes?.fill(0)}
  }
  internal class Key(private val bytes:ByteArray,private val valid:()->Boolean,private val released:(Key)->Unit):AutoCloseable {
   private var closed=false
@@ -99,9 +130,9 @@ internal class EvidenceCredentials internal constructor(
    val id="evidence-openai-179-"+owner.name.lowercase()
    return object:Backend {
     override fun configured()=store.isConfigured(id)
-    override fun save(value:ByteArray)=store.save(id,value)
+    override fun stage(value:ByteArray)=store.stageEvidence(id,value)
     override fun read()=store.read(id)
-    override fun clear()=store.clear(id)
+    override fun removal()=store.removeEvidence(id)
    }
   }
  }

@@ -1,0 +1,11 @@
+# Task6 fix round1 — integration completion
+
+Read requirements first: docs/release179/reviews/INTEGRATION179_INITIAL.md, all I1–I5 and M1–M2 verbatim are binding. Then original task-6-brief.md/report and CONTRACTS.md. Preserve all completed OCR/grouping/search/AI/export and existing vault/browser code. Android17 only; no version change.
+
+Ownership after authentication worker handback: Main/UI/OwnerSession/RouteCoordinator/DocumentIo/Staging, Controller only bulk registration addition, model only minimal correct timeline ordering or durable applied-analysis association if required, relevant tests/docs. No unrelated crypto/network/credentials/export changes without root coordination. No subagents/commit/push/CI/signing. Root sole Git writer. One implementer at a time.
+
+Resolve I1 complete admission/process fence, I2 chronological first move and boundary behavior, I3 bounded owner-reviewed bulk original registration + direct evidence/multiple incident mixed export selection, I4 actual Host/dialog/output/Hidden lifecycle tests, I5 retained applied AI advisory association/rendering with labelled detached source fingerprints; M1 actual landscape and M2 independent live revocation fixtures. No temporary-incident workaround, no arbitrary overlap association, no silent original attachment. All tests must exercise production behavior, not merely mirrored calculations.
+
+Additional concrete integration boundaries to correct/test: OCR timestamp correction must not label a user-entered date as extracted; preserve raw quote and mark USER/INFERRED. Re-export destination must never truncate/delete incoming original archive if same URI/document identity; cleanup only newly-owned destination. Bulk interrupted/partial result must truthfully report committed records and preserve originals; no silent truncation.
+
+Original worker root authored integration; you are fresh fix implementer because controller must not fix its own review findings. Existing files uncommitted, preserve other workers files. Runtime uncompiled/unrun; no claims beyond observed tests. Local Gradle bootstrap unavailable. Record exact covering commands/output and pending Android tests in task-6-report.md. Return short status/file/test/concern contract.

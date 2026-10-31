@@ -234,6 +234,7 @@ private fun HiddenVaultContent(
                                 allowGeneration=true,allowBiometrics=false,allowRestore=false,
                                 onGenerateImage=::generate,editingVaultLabel="Hidden Vault",
                                 onCamera={cameraActivity?.openVaultCamera(session)},
+                                onOpenEvidence={cameraActivity?.openEvidenceLocker(session)},
                                 onRecoverCamera={cameraActivity?.recoverVaultCamera(session)},
                                 onLoadSort={done->request({uk.co.traynor.privategallery.core.ui.MediaSort.decode(repository.presentationSort())}) {it.onSuccess(done)}},
                                 onSaveSort={value->request({repository.presentationSort(value.name)}) { }},

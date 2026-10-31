@@ -59,8 +59,19 @@ class EvidenceAi179Test {
   var bytes:ByteArray?="fixture-key".toByteArray();var reads=0
   override fun configured()=bytes!=null
   override fun read():ByteArray? {reads++;return bytes?.copyOf()}
-  override fun save(value:ByteArray){bytes?.fill(0);bytes=value.copyOf()}
-  override fun clear(){bytes?.fill(0);bytes=null}
+  override fun stage(value:ByteArray):uk.co.traynor.privategallery.core.editor.AiCredentialStore.PreparedChange {
+   var pending:ByteArray?=value.copyOf()
+   return object:uk.co.traynor.privategallery.core.editor.AiCredentialStore.PreparedChange {
+    override fun commit(){bytes?.fill(0);bytes=pending;pending=null}
+    override fun finish(){}
+    override fun close(){pending?.fill(0)}
+   }
+  }
+  override fun removal()=object:uk.co.traynor.privategallery.core.editor.AiCredentialStore.PreparedChange {
+   override fun commit(){bytes?.fill(0);bytes=null}
+   override fun finish(){}
+   override fun close(){}
+  }
  }
  private fun credentials(keys:Keys,owner:EvidenceCatalog.Owner=EvidenceCatalog.Owner.PRIMARY,current:()->Boolean={true})=
   EvidenceCredentials(owner,current,{action->check(current());action();check(current())},keys,{})
