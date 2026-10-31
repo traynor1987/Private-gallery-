@@ -1,5 +1,9 @@
 # 1.7.8 completion tracker
 
+## Current task: code50 native drawer — verification pending
+
+Owner15requirements mapped to icon/name grid, direct gated launch, themed securelongpress/overflow Edit/Pin/Reorder/Settings/Remove, search/AddApp, atomicfullorderMOVE_TO14, adaptive4columnphone/Fold/fontlayout and independentowner/revocation state. Schema2 and allprior49experience/security repairs preserved. Local8groups+27host/controltestsPASS;47Androidcasesselected, runtime/sourceapproval/signing49→50notyetcomplete. Original signed49 remains previousdeliverable, not drawer completion.
+
 ## Current code49 delivery status
 
 VERIFIED AND DELIVERED FOR OWNER ACCEPTANCE: source60f089d6e003fd13f8b7649feb6f44167e5028a2, productioncontrolf7051a24e8ba240c7cde1e6113442d42962b52bb, exact43Android/33JVM+strictnetworkPASS, independent0openCritical/Important, original-key archived48→49upgrade/restartPASS, actualAPKsignature/chunk/identity independentlyverified. Version1.7.8/code49; package unchanged/API37only. One signed APK and filtered evidence bundle saved; see FINAL_HANDOFF49.md and FINAL_REPAIR49_DELIVERY.json. PhysicalFoldOWNER_REQUIRED; no owner acceptance claim. Earlier status entries below are historical.

@@ -4,7 +4,7 @@ package uk.co.traynor.privategallery.core.privateapps;
 public final class PrivateAppCommands {
  private PrivateAppCommands(){}
  public static final int MAX_COMMAND_BYTES=16384;
- public static final int READ=0, UPSERT=1, REMOVE=2, PIN=3, UNPIN=4, MOVE_UP=5, MOVE_DOWN=6, SHOW_ADDRESS=7, HIDE_ADDRESS=8, REQUIRE_AUTH=9, NO_AUTH=10, RESET_SETTINGS=11, APP_STYLE=12, BROWSER_STYLE=13;
+ public static final int READ=0, UPSERT=1, REMOVE=2, PIN=3, UNPIN=4, MOVE_UP=5, MOVE_DOWN=6, SHOW_ADDRESS=7, HIDE_ADDRESS=8, REQUIRE_AUTH=9, NO_AUTH=10, RESET_SETTINGS=11, APP_STYLE=12, BROWSER_STYLE=13, MOVE_TO=14;
  public static PrivateAppCatalog execute(PrivateAppStore store,int action,byte[] payload,String id) {
   if(id==null || id.length()>36 || (payload!=null && payload.length>MAX_COMMAND_BYTES))throw new IllegalArgumentException("Invalid private app request");
   switch(action) {
@@ -38,6 +38,12 @@ public final class PrivateAppCommands {
       action==RESET_SETTINGS || action==APP_STYLE || (action!=BROWSER_STYLE && app.appStyle()),app.discoveryReport()));
      return c;
     });
+   case MOVE_TO:
+    requireEntryRequest(null,id);
+    if(payload==null || payload.length!=4)throw new IllegalArgumentException("Invalid move payload");
+    int index=java.nio.ByteBuffer.wrap(payload).getInt();
+    if(index<0 || index>=PrivateAppCatalog.MAX_APPS)throw new IllegalArgumentException("Invalid move destination");
+    return store.update(c->c.moveTo(id,index));
    case MOVE_UP:
    case MOVE_DOWN:
     requireEntryRequest(payload,id);

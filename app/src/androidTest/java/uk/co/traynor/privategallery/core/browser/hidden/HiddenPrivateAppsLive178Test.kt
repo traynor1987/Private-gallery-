@@ -346,7 +346,7 @@ class HiddenPrivateAppsLive178Test {
             waitFor("Selected catalogue starts independently empty") { visible("No private apps yet") }
             assertUnclaimedCallerDenied(checkNotNull(broker))
             assertTrue(selected.read().apps.isEmpty())
-            click("Add Private App")
+            click("Add App")
             setEditorField(0, "Owned launch fixture")
             setEditorField(1, launchUrl)
             waitFor("Actual broker discovery validates controlled manifest", 60) { visible("Install as Private Web App") }
@@ -357,7 +357,7 @@ class HiddenPrivateAppsLive178Test {
             assertEquals("standalone",selected.read().apps.single().display())
             assertEquals(URI(launchUrl).resolve("/").toString(),selected.read().apps.single().scope())
             val createdId = selected.read().apps.single().id()
-            click("Edit Owned launch fixture")
+            click("App actions for Owned launch fixture");click("Edit")
             setEditorField(0, "Renamed owned fixture")
             click("Save")
             waitFor("Native edit preserves identity and persists new title") {
@@ -373,7 +373,7 @@ class HiddenPrivateAppsLive178Test {
             waitFor("Reopened cross-process catalogue loads encrypted edited entry") { visible("Renamed owned fixture") }
             val requestPath = URI(launchUrl).rawPath
             val before = requestCount(events(), requestPath)
-            click("Open")
+            click("Renamed owned fixture")
             waitFor("Saved app requests its separate Hidden credential") {
                 visible("Unlock saved app") && visible("Enter your separate Hidden PIN.")
             }
@@ -388,7 +388,7 @@ class HiddenPrivateAppsLive178Test {
             assertEquals("Cancelling reauthentication must not launch the saved origin",before,requestCount(events(),requestPath))
             if(!visible("Renamed owned fixture"))click("Private Apps")
             waitFor("Cancelled protected app remains in its encrypted catalogue") {visible("Renamed owned fixture")}
-            click("Open")
+            click("Renamed owned fixture")
             waitFor("Retry still requires the separate Hidden credential") {visible("Enter your separate Hidden PIN.")}
             waitFor("Production PIN retry interval has elapsed") {SystemClock.elapsedRealtime()-attemptedAt>=1_100}
             setAuthenticationPin("738295")
@@ -412,8 +412,8 @@ class HiddenPrivateAppsLive178Test {
             val beforeExit=requestCount(events(),requestPath)
             fun reopenRetainedApp() {
                 val retryAfter=SystemClock.elapsedRealtime()+1_100
-                waitFor("Exit retains saved app in its authorised library") {visible("Renamed owned fixture") && visible("Open")}
-                click("Open")
+                waitFor("Exit retains saved app in its authorised library") {visible("Renamed owned fixture") && visible("App actions for Renamed owned fixture")}
+                click("Renamed owned fixture")
                 waitFor("Reopening still requires the separate Hidden PIN") {visible("Enter your separate Hidden PIN.")}
                 waitFor("Fresh PIN attempt respects broker throttling") {SystemClock.elapsedRealtime()>=retryAfter}
                 setAuthenticationPin("738295");click("Open app")
@@ -470,7 +470,7 @@ class HiddenPrivateAppsLive178Test {
                 click("Close session for Renamed owned fixture")
                 click("Open from library")
                 waitFor("Closed session keeps encrypted definition"){visible("Renamed owned fixture")}
-                click("Open")
+                click("Renamed owned fixture")
                 waitFor("New session after close requires fresh PIN"){visible("Unlock saved app")}
                 setAuthenticationPin("738295");click("Open app")
                 waitFor("New session reaches real app document"){visible("Download app document") && visible("Expand app controls")}
@@ -550,7 +550,7 @@ class HiddenPrivateAppsLive178Test {
             val beforeReopen=requestCount(events(),requestPath)
             click("Private Apps library")
             waitFor("App remains in library before authenticated reopen"){visible("Renamed owned fixture")}
-            click("Open")
+            click("Renamed owned fixture")
             waitFor("Reopening existing app still requires fresh separate PIN"){visible("Unlock saved app")}
             setAuthenticationPin("738295");click("Open app")
             waitFor("Existing app returns without start-page reload"){visible("Expand app controls") || visible("Collapse app controls")}
@@ -558,12 +558,12 @@ class HiddenPrivateAppsLive178Test {
             if(visible("Expand app controls"))click("Expand app controls")
             click("Private Apps library")
             waitFor("Launched app remains owned") { visible("Renamed owned fixture") }
-            click("Remove Renamed owned fixture")
+            click("App actions for Renamed owned fixture");click("Remove")
             click("Remove app")
             waitFor("Confirmed removal persisted across real Binder") {
                 selected.read().apps.isEmpty() && visible("No private apps yet")
             }
-            click("Add Private App")
+            click("Add App")
             setEditorField(0, "Persisted survivor")
             setEditorField(1, launchUrl)
             waitFor("Automatic discovery also offers survivor installation",60){visible("Install as Private Web App")}
@@ -574,7 +574,7 @@ class HiddenPrivateAppsLive178Test {
             val survivor = selected.read().apps.single()
             assertEquals(listOf(otherSentinel), other.read().apps)
             assertEquals(listOf(primarySentinel), primary.read().apps)
-            click("Edit Persisted survivor")
+            click("App actions for Persisted survivor");click("Edit")
             setEditorField(0, "Uncommitted revoked draft")
             val beforeRevoke = fingerprint(root)
             val retired = checkNotNull(broker)
@@ -596,7 +596,7 @@ class HiddenPrivateAppsLive178Test {
             assertEquals(listOf(survivor), fresh.read().apps)
             assertEquals(listOf(otherSentinel), HiddenPrivateAppStore(root, session, session.authority(), !torMode).read().apps)
             assertEquals(listOf(primarySentinel), primary.read().apps)
-            click("Remove Persisted survivor")
+            click("App actions for Persisted survivor");click("Remove")
             click("Remove app")
             waitFor("Fresh child can mutate only its newly authorised catalogue") {
                 fresh.read().apps.isEmpty() && visible("No private apps yet")

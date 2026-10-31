@@ -26,9 +26,9 @@ class FinalScope178Test(unittest.TestCase):
                    conclusion='success',workflow_path='.github/workflows/fast-development.yml',
                    head_branch='release/1.7.8-private-apps',event='push',verified_build_steps=True,
                    evidence_validation='PASS',original_exit_status=0,validated_case_count=1,network_evidence_revalidated=True)
-        approval = dict(source_sha=source,decision='APPROVED',version='1.7.8',version_code=49,
+        approval = dict(source_sha=source,decision='APPROVED',version='1.7.8',version_code=50,
                         package='uk.co.traynor.privategallery',certificate_sha256=GATE.CERTIFICATE,
-                        required_upgrade_from=48,baseline_source_sha=GATE.BASELINE,
+                        required_upgrade_from=49,baseline_source_sha=GATE.BASELINE,
                         scope={name:'PASS' for name in GATE.REQUIRED},independent_review={**decision,'report_sha256':GATE.digest(review)},
                         case_manifest_sha256=GATE.digest(manifest),upgrade_fixture_sha256=GATE.digest(fixture),validator_sha256=GATE.digest(validator),
                         focused_run_id=123,focused_artifact_id=456,focused_artifact_digest=run['artifact_digest'],physical_acceptance='OWNER_REQUIRED')
@@ -40,9 +40,9 @@ class FinalScope178Test(unittest.TestCase):
 
     def test_wrong_source_review_identity_scope_controls_or_evidence_rejected(self):
         mutations = [
-            (0,'decision','BLOCKED'), (0,'source_sha','3'*40), (0,'version_code',46),
+            (0,'decision','BLOCKED'), (0,'source_sha','3'*40), (0,'version_code',49),
             (0,'certificate_sha256','3'*64), (0,'baseline_source_sha','3'*40),
-            (0,'required_upgrade_from',47), (0,'scope',{}), (0,'independent_review',{}),
+            (0,'required_upgrade_from',48), (0,'scope',{}), (0,'independent_review',{}),
             (0,'case_manifest_sha256','3'*64), (0,'upgrade_fixture_sha256','3'*64), (0,'validator_sha256','3'*64),
             (0,'focused_run_id',999), (0,'focused_artifact_id',999), (0,'focused_artifact_digest','sha256:'+'3'*64),
             (3,'source_sha','3'*40), (3,'run_id',True), (3,'artifact_id',0),
@@ -95,8 +95,8 @@ class FinalScope178Test(unittest.TestCase):
             self.assertRegex(frozen,r'^[a-f0-9]{40}$')
             self.assertNotEqual(frozen,'0'*40)
             self.assertEqual((ROOT/'.acceptance178-candidate').read_text().splitlines()[0],frozen)
-            approval=json.loads((ROOT/'docs/release178/FINAL_REPAIR49_APPROVAL.json').read_text())
-            review=(ROOT/'docs/release178/SECURITY_REVIEW49.md').read_bytes()
+            approval=json.loads((ROOT/'docs/release178/FINAL_REPAIR50_APPROVAL.json').read_text())
+            review=(ROOT/'docs/release178/SECURITY_REVIEW50.md').read_bytes()
             self.assertEqual(approval['source_sha'],frozen)
             self.assertEqual(approval['decision'],'APPROVED')
             independent=approval['independent_review']
@@ -106,20 +106,21 @@ class FinalScope178Test(unittest.TestCase):
             blocks=re.findall(rb'^## Final machine-readable decision\s*\n```json\n(.*?)\n```',review,re.M|re.S)
             self.assertEqual(len(blocks),1)
             self.assertEqual(json.loads(blocks[0]),{k:independent[k]for k in ('source_sha','decision','critical_open','important_open')})
-        self.assertIn('FINAL_REPAIR49_APPROVAL.json',new)
-        self.assertIn('SECURITY_REVIEW49.md',new)
-        self.assertIn("versionCode='48' versionName='1.7.8'\" app/build/production-evidence/original178code48-package.txt",new)
-        self.assertIn("PRIVATE_GALLERY_UPGRADE_BASELINE: '48'",new)
-        self.assertIn("expected={48:'"+GATE.BASELINE+"'}",new)
-        self.assertIn("version_code=49",new)
+        self.assertIn('FINAL_REPAIR50_APPROVAL.json',new)
+        self.assertIn('SECURITY_REVIEW50.md',new)
+        self.assertIn("versionCode='49' versionName='1.7.8'\" app/build/production-evidence/original178code49-package.txt",new)
+        self.assertIn("PRIVATE_GALLERY_UPGRADE_BASELINE: '49'",new)
+        self.assertIn("expected={49:'"+GATE.BASELINE+"'}",new)
+        self.assertIn("version_code=50",new)
         self.assertNotIn('original178code47',new)
+        self.assertNotIn('original178code48',new)
         fast=(ROOT/'.github/workflows/fast-development.yml').read_text().split('      - name: Compile application and run catalogue JVM tests',1)[1]
         self.assertLess(fast.index(':app:lintDebug'),fast.index('      - name: Prepare isolated Private Apps transport fixtures'))
         self.assertIn("needs.release-marker.outputs.new_marker == 'true'",new)
         self.assertIn("github.ref == 'refs/heads/release/1.7.8-private-apps'",new)
         self.assertLess(new.index('verify_final_scope178.py" "$RUNNER_TEMP/final-scope178.json"'),new.index('secrets.PRIVATE_GALLERY_SIGNING_KEYSTORE_BASE64'))
         self.assertLess(new.index('./gradlew lintRelease assembleRelease'),new.index('cp "$RUNNER_TEMP/UpgradeFixture178.kt" scripts/upgrade/UpgradeFixtureTest.kt'))
-        self.assertIn('exact_archived_original_signed_1.7.8_code48_from_run41156213785_artifact13025351799',new)
+        self.assertIn('exact_archived_original_signed_1.7.8_code49_from_run41164782261_artifact13028668051',new)
 
 
 if __name__ == '__main__': unittest.main()

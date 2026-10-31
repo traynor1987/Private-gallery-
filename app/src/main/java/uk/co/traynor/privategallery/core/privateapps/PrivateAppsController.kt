@@ -42,6 +42,10 @@ class PrivateAppsController(
   require(delta==-1 || delta==1){"Invalid move"}
   return execute(if(delta==-1)PrivateAppCommands.MOVE_UP else PrivateAppCommands.MOVE_DOWN,id=id)
  }
+ fun moveTo(id:String,index:Int):PrivateAppCatalog {
+  require(index in 0 until PrivateAppCatalog.MAX_APPS){"Invalid move destination"}
+  return execute(PrivateAppCommands.MOVE_TO,java.nio.ByteBuffer.allocate(4).putInt(index).array(),id)
+ }
  private var authenticationRequest:Any?=null
  /** A callback grants exactly one launch, only for the unchanged saved definition and original authority. */
  fun open(id:String,opened:(PrivateAppCatalog.App)->Unit) {
@@ -63,8 +67,14 @@ class PrivateAppsController(
   }
  }
  /** Resolve the ID again: a stale UI cannot supply an arbitrary old URL or removed entry. Main-thread only. */
- fun launch(id:String,onOpened:()->Unit={})=open(id) {app ->
-  if(onLaunchApp!=null)onLaunchApp.invoke(app) else navigate(app.startUrl())
-  onOpened()
+ fun launch(id:String,onOpened:()->Unit={})=launchFromDrawer(id,{true},onOpened)
+ /** A delayed PIN result also belongs to the drawer presentation that requested it. */
+ fun launchFromDrawer(id:String,presentationCurrent:()->Boolean,onOpened:()->Unit={}) {
+  if(!runCatching{presentationCurrent()}.getOrDefault(false))return
+  open(id) {app ->
+   if(!runCatching{presentationCurrent()}.getOrDefault(false))return@open
+   if(onLaunchApp!=null)onLaunchApp.invoke(app) else navigate(app.startUrl())
+   onOpened()
+  }
  }
 }

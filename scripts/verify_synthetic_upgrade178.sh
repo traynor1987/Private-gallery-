@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
 set -euo pipefail
-# Disposable CI emulator only. Install the exact archived original-key code48 APK; never clear seeded data.
+# Disposable CI emulator only. Install the exact archived original-key code49 APK; never clear seeded data.
 [[ "${GITHUB_ACTIONS:-}" == true ]]
 source scripts/release_configuration.sh
 [[ "${GITHUB_REF:-}" == refs/heads/release/1.7.8-private-apps && "${PRODUCTION_UPGRADE:-}" == 1 ]]
-[[ "$baseline_code" == 48 && "$release_code" == 49 && "$baseline_sha" == 41b6d065a3fbef2f711198c9c778f7100e620c8f ]]
-archived_baseline="${PRIVATE_GALLERY_178_BASELINE_APK:?Exact archived signed 1.7.8 code48 APK required}"
+[[ "$baseline_code" == 49 && "$release_code" == 50 && "$baseline_sha" == 60f089d6e003fd13f8b7649feb6f44167e5028a2 ]]
+archived_baseline="${PRIVATE_GALLERY_178_BASELINE_APK:?Exact archived signed 1.7.8 code49 APK required}"
 [[ -f "$archived_baseline" && -s "$archived_baseline" ]]
-[[ "$(sha256sum "$archived_baseline" | cut -d ' ' -f 1)" == c9f43de796f0af15b95df54aabba686a11b4b6b6bb4eb08cf00169cccf7b7ec5 ]] || { echo 'Archived baseline APK hash mismatch' >&2; exit 1; }
+[[ "$(sha256sum "$archived_baseline" | cut -d ' ' -f 1)" == 99a3dad8fb8dcaf4870e02a5ad645697415528892a1c6b3f7da32cd65ae25feb ]] || { echo 'Archived baseline APK hash mismatch' >&2; exit 1; }
 readonly archived_baseline
 [[ "$(adb shell getprop ro.kernel.qemu | tr -d '\r')" == 1 ]]
 project_root=$(pwd)

@@ -170,5 +170,21 @@
   {
     "classname": "uk.co.traynor.privategallery.ui.PrivateAppScreenshot49Test",
     "name": "disposing_while_saved_image_read_is_in_flight_wipes_late_bytes_without_reopening"
+  },
+  {
+    "classname": "uk.co.traynor.privategallery.ui.PrivateAppsDrawer50Test",
+    "name": "tiles_search_long_press_and_overflow_preserve_authenticated_actions"
+  },
+  {
+    "classname": "uk.co.traynor.privategallery.ui.PrivateAppsDrawer50Test",
+    "name": "filtered_reorder_uses_full_persisted_order_and_survives_reopen"
+  },
+  {
+    "classname": "uk.co.traynor.privategallery.ui.PrivateAppsDrawer50Test",
+    "name": "drawer_adapts_themes_fold_and_large_text_and_revokes_each_encrypted_owner"
+  },
+  {
+    "classname": "uk.co.traynor.privategallery.ui.PrivateAppsDrawer50Test",
+    "name": "closing_drawer_retires_pending_pin_before_fresh_presentation_can_launch"
   }
 ]

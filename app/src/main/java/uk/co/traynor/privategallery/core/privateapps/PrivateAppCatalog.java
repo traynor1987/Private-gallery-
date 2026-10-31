@@ -52,6 +52,15 @@ public final class PrivateAppCatalog {
   for(int i=0;i<values.size();i++)if(values.get(i).id().equals(id)){int to=i+delta;if(to>=0 && to<values.size())Collections.swap(values,i,to);break;}
   return new PrivateAppCatalog(tor,values);
  }
+ /** Destination is the final zero-based index in the current catalogue. */
+ public PrivateAppCatalog moveTo(String id,int index) {
+  if(!uuid(id) || index<0 || index>=apps.size())throw new IllegalArgumentException("Invalid move destination");
+  ArrayList<App> values=new ArrayList<>(apps);int from=-1;
+  for(int i=0;i<values.size();i++)if(values.get(i).id().equals(id)){from=i;break;}
+  if(from<0)throw new IllegalArgumentException("Private app unavailable");
+  App app=values.remove(from);values.add(index,app);
+  return new PrivateAppCatalog(tor,values);
+ }
  public byte[] encode() {
   try(SensitiveBuffer bytes=new SensitiveBuffer();DataOutputStream output=new DataOutputStream(bytes)) {
    output.writeInt(2);output.writeInt(apps.size());

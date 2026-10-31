@@ -12,6 +12,38 @@ public final class PrivateAppCommandChecks {
  static void rejects(Runnable r){try{r.run();}catch(IllegalArgumentException e){return;}throw new AssertionError("Expected invalid command");}
  static void check(boolean condition){if(!condition)throw new AssertionError();}
  static PrivateAppCatalog.App app(String name){return new PrivateAppCatalog.App(UUID.randomUUID().toString(),name,"https://example.test/","","browser","",false,true,false);}
+ static byte[] position(int index){return java.nio.ByteBuffer.allocate(4).putInt(index).array();}
+ static void moveToChecks() {
+  check(PrivateAppCommands.MOVE_TO==14);
+  var store=new Store();var a=app("A");var b=app("B");
+  var rich=new PrivateAppCatalog.App(UUID.randomUUID().toString(),"Rich","https://example.test/start","https://example.test/","standalone","AQID",true,false,true,false,"Website compatibility retained");
+  store.value=new PrivateAppCatalog(false,List.of(a,b,rich));
+  var moved=PrivateAppCommands.execute(store,14,position(0),rich.id());
+  check(moved.apps.equals(List.of(rich,a,b)));check(moved.apps.get(0)==rich);
+  check(store.updates==1 && store.reads==0);
+  check(PrivateAppCommands.execute(store,14,position(2),rich.id()).apps.equals(List.of(a,b,rich)));
+  check(PrivateAppCommands.execute(store,14,position(1),rich.id()).apps.equals(List.of(a,rich,b)));
+  check(PrivateAppCatalog.decode(store.value.encode(),false).apps.equals(store.value.apps));
+  var before=store.value.apps;
+  for(byte[] invalid:new byte[][]{null,new byte[0],new byte[3],new byte[5],position(-1),position(32),position(Integer.MAX_VALUE)})
+   rejects(()->PrivateAppCommands.execute(store,14,invalid,rich.id()));
+  rejects(()->PrivateAppCommands.execute(store,14,position(3),rich.id()));
+  rejects(()->PrivateAppCommands.execute(store,14,position(0),UUID.randomUUID().toString()));
+  for(String id:new String[]{"",rich.id().toUpperCase(java.util.Locale.ROOT),"../bad"})rejects(()->PrivateAppCommands.execute(store,14,position(0),id));
+  check(store.value.apps.equals(before));
+  var full=new ArrayList<PrivateAppCatalog.App>();for(int i=0;i<PrivateAppCatalog.MAX_APPS;i++)full.add(app("App "+i));
+  store.value=new PrivateAppCatalog(false,full);
+  var expected=new ArrayList<>(full);var selected=expected.remove(0);expected.add(31,selected);
+  check(PrivateAppCommands.execute(store,14,position(31),selected.id()).apps.equals(expected));
+  check(PrivateAppCommands.execute(store,14,position(0),selected.id()).apps.equals(full));
+  // Resolve the target against the list supplied by the atomic store update.
+  PrivateAppStore latest=new PrivateAppStore(){
+   public Owner owner(){return Owner.HIDDEN_TOR;}
+   public PrivateAppCatalog read(){throw new AssertionError("No separate read allowed");}
+   public PrivateAppCatalog update(UnaryOperator<PrivateAppCatalog> change){return change.apply(new PrivateAppCatalog(true,List.of(rich)));}
+  };
+  rejects(()->PrivateAppCommands.execute(latest,14,position(1),rich.id()));
+ }
  public static void main(String[] args) {
   var store=new Store();var first=app("First");var second=app("Second");var third=app("Third");
   byte[] payload=new PrivateAppCatalog(false,List.of(first)).encode();
@@ -59,6 +91,7 @@ public final class PrivateAppCommandChecks {
   rejects(()->PrivateAppCommands.execute(store,99,null,first.id()));
   rejects(()->PrivateAppCommands.execute(store,PrivateAppCommands.PIN,null,null));
   check(store.updates==writes);
+  moveToChecks();
   System.out.println("PrivateAppCommand checks PASS");
  }
 }

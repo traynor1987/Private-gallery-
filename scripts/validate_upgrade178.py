@@ -3,7 +3,7 @@
 
 The disabled acceptance178 job stages the new fixture in its disposable checkout only
 after building the candidate, then invokes verify_synthetic_upgrade178.sh with the
-exact archived signed code48 APK. Never replace the historical fixture in the source
+exact archived signed code49 APK. Never replace the historical fixture in the source
 branch or run production operations based on this audit's exit status.
 """
 import hashlib
@@ -12,7 +12,7 @@ from pathlib import Path
 import re
 import sys
 
-BASELINE_SHA = "41b6d065a3fbef2f711198c9c778f7100e620c8f"
+BASELINE_SHA = "60f089d6e003fd13f8b7649feb6f44167e5028a2"
 CERTIFICATE_SHA256 = "94f2bfc6567f26d067d29077111cfd0ce86d38263c642ad115e43365f05b0d17"
 PRESERVED = {
     "scripts/upgrade/UpgradeFixtureTest.kt": "04448cb6653d9bbd70236fdea841de10b82fe004060909586caf94d73f9e6db0",
@@ -29,15 +29,15 @@ def audit(root: Path) -> dict:
     config = (root / "scripts/release_configuration.sh").read_text()
     match = re.search(r"refs/heads/release/1\.7\.8-private-apps\)\n(.*?)\n    ;;", config, re.S)
     block = match.group(1) if match else ""
-    for required in ("release_min_sdk=37", "release_version=1.7.8", "release_code=49",
-                     "baseline_version=1.7.8", "baseline_code=48", f"baseline_sha={BASELINE_SHA}",
-                     '[[ "${PRIVATE_GALLERY_UPGRADE_BASELINE:-48}" == 48 ]]'):
+    for required in ("release_min_sdk=37", "release_version=1.7.8", "release_code=50",
+                     "baseline_version=1.7.8", "baseline_code=49", f"baseline_sha={BASELINE_SHA}",
+                     '[[ "${PRIVATE_GALLERY_UPGRADE_BASELINE:-49}" == 49 ]]'):
         if required not in block:
             errors.append(f"Missing pinned release configuration: {required}")
     fixture = (root / "docs/release178/UpgradeFixtureTest.kt").read_text()
     pairs = re.findall(r"baselineCode == (\d+) && candidateCode == (\d+)", fixture)
-    if pairs != [("48", "49")]:
-        errors.append("Fixture must permit only code48 -> code49")
+    if pairs != [("49", "50")]:
+        errors.append("Fixture must permit only code49 -> code50")
     required_checks = (
         'check(context.packageName == "uk.co.traynor.privategallery.hiddenprototype")',
         'check(!proof.exists())', 'assertEquals(baselineCode,', 'assertEquals(candidateCode,',
@@ -52,10 +52,14 @@ def audit(root: Path) -> dict:
         'Preserve encrypted file $path', 'Preserve Hidden encrypted file $path',
         'assertCiphertextAfterReads(before)', 'Preserve ciphertext after reads $field/$path',
         'candidatePresentationFiles', 'candidateHiddenPresentationFiles',
-        'Original code48 seed uses catalogue format2",2',
+        'Original code49 seed uses catalogue format2",2',
         'Synthetic baseline PWA discovery report', 'Synthetic baseline website fallback report',
         'assertEquals(listOf(false,true),original.map {style.invoke(it)})',
         'original,restored',
+        'getField("MOVE_TO")', 'assertEquals(14,moveTo)',
+        'java.nio.ByteBuffer.allocate(4).putInt(index).array()',
+        'original.reversed(),open().read().apps',
+        'Restoring order preserves all eleven fields",original,open().read().apps',
         'primaryBrowser(key,false)', 'hiddenBrowser(hidden,false)',
         'HiddenCredentialStore(context).unlock("738291".toCharArray())',
         'PinVaultKeyStore(context).unlock("905184".toCharArray())',
@@ -77,16 +81,16 @@ def audit(root: Path) -> dict:
         "android_execution": "NOT_RUN",
         "original_key_upgrade": "NOT_RUN",
         "baseline_source": BASELINE_SHA,
-        "baseline_code": 48,
-        "candidate_code": 49,
+        "baseline_code": 49,
+        "candidate_code": 50,
         "required_certificate_sha256": CERTIFICATE_SHA256,
         "errors": errors,
         "remaining": [
             "Independent final source/security review and approval of the exact candidate and runner staging",
-            "Compile fixture against frozen code48 baseline; compile candidate and Android tests",
-            "Download pinned run41156213785 artifact13025351799; verify exact archive/APK hashes and original certificate before signer access",
-            "On a disposable emulator, install exact archived code48 APK plus original-signed baseline instrumentation",
-            "Seed code48, install candidate with adb install -r, verify, force-stop, verify with restartCheck=true",
+            "Compile fixture against frozen code49 baseline; compile candidate and Android tests",
+            "Download pinned run41164782261 artifact13028668051; verify exact archive/APK hashes and original certificate before signer access",
+            "On a disposable emulator, install exact archived code49 APK plus original-signed baseline instrumentation",
+            "Seed code49, install candidate with adb install -r, verify, force-stop, verify with restartCheck=true",
             "Archive exact baseline/candidate source IDs, APK hashes, package/signature reports and all three passing fixture logs",
             "Review source-bound evidence before any release/signing acceptance claim",
         ],

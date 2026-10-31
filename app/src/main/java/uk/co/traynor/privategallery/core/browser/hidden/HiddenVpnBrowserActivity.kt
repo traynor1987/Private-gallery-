@@ -623,9 +623,9 @@ class HiddenVpnBrowserActivity:ComponentActivity() {
         val appStyle=app?.appStyle()==true
         var appControlsExpanded by remember(current) {mutableStateOf(false)}
         screenshotReview?.let {request ->PrivateAppScreenshotReview(request,{if(screenshotReview===request)screenshotReview=null})}
-        if(privateAppsOpen)PrivateAppsLibrary(privateAppsController,{privateAppsOpen=false;current?.onResume();privateAppEditId=null;privateAppInitialUrl=null;privateAppInitialName=null;finishPrivateAppIcon(null)},privateAppEditId,{updated ->
+        if(privateAppsOpen)PrivateAppsLibrary(privateAppsController,{privateAppsOpen=false;if(ready && live() && lifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.RESUMED))current?.onResume();privateAppEditId=null;privateAppInitialUrl=null;privateAppInitialName=null;finishPrivateAppIcon(null)},privateAppEditId,{updated ->
             privateAppTabs.keys.toList().forEach {view ->if(privateAppTabs[view]?.id()==updated.id())privateAppTabs[view]=updated}
-        },{id ->views.filter {privateAppTabs[it]?.id()==id}.toList().forEach(::closePrivateAppSession)},initialUrl=privateAppInitialUrl,initialName=privateAppInitialName)
+        },{id ->views.filter {privateAppTabs[it]?.id()==id}.toList().forEach(::closePrivateAppSession)},initialUrl=privateAppInitialUrl,initialName=privateAppInitialName,onAppSettings={id->if(ready && live())privateAppSettingsId=id})
         privateAppIconSelection?.let {selection ->key(selection) {
             HiddenPrivateAppIconPicker(selection.generation,
                 isCurrent={privateAppIconSelection===selection && uploadGeneration.get()==selection.generation && ready && live()},

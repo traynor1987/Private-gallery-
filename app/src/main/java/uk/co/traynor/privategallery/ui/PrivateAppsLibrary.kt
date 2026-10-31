@@ -2,6 +2,12 @@ package uk.co.traynor.privategallery.ui
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.Image
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.ui.platform.LocalDensity
+import java.util.concurrent.atomic.AtomicBoolean
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.foundation.lazy.grid.*
@@ -21,7 +27,7 @@ import uk.co.traynor.privategallery.core.privateapps.*
 
 /** Shared library only: browsing remains in the existing authorised browser. No saved UI state. */
 @Composable
-internal fun PrivateAppsLibrary(controller:PrivateAppsController,onClose:()->Unit,initialEditId:String?=null,onUpdated:(PrivateAppCatalog.App)->Unit={},onRemoved:(String)->Unit={},initialUrl:String?=null,initialName:String?=null) {
+internal fun PrivateAppsLibrary(controller:PrivateAppsController,onClose:()->Unit,initialEditId:String?=null,onUpdated:(PrivateAppCatalog.App)->Unit={},onRemoved:(String)->Unit={},initialUrl:String?=null,initialName:String?=null,onAppSettings:((String)->Unit)?=null) {
  val scope=rememberCoroutineScope()
  var apps by remember(controller){mutableStateOf<List<PrivateAppCatalog.App>>(emptyList())}
  var busy by remember(controller){mutableStateOf(true)}
@@ -30,70 +36,107 @@ internal fun PrivateAppsLibrary(controller:PrivateAppsController,onClose:()->Uni
  var editing by remember(controller){mutableStateOf(false)}
  var removal by remember(controller){mutableStateOf<PrivateAppCatalog.App?>(null)}
  var revoked by remember(controller){mutableStateOf(false)}
- val close by rememberUpdatedState(onClose)
- fun revoke(){apps=emptyList();editor=null;editing=false;removal=null;message="";if(!revoked){revoked=true;close()}}
+ val alive=remember(controller){AtomicBoolean(true)}
+ var query by remember(controller){mutableStateOf("")}
+ var menuId by remember(controller){mutableStateOf<String?>(null)}
+ var reorder by remember(controller){mutableStateOf(false)}
+ var selectedId by remember(controller){mutableStateOf<String?>(null)}
+ var settingsId by remember(controller){mutableStateOf<String?>(null)}
+ var showInformation by remember(controller){mutableStateOf(false)}
+ val close=remember(controller){onClose}
+ fun current()=alive.get() && controller.isCurrent()
+ fun clearPresentation(){apps=emptyList();editor=null;editing=false;removal=null;message="";query="";menuId=null;selectedId=null;reorder=false;settingsId=null;showInformation=false}
+ fun dismiss(){if(alive.getAndSet(false)){clearPresentation();revoked=true;close()}}
+ DisposableEffect(controller){onDispose{alive.set(false)}}
+ val lifecycle=androidx.lifecycle.compose.LocalLifecycleOwner.current.lifecycle
+ DisposableEffect(controller,lifecycle){
+  val observer=androidx.lifecycle.LifecycleEventObserver{_,event->if(event==androidx.lifecycle.Lifecycle.Event.ON_STOP)dismiss()}
+  lifecycle.addObserver(observer);onDispose{lifecycle.removeObserver(observer)}
+ }
+ fun revoke(){dismiss()}
  fun runChange(after:()->Unit={},action:()->PrivateAppCatalog) {
-  if(!controller.isCurrent()){revoke();return}
+  if(!current()){revoke();return}
   busy=true;message=""
   scope.launch {
    val result=withContext(Dispatchers.IO){runCatching{action()}}
-   if(!controller.isCurrent()){revoke();return@launch}
+   if(!current()){revoke();return@launch}
    result.onSuccess{apps=it.apps;after()}.onFailure{message="Private apps could not be updated. Your saved data was kept."}
    busy=false
   }
  }
  LaunchedEffect(controller){
   val result=withContext(Dispatchers.IO){runCatching{controller.load()}}
-  if(!controller.isCurrent()){revoke();return@LaunchedEffect}
+  if(!current()){revoke();return@LaunchedEffect}
   result.onSuccess {apps=it.apps;initialEditId?.let {id ->editor=it.apps.firstOrNull {app->app.id()==id};editing=editor!=null};if(initialEditId==null && initialUrl!=null && PrivateAppDiscovery.safe(initialUrl,controller.owner==PrivateAppStore.Owner.HIDDEN_TOR))editing=true}
    .onFailure {message="Private apps could not be loaded."}
   busy=false
  }
- LaunchedEffect(controller){while(isActive && !revoked){delay(250);if(!controller.isCurrent())revoke()}}
+ LaunchedEffect(controller){while(isActive && !revoked){delay(250);if(!current())revoke()}}
  if(revoked)return
- Dialog(onDismissRequest={if(!busy)close()},properties=DialogProperties(usePlatformDefaultWidth=false,securePolicy=SecureFlagPolicy.SecureOn)) {
+ Dialog(onDismissRequest={if(!busy)dismiss()},properties=DialogProperties(usePlatformDefaultWidth=false,securePolicy=SecureFlagPolicy.SecureOn)) {
   Surface(Modifier.fillMaxSize().systemBarsPadding().imePadding(),color=MaterialTheme.colorScheme.background) {
-   Column(Modifier.fillMaxSize().widthIn(max=960.dp).padding(16.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
-    Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween) {
+   Column(Modifier.fillMaxSize().padding(16.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
+    Row(Modifier.fillMaxWidth(),verticalAlignment=androidx.compose.ui.Alignment.CenterVertically) {
      Text("Private Apps",style=MaterialTheme.typography.headlineSmall,modifier=Modifier.weight(1f))
-     TextButton(onClick={close()}){Text("Close")}
+     TextButton(onClick={dismiss()},enabled=!busy){Text("Close")}
     }
-    Text(when(controller.owner){PrivateAppStore.Owner.PRIMARY->"Primary Vault";PrivateAppStore.Owner.HIDDEN_VPN->"Hidden Vault · VPN";else->"Hidden Vault · Tor"},style=MaterialTheme.typography.labelLarge)
-    Text(if(controller.owner==PrivateAppStore.Owner.PRIMARY)"Websites use Primary browser storage and its existing login-retention setting." else "Hidden login sessions are cleared when this private browser closes. Tor settings stay unchanged.",style=MaterialTheme.typography.bodySmall)
-    Button(onClick={editor=null;editing=true},enabled=!busy && apps.size<PrivateAppCatalog.MAX_APPS){Text("Add Private App")}
+    Row(Modifier.fillMaxWidth(),verticalAlignment=androidx.compose.ui.Alignment.CenterVertically) {
+     Text(when(controller.owner){PrivateAppStore.Owner.PRIMARY->"Primary Vault";PrivateAppStore.Owner.HIDDEN_VPN->"Hidden Vault · VPN";else->"Hidden Vault · Tor"},modifier=Modifier.weight(1f),style=MaterialTheme.typography.labelLarge)
+     IconButton(onClick={showInformation=true}){Icon(Icons.Default.Info,"Browser session information")}
+     FilledTonalButton(onClick={editor=null;editing=true},enabled=!busy && !reorder && apps.size<PrivateAppCatalog.MAX_APPS){Icon(Icons.Default.Add,null);Text("Add App")}
+    }
+    OutlinedTextField(query,{query=it.take(120);menuId=null},modifier=Modifier.fillMaxWidth().testTag("private-app-search"),
+     enabled=!busy && !reorder,singleLine=true,label={Text("Search apps")},leadingIcon={Icon(Icons.Default.Search,null)})
+    if(reorder)Row(Modifier.fillMaxWidth(),verticalAlignment=androidx.compose.ui.Alignment.CenterVertically) {
+     Text(if(selectedId==null)"Tap an app, then tap its new position." else "Tap the new position for ${apps.firstOrNull{it.id()==selectedId}?.name().orEmpty()}.",Modifier.weight(1f),style=MaterialTheme.typography.bodySmall)
+     TextButton(enabled=!busy,onClick={reorder=false;selectedId=null}){Text("Done")}
+    }
     if(busy)LinearProgressIndicator(Modifier.fillMaxWidth())
     if(message.isNotEmpty())Text(message,color=MaterialTheme.colorScheme.error)
-    if(!busy && apps.isEmpty()) {
-     Text("No private apps yet",style=MaterialTheme.typography.titleLarge)
-     Text("Add a website to keep it in this vault. No services are preinstalled or signed in.")
+    val visibleApps=if(reorder || query.isBlank())apps else apps.filter{it.name().contains(query.trim(),ignoreCase=true)}
+    if(!busy && visibleApps.isEmpty()) {
+     Text(if(apps.isEmpty())"No private apps yet"else"No matching apps",style=MaterialTheme.typography.titleLarge)
+     Text(if(apps.isEmpty())"Add a website or Private Web App."else"Try another app name.")
     }
-    LazyVerticalGrid(columns=GridCells.Adaptive(160.dp),modifier=Modifier.weight(1f),horizontalArrangement=Arrangement.spacedBy(12.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
-     itemsIndexed(apps,key={_,app->app.id()}) {index,app ->
-      Card(Modifier.fillMaxWidth().heightIn(min=144.dp)) {
-       Column(Modifier.padding(12.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
-        PrivateAppIcon(app.icon(),app.name())
-        Text(app.name(),style=MaterialTheme.typography.titleMedium)
-        if(app.pinned())Text("Favourite",style=MaterialTheme.typography.labelMedium)
-        TextButton(onClick={
-         runCatching{controller.launch(app.id()){close()}}.onFailure{if(!controller.isCurrent())revoke() else message="App could not open. Check the authorised connection or authenticate again."}
-        },enabled=!busy){Text("Open")}
-        Row {
-         TextButton(onClick={editor=app;editing=true},enabled=!busy,modifier=Modifier.semantics{contentDescription="Edit ${app.name()}"}){Text("Edit")}
-         TextButton(onClick={removal=app},enabled=!busy,modifier=Modifier.semantics{contentDescription="Remove ${app.name()}"}){Text("Remove")}
-        }
-        TextButton(onClick={runChange{controller.setPinned(app.id(),!app.pinned())}},enabled=!busy,modifier=Modifier.semantics{contentDescription="${if(app.pinned())"Unpin" else "Pin"} ${app.name()} ${if(app.pinned())"from" else "as"} favourite"}){Text(if(app.pinned())"Unpin favourite" else "Pin favourite")}
-        // These indices are the persisted order: pinning never silently sorts this grid.
-        Column {
-         TextButton(onClick={runChange{controller.move(app.id(),-1)}},enabled=!busy && index>0,modifier=Modifier.semantics{contentDescription="Move ${app.name()} up"}){Text("Move up")}
-         TextButton(onClick={runChange{controller.move(app.id(),1)}},enabled=!busy && index<apps.lastIndex,modifier=Modifier.semantics{contentDescription="Move ${app.name()} down"}){Text("Move down")}
-        }
-       }
+    BoxWithConstraints(Modifier.weight(1f).fillMaxWidth()) {
+     val columns=((maxWidth.value+8f)/(72f*LocalDensity.current.fontScale.coerceAtLeast(1f)+8f)).toInt().coerceIn(1,8)
+     LazyVerticalGrid(columns=GridCells.Fixed(columns),modifier=Modifier.fillMaxSize().testTag("private-app-grid"),horizontalArrangement=Arrangement.spacedBy(8.dp),verticalArrangement=Arrangement.spacedBy(16.dp)) {
+      items(visibleApps,key={it.id()}) {app ->
+       val index=apps.indexOfFirst{it.id()==app.id()}
+       PrivateAppsDrawerTile(app,index,apps.size,!busy,reorder,selectedId==app.id(),menuId==app.id(),
+        onTap={
+         if(current() && !busy) {
+          if(reorder) {
+           val source=selectedId
+           if(source==null)selectedId=app.id()
+           else {selectedId=null;runChange{controller.moveTo(source,index)}}
+          } else runCatching{controller.launchFromDrawer(app.id(),{current()}){if(current())dismiss()}}
+           .onFailure{if(!current())revoke() else message="App could not open. Check the authorised connection or authenticate again."}
+         }
+        },onActions={if(current() && !busy){menuId=app.id()}},onDismissMenu={menuId=null},onAction={action ->
+         menuId=null
+         if(current() && !busy)apps.firstOrNull{it.id()==app.id()}?.let {latest ->
+          when(action) {
+           "Edit"->{editor=latest;editing=true}
+           "Pin","Unpin"->runChange{controller.setPinned(latest.id(),action=="Pin")}
+           "Reorder"->{query="";reorder=true;selectedId=null}
+           "App Settings"->if(onAppSettings!=null){dismiss();if(controller.isCurrent())onAppSettings(latest.id())}else settingsId=latest.id()
+           "Remove"->{removal=latest}
+          }
+         }
+        })
       }
      }
     }
    }
   }
  }
+ if(showInformation)GalleryAlertDialog(properties=DialogProperties(securePolicy=SecureFlagPolicy.SecureOn),onDismissRequest={showInformation=false},title={Text("Browser session")},
+  text={Text(if(controller.owner==PrivateAppStore.Owner.PRIMARY)"Primary apps and browser tabs share cookies and website storage. Your existing browser-wide login-retention policy applies. App Close does not delete shared login data."else"Hidden apps share only this separate temporary browser profile. Closing the Hidden browser clears its logins. Tor settings stay unchanged.")},confirmButton={TextButton(onClick={showInformation=false}){Text("Done")}})
+ settingsId?.let {id ->PrivateAppSettings(controller,id,{updated->apps=apps.map{if(it.id()==updated.id())updated else it};onUpdated(updated)},
+  {message="Browser tools are available from an opened app."},{settingsId=null},onEdit={settingsId=null;editor=apps.firstOrNull{it.id()==id};editing=editor!=null},
+  onRemoved={removed->apps=apps.filterNot{it.id()==removed};onRemoved(removed)})}
+
  if(editing) {
   var name by remember(editor){mutableStateOf(editor?.name() ?: initialName.orEmpty().take(120))}
   var url by remember(editor){mutableStateOf(editor?.startUrl() ?: initialUrl.orEmpty())}
@@ -114,7 +157,7 @@ internal fun PrivateAppsLibrary(controller:PrivateAppsController,onClose:()->Uni
    discovering=true;discoveryMessage="";discovered=null;checkedUrl=""
    editorScope.launch {
     val result=withContext(Dispatchers.IO){runCatching{controller.discover(target)}}
-    if(!controller.isCurrent()){revoke();return@launch}
+    if(!current()){revoke();return@launch}
     if(editing && editor===editorIdentity && url.trim()==target) {
      result.onSuccess {app ->discovered=app;if(name.isBlank() || (editor==null && initialName!=null && name==initialName))name=app.name();checkedUrl=app.startUrl();url=app.startUrl();invalid=false
       discoveryMessage=app.discoveryReport()

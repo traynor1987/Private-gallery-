@@ -80,11 +80,11 @@ case "${GITHUB_REF:-}" in
     # Configuration only: final source review and original-key upgrade evidence remain required.
     release_min_sdk=37
     release_version=1.7.8
-    release_code=49
+    release_code=50
     baseline_version=1.7.8
-    baseline_code=48
-    baseline_sha=41b6d065a3fbef2f711198c9c778f7100e620c8f
-    [[ "${PRIVATE_GALLERY_UPGRADE_BASELINE:-48}" == 48 ]] || { echo 'Unsupported upgrade baseline' >&2; exit 1; }
+    baseline_code=49
+    baseline_sha=60f089d6e003fd13f8b7649feb6f44167e5028a2
+    [[ "${PRIVATE_GALLERY_UPGRADE_BASELINE:-49}" == 49 ]] || { echo 'Unsupported upgrade baseline' >&2; exit 1; }
     ;;
   refs/heads/release/1.7.7-recently-deleted)
     release_min_sdk=37

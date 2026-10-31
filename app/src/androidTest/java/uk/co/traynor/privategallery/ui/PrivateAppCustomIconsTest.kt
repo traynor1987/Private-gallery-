@@ -65,7 +65,7 @@ class PrivateAppCustomIconsTest {
   },{},requestIcon={selection=it})
   compose.setContent{PrivateAppsLibrary(controller,{})}
   compose.waitUntil(5000){compose.onAllNodesWithText("No private apps yet").fetchSemanticsNodes().isNotEmpty()}
-  compose.onNodeWithText("Add Private App").performClick()
+  compose.onNodeWithText("Add App").performClick()
   compose.onNodeWithText("Choose icon").performClick()
   val bytes=png()
   compose.runOnIdle{live=false;checkNotNull(selection).invoke(bytes);assertTrue(bytes.all{it==0.toByte()});assertEquals(0,writes)}
@@ -110,12 +110,13 @@ class PrivateAppCustomIconsTest {
   fun openFixtureEditor() {
    compose.waitUntil(5000) {
     compose.onAllNodesWithText("Edit Private App").fetchSemanticsNodes().isEmpty() &&
-     compose.onAllNodes(hasContentDescription("Edit Fixture") and isEnabled()).fetchSemanticsNodes().size==1
+     compose.onAllNodes(hasContentDescription("App actions for Fixture") and isEnabled()).fetchSemanticsNodes().size==1
    }
-   compose.onNodeWithContentDescription("Edit Fixture").performClick()
+   compose.onNodeWithContentDescription("App actions for Fixture").performClick()
+   compose.onNodeWithText("Edit").performClick()
    compose.waitUntil(5000){compose.onAllNodesWithText("Edit Private App").fetchSemanticsNodes().size==1}
   }
-  compose.waitUntil(5000){compose.onAllNodesWithContentDescription("Edit Fixture").fetchSemanticsNodes().isNotEmpty()}
+  compose.waitUntil(5000){compose.onAllNodesWithContentDescription("App actions for Fixture").fetchSemanticsNodes().isNotEmpty()}
   openFixtureEditor()
   compose.onNodeWithText("Choose icon").performClick()
   compose.runOnIdle{checkNotNull(selection).invoke(png())}
