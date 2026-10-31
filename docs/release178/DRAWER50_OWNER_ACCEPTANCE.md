@@ -1,0 +1,17 @@
+# 1.7.8/code50 — physical Galaxy Z Fold acceptance
+
+Pending signed artifact delivery and owner testing. Install the original-key update over49; never uninstall or clear data. This checklist does not claim physical acceptance.
+
+1. Confirm version1.7.8/code50 and existing Primary/Hidden media, credentials, Recently Deleted, collections/favourites, browser settings and permitted retained Primary logins.
+2. Open Private Apps. Expect large rounded-square icons and names, four columns at a typical phone width, adaptive inner/landscape/large-text columns, search and Add App. No permanent Open/Edit/Favourite/Move/Remove rows.
+3. Tap an icon/name. It launches directly through the original transport and any configured fresh-PIN check. Confirm app-style direct start/loading, no permanent browser tabs/address/footer, compact security/Exit/Screenshot controls.
+4. Long-press a tile, then separately use its three-dot button. Both offer the same themed Edit, Pin/Unpin, Reorder, App Settings, Remove menu. Check TalkBack/keyboard focus and full app-name labels. Pin/unpin must not silently change stored order.
+5. Search by name. Enter Reorder from a filtered result: search clears and the full order appears. Tap an app, then tap its new position; Done exits mode. Reopen/lock/restart and confirm order, pins, icons, names and settings persist. This accessible mode is the deliberate alternative to unreliable drag gestures.
+6. Edit a name/icon/start page and inspect App Settings; confirm saved choices survive reopening. Remove only an authorised synthetic app and check confirmation/definition removal. Shared profile clearing is a separate explicit action, not an implication of app removal or Close.
+7. Back navigates within an app; root Back/Exit App return to the drawer without clearing its profile. Switch and Close sessions; check Exit to Gallery, Lock Vault and Panic Exit remain distinct. Closing a drawer with a pending PIN must not let that old callback launch later.
+8. Capture permitted synthetic content: protected review, Cancel without publication, Save encrypted in the named originating Vault, then View Screenshot from the committed item. Verify crop/orientation across fold/unfold. Secure/video/embedded/JavaScript-disabled Tor captures must remain refused; no public copy.
+9. Add a compatible synthetic PWA manually and from Add Current Website: correct Install as Private Web App versus explained Private Website fallback, start URL/icon/scope warnings. This runs inside Private Gallery; no separate Android package or push/background/guaranteed offline promise.
+10. Repeat supported flows in Primary, HiddenVPN and HiddenTor. No Hidden names or previews may appear in Primary. Tor stays Tor-only/JavaScript-off by default; VPN stays VPN-only. Lock/expiry/Hide/Panic must remove access and transient menus/search/selection.
+11. Check light/dark blue-grey theme, cover/inner, portrait/landscape, fold/unfold, large text and keyboard. Report clipped labels/actions, wrong columns, blank frames or confusing navigation.
+
+Primary apps/tabs share the existing Primary browser profile; login-retention/clearing is profile-wide. Hidden apps share their current separate ephemeral profile, cleared when that browser session ends. Close/Exit App does not promise per-app cookie isolation or persistent Hidden logins. Screenshot save/view stays with the captured authenticated originating Vault.

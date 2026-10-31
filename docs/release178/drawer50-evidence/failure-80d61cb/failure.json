@@ -1,0 +1,28 @@
+{
+  "source_sha": "80d61cb32d599fff3734c3d26c40f61824154933",
+  "run_id": 41190590737,
+  "job_id": 124506408698,
+  "artifact_id": 13039750250,
+  "artifact_sha256": "0086c992aa138525b0228538010e92ba9da44ae2fc507e81f426f5ed86454f06",
+  "decision": "FAILED",
+  "android_cases": 47,
+  "passed": 44,
+  "failures": [
+    {
+      "classname": "uk.co.traynor.privategallery.ui.PrivateAppsDrawer50Test",
+      "name": "drawer_adapts_themes_fold_and_large_text_and_revokes_each_encrypted_owner",
+      "failure": "java.lang.AssertionError: Fifth app starts next row\nat org.junit.Assert.fail(Assert.java:89)\nat org.junit.Assert.assertTrue(Assert.java:42)\nat uk.co.traynor.privategallery.ui.PrivateAppsDrawer50Test.drawer_adapts_themes_fold_and_large_text_and_revokes_each_encrypted_owner(PrivateAppsDrawer50Test.kt:168)\n"
+    },
+    {
+      "classname": "uk.co.traynor.privategallery.ui.PrivateAppsDrawer50Test",
+      "name": "tiles_search_long_press_and_overflow_preserve_authenticated_actions",
+      "failure": "androidx.compose.ui.test.ComposeTimeoutException: Condition still not satisfied after 5000 ms\nat androidx.compose.ui.test.AndroidComposeUiTestEnvironment$AndroidComposeUiTestImpl.waitUntil(ComposeUiTest.android.kt:441)\nat androidx.compose.ui.test.junit4.AndroidComposeTestRule.waitUntil(AndroidComposeTestRule.android.kt:306)\nat uk.co.traynor.privategallery.ui.PrivateAppsDrawer50Test.ready(PrivateAppsDrawer50Test.kt:26)\nat uk.co.traynor.privategallery.ui.PrivateAppsDrawer50Test.tiles_search_long_press_and_overflow_preserve_authenticated_actions(PrivateAppsDrawer50Test.kt:73)\n"
+    },
+    {
+      "classname": "uk.co.traynor.privategallery.core.browser.hidden.NativeTorIsolation1762Test",
+      "name": "packagedTorNativeFormsUploadsDownloadsAndNetworkSink",
+      "failure": "java.lang.AssertionError: Tor cookie response rendered\nat org.junit.Assert.fail(Assert.java:89)\nat org.junit.Assert.assertTrue(Assert.java:42)\nat uk.co.traynor.privategallery.core.browser.hidden.NativeTorIsolation1762Test.waitFor(NativeTorIsolation1762Test.kt:37)\nat uk.co.traynor.privategallery.core.browser.hidden.NativeTorIsolation1762Test.packagedTorNativeFormsUploadsDownloadsAndNetworkSink(NativeTorIsolation1762Test.kt:226)\n"
+    }
+  ],
+  "signing": "BLOCKED"
+}

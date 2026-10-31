@@ -6,11 +6,9 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Info
-import androidx.compose.ui.platform.LocalDensity
 import java.util.concurrent.atomic.AtomicBoolean
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.foundation.lazy.grid.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -98,13 +96,8 @@ internal fun PrivateAppsLibrary(controller:PrivateAppsController,onClose:()->Uni
      Text(if(apps.isEmpty())"No private apps yet"else"No matching apps",style=MaterialTheme.typography.titleLarge)
      Text(if(apps.isEmpty())"Add a website or Private Web App."else"Try another app name.")
     }
-    BoxWithConstraints(Modifier.weight(1f).fillMaxWidth()) {
-     val columns=((maxWidth.value+8f)/(72f*LocalDensity.current.fontScale.coerceAtLeast(1f)+8f)).toInt().coerceIn(1,8)
-     LazyVerticalGrid(columns=GridCells.Fixed(columns),modifier=Modifier.fillMaxSize().testTag("private-app-grid"),horizontalArrangement=Arrangement.spacedBy(8.dp),verticalArrangement=Arrangement.spacedBy(16.dp)) {
-      items(visibleApps,key={it.id()}) {app ->
-       val index=apps.indexOfFirst{it.id()==app.id()}
-       PrivateAppsDrawerTile(app,index,apps.size,!busy,reorder,selectedId==app.id(),menuId==app.id(),
-        onTap={
+    PrivateAppsDrawerGrid(apps,visibleApps,!busy,reorder,selectedId,menuId,
+        onTap={app,index ->
          if(current() && !busy) {
           if(reorder) {
            val source=selectedId
@@ -113,7 +106,7 @@ internal fun PrivateAppsLibrary(controller:PrivateAppsController,onClose:()->Uni
           } else runCatching{controller.launchFromDrawer(app.id(),{current()}){if(current())dismiss()}}
            .onFailure{if(!current())revoke() else message="App could not open. Check the authorised connection or authenticate again."}
          }
-        },onActions={if(current() && !busy){menuId=app.id()}},onDismissMenu={menuId=null},onAction={action ->
+        },onActions={id ->if(current() && !busy){menuId=id}},onDismissMenu={menuId=null},onAction={app,action ->
          menuId=null
          if(current() && !busy)apps.firstOrNull{it.id()==app.id()}?.let {latest ->
           when(action) {
@@ -124,10 +117,7 @@ internal fun PrivateAppsLibrary(controller:PrivateAppsController,onClose:()->Uni
            "Remove"->{removal=latest}
           }
          }
-        })
-      }
-     }
-    }
+        },modifier=Modifier.weight(1f).fillMaxWidth())
    }
   }
  }

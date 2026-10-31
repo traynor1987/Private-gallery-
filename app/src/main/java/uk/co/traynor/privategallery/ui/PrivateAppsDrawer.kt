@@ -3,6 +3,8 @@ package uk.co.traynor.privategallery.ui
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.grid.*
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MoreVert
@@ -54,6 +56,28 @@ internal fun PrivateAppsDrawerTile(
             properties=PopupProperties(focusable=true,securePolicy=SecureFlagPolicy.SecureOn)) {
             for(label in listOf("Edit",if(app.pinned())"Unpin"else"Pin","Reorder","App Settings","Remove")) {
                 DropdownMenuItem(text={Text(label)},onClick={onAction(label)},enabled=enabled)
+            }
+        }
+    }
+}
+
+/** Shared production layout: actual constraints, not the size of a parent outside its Dialog. */
+@Composable
+internal fun PrivateAppsDrawerGrid(
+    apps:List<PrivateAppCatalog.App>,visibleApps:List<PrivateAppCatalog.App>,enabled:Boolean,
+    reordering:Boolean,selectedId:String?,menuId:String?,
+    onTap:(PrivateAppCatalog.App,Int)->Unit,onActions:(String)->Unit,onDismissMenu:()->Unit,
+    onAction:(PrivateAppCatalog.App,String)->Unit,modifier:Modifier=Modifier,
+) {
+    BoxWithConstraints(modifier.fillMaxSize()) {
+        val columns=((maxWidth.value+8f)/(72f*LocalDensity.current.fontScale.coerceAtLeast(1f)+8f)).toInt().coerceIn(1,8)
+        LazyVerticalGrid(columns=GridCells.Fixed(columns),modifier=Modifier.fillMaxSize().testTag("private-app-grid"),
+            horizontalArrangement=Arrangement.spacedBy(8.dp),verticalArrangement=Arrangement.spacedBy(16.dp)) {
+            items(visibleApps,key={it.id()}) {app ->
+                val index=apps.indexOfFirst{it.id()==app.id()}
+                PrivateAppsDrawerTile(app,index,apps.size,enabled,reordering,selectedId==app.id(),menuId==app.id(),
+                    onTap={onTap(app,index)},onActions={onActions(app.id())},onDismissMenu=onDismissMenu,
+                    onAction={onAction(app,it)})
             }
         }
     }

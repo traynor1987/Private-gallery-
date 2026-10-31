@@ -4,7 +4,6 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.test.*
@@ -58,7 +57,8 @@ class PrivateAppsDrawer50Test {
   val store=PrimaryPrivateAppStore(root,key,{live},{check(live);it()})
   val alpha=app("Alpha",true);val beta=app("Beta")
   store.update{it.upsert(alpha).upsert(beta)}
-  val controller=PrivateAppsController(store.owner(),{live},{a,b,id->PrivateAppCommands.execute(store,a,b,id)},{opened=it},authenticate={authentication=it})
+  fun newController()=PrivateAppsController(store.owner(),{live},{a,b,id->PrivateAppCommands.execute(store,a,b,id)},{opened=it},authenticate={authentication=it})
+  var controller by mutableStateOf(newController())
   try {
    compose.setContent{PrivateGalleryTheme{if(mounted)PrivateAppsLibrary(controller,{closed++;mounted=false})}}
    ready(alpha.id())
@@ -70,7 +70,8 @@ class PrivateAppsDrawer50Test {
    compose.onNodeWithTag("private-app-tile-${alpha.id()}").performClick()
    compose.runOnIdle{checkNotNull(authentication).invoke(true);assertEquals(alpha.startUrl(),opened);assertEquals(1,closed);assertFalse(mounted)}
    compose.onNodeWithTag("private-app-search").assertDoesNotExist()
-   compose.runOnIdle{mounted=true};ready(alpha.id())
+   compose.mainClock.advanceTimeByFrame();compose.waitForIdle()
+   compose.runOnIdle{controller=newController();mounted=true};ready(alpha.id())
    compose.onNodeWithTag("private-app-search").performTextInput("beta")
    compose.onNodeWithTag("private-app-tile-${alpha.id()}").assertDoesNotExist()
    compose.onNodeWithTag("private-app-tile-${beta.id()}").assertIsDisplayed()
@@ -132,7 +133,7 @@ class PrivateAppsDrawer50Test {
  @Test fun drawer_adapts_themes_fold_and_large_text_and_revokes_each_encrypted_owner() {
   val root=File(ApplicationProvider.getApplicationContext<android.content.Context>().cacheDir,"drawer-owners-${UUID.randomUUID()}")
   val key=ByteArray(32){52};val hidden=HiddenSession{100L};assertTrue(hidden.complete(hidden.beginAuthentication(),key.copyOf()))
-  var live=true;var closed=0;var width by mutableStateOf(360);var dark by mutableStateOf(false);var large by mutableStateOf(false)
+  var live=true;var closed=0;var width by mutableStateOf(360);var dark by mutableStateOf(false);var large by mutableStateOf(false);var layoutPhase by mutableStateOf(true)
   val primary=PrimaryPrivateAppStore(File(root,"primary"),key,{live},{check(live);it()})
   val vpn=HiddenPrivateAppStore(root,hidden,hidden.authority(),false)
   val tor=HiddenPrivateAppStore(root,hidden,hidden.authority(),true)
@@ -142,32 +143,41 @@ class PrivateAppsDrawer50Test {
   fun controller(store:PrivateAppStore)=PrivateAppsController(store.owner(),{live && (store.owner()==PrivateAppStore.Owner.PRIMARY || hidden.isUnlocked)},{a,b,id->PrivateAppCommands.execute(store,a,b,id)},{})
   var owner by mutableStateOf(controller(primary))
   try {
+   var actualDensity=0f
    compose.setContent {
     val density=LocalDensity.current
-    val screen=LocalConfiguration.current
-    val configuration=android.content.res.Configuration(screen).apply{screenWidthDp=width}
-    // Dialogs own a full-screen window: scale its pixels to the requested dp viewport.
-    val viewportDensity=density.density*screen.screenWidthDp.toFloat()/width
-    CompositionLocalProvider(LocalDensity provides Density(viewportDensity,if(large)1.6f else 1f),LocalConfiguration provides configuration) {
+    actualDensity=density.density
+    CompositionLocalProvider(LocalDensity provides Density(density.density,if(large)1.6f else 1f)) {
      PrivateGalleryTheme(if(dark)AppTheme.DARK else AppTheme.LIGHT) {
-      Box(Modifier.width(width.dp)){PrivateAppsLibrary(owner,{closed++})}
+      if(layoutPhase)Box(Modifier.width(width.dp).fillMaxHeight()) {
+       PrivateAppsDrawerGrid(primaryApps,primaryApps,true,false,null,null,{_,_->},{},{},{_,_->})
+      } else PrivateAppsLibrary(owner,{closed++})
      }
     }
    }
    for(theme in listOf(false,true))for(size in listOf(360,840,600,360))for(font in listOf(false,true)) {
     compose.runOnIdle{dark=theme;width=size;large=font}
     ready(primaryApp.id())
-    compose.onNodeWithTag("private-app-search").assertIsDisplayed()
-    compose.onNodeWithText("Add App").assertIsDisplayed()
+    val gridWidth=compose.onNodeWithTag("private-app-grid").fetchSemanticsNode().boundsInRoot.width/actualDensity
+    assertEquals("Production grid receives the requested real dp viewport",size.toFloat(),gridWidth,1f)
     compose.onNodeWithContentDescription("App actions for PrimarySecret").assertIsDisplayed()
-    compose.onNodeWithText("HiddenSecret").assertDoesNotExist()
-    compose.onNodeWithText("TorSecret").assertDoesNotExist()
     if(size==360 && !font) {
      val bounds=primaryApps.take(5).map{compose.onNodeWithTag("private-app-tile-${it.id()}").fetchSemanticsNode().boundsInRoot}
      assertEquals("Cover drawer has four columns",bounds[0].top,bounds[3].top,1f)
      assertTrue("Fifth app starts next row",bounds[4].top>bounds[0].top)
     }
+    if(size==360 && font) {
+     val first=compose.onNodeWithTag("private-app-tile-${primaryApps[0].id()}").fetchSemanticsNode().boundsInRoot
+     val third=compose.onNodeWithTag("private-app-tile-${primaryApps[2].id()}").fetchSemanticsNode().boundsInRoot
+     assertTrue("Large text reduces cover drawer columns",third.top>first.top)
+    }
    }
+   compose.runOnIdle{layoutPhase=false}
+   ready(primaryApp.id())
+   compose.onNodeWithTag("private-app-search").assertIsDisplayed()
+   compose.onNodeWithText("Add App").assertIsDisplayed()
+   compose.onNodeWithText("HiddenSecret").assertDoesNotExist()
+   compose.onNodeWithText("TorSecret").assertDoesNotExist()
    compose.runOnIdle{owner=controller(vpn)};ready(hiddenApp.id())
    compose.onNodeWithText("PrimarySecret").assertDoesNotExist();compose.onNodeWithText("TorSecret").assertDoesNotExist()
    compose.runOnIdle{owner=controller(tor)};ready(torApp.id())
