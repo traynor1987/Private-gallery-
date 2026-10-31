@@ -15,7 +15,8 @@ import javax.crypto.spec.GCMParameterSpec
  * ciphertext in noBackupFilesDir, bound to the adapter ID. Secret buffers are caller-owned and
  * must be wiped after use. No logging, clipboard, broad FileProvider or public-storage path.
  */
-class AiCredentialStore(private val context: Context) {
+class AiCredentialStore private constructor(private val context: Context, private val alias: String) {
+    constructor(context: Context) : this(context, ALIAS)
     private fun file(id: String): File {
         require(id.matches(Regex("[a-z0-9-]{1,64}")))
         return File(context.noBackupFilesDir, "ai-provider-$id.enc")
@@ -45,13 +46,22 @@ class AiCredentialStore(private val context: Context) {
         android.util.AtomicFile(file(id)).delete()
         check(!file(id).exists()) { "Unable to remove provider configuration." }
     }
-    @Synchronized private fun key(): SecretKey {
+    private fun key(): SecretKey = synchronized(KEY_GATE) {
         val store = KeyStore.getInstance("AndroidKeyStore").apply { load(null) }
-        (store.getKey(ALIAS, null) as? SecretKey)?.let { return it }
-        return KeyGenerator.getInstance(KeyProperties.KEY_ALGORITHM_AES, "AndroidKeyStore").apply {
-            init(KeyGenParameterSpec.Builder(ALIAS, KeyProperties.PURPOSE_ENCRYPT or KeyProperties.PURPOSE_DECRYPT)
+        // All consumers share this alias, including separate owner/provider/store
+        // instances. Lookup and first creation must use the same process-wide fence.
+        // An existing inaccessible/wrong-type entry fails closed; never replace it.
+        if (store.containsAlias(alias)) {
+            return@synchronized (store.getKey(alias, null) as? SecretKey
+                ?: throw IllegalStateException("Credential protection key is unavailable."))
+        }
+        KeyGenerator.getInstance(KeyProperties.KEY_ALGORITHM_AES, "AndroidKeyStore").apply {
+            init(KeyGenParameterSpec.Builder(alias, KeyProperties.PURPOSE_ENCRYPT or KeyProperties.PURPOSE_DECRYPT)
                 .setBlockModes(KeyProperties.BLOCK_MODE_GCM).setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_NONE).setKeySize(256).build())
         }.generateKey()
     }
-    companion object { private const val ALIAS = "private-gallery-ai-provider-v1" }
+    companion object {
+        private const val ALIAS = "private-gallery-ai-provider-v1"
+        private val KEY_GATE = Any()
+    }
 }
