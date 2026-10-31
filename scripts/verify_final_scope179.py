@@ -101,7 +101,7 @@ def main():
     evidence = Path(evidence_path)
     run = json.loads(Path(run_path).read_text())
     manifest = Path(manifest_path).read_bytes()
-    count = verify_xml(evidence/'outputs/androidTest-results/connected/debug', cases_from_manifest(manifest))
+    count = verify_xml(evidence/'evidence179/android-results', cases_from_manifest(manifest))
     require(run.get('validated_case_count') == count, 'Runtime count differs')
     require((evidence/'evidence179/source-sha.txt').read_text().strip() == source, 'Artifact source differs')
     gates = json.loads((evidence/'evidence179/final-gates.json').read_text())

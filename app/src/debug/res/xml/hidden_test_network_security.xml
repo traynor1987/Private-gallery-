@@ -1,9 +1,10 @@
 <network-security-config>
   <base-config cleartextTrafficPermitted="false" />
   <domain-config cleartextTrafficPermitted="true">
-    <domain includeSubdomains="true">invalid</domain>
     <domain includeSubdomains="true">onion</domain>
+    <trust-anchors><certificates src="system" /><certificates src="@raw/hidden_vpn_fixture_ca" /></trust-anchors>
   </domain-config>
+  <domain-config cleartextTrafficPermitted="true"><domain includeSubdomains="true">invalid</domain></domain-config>
   <!-- Actual manifest-selected debug resource; never packaged in the release variant. -->
   <domain-config cleartextTrafficPermitted="true">
     <domain includeSubdomains="true">fixture.invalid</domain>

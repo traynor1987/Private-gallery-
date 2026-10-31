@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
-[[ "${GITHUB_ACTIONS:-}" == true && ( "${GITHUB_REF:-}" == refs/heads/release/1.7.6.2-ui-browser-polish || "${GITHUB_REF:-}" == refs/heads/release/1.7.7-recently-deleted || "${GITHUB_REF:-}" == refs/heads/release/1.7.8-private-apps ) ]]
+[[ "${GITHUB_ACTIONS:-}" == true && ( "${GITHUB_REF:-}" == refs/heads/release/1.7.6.2-ui-browser-polish || "${GITHUB_REF:-}" == refs/heads/release/1.7.7-recently-deleted || "${GITHUB_REF:-}" == refs/heads/release/1.7.8-private-apps || "${GITHUB_REF:-}" == refs/heads/release/1.7.9-evidence-locker ) ]]
 # Dedicated disposable runner only. No production VPN configuration or signing credentials.
 umask 077
 fixture_root="$RUNNER_TEMP/private-gallery-vpn1762"
@@ -32,9 +32,13 @@ forward_dns=$(awk '/^nameserver / {print $2;exit}' /etc/resolv.conf)
 [[ "$forward_dns" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]
 /usr/bin/python3 scripts/create_hidden_vpn_fixture_tls1762.py "$fixture_root"
 sudo python3 scripts/hidden_vpn_fixture1762.py --evidence "$evidence" --forward-dns "$forward_dns" --tls-cert "$fixture_root/fixture.crt" --tls-key "$fixture_root/fixture.key" > "$evidence/fixture.log" 2>&1 &
-printf '%s\n' "$!" > "$fixture_root/server.pid"
-sudo tcpdump -i any -nn -U -s 256 '(host 203.0.113.10 or port 53 or udp port 51820)' -w "$evidence/traffic.pcap" > "$evidence/capture.log" 2>&1 &
-printf '%s\n' "$!" > "$fixture_root/capture.pid"
+server_pid=$!
+printf '%s\n' "$server_pid" > "$fixture_root/server.pid"
+sudo python3 scripts/evidence179_processes.py register --identity "$fixture_root/server.identity.json" --parent "$server_pid" --executable python3 --argument "$evidence" --argument scripts/hidden_vpn_fixture1762.py --output "$evidence/fixture.log"
+sudo tcpdump -i any -nn -U -s 256 '(host 203.0.113.10 or host 2001:db8::10 or port 53 or udp port 51820)' -w "$evidence/traffic.pcap" > "$evidence/capture.log" 2>&1 &
+capture_pid=$!
+printf '%s\n' "$capture_pid" > "$fixture_root/capture.pid"
+sudo python3 scripts/evidence179_processes.py register --identity "$fixture_root/capture.identity.json" --parent "$capture_pid" --executable tcpdump --argument "$evidence/traffic.pcap" --output "$evidence/traffic.pcap" --output "$evidence/capture.log"
 {
   printf '[Interface]\nPrivateKey = '
   cat "$fixture_root/client.key"

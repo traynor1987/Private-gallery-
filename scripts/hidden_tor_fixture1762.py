@@ -1,4 +1,8 @@
 """Interactive endpoints for the disposable CI onion service; no app transport mocks."""
+try:
+    import evidence179_fixture_endpoints as evidence179
+except ModuleNotFoundError:
+    from scripts import evidence179_fixture_endpoints as evidence179
 import base64
 import hashlib
 from email.parser import BytesParser
@@ -42,6 +46,7 @@ def handler_class(base, root, payload):
             self.wfile.write(body)
 
         def do_GET(self):
+            if evidence179.get(self,root):return
             self.event(method='GET', path=self.path, cookie_present='hiddentorfixture=only' in self.headers.get('Cookie', ''))
             if self.path == '/':
                 self.send_bytes(200, payload)
@@ -68,6 +73,7 @@ def handler_class(base, root, payload):
             elif self.path == '/evidence':
                 with lock:
                     events = [json.loads(line) for line in events_path.read_text().splitlines()]
+                events += evidence179.events(root)
                 self.send_bytes(200, json.dumps({'events': events, 'png_sha256': hashlib.sha256(PNG).hexdigest()}).encode(), 'application/json')
             elif self.path == '/slow':
                 self.event(kind='slow-start')
@@ -86,6 +92,7 @@ def handler_class(base, root, payload):
                 self.send_bytes(404, b'Not found')
 
         def do_POST(self):
+            if evidence179.post(self,root):return
             length = self.headers.get('Content-Length', '')
             if not length.isdecimal() or not 0 < int(length) <= 2 * 1024 * 1024:
                 self.close_connection = True

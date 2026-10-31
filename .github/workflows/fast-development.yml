@@ -350,6 +350,19 @@ jobs:
             ~/.gradle/caches
             ~/.gradle/wrapper
           key: ${{ steps.evidence-gradle-cache.outputs.cache-primary-key }}
+      - name: Prepare isolated Evidence Locker route fixtures
+        id: evidence179-fixtures
+        if: contains(github.event.head_commit.message, '[focused179]')
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq wireguard-tools tcpdump iptables python3-cryptography python3-venv tor curl
+          python3 -m venv "$RUNNER_TEMP/evidence179-host-python"
+          "$RUNNER_TEMP/evidence179-host-python/bin/python" -m pip install --disable-pip-version-check cryptography==50.0.2
+          echo "$RUNNER_TEMP/evidence179-host-python/bin" >> "$GITHUB_PATH"
+          export PATH="$RUNNER_TEMP/evidence179-host-python/bin:$PATH"
+          python3 -c 'import cryptography,sys; print(sys.executable,cryptography.__version__)' > app/build/evidence179/host-python-version.txt
+          PYTHONDONTWRITEBYTECODE=1 python3 -m unittest scripts.tests.test_evidence179_route_evidence scripts.tests.test_evidence179_fixture_endpoints scripts.tests.test_ci_onion_probe scripts.tests.test_hidden_tor_fixture1762 scripts.tests.test_hidden_vpn_fixture1762 scripts.tests.test_evidence179_fixture_http scripts.tests.test_evidence179_fixture_tls scripts.tests.test_evidence179_cases scripts.tests.test_evidence179_process_ownership -q
+          bash scripts/prepare_evidence179_routes.sh
       - name: Enable emulator acceleration
         if: contains(github.event.head_commit.message, '[focused179]')
         run: sudo chmod 666 /dev/kvm
@@ -367,7 +380,35 @@ jobs:
           disk-size: 8G
           disable-animations: false
           emulator-options: -no-window -gpu software -no-snapshot -noaudio -no-boot-anim -feature -HardwareDecoder
-          script: bash scripts/run_evidence179.sh
+          script: |
+            bash scripts/evidence179_emulator_preflight.sh
+            bash scripts/run_evidence179.sh
+      - name: Stop owned fixtures and preserve original observations
+        if: always() && contains(github.event.head_commit.message, '[focused179]') && (steps.evidence179-fixtures.outcome == 'success' || steps.evidence179-fixtures.outcome == 'failure')
+        run: bash scripts/cleanup_evidence179_routes.sh
+      - name: Record exact validated Android runtime gates
+        if: success() && contains(github.event.head_commit.message, '[focused179]')
+        run: |
+          python3 - <<'PYGATES'
+          import hashlib,json,os,pathlib,subprocess
+          from scripts.verify_evidence179_cases import verify
+          root=pathlib.Path('app/build/evidence179');source=os.environ['GITHUB_SHA']
+          assert subprocess.check_output(['git','rev-parse','HEAD'],text=True).strip()==source
+          focused=json.loads((root/'focused-gates.json').read_text());route=json.loads((root/'route-proof.json').read_text())
+          expected={name:'PASS' for name in ('owned_vpn','native_tor','dns_and_packet_observation','revocation')}
+          assert focused==dict(source_sha=source,decision='PASS',original_exit_status=0,network=expected)
+          assert route['source_sha']==source and route['decision']=='PASS' and type(route['original_exit_status']) is int and route['original_exit_status']==0
+          manifest=pathlib.Path('scripts/evidence179_cases.json').read_bytes()
+          count=verify(root/'android-results',json.loads(manifest))
+          assert route['android_cases']==count
+          for name in ('ocr-distribution.json','apk-native-alignment.txt','emulator-health.txt'):
+              assert (root/name).is_file() and (root/name).stat().st_size>0
+          gates=dict(source_sha=source,decision='PASS',original_exit_status=0,network=expected,validated_case_count=count,
+              case_manifest_sha256=hashlib.sha256(manifest).hexdigest(),route_proof_sha256=hashlib.sha256((root/'route-proof.json').read_bytes()).hexdigest(),
+              ocr_distribution_sha256=hashlib.sha256((root/'ocr-distribution.json').read_bytes()).hexdigest(),
+              apk_native_alignment_sha256=hashlib.sha256((root/'apk-native-alignment.txt').read_bytes()).hexdigest())
+          (root/'final-gates.json').write_text(json.dumps(gates,indent=2)+'\n')
+          PYGATES
       - name: Record exact source and diagnostic status
         if: always()
         run: |

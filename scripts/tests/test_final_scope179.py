@@ -85,4 +85,21 @@ class FinalScope179Test(unittest.TestCase):
             with self.assertRaises(ValueError):GATE.cases_from_manifest(raw)
 
 
+
+    def test_cli_uses_frozen_aggregate_android_results_layout(self):
+        import contextlib,io,sys
+        from unittest.mock import patch
+        approval,source,review,run,gates,manifest,fixture,_=self.fixture()
+        approval['validator_sha256']=GATE.digest((ROOT/'scripts/verify_final_scope179.py').read_bytes())
+        with tempfile.TemporaryDirectory() as directory:
+            root=Path(directory);evidence=root/'artifact';proof=evidence/'evidence179'
+            results=proof/'android-results/focused';results.mkdir(parents=True)
+            (results/'results.xml').write_text('<testsuite><testcase classname="fixture.Class" name="method"/></testsuite>')
+            (proof/'source-sha.txt').write_text(source)
+            (proof/'final-gates.json').write_text(json.dumps(gates))
+            for name,value in [('approval.json',json.dumps(approval).encode()),('review.md',review),('run.json',json.dumps(run).encode()),('cases.json',manifest),('fixture.kt',fixture)]:
+                (root/name).write_bytes(value)
+            arguments=['verify_final_scope179.py',str(root/'approval.json'),source,str(root/'review.md'),str(root/'run.json'),str(evidence),str(root/'cases.json'),str(root/'fixture.kt')]
+            with patch.object(sys,'argv',arguments),contextlib.redirect_stdout(io.StringIO()):GATE.main()
+
 if __name__ == '__main__': unittest.main()

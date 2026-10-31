@@ -35,9 +35,9 @@ class EvidenceAi179UiTest {
   val access=EvidenceAccess.primary(context,key,{key},{true},{key.copyOf()},Any())
   val credentials=EvidenceCredentials(EvidenceCatalog.Owner.PRIMARY,access::current,{action->access.leases.acquire().use{it.commit{action()}}},object:EvidenceCredentials.Backend{
    override fun configured()=true
-   override fun save(value:ByteArray){}
+   override fun stage(value:ByteArray):uk.co.traynor.privategallery.core.editor.AiCredentialStore.PreparedChange = error("This read-only consent fixture must not replace credentials")
    override fun read():ByteArray{keyReads.incrementAndGet();return "sk-synthetic179-only".toByteArray()}
-   override fun clear(){}
+   override fun removal():uk.co.traynor.privategallery.core.editor.AiCredentialStore.PreparedChange = error("This read-only consent fixture must not remove credentials")
   },{})
   try {
    androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().runOnMainSync{controller=EvidenceController(context,access);controller.register(original.id)}

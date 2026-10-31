@@ -1,0 +1,586 @@
+[
+  {
+    "classname": "uk.co.traynor.privategallery.EvidenceAuthority179Test",
+    "name": "originatingVaultFactoryPickerEpochHideAndPanicNeverReuseAuthority"
+  },
+  {
+    "classname": "uk.co.traynor.privategallery.core.evidence.AiCredentialAlias179Test",
+    "name": "existingDisposableIncompatibleAliasIsNeverRegeneratedOrReplaced"
+  },
+  {
+    "classname": "uk.co.traynor.privategallery.core.evidence.AiCredentialAlias179Test",
+    "name": "disposableAliasConcurrentFirstUseAcrossInstancesKeepsBothOwnersDecryptable"
+  },
+  {
+    "classname": "uk.co.traynor.privategallery.core.evidence.EvidenceAccess179Test",
+    "name": "source_references_are_same_vault_verified_and_read_only"
+  },
+  {
+    "classname": "uk.co.traynor.privategallery.core.evidence.EvidenceAccess179Test",
+    "name": "revocation_and_cancelled_verified_reads_never_return_late_plaintext"
+  },
+  {
+    "classname": "uk.co.traynor.privategallery.core.evidence.EvidenceAccess179Test",
+    "name": "primary_post_eof_rechecks_trashed_changed_policy_fingerprint_and_missing_payload"
+  },
+  {
+    "classname": "uk.co.traynor.privategallery.core.evidence.EvidenceAccess179Test",
+    "name": "publication_gate_rejects_every_result_after_exact_retirement_boundary"
+  },
+  {
+    "classname": "uk.co.traynor.privategallery.core.evidence.EvidenceAi179Test",
+    "name": "prepareMakesZeroPostsAndExactFramingHasOnlySelectedContent"
+  },
+  {
+    "classname": "uk.co.traynor.privategallery.core.evidence.EvidenceAi179Test",
+    "name": "imagesAreExplicitBoundedReencodedAndThumbnailCopiesAreIndependent"
+  },
+  {
+    "classname": "uk.co.traynor.privategallery.core.evidence.EvidenceAi179Test",
+    "name": "foreignOwnerVaultOnlyAndChangedSourcesBlockBeforeCredentialReadOrPost"
+  },
+  {
+    "classname": "uk.co.traynor.privategallery.core.evidence.EvidenceAi179Test",
+    "name": "changedDigestRevisionRouteAndForeignCredentialRetireConsent"
+  },
+  {
+    "classname": "uk.co.traynor.privategallery.core.evidence.EvidenceAi179Test",
+    "name": "revocationAfterSendNeverPublishesAndProviderFailuresNeverEchoSecrets"
+  },
+  {
+    "classname": "uk.co.traynor.privategallery.core.evidence.EvidenceAi179Test",
+    "name": "refusalIncompleteAndForeignStructuredReferencesRemainBoundedAdvisory"
+  },
+  {
+    "classname": "uk.co.traynor.privategallery.core.evidence.EvidenceAi179Test",
+    "name": "selectedTextAndResponseLimitsAreRejectedWithoutTruncatingConsent"
+  },
+  {
+    "classname": "uk.co.traynor.privategallery.core.evidence.EvidenceAi179Test",
+    "name": "retainedUnrelatedIncidentAndAnalysisTextNeverEnterDirectSelectedPayload"
+  },
+  {
+    "classname": "uk.co.traynor.privategallery.core.evidence.EvidenceAi179Test",
+    "name": "actualKeyEchoIncludingEscapedJsonNeverEntersAdvisory"
+  },
+  {
+    "classname": "uk.co.traynor.privategallery.core.evidence.EvidenceAi179Test",
+    "name": "bodyAndConsentModelDigestChangeAndClosedCopiesCannotBeUsed"
+  },
+  {
+    "classname": "uk.co.traynor.privategallery.core.evidence.EvidenceAi179Test",
+    "name": "strictOuterAndOutputGrammarRejectsCommentQuotesSingleQuotesTrailingAndDeepInput"
+  },
+  {
+    "classname": "uk.co.traynor.privategallery.core.evidence.EvidenceAi179Test",
+    "name": "onlySingleStrictObjectAcceptsSelectedStructuredReferencesAndWrappersFailClosed"
+  },
+  {
+    "classname": "uk.co.traynor.privategallery.core.evidence.EvidenceAi179Test",
+    "name": "simultaneousOneShotAttemptsAdmitAtMostOnePostAndRetireBothResults"
+  },
+  {
+    "classname": "uk.co.traynor.privategallery.core.evidence.EvidenceAi179Test",
+    "name": "credentialRemovalDuringBodyWriteCancelsRouteAndPublishesNoAnalysis"
+  },
+  {
+    "classname": "uk.co.traynor.privategallery.core.evidence.EvidenceAi179Test",
+    "name": "actualIdentityRevisionCorrectionForeignReaderAndFailedAuthenticatedEofRejectConsent"
+  },
+  {
+    "classname": "uk.co.traynor.privategallery.core.evidence.EvidenceAi179Test",
+    "name": "prepareCancellationAfterConsumedBytesBeforeReaderReturnPublishesNothing"
+  },
+  {
+    "classname": "uk.co.traynor.privategallery.core.evidence.EvidenceAi179Test",
+    "name": "incompleteWithoutOutputIsLabelledAndOutputCharacterOverflowIsRejected"
+  },
+  {
+    "classname": "uk.co.traynor.privategallery.core.evidence.EvidenceAi179Test",
+    "name": "typedDetailsReusesStrictSchemaAndSelectedIdsAndKeepsReceiptAppOwned"
+  },
+  {
+    "classname": "uk.co.traynor.privategallery.core.evidence.EvidenceAi179Test",
+    "name": "selectedRecordImageAndTextQuotaBoundariesHavePositiveAndNegativeCases"
+  },
+  {
+    "classname": "uk.co.traynor.privategallery.core.evidence.EvidenceAi179Test",
+    "name": "credentialReplacementDuringResponseWaitRejectsAndWipesLateBytes"
+  },
+  {
+    "classname": "uk.co.traynor.privategallery.core.evidence.EvidenceArchive179Test",
+    "name": "encryptedRoundTripBothOwnersAndExplicitPlaintextOriginalsExact"
+  },
+  {
+    "classname": "uk.co.traynor.privategallery.core.evidence.EvidenceArchive179Test",
+    "name": "wrongPasswordLateTagTruncateHeaderAndForeignOwnerNeverReturnReport"
+  },
+  {
+    "classname": "uk.co.traynor.privategallery.core.evidence.EvidenceArchive179Test",
+    "name": "deniedAdmissionProducesNoOutputAndRetainedRestrictionBlocksBothModes"
+  },
+  {
+    "classname": "uk.co.traynor.privategallery.core.evidence.EvidenceArchive179Test",
+    "name": "retirementAfterOriginalReadFailsAndCloseIsIdempotent"
+  },
+  {
+    "classname": "uk.co.traynor.privategallery.core.evidence.EvidenceArchive179Test",
+    "name": "fixedScryptGcmVectorPreservesWhitespaceUnicodeAndHeaderAad"
+  },
+  {
+    "classname": "uk.co.traynor.privategallery.core.evidence.EvidenceArchive179Test",
+    "name": "cancelledOpenAndMalformedHeaderDeleteCiphertextStagesAndNeverCloseCallerStreams"
+  },
+  {
+    "classname": "uk.co.traynor.privategallery.core.evidence.EvidenceArchive179Test",
+    "name": "fullTagAuthenticationPrecedesEvenInvalidZipParsing"
+  },
+  {
+    "classname": "uk.co.traynor.privategallery.core.evidence.EvidenceArchive179Test",
+    "name": "strictSchemaOwnerDepthUnknownKeysRestrictionHashAndExtraEntriesRejectAfterValidCrypto"
+  },
+  {
+    "classname": "uk.co.traynor.privategallery.core.evidence.EvidenceArchive179Test",
+    "name": "perEntryMetadataTranscriptAndPdfBoundsRejectBeforePublishing"
+  },
+  {
+    "classname": "uk.co.traynor.privategallery.core.evidence.EvidenceArchive179Test",
+    "name": "advisoryAiAndUnattachedRetainedLineageStayLabelledWithoutReattachingOriginals"
+  },
+  {
+    "classname": "uk.co.traynor.privategallery.core.evidence.EvidenceArchive179Test",
+    "name": "appliedHistoricalReferencesSurviveUnlinkAndRemovalWithoutOriginalOrUnrelatedNotes"
+  },
+  {
+    "classname": "uk.co.traynor.privategallery.core.evidence.EvidenceArchive179Test",
+    "name": "genuinelyForeignRawAiReferencesNeverAcquireHistoricalAuthority"
+  },
+  {
+    "classname": "uk.co.traynor.privategallery.core.evidence.EvidenceArchive179Test",
+    "name": "reverseMetadataOrderIsCanonicalAcrossCodecWriteOpenAndReexportBothOwners"
+  },
+  {
+    "classname": "uk.co.traynor.privategallery.core.evidence.EvidenceArchive179Test",
+    "name": "originalCount128Admitted129RejectedBeforeOutput"
+  },
+  {
+    "classname": "uk.co.traynor.privategallery.core.evidence.EvidenceArchive179Test",
+    "name": "combinedMetadataAndManifestQuotaRejectsAndCleansStage"
+  },
+  {
+    "classname": "uk.co.traynor.privategallery.core.evidence.EvidenceArchive179Test",
+    "name": "writerOriginalActualSizeHashReaderFailuresAndStreamingRetirementNeverSucceed"
+  },
+  {
+    "classname": "uk.co.traynor.privategallery.core.evidence.EvidenceArchive179Test",
+    "name": "wrongWriterOwnerAndDigestFailBeforeAdmission"
+  },
+  {
+    "classname": "uk.co.traynor.privategallery.core.evidence.EvidenceArchive179Test",
+    "name": "outputFailureDoesNotCloseCallerOrProduceReceipt"
+  },
+  {
+    "classname": "uk.co.traynor.privategallery.core.evidence.EvidenceArchive179Test",
+    "name": "ciphertextLimitAndProviderFailureDeleteOnlyNewStage"
+  },
+  {
+    "classname": "uk.co.traynor.privategallery.core.evidence.EvidenceArchive179Test",
+    "name": "bothAuthenticatedPassesCancelAndSecondPassTagFaultNeverPublishOrLeavePlaintext"
+  },
+  {
+    "classname": "uk.co.traynor.privategallery.core.evidence.EvidenceArchive179Test",
+    "name": "closeWaitsForBorrowThenWipesReportAndDeletesStageAndRetiredReexportRefuses"
+  },
+  {
+    "classname": "uk.co.traynor.privategallery.core.evidence.EvidenceArchive179Test",
+    "name": "plaintextReexportOutputFailureReleasesStageOnClose"
+  },
+  {
+    "classname": "uk.co.traynor.privategallery.core.evidence.EvidenceArchive179Test",
+    "name": "outputFailureAndRevocationDuringOriginalStreamingNeverReturnReceipt"
+  },
+  {
+    "classname": "uk.co.traynor.privategallery.core.evidence.EvidenceArchive179Test",
+    "name": "portableSchema2RejectsLegacyBinaryCatalog"
+  },
+  {
+    "classname": "uk.co.traynor.privategallery.core.evidence.EvidenceController179Test",
+    "name": "editsPreserveOriginalFingerprintAndOcrHistory"
+  },
+  {
+    "classname": "uk.co.traynor.privategallery.core.evidence.EvidenceController179Test",
+    "name": "boundedReadRejectsOversizeAndLeavesNoPlaintextOutputFile"
+  },
+  {
+    "classname": "uk.co.traynor.privategallery.core.evidence.EvidenceController179Test",
+    "name": "scoped_bytes_are_wiped_when_outer_reader_rejects_after_consumer_returns"
+  },
+  {
+    "classname": "uk.co.traynor.privategallery.core.evidence.EvidenceController179Test",
+    "name": "cancellation_during_io_return_cannot_abandon_owned_bytes"
+  },
+  {
+    "classname": "uk.co.traynor.privategallery.core.evidence.EvidenceController179Test",
+    "name": "acquisition_claims_are_bounded_bound_to_original_and_unavailable_for_existing_reference"
+  },
+  {
+    "classname": "uk.co.traynor.privategallery.core.evidence.EvidenceController179Test",
+    "name": "refresh_flags_live_missing_changed_policy_and_fingerprint_without_full_read"
+  },
+  {
+    "classname": "uk.co.traynor.privategallery.core.evidence.EvidenceController179Test",
+    "name": "controller_state_paths_clear_at_retirement_and_reject_late_operation"
+  },
+  {
+    "classname": "uk.co.traynor.privategallery.core.evidence.EvidenceController179Test",
+    "name": "import_register_retains_provider_claims_and_reference_removal_preserves_original"
+  },
+  {
+    "classname": "uk.co.traynor.privategallery.core.evidence.EvidenceController179Test",
+    "name": "bulk_registration_reports_committed_prefix_on_failure_and_never_removes_originals"
+  },
+  {
+    "classname": "uk.co.traynor.privategallery.core.evidence.EvidenceCredentials179Test",
+    "name": "blockedBackendWorkDoesNotHoldCapturedPrimaryOrHiddenRetirement"
+  },
+  {
+    "classname": "uk.co.traynor.privategallery.core.evidence.EvidenceCredentials179Test",
+    "name": "sharedOwnerReadVersusRemoveAndReplacementRejectsStaleReadAndWipesCopies"
+  },
+  {
+    "classname": "uk.co.traynor.privategallery.core.evidence.EvidenceCredentials179Test",
+    "name": "queuedSameFileMutationDoesNotBlockRetirementOrResurrectStaleStage"
+  },
+  {
+    "classname": "uk.co.traynor.privategallery.core.evidence.EvidenceCredentials179Test",
+    "name": "realSharedKeystoreGateDoesNotBlockMainOwnerRetirementOrAdmitStaleStage"
+  },
+  {
+    "classname": "uk.co.traynor.privategallery.core.evidence.EvidenceCredentials179Test",
+    "name": "transitionAndDurabilityFailuresPreserveTruthAndRevokeBeforeCleanup"
+  },
+  {
+    "classname": "uk.co.traynor.privategallery.core.evidence.EvidenceCredentials179Test",
+    "name": "invalidReadCopiesAreWipedAndNotificationFailureDoesNotSkipDurabilityCleanup"
+  },
+  {
+    "classname": "uk.co.traynor.privategallery.core.evidence.EvidenceCredentials179Test",
+    "name": "actualCiphertextStagesPreserveOldUntilPromotionAndDetachAtomicFileCompanions"
+  },
+  {
+    "classname": "uk.co.traynor.privategallery.core.evidence.EvidenceCredentials179Test",
+    "name": "ownerScopedKeystoreCredentialsAreIsolatedEncryptedRemovedAndRetired"
+  },
+  {
+    "classname": "uk.co.traynor.privategallery.core.evidence.EvidenceEgress179Test",
+    "name": "foreignOwnerIsRejectedBeforeSourceEnumeration"
+  },
+  {
+    "classname": "uk.co.traynor.privategallery.core.evidence.EvidenceEgress179Test",
+    "name": "digestIsBoundToWholeCatalogueAndOwner"
+  },
+  {
+    "classname": "uk.co.traynor.privategallery.core.evidence.EvidenceNetwork179Test",
+    "name": "controlledHttpsRedirectsAreNotFollowedAndCookiesCacheAreNotReused"
+  },
+  {
+    "classname": "uk.co.traynor.privategallery.core.evidence.EvidenceNetwork179Test",
+    "name": "responseBoundsAndRevocationCancelAdmittedHttpsCalls"
+  },
+  {
+    "classname": "uk.co.traynor.privategallery.core.evidence.EvidenceNetwork179Test",
+    "name": "unavailableExplicitProxyNeverFallsBackAndCloseRejectsNewCalls"
+  },
+  {
+    "classname": "uk.co.traynor.privategallery.core.evidence.EvidenceNetwork179Test",
+    "name": "resetAfterReceiptAnd408Or503NeverRetryBilledPost"
+  },
+  {
+    "classname": "uk.co.traynor.privategallery.core.evidence.EvidenceNetwork179Test",
+    "name": "unknownLengthChunkedResponseOverflowIsRejectedWhileStreaming"
+  },
+  {
+    "classname": "uk.co.traynor.privategallery.core.evidence.EvidenceNetwork179Test",
+    "name": "coroutineCancellationDuringResponseReadDisconnectsWithoutPublishing"
+  },
+  {
+    "classname": "uk.co.traynor.privategallery.core.evidence.EvidenceNetwork179Test",
+    "name": "coroutineCancellationDuringUploadClosesSocketBeforeSourceWriterReturns"
+  },
+  {
+    "classname": "uk.co.traynor.privategallery.core.evidence.EvidenceNetwork179Test",
+    "name": "admissionPausedDuringCallCreationCannotEscapeConcurrentClose"
+  },
+  {
+    "classname": "uk.co.traynor.privategallery.core.evidence.EvidenceOcr179Test",
+    "name": "renderedMessagePreservesNamesDatesWordsConfidenceAndRawCorrection"
+  },
+  {
+    "classname": "uk.co.traynor.privategallery.core.evidence.EvidenceOcr179Test",
+    "name": "ordinary48MegapixelImageIsSampledBeforeWorkingAllocation"
+  },
+  {
+    "classname": "uk.co.traynor.privategallery.core.evidence.EvidenceOcr179Test",
+    "name": "explicitRotationIsAppliedAndRecorded"
+  },
+  {
+    "classname": "uk.co.traynor.privategallery.core.evidence.EvidenceOcr179Test",
+    "name": "utf8DocumentIsStrictUnknownConfidenceAndBounded"
+  },
+  {
+    "classname": "uk.co.traynor.privategallery.core.evidence.EvidenceOcr179Test",
+    "name": "pdfPagesCarryIndependentWordAndTimeIndicesAndLimitExplanation"
+  },
+  {
+    "classname": "uk.co.traynor.privategallery.core.evidence.EvidenceOcr179Test",
+    "name": "failedHocrNeverReadsCachedResultsAndCleansResources"
+  },
+  {
+    "classname": "uk.co.traynor.privategallery.core.evidence.EvidenceOcr179Test",
+    "name": "emptyCachedPageDoesNotStartAnotherRecognition"
+  },
+  {
+    "classname": "uk.co.traynor.privategallery.core.evidence.EvidenceOcr179Test",
+    "name": "cachedIteratorRetainsLowConfidenceAndClosesBeforeBitmapAndEngine"
+  },
+  {
+    "classname": "uk.co.traynor.privategallery.core.evidence.EvidenceOcr179Test",
+    "name": "activeNativeCancellationWaitsForExitBeforeCleanup"
+  },
+  {
+    "classname": "uk.co.traynor.privategallery.core.evidence.EvidenceOcr179Test",
+    "name": "activeNativeRevocationWaitsForExitBeforeCleanup"
+  },
+  {
+    "classname": "uk.co.traynor.privategallery.core.evidence.EvidenceOcr179Test",
+    "name": "realJniProgressCancellationCompletesWithinBoundAndCanRecognizeAgain"
+  },
+  {
+    "classname": "uk.co.traynor.privategallery.core.evidence.EvidenceOcr179Test",
+    "name": "realJniProgressRevocationCompletesWithinBoundAndCreatesNoEvidenceFiles"
+  },
+  {
+    "classname": "uk.co.traynor.privategallery.core.evidence.EvidenceOcr179Test",
+    "name": "blankRealJniPageHasEmptyTextAndUnknownConfidence"
+  },
+  {
+    "classname": "uk.co.traynor.privategallery.core.evidence.EvidenceOcr179Test",
+    "name": "rejectsOversizedInputAndInvalidRotation"
+  },
+  {
+    "classname": "uk.co.traynor.privategallery.core.evidence.EvidenceOwnedRoute179Test",
+    "name": "ownedVpnPostCancellationAndAuthorityRevocationNeverFallback"
+  },
+  {
+    "classname": "uk.co.traynor.privategallery.core.evidence.EvidenceOwnedRoute179Test",
+    "name": "ownedVpnLossCancelsAdmittedPostAndRejectsOldRoute"
+  },
+  {
+    "classname": "uk.co.traynor.privategallery.core.evidence.EvidenceOwnedRoute179Test",
+    "name": "privateUnixTorPostCancellationAndAuthorityRevocationNeverFallback"
+  },
+  {
+    "classname": "uk.co.traynor.privategallery.core.evidence.EvidenceOwnedRoute179Test",
+    "name": "torProcessDeathCancelsAdmittedPostAndRejectsOldRoute"
+  },
+  {
+    "classname": "uk.co.traynor.privategallery.core.evidence.EvidencePdf179Test",
+    "name": "reportHasPdfHeaderAndReadableProvenanceTextSource"
+  },
+  {
+    "classname": "uk.co.traynor.privategallery.core.evidence.EvidencePdf179Test",
+    "name": "multipageWrappingUnicodeAndProvenanceRemainReadableAtEndOfReport"
+  },
+  {
+    "classname": "uk.co.traynor.privategallery.core.evidence.EvidenceRouteCoordinator179Test",
+    "name": "hiddenCannotChooseSystemWithoutAnyTransportSideEffects"
+  },
+  {
+    "classname": "uk.co.traynor.privategallery.core.evidence.EvidenceRouteCoordinator179Test",
+    "name": "independentlyLiveRevokedStartupHasNoTransportSideEffects"
+  },
+  {
+    "classname": "uk.co.traynor.privategallery.core.evidence.EvidenceRouteCoordinator179Test",
+    "name": "vpnAdmissionAndDedicatedProcessFenceBothPrecedePreparationAndReadiness"
+  },
+  {
+    "classname": "uk.co.traynor.privategallery.core.evidence.EvidenceRouteCoordinator179Test",
+    "name": "revokedDuringPreparationCannotProbeReadinessOrPublishRoute"
+  },
+  {
+    "classname": "uk.co.traynor.privategallery.core.evidence.EvidenceRouteCoordinator179Test",
+    "name": "startupCancellationDuringPreparationCannotProbeOrPublishRoute"
+  },
+  {
+    "classname": "uk.co.traynor.privategallery.core.evidence.EvidenceStaging179Test",
+    "name": "restartCleanupDeletesOnlyNamedOrphanCiphertextAndPreservesVaultsAndUnknownFiles"
+  },
+  {
+    "classname": "uk.co.traynor.privategallery.core.evidence.EvidenceStore179Test",
+    "name": "encryptedOwnersPersistSeparatelyAndNeverWriteSearchableEvidenceText"
+  },
+  {
+    "classname": "uk.co.traynor.privategallery.core.evidence.EvidenceStore179Test",
+    "name": "interruptedUpdateLeavesLastCiphertextAndWrongKeyCannotReplaceIt"
+  },
+  {
+    "classname": "uk.co.traynor.privategallery.core.evidence.EvidenceStore179Test",
+    "name": "ciphertextTamperCannotReadOrOverwritePriorEncryptedEvidence"
+  },
+  {
+    "classname": "uk.co.traynor.privategallery.ui.EvidenceAi179UiTest",
+    "name": "actualPreviewNeedsExplicitSendAndSeparateOwnerApplication"
+  },
+  {
+    "classname": "uk.co.traynor.privategallery.ui.EvidenceLocker179UiTest",
+    "name": "primaryActualImportExtractCorrectIncidentSearchRemoveAndReopenPreservesOriginal"
+  },
+  {
+    "classname": "uk.co.traynor.privategallery.ui.EvidenceLocker179UiTest",
+    "name": "ownerAcceptsAndRejectsActualGroupingHintsAndOrdersUncertainTimeline"
+  },
+  {
+    "classname": "uk.co.traynor.privategallery.ui.EvidenceLocker179UiTest",
+    "name": "firstManualMoveUsesVisibleChronologyAndDisablesBoundaries"
+  },
+  {
+    "classname": "uk.co.traynor.privategallery.ui.EvidenceLocker179UiTest",
+    "name": "bulkOriginalRegistrationAndMixedExportSelectionAreOwnerReviewed"
+  },
+  {
+    "classname": "uk.co.traynor.privategallery.ui.EvidenceLocker179UiTest",
+    "name": "editedExtractedTimestampRemainsUserEnteredWithRawQuotePreserved"
+  },
+  {
+    "classname": "uk.co.traynor.privategallery.ui.EvidenceLocker179UiTest",
+    "name": "landscapeDarkLargeTextIncidentFormAndExitRemainReachable"
+  },
+  {
+    "classname": "uk.co.traynor.privategallery.ui.EvidenceLocker179UiTest",
+    "name": "hiddenInnerLockClearsSearchSelectionsAndDialogsWithoutDeletingEncryptedEvidence"
+  },
+  {
+    "classname": "uk.co.traynor.privategallery.ui.EvidenceSaf179Test",
+    "name": "importPickerRecreatesAuthorityOnlyAfterResumedOriginalAuthentication"
+  },
+  {
+    "classname": "uk.co.traynor.privategallery.ui.EvidenceSaf179Test",
+    "name": "latePickerAfterReauthenticationCannotReadOrImportItsDocument"
+  },
+  {
+    "classname": "uk.co.traynor.privategallery.ui.EvidenceSaf179Test",
+    "name": "hiddenWithinGracePickerCapturesFreshAuthorityAfterForegroundReconciliation"
+  },
+  {
+    "classname": "uk.co.traynor.privategallery.ui.EvidenceSaf179Test",
+    "name": "hiddenExpiredPickerCannotReadDocumentAfterRealForegroundReconciliation"
+  },
+  {
+    "classname": "uk.co.traynor.privategallery.ui.EvidenceSaf179Test",
+    "name": "hiddenReauthenticatedPickerCannotReviveOriginalAuthentication"
+  },
+  {
+    "classname": "uk.co.traynor.privategallery.ui.EvidenceSaf179Test",
+    "name": "encryptedPreparePickerFreshControllerCopiesExactSealedCiphertext"
+  },
+  {
+    "classname": "uk.co.traynor.privategallery.ui.EvidenceSaf179Test",
+    "name": "cancelledOutputPickerDiscardsOnlySealedCiphertextAndPreservesOriginals"
+  },
+  {
+    "classname": "uk.co.traynor.privategallery.ui.EvidenceSaf179Test",
+    "name": "plaintextOutputNeedsSeparateExplicitConfirmation"
+  },
+  {
+    "classname": "uk.co.traynor.privategallery.ui.EvidenceSaf179Test",
+    "name": "cancelBlockedProviderWriteClosesAdmissionWithoutBlockingMain"
+  },
+  {
+    "classname": "uk.co.traynor.privategallery.ui.EvidenceSaf179Test",
+    "name": "lockDuringBlockedProviderWriteRevokesAndRequestsPartialCleanup"
+  },
+  {
+    "classname": "uk.co.traynor.privategallery.ui.EvidenceSaf179Test",
+    "name": "hideDuringBlockedProviderWriteRevokesAndRequestsPartialCleanup"
+  },
+  {
+    "classname": "uk.co.traynor.privategallery.ui.EvidenceSaf179Test",
+    "name": "panicDuringBlockedProviderWriteRevokesAndRequestsPartialCleanup"
+  },
+  {
+    "classname": "uk.co.traynor.privategallery.ui.EvidenceSaf179Test",
+    "name": "permissionReturnUsesFreshControllerAndRequiresNewPreviewWithoutAutoConnecting"
+  },
+  {
+    "classname": "uk.co.traynor.privategallery.ui.EvidenceSaf179Test",
+    "name": "permissionReturnAfterReauthenticationCannotReopenAiOrStartTransport"
+  },
+  {
+    "classname": "uk.co.traynor.privategallery.ui.EvidenceSaf179Test",
+    "name": "archiveReexportFreshPasswordAndSeparateConfirmationProducePlaintextOnlyAtDestination"
+  },
+  {
+    "classname": "uk.co.traynor.privategallery.ui.EvidenceSaf179Test",
+    "name": "lockDuringBorrowedNativeRenderRejectsAndRecyclesUnpublishedBitmap"
+  },
+  {
+    "classname": "uk.co.traynor.privategallery.ui.EvidenceSaf179Test",
+    "name": "hideDuringBorrowedNativeRenderRejectsAndRecyclesUnpublishedBitmap"
+  },
+  {
+    "classname": "uk.co.traynor.privategallery.ui.EvidenceSaf179Test",
+    "name": "panicDuringBorrowedNativeRenderRejectsAndRecyclesUnpublishedBitmap"
+  },
+  {
+    "classname": "uk.co.traynor.privategallery.ui.EvidenceSaf179Test",
+    "name": "lockClearsAuthenticatedNativeReportViewAndCipherStage"
+  },
+  {
+    "classname": "uk.co.traynor.privategallery.ui.EvidenceSaf179Test",
+    "name": "hideClearsAuthenticatedNativeReportViewAndCipherStage"
+  },
+  {
+    "classname": "uk.co.traynor.privategallery.ui.EvidenceSaf179Test",
+    "name": "panicClearsAuthenticatedNativeReportViewAndCipherStage"
+  },
+  {
+    "classname": "uk.co.traynor.privategallery.ui.EvidenceSaf179Test",
+    "name": "archiveReexportRequiresPasswordAgainAndChangedCiphertextNeverPublishesReport"
+  },
+  {
+    "classname": "uk.co.traynor.privategallery.ui.EvidenceSaf179Test",
+    "name": "archiveReexportRejectsSameDocumentAliasBeforeTruncateAndNeverDeletesIncomingArchive"
+  },
+  {
+    "classname": "uk.co.traynor.privategallery.ui.EvidenceSaf179Test",
+    "name": "archiveReexportRejectsExactIncomingUriBeforeTruncateAndCleanup"
+  },
+  {
+    "classname": "uk.co.traynor.privategallery.ui.EvidenceSaf179Test",
+    "name": "archiveReexportFailsClosedWhenProviderIdentityCannotBeEstablished"
+  },
+  {
+    "classname": "uk.co.traynor.privategallery.ui.EvidenceSaf179Test",
+    "name": "wrongOriginatingOwnerIsRejectedBeforeArchiveReportPublication"
+  },
+  {
+    "classname": "uk.co.traynor.privategallery.ui.EvidenceSaf179Test",
+    "name": "lockWhileArchiveProviderReadIsActiveCancelsAndPreventsReportPublication"
+  },
+  {
+    "classname": "uk.co.traynor.privategallery.ui.EvidenceSaf179Test",
+    "name": "hideWhileArchiveProviderReadIsActiveCancelsAndPreventsReportPublication"
+  },
+  {
+    "classname": "uk.co.traynor.privategallery.ui.EvidenceSaf179Test",
+    "name": "panicWhileArchiveProviderReadIsActiveCancelsAndPreventsReportPublication"
+  },
+  {
+    "classname": "uk.co.traynor.privategallery.PrivacyShield175Test",
+    "name": "panicRevokesBothSessionsWipesKeyAndNeverReopensHidden"
+  },
+  {
+    "classname": "uk.co.traynor.privategallery.HideContent1761Test",
+    "name": "concealedTabsRestartAndPanicRetainFlagWithoutDeletingSyntheticState"
+  }
+]

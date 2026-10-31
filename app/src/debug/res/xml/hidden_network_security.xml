@@ -2,6 +2,7 @@
   <base-config cleartextTrafficPermitted="false" />
   <domain-config cleartextTrafficPermitted="true">
     <domain includeSubdomains="true">onion</domain>
+    <trust-anchors><certificates src="system" /><certificates src="@raw/hidden_vpn_fixture_ca" /></trust-anchors>
   </domain-config>
   <!-- Disposable reserved-domain emulator fixture only; never in the production APK. -->
   <domain-config cleartextTrafficPermitted="true">

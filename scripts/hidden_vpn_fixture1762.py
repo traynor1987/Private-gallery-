@@ -2,6 +2,10 @@
 """Disposable CI VPN-only synthetic origin/DNS. Never use real gallery/user data."""
 import argparse, base64, hashlib, http.server, json, select, ssl, socket, socketserver, struct, threading, time
 from pathlib import Path
+try:
+    import evidence179_fixture_endpoints as evidence179
+except ModuleNotFoundError:
+    from scripts import evidence179_fixture_endpoints as evidence179
 from email.parser import BytesParser
 from email import policy
 from urllib.parse import urlparse, parse_qs
@@ -72,8 +76,10 @@ class Fixture:
                 for key,value in headers:self.send_header(key,value)
                 self.end_headers();self.wfile.write(body)
             def do_GET(self):
+                if evidence179.get(self,fixture.folder):return
                 if self.path=='/evidence':
                     with fixture.lock:events=list(fixture.events)
+                    events+=evidence179.events(fixture.folder)
                     return self.reply(json.dumps(dict(events=events)).encode(),mime='application/json')
                 fixture.record(kind='http',source=self.client_address[0],method='GET',path=self.path,user_agent=self.headers.get('User-Agent',''),tls=isinstance(self.connection,ssl.SSLSocket),cookie_present='hiddenfixture=only' in self.headers.get('Cookie',''),basic_present=self.headers.get('Authorization','')=='Basic '+base64.b64encode(b'fixture-user:fixture-pass').decode())
                 if self.path.startswith('/manifest178.json?'):
@@ -127,6 +133,7 @@ class Fixture:
                     return self.reply(b'slow complete')
                 return self.reply(PAGE)
             def do_POST(self):
+                if evidence179.post(self,fixture.folder):return
                 length=int(self.headers.get('Content-Length','0'))
                 if length<1 or length>1024*1024:return self.reply(b'rejected',413)
                 body=self.rfile.read(length)
