@@ -2,6 +2,8 @@ package uk.co.traynor.privategallery.ui
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.selection.toggleable
+import androidx.compose.ui.semantics.Role
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -195,17 +197,19 @@ internal fun EvidenceLocker(controller:EvidenceController,onClose:()->Unit,onImp
    }
   }
  }
- if(choice=="Import")GalleryAlertDialog(onDismissRequest={choice=null;originalsSelected=emptySet()},title={EvidenceDialogTitle("Select existing encrypted originals")},text={Column{
-  Text("Review up to 128 originals to register in this vault. Originals remain unchanged. Extraction follows registration; interrupted batches can contain committed records.")
-  LazyColumn(Modifier.heightIn(max=400.dp)){items(state.originals,key={it.item.id}){original->
-   val id=original.item.id
-   Row(Modifier.fillMaxWidth().clickable{originalsSelected=if(id in originalsSelected)originalsSelected-id else if(originalsSelected.size<128)originalsSelected+id else originalsSelected}){
-    Checkbox(id in originalsSelected,{checked->originalsSelected=if(!checked)originalsSelected-id else if(originalsSelected.size<128)originalsSelected+id else originalsSelected},modifier=Modifier.semantics{contentDescription="Register original ${original.item.displayName}"})
-    Column{Text(original.item.displayName);Text("${original.item.mimeType} · ${original.item.plaintextSize} bytes",style=MaterialTheme.typography.bodySmall)}
+ if(choice=="Import")GalleryAlertDialog(scrollBody=false,onDismissRequest={choice=null;originalsSelected=emptySet()},title={EvidenceDialogTitle("Select existing encrypted originals")},text={
+  LazyColumn(Modifier.heightIn(max=400.dp)){
+   item{Text("Review up to 128 originals to register in this vault. Originals remain unchanged. Extraction follows registration; interrupted batches can contain committed records.")}
+   items(state.originals,key={it.item.id}){original->
+    val id=original.item.id;val chosen=id in originalsSelected
+    EvidenceSelectionRow("Register original ${original.item.displayName}",original.item.displayName,
+     "${original.item.mimeType} · ${original.item.plaintextSize} bytes",chosen,chosen||originalsSelected.size<128){checked->
+     originalsSelected=if(checked)originalsSelected+id else originalsSelected-id
+    }
    }
-  }}
-  Text("${originalsSelected.size} / 128 selected")
- }},confirmButton={TextButton(enabled=originalsSelected.isNotEmpty()&&!state.busy,onClick={val ids=originalsSelected.toList();choice=null;originalsSelected=emptySet();controller.registerMany(ids)}){Text("Register selected originals")}},dismissButton={TextButton(onClick={choice=null;originalsSelected=emptySet()}){Text("Cancel")}},properties=DialogProperties(securePolicy=SecureFlagPolicy.SecureOn))
+   item{Text("${originalsSelected.size} / 128 selected")}
+  }
+ },confirmButton={TextButton(enabled=originalsSelected.isNotEmpty()&&!state.busy,onClick={val ids=originalsSelected.toList();choice=null;originalsSelected=emptySet();controller.registerMany(ids)}){Text("Register selected originals")}},dismissButton={TextButton(onClick={choice=null;originalsSelected=emptySet()}){Text("Cancel")}},properties=DialogProperties(securePolicy=SecureFlagPolicy.SecureOn))
  exportSelection?.let{initial->if(catalog!=null)EvidenceExportSelectionDialog(catalog,initial,onClose={exportSelection=null},onContinue={selection->exportSelection=null;onExport(selection)})}
  choice?.takeIf{it!="Import"}?.let{kind->
   val options=catalog?.incidents()?.filter{!it.archived()&&(kind !in listOf("Merge","Move")||it.id()!=incidentId)}?.map{it.id() to it.title()}.orEmpty()
@@ -254,21 +258,29 @@ internal data class EvidenceExportSelection(val incidentIds:List<String>,val evi
  var evidence by remember(initial){mutableStateOf(initial.evidenceIds.toSet())}
  val attached=(evidence+catalog.incidents().filter{it.id() in incidents}.flatMap{it.evidenceIds()+it.events().flatMap{e->e.evidenceIds()}}).toSet()
  val valid=(incidents.isNotEmpty()||evidence.isNotEmpty())&&incidents.size<=128&&attached.size<=128
- GalleryAlertDialog(onDismissRequest=onClose,title={EvidenceDialogTitle("Select export contents")},text={Column{
-  Text("Choose incidents and standalone evidence explicitly. Up to 128 incidents and 128 attached originals; no selection is shortened automatically.")
+ GalleryAlertDialog(scrollBody=false,onDismissRequest=onClose,title={EvidenceDialogTitle("Select export contents")},text={
   LazyColumn(Modifier.heightIn(max=400.dp)){
-   items(catalog.incidents(),key={"incident-${it.id()}"}){incident->Row{
-    Checkbox(incident.id() in incidents,{checked->incidents=if(checked)incidents+incident.id() else incidents-incident.id()},modifier=Modifier.semantics{contentDescription="Export incident ${incident.title()}"})
-    Text(incident.title())
-   }}
-   items(catalog.evidence(),key={"evidence-${it.id()}"}){record->Row{
-    Checkbox(record.id() in evidence,{checked->evidence=if(checked)evidence+record.id() else evidence-record.id()},modifier=Modifier.semantics{contentDescription="Export evidence ${record.name()}"})
-    Text(record.name())
-   }}
+   item{Text("Choose incidents and standalone evidence explicitly. Up to 128 incidents and 128 attached originals; no selection is shortened automatically.")}
+   items(catalog.incidents(),key={"incident-${it.id()}"}){incident->
+    EvidenceSelectionRow("Export incident ${incident.title()}",incident.title(),null,incident.id() in incidents){checked->incidents=if(checked)incidents+incident.id() else incidents-incident.id()}
+   }
+   items(catalog.evidence(),key={"evidence-${it.id()}"}){record->
+    EvidenceSelectionRow("Export evidence ${record.name()}",record.name(),null,record.id() in evidence){checked->evidence=if(checked)evidence+record.id() else evidence-record.id()}
+   }
+   item{Text("${incidents.size} incidents · ${evidence.size} explicit records · ${attached.size} attached originals")
+    if(!valid)Text("Choose contents within the limits to continue.")}
   }
-  Text("${incidents.size} incidents · ${evidence.size} explicit records · ${attached.size} attached originals")
-  if(!valid)Text("Choose contents within the limits to continue.")
- }},confirmButton={TextButton(enabled=valid,onClick={onContinue(EvidenceExportSelection(incidents.toList(),evidence.toList()))}){Text("Review export")}},dismissButton={TextButton(onClick=onClose){Text("Cancel")}},properties=DialogProperties(securePolicy=SecureFlagPolicy.SecureOn))
+ },confirmButton={TextButton(enabled=valid,onClick={onContinue(EvidenceExportSelection(incidents.toList(),evidence.toList()))}){Text("Review export")}},dismissButton={TextButton(onClick=onClose){Text("Cancel")}},properties=DialogProperties(securePolicy=SecureFlagPolicy.SecureOn))
+}
+
+/** One touch/selection owner per row; the checkbox is the visual indicator. */
+@Composable private fun EvidenceSelectionRow(label:String,title:String,detail:String?,selected:Boolean,enabled:Boolean=true,onChange:(Boolean)->Unit) {
+ Row(Modifier.fillMaxWidth().heightIn(min=48.dp)
+  .toggleable(value=selected,enabled=enabled,role=Role.Checkbox,onValueChange=onChange)
+  .semantics{contentDescription=label}.padding(vertical=4.dp),verticalAlignment=androidx.compose.ui.Alignment.CenterVertically){
+  Checkbox(selected,onCheckedChange=null,enabled=enabled,modifier=Modifier.size(48.dp))
+  Column(Modifier.weight(1f)){Text(title);detail?.let{Text(it,style=MaterialTheme.typography.bodySmall)}}
+ }
 }
 
 @Composable private fun EvidenceSavedAdvisory(analysis:EvidenceCatalog.Analysis,incident:EvidenceCatalog.Incident) {

@@ -378,7 +378,10 @@ class EvidenceArchive179Test {
    override fun getNoBackupFilesDir()=File(root,"no-backup").apply{mkdirs()}
    override fun getApplicationContext():android.content.Context=this
   }
-  val key=ByteArray(32){31};val bytes=ByteArray(256*1024).also{java.util.Random(181).nextBytes(it)}
+  val key=ByteArray(32){31};val random=java.util.Random(181)
+  val alphabet="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/".toByteArray(Charsets.US_ASCII)
+  val bytes=ByteArray(256*1024){alphabet[random.nextInt(alphabet.size)]}
+  check(Charsets.UTF_8.newDecoder().decode(java.nio.ByteBuffer.wrap(bytes)).length==bytes.size)
   var access:EvidenceAccess?=null
   try {
    val repo=AndroidVaultRepository(isolated,key)

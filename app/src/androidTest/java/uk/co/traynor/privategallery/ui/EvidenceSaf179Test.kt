@@ -58,6 +58,10 @@ class EvidenceSaf179Test {
   @Volatile var blockWrites=false
   @Volatile var blockReads=false
   val readEntered=CountDownLatch(1)
+  val phase=java.util.concurrent.atomic.AtomicReference("idle")
+  val failureClass=java.util.concurrent.atomic.AtomicReference<String?>(null)
+  val writeHolding=java.util.concurrent.atomic.AtomicBoolean()
+  val cancelledDuringWriteHold=java.util.concurrent.atomic.AtomicBoolean()
   private val workers=Executors.newCachedThreadPool()
   fun file(id:String)=File(directory,if(id=="archive-alias")"archive"else id)
   override fun onCreate()=true
@@ -75,16 +79,20 @@ class EvidenceSaf179Test {
   }
   override fun deleteDocument(documentId:String){deleted.add(documentId);file(documentId).delete()}
   override fun openDocument(documentId:String,mode:String,signal:CancellationSignal?):ParcelFileDescriptor {
-   val input=mode=="r"
+   val input=mode=="r";phase.set(if(input)"read opened"else"write opened")
    if(input)reads.incrementAndGet()else writes.incrementAndGet()
-   signal?.setOnCancelListener{cancellations.incrementAndGet();release.countDown()}
+   signal?.setOnCancelListener{if(writeHolding.get())cancelledDuringWriteHold.set(true);cancellations.incrementAndGet();release.countDown()}
    if((!input&&blockWrites)||(input&&blockReads)) {
     val pipe=ParcelFileDescriptor.createReliablePipe()
     workers.execute{
      try {
-      if(input){readEntered.countDown();check(release.await(30,TimeUnit.SECONDS));ParcelFileDescriptor.AutoCloseOutputStream(pipe[1]).use{it.write(file(documentId).readBytes())}}
-      else ParcelFileDescriptor.AutoCloseInputStream(pipe[0]).use{stream->if(stream.read()>=0)writeEntered.countDown();check(release.await(30,TimeUnit.SECONDS));val buffer=ByteArray(8192);while(stream.read(buffer)>=0){};buffer.fill(0)}
-     }catch(_:Exception){}finally{closes.incrementAndGet();runCatching{if(input)pipe[1].close()else pipe[0].close()}}
+      if(input){phase.set("read gate");readEntered.countDown();check(release.await(30,TimeUnit.SECONDS));ParcelFileDescriptor.AutoCloseOutputStream(pipe[1]).use{it.write(file(documentId).readBytes())}}
+      else ParcelFileDescriptor.AutoCloseInputStream(pipe[0]).use{stream->
+       check(stream.read()>=0){"Provider received no output bytes"};phase.set("write gate");writeHolding.set(true);writeEntered.countDown()
+       try{check(release.await(30,TimeUnit.SECONDS))}finally{writeHolding.set(false)}
+       val buffer=ByteArray(8192);while(stream.read(buffer)>=0){};buffer.fill(0)
+      }
+     }catch(failure:Exception){failureClass.set(failure.javaClass.simpleName)}finally{closes.incrementAndGet();runCatching{if(input)pipe[1].close()else pipe[0].close()}}
     }
     return if(input)pipe[0]else pipe[1]
    }
@@ -126,13 +134,20 @@ class EvidenceSaf179Test {
   val authentication=hidden?.authentication()
   val accesses=CopyOnWriteArrayList<EvidenceAccess>();val picker=Picker();val dismissals=AtomicInteger();val security=CopyOnWriteArrayList<String>();val gate=Any()
   val stageDirectory=File(root,"cipher-staging")
+  val foregroundReconciliations=AtomicInteger()
+  var onNextResumed:((Lifecycle.State)->Unit)?=null
   lateinit var owner:EvidenceOwnerSession
   val same={epoch.get()==1L&&(hidden==null||hidden.isAuthenticationCurrent(authentication))}
   val lifecycleObserver=LifecycleEventObserver{_,event->
-   if(event==Lifecycle.Event.ON_RESUME)foreground.set(true)
+   if(event==Lifecycle.Event.ON_RESUME){
+    foreground.set(true)
+    // Installed before Host: this one-shot test boundary runs inside the actual resume
+    // event, after ON_START reconciliation and before Host may process its resume.
+    val action=onNextResumed;onNextResumed=null;action?.invoke(activity.lifecycle.currentState)
+   }
    if(event==Lifecycle.Event.ON_PAUSE)foreground.set(false)
    if(event==Lifecycle.Event.ON_STOP)hidden?.onBackground(60_000)
-   if(event==Lifecycle.Event.ON_START)hidden?.onForeground() // Same reconciliation order as Main, before RESUMED.
+   if(event==Lifecycle.Event.ON_START){hidden?.onForeground();foregroundReconciliations.incrementAndGet()} // Before RESUMED, as in Main.
   }
   init {
    provider.file("source").writeText("Synthetic private picker179 transcript; no external evidence")
@@ -160,6 +175,7 @@ class EvidenceSaf179Test {
    val operation=generation.incrementAndGet()
    return EvidenceAccess.primary(context,key,{key},{same()&&generation.get()==operation&&foreground.get()},{key.copyOf()},gate)
   }
+  fun diagnostics():String = "foreground=${foreground.get()} accesses=${accesses.size} dismissals=${dismissals.get()} pickerLaunches=${picker.launches} reads=${provider.reads.get()} writes=${provider.writes.get()} closes=${provider.closes.get()} cancellations=${provider.cancellations.get()} providerPhase=${provider.phase.get()} exportRejected=${compose.onAllNodesWithText("Export could not complete.",substring=true).fetchSemanticsNodes().isNotEmpty()} archiveRejected=${compose.onAllNodesWithText("No report was published.",substring=true).fetchSemanticsNodes().isNotEmpty()} savingShown=${compose.onAllNodesWithText("Saving evidence export").fetchSemanticsNodes().isNotEmpty()}"
   fun show(){val registryOwner=object:ActivityResultRegistryOwner{override val activityResultRegistry=picker}
    compose.setContent{CompositionLocalProvider(LocalContext provides context,LocalActivityResultRegistryOwner provides registryOwner){PrivateGalleryTheme(AppTheme.DARK){EvidenceLockerHost(owner,true,preparePermission={Intent("synthetic.evidence179.PERMISSION")}){dismissals.incrementAndGet()}}}}
    compose.waitUntil(20000){compose.onAllNodesWithText("Import document / image").fetchSemanticsNodes().isNotEmpty()}
@@ -203,22 +219,47 @@ class EvidenceSaf179Test {
  private fun importFlow(hidden:Boolean,reauthenticate:Boolean,advance:Long){GraceWatchdog(hidden&&!reauthenticate&&advance==30_000L).use{watchdog->Harness(secret=hidden).use{f->
   watchdog.step("composing Host");f.show();watchdog.step("launching import picker");val old=f.accesses.single();click("Import document / image")
   assertEquals("OpenDocument",f.picker.contract);assertFalse(old.current());assertEquals(0,f.provider.reads.get())
+  val originalPickerRequest=checkNotNull(f.picker.request)
   watchdog.step("stopping Activity");compose.activityRule.scenario.moveToState(Lifecycle.State.CREATED);f.clock.addAndGet(advance)
   if(reauthenticate&&f.hidden==null)f.epoch.incrementAndGet()
   assertEquals("No provider read while stopped",0,f.provider.reads.get())
   if(reauthenticate&&f.hidden!=null){
    // Reconcile the expired background gap through the actual Activity lifecycle first,
    // then authenticate a new identity while resumed before delivering the old result.
+   val reconciliationsBeforeResume=f.foregroundReconciliations.get()
+   val resumeFailure=java.util.concurrent.atomic.AtomicReference<Throwable?>(null)
+   val dispatchedPendingResult=java.util.concurrent.atomic.AtomicBoolean()
+   instrumentation.runOnMainSync{f.onNextResumed={state->
+    try{
+     assertEquals(android.os.Looper.getMainLooper(),android.os.Looper.myLooper())
+     assertEquals(Lifecycle.State.RESUMED,state)
+     assertTrue("Actual ON_START foreground reconciliation must precede delivery",f.foregroundReconciliations.get()>reconciliationsBeforeResume)
+     assertFalse("Foreground expiry must retire the captured authentication",f.hidden.isAuthenticationCurrent(f.authentication))
+     assertFalse(f.hidden.isUnlocked);assertFalse(old.current());assertEquals(1,f.accesses.size)
+     check(f.hidden.complete(f.hidden.beginAuthentication(),f.key.copyOf()))
+     assertTrue(f.hidden.isUnlocked);assertFalse(f.hidden.isAuthenticationCurrent(f.authentication))
+     assertEquals("The original picker must be the only launch",1,f.picker.launches)
+     assertEquals("OpenDocument",f.picker.contract);assertEquals(originalPickerRequest,f.picker.request)
+     assertEquals(0,f.provider.reads.get());assertEquals(1,f.accesses.size)
+     val closedFlag=EvidenceOwnerSession::class.java.getDeclaredField("closed").apply{isAccessible=true}.get(f.owner) as java.util.concurrent.atomic.AtomicBoolean
+     assertFalse("Original pending owner must still be live at dispatch",closedFlag.get())
+     assertEquals("Original picker owner must not have dismissed before delivery",0,f.dismissals.get())
+     f.picker.returnDocument(f.provider.uri("source"));dispatchedPendingResult.set(true)
+    }catch(failure:Throwable){resumeFailure.set(failure)}
+   }}
    compose.activityRule.scenario.moveToState(Lifecycle.State.RESUMED)
-   compose.waitUntil(15000){f.dismissals.get()>0}
-   instrumentation.runOnMainSync{check(f.hidden.complete(f.hidden.beginAuthentication(),f.key.copyOf()));f.picker.returnDocument(f.provider.uri("source"))}
+   resumeFailure.get()?.let{throw AssertionError("Resume-time stale-result precondition failed",it)}
+   assertTrue("Old result must be dispatched in the live original resume turn",dispatchedPendingResult.get())
   }else {
    instrumentation.runOnMainSync{f.picker.returnDocument(f.provider.uri("source"))}
    instrumentation.waitForIdleSync();assertEquals("No provider read after delivery while stopped",0,f.provider.reads.get())
   }
   watchdog.step("resuming Activity");compose.activityRule.scenario.moveToState(Lifecycle.State.RESUMED)
   watchdog.step("awaiting fresh authority and imported catalogue")
-  if(reauthenticate||hidden&&advance>=60_000){compose.waitUntil(15000){f.dismissals.get()>0};assertEquals(0,f.provider.reads.get());assertEquals(1,f.accesses.size);assertFalse(f.owner.sameAuthentication())}
+  if(reauthenticate||hidden&&advance>=60_000){
+   compose.waitUntil(15000){f.dismissals.get()>0};assertEquals(0,f.provider.reads.get());assertEquals(1,f.accesses.size);assertFalse(old.current());assertFalse(f.owner.sameAuthentication())
+   if(reauthenticate&&f.hidden!=null){assertTrue("The genuinely new authentication must remain distinct",f.hidden.isUnlocked);assertFalse(f.hidden.isAuthenticationCurrent(f.authentication))}
+  }
   else {
    compose.waitUntil(15000){f.accesses.size==2}
    val fresh=f.accesses.last();assertTrue(fresh.current());assertFalse(old.current())
@@ -279,10 +320,16 @@ class EvidenceSaf179Test {
  @Test fun cancelBlockedPlaintextSnapshotProviderWriteRevokesWithoutBlockingMain(){Harness(seed=true).use{f->
   f.show();f.exportDialog();click("Choose explicit plaintext ZIP export…");click("Confirm plaintext export")
   f.provider.blockWrites=true;f.returnFromPicker(f.provider.uri("output"))
-  assertTrue(f.provider.writeEntered.await(45,TimeUnit.SECONDS))
+  compose.awaitEvidenceGate("plaintext snapshot provider write",f.provider.writeEntered,45000,
+   failureClass={f.provider.failureClass.get()},diagnostics={f.diagnostics()})
+  assertEquals("Provider must remain held before cancellation",1L,f.provider.release.count)
+  compose.onNodeWithText("Saving evidence export").assertExists()
+  assertEquals("Plaintext output capability must not have completed/closed before cancellation",0,f.provider.cancellations.get())
+  assertTrue("Plaintext provider must still be inside its hold",f.provider.writeHolding.get())
   val before=android.os.SystemClock.elapsedRealtime();click("Cancel")
   assertTrue("Main cancellation must not wait for snapshot/provider IO",android.os.SystemClock.elapsedRealtime()-before<2000)
   compose.waitUntil(15000){f.provider.cancellations.get()>0&&f.provider.closes.get()>0&&"output" in f.provider.deleted}
+  assertTrue("Cancellation must reach the still-held plaintext writer",f.provider.cancelledDuringWriteHold.get())
   assertFalse(f.owner.sameAuthentication());assertTrue(f.accesses.all{!it.current()})
   compose.waitUntil(15000){File(f.context.noBackupFilesDir,"evidence-open-primary").listFiles().orEmpty().isEmpty()}
   compose.onNodeWithText("Explicitly confirmed plaintext ZIP export saved",substring=true).assertDoesNotExist()
@@ -294,11 +341,17 @@ class EvidenceSaf179Test {
  @Test fun panicDuringBlockedProviderWriteRevokesAndRequestsPartialCleanup()=blockedOutput("Panic Exit")
  private fun blockedOutput(action:String){Harness(seed=true).use{f->
   f.show();f.encryptedPicker().fill(0);f.provider.blockWrites=true;f.returnFromPicker(f.provider.uri("output"))
-  assertTrue(f.provider.writeEntered.await(15,TimeUnit.SECONDS))
+  compose.awaitEvidenceGate("encrypted provider write",f.provider.writeEntered,15000,
+   failureClass={f.provider.failureClass.get()},diagnostics={f.diagnostics()})
+  assertEquals("Provider must remain held before retirement",1L,f.provider.release.count)
   if(action!="Cancel")compose.onAllNodesWithContentDescription("Evidence security controls").onLast().performClick()
+  compose.onNodeWithText("Saving evidence export").assertExists()
+  assertEquals("Encrypted output capability must not have completed/closed before retirement",0,f.provider.cancellations.get())
+  assertTrue("Encrypted provider must still be inside its hold",f.provider.writeHolding.get())
   val before=android.os.SystemClock.elapsedRealtime();click(action)
   assertTrue("Main cancellation must not wait for provider IO",android.os.SystemClock.elapsedRealtime()-before<2000)
   compose.waitUntil(15000){f.provider.cancellations.get()>0&&f.provider.closes.get()>0&&"output" in f.provider.deleted}
+  assertTrue("Retirement must cancel the still-held encrypted writer",f.provider.cancelledDuringWriteHold.get())
   assertFalse(f.owner.sameAuthentication());assertTrue(f.accesses.all{!it.current()});assertTrue(f.provider.deleted.none{it=="source"||it=="archive"})
   if(action!="Cancel")assertEquals(listOf(action),f.security.toList())
   compose.onNodeWithText("Password-encrypted .pgevidence export saved.",substring=true).assertDoesNotExist()
@@ -338,7 +391,7 @@ class EvidenceSaf179Test {
   instrumentation.runOnMainSync{controller=checkNotNull(f.owner.newController(f.context))}
   compose.waitUntil(15000){controller.state.value.catalog!=null&&!controller.state.value.busy}
   f.provider.file("archive").writeBytes(f.archiveBytes())
-  val entered=CountDownLatch(1);val release=CountDownLatch(1);val rendered=java.util.concurrent.atomic.AtomicReference<android.graphics.Bitmap?>(null)
+  val entered=CountDownLatch(1);val release=CountDownLatch(1);val nativeHolding=java.util.concurrent.atomic.AtomicBoolean();val renderCompleted=java.util.concurrent.atomic.AtomicBoolean();val renderPhase=java.util.concurrent.atomic.AtomicReference("not called");val renderFailure=java.util.concurrent.atomic.AtomicReference<String?>(null);val rendered=java.util.concurrent.atomic.AtomicReference<android.graphics.Bitmap?>(null)
   var visible by mutableStateOf(true)
   try {
    compose.setContent{CompositionLocalProvider(LocalContext provides f.context,LocalEvidenceSecurityActions provides EvidenceSecurityActions(f.owner::lockVault,f.owner::panicExit,f.owner::hideContent)){
@@ -346,15 +399,26 @@ class EvidenceSaf179Test {
      renderReport={context,bytes,index,current->
       // Run the real proxy-FD/PdfRenderer first, then hold its borrowed return boundary.
       // Retirement must not wipe the borrowed report or publish this late native bitmap.
-      val result=VaultPdfPreview.page(context,bytes,index,current);rendered.set(result.first);entered.countDown()
-      try{check(release.await(15,TimeUnit.SECONDS));result}catch(failure:Throwable){result.first.recycle();throw failure}
+      try{
+       renderPhase.set("native render")
+       val result=try{VaultPdfPreview.page(context,bytes,index,current)}catch(failure:Throwable){renderFailure.set(failure.javaClass.simpleName);throw failure}
+       rendered.set(result.first);renderPhase.set("borrowed return");nativeHolding.set(true);entered.countDown()
+       try{check(release.await(15,TimeUnit.SECONDS));result}catch(failure:Throwable){renderFailure.set(failure.javaClass.simpleName);result.first.recycle();throw failure}
+       finally{nativeHolding.set(false)}
+      }finally{renderCompleted.set(true)}
      },onPlaintextRequest={fail("No re-export consent")},onClose={visible=false})}
    }}
-   f.authenticate();assertTrue(entered.await(30,TimeUnit.SECONDS));assertFalse(rendered.get()!!.isRecycled)
+   f.authenticate()
+   compose.awaitEvidenceGate("borrowed native report return",entered,30000,failureClass={renderFailure.get()},
+    diagnostics={"${f.diagnostics()} renderPhase=${renderPhase.get()} authenticateRejected=${compose.onAllNodesWithText("No report was published.",substring=true).fetchSemanticsNodes().isNotEmpty()} renderRejected=${compose.onAllNodesWithText("could not be rendered",substring=true).fetchSemanticsNodes().isNotEmpty()}"})
+   assertEquals("Native report must remain borrowed before retirement",1L,release.count)
+   assertFalse(rendered.get()!!.isRecycled)
    compose.onAllNodesWithContentDescription("Evidence security controls").onLast().performClick()
+   assertTrue("Native callback must still hold its borrowed return",nativeHolding.get());assertFalse(renderCompleted.get())
    val before=android.os.SystemClock.elapsedRealtime();click(action)
    assertTrue("Retirement must not wait on borrowed native report",android.os.SystemClock.elapsedRealtime()-before<2000)
    assertFalse(f.owner.sameAuthentication());compose.onNodeWithContentDescription("Authenticated evidence PDF report").assertDoesNotExist()
+   assertTrue("Native callback must remain held through retirement",nativeHolding.get());assertFalse(renderCompleted.get());assertNull(renderFailure.get())
    release.countDown();compose.waitUntil(15000){rendered.get()?.isRecycled==true}
    compose.waitUntil(15000){File(f.context.noBackupFilesDir,"evidence-open-primary").listFiles().orEmpty().isEmpty()}
    assertTrue(f.provider.file("archive").isFile);assertTrue(f.provider.deleted.isEmpty())

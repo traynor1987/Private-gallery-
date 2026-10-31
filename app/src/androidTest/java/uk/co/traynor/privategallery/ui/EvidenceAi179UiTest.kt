@@ -73,7 +73,7 @@ class EvidenceAi179UiTest {
    compose.evidenceNode(hasText("Save advisory")).performClick()
    compose.waitUntil(15000){controller.state.value.catalog?.analyses()?.size==1&&!controller.state.value.busy}
    assertFalse(access.store.read().analyses().single().applied())
-   compose.evidenceNode(hasText("Create incident")).performClick();compose.onNodeWithText("Confirm").performClick()
+   compose.evidenceNode(hasText("Create incident")).performClick();compose.evidenceNode(hasText("Confirm") and hasClickAction()).performClick()
    compose.onNode(hasSetTextAction() and hasText("Title")).performTextReplacement("Owner-approved AI179")
    compose.onNodeWithText("Create").performClick()
    compose.waitUntil(15000){controller.state.value.catalog?.incidents()?.size==1&&!controller.state.value.busy}
@@ -85,7 +85,7 @@ class EvidenceAi179UiTest {
    compose.evidenceNode(hasText("Synthetic advisory179. The visible timestamp is uncertain.")).assertIsDisplayed()
    compose.runOnIdle{compose.activity.onBackPressedDispatcher.onBackPressed()}
    compose.onNodeWithText("Library").performClick();compose.evidenceNode(hasContentDescription("Select evidence selected179.txt")).performClick()
-   compose.evidenceNode(hasText("Remove references")).performClick();compose.onNodeWithText("Confirm").performClick()
+   compose.evidenceNode(hasText("Remove references")).performClick();compose.evidenceNode(hasText("Confirm") and hasClickAction()).performClick()
    compose.waitUntil(15000){!controller.state.value.busy&&controller.state.value.catalog?.evidence()?.isEmpty()==true}
    compose.onNodeWithText("Incidents").performClick();compose.evidenceNode(hasText("Owner-approved AI179")).performClick()
    compose.evidenceNode(hasText("Synthetic advisory179. The visible timestamp is uncertain.")).assertIsDisplayed()

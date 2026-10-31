@@ -52,14 +52,14 @@ class EvidenceLocker179UiTest {
    androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().runOnMainSync{controller=EvidenceController(f.context,f.access)}
    compose.setContent{CompositionLocalProvider(LocalContext provides f.context){PrivateGalleryTheme(AppTheme.LIGHT){EvidenceLocker(controller,{},{},{},{},{})}}}
    waitReady(controller,0)
-   click("Add existing evidence");compose.evidenceNode(hasContentDescription("Register original alpha179.txt")).performClick().assertIsOn();click("Register selected originals");waitReady(controller,1)
+   click("Add existing evidence");compose.evidenceNode(hasContentDescription("Register original alpha179.txt")).assertIsDisplayed().assertHeightIsAtLeast(48.dp).performClick().assertIsOn();click("Register selected originals");waitReady(controller,1)
    compose.onNodeWithText("Library").performClick();compose.evidenceNode(hasText("alpha179.txt")).performClick();waitReady(controller,1)
    click("Review / correct");field("Owner-corrected text").performTextReplacement("unique179 owner corrected Alice timestamp uncertain")
    compose.onNodeWithText("Save").performClick()
    compose.waitUntil(15000){controller.state.value.catalog?.evidence()?.singleOrNull()?.transcript()?.startsWith("unique179")==true&&!controller.state.value.busy}
    val corrected=f.access.store.read().evidence().single();assertTrue(corrected.ocr().single().text().contains("arrange delivery"));assertEquals(1,corrected.corrections().size)
    compose.runOnIdle{compose.activity.onBackPressedDispatcher.onBackPressed()}
-   click("Add evidence");compose.evidenceNode(hasContentDescription("Register original beta179.txt")).performClick().assertIsOn();click("Register selected originals");waitReady(controller,2)
+   click("Add evidence");compose.evidenceNode(hasContentDescription("Register original beta179.txt")).assertIsDisplayed().assertHeightIsAtLeast(48.dp).performClick().assertIsOn();click("Register selected originals");waitReady(controller,2)
    compose.onNodeWithText("Incidents").performClick();click("New incident")
    field("Title").performTextReplacement("Synthetic incident179");compose.onNodeWithText("Save").performClick()
    compose.waitUntil(15000){controller.state.value.catalog?.incidents()?.size==1&&!controller.state.value.busy}
@@ -140,7 +140,7 @@ class EvidenceLocker179UiTest {
   try {
    androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().runOnMainSync{controller=EvidenceController(f.context,f.access)}
    compose.setContent{CompositionLocalProvider(LocalContext provides f.context){PrivateGalleryTheme(AppTheme.LIGHT){EvidenceLocker(controller,{},{},{},{exported=it},{})}}}
-   waitReady(controller,0);click("Add existing evidence");compose.evidenceNode(hasContentDescription("Register original alpha179.txt")).performClick().assertIsOn();compose.evidenceNode(hasContentDescription("Register original beta179.txt")).performClick().assertIsOn()
+   waitReady(controller,0);click("Add existing evidence");compose.evidenceNode(hasContentDescription("Register original alpha179.txt")).assertIsDisplayed().assertHeightIsAtLeast(48.dp).performClick().assertIsOn();compose.evidenceNode(hasContentDescription("Register original beta179.txt")).assertIsDisplayed().assertHeightIsAtLeast(48.dp).performClick().assertIsOn()
    assertTrue(f.access.store.read().evidence().isEmpty())
    compose.onNodeWithText("Register selected originals").performClick();waitReady(controller,2)
    assertEquals(2,f.access.sources.list().size)
@@ -199,7 +199,7 @@ class EvidenceLocker179UiTest {
    compose.runOnIdle{controller.register(f.ids.first())};waitReady(controller,1)
    compose.onNodeWithText("Library").performClick();compose.onNodeWithTag("evidence-search").performTextReplacement("Alice")
    compose.evidenceNode(hasContentDescription("Select evidence alpha179.txt")).performClick()
-   compose.onNodeWithText("alpha179.txt").performClick();waitReady(controller,1);click("Review / correct")
+   compose.evidenceNode(hasText("alpha179.txt") and hasClickAction()).performClick();waitReady(controller,1);click("Review / correct")
    field("Owner-corrected text").performTextReplacement("Unsaved private179")
    compose.runOnIdle{f.hidden!!.lock()}
    compose.waitUntil(10000){closed.get()>0&&controller.state.value.catalog==null}
