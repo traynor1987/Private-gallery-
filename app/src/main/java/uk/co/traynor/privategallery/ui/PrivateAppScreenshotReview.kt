@@ -30,6 +30,8 @@ internal fun PrivateAppScreenshotReview(request:PrivateAppScreenshotRequest,onCl
     val scope=rememberCoroutineScope()
     val alive=remember(request){AtomicBoolean(true)}
     val consumed=remember(request){AtomicBoolean(false)}
+    val memoryGate=remember(request){Any()}
+    val ownedBitmaps=remember(request){mutableSetOf<Bitmap>()}
     val receipt=remember(request){java.util.concurrent.atomic.AtomicReference<String?>(null)}
     var preview by remember(request){mutableStateOf<Bitmap?>(null)}
     var busy by remember(request){mutableStateOf(true)}
@@ -40,25 +42,32 @@ internal fun PrivateAppScreenshotReview(request:PrivateAppScreenshotRequest,onCl
     val lifecycle=androidx.lifecycle.compose.LocalLifecycleOwner.current.lifecycle
     fun consume(){if(consumed.compareAndSet(false,true))request.source.onConsumed()}
     fun current()=alive.get() && request.current()
-    fun dismiss(){alive.set(false);request.cancel(receipt.get());consume();close()}
+    fun wipe(bitmap:Bitmap){if(!bitmap.isRecycled){bitmap.eraseColor(0);bitmap.recycle()}}
+    fun releaseMemory(){synchronized(memoryGate){alive.set(false);ownedBitmaps.forEach(::wipe);ownedBitmaps.clear()}}
+    fun decodeOwned(bytes:ByteArray):Bitmap {
+        val bitmap=decodeScreenshotPreview(bytes)
+        synchronized(memoryGate){if(!alive.get()){wipe(bitmap);error("Screenshot review closed")};ownedBitmaps.add(bitmap)}
+        return bitmap
+    }
+    fun dismiss(){releaseMemory();preview=null;request.cancel(receipt.get());consume();close()}
     val owned=remember(request){request.source.copy(
         isCancelled={!alive.get() || request.source.isCancelled()},
         onConsumed={if(consumed.compareAndSet(false,true))request.source.onConsumed()},
-        publishIfAllowed={commit ->check(alive.get());request.source.publishIfAllowed {check(alive.get());commit()}})}
+        publishIfAllowed={commit ->synchronized(memoryGate){check(alive.get());request.source.publishIfAllowed {check(alive.get());commit()}}})}
     DisposableEffect(request,lifecycle) {
         val observer=androidx.lifecycle.LifecycleEventObserver {_,event ->if(event==androidx.lifecycle.Lifecycle.Event.ON_STOP)dismiss()}
         lifecycle.addObserver(observer)
-        onDispose {alive.set(false);request.cancel(receipt.get());consume();preview?.let {it.eraseColor(0);it.recycle()};preview=null;lifecycle.removeObserver(observer)}
+        onDispose {releaseMemory();request.cancel(receipt.get());consume();preview=null;lifecycle.removeObserver(observer)}
     }
     LaunchedEffect(request) {while(isActive){delay(100);if(!current()){dismiss();break}}}
     LaunchedEffect(request) {
         val result=withContext(Dispatchers.IO){runCatching {
             request.source.openStream().use {input ->
                 val bytes=input.readBytesBounded()
-                try {decodeScreenshotPreview(bytes)}finally{bytes.fill(0)}
+                try {decodeOwned(bytes)}finally{bytes.fill(0)}
             }
         }}
-        if(!current()){result.getOrNull()?.let {it.eraseColor(0);it.recycle()};dismiss();return@LaunchedEffect}
+        if(!current()){result.getOrNull()?.let {synchronized(memoryGate){ownedBitmaps.remove(it);wipe(it)}};dismiss();return@LaunchedEffect}
         result.onSuccess {preview=it}.onFailure {message="The captured image could not be validated. Cancel and try again."}
         busy=false
     }
@@ -75,10 +84,10 @@ internal fun PrivateAppScreenshotReview(request:PrivateAppScreenshotRequest,onCl
                 scope.launch {
                     val result=withContext(Dispatchers.IO){runCatching {
                         val bytes=request.read(id)
-                        try {decodeScreenshotPreview(bytes)}finally{bytes.fill(0)}
+                        try {decodeOwned(bytes)}finally{bytes.fill(0)}
                     }}
-                    if(!current()){result.getOrNull()?.let {it.eraseColor(0);it.recycle()};dismiss();return@launch}
-                    result.onSuccess {bitmap ->preview?.let {it.eraseColor(0);it.recycle()};preview=bitmap;viewing=true}
+                    if(!current()){result.getOrNull()?.let {synchronized(memoryGate){ownedBitmaps.remove(it);wipe(it)}};dismiss();return@launch}
+                    result.onSuccess {bitmap ->preview?.let {synchronized(memoryGate){ownedBitmaps.remove(it);wipe(it)}};preview=bitmap;viewing=true}
                         .onFailure {message="The saved screenshot is unavailable. Open this authenticated Vault to view it."}
                     busy=false
                 }

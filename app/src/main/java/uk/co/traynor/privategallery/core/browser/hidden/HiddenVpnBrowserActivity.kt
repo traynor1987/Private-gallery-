@@ -512,7 +512,7 @@ class HiddenVpnBrowserActivity:ComponentActivity() {
         val view=current ?: return
         val revision=navigationRevision
         val owner=broker
-        val authorized={broker===owner && !privateAppsOpen && current===view && navigationRevision==revision && ready && live() &&
+        val authorized={screenshotGeneration.get()==captureGeneration && broker===owner && !privateAppsOpen && current===view && navigationRevision==revision && ready && live() &&
             lifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.RESUMED)}
         screenshotReview=null
         view.postDelayed({

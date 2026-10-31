@@ -166,5 +166,9 @@
   {
     "classname": "uk.co.traynor.privategallery.ui.PrivateAppScreenshot49Test",
     "name": "review_cancel_save_and_view_read_the_committed_primary_item"
+  },
+  {
+    "classname": "uk.co.traynor.privategallery.ui.PrivateAppScreenshot49Test",
+    "name": "disposing_while_saved_image_read_is_in_flight_wipes_late_bytes_without_reopening"
   }
 ]
