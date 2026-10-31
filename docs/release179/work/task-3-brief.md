@@ -1,0 +1,19 @@
+# Task3 offline OCR implementation
+
+Readthisfirst: exactrequirementsbelow; sharedmodelCONTRACTS.md isbinding includingalladdenda. Rootowns EvidenceMetadata.kt andsources/controller/UI; yourscope excludes those.
+
+ OfflineOCR and provenance
+Files core/evidence/EvidenceOcr.kt, EvidenceMetadata.kt; pinnedassets/model+notices; scopeddependencyconfiguration; EvidenceOcr179Test.kt.
+- [ ] Testsyntheticrenderedmessage text/names/date/time/rotation/confidence/rawcorrection andrevocation/nooutputfiles.
+- [ ] ImplementpinnedofflineTesseract, cancellablehOCR-first withnativeexitcleanup, boundedbitmaps, document/PDFtextorpageOCR, timestampclaimlabels.
+- [ ] Verifyassetchecksum/licenses/nativeABIs/16KBcompatibility andrealAPI37OCR.
+
+
+
+OWNONLY: core/evidence/EvidenceOcr.kt (+smallOCR-onlyhelperifneeded); app/src/androidTest/java/uk/co/traynor/privategallery/core/evidence/EvidenceOcr179Test.kt; scripts/prepare_evidence179_model.sh; scripts/tests/test_evidence179_model.py; settings.gradle.kts restrictedJitPackrepository; app/build.gradle.kts addpinneddependency/buildtimeassetTaskONLY (preservecurrent1.7.9/code51/API37metadata); modellicense/hashmanifest/noticeunderapp/src/main/assets/evidence179/ anddocs/release179/OCR179.md. NoMain/metadata/controller/network/modelJava/otherworkflows/securitycipheredits.
+
+Implementationinterface suspendEvidenceOcr(Context).recognize(bytes:ByteArray,mime:String,rotation:Int,current:()->Boolean):EvidenceCatalog.Ocr EXACTJavaRecord constructor currentmodelread. Word/ExtractedTime pageIndex; Ocr.pageCount meansprocessedpages1..32, partialtrueiftruncatedpages/text; eightOcrversionsnotpagecount. Sourcebytescallerowned untouched. UTF8text/CSV strictdecoder, engineUTF8_DOCUMENT confidence-1; PDFs reuserenderedmemoryonlyVaultPdfPreview.page/current max32pages and120swhole doc/30sperpage; exposepartial explanatoryflags, fulloriginalpreserved. Imagesdownsamplebeforeallocationlongedge<=2048, workingbitmap<=16MP (allowordinary48MP source viaSampleSize; rejectpathologicaldimensions/bytes>32MiB withclearlocalfailure). Rotation0/90/180/270 explicitrecorded. Mean/wordconfidence unverified0..100/-1, rawwords/textnotfilteredlowconfidence. MapEvidenceTextHints.scan()readonlyrawdatehints intoExtractedTime(pageIndex,...confidence-1), neverautoidentifiedparticipants. No network/provider fallback.
+
+DependencyTesseract4Android4.9.0 cz.adaptech.tesseract4android:tesseract4android:4.9.0 (standard), restrictedJitPackincludeGroup only. Publicofficialmodel4.1.0eng staged /workspace/scratch/4181ccd09b2e/evidence179-research/eng.traineddata SHA7d4322bd2a7749724879683fc3912cb542f19906c83bcc1a52132556427170b2 length4113088; LICENSE+manifestthere. ModelBINARYNOTGIT: GradlepreBuildpreparetask runsfixedofficialdownloadSHA-checkedscript tobuild/generated/evidence179Assets/tessdata/eng.traineddata; assets.srcDirgenerated; failsclosedifmissing/hashwrong. No runtimeappHTTP; modelbundledAPK and verified/copyatomicintoprivatemodeldir. RootwillCIpackageassetchecks. Tracklicense/source/hash/versionnotices. Fetchpermittedbuild-timeartifactstemp/localonly, noactualAPIcalls/credentials.
+
+TesseractJNI: callcancellablegetHOCRText first, thengetUTF8Text/ResultIterator afterrecognition. stop() oncancellation/revocation/deadline; never recyclebitmap/endnativeinstance untilrecognition exits; serializeAPIinstance. Wipebitmaps/buffers/closeiterator/engine allpaths. No evidenceimages/textfiles. FrameworkPDFproxyreadsrecheckedauthority. LocalGradlebootstrapblockeduncached9.5.0/network; WRITEinstrumentedtestsfirst, don'tclaimactualruntimepasseduntilrootgroupedCI. HostmodelscriptTDDwithrealstagedpublicmodel/fakecurlfixtures validatesexistingcache/wrongdigest/partialfailure/nohardcodedruntimefetch; observeREDfornewscript thenGREEN. DoNOTlaunchCI/commit/push/sign/subagents. Fullreportdocs/release179/work/task-3-report.md withfiles/hostREDGREEN/Androidtestnames/pendingruntime/nativeABI/16KBconcerns. Rootreviewsintegrates.

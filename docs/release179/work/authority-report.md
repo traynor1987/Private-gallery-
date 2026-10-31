@@ -1,0 +1,7 @@
+# Evidence captured lease factories report
+
+RootnativeTask2subtask: EvidenceAuthorities.java and EvidenceAuthorities179Checks.java. Primarycaptureskeyidentity+callerimmutableauthenticationepoch guard/sharedcommitgate; peropownedkeycopy; stale/closedneverexposeskeyorcommits; HiddenusesactualHiddenSession.Authority+Operation, nocrossvaultfallback. Observedrevocationcloses/wipesoperation; finalclosealwayswipes. Hidden authorizedcallbackmustbenonblocking andnotreverse-lockowner; rootintegrationmustcloseEvidenceAccess undercorrespondingcommitboundary andrevocationcallbackssetatomicflags/enqueuecleanup only.
+
+RED: java com.sun.tools.javac.Main -d /tmp/evidence179-hints [existingHiddenRecordStore/HiddenSession/coreevidenceJava] scripts/tests/EvidenceAuthorities179Checks.java &&java ...EvidenceAuthorities179Checks -> AssertionError Evidence179capturedleasefactoriesmissing. GREEN afterimplementation: -Xlint:all compile andEvidenceAuthorities179Checks ->21checksPASS. A testfoundHiddenSession.revokeOperations marksoperationsrevokedbutdoesn'titselfwipeoperationcopy; factorycurrent()nowcloses/wipes whenrevocationobserved, preservingstrongcheck withoutchangingHiddenSession. Keysourcevaultarrayretainsbytes.
+
+CoversPrimarycopy/commit/closewipe/sourcekeyunchanged/epochstale/noextra keycopy/newfactory/identitychange; realHiddenPINsession/consumedcandidate/separatekey/operationrevoke/keywipe/reauthstale/presentationrevoke/no latepublication. NoAndroidbuild orreleaseclaim. RootMaincapturedguardsandcancelregistrationnotintegratedyet. Scopedsecurityreviewpending.

@@ -34,3 +34,16 @@ IndependentdesignreviewfoundImportantinterface/authenticated-open/concurrency/li
 LocalGradlebootstrapattempt failsbeforecompile: uncached9.5.0 distribution, Networkisunreachable. HostJava/Pythonavailable; Androidcompilation/runtime mustusecoherentfocusedCI, not claim localpass.
 
 Task1: IN_PROGRESS agent/root/evidence_model_store, base2e420b9, exactbriefwork/task-1-brief.md; reportwork/task-1-report.md. NoCI/commitpermissions; rootreviews/integrates.
+
+Independent native subtask: EvidenceTextHints.java rootTDD RED observedmissingfeature, GREEN hostchecksPASS, reviewpackage /workspace/scratch/4181ccd09b2e/review179-hints.diff; reportwork/text-hints-report.md; noAndroidclaim.
+
+Task1: implementationDONE pendingtaskreview;91hostassertionsPASS/eight178programsPASS; reportswork/task-1-report.md. NoAndroidclaim.
+Text-hintsnativefixround1/5: Importantblankregex addressedRED/GREEN, scopedreviewPASS/PASS; noopenfindings, no releaseapproval.
+NativeTask2authorityfactories:21hostchecksPASS afterfeaturemissingRED; reportwork/authority-report.md; reviewswithfoundationforleaseboundary. RootMain/SourceControllernotyetimplemented.
+
+Task1 fixround1/5: I1historicalsourceidentity+I2retiredplaintextbuffer fixesimplemented;117model/store+21authority+timestampchecksPASS; scopedrereviewpending. Package /workspace/scratch/4181ccd09b2e/review179-foundation-fix1.diff. No parkedImportant.
+Versionassignment: immediatelyrefetchedallremoterefs,85appmetadatarefs max50; workingappmetadata1.7.9/code51, min/target37packageunchanged. Notyetcommitted.
+Ruling: bundledOCRmodel fetchedonlyatBUILDtimefrompinnedofficialsource/hashandpackagedAPK, neverruntimeHTTP; avoidscommitting4MBbinarythroughGitData, sameofflinebehavior. License/source/hashtracked.
+
+Task1: COMPLETE scopedreviewfix1 I1/I2ADDRESSED0openImportant/Critical; reportSHAa26267c8fc2c01d39debf88dedbc9c91167fdfc7da40a243666f6c2cf9edbbcf. Domain/store117+authority21+hints hostPASS; noAndroidreleaseapproval. RootNativeTask2leasefactories scopedPASS.
+NextindependentworkerTask3OCR; rootparallelTask2AndroidSources/controller/UI integration. Disjointfiles perbrief, onlyoneimplementationsubagentactive.
