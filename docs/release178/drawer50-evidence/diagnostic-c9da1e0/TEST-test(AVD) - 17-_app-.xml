@@ -1,0 +1,11 @@
+<?xml version='1.0' encoding='UTF-8' ?>
+<testsuites tests="1" failures="0" errors="0" skipped="0" time="19.24" timestamp="2026-10-31T12:00:13" hostname="localhost">
+  <testsuite name="uk.co.traynor.privategallery.ui.PrivateAppsDrawer50Test" tests="1" failures="0" errors="0" skipped="0" time="16.731" timestamp="2026-10-31T12:00:13" hostname="localhost">
+    <properties>
+      <property name="device" value="test(AVD) - 17" />
+      <property name="flavor" value="" />
+      <property name="project" value=":app" />
+    </properties>
+    <testcase name="filtered_reorder_uses_full_persisted_order_and_survives_reopen" classname="uk.co.traynor.privategallery.ui.PrivateAppsDrawer50Test" time="16.731" />
+  </testsuite>
+</testsuites>

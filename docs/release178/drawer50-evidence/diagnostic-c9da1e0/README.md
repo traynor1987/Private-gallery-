@@ -1,0 +1,3 @@
+# One-case trace PASS — not release approval
+
+Sourcec9da1e052dc1870e4d5ab6298642610d7959a2ac/run41198457901/job124529296897. Artifact13041862355 SHA25612700a867daf63a07560be4d586434969a567df212348df0f8c38693df500efd. Compile/lint/35JVM andonecasePASS. No final-gates.json/full47/packetclaim. FirstLOADSTARTpid/tid4762/4762, AFTER_IO/PUBLISHED/FINALLY4762/4820 withsamecontroller/aliveidentity; freshloadpublishedonMain4762. ConcreteoffMainUIpublicationobserved; logging-onlypass doesnotprovepreviousstallcause orfix. Finalsource explicitlydispatchesload/change/discoverypublicationandpollrevoke toMainwithauthoritycheckinside, preservescancellation, removesallproductiontraces, requiresnewfull47gate.

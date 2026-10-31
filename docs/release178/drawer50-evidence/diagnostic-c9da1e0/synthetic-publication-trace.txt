@@ -1,0 +1,18 @@
+10-31 11:59:56.567  4762  4762 I DrawerLibrary50: controller=4082684 aliveToken=110449285 LOAD START active=true current=true
+10-31 11:59:56.571  4762  4820 I DrawerReorder50: generation=1 read=1 started
+10-31 11:59:56.581  4762  4762 I DrawerLibrary50: controller=4082684 aliveToken=110449285 OBSERVED busy=true count=0 alive=true revoked=false
+10-31 11:59:56.608  4762  4820 I DrawerReorder50: generation=1 read=1 complete ids=[94d585c0-52df-4975-975c-4f5b036228a5, 6066976f-9e65-4fee-90ba-21eae1b53b93, f329a3f0-686f-470c-ab74-fd948f5aff61, edbd6dee-87aa-48fa-b32d-fa9c77354611]
+10-31 11:59:56.608  4762  4820 I DrawerLibrary50: controller=4082684 aliveToken=110449285 LOAD AFTER_IO success=true active=true current=true
+10-31 11:59:56.609  4762  4820 I DrawerLibrary50: controller=4082684 aliveToken=110449285 LOAD PUBLISHED busy=false count=4 active=true current=true
+10-31 11:59:56.609  4762  4820 I DrawerLibrary50: controller=4082684 aliveToken=110449285 LOAD FINALLY cancellation=none active=true current=true
+10-31 12:00:07.281  4762  4762 I DrawerLibrary50: controller=4082684 aliveToken=110449285 DISPOSE beforeAlive=false
+10-31 12:00:07.379  4762  4778 I DrawerReorder50: generation=2 read=2 started
+10-31 12:00:07.381  4762  4778 I DrawerReorder50: generation=2 read=2 complete ids=[edbd6dee-87aa-48fa-b32d-fa9c77354611, 94d585c0-52df-4975-975c-4f5b036228a5, 6066976f-9e65-4fee-90ba-21eae1b53b93, f329a3f0-686f-470c-ab74-fd948f5aff61]
+10-31 12:00:07.433  4762  4762 I DrawerLibrary50: controller=39978649 aliveToken=85302622 OBSERVED busy=true count=0 alive=true revoked=false
+10-31 12:00:07.433  4762  4762 I DrawerLibrary50: controller=39978649 aliveToken=85302622 LOAD START active=true current=true
+10-31 12:00:07.435  4762  4820 I DrawerReorder50: generation=2 read=3 started
+10-31 12:00:07.437  4762  4820 I DrawerReorder50: generation=2 read=3 complete ids=[edbd6dee-87aa-48fa-b32d-fa9c77354611, 94d585c0-52df-4975-975c-4f5b036228a5, 6066976f-9e65-4fee-90ba-21eae1b53b93, f329a3f0-686f-470c-ab74-fd948f5aff61]
+10-31 12:00:07.438  4762  4762 I DrawerLibrary50: controller=39978649 aliveToken=85302622 LOAD AFTER_IO success=true active=true current=true
+10-31 12:00:07.439  4762  4762 I DrawerLibrary50: controller=39978649 aliveToken=85302622 LOAD PUBLISHED busy=false count=4 active=true current=true
+10-31 12:00:07.440  4762  4762 I DrawerLibrary50: controller=39978649 aliveToken=85302622 LOAD FINALLY cancellation=none active=true current=true
+10-31 12:00:08.016  4762  4762 I DrawerLibrary50: controller=39978649 aliveToken=85302622 DISPOSE beforeAlive=true

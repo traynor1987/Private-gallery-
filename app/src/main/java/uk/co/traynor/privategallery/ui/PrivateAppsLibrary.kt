@@ -43,15 +43,9 @@ internal fun PrivateAppsLibrary(controller:PrivateAppsController,onClose:()->Uni
  var showInformation by remember(controller){mutableStateOf(false)}
  val close=remember(controller){onClose}
  fun current()=alive.get() && controller.isCurrent()
- fun diagnosticTrace(event:()->String) {
-  if(uk.co.traynor.privategallery.BuildConfig.DEBUG)runCatching {
-   android.util.Log.i("DrawerLibrary50","controller=${System.identityHashCode(controller)} aliveToken=${System.identityHashCode(alive)} ${event()}")
-  }
- }
- SideEffect{diagnosticTrace{"OBSERVED busy=$busy count=${apps.size} alive=${alive.get()} revoked=$revoked"}}
  fun clearPresentation(){apps=emptyList();editor=null;editing=false;removal=null;message="";query="";menuId=null;selectedId=null;reorder=false;settingsId=null;showInformation=false}
  fun dismiss(){if(alive.getAndSet(false)){clearPresentation();revoked=true;close()}}
- DisposableEffect(controller){onDispose{diagnosticTrace{"DISPOSE beforeAlive=${alive.get()}"};alive.set(false)}}
+ DisposableEffect(controller){onDispose{alive.set(false)}}
  val lifecycle=androidx.lifecycle.compose.LocalLifecycleOwner.current.lifecycle
  DisposableEffect(controller,lifecycle){
   val observer=androidx.lifecycle.LifecycleEventObserver{_,event->if(event==androidx.lifecycle.Lifecycle.Event.ON_STOP)dismiss()}
@@ -63,31 +57,24 @@ internal fun PrivateAppsLibrary(controller:PrivateAppsController,onClose:()->Uni
   busy=true;message=""
   scope.launch {
    val result=withContext(Dispatchers.IO){runCatching{action()}}
-   if(!current()){revoke();return@launch}
-   result.onSuccess{apps=it.apps;after()}.onFailure{message="Private apps could not be updated. Your saved data was kept."}
-   busy=false
+   withContext(Dispatchers.Main.immediate) {
+    if(!current()){revoke();return@withContext}
+    result.onSuccess{apps=it.apps;after()}.onFailure{message="Private apps could not be updated. Your saved data was kept."}
+    busy=false
+   }
   }
  }
  LaunchedEffect(controller){
-  var cancellationClass="none"
-  try {
-   diagnosticTrace{"LOAD START active=$isActive current=${current()}"}
-   val result=withContext(Dispatchers.IO){runCatching{controller.load()}}
-   diagnosticTrace{"LOAD AFTER_IO success=${result.isSuccess} active=$isActive current=${current()}"}
-   if(!current()){revoke();return@LaunchedEffect}
+  val result=withContext(Dispatchers.IO){runCatching{controller.load()}}
+  // The composition's effect dispatcher is not necessarily Android Main.
+  withContext(Dispatchers.Main.immediate) {
+   if(!current()){revoke();return@withContext}
    result.onSuccess {apps=it.apps;initialEditId?.let {id ->editor=it.apps.firstOrNull {app->app.id()==id};editing=editor!=null};if(initialEditId==null && initialUrl!=null && PrivateAppDiscovery.safe(initialUrl,controller.owner==PrivateAppStore.Owner.HIDDEN_TOR))editing=true}
     .onFailure {message="Private apps could not be loaded."}
    busy=false
-   diagnosticTrace{"LOAD PUBLISHED busy=$busy count=${apps.size} active=$isActive current=${current()}"}
-  }catch(cancelled:CancellationException) {
-   cancellationClass=cancelled.javaClass.name
-   diagnosticTrace{"LOAD CANCELLED type=$cancellationClass active=$isActive current=${current()}"}
-   throw cancelled
-  }finally {
-   diagnosticTrace{"LOAD FINALLY cancellation=$cancellationClass active=$isActive current=${current()}"}
   }
  }
- LaunchedEffect(controller){while(isActive && !revoked){delay(250);if(!current())revoke()}}
+ LaunchedEffect(controller){while(isActive && !revoked){delay(250);withContext(Dispatchers.Main.immediate){if(!current())revoke()}}}
  if(revoked)return
  Dialog(onDismissRequest={if(!busy)dismiss()},properties=DialogProperties(usePlatformDefaultWidth=false,securePolicy=SecureFlagPolicy.SecureOn)) {
   Surface(Modifier.fillMaxSize().systemBarsPadding().imePadding(),color=MaterialTheme.colorScheme.background) {
@@ -165,20 +152,26 @@ internal fun PrivateAppsLibrary(controller:PrivateAppsController,onClose:()->Uni
    discovering=true;discoveryMessage="";discovered=null;checkedUrl=""
    editorScope.launch {
     val result=withContext(Dispatchers.IO){runCatching{controller.discover(target)}}
-    if(!current()){revoke();return@launch}
-    if(editing && editor===editorIdentity && url.trim()==target) {
-     result.onSuccess {app ->discovered=app;if(name.isBlank() || (editor==null && initialName!=null && name==initialName))name=app.name();checkedUrl=app.startUrl();url=app.startUrl();invalid=false
-      discoveryMessage=app.discoveryReport()
-     }.onFailure{checkedUrl=target;discoveryMessage="Discovery unavailable on the authorised connection. Metadata is public only; sign-in pages, redirects or a timeout can prevent compatibility checks. Save as a Private Website or check again."}
+    withContext(Dispatchers.Main.immediate) {
+     if(!current()){revoke();return@withContext}
+     if(editing && editor===editorIdentity && url.trim()==target) {
+      result.onSuccess {app ->discovered=app;if(name.isBlank() || (editor==null && initialName!=null && name==initialName))name=app.name();checkedUrl=app.startUrl();url=app.startUrl();invalid=false
+       discoveryMessage=app.discoveryReport()
+      }.onFailure{checkedUrl=target;discoveryMessage="Discovery unavailable on the authorised connection. Metadata is public only; sign-in pages, redirects or a timeout can prevent compatibility checks. Save as a Private Website or check again."}
+     }
+     discovering=false
     }
-    discovering=false
    }
   }
   // Offer the install choice without requiring the owner to know about manifest discovery.
   LaunchedEffect(url,discovering) {
    val target=url.trim()
    if(!discovering && target!=checkedUrl && PrivateAppDiscovery.safe(target,controller.owner==PrivateAppStore.Owner.HIDDEN_TOR)) {
-    delay(700);discoverWebsite()
+    delay(700)
+    withContext(Dispatchers.Main.immediate) {
+     if(!current()){revoke();return@withContext}
+     if(!discovering && target==url.trim() && target!=checkedUrl)discoverWebsite()
+    }
    }
   }
   GalleryAlertDialog(properties=DialogProperties(securePolicy=SecureFlagPolicy.SecureOn),onDismissRequest={editing=false},title={Text(if(editor==null)"Add Private App" else "Edit Private App")},text={
