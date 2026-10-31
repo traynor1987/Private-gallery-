@@ -661,6 +661,8 @@ class HiddenVpnBrowserActivity:ComponentActivity() {
                     }
                 },modifier=Modifier.fillMaxSize())};failures[view]?.let {detail ->BrowserPageError(detail,{failures.remove(view);view.reload()},{library();menu=true})}}
                 if(app==null && ready && (current==null || (!busy && current !in failures && current?.url.isNullOrBlank())))HiddenNativeStartPage(mode==HiddenConnectionPolicy.Mode.TOR_ONLY)
+                if(appStyle && ready && current !in failures && (busy || current?.url.isNullOrBlank()))
+                    uk.co.traynor.privategallery.ui.PrivateAppLoading(checkNotNull(app))
             }
             @Suppress("UNUSED_VARIABLE") val revision=navigationRevision
             if(!appStyle)BrowserNavigationToolbar(current?.canGoBack()==true,current?.canGoForward()==true,views.size,{current?.let {failures.remove(it);it.goBack()}},{current?.let {failures.remove(it);it.goForward()}},{showLibrary("Bookmarks")},{tabList=true},{library();menu=true},{library();menu=true})

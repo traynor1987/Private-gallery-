@@ -45,25 +45,32 @@ class PrivateAppControls178Test {
     @Test fun settings_and_switcher_render_save_and_close_on_revocation() {
         val context=ApplicationProvider.getApplicationContext<android.content.Context>()
         val root=File(context.cacheDir,"privateapps-controls-ui").apply {deleteRecursively();mkdirs()}
-        val key=ByteArray(32){9};var live=true;var closed=0;var updates=0
+        val key=ByteArray(32){9};var live=true;var closed=0;var updates=0;var sessionClosed=0
         val app=fixture()
         val store=PrimaryPrivateAppStore(root,key,{live},{check(live);it()})
         val controller=PrivateAppsController(store.owner(),{live},{a,b,id->PrivateAppCommands.execute(store,a,b,id)},{})
         controller.save(app)
         var panel by mutableStateOf("settings")
+        var activeApps by mutableStateOf(listOf("tab" to app))
         try {
             compose.setContent {PrivateGalleryTheme(AppTheme.LIGHT) {
                 if(panel=="settings")PrivateAppSettings(controller,app.id(),{updates++},{},{closed++;panel="switcher"})
-                else if(panel=="switcher")PrivateAppSwitcher(listOf("tab" to app),"tab",{}, {},{panel=""})
+                else if(panel=="switcher")PrivateAppSwitcher(activeApps,"tab",{}, {},{panel=""},onCloseSession={id ->sessionClosed++;activeApps=activeApps.filter{it.first!=id}})
             }}
             compose.waitUntil(5000){compose.onAllNodesWithTag("private-app-address-toggle").fetchSemanticsNodes().isNotEmpty()}
             compose.onNodeWithTag("private-app-address-toggle").performClick()
             compose.waitUntil(5000){updates==1}
             assertFalse(store.read().apps.single().addressBar())
+            compose.onNodeWithTag("private-app-style-toggle").performClick()
+            compose.waitUntil(5000){updates==2}
+            assertFalse(PrimaryPrivateAppStore(root,key,{live},{it()}).read().apps.single().appStyle())
             compose.runOnIdle {live=false}
             compose.waitUntil(5000){closed==1}
             compose.onNodeWithText("Switch private app").assertIsDisplayed()
             compose.onNodeWithText("Fixture App · Current").assertIsDisplayed()
+            compose.onNodeWithContentDescription("Close session for Fixture App").performClick()
+            compose.onNodeWithText("No private apps are open.").assertIsDisplayed()
+            compose.runOnIdle{assertEquals(1,sessionClosed)}
             compose.onNodeWithText("Close").performClick()
             compose.onNodeWithText("Switch private app").assertDoesNotExist()
         } finally {key.fill(0);root.deleteRecursively()}

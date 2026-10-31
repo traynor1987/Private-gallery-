@@ -9,22 +9,23 @@ import uk.co.traynor.privategallery.core.browser.hidden.HiddenConnectionPolicy
 internal object PrivateAppDiscovery {
  const val MAX_DOCUMENT=128*1024
  data class Resource(val bytes:ByteArray,val mime:String)
- data class Metadata(val name:String,val start:String,val scope:String="",val display:String="browser",val iconUrl:String="")
+ data class Metadata(val name:String,val start:String,val scope:String="",val display:String="browser",val iconUrl:String="",val iconCandidates:List<String> = emptyList())
  fun safe(url:String,tor:Boolean)=PrivateAppPolicy.safeUrl(url,tor) && HiddenConnectionPolicy.safeUrl(url,if(tor)HiddenConnectionPolicy.Mode.TOR_ONLY else HiddenConnectionPolicy.Mode.VPN_ONLY)
  fun resolve(base:String,value:String,tor:Boolean):String?=runCatching {
   require(value.length<=PrivateAppPolicy.MAX_URL && value.none {it.code<=32 || it=='\\'})
   URI(base).resolve(value).normalize().toString().takeIf{safe(it,tor) && PrivateAppPolicy.sameOrigin(base,it)}
  }.getOrNull()
  private fun htmlValue(value:String)=value.replace("&amp;","&").replace("&#38;","&").replace("&#x26;","&").replace("&quot;","\"").replace("&#39;","'")
- private fun links(html:String):List<Map<String,String>> {
-  // This deliberately narrow extractor is not an HTML renderer. Malformed/long tags fall back safely.
-  val visible=html.replace(Regex("<!--.*?-->|<script\\b[^>]*>.*?</script\\s*>",setOf(RegexOption.IGNORE_CASE,RegexOption.DOT_MATCHES_ALL)),"")
-  return Regex("<link\\b[^>]{0,4096}>",RegexOption.IGNORE_CASE).findAll(visible).take(32).map {tag ->
-   Regex("([a-zA-Z][a-zA-Z0-9_-]*)\\s*=\\s*(?:\"([^\"]*)\"|'([^']*)'|([^\\s>]+))").findAll(tag.value).associate {m ->
-    m.groupValues[1].lowercase() to htmlValue(m.groupValues.drop(2).firstOrNull{it.isNotEmpty()}.orEmpty())
-   }
-  }.toList()
+ private fun attributes(tag:String)=Regex("([a-zA-Z][a-zA-Z0-9_-]*)\\s*=\\s*(?:\"([^\"]*)\"|'([^']*)'|([^\\s>]+))").findAll(tag).associate {m ->
+  m.groupValues[1].lowercase() to htmlValue(m.groupValues.drop(2).firstOrNull{it.isNotEmpty()}.orEmpty())
  }
+ private fun visibleHtml(html:String)=html.replace(Regex("<!--.*?-->|<script\\b[^>]*>.*?</script\\s*>",setOf(RegexOption.IGNORE_CASE,RegexOption.DOT_MATCHES_ALL)),"")
+ private fun links(html:String):List<Map<String,String>> = Regex("<link\\b[^>]{0,4096}>",RegexOption.IGNORE_CASE).findAll(html).take(32).map {attributes(it.value)}.toList()
+ private fun documentBase(page:String,html:String,tor:Boolean):String {
+  val href=Regex("<base\\b[^>]{0,4096}>",RegexOption.IGNORE_CASE).find(html)?.let {attributes(it.value)["href"]} ?: return page
+  return resolve(page,href,tor) ?: error("Unsupported document base")
+ }
+
  fun manifest(page:String,url:String,json:String,tor:Boolean):Metadata {
   require(safe(page,tor) && resolve(page,url,tor)!=null && json.length<=MAX_DOCUMENT)
   val obj=JSONObject(json)
@@ -34,18 +35,20 @@ internal object PrivateAppDiscovery {
   val defaultScope=URI(start).resolve(".").toString()
   val scope=resolve(url,obj.optString("scope",defaultScope),tor) ?: error("Unsafe scope")
   require(URI(scope).rawQuery==null && URI(scope).rawFragment==null && PrivateAppPolicy.inScope(start,scope))
-  val display=obj.optString("display","browser")
-  require(display in setOf("browser","standalone","minimal-ui","fullscreen"))
+  val supported=setOf("browser","standalone","minimal-ui","fullscreen")
+  val overrides=obj.optJSONArray("display_override")
+  val display=(0 until minOf(overrides?.length() ?: 0,16)).map {overrides?.optString(it).orEmpty()}.firstOrNull {it in supported} ?: obj.optString("display","browser")
+  require(display in supported)
   val icons=obj.optJSONArray("icons")
-  val icon=(0 until minOf(icons?.length() ?: 0,16)).firstNotNullOfOrNull {i ->
+  val candidates=(0 until minOf(icons?.length() ?: 0,16)).mapNotNull {i ->
    val item=icons?.optJSONObject(i)
    val type=item?.optString("type").orEmpty()
    if(type.isNotEmpty() && type !in setOf("image/png","image/jpeg","image/webp","image/x-icon","image/vnd.microsoft.icon"))null
    else item?.optString("src")?.takeIf{it.isNotEmpty()}?.let{resolve(url,it,tor)}
-  }.orEmpty()
-  return Metadata(name,start,scope,display,icon)
+  }.distinct().take(3)
+  return Metadata(name,start,scope,display,candidates.firstOrNull().orEmpty(),candidates)
  }
- fun discover(page:String,tor:Boolean,current:()->Boolean,fetch:(String)->Resource,normalizeIcon:(ByteArray)->String,diagnostic:(String,Throwable)->Unit={_,_->}):PrivateAppCatalog.App {
+ fun discover(page:String,tor:Boolean,current:()->Boolean,fetch:(String)->Resource,normalizeIcon:(ByteArray)->String,diagnostic:(String,Throwable)->Unit={_,_->},iconBudget:()->Boolean={true}):PrivateAppCatalog.App {
   check(current());require(safe(page,tor))
   var metadata=Metadata(URI(page).host,page)
   var favicon=resolve(page,"/favicon.ico",tor).orEmpty()
@@ -55,9 +58,10 @@ internal object PrivateAppDiscovery {
   fun report(stage:String,failure:Throwable){runCatching{diagnostic(stage,failure)}}
   runCatching {
    val html=get(page)
-   val tags=try {phase="parse_page";require(html.mime in setOf("text/html","application/xhtml+xml"));links(html.bytes.toString(Charsets.UTF_8))}finally{html.bytes.fill(0)}
-   tags.firstOrNull{it["rel"].orEmpty().lowercase().split(Regex("\\s+")).contains("icon")}?.get("href")?.let {resolve(page,it,tor)}?.let{favicon=it}
-   val url=tags.firstOrNull{it["rel"].orEmpty().lowercase().split(Regex("\\s+")).contains("manifest")}?.get("href")?.let{resolve(page,it,tor)} ?: run {compatibility="No supported same-origin manifest link was found. Cross-origin metadata is not fetched.";return@runCatching}
+   var base=page
+   val tags=try {phase="parse_page";require(html.mime in setOf("text/html","application/xhtml+xml"));val source=visibleHtml(html.bytes.toString(Charsets.UTF_8));base=documentBase(page,source,tor);links(source)}finally{html.bytes.fill(0)}
+   tags.firstOrNull{it["rel"].orEmpty().lowercase().split(Regex("\\s+")).contains("icon")}?.get("href")?.let {resolve(base,it,tor)}?.let{favicon=it}
+   val url=tags.firstOrNull{it["rel"].orEmpty().lowercase().split(Regex("\\s+")).contains("manifest")}?.get("href")?.let{resolve(base,it,tor)} ?: run {compatibility="No supported same-origin manifest link was found. Cross-origin metadata is not fetched.";return@runCatching}
    phase="fetch_manifest"
    val resource=get(url)
    try {phase="parse_manifest";require(resource.mime in setOf("application/manifest+json","application/json"));metadata=manifest(page,url,resource.bytes.toString(Charsets.UTF_8),tor);compatibility="Compatible private web app: ${metadata.display}. Runs inside Private Gallery; push, background execution and guaranteed offline operation are unsupported."}finally{resource.bytes.fill(0)}
@@ -67,14 +71,15 @@ internal object PrivateAppDiscovery {
    if(failure is java.io.IOException)throw failure
    compatibility=when(phase) {
     "fetch_page"->"The public page could not be read without authentication or a redirect. Open its final HTTPS address and check again."
-    "parse_page"->"The public response is not a supported bounded HTML page."
+    "parse_page"->"The page has an unsupported document base or response type, or exceeds the bounded HTML limit."
     "fetch_manifest"->"The manifest could not be read without authentication or a redirect."
     else->"The manifest has unsupported or invalid name, start URL, scope or display metadata."
    }
   }
   check(current())
   var icon=""
-  for(url in listOf(metadata.iconUrl,favicon).filter{it.isNotEmpty()}.distinct().take(2)) {
+  for(url in (metadata.iconCandidates+listOf(metadata.iconUrl,favicon)).filter{it.isNotEmpty()}.distinct().take(4)) {
+   check(current());if(!iconBudget())break
    icon=runCatching {val resource=get(url);try {require(resource.mime.startsWith("image/") && resource.mime!="image/svg+xml");normalizeIcon(resource.bytes)}finally{resource.bytes.fill(0)}}.onFailure {report("icon",it)}.getOrDefault("")
    check(current());if(icon.isNotEmpty())break
   }

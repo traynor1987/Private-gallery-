@@ -67,4 +67,27 @@ class PrivateAppDiscoveryTest {
   assertTrue(app.discoveryReport().contains("manifest"));assertFalse(app.discoveryReport().contains("Compatible private web app"))
  }
 
+ @Test fun document_base_and_later_valid_manifest_icon_use_bounded_same_origin_transport() {
+  val seen=mutableListOf<String>()
+  val result=PrivateAppDiscovery.discover(page,false,{true},{url ->
+   seen+=url
+   when(url) {
+    page->PrivateAppDiscovery.Resource("<base href='/assets/'><link rel='manifest' href='app.json'>".toByteArray(),"text/html")
+    "https://example.test/assets/app.json"->PrivateAppDiscovery.Resource("""{"name":"Base app","start_url":"/app/home","scope":"/app/","display":"browser","display_override":["window-controls-overlay","standalone"],"icons":[{"src":"bad.png"},{"src":"good.png"}]}""".toByteArray(),"application/manifest+json")
+    "https://example.test/assets/good.png"->PrivateAppDiscovery.Resource(byteArrayOf(1,2,3),"image/png")
+    else->PrivateAppDiscovery.Resource(byteArrayOf(),"text/plain")
+   }
+  },{"AQID"})
+  assertEquals("standalone",result.display());assertTrue(seen.contains("https://example.test/assets/good.png"))
+  assertTrue(result.scope().isNotEmpty());assertEquals("AQID",result.icon())
+ }
+
+ @Test fun optional_icon_budget_cannot_downgrade_valid_private_web_app_metadata() {
+  val seen=mutableListOf<String>()
+  val app=PrivateAppDiscovery.discover(page,false,{true},{url ->seen+=url
+   PrivateAppDiscovery.Resource((if(url==page)"<link rel='manifest' href='/manifest.json'>" else """{"name":"App","start_url":"/app/home","scope":"/app/","icons":[{"src":"/icon.png"}]}""").toByteArray(),if(url==page)"text/html" else "application/manifest+json")
+  },{error("No optional icon decode after budget")},iconBudget={false})
+  assertEquals(listOf(page,manifest),seen);assertTrue(app.scope().isNotEmpty());assertEquals("",app.icon())
+ }
+
 }

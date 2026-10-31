@@ -56,7 +56,7 @@ internal object PrivateAppMetadataTransport {
       check(active());diagnostic("resource_body",status=response.code,bytes=count.toLong(),mime=kind);PrivateAppDiscovery.Resource(buffer.copyOf(count),body.contentType()?.let{"${it.type}/${it.subtype}"}.orEmpty())
      }finally{buffer.fill(0)}
     }
-   },PrivateAppIcons::normalize,{stage,failure ->diagnostic(stage,failure)})
+   },PrivateAppIcons::normalize,{stage,failure ->diagnostic(stage,failure)},iconBudget={System.nanoTime()-start<TimeUnit.SECONDS.toNanos(20)})
   }finally{watch.shutdownNow();client.dispatcher.cancelAll();client.connectionPool.evictAll();client.dispatcher.executorService.shutdown()}
  }
 }

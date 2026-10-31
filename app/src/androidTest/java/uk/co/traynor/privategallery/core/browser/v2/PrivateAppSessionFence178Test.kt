@@ -95,6 +95,10 @@ class PrivateAppSessionFence178Test {
     session.newTab();session.openPrivateApp(app)
     assertEquals(id,session.tabs.activeTab.id);assertEquals(count+1,session.tabs.tabs.size)
     assertSame(renderer,session.activeWebView());assertEquals(app,session.privateApp(id))
+    val browserStyle=uk.co.traynor.privategallery.core.privateapps.PrivateAppCatalog.App(app.id(),app.name(),app.startUrl(),app.scope(),app.display(),app.icon(),app.pinned(),app.addressBar(),app.requireAuthentication(),false,app.discoveryReport())
+    session.updatePrivateApp(browserStyle);assertFalse(checkNotNull(session.privateApp(id)).appStyle())
+    assertSame("Style changes do not replace the live renderer",renderer,session.activeWebView())
+    session.updatePrivateApp(app)
     renderer.evaluateJavascript("document.getElementById('retained').value") {stored ->value.set(stored);checked.countDown()}
    }
    assertTrue(checked.await(10,java.util.concurrent.TimeUnit.SECONDS));assertEquals("\"private draft\"",value.get())

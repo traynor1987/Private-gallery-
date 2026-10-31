@@ -32,7 +32,7 @@ class OriginalBaseline178Test(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             apk=Path(directory)/'wrong.apk';apk.write_bytes(b'wrong baseline')
             base={**os.environ,'GITHUB_ACTIONS':'true','GITHUB_REF':'refs/heads/release/1.7.8-private-apps',
-                  'PRODUCTION_UPGRADE':'1','PRIVATE_GALLERY_UPGRADE_BASELINE':'46'}
+                  'PRODUCTION_UPGRADE':'1','PRIVATE_GALLERY_UPGRADE_BASELINE':'47'}
             base.pop('PRIVATE_GALLERY_178_BASELINE_APK',None)
             variants=[base,{**base,'PRIVATE_GALLERY_178_BASELINE_APK':str(apk)},
                       {**base,'PRODUCTION_UPGRADE':'0','PRIVATE_GALLERY_178_BASELINE_APK':str(apk)},
