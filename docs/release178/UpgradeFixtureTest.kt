@@ -17,7 +17,7 @@ import uk.co.traynor.privategallery.core.privateapps.*
 import uk.co.traynor.privategallery.core.camera.CameraOptions
 import uk.co.traynor.privategallery.core.camera.VaultCaptureAccess
 
-/** Reviewed release-control instrumentation for original-key code47 -> code48 upgrade.
+/** Reviewed release-control instrumentation for original-key code48 -> code49 upgrade.
  * Captured and hash-checked before frozen application checkout; never modifies baseline app.
  */
 class UpgradeFixtureTest {
@@ -28,7 +28,7 @@ class UpgradeFixtureTest {
     private val candidateCode get() = checkNotNull(arguments.getString("candidateCode")).toInt()
     private fun guard() {
         check(context.packageName == "uk.co.traynor.privategallery.hiddenprototype")
-        check(baselineCode == 47 && candidateCode == 48)
+        check(baselineCode == 48 && candidateCode == 49)
     }
     private fun hash(bytes: ByteArray) = MessageDigest.getInstance("SHA-256").digest(bytes).joinToString("") { "%02x".format(it) }
     private fun encryptedHashes(): JSONObject = JSONObject().also { result ->
@@ -74,8 +74,8 @@ class UpgradeFixtureTest {
             assertEquals("Hidden upgrade",library.snapshot().bookmarks.single().title)
         }
     }
-    /** Baseline-compatible v1 definitions: all old fields, order and owner survive read/restart.
-     * No candidate-only API is referenced, so instrumentation compiles against the actual code47 source.
+    /** Baseline-compatible v2 definitions: all old fields, order and owner survive read/restart.
+     * No candidate-only API is referenced, so instrumentation compiles against the actual code48 source.
      * This helper performs no candidate write: the existing full ciphertext checks detect eager migration.
      */
     private fun privateApps(store:PrivateAppStore,seed:Boolean) {
@@ -87,10 +87,10 @@ class UpgradeFixtureTest {
         }
         val origin=if(owner==PrivateAppStore.Owner.HIDDEN_TOR)"http://"+"a".repeat(56)+".onion" else "https://upgrade.invalid"
         val icon="iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+ip1sAAAAASUVORK5CYII="
-        fun id(index:Int)=java.util.UUID.nameUUIDFromBytes("upgrade48:$label:$index".toByteArray(Charsets.UTF_8)).toString()
+        fun id(index:Int)=java.util.UUID.nameUUIDFromBytes("upgrade49:$label:$index".toByteArray(Charsets.UTF_8)).toString()
         val expected=listOf(
-            PrivateAppCatalog.App(id(1),"Upgrade $label PWA","$origin/app/home?upgrade=47","$origin/app/","standalone",icon,true,false,true),
-            PrivateAppCatalog.App(id(2),"Upgrade $label Website","https://upgrade.invalid/site/${owner.name.lowercase()}","","browser","",false,true,false)
+            PrivateAppCatalog.App(id(1),"Upgrade $label PWA","$origin/app/home?upgrade=48","$origin/app/","standalone",icon,true,false,true,false,"Synthetic baseline PWA discovery report"),
+            PrivateAppCatalog.App(id(2),"Upgrade $label Website","https://upgrade.invalid/site/${owner.name.lowercase()}","","browser","",false,true,false,true,"Synthetic baseline website fallback report")
         )
         if(seed) {
             assertTrue("Disposable baseline catalogue starts empty for $label",store.read().apps.isEmpty())
@@ -101,7 +101,7 @@ class UpgradeFixtureTest {
         assertEquals("Preserve $label private app IDs/order/name/start/scope/display/icon/pin/address/PIN flags",expected,actual.apps)
         if(seed) {
             val encoded=actual.encode()
-            try {assertEquals("Original code47 seed uses catalogue format1",1,java.io.DataInputStream(ByteArrayInputStream(encoded)).readInt())}
+            try {assertEquals("Original code48 seed uses catalogue format2",2,java.io.DataInputStream(ByteArrayInputStream(encoded)).readInt())}
             finally {encoded.fill(0)}
         }
     }
@@ -120,7 +120,7 @@ class UpgradeFixtureTest {
             privateApps(store,seed)
         }
     }
-    /** Candidate-only commands are looked up reflectively: baseline instrumentation keeps its code47 ABI. */
+    /** Candidate-only commands are looked up reflectively: baseline instrumentation keeps its code48 ABI. */
     private fun privateAppStyleRoundTrip(open:()->PrivateAppStore) {
         val original=open().read().apps
         assertEquals(2,original.size)
@@ -131,7 +131,7 @@ class UpgradeFixtureTest {
         val browser=PrivateAppCommands::class.java.getField("BROWSER_STYLE").getInt(null)
         val app=PrivateAppCommands::class.java.getField("APP_STYLE").getInt(null)
         assertEquals(13,browser);assertEquals(12,app)
-        original.forEach {assertEquals("V1 entries default to app style",true,style.invoke(it))}
+        assertEquals(listOf(false,true),original.map {style.invoke(it)})
         fun unchanged(actual:List<PrivateAppCatalog.App>) {
             assertEquals(original.map {it.id()},actual.map {it.id()})
             for((before,after) in original.zip(actual)) {
@@ -142,12 +142,12 @@ class UpgradeFixtureTest {
                 assertEquals("Style write preserves discovery report",report.invoke(before),report.invoke(after))
             }
         }
-        command.invoke(null,open(),browser,null,original.first().id())
+        command.invoke(null,open(),app,null,original.first().id())
         val browserState=open().read().apps
         unchanged(browserState)
-        assertEquals(false,style.invoke(browserState.first()))
+        assertEquals(true,style.invoke(browserState.first()))
         assertEquals(true,style.invoke(browserState.last()))
-        command.invoke(null,open(),app,null,original.first().id())
+        command.invoke(null,open(),browser,null,original.first().id())
         val restored=open().read().apps
         unchanged(restored)
         assertEquals("Restoring app style preserves full decoded definitions",original,restored)
@@ -430,7 +430,7 @@ class UpgradeFixtureTest {
         assertCiphertextAfterReads(before)
         if(baselineCode>=36&&!restarted) {
             // Every original ciphertext has just been checked after reads. Only now may
-            // explicit code48 style commands rewrite their three originating catalogues.
+            // explicit code49 style commands rewrite their three originating catalogues.
             rewriteCandidatePrivateAppStyles()
             before.put("candidatePrivateAppFiles",privateAppCiphertexts())
             fun presentationOnly(all:JSONObject)=JSONObject().also {out->all.keys().asSequence().filter {it.endsWith("presentation-v1/state.enc")}.forEach {out.put(it,all.getString(it))}}

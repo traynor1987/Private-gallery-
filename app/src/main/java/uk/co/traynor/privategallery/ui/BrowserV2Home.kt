@@ -295,6 +295,9 @@ internal fun BrowserV2Home(
     var privateApps by remember { mutableStateOf<uk.co.traynor.privategallery.core.privateapps.PrivateAppsController?>(null) }
     var privateAppSettings by remember { mutableStateOf<Pair<uk.co.traynor.privategallery.core.privateapps.PrivateAppsController,String>?>(null) }
     var privateAppSwitcher by remember { mutableStateOf(false) }
+    var screenshotReview by remember {mutableStateOf<PrivateAppScreenshotRequest?>(null)}
+    val screenshotGeneration=remember {java.util.concurrent.atomic.AtomicLong()}
+    var currentAppWebsite by remember {mutableStateOf<Pair<String,String>?>(null)}
 
 
     val focusManager = androidx.compose.ui.platform.LocalFocusManager.current
@@ -466,6 +469,7 @@ internal fun BrowserV2Home(
     DisposableEffect(session, videoLifecycle) {
         val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
             if (event == androidx.lifecycle.Lifecycle.Event.ON_STOP) {
+                screenshotGeneration.incrementAndGet();screenshotReview=null
                 cancelWebsitePermissions()
                 val ownedPickerStop=ui.devicePickerStopExpected && ui.deviceSelection!=null &&
                     ui.deviceValidationJob==null && android.os.SystemClock.elapsedRealtime()<ui.devicePickerDeadline
@@ -487,21 +491,22 @@ internal fun BrowserV2Home(
         onDispose { videoLifecycle.removeObserver(observer) }
     }
     fun saveViewportScreenshot() {
+        val captureGeneration=screenshotGeneration.incrementAndGet();screenshotReview=null
         val activity=permissionActivity as? uk.co.traynor.privategallery.MainActivity
         val view=session.activeWebViewOrNull()
         val owner=activity?.captureBrowserScreenshotAuthority()
         val document=permissionFence()
         if(activity==null || view==null || owner==null){ui.message="Screenshot unavailable in this browser.";return}
-        val current={owner() && document() && ui.fullscreen==null && !ui.webVideoView && !ui.overflow && !ui.settingsOpen && !ui.tabSwitcher && !ui.bookmarksOpen && !ui.historyOpen}
-        ui.pendingScreenshotCapture={
-            // Wait for the confirmation window to detach; never clear its secure flag.
-            view.postDelayed({
-                BrowserVaultScreenshot.capture(activity.window,view,true,current) {result ->
-                    result.onSuccess {source ->latestSave(source){ui.message=it}}
-                        .onFailure {ui.message=uk.co.traynor.privategallery.core.browser.v2.BrowserScreenshotPolicy.REFUSAL}
-                }
-            },150)
-        }
+        val current={screenshotGeneration.get()==captureGeneration && owner() && document() && ui.fullscreen==null && !ui.webVideoView && !ui.overflow && !ui.settingsOpen && !ui.tabSwitcher && !ui.bookmarksOpen && !ui.historyOpen}
+        // Screenshot is the explicit capture action; the protected review asks before saving.
+        view.postDelayed({
+            BrowserVaultScreenshot.capture(activity.window,view,true,current) {result ->
+                result.onSuccess {source ->
+                    if(current())screenshotReview=activity.privateAppScreenshotReview(source,current)
+                    else source.onConsumed()
+                }.onFailure {ui.message=uk.co.traynor.privategallery.core.browser.v2.BrowserScreenshotPolicy.REFUSAL}
+            }
+        },150)
     }
 
 
@@ -730,7 +735,14 @@ internal fun BrowserV2Home(
             latestFullscreenChanged(false)
         }
     }
-    BackHandler(enabled = onOpenGallery != null && !ui.addressFocused && !active.canGoBack && ui.fullscreen == null && !ui.webVideoView && ui.internalMedia == null) { onOpenGallery?.invoke() }
+    fun openPrivateApps() {
+        cancelUpload();cancelWebsitePermissions()
+        screenshotGeneration.incrementAndGet();screenshotReview=null
+        session.activeWebViewOrNull()?.onPause()
+        privateApps=(context as? uk.co.traynor.privategallery.MainActivity)?.privateAppsController()
+        if(privateApps==null)ui.message=(context as? uk.co.traynor.privategallery.MainActivity)?.privateAppProfileClearStatus() ?: "Unlock Primary and reopen the browser."
+    }
+    BackHandler(enabled = (activePrivateApp!=null || onOpenGallery != null) && !ui.addressFocused && !active.canGoBack && ui.fullscreen == null && !ui.webVideoView && ui.internalMedia == null) { if(activePrivateApp!=null)openPrivateApps() else onOpenGallery?.invoke() }
     BackHandler(enabled = ui.addressFocused) { focusManager.clearFocus(force = true) }
     BackHandler(enabled = ui.webVideoView) { ui.webVideoView = false; latestFullscreenChanged(false) }
     BackHandler(enabled = ui.fullscreen != null) {
@@ -747,12 +759,8 @@ internal fun BrowserV2Home(
         if (!staticContentHost) session.recordAcceptanceUiEvent("REAL_MODE_ENTERED")
     }
     SideEffect { session.recordAcceptanceUiEvent("BROWSER_V2_COMPOSED") }
-    fun openPrivateApps() {
-        cancelUpload()
-        privateApps=(context as? uk.co.traynor.privategallery.MainActivity)?.privateAppsController()
-        if(privateApps==null)ui.message=(context as? uk.co.traynor.privategallery.MainActivity)?.privateAppProfileClearStatus() ?: "Unlock Primary and reopen the browser."
-    }
-    privateApps?.let {controller ->PrivateAppsLibrary(controller,{privateApps=null;privateAppEditId=null},privateAppEditId,session::updatePrivateApp,session::removePrivateApp)}
+
+    privateApps?.let {controller ->PrivateAppsLibrary(controller,{privateApps=null;privateAppEditId=null;currentAppWebsite=null;session.activeWebViewOrNull()?.onResume()},privateAppEditId,session::updatePrivateApp,session::removePrivateApp,initialUrl=currentAppWebsite?.first,initialName=currentAppWebsite?.second)}
     privateAppSettings?.let { (controller,id) ->
         PrivateAppSettings(controller,id,session::updatePrivateApp,{ui.overflow=true},{privateAppSettings=null},onEdit={privateAppSettings=null;privateAppEditId=id;openPrivateApps()},onRemoved=session::removePrivateApp)
     }
@@ -790,12 +798,16 @@ internal fun BrowserV2Home(
                     app=activePrivateApp,url=active.url,
                     mode=(context as? uk.co.traynor.privategallery.MainActivity)?.privateAppConnectionLabel() ?: "Primary Vault",
                     enabled=!connectionPresentation.blocked,canGoBack=active.canGoBack,canGoForward=active.canGoForward,loading=active.loading,
-                    onBack=session::goBackActive,onForward=session::goForwardActive,
+                    onBack={if(active.canGoBack)session.goBackActive() else openPrivateApps()},onForward=session::goForwardActive,
                     onRefresh={if(active.loading)session.stopActive() else session.reloadActive()},
                     onHome={cancelUpload();session.navigateActive(activePrivateApp.startUrl())},
-                    onLibrary=::openPrivateApps,onSwitch={cancelUpload();privateAppSwitcher=true},
+                    onLibrary=::openPrivateApps,onSwitch={screenshotGeneration.incrementAndGet();screenshotReview=null;cancelUpload();privateAppSwitcher=true},
                     onSettings={cancelUpload();(context as? uk.co.traynor.privategallery.MainActivity)?.privateAppsController()?.let {privateAppSettings=it to activePrivateApp.id()}},
-                    onScreenshot=::saveViewportScreenshot,onExpanded={appControlsExpanded=it},onBrowserTools={ui.overflow=true})
+                    onScreenshot=::saveViewportScreenshot,onExpanded={appControlsExpanded=it},onBrowserTools={ui.overflow=true},
+                    onCloseApp={screenshotGeneration.incrementAndGet();cancelUpload();cancelWebsitePermissions();ui.downloadCancelled.set(true);ui.downloadBusy=false;screenshotReview=null;session.close(active.id);openPrivateApps()},
+                    onExitGallery={(context as? uk.co.traynor.privategallery.MainActivity)?.privateAppExitToGallery()},
+                    onLockVault={(context as? uk.co.traynor.privategallery.MainActivity)?.privateAppLockVault()},
+                    onQuickLock={(context as? uk.co.traynor.privategallery.MainActivity)?.panicExit()})
                 else if(context is uk.co.traynor.privategallery.MainActivity)TextButton(onClick=::openPrivateApps){Text("Private Apps")}
 
                 if (acceptanceProbeEnabled) AcceptanceProbeLabel("BROWSER_CHROME", Color(0xFF0000CC))
@@ -948,6 +960,12 @@ internal fun BrowserV2Home(
                 }
             }
             SheetAction("New tab", Icons.Default.Add) { ui.overflow = false; session.newTab() }
+            SheetAction("Add Current Website to Private Apps", Icons.Default.Apps) {
+                ui.overflow=false
+                if(uk.co.traynor.privategallery.core.privateapps.PrivateAppDiscovery.safe(active.url,false)) {
+                    currentAppWebsite=active.url to active.title;openPrivateApps()
+                } else ui.message="Open a supported website before adding a Private App."
+            }
             SheetAction("Bookmark this page", Icons.Default.StarOutline) {
                 ui.overflow = false
                 if (active.url.isBlank()) ui.message = "Open an HTTP(S) page before bookmarking it."
@@ -1111,12 +1129,7 @@ internal fun BrowserV2Home(
                 session.activeWebViewOrNull()?.let {view->latestSave(browserV2ImageSource(resource,view.settings.userAgentString,session.tabs.activeTab.url)){ui.message=it}}
                     ?:run {ui.message="Browser is unavailable. Retry before saving an image."}
             },onCancel={ui.pendingImageResource=null})}
-        ui.pendingScreenshotCapture?.let {capture ->
-            AlertDialog(onDismissRequest={ui.pendingScreenshotCapture=null},title={Text("Screenshot to Primary Vault?")},
-                text={Text("Save only the visible website area encrypted in Primary Vault. Capture must be allowed in this Vault's settings. Video, embedded and protected content cannot be captured.")},
-                confirmButton={TextButton(onClick={ui.pendingScreenshotCapture=null;capture()}){Text("Save screenshot")}},
-                dismissButton={TextButton(onClick={ui.pendingScreenshotCapture=null}){Text("Cancel")}})
-        }
+        screenshotReview?.let {request ->PrivateAppScreenshotReview(request){if(screenshotReview===request)screenshotReview=null}}
         if(ui.pendingScreenshotFallback)BrowserConsentDialog(BrowserConsentSurface.SCREENSHOT,
             onAccept={ui.pendingScreenshotFallback=false;saveViewportScreenshot()},onCancel={ui.pendingScreenshotFallback=false})
         ui.pendingExternalNavigation?.let {value->

@@ -252,7 +252,7 @@ class HiddenVpnBrowserActivity:ComponentActivity() {
         val source=Uri.parse(url);val origin="${source.scheme}://${source.authority}".take(300)
         websiteDialog=WebsiteDialog(view,kind,message.take(8000),result,default,origin);promptText=default.take(8000);return true
     }
-    private fun select(view:WebView) {cancelOwnedDownload();pendingDownload=null;downloadCandidate=null;current?.clearMatches();findOpen=false;findQuery="";findResult="";cancelWebsiteDialog();cancelUpload();current=view;address=view.url.orEmpty();desktop=desktopTabs[view] ?: false;pageLoadProgress=view.progress;busy=loadingTabs[view]==true;navigationRevision++}
+    private fun select(view:WebView) {screenshotGeneration.incrementAndGet();screenshotReview=null;cancelOwnedDownload();pendingDownload=null;downloadCandidate=null;current?.clearMatches();findOpen=false;findQuery="";findResult="";cancelWebsiteDialog();cancelUpload();current=view;if(!privateAppsOpen)view.onResume();address=view.url.orEmpty();desktop=desktopTabs[view] ?: false;pageLoadProgress=view.progress;busy=loadingTabs[view]==true;navigationRevision++}
     override fun onCreate(savedInstanceState:Bundle?) {
         super.onCreate(null)
         window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
@@ -284,7 +284,7 @@ class HiddenVpnBrowserActivity:ComponentActivity() {
             registerReceiver(screenOff,IntentFilter(Intent.ACTION_SCREEN_OFF),Context.RECEIVER_NOT_EXPORTED)
             handler.post(heartbeat)
             onBackPressedDispatcher.addCallback(this,object:OnBackPressedCallback(true) {override fun handleOnBackPressed(){
-                when {addressFocused -> clearAddressFocus?.invoke(); websiteDialog!=null || websiteAuth!=null || resubmit!=null -> cancelWebsiteDialog();pendingUpload!=null -> cancelUpload();findOpen -> {findOpen=false;current?.clearMatches()};current?.canGoBack()==true -> current?.let {failures.remove(it);it.goBack()};else -> terminate()}
+                when {addressFocused -> clearAddressFocus?.invoke(); websiteDialog!=null || websiteAuth!=null || resubmit!=null -> cancelWebsiteDialog();pendingUpload!=null -> cancelUpload();findOpen -> {findOpen=false;current?.clearMatches()};current?.canGoBack()==true -> current?.let {failures.remove(it);it.goBack()};current?.let {privateAppTabs[it]}!=null -> openPrivateApps();else -> terminate()}
             }})
             setContent {PrivateGalleryTheme(selectedTheme) {val captureRevision=captureGuard.revision;SideEffect{captureGuard.compositionCommitted(captureRevision)};Browser()}}
             // No WebView exists until process binding and proxy completion have both succeeded.
@@ -503,55 +503,91 @@ class HiddenVpnBrowserActivity:ComponentActivity() {
     private var privateAppSettingsId by mutableStateOf<String?>(null)
     private var privateAppSwitcher by mutableStateOf(false)
     private var privateAppEditId by mutableStateOf<String?>(null)
-    private var pendingScreenshot by mutableStateOf<(() -> Unit)?>(null)
+    private var privateAppInitialUrl by mutableStateOf<String?>(null)
+    private var privateAppInitialName by mutableStateOf<String?>(null)
+    private var screenshotReview by mutableStateOf<PrivateAppScreenshotRequest?>(null)
+    private val screenshotGeneration=java.util.concurrent.atomic.AtomicLong()
     private fun requestScreenshot() {
+        val captureGeneration=screenshotGeneration.incrementAndGet()
         val view=current ?: return
         val revision=navigationRevision
         val owner=broker
-        val authorized={broker===owner && current===view && navigationRevision==revision && ready && live() &&
+        val authorized={broker===owner && !privateAppsOpen && current===view && navigationRevision==revision && ready && live() &&
             lifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.RESUMED)}
-        pendingScreenshot={
-            view.postDelayed({
-                BrowserVaultScreenshot.capture(window,view,true,authorized) {result ->
-                    result.onFailure {notice=uk.co.traynor.privategallery.core.browser.v2.BrowserScreenshotPolicy.REFUSAL}
-                        .onSuccess {source ->
-                            notice="Saving screenshot encrypted in Hidden Vault…"
-                            lifecycleScope.launch(Dispatchers.IO) {
-                                val pipes=ParcelFileDescriptor.createReliablePipe()
-                                try {
-                                    check(authorized())
-                                    // Transfer the reliable read endpoint silently. A normal local
-                                    // close publishes a premature peer status and can make the
-                                    // receiver observe a dead peer instead of the writer's completion.
-                                    call(HiddenVpnBrowserBroker.SCREENSHOT,write={it.writeInt(1);it.writeTypedObject(pipes[0],android.os.Parcelable.PARCELABLE_WRITE_RETURN_VALUE)},read={Unit})
-                                    ParcelFileDescriptor.AutoCloseOutputStream(pipes[1]).use {output ->source.openStream().use {input ->
-                                        val buffer=ByteArray(16*1024)
-                                        try {while(true){check(authorized());val count=input.read(buffer);if(count<0)break;output.write(buffer,0,count)}}finally{buffer.fill(0)}
-                                    }}
-                                } catch(_:Exception){
-                                    runCatching {pipes[1].closeWithError("Screenshot cancelled")}
-                                    handler.post {if(!ended.get())notice="Screenshot save cancelled or unavailable."}
-                                }
-                                finally {pipes.forEach {runCatching {it.close()}};source.onConsumed()}
-                            }.invokeOnCompletion {source.onConsumed()}
+        screenshotReview=null
+        view.postDelayed({
+            BrowserVaultScreenshot.capture(window,view,true,authorized) {result ->
+                result.onFailure {notice=uk.co.traynor.privategallery.core.browser.v2.BrowserScreenshotPolicy.REFUSAL}
+                    .onSuccess {source ->
+                        if(!authorized()){source.onConsumed();return@onSuccess}
+                        val pending=java.util.concurrent.atomic.AtomicReference<String?>(null)
+                        val cancelled=AtomicBoolean(false)
+                        fun cancel(receipt:String?) {
+                            cancelled.set(true)
+                            (receipt ?: pending.get())?.let {value ->runCatching {call(HiddenVpnBrowserBroker.SCREENSHOT_CANCEL,write={it.writeString(value)},read={Unit})}}
                         }
-                }
-            },150)
-        }
+                        screenshotReview=PrivateAppScreenshotRequest(source,"Hidden Vault",{!cancelled.get() && authorized()},
+                            save={capture,complete ->
+                                lifecycleScope.launch(Dispatchers.IO) {
+                                    val outcome=runCatching {
+                                        val pipes=ParcelFileDescriptor.createReliablePipe()
+                                        try {
+                                            check(!cancelled.get() && authorized())
+                                            val receipt=call(HiddenVpnBrowserBroker.SCREENSHOT,write={it.writeInt(1);it.writeTypedObject(pipes[0],android.os.Parcelable.PARCELABLE_WRITE_RETURN_VALUE)},read={checkNotNull(it.readString())})
+                                            require(runCatching {UUID.fromString(receipt).toString()==receipt}.getOrDefault(false));pending.set(receipt)
+                                            check(!cancelled.get() && authorized())
+                                            ParcelFileDescriptor.AutoCloseOutputStream(pipes[1]).use {output ->capture.openStream().use {input ->
+                                                val buffer=ByteArray(16*1024)
+                                                try {while(true){check(!cancelled.get() && !capture.isCancelled() && authorized());val count=input.read(buffer);if(count<0)break;output.write(buffer,0,count)}}finally{buffer.fill(0)}
+                                            }}
+                                            val deadline=SystemClock.elapsedRealtime()+20_000
+                                            var saved=false
+                                            while(!saved) {
+                                                check(!cancelled.get() && authorized() && SystemClock.elapsedRealtime()<deadline)
+                                                val state=call(HiddenVpnBrowserBroker.CHECK,read={p ->
+                                                    check(p.readInt()==1);p.readString();p.readInt();p.readString();p.readInt();p.readLong();p.readLong()
+                                                    val observed=p.readString();val status=p.readString();check(observed==receipt);status
+                                                })
+                                                check(state!="failed");saved=state=="saved"
+                                                if(!saved)Thread.sleep(100)
+                                            }
+                                            check(!cancelled.get() && authorized());receipt
+                                        } catch(failure:Throwable){runCatching {pipes[1].closeWithError("Screenshot cancelled")};cancel(pending.get());throw failure}
+                                        finally {pipes.forEach {runCatching {it.close()}};capture.onConsumed()}
+                                    }
+                                    withContext(Dispatchers.Main){complete(outcome)}
+                                }.invokeOnCompletion {capture.onConsumed()}
+                            },read={receipt ->
+                                check(!cancelled.get() && authorized())
+                                val descriptor=call(HiddenVpnBrowserBroker.SCREENSHOT_VIEW,write={it.writeString(receipt)},read={checkNotNull(it.readTypedObject(ParcelFileDescriptor.CREATOR))})
+                                ParcelFileDescriptor.AutoCloseInputStream(descriptor).use {input ->
+                                    val output=uk.co.traynor.privategallery.core.browser.v2.BrowserScreenshotBuffer(uk.co.traynor.privategallery.core.browser.v2.BrowserScreenshotPolicy.MAX_PNG_BYTES)
+                                    val buffer=ByteArray(16*1024)
+                                    try {
+                                        while(true){check(!cancelled.get() && authorized());val n=input.read(buffer);if(n<0)break;output.write(buffer,0,n)}
+                                        descriptor.checkError();check(!cancelled.get() && authorized())
+                                        output.input().use {it.readBytes()}
+                                    }finally{buffer.fill(0);output.wipe()}
+                                }
+                            },cancel=::cancel)
+                    }
+            }
+        },150)
     }
 
     private fun closePrivateAppSession(view:WebView) {
+        screenshotGeneration.incrementAndGet();screenshotReview=null
         if(!ready || !live() || view !in views)return
         if(activeDownloadOwner?.view===view)cancelOwnedDownload()
         if(pendingDownload?.view===view)pendingDownload=null
         if(downloadCandidate?.view===view)downloadCandidate=null
-        if(current===view){cancelWebsiteDialog();cancelUpload()}
+        if(current===view){screenshotReview=null;cancelWebsiteDialog();cancelUpload()}
         views.remove(view);privateAppTabs.remove(view);desktopTabs.remove(view);failures.remove(view);loadingTabs.remove(view);pageDeadlines.remove(view)
         view.stopLoading();view.destroy()
         if(current===view){current=null;views.lastOrNull()?.let {select(it)};if(current==null){address="";busy=false;openPrivateApps()}}
     }
 
-    private fun openPrivateApps() { if(ready && live()){cancelUpload();cancelWebsiteDialog();privateAppsOpen=true} }
+    private fun openPrivateApps() { if(ready && live()){screenshotGeneration.incrementAndGet();screenshotReview=null;cancelUpload();cancelWebsiteDialog();current?.onPause();privateAppsOpen=true} }
 
     private val privateAppsController by lazy {
         val owner=if(mode==HiddenConnectionPolicy.Mode.TOR_ONLY)uk.co.traynor.privategallery.core.privateapps.PrivateAppStore.Owner.HIDDEN_TOR else uk.co.traynor.privategallery.core.privateapps.PrivateAppStore.Owner.HIDDEN_VPN
@@ -571,6 +607,7 @@ class HiddenVpnBrowserActivity:ComponentActivity() {
             })},onLaunchApp={app ->
                 check(ready && live());check(HiddenConnectionPolicy.safeUrl(app.startUrl(),mode))
                 cancelUpload();cancelWebsiteDialog()
+                privateAppsOpen=false
                 val existing=views.firstOrNull {privateAppTabs[it]?.id()==app.id()}
                 if(existing!=null){privateAppTabs[existing]=app;select(existing)} else {
                 val view=checkNotNull(newTab())
@@ -585,15 +622,10 @@ class HiddenVpnBrowserActivity:ComponentActivity() {
         val app=current?.let {privateAppTabs[it]}
         val appStyle=app?.appStyle()==true
         var appControlsExpanded by remember(current) {mutableStateOf(false)}
-        pendingScreenshot?.let {capture ->
-            GalleryAlertDialog(onDismissRequest={pendingScreenshot=null},title={Text("Screenshot to Hidden Vault?")},
-                text={Text("Save only the visible website area encrypted in Hidden Vault. Capture must be allowed in Hidden settings. Video, embedded and protected content cannot be captured. Tor pages with JavaScript disabled are unsupported.")},
-                confirmButton={TextButton(onClick={pendingScreenshot=null;capture()}){Text("Save screenshot")}},
-                dismissButton={TextButton(onClick={pendingScreenshot=null}){Text("Cancel")}})
-        }
-        if(privateAppsOpen)PrivateAppsLibrary(privateAppsController,{privateAppsOpen=false;privateAppEditId=null;finishPrivateAppIcon(null)},privateAppEditId,{updated ->
+        screenshotReview?.let {request ->PrivateAppScreenshotReview(request,{if(screenshotReview===request)screenshotReview=null})}
+        if(privateAppsOpen)PrivateAppsLibrary(privateAppsController,{privateAppsOpen=false;current?.onResume();privateAppEditId=null;privateAppInitialUrl=null;privateAppInitialName=null;finishPrivateAppIcon(null)},privateAppEditId,{updated ->
             privateAppTabs.keys.toList().forEach {view ->if(privateAppTabs[view]?.id()==updated.id())privateAppTabs[view]=updated}
-        },{id ->views.filter {privateAppTabs[it]?.id()==id}.toList().forEach(::closePrivateAppSession)})
+        },{id ->views.filter {privateAppTabs[it]?.id()==id}.toList().forEach(::closePrivateAppSession)},initialUrl=privateAppInitialUrl,initialName=privateAppInitialName)
         privateAppIconSelection?.let {selection ->key(selection) {
             HiddenPrivateAppIconPicker(selection.generation,
                 isCurrent={privateAppIconSelection===selection && uploadGeneration.get()==selection.generation && ready && live()},
@@ -624,11 +656,11 @@ class HiddenVpnBrowserActivity:ComponentActivity() {
             SideEffect {clearAddressFocus={focus.clearFocus();keyboard?.hide();addressFocused=false}}
             if(app!=null)PrivateAppControls(app,current?.url.orEmpty(),"Hidden Vault · ${mode.indicator}",ready,
                 current?.canGoBack()==true,current?.canGoForward()==true,busy,
-                {current?.let {failures.remove(it);it.goBack()}},{current?.let {failures.remove(it);it.goForward()}},
+                {current?.let {if(it.canGoBack()){failures.remove(it);it.goBack()}else openPrivateApps()}},{current?.let {failures.remove(it);it.goForward()}},
                 {current?.let {if(busy){pageDeadlines[it]?.visible();it.stopLoading();loadingTabs[it]=false;busy=false;pageLoadProgress=100}else {failures.remove(it);it.reload()}}},
                 {cancelUpload();cancelWebsiteDialog();navigate(app.startUrl())},::openPrivateApps,
-                {cancelUpload();cancelWebsiteDialog();privateAppSwitcher=true},
-                {cancelUpload();cancelWebsiteDialog();privateAppSettingsId=app.id()},onScreenshot=::requestScreenshot,onExpanded={appControlsExpanded=it},onBrowserTools={library();menu=true},onQuickLock=if(uk.co.traynor.privategallery.ui.PrivacyShieldPreferences(this@HiddenVpnBrowserActivity).let {it.enabled && it.quickLock})({panic()})else null)
+                {screenshotGeneration.incrementAndGet();screenshotReview=null;cancelUpload();cancelWebsiteDialog();privateAppSwitcher=true},
+                {cancelUpload();cancelWebsiteDialog();privateAppSettingsId=app.id()},onScreenshot=::requestScreenshot,onCloseApp={screenshotReview=null;current?.let(::closePrivateAppSession);openPrivateApps()},onExitGallery={screenshotReview=null;manageDownloads()},onLockVault={screenshotReview=null;runCatching {call(HiddenVpnBrowserBroker.LOCK_VAULT,read={Unit})};terminate()},onExpanded={appControlsExpanded=it},onBrowserTools={library();menu=true},onQuickLock=if(uk.co.traynor.privategallery.ui.PrivacyShieldPreferences(this@HiddenVpnBrowserActivity).let {it.enabled && it.quickLock})({panic()})else null)
             if(app==null || (app.addressBar() && (!appStyle || appControlsExpanded)))BrowserAddressBar(address,{address=it},ready,busy,{navigate(address)},{current?.let {if(busy){pageDeadlines[it]?.visible();it.stopLoading();loadingTabs[it]=false;busy=false;pageLoadProgress=100}else {failures.remove(it);it.reload()}}},{addressFocused=it})
             if(busy) {
                 LinearProgressIndicator(progress={pageLoadProgress/100f},modifier=Modifier.fillMaxWidth())
@@ -670,6 +702,7 @@ class HiddenVpnBrowserActivity:ComponentActivity() {
 
         if(menu)BrowserPanel("Browser settings","Hidden ${mode.indicator}",{menu=false}) {
             Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(16.dp)) {
+                TextButton(onClick={menu=false;privateAppInitialUrl=current?.url?.takeIf {HiddenConnectionPolicy.safeUrl(it,mode)};privateAppInitialName=current?.title;openPrivateApps()},enabled=ready && current?.url?.let {HiddenConnectionPolicy.safeUrl(it,mode)}==true){Text("Add current website as Private App")}
                 TextButton(onClick={menu=false;requestScreenshot()},enabled=ready){Text("Screenshot to Hidden Vault")}
                 HiddenNativeSettingsContent(mode==HiddenConnectionPolicy.Mode.TOR_ONLY,mode.indicator,saveHistory,desktop,
             bookmark={current?.url?.let {library(2,it)};menu=false},bookmarks={showLibrary("Bookmarks");menu=false},history={showLibrary("History");menu=false},
@@ -753,7 +786,7 @@ class HiddenVpnBrowserActivity:ComponentActivity() {
         ready=false;handler.removeCallbacksAndMessages(null);cancelWebsiteDialog();cancelUpload();finishPrivateAppIcon(null)
         thumbnailCache.snapshot().values.forEach {if(it.isMutable && !it.isRecycled)it.eraseColor(android.graphics.Color.TRANSPARENT)}
         thumbnailCache.evictAll()
-        pendingScreenshot=null
+        screenshotReview=null
         pendingDownload=null;downloadCandidate=null;activeDownloadOwner=null
         privateAppsOpen=false;privateAppSettingsId=null;privateAppEditId=null;privateAppSwitcher=false;privateAppTabs.clear()
         views.toList().forEach {runCatching {it.settings.blockNetworkLoads=true;it.stopLoading();it.destroy()}};views.clear();pageDeadlines.clear();current=null;libraryItems=emptyList();libraryKind=null

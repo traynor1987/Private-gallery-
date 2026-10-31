@@ -47,6 +47,10 @@ internal class HiddenVpnBrowserBroker(
     private val downloading=AtomicBoolean()
     private val discovering=AtomicBoolean()
     private val screenshotting=AtomicBoolean()
+    private val screenshotViewing=AtomicBoolean()
+    @Volatile private var screenshotReceipt=""
+    @Volatile private var screenshotState=""
+    @Volatile private var screenshotItem:String?=null
     private val screenshotReaders=ConcurrentHashMap.newKeySet<ParcelFileDescriptor>()
     @Volatile private var downloadStatus=""
     @Volatile private var downloadedBytes=0L
@@ -266,8 +270,13 @@ internal class HiddenVpnBrowserBroker(
                             check(valid());result.writeNoException();result.writeString(state)
                         }
                     }
+                    LOCK_VAULT -> {
+                        require(data.dataAvail()==0)
+                        // Bind revocation to this Hidden authority; never touch Primary.
+                        synchronized(session) {check(valid());result.writeNoException();session.lock()}
+                    }
                     PANIC -> {result.writeNoException();main.post {onPanic()};end(RETURN,SystemClock.elapsedRealtime(),true)}
-                    CHECK -> {result.writeNoException();result.writeInt(1);result.writeString(downloadStatus);result.writeInt(if(valid() && hiddenCaptureAllowed())1 else 0);result.writeString(uk.co.traynor.privategallery.core.ui.ThemePreference.encode(hiddenTheme()));result.writeInt(if(downloading.get())1 else 0);result.writeLong(downloadedBytes);result.writeLong(downloadTotal)}
+                    CHECK -> {result.writeNoException();result.writeInt(1);result.writeString(downloadStatus);result.writeInt(if(valid() && hiddenCaptureAllowed())1 else 0);result.writeString(uk.co.traynor.privategallery.core.ui.ThemePreference.encode(hiddenTheme()));result.writeInt(if(downloading.get())1 else 0);result.writeLong(downloadedBytes);result.writeLong(downloadTotal);result.writeString(screenshotReceipt);result.writeString(screenshotState)}
                     LIST -> {
                         val generation=data.readLong();val queryId=data.readString().orEmpty();val offset=data.readInt()
                         val accept:Array<String> = data.createStringArray()?.map {requireNotNull(it)}?.toTypedArray() ?: emptyArray()
@@ -339,6 +348,39 @@ internal class HiddenVpnBrowserBroker(
                             result.writeNoException();result.writeInt(if(matched)1 else 0)
                         }finally {pin.fill('\u0000');candidate?.fill(0)}
                     }
+                    SCREENSHOT_CANCEL -> {
+                        val receipt=data.readString();require(data.dataAvail()==0)
+                        synchronized(gate) {check(valid());require(receipt==screenshotReceipt && receipt?.isNotEmpty()==true)
+                            screenshotReceipt="";screenshotState="";screenshotItem=null
+                            screenshotReaders.toList().forEach {runCatching {it.close()}};screenshotReaders.clear()}
+                        result.writeNoException()
+                    }
+                    SCREENSHOT_VIEW -> {
+                        val receipt=data.readString();require(data.dataAvail()==0)
+                        val id=synchronized(gate) {check(valid() && hiddenCaptureAllowed());require(receipt==screenshotReceipt && screenshotState=="saved");checkNotNull(screenshotItem)}
+                        check(screenshotViewing.compareAndSet(false,true))
+                        val pipes=try {ParcelFileDescriptor.createReliablePipe()}catch(failure:Throwable){screenshotViewing.set(false);throw failure}
+                        val expiry=Runnable {runCatching {pipes[1].closeWithError("Screenshot view expired")}}
+                        try {
+                            main.postDelayed(expiry,15_000)
+                            synchronized(gate){check(valid());screenshotReaders.add(pipes[1])}
+                            worker.execute {
+                                val buffer=ByteArray(16*1024)
+                                try {
+                                    val allowed={valid() && hiddenCaptureAllowed() && screenshotReceipt==receipt && screenshotState=="saved" && screenshotItem==id && screenshotReaders.contains(pipes[1])}
+                                    val repo=repository(allowed);repo.verify(id);val size=repo.mediaSize(id)
+                                    require(size in 45..uk.co.traynor.privategallery.core.browser.v2.BrowserScreenshotPolicy.MAX_PNG_BYTES.toLong())
+                                    ParcelFileDescriptor.AutoCloseOutputStream(pipes[1]).use {output ->
+                                        var offset=0L
+                                        while(offset<size){check(allowed());val n=repo.readRange(id,offset,buffer,0,minOf(buffer.size.toLong(),size-offset).toInt());check(n>0);check(allowed());output.write(buffer,0,n);buffer.fill(0);offset+=n}
+                                        check(allowed())
+                                    }
+                                }catch(_:Exception){runCatching {pipes[1].closeWithError("Screenshot unavailable")}}
+                                finally {screenshotViewing.set(false);main.removeCallbacks(expiry);buffer.fill(0);screenshotReaders.remove(pipes[1]);runCatching {pipes[1].close()}}
+                            }
+                            result.writeNoException();result.writeTypedObject(pipes[0],Parcelable.PARCELABLE_WRITE_RETURN_VALUE)
+                        }catch(failure:Throwable){screenshotViewing.set(false);main.removeCallbacks(expiry);pipes.forEach {runCatching {it.close()}};throw failure}
+                    }
                     SCREENSHOT -> {
                         val confirmed=data.readInt()==1
                         val input=checkNotNull(data.readTypedObject(ParcelFileDescriptor.CREATOR))
@@ -347,12 +389,13 @@ internal class HiddenVpnBrowserBroker(
                             require(data.dataAvail()==0 && confirmed)
                             check(valid() && hiddenCaptureAllowed())
                             admitted=screenshotting.compareAndSet(false,true);check(admitted)
-                            synchronized(gate){check(valid());screenshotReaders.add(input)}
+                            val receipt=UUID.randomUUID().toString()
+                            synchronized(gate){check(valid());screenshotReceipt=receipt;screenshotState="saving";screenshotItem=null;screenshotReaders.add(input)}
                             val expiry=Runnable {runCatching {input.close()}}
                             main.postDelayed(expiry,15_000)
                             worker.execute {
                                 try {
-                                    val allowed={valid() && hiddenCaptureAllowed() && screenshotReaders.contains(input)}
+                                    val allowed={valid() && hiddenCaptureAllowed() && screenshotReceipt==receipt && screenshotReaders.contains(input)}
                                     val outcome=runCatching {
                                         ParcelFileDescriptor.AutoCloseInputStream(input).use {raw ->
                                             var count=0L
@@ -361,11 +404,11 @@ internal class HiddenVpnBrowserBroker(
                                                 override fun read(b:ByteArray,off:Int,len:Int):Int {
                                                     check(allowed());val n=`in`.read(b,off,len)
                                                     if(n>0){count+=n;require(count<=uk.co.traynor.privategallery.core.browser.v2.BrowserScreenshotPolicy.MAX_PNG_BYTES)}
-                                                    check(allowed());return n
+                                                    if(n<0)input.checkError();check(allowed());return n
                                                 }
                                             }
                                             val repo=repository(allowed)
-                                            val item=repo.importMedia("browser-screenshot.png","image/png",stream,vaultOnly=true,
+                                            val item=repo.importMedia("browser-screenshot.png","image/png",stream,createDistinctCopy=true,vaultOnly=true,
                                                 validateDownloadedMedia={media,size ->
                                                     val header=ByteArray(24);val tail=ByteArray(12)
                                                     try {
@@ -376,15 +419,17 @@ internal class HiddenVpnBrowserBroker(
                                                     } finally {header.fill(0);tail.fill(0)}
                                                 },capturedAtEpochMillis=System.currentTimeMillis())
                                             repo.verify(item.id)
+                                            synchronized(gate){check(allowed());screenshotItem=item.id;screenshotState="saved"}
                                         }
                                     }
                                     if(uk.co.traynor.privategallery.BuildConfig.DEBUG)outcome.exceptionOrNull()?.let {
                                         android.util.Log.w("PrivateAppsScreenshot","Encrypted screenshot save failed: ${it.javaClass.simpleName}")
                                     }
+                                    if(valid() && screenshotReceipt==receipt && outcome.isFailure)screenshotState="failed"
                                     if(valid())downloadStatus=if(outcome.isSuccess)"Screenshot verified and saved encrypted in Hidden Vault." else "Screenshot could not be saved. No capture was exported."
                                 } finally {main.removeCallbacks(expiry);screenshotReaders.remove(input);runCatching {input.close()};screenshotting.set(false)}
                             }
-                            result.writeNoException()
+                            result.writeNoException();result.writeString(receipt)
                         } catch(failure:Throwable){screenshotReaders.remove(input);runCatching {input.close()};if(admitted)screenshotting.set(false);throw failure}
                     }
                     DOWNLOAD -> {
@@ -565,6 +610,7 @@ internal class HiddenVpnBrowserBroker(
             endpoint=child
         }
         synchronized(registry) {registry.remove(token)}
+        screenshotReceipt="";screenshotState="";screenshotItem=null
         screenshotReaders.toList().forEach {runCatching {it.close()}};screenshotReaders.clear()
         worker.shutdownNow();storage.close()
         // A graceful RETURN keeps its signal registered until actual child death: locking
@@ -614,6 +660,9 @@ internal class HiddenVpnBrowserBroker(
         const val LIST=IBinder.FIRST_CALL_TRANSACTION+3
         const val UPLOAD=IBinder.FIRST_CALL_TRANSACTION+4
         const val DISCOVER_PRIVATE_APP=IBinder.FIRST_CALL_TRANSACTION+11
+        const val LOCK_VAULT=IBinder.FIRST_CALL_TRANSACTION+15
+        const val SCREENSHOT_CANCEL=IBinder.FIRST_CALL_TRANSACTION+16
+        const val SCREENSHOT_VIEW=IBinder.FIRST_CALL_TRANSACTION+17
         const val SCREENSHOT=IBinder.FIRST_CALL_TRANSACTION+14
         const val DOWNLOAD=IBinder.FIRST_CALL_TRANSACTION+5
         const val DOWNLOAD_CANCEL=IBinder.FIRST_CALL_TRANSACTION+12

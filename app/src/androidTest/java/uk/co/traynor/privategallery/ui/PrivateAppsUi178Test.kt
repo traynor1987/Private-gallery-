@@ -56,10 +56,9 @@ class PrivateAppsUi178Test {
    },PrivateAppIcons::normalize)
   })
   try {
-   compose.setContent{PrivateGalleryTheme(AppTheme.LIGHT){PrivateAppsLibrary(controller,{})}}
-   compose.waitUntil(5000){compose.onAllNodesWithText("No private apps yet").fetchSemanticsNodes().isNotEmpty()}
-   compose.onNodeWithText("Add Private App").performClick()
-   compose.onNodeWithTag("private-app-url").performTextInput("https://example.test/app/")
+   compose.setContent{PrivateGalleryTheme(AppTheme.LIGHT){PrivateAppsLibrary(controller,{},initialUrl="https://example.test/app/",initialName="Current fixture")}}
+   compose.waitUntil(5000){compose.onAllNodesWithTag("private-app-url").fetchSemanticsNodes().isNotEmpty()}
+   compose.onNodeWithTag("private-app-url").assertTextEquals("https://example.test/app/")
    compose.waitUntil(5000){compose.onAllNodesWithText("Install as Private Web App").fetchSemanticsNodes().isNotEmpty()}
    compose.onNodeWithText("Install as Private Web App").performClick()
    compose.waitUntil(5000){compose.onAllNodesWithText("Synthetic PWA").fetchSemanticsNodes().isNotEmpty()}

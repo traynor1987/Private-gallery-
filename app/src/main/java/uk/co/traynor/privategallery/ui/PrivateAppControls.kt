@@ -31,6 +31,9 @@ internal fun PrivateAppControls(
     onExpanded: (Boolean) -> Unit = {},
     onBrowserTools: () -> Unit = {},
     onQuickLock: (() -> Unit)? = null,
+    onCloseApp: (() -> Unit)? = null,
+    onExitGallery: (() -> Unit)? = null,
+    onLockVault: (() -> Unit)? = null,
 ) {
     var expanded by remember(app.id()) { mutableStateOf(false) }
     Column(Modifier.fillMaxWidth().testTag("private-app-controls")) {
@@ -40,8 +43,9 @@ internal fun PrivateAppControls(
                 Text(app.name(),style=MaterialTheme.typography.titleSmall,maxLines=1,overflow=TextOverflow.Ellipsis)
                 Text(mode,style=MaterialTheme.typography.labelSmall,maxLines=1,overflow=TextOverflow.Ellipsis)
             }
-            IconButton(onClick=onBack,enabled=enabled && canGoBack) {Icon(Icons.AutoMirrored.Filled.ArrowBack,"App back")}
-            IconButton(onClick=onRefresh,enabled=enabled) {Icon(if(loading)Icons.Default.Close else Icons.Default.Refresh,if(loading)"Stop app loading" else "Refresh app")}
+            IconButton(onClick=onBack,enabled=enabled) {Icon(Icons.AutoMirrored.Filled.ArrowBack,if(canGoBack)"App back" else "Back to Private Apps library")}
+            TextButton(onClick=onLibrary){Text("Exit App")}
+            if(onScreenshot!=null)IconButton(onClick=onScreenshot,enabled=enabled){Icon(Icons.Default.Screenshot,"Screenshot to Vault")}
             IconButton(onClick={expanded=!expanded;onExpanded(expanded)}) {Icon(Icons.Default.MoreVert,if(expanded)"Collapse app controls" else "Expand app controls")}
         }
         // Origin changes and transport failures must remain visible even with controls collapsed.
@@ -55,12 +59,15 @@ internal fun PrivateAppControls(
             // Wrap at cover-screen widths and large font sizes; no horizontally clipped actions.
             FlowRow(Modifier.fillMaxWidth().padding(horizontal=4.dp)) {
                 IconButton(onClick=onForward,enabled=enabled && canGoForward){Icon(Icons.AutoMirrored.Filled.ArrowForward,"App forward")}
+                IconButton(onClick=onRefresh,enabled=enabled){Icon(if(loading)Icons.Default.Close else Icons.Default.Refresh,if(loading)"Stop app loading" else "Refresh app")}
                 IconButton(onClick=onHome,enabled=enabled){Icon(Icons.Default.Home,"App home")}
                 IconButton(onClick=onSwitch){Icon(Icons.Default.SwapHoriz,"Switch private app")}
                 IconButton(onClick=onLibrary){Icon(Icons.Default.Apps,"Private Apps library")}
                 IconButton(onClick=onSettings,enabled=enabled){Icon(Icons.Default.Settings,"Private app settings")}
-                if(onScreenshot!=null)IconButton(onClick=onScreenshot,enabled=enabled){Icon(Icons.Default.Screenshot,"Screenshot to Vault")}
-                if(onQuickLock!=null)IconButton(onClick=onQuickLock){Icon(Icons.Default.Lock,"Quick lock")}
+                if(onCloseApp!=null)TextButton(onClick=onCloseApp){Text("Close App")}
+                if(onExitGallery!=null)TextButton(onClick=onExitGallery){Text("Exit to Gallery")}
+                if(onLockVault!=null)TextButton(onClick=onLockVault){Text("Lock Vault")}
+                if(onQuickLock!=null)TextButton(onClick=onQuickLock){Text("Panic Exit")}
                 IconButton(onClick=onBrowserTools){Icon(Icons.Default.Build,"Browser tools")}
             }
         }

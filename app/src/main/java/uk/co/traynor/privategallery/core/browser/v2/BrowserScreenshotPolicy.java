@@ -11,6 +11,17 @@ public final class BrowserScreenshotPolicy {
         return confirmed && authorized && !secure && focused && attached && safeDocument &&
                 width > 0 && height > 0 && (long) width * height <= MAX_PIXELS;
     }
+    /** A completely transparent, black or white frame has no usable visible content. */
+    public static boolean hasVisibleContent(int[] pixels) {
+        if (pixels == null || pixels.length == 0) return false;
+        boolean allBlack=true, allWhite=true, allTransparent=true;
+        for (int pixel : pixels) {
+            int rgb=pixel & 0x00ffffff;
+            allTransparent &= (pixel >>> 24)==0;
+            allBlack &= rgb==0; allWhite &= rgb==0x00ffffff;
+        }
+        return !allTransparent && !allBlack && !allWhite;
+    }
     public static boolean pngHeader(byte[] header, long bytes) {
         if (header.length < 24 || bytes < 45 || bytes > MAX_PNG_BYTES) return false;
         byte[] signature = {(byte)137,80,78,71,13,10,26,10,0,0,0,13,73,72,68,82};

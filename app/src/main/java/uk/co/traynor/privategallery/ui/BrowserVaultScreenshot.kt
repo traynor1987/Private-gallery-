@@ -88,13 +88,18 @@ internal object BrowserVaultScreenshot {
                     check(status==PixelCopy.SUCCESS) {"PixelCopy status=$status"}
                     check(allowed(rect,true)) {"Capture authority or window policy changed"}
                     check(rect==bounds()) {"Viewport changed during capture"}
+                    val samples=IntArray(16*16)
+                    try {
+                        for(y in 0 until 16)for(x in 0 until 16)samples[y*16+x]=bitmap.getPixel(x*(bitmap.width-1)/15,y*(bitmap.height-1)/15)
+                        check(BrowserScreenshotPolicy.hasVisibleContent(samples)) {"Capture contains no visible content"}
+                    } finally {samples.fill(0)}
                     output=BrowserScreenshotBuffer(BrowserScreenshotPolicy.MAX_PNG_BYTES)
                     check(bitmap.compress(Bitmap.CompressFormat.PNG,100,output))
                     check(allowed(rect,true))
                     val owned=checkNotNull(output)
                     val consumed=AtomicBoolean(false)
                     val source=VaultImportSource("browser-screenshot-${System.currentTimeMillis()}.png","image/png",
-                        openStream={check(!consumed.get() && authorized());owned.input()},vaultOnly=true,
+                        openStream={check(!consumed.get() && authorized());owned.input()},vaultOnly=true,createDistinctCopy=true,
                         onConsumed={if(consumed.compareAndSet(false,true)){owned.wipe();inFlight.set(false)}},
                         isCancelled={!authorized()},capturedAtEpochMillis=System.currentTimeMillis(),
                         publishIfAllowed={commit ->check(authorized());commit()})

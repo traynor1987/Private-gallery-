@@ -229,17 +229,18 @@ jobs:
     timeout-minutes: 45
     env:
       # Exact tested source; independent approval and original-key upgrade gates remain mandatory.
-      FROZEN_SOURCE: '41b6d065a3fbef2f711198c9c778f7100e620c8f'
+      FROZEN_SOURCE: '' # Pending exact-source review and approval; deliberately blocked
     steps:
       - uses: actions/checkout@v4
       - name: Preserve exact 1.7.8 approval and reviewed controls
         run: |
+          test -n "$FROZEN_SOURCE"
           test "$FROZEN_SOURCE" != 0000000000000000000000000000000000000000
           test "$(head -n 1 .acceptance178-candidate)" = "$FROZEN_SOURCE"
-          test -s docs/release178/FINAL_REPAIR48_APPROVAL.json
-          test -s docs/release178/SECURITY_REVIEW48.md
-          cp docs/release178/FINAL_REPAIR48_APPROVAL.json "$RUNNER_TEMP/final-scope178.json"
-          cp docs/release178/SECURITY_REVIEW48.md "$RUNNER_TEMP/final-security178.md"
+          test -s docs/release178/FINAL_REPAIR49_APPROVAL.json
+          test -s docs/release178/SECURITY_REVIEW49.md
+          cp docs/release178/FINAL_REPAIR49_APPROVAL.json "$RUNNER_TEMP/final-scope178.json"
+          cp docs/release178/SECURITY_REVIEW49.md "$RUNNER_TEMP/final-security178.md"
           cp scripts/verify_final_scope178.py "$RUNNER_TEMP/verify_final_scope178.py"
           cp scripts/private_apps178_cases.json "$RUNNER_TEMP/private_apps178_cases.json"
           cp docs/release178/UpgradeFixtureTest.kt "$RUNNER_TEMP/UpgradeFixture178.kt"
@@ -293,26 +294,26 @@ jobs:
           PYPROOF
           python3 "$RUNNER_TEMP/verify_final_scope178.py" "$RUNNER_TEMP/final-scope178.json" "$FROZEN_SOURCE" "$RUNNER_TEMP/final-security178.md" app/build/production-evidence/focused-run.json "$evidence" "$RUNNER_TEMP/private_apps178_cases.json" "$RUNNER_TEMP/UpgradeFixture178.kt"
           cp "$RUNNER_TEMP/final-scope178.json" "$RUNNER_TEMP/final-security178.md" "$RUNNER_TEMP/release-control178-sha.txt" "$RUNNER_TEMP/verify_final_scope178.py" "$RUNNER_TEMP/private_apps178_cases.json" app/build/production-evidence/
-      - name: Download immutable original signed 1.7.8 code47 baseline before signer access
+      - name: Download immutable original signed 1.7.8 code48 baseline before signer access
         uses: actions/github-script@v7
         with:
           script: |
             const fs=require('fs'),crypto=require('crypto');
-            const runId=41081513370,artifactId=12990222572;
-            const archiveDigest='sha256:5ea6025721ad51530249592213ec7d8a8682682e52eba84ba65587e86b68f82e';
+            const runId=41156213785,artifactId=13025351799;
+            const archiveDigest='sha256:dac16fa3c5ef0a5ba5fc8d0c8b6640c0e293e3c0407cf1379f3c9717942af416';
             const {data:run}=await github.rest.actions.getWorkflowRun({...context.repo,run_id:runId});
-            if(run.head_sha!=='67296943557d6caf55f1ab5840f3c7eaa8b18b84' || run.head_branch!=='release/1.7.8-private-apps' || run.path!=='.github/workflows/acceptance1762.yml' || run.event!=='push' || run.status!=='completed' || run.conclusion!=='success')throw new Error('Historical baseline run identity differs');
+            if(run.head_sha!=='1613339778a8c29bafe699af87b40504152977b3' || run.head_branch!=='release/1.7.8-private-apps' || run.path!=='.github/workflows/acceptance1762.yml' || run.event!=='push' || run.status!=='completed' || run.conclusion!=='success')throw new Error('Historical baseline run identity differs');
             const artifacts=await github.paginate(github.rest.actions.listWorkflowRunArtifacts,{...context.repo,run_id:runId});
-            const artifact=artifacts.find(a=>a.id===artifactId && a.name==='private-gallery-1.7.8-code47-owner-acceptance' && !a.expired);
+            const artifact=artifacts.find(a=>a.id===artifactId && a.name==='private-gallery-1.7.8-code48-owner-acceptance' && !a.expired);
             if(!artifact || artifact.digest!==archiveDigest)throw new Error('Original baseline artifact missing or changed');
             const download=await github.rest.actions.downloadArtifact({...context.repo,artifact_id:artifactId,archive_format:'zip'});
             const bytes=Buffer.from(download.data);
             if('sha256:'+crypto.createHash('sha256').update(bytes).digest('hex')!==archiveDigest)throw new Error('Original baseline archive checksum differs');
-            fs.writeFileSync(process.env.RUNNER_TEMP+'/original178code47.zip',bytes);
-            fs.writeFileSync('app/build/production-evidence/original178code47-provenance.json',JSON.stringify({run_id:runId,release_control_sha:run.head_sha,artifact_id:artifactId,artifact_digest:archiveDigest,application_source_sha:'04b91ae01c64323aac02975672d6046dfba62e30',apk_sha256:'21066bd7153520c688c5a6b6034fca549b33df391762e64a5070eecfeb342d3d'},null,2));
+            fs.writeFileSync(process.env.RUNNER_TEMP+'/original178code48.zip',bytes);
+            fs.writeFileSync('app/build/production-evidence/original178code48-provenance.json',JSON.stringify({run_id:runId,release_control_sha:run.head_sha,artifact_id:artifactId,artifact_digest:archiveDigest,application_source_sha:'41b6d065a3fbef2f711198c9c778f7100e620c8f',apk_sha256:'c9f43de796f0af15b95df54aabba686a11b4b6b6bb4eb08cf00169cccf7b7ec5'},null,2));
       - name: Extract exactly one byte-identical original signed baseline
         run: |
-          python3 scripts/verify_upgrade178_baseline.py "$RUNNER_TEMP/original178code47.zip" "$RUNNER_TEMP/original178code47.apk"
+          python3 scripts/verify_upgrade178_baseline.py "$RUNNER_TEMP/original178code48.zip" "$RUNNER_TEMP/original178code48.apk"
       - uses: actions/setup-java@v5
         with: { distribution: temurin, java-version: '17' }
       - uses: actions/cache/restore@v4
@@ -328,11 +329,11 @@ jobs:
           python3 scripts/verify_android17_sdk.py "$ANDROID_HOME" app/build/production-evidence/android17-sdk.json
       - name: Verify archived baseline package and original certificate before signer access
         run: |
-          "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose --print-certs "$RUNNER_TEMP/original178code47.apk" > app/build/production-evidence/original178code47-signature.txt
-          grep -Fq 'Signer #1 certificate SHA-256 digest: 94f2bfc6567f26d067d29077111cfd0ce86d38263c642ad115e43365f05b0d17' app/build/production-evidence/original178code47-signature.txt
-          "$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging "$RUNNER_TEMP/original178code47.apk" > app/build/production-evidence/original178code47-package.txt
-          grep -Fq "package: name='uk.co.traynor.privategallery' versionCode='47' versionName='1.7.8'" app/build/production-evidence/original178code47-package.txt
-          ! grep -q 'application-debuggable' app/build/production-evidence/original178code47-package.txt
+          "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose --print-certs "$RUNNER_TEMP/original178code48.apk" > app/build/production-evidence/original178code48-signature.txt
+          grep -Fq 'Signer #1 certificate SHA-256 digest: 94f2bfc6567f26d067d29077111cfd0ce86d38263c642ad115e43365f05b0d17' app/build/production-evidence/original178code48-signature.txt
+          "$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging "$RUNNER_TEMP/original178code48.apk" > app/build/production-evidence/original178code48-package.txt
+          grep -Fq "package: name='uk.co.traynor.privategallery' versionCode='48' versionName='1.7.8'" app/build/production-evidence/original178code48-package.txt
+          ! grep -q 'application-debuggable' app/build/production-evidence/original178code48-package.txt
       - name: Verify original production private key and certificate
         env:
           KEYSTORE_BASE64: ${{ secrets.PRIVATE_GALLERY_SIGNING_KEYSTORE_BASE64 }}
@@ -364,11 +365,11 @@ jobs:
           cp "$RUNNER_TEMP/UpgradeFixture178.kt" "$RUNNER_TEMP/upgrade-fixture178-sha256.txt" app/build/production-evidence/
       - name: Enable emulator acceleration
         run: sudo chmod 666 /dev/kvm
-      - name: Original-key code47 to code48 in-place upgrade and restart
+      - name: Original-key code48 to code49 in-place upgrade and restart
         uses: reactivecircus/android-emulator-runner@v2
         env:
-          PRIVATE_GALLERY_UPGRADE_BASELINE: '47'
-          PRIVATE_GALLERY_178_BASELINE_APK: ${{ runner.temp }}/original178code47.apk
+          PRIVATE_GALLERY_UPGRADE_BASELINE: '48'
+          PRIVATE_GALLERY_178_BASELINE_APK: ${{ runner.temp }}/original178code48.apk
           PRODUCTION_UPGRADE: '1'
           ORG_GRADLE_PROJECT_PRIVATE_GALLERY_STORE_FILE: ${{ runner.temp }}/private-gallery-release.jks
           ORG_GRADLE_PROJECT_PRIVATE_GALLERY_STORE_PASSWORD: ${{ secrets.PRIVATE_GALLERY_SIGNING_STORE_PASSWORD }}
@@ -381,7 +382,7 @@ jobs:
           api-level: '37.0'
           target: google_atd
           arch: x86_64
-          avd-name: upgrade1762-from47
+          avd-name: upgrade1762-from48
           profile: pixel_2
           cores: 4
           ram-size: 4096M
@@ -390,11 +391,11 @@ jobs:
           disable-animations: false
           emulator-options: -no-window -gpu swiftshader -no-snapshot -noaudio -no-boot-anim -feature -HardwareDecoder
           script: |
-            bash scripts/verify_android17_device.sh app/build/production-evidence/from47
+            bash scripts/verify_android17_device.sh app/build/production-evidence/from48
             test "$(adb shell getenforce | tr -d '\r')" = Enforcing
             bash scripts/verify_synthetic_upgrade178.sh
-            cp app/build/production-evidence/upgrade-* app/build/production-evidence/from47/
-      - name: Require original-key code47 upgrade proof for the one APK
+            cp app/build/production-evidence/upgrade-* app/build/production-evidence/from48/
+      - name: Require original-key code48 upgrade proof for the one APK
         run: |
           python3 - <<'PY'
           import hashlib,json,os,pathlib
@@ -404,17 +405,17 @@ jobs:
           source=os.environ['FROZEN_SOURCE']
           cert='94f2bfc6567f26d067d29077111cfd0ce86d38263c642ad115e43365f05b0d17'
           package=(root/'package.txt').read_text()
-          assert "package: name='uk.co.traynor.privategallery' versionCode='48' versionName='1.7.8'" in package
+          assert "package: name='uk.co.traynor.privategallery' versionCode='49' versionName='1.7.8'" in package
           assert "sdkVersion:'37'" in package and "targetSdkVersion:'37'" in package
           assert 'application-debuggable' not in package
           assert cert in (root/'signature.txt').read_text()
           assert (root/'source-sha.txt').read_text().strip()==source
           assert (root/'apk-sha256.txt').read_text().split()[0]==digest
-          expected={47:'04b91ae01c64323aac02975672d6046dfba62e30'}
+          expected={48:'41b6d065a3fbef2f711198c9c778f7100e620c8f'}
           for code,baseline in expected.items():
               d=root/f'from{code}'
               assert (d/'upgrade-baseline-source-sha.txt').read_text().strip()==baseline
-              assert (d/'upgrade-baseline-sha256.txt').read_text().split()[0]=='21066bd7153520c688c5a6b6034fca549b33df391762e64a5070eecfeb342d3d'
+              assert (d/'upgrade-baseline-sha256.txt').read_text().split()[0]=='c9f43de796f0af15b95df54aabba686a11b4b6b6bb4eb08cf00169cccf7b7ec5'
               assert (d/'upgrade-candidate-source-sha.txt').read_text().strip()==source
               assert (d/'upgrade-candidate-sha256.txt').read_text().split()[0]==digest
               for phase in ('baseline','candidate'):
@@ -422,13 +423,13 @@ jobs:
               for phase in ('seed','verify','after-restart'):
                   assert 'OK (1 test)' in (d/f'upgrade-{phase}.txt').read_text()
               assert (d/'upgrade-result.txt').read_text().startswith('PASS:')
-          (root/'release-summary.json').write_text(json.dumps(dict(source_sha=source,version='1.7.8',version_code=48,package='uk.co.traynor.privategallery',apk_sha256=digest,original_certificate_sha256=cert,synthetic_original_key_upgrades=[47],baseline_artifact='exact_archived_original_signed_1.7.8_code47_from_run41081513370_artifact12990222572',restart='PASS',owner_physical_acceptance='NOT_PERFORMED',hidden_interactive_vpn='VERIFIED'),indent=2)+'\n')
-          print('PASS: exact original-certificate candidate and code46 in-place upgrade/restart path')
+          (root/'release-summary.json').write_text(json.dumps(dict(source_sha=source,version='1.7.8',version_code=49,package='uk.co.traynor.privategallery',apk_sha256=digest,original_certificate_sha256=cert,synthetic_original_key_upgrades=[48],baseline_artifact='exact_archived_original_signed_1.7.8_code48_from_run41156213785_artifact13025351799',restart='PASS',owner_physical_acceptance='NOT_PERFORMED',hidden_interactive_vpn='VERIFIED'),indent=2)+'\n')
+          print('PASS: exact original-certificate candidate and code48 in-place upgrade/restart path')
           PY
       - name: Deliver one verified owner-acceptance APK
         uses: actions/upload-artifact@v4
         with:
-          name: private-gallery-1.7.8-code48-owner-acceptance
+          name: private-gallery-1.7.8-code49-owner-acceptance
           path: |
             app/build/outputs/apk/release/app-release.apk
             app/build/production-evidence

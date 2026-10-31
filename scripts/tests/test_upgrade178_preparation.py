@@ -30,13 +30,13 @@ class Upgrade178PreparationTest(unittest.TestCase):
         return subprocess.run(["bash", "-c", 'source scripts/release_configuration.sh; printf "%s %s %s %s %s %s" "$release_min_sdk" "$release_version" "$release_code" "$baseline_version" "$baseline_code" "$baseline_sha"'], cwd=ROOT, env=env, capture_output=True, text=True)
 
     def test_exact_baseline_default_and_explicit(self):
-        for baseline in (None, 47):
+        for baseline in (None, 48):
             result = self.config(baseline)
             self.assertEqual(0, result.returncode, result.stderr)
-            self.assertEqual(f"37 1.7.8 48 1.7.8 47 {GATE.BASELINE_SHA}", result.stdout)
+            self.assertEqual(f"37 1.7.8 49 1.7.8 48 {GATE.BASELINE_SHA}", result.stdout)
 
     def test_unsupported_baselines_and_branch_refused(self):
-        for baseline in (45, 46, 48, "", "047", "47; echo bypass"):
+        for baseline in (45, 46, 47, 49, "", "048", "48; echo bypass"):
             with self.subTest(baseline=baseline):
                 # Empty means the explicitly supported shell default, so test an actual blank instead.
                 result = self.config(" " if baseline == "" else baseline)
@@ -50,8 +50,10 @@ class Upgrade178PreparationTest(unittest.TestCase):
 
     def test_missing_coverage_and_tampering_fail_closed(self):
         mutations = (
-            ("docs/release178/UpgradeFixtureTest.kt", "candidateCode == 48", "candidateCode == 49"),
+            ("docs/release178/UpgradeFixtureTest.kt", "candidateCode == 49", "candidateCode == 50"),
             ("docs/release178/UpgradeFixtureTest.kt", "assertCiphertextAfterReads(before)", "// omitted"),
+            ("docs/release178/UpgradeFixtureTest.kt", 'Original code48 seed uses catalogue format2",2', 'Original code48 seed uses catalogue format1",1'),
+            ("docs/release178/UpgradeFixtureTest.kt", "Synthetic baseline PWA discovery report", ""),
             ("docs/release178/UpgradeFixtureTest.kt", 'assertRecentlyDeleted(before.getJSONObject("hiddenDeleted"),repo.recentlyDeleted(),repo.items())', "// omitted"),
             ("scripts/release_configuration.sh", GATE.BASELINE_SHA, "0" * 40),
             ("scripts/upgrade/UpgradeFixtureTest.kt", "candidateCode == 46", "candidateCode == 47"),

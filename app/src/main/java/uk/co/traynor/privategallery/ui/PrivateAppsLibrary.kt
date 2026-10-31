@@ -21,7 +21,7 @@ import uk.co.traynor.privategallery.core.privateapps.*
 
 /** Shared library only: browsing remains in the existing authorised browser. No saved UI state. */
 @Composable
-internal fun PrivateAppsLibrary(controller:PrivateAppsController,onClose:()->Unit,initialEditId:String?=null,onUpdated:(PrivateAppCatalog.App)->Unit={},onRemoved:(String)->Unit={}) {
+internal fun PrivateAppsLibrary(controller:PrivateAppsController,onClose:()->Unit,initialEditId:String?=null,onUpdated:(PrivateAppCatalog.App)->Unit={},onRemoved:(String)->Unit={},initialUrl:String?=null,initialName:String?=null) {
  val scope=rememberCoroutineScope()
  var apps by remember(controller){mutableStateOf<List<PrivateAppCatalog.App>>(emptyList())}
  var busy by remember(controller){mutableStateOf(true)}
@@ -45,7 +45,7 @@ internal fun PrivateAppsLibrary(controller:PrivateAppsController,onClose:()->Uni
  LaunchedEffect(controller){
   val result=withContext(Dispatchers.IO){runCatching{controller.load()}}
   if(!controller.isCurrent()){revoke();return@LaunchedEffect}
-  result.onSuccess {apps=it.apps;initialEditId?.let {id ->editor=it.apps.firstOrNull {app->app.id()==id};editing=editor!=null}}
+  result.onSuccess {apps=it.apps;initialEditId?.let {id ->editor=it.apps.firstOrNull {app->app.id()==id};editing=editor!=null};if(initialEditId==null && initialUrl!=null && PrivateAppDiscovery.safe(initialUrl,controller.owner==PrivateAppStore.Owner.HIDDEN_TOR))editing=true}
    .onFailure {message="Private apps could not be loaded."}
   busy=false
  }
@@ -95,8 +95,8 @@ internal fun PrivateAppsLibrary(controller:PrivateAppsController,onClose:()->Uni
   }
  }
  if(editing) {
-  var name by remember(editor){mutableStateOf(editor?.name().orEmpty())}
-  var url by remember(editor){mutableStateOf(editor?.startUrl().orEmpty())}
+  var name by remember(editor){mutableStateOf(editor?.name() ?: initialName.orEmpty().take(120))}
+  var url by remember(editor){mutableStateOf(editor?.startUrl() ?: initialUrl.orEmpty())}
   var invalid by remember(editor){mutableStateOf(false)}
   var customIcon by remember(editor){mutableStateOf<String?>(null)}
   var iconBusy by remember(editor){mutableStateOf(false)}

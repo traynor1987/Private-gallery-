@@ -24,22 +24,29 @@ class PrivateAppControls178Test {
     private fun fixture()=PrivateAppCatalog.App(UUID.randomUUID().toString(),"Fixture App","https://example.test/app/","https://example.test/app/","standalone","",false,true,false)
 
     @Test fun controls_keep_origin_visible_and_delegate_to_existing_owner() {
-        val app=fixture();var homes=0;var switches=0;var locks=0
+        val app=fixture();var homes=0;var switches=0;var locks=0;var backs=0;var libraries=0;var closes=0;var exits=0;var vaultLocks=0
         compose.setContent { PrivateGalleryTheme(AppTheme.LIGHT) {
             PrivateAppControls(app,"https://secret:password@example.test/elsewhere","Hidden Vault · Tor",true,false,true,false,
-                {},{},{},{homes++},{},{switches++},{},onQuickLock={locks++})
+                {backs++},{},{},{homes++},{libraries++},{switches++},{},onQuickLock={locks++},
+                onCloseApp={closes++},onExitGallery={exits++},onLockVault={vaultLocks++})
         } }
+        compose.onNodeWithContentDescription("Back to Private Apps library").assertIsEnabled().performClick()
+        compose.onNodeWithText("Exit App").assertIsDisplayed().performClick()
+        compose.onNodeWithText("Close App").assertDoesNotExist()
         compose.onNodeWithContentDescription("App home").assertDoesNotExist()
         compose.onNodeWithContentDescription("Expand app controls").performClick()
         compose.onNodeWithText("Fixture App").assertIsDisplayed()
         compose.onNodeWithText("https://example.test").assertIsDisplayed()
         compose.onNodeWithText("Browsing outside this app's saved scope").assertIsDisplayed()
-        compose.onNodeWithContentDescription("App back").assertIsNotEnabled()
+        compose.onNodeWithContentDescription("Back to Private Apps library").assertIsEnabled()
         compose.onNodeWithContentDescription("App forward").assertIsEnabled()
         compose.onNodeWithContentDescription("App home").performClick()
         compose.onNodeWithContentDescription("Switch private app").performClick()
-        compose.onNodeWithContentDescription("Quick lock").performClick()
-        compose.runOnIdle { assertEquals(1,homes);assertEquals(1,switches);assertEquals(1,locks) }
+        compose.onNodeWithText("Close App").performClick()
+        compose.onNodeWithText("Exit to Gallery").performClick()
+        compose.onNodeWithText("Lock Vault").performClick()
+        compose.onNodeWithText("Panic Exit").performClick()
+        compose.runOnIdle { assertEquals(1,homes);assertEquals(1,switches);assertEquals(1,locks);assertEquals(1,backs);assertEquals(1,libraries);assertEquals(1,closes);assertEquals(1,exits);assertEquals(1,vaultLocks) }
     }
 
     @Test fun settings_and_switcher_render_save_and_close_on_revocation() {

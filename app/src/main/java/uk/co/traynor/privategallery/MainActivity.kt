@@ -2394,6 +2394,54 @@ class MainActivity : FragmentActivity() {
     }
 
     private fun importBrowserSource(source: uk.co.traynor.privategallery.core.vault.VaultImportSource, onComplete: (String) -> Unit) {
+        importBrowserSourceResult(source) {result ->onComplete(when(result.getOrNull()) {
+            is ImportResult.Imported -> "Saved to Vault."
+            is ImportResult.Duplicate -> "Already in Vault."
+            else -> "Unable to save to Vault."
+        })}
+    }
+
+    internal fun privateAppExitToGallery() {
+        if(privateAppsController()?.isCurrent()==true)openNonBrowser(Route.VAULT)
+    }
+    internal fun privateAppLockVault() {
+        if(privateAppsController()?.isCurrent()==true)lock()
+    }
+
+    internal fun privateAppScreenshotReview(source:uk.co.traynor.privategallery.core.vault.VaultImportSource,
+                                            documentCurrent:()->Boolean):uk.co.traynor.privategallery.ui.PrivateAppScreenshotRequest {
+        val authority=captureBrowserScreenshotAuthority()
+        val owner=sessionKey
+        val saved=java.util.concurrent.atomic.AtomicReference<String?>(null)
+        val current={authority() && documentCurrent()}
+        return uk.co.traynor.privategallery.ui.PrivateAppScreenshotRequest(source,"Primary Vault",current,
+            save={input,done ->
+                if(!current()){input.onConsumed();done(Result.failure(IllegalStateException("Screenshot cancelled")))}
+                else importBrowserSourceResult(input.copy(createDistinctCopy=true)) {result ->
+                    val item=when(val imported=result.getOrNull()) {
+                        is ImportResult.Imported -> imported.item
+                        is ImportResult.Duplicate -> imported.existing
+                        else -> null
+                    }
+                    if(current() && item!=null){saved.set(item.id);done(Result.success(item.id))}
+                    else done(Result.failure(IllegalStateException("Screenshot unavailable")))
+                }
+            },read={id ->
+                check(current() && owner!=null && id==saved.get())
+                val key=checkNotNull(owner).copyOf()
+                try {
+                    val repo=AndroidVaultRepository(applicationContext,key,authorized=current)
+                    val item=repo.items().single {it.id==id}
+                    require(item.vaultOnly && item.mimeType=="image/png" && item.state==uk.co.traynor.privategallery.core.vault.VaultItemState.COMPLETE &&
+                        item.plaintextSize in 45..uk.co.traynor.privategallery.core.browser.v2.BrowserScreenshotPolicy.MAX_PNG_BYTES.toLong())
+                    val bytes=repo.readForViewing(item,cancelled={!current()})
+                    if(!current()){bytes.fill(0);error("Screenshot authority expired")}
+                    bytes
+                } finally {key.fill(0)}
+            })
+    }
+
+    private fun importBrowserSourceResult(source: uk.co.traynor.privategallery.core.vault.VaultImportSource, onComplete: (Result<ImportResult>) -> Unit) {
         val consumed=java.util.concurrent.atomic.AtomicBoolean(false)
         val consume={if(consumed.compareAndSet(false,true))source.onConsumed()}
         val owner=sessionKey
@@ -2403,7 +2451,7 @@ class MainActivity : FragmentActivity() {
             session.isAuthenticationCurrent(authentication) && !hideContent && !retained.hidden.selected &&
             route==Route.BROWSER && lifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.RESUMED) &&
             (!browserRequireVpn || browserVpnState==VpnConnectionState.CONNECTED) && !source.isCancelled()}
-        if(!current()) {consume();onComplete("Vault save cancelled.");return}
+        if(!current()) {consume();onComplete(Result.failure(IllegalStateException("Vault save cancelled")));return}
         val key=owner!!.copyOf()
         lifecycleScope.launch(Dispatchers.IO) {
             val result=try {runCatching {
@@ -2412,11 +2460,7 @@ class MainActivity : FragmentActivity() {
                     source.copy(onConsumed=consume,isCancelled={!current()},publishIfAllowed={commit ->publish {source.publishIfAllowed(commit)}}))
             }} finally {key.fill(0);consume()}
             runOnUiThread {
-                if(current())onComplete(when(result.getOrNull()) {
-                    is ImportResult.Imported -> "Saved to Vault."
-                    is ImportResult.Duplicate -> "Already in Vault."
-                    else -> "Unable to save to Vault."
-                })
+                if(current())onComplete(result)
             }
         }.invokeOnCompletion {key.fill(0);consume()}
     }

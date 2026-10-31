@@ -14,6 +14,10 @@ public class BrowserScreenshotChecks {
         check(!BrowserScreenshotPolicy.allowed(true,true,false,true,true,false,1080,1920));
         check(!BrowserScreenshotPolicy.allowed(true,true,false,true,true,true,0,1920));
         check(!BrowserScreenshotPolicy.allowed(true,true,false,true,true,true,Integer.MAX_VALUE,Integer.MAX_VALUE));
+        int[] blank=new int[256];java.util.Arrays.fill(blank,0xff000000);
+        java.lang.reflect.Method quality=BrowserScreenshotPolicy.class.getMethod("hasVisibleContent",int[].class);
+        check(!(Boolean)quality.invoke(null,(Object)blank));blank[128]=0xffffffff;
+        check((Boolean)quality.invoke(null,(Object)blank));
         BrowserScreenshotBuffer buffer=new BrowserScreenshotBuffer(3);
         buffer.write(new byte[]{42,43,44});
         InputStream stream=buffer.input();check(stream.read()==42);

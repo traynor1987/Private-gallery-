@@ -419,13 +419,25 @@ class HiddenPrivateAppsLive178Test {
                     visible("Refresh app") && !visible("Stop app loading") && visible("Download app document")
                 }
                 val count=repository.items().size
-                click("Screenshot to Vault");click("Save screenshot")
+                click("Screenshot to Vault")
+                waitFor("Capture opens protected memory-only review") {visible("Review screenshot") && visible("Protected screenshot preview")}
+                assertEquals("Review must not publish before Save",count,repository.items().size)
+                click("Cancel")
+                waitFor("Cancel returns to the same app") {!visible("Review screenshot") && visible("Screenshot to Vault")}
+                assertEquals("Cancelled capture leaves no Vault item",count,repository.items().size)
+                click("Screenshot to Vault")
+                waitFor("Second capture can be reviewed") {visible("Review screenshot") && visible("Protected screenshot preview")}
+                click("Save screenshot")
                 waitFor("Actual child screenshot pipe persists authenticated encrypted PNG",30) {repository.items().size==count+1}
                 val screenshot=repository.items().single{it.displayName=="browser-screenshot.png"}
                 assertTrue(screenshot.vaultOnly);assertNull(screenshot.sourceUri)
                 repository.verify(screenshot.id)
                 val png=repository.read(screenshot.id)
                 try {assertEquals(0x89,png[0].toInt() and 255);assertTrue(png.size>24)}finally{png.fill(0)}
+                waitFor("Save acknowledges committed encrypted item") {visible("Screenshot saved") && visible("View Screenshot")}
+                click("View Screenshot")
+                waitFor("View decrypts the committed screenshot receipt") {visible("Saved screenshot") && visible("Protected screenshot preview")}
+                click("Done")
                 val saved=repository.items().map{it.id}.toSet()
                 clickWeb("Download slow app document");click("Save GET file")
                 click("Browser tools");click("Downloads")
@@ -445,12 +457,21 @@ class HiddenPrivateAppsLive178Test {
                 click("Open")
                 waitFor("New session after close requires fresh PIN"){visible("Unlock saved app")}
                 setAuthenticationPin("738295");click("Open app")
-                waitFor("New session reaches real app document"){visible("Download app document") && visible("Expand app controls") && visible("Refresh app")}
+                waitFor("New session reaches real app document"){visible("Download app document") && visible("Expand app controls")}
                 click("Expand app controls");click("Browser tools");click("Downloads")
                 waitFor("Closing an app cancels its owned download"){visible("Download cancelled. No new item was saved.")}
                 assertEquals("Close cannot publish the cancelled file",saved,repository.items().map{it.id}.toSet())
                 assertFalse("Closing session removes download staging",root.walkTopDown().any{it.isFile && it.name.startsWith("staged-")})
                 click("Keep browsing")
+            }
+            if(torMode) {
+                val beforeScreenshot=repository.items().map{it.id}.toSet()
+                click("Screenshot to Vault")
+                waitFor("Tor JavaScript-disabled capture remains fail closed") {
+                    visible(uk.co.traynor.privategallery.core.browser.v2.BrowserScreenshotPolicy.REFUSAL)
+                }
+                assertFalse("Refused Tor capture never opens review",visible("Review screenshot"))
+                assertEquals(beforeScreenshot,repository.items().map{it.id}.toSet())
             }
             val documentPath="/private-app-document178.txt"
             val beforeDownload=requestCount(events(),documentPath)
