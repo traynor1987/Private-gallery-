@@ -38,12 +38,15 @@ public final class PrivateAppCommandChecks {
   check(PrivateAppCommands.execute(store,PrivateAppCommands.REQUIRE_AUTH,null,first.id()).apps.get(0).requireAuthentication());
   var reset=PrivateAppCommands.execute(store,PrivateAppCommands.RESET_SETTINGS,null,first.id()).apps.get(0);
   check(reset.requireAuthentication());check(!reset.pinned());check(reset.addressBar());check(reset.startUrl().equals(first.startUrl()));
+  check(!PrivateAppCommands.execute(store,PrivateAppCommands.BROWSER_STYLE,null,first.id()).apps.get(0).appStyle());
+  check(PrivateAppCommands.execute(store,PrivateAppCommands.APP_STYLE,null,first.id()).apps.get(0).appStyle());
+  check(PrivateAppCatalog.decode(store.read().encode(),false).apps.get(0).appStyle());
   check(!PrivateAppCommands.execute(store,PrivateAppCommands.NO_AUTH,null,first.id()).apps.get(0).requireAuthentication());
   var barrier=new PrivateAppClearBarrier();var old=barrier.begin();var current=barrier.begin();
   check(!barrier.complete(old,()->{throw new AssertionError();}));check(barrier.pending());
   check(barrier.complete(current,()->{}));check(!barrier.pending());check(!barrier.complete(current,()->{throw new AssertionError();}));
   var removed=PrivateAppCommands.execute(store,PrivateAppCommands.REMOVE,null,second.id());
-  for(int action:new int[]{PrivateAppCommands.PIN,PrivateAppCommands.UNPIN,PrivateAppCommands.MOVE_UP,PrivateAppCommands.MOVE_DOWN,PrivateAppCommands.SHOW_ADDRESS,PrivateAppCommands.HIDE_ADDRESS,PrivateAppCommands.REQUIRE_AUTH,PrivateAppCommands.NO_AUTH,PrivateAppCommands.RESET_SETTINGS}) {
+  for(int action:new int[]{PrivateAppCommands.PIN,PrivateAppCommands.UNPIN,PrivateAppCommands.MOVE_UP,PrivateAppCommands.MOVE_DOWN,PrivateAppCommands.SHOW_ADDRESS,PrivateAppCommands.HIDE_ADDRESS,PrivateAppCommands.REQUIRE_AUTH,PrivateAppCommands.NO_AUTH,PrivateAppCommands.RESET_SETTINGS,PrivateAppCommands.APP_STYLE,PrivateAppCommands.BROWSER_STYLE}) {
    check(PrivateAppCommands.execute(store,action,null,second.id()).apps.equals(removed.apps));
    rejects(()->PrivateAppCommands.execute(store,action,payload,first.id()));
    rejects(()->PrivateAppCommands.execute(store,action,null,"../bad"));

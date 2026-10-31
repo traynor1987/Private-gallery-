@@ -21,7 +21,7 @@ import uk.co.traynor.privategallery.core.privateapps.*
 
 /** Shared library only: browsing remains in the existing authorised browser. No saved UI state. */
 @Composable
-internal fun PrivateAppsLibrary(controller:PrivateAppsController,onClose:()->Unit) {
+internal fun PrivateAppsLibrary(controller:PrivateAppsController,onClose:()->Unit,initialEditId:String?=null,onUpdated:(PrivateAppCatalog.App)->Unit={},onRemoved:(String)->Unit={}) {
  val scope=rememberCoroutineScope()
  var apps by remember(controller){mutableStateOf<List<PrivateAppCatalog.App>>(emptyList())}
  var busy by remember(controller){mutableStateOf(true)}
@@ -32,17 +32,23 @@ internal fun PrivateAppsLibrary(controller:PrivateAppsController,onClose:()->Uni
  var revoked by remember(controller){mutableStateOf(false)}
  val close by rememberUpdatedState(onClose)
  fun revoke(){apps=emptyList();editor=null;editing=false;removal=null;message="";if(!revoked){revoked=true;close()}}
- fun runChange(action:()->PrivateAppCatalog) {
+ fun runChange(after:()->Unit={},action:()->PrivateAppCatalog) {
   if(!controller.isCurrent()){revoke();return}
   busy=true;message=""
   scope.launch {
    val result=withContext(Dispatchers.IO){runCatching{action()}}
    if(!controller.isCurrent()){revoke();return@launch}
-   result.onSuccess{apps=it.apps}.onFailure{message="Private apps could not be updated. Your saved data was kept."}
+   result.onSuccess{apps=it.apps;after()}.onFailure{message="Private apps could not be updated. Your saved data was kept."}
    busy=false
   }
  }
- LaunchedEffect(controller){runChange{controller.load()}}
+ LaunchedEffect(controller){
+  val result=withContext(Dispatchers.IO){runCatching{controller.load()}}
+  if(!controller.isCurrent()){revoke();return@LaunchedEffect}
+  result.onSuccess {apps=it.apps;initialEditId?.let {id ->editor=it.apps.firstOrNull {app->app.id()==id};editing=editor!=null}}
+   .onFailure {message="Private apps could not be loaded."}
+  busy=false
+ }
  LaunchedEffect(controller){while(isActive && !revoked){delay(250);if(!controller.isCurrent())revoke()}}
  if(revoked)return
  Dialog(onDismissRequest={if(!busy)close()},properties=DialogProperties(usePlatformDefaultWidth=false,securePolicy=SecureFlagPolicy.SecureOn)) {
@@ -69,7 +75,7 @@ internal fun PrivateAppsLibrary(controller:PrivateAppsController,onClose:()->Uni
         Text(app.name(),style=MaterialTheme.typography.titleMedium)
         if(app.pinned())Text("Favourite",style=MaterialTheme.typography.labelMedium)
         TextButton(onClick={
-         runCatching{controller.launch(app.id())}.onSuccess{close()}.onFailure{if(!controller.isCurrent())revoke() else message="App could not open. Check the connection; apps requiring fresh authentication are not supported yet."}
+         runCatching{controller.launch(app.id()){close()}}.onFailure{if(!controller.isCurrent())revoke() else message="App could not open. Check the authorised connection or authenticate again."}
         },enabled=!busy){Text("Open")}
         Row {
          TextButton(onClick={editor=app;editing=true},enabled=!busy,modifier=Modifier.semantics{contentDescription="Edit ${app.name()}"}){Text("Edit")}
@@ -100,26 +106,36 @@ internal fun PrivateAppsLibrary(controller:PrivateAppsController,onClose:()->Uni
   val editorScope=rememberCoroutineScope()
   val editorIdentity=editor
 
+  var checkedUrl by remember(editor){mutableStateOf(editor?.startUrl().orEmpty())}
+  fun discoverWebsite() {
+   if(discovering)return
+     val target=url.trim()
+     if(!PrivateAppDiscovery.safe(target,controller.owner==PrivateAppStore.Owner.HIDDEN_TOR)){invalid=true;return}
+     discovering=true;discoveryMessage="";discovered=null;checkedUrl=""
+     editorScope.launch {
+      val result=withContext(Dispatchers.IO){runCatching{controller.discover(target)}}
+      if(!controller.isCurrent()){revoke();return@launch}
+      if(editing && editor===editorIdentity && url.trim()==target) {
+       result.onSuccess {app ->discovered=app;if(name.isBlank())name=app.name();checkedUrl=app.startUrl();url=app.startUrl();invalid=false
+        discoveryMessage=app.discoveryReport()
+       }.onFailure{checkedUrl=target;discoveryMessage="Discovery unavailable on the authorised connection. Metadata is public only; sign-in pages, redirects or a timeout can prevent compatibility checks. Save as a Private Website or check again."}
+      }
+      discovering=false
+     }
+  }
+  // Offer the install choice without requiring the owner to know about manifest discovery.
+  LaunchedEffect(url,discovering) {
+   val target=url.trim()
+   if(!discovering && target!=checkedUrl && PrivateAppDiscovery.safe(target,controller.owner==PrivateAppStore.Owner.HIDDEN_TOR)) {
+    delay(700);discoverWebsite()
+   }
+  }
   GalleryAlertDialog(properties=DialogProperties(securePolicy=SecureFlagPolicy.SecureOn),onDismissRequest={editing=false},title={Text(if(editor==null)"Add Private App" else "Edit Private App")},text={
    Column(verticalArrangement=Arrangement.spacedBy(10.dp)) {
     OutlinedTextField(name,{name=it.take(PrivateAppPolicy.MAX_NAME)},label={Text("App name")},singleLine=true,modifier=Modifier.fillMaxWidth().testTag("private-app-name"))
     OutlinedTextField(url,{url=it.take(PrivateAppPolicy.MAX_URL);discovered=null;discoveryMessage="";iconBusy=false},label={Text("Website URL")},singleLine=true,modifier=Modifier.fillMaxWidth().testTag("private-app-url"))
     Text("Use an https:// website address. Onion addresses require Hidden Tor.",style=MaterialTheme.typography.bodySmall)
-    TextButton(enabled=!discovering && !iconBusy,onClick={
-     val target=url.trim()
-     if(!PrivateAppDiscovery.safe(target,controller.owner==PrivateAppStore.Owner.HIDDEN_TOR)){invalid=true;return@TextButton}
-     discovering=true;discoveryMessage="";discovered=null
-     editorScope.launch {
-      val result=withContext(Dispatchers.IO){runCatching{controller.discover(target)}}
-      if(!controller.isCurrent()){revoke();return@launch}
-      if(editing && editor===editorIdentity && url.trim()==target) {
-       result.onSuccess {app ->discovered=app;name=app.name();url=app.startUrl();invalid=false
-        discoveryMessage=if(app.scope().isNotEmpty())"Compatible web app metadata found." else "No compatible manifest found. Add as a private website."
-       }.onFailure{discoveryMessage="Discovery unavailable. Check the authorised connection, or save the website manually."}
-      }
-      discovering=false
-     }
-    }){Text(if(discovering)"Discovering…" else "Discover website")}
+    TextButton(enabled=!discovering && !iconBusy,onClick={discoverWebsite()}){Text(if(discovering)"Discovering…" else "Discover website")}
     if(discovering)LinearProgressIndicator(Modifier.fillMaxWidth())
     // Explicit user selection wins over discovery. A changed URL retires in-flight picker results.
     key(editor,url) {
@@ -127,27 +143,27 @@ internal fun PrivateAppsLibrary(controller:PrivateAppsController,onClose:()->Uni
       onChange={customIcon=it},onBusy={iconBusy=it},enabled=!discovering)
     }
     if(discoveryMessage.isNotEmpty())Text(discoveryMessage,style=MaterialTheme.typography.bodySmall)
-    Text("Public metadata only; redirects and cross-origin resources are unsupported. No background push, offline guarantee or service-worker installation. Display mode is metadata; browser controls remain available.",style=MaterialTheme.typography.bodySmall)
+    Text("Private Web Apps run inside Private Gallery, not as separate Android applications. Public metadata only; redirects and cross-origin resources are unsupported. Push, background execution and guaranteed offline operation are unavailable.",style=MaterialTheme.typography.bodySmall)
     if(invalid)Text("Enter a valid name and supported website URL.",color=MaterialTheme.colorScheme.error)
    }
-  },confirmButton={TextButton(enabled=!discovering && !iconBusy,onClick={
+  },confirmButton={TextButton(enabled=!discovering && !iconBusy && checkedUrl==url.trim(),onClick={
    val address=url.trim();val title=name.trim()
    if(!PrivateAppPolicy.validName(title) || !PrivateAppPolicy.safeUrl(address,controller.owner==PrivateAppStore.Owner.HIDDEN_TOR)){invalid=true;return@TextButton}
    val old=editor
    // A changed URL must not retain a manifest scope or icon from the old origin.
    val same=old?.startUrl()==address
    val found=discovered?.takeIf{it.startUrl()==address}
-   val item=PrivateAppCatalog.App(old?.id() ?: UUID.randomUUID().toString(),title,address,found?.scope() ?: if(same)old!!.scope() else "",found?.display() ?: if(same)old!!.display() else "browser",customIcon ?: found?.icon() ?: if(same)old!!.icon() else "",old?.pinned() ?: false,old?.addressBar() ?: true,old?.requireAuthentication() ?: false)
-   editing=false;runChange{controller.save(item)}
-  }){Text(if(editor!=null || discovered==null)"Save" else if(discovered!!.scope().isNotEmpty())"Add as Private Web App" else "Add as Private Website")}},dismissButton={TextButton(onClick={editing=false}){Text("Cancel")}})
+   val item=PrivateAppCatalog.App(old?.id() ?: UUID.randomUUID().toString(),title,address,found?.scope() ?: if(same)old!!.scope() else "",found?.display() ?: if(same)old!!.display() else "browser",customIcon ?: found?.icon() ?: if(same)old!!.icon() else "",old?.pinned() ?: false,old?.addressBar() ?: false,old?.requireAuthentication() ?: false,old?.appStyle() ?: true,found?.discoveryReport() ?: if(same)old!!.discoveryReport() else discoveryMessage.take(256))
+   editing=false;runChange(after={onUpdated(item)}){controller.save(item)}
+  }){Text(if(editor!=null)"Save" else if(discovered?.scope()?.isNotEmpty()==true)"Install as Private Web App" else "Add as Private Website")}},dismissButton={TextButton(onClick={editing=false}){Text("Cancel")}})
  }
- removal?.let {app ->GalleryAlertDialog(properties=DialogProperties(securePolicy=SecureFlagPolicy.SecureOn),onDismissRequest={removal=null},title={Text("Remove ${app.name()}?")},text={Text("Removes the saved app entry. Shared browser login data is unchanged.")},confirmButton={TextButton(onClick={removal=null;runChange{controller.remove(app.id())}}){Text("Remove app")}},dismissButton={TextButton(onClick={removal=null}){Text("Cancel")}})}
+ removal?.let {app ->GalleryAlertDialog(properties=DialogProperties(securePolicy=SecureFlagPolicy.SecureOn),onDismissRequest={removal=null},title={Text("Remove ${app.name()}?")},text={Text("Removes the saved app entry. Shared browser login data is unchanged.")},confirmButton={TextButton(onClick={removal=null;runChange(after={onRemoved(app.id())}){controller.remove(app.id())}}){Text("Remove app")}},dismissButton={TextButton(onClick={removal=null}){Text("Cancel")}})}
 }
 
 @Composable
-internal fun PrivateAppIcon(value:String,name:String) {
+internal fun PrivateAppIcon(value:String,name:String,size:Int=48) {
  val bitmap=remember(value){PrivateAppIcons.decode(value)}
  DisposableEffect(bitmap){onDispose{bitmap?.recycle()}}
- if(bitmap!=null)Image(bitmap.asImageBitmap(),contentDescription=null,modifier=Modifier.size(48.dp),contentScale=ContentScale.Fit)
- else Text(name.take(1).uppercase(),style=MaterialTheme.typography.headlineMedium)
+ if(bitmap!=null)Image(bitmap.asImageBitmap(),contentDescription=null,modifier=Modifier.size(size.dp),contentScale=ContentScale.Fit)
+ else Box(Modifier.size(size.dp),contentAlignment=androidx.compose.ui.Alignment.Center){Text(name.take(1).uppercase(),style=MaterialTheme.typography.titleMedium)}
 }

@@ -693,6 +693,9 @@ internal fun BrowserV2Home(
     @Suppress("UNUSED_VARIABLE") val stateVersion = ui.revision
     val active = session.tabs.activeTab
     val activePrivateApp = session.privateApp(active.id)
+    val appStyle=activePrivateApp?.appStyle()==true
+    var appControlsExpanded by remember(active.id) {mutableStateOf(false)}
+    var privateAppEditId by remember {mutableStateOf<String?>(null)}
     LaunchedEffect(active.id, active.url) {
         scrollChrome.reveal(); ui.chromeVisible = true
         if (ui.address != active.url) ui.address = active.url
@@ -749,13 +752,15 @@ internal fun BrowserV2Home(
         privateApps=(context as? uk.co.traynor.privategallery.MainActivity)?.privateAppsController()
         if(privateApps==null)ui.message=(context as? uk.co.traynor.privategallery.MainActivity)?.privateAppProfileClearStatus() ?: "Unlock Primary and reopen the browser."
     }
-    privateApps?.let {controller ->PrivateAppsLibrary(controller,{privateApps=null})}
+    privateApps?.let {controller ->PrivateAppsLibrary(controller,{privateApps=null;privateAppEditId=null},privateAppEditId,session::updatePrivateApp,session::removePrivateApp)}
     privateAppSettings?.let { (controller,id) ->
-        PrivateAppSettings(controller,id,session::updatePrivateApp,{ui.overflow=true},{privateAppSettings=null})
+        PrivateAppSettings(controller,id,session::updatePrivateApp,{ui.overflow=true},{privateAppSettings=null},onEdit={privateAppSettings=null;privateAppEditId=id;openPrivateApps()},onRemoved=session::removePrivateApp)
     }
     if(privateAppSwitcher)PrivateAppSwitcher(
         session.tabs.tabs.mapNotNull { tab -> session.privateApp(tab.id)?.let { tab.id to it } },active.id,
-        {cancelUpload();session.select(it)},::openPrivateApps,{privateAppSwitcher=false})
+        {tabId ->cancelUpload();val saved=session.privateApp(tabId)
+            if(saved!=null)(context as? uk.co.traynor.privategallery.MainActivity)?.privateAppsController()?.open(saved.id()) {session.select(tabId)}
+        },::openPrivateApps,{privateAppSwitcher=false},onCloseSession={cancelUpload();session.close(it)})
 
     Box(
         modifier = modifier.fillMaxSize()
@@ -768,7 +773,7 @@ internal fun BrowserV2Home(
     ) {
         Column(Modifier.fillMaxSize().imePadding()) {
             if (acceptanceProbeEnabled) AcceptanceProbeLabel("BROWSER_V2_ROOT", Color(0xFF00A000))
-            BrowserChromeBar(chromeFraction, top = true) { Column(
+            BrowserChromeBar(if(appStyle)1f else chromeFraction, top = true) { Column(
                 Modifier.fillMaxWidth()
                     .then(if (acceptanceProbeEnabled) Modifier.background(Color(0xFF0000CC)) else Modifier)
                     .onGloballyPositioned { coordinates ->
@@ -790,12 +795,12 @@ internal fun BrowserV2Home(
                     onHome={cancelUpload();session.navigateActive(activePrivateApp.startUrl())},
                     onLibrary=::openPrivateApps,onSwitch={cancelUpload();privateAppSwitcher=true},
                     onSettings={cancelUpload();(context as? uk.co.traynor.privategallery.MainActivity)?.privateAppsController()?.let {privateAppSettings=it to activePrivateApp.id()}},
-                    onScreenshot=::saveViewportScreenshot)
+                    onScreenshot=::saveViewportScreenshot,onExpanded={appControlsExpanded=it},onBrowserTools={ui.overflow=true})
                 else if(context is uk.co.traynor.privategallery.MainActivity)TextButton(onClick=::openPrivateApps){Text("Private Apps")}
 
                 if (acceptanceProbeEnabled) AcceptanceProbeLabel("BROWSER_CHROME", Color(0xFF0000CC))
                 if (active.loading) LinearProgressIndicator(Modifier.fillMaxWidth())
-                if(activePrivateApp==null || activePrivateApp.addressBar())BrowserAddressBar(ui.address, {
+                if(activePrivateApp==null || !appStyle || (activePrivateApp.addressBar() && appControlsExpanded))BrowserAddressBar(ui.address, {
                     ui.address=it;session.recordAcceptanceUiEvent("OMNIBOX_TEXT_CHANGED")
                 }, !connectionPresentation.blocked, active.loading, {
                     session.recordAcceptanceUiEvent("OMNIBOX_SUBMIT")
@@ -862,13 +867,12 @@ internal fun BrowserV2Home(
                 session.pageFailure(active.id)?.takeIf { !connectionPresentation.blocked }?.let { detail ->
                     BrowserPageError(detail,{session.reloadActive()},::openSettings)
                 }
+                if(appStyle && active.loading && !connectionPresentation.blocked && session.pageFailure(active.id)==null)
+                    PrivateAppLoading(checkNotNull(activePrivateApp))
                 if (acceptanceProbeEnabled) AcceptanceProbeLabel("CONTENT_HOST", Color(0xFFFFD800))
             }
             BrowserChromeBar(chromeFraction, top = false) {
-                if(activePrivateApp!=null)Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceEvenly) {
-                    TextButton(onClick={ui.tabSwitcher=true}){Text("All tabs")}
-                    TextButton(onClick={ui.overflow=true}){Text("Browser tools")}
-                } else BrowserNavigationToolbar(!connectionPresentation.blocked && active.canGoBack,!connectionPresentation.blocked && active.canGoForward,session.tabs.tabs.size,
+                if(!appStyle)BrowserNavigationToolbar(!connectionPresentation.blocked && active.canGoBack,!connectionPresentation.blocked && active.canGoForward,session.tabs.tabs.size,
                     session::goBackActive,session::goForwardActive,{ui.bookmarksOpen=true},{ui.tabSwitcher=true},::openSettings,{ui.overflow=true})
             }
         }

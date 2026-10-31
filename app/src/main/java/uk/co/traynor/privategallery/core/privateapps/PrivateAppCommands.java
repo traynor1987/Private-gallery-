@@ -4,7 +4,7 @@ package uk.co.traynor.privategallery.core.privateapps;
 public final class PrivateAppCommands {
  private PrivateAppCommands(){}
  public static final int MAX_COMMAND_BYTES=16384;
- public static final int READ=0, UPSERT=1, REMOVE=2, PIN=3, UNPIN=4, MOVE_UP=5, MOVE_DOWN=6, SHOW_ADDRESS=7, HIDE_ADDRESS=8, REQUIRE_AUTH=9, NO_AUTH=10, RESET_SETTINGS=11;
+ public static final int READ=0, UPSERT=1, REMOVE=2, PIN=3, UNPIN=4, MOVE_UP=5, MOVE_DOWN=6, SHOW_ADDRESS=7, HIDE_ADDRESS=8, REQUIRE_AUTH=9, NO_AUTH=10, RESET_SETTINGS=11, APP_STYLE=12, BROWSER_STYLE=13;
  public static PrivateAppCatalog execute(PrivateAppStore store,int action,byte[] payload,String id) {
   if(id==null || id.length()>36 || (payload!=null && payload.length>MAX_COMMAND_BYTES))throw new IllegalArgumentException("Invalid private app request");
   switch(action) {
@@ -26,13 +26,16 @@ public final class PrivateAppCommands {
    case REQUIRE_AUTH:
    case NO_AUTH:
    case RESET_SETTINGS:
+   case APP_STYLE:
+   case BROWSER_STYLE:
     requireEntryRequest(payload,id);
     // Resolve inside the store's atomic update, preserving newer metadata and order.
     return store.update(c->{
      for(PrivateAppCatalog.App app:c.apps)if(app.id().equals(id))return c.upsert(new PrivateAppCatalog.App(
       app.id(),app.name(),app.startUrl(),app.scope(),app.display(),action==RESET_SETTINGS?"":app.icon(),
       action!=RESET_SETTINGS && (action==PIN || (action!=UNPIN && app.pinned())),action==RESET_SETTINGS || action==SHOW_ADDRESS || (action!=HIDE_ADDRESS && app.addressBar()),
-      action==REQUIRE_AUTH || (action!=NO_AUTH && app.requireAuthentication())));
+      action==REQUIRE_AUTH || (action!=NO_AUTH && app.requireAuthentication()),
+      action==RESET_SETTINGS || action==APP_STYLE || (action!=BROWSER_STYLE && app.appStyle()),app.discoveryReport()));
      return c;
     });
    case MOVE_UP:

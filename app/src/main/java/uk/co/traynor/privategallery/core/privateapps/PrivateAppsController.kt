@@ -28,6 +28,7 @@ class PrivateAppsController(
  fun save(app:PrivateAppCatalog.App)=execute(PrivateAppCommands.UPSERT,PrivateAppCatalog(owner==PrivateAppStore.Owner.HIDDEN_TOR,listOf(app)).encode())
  fun remove(id:String)=execute(PrivateAppCommands.REMOVE,id=id)
  fun setPinned(id:String,pinned:Boolean)=execute(if(pinned)PrivateAppCommands.PIN else PrivateAppCommands.UNPIN,id=id)
+ fun setAppStyle(id:String,enabled:Boolean)=execute(if(enabled)PrivateAppCommands.APP_STYLE else PrivateAppCommands.BROWSER_STYLE,id=id)
  fun setAddressBar(id:String,visible:Boolean)=execute(if(visible)PrivateAppCommands.SHOW_ADDRESS else PrivateAppCommands.HIDE_ADDRESS,id=id)
  fun setRequireAuthentication(id:String,required:Boolean)=execute(if(required)PrivateAppCommands.REQUIRE_AUTH else PrivateAppCommands.NO_AUTH,id=id)
  fun resetSettings(id:String)=execute(PrivateAppCommands.RESET_SETTINGS,id=id)
@@ -62,7 +63,8 @@ class PrivateAppsController(
   }
  }
  /** Resolve the ID again: a stale UI cannot supply an arbitrary old URL or removed entry. Main-thread only. */
- fun launch(id:String)=open(id) {app ->
+ fun launch(id:String,onOpened:()->Unit={})=open(id) {app ->
   if(onLaunchApp!=null)onLaunchApp.invoke(app) else navigate(app.startUrl())
+  onOpened()
  }
 }

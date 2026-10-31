@@ -15,12 +15,13 @@ internal object PrivateAppDiscovery {
   require(value.length<=PrivateAppPolicy.MAX_URL && value.none {it.code<=32 || it=='\\'})
   URI(base).resolve(value).normalize().toString().takeIf{safe(it,tor) && PrivateAppPolicy.sameOrigin(base,it)}
  }.getOrNull()
+ private fun htmlValue(value:String)=value.replace("&amp;","&").replace("&#38;","&").replace("&#x26;","&").replace("&quot;","\"").replace("&#39;","'")
  private fun links(html:String):List<Map<String,String>> {
   // This deliberately narrow extractor is not an HTML renderer. Malformed/long tags fall back safely.
   val visible=html.replace(Regex("<!--.*?-->|<script\\b[^>]*>.*?</script\\s*>",setOf(RegexOption.IGNORE_CASE,RegexOption.DOT_MATCHES_ALL)),"")
   return Regex("<link\\b[^>]{0,4096}>",RegexOption.IGNORE_CASE).findAll(visible).take(32).map {tag ->
    Regex("([a-zA-Z][a-zA-Z0-9_-]*)\\s*=\\s*(?:\"([^\"]*)\"|'([^']*)'|([^\\s>]+))").findAll(tag.value).associate {m ->
-    m.groupValues[1].lowercase() to m.groupValues.drop(2).firstOrNull{it.isNotEmpty()}.orEmpty()
+    m.groupValues[1].lowercase() to htmlValue(m.groupValues.drop(2).firstOrNull{it.isNotEmpty()}.orEmpty())
    }
   }.toList()
  }
@@ -50,19 +51,26 @@ internal object PrivateAppDiscovery {
   var favicon=resolve(page,"/favicon.ico",tor).orEmpty()
   fun get(url:String):Resource {check(current());require(resolve(page,url,tor)!=null);return fetch(url).also{try{check(current());require(it.bytes.size<=MAX_DOCUMENT)}catch(e:Exception){it.bytes.fill(0);throw e}}}
   var phase="fetch_page"
+  var compatibility="No manifest link was found in the public page. Login-only or script-generated manifests cannot be discovered privately."
   fun report(stage:String,failure:Throwable){runCatching{diagnostic(stage,failure)}}
   runCatching {
    val html=get(page)
    val tags=try {phase="parse_page";require(html.mime in setOf("text/html","application/xhtml+xml"));links(html.bytes.toString(Charsets.UTF_8))}finally{html.bytes.fill(0)}
    tags.firstOrNull{it["rel"].orEmpty().lowercase().split(Regex("\\s+")).contains("icon")}?.get("href")?.let {resolve(page,it,tor)}?.let{favicon=it}
-   val url=tags.firstOrNull{it["rel"].orEmpty().lowercase().split(Regex("\\s+")).contains("manifest")}?.get("href")?.let{resolve(page,it,tor)} ?: return@runCatching
+   val url=tags.firstOrNull{it["rel"].orEmpty().lowercase().split(Regex("\\s+")).contains("manifest")}?.get("href")?.let{resolve(page,it,tor)} ?: run {compatibility="No supported same-origin manifest link was found. Cross-origin metadata is not fetched.";return@runCatching}
    phase="fetch_manifest"
    val resource=get(url)
-   try {phase="parse_manifest";require(resource.mime in setOf("application/manifest+json","application/json"));metadata=manifest(page,url,resource.bytes.toString(Charsets.UTF_8),tor)}finally{resource.bytes.fill(0)}
+   try {phase="parse_manifest";require(resource.mime in setOf("application/manifest+json","application/json"));metadata=manifest(page,url,resource.bytes.toString(Charsets.UTF_8),tor);compatibility="Compatible private web app: ${metadata.display}. Runs inside Private Gallery; push, background execution and guaranteed offline operation are unsupported."}finally{resource.bytes.fill(0)}
   }.onFailure {failure ->
    report(phase,failure)
    // Network unavailability is not an incompatible manifest. Existing UI offers manual save.
    if(failure is java.io.IOException)throw failure
+   compatibility=when(phase) {
+    "fetch_page"->"The public page could not be read without authentication or a redirect. Open its final HTTPS address and check again."
+    "parse_page"->"The public response is not a supported bounded HTML page."
+    "fetch_manifest"->"The manifest could not be read without authentication or a redirect."
+    else->"The manifest has unsupported or invalid name, start URL, scope or display metadata."
+   }
   }
   check(current())
   var icon=""
@@ -70,7 +78,7 @@ internal object PrivateAppDiscovery {
    icon=runCatching {val resource=get(url);try {require(resource.mime.startsWith("image/") && resource.mime!="image/svg+xml");normalizeIcon(resource.bytes)}finally{resource.bytes.fill(0)}}.onFailure {report("icon",it)}.getOrDefault("")
    check(current());if(icon.isNotEmpty())break
   }
-  val app=PrivateAppCatalog.App(UUID.randomUUID().toString(),metadata.name,metadata.start,metadata.scope,metadata.display,icon,false,true,false)
+  val app=PrivateAppCatalog.App(UUID.randomUUID().toString(),metadata.name,metadata.start,metadata.scope,metadata.display,icon,false,false,false,true,compatibility)
   return PrivateAppCatalog(tor,listOf(app)).apps.single().also{check(current())}
  }
 }

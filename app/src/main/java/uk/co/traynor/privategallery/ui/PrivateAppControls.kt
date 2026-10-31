@@ -19,6 +19,7 @@ import kotlinx.coroutines.*
 import uk.co.traynor.privategallery.core.privateapps.*
 
 /** Chrome only: all actions delegate to the same authenticated tab and browser policy. */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 internal fun PrivateAppControls(
     app: PrivateAppCatalog.App, url: String, mode: String, enabled: Boolean,
@@ -27,29 +28,39 @@ internal fun PrivateAppControls(
     onHome: () -> Unit, onLibrary: () -> Unit, onSwitch: () -> Unit,
     onSettings: () -> Unit,
     onScreenshot: (() -> Unit)? = null,
+    onExpanded: (Boolean) -> Unit = {},
+    onBrowserTools: () -> Unit = {},
 ) {
+    var expanded by remember(app.id()) { mutableStateOf(false) }
     Column(Modifier.fillMaxWidth().testTag("private-app-controls")) {
-        Row(Modifier.fillMaxWidth().padding(horizontal=12.dp, vertical=6.dp), verticalAlignment=Alignment.CenterVertically) {
-            PrivateAppIcon(app.icon(), app.name())
-            Column(Modifier.weight(1f).padding(start=12.dp)) {
-                Text(app.name(), style=MaterialTheme.typography.titleMedium, maxLines=1, overflow=TextOverflow.Ellipsis)
-                Text(mode, style=MaterialTheme.typography.labelSmall)
-                val origin=runCatching { Uri.parse(url).let { "${it.scheme}://${it.host.orEmpty()}${if(it.port>=0)":${it.port}" else ""}" } }.getOrDefault("")
-                Text(origin.ifBlank { "Opening app…" }, style=MaterialTheme.typography.bodySmall, maxLines=1, overflow=TextOverflow.Ellipsis)
+        Row(Modifier.fillMaxWidth().heightIn(min=48.dp).padding(horizontal=8.dp),verticalAlignment=Alignment.CenterVertically) {
+            PrivateAppIcon(app.icon(),app.name(),24)
+            Column(Modifier.weight(1f).padding(horizontal=8.dp)) {
+                Text(app.name(),style=MaterialTheme.typography.titleSmall,maxLines=1,overflow=TextOverflow.Ellipsis)
+                Text(mode,style=MaterialTheme.typography.labelSmall,maxLines=1,overflow=TextOverflow.Ellipsis)
             }
-            if(onScreenshot!=null)IconButton(onClick=onScreenshot, enabled=enabled) { Icon(Icons.Default.Screenshot, "Screenshot to Vault") }
-            IconButton(onClick=onSettings, enabled=enabled) { Icon(Icons.Default.Settings, "Private app settings") }
+            IconButton(onClick=onBack,enabled=enabled && canGoBack) {Icon(Icons.AutoMirrored.Filled.ArrowBack,"App back")}
+            IconButton(onClick=onRefresh,enabled=enabled) {Icon(if(loading)Icons.Default.Close else Icons.Default.Refresh,if(loading)"Stop app loading" else "Refresh app")}
+            IconButton(onClick={expanded=!expanded;onExpanded(expanded)}) {Icon(Icons.Default.MoreVert,if(expanded)"Collapse app controls" else "Expand app controls")}
         }
-        // Leaving a manifest's scope is allowed by the existing browser, but remains visible.
-        if (url.isNotBlank() && !PrivateAppPolicy.inScope(url, app.scope().ifBlank { app.startUrl() }))
-            Text("Browsing outside this app's saved scope", Modifier.padding(horizontal=12.dp), style=MaterialTheme.typography.bodySmall)
-        Row(Modifier.fillMaxWidth(), horizontalArrangement=Arrangement.SpaceEvenly) {
-            IconButton(onClick=onBack, enabled=enabled && canGoBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack,"App back") }
-            IconButton(onClick=onForward, enabled=enabled && canGoForward) { Icon(Icons.AutoMirrored.Filled.ArrowForward,"App forward") }
-            IconButton(onClick=onRefresh, enabled=enabled) { Icon(if(loading)Icons.Default.Close else Icons.Default.Refresh,if(loading)"Stop app loading" else "Refresh app") }
-            IconButton(onClick=onHome, enabled=enabled) { Icon(Icons.Default.Home,"App home") }
-            IconButton(onClick=onLibrary) { Icon(Icons.Default.Apps,"Private Apps library") }
-            IconButton(onClick=onSwitch) { Icon(Icons.Default.SwapHoriz,"Switch private app") }
+        // Origin changes and transport failures must remain visible even with controls collapsed.
+        val outside=url.isNotBlank() && !PrivateAppPolicy.inScope(url,app.scope().ifBlank {app.startUrl()})
+        if(outside || !enabled || expanded) {
+            val origin=runCatching {Uri.parse(url).let {"${it.scheme}://${it.host.orEmpty()}${if(it.port>=0)":${it.port}" else ""}"}}.getOrDefault("")
+            Text(origin.ifBlank {"Opening app…"},Modifier.padding(horizontal=12.dp),style=MaterialTheme.typography.bodySmall,maxLines=1,overflow=TextOverflow.Ellipsis)
+        }
+        if(outside)Text("Browsing outside this app's saved scope",Modifier.padding(horizontal=12.dp),style=MaterialTheme.typography.bodySmall)
+        if(expanded) {
+            // Wrap at cover-screen widths and large font sizes; no horizontally clipped actions.
+            FlowRow(Modifier.fillMaxWidth().padding(horizontal=4.dp)) {
+                IconButton(onClick=onForward,enabled=enabled && canGoForward){Icon(Icons.AutoMirrored.Filled.ArrowForward,"App forward")}
+                IconButton(onClick=onHome,enabled=enabled){Icon(Icons.Default.Home,"App home")}
+                IconButton(onClick=onSwitch){Icon(Icons.Default.SwapHoriz,"Switch private app")}
+                IconButton(onClick=onLibrary){Icon(Icons.Default.Apps,"Private Apps library")}
+                IconButton(onClick=onSettings,enabled=enabled){Icon(Icons.Default.Settings,"Private app settings")}
+                if(onScreenshot!=null)IconButton(onClick=onScreenshot,enabled=enabled){Icon(Icons.Default.Screenshot,"Screenshot to Vault")}
+                IconButton(onClick=onBrowserTools){Icon(Icons.Default.Build,"Browser tools")}
+            }
         }
     }
 }
@@ -59,6 +70,8 @@ internal fun PrivateAppControls(
 internal fun PrivateAppSettings(
     controller: PrivateAppsController, appId: String, onUpdated: (PrivateAppCatalog.App) -> Unit,
     onBrowserSettings: () -> Unit, onClose: () -> Unit,
+    onEdit: () -> Unit = {},
+    onRemoved: (String) -> Unit = {},
 ) {
     val scope=rememberCoroutineScope()
     var app by remember(controller,appId) { mutableStateOf<PrivateAppCatalog.App?>(null) }
@@ -89,6 +102,14 @@ internal fun PrivateAppSettings(
         text={Column(verticalArrangement=Arrangement.spacedBy(12.dp)) {
             app?.let { item ->
                 Text(item.name(), style=MaterialTheme.typography.titleMedium)
+                Row(verticalAlignment=Alignment.CenterVertically) {
+                    Text("App-style presentation",Modifier.weight(1f))
+                    Switch(modifier=Modifier.testTag("private-app-style-toggle"),checked=item.appStyle(),enabled=!busy,
+                        onCheckedChange={value ->update {controller.setAppStyle(appId,value)}})
+                }
+                Text("In app style the address bar is available when controls are expanded. Browser style keeps the usual browser tools.",style=MaterialTheme.typography.bodySmall)
+                TextButton(onClick={onEdit()}){Text("Edit name, icon and start page")}
+                if(item.discoveryReport().isNotBlank())Text(item.discoveryReport(),style=MaterialTheme.typography.bodySmall)
                 Row(verticalAlignment=Alignment.CenterVertically) {
                     Text("Show address bar",Modifier.weight(1f))
                     Switch(modifier=Modifier.testTag("private-app-address-toggle"),checked=item.addressBar(),enabled=!busy,
@@ -135,7 +156,7 @@ internal fun PrivateAppSettings(
                     "reset" ->update {controller.resetSettings(appId)}
                     "remove" -> {busy=true;scope.launch {
                         val result=withContext(Dispatchers.IO){runCatching {controller.remove(appId)}}
-                        if(!controller.isCurrent() || result.isSuccess)close() else {busy=false;message="Saved app could not be removed."}
+                        if(!controller.isCurrent())close() else if(result.isSuccess){onRemoved(appId);close()} else {busy=false;message="Saved app could not be removed."}
                     }}
                     else ->runCatching {
                         if(action=="clear") {controller.clearSharedProfile();close()}
@@ -192,12 +213,28 @@ internal fun PrivateAppAuthentication(request:PrivateAppAuthenticationRequest) {
 }
 
 @Composable
-internal fun PrivateAppSwitcher(apps: List<Pair<String,PrivateAppCatalog.App>>, currentId: String, onSelect:(String)->Unit, onLibrary:()->Unit, onClose:()->Unit) {
+internal fun PrivateAppSwitcher(apps: List<Pair<String,PrivateAppCatalog.App>>, currentId: String, onSelect:(String)->Unit, onLibrary:()->Unit, onClose:()->Unit, onCloseSession:((String)->Unit)?=null) {
     GalleryAlertDialog(properties=DialogProperties(securePolicy=SecureFlagPolicy.SecureOn),onDismissRequest=onClose,
         title={Text("Switch private app")},text={Column() {
             if(apps.isEmpty())Text("No private apps are open.")
-            apps.forEach { (id,app) -> TextButton(onClick={onSelect(id);onClose()},modifier=Modifier.fillMaxWidth()) {
-                Text(app.name()+if(id==currentId)" · Current" else "")
+            apps.forEach { (id,app) -> Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically) {
+                PrivateAppIcon(app.icon(),app.name(),32)
+                TextButton(onClick={onSelect(id);onClose()},modifier=Modifier.weight(1f)) {
+                    Text(app.name()+if(id==currentId)" · Current" else " · Open")
+                }
+                if(onCloseSession!=null)IconButton(onClick={onCloseSession(id)},modifier=Modifier.testTag("close-private-app-$id")) {Icon(Icons.Default.Close,"Close session for ${app.name()}")}
             } }
         }},confirmButton={TextButton(onClick={onClose();onLibrary()}){Text("Open from library")}},dismissButton={TextButton(onClick=onClose){Text("Close")}})
+}
+
+/** Branded transient UI only; no snapshots, new WebView or network requests. */
+@Composable
+internal fun PrivateAppLoading(app:PrivateAppCatalog.App) {
+    Surface(Modifier.fillMaxSize().testTag("private-app-loading"),color=MaterialTheme.colorScheme.background) {
+        Column(Modifier.fillMaxSize(),verticalArrangement=Arrangement.Center,horizontalAlignment=Alignment.CenterHorizontally) {
+            PrivateAppIcon(app.icon(),app.name())
+            Text("Opening ${app.name()}…",Modifier.padding(12.dp),style=MaterialTheme.typography.titleMedium)
+            CircularProgressIndicator()
+        }
+    }
 }

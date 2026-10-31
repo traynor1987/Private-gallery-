@@ -77,9 +77,15 @@ class BrowserV2Session(
     private val privateAppTabs = mutableMapOf<String, uk.co.traynor.privategallery.core.privateapps.PrivateAppCatalog.App>()
     fun privateApp(tabId: String) = privateAppTabs[tabId]
     fun openPrivateApp(app: uk.co.traynor.privategallery.core.privateapps.PrivateAppCatalog.App) {
+        privateAppTabs.entries.firstOrNull {it.value.id()==app.id() && tabs.tabs.any {tab->tab.id==it.key}}?.let {
+            privateAppTabs[it.key]=app;select(it.key);return
+        }
         val tab = newTab(app.startUrl())
         privateAppTabs[tab.id] = app
         changed()
+    }
+    fun removePrivateApp(appId:String) {
+        privateAppTabs.filterValues {it.id()==appId}.keys.toList().forEach(::close)
     }
     fun updatePrivateApp(app: uk.co.traynor.privategallery.core.privateapps.PrivateAppCatalog.App) {
         privateAppTabs.entries.filter { it.value.id() == app.id() }.forEach { it.setValue(app) }

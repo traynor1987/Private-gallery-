@@ -7,8 +7,11 @@ import java.util.*;
 public final class PrivateAppCatalog {
  public static final int MAX_APPS=32, MAX_BYTES=384*1024;
  public record App(String id,String name,String startUrl,String scope,String display,String icon,
-                   boolean pinned,boolean addressBar,boolean requireAuthentication) {
-  public App withName(String value){return new App(id,value,startUrl,scope,display,icon,pinned,addressBar,requireAuthentication);}
+                   boolean pinned,boolean addressBar,boolean requireAuthentication,boolean appStyle,String discoveryReport) {
+  public App(String id,String name,String startUrl,String scope,String display,String icon,boolean pinned,boolean addressBar,boolean requireAuthentication) {
+   this(id,name,startUrl,scope,display,icon,pinned,addressBar,requireAuthentication,true,"");
+  }
+  public App withName(String value){return new App(id,value,startUrl,scope,display,icon,pinned,addressBar,requireAuthentication,appStyle,discoveryReport);}
  }
  public final List<App> apps;
  public final boolean tor;
@@ -19,6 +22,7 @@ public final class PrivateAppCatalog {
    if(app==null || !uuid(app.id()) || !seen.add(app.id()) || !PrivateAppPolicy.validName(app.name()) || !PrivateAppPolicy.safeUrl(app.startUrl(),tor)
      || app.scope()==null || (!app.scope().isEmpty() && !PrivateAppPolicy.inScope(app.startUrl(),app.scope()))
      || !Set.of("browser","standalone","minimal-ui","fullscreen").contains(app.display())
+     || app.discoveryReport()==null || app.discoveryReport().length()>256 || app.discoveryReport().chars().anyMatch(c->c<32)
      || !validIcon(app.icon()))throw new IllegalArgumentException("Invalid private app definition");
   }
   this.tor=tor;this.apps=List.copyOf(apps);
@@ -50,18 +54,18 @@ public final class PrivateAppCatalog {
  }
  public byte[] encode() {
   try(SensitiveBuffer bytes=new SensitiveBuffer();DataOutputStream output=new DataOutputStream(bytes)) {
-   output.writeInt(1);output.writeInt(apps.size());
-   for(App app:apps){output.writeUTF(app.id());output.writeUTF(app.name());output.writeUTF(app.startUrl());output.writeUTF(app.scope());output.writeUTF(app.display());output.writeUTF(app.icon());output.writeBoolean(app.pinned());output.writeBoolean(app.addressBar());output.writeBoolean(app.requireAuthentication());}
+   output.writeInt(2);output.writeInt(apps.size());
+   for(App app:apps){output.writeUTF(app.id());output.writeUTF(app.name());output.writeUTF(app.startUrl());output.writeUTF(app.scope());output.writeUTF(app.display());output.writeUTF(app.icon());output.writeBoolean(app.pinned());output.writeBoolean(app.addressBar());output.writeBoolean(app.requireAuthentication());output.writeBoolean(app.appStyle());output.writeUTF(app.discoveryReport());}
    output.flush();if(bytes.size()>MAX_BYTES)throw new IllegalArgumentException("Private app catalogue too large");return bytes.toByteArray();
   }catch(IOException e){throw new IllegalArgumentException("Invalid private app catalogue",e);}
  }
  public static PrivateAppCatalog decode(byte[] bytes,boolean tor) {
   if(bytes==null || bytes.length>MAX_BYTES)throw new IllegalArgumentException("Private app catalogue too large");
   try(DataInputStream input=new DataInputStream(new ByteArrayInputStream(bytes))) {
-   if(input.readInt()!=1)throw new IOException("Unsupported catalogue");
+   int version=input.readInt();if(version!=1 && version!=2)throw new IOException("Unsupported catalogue");
    int count=input.readInt();if(count<0 || count>MAX_APPS)throw new IOException("Invalid catalogue size");
    ArrayList<App> values=new ArrayList<>();
-   for(int i=0;i<count;i++)values.add(new App(input.readUTF(),input.readUTF(),input.readUTF(),input.readUTF(),input.readUTF(),input.readUTF(),input.readBoolean(),input.readBoolean(),input.readBoolean()));
+   for(int i=0;i<count;i++)values.add(new App(input.readUTF(),input.readUTF(),input.readUTF(),input.readUTF(),input.readUTF(),input.readUTF(),input.readBoolean(),input.readBoolean(),input.readBoolean(),version==1 || input.readBoolean(),version==1?"":input.readUTF()));
    if(input.read()!=-1)throw new IOException("Trailing catalogue data");
    return new PrivateAppCatalog(tor,values);
   }catch(IOException e){throw new IllegalArgumentException("Invalid private app catalogue",e);}

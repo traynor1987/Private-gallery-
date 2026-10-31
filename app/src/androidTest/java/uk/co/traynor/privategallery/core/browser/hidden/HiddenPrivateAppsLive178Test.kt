@@ -349,9 +349,8 @@ class HiddenPrivateAppsLive178Test {
             click("Add Private App")
             setEditorField(0, "Owned launch fixture")
             setEditorField(1, launchUrl)
-            click("Discover website")
-            waitFor("Actual broker discovery validates controlled manifest", 60) { visible("Add as Private Web App") }
-            click("Add as Private Web App")
+            waitFor("Actual broker discovery validates controlled manifest", 60) { visible("Install as Private Web App") }
+            click("Install as Private Web App")
             waitFor("Native save committed to authenticated selected encrypted catalogue") {
                 visible("Owned launch fixture") && selected.read().apps.singleOrNull()?.startUrl() == launchUrl
             }
@@ -409,6 +408,9 @@ class HiddenPrivateAppsLive178Test {
                     }
                 })
             }
+            waitFor("Standalone app has compact controls") {visible("Expand app controls")}
+            assertFalse("App toolbar starts collapsed",visible("App home"))
+            click("Expand app controls")
             waitFor("Launched Private App has actual dedicated controls") {
                 visible("App home") && visible("Private app settings") && visible("Private Apps library")
             }

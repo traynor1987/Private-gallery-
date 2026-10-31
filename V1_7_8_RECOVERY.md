@@ -1,5 +1,13 @@
 # Private Gallery 1.7.8 recovery
 
+## Current owner-authorized repair — code48 IN PROGRESS
+
+Owner physically installed/tested delivered1.7.8/code47 and reports browser-like app presentation/no PWA install offer. Newrepair stays1.7.8, nextavailablecode48 (85remote branch versions auditedmaximum47). Authoritative recoveryHEAD8a92f183; installedcandidate frozen04b91ae, APK21066bd7153520c688c5a6b6034fca549b33df391762e64a5070eecfeb342d3d, originalcertificate94f2bfc6567f26d067d29077111cfd0ce86d38263c642ad115e43365f05b0d17. No competingremotechange observed.
+
+Implementing compact dedicated apppresentation, automatic compatibility choices, encryptedpresentation preference and polished existing-session switcher without changing transport/profile/securityarchitecture. See REPAIR48_DESIGN_PLAN.md. Local eightJavahostchecksPASS; localGradle cannotdownload uncacheddistribution(networkunreachable). Newexactsource Android/security/47→48 upgrade/signing mandatory. Code47 approval is historical and does not approve these changes. Do not sign until newgatesPASS. All historical release evidence below preserved.
+
+## Historical code47 completion record
+
 Current status: FINAL VERIFICATION IN PROGRESS / NOT APPROVED FOR SIGNING.
 
 Latest completed application/test candidate: `5e9095728f9d29c28a2088b8659189c6da089e2a`, version 1.7.8/code 47, Android 17/API 37. Run `41047906712` passed 27 JVM and 37/38 Android cases, including DNS revocation and full native VPN/Tor protocols. Tor Private Apps manifest discovery remains failed; reviewed accurate-unavailability reporting and non-content diagnostics below require new exact-source compilation/29-JVM/38-Android/strict-packet evidence. Signing, original-key code46→47 upgrade/restart and APK delivery remain blocked. Physical Fold acceptance is owner-required.

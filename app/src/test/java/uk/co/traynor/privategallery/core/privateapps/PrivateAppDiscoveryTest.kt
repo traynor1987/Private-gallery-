@@ -54,4 +54,17 @@ class PrivateAppDiscoveryTest {
   val app=PrivateAppDiscovery.discover(page,false,{true},{PrivateAppDiscovery.Resource(ByteArray(PrivateAppDiscovery.MAX_DOCUMENT+1),"text/html")},{error("Do not decode")})
   assertEquals("",app.scope());assertEquals("",app.icon())
  }
+ @Test fun private_web_app_defaults_to_compact_presentation_and_reports_capabilities() {
+  val app=PrivateAppDiscovery.discover(page,false,{true},{url ->
+   PrivateAppDiscovery.Resource((if(url==page)"<link rel='manifest' href='/manifest.json?x=1&amp;y=2'>" else """{"name":"App","start_url":"/app/home","scope":"/app/","display":"minimal-ui"}""").toByteArray(),if(url==page)"text/html" else "application/manifest+json")
+  },{""})
+  assertEquals("https://example.test/app/home",app.startUrl());assertEquals("minimal-ui",app.display())
+  assertTrue(app.appStyle());assertFalse(app.addressBar());assertTrue(app.discoveryReport().contains("inside Private Gallery"))
+ }
+ @Test fun website_fallback_explains_manifest_failure_without_claiming_installation() {
+  val app=PrivateAppDiscovery.discover(page,false,{true},{PrivateAppDiscovery.Resource("<html>No manifest</html>".toByteArray(),"text/html")},{""})
+  assertTrue(app.scope().isEmpty());assertTrue(app.appStyle());assertFalse(app.addressBar())
+  assertTrue(app.discoveryReport().contains("manifest"));assertFalse(app.discoveryReport().contains("Compatible private web app"))
+ }
+
 }

@@ -29,6 +29,8 @@ class PrivateAppControls178Test {
             PrivateAppControls(app,"https://secret:password@example.test/elsewhere","Hidden Vault · Tor",true,false,true,false,
                 {},{},{},{homes++},{},{switches++},{})
         } }
+        compose.onNodeWithContentDescription("App home").assertDoesNotExist()
+        compose.onNodeWithContentDescription("Expand app controls").performClick()
         compose.onNodeWithText("Fixture App").assertIsDisplayed()
         compose.onNodeWithText("https://example.test").assertIsDisplayed()
         compose.onNodeWithText("Browsing outside this app's saved scope").assertIsDisplayed()
@@ -82,6 +84,7 @@ class PrivateAppControls178Test {
         }
         for(theme in listOf(false,true))for(size in listOf(360,840,600,360))for(font in listOf(false,true)) {
             compose.runOnIdle{dark=theme;width=size;large=font}
+            if(compose.onAllNodesWithContentDescription("Expand app controls").fetchSemanticsNodes().isNotEmpty())compose.onNodeWithContentDescription("Expand app controls").performClick()
             listOf("App back","App forward","Refresh app","App home","Private Apps library","Switch private app","Private app settings","Screenshot to Vault").forEach{
                 compose.onNodeWithContentDescription(it).assertIsDisplayed()
             }

@@ -69,4 +69,19 @@ class PrivateAppSessionFence178Test {
   }
  }
 
+ @Test fun reopening_same_private_app_retains_renderer_and_closing_session_removes_binding() {
+  ActivityScenario.launch(ComponentActivity::class.java).use {scenario ->scenario.onActivity {activity ->
+   val session=BrowserV2Session(activity,BrowserVpnGate {false},NoopBrowserV2Listener,rendererAllowed={false})
+   val app=uk.co.traynor.privategallery.core.privateapps.PrivateAppCatalog.App(java.util.UUID.randomUUID().toString(),"Saved App","https://example.test/app/","https://example.test/app/","standalone","",false,false,true)
+   session.openPrivateApp(app)
+   val id=session.tabs.activeTab.id;val count=session.tabs.tabs.size
+   session.newTab();session.openPrivateApp(app)
+   assertEquals(id,session.tabs.activeTab.id);assertEquals(count+1,session.tabs.tabs.size)
+   assertEquals(app,session.privateApp(id))
+   session.removePrivateApp(app.id());assertNull(session.privateApp(id));assertFalse(session.tabs.tabs.any {it.id==id})
+   session.openPrivateApp(app);assertNotEquals(id,session.tabs.activeTab.id)
+   session.destroyAll();assertNull(session.privateApp(id))
+  }}
+ }
+
 }

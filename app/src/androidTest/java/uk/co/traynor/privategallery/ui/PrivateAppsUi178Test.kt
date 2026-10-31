@@ -23,7 +23,8 @@ class PrivateAppsUi178Test {
   compose.onNodeWithText("Add Private App").performClick()
   compose.onNodeWithTag("private-app-name").performTextInput("Fixture")
   compose.onNodeWithTag("private-app-url").performTextInput("https://example.test/")
-  compose.onNodeWithText("Save").performClick()
+  compose.waitUntil(5000){compose.onAllNodesWithText("Add as Private Website").fetchSemanticsNodes().any{it.config.contains(androidx.compose.ui.semantics.SemanticsProperties.Disabled).not()}}
+  compose.onNodeWithText("Add as Private Website").performClick()
   compose.waitUntil(5000){compose.onAllNodesWithText("Fixture").fetchSemanticsNodes().isNotEmpty()}
   compose.onNodeWithContentDescription("Edit Fixture").performClick()
   compose.onNodeWithTag("private-app-name").performTextReplacement("Renamed")
@@ -59,9 +60,8 @@ class PrivateAppsUi178Test {
    compose.waitUntil(5000){compose.onAllNodesWithText("No private apps yet").fetchSemanticsNodes().isNotEmpty()}
    compose.onNodeWithText("Add Private App").performClick()
    compose.onNodeWithTag("private-app-url").performTextInput("https://example.test/app/")
-   compose.onNodeWithText("Discover website").performClick()
-   compose.waitUntil(5000){compose.onAllNodesWithText("Add as Private Web App").fetchSemanticsNodes().isNotEmpty()}
-   compose.onNodeWithText("Add as Private Web App").performClick()
+   compose.waitUntil(5000){compose.onAllNodesWithText("Install as Private Web App").fetchSemanticsNodes().isNotEmpty()}
+   compose.onNodeWithText("Install as Private Web App").performClick()
    compose.waitUntil(5000){compose.onAllNodesWithText("Synthetic PWA").fetchSemanticsNodes().isNotEmpty()}
    val app=store.read().apps.single();assertEquals("https://example.test/app/home",app.startUrl());assertEquals("standalone",app.display());assertTrue(app.icon().isNotEmpty())
    assertEquals(app,PrimaryPrivateAppStore(root,key,{true},{it()}).read().apps.single())

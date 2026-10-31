@@ -154,5 +154,9 @@
   {
     "classname": "uk.co.traynor.privategallery.ui.PrivateAppSessionSettings178Test",
     "name": "hidden_settings_have_authentication_but_no_retention_toggle"
+  },
+  {
+    "classname": "uk.co.traynor.privategallery.core.browser.v2.PrivateAppSessionFence178Test",
+    "name": "reopening_same_private_app_retains_renderer_and_closing_session_removes_binding"
   }
 ]
