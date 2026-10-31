@@ -386,7 +386,7 @@ class HiddenPrivateAppsLive178Test {
             click("Cancel")
             waitFor("Cancelled authentication closes its prompt") {!visible("Unlock saved app")}
             assertEquals("Cancelling reauthentication must not launch the saved origin",before,requestCount(events(),requestPath))
-            click("Private Apps")
+            if(!visible("Renamed owned fixture"))click("Private Apps")
             waitFor("Cancelled protected app remains in its encrypted catalogue") {visible("Renamed owned fixture")}
             click("Open")
             waitFor("Retry still requires the separate Hidden credential") {visible("Enter your separate Hidden PIN.")}
@@ -434,6 +434,22 @@ class HiddenPrivateAppsLive178Test {
                 waitFor("Actual broker cancellation completes without publication") {visible("Download cancelled. No new item was saved.")}
                 assertEquals(saved,repository.items().map{it.id}.toSet())
                 assertFalse("Cancelled encrypted staging is removed",root.walkTopDown().any{it.isFile && it.name.startsWith("staged-")})
+                click("Keep browsing")
+                val beforeClose=requestCount(events(),"/private-app-slow178.txt")
+                clickWeb("Download slow app document");click("Save GET file")
+                waitFor("Second download actually starts before session close"){requestCount(events(),"/private-app-slow178.txt")>beforeClose}
+                click("Switch private app")
+                click("Close session for Renamed owned fixture")
+                click("Open from library")
+                waitFor("Closed session keeps encrypted definition"){visible("Renamed owned fixture")}
+                click("Open")
+                waitFor("New session after close requires fresh PIN"){visible("Unlock saved app")}
+                setAuthenticationPin("738295");click("Open app")
+                waitFor("New session reaches real app document"){visible("Download app document") && visible("Expand app controls") && visible("Refresh app")}
+                click("Expand app controls");click("Browser tools");click("Downloads")
+                waitFor("Closing an app cancels its owned download"){visible("Download cancelled. No new item was saved.")}
+                assertEquals("Close cannot publish the cancelled file",saved,repository.items().map{it.id}.toSet())
+                assertFalse("Closing session removes download staging",root.walkTopDown().any{it.isFile && it.name.startsWith("staged-")})
                 click("Keep browsing")
             }
             val documentPath="/private-app-document178.txt"
@@ -494,6 +510,15 @@ class HiddenPrivateAppsLive178Test {
                 }}
             }
             assertTrue("Document transfer preserves the authenticated immutable child",checkNotNull(broker).valid())
+            val beforeReopen=requestCount(events(),requestPath)
+            click("Private Apps library")
+            waitFor("App remains in library before authenticated reopen"){visible("Renamed owned fixture")}
+            click("Open")
+            waitFor("Reopening existing app still requires fresh separate PIN"){visible("Unlock saved app")}
+            setAuthenticationPin("738295");click("Open app")
+            waitFor("Existing app returns without start-page reload"){visible("Expand app controls") || visible("Collapse app controls")}
+            assertEquals("Reopen selects the active app rather than loading its start URL",beforeReopen,requestCount(events(),requestPath))
+            if(visible("Expand app controls"))click("Expand app controls")
             click("Private Apps library")
             waitFor("Launched app remains owned") { visible("Renamed owned fixture") }
             click("Remove Renamed owned fixture")
@@ -504,7 +529,8 @@ class HiddenPrivateAppsLive178Test {
             click("Add Private App")
             setEditorField(0, "Persisted survivor")
             setEditorField(1, launchUrl)
-            click("Save")
+            waitFor("Automatic discovery also offers survivor installation",60){visible("Install as Private Web App")}
+            click("Install as Private Web App")
             waitFor("Survivor committed before revocation") {
                 visible("Persisted survivor") && selected.read().apps.singleOrNull()?.name() == "Persisted survivor"
             }

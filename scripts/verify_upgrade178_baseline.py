@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
-"""Extract the pinned distributed 1.7.7 APK; never rebuild/substitute an application baseline."""
+"""Extract the pinned distributed 1.7.8 code47 APK; never rebuild/substitute an application baseline."""
 import hashlib
 from pathlib import Path
 import sys
 import zipfile
 
-ARCHIVE_SHA256 = '16873a3b24abcb311d21ca11e93e1af1707be42946a817770e4b9d629e790869'
-APK_SHA256 = '696e80071497501d8da6cd8dd3e2c9728a63b0d4abc9e88c4ab46338fef97a2e'
-SOURCE_SHA = '25aae6d59f79c455e47acc73a5c99f9c8f15242a'
+ARCHIVE_SHA256 = '5ea6025721ad51530249592213ec7d8a8682682e52eba84ba65587e86b68f82e'
+APK_SHA256 = '21066bd7153520c688c5a6b6034fca549b33df391762e64a5070eecfeb342d3d'
+SOURCE_SHA = '04b91ae01c64323aac02975672d6046dfba62e30'
 
 
 def require(condition, message):
@@ -35,4 +35,4 @@ if __name__ == '__main__':
     destination = Path(sys.argv[2])
     require(not destination.exists(), 'Baseline destination already exists')
     destination.write_bytes(apk)
-    print('PASS: exact archived original signed 1.7.7 APK and frozen application source')
+    print('PASS: exact archived original signed 1.7.8 code47 APK and frozen application source')

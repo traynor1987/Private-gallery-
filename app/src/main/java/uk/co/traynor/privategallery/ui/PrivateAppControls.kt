@@ -30,6 +30,7 @@ internal fun PrivateAppControls(
     onScreenshot: (() -> Unit)? = null,
     onExpanded: (Boolean) -> Unit = {},
     onBrowserTools: () -> Unit = {},
+    onQuickLock: (() -> Unit)? = null,
 ) {
     var expanded by remember(app.id()) { mutableStateOf(false) }
     Column(Modifier.fillMaxWidth().testTag("private-app-controls")) {
@@ -59,6 +60,7 @@ internal fun PrivateAppControls(
                 IconButton(onClick=onLibrary){Icon(Icons.Default.Apps,"Private Apps library")}
                 IconButton(onClick=onSettings,enabled=enabled){Icon(Icons.Default.Settings,"Private app settings")}
                 if(onScreenshot!=null)IconButton(onClick=onScreenshot,enabled=enabled){Icon(Icons.Default.Screenshot,"Screenshot to Vault")}
+                if(onQuickLock!=null)IconButton(onClick=onQuickLock){Icon(Icons.Default.Lock,"Quick lock")}
                 IconButton(onClick=onBrowserTools){Icon(Icons.Default.Build,"Browser tools")}
             }
         }

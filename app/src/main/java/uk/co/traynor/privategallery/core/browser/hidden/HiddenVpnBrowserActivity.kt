@@ -542,7 +542,10 @@ class HiddenVpnBrowserActivity:ComponentActivity() {
 
     private fun closePrivateAppSession(view:WebView) {
         if(!ready || !live() || view !in views)return
-        cancelWebsiteDialog();cancelUpload()
+        if(activeDownloadOwner?.view===view)cancelOwnedDownload()
+        if(pendingDownload?.view===view)pendingDownload=null
+        if(downloadCandidate?.view===view)downloadCandidate=null
+        if(current===view){cancelWebsiteDialog();cancelUpload()}
         views.remove(view);privateAppTabs.remove(view);desktopTabs.remove(view);failures.remove(view);loadingTabs.remove(view);pageDeadlines.remove(view)
         view.stopLoading();view.destroy()
         if(current===view){current=null;views.lastOrNull()?.let {select(it)};if(current==null){address="";busy=false;openPrivateApps()}}
@@ -625,7 +628,7 @@ class HiddenVpnBrowserActivity:ComponentActivity() {
                 {current?.let {if(busy){pageDeadlines[it]?.visible();it.stopLoading();loadingTabs[it]=false;busy=false;pageLoadProgress=100}else {failures.remove(it);it.reload()}}},
                 {cancelUpload();cancelWebsiteDialog();navigate(app.startUrl())},::openPrivateApps,
                 {cancelUpload();cancelWebsiteDialog();privateAppSwitcher=true},
-                {cancelUpload();cancelWebsiteDialog();privateAppSettingsId=app.id()},onScreenshot=::requestScreenshot,onExpanded={appControlsExpanded=it},onBrowserTools={library();menu=true})
+                {cancelUpload();cancelWebsiteDialog();privateAppSettingsId=app.id()},onScreenshot=::requestScreenshot,onExpanded={appControlsExpanded=it},onBrowserTools={library();menu=true},onQuickLock=if(uk.co.traynor.privategallery.ui.PrivacyShieldPreferences(this@HiddenVpnBrowserActivity).let {it.enabled && it.quickLock})({panic()})else null)
             if(app==null || !appStyle || (app.addressBar() && appControlsExpanded))BrowserAddressBar(address,{address=it},ready,busy,{navigate(address)},{current?.let {if(busy){pageDeadlines[it]?.visible();it.stopLoading();loadingTabs[it]=false;busy=false;pageLoadProgress=100}else {failures.remove(it);it.reload()}}},{addressFocused=it})
             if(busy) {
                 LinearProgressIndicator(progress={pageLoadProgress/100f},modifier=Modifier.fillMaxWidth())

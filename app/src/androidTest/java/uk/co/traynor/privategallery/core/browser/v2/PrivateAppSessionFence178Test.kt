@@ -69,19 +69,41 @@ class PrivateAppSessionFence178Test {
   }
  }
 
+
  @Test fun reopening_same_private_app_retains_renderer_and_closing_session_removes_binding() {
-  ActivityScenario.launch(ComponentActivity::class.java).use {scenario ->scenario.onActivity {activity ->
-   val session=BrowserV2Session(activity,BrowserVpnGate {false},NoopBrowserV2Listener,rendererAllowed={false})
-   val app=uk.co.traynor.privategallery.core.privateapps.PrivateAppCatalog.App(java.util.UUID.randomUUID().toString(),"Saved App","https://example.test/app/","https://example.test/app/","standalone","",false,false,true)
-   session.openPrivateApp(app)
-   val id=session.tabs.activeTab.id;val count=session.tabs.tabs.size
-   session.newTab();session.openPrivateApp(app)
-   assertEquals(id,session.tabs.activeTab.id);assertEquals(count+1,session.tabs.tabs.size)
-   assertEquals(app,session.privateApp(id))
-   session.removePrivateApp(app.id());assertNull(session.privateApp(id));assertFalse(session.tabs.tabs.any {it.id==id})
-   session.openPrivateApp(app);assertNotEquals(id,session.tabs.activeTab.id)
-   session.destroyAll();assertNull(session.privateApp(id))
-  }}
+  val loaded=java.util.concurrent.CountDownLatch(1);val checked=java.util.concurrent.CountDownLatch(1)
+  val value=java.util.concurrent.atomic.AtomicReference<String>()
+  lateinit var session:BrowserV2Session
+  lateinit var renderer:android.webkit.WebView
+  lateinit var app:uk.co.traynor.privategallery.core.privateapps.PrivateAppCatalog.App
+  var id="";var count=0
+  ActivityScenario.launch(ComponentActivity::class.java).use {scenario ->
+   scenario.onActivity {activity ->
+    session=BrowserV2Session(activity,BrowserVpnGate {false},NoopBrowserV2Listener,rendererAllowed={true})
+    app=uk.co.traynor.privategallery.core.privateapps.PrivateAppCatalog.App(java.util.UUID.randomUUID().toString(),"Saved App","https://example.test/app/","https://example.test/app/","standalone","",false,false,true)
+    session.openPrivateApp(app);id=session.tabs.activeTab.id;count=session.tabs.tabs.size;renderer=session.activeWebView()
+    renderer.settings.javaScriptEnabled=true
+    renderer.webViewClient=object:android.webkit.WebViewClient() {
+     override fun onPageFinished(view:android.webkit.WebView,url:String?) {
+      view.evaluateJavascript("document.getElementById('retained').value='private draft';document.getElementById('retained').value") {stored ->value.set(stored);loaded.countDown()}
+     }
+    }
+    renderer.loadDataWithBaseURL(app.startUrl(),"<html><body><input id='retained'></body></html>","text/html","UTF-8",null)
+   }
+   assertTrue(loaded.await(10,java.util.concurrent.TimeUnit.SECONDS));assertEquals("\"private draft\"",value.get())
+   scenario.onActivity {
+    session.newTab();session.openPrivateApp(app)
+    assertEquals(id,session.tabs.activeTab.id);assertEquals(count+1,session.tabs.tabs.size)
+    assertSame(renderer,session.activeWebView());assertEquals(app,session.privateApp(id))
+    renderer.evaluateJavascript("document.getElementById('retained').value") {stored ->value.set(stored);checked.countDown()}
+   }
+   assertTrue(checked.await(10,java.util.concurrent.TimeUnit.SECONDS));assertEquals("\"private draft\"",value.get())
+   scenario.onActivity {
+    session.removePrivateApp(app.id());assertNull(session.privateApp(id));assertFalse(session.tabs.tabs.any {it.id==id})
+    session.openPrivateApp(app);assertNotEquals(id,session.tabs.activeTab.id)
+    session.destroyAll();assertNull(session.privateApp(id))
+   }
+  }
  }
 
 }

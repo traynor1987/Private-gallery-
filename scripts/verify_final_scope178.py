@@ -8,7 +8,7 @@ import sys
 import xml.etree.ElementTree as ET
 
 CERTIFICATE = '94f2bfc6567f26d067d29077111cfd0ce86d38263c642ad115e43365f05b0d17'
-BASELINE = '25aae6d59f79c455e47acc73a5c99f9c8f15242a'
+BASELINE = '04b91ae01c64323aac02975672d6046dfba62e30'
 REQUIRED = {
     'encrypted_catalogue', 'vault_and_transport_ownership', 'library_and_app_controls',
     'ordering_and_favourites', 'pwa_discovery_and_fallback', 'bounded_website_and_custom_icons',
@@ -61,9 +61,9 @@ def verify_xml(root, expected):
 def validate(approval, source, review, run, gates, manifest, fixture, validator):
     require(bool(re.fullmatch('[a-f0-9]{40}', source)) and source != '0'*40, 'Unfrozen source')
     require(approval.get('source_sha') == source and approval.get('decision') == 'APPROVED', 'Source not approved')
-    require((approval.get('version'), approval.get('version_code'), approval.get('package')) == ('1.7.8', 47, 'uk.co.traynor.privategallery'), 'Wrong identity')
+    require((approval.get('version'), approval.get('version_code'), approval.get('package')) == ('1.7.8', 48, 'uk.co.traynor.privategallery'), 'Wrong identity')
     require(approval.get('certificate_sha256') == CERTIFICATE, 'Wrong signer')
-    require(approval.get('required_upgrade_from') == 46 and approval.get('baseline_source_sha') == BASELINE, 'Wrong frozen baseline')
+    require(approval.get('required_upgrade_from') == 47 and approval.get('baseline_source_sha') == BASELINE, 'Wrong frozen baseline')
     scope = approval.get('scope', {})
     require(set(scope) == REQUIRED and set(scope.values()) == {'PASS'}, 'Incomplete original feature scope')
     independent = approval.get('independent_review', {})
@@ -103,7 +103,7 @@ def main():
     gates = json.loads((evidence/'privateapps178/final-gates.json').read_text())
     validate(json.loads(Path(approval_path).read_text()), source, Path(review_path).read_bytes(), run, gates,
              manifest, Path(fixture_path).read_bytes(), Path(__file__).read_bytes())
-    print('PASS: exact reviewed 1.7.8 source and focused evidence; original-key code46 upgrade remains mandatory')
+    print('PASS: exact reviewed 1.7.8 source and focused evidence; original-key code47 upgrade remains mandatory')
 
 
 if __name__ == '__main__':

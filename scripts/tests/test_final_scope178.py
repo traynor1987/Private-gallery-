@@ -25,9 +25,9 @@ class FinalScope178Test(unittest.TestCase):
                    conclusion='success',workflow_path='.github/workflows/fast-development.yml',
                    head_branch='release/1.7.8-private-apps',event='push',verified_build_steps=True,
                    evidence_validation='PASS',original_exit_status=0,validated_case_count=1,network_evidence_revalidated=True)
-        approval = dict(source_sha=source,decision='APPROVED',version='1.7.8',version_code=47,
+        approval = dict(source_sha=source,decision='APPROVED',version='1.7.8',version_code=48,
                         package='uk.co.traynor.privategallery',certificate_sha256=GATE.CERTIFICATE,
-                        required_upgrade_from=46,baseline_source_sha=GATE.BASELINE,
+                        required_upgrade_from=47,baseline_source_sha=GATE.BASELINE,
                         scope={name:'PASS' for name in GATE.REQUIRED},independent_review={**decision,'report_sha256':GATE.digest(review)},
                         case_manifest_sha256=GATE.digest(manifest),upgrade_fixture_sha256=GATE.digest(fixture),validator_sha256=GATE.digest(validator),
                         focused_run_id=123,focused_artifact_id=456,focused_artifact_digest=run['artifact_digest'],physical_acceptance='OWNER_REQUIRED')
@@ -91,7 +91,7 @@ class FinalScope178Test(unittest.TestCase):
         self.assertIn("github.ref == 'refs/heads/release/1.7.8-private-apps'",new)
         self.assertLess(new.index('verify_final_scope178.py" "$RUNNER_TEMP/final-scope178.json"'),new.index('secrets.PRIVATE_GALLERY_SIGNING_KEYSTORE_BASE64'))
         self.assertLess(new.index('./gradlew lintRelease assembleRelease'),new.index('cp "$RUNNER_TEMP/UpgradeFixture178.kt" scripts/upgrade/UpgradeFixtureTest.kt'))
-        self.assertIn('exact_archived_original_signed_1.7.7_from_run40899438953_artifact12908558722',new)
+        self.assertIn('exact_archived_original_signed_1.7.8_code47_from_run41081513370_artifact12990222572',new)
 
 
 if __name__ == '__main__': unittest.main()

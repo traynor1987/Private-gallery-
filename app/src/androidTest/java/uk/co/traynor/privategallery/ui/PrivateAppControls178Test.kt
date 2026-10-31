@@ -24,10 +24,10 @@ class PrivateAppControls178Test {
     private fun fixture()=PrivateAppCatalog.App(UUID.randomUUID().toString(),"Fixture App","https://example.test/app/","https://example.test/app/","standalone","",false,true,false)
 
     @Test fun controls_keep_origin_visible_and_delegate_to_existing_owner() {
-        val app=fixture();var homes=0;var switches=0
+        val app=fixture();var homes=0;var switches=0;var locks=0
         compose.setContent { PrivateGalleryTheme(AppTheme.LIGHT) {
             PrivateAppControls(app,"https://secret:password@example.test/elsewhere","Hidden Vault · Tor",true,false,true,false,
-                {},{},{},{homes++},{},{switches++},{})
+                {},{},{},{homes++},{},{switches++},{},onQuickLock={locks++})
         } }
         compose.onNodeWithContentDescription("App home").assertDoesNotExist()
         compose.onNodeWithContentDescription("Expand app controls").performClick()
@@ -38,7 +38,8 @@ class PrivateAppControls178Test {
         compose.onNodeWithContentDescription("App forward").assertIsEnabled()
         compose.onNodeWithContentDescription("App home").performClick()
         compose.onNodeWithContentDescription("Switch private app").performClick()
-        compose.runOnIdle { assertEquals(1,homes);assertEquals(1,switches) }
+        compose.onNodeWithContentDescription("Quick lock").performClick()
+        compose.runOnIdle { assertEquals(1,homes);assertEquals(1,switches);assertEquals(1,locks) }
     }
 
     @Test fun settings_and_switcher_render_save_and_close_on_revocation() {

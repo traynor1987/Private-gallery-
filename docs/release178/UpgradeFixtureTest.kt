@@ -13,10 +13,11 @@ import uk.co.traynor.privategallery.core.security.PinVaultKeyStore
 import uk.co.traynor.privategallery.core.vault.*
 import uk.co.traynor.privategallery.core.vpn.*
 import uk.co.traynor.privategallery.core.hidden.*
+import uk.co.traynor.privategallery.core.privateapps.*
 import uk.co.traynor.privategallery.core.camera.CameraOptions
 import uk.co.traynor.privategallery.core.camera.VaultCaptureAccess
 
-/** Reviewed release-control instrumentation for original-key code46 -> code47 upgrade.
+/** Reviewed release-control instrumentation for original-key code47 -> code48 upgrade.
  * Captured and hash-checked before frozen application checkout; never modifies baseline app.
  */
 class UpgradeFixtureTest {
@@ -27,7 +28,7 @@ class UpgradeFixtureTest {
     private val candidateCode get() = checkNotNull(arguments.getString("candidateCode")).toInt()
     private fun guard() {
         check(context.packageName == "uk.co.traynor.privategallery.hiddenprototype")
-        check(baselineCode == 46 && candidateCode == 47)
+        check(baselineCode == 47 && candidateCode == 48)
     }
     private fun hash(bytes: ByteArray) = MessageDigest.getInstance("SHA-256").digest(bytes).joinToString("") { "%02x".format(it) }
     private fun encryptedHashes(): JSONObject = JSONObject().also { result ->
@@ -72,6 +73,110 @@ class UpgradeFixtureTest {
             assertEquals(if(vpn)listOf(url) else emptyList<String>(),library.history())
             assertEquals("Hidden upgrade",library.snapshot().bookmarks.single().title)
         }
+    }
+    /** Baseline-compatible v1 definitions: all old fields, order and owner survive read/restart.
+     * No candidate-only API is referenced, so instrumentation compiles against the actual code47 source.
+     * This helper performs no candidate write: the existing full ciphertext checks detect eager migration.
+     */
+    private fun privateApps(store:PrivateAppStore,seed:Boolean) {
+        val owner=store.owner()
+        val label=when(owner) {
+            PrivateAppStore.Owner.PRIMARY -> "Primary"
+            PrivateAppStore.Owner.HIDDEN_VPN -> "Hidden VPN"
+            PrivateAppStore.Owner.HIDDEN_TOR -> "Hidden Tor"
+        }
+        val origin=if(owner==PrivateAppStore.Owner.HIDDEN_TOR)"http://"+"a".repeat(56)+".onion" else "https://upgrade.invalid"
+        val icon="iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+ip1sAAAAASUVORK5CYII="
+        fun id(index:Int)=java.util.UUID.nameUUIDFromBytes("upgrade48:$label:$index".toByteArray(Charsets.UTF_8)).toString()
+        val expected=listOf(
+            PrivateAppCatalog.App(id(1),"Upgrade $label PWA","$origin/app/home?upgrade=47","$origin/app/","standalone",icon,true,false,true),
+            PrivateAppCatalog.App(id(2),"Upgrade $label Website","https://upgrade.invalid/site/${owner.name.lowercase()}","","browser","",false,true,false)
+        )
+        if(seed) {
+            assertTrue("Disposable baseline catalogue starts empty for $label",store.read().apps.isEmpty())
+            for(app in expected)store.update {catalog ->catalog.upsert(app)}
+        }
+        val actual=store.read()
+        assertEquals("Preserve $label catalogue transport owner",owner==PrivateAppStore.Owner.HIDDEN_TOR,actual.tor)
+        assertEquals("Preserve $label private app IDs/order/name/start/scope/display/icon/pin/address/PIN flags",expected,actual.apps)
+        if(seed) {
+            val encoded=actual.encode()
+            try {assertEquals("Original code47 seed uses catalogue format1",1,java.io.DataInputStream(ByteArrayInputStream(encoded)).readInt())}
+            finally {encoded.fill(0)}
+        }
+    }
+    private fun primaryPrivateApps(key:ByteArray,seed:Boolean) {
+        val copy=key.copyOf()
+        try {
+            val store=PrimaryPrivateAppStore(File(context.filesDir,"private-apps"),copy,{true},{commit ->commit()})
+            assertEquals(PrivateAppStore.Owner.PRIMARY,store.owner())
+            privateApps(store,seed)
+        } finally {copy.fill(0)}
+    }
+    private fun hiddenPrivateApps(session:HiddenSession,seed:Boolean) {
+        for(tor in listOf(false,true)) {
+            val store=HiddenPrivateAppStore(context.noBackupFilesDir,session,session.authority(),tor)
+            assertEquals(if(tor)PrivateAppStore.Owner.HIDDEN_TOR else PrivateAppStore.Owner.HIDDEN_VPN,store.owner())
+            privateApps(store,seed)
+        }
+    }
+    /** Candidate-only commands are looked up reflectively: baseline instrumentation keeps its code47 ABI. */
+    private fun privateAppStyleRoundTrip(open:()->PrivateAppStore) {
+        val original=open().read().apps
+        assertEquals(2,original.size)
+        val style=PrivateAppCatalog.App::class.java.getMethod("appStyle")
+        val report=PrivateAppCatalog.App::class.java.getMethod("discoveryReport")
+        val command=PrivateAppCommands::class.java.getMethod("execute",PrivateAppStore::class.java,
+            Int::class.javaPrimitiveType,ByteArray::class.java,String::class.java)
+        val browser=PrivateAppCommands::class.java.getField("BROWSER_STYLE").getInt(null)
+        val app=PrivateAppCommands::class.java.getField("APP_STYLE").getInt(null)
+        assertEquals(13,browser);assertEquals(12,app)
+        original.forEach {assertEquals("V1 entries default to app style",true,style.invoke(it))}
+        fun unchanged(actual:List<PrivateAppCatalog.App>) {
+            assertEquals(original.map {it.id()},actual.map {it.id()})
+            for((before,after) in original.zip(actual)) {
+                for(field in listOf("id","name","startUrl","scope","display","icon","pinned","addressBar","requireAuthentication")) {
+                    val read=PrivateAppCatalog.App::class.java.getMethod(field)
+                    assertEquals("Style write preserves original $field",read.invoke(before),read.invoke(after))
+                }
+                assertEquals("Style write preserves discovery report",report.invoke(before),report.invoke(after))
+            }
+        }
+        command.invoke(null,open(),browser,null,original.first().id())
+        val browserState=open().read().apps
+        unchanged(browserState)
+        assertEquals(false,style.invoke(browserState.first()))
+        assertEquals(true,style.invoke(browserState.last()))
+        command.invoke(null,open(),app,null,original.first().id())
+        val restored=open().read().apps
+        unchanged(restored)
+        assertEquals("Restoring app style preserves full decoded definitions",original,restored)
+    }
+    private fun privateAppCiphertext(path:String)=path=="private-apps/primary-private-apps-v1.enc" || path.startsWith("hidden-private-apps-v1/")
+    private fun privateAppCiphertexts():JSONObject = JSONObject().also {out ->
+        for((root,label) in listOf(context.filesDir to "files",context.noBackupFilesDir to "hiddenFiles")) {
+            val hashes=JSONObject()
+            root.walkTopDown().filter {it.isFile && privateAppCiphertext(it.relativeTo(root).path)}.forEach {
+                hashes.put(it.relativeTo(root).path,hash(it.readBytes()))
+            }
+            assertEquals("Expected independent encrypted private-app records for $label",if(label=="files")1 else 2,hashes.length())
+            out.put(label,hashes)
+        }
+    }
+    private fun rewriteCandidatePrivateAppStyles() {
+        val key=PinVaultKeyStore(context).unlock("738291".toCharArray())
+        try {
+            privateAppStyleRoundTrip {PrimaryPrivateAppStore(File(context.filesDir,"private-apps"),key,{true},{commit ->commit()})}
+        } finally {key.fill(0)}
+        val hidden=hiddenSession(false)
+        try {
+            for(tor in listOf(false,true))privateAppStyleRoundTrip {HiddenPrivateAppStore(context.noBackupFilesDir,hidden,hidden.authority(),tor)}
+        } finally {hidden.lock()}
+    }
+    private fun expectedCiphertext(before:JSONObject,field:String,path:String,restarted:Boolean):String {
+        if(restarted && privateAppCiphertext(path))return before.getJSONObject("candidatePrivateAppFiles").getJSONObject(field).getString(path)
+        if(restarted && path.endsWith("presentation-v1/state.enc"))return before.getJSONObject(if(field=="files")"candidatePresentationFiles" else "candidateHiddenPresentationFiles").getString(path)
+        return before.getJSONObject(field).getString(path)
     }
     private fun browserConfiguration(seed:Boolean) {
         val prefs=context.getSharedPreferences("private-gallery-settings",0)
@@ -122,6 +227,7 @@ class UpgradeFixtureTest {
         try {
             val repository = AndroidVaultRepository(context, key)
             primaryBrowser(key,true)
+            primaryPrivateApps(key,true)
             browserConfiguration(true)
             cameraConfiguration(key,null,true)
             val photo = Bitmap.createBitmap(64,64,Bitmap.Config.ARGB_8888).let { bitmap ->
@@ -167,6 +273,7 @@ class UpgradeFixtureTest {
                 val repo=HiddenRepository(context,hidden)
                 val hiddenDeletedIds=mutableListOf<String>()
                 hiddenBrowser(hidden,true)
+                hiddenPrivateApps(hidden,true)
                 cameraConfiguration(null,hidden,true)
                 val bytes=Bitmap.createBitmap(32,32,Bitmap.Config.ARGB_8888).let {bitmap ->
                     try {ByteArrayOutputStream().use {bitmap.compress(Bitmap.CompressFormat.PNG,100,it);it.toByteArray()}}
@@ -228,7 +335,7 @@ class UpgradeFixtureTest {
             val expected=before.getJSONObject(field)
             expected.keys().forEach { path ->
                 if(!path.endsWith("presentation-v1/state.enc")) {
-                    assertEquals("Preserve ciphertext after reads $field/$path",expected.getString(path),hash(File(root,path).readBytes()))
+                    assertEquals("Preserve ciphertext after reads $field/$path",expectedCiphertext(before,field,path,arguments.getString("restartCheck")=="true"),hash(File(root,path).readBytes()))
                 }
             }
         }
@@ -262,10 +369,10 @@ class UpgradeFixtureTest {
         val before = JSONObject(proof.readText())
         val restarted=arguments.getString("restartCheck")=="true"
         val files = before.getJSONObject("files")
-        files.keys().forEach { path -> assertEquals("Preserve encrypted file $path", if(baselineCode>=36&&restarted&&path.endsWith("presentation-v1/state.enc"))before.getJSONObject("candidatePresentationFiles").getString(path) else files.getString(path), hash(File(context.filesDir,path).readBytes())) }
+        files.keys().forEach { path -> assertEquals("Preserve encrypted file $path", expectedCiphertext(before,"files",path,restarted), hash(File(context.filesDir,path).readBytes())) }
         assertEquals("SECONDS_30",context.getSharedPreferences("hidden-v1-policy",0).getString("background-timeout",null))
         val hiddenFiles=before.getJSONObject("hiddenFiles")
-        hiddenFiles.keys().forEach {path ->assertEquals("Preserve Hidden encrypted file $path",if(baselineCode>=36&&restarted&&path.endsWith("presentation-v1/state.enc"))before.getJSONObject("candidateHiddenPresentationFiles").getString(path) else hiddenFiles.getString(path),hash(File(context.noBackupFilesDir,path).readBytes()))}
+        hiddenFiles.keys().forEach {path ->assertEquals("Preserve Hidden encrypted file $path",expectedCiphertext(before,"hiddenFiles",path,restarted),hash(File(context.noBackupFilesDir,path).readBytes()))}
         assertTrue(runCatching {HiddenCredentialStore(context).unlock("738291".toCharArray())}.isFailure)
         val hidden=hiddenSession(false)
         try {
@@ -273,6 +380,7 @@ class UpgradeFixtureTest {
             assertEquals(15,repo.retentionDays())
             assertRecentlyDeleted(before.getJSONObject("hiddenDeleted"),repo.recentlyDeleted(),repo.items())
             hiddenBrowser(hidden,false)
+            hiddenPrivateApps(hidden,false)
             cameraConfiguration(null,hidden,false)
             verifyCandidateSort(repo,"TAKEN_OLDEST")
             assertRecentlyDeleted(before.getJSONObject("hiddenDeleted"),repo.recentlyDeleted(),repo.items())
@@ -290,6 +398,7 @@ class UpgradeFixtureTest {
             assertEquals(60,repository.retentionDays())
             assertRecentlyDeleted(before.getJSONObject("primaryDeleted"),repository.recentlyDeleted(),repository.items())
             primaryBrowser(key,false)
+            primaryPrivateApps(key,false)
             browserConfiguration(false)
             cameraConfiguration(key,null,false)
             verifyCandidateSort(repository,"NAME_DESC")
@@ -320,6 +429,10 @@ class UpgradeFixtureTest {
         } finally { key.fill(0) }
         assertCiphertextAfterReads(before)
         if(baselineCode>=36&&!restarted) {
+            // Every original ciphertext has just been checked after reads. Only now may
+            // explicit code48 style commands rewrite their three originating catalogues.
+            rewriteCandidatePrivateAppStyles()
+            before.put("candidatePrivateAppFiles",privateAppCiphertexts())
             fun presentationOnly(all:JSONObject)=JSONObject().also {out->all.keys().asSequence().filter {it.endsWith("presentation-v1/state.enc")}.forEach {out.put(it,all.getString(it))}}
             val primary=presentationOnly(encryptedHashes());val secret=presentationOnly(hiddenHashes())
             assertEquals(1,primary.length());assertEquals(1,secret.length())
