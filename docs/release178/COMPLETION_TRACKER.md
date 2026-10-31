@@ -1,10 +1,22 @@
 # 1.7.8 completion tracker
 
-## Current task: code50 native drawer — verification pending
+## Current code50: verified and delivered for owner acceptance
+
+Private Gallery **1.7.8/code50**, package `uk.co.traynor.privategallery`, Android17/API37 only. Frozen application `4820e176dcb60a3aa2f1bfd7b36e2de19fafee11`; successful original-key production control `d06c54c128a94dbd88d57e191ad80ccf0b1f79df`. Final backup is documentation/evidence only; no1.7.9/1.7.8.1 work.
+
+Native drawer uses rounded-square icons/names, immediate authenticated tap, secure themed long-press/three-dot menus, search/AddApp and accessible two-tap atomic encrypted reorder. Four normal phone columns adapt to Fold/landscape/large text. Existing app names/icons/pins/preferences and all code49 app-style/Exit/screenshot/PWA/security work preserved. Main publication explicitly rechecks originating authority.
+
+Exact47Android/35JVM zero failure/error/skip/duplicate and strictVPN/Tor/DNS/revocation/emulatorhealth PASS. Independent source/runtime review APPROVED0openCritical/Important SHA2564a07bbe288ebe2448d4e0982f45779c175aad2aefdff71831b77771561eb13a9. Productionrun41200936129/job124536454978 passes release lint/build/identity/distribution, actual archived original-key49→50 seed/install-r/verify/force-stop/restart and signing-material cleanup. Independent signed-artifact review SHA2563f7d3c48a4900f58b427540640948c112b93d3a5ce34c99a71c02f7f0998f5df verifies actualv2RSA-SHA512/all103chunks/compiledmanifest/originalcertificate.
+
+One signed APK: `Private-Gallery-1.7.8-code50-owner-acceptance.apk`, 105601622 bytes, SHA256`df958e447ce1c5a9bc9b515d16de03c0d11a961ae6efb030b305b2dfe733ccf3`. Original certificate SHA256`94f2bfc6567f26d067d29077111cfd0ce86d38263c642ad115e43365f05b0d17`. [Download signed APK](https://chatgpt.com/library?file_id=libfile_5adddcad6ea08191a55c68ccf7a33b17&account_id=personal). [Filtered verification bundle](https://chatgpt.com/library?file_id=libfile_d9e08d0396a48191a8bf0b77db045d21&account_id=personal), SHA256`1a034f15766818628b95a7ce43874c6348197ec5ca0a062b6c919f0df0f9c872`; no APKs/browser images/private signing material inside. Save receipts and local metadata succeeded.
+
+See FINAL_HANDOFF50.md, FINAL_REPAIR50_EVIDENCE.json, FINAL_REPAIR50_DELIVERY.json, SECURITY_REVIEW50.md, SIGNED_ARTIFACT_REVIEW50.md and DRAWER50_OWNER_ACCEPTANCE.md. Original177/code47/48/49 and all failed/diagnostic evidence preserved. **Physical code50 Galaxy Z Fold acceptance remains OWNER_REQUIRED.** Install over49; never uninstall or clear data. Primary profile remains shared; Hidden profile remains separate and ephemeral; per-app cookie isolation/persistent Hidden logins are not promised.
+
+## Historical code50 drawer preparation
 
 Owner15requirements mapped to icon/name grid, direct gated launch, themed securelongpress/overflow Edit/Pin/Reorder/Settings/Remove, search/AddApp, atomicfullorderMOVE_TO14, adaptive4columnphone/Fold/fontlayout and independentowner/revocation state. Schema2 and allprior49experience/security repairs preserved. Local8groups+27host/controltestsPASS;47Androidcasesselected, runtime/sourceapproval/signing49→50notyetcomplete. Original signed49 remains previousdeliverable, not drawer completion.
 
-## Current code49 delivery status
+## Previous code49 delivery status
 
 VERIFIED AND DELIVERED FOR OWNER ACCEPTANCE: source60f089d6e003fd13f8b7649feb6f44167e5028a2, productioncontrolf7051a24e8ba240c7cde1e6113442d42962b52bb, exact43Android/33JVM+strictnetworkPASS, independent0openCritical/Important, original-key archived48→49upgrade/restartPASS, actualAPKsignature/chunk/identity independentlyverified. Version1.7.8/code49; package unchanged/API37only. One signed APK and filtered evidence bundle saved; see FINAL_HANDOFF49.md and FINAL_REPAIR49_DELIVERY.json. PhysicalFoldOWNER_REQUIRED; no owner acceptance claim. Earlier status entries below are historical.
 

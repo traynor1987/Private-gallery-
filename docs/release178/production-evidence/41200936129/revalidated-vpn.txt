@@ -1,0 +1,1 @@
+PASS: actual JavaScript POST, HTML form POST and multipart bodies; WireGuard-only origin and fixture DNS observed; in-flight revocation fixture exercised. Instrumentation results separately required for cancellation/profile/mode-switch assertions.

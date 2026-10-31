@@ -1,0 +1,17 @@
+Verifies
+Verified using v1 scheme (JAR signing): false
+Verified using v2 scheme (APK Signature Scheme v2): false
+Verified using v3 scheme (APK Signature Scheme v3): true
+Verified using v3.1 scheme (APK Signature Scheme v3.1): false
+Verified using v4 scheme (APK Signature Scheme v4): false
+Verified for SourceStamp: false
+Number of signers: 1
+Signer #1 certificate DN: CN=James, OU=JT Software Inc, O=Unknown, L=Unknown, ST=Unknown, C=Unknown
+Signer #1 certificate SHA-256 digest: 94f2bfc6567f26d067d29077111cfd0ce86d38263c642ad115e43365f05b0d17
+Signer #1 certificate SHA-1 digest: 2ba9df97665109e1714976d468038bcbd9d5081b
+Signer #1 certificate MD5 digest: 1aad45408d29c9e36c2bc71c44811507
+Signer #1 key algorithm: RSA
+Signer #1 key size (bits): 4096
+Signer #1 public key SHA-256 digest: e6c5dee1c75a1b4325f17ee9cb235503a1f972774fbe1201580b496e88ff695a
+Signer #1 public key SHA-1 digest: d2b288a35fb3f34642630a5a830b051b16c01587
+Signer #1 public key MD5 digest: c7b120254724c7e20c907941c08a5864

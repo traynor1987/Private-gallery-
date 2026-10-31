@@ -37,7 +37,7 @@
 **Files:** established178 release controls, UpgradeFixtureTest, version metadata, recovery/tracker/evidence reports.
 - [x] Pin exact actual signed49 APK/source/certificate, code50; preserve prior releases.
 - [x] Review exact implementation/runtime independently, resolve Critical/Important findings; freeze exact passing SHA.
-- [ ] Activate original-key49→50 seed/install-r/verify/restart and production identity/distribution gates.
-- [ ] Independently verify actual APK signature/digest/identity and upgrade logs; save one APK + filtered evidence, commit/push/independently verify remote and hand off with Fold checklist.
+- [x] Activate original-key49→50 seed/install-r/verify/restart and production identity/distribution gates.
+- [x] Independently verify actual APK signature/digest/identity and upgrade logs; save one APK + filtered evidence, commit/push/independently verify remote and hand off with Fold checklist.
 
 Ruling: Owner explicitly authorised autonomous execution and simple reorder fallback; no routine design/continuation approval pauses. Existing isolated recovered-gallery checkout has no competing writer; parallel work owns disjoint files.

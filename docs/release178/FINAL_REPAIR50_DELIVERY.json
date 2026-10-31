@@ -1,0 +1,29 @@
+{
+  "source_sha": "4820e176dcb60a3aa2f1bfd7b36e2de19fafee11",
+  "control_sha": "d06c54c128a94dbd88d57e191ad80ccf0b1f79df",
+  "version_name": "1.7.8",
+  "version_code": 50,
+  "package": "uk.co.traynor.privategallery",
+  "certificate_sha256": "94f2bfc6567f26d067d29077111cfd0ce86d38263c642ad115e43365f05b0d17",
+  "apk": {
+    "filename": "Private-Gallery-1.7.8-code50-owner-acceptance.apk",
+    "bytes": 105601622,
+    "sha256": "df958e447ce1c5a9bc9b515d16de03c0d11a961ae6efb030b305b2dfe733ccf3",
+    "library_file_id": "libfile_5adddcad6ea08191a55c68ccf7a33b17",
+    "url": "https://chatgpt.com/library?file_id=libfile_5adddcad6ea08191a55c68ccf7a33b17&account_id=personal",
+    "status": "succeeded",
+    "local_metadata_applied": true
+  },
+  "verification_archive": {
+    "filename": "Private-Gallery-1.7.8-code50-verification.zip",
+    "bytes": 18815487,
+    "sha256": "1a034f15766818628b95a7ce43874c6348197ec5ca0a062b6c919f0df0f9c872",
+    "library_file_id": "libfile_d9e08d0396a48191a8bf0b77db045d21",
+    "url": "https://chatgpt.com/library?file_id=libfile_d9e08d0396a48191a8bf0b77db045d21&account_id=personal",
+    "status": "succeeded",
+    "local_metadata_applied": true
+  },
+  "physical_acceptance": "OWNER_REQUIRED",
+  "installation": "Original-key in-place update over code49; never uninstall or clear data",
+  "decision": "DELIVERED_FOR_OWNER_ACCEPTANCE"
+}
