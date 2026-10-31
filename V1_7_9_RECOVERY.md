@@ -1,6 +1,6 @@
 # Private Gallery 1.7.9 — current recovery status
 
-Release incomplete. No 1.7.9 production APK, consolidated security approval or original-key upgrade pass exists. Keep version 1.7.9/code51; recheck code availability before freeze. Physical Fold acceptance remains OWNER_REQUIRED.
+Release incomplete. No 1.7.9 production APK, consolidated security approval or original-key upgrade pass exists. Consolidated review found two Important source findings; one complete correction wave is now independently source-accepted by SECURITY179_FIX_WAVE.md, compilation/runtime pending. Keep version 1.7.9/code51; recheck code availability before freeze. Physical Fold acceptance remains OWNER_REQUIRED.
 
 Latest independently fetched controls backup: `3b41d8dcd166395a2485050e214bdcc69c62ce08`. Latest independently fetched application source: `ddd0e3cdba8a67b34e806298822766139d3f46be`, branch `release/1.7.9-evidence-locker`. Root is sole Git writer. Preserve newer release-control working files; never reset, clean, force-push or discard them.
 
@@ -16,7 +16,7 @@ Task7b release controls source review is complete: RELEASE_CONTROLS179_FIX1 acce
 
 Continue autonomously:
 1. Inspect current run exact outcome/logs; diagnose failures before one coherent corrected rerun. No duplicate source runs or unrelated historical suites.
-2. Preserve independently accepted inactive controls. Consolidated full implementation reviewer /root/final179_security_review is active; report SECURITY179_CONSOLIDATED.md. Resolve all Critical/Important findings and provide actual runtime evidence to this same consolidated review.
+2. Preserve independently accepted inactive controls. Consolidated SECURITY179_CONSOLIDATED.md reports SEC179-1 AI default-name filename disclosure and SEC179-2 plaintext original output before authenticated EOF. The complete correction worker is frozen; work/final179-fix-report.md records six changed Kotlin files. SECURITY179_FIX_WAVE.md accepts both source corrections; no introduced defect established. Preserve them. Remove AI name projection and use completely validated encrypted snapshot before public plaintext provider. Static manifest now153cases, including7 regressions. Corrected-source Android gates remain mandatory; old ddd0 run is supporting evidence only. Send actual immutable evidence to same consolidated reviewer for final disposition.
 3. Independently verify exact successful artifact digest,146-case XML, native/model/alignment and raw route replay. Conduct consolidated whole-implementation independent security review; resolve Critical/Important findings.
 4. Recheck latest signed version/code and competing writers, freeze verified source, bind reviewed control/source/artifact hashes, then original-key production build, package/certificate/hash checks and original signed50→51 in-place upgrade/restart. Never uninstall or clear data.
 5. Publish exactly one production-signed owner APK with verified link, final SHA/hash/certificate, feature/test/limitation handoff and physical Fold checklist. Do not claim physical acceptance.

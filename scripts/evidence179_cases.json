@@ -582,5 +582,33 @@
   {
     "classname": "uk.co.traynor.privategallery.HideContent1761Test",
     "name": "concealedTabsRestartAndPanicRetainFlagWithoutDeletingSyntheticState"
+  },
+  {
+    "classname": "uk.co.traynor.privategallery.core.evidence.EvidenceAi179Test",
+    "name": "defaultFilenameNameIsExcludedFromExactPreviewAndOneShotBodyWithSelectedOcr"
+  },
+  {
+    "classname": "uk.co.traynor.privategallery.core.evidence.EvidenceArchive179Test",
+    "name": "plaintextLateTagHashAndPostReaderFailuresNeverTouchPublicOutput"
+  },
+  {
+    "classname": "uk.co.traynor.privategallery.core.evidence.EvidenceArchive179Test",
+    "name": "plaintextAllOriginalsAuthenticateBeforePublicOutputAndSnapshotNeverRereadsSources"
+  },
+  {
+    "classname": "uk.co.traynor.privategallery.core.evidence.EvidenceArchive179Test",
+    "name": "plaintextSnapshotIsIndependentOfMutableOriginalAndRechecksLivePolicy"
+  },
+  {
+    "classname": "uk.co.traynor.privategallery.core.evidence.EvidenceArchive179Test",
+    "name": "primaryLegacyLateGcmTagFailureNeverPublishesPlaintext"
+  },
+  {
+    "classname": "uk.co.traynor.privategallery.ui.EvidenceSaf179Test",
+    "name": "plaintextLatePrimaryTagFailureNeverAcquiresProviderDestination"
+  },
+  {
+    "classname": "uk.co.traynor.privategallery.ui.EvidenceSaf179Test",
+    "name": "cancelBlockedPlaintextSnapshotProviderWriteRevokesWithoutBlockingMain"
   }
 ]

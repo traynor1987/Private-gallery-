@@ -232,6 +232,29 @@ class EvidenceSaf179Test {
   compose.waitUntil(30000){compose.onAllNodesWithText("Explicitly confirmed plaintext ZIP export saved",substring=true).fetchSemanticsNodes().isNotEmpty()}
   assertEquals("PK",f.provider.file("output").inputStream().use{String(it.readNBytes(2))});assertTrue(f.provider.deleted.isEmpty())
  }}
+ @Test fun plaintextLatePrimaryTagFailureNeverAcquiresProviderDestination(){Harness(seed=true).use{f->
+  f.show();f.exportDialog();click("Choose explicit plaintext ZIP export…");click("Confirm plaintext export")
+  val repo=AndroidVaultRepository(f.context,f.key);val item=repo.items().single()
+  val payload=File(f.context.filesDir,"vault/payloads/${item.id}.vault")
+  assertFalse(ChunkedVaultVideoStore.isChunked(payload))
+  java.io.RandomAccessFile(payload,"rw").use{it.seek(it.length()-1);val last=it.readByte();it.seek(it.length()-1);it.writeByte(last.toInt() xor 1)}
+  f.returnFromPicker(f.provider.uri("output"))
+  compose.waitUntil(45000){compose.onAllNodesWithText("Export could not complete.",substring=true).fetchSemanticsNodes().isNotEmpty()}
+  assertEquals(0,f.provider.writes.get());assertEquals(0,f.provider.closes.get());assertFalse(f.provider.file("output").exists())
+  assertTrue(payload.isFile);assertTrue(f.provider.deleted.none{it=="source"||it=="archive"})
+ }}
+ @Test fun cancelBlockedPlaintextSnapshotProviderWriteRevokesWithoutBlockingMain(){Harness(seed=true).use{f->
+  f.show();f.exportDialog();click("Choose explicit plaintext ZIP export…");click("Confirm plaintext export")
+  f.provider.blockWrites=true;f.returnFromPicker(f.provider.uri("output"))
+  assertTrue(f.provider.writeEntered.await(45,TimeUnit.SECONDS))
+  val before=android.os.SystemClock.elapsedRealtime();click("Cancel")
+  assertTrue("Main cancellation must not wait for snapshot/provider IO",android.os.SystemClock.elapsedRealtime()-before<2000)
+  compose.waitUntil(15000){f.provider.cancellations.get()>0&&f.provider.closes.get()>0&&"output" in f.provider.deleted}
+  assertFalse(f.owner.sameAuthentication());assertTrue(f.accesses.all{!it.current()})
+  compose.waitUntil(15000){File(f.context.noBackupFilesDir,"evidence-open-primary").listFiles().orEmpty().isEmpty()}
+  compose.onNodeWithText("Explicitly confirmed plaintext ZIP export saved",substring=true).assertDoesNotExist()
+  assertEquals(1,AndroidVaultRepository(f.context,f.key).items().size)
+ }}
  @Test fun cancelBlockedProviderWriteClosesAdmissionWithoutBlockingMain()=blockedOutput("Cancel")
  @Test fun lockDuringBlockedProviderWriteRevokesAndRequestsPartialCleanup()=blockedOutput("Lock Vault")
  @Test fun hideDuringBlockedProviderWriteRevokesAndRequestsPartialCleanup()=blockedOutput("Hide Content")

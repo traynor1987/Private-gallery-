@@ -92,18 +92,20 @@ private class EvidenceArchiveRequest(val source:Uri,val destination:Uri?=null,va
        val reader=fresh.access.reader{!isActive};val catalog=fresh.access.store.read()
        check(EvidenceEgress.digest(catalog)==ticket.digest){"Export selection changed"}
        EvidenceEgress.requireAllowed(catalog,ticket.evidenceIds,ticket.incidentIds,reader)
-       evidenceDestination(context,fresh,destination){output->
+       // Authentication must finish before even acquiring/truncating a public destination.
+       val snapshot=if(ticket.kind=="Plain")EvidenceArchive.preparePlaintext(context,
+        EvidenceExportPlan(catalog,ticket.incidentIds,ticket.evidenceIds,ticket.digest,true),reader)else null
+       try { evidenceDestination(context,fresh,destination){output->
         if(ticket.kind=="Encrypted") {
          val stage=checkNotNull(ticket.stage);check(stage.current());val expected=checkNotNull(ticket.receipt);check(expected.encrypted)
          val digest=MessageDigest.getInstance("SHA-256");val buffer=ByteArray(65536);var count=0L
          try{stage.file.inputStream().use{input->while(true){fresh.access.checkCurrent();val n=input.read(buffer);if(n<0)break;count+=n;check(count<=expected.bytes);output.write(buffer,0,n);digest.update(buffer,0,n)}};check(count==expected.bytes&&digest.digest().joinToString(""){"%02x".format(it.toInt() and 255)}==expected.sha256)}finally{buffer.fill(0)}
         }else {
-         val plan=EvidenceExportPlan(catalog,ticket.incidentIds,ticket.evidenceIds,ticket.digest,true)
-         EvidenceArchive.write(plan,reader,charArrayOf(),output)
+         checkNotNull(snapshot).write(output)
         }
         fresh.access.checkCurrent();check(EvidenceEgress.digest(fresh.access.store.read())==ticket.digest)
         EvidenceEgress.requireAllowed(catalog,ticket.evidenceIds,ticket.incidentIds,reader)
-       }
+       }}finally{snapshot?.close()}
       }
       fresh.access.publishIfCurrent{notice=if(ticket.kind=="Encrypted")"Password-encrypted .pgevidence export saved. Open it in Evidence Locker to read its PDF and structured contents."else"Explicitly confirmed plaintext ZIP export saved to the chosen document destination."}
      }catch(cancelled:CancellationException){EvidenceDocumentIo.requestPartialCleanup(context,destination);throw cancelled}catch(_:Throwable){EvidenceDocumentIo.requestPartialCleanup(context,destination);fresh.access.publishIfCurrent{notice="Export could not complete. Partial destination cleanup was requested; provider deletion cannot be guaranteed."}}

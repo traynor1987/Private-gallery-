@@ -88,8 +88,43 @@ internal object EvidenceArchive {
  }
  internal fun utf8(bytes:ByteArray):String=Charsets.UTF_8.newDecoder().onMalformedInput(CodingErrorAction.REPORT).onUnmappableCharacter(CodingErrorAction.REPORT).decode(ByteBuffer.wrap(bytes)).toString()
  internal fun hashes(catalog:EvidenceCatalog,sources:List<EvidenceCatalog.SourceFingerprint>,documents:Map<String,Pair<Long,String>>):ByteArray = obj("version" to 1,"algorithm" to "SHA-256","documents" to array(documents.map{(name,value)->obj("path" to name,"bytes" to value.first,"sha256" to value.second)}),"sources" to array(sources.map{f->obj("fingerprint" to fingerprint(f),"path" to if(catalog.evidence().any{it.sourceId()==f.sourceId()})path(f.sourceId())else JSONObject.NULL,"attached" to catalog.evidence().any{it.sourceId()==f.sourceId()})})).toString().let(::boundedMetadata)
- fun write(plan:EvidenceExportPlan,reader:EvidenceSourceReader,passphrase:CharArray,output:OutputStream):EvidenceExportReceipt {
-  offMain();val selected=select(plan,reader);if(!plan.plaintextConfirmed)require(passphrase.size>=12){"Use at least 12 passphrase characters"}
+ /** A fully authenticated encrypted snapshot; source reads have all returned before this exists. */
+ internal class PlaintextSnapshot internal constructor(private val archive:EvidenceOpenedArchive,private val selected:Selected,private val reader:EvidenceSourceReader):AutoCloseable {
+  fun write(output:OutputStream):EvidenceExportReceipt {
+   allowed(selected,reader)
+   // Read only the sealed snapshot. Live originals supply authority/policy checks, never copy bytes.
+   return archive.writePlaintext(output,true){allowed(selected,reader);reader.current()}.also{allowed(selected,reader)}
+  }
+  override fun close(){archive.close()}
+ }
+ fun preparePlaintext(context:Context,plan:EvidenceExportPlan,reader:EvidenceSourceReader):PlaintextSnapshot {
+  offMain();require(plan.plaintextConfirmed){"Explicit plaintext confirmation required"}
+  val selected=select(plan,reader)
+  val directory=File(context.noBackupFilesDir,"evidence-open-${reader.owner.name.lowercase()}")
+  require(directory.isDirectory||directory.mkdirs());android.system.Os.chmod(directory.absolutePath,448)
+  val stage=File.createTempFile("encrypted-",".stage",directory)
+  val secret=CharArray(64);val entropy=ByteArray(32);var opened:EvidenceOpenedArchive?=null
+  try {
+   SecureRandom().nextBytes(entropy)
+   val alphabet="0123456789abcdef"
+   for(i in entropy.indices){val value=entropy[i].toInt() and 255;secret[i*2]=alphabet[value ushr 4];secret[i*2+1]=alphabet[value and 15]}
+   entropy.fill(0);android.system.Os.chmod(stage.absolutePath,384)
+   FileOutputStream(stage).use{output->
+    // Preliminary legacy GCM plaintext is permitted only inside this encrypted container.
+    write(plan.copy(plaintextConfirmed=false),reader,secret,output)
+    allowed(selected,reader);output.fd.sync()
+   }
+   android.system.Os.chmod(stage.absolutePath,256)
+   // Reuse full tag-before-parser authentication and schema/original-hash validation. The
+   // opener retains one sealed private descriptor and never returns to a mutable source.
+   opened=FileInputStream(stage).use{input->open(context,reader.owner,input,secret){reader.current()}}
+   allowed(selected,reader)
+   return PlaintextSnapshot(checkNotNull(opened),selected,reader).also{opened=null}
+  }finally{try{opened?.close()}finally{secret.fill('\u0000');entropy.fill(0);stage.delete()}}
+ }
+ fun write(plan:EvidenceExportPlan,reader:EvidenceSourceReader,passphrase:CharArray,output:OutputStream,context:Context?=null):EvidenceExportReceipt {
+  if(plan.plaintextConfirmed)return preparePlaintext(requireNotNull(context){"Private ciphertext staging context required"},plan,reader).use{it.write(output)}
+  offMain();val selected=select(plan,reader);require(passphrase.size>=12){"Use at least 12 passphrase characters"}
   val metadata=metadataBytes(selected.catalog,selected.sources);var pdf:ByteArray?=null;var transcript:ByteArray?=null;var manifest:ByteArray?=null;var key:ByteArray?=null;var encrypt:EvidenceArchiveCrypto.Encrypt?=null
   try {
    val pdfBytes=EvidencePdf.renderSelected(selected,reader);pdf=pdfBytes
@@ -99,11 +134,12 @@ internal object EvidenceArchive {
    require(metadata.size<=EvidenceArchiveFormat.META-manifestBytes.size){"Combined metadata quota exceeded"}
    val expanded=selected.originals.sumOf{it.size()}+metadata.size+pdfBytes.size+transcriptBytes.size+manifestBytes.size;require(expanded<=EvidenceArchiveFormat.MAX_EXPANDED)
    val header=EvidenceArchiveFormat.header(ByteArray(16).also{SecureRandom().nextBytes(it)},ByteArray(12).also{SecureRandom().nextBytes(it)})
-   if(!plan.plaintextConfirmed)key=EvidenceArchiveCrypto.key(passphrase,header)
+   key=EvidenceArchiveCrypto.key(passphrase,header)
    allowed(selected,reader) // No output before complete admission and bounded report/schema construction.
    var writing=true
    val receipt=ReceiptOutput(output,{writing&&reader.current()})
-   val sink=if(plan.plaintextConfirmed)receipt else {receipt.write(header);EvidenceArchiveCrypto.Encrypt(receipt,key!!,header){reader.current()}.also{encrypt=it}}
+   receipt.write(header)
+   val sink=EvidenceArchiveCrypto.Encrypt(receipt,key!!,header){reader.current()}.also{encrypt=it}
    val zip=ZipOutputStream(sink)
    try {
     fun entry(name:String,bytes:ByteArray){check(reader.current());zip.putNextEntry(ZipEntry(name));var at=0;while(at<bytes.size){check(reader.current());val n=minOf(32768,bytes.size-at);zip.write(bytes,at,n);at+=n};zip.closeEntry()}
@@ -117,7 +153,7 @@ internal object EvidenceArchive {
      }
      allowed(selected,reader);zip.closeEntry()
     }}finally{buffer.fill(0)}
-    allowed(selected,reader);zip.finish();encrypt?.finish();allowed(selected,reader);receipt.flush();return receipt.receipt(!plan.plaintextConfirmed)
+    allowed(selected,reader);zip.finish();encrypt?.finish();allowed(selected,reader);receipt.flush();return receipt.receipt(true)
    }finally{writing=false;zip.deflateEnd()}
   }finally{encrypt?.dispose();key?.fill(0);metadata.fill(0);pdf?.fill(0);transcript?.fill(0);manifest?.fill(0)}
  }
@@ -127,7 +163,7 @@ internal object EvidenceArchive {
   private val digest=MessageDigest.getInstance("SHA-256");private var count=0L
   override fun write(b:Int){write(byteArrayOf(b.toByte()))}
   override fun write(b:ByteArray,off:Int,len:Int){check(current());require(count<=EvidenceArchiveFormat.MAX_CIPHER-len);target.write(b,off,len);digest.update(b,off,len);count+=len;check(current())}
-  override fun flush(){target.flush()}
+  override fun flush(){check(current());target.flush();check(current())}
   override fun close(){} // caller owns provider/output
   fun receipt(encrypted:Boolean)=EvidenceExportReceipt(hex(digest.digest()),count,encrypted)
  }

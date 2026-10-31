@@ -23,9 +23,9 @@ class EvidenceAi179Test {
  private class Fixture(val bytes:ByteArray="original".toByteArray(),val mime:String="text/plain",val restricted:Boolean=false) {
   val id=UUID.randomUUID().toString();val sourceId=UUID.randomUUID().toString()
   val hash=MessageDigest.getInstance("SHA-256").digest(bytes)
-  val item=VaultItem(sourceId,mime,"PRIVATE_FILENAME_GPS",1,bytes.size.toLong(),hash,ByteArray(12),VaultItemState.COMPLETE,vaultOnly=restricted)
-  val evidence=EvidenceCatalog.Evidence(id,sourceId,"Selected title",mime,hash.joinToString(""){ "%02x".format(it.toInt() and 255)},bytes.size.toLong(),1,
-   EvidenceCatalog.Metadata("PRIVATE_FILENAME_GPS",0,0,0,0,0,0,mapOf("GPS" to "PRIVATE_GPS"),restricted),"Selected description","Selected note",listOf("Selected tag"),listOf("Selected participant"),emptyList(),emptyList())
+  val item=VaultItem(sourceId,mime,"patient-Jane-London-clinic.png",1,bytes.size.toLong(),hash,ByteArray(12),VaultItemState.COMPLETE,vaultOnly=restricted)
+  val evidence=EvidenceCatalog.Evidence(id,sourceId,item.displayName,mime,hash.joinToString(""){ "%02x".format(it.toInt() and 255)},bytes.size.toLong(),1,
+   EvidenceCatalog.Metadata("DISTINCT_SOURCE_FILENAME",0,0,0,0,0,0,mapOf("GPS" to "PRIVATE_GPS"),restricted),"Selected description","Selected note",listOf("Selected tag"),listOf("Selected participant"),emptyList(),emptyList())
   val catalog=EvidenceCatalog.empty(EvidenceCatalog.Owner.PRIMARY).upsertEvidence(evidence,1,"IMPORT")
   var active=true;var changed=false;var eof=false;var readCount=0;var liveItem=item;var afterConsume:()->Unit={}
   val reader=object:EvidenceSourceReader {
@@ -84,17 +84,39 @@ class EvidenceAi179Test {
   try {
    assertEquals(0,route.posts);assertEquals(0,keys.reads);assertTrue(f.eof)
    val exact=p.exactText
-   for(s in listOf("Selected title","Selected description","Selected note","Selected tag","Selected participant"))assertTrue(exact.contains(s))
-   assertFalse(exact.contains("PRIVATE_FILENAME_GPS"));assertFalse(exact.contains("PRIVATE_GPS"));assertTrue(p.images.isEmpty())
+   for(s in listOf("Selected description","Selected note","Selected tag","Selected participant"))assertTrue(exact.contains(s))
+   for(secret in listOf(f.item.displayName,"DISTINCT_SOURCE_FILENAME","PRIVATE_GPS"))assertFalse(exact.contains(secret));assertTrue(p.images.isEmpty())
    assertTrue(p.estimatedUsd>0);assertTrue(p.disclosure.contains("30 days"))
    val analysis=EvidenceAi.analyze(p,credentials(keys)){EvidenceEgress.digest(f.catalog)}
    val body=JSONObject(route.payload)
+   for(secret in listOf(f.item.displayName,"DISTINCT_SOURCE_FILENAME","PRIVATE_GPS"))assertFalse(route.payload.contains(secret))
+   assertFalse(exact.contains("\"name\""))
    assertEquals(exact,body.getJSONArray("input").getJSONObject(0).getJSONArray("content").getJSONObject(0).getString("text"))
    assertFalse(body.getBoolean("store"));assertFalse(body.getBoolean("background"));assertFalse(body.getBoolean("stream"))
    assertEquals("none",body.getJSONObject("reasoning").getString("effort"));assertEquals(2048,body.getInt("max_output_tokens"));assertEquals(0,body.getJSONArray("tools").length())
    assertEquals(listOf(f.id),analysis.evidenceIds());assertFalse(analysis.applied());assertEquals(10L,analysis.inputTokens());assertTrue(analysis.text().contains("ADVISORY"))
    assertEquals(1,keys.reads);assertEquals("Bearer fixture-key",route.authorization)
    rejected{EvidenceAi.analyze(p,credentials(keys)){EvidenceEgress.digest(f.catalog)}};assertEquals(1,route.posts)
+  }finally{p.close()}
+ }
+ @Test fun defaultFilenameNameIsExcludedFromExactPreviewAndOneShotBodyWithSelectedOcr()=runBlocking {
+  val f=Fixture();val route=Route();val keys=Keys()
+  assertEquals(f.item.displayName,f.evidence.name()) // The production registration default.
+  val ocr=EvidenceCatalog.Ocr(UUID.randomUUID().toString(),2,"FIXTURE",0,0,0,"Selected OCR transcript",-1f,emptyList(),emptyList(),1,false)
+  val catalog=f.catalog.saveOcr(f.id,ocr,2)
+  val p=EvidenceAi.prepare(catalog,listOf(f.id),emptyList(),EvidenceAi.Model.LUNA,EvidenceAi.Task.FACTUAL_SUMMARY,f.reader,route)
+  try {
+   val exact=p.exactText
+   assertEquals(0,keys.reads);assertEquals(0,route.posts)
+   for(value in listOf(f.id,"Selected OCR transcript","Selected note"))assertTrue(exact.contains(value))
+   for(secret in listOf(f.item.displayName,"DISTINCT_SOURCE_FILENAME","PRIVATE_GPS"))assertFalse(exact.contains(secret))
+   EvidenceAi.analyze(p,credentials(keys)){EvidenceEgress.digest(catalog)}
+   val sent=JSONObject(route.payload).getJSONArray("input").getJSONObject(0).getJSONArray("content").getJSONObject(0).getString("text")
+   assertEquals(exact,sent)
+   for(secret in listOf(f.item.displayName,"DISTINCT_SOURCE_FILENAME","PRIVATE_GPS"))assertFalse(route.payload.contains(secret))
+   assertEquals(1,keys.reads);assertEquals(1,route.posts)
+   rejected{EvidenceAi.analyze(p,credentials(keys)){EvidenceEgress.digest(catalog)}}
+   assertEquals(1,keys.reads);assertEquals(1,route.posts);assertEquals(f.item.displayName,f.evidence.name())
   }finally{p.close()}
  }
  @Test fun imagesAreExplicitBoundedReencodedAndThumbnailCopiesAreIndependent()=runBlocking {
@@ -306,7 +328,7 @@ class EvidenceAi179Test {
   rejected{EvidenceAi.prepare(all,records.map{it.id}+UUID.randomUUID().toString(),emptyList(),EvidenceAi.Model.LUNA,EvidenceAi.Task.FACTUAL_SUMMARY,reader(records),Route())}
   val f=Fixture();val e=f.evidence
   fun textCatalog(extra:Int):EvidenceCatalog {
-   val record=EvidenceCatalog.Evidence(e.id(),e.sourceId(),"n",e.mime(),e.sha256(),e.size(),e.importedAt(),e.metadata(),"d".repeat(50000+extra),"n".repeat(49999),emptyList(),emptyList(),emptyList(),emptyList())
+   val record=EvidenceCatalog.Evidence(e.id(),e.sourceId(),"n",e.mime(),e.sha256(),e.size(),e.importedAt(),e.metadata(),"d".repeat(50000+extra),"n".repeat(50000),emptyList(),emptyList(),emptyList(),emptyList())
    return EvidenceCatalog.empty(EvidenceCatalog.Owner.PRIMARY).upsertEvidence(record,1,"IMPORT")
   }
   EvidenceAi.prepare(textCatalog(0),listOf(f.id),emptyList(),EvidenceAi.Model.LUNA,EvidenceAi.Task.FACTUAL_SUMMARY,f.reader,Route()).close()
