@@ -16,8 +16,12 @@ fixture_source="${PRIVATE_GALLERY_179_UPGRADE_FIXTURE:?Reviewed baseline-compati
 [[ "$(adb shell getprop ro.build.version.sdk | tr -d '\r')" == 37 ]]
 [[ "$(adb shell getenforce | tr -d '\r')" == Enforcing ]]
 fixture_package=uk.co.traynor.privategallery
-installed_package=$(adb shell pm path "$fixture_package" | tr -d '\r')
-[[ -z "$installed_package" ]] || { echo 'Production package must be initially absent' >&2; exit 1; }
+# pm list packages succeeds with empty output for an absent package; pm path does not.
+installed_packages=$(adb shell pm list packages "$fixture_package" | tr -d '\r') || { echo 'Package presence query failed' >&2; exit 1; }
+if grep -Fxq "package:$fixture_package" <<< "$installed_packages"; then
+  echo 'Production package must be initially absent' >&2
+  exit 1
+fi
 project_root=$(pwd)
 artifact_dir="$project_root/app/build/production-evidence/from50"
 mkdir -p "$artifact_dir"

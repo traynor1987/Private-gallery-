@@ -2,7 +2,7 @@
 
 Release incomplete. No 1.7.9 production APK, consolidated security approval or original-key upgrade pass exists. Keep version 1.7.9/code51; recheck code availability before freeze. Physical Fold acceptance remains OWNER_REQUIRED.
 
-Latest independently fetched application source: `ddd0e3cdba8a67b34e806298822766139d3f46be`, branch `release/1.7.9-evidence-locker`. Root is sole Git writer. Preserve newer release-control working files; never reset, clean, force-push or discard them.
+Latest independently fetched controls backup: `3b41d8dcd166395a2485050e214bdcc69c62ce08`. Latest independently fetched application source: `ddd0e3cdba8a67b34e806298822766139d3f46be`, branch `release/1.7.9-evidence-locker`. Root is sole Git writer. Preserve newer release-control working files; never reset, clean, force-push or discard them.
 
 Current grouped focused Android17 run: https://github.com/traynor1987/Private-gallery-/actions/runs/41237030300, job124642848043. At the latest API observation, application AND all instrumentation compilation, focused host checks, pinned offline OCR/native alignment and isolated route fixture preparation PASSED. Grouped Android runtime is IN_PROGRESS. Do not infer runtime success from compilation.
 
@@ -12,11 +12,11 @@ Export source changes accepted by EXPORT179_FIX2: historical references/incident
 
 Actual owned VPN/Tor proof implementation and fix round1 are source-accepted by ROUTES179_FIX1. Four route cases plus142 other cases form the committed146-case manifest. Raw packet/events/certificates/Android proof must pass; no direct-network fallback or security waiver is authorised. Loss after path removal uses explicit unavailable remote-close provenance; reachable cancellation still requires genuine peer close.
 
-Task7b release controls are frozen in working files, independently reviewing via /root/release_controls_review. Report: docs/release179/work/task-7b-release-report.md; package: task-7b-review-package.diff. Existing acceptance1762 workflow only; FROZEN_SOURCE remains zero, activation marker absent. Twenty-four focused host methods passed; baseline-compatible Android50 fixture compilation, production build/signing and actual50→51 upgrade/restart remain UNRUN. Do not activate until controls and complete implementation are approved with actual runtime evidence.
+Task7b release controls source review is complete: RELEASE_CONTROLS179_FIX1 accepts the corrected clean-package query, zero open Critical/Important. Six targeted admission tests pass; original-key actual upgrade remains unrun. Report: docs/release179/work/task-7b-release-report.md; package: task-7b-review-package.diff. Existing acceptance1762 workflow only; FROZEN_SOURCE remains zero, activation marker absent. Twenty-four focused host methods passed; baseline-compatible Android50 fixture compilation, production build/signing and actual50→51 upgrade/restart remain UNRUN. Do not activate until controls and complete implementation are approved with actual runtime evidence.
 
 Continue autonomously:
 1. Inspect current run exact outcome/logs; diagnose failures before one coherent corrected rerun. No duplicate source runs or unrelated historical suites.
-2. Resolve all Critical/Important Task7b findings through original implementer and fresh scoped review. Preserve inactive controls until mandatory gates.
+2. Preserve independently accepted inactive controls. Consolidated full implementation reviewer /root/final179_security_review is active; report SECURITY179_CONSOLIDATED.md. Resolve all Critical/Important findings and provide actual runtime evidence to this same consolidated review.
 3. Independently verify exact successful artifact digest,146-case XML, native/model/alignment and raw route replay. Conduct consolidated whole-implementation independent security review; resolve Critical/Important findings.
 4. Recheck latest signed version/code and competing writers, freeze verified source, bind reviewed control/source/artifact hashes, then original-key production build, package/certificate/hash checks and original signed50→51 in-place upgrade/restart. Never uninstall or clear data.
 5. Publish exactly one production-signed owner APK with verified link, final SHA/hash/certificate, feature/test/limitation handoff and physical Fold checklist. Do not claim physical acceptance.

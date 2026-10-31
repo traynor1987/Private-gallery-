@@ -75,3 +75,35 @@ These hashes identify this worker handback. Report itself is excluded; root must
 | `scripts/tests/test_upgrade179_compilation.py` | `282c3153f5f3010b5a3e77050e019a1671d8c08d147c121eb7c99e4ba656bf7b` |
 | `scripts/tests/test_upgrade179_evidence.py` | `0b551fc93b14f0e9453a9b9e3458ba6acba70aad4751ef9deb06b0cc8ea741d1` |
 | `scripts/tests/test_release179_runtime_controls.py` | `7aa5c2f3ac86d4e06319cc6fa3ae30cfc25130cecfb16e2bbabf5f8d6f21f72e` |
+
+
+## Scoped correction round1/5 — finding1 (2026-10-31)
+
+Read `docs/release179/reviews/RELEASE_CONTROLS179_INITIAL.md` finding1 in full. The reviewer correctly identified that `pm path` reports absence with nonzero status, making the required clean emulator abort under `set -euo pipefail`. Root identified the preceding controls backup as `3b41d8dcd166395a2485050e214bdcc69c62ce08`; this worker did not invoke Git to inspect or change it.
+
+Changed only the production-package admission block and its narrow runner tests. The runner now uses `adb shell pm list packages "$fixture_package"`, whose successful empty output represents absence. A failing package-manager/transport query is explicitly rejected while pipeline `pipefail` is retained. Successful output rejects the exact full line `package:uk.co.traynor.privategallery`; the test/debug suffix packages do not falsely count as the production package. There is no blanket `|| true`, uninstall, data-clear, signer, identity, source or workflow change.
+
+Three additional narrow host test methods execute the actual admission block with a temporary mock `adb`: successful empty absence and suffix-only results are admitted; the exact installed production package is rejected; query statuses1 and42 with empty or partial output are rejected. The mock accepts only the intended read-only package-list query. Tests never invoke real Git, adb, signer or install commands. Pre-fix run of this one module was RED (`Ran 6 tests ... FAILED (failures=7)`); no unchanged24-method aggregate was rerun.
+
+Post-fix command and exact output:
+
+```
+PYTHONDONTWRITEBYTECODE=1 python3 -m unittest scripts.tests.test_upgrade179_runner -q
+----------------------------------------------------------------------
+Ran 6 tests in 0.056s
+
+OK
+```
+
+```
+bash -n scripts/verify_synthetic_upgrade179.sh
+```
+
+Result: exit0, no output. A focused PyYAML assertion checked `jobs.acceptance179.env.FROZEN_SOURCE == '0'*40` and `not Path('.acceptance179-candidate').exists()`; output was `PASS: acceptance179 source zero; activation marker absent`.
+
+These are host admission tests only. Actual original50 Android seed, signed51 install-r upgrade, verify/restart and all other previously unexecuted gates remain unexecuted by this worker. Independent scoped correction review remains required. No Git/push/CI/secrets/signing/subagent activity occurred. This correction handback is frozen; the following hashes supersede only those paths' previous handback hashes.
+
+| Changed path | SHA256 |
+|---|---|
+| `scripts/verify_synthetic_upgrade179.sh` | `a7b4033f896ec90f7b09368794fc432fe7725ad80dbd559bb25f58b1e4b63515` |
+| `scripts/tests/test_upgrade179_runner.py` | `a3eff069da9bea0e01a64346d681446f1a08a12c696a52169c939fe81bccde2c` |

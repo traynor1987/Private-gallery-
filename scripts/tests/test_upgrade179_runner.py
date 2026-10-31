@@ -1,4 +1,4 @@
-"""Production upgrade admission guards must reject before any adb operation."""
+"""Production context admission and clean-package query guards, without real device access."""
 import os
 from pathlib import Path
 import subprocess
@@ -28,4 +28,32 @@ class Runner179(unittest.TestCase):
         env=self.env.copy();env.pop('PRIVATE_GALLERY_179_BASELINE_APK')
         self.env=env
         self.run_guard({},'Exact archived signed 1.7.8 code50 APK required')
+    def query_guard(self,output,status):
+        # Execute the real narrow admission block. No Git, signer, install or device is invoked.
+        source=(ROOT/'scripts/verify_synthetic_upgrade179.sh').read_text()
+        block=source[source.index('fixture_package='):source.index('project_root=$(pwd)')]
+        tool=self.path/'adb'
+        tool.write_text("#!/bin/sh\n[ \"$*\" = 'shell pm list packages uk.co.traynor.privategallery' ] || exit 95\nprintf '%s' \"$QUERY_OUTPUT\"\nexit \"$QUERY_STATUS\"\n")
+        tool.chmod(0o755)
+        return subprocess.run(['bash','-c','set -euo pipefail\n'+block+"printf 'ADMITTED\\n'\n"],
+            env={**self.env,'QUERY_OUTPUT':output,'QUERY_STATUS':str(status)},text=True,capture_output=True)
+    def test_absent_production_package_admits_successful_empty_query(self):
+        for output in ['', 'package:uk.co.traynor.privategallery.test\r\npackage:uk.co.traynor.privategallery.hiddenprototype\r\n']:
+            with self.subTest(output=output):
+                result=self.query_guard(output,0)
+                self.assertEqual(0,result.returncode,result.stderr)
+                self.assertEqual('ADMITTED\n',result.stdout)
+    def test_exact_installed_production_package_is_rejected(self):
+        result=self.query_guard('package:uk.co.traynor.privategallery.test\r\npackage:uk.co.traynor.privategallery\r\n',0)
+        self.assertNotEqual(0,result.returncode)
+        self.assertIn('Production package must be initially absent',result.stderr)
+        self.assertNotIn('ADMITTED',result.stdout)
+    def test_package_query_failure_never_admits_empty_or_partial_output(self):
+        for output in ['', 'package:uk.co.traynor.privategallery.test\n']:
+            for status in [1,42]:
+                with self.subTest(output=output,status=status):
+                    result=self.query_guard(output,status)
+                    self.assertNotEqual(0,result.returncode)
+                    self.assertIn('Package presence query failed',result.stderr)
+                    self.assertNotIn('ADMITTED',result.stdout)
 if __name__=='__main__':unittest.main()
