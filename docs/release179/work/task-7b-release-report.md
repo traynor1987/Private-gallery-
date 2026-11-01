@@ -107,3 +107,46 @@ These are host admission tests only. Actual original50 Android seed, signed51 in
 |---|---|
 | `scripts/verify_synthetic_upgrade179.sh` | `a7b4033f896ec90f7b09368794fc432fe7725ad80dbd559bb25f58b1e4b63515` |
 | `scripts/tests/test_upgrade179_runner.py` | `a3eff069da9bea0e01a64346d681446f1a08a12c696a52169c939fe81bccde2c` |
+
+
+## Scoped correction round2/5 — explicit instrumentation v2 signing (2026-11-01)
+
+Read the original handback, `reviews/RELEASE_CONTROLS179_FIX1.md`, the TDD/good-test guidance and `subagent-driven-development/references/fix-loop.md`. This round addresses the actual production-control failure supplied by root, not application functionality. Root reports frozen source `19e3275ef17746e780d64e6a684d94bab2cabdc3` passed all153 Android cases and canonical source approval; activation control `d2bb6153238c392e72426e981d4a275eed34d8dc`, production run41298260070/job124823621070 reached instrumentation signing after pre-secret evidence/review, original50 fixture compilation and original-key production build. This worker did not rerun or independently query CI.
+
+Directly inspected the retained failure artifact at `/workspace/scratch/4181ccd09b2e/production179-failure/original/from50/upgrade-instrumentation-signature.txt`: v2false, v3true, one signer, original certificate `94f2bfc6567f26d067d29077111cfd0ce86d38263c642ad115e43365f05b0d17`. Receipt SHA256 is `47c847f717e50523d9e2089a15ec3d0c381b2a9d5b4d6fe29f992c2f9dfa6eb8`. Original failure artifact13080218184 was supplied by root as76474 bytes, ZIP SHA256 `b5e1fedd2de5041b54ffcf59bccc12ba21481d4292e908d77d7aa0dcc8e38719`; this worker used the already-extracted receipts, did not download it again. Seed/verify/restart receipts are absent. The unchanged runner checks v2 before any application install, so this was an early fail-closed control abort, not evidence of a production app defect or an executed upgrade.
+
+Exact production change: add `--v2-signing-enabled true` to the existing `"$sdk/apksigner" sign` invocation for the disposable instrumentation copy. The original keystore path, alias and password environment-reference arguments remain unchanged, as do subsequent actual verification, mandatory v2true, exact original certificate and one-signer checks. No application, Android test, upgrade fixture, workflow, version, source approval, marker, signer credential or release activation change. Only the runner line, focused host test additions and this appended report changed. Reversing that option in memory exactly recovers archived runner SHA256 `a7b4033f896ec90f7b09368794fc432fe7725ad80dbd559bb25f58b1e4b63515`, matching failure artifact `control-hashes.json`.
+
+Read-only actual local CLI characterization:
+
+```
+java -jar /workspace/scratch/4181ccd09b2e/apk179-host/tools/usr/share/java/apksigner.jar sign --help | rg -A 5 -B 2 -- '--v2-signing-enabled'
+```
+
+Exit0. Help confirms `--v2-signing-enabled` selects APK Signature Scheme v2, with the default based on min/max SDK versions. No signing invocation, keystore, password or replacement key was used locally.
+
+Added `InstrumentationSigning179` in `scripts/tests/test_upgrade179_runner.py`. It executes the actual production signing/verification block against a temporary fake external apksigner, captures emitted command arguments and asserts the explicit v2true option plus unchanged original-key path/alias/password environment references. No keystore or APK is created and no password is provided. Negative subcases execute the real unchanged gates with v2false, wrong certificate, two signers, sign failure and verification failure, requiring rejection before the continuation marker. This tests our emitted command and fail-closed checks; it does not claim a real cryptographic signature. A scratch test-generator quoting typo was corrected before the meaningful RED/GREEN cycle; no production code was changed before RED.
+
+Covering command, run before the one-line fix:
+
+```
+PYTHONDONTWRITEBYTECODE=1 python3 -m unittest scripts.tests.test_upgrade179_runner.InstrumentationSigning179 -q
+```
+
+RED: `Ran 2 tests in 0.456s`, `FAILED (failures=1)`. The exact command-argument assertion reported missing `--v2-signing-enabled`, `true`; the negative gate method already passed. After the one-line fix, the identical command produced:
+
+```
+----------------------------------------------------------------------
+Ran 2 tests in 0.478s
+
+OK
+```
+
+`bash -n scripts/verify_synthetic_upgrade179.sh` exited0 with no output. The in-memory reverse-option comparison and archive phase-absence assertions printed `PASS: exact one-line runner delta; archived seed/verify/restart receipts absent`.
+
+No unchanged host aggregate or Android suite rerun. No Git/push/CI, secrets access, real signing, new keys/test credentials, device operation, install, uninstall, data clear or subagents. Current root-approved source/workflow/marker state was preserved; earlier inactive-state statements above describe earlier handbacks only. Real v2 signing with the original production key and the complete original50→signed51 seed/install-r/verify/restart remain for root's single existing production-workflow retry after a different independent scoped reviewer approves this correction. Physical acceptance remains owner-required. This round2 handback is frozen.
+
+| Changed path | SHA256 |
+|---|---|
+| `scripts/verify_synthetic_upgrade179.sh` | `233246421b783cb3901dde3efb96a16ee84f5d71beaa0e8891f3e8c34fc64f9f` |
+| `scripts/tests/test_upgrade179_runner.py` | `8229ec344d1f1442e28896978dbd18695ef993aa8841f914b0b91aca584bbbd4` |
