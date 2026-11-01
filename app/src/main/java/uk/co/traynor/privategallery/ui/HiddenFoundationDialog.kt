@@ -130,10 +130,10 @@ internal fun HiddenFoundationDialog(
         Surface(Modifier.fillMaxSize()) {
             if(unlocked) Column {Text("Hidden session unlocked.");TextButton(onClick={session.lock();unlocked=false}){Text("Lock Hidden")}}
             else if(configured) PasscodeKeypad(pin=pin,onPinChange={if(!busy)pin=it.filter{c->c in '0'..'9'}.take(12)},
-                onSubmit=::submit,enabled=!busy,message=message.takeIf{it.isNotEmpty()},appTitle="Private Gallery",
+                onSubmit=::submit,enabled=!busy,message=message.takeIf{it.isNotEmpty()},appTitle="NovaOS",
                 secondary={TextButton(onClick=close){Text("Close")}})
             else PinPage(
-                title=if(uk.co.traynor.privategallery.BuildConfig.DEBUG) "Hidden Vault · TEST ONLY" else "Hidden Vault",
+                title=if(uk.co.traynor.privategallery.BuildConfig.DEBUG) "Hidden Space · TEST ONLY" else "Hidden Space",
                 detail=if(configured)"Enter your independent Hidden PIN." else "Choose a different PIN from Primary: 6–12 digits. Hidden has no backup or recovery yet.",
                 pin=pin,onPinChange={if(!busy)pin=it.filter{c ->c in '0'..'9'}.take(12)},
                 confirmation=if(configured)null else confirmation,

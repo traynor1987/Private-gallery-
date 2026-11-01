@@ -59,7 +59,7 @@ internal fun SyntheticHiddenGalleryDialog(onDismiss: () -> Unit) {
         Surface(Modifier.fillMaxSize()) {
             Column(Modifier.fillMaxSize().padding(12.dp), verticalArrangement=Arrangement.spacedBy(8.dp)) {
                 Text("TEST ONLY — INSECURE — SYNTHETIC MEDIA", color=MaterialTheme.colorScheme.error, style=MaterialTheme.typography.titleSmall)
-                Text("Hidden Vault", style=MaterialTheme.typography.headlineSmall)
+                Text("Hidden Space", style=MaterialTheme.typography.headlineSmall)
                 Text("Disposable memory only. Nothing survives close, background or process death.")
                 Row(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
                     TextButton(onClick=close) { Text("Close") }

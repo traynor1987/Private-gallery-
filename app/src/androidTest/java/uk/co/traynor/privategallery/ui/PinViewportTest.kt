@@ -27,7 +27,7 @@ class PinViewportTest {
             MaterialTheme {
                 Box(Modifier.width(320.dp).height(240.dp)) {
                     PinPage(
-                        title = "Hidden Vault · TEST ONLY",
+                        title = "Hidden Space · TEST ONLY",
                         detail = "Choose an independent Hidden PIN.",
                         pin = "728491", onPinChange = {},
                         confirmation = "728491", onConfirmationChange = {},

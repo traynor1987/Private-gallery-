@@ -104,7 +104,7 @@ internal object BrowserV2FatalCrashCapture {
     }.getOrNull()
 
     internal fun formatReport(threadName: String, throwable: Throwable, state: BrowserV2CrashContext): String = buildString {
-        appendLine("Private Gallery acceptance fatal report")
+        appendLine("NovaOS acceptance fatal report")
         appendLine("Captured at epoch ms: ${System.currentTimeMillis()}")
         appendLine("Thread: ${safeAtom(threadName, 100)}")
         appendLine("Browser route: ${safeAtom(state.route, 80)}")

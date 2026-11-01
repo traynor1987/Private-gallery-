@@ -32,6 +32,11 @@ class PrivateAppsUi178Test {
   compose.onNodeWithTag("private-app-name").performTextReplacement("Renamed")
   compose.onNodeWithText("Save").performClick()
   compose.waitUntil(5000){compose.onAllNodesWithText("Renamed").fetchSemanticsNodes().isNotEmpty()}
+  compose.onNodeWithContentDescription("App actions for Renamed").performClick()
+  compose.onNodeWithText("App Settings").performClick()
+  compose.onNodeWithText("Done").performClick()
+  compose.onNodeWithTag("private-app-search").assertExists()
+  compose.runOnIdle{assertEquals("App settings return to the library",0,closed);assertEquals(0,rootExits)}
   compose.onNodeWithText("Renamed").performClick()
   compose.runOnIdle{assertEquals("https://example.test/",launched);assertEquals(1,closed);assertEquals("Launching an app is not root Close",0,rootExits);assertFalse(mounted)}
   compose.onNodeWithTag("private-app-search").assertDoesNotExist()

@@ -529,7 +529,7 @@ internal fun BrowserV2Home(
             override fun onMessage(value: BrowserMessage) {
                 ui.message = when (value) {
                     BrowserMessage.VpnRequired -> null
-                    BrowserMessage.UnsupportedScheme -> "This link type is not supported in Private Gallery."
+                    BrowserMessage.UnsupportedScheme -> "This link type is not supported in NovaOS."
                     BrowserMessage.NetworkError -> "Page load failed. Check the connection and try again."
                     BrowserMessage.TlsRejected -> "TLS certificate error. This page was not opened."
                     BrowserMessage.RendererGone -> "The page renderer stopped. Reload this tab to recover."
@@ -545,7 +545,7 @@ internal fun BrowserV2Home(
                 val documentCurrent=permissionFence()
                 val activity=context.playerActivity() as? uk.co.traynor.privategallery.MainActivity
                 val network=activity?.hiddenOwnedVpnNetwork()
-                if(network==null){ui.message="Connect Private Gallery VPN before downloading files into Vault.";return}
+                if(network==null){ui.message="Connect NovaOS VPN before downloading files into Vault.";return}
                 val ownedActivity=checkNotNull(activity)
                 val current={documentCurrent() && ownedActivity.hiddenOwnedVpnNetwork()==network}
                 val cancellation=AtomicBoolean(false);ui.downloadCancelled=cancellation
@@ -656,7 +656,7 @@ internal fun BrowserV2Home(
                 when (BrowserUploadPreference.read(context)) {
                     BrowserUploadPolicy.BLOCKED -> {
                         session.recordAcceptanceUiEvent("FILE_CHOOSER_POLICY", mapOf("policy" to "blocked"))
-                        ui.message = "File uploads are blocked in Private Gallery Browser."
+                        ui.message = "File uploads are blocked in NovaOS Browser."
                         wrapped.onReceiveValue(null); ui.pendingFileResult = null;ui.fileFence=null
                     }
                     BrowserUploadPolicy.VAULT_ONLY -> {
@@ -774,7 +774,8 @@ internal fun BrowserV2Home(
             if(saved!=null)(context as? uk.co.traynor.privategallery.MainActivity)?.privateAppsController()?.open(saved.id()) {session.select(tabId)}
         },::openPrivateApps,{privateAppSwitcher=false},onCloseSession={cancelUpload();session.close(it)})
 
-    Box(
+    val chromeSecurity=novaSecurityActions()
+    if(privateApps==null && privateAppSettings==null)Box(
         modifier = modifier.fillMaxSize()
             .then(if (acceptanceProbeEnabled) Modifier.background(Color(0xFF00A000)) else Modifier)
             .onGloballyPositioned { coordinates ->
@@ -785,7 +786,7 @@ internal fun BrowserV2Home(
     ) {
         Column(Modifier.fillMaxSize().imePadding()) {
             if (acceptanceProbeEnabled) AcceptanceProbeLabel("BROWSER_V2_ROOT", Color(0xFF00A000))
-            BrowserChromeBar(if(appStyle)1f else chromeFraction, top = true) { Column(
+            if(ui.fullscreen==null && !ui.webVideoView)BrowserChromeBar(if(appStyle)1f else chromeFraction, top = true) { Column(
                 Modifier.fillMaxWidth()
                     .then(if (acceptanceProbeEnabled) Modifier.background(Color(0xFF0000CC)) else Modifier)
                     .onGloballyPositioned { coordinates ->
@@ -800,7 +801,7 @@ internal fun BrowserV2Home(
                 }
                 if(activePrivateApp!=null)PrivateAppControls(
                     app=activePrivateApp,url=active.url,
-                    mode=(context as? uk.co.traynor.privategallery.MainActivity)?.privateAppConnectionLabel() ?: "Primary Vault",
+                    mode=(context as? uk.co.traynor.privategallery.MainActivity)?.privateAppConnectionLabel() ?: "Primary Space",
                     enabled=!connectionPresentation.blocked,canGoBack=active.canGoBack,canGoForward=active.canGoForward,loading=active.loading,
                     onBack={if(active.canGoBack)session.goBackActive() else openPrivateApps()},onForward=session::goForwardActive,
                     onRefresh={if(active.loading)session.stopActive() else session.reloadActive()},
@@ -809,10 +810,12 @@ internal fun BrowserV2Home(
                     onSettings={cancelUpload();(context as? uk.co.traynor.privategallery.MainActivity)?.privateAppsController()?.let {privateAppSettings=it to activePrivateApp.id()}},
                     onScreenshot=::saveViewportScreenshot,onExpanded={appControlsExpanded=it},onBrowserTools={ui.overflow=true},
                     onCloseApp={screenshotGeneration.incrementAndGet();cancelUpload();cancelWebsitePermissions();ui.downloadCancelled.set(true);ui.downloadBusy=false;screenshotReview=null;session.close(active.id);openPrivateApps()},
-                    onExitGallery={(context as? uk.co.traynor.privategallery.MainActivity)?.privateAppExitToGallery()},
+                    onExitGallery={(context as? uk.co.traynor.privategallery.MainActivity)?.returnPrivateHome()},
                     onLockVault={(context as? uk.co.traynor.privategallery.MainActivity)?.privateAppLockVault()},
                     onQuickLock={(context as? uk.co.traynor.privategallery.MainActivity)?.panicExit()})
-                else if(context is uk.co.traynor.privategallery.MainActivity)TextButton(onClick=::openPrivateApps){Text("Private Apps")}
+                else NovaAppHeader("Browser",chromeSecurity?.space,
+                    onHome=chromeSecurity?.home,onLock=chromeSecurity?.lock,onPanic=chromeSecurity?.panic,
+                    actions={IconButton(onClick=::openPrivateApps){Icon(Icons.Default.Apps,"Private Apps")}})
 
                 if (acceptanceProbeEnabled) AcceptanceProbeLabel("BROWSER_CHROME", Color(0xFF0000CC))
                 if (active.loading) LinearProgressIndicator(Modifier.fillMaxWidth())
@@ -887,7 +890,7 @@ internal fun BrowserV2Home(
                     PrivateAppLoading(checkNotNull(activePrivateApp))
                 if (acceptanceProbeEnabled) AcceptanceProbeLabel("CONTENT_HOST", Color(0xFFFFD800))
             }
-            BrowserChromeBar(chromeFraction, top = false) {
+            if(ui.fullscreen==null && !ui.webVideoView)BrowserChromeBar(chromeFraction, top = false) {
                 if(!appStyle)BrowserNavigationToolbar(!connectionPresentation.blocked && active.canGoBack,!connectionPresentation.blocked && active.canGoForward,session.tabs.tabs.size,
                     session::goBackActive,session::goForwardActive,{ui.bookmarksOpen=true},{ui.tabSwitcher=true},::openSettings,{ui.overflow=true})
             }
@@ -956,7 +959,7 @@ internal fun BrowserV2Home(
                         session.recordAcceptanceUiEvent("SAVE_TO_VAULT_FAILED", mapOf("category" to (candidate?.reason ?: MediaSaveReason.NO_MEDIA_CANDIDATE).name)) }
                 }
             }
-            SheetAction("Play in Private Gallery", Icons.Default.PlayCircle) {
+            SheetAction("Play in NovaOS", Icons.Default.PlayCircle) {
                 ui.overflow = false
                 session.requestPlayableMedia { media ->
                     if (media == null) openWebVideoView()
@@ -991,12 +994,8 @@ internal fun BrowserV2Home(
             }
             SheetAction("Browser settings", Icons.Default.Settings) { ui.overflow = false; openSettings() }
             if (BuildConfig.ACCEPTANCE_BROWSER_DIAGNOSTICS) SheetAction("Browser diagnostics", Icons.Default.BugReport) { ui.overflow = false; ui.diagnosticsOpen = true }
-            if (onOpenGallery != null || onOpenVault != null || onOpenFavourite != null) {
-                SheetSection("Private Gallery")
-                if (onOpenGallery != null) SheetAction("Gallery", Icons.Default.PhotoLibrary) { ui.overflow = false; onOpenGallery() }
-                if (onOpenVault != null) SheetAction("Vault", Icons.Default.Lock) { ui.overflow = false; onOpenVault() }
-                if (onOpenFavourite != null) SheetAction(favouriteLabel, Icons.Default.Favorite) { ui.overflow = false; onOpenFavourite() }
-                SheetAction("App settings", Icons.Default.Settings) { ui.overflow = false; onOpenBrowserSettings() }
+            (context as? uk.co.traynor.privategallery.MainActivity)?.let {activity ->
+                SheetAction("Nova Home",Icons.Default.Home){ui.overflow=false;activity.returnPrivateHome()}
             }
         }
         if (ui.settingsOpen && browserSettings != null) BrowserPanel("Browser settings", "Search, privacy and connection", { ui.settingsOpen = false }) {
@@ -1052,7 +1051,7 @@ internal fun BrowserV2Home(
         }
         if (ui.selectedUploads.isNotEmpty() && !ui.vaultPickerOpen) AlertDialog(onDismissRequest = ::cancelUpload,
             title = { Text(if (ui.selectedUploads.size == 1) "Upload this file?" else "Upload these files?") },
-            text = { Text("This sends a decrypted copy through the page at ${ui.fileOrigin}. An embedded upload service may receive it. Private Gallery cannot control how the destination stores or uses it.") },
+            text = { Text("This sends a decrypted copy through the page at ${ui.fileOrigin}. An embedded upload service may receive it. NovaOS cannot control how the destination stores or uses it.") },
             confirmButton = { TextButton(enabled = !ui.uploadBusy, onClick = {
                 val request = ui.pendingFileResult ?: return@TextButton
                 val generation = ui.vaultPickerGeneration
@@ -1089,7 +1088,7 @@ internal fun BrowserV2Home(
             onCapture={ui.diagnosticCaptureBusy=true;session.captureAcceptanceRuntime {ui.diagnosticCaptureBusy=false;ui.revision++}},
             onFocus={session.setAcceptanceFocusMode(it);ui.revision++},
             onToggleVerbose={session.setVerboseDiagnostics(!session.verboseDiagnosticsEnabled());ui.revision++},
-            onCopy={context.getSystemService(ClipboardManager::class.java).setPrimaryClip(ClipData.newPlainText("Private Gallery Browser acceptance trace",session.acceptanceReport()))},
+            onCopy={context.getSystemService(ClipboardManager::class.java).setPrimaryClip(ClipData.newPlainText("NovaOS Browser acceptance trace",session.acceptanceReport()))},
             onClear={session.clearAcceptanceReport();ui.revision++},onClose={ui.diagnosticsOpen=false})
         session.scriptDialog?.let { request ->
             androidx.compose.runtime.key(request) {

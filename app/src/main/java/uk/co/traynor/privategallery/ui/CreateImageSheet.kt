@@ -26,7 +26,7 @@ import uk.co.traynor.privategallery.core.vault.VaultItem
 fun CreateImageSheet(onGenerate: (GenerationRequest, (String) -> Unit, (Result<VaultItem>) -> Unit) -> (() -> Unit),
     onSaved: (VaultItem) -> Unit, onDismiss: () -> Unit,
     vaultImages: List<VaultItem> = emptyList(),
-    vaultLabel: String = "Primary Vault",
+    vaultLabel: String = "Primary Space",
     onLoadPreview: (VaultItem, (Result<Bitmap>) -> Unit) -> Unit = { _, _ -> }) {
     val context = LocalContext.current
     val modelStore = remember { GenerationModelStore(context) }

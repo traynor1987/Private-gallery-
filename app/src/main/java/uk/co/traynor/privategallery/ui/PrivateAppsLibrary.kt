@@ -1,5 +1,6 @@
 package uk.co.traynor.privategallery.ui
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.Image
 import androidx.compose.material.icons.Icons
@@ -27,6 +28,7 @@ import uk.co.traynor.privategallery.core.privateapps.*
 @Composable
 internal fun PrivateAppsLibrary(controller:PrivateAppsController,onClose:()->Unit,initialEditId:String?=null,onUpdated:(PrivateAppCatalog.App)->Unit={},onRemoved:(String)->Unit={},initialUrl:String?=null,initialName:String?=null,onAppSettings:((String)->Unit)?=null,onRootExit:()->Unit={}) {
  val scope=rememberCoroutineScope()
+ val security=novaSecurityActions()
  var apps by remember(controller){mutableStateOf<List<PrivateAppCatalog.App>>(emptyList())}
  var busy by remember(controller){mutableStateOf(true)}
  var message by remember(controller){mutableStateOf("")}
@@ -44,7 +46,7 @@ internal fun PrivateAppsLibrary(controller:PrivateAppsController,onClose:()->Uni
  val close=remember(controller){onClose}
  fun current()=alive.get() && controller.isCurrent()
  fun clearPresentation(){apps=emptyList();editor=null;editing=false;removal=null;message="";query="";menuId=null;selectedId=null;reorder=false;settingsId=null;showInformation=false}
- fun dismiss(root:Boolean=false){if(alive.getAndSet(false)){clearPresentation();revoked=true;close();if(root)onRootExit()}}
+ fun dismiss(root:Boolean=false){if(alive.getAndSet(false)){clearPresentation();revoked=true;close();if(root){onRootExit();security?.home?.invoke()}}}
  DisposableEffect(controller){onDispose{alive.set(false)}}
  val lifecycle=androidx.lifecycle.compose.LocalLifecycleOwner.current.lifecycle
  DisposableEffect(controller,lifecycle){
@@ -76,15 +78,15 @@ internal fun PrivateAppsLibrary(controller:PrivateAppsController,onClose:()->Uni
  }
  LaunchedEffect(controller){while(isActive && !revoked){delay(250);withContext(Dispatchers.Main.immediate){if(!current())revoke()}}}
  if(revoked)return
- Dialog(onDismissRequest={if(!busy)dismiss(true)},properties=DialogProperties(usePlatformDefaultWidth=false,securePolicy=SecureFlagPolicy.SecureOn)) {
-  Surface(Modifier.fillMaxSize().systemBarsPadding().imePadding(),color=MaterialTheme.colorScheme.background) {
+ Box(Modifier.fillMaxSize()) {
+  BackHandler {when{editing->editing=false;settingsId!=null->settingsId=null;else->dismiss(true)}}
+  if(!editing && settingsId==null)Surface(Modifier.fillMaxSize().systemBarsPadding().imePadding(),color=MaterialTheme.colorScheme.background) {
    Column(Modifier.fillMaxSize().padding(16.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
+    NovaAppHeader("Private Apps",when(controller.owner){PrivateAppStore.Owner.PRIMARY->"Primary Space";PrivateAppStore.Owner.HIDDEN_VPN->"Hidden Space · VPN";else->"Hidden Space · Tor"},
+     onHome=if(security!=null)({dismiss(true)})else null,onLock=security?.lock,onPanic=security?.panic,
+     actions={if(security==null)TextButton(onClick={dismiss(true)}){Text("Close")}})
     Row(Modifier.fillMaxWidth(),verticalAlignment=androidx.compose.ui.Alignment.CenterVertically) {
-     Text("Private Apps",style=MaterialTheme.typography.headlineSmall,modifier=Modifier.weight(1f))
-     TextButton(onClick={dismiss(true)},enabled=!busy){Text("Close")}
-    }
-    Row(Modifier.fillMaxWidth(),verticalAlignment=androidx.compose.ui.Alignment.CenterVertically) {
-     Text(when(controller.owner){PrivateAppStore.Owner.PRIMARY->"Primary Vault";PrivateAppStore.Owner.HIDDEN_VPN->"Hidden Vault · VPN";else->"Hidden Vault · Tor"},modifier=Modifier.weight(1f),style=MaterialTheme.typography.labelLarge)
+     Text(if(apps.isEmpty())"Your private web apps"else"${apps.size} apps",modifier=Modifier.weight(1f),style=MaterialTheme.typography.labelLarge,color=MaterialTheme.colorScheme.onSurfaceVariant)
      IconButton(onClick={showInformation=true}){Icon(Icons.Default.Info,"Browser session information")}
      FilledTonalButton(onClick={editor=null;editing=true},enabled=!busy && !reorder && apps.size<PrivateAppCatalog.MAX_APPS){Icon(Icons.Default.Add,null);Text("Add App")}
     }
@@ -118,14 +120,13 @@ internal fun PrivateAppsLibrary(controller:PrivateAppsController,onClose:()->Uni
            "Edit"->{editor=latest;editing=true}
            "Pin","Unpin"->runChange{controller.setPinned(latest.id(),action=="Pin")}
            "Reorder"->{query="";reorder=true;selectedId=null}
-           "App Settings"->if(onAppSettings!=null){dismiss();if(controller.isCurrent())onAppSettings(latest.id())}else settingsId=latest.id()
+           "App Settings"->settingsId=latest.id()
            "Remove"->{removal=latest}
           }
          }
         },modifier=Modifier.weight(1f).fillMaxWidth())
    }
   }
- }
  if(showInformation)GalleryAlertDialog(properties=DialogProperties(securePolicy=SecureFlagPolicy.SecureOn),onDismissRequest={showInformation=false},title={Text("Browser session")},
   text={Text(if(controller.owner==PrivateAppStore.Owner.PRIMARY)"Primary apps and browser tabs share cookies and website storage. Your existing browser-wide login-retention policy applies. App Close does not delete shared login data."else"Hidden apps share only this separate temporary browser profile. Closing the Hidden browser clears its logins. Tor settings stay unchanged.")},confirmButton={TextButton(onClick={showInformation=false}){Text("Done")}})
  settingsId?.let {id ->PrivateAppSettings(controller,id,{updated->apps=apps.map{if(it.id()==updated.id())updated else it};onUpdated(updated)},
@@ -174,7 +175,7 @@ internal fun PrivateAppsLibrary(controller:PrivateAppsController,onClose:()->Uni
     }
    }
   }
-  GalleryAlertDialog(properties=DialogProperties(securePolicy=SecureFlagPolicy.SecureOn),onDismissRequest={editing=false},title={Text(if(editor==null)"Add Private App" else "Edit Private App")},text={
+  NovaWorkflowPage(onDismissRequest={editing=false},title={Text(if(editor==null)"Add Private App" else "Edit Private App")},text={
    Column(verticalArrangement=Arrangement.spacedBy(10.dp)) {
     OutlinedTextField(name,{name=it.take(PrivateAppPolicy.MAX_NAME)},label={Text("App name")},singleLine=true,modifier=Modifier.fillMaxWidth().testTag("private-app-name"))
     OutlinedTextField(url,{url=it.take(PrivateAppPolicy.MAX_URL);discovered=null;discoveryMessage="";iconBusy=false},label={Text("Website URL")},singleLine=true,modifier=Modifier.fillMaxWidth().testTag("private-app-url"))
@@ -187,7 +188,7 @@ internal fun PrivateAppsLibrary(controller:PrivateAppsController,onClose:()->Uni
       onChange={customIcon=it},onBusy={iconBusy=it},enabled=!discovering)
     }
     if(discoveryMessage.isNotEmpty())Text(discoveryMessage,style=MaterialTheme.typography.bodySmall)
-    Text("Private Web Apps run inside Private Gallery, not as separate Android applications. Public metadata only; redirects and cross-origin resources are unsupported. Push, background execution and guaranteed offline operation are unavailable.",style=MaterialTheme.typography.bodySmall)
+    Text("Private Web Apps run inside NovaOS, not as separate Android applications. Public metadata only; redirects and cross-origin resources are unsupported. Push, background execution and guaranteed offline operation are unavailable.",style=MaterialTheme.typography.bodySmall)
     if(invalid)Text("Enter a valid name and supported website URL.",color=MaterialTheme.colorScheme.error)
    }
   },confirmButton={TextButton(enabled=!discovering && !iconBusy && checkedUrl==url.trim(),onClick={
@@ -202,6 +203,7 @@ internal fun PrivateAppsLibrary(controller:PrivateAppsController,onClose:()->Uni
   }){Text(if(editor!=null)"Save" else if(discovered?.scope()?.isNotEmpty()==true)"Install as Private Web App" else "Add as Private Website")}},dismissButton={TextButton(onClick={editing=false}){Text("Cancel")}})
  }
  removal?.let {app ->GalleryAlertDialog(properties=DialogProperties(securePolicy=SecureFlagPolicy.SecureOn),onDismissRequest={removal=null},title={Text("Remove ${app.name()}?")},text={Text("Removes the saved app entry. Shared browser login data is unchanged.")},confirmButton={TextButton(onClick={removal=null;runChange(after={onRemoved(app.id())}){controller.remove(app.id())}}){Text("Remove app")}},dismissButton={TextButton(onClick={removal=null}){Text("Cancel")}})}
+}
 }
 
 @Composable

@@ -50,7 +50,7 @@ class HiddenTorIsolationService:VpnService() {
     private fun startForegroundConnection() {
         val channel="private-network-isolation"
         getSystemService(NotificationManager::class.java).createNotificationChannel(NotificationChannel(channel,"Private connection",NotificationManager.IMPORTANCE_LOW))
-        startForeground(176245,Notification.Builder(this,channel).setSmallIcon(applicationInfo.icon).setContentTitle("Private Gallery connection").setVisibility(Notification.VISIBILITY_SECRET).setOngoing(true).build())
+        startForeground(176245,Notification.Builder(this,channel).setSmallIcon(applicationInfo.icon).setContentTitle("NovaOS connection").setVisibility(Notification.VISIBILITY_SECRET).setOngoing(true).build())
         startService(Intent(this,HiddenTorIsolationService::class.java))
     }
     internal fun network():Network? {

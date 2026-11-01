@@ -14,10 +14,13 @@ class ProtectedSessionState : ViewModel() {
     internal var route = Route.LOCK
     internal var afterAuthentication = Route.VAULT
     internal var previewConcealmentEpoch by androidx.compose.runtime.mutableIntStateOf(0)
+    internal val novaPosition=uk.co.traynor.privategallery.core.home.NovaNavigation.Position()
+    internal var novaHiddenNavigationIdentity:uk.co.traynor.privategallery.core.hidden.HiddenSession.Authentication?=null
+    internal fun clearNovaNavigation(){novaPosition.clear();novaHiddenNavigationIdentity=null}
     internal var homeFeatureRoot:String?=null
     internal var homeVisible by androidx.compose.runtime.mutableStateOf(false)
     internal var homePrimaryAuthentication:Long?=null
     internal var homeHiddenAuthentication:uk.co.traynor.privategallery.core.hidden.HiddenSession.Authentication?=null
     internal var primaryGallery by androidx.compose.runtime.mutableStateOf(false)
-    override fun onCleared() { hidden.leave(); key?.fill(0); key = null; session.lock() }
+    override fun onCleared() {clearNovaNavigation(); hidden.leave(); key?.fill(0); key = null; session.lock() }
 }

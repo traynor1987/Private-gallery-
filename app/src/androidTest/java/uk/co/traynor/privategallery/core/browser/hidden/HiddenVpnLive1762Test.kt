@@ -503,7 +503,7 @@ class HiddenVpnLive1762Test {
                 waitFor("A browser download requires explicit confirmation") {nodes().any {it.text?.toString()=="Save this GET file URL?"}}
                 assertFalse("No media is imported before explicit confirmation",downloadRepo.items().any {it.displayName=="Hidden download"})
                 click("Save GET file")
-                waitFor("Supported GET image imported into encrypted Hidden Vault",30) {downloadRepo.items().any {it.displayName=="Hidden download"}}
+                waitFor("Supported GET image imported into encrypted Hidden Space",30) {downloadRepo.items().any {it.displayName=="Hidden download"}}
                 val downloaded=downloadRepo.items().single {it.displayName=="Hidden download"}
                 downloadRepo.verify(downloaded.id)
                 downloadRepo.withTransferSource(downloaded.id,{false}) {_,input ->

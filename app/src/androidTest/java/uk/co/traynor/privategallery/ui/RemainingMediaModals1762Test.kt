@@ -118,7 +118,7 @@ class RemainingMediaModals1762Test {
                         6 -> PredictionDiagnosticDialog(long,{dismissals++})
                         7 -> AiOperationProgressDialog("Synthetic provider",long,"99m 59s elapsed","Processed remotely with a synthetic provider",{cancellations++})
                         8 -> AiSaveProgressDialog(long,false,{cancellations++})
-                        9 -> AiSaveProgressDialog("Saved to Hidden Vault",true,{cancellations++})
+                        9 -> AiSaveProgressDialog("Saved to Hidden Space",true,{cancellations++})
                         10 -> RecordingDetailsContentDialog(long,"Synthetic integrity state",verifying,{verifications++;verifying=true},{dismissals++})
                         11 -> Surface {MediaSortButton(sort ?: MediaSort.entries.first()){sort=it}}
                         12 -> Box(Modifier.fillMaxSize().background(Color.Black)) {VideoPlaybackSpeedMenu(speed ?: 1f){speed=it}}

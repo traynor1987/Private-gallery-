@@ -26,18 +26,18 @@ class HomeNavigation1710Test {
    compose.onNodeWithTag("private-home1710").assertDoesNotExist()
    compose.runOnIdle{state.key=key;state.session.unlock();route.value=Route.VAULT;MainActivity::class.java.getDeclaredMethod("applyAllowScreenshots",Boolean::class.javaPrimitiveType).apply{isAccessible=true}.invoke(activity,true);activity.returnPrivateHome()}
    compose.waitUntil(15000){compose.onAllNodesWithTag("private-home1710").fetchSemanticsNodes().isNotEmpty()}
-   compose.onNodeWithText("Primary Vault").assertExists()
+   compose.onNodeWithText("Primary Space").assertExists()
    compose.runOnIdle{
     state.hidden.select();assertTrue(state.hidden.session.complete(state.hidden.session.beginAuthentication(),ByteArray(32){82}))
     state.hidden.authenticated=true;activity.returnPrivateHome()
    }
-   compose.waitUntil(15000){compose.onAllNodes(hasText("Hidden Vault") and hasAnyAncestor(hasTestTag("private-home1710"))).fetchSemanticsNodes().isNotEmpty()}
+   compose.waitUntil(15000){compose.onAllNodes(hasText("Hidden Space") and hasAnyAncestor(hasTestTag("private-home1710"))).fetchSemanticsNodes().isNotEmpty()}
    compose.runOnIdle{state.session.lock();state.hidden.outside();state.primaryGallery=true;route.value=Route.GALLERY;activity.returnPrivateHome()
     val capture=MainActivity::class.java.getDeclaredMethod("currentScreenshotPreference").apply{isAccessible=true}.invoke(activity) as Boolean
     assertFalse("Hidden Home must not inherit underlying device Gallery screenshot allowance",capture)
    }
    compose.waitUntil(15000){compose.onAllNodesWithTag("private-home1710").fetchSemanticsNodes().isNotEmpty()}
-   compose.onNode(hasText("Hidden Vault") and hasAnyAncestor(hasTestTag("private-home1710"))).assertExists()
+   compose.onNode(hasText("Hidden Space") and hasAnyAncestor(hasTestTag("private-home1710"))).assertExists()
    compose.runOnIdle{activity.panicExit()}
    compose.onNodeWithTag("private-home1710").assertDoesNotExist()
    assertFalse(state.hidden.session.isUnlocked);assertFalse(state.session.isUnlocked)

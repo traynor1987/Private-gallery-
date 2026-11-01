@@ -252,7 +252,7 @@ internal fun BrowserHome(
     callbacks.onProgress = { value -> progress = value }
     callbacks.onTitle = { value -> title = value }
     callbacks.onError = { value -> loading = false; pageError = value }
-    callbacks.onUnsupportedLink = { acquisitionFeedback = "This link type is not supported in Private Gallery." }
+    callbacks.onUnsupportedLink = { acquisitionFeedback = "This link type is not supported in NovaOS." }
     callbacks.onDownload = { url, userAgent, contentDisposition, mimeType ->
                 if (!networkAllowed) {
                     acquisitionFeedback = "VPN is not connected. Download was not started."
@@ -368,7 +368,7 @@ internal fun BrowserHome(
             Log.d(BROWSER_LOG_TAG, "WebView created and configured")
         }.onFailure {
             initializationFailed = true
-            pageError = "Browser could not start. Try reopening Private Gallery."
+            pageError = "Browser could not start. Try reopening NovaOS."
             Log.w(BROWSER_LOG_TAG, "WebView creation failed", it)
         }.getOrNull()
     }
@@ -439,7 +439,7 @@ internal fun BrowserHome(
             ) {
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                 Column(modifier = Modifier.weight(1f)) {
-                    GallerySectionLabel("Private Gallery")
+                    GallerySectionLabel("NovaOS")
                     Text("Browser", style = MaterialTheme.typography.titleLarge)
                     if (!networkAllowed) Text("VPN is connecting. Browser networking is blocked until it is confirmed.", color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
@@ -566,7 +566,7 @@ internal fun BrowserHome(
                 when {
                     screenState.showError -> BrowserStartSurface(
                         title = "Browser unavailable",
-                        detail = pageError ?: "Browser could not start. Try reopening Private Gallery.",
+                        detail = pageError ?: "Browser could not start. Try reopening NovaOS.",
                         onRetry = ::retryWebView,
                     )
                     initializedWebView != null -> AndroidView(
@@ -626,7 +626,7 @@ internal fun BrowserHome(
             AlertDialog(
                 onDismissRequest = { pendingImage = null },
                 title = { Text(if (isResource) "Save image to Vault?" else "Screenshot to Vault?") },
-                text = { Text(if (isResource) "The image currently available to this Browser session will be encrypted directly into your Vault." else "Private Gallery cannot safely identify the pressed image bounds. Save a screenshot instead; the current page will remain unchanged.") },
+                text = { Text(if (isResource) "The image currently available to this Browser session will be encrypted directly into your Vault." else "NovaOS cannot safely identify the pressed image bounds. Save a screenshot instead; the current page will remain unchanged.") },
                 confirmButton = { TextButton(onClick = {
                     pendingImage = null
                     val page = webViewRef.value ?: return@TextButton
@@ -690,7 +690,7 @@ internal fun BrowserHome(
                     if (acceptanceDiagnosticsEnabled) {
                         TextButton(onClick = {
                             val clipboard = context.getSystemService(ClipboardManager::class.java)
-                            clipboard.setPrimaryClip(ClipData.newPlainText("Private Gallery Browser acceptance trace", acceptanceConsole.report()))
+                            clipboard.setPrimaryClip(ClipData.newPlainText("NovaOS Browser acceptance trace", acceptanceConsole.report()))
                         }) { Text("Copy all") }
                         TextButton(onClick = { acceptanceConsole.clear(); diagnostics = emptyList(); diagnosticOutcomes = acceptanceConsole.summary() }) { Text("Clear") }
                     }

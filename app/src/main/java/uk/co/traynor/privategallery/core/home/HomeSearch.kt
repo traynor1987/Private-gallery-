@@ -15,7 +15,7 @@ internal fun searchPrivateHome(context:android.content.Context,access:uk.co.tray
             if(hidden) {
                 val owner=checkNotNull(access.hiddenSession);val authority=owner.authority()
                 val repo=uk.co.traynor.privategallery.core.hidden.HiddenRepository(context,owner)
-                repo.items().forEach{add(it.displayName,"Gallery",uk.co.traynor.privategallery.core.home.HomeLayout.Shortcut.GALLERY)}
+                repo.items().forEach{add(it.displayName,"Gallery",uk.co.traynor.privategallery.core.home.HomeLayout.Shortcut.VAULT)}
                 repo.collections().forEach{add(it.name,"Collection",uk.co.traynor.privategallery.core.home.HomeLayout.Shortcut.COLLECTIONS)}
                 listOf(false,true).forEach{tor->
                     val apps=uk.co.traynor.privategallery.core.privateapps.HiddenPrivateAppStore(context.noBackupFilesDir,owner,authority,tor,{access.current()},{commit->lease.commit{commit.run()}}).read()
@@ -23,7 +23,7 @@ internal fun searchPrivateHome(context:android.content.Context,access:uk.co.tray
                 }
             }else {
                 val repo=uk.co.traynor.privategallery.core.vault.AndroidVaultRepository(context,lease.key(),{action->lease.commit{action()}},{access.current()&&lease.current()})
-                repo.items().forEach{add(it.displayName,"Gallery",uk.co.traynor.privategallery.core.home.HomeLayout.Shortcut.GALLERY)}
+                repo.items().forEach{add(it.displayName,"Gallery",uk.co.traynor.privategallery.core.home.HomeLayout.Shortcut.VAULT)}
                 repo.collections().forEach{add(it.name,"Collection",uk.co.traynor.privategallery.core.home.HomeLayout.Shortcut.COLLECTIONS)}
                 uk.co.traynor.privategallery.core.privateapps.PrimaryPrivateAppStore(java.io.File(context.filesDir,"private-apps"),lease.key(),{access.current()},{action->lease.commit{action()}}).read().apps.forEach{app->add(app.name(),"Private App",uk.co.traynor.privategallery.core.home.HomeLayout.Shortcut.PRIVATE_APPS)}
             }

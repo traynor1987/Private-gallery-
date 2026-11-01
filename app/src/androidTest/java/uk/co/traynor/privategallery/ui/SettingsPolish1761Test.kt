@@ -20,9 +20,9 @@ class SettingsPolish1761Test {
   compose.onNodeWithContentDescription("Back to Settings").performClick()
   compose.onNodeWithText("Updates & About").performClick()
   compose.onNodeWithText("0.0.1 · Build 4").assertExists()
-  compose.onNodeWithText("Private Gallery 0.0.1").performScrollTo().assertIsDisplayed()
+  compose.onNodeWithText("NovaOS 0.0.1").performScrollTo().assertIsDisplayed()
   compose.onNodeWithText("Basic gallery functionality. More features coming soon.").assertExists()
-  compose.onNodeWithText("Private Gallery ${BuildConfig.VERSION_NAME}").assertDoesNotExist()
+  compose.onNodeWithText("NovaOS ${BuildConfig.VERSION_NAME}").assertDoesNotExist()
   val info=compose.activity.packageManager.getPackageInfo(compose.activity.packageName,0)
   assertEquals(BuildConfig.VERSION_NAME,info.versionName);assertEquals(BuildConfig.VERSION_CODE.toLong(),info.longVersionCode)
   compose.onNodeWithContentDescription("Back to Settings").performClick()
@@ -32,7 +32,7 @@ class SettingsPolish1761Test {
   compose.onNodeWithText("Confirm owner identity").assertIsDisplayed();compose.onNodeWithText("Confirm").performClick()
   compose.onNodeWithContentDescription("Back to Security").performClick();compose.onNodeWithContentDescription("Back to Settings").performClick()
   compose.onNodeWithText("${BuildConfig.VERSION_NAME} · Build ${BuildConfig.VERSION_CODE}").assertExists()
-  compose.onNodeWithText("Updates & About").performClick();compose.onNodeWithText("Private Gallery ${BuildConfig.VERSION_NAME}").performScrollTo().assertIsDisplayed()
+  compose.onNodeWithText("Updates & About").performClick();compose.onNodeWithText("NovaOS ${BuildConfig.VERSION_NAME}").performScrollTo().assertIsDisplayed()
  }
  @Test fun panicConfigurationIsAbsentFromSecretWhileHideContentAccessRemains() {
   settings()

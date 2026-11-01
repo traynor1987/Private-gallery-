@@ -17,7 +17,7 @@ class ExternalEditorChooser1762Test {
         val other = ComponentName("example.editor", "SyntheticEdit")
         var chosen: ComponentName? = null
         compose.setContent { PrivateGalleryTheme(AppTheme.DARK) {
-            ExternalEditingDialog(label="Hidden Vault",prepared=true,result=null,saved=false,status="",exportChosen=false,
+            ExternalEditingDialog(label="Hidden Space",prepared=true,result=null,saved=false,status="",exportChosen=false,
                 prepare={},launch={},export={},writeExport={},pick={},preview={},save={_,_,_->},cleanupPublic={},close={},
                 editors=listOf(ExternalEditorIntents.EditorTarget(samsung,"Samsung Gallery"),ExternalEditorIntents.EditorTarget(other,"Other photo editor")),
                 chooseEditor={chosen=it})

@@ -32,8 +32,8 @@ class HiddenPolicySettingsTest {
             var returned=false
             assertEquals(AutoLockTimeout.MINUTE_1,timeout.value)
             compose.setContent {MaterialTheme {HiddenPolicySettings(timeout.value,onTimeoutChanged={policy.timeout=it;timeout.value=it},onUsePrimary={returned=true})}}
-            compose.onNodeWithText("Hidden Vault — independent settings").assertIsDisplayed()
-            compose.onNodeWithText("Return to Primary Vault").assertIsDisplayed().performClick()
+            compose.onNodeWithText("Hidden Space — independent settings").assertIsDisplayed()
+            compose.onNodeWithText("Return to Primary Space").assertIsDisplayed().performClick()
             compose.runOnIdle {assertTrue(returned)}
             compose.onNodeWithText("After 5 minutes").performClick()
             compose.runOnIdle {

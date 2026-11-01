@@ -84,7 +84,7 @@ class BrowserAcceptanceDebugConsole(
     }
 
     fun report(extra: Map<String, String> = emptyMap()): String = buildString {
-        appendLine("Private Gallery Browser acceptance trace")
+        appendLine("NovaOS Browser acceptance trace")
         summary(extra).forEach(::appendLine)
         appendLine("Chronological events:")
         events().forEach(::appendLine)

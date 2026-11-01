@@ -37,7 +37,7 @@ class PrivateAppScreenshot49Test {
   var consumed=0;var reads=0;var receipt:String?=null;var live=true
   fun capture()=PrivateAppScreenshotRequest(
    VaultImportSource("browser-screenshot.png","image/png",{png.inputStream()},vaultOnly=true,createDistinctCopy=true,onConsumed={consumed++}),
-   "Primary Vault",{live},
+   "Primary Space",{live},
    {source,done ->done(runCatching {
     val item=(VaultImportCoordinator(repo).acquire(source) as ImportResult.Imported).item
     receipt=item.id;item.id
@@ -100,7 +100,7 @@ class PrivateAppScreenshot49Test {
    compose.setContent{PrivateGalleryTheme{request?.let{owned ->PrivateAppScreenshotReview(owned){if(request===owned)request=null}}}}
    compose.runOnIdle {request=PrivateAppScreenshotRequest(
     VaultImportSource("screenshot.png","image/png",{png.inputStream()},vaultOnly=true,onConsumed={consumes++}),
-    "Primary Vault",{true},
+    "Primary Space",{true},
     {source,done ->saves++;source.onConsumed();done(Result.success(receipt))},
     {id ->assertEquals(receipt,id);reads++;entered.countDown()
      check(release.await(10,java.util.concurrent.TimeUnit.SECONDS));returned.countDown();lateBytes})}

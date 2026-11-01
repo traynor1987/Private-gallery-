@@ -5,9 +5,9 @@ public final class Presentation1761Checks {
  public static void main(String[] args){
   var normal=new InAppVersionPresentation(false,"1.7.6.1",42);
   var decoy=new InAppVersionPresentation(true,"1.7.6.1",42);
-  eq("1.7.6.1 · Build 42",normal.installed());eq("Private Gallery 1.7.6.1",normal.about());
-  eq("0.0.1 · Build 4",decoy.installed());eq("Private Gallery 0.0.1",decoy.about());
-  eq("Private Gallery 0.0.1 · Build 4",decoy.header());
+  eq("1.7.6.1 · Build 42",normal.installed());eq("NovaOS 1.7.6.1",normal.about());
+  eq("0.0.1 · Build 4",decoy.installed());eq("NovaOS 0.0.1",decoy.about());
+  eq("NovaOS 0.0.1 · Build 4",decoy.header());
   eq("Basic gallery functionality. More features coming soon.",decoy.description());
   eq("Media stays in encrypted private app storage until you restore it.",normal.description());
   eq("Up to date · 1.7.6.1",normal.updateStatus("Up to date · 1.7.6.1"));

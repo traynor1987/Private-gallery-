@@ -528,7 +528,7 @@ class HiddenVpnBrowserActivity:ComponentActivity() {
                             cancelled.set(true)
                             (receipt ?: pending.get())?.let {value ->runCatching {call(HiddenVpnBrowserBroker.SCREENSHOT_CANCEL,write={it.writeString(value)},read={Unit})}}
                         }
-                        screenshotReview=PrivateAppScreenshotRequest(source,"Hidden Vault",{!cancelled.get() && authorized()},
+                        screenshotReview=PrivateAppScreenshotRequest(source,"Hidden Space",{!cancelled.get() && authorized()},
                             save={capture,complete ->
                                 lifecycleScope.launch(Dispatchers.IO) {
                                     val outcome=runCatching {
@@ -625,6 +625,8 @@ class HiddenVpnBrowserActivity:ComponentActivity() {
         val appStyle=app?.appStyle()==true
         var appControlsExpanded by remember(current) {mutableStateOf(false)}
         screenshotReview?.let {request ->PrivateAppScreenshotReview(request,{if(screenshotReview===request)screenshotReview=null})}
+        androidx.compose.runtime.CompositionLocalProvider(uk.co.traynor.privategallery.ui.LocalNovaSecurityActions provides
+            uk.co.traynor.privategallery.ui.NovaSecurityActions({terminate()},{runCatching{call(HiddenVpnBrowserBroker.LOCK_VAULT,read={Unit})};terminate()},{panic()},"Hidden Space · ${mode.indicator}")) {
         if(privateAppsOpen)PrivateAppsLibrary(privateAppsController,{privateAppsOpen=false;if(ready && live() && lifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.RESUMED))current?.onResume();privateAppEditId=null;privateAppInitialUrl=null;privateAppInitialName=null;finishPrivateAppIcon(null)},privateAppEditId,{updated ->
             privateAppTabs.keys.toList().forEach {view ->if(privateAppTabs[view]?.id()==updated.id())privateAppTabs[view]=updated}
         },{id ->views.filter {privateAppTabs[it]?.id()==id}.toList().forEach(::closePrivateAppSession)},initialUrl=privateAppInitialUrl,initialName=privateAppInitialName,onAppSettings={id->if(ready && live())privateAppSettingsId=id},onRootExit={if(privateAppsHomeRoot)terminate()})
@@ -643,26 +645,24 @@ class HiddenVpnBrowserActivity:ComponentActivity() {
         privateAppSettingsId?.let { id ->PrivateAppSettings(privateAppsController,id,{updated ->
             privateAppTabs.keys.toList().forEach { view ->if(privateAppTabs[view]?.id()==updated.id())privateAppTabs[view]=updated }
         },{library();menu=true},{privateAppSettingsId=null},onEdit={privateAppSettingsId=null;privateAppEditId=id;openPrivateApps()},onRemoved={removed ->views.filter {privateAppTabs[it]?.id()==removed}.toList().forEach(::closePrivateAppSession)}) }
+        }
         if(privateAppSwitcher)PrivateAppSwitcher(views.mapNotNull {view ->privateAppTabs[view]?.let {System.identityHashCode(view).toString() to it}},System.identityHashCode(current).toString(),
             {id ->views.firstOrNull {System.identityHashCode(it).toString()==id}?.let {view ->privateAppTabs[view]?.let {saved ->privateAppsController.open(saved.id()){if(view in views && live())select(view)}}}},::openPrivateApps,{privateAppSwitcher=false},onCloseSession={id ->
                 views.firstOrNull {System.identityHashCode(it).toString()==id}?.let {closePrivateAppSession(it)}
             })
-        Column(Modifier.fillMaxSize().systemBarsPadding().imePadding()) {
-            if(!appStyle)Row(Modifier.fillMaxWidth().padding(horizontal=12.dp)) {
-                Text("Hidden Browser · ${mode.indicator}",Modifier.weight(1f).padding(vertical=16.dp),style=MaterialTheme.typography.titleMedium)
-                if(uk.co.traynor.privategallery.ui.PrivacyShieldPreferences(this@HiddenVpnBrowserActivity).let {it.enabled && it.quickLock})TextButton(onClick={panic()}){Text("Quick lock")}
-                if(app==null)TextButton(onClick=::openPrivateApps,enabled=ready){Text("Private Apps")}
-                TextButton(onClick={terminate()}){Text("Private Home")}
-            }
+        if(!privateAppsOpen && privateAppSettingsId==null)Column(Modifier.fillMaxSize().systemBarsPadding().imePadding()) {
+            if(app==null)uk.co.traynor.privategallery.ui.NovaAppHeader("Browser","Hidden Space · ${mode.indicator}",
+                onHome={terminate()},onLock={runCatching{call(HiddenVpnBrowserBroker.LOCK_VAULT,read={Unit})};terminate()},onPanic={panic()},
+                actions={IconButton(onClick=::openPrivateApps,enabled=ready){Icon(Icons.Default.Apps,"Private Apps")}})
             val focus=LocalFocusManager.current;val keyboard=LocalSoftwareKeyboardController.current
             SideEffect {clearAddressFocus={focus.clearFocus();keyboard?.hide();addressFocused=false}}
-            if(app!=null)PrivateAppControls(app,current?.url.orEmpty(),"Hidden Vault · ${mode.indicator}",ready,
+            if(app!=null)PrivateAppControls(app,current?.url.orEmpty(),"Hidden Space · ${mode.indicator}",ready,
                 current?.canGoBack()==true,current?.canGoForward()==true,busy,
                 {current?.let {if(it.canGoBack()){failures.remove(it);it.goBack()}else openPrivateApps()}},{current?.let {failures.remove(it);it.goForward()}},
                 {current?.let {if(busy){pageDeadlines[it]?.visible();it.stopLoading();loadingTabs[it]=false;busy=false;pageLoadProgress=100}else {failures.remove(it);it.reload()}}},
                 {cancelUpload();cancelWebsiteDialog();navigate(app.startUrl())},::openPrivateApps,
                 {screenshotGeneration.incrementAndGet();screenshotReview=null;cancelUpload();cancelWebsiteDialog();privateAppSwitcher=true},
-                {cancelUpload();cancelWebsiteDialog();privateAppSettingsId=app.id()},onScreenshot=::requestScreenshot,onCloseApp={screenshotReview=null;current?.let(::closePrivateAppSession);openPrivateApps()},onExitGallery={screenshotReview=null;manageDownloads()},onLockVault={screenshotReview=null;runCatching {call(HiddenVpnBrowserBroker.LOCK_VAULT,read={Unit})};terminate()},onExpanded={appControlsExpanded=it},onBrowserTools={library();menu=true},onQuickLock=if(uk.co.traynor.privategallery.ui.PrivacyShieldPreferences(this@HiddenVpnBrowserActivity).let {it.enabled && it.quickLock})({panic()})else null)
+                {cancelUpload();cancelWebsiteDialog();privateAppSettingsId=app.id()},onScreenshot=::requestScreenshot,onCloseApp={screenshotReview=null;current?.let(::closePrivateAppSession);openPrivateApps()},onExitGallery={screenshotReview=null;terminate()},onLockVault={screenshotReview=null;runCatching {call(HiddenVpnBrowserBroker.LOCK_VAULT,read={Unit})};terminate()},onExpanded={appControlsExpanded=it},onBrowserTools={library();menu=true},onQuickLock={panic()})
             if(app==null || (app.addressBar() && (!appStyle || appControlsExpanded)))BrowserAddressBar(address,{address=it},ready,busy,{navigate(address)},{current?.let {if(busy){pageDeadlines[it]?.visible();it.stopLoading();loadingTabs[it]=false;busy=false;pageLoadProgress=100}else {failures.remove(it);it.reload()}}},{addressFocused=it})
             if(busy) {
                 LinearProgressIndicator(progress={pageLoadProgress/100f},modifier=Modifier.fillMaxWidth())
@@ -705,7 +705,7 @@ class HiddenVpnBrowserActivity:ComponentActivity() {
         if(menu)BrowserPanel("Browser settings","Hidden ${mode.indicator}",{menu=false}) {
             Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(16.dp)) {
                 TextButton(onClick={menu=false;privateAppInitialUrl=current?.url?.takeIf {HiddenConnectionPolicy.safeUrl(it,mode)};privateAppInitialName=current?.title;openPrivateApps()},enabled=ready && current?.url?.let {HiddenConnectionPolicy.safeUrl(it,mode)}==true){Text("Add current website as Private App")}
-                TextButton(onClick={menu=false;requestScreenshot()},enabled=ready){Text("Screenshot to Hidden Vault")}
+                TextButton(onClick={menu=false;requestScreenshot()},enabled=ready){Text("Screenshot to Hidden Space")}
                 HiddenNativeSettingsContent(mode==HiddenConnectionPolicy.Mode.TOR_ONLY,mode.indicator,saveHistory,desktop,
             bookmark={current?.url?.let {library(2,it)};menu=false},bookmarks={showLibrary("Bookmarks");menu=false},history={showLibrary("History");menu=false},
             setHistory={library(4,enabled=it)},clearHistory={clearHistoryConfirm=true},toggleDesktop={desktop=!desktop;current?.let {desktopTabs[it]=desktop};current?.settings?.apply {useWideViewPort=desktop;loadWithOverviewMode=desktop;userAgentString=BrowserSecurityPolicy.userAgent(if(desktop)BrowserUserAgentMode.DESKTOP else BrowserUserAgentMode.MOBILE,WebSettings.getDefaultUserAgent(this@HiddenVpnBrowserActivity))};current?.reload()},
@@ -733,16 +733,16 @@ class HiddenVpnBrowserActivity:ComponentActivity() {
             if(downloadRunning)({runCatching {check(live());call(HiddenVpnBrowserBroker.DOWNLOAD_CANCEL,read={Unit})};Unit})else null)
 
         pendingDownload?.let {selection ->GalleryAlertDialog(properties=androidx.compose.ui.window.DialogProperties(securePolicy=androidx.compose.ui.window.SecureFlagPolicy.SecureOn),onDismissRequest={pendingDownload=null},
-            title={Text("Save this GET file URL?")},text={Text("A fresh GET request will save supported media, PDF or plain text encrypted in Hidden Vault. This cannot save POST responses, blob URLs, segmented media or one-use download responses. No public file is created.")},
+            title={Text("Save this GET file URL?")},text={Text("A fresh GET request will save supported media, PDF or plain text encrypted in Hidden Space. This cannot save POST responses, blob URLs, segmented media or one-use download responses. No public file is created.")},
             confirmButton={TextButton(onClick={pendingDownload=null;try {
                 check(downloadSelectionCurrent(selection));val cookies=profile!!.cookieManager.getCookie(selection.url).orEmpty()
                 call(HiddenVpnBrowserBroker.DOWNLOAD,write={it.writeString(selection.url);it.writeString(cookies);it.writeString(selection.view.settings.userAgentString.orEmpty())},read={Unit})
                 activeDownloadOwner=selection
-                notice="GET download queued into Hidden Vault. Changing tabs or navigating cancels this download; unsupported or failed files are not saved."
+                notice="GET download queued into Hidden Space. Changing tabs or navigating cancels this download; unsupported or failed files are not saved."
             } catch(_:Exception){notice="Download rejected: its tab, document or session changed."}}){Text("Save GET file")}},dismissButton={TextButton(onClick={pendingDownload=null}){Text("Cancel")}})}
         if(pendingUpload!=null && confirmUploads.isEmpty())GalleryAlertDialog(
             scrollBody=false,
-            onDismissRequest={cancelUpload()},title={Text("Choose from Hidden Vault")},
+            onDismissRequest={cancelUpload()},title={Text("Choose from Hidden Space")},
             text={HiddenNativeUploadPickerGrid(uploadItems,uploadLoading,multipleUploads,uploadRestricted,uploadTypes,uploadTotal,uploadLoadError,selectedUploads,
                 preview={item,callback ->loadUploadPreview(item,callback)},choose={item ->
                     if(multipleUploads)selectedUploads=if(item.id in selectedUploads)selectedUploads-item.id else (selectedUploads+item.id).take(4).toSet()
@@ -751,7 +751,7 @@ class HiddenVpnBrowserActivity:ComponentActivity() {
             confirmButton={if(multipleUploads)TextButton(enabled=!uploadLoading && selectedUploads.isNotEmpty(),onClick={confirmUploads=uploadItems.filter {it.id in selectedUploads}}){Text("Review upload")}},
             dismissButton={TextButton(onClick={cancelUpload()}){Text("Cancel")}})
         if(confirmUploads.isNotEmpty())GalleryAlertDialog(
-            onDismissRequest={cancelUpload()},title={Text("Send media outside Hidden Vault?")},
+            onDismissRequest={cancelUpload()},title={Text("Send media outside Hidden Space?")},
             text={HiddenNativeUploadConsentContent(Uri.parse(uploadOrigin).host,confirmUploads.size)},
             confirmButton={TextButton(onClick={
                 try {

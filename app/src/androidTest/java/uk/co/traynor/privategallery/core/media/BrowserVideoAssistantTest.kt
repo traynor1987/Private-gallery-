@@ -57,7 +57,7 @@ class BrowserVideoAssistantTest {
             assertNull(media())
             val original = compose.runOnIdle { session.activeWebView() }
             compose.onNodeWithContentDescription("More").performClick()
-            compose.onNodeWithText("Play in Private Gallery").performClick()
+            compose.onNodeWithText("Play in NovaOS").performClick()
             compose.onNodeWithContentDescription("Exit video view").assertIsDisplayed().performClick()
             compose.runOnIdle {
                 assertSame(original, session.activeWebView())

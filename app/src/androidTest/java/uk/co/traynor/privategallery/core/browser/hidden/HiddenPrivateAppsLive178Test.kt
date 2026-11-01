@@ -246,7 +246,7 @@ class HiddenPrivateAppsLive178Test {
         val primarySentinel = app("Primary owner sentinel", "https://example.test/primary")
         other.update { it.upsert(otherSentinel) }
         primary.update { it.upsert(primarySentinel) }
-        val ownerLabel = if (torMode) "Hidden Vault · Tor" else "Hidden Vault · VPN"
+        val ownerLabel = if (torMode) "Hidden Space · Tor" else "Hidden Space · VPN"
         var broker: HiddenVpnBrowserBroker? = null
         val ended = AtomicBoolean()
         val parentBinding = context.getSystemService(ConnectivityManager::class.java).boundNetworkForProcess
@@ -493,7 +493,7 @@ class HiddenPrivateAppsLive178Test {
             val beforeDownload=requestCount(events(),documentPath)
             clickWeb("Download app document")
             click("Save GET file")
-            waitFor("Actual selected transport saves a validated document encrypted in Hidden Vault",60) {
+            waitFor("Actual selected transport saves a validated document encrypted in Hidden Space",60) {
                 repository.items().any{it.id!=uploadDocument.id && it.mimeType=="text/plain"}
             }
             val downloaded=repository.items().single{it.id!=uploadDocument.id && it.mimeType=="text/plain"}
@@ -516,7 +516,7 @@ class HiddenPrivateAppsLive178Test {
             }}
             val beforeUpload=documentPosts()
             clickWeb("Choose app document")
-            waitFor("Native document chooser shows only this authenticated Hidden repository") {visible("Choose from Hidden Vault") && visible(uploadDocument.displayName)}
+            waitFor("Native document chooser shows only this authenticated Hidden repository") {visible("Choose from Hidden Space") && visible(uploadDocument.displayName)}
             click(uploadDocument.displayName)
             waitFor("Document upload requires explicit outward-copy confirmation") {visible("Allow upload")}
             assertEquals("Selecting a document does not upload before confirmation",beforeUpload,documentPosts())

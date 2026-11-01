@@ -102,9 +102,9 @@ class ProfessionalUiTest {
         backToSettings()
         compose.onNodeWithText("Updates & About").performClick()
         repeat(5) { compose.onNodeWithText("Installed").performClick() }
-        compose.onNodeWithText("Private Gallery ${BuildConfig.VERSION_NAME}").performClick()
+        compose.onNodeWithText("NovaOS ${BuildConfig.VERSION_NAME}").performClick()
         repeat(4) { compose.onNodeWithText("Installed").performClick() }
-        compose.onNodeWithText("Hidden Vault · TEST ONLY").assertIsDisplayed()
+        compose.onNodeWithText("Hidden Space · TEST ONLY").assertIsDisplayed()
         compose.onNodeWithText("Hidden PIN").assertIsDisplayed()
         compose.onNodeWithText("Close").performClick()
         compose.onNodeWithText("Protected settings unlocked").assertIsDisplayed()
@@ -123,7 +123,7 @@ class ProfessionalUiTest {
         compose.onNodeWithText("Updates & About").performClick()
         repeat(5) { compose.onNodeWithText("Installed").performClick() }
         compose.onNodeWithText("Check for updates").performClick()
-        compose.onNodeWithText("Private Gallery ${BuildConfig.VERSION_NAME}").performScrollTo().performClick()
+        compose.onNodeWithText("NovaOS ${BuildConfig.VERSION_NAME}").performScrollTo().performClick()
         repeat(4) { compose.onNodeWithText("Installed").performClick() }
         compose.onNodeWithText("Protected settings unlocked").assertDoesNotExist()
         backToSettings()
@@ -131,7 +131,7 @@ class ProfessionalUiTest {
         repeat(5) { compose.onNodeWithText("Installed").performClick() }
         backToSettings()
         compose.onNodeWithText("Updates & About").performClick()
-        compose.onNodeWithText("Private Gallery ${BuildConfig.VERSION_NAME}").performScrollTo().performClick()
+        compose.onNodeWithText("NovaOS ${BuildConfig.VERSION_NAME}").performScrollTo().performClick()
         repeat(4) { compose.onNodeWithText("Installed").performClick() }
         compose.onNodeWithText("Protected settings unlocked").assertDoesNotExist()
     }
@@ -140,9 +140,9 @@ class ProfessionalUiTest {
         compose.setContent { FixtureTheme { SettingsFixture(AppTheme.DARK, allowSecretPin = true, onTimeout = {}) } }
         compose.onNodeWithText("Updates & About").performClick()
         repeat(5) { compose.onNodeWithText("Installed").performClick() }
-        compose.onNodeWithText("Private Gallery ${BuildConfig.VERSION_NAME}").performClick()
+        compose.onNodeWithText("NovaOS ${BuildConfig.VERSION_NAME}").performClick()
         repeat(4) { compose.onNodeWithText("Installed").performClick() }
-        compose.onNodeWithText("Hidden Vault · TEST ONLY").assertIsDisplayed()
+        compose.onNodeWithText("Hidden Space · TEST ONLY").assertIsDisplayed()
         compose.onNodeWithText("Hidden PIN").assertIsDisplayed()
         compose.onNodeWithText("Close").performClick()
         backToSettings()
@@ -174,9 +174,9 @@ class ProfessionalUiTest {
             onHiddenChanged = { hidden = it }, onTimeout = {}) } }
         compose.onNodeWithText("Updates & About").performClick()
         repeat(5) { compose.onNodeWithText("Installed").performClick() }
-        compose.onNodeWithText("Private Gallery ${BuildConfig.VERSION_NAME}").performClick()
+        compose.onNodeWithText("NovaOS ${BuildConfig.VERSION_NAME}").performClick()
         repeat(4) { compose.onNodeWithText("Installed").performClick() }
-        compose.onNodeWithText("Hidden Vault · TEST ONLY").assertIsDisplayed()
+        compose.onNodeWithText("Hidden Space · TEST ONLY").assertIsDisplayed()
         compose.onNodeWithText("Hidden PIN").assertIsDisplayed()
         compose.onNodeWithText("Close").performClick()
         backToSettings()
@@ -197,9 +197,9 @@ class ProfessionalUiTest {
             onHiddenChanged = { hidden = it }, onBiometricRequest = { requests += it }, onTimeout = {}) } }
         compose.onNodeWithText("Updates & About").performClick()
         repeat(5) { compose.onNodeWithText("Installed").performClick() }
-        compose.onNodeWithText("Private Gallery ${BuildConfig.VERSION_NAME}").performClick()
+        compose.onNodeWithText("NovaOS ${BuildConfig.VERSION_NAME}").performClick()
         repeat(4) { compose.onNodeWithText("Installed").performClick() }
-        compose.onNodeWithText("Hidden Vault · TEST ONLY").assertIsDisplayed()
+        compose.onNodeWithText("Hidden Space · TEST ONLY").assertIsDisplayed()
         compose.onNodeWithText("Hidden PIN").assertIsDisplayed()
         compose.onNodeWithText("Close").performClick()
         backToSettings()
@@ -294,7 +294,7 @@ class ProfessionalUiTest {
         compose.onNodeWithText("Debug / Acceptance").assertDoesNotExist()
         compose.onNodeWithText("Owner diagnostics").assertDoesNotExist()
         compose.onNodeWithText("Updates & About").performScrollTo().performClick()
-        val version=compose.onNodeWithText("Private Gallery ${uk.co.traynor.privategallery.BuildConfig.VERSION_NAME}")
+        val version=compose.onNodeWithText("NovaOS ${uk.co.traynor.privategallery.BuildConfig.VERSION_NAME}")
         repeat(6) { version.performScrollTo().performClick() }
         compose.onNodeWithText("Confirm owner identity").assertDoesNotExist()
         version.performScrollTo().performClick()
@@ -330,16 +330,18 @@ class ProfessionalUiTest {
 
     @Test fun galleryDestinationsKeepNavigationAndBrowserUsesItsOwnToolbar() {
         var route by mutableStateOf(Route.GALLERY)
-        compose.setContent { FixtureTheme { ProtectedAppShell(route, "Jenna", {}) {} } }
-        val before = compose.onNodeWithText("Gallery").fetchSemanticsNode().boundsInRoot
-        for (destination in listOf(Route.VAULT, Route.FAVOURITE, Route.SETTINGS)) {
-            compose.runOnIdle { route = destination }
-            listOf("Gallery", "Vault", "Jenna", "Browser", "Settings").forEach { compose.onNodeWithText(it).assertIsDisplayed() }
-            assertEquals(before, compose.onNodeWithText("Gallery").fetchSemanticsNode().boundsInRoot)
+        compose.setContent {CompositionLocalProvider(LocalNovaSecurityActions provides NovaSecurityActions({},{},{},"Primary Space")){FixtureTheme {ProtectedAppShell(route,"Jenna",{}){androidx.compose.material3.Text("App content")}}}}
+        for(destination in listOf(Route.GALLERY,Route.VAULT,Route.FAVOURITE,Route.SETTINGS)) {
+            compose.runOnIdle{route=destination}
+            compose.onNodeWithTag("nova-app-header").assertExists()
+            compose.onNodeWithContentDescription("Nova Home").assertIsDisplayed()
+            compose.onNodeWithContentDescription("Lock Space").assertIsDisplayed()
+            compose.onNodeWithContentDescription("Panic Exit").assertIsDisplayed()
+            compose.onNodeWithText("App content").assertIsDisplayed()
+            compose.onNodeWithText("Jenna").assertDoesNotExist()
         }
-        compose.onNodeWithText("Settings").assertIsSelected()
-        compose.runOnIdle { route = Route.BROWSER }
-        compose.onNodeWithText("Gallery").assertDoesNotExist()
+        compose.runOnIdle{route=Route.BROWSER}
+        compose.onNodeWithTag("nova-app-header").assertDoesNotExist()
     }
 
     @Test fun requiredVpnDoesNotCreateOrAttachWebViewUntilConnected() {
@@ -370,18 +372,18 @@ class ProfessionalUiTest {
         var fullscreen by mutableStateOf(false)
         var exits = 0
         val session = BrowserV2Session(compose.activity, BrowserVpnGate { vpn == VpnConnectionState.CONNECTED }, NoopBrowserV2Listener)
-        compose.setContent { FixtureTheme {
+        compose.setContent {CompositionLocalProvider(LocalNovaSecurityActions provides NovaSecurityActions({},{},{},"Primary Space")){ FixtureTheme {
             ProtectedAppShell(Route.BROWSER, "Jenna", {}, hideNavigation = fullscreen) { padding ->
                 BrowserV2ProductionDestination(session, BrowserSearchEngine.GOOGLE, { _, _ -> }, { _, _ -> }, false, {}, emptyList(), { _, _, _ -> }, {}, { it(emptyList()) }, { it() }, {},
                     modifier = Modifier.padding(padding), staticContentHost = true,
                     connectionPresentation = BrowserConnectionPresentation.from(true, vpn), onFullscreenChanged = { fullscreen = it })
             }
-        } }
-        compose.onNodeWithText("Gallery").assertIsDisplayed()
+        } } }
+        compose.onNodeWithContentDescription("Nova Home").assertIsDisplayed()
         compose.runOnIdle { session.onShowCustomView(session.tabs.activeTab.id, android.view.View(compose.activity), android.webkit.WebChromeClient.CustomViewCallback { exits++ }) }
-        compose.onNodeWithText("Gallery").assertDoesNotExist()
+        compose.onNodeWithContentDescription("Nova Home").assertDoesNotExist()
         compose.runOnIdle { vpn = VpnConnectionState.FAILED }
-        compose.onNodeWithText("Gallery").assertIsDisplayed()
+        compose.onNodeWithContentDescription("Nova Home").assertIsDisplayed()
         compose.onNodeWithText("Couldn't connect to VPN").assertIsDisplayed()
         compose.runOnIdle { assertEquals(1, exits); session.destroyAll() }
     }

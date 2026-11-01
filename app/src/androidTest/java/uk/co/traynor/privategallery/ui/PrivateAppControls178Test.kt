@@ -26,7 +26,7 @@ class PrivateAppControls178Test {
     @Test fun controls_keep_origin_visible_and_delegate_to_existing_owner() {
         val app=fixture();var homes=0;var switches=0;var locks=0;var backs=0;var libraries=0;var closes=0;var exits=0;var vaultLocks=0
         compose.setContent { PrivateGalleryTheme(AppTheme.LIGHT) {
-            PrivateAppControls(app,"https://secret:password@example.test/elsewhere","Hidden Vault · Tor",true,false,true,false,
+            PrivateAppControls(app,"https://secret:password@example.test/elsewhere","Hidden Space · Tor",true,false,true,false,
                 {backs++},{},{},{homes++},{libraries++},{switches++},{},onQuickLock={locks++},
                 onCloseApp={closes++},onExitGallery={exits++},onLockVault={vaultLocks++})
         } }
@@ -43,9 +43,9 @@ class PrivateAppControls178Test {
         compose.onNodeWithContentDescription("App home").performClick()
         compose.onNodeWithContentDescription("Switch private app").performClick()
         compose.onNodeWithText("Close App").performClick()
-        compose.onNodeWithText("Exit to Gallery").performClick()
-        compose.onNodeWithText("Lock Vault").performClick()
-        compose.onNodeWithText("Panic Exit").performClick()
+        compose.onNodeWithContentDescription("Nova Home").performClick()
+        compose.onNodeWithContentDescription("Lock Space").performClick()
+        compose.onNodeWithContentDescription("Panic Exit").performClick()
         compose.runOnIdle { assertEquals(1,homes);assertEquals(1,switches);assertEquals(1,locks);assertEquals(1,backs);assertEquals(1,libraries);assertEquals(1,closes);assertEquals(1,exits);assertEquals(1,vaultLocks) }
     }
 
@@ -92,7 +92,7 @@ class PrivateAppControls178Test {
             CompositionLocalProvider(LocalDensity provides Density(density.density,if(large)1.6f else 1f)) {
                 PrivateGalleryTheme(if(dark)AppTheme.DARK else AppTheme.LIGHT) {
                     Box(Modifier.width(width.dp)) {
-                        PrivateAppControls(app,"https://example.test/app/","Hidden Vault · VPN",true,true,true,false,{},{},{},{},{},{},{},{})
+                        PrivateAppControls(app,"https://example.test/app/","Hidden Space · VPN",true,true,true,false,{},{},{},{},{},{},{},{})
                     }
                 }
             }
@@ -100,9 +100,10 @@ class PrivateAppControls178Test {
         for(theme in listOf(false,true))for(size in listOf(360,840,600,360))for(font in listOf(false,true)) {
             compose.runOnIdle{dark=theme;width=size;large=font}
             if(compose.onAllNodesWithContentDescription("Expand app controls").fetchSemanticsNodes().isNotEmpty())compose.onNodeWithContentDescription("Expand app controls").performClick()
-            listOf("App back","App forward","Refresh app","App home","Private Apps library","Switch private app","Private app settings","Screenshot to Vault").forEach{
+            listOf("App back","App forward","Refresh app","App home","Switch private app","Private app settings","Screenshot to Vault").forEach{
                 compose.onNodeWithContentDescription(it).assertIsDisplayed()
             }
+            compose.onNodeWithText("Exit App").assertIsDisplayed()
         }
     }
 

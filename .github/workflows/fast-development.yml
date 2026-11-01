@@ -442,6 +442,7 @@ jobs:
             ~/.gradle/wrapper
           key: home1710-${{ runner.os }}-${{ hashFiles('**/*.gradle*', 'gradle/wrapper/gradle-wrapper.properties') }}
           restore-keys: |
+            home1710-${{ runner.os }}-
             evidencelocker179-${{ runner.os }}-
             privacy1751-${{ runner.os }}-
       - name: Install Android 17 compile SDK
@@ -453,10 +454,15 @@ jobs:
           "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-37.1" "build-tools;36.0.0" "emulator"
       - name: Focused Home and evidence host checks
         run: |
-          java com.sun.tools.javac.Main -d /tmp/home1710 app/src/main/java/uk/co/traynor/privategallery/core/home/HomeLayout.java tests/home1710/*.java
+          java com.sun.tools.javac.Main -d /tmp/home1710 app/src/main/java/uk/co/traynor/privategallery/core/home/*.java tests/home1710/*.java
+          java -cp /tmp/home1710 NovaLayoutMigrationChecks
+          java -cp /tmp/home1710 NovaNavigationChecks
+          java -cp /tmp/home1710 NovaPositionChecks
+          python3 scripts/check_nova17101.py
           java -cp /tmp/home1710 HomeLayoutChecks
           java -cp /tmp/home1710 HomePersistenceChecks
-          PYTHONDONTWRITEBYTECODE=1 python3 -m unittest scripts.tests.test_home1710_release
+          PYTHONDONTWRITEBYTECODE=1 python3 -m unittest scripts.tests.test_home1710_release scripts.tests.test_nova17101_release
+          bash scripts/check_private_apps178.sh
           bash scripts/check_evidence179.sh
           bash scripts/check_evidence179_ai_json.sh
           bash scripts/check_evidence179_archive.sh
@@ -472,7 +478,7 @@ jobs:
       - name: Enable Android emulator acceleration
         if: contains(github.event.head_commit.message, '[verify1710]')
         run: sudo chmod 666 /dev/kvm
-      - name: Grouped Home and changed privacy-boundary Android 17 verification
+      - name: Grouped NovaOS navigation and changed privacy-boundary Android 17 verification
         if: contains(github.event.head_commit.message, '[verify1710]')
         uses: reactivecircus/android-emulator-runner@v2
         with:
@@ -488,11 +494,11 @@ jobs:
           emulator-options: -no-window -gpu software -no-snapshot -noaudio -no-boot-anim -feature -HardwareDecoder
           script: |
             bash scripts/home1710_emulator_preflight.sh
-            ./gradlew :app:connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=uk.co.traynor.privategallery.HomeNavigation1710Test,uk.co.traynor.privategallery.core.home.Home1710Test,uk.co.traynor.privategallery.core.home.EvidenceImport1710Test,uk.co.traynor.privategallery.core.evidence.EvidenceStore179Test,uk.co.traynor.privategallery.core.evidence.EvidenceAccess179Test,uk.co.traynor.privategallery.core.evidence.EvidenceController179Test,uk.co.traynor.privategallery.EvidenceAuthority179Test,uk.co.traynor.privategallery.ui.HiddenNavigationAuthorityTest,uk.co.traynor.privategallery.ui.EvidenceLocker179UiTest,uk.co.traynor.privategallery.PrivacyViewerRepair1751Test,uk.co.traynor.privategallery.ui.PrivateAppsUi178Test --stacktrace
+            ./gradlew :app:connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=uk.co.traynor.privategallery.HomeNavigation1710Test,uk.co.traynor.privategallery.NovaNavigation17101Test,uk.co.traynor.privategallery.NovaHomePresentation17101Test,uk.co.traynor.privategallery.core.home.Home1710Test,uk.co.traynor.privategallery.core.home.EvidenceImport1710Test,uk.co.traynor.privategallery.core.evidence.EvidenceStore179Test,uk.co.traynor.privategallery.core.evidence.EvidenceAccess179Test,uk.co.traynor.privategallery.core.evidence.EvidenceController179Test,uk.co.traynor.privategallery.EvidenceAuthority179Test,uk.co.traynor.privategallery.ui.HiddenNavigationAuthorityTest,uk.co.traynor.privategallery.ui.EvidenceLocker179UiTest,uk.co.traynor.privategallery.PrivacyViewerRepair1751Test,uk.co.traynor.privategallery.ui.PrivateAppsUi178Test,uk.co.traynor.privategallery.ui.PrivateAppControls178Test,uk.co.traynor.privategallery.ui.ProfessionalUiTest,uk.co.traynor.privategallery.ui.CameraPresentationTest,uk.co.traynor.privategallery.ui.ModalCompletion1762Test,uk.co.traynor.privategallery.HideContent1761Test --stacktrace
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: private-home1710-verification
+          name: novaos17101-verification
           path: |
             app/build/reports
             app/build/test-results

@@ -9,8 +9,8 @@ public final class InAppVersionPresentation {
         this.hidden=hidden;this.name=hidden?"0.0.1":realName;this.code=hidden?4:realCode;
     }
     public String installed(){return name+" · Build "+code;}
-    public String header(){return "Private Gallery "+installed();}
-    public String about(){return "Private Gallery "+name;}
+    public String header(){return "NovaOS "+installed();}
+    public String about(){return "NovaOS "+name;}
     public String description(){return hidden?"Basic gallery functionality. More features coming soon.":"Media stays in encrypted private app storage until you restore it.";}
     public String updateStatus(String realStatus){return hidden?"Checks use the installed Android app version.":realStatus;}
 }

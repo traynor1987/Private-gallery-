@@ -64,7 +64,7 @@ class HiddenFoundationDialogTest {
         compose.onNodeWithTag("passcode-indicator").assertIsDisplayed()
         PinVaultKeyStore(context).unlock("123456".toCharArray()).fill(0)
         compose.onNodeWithText("Close").performClick()
-        compose.onNodeWithText("Hidden Vault").assertDoesNotExist()
+        compose.onNodeWithText("Hidden Space").assertDoesNotExist()
         compose.onNodeWithTag("passcode-indicator").assertDoesNotExist()
     }
     @Test fun backgroundClearsUnsubmittedPinWithoutCredentialCreation() {

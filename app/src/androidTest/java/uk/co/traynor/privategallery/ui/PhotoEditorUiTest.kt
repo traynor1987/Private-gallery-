@@ -144,14 +144,14 @@ class PhotoEditorUiTest {
         assertEquals(1, edits); assertEquals(0, restores)
     }
     @Test fun externalEditorEntryCarriesOriginInBothVaults() {
-        val original=bytes();var label by mutableStateOf("Primary Vault");val requests=mutableListOf<Pair<String,String>>()
+        val original=bytes();var label by mutableStateOf("Primary Space");val requests=mutableListOf<Pair<String,String>>()
         compose.setContent {PrivateGalleryTheme {key(label) {
             FullscreenMediaViewer(listOf(ViewerMediaEntry("synthetic-origin","image/png")),MediaViewerSource.VAULT,0,{},
                 onLoadProtectedBytes={_,done->done(Result.success(original.copyOf()))},editingVaultLabel=label,
                 onExternalEdit={requests+=label to it},onSaveEditedCopy={_,data,_,done->data.fill(0);done(Result.success(Unit))})
         }}}
         try {
-            for(vault in listOf("Primary Vault","Hidden Vault")) {
+            for(vault in listOf("Primary Space","Hidden Space")) {
                 compose.runOnIdle {label=vault}
                 compose.onNodeWithText("Edit").performClick()
                 compose.onNodeWithText("Edit in another app").assertIsDisplayed().performClick()

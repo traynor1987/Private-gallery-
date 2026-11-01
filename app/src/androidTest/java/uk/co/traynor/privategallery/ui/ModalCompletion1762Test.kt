@@ -200,7 +200,7 @@ class ModalCompletion1762Test {
         try {
             content(AppTheme.DARK) {
                 var open by remember { mutableStateOf(true) }
-                if (open) AiSourcePicker(2, "Hidden Vault", candidates, active,
+                if (open) AiSourcePicker(2, "Hidden Space", candidates, active,
                     load = { _, done -> done(Result.success(bytes.copyOf())) }, loadForEditing = null,
                     onSelect = { chosen = it; open = false }, onDismiss = { open = false })
             }
@@ -325,7 +325,7 @@ class ModalCompletion1762Test {
             VaultItem("size-$index", "image/png", "Synthetic size $index", 0, size, ByteArray(32), ByteArray(12), VaultItemState.COMPLETE)
         }
         var selected: Set<String>? = null
-        content(AppTheme.DARK) { MediaSelectionDialog(media, "Hidden Vault", {}, { selected = it }) }
+        content(AppTheme.DARK) { MediaSelectionDialog(media, "Hidden Space", {}, { selected = it }) }
         compose.onNodeWithText("File size").performScrollTo().performClick()
         listOf("100 MB+", "500 MB+", "Over 1 GB").forEach { label ->
             compose.onNodeWithText(label).performScrollTo().assertIsDisplayed().assertWidthIsAtLeast(48.dp).performClick()
@@ -356,7 +356,7 @@ class ModalCompletion1762Test {
             VaultItemState.COMPLETE, capturedAtEpochMillis = Instant.parse("2024-03-31T00:00:00Z").toEpochMilli(), adjustedTimeZone = "Europe/London")
         val changes = AtomicInteger()
         content(AppTheme.LIGHT) {
-            MediaDetailsDialog("dst", "Hidden Vault", { _, done -> done(Result.success(original)) },
+            MediaDetailsDialog("dst", "Hidden Space", { _, done -> done(Result.success(original)) },
                 { _, _, _, done -> changes.incrementAndGet(); done(Result.success(Unit)) }, null, {}, {})
         }
         compose.onNodeWithText("Edit Date Taken").performScrollTo().performClick()

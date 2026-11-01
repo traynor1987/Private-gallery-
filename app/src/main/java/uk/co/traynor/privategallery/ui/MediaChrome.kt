@@ -34,6 +34,7 @@ enum class ThumbnailDensity(val label: String, val minSize: Int) {
     COMPACT("Compact", 87), COMFORTABLE("Comfortable", 112), LARGE("Large", 156),
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun MediaHeader(
     title: String,
@@ -47,19 +48,24 @@ fun MediaHeader(
     searchActive: Boolean = false,
     sort: uk.co.traynor.privategallery.core.ui.MediaSort? = null,
     onSort: (uk.co.traynor.privategallery.core.ui.MediaSort)->Unit = {},
+    showTitle:Boolean=true,
 ) {
-    Row(Modifier.fillMaxWidth().heightIn(min = 64.dp).padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+    Column(Modifier.fillMaxWidth().padding(horizontal = 8.dp,vertical=4.dp)) {
+     Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically) {
         if (onBack != null) IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back to collections") }
         Column(Modifier.weight(1f).padding(start = 6.dp)) {
-            Text(title, modifier = Modifier.semantics { heading() }, style = MaterialTheme.typography.titleLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            if(showTitle)Text(title, modifier = Modifier.semantics { heading() }, style = MaterialTheme.typography.titleLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
             if (subtitle.isNotBlank()) Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
+     }
+     FlowRow(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.End) {
         if (sort != null) MediaSortButton(sort,onSort)
         if (onSearch != null) IconButton(onClick = onSearch) { Icon(Icons.Default.Search, if (searchActive) "Search vault, filter active" else "Search vault", tint = if(searchActive) MaterialTheme.colorScheme.primary else LocalContentColor.current) }
         if (onAdd != null) IconButton(onClick = onAdd) { Icon(Icons.Default.Add, "Add media") }
         if (onGenerate != null) IconButton(onClick = onGenerate) { Icon(Icons.Default.AutoAwesome, "Create image") }
         if (onLock != null) IconButton(onClick = onLock) { Icon(Icons.Default.Lock, "Lock Vault") }
         if (onMenu != null) IconButton(onClick = onMenu) { Icon(Icons.Default.MoreVert, "$title menu") }
+     }
     }
 }
 

@@ -24,7 +24,7 @@ import androidx.compose.ui.unit.sp
 internal fun PasscodeKeypad(
  pin:String,onPinChange:(String)->Unit,onSubmit:()->Unit,
  expectedLength:Int?=null,enabled:Boolean=true,message:String?=null,
- appTitle:String="Private Gallery",onDiscreetEntry:(()->Unit)?=null,
+ appTitle:String="NovaOS",onDiscreetEntry:(()->Unit)?=null,
  action:String="Unlock",secondary:(@Composable ()->Unit)?=null,
 ) {
  CredentialCaptureProtection()

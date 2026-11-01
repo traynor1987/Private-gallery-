@@ -10,9 +10,9 @@ android {
     applicationId = "uk.co.traynor.privategallery"
     minSdk = 37
     targetSdk = 37
-    versionCode = 52
-    versionName = "1.7.10"
-    resValue("string", "app_name", "Private Gallery")
+    versionCode = 53
+    versionName = "1.7.10.1"
+    resValue("string", "app_name", "NovaOS")
     buildConfigField("boolean", "HIDDEN_PROTOTYPE", "false")
     buildConfigField("boolean", "HIDDEN_ENABLED", "true")
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
@@ -40,7 +40,7 @@ android {
     getByName("debug") {
       applicationIdSuffix = ".hiddenprototype"
       versionNameSuffix = "-TEST-ONLY"
-      resValue("string", "app_name", "Private Gallery TEST ONLY")
+      resValue("string", "app_name", "NovaOS TEST ONLY")
       buildConfigField("boolean", "HIDDEN_PROTOTYPE", "true")
       buildConfigField("boolean", "ACCEPTANCE_BROWSER_DIAGNOSTICS", "false")
     }

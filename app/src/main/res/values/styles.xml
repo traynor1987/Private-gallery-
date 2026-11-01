@@ -1,9 +1,13 @@
 <resources>
-  <style name="Theme.PrivateGallery" parent="android:style/Theme.Material.Light.NoActionBar" />
+  <style name="Theme.PrivateGallery" parent="android:style/Theme.Material.Light.NoActionBar">
+    <item name="android:windowBackground">#07111F</item>
+    <item name="android:windowSplashScreenBackground">#07111F</item>
+    <item name="android:windowSplashScreenAnimatedIcon">@mipmap/ic_launcher</item>
+  </style>
   <style name="Theme.PrivateGallery.Picker.Dark" parent="android:style/Theme.Material.Dialog.Alert">
-    <item name="android:colorAccent">#B9C7DA</item>
+    <item name="android:colorAccent">#8EBFFF</item>
   </style>
   <style name="Theme.PrivateGallery.Picker.Light" parent="android:style/Theme.Material.Light.Dialog.Alert">
-    <item name="android:colorAccent">#465B76</item>
+    <item name="android:colorAccent">#2466B7</item>
   </style>
 </resources>

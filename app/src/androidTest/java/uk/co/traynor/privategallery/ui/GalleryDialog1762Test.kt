@@ -31,7 +31,7 @@ class GalleryDialog1762Test {
    CompositionLocalProvider(LocalDensity provides Density(density.density,1.6f)) {
     PrivateGalleryTheme(theme) {
      GalleryAlertDialog(onDismissRequest={cancelled=true},modifier=Modifier.testTag("fixture-dialog"),
-      title={Text("Private Gallery")},
+      title={Text("NovaOS")},
       text={Column {repeat(40){Text("Option $it")}}},
       confirmButton={TextButton(onClick={confirmed=true}){Text("Continue")}},
       dismissButton={TextButton(onClick={cancelled=true}){Text("Cancel")}})

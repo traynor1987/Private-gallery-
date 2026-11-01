@@ -102,7 +102,7 @@ fun AiEditingSettings(configuration: AiProviderConfiguration? = null) {
                     }
                     Switch(promptEnabled, { promptEnabled = it; promptTemplates.enabled = it })
                 }
-                Text("Your prompt stays exactly as you typed it. Private Gallery adds the selected guidance only when you generate.",
+                Text("Your prompt stays exactly as you typed it. NovaOS adds the selected guidance only when you generate.",
                     style = MaterialTheme.typography.bodySmall)
                 HorizontalDivider()
                 PromptKind.entries.forEach { kind ->

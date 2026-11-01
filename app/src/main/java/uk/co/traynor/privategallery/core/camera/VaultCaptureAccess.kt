@@ -18,7 +18,7 @@ internal class VaultCaptureAccess(
 ) {
     private val app = context.applicationContext
     val domain = if (hidden == null) "primary" else "hidden"
-    val label = if (hidden == null) "Primary Vault" else "Hidden Vault"
+    val label = if (hidden == null) "Primary Space" else "Hidden Space"
     private val root = File(app.noBackupFilesDir, "camera-$domain-v1")
     val journal = CaptureJournal(root, domain)
     private val hiddenAuthority = hidden?.authority()

@@ -37,16 +37,15 @@ internal fun PrivateAppControls(
 ) {
     var expanded by remember(app.id()) { mutableStateOf(false) }
     Column(Modifier.fillMaxWidth().testTag("private-app-controls")) {
-        Row(Modifier.fillMaxWidth().heightIn(min=48.dp).padding(horizontal=8.dp),verticalAlignment=Alignment.CenterVertically) {
-            PrivateAppIcon(app.icon(),app.name(),24)
-            Column(Modifier.weight(1f).padding(horizontal=8.dp)) {
-                Text(app.name(),style=MaterialTheme.typography.titleSmall,maxLines=1,overflow=TextOverflow.Ellipsis)
-                Text(mode,style=MaterialTheme.typography.labelSmall,maxLines=1,overflow=TextOverflow.Ellipsis)
-            }
-            IconButton(onClick=onBack,enabled=enabled) {Icon(Icons.AutoMirrored.Filled.ArrowBack,if(canGoBack)"App back" else "Back to Private Apps library")}
+        val security=novaSecurityActions()
+        NovaAppHeader(app.name(),mode,onHome=security?.home ?: onExitGallery,
+            onLock=onLockVault ?: security?.lock,onPanic=onQuickLock ?: security?.panic,
+            actions={IconButton(onClick={expanded=!expanded;onExpanded(expanded)}){Icon(Icons.Default.MoreVert,if(expanded)"Collapse app controls"else"Expand app controls")}})
+        FlowRow(Modifier.fillMaxWidth().padding(horizontal=8.dp),verticalArrangement=Arrangement.spacedBy(0.dp)) {
+            IconButton(onClick=onBack,enabled=enabled){Icon(Icons.AutoMirrored.Filled.ArrowBack,if(canGoBack)"App back"else"Back to Private Apps library")}
             TextButton(onClick=onLibrary){Text("Exit App")}
+            IconButton(onClick=onSwitch){Icon(Icons.Default.SwapHoriz,"Switch private app")}
             if(onScreenshot!=null)IconButton(onClick=onScreenshot,enabled=enabled){Icon(Icons.Default.Screenshot,"Screenshot to Vault")}
-            IconButton(onClick={expanded=!expanded;onExpanded(expanded)}) {Icon(Icons.Default.MoreVert,if(expanded)"Collapse app controls" else "Expand app controls")}
         }
         // Origin changes and transport failures must remain visible even with controls collapsed.
         val outside=url.isNotBlank() && !PrivateAppPolicy.inScope(url,app.scope().ifBlank {app.startUrl()})
@@ -61,13 +60,8 @@ internal fun PrivateAppControls(
                 IconButton(onClick=onForward,enabled=enabled && canGoForward){Icon(Icons.AutoMirrored.Filled.ArrowForward,"App forward")}
                 IconButton(onClick=onRefresh,enabled=enabled){Icon(if(loading)Icons.Default.Close else Icons.Default.Refresh,if(loading)"Stop app loading" else "Refresh app")}
                 IconButton(onClick=onHome,enabled=enabled){Icon(Icons.Default.Home,"App home")}
-                IconButton(onClick=onSwitch){Icon(Icons.Default.SwapHoriz,"Switch private app")}
-                IconButton(onClick=onLibrary){Icon(Icons.Default.Apps,"Private Apps library")}
                 IconButton(onClick=onSettings,enabled=enabled){Icon(Icons.Default.Settings,"Private app settings")}
                 if(onCloseApp!=null)TextButton(onClick=onCloseApp){Text("Close App")}
-                if(onExitGallery!=null)TextButton(onClick=onExitGallery){Text("Exit to Gallery")}
-                if(onLockVault!=null)TextButton(onClick=onLockVault){Text("Lock Vault")}
-                if(onQuickLock!=null)TextButton(onClick=onQuickLock){Text("Panic Exit")}
                 IconButton(onClick=onBrowserTools){Icon(Icons.Default.Build,"Browser tools")}
             }
         }
@@ -106,7 +100,7 @@ internal fun PrivateAppSettings(
             busy=false
         }
     }
-    GalleryAlertDialog(properties=DialogProperties(securePolicy=SecureFlagPolicy.SecureOn), onDismissRequest={close()},
+    NovaWorkflowPage(onDismissRequest={close()},
         title={Text("Private app settings")},
         text={Column(verticalArrangement=Arrangement.spacedBy(12.dp)) {
             app?.let { item ->

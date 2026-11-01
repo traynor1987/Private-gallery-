@@ -52,7 +52,7 @@ internal fun PrimaryCopyDialog(access: PrimaryCopyAccess, onClose: () -> Unit, o
             if (entries == null) {
                 PasscodeKeypad(
                     pin = pin, onPinChange = { if (!busy) pin = it.take(12) },
-                    appTitle = "Copy from Primary Vault", action = if (busy) "Verifying…" else "Continue",
+                    appTitle = "Copy from Primary Space", action = if (busy) "Verifying…" else "Continue",
                     message = error, enabled = !busy,
                     secondary = { TextButton(onClick = close) { Text("Cancel") } },
                     onSubmit = {
@@ -69,7 +69,7 @@ internal fun PrimaryCopyDialog(access: PrimaryCopyAccess, onClose: () -> Unit, o
                 })
             } else {
                 Column(Modifier.fillMaxSize().safeDrawingPadding().imePadding().padding(16.dp)) {
-                    Text("Primary Vault", style = MaterialTheme.typography.headlineSmall)
+                    Text("Primary Space", style = MaterialTheme.typography.headlineSmall)
                     Text("Copy to Hidden · originals stay in Primary · up to 2 GiB each")
                     FlowRow {
                         TextButton(enabled=!busy,onClick={selected=entries.orEmpty().filter {it.plaintextSize<=uk.co.traynor.privategallery.core.hidden.HiddenChunkStore.MAX_BYTES}.mapTo(linkedSetOf()){it.id}}) {Text("Select all")}

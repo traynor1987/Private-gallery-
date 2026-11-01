@@ -39,6 +39,7 @@ class Home1710Test {
     uk.co.traynor.privategallery.core.hidden.HiddenRepository(context,hidden).importMedia("HIDDEN-ONLY1710.txt","text/plain",hiddenBytes.inputStream())
     assertTrue(searchPrivateHome(context,primary,"HIDDEN-ONLY1710").isEmpty())
     assertEquals("PRIMARY-ONLY1710.txt",searchPrivateHome(context,primary,"PRIMARY-ONLY1710").single().label)
+    assertEquals(HomeLayout.Shortcut.VAULT,searchPrivateHome(context,primary,"PRIMARY-ONLY1710").single().shortcut)
     assertTrue(searchPrivateHome(context,secret,"PRIMARY-ONLY1710").isEmpty())
     assertEquals("HIDDEN-ONLY1710.txt",searchPrivateHome(context,secret,"HIDDEN-ONLY1710").single().label)
    }finally{primaryBytes.fill(0);hiddenBytes.fill(0)}

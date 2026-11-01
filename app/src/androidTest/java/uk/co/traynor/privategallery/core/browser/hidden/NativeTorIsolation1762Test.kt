@@ -227,7 +227,7 @@ class NativeTorIsolation1762Test {
                 navigate("$base/interactive");clickWeb("Submit Tor form")
                 waitFor("Native JS-free form body",60){observed(path,host){it.optString("path")=="/form-result" && it.optBoolean("form_ok")}}
                 navigate("$base/interactive");clickWeb("Choose Tor upload")
-                waitFor("Actual JS-off child renders its upload chooser") {nodes().any {it.text?.toString()=="Choose from Hidden Vault"}}
+                waitFor("Actual JS-off child renders its upload chooser") {nodes().any {it.text?.toString()=="Choose from Hidden Space"}}
                 click("Tor eligible fixture.png");click("Allow upload")
                 // Inspect only the grant already minted by the real separate owner confirmation.
                 @Suppress("UNCHECKED_CAST")

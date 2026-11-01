@@ -32,7 +32,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 
 /**
- * Shared neutral surfaces and compact spacing for Private Gallery.
+ * Shared neutral surfaces and compact spacing for NovaOS.
  * It deliberately owns chrome and settings only: protected media remains the hero.
  */
 object GalleryTokens {
@@ -54,9 +54,9 @@ object GalleryTokens {
     val RowShape = RoundedCornerShape(12.dp)
     val MediaShape = RoundedCornerShape(16.dp)
     // Shared by device and protected media; Adaptive uses the actual pane width.
-    val ThumbnailMinSize = 87.dp
-    val MediaGap = 3.dp
-    val ThumbnailShape = RoundedCornerShape(8.dp)
+    val ThumbnailMinSize = 90.dp
+    val MediaGap = 4.dp
+    val ThumbnailShape = RoundedCornerShape(10.dp)
 }
 
 @Composable

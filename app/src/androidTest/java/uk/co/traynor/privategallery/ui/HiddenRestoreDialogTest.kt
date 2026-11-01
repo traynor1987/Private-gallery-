@@ -21,10 +21,10 @@ class HiddenRestoreDialogTest {
         try {block(session,access){deliveries}}finally{compose.runOnIdle {access.close();session.lock()}}
     }
     @Test fun choicesAreExplicitAndPrimaryRequiresFreshPinWithoutChangingHidden()=fixture {session,access,count ->
-        listOf("Copy to Phone Gallery","Move to Phone Gallery","Copy to Primary Vault","Move to Primary Vault").forEach {compose.onNodeWithText(it).performScrollTo().assertIsDisplayed()}
-        compose.onNodeWithText("Copy to Primary Vault").performScrollTo().performClick()
+        listOf("Copy to Phone Gallery","Move to Phone Gallery","Copy to Primary Space","Move to Primary Space").forEach {compose.onNodeWithText(it).performScrollTo().assertIsDisplayed()}
+        compose.onNodeWithText("Copy to Primary Space").performScrollTo().performClick()
         compose.onNodeWithText("Enter passcode").assertIsDisplayed()
-        compose.onNodeWithText("Restore to Primary Vault").assertIsDisplayed()
+        compose.onNodeWithText("Restore to Primary Space").assertIsDisplayed()
         compose.runOnIdle {assertTrue(session.isUnlocked);assertTrue(access.isActive())}
         compose.onNodeWithText("Cancel").performClick()
         compose.waitUntil(3000){count()==1}

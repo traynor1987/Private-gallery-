@@ -49,7 +49,7 @@ class PrimaryCopyDialogTest {
                 hiddenDestination=true,onBrowsePrimary={requested=true})
         } }
         compose.onNodeWithText("Device Gallery · Copy to Hidden").assertIsDisplayed()
-        compose.onNodeWithText("Primary Vault").performClick()
+        compose.onNodeWithText("Primary Space").performClick()
         compose.runOnIdle {assertTrue(requested)}
         compose.onNodeWithText("Allow Gallery access").assertIsDisplayed()
     }
@@ -83,8 +83,8 @@ class PrimaryCopyDialogTest {
                         createPrimaryCopy={PrimaryCopyAccess(context,it)},onDismiss={shown.value=false})}
                 }
             }
-            compose.onNodeWithContentDescription("Hidden Vault menu").performClick()
-            compose.onNodeWithText("Copy from Primary Vault").performScrollTo().performClick()
+            compose.onNodeWithContentDescription("Hidden Space menu").performClick()
+            compose.onNodeWithText("Copy from Primary Space").performScrollTo().performClick()
             compose.onNodeWithText("Enter passcode").assertIsDisplayed()
             compose.onNodeWithText("copy-photo.png").assertDoesNotExist()
             repeat(6) { compose.onNodeWithText("9").performScrollTo().performClick() }

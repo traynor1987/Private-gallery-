@@ -50,12 +50,12 @@ internal fun HiddenPrivateAppIconPicker(
    query=id;items=loaded;loading=false
   }catch(_:Exception){if(alive.get()){loading=false;error="Images could not be loaded. Cancel and try again."}}
  }
- GalleryAlertDialog(scrollBody=false,properties=DialogProperties(securePolicy=SecureFlagPolicy.SecureOn),onDismissRequest={onResult(null)},title={Text("Choose icon from Hidden Vault")},text={
+ GalleryAlertDialog(scrollBody=false,properties=DialogProperties(securePolicy=SecureFlagPolicy.SecureOn),onDismissRequest={onResult(null)},title={Text("Choose icon from Hidden Space")},text={
   Column(verticalArrangement=Arrangement.spacedBy(8.dp)) {
    Text("Select an image for this app's icon. Upload-restricted images are excluded; nothing is sent to the website.",style=MaterialTheme.typography.bodySmall)
    if(loading || choosing)LinearProgressIndicator(Modifier.fillMaxWidth())
    if(error.isNotEmpty())Text(error,color=MaterialTheme.colorScheme.error)
-   if(!loading && items.isEmpty() && error.isEmpty())Text("No eligible images in Hidden Vault.")
+   if(!loading && items.isEmpty() && error.isEmpty())Text("No eligible images in Hidden Space.")
    LazyVerticalGrid(columns=GridCells.Adaptive(88.dp),modifier=Modifier.heightIn(max=360.dp),horizontalArrangement=Arrangement.spacedBy(8.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
     items(items,key={it.id}) {item ->
      var icon by remember(item.id){mutableStateOf("")}

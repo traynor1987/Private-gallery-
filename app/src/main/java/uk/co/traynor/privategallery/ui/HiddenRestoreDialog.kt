@@ -44,7 +44,7 @@ internal fun HiddenRestoreDialog(access:HiddenRestoreAccess,ids:List<String>,onC
             val target=destination
             if(target==HiddenRestoreAccess.Destination.PRIMARY && !authenticated) {
                 PasscodeKeypad(pin=pin,onPinChange={if(!busy)pin=it.take(12)},
-                    appTitle="Restore to Primary Vault",action=if(busy)"Verifying…" else "Continue",
+                    appTitle="Restore to Primary Space",action=if(busy)"Verifying…" else "Continue",
                     message=error,enabled=!busy,
                     secondary={TextButton(onClick={finish("Restore cancelled; Hidden originals unchanged.")}){Text("Cancel")}},
                     onSubmit={

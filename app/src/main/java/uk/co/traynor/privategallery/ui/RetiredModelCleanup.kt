@@ -29,7 +29,7 @@ internal fun RetiredModelCleanup() {
     }
     if (confirm) AlertDialog(onDismissRequest = { confirm = false },
         title = { Text("Remove downloaded AI models?") },
-        text = { Text("Removes old local AI weights and partial downloads from Private Gallery storage. Vault media and cloud provider settings stay intact.") },
+        text = { Text("Removes old local AI weights and partial downloads from NovaOS storage. Vault media and cloud provider settings stay intact.") },
         confirmButton = { TextButton(modifier = Modifier.heightIn(min = 48.dp), onClick = {
             confirm = false
             scope.launch {

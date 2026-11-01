@@ -181,7 +181,7 @@ class HiddenHostRoutingTest {
                 route.value=Route.GALLERY
             }
             compose.onNodeWithText("Phone Gallery").assertDoesNotExist()
-            compose.onNodeWithText("Primary Vault").assertDoesNotExist()
+            compose.onNodeWithText("Primary Space").assertDoesNotExist()
             compose.onNodeWithContentDescription("Vault menu").assertDoesNotExist()
             compose.onNodeWithContentDescription("Gallery menu").assertIsDisplayed()
             compose.runOnIdle {assertTrue(state.session.isUnlocked)}
@@ -198,13 +198,13 @@ class HiddenHostRoutingTest {
                 state.hidden.outside();state.primaryGallery=false;route.value=Route.GALLERY
             }
             compose.onNodeWithText("Phone Gallery").assertIsSelected()
-            compose.onNodeWithText("Primary Vault").performClick()
+            compose.onNodeWithText("Primary Space").performClick()
             compose.runOnIdle {
                 assertFalse(state.session.isUnlocked);assertNull(state.key)
                 assertTrue(state.hidden.selected);assertTrue(state.hidden.session.isUnlocked)
                 state.key=ByteArray(32){9};state.session.unlock();route.value=Route.GALLERY
             }
-            compose.onNodeWithText("Primary Vault").assertIsSelected()
+            compose.onNodeWithText("Primary Space").assertIsSelected()
             compose.onNodeWithContentDescription("Vault menu").assertIsDisplayed()
             compose.onNodeWithText("Phone Gallery").performClick()
             compose.onNodeWithContentDescription("Vault menu").assertDoesNotExist()

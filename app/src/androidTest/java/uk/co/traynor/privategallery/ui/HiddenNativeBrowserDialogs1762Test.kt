@@ -82,10 +82,10 @@ class HiddenNativeBrowserDialogs1762Test {
         var manages=0;var closes=0
         val status="Transfer status ".repeat(300)
         content(theme) {HiddenDownloadsDialog(status,{manages++},{closes++})}
-        compose.onNodeWithText("Supported GET image/video downloads are saved encrypted in Hidden Vault. Return to Hidden Vault to manage saved media. Returning closes all browser tabs and cancels transfers still in progress.").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("Supported GET image/video downloads are saved encrypted in Hidden Space. Return to Hidden Space to manage saved media. Returning closes all browser tabs and cancels transfers still in progress.").performScrollTo().assertIsDisplayed()
         compose.onNodeWithText("Keep browsing").assertIsDisplayed().performClick()
         compose.runOnIdle {assertEquals(0,manages);assertEquals(1,closes)}
-        compose.onNodeWithText("Manage in Hidden Vault").assertIsDisplayed().performClick()
+        compose.onNodeWithText("Manage in Hidden Space").assertIsDisplayed().performClick()
         compose.runOnIdle {assertEquals(1,manages);assertEquals(1,closes)}
     }
     @Test fun findLightCoverKeyboardAndActions()=find(AppTheme.LIGHT)
@@ -175,7 +175,7 @@ class HiddenNativeBrowserDialogs1762Test {
     private fun upload(theme:AppTheme) {
         var sent=false
         content(theme) {var review by remember {mutableStateOf(false)}
-            GalleryAlertDialog(onDismissRequest={},title={Text(if(review)"Send media outside Hidden Vault?" else "Choose from Hidden Vault")},text={
+            GalleryAlertDialog(onDismissRequest={},title={Text(if(review)"Send media outside Hidden Space?" else "Choose from Hidden Space")},text={
                 if(review)HiddenNativeUploadConsentContent("fixture.invalid",4)
                 else HiddenNativePickerIntro(true,501,7,false,600,600,null,false)
             },confirmButton={TextButton(onClick={if(review)sent=true else review=true}){Text(if(review)"Allow upload" else "Review upload")}},dismissButton={TextButton(onClick={}){Text("Cancel")}})
@@ -207,7 +207,7 @@ class HiddenNativeBrowserDialogs1762Test {
         val entries=(0..500).map {HiddenNativeUploadItem("photo-$it","Photo $it","image/png")}
         val loading=mutableStateOf(true);val selected=mutableStateOf<Set<String>>(emptySet())
         var reviews=0
-        content(theme) {GalleryAlertDialog(scrollBody=false,onDismissRequest={},title={Text("Choose from Hidden Vault")},text={
+        content(theme) {GalleryAlertDialog(scrollBody=false,onDismissRequest={},title={Text("Choose from Hidden Space")},text={
             HiddenNativeUploadPickerGrid(entries,loading.value,true,3,7,501,null,selected.value,
                 preview={_,callback ->callback(Result.failure(IllegalStateException("Synthetic unavailable preview")))},choose={selected.value=selected.value+it.id})
         },confirmButton={TextButton(enabled=selected.value.isNotEmpty(),onClick={reviews++}){Text("Review upload")}},dismissButton={TextButton(onClick={}){Text("Cancel")}})}

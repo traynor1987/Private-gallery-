@@ -24,13 +24,13 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 
-/** UI only: the authenticated owner decides whether management can return to Hidden Vault. */
+/** UI only: the authenticated owner decides whether management can return to Hidden Space. */
 @Composable internal fun HiddenDownloadsDialog(status:String,onManage:()->Unit,onClose:()->Unit,onCancel:(()->Unit)?=null) {
     GalleryAlertDialog(onDismissRequest=onClose,title={Text("Hidden downloads")},text={
         Column {if(status.isNotBlank())Text(status)
             if(onCancel!=null)TextButton(onClick=onCancel){Text("Cancel active download")}
-            Text("Supported GET media and document downloads are saved encrypted in Hidden Vault. Return to Hidden Vault to manage saved media. Returning closes all browser tabs and cancels transfers still in progress.")}
-    },confirmButton={TextButton(onClick=onManage){Text("Manage in Hidden Vault")}},dismissButton={TextButton(onClick=onClose){Text("Keep browsing")}})
+            Text("Supported GET media and document downloads are saved encrypted in Hidden Space. Return to Hidden Space to manage saved media. Returning closes all browser tabs and cancels transfers still in progress.")}
+    },confirmButton={TextButton(onClick=onManage){Text("Manage in Hidden Space")}},dismissButton={TextButton(onClick=onClose){Text("Keep browsing")}})
 }
 /** Find presentation only; WebView matching and lifecycle stay with the isolated owner. */
 @Composable internal fun HiddenFindBar(query:String,result:String,onChange:(String)->Unit,onNext:(Boolean)->Unit,onClose:()->Unit) {
@@ -63,7 +63,7 @@ import androidx.compose.ui.unit.dp
 @Composable internal fun HiddenNativeUploadConsentContent(host:String?,count:Int) {Text("Allow the page at $host to access $count selected item(s)? It can keep this media and send it to other destinations. This is an explicit copy outside your vault.")}
 @Composable internal fun HiddenNativePickerIntro(multiple:Boolean,restricted:Int,types:Int,loading:Boolean,loaded:Int,total:Int,error:String?,empty:Boolean) {
     Column {
-        Text("Vault-only items cannot be uploaded. Only this authenticated Hidden Vault is shown.")
+        Text("Vault-only items cannot be uploaded. Only this authenticated Hidden Space is shown.")
         Text(if(multiple)"Select up to four compatible items, then review the upload." else "Select one compatible item. Nothing is sent before confirmation.")
         Text("$restricted Vault-only restricted item(s) cannot be uploaded. $types other item(s) do not match this website's accepted file types.")
         if(loading){Text("Loading Hidden media… $loaded of $total");LinearProgressIndicator(Modifier.fillMaxWidth())}
@@ -104,9 +104,9 @@ import androidx.compose.ui.unit.dp
             TextButton(onClick={history()}){Text("History")}
             Row(verticalAlignment=androidx.compose.ui.Alignment.CenterVertically) {Switch(modifier=Modifier.sizeIn(minWidth=48.dp,minHeight=48.dp).semantics {contentDescription="Save Hidden $indicator history"},checked=saveHistory,onCheckedChange={setHistory(it)});Text("Save Hidden $indicator history")}
             TextButton(onClick={clearHistory()}){Text("Clear Hidden history")}
-            Text("Bookmarks and optional history stay encrypted in Hidden Vault. Clearing browsing data retains bookmarks.")
+            Text("Bookmarks and optional history stay encrypted in Hidden Space. Clearing browsing data retains bookmarks.")
             TextButton(onClick={toggleDesktop()}){Text(if(desktop)"Desktop layout on" else "Desktop layout off")}
-            TextButton(onClick={download()}){Text("Save GET file to Hidden Vault")}
+            TextButton(onClick={download()}){Text("Save GET file to Hidden Space")}
             TextButton(onClick={clearClose()}){Text("Clear browsing data and close")}
     }
 }

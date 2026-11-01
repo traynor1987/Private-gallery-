@@ -5,7 +5,7 @@ public class HomeLayoutChecks {
   static void check(boolean condition) { if (!condition) throw new AssertionError(); }
   public static void main(String[] args) {
     HomeLayout home = HomeLayout.defaults();
-    check(home.visible().size() == 8);
+    check(home.visible().size() == 10);
     home = home.hide(HomeLayout.Shortcut.BROWSER).pin(HomeLayout.Shortcut.CAMERA);
     check(!home.visible().contains(HomeLayout.Shortcut.BROWSER));
     check(home.favourites().contains(HomeLayout.Shortcut.CAMERA));

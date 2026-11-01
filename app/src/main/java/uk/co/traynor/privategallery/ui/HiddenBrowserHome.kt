@@ -82,10 +82,8 @@ internal fun HiddenBrowserHome(session:HiddenSession,onGallery:()->Unit,onVault:
     }
     val background=MaterialTheme.colorScheme.background.toArgb()
     Column(modifier.fillMaxSize().imePadding()) {
-        Row(Modifier.fillMaxWidth().padding(horizontal=12.dp)) {
-            Text("Hidden Browser · ${mode.indicator}",Modifier.weight(1f).padding(vertical=16.dp),style=MaterialTheme.typography.titleMedium)
-            TextButton(onClick={runtime?.close();onVault()}){Text("Done")}
-        }
+        NovaAppHeader(if(activity?.homePrivateAppsRequested==true)"Private Apps"else"Browser","Hidden Space · ${mode.indicator}",
+            onHome={runtime?.close();activity?.returnPrivateHome()},onLock={activity?.lockNovaSpace()},onPanic={activity?.panicExit()})
         BrowserAddressBar(runtime?.address.orEmpty(),{runtime?.address=it},runtime?.connected==true,runtime?.busy==true,
             {runtime?.let {it.navigate(it.address)}},{runtime?.refreshOrStop()},{})
         Text("${runtime?.status ?: "Disconnected"} · ${mode.label}",Modifier.padding(8.dp),style=MaterialTheme.typography.bodySmall)
@@ -134,10 +132,10 @@ internal fun HiddenBrowserHome(session:HiddenSession,onGallery:()->Unit,onVault:
                     Text("Save Hidden history in this mode",Modifier.padding(start=8.dp))
                 }
                 TextButton(onClick={runtime?.clearHistory()}){Text("Clear Hidden history")}
-                Text("Bookmarks and optional history are encrypted in Hidden Vault, separately for each mode. Clearing browsing data keeps bookmarks.",style=MaterialTheme.typography.bodySmall)
+                Text("Bookmarks and optional history are encrypted in Hidden Space, separately for each mode. Clearing browsing data keeps bookmarks.",style=MaterialTheme.typography.bodySmall)
                 TextButton(onClick={settings=false;onVault()}){Text("Manage Hidden downloads")}
                 TextButton(onClick={privacy=!privacy}){Text("Privacy information")}
-                if(privacy)Text("Browsing uses only the selected transport. VPN + Tor is unavailable. VPN Only opens a separate interactive browser with JavaScript and forms. Tor Only uses the separate native interface with JavaScript off and forms/uploads through an isolated Tor route, once verification gates permit activation. Some websites will not work. This is not Tor Browser. Tabs and cookies are session-only. Browser profile data is app-private; downloads are encrypted in Hidden Vault. A fixed HTTPS check to example.com verifies connectivity over the selected route. Physical DNS-leak verification remains required.",style=MaterialTheme.typography.bodySmall)
+                if(privacy)Text("Browsing uses only the selected transport. VPN + Tor is unavailable. VPN Only opens a separate interactive browser with JavaScript and forms. Tor Only uses the separate native interface with JavaScript off and forms/uploads through an isolated Tor route, once verification gates permit activation. Some websites will not work. This is not Tor Browser. Tabs and cookies are session-only. Browser profile data is app-private; downloads are encrypted in Hidden Space. A fixed HTTPS check to example.com verifies connectivity over the selected route. Physical DNS-leak verification remains required.",style=MaterialTheme.typography.bodySmall)
                 TextButton(onClick={diagnostics=!diagnostics}){Text("Connection diagnostics")}
                 if(diagnostics)Text(runtime?.detail ?: "No active session. No addresses or browsing data are logged.",style=MaterialTheme.typography.bodySmall)
             }
@@ -174,6 +172,6 @@ internal fun HiddenBrowserPreferences() {
             }
         }}
         Text("VPN + Tor is currently unavailable. Tor Only is the default. VPN Only does not provide Tor anonymity.")
-        Text("JavaScript is disabled in Tor Only. Both modes use an independent native browser once their verification gates pass. Neither mode provides Tor Browser fingerprinting protection. Cookies and tabs are cleared when browsing ends. Optional history and bookmarks remain encrypted until explicitly removed. Manage encrypted downloads in Hidden Vault. Connection retry and data clearing are inside Hidden Browser Settings.")
+        Text("JavaScript is disabled in Tor Only. Both modes use an independent native browser once their verification gates pass. Neither mode provides Tor Browser fingerprinting protection. Cookies and tabs are cleared when browsing ends. Optional history and bookmarks remain encrypted until explicitly removed. Manage encrypted downloads in Hidden Space. Connection retry and data clearing are inside Hidden Browser Settings.")
     }
 }

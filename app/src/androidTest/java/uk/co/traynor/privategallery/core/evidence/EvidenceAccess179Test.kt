@@ -34,7 +34,7 @@ class EvidenceAccess179Test {
    try{assertArrayEquals(primaryBytes,actual)}finally{actual.fill(0)}
    val other=secret.sources.readVerified(second.id,{false}){_,input->input.readBytes()};try{assertArrayEquals(hiddenBytes,other)}finally{other.fill(0)}
    assertEquals(listOf(first.id),primaryRepo.items().map{it.id});assertEquals(listOf(second.id),hiddenRepo.items().map{it.id});assertArrayEquals(first.plaintextSha256,primaryRepo.items().single().plaintextSha256);assertArrayEquals(second.plaintextSha256,hiddenRepo.items().single().plaintextSha256)
-   secret.close();assertFalse(secret.current());assertTrue("Closing Evidence Locker does not lock the Hidden Vault",hidden.isUnlocked)
+   secret.close();assertFalse(secret.current());assertTrue("Closing Evidence Locker does not lock the Hidden Space",hidden.isUnlocked)
    refused{secret.sources.list()};primary.close();refused{primary.store.read()};assertEquals(listOf(first.id),primaryRepo.items().map{it.id})
   }finally{primary.close();secret.close();hidden.lock();key.fill(0);primaryBytes.fill(0);hiddenBytes.fill(0);root.deleteRecursively()}
  }

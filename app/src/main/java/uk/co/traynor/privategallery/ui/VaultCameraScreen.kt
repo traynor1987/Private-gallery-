@@ -150,7 +150,11 @@ internal fun VaultCameraScreen(controller:VaultCameraController,onExit:()->Unit)
     }
     Surface(Modifier.fillMaxSize(),color=if(active&&black)Color.Black else MaterialTheme.colorScheme.background) {
         Column(Modifier.fillMaxSize().safeDrawingPadding()) {
-            if(!active || !reading) Row(Modifier.fillMaxWidth().heightIn(min=48.dp).padding(horizontal=8.dp),verticalAlignment=Alignment.CenterVertically) {
+            if(!active) {
+                val security=novaSecurityActions()
+                NovaAppHeader("Camera",security?.space,onHome={onExit();security?.home?.invoke()},onLock=security?.lock,onPanic=security?.panic)
+            }
+            if(active && !reading) FlowRow(Modifier.fillMaxWidth().padding(horizontal=8.dp),horizontalArrangement=Arrangement.End) {
                 IconButton(onClick=onExit){Icon(Icons.Default.Close,"Stop and exit camera",tint=if(active&&black)Color.Gray else LocalContentColor.current)}
                 if(!active||!black)Text(if(active) "" else "Camera",Modifier.weight(1f),style=MaterialTheme.typography.titleMedium)
                 else Spacer(Modifier.weight(1f))
@@ -163,6 +167,11 @@ internal fun VaultCameraScreen(controller:VaultCameraController,onExit:()->Unit)
                     TextButton(onClick={fillPreview=!fillPreview;preview.scaleType=if(fillPreview)PreviewView.ScaleType.FILL_CENTER else PreviewView.ScaleType.FIT_CENTER},enabled=!controller.busy){Text(if(fillPreview)"Fill" else "Fit")}
                 }
                 if(active&&!controller.busy&&countdown==0) IconButton(onClick={if(controller.pauseForSettings())active=false}) { Icon(Icons.Default.Tune,"Camera modes and settings") }
+                if(active&&!black) {
+                    val security=novaSecurityActions()
+                    IconButton(onClick={security?.lock?.invoke()}){Icon(Icons.Default.Lock,"Lock Space")}
+                    IconButton(onClick={security?.panic?.invoke()}){Icon(Icons.Default.PowerSettingsNew,"Panic Exit")}
+                }
                 if(active&&black)Text(if(controller.recordingNow)"REC ${controller.elapsed}s" else controller.status,
                     Modifier.weight(1f),color=Color.DarkGray,style=MaterialTheme.typography.labelSmall)
             }

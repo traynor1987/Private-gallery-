@@ -23,7 +23,7 @@ class MediaDetails174Test {
     onDispose {activity.window.setFlags(old and android.view.WindowManager.LayoutParams.FLAG_SECURE,android.view.WindowManager.LayoutParams.FLAG_SECURE)}
    }
    SideEffect {activity.window.setFlags(if(secureValue)android.view.WindowManager.LayoutParams.FLAG_SECURE else 0,android.view.WindowManager.LayoutParams.FLAG_SECURE)}
-   MediaDetailsDialog("picker","Hidden Vault",{_,done->done(Result.success(item))},{_,time,zone,done->
+   MediaDetailsDialog("picker","Hidden Space",{_,done->done(Result.success(item))},{_,time,zone,done->
     item=item.copy(adjustedTakenAtEpochMillis=time,adjustedTimeZone=zone);updates++;done(Result.success(Unit))
    },null,{},{})
   }}
@@ -88,7 +88,7 @@ class MediaDetails174Test {
   val hash=ByteArray(32){7}
   var item=VaultItem("id","image/jpeg","private.jpg",1000,100,hash,byteArrayOf(),VaultItemState.COMPLETE,capturedAtEpochMillis=1700000000000,adjustedTakenAtEpochMillis=1800000000000,adjustedTimeZone="UTC")
   var changes=0
-  compose.setContent {PrivateGalleryTheme {MediaDetailsDialog("id","Hidden Vault",{_,done->done(Result.success(item))},{_,time,zone,done->item=item.copy(adjustedTakenAtEpochMillis=time,adjustedTimeZone=zone);done(Result.success(Unit))},null,{changes++},{})}}
+  compose.setContent {PrivateGalleryTheme {MediaDetailsDialog("id","Hidden Space",{_,done->done(Result.success(item))},{_,time,zone,done->item=item.copy(adjustedTakenAtEpochMillis=time,adjustedTimeZone=zone);done(Result.success(Unit))},null,{changes++},{})}}
   compose.onNodeWithText("Date Taken · Adjusted").assertExists()
   compose.onNodeWithText("Restore Original Date").performScrollTo().performClick()
   compose.onNodeWithText("Date Taken · Adjusted").assertDoesNotExist()

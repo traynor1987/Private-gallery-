@@ -112,7 +112,7 @@ fun FullscreenMediaViewer(
     onUndoImageCrop: ((id: String, onComplete: (Result<ImageEditState?>) -> Unit) -> Unit)? = null,
     onResetImageCrop: ((id: String, onComplete: (Result<Unit>) -> Unit) -> Unit)? = null,
     onCropChanged: () -> Unit = {},
-    editingVaultLabel: String = "Primary Vault",
+    editingVaultLabel: String = "Primary Space",
     onSaveEditedCopy: ((String, ByteArray, () -> Boolean, (Result<Unit>) -> Unit) -> Unit)? = null,
     onAddToCollection: ((ViewerMediaEntry) -> Unit)? = null,
     restrictedIds: Set<String> = emptySet(),
@@ -252,7 +252,7 @@ fun FullscreenMediaViewer(
                 onSaveAiWithSource = onSaveAiCopy,
                 onSaveRemoteWithSource = onSaveRemoteCopy,
                 onSaveWithSource = onSaveEditedCopy,
-                onExternalEdit = onExternalEdit ?: if(editingVaultLabel=="Primary Vault") ({id -> viewerActivity?.openExternalEdit(id)}) else null,
+                onExternalEdit = onExternalEdit ?: if(editingVaultLabel=="Primary Space") ({id -> viewerActivity?.openExternalEdit(id)}) else null,
                 onSave = { _, _, completed ->
                     completed(Result.failure(IllegalStateException("Save unavailable")))
                 },

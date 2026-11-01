@@ -12,6 +12,7 @@ import android.net.Uri
 import android.net.VpnService
 import android.provider.MediaStore
 import android.provider.Settings
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import android.view.WindowManager
 import android.webkit.CookieManager
 import android.webkit.WebStorage
@@ -516,7 +517,7 @@ class MainActivity : FragmentActivity() {
             LaunchedEffect(ticket,unlocked,previewConcealmentEpoch){if(unlocked)resumeExternalPresentation(ticket)}
         }
         if(!externalCurrent(ticket))return
-        uk.co.traynor.privategallery.ui.ExternalEditingDialog(if(ticket.hidden==null)"Primary Vault" else "Hidden Vault",ticket.file!=null,ticket.result,ticket.saved,ticket.status,ticket.exportDestination!=null,
+        uk.co.traynor.privategallery.ui.ExternalEditingDialog(if(ticket.hidden==null)"Primary Space" else "Hidden Space",ticket.file!=null,ticket.result,ticket.saved,ticket.status,ticket.exportDestination!=null,
             prepare={prepareExternalEdit(ticket){launchExternalEditor(ticket)}},launch={launchExternalEditor(ticket)},export={externalExportOwner=ticket;externalExportPicker.launch("edited-copy.png")},writeExport={writeExternalExport(ticket)},
             pick={runCatching {check(externalCurrent(ticket));persistExternalReceipt(ticket);externalPickerOwner=ticket;ticket.resumePending=true;externalResultPicker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))}.onFailure {ticket.status="Could not retain recovery receipt. Unlock this vault and retry."}},preview={previewExternalResult(ticket,it)},save={bytes,replace,done ->saveExternalResult(ticket,bytes,replace,done)},cleanupPublic={cleanupExternalPublic(ticket)},close={clearExternalEdit()},exportGallery={exportExternalGallery(ticket)},fallback=ticket.fallback,working=ticket.working,editors=ticket.editors,chooseEditor={launchExternalEditor(ticket,it)},dismissEditors={ticket.editors=emptyList()},launchSamsung=if(supportsSamsungEditing())({launchSamsungEditor(ticket)})else null,compatibleEditorAvailable=supportsPhotoEditing(),acknowledgeReceipt={runCatching {check(externalCurrent(ticket));externalRecoveryStore(ticket.hidden!=null).acknowledge(ticket.recoveryId);clearExternalEdit()}.onFailure {ticket.status="Recovery receipt retained. Unlock this vault and retry."}})
     }
@@ -1186,7 +1187,7 @@ class MainActivity : FragmentActivity() {
         route = if ((session.isUnlocked && sessionKey != null) || (retained.hidden.selected && retained.hidden.session.isUnlocked)) retained.route else if (keys.isConfigured) Route.LOCK else Route.SETUP
         setContent {
             PrivateGalleryTheme(appTheme) {
-                if(!displayPrivateHome()) PrivateGalleryApp(route, ::createPin, ::unlock, ::changePin, ::recoverWithOfflineKey, ::finishRecoveryKeySetup, { route = Route.RECOVER }, { route = Route.LOCK }, ::lock, ::importSelected, ::moveSelected, ::loadItems, ::loadCollections, ::loadFavouriteCollection, ::createCollection, ::addItemsToCollection, ::removeItemsFromCollection, ::renameCollection, ::deleteCollection, ::loadCollectionItems, ::readForViewing, ::loadPreview, ::loadImageEdit, ::applyImageCrop, ::undoImageCrop, ::resetImageCrop, ::restore, ::delete, biometricEnabled, ::unlockWithBiometrics, ::enrollBiometrics, ::finishSetup, autoLockTimeout, appTheme, if(retained.hidden.selected) hiddenAllowScreenshots else allowScreenshots, updateStatus, updateLastChecked, availableUpdate != null, mediaAccessAvailable, ::requestDeviceMediaAccess, ::deviceMediaPages, { deviceGallery.albums() }, ::loadDeviceThumbnail, ::openSettings, { openNonBrowser(Route.GALLERY); mediaAccessAvailable = hasDeviceMediaAccess() }, { openNonBrowser(Route.VAULT) }, { openNonBrowser(Route.FAVOURITE) }, ::openBrowser, ::applyAutoLockTimeout, ::applyTheme, ::applyAllowScreenshots, ::applyBrowserSearchEngine, ::applyClearBrowserDataOnLock, ::clearBrowserData, browserSearchEngine, clearBrowserDataOnLock, browserSaveHistory, ::applyBrowserSaveHistory, browserWebView, { view -> browserWebView = view }, { exit -> browserFullscreenExit = exit }, ::checkForUpdates, ::downloadUpdate, recoveryKeys.isConfigured, pendingRecoveryKey?.concatToString(), ::importBrowserSource, browserRequireVpn, browserVpnState == VpnConnectionState.CONNECTED, ::importWireGuardProfile, vpnProfileStatus, browserVpnState, browserAutoConnectVpn, ::applyBrowserAutoConnectVpn, ::applyBrowserRequireVpn, ::setFavouriteCollection, vpnProfiles, ::selectVpnProfile, ::removeVpnProfile, browserBookmarks, ::addBrowserBookmark, ::removeBrowserBookmark, browserV2Session, ::loadBrowserHistory, ::clearBrowserHistory, ::recordBrowserHistory, browserVpnPreparing, browserVpnPermissionRequired, ::requestBrowserVpnPermissionOrConnect, { item, bytes, cancelled, completed -> saveEditedCopy(item, bytes, cancelled, completed) }, ::readForEditing, { item, bytes, cancelled, completed -> saveEditedCopy(item, bytes, cancelled, completed, true) }, onReadVideoForViewing = ::readVideoForViewing, onOpenVideoSession = ::openVideoSession, onSaveAiCopy = { item, bytes, provenance, cancelled, completed -> saveEditedCopy(item, bytes, cancelled, completed, aiProvenance = provenance) }, onPrepareBrowserUpload = ::prepareBrowserUpload, onClearBrowserUpload = ::clearBrowserUploadCopies, hideContent = hideContent, secretDiscovered = secretDiscovered, onHideContentChanged = ::applyHideContent, onSecretDiscoveryChanged = ::applySecretDiscovery, onAuthenticateSensitive = ::authenticateSensitive, onCancelSensitiveAuthentication = ::cancelSensitiveAuthentication, onVerifySecretPin = ::verifySecretPin, onGenerateImage = ::generateVaultImage, onChooseBackupExport = { backupExportLauncher.launch("private-gallery-vault.pgvault") }, backupExportUri = backupExportUri, onCancelBackupExport = { backupExportUri = null }, onExportBackup = ::exportEncryptedBackup, backupStatus = backupStatus, onChooseBackupRestore = { backupRestoreLauncher.launch(arrayOf("application/octet-stream", "application/zip", "*/*")) }, backupRestoreUri = backupRestoreUri, onCancelBackupRestore = { backupRestoreUri = null }, onRestoreBackup = ::restoreEncryptedBackup, onLoadRecentlyDeleted = ::loadRecentlyDeleted, onMoveItemsToRecentlyDeleted = ::moveItemsToRecentlyDeleted, onChangeRecentlyDeleted = ::changeRecentlyDeleted, onRestoreSelectedVaultCopies = ::restoreSelectedVaultCopies, onLeaveHidden = ::leaveHiddenToDestination, hiddenState = retained.hidden, primaryAuthority = {session.isUnlocked && sessionKey != null}, onReturnToPrimary = ::returnToPrimaryVault, createPrimaryCopy = ::createPrimaryCopy, primaryGallerySelected = retained.primaryGallery, onGallerySourceSelected = ::selectGallerySource, onTransferToHidden = ::transferPrimaryToHidden, phoneMoveStatus = phoneMoveStatus, onCancelGalleryAuthentication = ::cancelGalleryAuthentication, onCapturePrimaryEditorAuthority = ::capturePrimaryEditorAuthority, onInvalidatePrimaryPresentation = ::invalidatePrimaryBrowserPresentation, onDirectHiddenUnlock = ::unlockHiddenDirect)
+                if(!displayPrivateHome()) Box(Modifier.fillMaxSize().then(if(evidenceOwner!=null || vaultCamera!=null)Modifier.clearAndSetSemantics{}else Modifier)) {PrivateGalleryApp(route, ::createPin, ::unlock, ::changePin, ::recoverWithOfflineKey, ::finishRecoveryKeySetup, { route = Route.RECOVER }, { route = Route.LOCK }, ::lock, ::importSelected, ::moveSelected, ::loadItems, ::loadCollections, ::loadFavouriteCollection, ::createCollection, ::addItemsToCollection, ::removeItemsFromCollection, ::renameCollection, ::deleteCollection, ::loadCollectionItems, ::readForViewing, ::loadPreview, ::loadImageEdit, ::applyImageCrop, ::undoImageCrop, ::resetImageCrop, ::restore, ::delete, biometricEnabled, ::unlockWithBiometrics, ::enrollBiometrics, ::finishSetup, autoLockTimeout, appTheme, if(retained.hidden.selected) hiddenAllowScreenshots else allowScreenshots, updateStatus, updateLastChecked, availableUpdate != null, mediaAccessAvailable, ::requestDeviceMediaAccess, ::deviceMediaPages, { deviceGallery.albums() }, ::loadDeviceThumbnail, ::openSettings, { openNonBrowser(Route.GALLERY); mediaAccessAvailable = hasDeviceMediaAccess() }, { openNonBrowser(Route.VAULT) }, { openNonBrowser(Route.FAVOURITE) }, ::openBrowser, ::applyAutoLockTimeout, ::applyTheme, ::applyAllowScreenshots, ::applyBrowserSearchEngine, ::applyClearBrowserDataOnLock, ::clearBrowserData, browserSearchEngine, clearBrowserDataOnLock, browserSaveHistory, ::applyBrowserSaveHistory, browserWebView, { view -> browserWebView = view }, { exit -> browserFullscreenExit = exit }, ::checkForUpdates, ::downloadUpdate, recoveryKeys.isConfigured, pendingRecoveryKey?.concatToString(), ::importBrowserSource, browserRequireVpn, browserVpnState == VpnConnectionState.CONNECTED, ::importWireGuardProfile, vpnProfileStatus, browserVpnState, browserAutoConnectVpn, ::applyBrowserAutoConnectVpn, ::applyBrowserRequireVpn, ::setFavouriteCollection, vpnProfiles, ::selectVpnProfile, ::removeVpnProfile, browserBookmarks, ::addBrowserBookmark, ::removeBrowserBookmark, browserV2Session, ::loadBrowserHistory, ::clearBrowserHistory, ::recordBrowserHistory, browserVpnPreparing, browserVpnPermissionRequired, ::requestBrowserVpnPermissionOrConnect, { item, bytes, cancelled, completed -> saveEditedCopy(item, bytes, cancelled, completed) }, ::readForEditing, { item, bytes, cancelled, completed -> saveEditedCopy(item, bytes, cancelled, completed, true) }, onReadVideoForViewing = ::readVideoForViewing, onOpenVideoSession = ::openVideoSession, onSaveAiCopy = { item, bytes, provenance, cancelled, completed -> saveEditedCopy(item, bytes, cancelled, completed, aiProvenance = provenance) }, onPrepareBrowserUpload = ::prepareBrowserUpload, onClearBrowserUpload = ::clearBrowserUploadCopies, hideContent = hideContent, secretDiscovered = secretDiscovered, onHideContentChanged = ::applyHideContent, onSecretDiscoveryChanged = ::applySecretDiscovery, onAuthenticateSensitive = ::authenticateSensitive, onCancelSensitiveAuthentication = ::cancelSensitiveAuthentication, onVerifySecretPin = ::verifySecretPin, onGenerateImage = ::generateVaultImage, onChooseBackupExport = { backupExportLauncher.launch("private-gallery-vault.pgvault") }, backupExportUri = backupExportUri, onCancelBackupExport = { backupExportUri = null }, onExportBackup = ::exportEncryptedBackup, backupStatus = backupStatus, onChooseBackupRestore = { backupRestoreLauncher.launch(arrayOf("application/octet-stream", "application/zip", "*/*")) }, backupRestoreUri = backupRestoreUri, onCancelBackupRestore = { backupRestoreUri = null }, onRestoreBackup = ::restoreEncryptedBackup, onLoadRecentlyDeleted = ::loadRecentlyDeleted, onMoveItemsToRecentlyDeleted = ::moveItemsToRecentlyDeleted, onChangeRecentlyDeleted = ::changeRecentlyDeleted, onRestoreSelectedVaultCopies = ::restoreSelectedVaultCopies, onLeaveHidden = ::leaveHiddenToDestination, hiddenState = retained.hidden, primaryAuthority = {session.isUnlocked && sessionKey != null}, onReturnToPrimary = ::returnToPrimaryVault, createPrimaryCopy = ::createPrimaryCopy, primaryGallerySelected = retained.primaryGallery, onGallerySourceSelected = ::selectGallerySource, onTransferToHidden = ::transferPrimaryToHidden, phoneMoveStatus = phoneMoveStatus, onCancelGalleryAuthentication = ::cancelGalleryAuthentication, onCapturePrimaryEditorAuthority = ::capturePrimaryEditorAuthority, onInvalidatePrimaryPresentation = ::invalidatePrimaryBrowserPresentation, onDirectHiddenUnlock = ::unlockHiddenDirect)}
                 privateAppAuthentication?.let { uk.co.traynor.privategallery.ui.PrivateAppAuthentication(it) }
                 HomePresentation()
                 evidenceOwner?.let { owner -> androidx.compose.runtime.key(owner) { uk.co.traynor.privategallery.ui.EvidenceLockerHost(owner,activityResumed) { if(evidenceOwner===owner){closeEvidenceLocker();finishHomeFeature(uk.co.traynor.privategallery.core.home.HomeLayout.Shortcut.EVIDENCE_LOCKER)} } } }
@@ -1313,6 +1314,7 @@ class MainActivity : FragmentActivity() {
             hiddenExpired=hiddenCurrent && !hidden.isUnlocked
         }
         if(hiddenExpired) {
+            retained.clearNovaNavigation()
             retained.hidden.authenticated=false;retained.hidden.visible=false
             hiddenBrowserOwner?.close();automaticBiometricPromptAttempted=false
         }
@@ -1555,6 +1557,7 @@ class MainActivity : FragmentActivity() {
     private fun lock() = lockPrimary(revokeHidden = true)
 
     private fun lockPrimary(revokeHidden: Boolean) {
+        retained.clearNovaNavigation()
         if(revokeHidden || evidenceOwner?.owner==uk.co.traynor.privategallery.core.evidence.EvidenceCatalog.Owner.PRIMARY)closeEvidenceLocker()
         privateAppAuthentication?.done?.invoke(false)
         privateAppAuthentication=null
@@ -1680,9 +1683,9 @@ class MainActivity : FragmentActivity() {
     }
 
     internal fun privateAppConnectionLabel():String = when {
-        browserVpnState==VpnConnectionState.CONNECTED -> "Primary Vault · VPN connected"
-        browserRequireVpn -> "Primary Vault · VPN required"
-        else -> "Primary Vault · VPN not required"
+        browserVpnState==VpnConnectionState.CONNECTED -> "Primary Space · VPN connected"
+        browserRequireVpn -> "Primary Space · VPN required"
+        else -> "Primary Space · VPN not required"
     }
 
     private var privateAppAuthentication by mutableStateOf<uk.co.traynor.privategallery.ui.PrivateAppAuthenticationRequest?>(null)
@@ -1716,8 +1719,8 @@ class MainActivity : FragmentActivity() {
     internal fun privateAppProfileClearStatus():String? {
         if(!privateAppProfileClearPending())return null
         return if(androidx.webkit.WebViewFeature.isFeatureSupported(androidx.webkit.WebViewFeature.DELETE_BROWSING_DATA))
-            "Shared browser data is being cleared. Browsing stays blocked until clearing finishes. If this persists, close and reopen Private Gallery to retry."
-        else "Browsing is blocked because shared profile clearing is required. Update Android System WebView, then reopen Private Gallery to complete clearing."
+            "Shared browser data is being cleared. Browsing stays blocked until clearing finishes. If this persists, close and reopen NovaOS to retry."
+        else "Browsing is blocked because shared profile clearing is required. Update Android System WebView, then reopen NovaOS to complete clearing."
     }
     private fun resumePrivateAppProfileClear() {
         if(!androidx.webkit.WebViewFeature.isFeatureSupported(androidx.webkit.WebViewFeature.DELETE_BROWSING_DATA))return
@@ -1753,14 +1756,22 @@ class MainActivity : FragmentActivity() {
     private var homeHiddenAuthentication:uk.co.traynor.privategallery.core.hidden.HiddenSession.Authentication?
         get()=retained.homeHiddenAuthentication
         set(value){retained.homeHiddenAuthentication=value}
-    internal var homeVaultMode by mutableStateOf("MEDIA")
+    internal val homeVaultMode:String
+        get()=when(retained.homeFeatureRoot){"COLLECTIONS"->"COLLECTIONS";"RECENTLY_DELETED"->"TRASH";else->"MEDIA"}
     internal var homePrivateAppsRequested by mutableStateOf(false)
     internal fun openHomePreferences() {homeCustomisationRequested=true;returnPrivateHome()}
     internal fun returnPrivateHome() {
-        if(hideContent || !activityResumed)return
+        if(!activityResumed)return
         val hidden=retained.hidden.selected
         if(if(hidden)!retained.hidden.session.isUnlocked else !session.isUnlocked||sessionKey==null)return
+        if(uk.co.traynor.privategallery.core.home.NovaNavigation.rootDestination(hideContent)=="GALLERY") {
+            closeEvidenceLocker();closeVaultCamera();retained.clearNovaNavigation();retained.homeFeatureRoot=null;homeVisible=false
+            if(route==Route.GALLERY)moveTaskToBack(true)else openNonBrowser(Route.GALLERY)
+            return
+        }
         if(hidden)homeHiddenAuthentication=retained.hidden.session.authentication()else homePrimaryAuthentication=session.captureAuthenticationEpoch()
+        if(vaultCamera!=null){exitVaultCamera();if(homeVisible)return}
+        retained.clearNovaNavigation()
         closeEvidenceLocker();retained.homeFeatureRoot=null;if(route!=Route.VAULT)openNonBrowser(Route.VAULT);homeRequestRevision++;homeVisible=true
     }
     internal fun finishHomeFeature(item:uk.co.traynor.privategallery.core.home.HomeLayout.Shortcut) {
@@ -1789,14 +1800,21 @@ class MainActivity : FragmentActivity() {
     private fun launchHomeShortcut(item:uk.co.traynor.privategallery.core.home.HomeLayout.Shortcut) {
         val hidden=retained.hidden.selected
         if(hideContent||!activityResumed||(if(hidden)!retained.hidden.session.isUnlocked else !session.isUnlocked||sessionKey==null))return
-        homeVisible=false;retained.homeFeatureRoot=item.name;homeVaultMode="MEDIA"
+        retained.clearNovaNavigation()
+        homeVisible=false;retained.homeFeatureRoot=item.name
         when(item) {
             uk.co.traynor.privategallery.core.home.HomeLayout.Shortcut.GALLERY -> {
-                openNonBrowser(Route.VAULT);if(hidden)retained.hidden.select()
+                // Phone media is an explicit app; the existing source selector retains
+                // the separate Primary authentication gate for encrypted Primary media.
+                selectGallerySource(false)
+            }
+            uk.co.traynor.privategallery.core.home.HomeLayout.Shortcut.VAULT,
+            uk.co.traynor.privategallery.core.home.HomeLayout.Shortcut.FAVOURITES -> {
+                val destination=Route.valueOf(uk.co.traynor.privategallery.core.home.NovaNavigation.route(item))
+                openNonBrowser(destination);if(hidden)retained.hidden.select(destination)
             }
             uk.co.traynor.privategallery.core.home.HomeLayout.Shortcut.COLLECTIONS,
             uk.co.traynor.privategallery.core.home.HomeLayout.Shortcut.RECENTLY_DELETED -> {
-                homeVaultMode=if(item==uk.co.traynor.privategallery.core.home.HomeLayout.Shortcut.COLLECTIONS)"COLLECTIONS"else"TRASH"
                 openNonBrowser(Route.VAULT);if(hidden)retained.hidden.select()
             }
             uk.co.traynor.privategallery.core.home.HomeLayout.Shortcut.BROWSER,
@@ -1820,42 +1838,83 @@ class MainActivity : FragmentActivity() {
         if(!homePrivateAppsRequested || !retained.hidden.selected || !retained.hidden.session.isUnlocked || route!=Route.BROWSER)return false
         homePrivateAppsRequested=false;return true
     }
-    @Composable internal fun HomeStartupSettings() {
+    private fun novaHiddenNavigationIdentity():uk.co.traynor.privategallery.core.hidden.HiddenSession.Authentication? {
+        val hidden=retained.hidden.session
+        if(!hidden.isUnlocked)return null
+        val existing=retained.novaHiddenNavigationIdentity
+        if(hidden.isAuthenticationCurrent(existing))return existing
+        return hidden.authentication().also{retained.novaHiddenNavigationIdentity=it}
+    }
+    internal fun novaCollectionPosition():String? {
+        if(retained.hidden.selected) {
+            val hidden=retained.hidden.session
+            return if(hidden.isUnlocked)retained.novaPosition.restore(novaHiddenNavigationIdentity(),0)else null
+        }
+        return if(session.isUnlocked)retained.novaPosition.restore(sessionKey,session.captureAuthenticationEpoch())else null
+    }
+    internal fun rememberNovaCollectionPosition(id:String?) {
+        if(retained.hidden.selected) {
+            val hidden=retained.hidden.session
+            retained.novaPosition.record(novaHiddenNavigationIdentity(),0,id)
+        }else retained.novaPosition.record(if(session.isUnlocked)sessionKey else null,session.captureAuthenticationEpoch(),id)
+    }
+    internal fun switchNovaSpace() {
+        if(hideContent || !activityResumed)return
+        if(retained.hidden.selected) {
+            returnToPrimaryVault()
+            if(session.isUnlocked && sessionKey!=null)returnPrivateHome()
+        } else if(secretDiscovered && session.isUnlocked && sessionKey!=null) {
+            invalidatePrimaryBrowserPresentation();homeVisible=false
+            openNonBrowser(Route.VAULT);retained.hidden.select()
+            if(retained.hidden.authenticated && retained.hidden.session.isUnlocked)returnPrivateHome()
+        }
+    }
+    internal fun lockNovaSpace() {
+        retained.clearNovaNavigation()
+        if(retained.hidden.selected)retained.hidden.lock()else lock()
+    }
+    internal fun novaConcealed():Boolean=hideContent
+    internal fun openNovaSettings() {
         if(!activityResumed)return
-        androidx.compose.runtime.key(retained.hidden.selected) { HomeStartupSettingsScoped() }
+        if(if(retained.hidden.selected)!retained.hidden.session.isUnlocked else !session.isUnlocked||sessionKey==null)return
+        openSettings()
     }
-    @Composable private fun HomeStartupSettingsScoped() {
-            var admittedAccess by remember {mutableStateOf<uk.co.traynor.privategallery.core.evidence.EvidenceAccess?>(null)}
-            DisposableEffect(Unit){onDispose{admittedAccess?.close();admittedAccess=null}}
-            LaunchedEffect(Unit){kotlinx.coroutines.yield();admittedAccess=homeAccess()}
-            val access=admittedAccess ?: return
-            val store=remember(access){uk.co.traynor.privategallery.core.home.HomePreferencesStore(access,appSettings.getBoolean("home-existing-install",true))}
-            var value by remember(access){mutableStateOf<uk.co.traynor.privategallery.core.home.HomePreferences?>(null)}
-            val scope=rememberCoroutineScope()
-            DisposableEffect(access){onDispose{access.close();value=null}}
-            LaunchedEffect(access){val loaded=withContext(Dispatchers.IO){runCatching{store.read()}.getOrNull()};if(access.current())value=loaded}
+    internal fun novaSpaceLabel():String? = uk.co.traynor.privategallery.core.home.NovaNavigation.ownerLabel(retained.hidden.selected,hideContent)
+    internal fun novaApplicationTitle(selected:Route):String = if(hideContent)"NovaOS"else when(selected) {
+        Route.GALLERY -> "Gallery"
+        Route.FAVOURITE -> "Favourites"
+        Route.BROWSER -> "Browser"
+        Route.SETTINGS -> "Settings"
+        else -> retained.homeFeatureRoot?.let {name ->
+            runCatching {uk.co.traynor.privategallery.core.home.HomeLayout.Shortcut.valueOf(name)}.getOrNull()
+        }?.takeIf {uk.co.traynor.privategallery.core.home.NovaNavigation.route(it)=="VAULT"}?.label ?: "Vault"
+    }
+    @Composable internal fun HomeStartupSettings() {
+        if(!activityResumed || hideContent)return
+        uk.co.traynor.privategallery.ui.GalleryCard {
             Text("Startup Screen",style=MaterialTheme.typography.titleMedium)
-            value?.let{preferences->
-                listOf(true to "Private Home",false to "Gallery").forEach{(home,label)->
-                    GalleryChoiceRow(label,preferences.startupHome==home){scope.launch{
-                        val next=preferences.copy(startupHome=home)
-                        val saved=withContext(Dispatchers.IO){runCatching{store.write(next)}.isSuccess}
-                        if(saved&&access.current())value=next
-                    }}
-                }
-            }
+            Text("Nova Home",color=MaterialTheme.colorScheme.primary)
+            Text("Your private workspace opens at Home. Launch Gallery and every other app from its icon.",style=MaterialTheme.typography.bodySmall)
+            TextButton(onClick=::openHomePreferences){Text("Personalise Home")}
+        }
     }
-    private fun displayPrivateHome():Boolean = homeVisible && !hideContent &&
+    private fun novaHomeAdmissionRequired():Boolean =
+        if(retained.hidden.selected)!retained.hidden.session.isAuthenticationCurrent(homeHiddenAuthentication)
+        else homePrimaryAuthentication!=session.captureAuthenticationEpoch()
+    private fun displayPrivateHome():Boolean = !hideContent &&
         route in setOf(Route.GALLERY,Route.VAULT,Route.FAVOURITE,Route.BROWSER,Route.SETTINGS) &&
-        if(retained.hidden.selected)retained.hidden.authenticated&&retained.hidden.session.isUnlocked else session.isUnlocked&&sessionKey!=null
+        (if(retained.hidden.selected)retained.hidden.authenticated&&retained.hidden.session.isUnlocked else session.isUnlocked&&sessionKey!=null) &&
+        (homeVisible || novaHomeAdmissionRequired())
     @Composable private fun HomePresentation() {
         val hidden=retained.hidden.selected
         val admitted=activityResumed && !hideContent && route in setOf(Route.GALLERY,Route.VAULT,Route.FAVOURITE,Route.BROWSER,Route.SETTINGS) &&
             if(hidden)retained.hidden.authenticated&&retained.hidden.session.isUnlocked else session.isUnlocked&&sessionKey!=null
         if(!admitted)return
-        if(!homeVisible && evidenceOwner==null && vaultCamera==null)Box(Modifier.fillMaxSize(),contentAlignment=androidx.compose.ui.Alignment.BottomCenter){
-            androidx.compose.material3.FilledTonalIconButton(onClick=::returnPrivateHome,modifier=Modifier.padding(bottom=82.dp)){
-                Icon(Icons.Default.Home,"Private Home")
+        SideEffect {
+            if(novaHomeAdmissionRequired()) {
+                retained.clearNovaNavigation();retained.homeFeatureRoot=null;homeVisible=true
+                if(hidden)homeHiddenAuthentication=retained.hidden.session.authentication()
+                else homePrimaryAuthentication=session.captureAuthenticationEpoch()
             }
         }
         androidx.compose.runtime.key(hidden,if(hidden)retained.hidden.session else sessionKey,homeRequestRevision,homeVisible) {
@@ -1877,9 +1936,6 @@ class MainActivity : FragmentActivity() {
                 val loaded=withContext(Dispatchers.IO){runCatching{store.read()}.getOrNull()}
                 if(access.current()) {
                     preferences=loaded;loading=false
-                    val first=if(hidden)!retained.hidden.session.isAuthenticationCurrent(homeHiddenAuthentication)else homePrimaryAuthentication!=session.captureAuthenticationEpoch()
-                    if(first){retained.homeFeatureRoot=null;homeVisible=loaded?.startupHome==true
-                        if(hidden)homeHiddenAuthentication=retained.hidden.session.authentication()else homePrimaryAuthentication=session.captureAuthenticationEpoch()}
                 }
                 while(isActive&&access.current())delay(100)
                 live=false;preferences=null
@@ -1906,7 +1962,7 @@ class MainActivity : FragmentActivity() {
             if(homeVisible&&value!=null)uk.co.traynor.privategallery.ui.PrivateHome(hidden,value,{save(it)},initialCustomisation=homeCustomisationRequested,
                 search={query->withContext(Dispatchers.IO){uk.co.traynor.privategallery.core.home.searchPrivateHome(applicationContext,access,query)}},
                 {item->if(access.current()){save(value.copy(recent=(listOf(item)+value.recent).distinct().take(8))){if(access.current())launchHomeShortcut(item)}}},
-                {if(hidden)retained.hidden.lock()else lock()},::panicExit,{moveTaskToBack(true)})
+                {if(hidden)retained.hidden.lock()else lock()},::panicExit,{moveTaskToBack(true)},onSwitchSpace=if(hidden||secretDiscovered)({switchNovaSpace()})else null)
 
     }
 
@@ -2232,7 +2288,7 @@ class MainActivity : FragmentActivity() {
         val permissionIntent = VpnService.prepare(this)
         browserVpnPermissionRequired = permissionIntent != null
         if (permissionIntent != null) {
-            // Android owns this confirmation. Private Gallery never stops another app's VPN itself.
+            // Android owns this confirmation. NovaOS never stops another app's VPN itself.
             vpnPermissionWasHidden = retained.hidden.selected
             hiddenVpnPermissionMode = if (vpnPermissionWasHidden) hiddenBrowserOwner?.mode else null
             vpnPermissionLauncher.launch(permissionIntent)
@@ -2578,7 +2634,7 @@ class MainActivity : FragmentActivity() {
     private fun downloadUpdate() {
         val release = availableUpdate ?: return
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && !packageManager.canRequestPackageInstalls()) {
-            updateStatus = "Allow installs from Private Gallery, then download again."
+            updateStatus = "Allow installs from NovaOS, then download again."
             startActivity(Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, Uri.parse("package:$packageName")))
             return
         }
@@ -2668,7 +2724,7 @@ class MainActivity : FragmentActivity() {
         val owner=sessionKey
         val saved=java.util.concurrent.atomic.AtomicReference<String?>(null)
         val current={authority() && documentCurrent()}
-        return uk.co.traynor.privategallery.ui.PrivateAppScreenshotRequest(source,"Primary Vault",current,
+        return uk.co.traynor.privategallery.ui.PrivateAppScreenshotRequest(source,"Primary Space",current,
             save={input,done ->
                 if(!current()){input.onConsumed();done(Result.failure(IllegalStateException("Screenshot cancelled")))}
                 else importBrowserSourceResult(input.copy(createDistinctCopy=true)) {result ->
@@ -3300,7 +3356,7 @@ class MainActivity : FragmentActivity() {
     }
     internal fun loadTrashRetention(done:(Int)->Unit) = primaryTrashOperation({it.retentionDays()}) {it.onSuccess(done)}
     internal fun saveTrashRetention(days:Int,done:(String)->Unit) = primaryTrashOperation({it.retentionDays(days);expirePrimaryTrash(it)}) {
-        done(if(it.isSuccess)"Retention updated for Primary Vault." else "Unable to update retention.")
+        done(if(it.isSuccess)"Retention updated for Primary Space." else "Unable to update retention.")
     }
     private fun loadRecentlyDeleted(onLoaded: (List<VaultItem>) -> Unit) = primaryTrashOperation({expirePrimaryTrash(it);it.recentlyDeleted()}) {
         onLoaded(it.getOrDefault(emptyList()))
@@ -3319,7 +3375,7 @@ class MainActivity : FragmentActivity() {
             }.isSuccess)changed++
         }}
         changed
-    }) {result ->items.forEach {invalidatePreview(it.id)};done(result.fold({"$it/${items.distinctBy{it.id}.size} items ${if(permanently)"permanently deleted" else "restored to Primary Vault"}."},{"Update failed; retained records were not discarded."}))}
+    }) {result ->items.forEach {invalidatePreview(it.id)};done(result.fold({"$it/${items.distinctBy{it.id}.size} items ${if(permanently)"permanently deleted" else "restored to Primary Space"}."},{"Update failed; retained records were not discarded."}))}
     private fun changeRecentlyDeleted(item:VaultItem,permanently:Boolean,onComplete:(String)->Unit) = changeTrashItems(listOf(item),permanently,onComplete)
 
     private fun unlockWithBiometrics() {
@@ -3329,7 +3385,7 @@ class MainActivity : FragmentActivity() {
             val prompt = newBiometricPrompt(BiometricPurpose.UNLOCK)
             prompt.authenticate(
             BiometricPrompt.PromptInfo.Builder()
-                .setTitle("Private Gallery")
+                .setTitle("NovaOS")
                 .setSubtitle("Unlock your Vault")
                 .setAllowedAuthenticators(BiometricManager.Authenticators.BIOMETRIC_STRONG)
                 .setNegativeButtonText("Use PIN")
@@ -3346,7 +3402,7 @@ class MainActivity : FragmentActivity() {
         prompt.authenticate(
             BiometricPrompt.PromptInfo.Builder()
                 .setTitle("Enable biometric unlock")
-                .setSubtitle("Use biometrics to unlock Private Gallery")
+                .setSubtitle("Use biometrics to unlock NovaOS")
                 .setAllowedAuthenticators(BiometricManager.Authenticators.BIOMETRIC_STRONG)
                 .setNegativeButtonText("Cancel")
                 .build(),
@@ -3542,7 +3598,7 @@ private fun PrivateGalleryApp(
         else {
             // Capture the authenticated epoch before queuing any IO. Never fall back to Primary.
             val repository=runCatching {check(hiddenState.authenticated && hiddenState.session.isUnlocked);uk.co.traynor.privategallery.core.hidden.HiddenRepository(hiddenContext,hiddenState.session)}.getOrNull()
-            if(repository==null) done("Unlock Hidden Vault before importing. Originals were retained.")
+            if(repository==null) done("Unlock Hidden Space before importing. Originals were retained.")
             else hiddenImportScope.launch(Dispatchers.IO) {
                 var imported=0
                 uris.forEach {uri ->try {val item=repository.import(uri);repository.verify(item.id);imported++}catch(_:Exception){}}
@@ -3590,7 +3646,9 @@ private fun PrivateGalleryApp(
     // Register the destination fallback before child handlers: viewer, settings,
     // WebView history and fullscreen consume Back first, including system gestures.
     androidx.activity.compose.BackHandler(viewerRequest == null) { metadataActivity?.returnPrivateHome() }
-    ProtectedAppShell(route, if (hideContent || hiddenState.selected) null else favouriteLabel, hideNavigation = route == Route.BROWSER && !hideContent, onNavigate = { destination ->
+    if(!hideContent && hiddenState.selected && route in setOf(Route.VAULT,Route.FAVOURITE)) {
+        LaunchedEffect(route){hiddenState.select(route)}
+    } else ProtectedAppShell(route, if (hideContent || hiddenState.selected) null else favouriteLabel, hideNavigation = route == Route.BROWSER && !hideContent, onNavigate = { destination ->
         viewerRequest=null;collectionTarget=null;viewerCollections=emptyList()
         when (destination) {
             AppNavigationDestination.GALLERY -> onOpenGallery()
@@ -3600,11 +3658,7 @@ private fun PrivateGalleryApp(
             AppNavigationDestination.SETTINGS -> onOpenSettings()
         }
     }) { contentPadding ->
-        if (!hideContent && hiddenState.selected && route in setOf(Route.VAULT,Route.FAVOURITE)) {
-            // Primary unlock/configuration can restore this route. Never compose Primary data in Hidden mode.
-            LaunchedEffect(route) {hiddenState.select(route)}
-            Box(Modifier.fillMaxSize())
-        } else if (hideContent && route != Route.SETTINGS) {
+        if (hideContent && route != Route.SETTINGS) {
             val title = when (route) { Route.GALLERY -> "Gallery"; Route.VAULT -> "Vault"; Route.FAVOURITE -> "Favourite"; else -> "Browser" }
             val empty = when (route) { Route.GALLERY -> "No photos"; Route.VAULT -> "Your Vault is empty"; Route.FAVOURITE -> "No favourites"; else -> "No recent pages" }
             Column(Modifier.fillMaxSize().padding(contentPadding).padding(24.dp), verticalArrangement = Arrangement.spacedBy(20.dp)) {
@@ -3615,12 +3669,12 @@ private fun PrivateGalleryApp(
                 if((!hiddenState.selected || !primaryGallerySelected) && phoneMoveStatus.isNotBlank()) Text(phoneMoveStatus,Modifier.padding(12.dp))
                 if (hiddenState.selected) Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
                     FilterChip(selected = !primaryGallerySelected, onClick = { viewerRequest = null; onGallerySourceSelected(false) }, label = { Text("Phone Gallery") })
-                    FilterChip(selected = primaryGallerySelected, onClick = { viewerRequest = null; onGallerySourceSelected(true) }, label = { Text("Primary Vault") })
+                    FilterChip(selected = primaryGallerySelected, onClick = { viewerRequest = null; onGallerySourceSelected(true) }, label = { Text("Primary Space") })
                 }
                 if (hiddenState.selected && primaryGallerySelected) {
                     if (primaryPresentation) {
                         VaultHome(onLock, onImport, onLoadItems, onLoadCollections, onCreateCollection, onAddItemsToCollection, onRemoveItemsFromCollection, onRenameCollection, onDeleteCollection, onLoadCollectionItems, onLoadPreview, cropRevision, biometricEnabled, onEnrollBiometrics, onSetFavouriteCollection, onFavouriteStateChanged = { onLoadFavouriteCollection { favouriteLabel = it?.name } }, onOpenViewer = { entries, items, index -> viewerRequest = ViewerRequest.Vault(entries, items, index, onCapturePrimaryEditorAuthority()) }, modifier = Modifier.weight(1f), onGenerateImage = onGenerateImage, onLoadRecentlyDeleted = onLoadRecentlyDeleted, onMoveItemsToRecentlyDeleted = onMoveItemsToRecentlyDeleted, onChangeRecentlyDeleted = onChangeRecentlyDeleted, onRestoreSelectedVaultCopies = onRestoreSelectedVaultCopies, onTransferToHidden = if(hiddenState.selected && hiddenState.session.isUnlocked) onTransferToHidden else null)
-                    } else Text("Unlock Primary Vault to browse encrypted media.", Modifier.padding(24.dp))
+                    } else Text("Unlock Primary Space to browse encrypted media.", Modifier.padding(24.dp))
                 } else GalleryHome(deviceMediaAccessAvailable, onRequestDeviceMediaAccess, onDeviceMediaPages, onLoadDeviceAlbums, onLoadDeviceThumbnail,
                     importToSelectedVault,
                     onMove,
@@ -3632,7 +3686,7 @@ private fun PrivateGalleryApp(
             Route.BROWSER -> if (hiddenState.selected) {
                 if (hiddenState.session.isUnlocked && hiddenState.authenticated) uk.co.traynor.privategallery.ui.HiddenBrowserHome(
                     hiddenState.session,onOpenGallery,openScopedVault,openScopedFavourite,onOpenSettings,Modifier.padding(contentPadding))
-                else Column(Modifier.padding(contentPadding).padding(16.dp)) { Text("Unlock Hidden Vault before browsing."); Button(onClick=openScopedVault) {Text("Unlock Hidden")} }
+                else Column(Modifier.padding(contentPadding).padding(16.dp)) { Text("Unlock Hidden Space before browsing."); Button(onClick=openScopedVault) {Text("Unlock Hidden")} }
             } else BrowserV2ProductionDestination(
                 session = browserV2Session,
                 connectionPresentation = BrowserConnectionPresentation.from(requireVpnForBrowsing, vpnConnectionState, vpnPermissionRequired, vpnPreparing),
@@ -3652,7 +3706,7 @@ private fun PrivateGalleryApp(
                         clearBrowserDataOnLock, onClearBrowserDataOnLockChanged, onClearBrowserData, browserV2Session.contentBlocker,
                     )
                 },
-                onSaveToVault = { source,done -> if(hiddenState.selected) {source.onConsumed();done("Open Hidden Vault and use Add media. Browser import to Primary is unavailable while Hidden is selected.")} else onSaveBrowserSource(source,done) },
+                onSaveToVault = { source,done -> if(hiddenState.selected) {source.onConsumed();done("Open Hidden Space and use Add media. Browser import to Primary is unavailable while Hidden is selected.")} else onSaveBrowserSource(source,done) },
                 onLoadVaultItems = { done -> if(hiddenState.selected) done(emptyList()) else onLoadItems(done) },
                 onLoadVaultPreview = { item,done -> if(hiddenState.selected) done(Result.failure(IllegalStateException("Hidden content is not exposed in Browser"))) else onLoadPreview(item,done) },
                 onPrepareVaultUpload = { request,done -> if(hiddenState.selected) done(Result.failure(IllegalStateException("Vault upload is unavailable while Hidden is selected"))) else onPrepareBrowserUpload(request,done) },
@@ -3665,7 +3719,7 @@ private fun PrivateGalleryApp(
                 onRemoveBookmark = onRemoveBookmark,
                 onLoadHistory = onLoadBrowserHistory,
                 onClearHistory = onClearBrowserHistory,
-                modifier = Modifier.padding(contentPadding),
+                modifier = Modifier.padding(contentPadding).consumeWindowInsets(contentPadding),
             )
             Route.SETTINGS -> SettingsHome(autoLockTimeout, appTheme, allowScreenshots, updateStatus, updateLastChecked, updateAvailable, biometricEnabled, recoveryKeyConfigured, browserSearchEngine, clearBrowserDataOnLock, onAutoLockTimeoutChanged, onThemeChanged, onAllowScreenshotsChanged, onBrowserSearchEngineChanged, onClearBrowserDataOnLockChanged, onClearBrowserData, onCheckForUpdates, onDownloadUpdate, onChangePin, onLock, browserAutoConnectVpn, requireVpnForBrowsing, onBrowserAutoConnectVpnChanged, onBrowserRequireVpnChanged, onImportWireGuardProfile, vpnProfileStatus, vpnConnectionState, vpnProfiles, onSelectVpnProfile, onRemoveVpnProfile, modifier = Modifier.padding(contentPadding), browserSaveHistory = browserSaveHistory, onBrowserSaveHistoryChanged = onBrowserSaveHistoryChanged, browserStaticContentHost = browserStaticContentHost, onBrowserStaticContentHostChanged = { browserStaticContentHost = it }, browserLayoutColours = browserLayoutColours, onBrowserLayoutColoursChanged = { browserLayoutColours = it }, contentBlocker = browserV2Session.contentBlocker, hideContent = hideContent, secretDiscovered = secretDiscovered, onHideContentChanged = onHideContentChanged, onSecretDiscoveryChanged = onSecretDiscoveryChanged, onAuthenticateSensitive = onAuthenticateSensitive, onCancelSensitiveAuthentication = onCancelSensitiveAuthentication, onVerifySecretPin = onVerifySecretPin, onChooseBackupExport = onChooseBackupExport, backupExportUri = backupExportUri, onCancelBackupExport = onCancelBackupExport, onExportBackup = onExportBackup, backupStatus = backupStatus, onOpenHidden = { onInvalidatePrimaryPresentation(); hiddenState.select() },
                 storagePanel = ({ androidx.compose.runtime.key(hiddenState.selected,hiddenState.authenticated,hideContent) {uk.co.traynor.privategallery.ui.VaultStoragePanel(
@@ -3829,24 +3883,21 @@ internal fun ProtectedAppShell(
     destinations: List<AppNavigationDestination> = AppNavigationPolicy.destinations,
     content: @Composable (androidx.compose.foundation.layout.PaddingValues) -> Unit,
 ) {
+    val activity=androidx.activity.compose.LocalActivity.current as? MainActivity
+    val security=uk.co.traynor.privategallery.ui.novaSecurityActions()
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
-        bottomBar = {
-            if (!hideNavigation) NavigationBar(containerColor = MaterialTheme.colorScheme.surface, tonalElevation = 0.dp) {
-                destinations.forEach { destination ->
-                    NavigationBarItem(
-                        selected = destination.matches(selected),
-                        onClick = { onNavigate(destination) },
-                        icon = { Icon(when (destination) {
-                            AppNavigationDestination.GALLERY -> Icons.Default.PhotoLibrary
-                            AppNavigationDestination.VAULT -> Icons.Default.Lock
-                            AppNavigationDestination.FAVOURITE -> Icons.Default.Favorite
-                            AppNavigationDestination.BROWSER -> Icons.Default.Language
-                            AppNavigationDestination.SETTINGS -> Icons.Default.Settings
-                        }, contentDescription = null) },
-                        label = { Text(AppNavigationPolicy.labelFor(destination, favouriteLabel), maxLines = 1, overflow = TextOverflow.Ellipsis) },
-                    )
-                }
+        topBar = {
+            if(selected!=Route.BROWSER || activity?.novaConcealed()==true)Column(Modifier.statusBarsPadding()) {
+                uk.co.traynor.privategallery.ui.NovaAppHeader(
+                    title=activity?.novaApplicationTitle(selected) ?: when(selected){
+                        Route.GALLERY->"Gallery";Route.FAVOURITE->"Favourites";Route.BROWSER->"Browser";Route.SETTINGS->"Settings";else->"Vault"},
+                    space=security?.space,
+                    onHome=security?.home,
+                    onLock=security?.lock,
+                    onPanic=security?.panic,
+                    actions={if(activity?.novaConcealed()==true)IconButton(onClick=activity::openNovaSettings){Icon(Icons.Default.Settings,"Open Settings")}},
+                )
             }
         },
         content = content,
@@ -3879,6 +3930,9 @@ internal fun GalleryHome(
     var density by rememberSaveable { mutableStateOf(ThumbnailDensity.COMPACT) }
     var albumId by rememberSaveable { mutableStateOf<String?>(null) }
     var albums by remember { mutableStateOf<List<DeviceAlbum>>(emptyList()) }
+    androidx.activity.compose.BackHandler(selectionMode || albumId!=null) {
+        if(selectionMode){selectionMode=false;selected=emptyMap()}else albumId=null
+    }
     var albumRefresh by remember { mutableStateOf(0) }
     LaunchedEffect(deviceMediaAccessAvailable, albumRefresh) {
         albums = if (deviceMediaAccessAvailable) runCatching { onLoadDeviceAlbums() }.getOrDefault(emptyList()) else emptyList()
@@ -3905,11 +3959,12 @@ internal fun GalleryHome(
             "Gallery", if (selectionMode) "${selected.size} selected" else if (deviceMedia.itemCount > 0) "${deviceMedia.itemCount} loaded · On this device" else "On this device",
             onMenu = { galleryOverflowExpanded = true },
             sort=gallerySort,onSort={gallerySort=it;sortPreferences.edit().putString("phone-sort",it.name).apply()},
+            showTitle=sortContext !is MainActivity,
         )
         onBrowsePrimary?.let { browse ->
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
                 Text("Device Gallery · Copy to Hidden", style = MaterialTheme.typography.bodySmall)
-                TextButton(onClick = browse) { Text("Primary Vault") }
+                TextButton(onClick = browse) { Text("Primary Space") }
             }
         }
         if (deviceMediaAccessAvailable && albums.isNotEmpty()) {
@@ -3933,7 +3988,7 @@ internal fun GalleryHome(
         if (!deviceMediaAccessAvailable) {
             GalleryCard {
                 GalleryCardHeading("Show your device media")
-                Text("Allow Private Gallery to show your device photos and videos. This does not let the app silently delete originals.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text("Allow NovaOS to show your device photos and videos. This does not let the app silently delete originals.", color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Button(onClick = onRequestDeviceMediaAccess, modifier = Modifier.fillMaxWidth()) { Text("Allow Gallery access") }
                 androidx.compose.material3.OutlinedButton(
                     onClick = { picker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageAndVideo)) },
@@ -3988,7 +4043,7 @@ internal fun GalleryHome(
                 }
                 deviceMedia.itemCount == 0 -> GalleryCard {
                     Text(if (albumId == null) "No accessible media" else "No media in this album", style = MaterialTheme.typography.titleMedium)
-                    Text(if (albumId == null) "Photos and videos you allow Private Gallery to access will appear here."
+                    Text(if (albumId == null) "Photos and videos you allow NovaOS to access will appear here."
                         else "Choose another album or refresh Gallery access.", color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 else -> LazyVerticalGrid(
@@ -4079,7 +4134,7 @@ private fun PinSetup(onCreatePin: (CharArray) -> Result<Unit>, onChooseBackupRes
     var confirmation by remember { mutableStateOf("") }
     var message by remember { mutableStateOf<String?>(null) }
     PinPage(
-        title = "Set up Private Gallery",
+        title = "Set up NovaOS",
         detail = "Selected media is encrypted in this device's private storage. If you lose your PIN and biometric access is unavailable, the Vault may be unrecoverable.",
         pin = pin,
         onPinChange = { pin = it },
@@ -4111,7 +4166,7 @@ private fun PinSetup(onCreatePin: (CharArray) -> Result<Unit>, onChooseBackupRes
 private fun BiometricSetup(onEnrollBiometrics: () -> Unit, onFinish: () -> Unit) {
     LockSurface {
         GalleryPageTitle("One more option", "Use biometrics?")
-        Text("Use your device biometrics to unlock Private Gallery more quickly. Your PIN remains available.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text("Use your device biometrics to unlock NovaOS more quickly. Your PIN remains available.", color = MaterialTheme.colorScheme.onSurfaceVariant)
         Button(onClick = onEnrollBiometrics, modifier = Modifier.fillMaxWidth()) { Text("Enable biometric unlock") }
         androidx.compose.material3.OutlinedButton(onClick = onFinish, modifier = Modifier.fillMaxWidth()) { Text("Finish") }
     }
@@ -4392,7 +4447,7 @@ internal fun SettingsHome(
         verticalArrangement = Arrangement.spacedBy(GalleryTokens.ContentGap),
     ) {
         if (category == null) {
-            GalleryPageTitle(if(hideContent)versionPresentation.header() else "Private Gallery", "Settings")
+            GalleryPageTitle(if(hideContent)versionPresentation.header() else "NovaOS", "Settings")
             BoxWithConstraints(Modifier.fillMaxWidth()) {
                 val columns = if (maxWidth >= 600.dp) 2 else 1
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -4472,7 +4527,7 @@ internal fun SettingsHome(
             )
             Text("Recovery key", style = MaterialTheme.typography.titleMedium)
             Text(
-                if (recoveryKeyConfigured) "Configured offline. It is never stored as plaintext in Private Gallery." else "Not configured. Set up a recovery key before relying on this Vault.",
+                if (recoveryKeyConfigured) "Configured offline. It is never stored as plaintext in NovaOS." else "Not configured. Set up a recovery key before relying on this Vault.",
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             androidx.compose.material3.OutlinedButton(onClick = onChooseBackupExport,
@@ -4483,7 +4538,7 @@ internal fun SettingsHome(
                 color = MaterialTheme.colorScheme.onSurfaceVariant)
             if (backupStatus.isNotBlank()) Text(backupStatus, color = MaterialTheme.colorScheme.onSurfaceVariant)
             Text("Auto-lock", style = MaterialTheme.typography.titleMedium)
-            Text("Lock protected content after Private Gallery leaves the foreground.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text("Lock protected content after NovaOS leaves the foreground.", color = MaterialTheme.colorScheme.onSurfaceVariant)
             Column(Modifier.selectableGroup()) {
                 AutoLockTimeout.entries.forEach { timeout ->
                     GalleryChoiceRow(timeout.label, timeout == autoLockTimeout) { onAutoLockTimeoutChanged(timeout) }
@@ -4495,7 +4550,7 @@ internal fun SettingsHome(
             Text("Secure-screen protection", style = MaterialTheme.typography.titleMedium)
             Text("Protected screens are excluded from screenshots and Recents previews where Android supports it.", color = MaterialTheme.colorScheme.onSurfaceVariant)
             Text("Backup protection", style = MaterialTheme.typography.titleMedium)
-            Text("Private Gallery data is excluded from Android backup.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text("NovaOS data is excluded from Android backup.", color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         if (category == SettingsCategory.DEBUG && diagnosticsAuthenticated) SettingsSection(SettingsSections.DEBUG) {
             if (allowHiddenDiagnostics && (BuildConfig.DEBUG || BuildConfig.ACCEPTANCE_BROWSER_DIAGNOSTICS)) {
@@ -4513,7 +4568,7 @@ internal fun SettingsHome(
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
                     Text("Hide content", style = MaterialTheme.typography.titleMedium)
-                    Text("Temporarily make Private Gallery appear empty. Your encrypted content remains safely stored.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text("Temporarily make NovaOS appear empty. Your encrypted content remains safely stored.", color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 androidx.compose.material3.Switch(modifier = Modifier.testTag("privacy-hide-content"), checked = hideContent, onCheckedChange = {
                     if (it) onHideContentChanged(true) else authAction = java.util.UUID.randomUUID().toString() to "reveal"
@@ -4691,7 +4746,7 @@ internal fun SecretAuthenticationDialog(
         title = { Text("Confirm owner identity") },
         text = {
             Column(Modifier.heightIn(max=360.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("Use your Private Gallery PIN${if (biometricEnabled) " or biometrics" else ""}.")
+                Text("Use your NovaOS PIN${if (biometricEnabled) " or biometrics" else ""}.")
                 OutlinedTextField(pin, { pin = it.filter(Char::isDigit) }, label = { Text("PIN") },
                     visualTransformation = PasswordVisualTransformation(),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword))
@@ -4790,7 +4845,7 @@ internal fun VaultHome(
     onRestoreSelectedVaultCopies: (List<String>, (String) -> Unit) -> Unit = { _, done -> done("Unavailable.") },
     vaultTitle: String = "Vault",
     allowGeneration: Boolean = true,
-    editingVaultLabel: String = "Primary Vault",
+    editingVaultLabel: String = "Primary Space",
     allowBiometrics: Boolean = true,
     allowRestore: Boolean = true,
     onRequestImport: (() -> Unit)? = null,
@@ -4856,7 +4911,14 @@ internal fun VaultHome(
     var managingCollection by remember { mutableStateOf<VaultCollection?>(null) }
     var choosingCover by remember(editingVaultLabel) { mutableStateOf<VaultCollection?>(null) }
     var coverItems by remember(editingVaultLabel) { mutableStateOf<List<VaultItem>>(emptyList()) }
+    val restoredCollectionId=remember(editingVaultLabel){cameraActivity?.novaCollectionPosition()}
+    var restoringPosition by remember(editingVaultLabel){mutableStateOf(restoredCollectionId!=null)}
+    var collectionsLoaded by remember{mutableStateOf(false)}
     var openCollection by remember { mutableStateOf<VaultCollection?>(null) }
+    LaunchedEffect(collectionsLoaded,collections) {
+        if(restoringPosition && collectionsLoaded){openCollection=collections.firstOrNull{it.id==restoredCollectionId};restoringPosition=false}
+    }
+    SideEffect{if(!restoringPosition)cameraActivity?.rememberNovaCollectionPosition(openCollection?.id)}
     var openCollectionItems by remember { mutableStateOf<List<VaultItem>>(emptyList()) }
     androidx.activity.compose.BackHandler(openCollection!=null || selectionMode) {
         if(selectionMode){selectionMode=false;selectedItemIds=emptySet()}else {openCollection=null;openCollectionItems=emptyList()}
@@ -4884,7 +4946,7 @@ internal fun VaultHome(
     fun refresh() {
         refreshRevision++
         onLoadItems { items -> vaultItems = items; loaded = true }
-        onLoadCollections { collections = it }
+        onLoadCollections { collections = it;collectionsLoaded=true }
         onLoadRecentlyDeleted { recentlyDeleted = it }
     }
     LaunchedEffect(Unit) { (onRecoverCamera ?: {cameraActivity?.recoverVaultCamera()}).invoke() }
@@ -4902,8 +4964,9 @@ internal fun VaultHome(
             title = openCollection?.name ?: if (contentMode == VaultContentMode.TRASH) "Recently Deleted" else vaultTitle,
             subtitle = (statusLabel?.let { "$it · " } ?: "") + if (contentMode == VaultContentMode.TRASH) "${recentlyDeleted.size} encrypted items" else if (openCollection == null) VaultSummary.from(vaultItems).let { "${it.photos} photos · ${it.videos} videos" } else "${openCollectionItems.size} items",
             onAdd = { requestImport() },
-            onBack = when { contentMode == VaultContentMode.TRASH -> ({ contentMode = VaultContentMode.MEDIA }); openCollection != null -> ({ openCollection = null }); else -> null },
-            onLock = onLock,
+            onBack = when { contentMode == VaultContentMode.TRASH && cameraActivity?.homeVaultMode=="TRASH" -> ({ cameraActivity.returnPrivateHome() }); contentMode == VaultContentMode.TRASH -> ({ contentMode = VaultContentMode.MEDIA }); openCollection != null -> ({ openCollection = null }); else -> null },
+            onLock = if(cameraActivity==null)onLock else null,
+            showTitle = openCollection!=null || cameraActivity==null,
             sort=if(sortReady&&contentMode!=VaultContentMode.TRASH&&(openCollection!=null||contentMode==VaultContentMode.MEDIA))sort else null,
             onSort=::chooseSort,
             onSearch = if (openCollection == null && contentMode == VaultContentMode.MEDIA && vaultItems.isNotEmpty()) ({ searchExpanded = !searchExpanded }) else null,
@@ -4915,8 +4978,8 @@ internal fun VaultHome(
             SheetSection("Add and organise")
             SheetAction("Evidence Locker", Icons.Default.Folder) {menuOpen=false;(onOpenEvidence ?: {cameraActivity?.openEvidenceLocker()}).invoke()}
             SheetAction("Camera", Icons.Default.PhotoCamera) { menuOpen = false; cameraAction() }
-            onReturnToPrimary?.let { action -> SheetAction("Return to Primary Vault", Icons.Default.Lock) { menuOpen = false; action() } }
-            onCopyFromPrimary?.let { action -> SheetAction("Copy from Primary Vault", Icons.Default.PhotoLibrary) { menuOpen = false; action() } }
+            onReturnToPrimary?.let { action -> SheetAction("Return to Primary Space", Icons.Default.Lock) { menuOpen = false; action() } }
+            onCopyFromPrimary?.let { action -> SheetAction("Copy from Primary Space", Icons.Default.PhotoLibrary) { menuOpen = false; action() } }
             SheetAction("Add media", Icons.Default.AddPhotoAlternate) { menuOpen = false; requestImport() }
             if (allowGeneration) SheetAction("Create image", Icons.Default.AutoAwesome) { menuOpen = false; creatingImage = true }
             if (openCollection == null && contentMode == VaultContentMode.MEDIA) SheetAction("Select items", Icons.Default.CheckCircle, enabled = vaultItems.isNotEmpty()) {
@@ -4935,7 +4998,7 @@ internal fun VaultHome(
             if (allowBiometrics && !biometricEnabled) SheetAction("Enable biometric unlock", Icons.Default.Fingerprint) { menuOpen = false; onEnrollBiometrics() }
             SheetAction("Lock Vault", Icons.Default.Lock) { menuOpen = false; onLock() }
         }
-        if (openCollection == null && contentMode != VaultContentMode.TRASH) {
+        if (openCollection == null && contentMode != VaultContentMode.TRASH && cameraActivity?.homeVaultMode!="COLLECTIONS") {
             androidx.compose.material3.TabRow(selectedTabIndex = if (contentMode == VaultContentMode.MEDIA) 0 else 1) {
                 androidx.compose.material3.Tab(selected = contentMode == VaultContentMode.MEDIA, onClick = { contentMode = VaultContentMode.MEDIA }, text = { Text("Media") })
                 androidx.compose.material3.Tab(selected = contentMode == VaultContentMode.COLLECTIONS, onClick = { contentMode = VaultContentMode.COLLECTIONS; selectedItemIds = emptySet(); selectionMode = false }, text = { Text("Collections") })
@@ -5424,14 +5487,14 @@ private const val MAX_PICKED_MEDIA = 50
 
 @Composable
 internal fun HiddenPolicySettings(timeout:AutoLockTimeout,onTimeoutChanged:(AutoLockTimeout)->Unit,onUsePrimary:()->Unit) {
-    SettingsSection("Hidden Vault — independent settings") {
+    SettingsSection("Hidden Space — independent settings") {
         Text("Hidden auto-lock",style=MaterialTheme.typography.titleMedium)
         Text("Applies after the app leaves the foreground, not while using it or switching tabs. Manual Primary lock and screen-off still lock Hidden immediately. Primary may require its own PIN before Hidden can be shown.")
         Column(Modifier.selectableGroup()) {AutoLockTimeout.entries.forEach {value ->
             GalleryChoiceRow(value.label,value==timeout) {onTimeoutChanged(value)}
         }}
         Text("Locks Hidden immediately and requires fresh Primary PIN or authorized biometric authentication before showing Primary media.")
-        OutlinedButton(onClick=onUsePrimary,modifier=Modifier.fillMaxWidth()) {Text("Return to Primary Vault")}
+        OutlinedButton(onClick=onUsePrimary,modifier=Modifier.fillMaxWidth()) {Text("Return to Primary Space")}
     }
 }
 
@@ -5506,7 +5569,7 @@ internal fun ThirdPartyLicencesDialog(notices:String,onDismiss:()->Unit) {
 internal fun ConfirmHiddenTransferDialog(count:Int,move:Boolean,busy:Boolean,onDismiss:()->Unit,onConfirm:()->Unit) {
     val action=if(move)"Move" else "Copy"
     AlertDialog(onDismissRequest=onDismiss,title={Text("$action $count selected items?")},
-        text={Text("Source: Primary Vault\nDestination: Hidden Vault\nSelected: $count\n\n"+
+        text={Text("Source: Primary Space\nDestination: Hidden Space\nSelected: $count\n\n"+
             if(move)"Each Hidden copy is verified before its Primary original enters Recently Deleted under the Primary retention setting. Failed transfers retain their originals."
             else "Each Hidden copy is verified. Primary originals are retained.")},
         confirmButton={TextButton(enabled=!busy,onClick=onConfirm){Text("$action to Hidden")}},dismissButton={TextButton(onClick=onDismiss){Text("Cancel")}})
@@ -5516,7 +5579,7 @@ internal fun ConfirmHiddenTransferDialog(count:Int,move:Boolean,busy:Boolean,onD
 internal fun HiddenTransferProgressDialog(completed:Int,total:Int,stopping:Boolean,onCancel:()->Unit) {
     AlertDialog(scrollBody=false,onDismissRequest={},title={Text("Transferring to Hidden")},
         text={Column(Modifier.heightIn(max=360.dp).verticalScroll(rememberScrollState()),verticalArrangement=Arrangement.spacedBy(12.dp)) {
-            Text("Primary Vault → Hidden Vault")
+            Text("Primary Space → Hidden Space")
             Text("$completed / $total processed · verified and failed totals follow")
             androidx.compose.material3.LinearProgressIndicator(progress={if(total==0)0f else completed.toFloat()/total},modifier=Modifier.fillMaxWidth())
             Text(if(stopping)"Stopping after the current copy is safely verified…" else "Keep the app open. Cancel safely stops after the current copy; originals for unfinished items are retained.")

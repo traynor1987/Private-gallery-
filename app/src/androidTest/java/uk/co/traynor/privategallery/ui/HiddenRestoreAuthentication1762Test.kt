@@ -64,13 +64,13 @@ class HiddenRestoreAuthentication1762Test {
         compose.onNodeWithText("Continue").performScrollTo().performClick()
     }
     @Test fun wrongThenCorrectKeypadPinCopiesVerifiedMediaAndKeepsHiddenOriginal()=fixture {hidden,_,repo,primary,item,count,_ ->
-        compose.onNodeWithText("Copy to Primary Vault").performScrollTo().performClick()
+        compose.onNodeWithText("Copy to Primary Space").performScrollTo().performClick()
         enter("999999")
         compose.waitUntil(30_000){compose.onAllNodesWithText("Primary authentication failed.",substring=true).fetchSemanticsNodes().isNotEmpty()}
         assertTrue(primary.items().isEmpty());assertEquals(item.id,repo.items().single().id)
         enter("123456")
-        compose.waitUntil(30_000){compose.onAllNodesWithText("Copy to Primary Vault").fetchSemanticsNodes().isNotEmpty()}
-        compose.onNodeWithText("Copy to Primary Vault").performScrollTo().performClick()
+        compose.waitUntil(30_000){compose.onAllNodesWithText("Copy to Primary Space").fetchSemanticsNodes().isNotEmpty()}
+        compose.onNodeWithText("Copy to Primary Space").performScrollTo().performClick()
         compose.waitUntil(30_000){count()==1}
         assertTrue(hidden.isUnlocked)
         val copy=primary.items().single();assertNotEquals(item.id,copy.id);assertArrayEquals(item.plaintextSha256,copy.plaintextSha256)
@@ -78,26 +78,26 @@ class HiddenRestoreAuthentication1762Test {
         val bytes=primary.readForEditing(copy){false};try {assertTrue(bytes.isNotEmpty())} finally {bytes.fill(0)}
     }
     @Test fun correctKeypadPinMovesOnlyAfterSeparateConfirmation()=fixture {_,_,repo,primary,item,count,_ ->
-        compose.onNodeWithText("Move to Primary Vault").performScrollTo().performClick();enter("123456")
-        compose.waitUntil(30_000){compose.onAllNodesWithText("Confirm Move to Primary Vault").fetchSemanticsNodes().isNotEmpty()}
+        compose.onNodeWithText("Move to Primary Space").performScrollTo().performClick();enter("123456")
+        compose.waitUntil(30_000){compose.onAllNodesWithText("Confirm Move to Primary Space").fetchSemanticsNodes().isNotEmpty()}
         assertTrue(primary.items().isEmpty());assertEquals(item.id,repo.items().single().id)
-        compose.onNodeWithText("Confirm Move to Primary Vault").performScrollTo().performClick()
+        compose.onNodeWithText("Confirm Move to Primary Space").performScrollTo().performClick()
         compose.waitUntil(30_000){count()==1}
         assertArrayEquals(item.plaintextSha256,primary.items().single().plaintextSha256)
         assertTrue(repo.items().isEmpty());assertEquals(item.id,repo.recentlyDeleted().single().id)
     }
     @Test fun cancellationAtKeypadDoesNotPublishOrDelete()=fixture {hidden,access,repo,primary,item,count,_ ->
-        compose.onNodeWithText("Move to Primary Vault").performScrollTo().performClick()
+        compose.onNodeWithText("Move to Primary Space").performScrollTo().performClick()
         compose.onNodeWithText("Cancel").performClick();compose.waitUntil(3000){count()==1}
         assertFalse(access.isActive());assertTrue(hidden.isUnlocked);assertTrue(primary.items().isEmpty());assertEquals(item.id,repo.items().single().id)
     }
     @Test fun lockWhileEnteringPrimaryPinRevokesWithoutPublishing()=fixture {hidden,access,_,primary,_,count,_ ->
-        compose.onNodeWithText("Copy to Primary Vault").performScrollTo().performClick()
+        compose.onNodeWithText("Copy to Primary Space").performScrollTo().performClick()
         compose.runOnIdle {hidden.lock()};compose.waitUntil(3000){count()==1}
         assertFalse(access.isActive());assertTrue(primary.items().isEmpty())
     }
     @Test fun expiredHiddenGraceRevokesPrimaryAuthenticationDialog()=fixture {hidden,access,_,primary,_,count,setTime ->
-        compose.onNodeWithText("Copy to Primary Vault").performScrollTo().performClick()
+        compose.onNodeWithText("Copy to Primary Space").performScrollTo().performClick()
         compose.runOnIdle {hidden.onBackground(30_000);setTime(31_001);hidden.onForeground()}
         compose.waitUntil(3000){count()==1}
         assertFalse(hidden.isUnlocked);assertFalse(access.isActive());assertTrue(primary.items().isEmpty())

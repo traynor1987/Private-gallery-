@@ -36,7 +36,7 @@ class HiddenEditorUiTest {
             compose.onNodeWithContentDescription("hidden-original.png").performClick()
             compose.onNodeWithText("Edit").performClick()
             compose.onNodeWithTag("photo-editor").assertIsDisplayed()
-            compose.onNode(hasText("Hidden Vault") and hasAnyAncestor(hasTestTag("photo-editor"))).assertIsDisplayed()
+            compose.onNode(hasText("Hidden Space") and hasAnyAncestor(hasTestTag("photo-editor"))).assertIsDisplayed()
             compose.onNodeWithText("Adjust").performClick()
             compose.onNodeWithText("Brightness").assertIsDisplayed()
             compose.waitUntil(10000) {runCatching {compose.onNodeWithText("Save copy").assertIsEnabled()}.isSuccess}
@@ -46,9 +46,9 @@ class HiddenEditorUiTest {
             assertTrue(AndroidVaultRepository(context,ByteArray(32){9}).items().isEmpty())
             compose.waitUntil(10000) {compose.onAllNodesWithTag("photo-editor").fetchSemanticsNodes().isEmpty()}
             compose.onNodeWithContentDescription("Back").performClick()
-            compose.onNodeWithContentDescription("Hidden Vault menu").performClick()
+            compose.onNodeWithContentDescription("Hidden Space menu").performClick()
             compose.onNodeWithText("Create image").performClick()
-            compose.onNodeWithText("Saves to Hidden Vault").assertIsDisplayed()
+            compose.onNodeWithText("Saves to Hidden Space").assertIsDisplayed()
         } finally {compose.runOnIdle {session.lock()};source.fill(0);root.deleteRecursively()}
     }
 }

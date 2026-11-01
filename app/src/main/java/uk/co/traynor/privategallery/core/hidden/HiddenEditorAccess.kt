@@ -71,7 +71,7 @@ internal class HiddenEditorAccess(
             currentCoroutineContext().ensureActive();checkCurrent(cancelled)
             clean=PhotoRenderer.sanitize(remote!!)
             remote?.fill(0);remote=null
-            onStage("Encrypting in Hidden Vault…")
+            onStage("Encrypting in Hidden Space…")
             return saveGenerated(clean!!,request.model.modelId,cancelled)
         } finally {token?.fill(0);remote?.fill(0);clean?.fill(0)}
     }

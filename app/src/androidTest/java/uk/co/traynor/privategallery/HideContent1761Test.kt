@@ -27,20 +27,22 @@ class HideContent1761Test {
     assertTrue(state.hidden.session.complete(state.hidden.session.beginAuthentication(),ByteArray(32){9}));state.hidden.select();gallery(a)
    }
    compose.onNodeWithText("No photos").assertExists()
-   for(tab in listOf("Vault","Favourite","Browser","Settings")) {
-    compose.onNode(hasText(tab) and hasClickAction()).performClick().assertIsSelected()
-    val empty=mapOf("Vault" to "Your Vault is empty","Favourite" to "No favourites","Browser" to "No recent pages")[tab]
-    if(empty!=null)compose.onNodeWithText(empty).assertExists()
+   for(destination in listOf(Route.VAULT,Route.FAVOURITE,Route.BROWSER,Route.GALLERY)) {
+    compose.activityRule.scenario.onActivity {a ->invoke(a,"setRoute",destination)}
     compose.onAllNodesWithText("Hidden",substring=true).assertCountEquals(0)
+    compose.onNodeWithContentDescription("Open Settings").assertIsDisplayed()
    }
-   compose.onNodeWithText("PRIVATE GALLERY 0.0.1 · BUILD 4").assertExists()
+   compose.onAllNodesWithText("Hidden",substring=true).assertCountEquals(0)
+   compose.onNodeWithTag("private-home1710").assertDoesNotExist()
+   compose.onNodeWithContentDescription("Open Settings").performClick()
+   compose.onNodeWithText("NOVAOS 0.0.1 · BUILD 4").assertExists()
    compose.onNodeWithText("Gallery & Vault").performScrollTo().performClick()
    compose.onNodeWithText("Storage").assertDoesNotExist()
    compose.onAllNodesWithText("Hidden",substring=true).assertCountEquals(0)
    compose.onNodeWithContentDescription("Back to Settings").performClick()
    compose.onNodeWithText("Updates & About").performScrollTo().performClick()
    compose.onNodeWithText("0.0.1 · Build 4").assertExists()
-   compose.onNodeWithText("Private Gallery 0.0.1").performScrollTo().assertExists()
+   compose.onNodeWithText("NovaOS 0.0.1").performScrollTo().assertExists()
    compose.activityRule.scenario.moveToState(Lifecycle.State.CREATED)
    compose.activityRule.scenario.moveToState(Lifecycle.State.RESUMED)
    compose.activityRule.scenario.recreate()

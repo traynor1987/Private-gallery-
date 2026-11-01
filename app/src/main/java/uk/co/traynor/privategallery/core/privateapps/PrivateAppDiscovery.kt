@@ -64,7 +64,7 @@ internal object PrivateAppDiscovery {
    val url=tags.firstOrNull{it["rel"].orEmpty().lowercase().split(Regex("\\s+")).contains("manifest")}?.get("href")?.let{resolve(base,it,tor)} ?: run {compatibility="No supported same-origin manifest link was found. Cross-origin metadata is not fetched.";return@runCatching}
    phase="fetch_manifest"
    val resource=get(url)
-   try {phase="parse_manifest";require(resource.mime in setOf("application/manifest+json","application/json"));metadata=manifest(page,url,resource.bytes.toString(Charsets.UTF_8),tor);compatibility="Compatible private web app: ${metadata.display}. Runs inside Private Gallery; push, background execution and guaranteed offline operation are unsupported."}finally{resource.bytes.fill(0)}
+   try {phase="parse_manifest";require(resource.mime in setOf("application/manifest+json","application/json"));metadata=manifest(page,url,resource.bytes.toString(Charsets.UTF_8),tor);compatibility="Compatible private web app: ${metadata.display}. Runs inside NovaOS; push, background execution and guaranteed offline operation are unsupported."}finally{resource.bytes.fill(0)}
   }.onFailure {failure ->
    report(phase,failure)
    // Network unavailability is not an incompatible manifest. Existing UI offers manual save.

@@ -199,8 +199,8 @@ class HiddenMainBrowserLifecycle1762Test {
             }
             assertTrue(state.session.isUnlocked);assertTrue(state.hidden.session.isUnlocked)
             val returningAuthority=state.hidden.session.authority()
-            click("Browser settings");click("Downloads");click("Manage in Hidden Vault")
-            waitFor("Downloads returns through actual Main foreground into authenticated Hidden Vault",15) {
+            click("Browser settings");click("Downloads");click("Manage in Hidden Space")
+            waitFor("Downloads returns through actual Main foreground into authenticated Hidden Space",15) {
                 activity.lifecycle.currentState==androidx.lifecycle.Lifecycle.State.RESUMED &&
                     state.hidden.selected && state.hidden.destination==Route.VAULT &&
                     state.hidden.session.isAuthorityCurrent(returningAuthority)

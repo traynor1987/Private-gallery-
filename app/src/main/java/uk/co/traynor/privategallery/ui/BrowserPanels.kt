@@ -222,7 +222,7 @@ internal fun BrowserSettingsContent(searchEngine: BrowserSearchEngine, onSearchE
         BrowserSettingToggle("Save browsing history", "Keep an encrypted record of visited pages on this device.", saveHistory, onSaveHistory)
         BrowserSettingToggle("Require VPN for browsing", "Block Browser networking until your VPN connection is confirmed.", requireVpn, onRequireVpn)
         BrowserSettingToggle("Auto-connect VPN", "Connect the selected profile when opening Browser. Manage profiles in Settings → VPN.", autoConnect, onAutoConnect)
-        BrowserSettingToggle("Clear data on lock", "Clear Browser history, cache, cookies and site storage when Private Gallery locks.", clearOnLock, onClearOnLock)
+        BrowserSettingToggle("Clear data on lock", "Clear Browser history, cache, cookies and site storage when NovaOS locks.", clearOnLock, onClearOnLock)
         HorizontalDivider()
         Text("File uploads", style = MaterialTheme.typography.titleMedium)
         Text("Websites receive only files you explicitly select. Vault uploads require confirmation.", style = MaterialTheme.typography.bodySmall)

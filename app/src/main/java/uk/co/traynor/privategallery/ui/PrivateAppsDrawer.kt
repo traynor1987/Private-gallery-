@@ -53,7 +53,7 @@ internal fun PrivateAppsDrawerTile(
             Icon(Icons.Default.MoreVert,"App actions for ${app.name()}",Modifier.size(18.dp),tint=MaterialTheme.colorScheme.onSurfaceVariant)
         }
         DropdownMenu(expanded=menuExpanded,onDismissRequest=onDismissMenu,
-            properties=PopupProperties(focusable=true,securePolicy=SecureFlagPolicy.SecureOn)) {
+            properties=PopupProperties(focusable=true,securePolicy=SecureFlagPolicy.Inherit)) {
             for(label in listOf("Edit",if(app.pinned())"Unpin"else"Pin","Reorder","App Settings","Remove")) {
                 DropdownMenuItem(text={Text(label)},onClick={onAction(label)},enabled=enabled)
             }
@@ -70,9 +70,9 @@ internal fun PrivateAppsDrawerGrid(
     onAction:(PrivateAppCatalog.App,String)->Unit,modifier:Modifier=Modifier,
 ) {
     BoxWithConstraints(modifier.fillMaxSize()) {
-        val columns=((maxWidth.value+8f)/(72f*LocalDensity.current.fontScale.coerceAtLeast(1f)+8f)).toInt().coerceIn(1,8)
+        val columns=uk.co.traynor.privategallery.core.home.NovaNavigation.columns(maxWidth.value.toInt(),LocalDensity.current.fontScale)
         LazyVerticalGrid(columns=GridCells.Fixed(columns),modifier=Modifier.fillMaxSize().testTag("private-app-grid"),
-            horizontalArrangement=Arrangement.spacedBy(8.dp),verticalArrangement=Arrangement.spacedBy(16.dp)) {
+            horizontalArrangement=Arrangement.spacedBy(0.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
             items(visibleApps,key={it.id()}) {app ->
                 val index=apps.indexOfFirst{it.id()==app.id()}
                 PrivateAppsDrawerTile(app,index,apps.size,enabled,reordering,selectedId==app.id(),menuId==app.id(),

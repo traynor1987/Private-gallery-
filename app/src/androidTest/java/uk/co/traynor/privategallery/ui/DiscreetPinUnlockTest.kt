@@ -25,7 +25,7 @@ class DiscreetPinUnlockTest {
         "123456".forEach { compose.onNodeWithText(it.toString(), substring=false).performClick() }
         compose.onNodeWithText("Unlock").performClick()
         compose.runOnIdle { assertEquals(1, primary); assertEquals(0, hidden) }
-        compose.onNodeWithText("Private Gallery").performTouchInput { longClick() }
+        compose.onNodeWithText("NovaOS").performTouchInput { longClick() }
         compose.onAllNodesWithText("Hidden", substring = true).assertCountEquals(0)
         "728491".forEach { compose.onNodeWithText(it.toString(), substring=false).performClick() }
         compose.onNodeWithText("Unlock").performClick()
@@ -41,7 +41,7 @@ class DiscreetPinUnlockTest {
             PinUnlock({ primary++; Result.failure(SecurityException()) }, false, {}, {},
                 onDirectHiddenUnlock = { hidden++; Result.failure(SecurityException()) })
         } }
-        compose.onNodeWithText("Private Gallery").performTouchInput { longClick() }
+        compose.onNodeWithText("NovaOS").performTouchInput { longClick() }
         "728491".forEach { compose.onNodeWithText(it.toString(), substring=false).performClick() }
         compose.activityRule.scenario.moveToState(Lifecycle.State.CREATED)
         compose.activityRule.scenario.moveToState(Lifecycle.State.RESUMED)
@@ -60,7 +60,7 @@ class DiscreetPinUnlockTest {
             PinUnlock({ primary++; Result.failure(SecurityException()) }, false, {}, {},
                 onDirectHiddenUnlock = { hidden++; Result.failure(SecurityException()) })
         } }
-        compose.onNodeWithText("Private Gallery").performTouchInput { longClick() }
+        compose.onNodeWithText("NovaOS").performTouchInput { longClick() }
         restoration.emulateSavedInstanceStateRestore()
         compose.onAllNodesWithText("Hidden", substring = true).assertCountEquals(0)
         "123456".forEach { compose.onNodeWithText(it.toString(), substring=false).performClick() }

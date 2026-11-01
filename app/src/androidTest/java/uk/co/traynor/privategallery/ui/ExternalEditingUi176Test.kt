@@ -32,7 +32,7 @@ class ExternalEditingUi176Test {
  @Test fun replaceRequiresExplicitConfirmationAfterPreview() {
   var saves=0;var replaced=false
   val image=Bitmap.createBitmap(8,8,Bitmap.Config.ARGB_8888)
-  dialogContent {PrivateGalleryTheme {ExternalEditingDialog("Hidden Vault",true,Uri.parse("content://synthetic/1"),false,"",false,
+  dialogContent {PrivateGalleryTheme {ExternalEditingDialog("Hidden Space",true,Uri.parse("content://synthetic/1"),false,"",false,
    {},{},{},{},{}, {it(Result.success(byteArrayOf(1) to image))}, {bytes,replace,done ->saves++;replaced=replace;bytes.fill(0);done(Result.success(Unit))},{},{})}}
   compose.onNodeWithText("Preview selected result").performScrollTo().performClick()
   compose.onNodeWithText("Replace Original…").performScrollTo().performClick()
@@ -43,7 +43,7 @@ class ExternalEditingUi176Test {
  @Test fun latePreviewForPreviousSelectedResultIsWipedAndRecycled() {
   var uri by mutableStateOf(Uri.parse("content://synthetic/1"))
   var callback:((Result<Pair<ByteArray,Bitmap>>)->Unit)?=null
-  dialogContent {PrivateGalleryTheme {ExternalEditingDialog("Primary Vault",true,uri,false,"",false,{},{},{},{},{},{callback=it},{_,_,_->},{},{})}}
+  dialogContent {PrivateGalleryTheme {ExternalEditingDialog("Primary Space",true,uri,false,"",false,{},{},{},{},{},{callback=it},{_,_,_->},{},{})}}
   compose.onNodeWithText("Preview selected result").performScrollTo().performClick()
   compose.runOnIdle {uri=Uri.parse("content://synthetic/2")}
   compose.waitForIdle()
@@ -54,7 +54,7 @@ class ExternalEditingUi176Test {
  }
  @Test fun compactEntryKeepsHandoffBehindExplicitConsentAndCanCancel() {
   var prepared=0;var closed=0
-  dialogContent {PrivateGalleryTheme {ExternalEditingDialog("Primary Vault",false,null,false,"",false,{prepared++},{},{},{},{},{},{_,_,_->},{},{closed++})}}
+  dialogContent {PrivateGalleryTheme {ExternalEditingDialog("Primary Space",false,null,false,"",false,{prepared++},{},{},{},{},{},{_,_,_->},{},{closed++})}}
   compose.onNodeWithText("Edit in another app").assertExists()
   compose.onNodeWithText("Choose a compatible photo editor, then bring your photo back into this vault.").assertExists()
   compose.onNodeWithText("Choose another compatible photo editor").performScrollTo().performClick()
@@ -66,7 +66,7 @@ class ExternalEditingUi176Test {
  }
  @Test fun confirmedEditorChoicePreparesOnceAndImportIsExplicit() {
   var prepared=0;var picked=0
-  dialogContent {PrivateGalleryTheme {ExternalEditingDialog("Hidden Vault",false,null,false,"",false,{prepared++},{},{},{},{picked++},{},{_,_,_->},{},{})}}
+  dialogContent {PrivateGalleryTheme {ExternalEditingDialog("Hidden Space",false,null,false,"",false,{prepared++},{},{},{},{picked++},{},{_,_,_->},{},{})}}
   compose.onNodeWithText("Choose another compatible photo editor").performScrollTo().performClick();compose.onNodeWithText("Continue to editor").performClick()
   compose.runOnIdle {assertEquals(1,prepared);assertEquals(0,picked)}
   compose.onNodeWithText("Import edited result").performScrollTo().performClick();compose.runOnIdle {assertEquals(1,picked)}
@@ -76,7 +76,7 @@ class ExternalEditingUi176Test {
  private fun acknowledgeReceipt(theme:AppTheme) {
   var acknowledged=0
   dialogContent {
-   PrivateGalleryTheme(theme) {ExternalEditingDialog("Hidden Vault",false,null,false,"Public copy receipt retained.",true,
+   PrivateGalleryTheme(theme) {ExternalEditingDialog("Hidden Space",false,null,false,"Public copy receipt retained.",true,
     {},{},{},{},{},{},{_,_,_->},{},{},acknowledgeReceipt={acknowledged++})}
   }
   compose.onNodeWithText("Forget recovery receipt…").performScrollTo().performClick()
@@ -95,7 +95,7 @@ class ExternalEditingUi176Test {
 
  @Test fun samsungActionHasSeparateConsentAndDoesNotLaunchGenericChooser() {
   var samsung=0;var generic=0
-  dialogContent {PrivateGalleryTheme {ExternalEditingDialog("Primary Vault",true,null,false,"",false,
+  dialogContent {PrivateGalleryTheme {ExternalEditingDialog("Primary Space",true,null,false,"",false,
    {},{generic++},{},{},{},{},{_,_,_->},{},{},launchSamsung={samsung++})}}
   compose.onNodeWithText("Edit with Samsung Gallery").performScrollTo().performClick()
   compose.runOnIdle {assertEquals(0,samsung);assertEquals(0,generic)}
@@ -103,13 +103,13 @@ class ExternalEditingUi176Test {
   compose.runOnIdle {assertEquals(1,samsung);assertEquals(0,generic)}
  }
  @Test fun unavailableSamsungRouteIsNotOffered() {
-  dialogContent {PrivateGalleryTheme {ExternalEditingDialog("Primary Vault",false,null,false,"",false,
+  dialogContent {PrivateGalleryTheme {ExternalEditingDialog("Primary Space",false,null,false,"",false,
    {},{},{},{},{},{},{_,_,_->},{},{})}}
   compose.onNodeWithText("Edit with Samsung Gallery").assertDoesNotExist()
  }
  @Test fun unavailableCompatibleEditorsAreNotOffered() {
   var exports=0
-  dialogContent {PrivateGalleryTheme {ExternalEditingDialog("Primary Vault",false,null,false,"",false,
+  dialogContent {PrivateGalleryTheme {ExternalEditingDialog("Primary Space",false,null,false,"",false,
    {},{},{},{},{},{},{_,_,_->},{},{},exportGallery={exports++},compatibleEditorAvailable=false)}}
   compose.onNodeWithText("Choose another compatible photo editor").assertDoesNotExist()
   compose.onNodeWithText("Import edited result").performScrollTo().assertIsDisplayed()
@@ -119,7 +119,7 @@ class ExternalEditingUi176Test {
   compose.runOnIdle {assertEquals(0,exports)}
  }
  @Test fun separateActionsLandscapeDarkRemainReachableAtDoubleFont() {
-  dialogContent {PrivateGalleryTheme(AppTheme.DARK) {ExternalEditingDialog("Hidden Vault",true,null,false,"",false,
+  dialogContent {PrivateGalleryTheme(AppTheme.DARK) {ExternalEditingDialog("Hidden Space",true,null,false,"",false,
    {},{},{},{},{},{},{_,_,_->},{},{},launchSamsung={})}}
   val actions=listOf("Edit with Samsung Gallery","Choose another compatible photo editor","Import edited result")
   var width:Float?=null
@@ -134,7 +134,7 @@ class ExternalEditingUi176Test {
  @Test fun returnedWithoutResultExposesGuidedExportWithSeparateConsent() {
   var fallback by mutableStateOf(false)
   var exported=0
-  dialogContent {PrivateGalleryTheme {ExternalEditingDialog("Hidden Vault",true,null,false,"No edited result was returned.",false,
+  dialogContent {PrivateGalleryTheme {ExternalEditingDialog("Hidden Space",true,null,false,"No edited result was returned.",false,
    {},{},{},{},{},{},{_,_,_->},{},{},exportGallery={exported++},fallback=fallback)}}
   compose.onNodeWithText("Export a copy to Gallery").assertDoesNotExist()
   compose.runOnIdle {fallback=true}

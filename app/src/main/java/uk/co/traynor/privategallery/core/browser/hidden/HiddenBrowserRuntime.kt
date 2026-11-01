@@ -263,7 +263,7 @@ internal class HiddenBrowserRuntime(
                 }
             }}
             downloading=false
-            if(authorized())notice=if(result.isSuccess)"Saved into encrypted Hidden Vault. Open Vault to view or restore it." else "Download failed or unsupported. No public file was created."
+            if(authorized())notice=if(result.isSuccess)"Saved into encrypted Hidden Space. Open Vault to view or restore it." else "Download failed or unsupported. No public file was created."
         }
     }
     fun updateDesktopSite(enabled:Boolean) {

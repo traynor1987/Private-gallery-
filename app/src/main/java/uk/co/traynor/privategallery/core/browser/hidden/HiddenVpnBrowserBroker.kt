@@ -426,7 +426,7 @@ internal class HiddenVpnBrowserBroker(
                                         android.util.Log.w("PrivateAppsScreenshot","Encrypted screenshot save failed: ${it.javaClass.simpleName}")
                                     }
                                     if(valid() && screenshotReceipt==receipt && outcome.isFailure)screenshotState="failed"
-                                    if(valid())downloadStatus=if(outcome.isSuccess)"Screenshot verified and saved encrypted in Hidden Vault." else "Screenshot could not be saved. No capture was exported."
+                                    if(valid())downloadStatus=if(outcome.isSuccess)"Screenshot verified and saved encrypted in Hidden Space." else "Screenshot could not be saved. No capture was exported."
                                 } finally {main.removeCallbacks(expiry);screenshotReaders.remove(input);runCatching {input.close()};screenshotting.set(false)}
                             }
                             result.writeNoException();result.writeString(receipt)
@@ -439,10 +439,10 @@ internal class HiddenVpnBrowserBroker(
                         // is fenced again, so a late download cannot inherit a subsequent unlock.
                         check(downloading.compareAndSet(false,true))
                         downloadCancelled.set(false);downloadedBytes=0;downloadTotal=-1
-                        downloadStatus="Downloading into Hidden Vault…"
+                        downloadStatus="Downloading into Hidden Space…"
                         worker.execute {
                             val outcome=runCatching {download(url,cookie,agent)}
-                            if(valid())downloadStatus=if(outcome.isSuccess)"Download verified and saved encrypted in Hidden Vault." else if(downloadCancelled.get())"Download cancelled. No new item was saved." else "Download failed or unsupported. No new item was saved. Try a complete image, video, PDF, text or CSV GET URL again."
+                            if(valid())downloadStatus=if(outcome.isSuccess)"Download verified and saved encrypted in Hidden Space." else if(downloadCancelled.get())"Download cancelled. No new item was saved." else "Download failed or unsupported. No new item was saved. Try a complete image, video, PDF, text or CSV GET URL again."
                             downloading.set(false)
                         }
                         result.writeNoException()

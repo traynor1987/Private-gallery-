@@ -36,7 +36,7 @@ class CreateImageCancellationTest {
         try {
             compose.setContent {CompositionLocalProvider(LocalContext provides context) {PrivateGalleryTheme {
                 CreateImageSheet(onGenerate={_,_,done ->callbacks+=done;{cancellations++}},
-                    onSaved={saved++},onDismiss={},vaultLabel="Hidden Vault")
+                    onSaved={saved++},onDismiss={},vaultLabel="Hidden Space")
             }}}
             compose.onNodeWithText("Describe the image").performScrollTo().performTextInput("Synthetic fixture")
             compose.onNodeWithText("Generate").performScrollTo().performClick()

@@ -1,9 +1,4 @@
-<vector xmlns:android="http://schemas.android.com/apk/res/android"
-    android:width="108dp" android:height="108dp" android:viewportWidth="108" android:viewportHeight="108">
-  <!-- Photo frames above the vault; designed for a single themed tint. -->
-  <path android:fillColor="#FFFFFFFF" android:fillType="evenOdd" android:pathData="M35,44L32,34Q31,31 35,30L59,25Q62,24 63,28L66,40L62,41L59,29L36,34L39,43Z" />
-  <path android:fillColor="#FFFFFFFF" android:fillType="evenOdd" android:pathData="M42,45L40,32Q39,29 43,29L72,27Q75,27 75,31L76,45L72,45L71,31L44,33L46,45Z" />
-  <path android:fillColor="#FFFFFFFF" android:fillType="evenOdd" android:pathData="M30,44Q30,40 34,40L43,40L49,45L62,45L68,40L75,40Q79,40 79,44L79,73Q79,80 72,80L36,80Q29,80 29,73ZM54,48A14,14 0,1 0,54.01,48Z" />
-  <path android:fillColor="#FFFFFFFF" android:fillType="evenOdd" android:pathData="M54,50A12,12 0,1 0,54.01,50ZM54,53A9,9 0,1 1,53.99,53Z" />
-  <path android:fillColor="#FFFFFFFF" android:fillType="evenOdd" android:pathData="M50,61L50,58A4,4 0,0 1,58,58L58,61L60,61L60,70L48,70L48,61ZM52,61L56,61L56,58A2,2 0,0 0,52,58ZM53,64L55,64L55,67L53,67Z" />
+<vector xmlns:android="http://schemas.android.com/apk/res/android" android:width="108dp" android:height="108dp" android:viewportWidth="108" android:viewportHeight="108">
+    <path android:fillColor="#FFFFFFFF" android:pathData="M38,74 L38,34 L46,34 L69,62 L69,34 L77,34 L77,74 L69,74 L46,46 L46,74 Z" />
+    <path android:fillColor="#00000000" android:strokeColor="#FFFFFFFF" android:strokeWidth="2" android:pathData="M54,22 A32,32 0,1 0,54,86 A32,32 0,1 0,54,22" />
 </vector>

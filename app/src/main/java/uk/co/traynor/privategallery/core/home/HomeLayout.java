@@ -13,7 +13,7 @@ public final class HomeLayout {
     public enum Shortcut {
         GALLERY("Gallery"), BROWSER("Browser"), PRIVATE_APPS("Private Apps"),
         EVIDENCE_LOCKER("Evidence Locker"), CAMERA("Camera"),
-        RECENTLY_DELETED("Recently Deleted"), COLLECTIONS("Collections"), SETTINGS("Settings");
+        RECENTLY_DELETED("Recently Deleted"), COLLECTIONS("Collections"), SETTINGS("Settings"), VAULT("Vault"), FAVOURITES("Favourites");
         public final String label;
         Shortcut(String label) { this.label = label; }
     }
@@ -29,7 +29,9 @@ public final class HomeLayout {
         this.favourites = Collections.unmodifiableSet(f);
     }
     public static HomeLayout defaults() {
-        return new HomeLayout(List.of(Shortcut.values()), Set.of(), Set.of());
+        return new HomeLayout(List.of(Shortcut.GALLERY, Shortcut.VAULT, Shortcut.BROWSER,
+            Shortcut.PRIVATE_APPS, Shortcut.EVIDENCE_LOCKER, Shortcut.CAMERA, Shortcut.COLLECTIONS,
+            Shortcut.FAVOURITES, Shortcut.RECENTLY_DELETED, Shortcut.SETTINGS), Set.of(), Set.of());
     }
     public List<Shortcut> visible() {
         List<Shortcut> result = new ArrayList<>();
@@ -74,7 +76,13 @@ public final class HomeLayout {
         String[] parts = value.split("\\|", -1);
         if (parts.length != 4 || !parts[0].equals("v1")) throw new IllegalArgumentException("Invalid layout");
         List<Shortcut> order = parse(parts[1]);
-        if (order.size() != Shortcut.values().length) throw new IllegalArgumentException("Incomplete layout");
+        if (order.size() != Shortcut.values().length) {
+            // The only accepted older schema is the complete eight-app 1.7.10 layout.
+            Set<Shortcut> legacy = EnumSet.allOf(Shortcut.class);
+            legacy.remove(Shortcut.VAULT); legacy.remove(Shortcut.FAVOURITES);
+            if (!legacy.equals(new java.util.HashSet<>(order))) throw new IllegalArgumentException("Incomplete layout");
+            order.add(Shortcut.VAULT); order.add(Shortcut.FAVOURITES);
+        }
         return new HomeLayout(order, new java.util.HashSet<>(parse(parts[2])), new java.util.HashSet<>(parse(parts[3])));
     }
     public HomeLayout before(Shortcut item, Shortcut target) {
