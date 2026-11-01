@@ -1,6 +1,6 @@
 # 1.7.9 completion gates
 
-Implementation ledger, not release approval. No179productionAPK exists. Latest actualsource29a2a7b0/run41252039247 completed153exactunique152PASS1HiddenUIfail0skip; allfouractualownedroutecasesPASS, strictpacket/finalgatesblocked. UIcorrection sourceacceptedRUNTIME179_FIX4. Readonlyrawdiagnosis foundclassname/numericfirewall/independentclockuncertaintyblockers; Clockdesign/core andactual8negativecontrolsource/fixreviewsnowaccepted,0openC/I inbatch; freshactualAPI37compile/153cases/sixsamples/eightcontrols/strictpacketproofrequired. Allpriorvalidsource/evidencepreserved.
+Implementation ledger, not release approval. No179productionAPK exists. Latestactualsource d006ba9f/run41258646179:149nonroute148PASS1HiddenUIfail0skip; firstownedroutecasefailedAndroidICUregexpatternbeforepositiveproof,3othersunreached. AllnewKotlincompiled/OCRnativePASS. Two-testcorrection/nativeICUprobe sourceacceptedRUNTIME179_FIX5,0newC/I. Sixcalibratedsamples/eightactualKotlincontrols/full153/strictpacketproof remain mandatory; no canonicalfinalapproval/upgrade/signing.
 
 | Requirement | Verified evidence | Remaining gate |
 |---|---|---|

@@ -23,7 +23,7 @@ internal class EvidenceRouteClockLifecycle179(
  private fun nonce()=UUID.randomUUID().toString().replace("-","")
  private suspend fun until(test:()->Boolean){withTimeout(4000){while(!test())delay(1)}}
  private fun parsed(event:JSONObject):Pair<Int,JSONObject?> {
-  val match=checkNotNull(Regex("Broadcasting: Intent \\{[^\\r\\n]*}\\r?\\nBroadcast completed: result=(0|178|179)(?:, data=\"([A-Za-z0-9_-]+)\")?\\r?\\n\\r?\\nE179_CLOCK_STATUS=0\\r?\\n").matchEntire(event.getString("raw")))
+  val match=checkNotNull(Regex("Broadcasting: Intent \\{[^\\r\\n]*\\}\\r?\\nBroadcast completed: result=(0|178|179)(?:, data=\"([A-Za-z0-9_-]+)\")?\\r?\\n\\r?\\nE179_CLOCK_STATUS=0\\r?\\n").matchEntire(event.getString("raw")))
   val code=match.groupValues[1].toInt();val encoded=match.groupValues[2]
   check((code==0)==encoded.isEmpty())
   return code to if(encoded.isEmpty())null else JSONObject(Base64.decode(encoded,Base64.URL_SAFE or Base64.NO_WRAP or Base64.NO_PADDING).toString(Charsets.UTF_8))

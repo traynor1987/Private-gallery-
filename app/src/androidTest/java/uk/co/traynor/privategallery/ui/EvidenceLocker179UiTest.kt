@@ -198,11 +198,25 @@ class EvidenceLocker179UiTest {
    compose.setContent{CompositionLocalProvider(LocalContext provides f.context){PrivateGalleryTheme(AppTheme.DARK){EvidenceLocker(controller,{closed.incrementAndGet()},{},{},{},{})}}}
    compose.runOnIdle{controller.register(f.ids.first())};waitReady(controller,1)
    compose.onNodeWithText("Library").performClick();compose.onNodeWithTag("evidence-search").performTextReplacement("Alice")
+   // Finish the real IME transition before scrolling this large-text Library viewport.
+   var libraryWindow:android.view.View?=null
+   androidx.test.espresso.Espresso.onView(androidx.test.espresso.matcher.ViewMatchers.isRoot())
+    .inRoot(androidx.test.espresso.matcher.RootMatchers.isDialog())
+    .check{view,failure->if(failure!=null)throw failure;libraryWindow=checkNotNull(view)}
+    .perform(androidx.test.espresso.action.ViewActions.closeSoftKeyboard())
+   compose.waitUntil(10000){compose.runOnIdle{libraryWindow?.rootWindowInsets?.isVisible(android.view.WindowInsets.Type.ime())==false}}
+   compose.onNodeWithTag("evidence-search").assertTextContains("Alice")
    val selectAlpha=hasContentDescription("Select evidence alpha179.txt")
-   compose.evidenceNode(selectAlpha).performClick()
-   compose.evidenceNode(selectAlpha).assertIsOn()
-   // Selection updates header controls; settle that composition before locating the next touch target.
    compose.waitForIdle()
+   compose.onNodeWithTag("evidence-list").performScrollToNode(selectAlpha)
+   compose.waitUntil(10000){compose.onAllNodes(selectAlpha).fetchSemanticsNodes().size==1&&compose.onNode(selectAlpha).isDisplayed()}
+   compose.onNode(selectAlpha).assertIsDisplayed().performClick()
+   // Use the known list after recomposition; the shared helper can lose its child between queries.
+   compose.waitForIdle()
+   compose.onNodeWithTag("evidence-list").performScrollToNode(selectAlpha)
+   val checkedAlpha=selectAlpha and isOn()
+   compose.waitUntil(10000){compose.onAllNodes(checkedAlpha).fetchSemanticsNodes().size==1&&compose.onNode(checkedAlpha).isDisplayed()}
+   compose.onNode(checkedAlpha).assertIsDisplayed().assertIsOn()
    val openAlpha=hasText("alpha179.txt") and hasClickAction()
    compose.onNodeWithTag("evidence-list").performScrollToNode(openAlpha)
    try{compose.waitUntil(10000){compose.onAllNodes(openAlpha).fetchSemanticsNodes().size==1&&compose.onNode(openAlpha).isDisplayed()}}
