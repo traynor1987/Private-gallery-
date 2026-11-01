@@ -1,3 +1,45 @@
+# FINAL OWNER-ACCEPTANCE DELIVERY — 1.7.10 code52
+
+Completed 2026-11-01. One production-signed acceptance APK published after all gates passed.
+
+- Frozen application source: f301ee73320df2e366b7cd258dae5105296237a7; tree48425f7ab0581bcba1b43e1c8b29f690f82bd378.
+- Successful release control: fd1695f792304aba9813448538a4ce4c393b33cd.
+- Android17 grouped verification: https://github.com/traynor1987/Private-gallery-/actions/runs/41332619845 —54 tests,0 failures/errors/skips across11 required classes. Host checks and app/test assembly passed.
+- Signed release/upgrade: https://github.com/traynor1987/Private-gallery-/actions/runs/41336291205 —release lint/assembly, package/certificate, OCR distribution,16KB native alignment and original-key code51->52 upgrade/restart all passed. Baseline seed, post-upgrade verify and post-restart verify eachOK(1 test). No uninstall or data clear.
+- Artifact13095218976: https://github.com/traynor1987/Private-gallery-/actions/runs/41336291205/artifacts/13095218976
+- Archive SHA-256: b7c124eebf67aeb9d5fa5143146652250556ea184c161b38544cdce7653d0a29.
+- APK: Private-Gallery-1.7.10-code52-owner-acceptance.apk;137915802 bytes.
+- APK SHA-256: 0b22f736055738f4e3f552e4939cae1ea767cbce58a4908d04666786e0c37ba2.
+- Original certificate SHA-256: 94f2bfc6567f26d067d29077111cfd0ce86d38263c642ad115e43365f05b0d17. Downloaded APK's actual v2 RSA/SHA512 signature, single original DER certificate and complete chunked content digest independently verified locally, in addition to SDK apksigner verification and Android install-r acceptance.
+- Package uk.co.traynor.privategallery;1.7.10/code52;min/targetAPI37. Code52 was unused before assignment.
+- Separate security reviewer /root/security_review approved exact-source code/runtime and final release evidence: no unresolvedCritical/Important findings. Physical Galaxy Z Fold remains owner acceptance, not claimed as remotely tested.
+- Direct APK: https://chatgpt.com/library?file_id=libfile_ba8af637cf54819185d0298cccc5e0fa&account_id=personal
+
+## Delivered feature inventory
+
+Actual authenticated Private Home is integrated at MainActivity root with adaptive light/dark rounded-icon grid,8 existing feature destinations, long-press context actions, search/filter, pin/hide/reorder/restore, density/icon sizing and recent shortcuts. Primary/Hidden preferences and metadata search use independent encrypted owner stores and revocable access; lock/Panic clear sensitive presentation. Hidden remains PIN-only. Existing Gallery/Browser/Camera implementations are reused.
+
+Home/startup and feature Back/root/Home navigation are integrated. Existing installs retain Gallery startup until changed in Settings > Appearance & Navigation > Startup Screen; new installs default Private Home. Preferences are per-vault. Fold/configuration route retention keeps only feature navigation and rechecks retained authenticated authority. Explicit Lock, Panic, timeout and background/foreground policies remain enforced.
+
+Evidence Home, library, incidents/detail/timeline, OCR review, AI consent/analysis and export use dedicated Activity-owned pages instead of large workflow dialogs. Guided encrypted import supports selection/removal, offline OCR, text/time corrections, grouping/split/merge labels and explicit approved save. Existing encryption, integrity, OCR, AI and export controllers are reused; cloud requests require explicit exact-payload consent and never auto-upload originals.
+
+Screenshot repair addresses the successful settings-auth callback guard and capture-policy priority/lifecycle interactions. Eligible app screens honor Allow Screenshots; credential/protected AI/export pages, background/Recents and lock protection remain enforced. Android/system/DRM-protected content may remain uncapturable. Runtime permission/focus assertions were not weakened; emulator's SystemUI fullscreen tutorial is acknowledged only in guarded test preflight.
+
+Original-key upgrade verified preservation of Primary/Hidden encrypted media, Evidence records/OCR/corrections/incidents/timeline/analyses, Private Apps, browser metadata/preferences, Recently Deleted, credentials and other preferences. Only exact top-level AndroidX performance metadata files are excluded from ciphertext snapshots because package-update timestamps necessarily change; all owner-data checks remain mandatory.
+
+## Short Samsung Galaxy Z Fold acceptance checklist
+
+1. Install this APK over1.7.9 without uninstall/clear; verify existing Primary/Hidden media, Evidence and Recently Deleted.
+2. Change Startup Screen to Private Home; launch all8 features; check nested/root Back and Home.
+3. Pin/hide/reorder/search; restart and fold/unfold on cover/inner displays; check theme/density.
+4. Enter Hidden byPIN; confirm independent Home/search/layout, timeout/Lock and no Primary results.
+5. Review screenshot/document import, offlineOCR/group corrections, exact cloud consent and encrypted export.
+6. Toggle screenshots on eligible pages; verify credential/Recents privacy and Panic Exit revoking both vaults.
+
+Historical recovery entries below document implementation and resolved failures; the final status above supersedes older pending statements.
+
+---
+
 # Private Gallery 1.7.10 recovery
 
 Status: baseline recovered; implementation has not started. No 1.7.10 APK or security approval exists.
