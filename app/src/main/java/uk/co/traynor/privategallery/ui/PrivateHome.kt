@@ -42,6 +42,7 @@ import uk.co.traynor.privategallery.core.home.*
  BackHandler{when{menu!=null->menu=null;restore->restore=false;query.isNotBlank()->query="";customise->customise=false;else->onExit()}}
  val visible=preferences.layout.search(query).sortedByDescending{it in preferences.layout.favourites()}
  val palette=MaterialTheme.colorScheme
+ CompositionLocalProvider(LocalContentColor provides palette.onBackground) {
  Box(Modifier.fillMaxSize().testTag("private-home1710").background(Brush.verticalGradient(listOf(palette.primaryContainer.copy(alpha=.40f),palette.background,palette.background)))) {
   Column(Modifier.fillMaxSize().safeDrawingPadding().imePadding().widthIn(max=1120.dp).align(Alignment.TopCenter)) {
    if(customise) {
@@ -122,6 +123,7 @@ import uk.co.traynor.privategallery.core.home.*
     }
    }
   }
+ }
  }
  if(restore)GalleryAlertDialog(onDismissRequest={restore=false},title={Text("Restore this Home?")},text={Text("App order, pins and hidden shortcuts return to defaults in this Space. Your apps and files stay intact.")},confirmButton={TextButton(onClick={onChange(preferences.copy(layout=HomeLayout.defaults(),recent=emptyList()));restore=false}){Text("Restore")}},dismissButton={TextButton(onClick={restore=false}){Text("Cancel")}})
 }

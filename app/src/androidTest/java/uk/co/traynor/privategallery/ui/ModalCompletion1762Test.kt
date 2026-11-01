@@ -388,7 +388,11 @@ class ModalCompletion1762Test {
                 var open by remember { mutableStateOf(true) }
                 if (open) TransferHistoryDialog(access) { open = false }
             }
-            waitText("History is encrypted")
+            assertTrue("History owner must remain active",access.isActive())
+            assertEquals("All encrypted fixture operations must load before rendering",30,access.history().size)
+            try {waitText("History is encrypted")} catch(failure:Throwable) {
+                throw AssertionError("History active=${access.isActive()}, records=${runCatching{access.history().size}}\n"+compose.onAllNodes(isRoot(),useUnmergedTree=true).printToString(),failure)
+            }
             compose.onNodeWithText("Close").assertIsDisplayed()
             compose.onNode(hasScrollToIndexAction()).performScrollToIndex(29)
             compose.onNodeWithText("Cancel transfer").assertIsDisplayed().performClick()

@@ -1560,6 +1560,7 @@ class MainActivity : FragmentActivity() {
     private fun lock() = lockPrimary(revokeHidden = true)
 
     private fun lockPrimary(revokeHidden: Boolean) {
+        if(revokeHidden || !retained.hidden.selected) {homeVisible=false;retained.homeFeatureRoot=null}
         retained.clearNovaNavigation()
         if(revokeHidden || evidenceOwner?.owner==uk.co.traynor.privategallery.core.evidence.EvidenceCatalog.Owner.PRIMARY)closeEvidenceLocker()
         privateAppAuthentication?.done?.invoke(false)
@@ -1873,6 +1874,7 @@ class MainActivity : FragmentActivity() {
         }
     }
     internal fun lockNovaSpace() {
+        homeVisible=false;retained.homeFeatureRoot=null
         retained.clearNovaNavigation()
         if(retained.hidden.selected)retained.hidden.lock()else lock()
     }

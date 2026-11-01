@@ -55,6 +55,9 @@ class NovaHomePresentation17101Test {
   }
   for(theme in listOf(false,true))for(size in listOf(360 to 720,840 to 720,840 to 360,280 to 480))for(scale in listOf(1f,1.8f)) {
    compose.runOnIdle{dark=theme;width=size.first;height=size.second;font=scale}
+   val layouts=mutableListOf<androidx.compose.ui.text.TextLayoutResult>()
+   compose.onNodeWithText("NovaOS").performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.GetTextLayoutResult){it(layouts)}
+   assertEquals("Home text must inherit the current theme foreground",if(theme)androidx.compose.ui.graphics.Color(0xFFE4E6EA)else androidx.compose.ui.graphics.Color(0xFF1B1E23),layouts.single().layoutInput.style.color)
    compose.onNodeWithContentDescription("Lock Space").assertIsDisplayed()
    compose.onNodeWithContentDescription("Panic Exit").assertIsDisplayed()
    compose.onNodeWithTag("nova-app-grid").performScrollToNode(hasTestTag("nova-app-SETTINGS"))
