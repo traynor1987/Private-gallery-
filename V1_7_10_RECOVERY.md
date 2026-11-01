@@ -67,3 +67,13 @@ Final navigation completion now omits old feature composition while Home is disp
 Run41328278536 source1b7b96fb9719043edf6afb3097f21b73e1bceadf assembled successfully and passed the restored emulator preflight. Eight cases passed before the test process crashed during EvidenceAccess179Test.source_references_are_same_vault_verified_and_read_only. Actual crash: ConcurrentHashMap.KeyIterator.next -> Kotlin Collections.toList -> EvidenceAccess.cleanup. Kotlin's size==1 list conversion races with concurrent lease removal. Replaced all three concurrent retirement snapshots with toTypedArray (Collection.toArray), retaining closed/authority/commit fences. Independent reviewer confirms the fix preserves revocation semantics; the failing test stays mandatory.
 
 Final scope review also keeps explicit Home requests independent of existing-install startup defaults, handles nested collection/selection Back before root Home, and preserves authenticated Hidden download-manager navigation rather than concealing it with Home. Latest fixed source must pass the complete grouped run before any signing activation. No security approval or APK delivery has been claimed.
+
+### Complete runtime result and test-harness corrections
+
+Run41329394915 at2e51b265f0f23cad4359bcd5f34a28d93b34cf1e completed54 Android17 cases:51 passed,3 failed,0 skipped. The EvidenceAccess retirement race test now passes. Remaining failures were diagnosed from raw XML/logcat artifact13093245181:
+
+- Hidden Evidence UI test still matched a Dialog root, although the redesign intentionally uses an Activity page. Matcher now targets the exact Activity decorView; all clearing/isolation/storage assertions remain.
+- Screenshot recreation fixture replaced production setContent with bare Text and removed the production foreground privacy-commit SideEffect. It now uses a real authenticated Main composition with explicit5min grace and validates recreation/secure stop/authorized resume, restoring settings/key afterward.
+- Native permission denial was confirmed, but WM did not return focus after a permission request launched~200ms after initial Main display; native SPLASHSCREEN_EXIT_ANIM timeout was recorded. Test now lets initial production foreground/splash settle before installing the photo fixture/requesting permission, preserves real callback/resume/focus/no-reload checks, and records separate window/input diagnostics on timeout. Product focus policy was NOT relaxed.
+
+Independent review confirms these test corrections retain mandatory security assertions. Product source is unchanged from the51/54 run; one grouped rerun is required to validate all lifecycle interactions. No signing activation exists.

@@ -206,7 +206,7 @@ class EvidenceLocker179UiTest {
    // Finish the real IME transition before scrolling this large-text Library viewport.
    var libraryWindow:android.view.View?=null
    androidx.test.espresso.Espresso.onView(androidx.test.espresso.matcher.ViewMatchers.isRoot())
-    .inRoot(androidx.test.espresso.matcher.RootMatchers.isDialog())
+    .inRoot(androidx.test.espresso.matcher.RootMatchers.withDecorView(org.hamcrest.Matchers.equalTo(compose.activity.window.decorView)))
     .check{view,failure->if(failure!=null)throw failure;libraryWindow=checkNotNull(view)}
     .perform(androidx.test.espresso.action.ViewActions.closeSoftKeyboard())
    compose.waitUntil(10000){compose.runOnIdle{libraryWindow?.rootWindowInsets?.isVisible(android.view.WindowInsets.Type.ime())==false}}

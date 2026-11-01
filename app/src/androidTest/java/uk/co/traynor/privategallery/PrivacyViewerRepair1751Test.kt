@@ -257,15 +257,35 @@ class PrivacyViewerRepair1751Test {
   compose.onNodeWithText("Preview hidden").assertDoesNotExist()
  }
  @Test fun screenshotPreferenceSurvivesRecreationAndBackgroundReturn() {
-  content {Text("Eligible screenshot preference fixture")}
-  compose.waitUntil(10000){!compose.activity.privacyCoverVisible() && compose.activity.window.attributes.flags and WindowManager.LayoutParams.FLAG_SECURE==0}
-  compose.activityRule.scenario.recreate()
-  content {Text("Eligible screenshot preference fixture")}
-  compose.waitUntil(10000){!compose.activity.privacyCoverVisible() && compose.activity.window.attributes.flags and WindowManager.LayoutParams.FLAG_SECURE==0}
-  compose.activityRule.scenario.moveToState(Lifecycle.State.CREATED)
-  compose.activityRule.scenario.onActivity {activity->assertTrue(activity.privacyCoverVisible());assertTrue(activity.window.attributes.flags and WindowManager.LayoutParams.FLAG_SECURE!=0)}
-  compose.activityRule.scenario.moveToState(Lifecycle.State.RESUMED)
-  compose.waitUntil(10000){!compose.activity.privacyCoverVisible() && compose.activity.window.attributes.flags and WindowManager.LayoutParams.FLAG_SECURE==0}
+  val settings=compose.activity.getSharedPreferences("private-gallery-settings",0)
+  val previousTimeout=settings.getString("auto-lock-timeout",null)
+  val key=ByteArray(32){55}
+  fun setTimeout(activity:MainActivity,value:uk.co.traynor.privategallery.core.security.AutoLockTimeout){
+   MainActivity::class.java.getDeclaredMethod("applyAutoLockTimeout",uk.co.traynor.privategallery.core.security.AutoLockTimeout::class.java).apply{isAccessible=true}.invoke(activity,value)
+  }
+  try {
+   // Exercise the production foreground-commit composition and an explicitly configured grace period.
+   compose.runOnIdle {
+    val activity=compose.activity;val state=androidx.lifecycle.ViewModelProvider(activity)[ProtectedSessionState::class.java]
+    state.key=key;state.session.unlock()
+    @Suppress("UNCHECKED_CAST") val route=MainActivity::class.java.getDeclaredField("route\$delegate").apply{isAccessible=true}.get(activity) as MutableState<Route>
+    route.value=Route.VAULT;setTimeout(activity,uk.co.traynor.privategallery.core.security.AutoLockTimeout.MINUTES_5);activity.returnPrivateHome()
+   }
+   assertNormalWindow()
+   compose.activityRule.scenario.recreate()
+   assertNormalWindow()
+   compose.activityRule.scenario.moveToState(Lifecycle.State.CREATED)
+   compose.activityRule.scenario.onActivity {activity->assertTrue(activity.privacyCoverVisible());assertTrue(activity.window.attributes.flags and WindowManager.LayoutParams.FLAG_SECURE!=0)}
+   compose.activityRule.scenario.moveToState(Lifecycle.State.RESUMED)
+   assertNormalWindow()
+  }finally{
+   compose.runOnIdle {
+    val activity=compose.activity;val state=androidx.lifecycle.ViewModelProvider(activity)[ProtectedSessionState::class.java]
+    state.hidden.leave();state.key=null;state.session.lock()
+    setTimeout(activity,uk.co.traynor.privategallery.core.security.AutoLockPreference.decode(previousTimeout))
+   }
+   settings.edit().apply{if(previousTimeout==null)remove("auto-lock-timeout")else putString("auto-lock-timeout",previousTimeout)}.commit();key.fill(0)
+  }
  }
  @Test fun passcodeEntryRemainsProtectedWhenOrdinaryScreenshotsAreAllowed() {
   content {PrivateGalleryTheme {PasscodeKeypad(pin="123",onPinChange={},onSubmit={})}}
@@ -374,6 +394,9 @@ class PrivacyViewerRepair1751Test {
   assertNormalWindow()
  }
  @Test fun actualAndroidPermissionDialogKeepsPhotoAndCorrectForegroundPolicy() {
+  // Let the real initial foreground commit and native splash transition settle before the fixture/permission handoff.
+  compose.waitUntil(10000){compose.activity.lifecycle.currentState==Lifecycle.State.RESUMED && !compose.activity.privacyCoverVisible() && compose.activity.window.decorView.hasWindowFocus()}
+  InstrumentationRegistry.getInstrumentation().uiAutomation.waitForIdle(1000,10000)
   var loads=0
   content {PrivateGalleryTheme {FullscreenMediaViewer(listOf(ViewerMediaEntry("photo","image/jpeg")),MediaViewerSource.VAULT,0,{},onLoadProtectedBytes={_,done->loads++;done(Result.success(jpeg()))})}}
   compose.waitUntil(10000){loads==1 && compose.onAllNodesWithText("Loading media…").fetchSemanticsNodes().isEmpty()}
@@ -381,6 +404,7 @@ class PrivacyViewerRepair1751Test {
   val ui=instrumentation.uiAutomation
   val permission=android.Manifest.permission.ACCESS_FINE_LOCATION
   assertNormalWindow()
+  ui.waitForIdle(500,10000)
   val epochBeforePermission=compose.activity.previewConcealmentEpoch
   val returned=java.util.concurrent.atomic.AtomicBoolean(false)
   val permissionContract=PrivacyPermissionContract(compose.activity)
@@ -430,7 +454,15 @@ class PrivacyViewerRepair1751Test {
      instrumentation.runOnMainSync {restored=returned.get() && compose.activity.lifecycle.currentState==Lifecycle.State.RESUMED && compose.activity.window.decorView.hasWindowFocus()}
      if(!restored)Thread.sleep(25)
     }
-    assertTrue("Native permission result and foreground focus must return before unregistering",restored)
+    if(!restored) {
+     instrumentation.runOnMainSync {android.util.Log.e("PGPermission1710","returned=${returned.get()} lifecycle=${compose.activity.lifecycle.currentState} focus=${compose.activity.window.decorView.hasWindowFocus()} covered=${compose.activity.privacyCoverVisible()} flags=${compose.activity.window.attributes.flags}")}
+     for(command in listOf("dumpsys window","dumpsys input")) {
+      val dump=android.os.ParcelFileDescriptor.AutoCloseInputStream(ui.executeShellCommand(command)).bufferedReader().use{it.readText()}
+      dump.chunked(3500).forEach{android.util.Log.e("PGPermission1710",command+": "+it)}
+     }
+     ui.windows.forEach{window->android.util.Log.e("PGPermission1710","window=${window.id} type=${window.type} active=${window.isActive} focused=${window.isFocused} package=${window.root?.packageName}")}
+    }
+    assertTrue("Native permission result and foreground focus must return before unregistering (callback=${returned.get()})",restored)
    } finally {
     ui.serviceInfo=ui.serviceInfo.apply {flags=previousFlags}
     instrumentation.runOnMainSync {permissionLauncher.unregister();permissionContract.close()}
