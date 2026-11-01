@@ -32,10 +32,13 @@ class UpgradeFixtureTest {
     }
     private fun hash(bytes: ByteArray) = MessageDigest.getInstance("SHA-256").digest(bytes).joinToString("") { "%02x".format(it) }
     private fun encryptedHashes(): JSONObject = JSONObject().also { result ->
-        // AndroidX rewrites this exact runtime marker with PackageInfo.lastUpdateTime
-        // after an APK update. It is not owner data; no vault subpath is excluded.
-        val profileMarker = File(context.filesDir, "profileinstaller_profileWrittenFor_lastUpdateTime.dat")
-        context.filesDir.walkTopDown().filter { it.isFile && it != proof && it != profileMarker }.forEach {
+        // AndroidX rewrites these exact runtime files with PackageInfo.lastUpdateTime
+        // and compilation status after an APK update. No vault subpath is excluded.
+        val runtimeProfileFiles = setOf(
+            File(context.filesDir, "profileinstaller_profileWrittenFor_lastUpdateTime.dat"),
+            File(context.filesDir, "profileInstalled")
+        )
+        context.filesDir.walkTopDown().filter { it.isFile && it != proof && it !in runtimeProfileFiles }.forEach {
             result.put(it.relativeTo(context.filesDir).path, hash(it.readBytes()))
         }
     }
