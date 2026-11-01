@@ -3,6 +3,7 @@
 import sys,zipfile,xml.etree.ElementTree as ET
 EXPECTED={
  'uk.co.traynor.privategallery.HomeNavigation1710Test',
+ 'uk.co.traynor.privategallery.ui.PrivateAppsUi178Test',
  'uk.co.traynor.privategallery.core.home.Home1710Test',
  'uk.co.traynor.privategallery.core.home.EvidenceImport1710Test',
  'uk.co.traynor.privategallery.core.evidence.EvidenceStore179Test',

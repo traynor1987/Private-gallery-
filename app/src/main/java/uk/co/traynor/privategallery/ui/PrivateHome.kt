@@ -3,6 +3,8 @@ package uk.co.traynor.privategallery.ui
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -22,7 +24,7 @@ import uk.co.traynor.privategallery.core.home.*
  hidden:Boolean,preferences:HomePreferences,onChange:(HomePreferences)->Unit,
  initialCustomisation:Boolean=false,
  search:suspend (String)->List<HomeSearchResult>,
- onLaunch:(HomeLayout.Shortcut)->Unit,onLock:()->Unit,onPanic:()->Unit,
+ onLaunch:(HomeLayout.Shortcut)->Unit,onLock:()->Unit,onPanic:()->Unit,onExit:()->Unit,
 ) {
  var query by remember{mutableStateOf("")}
  var menu by remember{mutableStateOf<HomeLayout.Shortcut?>(null)}
@@ -31,7 +33,7 @@ import uk.co.traynor.privategallery.core.home.*
  var searching by remember{mutableStateOf(false)}
  LaunchedEffect(query){results=emptyList();if(query.isNotBlank()){searching=true;kotlinx.coroutines.delay(200);results=runCatching{search(query)}.getOrDefault(emptyList());searching=false}}
 
- BackHandler{query="";menu=null;customise=false}
+ BackHandler{when{menu!=null->menu=null;query.isNotBlank()->query="";customise->customise=false;else->onExit()}}
  val visible=preferences.layout.search(query).sortedByDescending{it in preferences.layout.favourites()}
  Surface(Modifier.fillMaxSize().testTag("private-home1710"),color=MaterialTheme.colorScheme.background){Column(Modifier.fillMaxSize().safeDrawingPadding().padding(16.dp)){
   Row(verticalAlignment=Alignment.CenterVertically){Column(Modifier.weight(1f)){
@@ -45,7 +47,7 @@ import uk.co.traynor.privategallery.core.home.*
    Text("Recently opened",style=MaterialTheme.typography.labelLarge)
    FlowRow(horizontalArrangement=Arrangement.spacedBy(8.dp)){preferences.recent.filter{it in preferences.layout.visible()}.take(4).forEach{item->AssistChip(onClick={onLaunch(item)},label={Text(item.label)})}}
   }
-  if(customise){
+  if(customise)Column(Modifier.heightIn(max=240.dp).verticalScroll(rememberScrollState())){
    Text("Appearance & Navigation",style=MaterialTheme.typography.titleMedium)
    Row{FilterChip(preferences.startupHome,{onChange(preferences.copy(startupHome=true))},{Text("Start: Private Home")});Spacer(Modifier.width(8.dp));FilterChip(!preferences.startupHome,{onChange(preferences.copy(startupHome=false))},{Text("Gallery")})}
    Row{FilterChip(preferences.compact,{onChange(preferences.copy(compact=!preferences.compact))},{Text("Compact")});Spacer(Modifier.width(8.dp));FilterChip(preferences.largeIcons,{onChange(preferences.copy(largeIcons=!preferences.largeIcons))},{Text("Large icons")})}

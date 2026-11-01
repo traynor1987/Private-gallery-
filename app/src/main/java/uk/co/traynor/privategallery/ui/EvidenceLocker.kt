@@ -71,7 +71,7 @@ internal fun EvidenceLocker(controller:EvidenceController,onClose:()->Unit,onImp
  EvidencePage(onBack=navigateBack) {
   Surface(Modifier.fillMaxSize().systemBarsPadding().imePadding(),color=MaterialTheme.colorScheme.background) {
    Column(Modifier.fillMaxSize().padding(16.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
-    Row(Modifier.fillMaxWidth()) {Text("Evidence Locker",Modifier.weight(1f),style=MaterialTheme.typography.headlineSmall);EvidenceSecurityControls();TextButton(onClick={close()}){Text("Close")}}
+    Row(Modifier.fillMaxWidth()) {if(page!="Home"||evidenceId!=null||incidentId!=null)TextButton(onClick=navigateBack){Text("Back")};Text("Evidence Locker",Modifier.weight(1f),style=MaterialTheme.typography.headlineSmall);EvidenceSecurityControls();TextButton(onClick={close()}){Text("Close")}}
     Text(if(controller.access.owner==EvidenceCatalog.Owner.PRIMARY)"Primary · encrypted local evidence"else"Hidden · encrypted local evidence",style=MaterialTheme.typography.labelLarge)
     FlowRow(horizontalArrangement=Arrangement.spacedBy(4.dp)) {listOf("Home","Library","Incidents","Timeline").forEach{target->FilterChip(selected=page==target,onClick={page=target;evidenceId=null;incidentId=null},label={Text(target)})}}
     if(state.busy)LinearProgressIndicator(Modifier.fillMaxWidth())

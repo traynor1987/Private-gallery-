@@ -764,7 +764,7 @@ internal fun BrowserV2Home(
     }
     SideEffect { session.recordAcceptanceUiEvent("BROWSER_V2_COMPOSED") }
 
-    privateApps?.let {controller ->PrivateAppsLibrary(controller,{if(privateApps===controller){privateApps=null;privateAppEditId=null;currentAppWebsite=null;if(controller.isCurrent())session.activeWebViewOrNull()?.onResume()}},privateAppEditId,session::updatePrivateApp,session::removePrivateApp,initialUrl=currentAppWebsite?.first,initialName=currentAppWebsite?.second,onAppSettings={id->if(controller.isCurrent())privateAppSettings=controller to id})}
+    privateApps?.let {controller ->PrivateAppsLibrary(controller,{if(privateApps===controller){privateApps=null;privateAppEditId=null;currentAppWebsite=null;if(controller.isCurrent())session.activeWebViewOrNull()?.onResume()}},privateAppEditId,session::updatePrivateApp,session::removePrivateApp,initialUrl=currentAppWebsite?.first,initialName=currentAppWebsite?.second,onAppSettings={id->if(controller.isCurrent())privateAppSettings=controller to id},onRootExit={(context as? uk.co.traynor.privategallery.MainActivity)?.finishHomeFeature(uk.co.traynor.privategallery.core.home.HomeLayout.Shortcut.PRIVATE_APPS)})}
     privateAppSettings?.let { (controller,id) ->
         PrivateAppSettings(controller,id,session::updatePrivateApp,{ui.overflow=true},{privateAppSettings=null},onEdit={privateAppSettings=null;privateAppEditId=id;openPrivateApps()},onRemoved=session::removePrivateApp)
     }

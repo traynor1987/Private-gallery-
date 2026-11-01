@@ -25,7 +25,7 @@ import uk.co.traynor.privategallery.core.privateapps.*
 
 /** Shared library only: browsing remains in the existing authorised browser. No saved UI state. */
 @Composable
-internal fun PrivateAppsLibrary(controller:PrivateAppsController,onClose:()->Unit,initialEditId:String?=null,onUpdated:(PrivateAppCatalog.App)->Unit={},onRemoved:(String)->Unit={},initialUrl:String?=null,initialName:String?=null,onAppSettings:((String)->Unit)?=null) {
+internal fun PrivateAppsLibrary(controller:PrivateAppsController,onClose:()->Unit,initialEditId:String?=null,onUpdated:(PrivateAppCatalog.App)->Unit={},onRemoved:(String)->Unit={},initialUrl:String?=null,initialName:String?=null,onAppSettings:((String)->Unit)?=null,onRootExit:()->Unit={}) {
  val scope=rememberCoroutineScope()
  var apps by remember(controller){mutableStateOf<List<PrivateAppCatalog.App>>(emptyList())}
  var busy by remember(controller){mutableStateOf(true)}
@@ -44,7 +44,7 @@ internal fun PrivateAppsLibrary(controller:PrivateAppsController,onClose:()->Uni
  val close=remember(controller){onClose}
  fun current()=alive.get() && controller.isCurrent()
  fun clearPresentation(){apps=emptyList();editor=null;editing=false;removal=null;message="";query="";menuId=null;selectedId=null;reorder=false;settingsId=null;showInformation=false}
- fun dismiss(){if(alive.getAndSet(false)){clearPresentation();revoked=true;close()}}
+ fun dismiss(root:Boolean=false){if(alive.getAndSet(false)){clearPresentation();revoked=true;close();if(root)onRootExit()}}
  DisposableEffect(controller){onDispose{alive.set(false)}}
  val lifecycle=androidx.lifecycle.compose.LocalLifecycleOwner.current.lifecycle
  DisposableEffect(controller,lifecycle){
@@ -76,12 +76,12 @@ internal fun PrivateAppsLibrary(controller:PrivateAppsController,onClose:()->Uni
  }
  LaunchedEffect(controller){while(isActive && !revoked){delay(250);withContext(Dispatchers.Main.immediate){if(!current())revoke()}}}
  if(revoked)return
- Dialog(onDismissRequest={if(!busy)dismiss()},properties=DialogProperties(usePlatformDefaultWidth=false,securePolicy=SecureFlagPolicy.SecureOn)) {
+ Dialog(onDismissRequest={if(!busy)dismiss(true)},properties=DialogProperties(usePlatformDefaultWidth=false,securePolicy=SecureFlagPolicy.SecureOn)) {
   Surface(Modifier.fillMaxSize().systemBarsPadding().imePadding(),color=MaterialTheme.colorScheme.background) {
    Column(Modifier.fillMaxSize().padding(16.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
     Row(Modifier.fillMaxWidth(),verticalAlignment=androidx.compose.ui.Alignment.CenterVertically) {
      Text("Private Apps",style=MaterialTheme.typography.headlineSmall,modifier=Modifier.weight(1f))
-     TextButton(onClick={dismiss()},enabled=!busy){Text("Close")}
+     TextButton(onClick={dismiss(true)},enabled=!busy){Text("Close")}
     }
     Row(Modifier.fillMaxWidth(),verticalAlignment=androidx.compose.ui.Alignment.CenterVertically) {
      Text(when(controller.owner){PrivateAppStore.Owner.PRIMARY->"Primary Vault";PrivateAppStore.Owner.HIDDEN_VPN->"Hidden Vault · VPN";else->"Hidden Vault · Tor"},modifier=Modifier.weight(1f),style=MaterialTheme.typography.labelLarge)

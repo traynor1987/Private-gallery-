@@ -16,10 +16,10 @@ class PrivateAppsUi178Test {
  @Test fun libraryCrudLaunchAndRevocation() {
   val context=ApplicationProvider.getApplicationContext<android.content.Context>()
   val root=File(context.cacheDir,"privateapps-ui-test").apply{deleteRecursively();mkdirs()}
-  val key=ByteArray(32){3};var live=true;var closed=0;var launched="";var mounted by mutableStateOf(true)
+  val key=ByteArray(32){3};var live=true;var closed=0;var rootExits=0;var launched="";var mounted by mutableStateOf(true)
   val store=PrimaryPrivateAppStore(root,key,{live},{check(live);it()})
   val controller=PrivateAppsController(store.owner(),{live},{action,bytes,id->PrivateAppCommands.execute(store,action,bytes,id)},{launched=it})
-  compose.setContent {PrivateGalleryTheme(AppTheme.DARK){if(mounted)PrivateAppsLibrary(controller,{closed++;mounted=false})}}
+  compose.setContent {PrivateGalleryTheme(AppTheme.DARK){if(mounted)PrivateAppsLibrary(controller,{closed++;mounted=false},onRootExit={rootExits++})}}
   compose.waitUntil(5000){compose.onAllNodesWithText("No private apps yet").fetchSemanticsNodes().isNotEmpty()}
   compose.onNodeWithText("Add App").performClick()
   compose.onNodeWithTag("private-app-name").performTextInput("Fixture")
@@ -33,9 +33,12 @@ class PrivateAppsUi178Test {
   compose.onNodeWithText("Save").performClick()
   compose.waitUntil(5000){compose.onAllNodesWithText("Renamed").fetchSemanticsNodes().isNotEmpty()}
   compose.onNodeWithText("Renamed").performClick()
-  compose.runOnIdle{assertEquals("https://example.test/",launched);assertEquals(1,closed);assertFalse(mounted)}
+  compose.runOnIdle{assertEquals("https://example.test/",launched);assertEquals(1,closed);assertEquals("Launching an app is not root Close",0,rootExits);assertFalse(mounted)}
   compose.onNodeWithTag("private-app-search").assertDoesNotExist()
   compose.runOnIdle{mounted=true}
+  compose.waitUntil(5000){compose.onAllNodesWithText("Close").fetchSemanticsNodes().isNotEmpty()}
+  compose.onNodeWithText("Close").performClick()
+  compose.runOnIdle{assertEquals("Explicit Close returns to Home",1,rootExits);mounted=true}
   compose.waitUntil(5000){compose.onAllNodesWithContentDescription("App actions for Renamed").fetchSemanticsNodes().isNotEmpty()}
   compose.onNodeWithContentDescription("App actions for Renamed").performClick()
   compose.onNodeWithText("Remove").performClick()

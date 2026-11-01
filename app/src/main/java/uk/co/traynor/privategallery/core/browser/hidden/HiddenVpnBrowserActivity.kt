@@ -262,7 +262,7 @@ class HiddenVpnBrowserActivity:ComponentActivity() {
         // authority, and especially before rebinding the old process to a different Network.
         if(!processAdmission.enter()) {terminate(false);return}
         try {
-            homePrivateApps=intent.getBooleanExtra("home1710-private-apps",false);broker=checkNotNull(intent.extras?.getBinder(HiddenVpnBrowserBroker.EXTRA));intent.replaceExtras(Bundle())
+            homePrivateApps=intent.getBooleanExtra("home1710-private-apps",false);privateAppsHomeRoot=homePrivateApps;broker=checkNotNull(intent.extras?.getBinder(HiddenVpnBrowserBroker.EXTRA));intent.replaceExtras(Bundle())
             broker!!.linkToDeath(death,0)
             call(HiddenVpnBrowserBroker.CLAIM,write={it.writeStrongBinder(endpoint)},read={parcel ->
                 network=parcel.readTypedObject(Network.CREATOR);proxyPort=parcel.readInt();proxyPassword=checkNotNull(parcel.readString());storageId=checkNotNull(parcel.readString());mode=HiddenConnectionPolicy.Mode.parse(parcel.readString());check(mode!=HiddenConnectionPolicy.Mode.VPN_TOR);captureGuard.updatePolicy(parcel.readInt()==1);selectedTheme=uk.co.traynor.privategallery.core.ui.ThemePreference.decode(parcel.readString())
@@ -500,6 +500,7 @@ class HiddenVpnBrowserActivity:ComponentActivity() {
     }
     private var privateAppsOpen by mutableStateOf(false)
     private var homePrivateApps=false
+    private var privateAppsHomeRoot=false
     private val privateAppTabs=mutableStateMapOf<WebView,uk.co.traynor.privategallery.core.privateapps.PrivateAppCatalog.App>()
     private var privateAppSettingsId by mutableStateOf<String?>(null)
     private var privateAppSwitcher by mutableStateOf(false)
@@ -626,7 +627,7 @@ class HiddenVpnBrowserActivity:ComponentActivity() {
         screenshotReview?.let {request ->PrivateAppScreenshotReview(request,{if(screenshotReview===request)screenshotReview=null})}
         if(privateAppsOpen)PrivateAppsLibrary(privateAppsController,{privateAppsOpen=false;if(ready && live() && lifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.RESUMED))current?.onResume();privateAppEditId=null;privateAppInitialUrl=null;privateAppInitialName=null;finishPrivateAppIcon(null)},privateAppEditId,{updated ->
             privateAppTabs.keys.toList().forEach {view ->if(privateAppTabs[view]?.id()==updated.id())privateAppTabs[view]=updated}
-        },{id ->views.filter {privateAppTabs[it]?.id()==id}.toList().forEach(::closePrivateAppSession)},initialUrl=privateAppInitialUrl,initialName=privateAppInitialName,onAppSettings={id->if(ready && live())privateAppSettingsId=id})
+        },{id ->views.filter {privateAppTabs[it]?.id()==id}.toList().forEach(::closePrivateAppSession)},initialUrl=privateAppInitialUrl,initialName=privateAppInitialName,onAppSettings={id->if(ready && live())privateAppSettingsId=id},onRootExit={if(privateAppsHomeRoot)terminate()})
         privateAppIconSelection?.let {selection ->key(selection) {
             HiddenPrivateAppIconPicker(selection.generation,
                 isCurrent={privateAppIconSelection===selection && uploadGeneration.get()==selection.generation && ready && live()},

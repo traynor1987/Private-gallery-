@@ -14,6 +14,7 @@ class ProtectedSessionState : ViewModel() {
     internal var route = Route.LOCK
     internal var afterAuthentication = Route.VAULT
     internal var previewConcealmentEpoch by androidx.compose.runtime.mutableIntStateOf(0)
+    internal var homeFeatureRoot:String?=null
     internal var homeVisible by androidx.compose.runtime.mutableStateOf(false)
     internal var homePrimaryAuthentication:Long?=null
     internal var homeHiddenAuthentication:uk.co.traynor.privategallery.core.hidden.HiddenSession.Authentication?=null

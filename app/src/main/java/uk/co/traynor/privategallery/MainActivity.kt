@@ -132,6 +132,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.material3.OutlinedButton
@@ -571,6 +572,7 @@ class MainActivity : FragmentActivity() {
     private fun exitVaultCamera() {
         closeVaultCamera()
         recoverVaultCamera(if(retained.hidden.selected)retained.hidden.session else null)
+        finishHomeFeature(uk.co.traynor.privategallery.core.home.HomeLayout.Shortcut.CAMERA)
     }
     override fun onKeyDown(keyCode: Int, event: android.view.KeyEvent): Boolean {
         if (keyCode == android.view.KeyEvent.KEYCODE_VOLUME_DOWN && cameraVolumeAction != null) {
@@ -602,7 +604,7 @@ class MainActivity : FragmentActivity() {
         val token=++protectedPageGeneration;protectedPages.add(token);applyScreenPrivacy();return token
     }
     internal fun endProtectedPage(token:Long) {
-        if(protectedPages.remove(token))applyScreenPrivacy()
+        if(protectedPages.remove(token) && !isDestroyed && !isChangingConfigurations && !isFinishing)applyScreenPrivacy()
     }
 
     internal fun beginPermissionWindow():Long {
@@ -1184,10 +1186,10 @@ class MainActivity : FragmentActivity() {
         route = if ((session.isUnlocked && sessionKey != null) || (retained.hidden.selected && retained.hidden.session.isUnlocked)) retained.route else if (keys.isConfigured) Route.LOCK else Route.SETUP
         setContent {
             PrivateGalleryTheme(appTheme) {
-                PrivateGalleryApp(route, ::createPin, ::unlock, ::changePin, ::recoverWithOfflineKey, ::finishRecoveryKeySetup, { route = Route.RECOVER }, { route = Route.LOCK }, ::lock, ::importSelected, ::moveSelected, ::loadItems, ::loadCollections, ::loadFavouriteCollection, ::createCollection, ::addItemsToCollection, ::removeItemsFromCollection, ::renameCollection, ::deleteCollection, ::loadCollectionItems, ::readForViewing, ::loadPreview, ::loadImageEdit, ::applyImageCrop, ::undoImageCrop, ::resetImageCrop, ::restore, ::delete, biometricEnabled, ::unlockWithBiometrics, ::enrollBiometrics, ::finishSetup, autoLockTimeout, appTheme, if(retained.hidden.selected) hiddenAllowScreenshots else allowScreenshots, updateStatus, updateLastChecked, availableUpdate != null, mediaAccessAvailable, ::requestDeviceMediaAccess, ::deviceMediaPages, { deviceGallery.albums() }, ::loadDeviceThumbnail, ::openSettings, { openNonBrowser(Route.GALLERY); mediaAccessAvailable = hasDeviceMediaAccess() }, { openNonBrowser(Route.VAULT) }, { openNonBrowser(Route.FAVOURITE) }, ::openBrowser, ::applyAutoLockTimeout, ::applyTheme, ::applyAllowScreenshots, ::applyBrowserSearchEngine, ::applyClearBrowserDataOnLock, ::clearBrowserData, browserSearchEngine, clearBrowserDataOnLock, browserSaveHistory, ::applyBrowserSaveHistory, browserWebView, { view -> browserWebView = view }, { exit -> browserFullscreenExit = exit }, ::checkForUpdates, ::downloadUpdate, recoveryKeys.isConfigured, pendingRecoveryKey?.concatToString(), ::importBrowserSource, browserRequireVpn, browserVpnState == VpnConnectionState.CONNECTED, ::importWireGuardProfile, vpnProfileStatus, browserVpnState, browserAutoConnectVpn, ::applyBrowserAutoConnectVpn, ::applyBrowserRequireVpn, ::setFavouriteCollection, vpnProfiles, ::selectVpnProfile, ::removeVpnProfile, browserBookmarks, ::addBrowserBookmark, ::removeBrowserBookmark, browserV2Session, ::loadBrowserHistory, ::clearBrowserHistory, ::recordBrowserHistory, browserVpnPreparing, browserVpnPermissionRequired, ::requestBrowserVpnPermissionOrConnect, { item, bytes, cancelled, completed -> saveEditedCopy(item, bytes, cancelled, completed) }, ::readForEditing, { item, bytes, cancelled, completed -> saveEditedCopy(item, bytes, cancelled, completed, true) }, onReadVideoForViewing = ::readVideoForViewing, onOpenVideoSession = ::openVideoSession, onSaveAiCopy = { item, bytes, provenance, cancelled, completed -> saveEditedCopy(item, bytes, cancelled, completed, aiProvenance = provenance) }, onPrepareBrowserUpload = ::prepareBrowserUpload, onClearBrowserUpload = ::clearBrowserUploadCopies, hideContent = hideContent, secretDiscovered = secretDiscovered, onHideContentChanged = ::applyHideContent, onSecretDiscoveryChanged = ::applySecretDiscovery, onAuthenticateSensitive = ::authenticateSensitive, onCancelSensitiveAuthentication = ::cancelSensitiveAuthentication, onVerifySecretPin = ::verifySecretPin, onGenerateImage = ::generateVaultImage, onChooseBackupExport = { backupExportLauncher.launch("private-gallery-vault.pgvault") }, backupExportUri = backupExportUri, onCancelBackupExport = { backupExportUri = null }, onExportBackup = ::exportEncryptedBackup, backupStatus = backupStatus, onChooseBackupRestore = { backupRestoreLauncher.launch(arrayOf("application/octet-stream", "application/zip", "*/*")) }, backupRestoreUri = backupRestoreUri, onCancelBackupRestore = { backupRestoreUri = null }, onRestoreBackup = ::restoreEncryptedBackup, onLoadRecentlyDeleted = ::loadRecentlyDeleted, onMoveItemsToRecentlyDeleted = ::moveItemsToRecentlyDeleted, onChangeRecentlyDeleted = ::changeRecentlyDeleted, onRestoreSelectedVaultCopies = ::restoreSelectedVaultCopies, onLeaveHidden = ::leaveHiddenToDestination, hiddenState = retained.hidden, primaryAuthority = {session.isUnlocked && sessionKey != null}, onReturnToPrimary = ::returnToPrimaryVault, createPrimaryCopy = ::createPrimaryCopy, primaryGallerySelected = retained.primaryGallery, onGallerySourceSelected = ::selectGallerySource, onTransferToHidden = ::transferPrimaryToHidden, phoneMoveStatus = phoneMoveStatus, onCancelGalleryAuthentication = ::cancelGalleryAuthentication, onCapturePrimaryEditorAuthority = ::capturePrimaryEditorAuthority, onInvalidatePrimaryPresentation = ::invalidatePrimaryBrowserPresentation, onDirectHiddenUnlock = ::unlockHiddenDirect)
+                if(!displayPrivateHome()) PrivateGalleryApp(route, ::createPin, ::unlock, ::changePin, ::recoverWithOfflineKey, ::finishRecoveryKeySetup, { route = Route.RECOVER }, { route = Route.LOCK }, ::lock, ::importSelected, ::moveSelected, ::loadItems, ::loadCollections, ::loadFavouriteCollection, ::createCollection, ::addItemsToCollection, ::removeItemsFromCollection, ::renameCollection, ::deleteCollection, ::loadCollectionItems, ::readForViewing, ::loadPreview, ::loadImageEdit, ::applyImageCrop, ::undoImageCrop, ::resetImageCrop, ::restore, ::delete, biometricEnabled, ::unlockWithBiometrics, ::enrollBiometrics, ::finishSetup, autoLockTimeout, appTheme, if(retained.hidden.selected) hiddenAllowScreenshots else allowScreenshots, updateStatus, updateLastChecked, availableUpdate != null, mediaAccessAvailable, ::requestDeviceMediaAccess, ::deviceMediaPages, { deviceGallery.albums() }, ::loadDeviceThumbnail, ::openSettings, { openNonBrowser(Route.GALLERY); mediaAccessAvailable = hasDeviceMediaAccess() }, { openNonBrowser(Route.VAULT) }, { openNonBrowser(Route.FAVOURITE) }, ::openBrowser, ::applyAutoLockTimeout, ::applyTheme, ::applyAllowScreenshots, ::applyBrowserSearchEngine, ::applyClearBrowserDataOnLock, ::clearBrowserData, browserSearchEngine, clearBrowserDataOnLock, browserSaveHistory, ::applyBrowserSaveHistory, browserWebView, { view -> browserWebView = view }, { exit -> browserFullscreenExit = exit }, ::checkForUpdates, ::downloadUpdate, recoveryKeys.isConfigured, pendingRecoveryKey?.concatToString(), ::importBrowserSource, browserRequireVpn, browserVpnState == VpnConnectionState.CONNECTED, ::importWireGuardProfile, vpnProfileStatus, browserVpnState, browserAutoConnectVpn, ::applyBrowserAutoConnectVpn, ::applyBrowserRequireVpn, ::setFavouriteCollection, vpnProfiles, ::selectVpnProfile, ::removeVpnProfile, browserBookmarks, ::addBrowserBookmark, ::removeBrowserBookmark, browserV2Session, ::loadBrowserHistory, ::clearBrowserHistory, ::recordBrowserHistory, browserVpnPreparing, browserVpnPermissionRequired, ::requestBrowserVpnPermissionOrConnect, { item, bytes, cancelled, completed -> saveEditedCopy(item, bytes, cancelled, completed) }, ::readForEditing, { item, bytes, cancelled, completed -> saveEditedCopy(item, bytes, cancelled, completed, true) }, onReadVideoForViewing = ::readVideoForViewing, onOpenVideoSession = ::openVideoSession, onSaveAiCopy = { item, bytes, provenance, cancelled, completed -> saveEditedCopy(item, bytes, cancelled, completed, aiProvenance = provenance) }, onPrepareBrowserUpload = ::prepareBrowserUpload, onClearBrowserUpload = ::clearBrowserUploadCopies, hideContent = hideContent, secretDiscovered = secretDiscovered, onHideContentChanged = ::applyHideContent, onSecretDiscoveryChanged = ::applySecretDiscovery, onAuthenticateSensitive = ::authenticateSensitive, onCancelSensitiveAuthentication = ::cancelSensitiveAuthentication, onVerifySecretPin = ::verifySecretPin, onGenerateImage = ::generateVaultImage, onChooseBackupExport = { backupExportLauncher.launch("private-gallery-vault.pgvault") }, backupExportUri = backupExportUri, onCancelBackupExport = { backupExportUri = null }, onExportBackup = ::exportEncryptedBackup, backupStatus = backupStatus, onChooseBackupRestore = { backupRestoreLauncher.launch(arrayOf("application/octet-stream", "application/zip", "*/*")) }, backupRestoreUri = backupRestoreUri, onCancelBackupRestore = { backupRestoreUri = null }, onRestoreBackup = ::restoreEncryptedBackup, onLoadRecentlyDeleted = ::loadRecentlyDeleted, onMoveItemsToRecentlyDeleted = ::moveItemsToRecentlyDeleted, onChangeRecentlyDeleted = ::changeRecentlyDeleted, onRestoreSelectedVaultCopies = ::restoreSelectedVaultCopies, onLeaveHidden = ::leaveHiddenToDestination, hiddenState = retained.hidden, primaryAuthority = {session.isUnlocked && sessionKey != null}, onReturnToPrimary = ::returnToPrimaryVault, createPrimaryCopy = ::createPrimaryCopy, primaryGallerySelected = retained.primaryGallery, onGallerySourceSelected = ::selectGallerySource, onTransferToHidden = ::transferPrimaryToHidden, phoneMoveStatus = phoneMoveStatus, onCancelGalleryAuthentication = ::cancelGalleryAuthentication, onCapturePrimaryEditorAuthority = ::capturePrimaryEditorAuthority, onInvalidatePrimaryPresentation = ::invalidatePrimaryBrowserPresentation, onDirectHiddenUnlock = ::unlockHiddenDirect)
                 privateAppAuthentication?.let { uk.co.traynor.privategallery.ui.PrivateAppAuthentication(it) }
                 HomePresentation()
-                evidenceOwner?.let { owner -> androidx.compose.runtime.key(owner) { uk.co.traynor.privategallery.ui.EvidenceLockerHost(owner,activityResumed) { if(evidenceOwner===owner)closeEvidenceLocker() } } }
+                evidenceOwner?.let { owner -> androidx.compose.runtime.key(owner) { uk.co.traynor.privategallery.ui.EvidenceLockerHost(owner,activityResumed) { if(evidenceOwner===owner){closeEvidenceLocker();finishHomeFeature(uk.co.traynor.privategallery.core.home.HomeLayout.Shortcut.EVIDENCE_LOCKER)} } } }
                 ExternalEditingHost()
                 vaultCamera?.let { camera -> uk.co.traynor.privategallery.ui.VaultCameraScreen(camera, ::exitVaultCamera) }
                 // Observe all policy inputs during composition; hand off only after it commits.
@@ -1258,7 +1260,7 @@ class MainActivity : FragmentActivity() {
         if(isDestroyed || !owner.delivered.compareAndSet(false,true))return
         if(reason==uk.co.traynor.privategallery.core.browser.hidden.HiddenVpnBrowserBroker.RETURN &&
             retained.hidden.selected && retained.hidden.session.isAuthenticationCurrent(owner.hidden)) {
-            homeVisible=true;homeRequestRevision++
+            retained.homeFeatureRoot=null;homeVisible=true;homeRequestRevision++
         }
         val interactive=(getSystemService(POWER_SERVICE) as android.os.PowerManager).isInteractive
         val screenOff=!interactive || reason==uk.co.traynor.privategallery.core.browser.hidden.HiddenVpnBrowserBroker.SCREEN_OFF
@@ -1751,7 +1753,12 @@ class MainActivity : FragmentActivity() {
         if(hideContent || !activityResumed)return
         val hidden=retained.hidden.selected
         if(if(hidden)!retained.hidden.session.isUnlocked else !session.isUnlocked||sessionKey==null)return
-        closeEvidenceLocker();leaveBrowserIfOpen();homeRequestRevision++;homeVisible=true
+        closeEvidenceLocker();retained.homeFeatureRoot=null;if(route!=Route.VAULT)openNonBrowser(Route.VAULT);homeRequestRevision++;homeVisible=true
+    }
+    internal fun finishHomeFeature(item:uk.co.traynor.privategallery.core.home.HomeLayout.Shortcut) {
+        if(retained.homeFeatureRoot!=item.name)return
+        retained.homeFeatureRoot=null
+        if(activityResumed)returnPrivateHome()else {homeVisible=true;homeRequestRevision++}
     }
     private fun homeAccess():uk.co.traynor.privategallery.core.evidence.EvidenceAccess? {
         if(hideContent||!activityResumed)return null
@@ -1774,7 +1781,7 @@ class MainActivity : FragmentActivity() {
     private fun launchHomeShortcut(item:uk.co.traynor.privategallery.core.home.HomeLayout.Shortcut) {
         val hidden=retained.hidden.selected
         if(hideContent||!activityResumed||(if(hidden)!retained.hidden.session.isUnlocked else !session.isUnlocked||sessionKey==null))return
-        homeVisible=false;homeVaultMode="MEDIA"
+        homeVisible=false;retained.homeFeatureRoot=item.name;homeVaultMode="MEDIA"
         when(item) {
             uk.co.traynor.privategallery.core.home.HomeLayout.Shortcut.GALLERY -> {
                 openNonBrowser(Route.VAULT);if(hidden)retained.hidden.select()
@@ -1830,6 +1837,9 @@ class MainActivity : FragmentActivity() {
                 }
             }
     }
+    private fun displayPrivateHome():Boolean = homeVisible && !hideContent &&
+        route in setOf(Route.GALLERY,Route.VAULT,Route.FAVOURITE,Route.BROWSER,Route.SETTINGS) &&
+        if(retained.hidden.selected)retained.hidden.authenticated&&retained.hidden.session.isUnlocked else session.isUnlocked&&sessionKey!=null
     @Composable private fun HomePresentation() {
         val hidden=retained.hidden.selected
         val admitted=activityResumed && !hideContent && route in setOf(Route.GALLERY,Route.VAULT,Route.FAVOURITE,Route.BROWSER,Route.SETTINGS) &&
@@ -1840,7 +1850,7 @@ class MainActivity : FragmentActivity() {
                 Icon(Icons.Default.Home,"Private Home")
             }
         }
-        androidx.compose.runtime.key(hidden,if(hidden)retained.hidden.session else sessionKey,homeRequestRevision) {
+        androidx.compose.runtime.key(hidden,if(hidden)retained.hidden.session else sessionKey,homeRequestRevision,homeVisible) {
             HomeScopedPresentation(hidden)
         }
     }
@@ -1852,14 +1862,15 @@ class MainActivity : FragmentActivity() {
             val store=remember(access){uk.co.traynor.privategallery.core.home.HomePreferencesStore(access,appSettings.getBoolean("home-existing-install",true))}
             var preferences by remember(access){mutableStateOf<uk.co.traynor.privategallery.core.home.HomePreferences?>(null)}
             var live by remember(access){mutableStateOf(true)}
+            var loading by remember(access){mutableStateOf(true)}
             val scope=rememberCoroutineScope()
             DisposableEffect(access){onDispose{access.close();preferences=null}}
             LaunchedEffect(access){
                 val loaded=withContext(Dispatchers.IO){runCatching{store.read()}.getOrNull()}
                 if(access.current()) {
-                    preferences=loaded
+                    preferences=loaded;loading=false
                     val first=if(hidden)!retained.hidden.session.isAuthenticationCurrent(homeHiddenAuthentication)else homePrimaryAuthentication!=session.captureAuthenticationEpoch()
-                    if(first){homeVisible=loaded?.startupHome==true
+                    if(first){retained.homeFeatureRoot=null;homeVisible=loaded?.startupHome==true
                         if(hidden)homeHiddenAuthentication=retained.hidden.session.authentication()else homePrimaryAuthentication=session.captureAuthenticationEpoch()}
                 }
                 while(isActive&&access.current())delay(100)
@@ -1867,14 +1878,27 @@ class MainActivity : FragmentActivity() {
             }
             if(!live)return
             val value=preferences
-            fun save(next:uk.co.traynor.privategallery.core.home.HomePreferences){
-                scope.launch {val saved=withContext(Dispatchers.IO){runCatching{store.write(next)}.isSuccess}
-                    if(saved&&access.current())preferences=next}
+            val saveMutex=remember(access){kotlinx.coroutines.sync.Mutex()}
+            fun save(next:uk.co.traynor.privategallery.core.home.HomePreferences,after:()->Unit={}){
+                scope.launch {saveMutex.withLock {
+                    val saved=withContext(Dispatchers.IO){runCatching{store.write(next)}.isSuccess}
+                    if(access.current()){if(saved)preferences=next;after()}
+                }}
             }
-            if(homeVisible&&value!=null)uk.co.traynor.privategallery.ui.PrivateHome(hidden,value,::save,initialCustomisation=homeCustomisationRequested,
+            if(homeVisible&&value==null)Surface(Modifier.fillMaxSize()){
+                Column(Modifier.fillMaxSize().safeDrawingPadding().padding(24.dp),verticalArrangement=Arrangement.spacedBy(16.dp)){
+                    if(loading)CircularProgressIndicator()else {
+                        Text("Home layout could not open. Encrypted media is unchanged.")
+                        TextButton(onClick={save(uk.co.traynor.privategallery.core.home.HomePreferences())}){Text("Restore default Home layout")}
+                    }
+                    TextButton(onClick={if(hidden)retained.hidden.lock()else lock()}){Text("Lock")}
+                    TextButton(onClick=::panicExit){Text("Panic Exit")}
+                }
+            }
+            if(homeVisible&&value!=null)uk.co.traynor.privategallery.ui.PrivateHome(hidden,value,{save(it)},initialCustomisation=homeCustomisationRequested,
                 search={query->withContext(Dispatchers.IO){uk.co.traynor.privategallery.core.home.searchPrivateHome(applicationContext,access,query)}},
-                {item->if(access.current()){save(value.copy(recent=(listOf(item)+value.recent).distinct().take(8)));launchHomeShortcut(item)}},
-                {if(hidden)retained.hidden.lock()else lock()},::panicExit)
+                {item->if(access.current()){save(value.copy(recent=(listOf(item)+value.recent).distinct().take(8))){if(access.current())launchHomeShortcut(item)}}},
+                {if(hidden)retained.hidden.lock()else lock()},::panicExit,{moveTaskToBack(true)})
 
     }
 
@@ -2506,7 +2530,7 @@ class MainActivity : FragmentActivity() {
     }
 
     private fun currentScreenshotPreference(): Boolean =
-        if(retained.hidden.selected && !(route==Route.GALLERY && retained.primaryGallery && !retained.hidden.visible)) hiddenAllowScreenshots else allowScreenshots
+        if(retained.hidden.selected && (homeVisible || !(route==Route.GALLERY && retained.primaryGallery && !retained.hidden.visible))) hiddenAllowScreenshots else allowScreenshots
 
     private fun applyScreenPrivacy(allowed: Boolean = currentScreenshotPreference()) {
         if (allowed && activityResumed && !privacyCoverVisible() && privacyWindows.hasFocus() && permissionWindows.isEmpty() && protectedPages.isEmpty()) {
