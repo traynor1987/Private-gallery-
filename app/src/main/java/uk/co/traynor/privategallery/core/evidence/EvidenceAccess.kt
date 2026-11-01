@@ -47,6 +47,7 @@ internal class EvidenceAccess private constructor(
  val owner:EvidenceCatalog.Owner,val root:File,private val rawLeases:EvidenceEncryptedStore.LeaseFactory,
  private val guard:()->Boolean,private val retireBoundary:((()->Unit)->Unit),
  sourceFactory:(EvidenceAccess)->EvidenceSources,
+ internal val hiddenSession:HiddenSession?=null,
 ):AutoCloseable {
  private val closed=AtomicBoolean()
  private val retired=AtomicBoolean()
@@ -137,7 +138,7 @@ internal class EvidenceAccess private constructor(
    val authority=session.authority();val valid={authorized()&&session.isAuthorityCurrent(authority)}
    val factory=EvidenceAuthorities.hidden(session,authority,{authorized()})
    val access=EvidenceAccess(EvidenceCatalog.Owner.HIDDEN,File(context.noBackupFilesDir,"evidence-state"),factory,
-    valid,{action->synchronized(session){action()}},{owner->HiddenSources(context,session,owner)})
+    valid,{action->synchronized(session){action()}},{owner->HiddenSources(context,session,owner)},session)
    access.revocation=session.onRevoked(authority){access.markRevoked()}
    if(!access.current()){access.close();access.revocation?.close();error("Hidden evidence authority retired")}
    return access

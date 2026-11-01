@@ -2,6 +2,15 @@
 # Source only for release operations. Never infer a release from version text or PR input.
 release_min_sdk=26
 case "${GITHUB_REF:-}" in
+  refs/heads/release/1.7.10-private-home)
+    release_min_sdk=37
+    release_version=1.7.10
+    release_code=52
+    baseline_version=1.7.9
+    baseline_code=51
+    baseline_sha=3fc699ae5ecfbc7678e835240c594e38daf4e1da
+    [[ "${PRIVATE_GALLERY_UPGRADE_BASELINE:-51}" == 51 ]] || { echo 'Unsupported upgrade baseline' >&2; exit 1; }
+    ;;
   refs/heads/release/1.7-encrypted-camera)
     release_version=1.7
     release_code=33

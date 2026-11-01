@@ -257,13 +257,21 @@ class PrivacyViewerRepair1751Test {
   compose.onNodeWithText("Preview hidden").assertDoesNotExist()
  }
  @Test fun screenshotPreferenceSurvivesRecreationAndBackgroundReturn() {
+  content {Text("Eligible screenshot preference fixture")}
   compose.waitUntil(10000){!compose.activity.privacyCoverVisible() && compose.activity.window.attributes.flags and WindowManager.LayoutParams.FLAG_SECURE==0}
   compose.activityRule.scenario.recreate()
+  content {Text("Eligible screenshot preference fixture")}
   compose.waitUntil(10000){!compose.activity.privacyCoverVisible() && compose.activity.window.attributes.flags and WindowManager.LayoutParams.FLAG_SECURE==0}
   compose.activityRule.scenario.moveToState(Lifecycle.State.CREATED)
   compose.activityRule.scenario.onActivity {activity->assertTrue(activity.privacyCoverVisible());assertTrue(activity.window.attributes.flags and WindowManager.LayoutParams.FLAG_SECURE!=0)}
   compose.activityRule.scenario.moveToState(Lifecycle.State.RESUMED)
   compose.waitUntil(10000){!compose.activity.privacyCoverVisible() && compose.activity.window.attributes.flags and WindowManager.LayoutParams.FLAG_SECURE==0}
+ }
+ @Test fun passcodeEntryRemainsProtectedWhenOrdinaryScreenshotsAreAllowed() {
+  content {PrivateGalleryTheme {PasscodeKeypad(pin="123",onPinChange={},onSubmit={})}}
+  compose.waitUntil(10000){compose.activity.window.attributes.flags and WindowManager.LayoutParams.FLAG_SECURE!=0}
+  content {Text("Eligible page after passcode dismissal")}
+  assertNormalWindow()
  }
  @Test fun screenshotDisabledStaysSecureWithoutOwnedDialogBlackout() {
   compose.runOnIdle {MainActivity::class.java.getDeclaredMethod("applyAllowScreenshots",Boolean::class.javaPrimitiveType).apply {isAccessible=true}.invoke(compose.activity,false)}

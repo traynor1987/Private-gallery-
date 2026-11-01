@@ -27,6 +27,7 @@ internal fun PasscodeKeypad(
  appTitle:String="Private Gallery",onDiscreetEntry:(()->Unit)?=null,
  action:String="Unlock",secondary:(@Composable ()->Unit)?=null,
 ) {
+ CredentialCaptureProtection()
  val feedback=LocalHapticFeedback.current
  val currentSubmit by rememberUpdatedState(onSubmit)
  LaunchedEffect(pin,expectedLength) {if(enabled&&expectedLength!=null&&pin.length==expectedLength)currentSubmit()}

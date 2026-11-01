@@ -33,8 +33,18 @@ class Home1710Test {
    h.write(HomePreferences(layout=HomeLayout.defaults().move(HomeLayout.Shortcut.SETTINGS,0)))
    assertEquals(changed,p.read());assertEquals(HomeLayout.Shortcut.SETTINGS,h.read().layout.visible().first())
    root.walkTopDown().filter{it.isFile}.forEach {file->val data=file.readBytes();try{val raw=String(data,Charsets.ISO_8859_1);assertFalse(raw.contains("EVIDENCE_LOCKER"));assertFalse(raw.contains("v1|GALLERY"))}finally{data.fill(0)}}
+   val primaryBytes="PRIMARY-ONLY1710".toByteArray();val hiddenBytes="HIDDEN-ONLY1710".toByteArray()
+   try {
+    uk.co.traynor.privategallery.core.vault.AndroidVaultRepository(context,key).importVerified(uk.co.traynor.privategallery.core.vault.VaultImportSource("PRIMARY-ONLY1710.txt","text/plain",{primaryBytes.inputStream()}))
+    uk.co.traynor.privategallery.core.hidden.HiddenRepository(context,hidden).importMedia("HIDDEN-ONLY1710.txt","text/plain",hiddenBytes.inputStream())
+    assertTrue(searchPrivateHome(context,primary,"HIDDEN-ONLY1710").isEmpty())
+    assertEquals("PRIMARY-ONLY1710.txt",searchPrivateHome(context,primary,"PRIMARY-ONLY1710").single().label)
+    assertTrue(searchPrivateHome(context,secret,"PRIMARY-ONLY1710").isEmpty())
+    assertEquals("HIDDEN-ONLY1710.txt",searchPrivateHome(context,secret,"HIDDEN-ONLY1710").single().label)
+   }finally{primaryBytes.fill(0);hiddenBytes.fill(0)}
    hidden.revokeOperations()
    try{h.read();fail("stale Hidden capability accepted")}catch(expected:Exception){}
+   try{searchPrivateHome(context,secret,"HIDDEN-ONLY1710");fail("revoked search accepted")}catch(expected:Exception){}
    assertEquals(changed,p.read())
    valid.set(false)
    try{p.write(HomePreferences());fail("revoked save accepted")}catch(expected:Exception){}

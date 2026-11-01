@@ -28,7 +28,7 @@ import uk.co.traynor.privategallery.core.evidence.*
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 internal fun EvidenceLocker(controller:EvidenceController,onClose:()->Unit,onImport:()->Unit,
- onAi:(List<String>)->Unit,onExport:(EvidenceExportSelection)->Unit,onOpenArchive:()->Unit) {
+ onAi:(List<String>)->Unit,onExport:(EvidenceExportSelection)->Unit,onOpenArchive:()->Unit,startImportReview:Boolean=false) {
  val state by controller.state.collectAsState()
  var page by remember(controller){mutableStateOf("Home")}
  var query by remember(controller){mutableStateOf("")}
@@ -40,7 +40,7 @@ internal fun EvidenceLocker(controller:EvidenceController,onClose:()->Unit,onImp
  var evidenceId by remember(controller){mutableStateOf<String?>(null)}
  var incidentId by remember(controller){mutableStateOf<String?>(null)}
  var form by remember(controller){mutableStateOf<EvidenceForm?>(null)}
- var choice by remember(controller){mutableStateOf<String?>(null)}
+ var choice by remember(controller){mutableStateOf<String?>(if(startImportReview)"Import"else null)}
  var suggestionEdit by remember(controller){mutableStateOf<EvidenceCatalog.Suggestion?>(null)}
  var confirmation by remember(controller){mutableStateOf<Pair<String,()->Unit>?>(null)}
  var viewOriginal by remember(controller){mutableStateOf<String?>(null)}

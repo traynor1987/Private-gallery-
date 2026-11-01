@@ -451,11 +451,19 @@ jobs:
           java com.sun.tools.javac.Main -d /tmp/home1710 app/src/main/java/uk/co/traynor/privategallery/core/home/HomeLayout.java tests/home1710/*.java
           java -cp /tmp/home1710 HomeLayoutChecks
           java -cp /tmp/home1710 HomePersistenceChecks
+          PYTHONDONTWRITEBYTECODE=1 python3 -m unittest scripts.tests.test_home1710_release
           bash scripts/check_evidence179.sh
           bash scripts/check_evidence179_ai_json.sh
           bash scripts/check_evidence179_archive.sh
       - name: Compile integrated app and Android test sources
         run: ./gradlew :app:assembleDebug :app:assembleDebugAndroidTest :app:testDebugUnitTest --tests 'uk.co.traynor.privategallery.core.vault.VaultDocumentPolicyTest' --stacktrace
+      - uses: actions/cache/save@v4
+        if: success()
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: home1710-${{ runner.os }}-${{ hashFiles('**/*.gradle*', 'gradle/wrapper/gradle-wrapper.properties') }}
       - name: Enable Android emulator acceleration
         if: contains(github.event.head_commit.message, '[verify1710]')
         run: sudo chmod 666 /dev/kvm
@@ -474,13 +482,6 @@ jobs:
           disable-animations: true
           emulator-options: -no-window -gpu software -no-snapshot -noaudio -no-boot-anim -feature -HardwareDecoder
           script: ./gradlew :app:connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=uk.co.traynor.privategallery.HomeNavigation1710Test,uk.co.traynor.privategallery.core.home.Home1710Test,uk.co.traynor.privategallery.core.home.EvidenceImport1710Test,uk.co.traynor.privategallery.core.evidence.EvidenceStore179Test,uk.co.traynor.privategallery.core.evidence.EvidenceAccess179Test,uk.co.traynor.privategallery.core.evidence.EvidenceController179Test,uk.co.traynor.privategallery.EvidenceAuthority179Test,uk.co.traynor.privategallery.ui.HiddenNavigationAuthorityTest,uk.co.traynor.privategallery.ui.EvidenceLocker179UiTest,uk.co.traynor.privategallery.PrivacyViewerRepair1751Test --stacktrace
-      - uses: actions/cache/save@v4
-        if: success()
-        with:
-          path: |
-            ~/.gradle/caches
-            ~/.gradle/wrapper
-          key: home1710-${{ runner.os }}-${{ hashFiles('**/*.gradle*', 'gradle/wrapper/gradle-wrapper.properties') }}
       - uses: actions/upload-artifact@v4
         if: always()
         with:

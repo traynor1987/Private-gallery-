@@ -596,6 +596,15 @@ class MainActivity : FragmentActivity() {
     private var resumeFocusHandoffUntil=0L
     private var permissionWindowGeneration=0L
     private val permissionWindows=mutableSetOf<Long>()
+    private var protectedPageGeneration=0L
+    private val protectedPages=mutableSetOf<Long>()
+    internal fun beginProtectedPage():Long {
+        val token=++protectedPageGeneration;protectedPages.add(token);applyScreenPrivacy();return token
+    }
+    internal fun endProtectedPage(token:Long) {
+        if(protectedPages.remove(token))applyScreenPrivacy()
+    }
+
     internal fun beginPermissionWindow():Long {
         val token=++permissionWindowGeneration
         permissionWindows.add(token)
@@ -1792,50 +1801,19 @@ class MainActivity : FragmentActivity() {
             }
         }
     }
-    private fun searchPrivateHome(access:uk.co.traynor.privategallery.core.evidence.EvidenceAccess,query:String):List<uk.co.traynor.privategallery.core.home.HomeSearchResult> {
-        access.checkCurrent();val q=query.trim().lowercase(java.util.Locale.ROOT)
-        if(q.isEmpty())return emptyList()
-        val results=mutableListOf<uk.co.traynor.privategallery.core.home.HomeSearchResult>()
-        fun add(label:String,detail:String,target:uk.co.traynor.privategallery.core.home.HomeLayout.Shortcut,notes:String="") {
-            if((label+" "+notes).lowercase(java.util.Locale.ROOT).contains(q)&&results.size<100)
-                results.add(uk.co.traynor.privategallery.core.home.HomeSearchResult(label,detail,target))
-        }
-        val hidden=access.owner==uk.co.traynor.privategallery.core.evidence.EvidenceCatalog.Owner.HIDDEN
-        access.leases.acquire().use {lease ->
-            if(hidden) {
-                val owner=retained.hidden.session;val authority=owner.authority()
-                val repo=uk.co.traynor.privategallery.core.hidden.HiddenRepository(applicationContext,owner)
-                repo.items().forEach{add(it.displayName,"Gallery",uk.co.traynor.privategallery.core.home.HomeLayout.Shortcut.GALLERY)}
-                repo.collections().forEach{add(it.name,"Collection",uk.co.traynor.privategallery.core.home.HomeLayout.Shortcut.COLLECTIONS)}
-                listOf(false,true).forEach{tor->
-                    val apps=uk.co.traynor.privategallery.core.privateapps.HiddenPrivateAppStore(noBackupFilesDir,owner,authority,tor,{access.current()},{commit->lease.commit{commit.run()}}).read()
-                    apps.apps.forEach{app->add(app.name(),if(tor)"Private App · Tor"else"Private App · VPN",uk.co.traynor.privategallery.core.home.HomeLayout.Shortcut.PRIVATE_APPS)}
-                }
-            }else {
-                val repo=AndroidVaultRepository(applicationContext,lease.key(),{action->lease.commit{action()}},{access.current()&&lease.current()})
-                repo.items().forEach{add(it.displayName,"Gallery",uk.co.traynor.privategallery.core.home.HomeLayout.Shortcut.GALLERY)}
-                repo.collections().forEach{add(it.name,"Collection",uk.co.traynor.privategallery.core.home.HomeLayout.Shortcut.COLLECTIONS)}
-                uk.co.traynor.privategallery.core.privateapps.PrimaryPrivateAppStore(File(filesDir,"private-apps"),lease.key(),{access.current()},{action->lease.commit{action()}}).read().apps.forEach{app->add(app.name(),"Private App",uk.co.traynor.privategallery.core.home.HomeLayout.Shortcut.PRIVATE_APPS)}
-            }
-            val catalog=access.store.read()
-            catalog.evidence().forEach{add(it.name(),"Evidence",uk.co.traynor.privategallery.core.home.HomeLayout.Shortcut.EVIDENCE_LOCKER,it.notes()+" "+it.description()+" "+it.ocr().joinToString(" "){ocr->ocr.text()})}
-            catalog.incidents().forEach{add(it.title(),"Incident",uk.co.traynor.privategallery.core.home.HomeLayout.Shortcut.EVIDENCE_LOCKER,it.notes()+" "+it.description())}
-            access.checkCurrent();check(lease.current())
-        }
-        return results
-    }
     internal fun consumeHomePrivateAppsRequest():Boolean {
         if(!homePrivateAppsRequested || !retained.hidden.selected || !retained.hidden.session.isUnlocked || route!=Route.BROWSER)return false
         homePrivateAppsRequested=false;return true
     }
     @Composable internal fun HomeStartupSettings() {
         if(!activityResumed)return
-        val hidden=retained.hidden.selected
-        androidx.compose.runtime.key(hidden) {
+        androidx.compose.runtime.key(retained.hidden.selected) { HomeStartupSettingsScoped() }
+    }
+    @Composable private fun HomeStartupSettingsScoped() {
             var admittedAccess by remember {mutableStateOf<uk.co.traynor.privategallery.core.evidence.EvidenceAccess?>(null)}
             DisposableEffect(Unit){onDispose{admittedAccess?.close();admittedAccess=null}}
             LaunchedEffect(Unit){kotlinx.coroutines.yield();admittedAccess=homeAccess()}
-            val access=admittedAccess ?: return@key
+            val access=admittedAccess ?: return
             val store=remember(access){uk.co.traynor.privategallery.core.home.HomePreferencesStore(access,appSettings.getBoolean("home-existing-install",true))}
             var value by remember(access){mutableStateOf<uk.co.traynor.privategallery.core.home.HomePreferences?>(null)}
             val scope=rememberCoroutineScope()
@@ -1851,7 +1829,6 @@ class MainActivity : FragmentActivity() {
                     }}
                 }
             }
-        }
     }
     @Composable private fun HomePresentation() {
         val hidden=retained.hidden.selected
@@ -1864,10 +1841,14 @@ class MainActivity : FragmentActivity() {
             }
         }
         androidx.compose.runtime.key(hidden,if(hidden)retained.hidden.session else sessionKey,homeRequestRevision) {
+            HomeScopedPresentation(hidden)
+        }
+    }
+    @Composable private fun HomeScopedPresentation(hidden:Boolean) {
             var admittedAccess by remember {mutableStateOf<uk.co.traynor.privategallery.core.evidence.EvidenceAccess?>(null)}
             DisposableEffect(Unit){onDispose{admittedAccess?.close();admittedAccess=null}}
             LaunchedEffect(Unit){kotlinx.coroutines.yield();admittedAccess=homeAccess()}
-            val access=admittedAccess ?: return@key
+            val access=admittedAccess ?: return
             val store=remember(access){uk.co.traynor.privategallery.core.home.HomePreferencesStore(access,appSettings.getBoolean("home-existing-install",true))}
             var preferences by remember(access){mutableStateOf<uk.co.traynor.privategallery.core.home.HomePreferences?>(null)}
             var live by remember(access){mutableStateOf(true)}
@@ -1884,18 +1865,17 @@ class MainActivity : FragmentActivity() {
                 while(isActive&&access.current())delay(100)
                 live=false;preferences=null
             }
-            if(!live)return@key
+            if(!live)return
             val value=preferences
             fun save(next:uk.co.traynor.privategallery.core.home.HomePreferences){
                 scope.launch {val saved=withContext(Dispatchers.IO){runCatching{store.write(next)}.isSuccess}
                     if(saved&&access.current())preferences=next}
             }
             if(homeVisible&&value!=null)uk.co.traynor.privategallery.ui.PrivateHome(hidden,value,::save,initialCustomisation=homeCustomisationRequested,
-                search={query->withContext(Dispatchers.IO){searchPrivateHome(access,query)}},
+                search={query->withContext(Dispatchers.IO){uk.co.traynor.privategallery.core.home.searchPrivateHome(applicationContext,access,query)}},
                 {item->if(access.current()){save(value.copy(recent=(listOf(item)+value.recent).distinct().take(8)));launchHomeShortcut(item)}},
                 {if(hidden)retained.hidden.lock()else lock()},::panicExit)
 
-        }
     }
 
     private var evidenceOwner by mutableStateOf<uk.co.traynor.privategallery.core.evidence.EvidenceOwnerSession?>(null)
@@ -2529,7 +2509,7 @@ class MainActivity : FragmentActivity() {
         if(retained.hidden.selected && !(route==Route.GALLERY && retained.primaryGallery && !retained.hidden.visible)) hiddenAllowScreenshots else allowScreenshots
 
     private fun applyScreenPrivacy(allowed: Boolean = currentScreenshotPreference()) {
-        if (allowed && activityResumed && !privacyCoverVisible() && privacyWindows.hasFocus() && permissionWindows.isEmpty()) {
+        if (allowed && activityResumed && !privacyCoverVisible() && privacyWindows.hasFocus() && permissionWindows.isEmpty() && protectedPages.isEmpty()) {
             if(!privacyWindows.restore(true)) {lock();return}
             window.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)
         } else {
@@ -4148,6 +4128,7 @@ internal fun PinUnlock(onUnlock: (CharArray) -> Result<Unit>, biometricEnabled: 
 
 @Composable
 private fun RecoveryKeySetup(recoveryKey: String, onFinish: () -> Unit) {
+    uk.co.traynor.privategallery.ui.CredentialCaptureProtection()
     var acknowledged by remember { mutableStateOf(false) }
     LockSurface {
         GalleryPageTitle("Keep this offline", "Recovery key")
@@ -4210,6 +4191,7 @@ internal fun PinPage(
     titleModifier: Modifier = Modifier,
     onAction: () -> Unit,
 ) {
+    uk.co.traynor.privategallery.ui.CredentialCaptureProtection()
     LockSurface {
         GalleryPageTitle(if (action == "Unlock") "Protected on this device" else "Welcome", title, titleModifier)
         Text(detail, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -4666,6 +4648,7 @@ internal fun SecretAuthenticationDialog(
     onVerifyPin: (CharArray) -> Boolean,
     onDone: (Boolean) -> Unit,
 ) {
+    uk.co.traynor.privategallery.ui.CredentialCaptureProtection()
     var pin by remember { mutableStateOf("") }
     var error by remember { mutableStateOf(false) }
     LaunchedEffect(requestId) {

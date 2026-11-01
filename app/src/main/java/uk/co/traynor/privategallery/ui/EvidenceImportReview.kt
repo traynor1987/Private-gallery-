@@ -22,6 +22,7 @@ import uk.co.traynor.privategallery.core.evidence.*
  var transcripts by remember(controller){mutableStateOf<Map<String,String>>(emptyMap())}
  var groups by remember(controller){mutableStateOf<Map<String,String>>(emptyMap())}
  val scope=rememberCoroutineScope()
+ LaunchedEffect(state.reviewImportIds){if(step==0&&state.reviewImportIds.isNotEmpty())selected=state.reviewImportIds.toSet()}
  fun back(){if(!busy){if(step>0)step-- else onClose()}}
  EvidencePage(::back){Column(Modifier.fillMaxSize().safeDrawingPadding().imePadding().padding(16.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){
   Text(when(step){0->"1 · Review selected originals";1->"2 · Offline OCR review";else->"3 · Review incident groups"},style=MaterialTheme.typography.headlineSmall)

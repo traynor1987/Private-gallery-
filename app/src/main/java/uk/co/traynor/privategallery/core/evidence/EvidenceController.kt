@@ -16,7 +16,8 @@ import kotlinx.coroutines.sync.withLock
 /** A screen-scoped owner capability. No key, original bytes or plaintext index is persisted here. */
 internal class EvidenceController(context:Context,val access:EvidenceAccess):AutoCloseable {
  data class State(val catalog:EvidenceCatalog?=null,val originals:List<EvidenceOriginal> = emptyList(),
-  val busy:Boolean=false,val message:String?=null,val integrity:Map<String,String> = emptyMap())
+  val busy:Boolean=false,val message:String?=null,val integrity:Map<String,String> = emptyMap(),val reviewImportIds:List<String> = emptyList())
+ private val importAcquisitions=java.util.concurrent.ConcurrentHashMap<String,EvidenceOriginal>()
  private val main=Handler(Looper.getMainLooper())
  private val scope=CoroutineScope(SupervisorJob()+Dispatchers.Main.immediate)
  private val mutex=Mutex()
@@ -28,6 +29,7 @@ internal class EvidenceController(context:Context,val access:EvidenceAccess):Aut
   clearOnMain()
  }
  private fun clearOnMain() {
+  importAcquisitions.clear()
   if(Looper.myLooper()===Looper.getMainLooper())mutable.value=State() else main.post{mutable.value=State()}
  }
  private fun publish(change:(State)->State)=access.publishIfCurrent{mutable.value=change(mutable.value)}
@@ -142,7 +144,7 @@ internal class EvidenceController(context:Context,val access:EvidenceAccess):Aut
   val operation=currentCoroutineContext();var draft=EvidenceCatalog.empty(access.owner)
   for(id in sourceIds){
    operation.ensureActive();access.checkCurrent()
-   val record=readRegistration(id);draft=draft.upsertEvidence(record,now(),"REVIEW_IMPORT")
+   val record=readRegistration(id,importAcquisitions[id]);draft=draft.upsertEvidence(record,now(),"REVIEW_IMPORT")
    if(record.size()<=OCR_LIMIT) {
     val extraction=withVerifiedBytes(access.reader{!operation.isActive},id,OCR_LIMIT,{checkSource(record,it)}) {bytes->ocr.recognize(bytes,record.mime(),0){current()&&operation.isActive}}
     draft=draft.saveOcr(record.id(),extraction,now())
@@ -164,8 +166,10 @@ internal class EvidenceController(context:Context,val access:EvidenceAccess):Aut
   }
  }
  fun importOriginalsForReview(uris:List<Uri>)=perform("Original imported encrypted; use Add existing evidence to review before registration") {
-  require(uris.isNotEmpty()&&uris.size<=128);uris.forEach{access.checkCurrent();access.sources.import(it)};val sources=access.sources.list()
-  withContext(Dispatchers.Main.immediate){publish{it.copy(originals=sources)}}
+  require(uris.isNotEmpty()&&uris.size<=128)
+  val imported=uris.map{uri->access.checkCurrent();access.sources.import(uri).also{acquired->importAcquisitions[acquired.item.id]=acquired}}
+  val sources=access.sources.list()
+  withContext(Dispatchers.Main.immediate){publish{it.copy(originals=sources,reviewImportIds=imported.map{original->original.item.id}.distinct())}}
   access.store.read()
  }
  fun extract(evidenceId:String,rotation:Int=0)=perform("Extraction saved as unverified text") {

@@ -43,6 +43,7 @@ private class EvidenceArchiveRequest(val source:Uri,val destination:Uri?=null,va
  var job by remember(owner){mutableStateOf<Job?>(null)}
  var transferring by remember(owner){mutableStateOf(false)}
  var notice by remember(owner){mutableStateOf<String?>(null)}
+ var startImportReview by remember(owner){mutableStateOf(false)}
  fun discardDestination(ticket:EvidencePickerTicket?){if(ticket?.kind in listOf("Encrypted","Plain","Reexport"))ticket?.uri?.let{EvidenceDocumentIo.requestPartialCleanup(context,it,ticket.source)}}
  fun dismiss(){discardDestination(pending);discardDestination(delivered);job?.cancel();controller?.let{owner.retire(it)};controller=null;aiIds=null;exportIds=null;archive=null;pending?.stage?.let{owner.discard(it)};pending=null;delivered=null;owner.close();onClose()}
  fun received(uri:Uri?,accepted:Boolean){val ticket=pending?:return;if(!ticket.delivered.compareAndSet(false,true))return;ticket.uri=uri;ticket.accepted=accepted;delivered=ticket}
@@ -55,7 +56,7 @@ private class EvidenceArchiveRequest(val source:Uri,val destination:Uri?=null,va
  val permissionPicker=rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()){result->received(null,result.resultCode==Activity.RESULT_OK)}
  fun handoff(ticket:EvidencePickerTicket,launch:()->Unit):Boolean {
   if(!activityResumed||!resumed||!owner.sameAuthentication()||controller?.current()!=true||pending!=null)return false
-  pending=ticket;delivered=null;aiIds=null;exportIds=null;archive=null
+  pending=ticket;delivered=null;aiIds=null;exportIds=null;archive=null;startImportReview=false
   controller?.let{owner.retire(it)};controller=null
   try{launch()}catch(_:Throwable){ticket.stage?.let{owner.discard(it)};ticket.accepted=false;delivered=ticket;notice="The system document or permission screen could not open."}
   return true
@@ -83,7 +84,7 @@ private class EvidenceArchiveRequest(val source:Uri,val destination:Uri?=null,va
   delivered=null;pending=null
   if(!ticket.accepted){ticket.stage?.let{owner.discard(it)};notice=notice?:"Cancelled. No evidence record or original was removed.";return@withContext}
   when(ticket.kind){
-   "Import"->fresh.importOriginalsForReview(ticket.inputUris)
+   "Import"->{startImportReview=true;fresh.importOriginalsForReview(ticket.inputUris)}
    "Open"->ticket.uri?.let{archive=EvidenceArchiveRequest(it)}
    "Permission"->{aiMode=ticket.mode;aiIds=ticket.evidenceIds}
    "Reexport"->ticket.uri?.let{destination->archive=EvidenceArchiveRequest(checkNotNull(ticket.source),destination,ticket.cipherDigest)}
@@ -124,7 +125,7 @@ private class EvidenceArchiveRequest(val source:Uri,val destination:Uri?=null,va
   EvidenceLocker(active,onClose={if(controller===active){owner.retire(active);controller=null;if(pending==null)dismiss()}},
    onImport={handoff(EvidencePickerTicket("Import")){documentImportPicker.launch(arrayOf("image/*","application/pdf","text/plain","text/csv"))}},
    onAi={ids->aiIds=ids;aiMode=null},onExport={ids->exportIds=ids},
-   onOpenArchive={handoff(EvidencePickerTicket("Open")){importPicker.launch(arrayOf("application/octet-stream","*/*"))}})
+   onOpenArchive={handoff(EvidencePickerTicket("Open")){importPicker.launch(arrayOf("application/octet-stream","*/*"))}},startImportReview=startImportReview)
   aiIds?.let{ids->EvidenceAiDialog(active,ids,owner.allowsSystem(),{owner.routes(active)},onRequestPermission={mode->
    val intent=preparePermission(context)
    if(intent==null){aiMode=mode;notice="Android VPN permission is already granted. Prepare a fresh preview on the chosen secure transport.";aiIds=ids}
