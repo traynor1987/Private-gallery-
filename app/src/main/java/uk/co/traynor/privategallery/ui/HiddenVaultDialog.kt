@@ -114,7 +114,7 @@ private fun HiddenVaultContent(
     var collections by remember {mutableStateOf<List<uk.co.traynor.privategallery.core.vault.VaultCollection>>(emptyList())}
     val close={session.lock();viewer=null;onClose()}
     DisposableEffect(Unit) {onDispose {alive.set(false);uk.co.traynor.privategallery.core.hidden.HiddenPreviewState.invalidate(session);session.revokeOperations()}}
-    BackHandler {close()}
+    BackHandler {cameraActivity?.returnPrivateHome() ?: close()}
     fun release(value:Any?) {when(value){is ByteArray->value.fill(0);is Bitmap->value.recycle();is AutoCloseable->value.close()}}
     fun <T> request(block:()->T,complete:(Result<T>)->Unit) {
         scope.launch(Dispatchers.IO) {

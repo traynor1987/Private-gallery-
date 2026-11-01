@@ -67,8 +67,8 @@ internal fun EvidenceLocker(controller:EvidenceController,onClose:()->Unit,onImp
    change("Incident saved"){it.upsertIncident(updated,EvidenceController.now(),"OWNER_EDIT_INCIDENT")};incidentId=id;page="Incidents"
   }
  }
- BackHandler {when{viewOriginal!=null->viewOriginal=null;evidenceId!=null->evidenceId=null;incidentId!=null->incidentId=null;page!="Home"->page="Home";else->close()}}
- Dialog(onDismissRequest={close()},properties=DialogProperties(usePlatformDefaultWidth=false,securePolicy=SecureFlagPolicy.SecureOn)) {
+ val navigateBack:()->Unit={when{viewOriginal!=null->viewOriginal=null;evidenceId!=null->evidenceId=null;incidentId!=null->incidentId=null;page!="Home"->page="Home";else->close()}}
+ EvidencePage(onBack=navigateBack) {
   Surface(Modifier.fillMaxSize().systemBarsPadding().imePadding(),color=MaterialTheme.colorScheme.background) {
    Column(Modifier.fillMaxSize().padding(16.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
     Row(Modifier.fillMaxWidth()) {Text("Evidence Locker",Modifier.weight(1f),style=MaterialTheme.typography.headlineSmall);EvidenceSecurityControls();TextButton(onClick={close()}){Text("Close")}}
@@ -197,7 +197,7 @@ internal fun EvidenceLocker(controller:EvidenceController,onClose:()->Unit,onImp
    }
   }
  }
- if(choice=="Import")GalleryAlertDialog(scrollBody=false,onDismissRequest={choice=null;originalsSelected=emptySet()},title={EvidenceDialogTitle("Select existing encrypted originals")},text={
+ if(choice=="Import")EvidenceWorkflowPage(onDismissRequest={choice=null;originalsSelected=emptySet()},title={EvidenceDialogTitle("Select existing encrypted originals")},text={
   LazyColumn(Modifier.heightIn(max=400.dp)){
    item{Text("Review up to 128 originals to register in this vault. Originals remain unchanged. Extraction follows registration; interrupted batches can contain committed records.")}
    items(state.originals,key={it.item.id}){original->
@@ -209,16 +209,16 @@ internal fun EvidenceLocker(controller:EvidenceController,onClose:()->Unit,onImp
    }
    item{Text("${originalsSelected.size} / 128 selected")}
   }
- },confirmButton={TextButton(enabled=originalsSelected.isNotEmpty()&&!state.busy,onClick={val ids=originalsSelected.toList();choice=null;originalsSelected=emptySet();controller.registerMany(ids)}){Text("Register selected originals")}},dismissButton={TextButton(onClick={choice=null;originalsSelected=emptySet()}){Text("Cancel")}},properties=DialogProperties(securePolicy=SecureFlagPolicy.SecureOn))
+ },confirmButton={TextButton(enabled=originalsSelected.isNotEmpty()&&!state.busy,onClick={val ids=originalsSelected.toList();choice=null;originalsSelected=emptySet();controller.registerMany(ids)}){Text("Register selected originals")}},dismissButton={TextButton(onClick={choice=null;originalsSelected=emptySet()}){Text("Cancel")}})
  exportSelection?.let{initial->if(catalog!=null)EvidenceExportSelectionDialog(catalog,initial,onClose={exportSelection=null},onContinue={selection->exportSelection=null;onExport(selection)})}
  choice?.takeIf{it!="Import"}?.let{kind->
   val options=catalog?.incidents()?.filter{!it.archived()&&(kind !in listOf("Merge","Move")||it.id()!=incidentId)}?.map{it.id() to it.title()}.orEmpty()
   GalleryAlertDialog(onDismissRequest={choice=null},title={EvidenceDialogTitle(when(kind){"Merge"->"Merge this incident into…";else->"Choose incident"})},text={LazyColumn(Modifier.heightIn(max=400.dp)){items(options,key={it.first}){(id,name)->TextButton(onClick={
    choice=null;when(kind){"Merge"->{val source=incidentId;confirmation="Merge this incident into $name? Source incident will be archived and source lineage retained." to {if(source!=null)change("Incidents merged"){it.merge(id,listOf(source),EvidenceController.now())};incidentId=id}};"Edit suggestion target"->{val suggestion=suggestionEdit;suggestionEdit=null;if(suggestion!=null)confirmation="Apply the edited suggestion to $name? Only evidence references will be linked." to {change("Owner-edited suggestion applied"){it.rejectSuggestion(suggestion.id(),EvidenceController.now()).assign(suggestion.evidenceIds(),id,false,EvidenceController.now())}}};else->{val ids=selected.toList();change("Evidence assigned"){it.assign(ids,id,kind=="Move",EvidenceController.now())};selected=emptySet()}}
-  }){Text(name)}}}},confirmButton={TextButton(onClick={choice=null}){Text("Cancel")}},properties=DialogProperties(securePolicy=SecureFlagPolicy.SecureOn))
+  }){Text(name)}}}},confirmButton={TextButton(onClick={choice=null}){Text("Cancel")}},properties=DialogProperties(securePolicy=SecureFlagPolicy.Inherit))
  }
  form?.let{value->EvidenceFormDialog(value){form=null}}
- confirmation?.let{(text,action)->GalleryAlertDialog(onDismissRequest={confirmation=null},title={EvidenceDialogTitle("Confirm change")},text={Text(text)},confirmButton={TextButton(onClick={confirmation=null;if(controller.current())action()}){Text("Confirm")}},dismissButton={TextButton(onClick={confirmation=null}){Text("Cancel")}},properties=DialogProperties(securePolicy=SecureFlagPolicy.SecureOn))}
+ confirmation?.let{(text,action)->GalleryAlertDialog(onDismissRequest={confirmation=null},title={EvidenceDialogTitle("Confirm change")},text={Text(text)},confirmButton={TextButton(onClick={confirmation=null;if(controller.current())action()}){Text("Confirm")}},dismissButton={TextButton(onClick={confirmation=null}){Text("Cancel")}},properties=DialogProperties(securePolicy=SecureFlagPolicy.Inherit))}
  viewOriginal?.let{id->EvidenceOriginalView(controller,id){viewOriginal=null}}
 }
 
@@ -242,7 +242,7 @@ internal fun EvidenceLocker(controller:EvidenceController,onClose:()->Unit,onImp
 private class EvidenceForm(val title:String,val labels:List<String>,val initial:List<String>,val save:(List<String>)->Unit)
 @Composable private fun EvidenceFormDialog(form:EvidenceForm,onClose:()->Unit) {
  val values=remember(form){form.initial.map{mutableStateOf(it)}};var error by remember(form){mutableStateOf(false)}
- GalleryAlertDialog(onDismissRequest=onClose,title={EvidenceDialogTitle(form.title)},text={Column{LazyColumn(Modifier.heightIn(max=480.dp),verticalArrangement=Arrangement.spacedBy(8.dp)){items(form.labels.indices.toList()){index->OutlinedTextField(values[index].value,{values[index].value=it.take(if(form.labels[index].contains("text",true))100000 else 65536);error=false},label={Text(form.labels[index])},modifier=Modifier.fillMaxWidth())}};if(error)Text("Check values, lengths and timestamp format.",color=MaterialTheme.colorScheme.error)}},confirmButton={TextButton(onClick={runCatching{form.save(values.map{it.value})}.onSuccess{onClose()}.onFailure{error=true}}){Text("Save")}},dismissButton={TextButton(onClick=onClose){Text("Cancel")}},properties=DialogProperties(securePolicy=SecureFlagPolicy.SecureOn))
+ EvidenceWorkflowPage(onDismissRequest=onClose,title={EvidenceDialogTitle(form.title)},text={Column{LazyColumn(Modifier.heightIn(max=480.dp),verticalArrangement=Arrangement.spacedBy(8.dp)){items(form.labels.indices.toList()){index->OutlinedTextField(values[index].value,{values[index].value=it.take(if(form.labels[index].contains("text",true))100000 else 65536);error=false},label={Text(form.labels[index])},modifier=Modifier.fillMaxWidth())}};if(error)Text("Check values, lengths and timestamp format.",color=MaterialTheme.colorScheme.error)}},confirmButton={TextButton(onClick={runCatching{form.save(values.map{it.value})}.onSuccess{onClose()}.onFailure{error=true}}){Text("Save")}},dismissButton={TextButton(onClick=onClose){Text("Cancel")}})
 }
 private fun tags(value:String)=value.split(',').map{it.trim()}.filter{it.isNotEmpty()}.distinct()
 private fun epoch(value:String)=if(value.isBlank())0L else Instant.parse(value.trim()).toEpochMilli().also{require(it>=0)}
@@ -258,7 +258,7 @@ internal data class EvidenceExportSelection(val incidentIds:List<String>,val evi
  var evidence by remember(initial){mutableStateOf(initial.evidenceIds.toSet())}
  val attached=(evidence+catalog.incidents().filter{it.id() in incidents}.flatMap{it.evidenceIds()+it.events().flatMap{e->e.evidenceIds()}}).toSet()
  val valid=(incidents.isNotEmpty()||evidence.isNotEmpty())&&incidents.size<=128&&attached.size<=128
- GalleryAlertDialog(scrollBody=false,onDismissRequest=onClose,title={EvidenceDialogTitle("Select export contents")},text={
+ EvidenceWorkflowPage(onDismissRequest=onClose,title={EvidenceDialogTitle("Select export contents")},text={
   LazyColumn(Modifier.heightIn(max=400.dp)){
    item{Text("Choose incidents and standalone evidence explicitly. Up to 128 incidents and 128 attached originals; no selection is shortened automatically.")}
    items(catalog.incidents(),key={"incident-${it.id()}"}){incident->
@@ -270,7 +270,7 @@ internal data class EvidenceExportSelection(val incidentIds:List<String>,val evi
    item{Text("${incidents.size} incidents · ${evidence.size} explicit records · ${attached.size} attached originals")
     if(!valid)Text("Choose contents within the limits to continue.")}
   }
- },confirmButton={TextButton(enabled=valid,onClick={onContinue(EvidenceExportSelection(incidents.toList(),evidence.toList()))}){Text("Review export")}},dismissButton={TextButton(onClick=onClose){Text("Cancel")}},properties=DialogProperties(securePolicy=SecureFlagPolicy.SecureOn))
+ },confirmButton={TextButton(enabled=valid,onClick={onContinue(EvidenceExportSelection(incidents.toList(),evidence.toList()))}){Text("Review export")}},dismissButton={TextButton(onClick=onClose){Text("Cancel")}})
 }
 
 /** One touch/selection owner per row; the checkbox is the visual indicator. */

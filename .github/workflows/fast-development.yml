@@ -28,6 +28,7 @@ concurrency:
   cancel-in-progress: true
 jobs:
   fast:
+    if: github.ref != 'refs/heads/release/1.7.10-private-home'
     runs-on: ubuntu-24.04
     timeout-minutes: 25
     steps:
@@ -426,3 +427,40 @@ jobs:
             app/build/outputs/androidTest-results
             app/build/reports/androidTests
             app/build/outputs/connected_android_test_additional_output
+
+  private-home1710:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/release/1.7.10-private-home'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v5
+        with: { distribution: temurin, java-version: '17' }
+      - uses: actions/cache/restore@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: home1710-${{ runner.os }}-${{ hashFiles('**/*.gradle*', 'gradle/wrapper/gradle-wrapper.properties') }}
+          restore-keys: |
+            evidencelocker179-${{ runner.os }}-
+            privacy1751-${{ runner.os }}-
+      - name: Install Android 17 compile SDK
+        run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-37.1" "build-tools;36.0.0"
+      - name: Focused Home and evidence host checks
+        run: |
+          java com.sun.tools.javac.Main -d /tmp/home1710 app/src/main/java/uk/co/traynor/privategallery/core/home/HomeLayout.java tests/home1710/*.java
+          java -cp /tmp/home1710 HomeLayoutChecks
+          java -cp /tmp/home1710 HomePersistenceChecks
+          bash scripts/check_evidence179.sh
+          bash scripts/check_evidence179_ai_json.sh
+          bash scripts/check_evidence179_archive.sh
+      - name: Compile integrated app and Android test sources
+        run: ./gradlew :app:compileDebugKotlin :app:compileDebugAndroidTestKotlin :app:testDebugUnitTest --tests 'uk.co.traynor.privategallery.core.vault.VaultDocumentPolicyTest' --stacktrace
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: private-home1710-compile
+          path: |
+            app/build/reports
+            app/build/test-results

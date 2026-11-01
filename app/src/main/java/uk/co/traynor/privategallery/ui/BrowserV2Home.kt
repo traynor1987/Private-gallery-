@@ -742,7 +742,11 @@ internal fun BrowserV2Home(
         privateApps=(context as? uk.co.traynor.privategallery.MainActivity)?.privateAppsController()
         if(privateApps==null)ui.message=(context as? uk.co.traynor.privategallery.MainActivity)?.privateAppProfileClearStatus() ?: "Unlock Primary and reopen the browser."
     }
-    BackHandler(enabled = (activePrivateApp!=null || onOpenGallery != null) && !ui.addressFocused && !active.canGoBack && ui.fullscreen == null && !ui.webVideoView && ui.internalMedia == null) { if(activePrivateApp!=null)openPrivateApps() else onOpenGallery?.invoke() }
+    val homeActivity=context as? uk.co.traynor.privategallery.MainActivity
+    LaunchedEffect(homeActivity?.homePrivateAppsRequested) {
+        if(homeActivity?.homePrivateAppsRequested==true){homeActivity.homePrivateAppsRequested=false;openPrivateApps()}
+    }
+    BackHandler(enabled = (activePrivateApp!=null || onOpenGallery != null) && !ui.addressFocused && !active.canGoBack && ui.fullscreen == null && !ui.webVideoView && ui.internalMedia == null) { if(activePrivateApp!=null)openPrivateApps() else (context as? uk.co.traynor.privategallery.MainActivity)?.returnPrivateHome() ?: onOpenGallery?.invoke() }
     BackHandler(enabled = ui.addressFocused) { focusManager.clearFocus(force = true) }
     BackHandler(enabled = ui.webVideoView) { ui.webVideoView = false; latestFullscreenChanged(false) }
     BackHandler(enabled = ui.fullscreen != null) {

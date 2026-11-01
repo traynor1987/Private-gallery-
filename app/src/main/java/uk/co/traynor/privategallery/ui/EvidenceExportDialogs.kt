@@ -46,7 +46,7 @@ import uk.co.traynor.privategallery.core.vault.VaultPdfPreview
   }catch(cancelled:CancellationException){throw cancelled}catch(_:Throwable){withContext(Dispatchers.Main.immediate){controller.access.publishIfCurrent{message="Export is blocked for vault-only, unavailable, changed or foreign-vault contributors. Verify the selected incident's evidence first."}}}
  }
  if(!controller.current())return
- Dialog(onDismissRequest={dismiss()},properties=DialogProperties(usePlatformDefaultWidth=false,securePolicy=SecureFlagPolicy.SecureOn)) {
+ EvidencePage(onBack={dismiss()},sensitive=true) {
   Surface(Modifier.fillMaxSize().systemBarsPadding().imePadding(),color=MaterialTheme.colorScheme.background){Column(Modifier.fillMaxSize().padding(16.dp),verticalArrangement=Arrangement.spacedBy(8.dp)){
    Row(Modifier.fillMaxWidth()){Text("Export evidence",Modifier.weight(1f),style=MaterialTheme.typography.headlineSmall);EvidenceSecurityControls();TextButton(onClick={dismiss()}){Text("Cancel")}}
    if(busy)LinearProgressIndicator(Modifier.fillMaxWidth())
@@ -115,7 +115,7 @@ private fun retireEvidenceArchive(archive:EvidenceOpenedArchive?){if(archive!=nu
   }catch(cancelled:CancellationException){throw cancelled}catch(_:Throwable){withContext(Dispatchers.Main.immediate){controller.access.publishIfCurrent{message="The authenticated report could not be rendered; no plaintext file was created."}}}finally{pending?.let(::wipeReportBitmap)}
  }
  if(!controller.current())return
- Dialog(onDismissRequest={dismiss()},properties=DialogProperties(usePlatformDefaultWidth=false,securePolicy=SecureFlagPolicy.SecureOn)) {
+ EvidencePage(onBack={dismiss()},sensitive=true) {
   Surface(Modifier.fillMaxSize().systemBarsPadding().imePadding(),color=MaterialTheme.colorScheme.background){Column(Modifier.fillMaxSize().padding(16.dp),verticalArrangement=Arrangement.spacedBy(8.dp)){
    Row(Modifier.fillMaxWidth()){Text("Open encrypted evidence",Modifier.weight(1f),style=MaterialTheme.typography.titleLarge);EvidenceSecurityControls();TextButton(onClick={dismiss()}){Text("Close")}}
    if(busy)LinearProgressIndicator(Modifier.fillMaxWidth())

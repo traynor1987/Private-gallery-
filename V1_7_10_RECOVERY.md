@@ -15,3 +15,13 @@ Environment observation: local Android SDK, emulator and Gradle distribution wer
 ## Launcher rules checkpoint
 
 A small standalone immutable `HomeLayout` model now defines the eight shortcut IDs, ordered visible items, hide/show, pinning, reorder, reset and label filtering. `tests/home1710/HomeLayoutChecks.java` exercises those rules on the host using the JDK compiler entry point. This is an unintegrated foundation only: it does not persist, choose a vault, authenticate, render Home, or implement navigation. It must not be described as a completed launcher. No Android build or security test has been run on it. All remaining requirements above remain open.
+
+## 2026-11-01 integrated development pass (not release-approved)
+
+Remote HEAD independently recovered at 817b28998cecc2ee8f88d98aff0afd1cd1cf8bde. Audited app/build.gradle.kts at 87 fetched remote branch heads: highest issued version code 51; code 52 was unused and is now assigned to 1.7.10. Original baseline acceptance179 job 124832650609 rechecked successful.
+
+Added actual Compose Home and activity routing for eight shortcuts, owner-bound encrypted Home preferences using existing revocable vault leases, layout serialization checks, vault-scoped metadata search, Home return controls, and activity-owned Evidence workflow pages. Sensitive AI/export credential pages retain capture protection. These changes require compilation, instrumentation, independent security review and further completion. No APK exists for 1.7.10 and no release gate is being asserted.
+
+Local Java compiler is available via `java com.sun.tools.javac.Main`; layout and persistence host checks passed. Gradle bootstrap failed with Network is unreachable to services.gradle.org. Existing fast-development workflow now has one branch-specific grouped Home compilation job, excluding the unrelated default job for this branch.
+
+Outstanding: complete guided evidence import review before registration, direct Startup Screen preference controls in Settings, Hidden child-process Private Apps/Home routing, robust Fold/session restoration, instrumented Home encryption/navigation/search/screenshot tests, review findings, complete API37 runtime gates, original-key code51->52 upgrade and signing. Do not treat this checkpoint as finished or deliver its APK as accepted.

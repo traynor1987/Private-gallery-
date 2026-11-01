@@ -50,6 +50,33 @@ public final class HomeLayout {
         EnumSet<Shortcut> f = EnumSet.noneOf(Shortcut.class); f.addAll(favourites); f.add(item);
         return new HomeLayout(order, hidden, f);
     }
+    public HomeLayout unpin(Shortcut item) {
+        EnumSet<Shortcut> f = EnumSet.noneOf(Shortcut.class); f.addAll(favourites); f.remove(Objects.requireNonNull(item));
+        return new HomeLayout(order, hidden, f);
+    }
+    public String encode() {
+        return "v1|" + names(order) + "|" + names(hidden) + "|" + names(favourites);
+    }
+    private static String names(Iterable<Shortcut> values) {
+        List<String> names = new ArrayList<>(); for (Shortcut value : values) names.add(value.name());
+        return String.join(",", names);
+    }
+    private static List<Shortcut> parse(String value) {
+        List<Shortcut> result = new ArrayList<>();
+        if (!value.isEmpty()) for (String name : value.split(",", -1)) {
+            Shortcut item = Shortcut.valueOf(name); if (result.contains(item)) throw new IllegalArgumentException("Duplicate shortcut");
+            result.add(item);
+        }
+        return result;
+    }
+    public static HomeLayout decode(String value) {
+        if (value == null || value.length() > 1024) throw new IllegalArgumentException("Invalid layout");
+        String[] parts = value.split("\\|", -1);
+        if (parts.length != 4 || !parts[0].equals("v1")) throw new IllegalArgumentException("Invalid layout");
+        List<Shortcut> order = parse(parts[1]);
+        if (order.size() != Shortcut.values().length) throw new IllegalArgumentException("Incomplete layout");
+        return new HomeLayout(order, new java.util.HashSet<>(parse(parts[2])), new java.util.HashSet<>(parse(parts[3])));
+    }
     public HomeLayout move(Shortcut item, int position) {
         Objects.requireNonNull(item); List<Shortcut> newOrder = new ArrayList<>(order);
         newOrder.remove(item); newOrder.add(Math.max(0, Math.min(position, newOrder.size())), item);

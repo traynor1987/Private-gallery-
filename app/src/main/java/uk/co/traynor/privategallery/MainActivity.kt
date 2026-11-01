@@ -1131,6 +1131,7 @@ class MainActivity : FragmentActivity() {
         recoveryKeys = RecoveryVaultKeyStore(this)
         biometricAvailable = BiometricManager.from(this).canAuthenticate(BiometricManager.Authenticators.BIOMETRIC_STRONG) == BiometricManager.BIOMETRIC_SUCCESS
         appSettings = getSharedPreferences("private-gallery-settings", MODE_PRIVATE)
+        if(!appSettings.contains("home-existing-install"))check(appSettings.edit().putBoolean("home-existing-install",keys.isConfigured).commit())
         // A configured forget-on-lock policy also covers process death before a pending marker reached disk.
         if(privateAppProfileClearPending() || appSettings.getBoolean("browser-clear-data-on-lock",false)) {
             privateAppProfileClearBarrier.begin()
@@ -1176,6 +1177,7 @@ class MainActivity : FragmentActivity() {
             PrivateGalleryTheme(appTheme) {
                 PrivateGalleryApp(route, ::createPin, ::unlock, ::changePin, ::recoverWithOfflineKey, ::finishRecoveryKeySetup, { route = Route.RECOVER }, { route = Route.LOCK }, ::lock, ::importSelected, ::moveSelected, ::loadItems, ::loadCollections, ::loadFavouriteCollection, ::createCollection, ::addItemsToCollection, ::removeItemsFromCollection, ::renameCollection, ::deleteCollection, ::loadCollectionItems, ::readForViewing, ::loadPreview, ::loadImageEdit, ::applyImageCrop, ::undoImageCrop, ::resetImageCrop, ::restore, ::delete, biometricEnabled, ::unlockWithBiometrics, ::enrollBiometrics, ::finishSetup, autoLockTimeout, appTheme, if(retained.hidden.selected) hiddenAllowScreenshots else allowScreenshots, updateStatus, updateLastChecked, availableUpdate != null, mediaAccessAvailable, ::requestDeviceMediaAccess, ::deviceMediaPages, { deviceGallery.albums() }, ::loadDeviceThumbnail, ::openSettings, { openNonBrowser(Route.GALLERY); mediaAccessAvailable = hasDeviceMediaAccess() }, { openNonBrowser(Route.VAULT) }, { openNonBrowser(Route.FAVOURITE) }, ::openBrowser, ::applyAutoLockTimeout, ::applyTheme, ::applyAllowScreenshots, ::applyBrowserSearchEngine, ::applyClearBrowserDataOnLock, ::clearBrowserData, browserSearchEngine, clearBrowserDataOnLock, browserSaveHistory, ::applyBrowserSaveHistory, browserWebView, { view -> browserWebView = view }, { exit -> browserFullscreenExit = exit }, ::checkForUpdates, ::downloadUpdate, recoveryKeys.isConfigured, pendingRecoveryKey?.concatToString(), ::importBrowserSource, browserRequireVpn, browserVpnState == VpnConnectionState.CONNECTED, ::importWireGuardProfile, vpnProfileStatus, browserVpnState, browserAutoConnectVpn, ::applyBrowserAutoConnectVpn, ::applyBrowserRequireVpn, ::setFavouriteCollection, vpnProfiles, ::selectVpnProfile, ::removeVpnProfile, browserBookmarks, ::addBrowserBookmark, ::removeBrowserBookmark, browserV2Session, ::loadBrowserHistory, ::clearBrowserHistory, ::recordBrowserHistory, browserVpnPreparing, browserVpnPermissionRequired, ::requestBrowserVpnPermissionOrConnect, { item, bytes, cancelled, completed -> saveEditedCopy(item, bytes, cancelled, completed) }, ::readForEditing, { item, bytes, cancelled, completed -> saveEditedCopy(item, bytes, cancelled, completed, true) }, onReadVideoForViewing = ::readVideoForViewing, onOpenVideoSession = ::openVideoSession, onSaveAiCopy = { item, bytes, provenance, cancelled, completed -> saveEditedCopy(item, bytes, cancelled, completed, aiProvenance = provenance) }, onPrepareBrowserUpload = ::prepareBrowserUpload, onClearBrowserUpload = ::clearBrowserUploadCopies, hideContent = hideContent, secretDiscovered = secretDiscovered, onHideContentChanged = ::applyHideContent, onSecretDiscoveryChanged = ::applySecretDiscovery, onAuthenticateSensitive = ::authenticateSensitive, onCancelSensitiveAuthentication = ::cancelSensitiveAuthentication, onVerifySecretPin = ::verifySecretPin, onGenerateImage = ::generateVaultImage, onChooseBackupExport = { backupExportLauncher.launch("private-gallery-vault.pgvault") }, backupExportUri = backupExportUri, onCancelBackupExport = { backupExportUri = null }, onExportBackup = ::exportEncryptedBackup, backupStatus = backupStatus, onChooseBackupRestore = { backupRestoreLauncher.launch(arrayOf("application/octet-stream", "application/zip", "*/*")) }, backupRestoreUri = backupRestoreUri, onCancelBackupRestore = { backupRestoreUri = null }, onRestoreBackup = ::restoreEncryptedBackup, onLoadRecentlyDeleted = ::loadRecentlyDeleted, onMoveItemsToRecentlyDeleted = ::moveItemsToRecentlyDeleted, onChangeRecentlyDeleted = ::changeRecentlyDeleted, onRestoreSelectedVaultCopies = ::restoreSelectedVaultCopies, onLeaveHidden = ::leaveHiddenToDestination, hiddenState = retained.hidden, primaryAuthority = {session.isUnlocked && sessionKey != null}, onReturnToPrimary = ::returnToPrimaryVault, createPrimaryCopy = ::createPrimaryCopy, primaryGallerySelected = retained.primaryGallery, onGallerySourceSelected = ::selectGallerySource, onTransferToHidden = ::transferPrimaryToHidden, phoneMoveStatus = phoneMoveStatus, onCancelGalleryAuthentication = ::cancelGalleryAuthentication, onCapturePrimaryEditorAuthority = ::capturePrimaryEditorAuthority, onInvalidatePrimaryPresentation = ::invalidatePrimaryBrowserPresentation, onDirectHiddenUnlock = ::unlockHiddenDirect)
                 privateAppAuthentication?.let { uk.co.traynor.privategallery.ui.PrivateAppAuthentication(it) }
+                HomePresentation()
                 evidenceOwner?.let { owner -> androidx.compose.runtime.key(owner) { uk.co.traynor.privategallery.ui.EvidenceLockerHost(owner,activityResumed) { if(evidenceOwner===owner)closeEvidenceLocker() } } }
                 ExternalEditingHost()
                 vaultCamera?.let { camera -> uk.co.traynor.privategallery.ui.VaultCameraScreen(camera, ::exitVaultCamera) }
@@ -1716,6 +1718,141 @@ class MainActivity : FragmentActivity() {
         browserWebView?.destroy();browserWebView=null
         lock()
         resumePrivateAppProfileClear()
+    }
+
+    private var homeVisible by mutableStateOf(false)
+    private var homeRequestRevision by mutableIntStateOf(0)
+    private var homePrimaryAuthentication:Long?=null
+    private var homeHiddenAuthentication:uk.co.traynor.privategallery.core.hidden.HiddenSession.Authentication?=null
+    internal var homeVaultMode by mutableStateOf("MEDIA")
+    internal var homePrivateAppsRequested by mutableStateOf(false)
+    internal fun returnPrivateHome() {
+        if(hideContent || !activityResumed)return
+        val hidden=retained.hidden.selected
+        if(if(hidden)!retained.hidden.session.isUnlocked else !session.isUnlocked||sessionKey==null)return
+        closeEvidenceLocker();leaveBrowserIfOpen();homeRequestRevision++;homeVisible=true
+    }
+    private fun homeAccess():uk.co.traynor.privategallery.core.evidence.EvidenceAccess? {
+        if(hideContent||!activityResumed)return null
+        val hidden=retained.hidden.selected
+        return runCatching {
+            if(hidden) {
+                val owner=retained.hidden.session
+                val auth=owner.authentication()
+                uk.co.traynor.privategallery.core.evidence.EvidenceAccess.hidden(applicationContext,owner) {
+                    !hideContent&&retained.hidden.selected&&owner.isAuthenticationCurrent(auth)&&activityResumed
+                }
+            }else {
+                val identity=checkNotNull(sessionKey);val auth=session.captureAuthenticationEpoch()
+                uk.co.traynor.privategallery.core.evidence.EvidenceAccess.primary(applicationContext,identity,{sessionKey},
+                    {!hideContent&&!retained.hidden.selected&&session.isAuthenticationCurrent(auth)&&activityResumed},
+                    {checkNotNull(sessionKey).copyOf()},phoneTransferGate)
+            }
+        }.getOrNull()
+    }
+    private fun launchHomeShortcut(item:uk.co.traynor.privategallery.core.home.HomeLayout.Shortcut) {
+        val hidden=retained.hidden.selected
+        if(hideContent||!activityResumed||(if(hidden)!retained.hidden.session.isUnlocked else !session.isUnlocked||sessionKey==null))return
+        homeVisible=false;homeVaultMode="MEDIA"
+        when(item) {
+            uk.co.traynor.privategallery.core.home.HomeLayout.Shortcut.GALLERY -> {
+                openNonBrowser(Route.VAULT);if(hidden)retained.hidden.select()
+            }
+            uk.co.traynor.privategallery.core.home.HomeLayout.Shortcut.COLLECTIONS,
+            uk.co.traynor.privategallery.core.home.HomeLayout.Shortcut.RECENTLY_DELETED -> {
+                homeVaultMode=if(item==uk.co.traynor.privategallery.core.home.HomeLayout.Shortcut.COLLECTIONS)"COLLECTIONS"else"TRASH"
+                openNonBrowser(Route.VAULT);if(hidden)retained.hidden.select()
+            }
+            uk.co.traynor.privategallery.core.home.HomeLayout.Shortcut.BROWSER,
+            uk.co.traynor.privategallery.core.home.HomeLayout.Shortcut.PRIVATE_APPS -> {
+                if(hidden)retained.hidden.outside()
+                homePrivateAppsRequested=item==uk.co.traynor.privategallery.core.home.HomeLayout.Shortcut.PRIVATE_APPS
+                openBrowser()
+            }
+            uk.co.traynor.privategallery.core.home.HomeLayout.Shortcut.SETTINGS -> {
+                if(hidden)retained.hidden.outside();openSettings()
+            }
+            uk.co.traynor.privategallery.core.home.HomeLayout.Shortcut.EVIDENCE_LOCKER -> {
+                openNonBrowser(Route.VAULT);openEvidenceLocker(if(hidden)retained.hidden.session else null)
+            }
+            uk.co.traynor.privategallery.core.home.HomeLayout.Shortcut.CAMERA -> {
+                openNonBrowser(Route.VAULT);openVaultCamera(if(hidden)retained.hidden.session else null)
+            }
+        }
+    }
+    private fun searchPrivateHome(access:uk.co.traynor.privategallery.core.evidence.EvidenceAccess,query:String):List<uk.co.traynor.privategallery.core.home.HomeSearchResult> {
+        access.checkCurrent();val q=query.trim().lowercase(java.util.Locale.ROOT)
+        if(q.isEmpty())return emptyList()
+        val results=mutableListOf<uk.co.traynor.privategallery.core.home.HomeSearchResult>()
+        fun add(label:String,detail:String,target:uk.co.traynor.privategallery.core.home.HomeLayout.Shortcut,notes:String="") {
+            if((label+" "+notes).lowercase(java.util.Locale.ROOT).contains(q)&&results.size<100)
+                results.add(uk.co.traynor.privategallery.core.home.HomeSearchResult(label,detail,target))
+        }
+        val hidden=access.owner==uk.co.traynor.privategallery.core.evidence.EvidenceCatalog.Owner.HIDDEN
+        access.leases.acquire().use {lease ->
+            if(hidden) {
+                val owner=retained.hidden.session;val authority=owner.authority()
+                val repo=uk.co.traynor.privategallery.core.hidden.HiddenRepository(applicationContext,owner)
+                repo.items().forEach{add(it.displayName,"Gallery",uk.co.traynor.privategallery.core.home.HomeLayout.Shortcut.GALLERY)}
+                repo.collections().forEach{add(it.name,"Collection",uk.co.traynor.privategallery.core.home.HomeLayout.Shortcut.COLLECTIONS)}
+                listOf(false,true).forEach{tor->
+                    val apps=uk.co.traynor.privategallery.core.privateapps.HiddenPrivateAppStore(noBackupFilesDir,owner,authority,tor,{access.current()},{commit->lease.commit{commit.run()}}).read()
+                    apps.apps.forEach{app->add(app.name(),if(tor)"Private App · Tor"else"Private App · VPN",uk.co.traynor.privategallery.core.home.HomeLayout.Shortcut.PRIVATE_APPS)}
+                }
+            }else {
+                val repo=AndroidVaultRepository(applicationContext,lease.key(),{action->lease.commit{action()}},{access.current()&&lease.current()})
+                repo.items().forEach{add(it.displayName,"Gallery",uk.co.traynor.privategallery.core.home.HomeLayout.Shortcut.GALLERY)}
+                repo.collections().forEach{add(it.name,"Collection",uk.co.traynor.privategallery.core.home.HomeLayout.Shortcut.COLLECTIONS)}
+                uk.co.traynor.privategallery.core.privateapps.PrimaryPrivateAppStore(File(filesDir,"private-apps"),lease.key(),{access.current()},{action->lease.commit{action()}}).read().apps.forEach{app->add(app.name(),"Private App",uk.co.traynor.privategallery.core.home.HomeLayout.Shortcut.PRIVATE_APPS)}
+            }
+            val catalog=access.store.read()
+            catalog.evidence().forEach{add(it.name(),"Evidence",uk.co.traynor.privategallery.core.home.HomeLayout.Shortcut.EVIDENCE_LOCKER,it.notes()+" "+it.description()+" "+it.ocr().joinToString(" "){ocr->ocr.text()})}
+            catalog.incidents().forEach{add(it.title(),"Incident",uk.co.traynor.privategallery.core.home.HomeLayout.Shortcut.EVIDENCE_LOCKER,it.notes()+" "+it.description())}
+            access.checkCurrent();check(lease.current())
+        }
+        return results
+    }
+    @Composable private fun HomePresentation() {
+        val hidden=retained.hidden.selected
+        val admitted=activityResumed && !hideContent && route in setOf(Route.GALLERY,Route.VAULT,Route.FAVOURITE,Route.BROWSER,Route.SETTINGS) &&
+            if(hidden)retained.hidden.authenticated&&retained.hidden.session.isUnlocked else session.isUnlocked&&sessionKey!=null
+        if(!admitted)return
+        if(!homeVisible && evidenceOwner==null && vaultCamera==null)Box(Modifier.fillMaxSize(),contentAlignment=androidx.compose.ui.Alignment.BottomCenter){
+            androidx.compose.material3.FilledTonalIconButton(onClick=::returnPrivateHome,modifier=Modifier.padding(bottom=82.dp)){
+                Icon(Icons.Default.Home,"Private Home")
+            }
+        }
+        androidx.compose.runtime.key(hidden,if(hidden)retained.hidden.session else sessionKey,homeRequestRevision) {
+            val access=remember {homeAccess()}
+            if(access==null)return@key
+            val store=remember(access){uk.co.traynor.privategallery.core.home.HomePreferencesStore(access,appSettings.getBoolean("home-existing-install",true))}
+            var preferences by remember(access){mutableStateOf<uk.co.traynor.privategallery.core.home.HomePreferences?>(null)}
+            var live by remember(access){mutableStateOf(true)}
+            val scope=rememberCoroutineScope()
+            DisposableEffect(access){onDispose{access.close();preferences=null}}
+            LaunchedEffect(access){
+                val loaded=withContext(Dispatchers.IO){runCatching{store.read()}.getOrNull()}
+                if(access.current()) {
+                    preferences=loaded
+                    val first=if(hidden)!retained.hidden.session.isAuthenticationCurrent(homeHiddenAuthentication)else homePrimaryAuthentication!=session.captureAuthenticationEpoch()
+                    if(first){homeVisible=loaded?.startupHome==true
+                        if(hidden)homeHiddenAuthentication=retained.hidden.session.authentication()else homePrimaryAuthentication=session.captureAuthenticationEpoch()}
+                }
+                while(isActive&&access.current())delay(100)
+                live=false;preferences=null
+            }
+            if(!live)return@key
+            val value=preferences
+            fun save(next:uk.co.traynor.privategallery.core.home.HomePreferences){
+                scope.launch {val saved=withContext(Dispatchers.IO){runCatching{store.write(next)}.isSuccess}
+                    if(saved&&access.current())preferences=next}
+            }
+            if(homeVisible&&value!=null)uk.co.traynor.privategallery.ui.PrivateHome(hidden,value,::save,
+                search={query->withContext(Dispatchers.IO){searchPrivateHome(access,query)}},
+                {item->if(access.current()){save(value.copy(recent=(listOf(item)+value.recent).distinct().take(8)));launchHomeShortcut(item)}},
+                {if(hidden)retained.hidden.lock()else lock()},::panicExit)
+
+        }
     }
 
     private var evidenceOwner by mutableStateOf<uk.co.traynor.privategallery.core.evidence.EvidenceOwnerSession?>(null)
@@ -3397,7 +3534,7 @@ private fun PrivateGalleryApp(
     Route.GALLERY, Route.VAULT, Route.FAVOURITE, Route.BROWSER, Route.SETTINGS -> Box(Modifier.fillMaxSize()) {
     // Register the destination fallback before child handlers: viewer, settings,
     // WebView history and fullscreen consume Back first, including system gestures.
-    androidx.activity.compose.BackHandler(route != Route.GALLERY && viewerRequest == null) { onOpenGallery() }
+    androidx.activity.compose.BackHandler(viewerRequest == null) { metadataActivity?.returnPrivateHome() }
     ProtectedAppShell(route, if (hideContent || hiddenState.selected) null else favouriteLabel, hideNavigation = route == Route.BROWSER && !hideContent, onNavigate = { destination ->
         viewerRequest=null;collectionTarget=null;viewerCollections=emptyList()
         when (destination) {
@@ -4347,6 +4484,10 @@ internal fun SettingsHome(
             }, modifier = Modifier.fillMaxWidth()) { Text("Hide Secret settings again") }
         }
         if (category == SettingsCategory.APPEARANCE) SettingsSection(SettingsSections.APPEARANCE) {
+            Text("Appearance & Navigation",style=MaterialTheme.typography.titleMedium)
+            val homeActivity=LocalContext.current.playerActivity() as? MainActivity
+            TextButton(onClick={homeActivity?.returnPrivateHome()}){Text("Startup Screen and Home layout")}
+
             Text("Theme", style = MaterialTheme.typography.titleMedium)
             Text("Choose light, dark, or follow your device.", color = MaterialTheme.colorScheme.onSurfaceVariant)
             Column(Modifier.selectableGroup()) {
@@ -4643,7 +4784,8 @@ internal fun VaultHome(
     val displayedItems = remember(vaultItems, query, kind, sort, filterFavouriteIds) { VaultBrowsePolicy.apply(vaultItems, query, kind, sort, filterFavouriteIds) }
     var refreshRevision by remember { mutableStateOf(0) }
     var loaded by remember { mutableStateOf(false) }
-    var contentMode by remember { mutableStateOf(VaultContentMode.MEDIA) }
+    var contentMode by remember { mutableStateOf(runCatching {VaultContentMode.valueOf(cameraActivity?.homeVaultMode ?: "MEDIA")}.getOrDefault(VaultContentMode.MEDIA)) }
+    LaunchedEffect(cameraActivity?.homeVaultMode) { contentMode=runCatching {VaultContentMode.valueOf(cameraActivity?.homeVaultMode ?: "MEDIA")}.getOrDefault(VaultContentMode.MEDIA) }
     var recentlyDeleted by remember { mutableStateOf<List<VaultItem>>(emptyList()) }
     var confirmingBulkTrash by remember { mutableStateOf(false) }
     var confirmingBulkRestore by remember { mutableStateOf(false) }

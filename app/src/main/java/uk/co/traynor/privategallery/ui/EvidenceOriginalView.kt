@@ -60,7 +60,7 @@ import uk.co.traynor.privategallery.core.vault.VaultPdfPreview
   finally{pending?.let(::clearEvidenceBitmap)}
  }
  if(!controller.current())return
- Dialog(onDismissRequest=onClose,properties=DialogProperties(usePlatformDefaultWidth=false,securePolicy=SecureFlagPolicy.SecureOn)) {
+ EvidencePage(onBack=onClose) {
   Surface(Modifier.fillMaxSize().systemBarsPadding(),color=MaterialTheme.colorScheme.background){Column(Modifier.fillMaxSize().padding(16.dp)){
    Row(Modifier.fillMaxWidth()){Text("Original evidence",Modifier.weight(1f),style=MaterialTheme.typography.titleLarge);EvidenceSecurityControls();TextButton(onClick=onClose){Text("Close")}}
    Text(status,style=MaterialTheme.typography.bodySmall)

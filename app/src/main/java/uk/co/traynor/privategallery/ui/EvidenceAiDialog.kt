@@ -84,7 +84,7 @@ import uk.co.traynor.privategallery.core.evidence.*
  }
  val details=remember(result){result?.let{runCatching{EvidenceAi.details(it)}.getOrNull()}}
  if(!controller.current())return
- Dialog(onDismissRequest={dismiss()},properties=DialogProperties(usePlatformDefaultWidth=false,securePolicy=SecureFlagPolicy.SecureOn)) {
+ EvidencePage(onBack={dismiss()},sensitive=true) {
   Surface(Modifier.fillMaxSize().systemBarsPadding().imePadding(),color=MaterialTheme.colorScheme.background) {
    Column(Modifier.fillMaxSize().padding(16.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
     Row(Modifier.fillMaxWidth()){Text("Optional AI analysis",Modifier.weight(1f),style=MaterialTheme.typography.headlineSmall);EvidenceSecurityControls();TextButton(onClick={dismiss()}){Text(if(busy)"Cancel / close"else"Close")}}
