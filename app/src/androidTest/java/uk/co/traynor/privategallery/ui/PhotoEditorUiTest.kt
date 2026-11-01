@@ -154,7 +154,7 @@ class PhotoEditorUiTest {
             for(vault in listOf("Primary Space","Hidden Space")) {
                 compose.runOnIdle {label=vault}
                 compose.onNodeWithText("Edit").performClick()
-                compose.onNodeWithText("Edit in another app").assertIsDisplayed().performClick()
+                compose.onNodeWithText("Edit in another app").performScrollTo().assertIsDisplayed().performClick()
                 compose.runOnIdle {assertEquals(vault to "synthetic-origin",requests.last())}
             }
             assertEquals(2,requests.size)

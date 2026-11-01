@@ -57,6 +57,7 @@ fun PhotoEditor(
 ) {
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
+    val security = novaSecurityActions()
     val lifecycle = LocalLifecycleOwner.current.lifecycle
     val consent = remember { AiConsentStore(context) }
     val replicateModels = remember { ReplicateEditModelStore(context) }
@@ -73,6 +74,8 @@ fun PhotoEditor(
     var history by remember(id) { mutableStateOf(EditHistory(PhotoEdit(crop = initialCrop ?: NormalizedCrop.ORIGINAL))) }
     var draft by remember(id) { mutableStateOf(history.current) }
     var tool by remember { mutableStateOf("Crop") }
+    var cropPreset by remember(id) { mutableStateOf("Free") }
+    var providerSettingsExpanded by remember { mutableStateOf(false) } // Provider settings start collapsed
     var chosenSourceId by remember(id) { mutableStateOf(id) }
     var editorVisible by remember { mutableStateOf(true) }
     var sourceLoadRevision by remember(id) { mutableIntStateOf(0) }
@@ -222,7 +225,7 @@ fun PhotoEditor(
         if (number == 1) {
             loadJob?.cancel(); renderJob?.cancel()
             source?.fill(0); source = null; preview = null
-            if (candidate != chosenSourceId) { history = EditHistory(PhotoEdit()); draft = history.current; strokes = emptyList() }
+            if (candidate != chosenSourceId) { history = EditHistory(PhotoEdit()); draft = history.current; cropPreset = "Free"; strokes = emptyList() }
             chosenSourceId = candidate; sourceLoadRevision++
         } else if (number == 2) {
             referenceJob?.cancel(); referenceBytes?.fill(0); referenceBytes = null; referencePreview = null
@@ -351,32 +354,42 @@ fun PhotoEditor(
             finally { input.fill(0); output?.fill(0); otherBusy = false; savingStage = null }
         }
     }
+    fun securityExit(action: () -> Unit) {
+        active.set(false); editorVisible = false
+        operation?.cancel(); loadJob?.cancel(); renderJob?.cancel(); referenceJob?.cancel(); resultRenderJob?.cancel()
+        source?.fill(0); referenceBytes?.fill(0); cloudResult?.fill(0)
+        source = null; referenceBytes = null; cloudResult = null
+        preview?.recycle(); referencePreview?.recycle(); resultPreview?.recycle()
+        preview = null; referencePreview = null; resultPreview = null
+        prompt = ""; strokes = emptyList(); choosingSource = null; enlargedSource = null; enlargedResult = false
+        onCancel()
+        action()
+    }
     if (!editorVisible) return
-    PrivateGalleryTheme(uk.co.traynor.privategallery.core.ui.AppTheme.DARK) {
-    Column(Modifier.fillMaxSize().background(Color.Black).windowInsetsPadding(WindowInsets.safeDrawing).imePadding().testTag("photo-editor")) {
-        Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+    Column(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background).windowInsetsPadding(WindowInsets.safeDrawing).imePadding().testTag("photo-editor")) {
+        NovaAppHeader("Photo Editor", vaultLabel, onBack = leave, actions = {
+            FilledTonalButton(onClick = ::save, enabled = source != null && (if (aiResult != null) resultPreview else preview) != null && !busy) { Text("Save copy") }
+        })
+        Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically) {
             TextButton(onClick = leave) { Text("Cancel") }
-            Column(Modifier.weight(1f)) {
-                Text("Edit photo", style = MaterialTheme.typography.titleMedium, color = Color.White)
-                Text(vaultLabel, style = MaterialTheme.typography.labelSmall, color = Color.LightGray)
+            if (security != null) {
+                IconButton(onClick = { securityExit(security.home) }) { Icon(Icons.Default.Home, "Nova Home") }
+                IconButton(onClick = { securityExit(security.lock) }) { Icon(Icons.Default.Lock, "Lock Space") }
+                IconButton(onClick = { securityExit(security.panic) }) { Icon(Icons.Default.PowerSettingsNew, "Panic Exit", tint = MaterialTheme.colorScheme.primary) }
             }
-            TextButton(onClick = ::save, enabled = source != null && (if (aiResult != null) resultPreview else preview) != null && !busy) { Text("Save copy") }
-        }
-        onExternalEdit?.let {edit -> TextButton(enabled=!busy,onClick={edit(chosenSourceId)}) {Text("Edit in another app")} }
-        if (tool != "AI Edit") Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
-            IconButton(onClick = { history = history.undo(); draft = history.current; strokes = emptyList() }, enabled = history.canUndo && !busy && aiResult == null) { Icon(Icons.AutoMirrored.Filled.Undo, "Undo") }
-            IconButton(onClick = { history = history.redo(); draft = history.current; strokes = emptyList() }, enabled = history.canRedo && !busy && aiResult == null) { Icon(Icons.AutoMirrored.Filled.Redo, "Redo") }
-            TextButton(onClick = { history = history.reset(); draft = history.current; strokes = emptyList() }, enabled = !busy && aiResult == null) { Text("Reset") }
+            IconButton(onClick = { history = history.undo(); draft = history.current; cropPreset = "Free"; strokes = emptyList() }, enabled = history.canUndo && !busy && aiResult == null) { Icon(Icons.AutoMirrored.Filled.Undo, "Undo") }
+            IconButton(onClick = { history = history.redo(); draft = history.current; cropPreset = "Free"; strokes = emptyList() }, enabled = history.canRedo && !busy && aiResult == null) { Icon(Icons.AutoMirrored.Filled.Redo, "Redo") }
+            TextButton(onClick = { history = history.reset(); draft = history.current; cropPreset = "Free"; strokes = emptyList() }, enabled = !busy && aiResult == null) { Text("Reset") }
+            onExternalEdit?.let { edit -> TextButton(enabled = !busy, onClick = { edit(chosenSourceId) }) { Text("Edit in another app") } }
         }
         BoxWithConstraints(Modifier.weight(1f).fillMaxWidth()) {
-            val landscape = maxWidth > maxHeight * 1.35f
-            val combineSetup = tool == "AI Edit" && capability == AiCapability.COMBINE_PHOTOS && aiResult == null
-            val panelHeight = if (combineSetup || landscape) maxHeight else if (tool == "AI Edit") minOf(480.dp, maxHeight * .68f)
-                else minOf(260.dp, maxHeight * .55f)
+            val landscape = maxWidth >= 600.dp && maxWidth > maxHeight * 1.1f
+            // Keep a stable working preview while scrolling tools or opening the keyboard.
+            val panelHeight = if (landscape) maxHeight else minOf(380.dp, maxHeight * .46f)
             val imageCanvas: @Composable () -> Unit = {
-        Box(Modifier.fillMaxSize().testTag("editor-canvas"), contentAlignment = Alignment.Center) {
+        Box(Modifier.fillMaxSize().background(Color.Black).padding(8.dp).testTag("editor-canvas"), contentAlignment = Alignment.Center) {
             (if (aiResult != null) resultPreview else preview)?.let { bitmap ->
-                if (tool == "Crop" && aiResult == null && !busy) CropCanvas(bitmap, draft.crop, { crop -> draft = draft.copy(crop = crop) }, onGestureFinished = { change(draft) })
+                if (tool == "Crop" && aiResult == null && !busy) CropCanvas(bitmap, draft.crop, { crop -> cropPreset = "Free"; draft = draft.copy(crop = crop) }, onGestureFinished = { change(draft) })
                 else if (tool == "AI Edit" && aiResult == null && capability in setOf(AiCapability.OBJECT_REMOVAL, AiCapability.GENERATIVE_FILL) && !busy) MaskCanvas(bitmap, strokes, brush, { if (strokes.size < 128 && strokes.sumOf { stroke -> stroke.points.size } + it.points.size <= 16384) strokes = strokes + it else message = "Selection limit reached. Clear or undo a stroke." })
                 else if (tool == "AI Edit" && aiResult == null && capability == AiCapability.OUTPAINT) ExpandCanvasPreview(bitmap, aspect)
                 else Image(bitmap.asImageBitmap(), if (aiResult != null) "AI result preview" else "Photo preview",
@@ -387,10 +400,10 @@ fun PhotoEditor(
         }
             }
             val toolPanel: @Composable () -> Unit = {
-        Surface(modifier = if (combineSetup) Modifier.fillMaxSize() else Modifier,
+        Surface(modifier = Modifier.testTag("editor-context-panel"),
             color = MaterialTheme.colorScheme.surfaceContainerLow) {
-            Column(Modifier.fillMaxWidth().heightIn(max = panelHeight)) {
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+            Column(Modifier.fillMaxWidth().height(panelHeight)) {
+                FlowRow(Modifier.fillMaxWidth().padding(horizontal = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     listOf("Crop" to Icons.Default.Crop, "Adjust" to Icons.Default.Tune, "AI Edit" to Icons.Default.AutoAwesome).forEach { (name, icon) ->
                         FilterChip(tool == name, { tool = name; draft = history.current; strokes = emptyList() }, label = { Text(name) }, leadingIcon = { Icon(icon, null, Modifier.size(18.dp)) }, enabled = !busy && aiResult == null)
                     }
@@ -413,9 +426,30 @@ fun PhotoEditor(
                         }
                     } else when (tool) {
                         "Crop" -> {
-                            Text("Crop the original; rotate and flip apply afterwards.", style = MaterialTheme.typography.bodySmall)
+                            FlowRow(Modifier.fillMaxWidth().testTag("editor-crop-presets"), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                listOf("Free" to null, "Original" to 0f, "1:1" to 1f, "4:3" to (4f / 3f), "16:9" to (16f / 9f)).forEach { (label, ratio) ->
+                                    FilterChip(cropPreset == label, {
+                                        if (ratio == null) cropPreset = label
+                                        else source?.let { bytes ->
+                                            try {
+                                                // Bounds-only decode keeps the preset exact even when the preview is sampled.
+                                                val dimensions = android.graphics.BitmapFactory.Options().apply { inJustDecodeBounds = true }
+                                                android.graphics.BitmapFactory.decodeByteArray(bytes, 0, bytes.size, dimensions)
+                                                val orientation = runCatching { android.media.ExifInterface(java.io.ByteArrayInputStream(bytes))
+                                                    .getAttributeInt(android.media.ExifInterface.TAG_ORIENTATION, 1) }.getOrDefault(1)
+                                                val bounds = EditorCropPresets.orientedCentered(dimensions.outWidth, dimensions.outHeight, orientation, ratio)
+                                                change(draft.copy(crop = NormalizedCrop(bounds[0], bounds[1], bounds[2], bounds[3])))
+                                                cropPreset = label
+                                            } catch (_: IllegalArgumentException) {
+                                                message = "This photo is too narrow for that preset. Choose Free to crop manually."
+                                            }
+                                        }
+                                    }, enabled = !busy && preview != null, label = { Text(label) }, modifier = Modifier.testTag("editor-crop-$label"))
+                                }
+                            }
+                            Text("Drag a handle for a free crop; rotate and flip apply afterwards.", style = MaterialTheme.typography.bodySmall)
                             Text("Very large copies may use a reduced resolution to fit device memory.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            Row { TextButton(onClick = ::autoCrop, enabled = !busy && preview != null) { Text("Auto crop") }; TextButton(onClick = { change(draft.rotate()); tool = "Adjust" }, enabled = !busy) { Icon(Icons.Default.RotateRight, null); Text("Rotate") }; TextButton(onClick = { change(draft.copy(flipHorizontal = !draft.flipHorizontal)); tool = "Adjust" }, enabled = !busy) { Icon(Icons.Default.Flip, null); Text("Flip") } }
+                            FlowRow(horizontalArrangement = Arrangement.spacedBy(4.dp)) { TextButton(onClick = { cropPreset = "Free"; autoCrop() }, enabled = !busy && preview != null) { Text("Auto crop") }; TextButton(onClick = { change(draft.rotate()); tool = "Adjust" }, enabled = !busy) { Icon(Icons.Default.RotateRight, null); Text("Rotate") }; TextButton(onClick = { change(draft.copy(flipHorizontal = !draft.flipHorizontal)); tool = "Adjust" }, enabled = !busy) { Icon(Icons.Default.Flip, null); Text("Flip") } }
                         }
                         "Adjust" -> {
                             AdjustmentSlider("Brightness", draft.brightness, -1f..1f, !busy, { draft = draft.copy(brightness = it) }, { change(draft) })
@@ -425,10 +459,14 @@ fun PhotoEditor(
                         "AI Edit" -> {
                             if (providerConfigured) {
                                 Text(if (capability == AiCapability.COMBINE_PHOTOS) "Source photos" else "Source photo", style = MaterialTheme.typography.titleSmall)
-                                Row(Modifier.fillMaxWidth().padding(vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                                    AiSourceCard(1, preview, true, sourceLoading, !busy, { choosingSource = 1 }, { enlargedSource = 1 }, Modifier.weight(1f))
-                                    if (capability == AiCapability.COMBINE_PHOTOS)
+                                if (capability == AiCapability.COMBINE_PHOTOS) {
+                                    Row(Modifier.fillMaxWidth().padding(vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                                        AiSourceCard(1, preview, true, sourceLoading, !busy, { choosingSource = 1 }, { enlargedSource = 1 }, Modifier.weight(1f))
                                         AiSourceCard(2, referencePreview, referenceId != null, referenceLoading, !busy, { choosingSource = 2 }, { enlargedSource = 2 }, Modifier.weight(1f))
+                                    }
+                                } else FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    OutlinedButton(onClick = { choosingSource = 1 }, enabled = !busy, modifier = Modifier.testTag("ai-source-1")) { Text("Replace source") }
+                                    TextButton(onClick = { enlargedSource = 1 }, enabled = !busy && preview != null) { Text("Enlarge source") }
                                 }
                                 if (capability == AiCapability.COMBINE_PHOTOS) {
                                     Text("Choose two photos from $vaultLabel. Both displayed photos are sent to the provider.", style = MaterialTheme.typography.bodySmall,
@@ -438,6 +476,23 @@ fun PhotoEditor(
                                 Spacer(Modifier.height(16.dp))
                             }
                             if (!providerConfigured) Text("AI editing · Not configured", style = MaterialTheme.typography.titleSmall)
+                            OutlinedCard(onClick = { providerSettingsExpanded = !providerSettingsExpanded },
+                                modifier = Modifier.fillMaxWidth().testTag("editor-provider-disclosure")) {
+                                Row(Modifier.fillMaxWidth().padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                                    Column(Modifier.weight(1f)) {
+                                        Text("Provider and model", style = MaterialTheme.typography.titleSmall)
+                                        Text(if (currentProvider is ReplicateMultiEditProvider) "${currentProvider.displayName} · ${replicateModel.label}"
+                                            else currentProvider?.displayName ?: "Configure in Settings", style = MaterialTheme.typography.bodySmall)
+                                    }
+                                    Icon(if (providerSettingsExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                                        if (providerSettingsExpanded) "Collapse provider settings" else "Expand provider settings")
+                                }
+                            }
+                            if (providerConfigured && currentProvider is ReplicateMultiEditProvider) {
+                                Text("Estimated cost · ${replicateModel.pickerItem(consent.relaxSeedreamModeration(), proResolution).price}",
+                                    style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(vertical = 8.dp))
+                            }
+                            if (providerSettingsExpanded) Column(Modifier.fillMaxWidth().testTag("editor-provider-settings")) {
                             val providerChoices = AiProviderChoice.entries.filter { choice ->
                                 AiProviderRegistry.provider(choice)?.configured == true || choice == selectedChoice
                             }
@@ -453,8 +508,9 @@ fun PhotoEditor(
                                     strokes = emptyList()
                                 }, enabled = !busy)
                             if (!providerConfigured) Text("Configure your selected provider in AI editing settings.", style = MaterialTheme.typography.bodySmall)
-                            else if (currentProvider != null) {
-                                if (selectedChoice == AiProviderChoice.REPLICATE && currentProvider is ReplicateMultiEditProvider) {
+                            }
+                            if (currentProvider != null && providerConfigured) {
+                                if (providerSettingsExpanded && selectedChoice == AiProviderChoice.REPLICATE && currentProvider is ReplicateMultiEditProvider) {
                                     val eligible = if (capability == AiCapability.GENERATIVE_EDIT)
                                         ReplicateModelCapabilities.editModels else ReplicateModelCapabilities.editModelsFor(capability)
                                     // Selecting an operation can change the eligible model; the selected card
@@ -528,10 +584,9 @@ fun PhotoEditor(
             }
         }
             }
-            if (combineSetup) toolPanel()
-            else if (landscape) Row(Modifier.fillMaxSize()) {
+            if (landscape) Row(Modifier.fillMaxSize()) {
                 Box(Modifier.weight(1f).fillMaxHeight()) { imageCanvas() }
-                Box(Modifier.widthIn(max = 320.dp).fillMaxHeight().weight(.7f)) { toolPanel() }
+                Box(Modifier.widthIn(max = 380.dp).fillMaxHeight().weight(.85f)) { toolPanel() }
             } else Column(Modifier.fillMaxSize()) {
                 Box(Modifier.weight(1f).fillMaxWidth()) { imageCanvas() }
                 toolPanel()
@@ -589,10 +644,16 @@ fun PhotoEditor(
         Row(verticalAlignment = Alignment.CenterVertically) { Checkbox(rememberConsent, { rememberConsent = it }); Text("Remember for this provider") }
     } }, confirmButton = { TextButton(onClick = { showConsent = false; sessionConsent = true; combineConsent = capability == AiCapability.COMBINE_PHOTOS; if (rememberConsent) currentProvider?.let { consent.remember(it.id) }; generate() }) { Text("Continue") } }, dismissButton = { TextButton(onClick = { showConsent = false }) { Text("Cancel") } })
     if (discard) AlertDialog(onDismissRequest = { discard = false }, title = { Text("Discard edits?") }, text = { Text("Your original stays untouched.") }, confirmButton = { TextButton(onClick = { active.set(false); operation?.cancel(); onCancel() }) { Text("Discard") } }, dismissButton = { TextButton(onClick = { discard = false }) { Text("Keep editing") } })
-    }
 }
 
 @Composable
 private fun AdjustmentSlider(label: String, value: Float, range: ClosedFloatingPointRange<Float>, enabled: Boolean, changed: (Float) -> Unit, finished: () -> Unit) {
-    Row(verticalAlignment = Alignment.CenterVertically) { Text(label, Modifier.width(86.dp), style = MaterialTheme.typography.labelMedium); Slider(value, changed, Modifier.weight(1f), enabled = enabled, valueRange = range, onValueChangeFinished = finished) }
+    Column(Modifier.fillMaxWidth()) {
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+            Text(label, style = MaterialTheme.typography.labelLarge)
+            Text("${(value * 100).toInt()}%", style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        Slider(value, changed, Modifier.fillMaxWidth(), enabled = enabled, valueRange = range, onValueChangeFinished = finished)
+    }
 }

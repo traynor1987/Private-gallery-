@@ -80,8 +80,9 @@ import androidx.compose.ui.unit.dp
     }}}
 }
 
-@Composable internal fun HiddenNativeSettingsContent(tor:Boolean,indicator:String,saveHistory:Boolean,desktop:Boolean,bookmark:()->Unit,bookmarks:()->Unit,history:()->Unit,setHistory:(Boolean)->Unit,clearHistory:()->Unit,toggleDesktop:()->Unit,download:()->Unit,clearClose:()->Unit,find:()->Unit={},downloads:()->Unit={},searchEngine:uk.co.traynor.privategallery.core.browser.BrowserSearchEngine=uk.co.traynor.privategallery.core.browser.BrowserSearchEngine.DUCKDUCKGO,setSearchEngine:(uk.co.traynor.privategallery.core.browser.BrowserSearchEngine)->Unit={},setMode:(uk.co.traynor.privategallery.core.browser.hidden.HiddenConnectionPolicy.Mode)->Unit={}) {
+@Composable internal fun HiddenNativeSettingsContent(tor:Boolean,indicator:String,saveHistory:Boolean,desktop:Boolean,bookmark:()->Unit,bookmarks:()->Unit,history:()->Unit,setHistory:(Boolean)->Unit,clearHistory:()->Unit,toggleDesktop:()->Unit,download:()->Unit,clearClose:()->Unit,find:()->Unit={},downloads:()->Unit={},searchEngine:uk.co.traynor.privategallery.core.browser.BrowserSearchEngine=uk.co.traynor.privategallery.core.browser.BrowserSearchEngine.DUCKDUCKGO,setSearchEngine:(uk.co.traynor.privategallery.core.browser.BrowserSearchEngine)->Unit={},setMode:(uk.co.traynor.privategallery.core.browser.hidden.HiddenConnectionPolicy.Mode)->Unit={},allowModeSwitch:Boolean=true) {
     Column {
+            if(allowModeSwitch) {
             Text("Connection mode",style=MaterialTheme.typography.titleSmall)
             uk.co.traynor.privategallery.core.browser.hidden.HiddenConnectionPolicy.Mode.entries.forEach {choice ->
                 val enabled=choice!=uk.co.traynor.privategallery.core.browser.hidden.HiddenConnectionPolicy.Mode.VPN_TOR
@@ -92,6 +93,7 @@ import androidx.compose.ui.unit.dp
                 }
             }
             Text("Changing mode closes every tab and cancels transfers. The new mode must establish and verify a separate connection; no fallback is used.",style=MaterialTheme.typography.bodySmall)
+            } else Text(if(tor)"Tor only · separate session"else"VPN only · separate session",style=MaterialTheme.typography.titleMedium)
             Text(if(tor)"Tor Only uses isolated native forms and uploads with JavaScript off. DNS and bypass traffic are blocked by the local isolation boundary. This is not Tor Browser." else "JavaScript, forms and POST run through the owned VPN. Closing this window ends all tabs and session data.")
             TextButton(onClick=find){Text("Find in page")}
             TextButton(onClick=downloads){Text("Downloads")}

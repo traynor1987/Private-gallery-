@@ -77,7 +77,7 @@ internal fun EvidenceLocker(controller:EvidenceController,onClose:()->Unit,onImp
      onLock=security?.lock,onPanic=security?.panic,
      actions={if(security==null)TextButton(onClick={close()}){Text("Close")}})
     Text(if(controller.access.owner==EvidenceCatalog.Owner.PRIMARY)"Primary · encrypted local evidence"else"Hidden · encrypted local evidence",style=MaterialTheme.typography.labelLarge)
-    FlowRow(horizontalArrangement=Arrangement.spacedBy(4.dp)) {listOf("Home","Library","Incidents","Timeline").forEach{target->FilterChip(selected=page==target,onClick={page=target;evidenceId=null;incidentId=null},label={Text(target)})}}
+    FlowRow(horizontalArrangement=Arrangement.spacedBy(4.dp)) {listOf("Home","Library","Incidents","Timeline","Information").forEach{target->FilterChip(selected=page==target,onClick={page=target;evidenceId=null;incidentId=null},label={Text(target)})}}
     if(state.busy)LinearProgressIndicator(Modifier.fillMaxWidth())
     if(catalog==null){Text("Opening encrypted catalogue…");return@Column}
     val busy=state.busy
@@ -158,10 +158,29 @@ internal fun EvidenceLocker(controller:EvidenceController,onClose:()->Unit,onImp
       items(incident.analysisIds().mapNotNull{id->catalog.analyses().firstOrNull{it.id()==id}},key={it.id()}){analysis->EvidenceSavedAdvisory(analysis,incident)}
      } else when(page) {
       "Home" -> {
-       item {Text("${catalog.evidence().size} evidence records · ${catalog.incidents().count{!it.archived()}} active incidents",style=MaterialTheme.typography.titleMedium)
-        Text("Originals stay encrypted in their originating vault. OCR, notes, inferred dates and AI advice remain distinct. A hash verifies matching bytes, not truth.");Text("On-device OCR uses an English/Latin model. Images and PDF pages are supported; UTF8 text/CSV extracts directly. Review uncertain text and dates.",style=MaterialTheme.typography.bodySmall)
-        FlowRow {Button(enabled=!busy,onClick={originalsSelected=emptySet();choice="Import"}){Text("Add existing evidence")};TextButton(enabled=!busy,onClick=onImport){Text("Import document / image")};TextButton(enabled=!busy,onClick={incidentForm()}){Text("New incident")};TextButton(enabled=!busy,onClick=onOpenArchive){Text("Open encrypted export")};TextButton(enabled=!busy,onClick={controller.refresh()}){Text("Refresh originals")}}
+       item {
+        EvidenceDashboardOverview(catalog.evidence().size,catalog.incidents().count{!it.archived()},busy,query,
+         onQuery={query=it.take(1000)},onImport=onImport,
+         onExisting={originalsSelected=emptySet();choice="Import"},onLibrary={page="Library"},onTimeline={page="Timeline"},
+         onAi={query="";page="Library"},onNewIncident={incidentForm()},onArchive=onOpenArchive,onRefresh={controller.refresh()})
        }
+       if(query.isNotBlank()) {
+        items(catalog.search(query,0L,0L,false),key={"search-${it.id()}"}){e->EvidenceRow(controller,e,state.integrity[e.id()],e.id() in selected,{selected=if(e.id() in selected)selected-e.id()else selected+e.id()},{evidenceId=e.id()})}
+       } else {
+        item {Text("Recent incidents",style=MaterialTheme.typography.titleMedium)}
+        val recent=catalog.incidents().filter{!it.archived()}.asReversed().take(3)
+        if(recent.isEmpty())item{Text("Create an incident to bring related evidence together.",color=MaterialTheme.colorScheme.onSurfaceVariant)}
+        items(recent,key={"recent-${it.id()}"}){group->
+         ElevatedCard(onClick={incidentId=group.id();selected=emptySet()},modifier=Modifier.fillMaxWidth()) {
+          Column(Modifier.padding(16.dp),verticalArrangement=Arrangement.spacedBy(4.dp)) {
+           Text(group.title(),style=MaterialTheme.typography.titleMedium)
+           Text("${group.evidenceIds().size} evidence records",style=MaterialTheme.typography.bodyMedium)
+           if(group.description().isNotBlank())Text(group.description(),style=MaterialTheme.typography.bodySmall,maxLines=2)
+          }
+         }
+        }
+       }
+       if(catalog.suggestions().isNotEmpty())item{Text("Group suggestions",style=MaterialTheme.typography.titleMedium)}
        items(catalog.suggestions(),key={it.id()}){suggestion->ElevatedCard(Modifier.fillMaxWidth().testTag("evidence-suggestion-${suggestion.id()}")){Column(Modifier.padding(12.dp)){
         Text("Suggested grouping · unverified");Text(suggestion.title());Text(suggestion.reasons().joinToString("; "))
         if(suggestion.incidentId().isNotEmpty())Text("Suggested target: ${catalog.incidents().firstOrNull{it.id()==suggestion.incidentId()}?.title().orEmpty()}")
@@ -175,8 +194,16 @@ internal fun EvidenceLocker(controller:EvidenceController,onClose:()->Unit,onImp
         }
        }}}
       }
+      "Information" -> {
+       item {EvidenceWorkflowHeading("About your evidence","Local originals · separate annotations")}
+       item {Text("Originals stay encrypted in their originating vault. OCR, notes, inferred dates and AI advice remain distinct. A hash verifies matching bytes, not truth.")}
+       item {Text("On-device OCR uses an English/Latin model. Images and PDF pages are supported; UTF8 text/CSV extracts directly. Review uncertain text and dates.")}
+       item {Text("AI analysis is optional. Select records in Library, then review the exact provider payload, images, route and cost before explicitly consenting to send.")}
+       item {Text("Exports require a separate content review. Readable exports leave the encrypted vault and require explicit confirmation.")}
+      }
       "Library" -> {
        item {
+        Text("Select evidence for an incident, export or optional AI analysis.",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
         OutlinedTextField(query,{query=it.take(1000)},label={Text("Search names, OCR, notes, tags, participants, incidents")},modifier=Modifier.fillMaxWidth().testTag("evidence-search"))
         FlowRow {OutlinedTextField(from,{from=it.take(10)},label={Text("From UTC date YYYY-MM-DD")});OutlinedTextField(through,{through=it.take(10)},label={Text("Through UTC date")})}
         Text("Date filters use original capture or import claims, not inferred message dates.",style=MaterialTheme.typography.bodySmall)

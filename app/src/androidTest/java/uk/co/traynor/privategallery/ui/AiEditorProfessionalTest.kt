@@ -222,8 +222,10 @@ class AiEditorProfessionalTest {
             compose.onNodeWithText("Save copy").assertIsDisplayed()
             compose.onNodeWithTag("ai-source-1").performScrollTo().assertIsDisplayed()
             compose.onNodeWithTag("ai-source-2").assertIsDisplayed()
-            // Combine setup dedicates the viewport to the two source cards and controls.
-            compose.onNodeWithTag("editor-canvas").assertDoesNotExist()
+            // Source selection keeps a stable working preview beside or above its controls.
+            compose.onNodeWithTag("editor-canvas").assertIsDisplayed()
+            val canvasBounds = compose.onNodeWithTag("editor-canvas").fetchSemanticsNode().boundsInRoot
+            assertTrue("Combine preview retains working space", canvasBounds.width >= 120 && canvasBounds.height >= 100)
             val instrumentation = androidx.test.platform.app.InstrumentationRegistry.getInstrumentation()
             val output = androidx.test.platform.app.InstrumentationRegistry.getArguments().getString("additionalTestOutputDir")
                 ?: java.io.File(instrumentation.targetContext.externalMediaDirs.first(), "additional_test_output").absolutePath
@@ -286,7 +288,7 @@ class AiEditorProfessionalTest {
             compose.onNodeWithTag("ai-source-1").performScrollTo().performClick()
             waitFor("ai-candidate-thumbnail-replacement")
             compose.onNodeWithTag("ai-candidate-replacement").performClick()
-            waitFor("ai-source-thumbnail-1")
+            waitFor("editor-source-preview")
             if (saveRoute != "ordinary") {
                 compose.onNodeWithText("Describe your change").performScrollTo().performTextInput("Keep green")
                 compose.onNodeWithText("Generate").performScrollTo().performClick()

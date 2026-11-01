@@ -1,3 +1,15 @@
+# NovaOS1.7.10.2/code54 — internal-app overhaul, NOT RELEASE APPROVED
+
+Owner-requested continuation from authoritative73e896054b942734f8c37b5717ed05a2b8679b4f. Latest signed baseline remains1.7.10.1/code53 (details below). Audited87 remote heads max53; assigned54 on same release branch. No54 signing marker or owner APK exists.
+
+Coherent batch: eleven-app model with exact8/10 migration; Hidden-only Tor icon and Primary rejection; fixedVPN Browser/fixedTOR app admission ignoring legacy mode preference; shared themed connection/status/browser surfaces; fixedmode settings, ClearSession with checked authenticated history deletion, Tor NewIdentity retires whole session/process then requires freshlaunch (no exit-IP guarantee). Existing mode-separated PrivateApps/bookmarks/history retained, Tor search targetsTor. Browser proxy/network/JS/Form/POST/upload engines unchanged. Evidence dashboard counts/import/search/recent/shortcuts/Information; existing full-page OCR/grouping/exact-AI-consent/export preserved. Camera unobscured preview/control dock/top hardware controls/recent capture; existing capture/finalization/concealed engine preserved. Editor stable preview,collapsibleAI,source replacement,crop ratios,selectedtheme,plaintext-wiping Home/Lock/Panic; existing save/provider/externaleditor fences preserved.
+
+Local Home launcher RED->GREEN; geometry/host/presentation checks pass; Android compilation/runtime pending one existingfast-development workflow [verify17102] with253 affectedUI cases+3 liveVPN/Tor/networkloss cases and packet/DNS/body assertions. No unrelated workflow created. Final case matrices docs/release17102. Plan docs/superpowers/plans/2026-11-01-novaos-apps.md.
+
+Independent source reviewer found and verified fixes for failedClearSession falsely closing and inaccessible existingTorPrivateApps. No additionalCritical/Important implementationfinding identified. IMPORTANT UNRESOLVED REQUIREMENT: provider-managed WebView cookies/DOM/session files use ordinary isolated app-private transient profiles; they are NOT encrypted with Hidden vault key. Bookmarks/history are vault-encrypted. Existing Android encrypted-device storage and cleanup are not represented as app-key encryption. Encrypted cookie snapshots would not fix provider-managed plaintext state. Full signing approval WITHHELD pending owner resolution or actual secure storage architecture; do not bypass or deliver54 as complete. Finish focusedverification and checkpoint currentwork; preserve prior signed53 APK.
+
+---
+
 # DELIVERED — NovaOS 1.7.10.1 / code53
 
 Completed2026-11-01. This final status supersedes historical in-progress/pending entries below.

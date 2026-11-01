@@ -288,7 +288,7 @@ class HiddenVpnBrowserActivity:ComponentActivity() {
             onBackPressedDispatcher.addCallback(this,object:OnBackPressedCallback(true) {override fun handleOnBackPressed(){
                 when {addressFocused -> clearAddressFocus?.invoke(); websiteDialog!=null || websiteAuth!=null || resubmit!=null -> cancelWebsiteDialog();pendingUpload!=null -> cancelUpload();findOpen -> {findOpen=false;current?.clearMatches()};current?.canGoBack()==true -> current?.let {failures.remove(it);it.goBack()};current?.let {privateAppTabs[it]}!=null -> openPrivateApps();else -> terminate()}
             }})
-            setContent {PrivateGalleryTheme(selectedTheme) {val captureRevision=captureGuard.revision;SideEffect{captureGuard.compositionCommitted(captureRevision)};Browser()}}
+            setContent {PrivateGalleryTheme(selectedTheme) {Surface(Modifier.fillMaxSize()) {val captureRevision=captureGuard.revision;SideEffect{captureGuard.compositionCommitted(captureRevision)};Browser()}}}
             // No WebView exists until process binding and proxy completion have both succeeded.
             val config=ProxyConfig.Builder().addProxyRule("http://127.0.0.1:$proxyPort").removeImplicitRules().build()
             ProxyController.getInstance().setProxyOverride(config,{command ->handler.post(command)}) {
@@ -626,6 +626,8 @@ class HiddenVpnBrowserActivity:ComponentActivity() {
         val app=current?.let {privateAppTabs[it]}
         val appStyle=app?.appStyle()==true
         var appControlsExpanded by remember(current) {mutableStateOf(false)}
+        var clearSessionConfirm by remember{mutableStateOf(false)}
+        var newIdentityConfirm by remember{mutableStateOf(false)}
         screenshotReview?.let {request ->PrivateAppScreenshotReview(request,{if(screenshotReview===request)screenshotReview=null})}
         androidx.compose.runtime.CompositionLocalProvider(uk.co.traynor.privategallery.ui.LocalNovaSecurityActions provides
             uk.co.traynor.privategallery.ui.NovaSecurityActions({terminate()},{runCatching{call(HiddenVpnBrowserBroker.LOCK_VAULT,read={Unit})};terminate()},{panic()},"Hidden Space · ${mode.indicator}")) {
@@ -653,7 +655,7 @@ class HiddenVpnBrowserActivity:ComponentActivity() {
                 views.firstOrNull {System.identityHashCode(it).toString()==id}?.let {closePrivateAppSession(it)}
             })
         if(!privateAppsOpen && privateAppSettingsId==null)Column(Modifier.fillMaxSize().systemBarsPadding().imePadding()) {
-            if(app==null)uk.co.traynor.privategallery.ui.NovaAppHeader("Browser","Hidden Space · ${mode.indicator}",
+            if(app==null)uk.co.traynor.privategallery.ui.NovaAppHeader(if(mode==HiddenConnectionPolicy.Mode.TOR_ONLY)"Tor Browser"else"Browser","Hidden Space",
                 onHome={terminate()},onLock={runCatching{call(HiddenVpnBrowserBroker.LOCK_VAULT,read={Unit})};terminate()},onPanic={panic()},
                 actions={IconButton(onClick=::openPrivateApps,enabled=ready){Icon(Icons.Default.Apps,"Private Apps")}})
             val focus=LocalFocusManager.current;val keyboard=LocalSoftwareKeyboardController.current
@@ -670,11 +672,13 @@ class HiddenVpnBrowserActivity:ComponentActivity() {
                 LinearProgressIndicator(progress={pageLoadProgress/100f},modifier=Modifier.fillMaxWidth())
                 Text(if(appStyle)"Opening ${app?.name()}…" else "Loading website…",Modifier.padding(horizontal=8.dp),style=MaterialTheme.typography.bodySmall)
             }
-            Text(notice,Modifier.heightIn(max=88.dp).verticalScroll(rememberScrollState()).padding(8.dp),style=MaterialTheme.typography.bodySmall)
+            NovaBrowserStatus(mode==HiddenConnectionPolicy.Mode.TOR_ONLY,ready,notice,{library();menu=true})
+            if(notice.isNotBlank() && !notice.startsWith("VPN only ·") && !notice.startsWith("Tor only ·"))
+                Text(notice,Modifier.heightIn(max=72.dp).verticalScroll(rememberScrollState()).padding(horizontal=12.dp,vertical=4.dp),style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
             if(findOpen)HiddenFindBar(findQuery,findResult,{findQuery=it;current?.findAllAsync(it)},{current?.findNext(it)},{findOpen=false;current?.clearMatches()})
             Box(Modifier.weight(1f).fillMaxWidth()) {
                 @Suppress("UNUSED_VARIABLE") val pageRevision=navigationRevision
-                if(!ready)Text("Establishing private browser…",Modifier.padding(24.dp))
+                if(!ready)NovaBrowserConnectionSurface(mode==HiddenConnectionPolicy.Mode.TOR_ONLY,"Connecting",notice,{},{library();menu=true})
                 current?.takeUnless {!busy && it.url.isNullOrBlank()}?.let {view ->key(view) {AndroidView(factory={
                     // Keep clipping in the native hierarchy. A Compose graphics-layer clip can
                     // leave WebView virtual descendants with zero-height bounds after Fold resize.
@@ -711,8 +715,16 @@ class HiddenVpnBrowserActivity:ComponentActivity() {
                 HiddenNativeSettingsContent(mode==HiddenConnectionPolicy.Mode.TOR_ONLY,mode.indicator,saveHistory,desktop,
             bookmark={current?.url?.let {library(2,it)};menu=false},bookmarks={showLibrary("Bookmarks");menu=false},history={showLibrary("History");menu=false},
             setHistory={library(4,enabled=it)},clearHistory={clearHistoryConfirm=true},toggleDesktop={desktop=!desktop;current?.let {desktopTabs[it]=desktop};current?.settings?.apply {useWideViewPort=desktop;loadWithOverviewMode=desktop;userAgentString=BrowserSecurityPolicy.userAgent(if(desktop)BrowserUserAgentMode.DESKTOP else BrowserUserAgentMode.MOBILE,WebSettings.getDefaultUserAgent(this@HiddenVpnBrowserActivity))};current?.reload()},
-            download={pendingDownload=downloadCandidate?.takeIf {downloadSelectionCurrent(it)} ?: current?.let {view ->view.url?.let {downloadSelection(view,it)}};menu=false},find={findOpen=true;menu=false;current?.setFindListener {active,count,done ->if(done)findResult=if(count==0)"No matches" else "${active+1} of $count matches"}},downloads={downloadsOpen=true;menu=false},searchEngine=searchEngine,setSearchEngine={searchEngine=it},setMode={requestedMode=it},clearClose={if(library(6)!=null)terminate()})}
+            download={pendingDownload=downloadCandidate?.takeIf {downloadSelectionCurrent(it)} ?: current?.let {view ->view.url?.let {downloadSelection(view,it)}};menu=false},find={findOpen=true;menu=false;current?.setFindListener {active,count,done ->if(done)findResult=if(count==0)"No matches" else "${active+1} of $count matches"}},downloads={downloadsOpen=true;menu=false},searchEngine=searchEngine,setSearchEngine={searchEngine=it},setMode={requestedMode=it},clearClose={clearSessionConfirm=true},allowModeSwitch=false)
+                if(mode==HiddenConnectionPolicy.Mode.TOR_ONLY)TextButton(onClick={newIdentityConfirm=true}){Text("New Identity")}
+                Text(notice,style=MaterialTheme.typography.bodySmall)
+            }
         }
+        if(clearSessionConfirm||newIdentityConfirm)GalleryAlertDialog(onDismissRequest={clearSessionConfirm=false;newIdentityConfirm=false},
+            title={Text(if(newIdentityConfirm)"New Tor identity?"else"Clear Session?")},
+            text={Text(if(newIdentityConfirm)"Closes all tabs, cookies and active transfers, and retires this Tor process. Open Tor Browser from Home to establish a fresh circuit. Bookmarks are kept. A different exit address is not guaranteed."else"Closes this browser session and removes its cookies, tabs and saved history. Bookmarks are kept.")},
+            confirmButton={TextButton(onClick={if(newIdentityConfirm || library(6)!=null)terminate()else {clearSessionConfirm=false;notice="History could not be cleared. Session kept open; retry explicitly."}}){Text(if(newIdentityConfirm)"Close session and renew"else"Clear Session")}},
+            dismissButton={TextButton(onClick={clearSessionConfirm=false;newIdentityConfirm=false}){Text("Cancel")}})
         requestedMode?.let {selected ->GalleryAlertDialog(onDismissRequest={requestedMode=null},title={Text("Switch to ${selected.label}?")},
             text={Text("All tabs will close and transfers will stop. ${selected.label} must establish and verify a new connection before you can browse. VPN + Tor is unavailable.")},
             confirmButton={TextButton(onClick={requestedMode=null;terminate(switchMode=selected)}){Text("Close tabs and switch")}},

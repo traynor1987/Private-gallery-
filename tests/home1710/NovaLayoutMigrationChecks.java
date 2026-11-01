@@ -3,7 +3,7 @@ import uk.co.traynor.privategallery.core.home.*;
 public class NovaLayoutMigrationChecks {
  static void require(boolean ok,String message){if(!ok)throw new AssertionError(message);}
  public static void main(String[] args){
-  require(HomeLayout.defaults().visible().size()==10,"Nova Home must expose ten applications");
+  require(HomeLayout.defaults().visible().size()==11,"Nova Home must expose eleven applications");
   String legacy="v1|SETTINGS,GALLERY,BROWSER,PRIVATE_APPS,EVIDENCE_LOCKER,CAMERA,RECENTLY_DELETED,COLLECTIONS|BROWSER|CAMERA";
   HomeLayout migrated=HomeLayout.decode(legacy);
   require(migrated.visible().get(0)==HomeLayout.Shortcut.SETTINGS,"preserve owner order");

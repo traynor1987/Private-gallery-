@@ -1803,7 +1803,7 @@ class MainActivity : FragmentActivity() {
     }
     private fun launchHomeShortcut(item:uk.co.traynor.privategallery.core.home.HomeLayout.Shortcut) {
         val hidden=retained.hidden.selected
-        if(hideContent||!activityResumed||(if(hidden)!retained.hidden.session.isUnlocked else !session.isUnlocked||sessionKey==null))return
+        if(!uk.co.traynor.privategallery.core.home.NovaNavigation.available(item,hidden)||hideContent||!activityResumed||(if(hidden)!retained.hidden.session.isUnlocked else !session.isUnlocked||sessionKey==null))return
         retained.clearNovaNavigation()
         homeVisible=false;retained.homeFeatureRoot=item.name
         when(item) {
@@ -1821,6 +1821,7 @@ class MainActivity : FragmentActivity() {
             uk.co.traynor.privategallery.core.home.HomeLayout.Shortcut.RECENTLY_DELETED -> {
                 openNonBrowser(Route.VAULT);if(hidden)retained.hidden.select()
             }
+            uk.co.traynor.privategallery.core.home.HomeLayout.Shortcut.TOR_BROWSER,
             uk.co.traynor.privategallery.core.home.HomeLayout.Shortcut.BROWSER,
             uk.co.traynor.privategallery.core.home.HomeLayout.Shortcut.PRIVATE_APPS -> {
                 if(hidden)retained.hidden.outside()
@@ -1838,6 +1839,8 @@ class MainActivity : FragmentActivity() {
             }
         }
     }
+    internal val novaHiddenBrowserMode:uk.co.traynor.privategallery.core.browser.hidden.HiddenConnectionPolicy.Mode
+        get()=if(retained.homeFeatureRoot=="TOR_BROWSER")uk.co.traynor.privategallery.core.browser.hidden.HiddenConnectionPolicy.Mode.TOR_ONLY else uk.co.traynor.privategallery.core.browser.hidden.HiddenConnectionPolicy.Mode.VPN_ONLY
     internal fun consumeHomePrivateAppsRequest():Boolean {
         if(!homePrivateAppsRequested || !retained.hidden.selected || !retained.hidden.session.isUnlocked || route!=Route.BROWSER)return false
         homePrivateAppsRequested=false;return true

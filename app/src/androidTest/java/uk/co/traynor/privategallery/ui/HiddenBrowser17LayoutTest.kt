@@ -51,25 +51,20 @@ class HiddenBrowser17LayoutTest {
                 assertEquals("Actual dialog/window viewport height",height,bounds.height())
                 assertEquals("Viewport fixtures use 1px per dp",1f,compose.density.density,.01f)
             }
-            compose.onNodeWithText("Hidden Browser").assertIsDisplayed()
-            listOf("Hidden browser settings","Back","Forward","Refresh","New tab","Save media to Hidden").forEach {label->
+            compose.onNodeWithText("Browser").assertIsDisplayed()
+            listOf("Browser settings","Back","Forward","Tabs","More").forEach {label->
                 val node=compose.onNodeWithContentDescription(label);node.assertIsDisplayed()
                 val bounds=node.fetchSemanticsNode().boundsInRoot
                 val minimum = with(compose.density) { 48.dp.toPx() }
                 assertTrue("$label must retain a 48dp target", bounds.width >= minimum - 1 && bounds.height >= minimum - 1)
             }
             capture("browser-$width-$height-$theme-$fontScale",width,height)
-            compose.onNodeWithText("Tabs 0").performClick();compose.onNodeWithText("Hidden tabs").assertIsDisplayed();compose.onNodeWithText("Done").performClick()
-            compose.onNodeWithContentDescription("Hidden browser settings").performClick()
-            compose.onNodeWithText("VPN + Tor · unavailable").assertIsNotEnabled()
-            compose.onNodeWithText("Privacy information").performScrollTo().performClick()
-            compose.onNodeWithText("Connection diagnostics").performScrollTo().performClick()
+            compose.onNodeWithContentDescription("Browser settings").performClick()
+            compose.onNodeWithText("VPN only").assertIsDisplayed()
+            compose.onNodeWithText("VPN + Tor · unavailable").assertDoesNotExist()
             compose.onNodeWithText("Manage Hidden downloads").performScrollTo().assertIsDisplayed()
-            compose.onNodeWithText("Done").assertIsDisplayed()
             capture("hidden-settings-$width-$height-$theme-$fontScale",width,height,"hidden-browser-settings")
-            compose.onNodeWithText("Done").performClick()
-            compose.onNodeWithText("Search or enter address").performClick()
-            compose.onNodeWithContentDescription("Hidden browser settings").assertIsDisplayed()
+            compose.onNodeWithContentDescription("Back to Browser").performClick()
         } finally {
             compose.runOnIdle {compose.activity.hiddenBrowserOwner?.close();session.lock()}
             prefs.edit().apply{if(previous==null)remove("mode")else putString("mode",previous)}.commit()
@@ -89,7 +84,8 @@ class HiddenBrowser17LayoutTest {
     }
     @Test fun unavailableCombinedModeCannotBeSelectedInPreferences() {
         compose.runOnIdle { compose.activity.setContent { PrivateGalleryTheme { HiddenBrowserPreferences() } } }
-        compose.onNodeWithText("VPN + Tor · unavailable").assertIsNotEnabled()
+        compose.onNodeWithText("Browser uses VPN only. Open Tor Browser from Hidden Home for a separate Tor session.").assertIsDisplayed()
+        compose.onNodeWithText("VPN + Tor · unavailable").assertDoesNotExist()
     }
     @Test fun foldCoverLight()=layout(392,840,AppTheme.LIGHT)
     @Test fun foldInnerDark()=layout(840,900,AppTheme.DARK)

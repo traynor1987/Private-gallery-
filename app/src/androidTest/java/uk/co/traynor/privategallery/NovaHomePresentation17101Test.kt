@@ -29,11 +29,11 @@ class NovaHomePresentation17101Test {
    }
   }
   compose.onNodeWithText("NovaOS").assertExists()
-  for(app in HomeLayout.Shortcut.values()) {
+  for(app in HomeLayout.Shortcut.values().filter{NovaNavigation.available(it,false)}) {
    compose.onNodeWithTag("nova-app-grid").performScrollToNode(hasTestTag("nova-app-${app.name}"))
    compose.onNodeWithTag("nova-app-${app.name}").performClick()
   }
-  assertEquals(HomeLayout.Shortcut.values().toSet(),launched)
+  assertEquals(HomeLayout.Shortcut.values().filter{NovaNavigation.available(it,false)}.toSet(),launched)
   compose.runOnIdle {scale=1.8f}
   compose.onNodeWithTag("nova-app-grid").performScrollToNode(hasTestTag("nova-app-SETTINGS"))
   compose.onNodeWithContentDescription("Actions for Settings").performClick()

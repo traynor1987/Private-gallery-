@@ -430,7 +430,7 @@ jobs:
   private-home1710:
     if: github.event_name == 'push' && github.ref == 'refs/heads/release/1.7.10-private-home'
     runs-on: ubuntu-24.04
-    timeout-minutes: 35
+    timeout-minutes: 55
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v5
@@ -458,7 +458,12 @@ jobs:
           java -cp /tmp/home1710 NovaLayoutMigrationChecks
           java -cp /tmp/home1710 NovaNavigationChecks
           java -cp /tmp/home1710 NovaPositionChecks
-          python3 scripts/check_nova17101.py
+          java -cp /tmp/home1710 NovaBrowserAppsChecks
+          python3 -m unittest scripts.tests.test_editor_workspace_presentation
+          python3 -m unittest discover -s tests/evidence_presentation -p "test_*.py"
+          java com.sun.tools.javac.Main -d /tmp/editor17102 app/src/main/java/uk/co/traynor/privategallery/ui/EditorCropPresets.java tests/editor_presentation/EditorCropPresetChecks.java
+          java -cp /tmp/editor17102 uk.co.traynor.privategallery.ui.EditorCropPresetChecks
+          python3 scripts/check_nova17101.py --code 54 --version 1.7.10.2
           java -cp /tmp/home1710 HomeLayoutChecks
           java -cp /tmp/home1710 HomePersistenceChecks
           PYTHONDONTWRITEBYTECODE=1 python3 -m unittest scripts.tests.test_home1710_release scripts.tests.test_nova17101_release
@@ -475,8 +480,15 @@ jobs:
             ~/.gradle/caches
             ~/.gradle/wrapper
           key: home1710-${{ runner.os }}-${{ hashFiles('**/*.gradle*', 'gradle/wrapper/gradle-wrapper.properties') }}
+      - name: Prepare disposable VPN and Tor fixtures for changed browser boundary
+        if: contains(github.event.head_commit.message, '[verify17102]')
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq wireguard-tools tcpdump iptables python3-cryptography tor
+          bash scripts/setup_hidden_vpn_fixture1762.sh
+          python3 scripts/ci_onion_probe.py
       - name: Enable Android emulator acceleration
-        if: contains(github.event.head_commit.message, '[verify1710]')
+        if: contains(github.event.head_commit.message, '[verify1710]') || contains(github.event.head_commit.message, '[verify17102]')
         run: sudo chmod 666 /dev/kvm
       - name: Grouped NovaOS navigation and changed privacy-boundary Android 17 verification
         if: contains(github.event.head_commit.message, '[verify1710]')
@@ -495,13 +507,35 @@ jobs:
           script: |
             bash scripts/home1710_emulator_preflight.sh
             ./gradlew :app:connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=uk.co.traynor.privategallery.HomeNavigation1710Test,uk.co.traynor.privategallery.NovaNavigation17101Test,uk.co.traynor.privategallery.NovaHomePresentation17101Test,uk.co.traynor.privategallery.core.home.Home1710Test,uk.co.traynor.privategallery.core.home.EvidenceImport1710Test,uk.co.traynor.privategallery.core.evidence.EvidenceStore179Test,uk.co.traynor.privategallery.core.evidence.EvidenceAccess179Test,uk.co.traynor.privategallery.core.evidence.EvidenceController179Test,uk.co.traynor.privategallery.EvidenceAuthority179Test,uk.co.traynor.privategallery.ui.HiddenNavigationAuthorityTest,uk.co.traynor.privategallery.ui.EvidenceLocker179UiTest,uk.co.traynor.privategallery.PrivacyViewerRepair1751Test,uk.co.traynor.privategallery.ui.PrivateAppsUi178Test,uk.co.traynor.privategallery.ui.PrivateAppControls178Test,uk.co.traynor.privategallery.ui.ProfessionalUiTest,uk.co.traynor.privategallery.ui.CameraPresentationTest,uk.co.traynor.privategallery.ui.ModalCompletion1762Test,uk.co.traynor.privategallery.HideContent1761Test --stacktrace
+      - name: Focused NovaOS applications and actual VPN Tor boundary verification
+        if: contains(github.event.head_commit.message, '[verify17102]')
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: '37.0'
+          target: google_apis
+          arch: x86_64
+          profile: pixel_2
+          cores: 4
+          ram-size: 4096M
+          heap-size: 512M
+          disk-size: 8G
+          disable-animations: true
+          emulator-options: -no-window -gpu software -no-snapshot -noaudio -no-boot-anim -feature -HardwareDecoder
+          script: bash scripts/run_nova17102.sh
+      - name: Stop only owned disposable browser fixtures
+        if: always() && contains(github.event.head_commit.message, '[verify17102]')
+        run: |
+          bash scripts/cleanup_hidden_vpn_fixture1762.sh
+          python3 scripts/ci_onion_probe.py --stop
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: novaos17101-verification
+          name: novaos17102-verification
           path: |
             app/build/reports
             app/build/test-results
             app/build/home1710
+            app/build/nova17102
+            app/build/hidden-vpn1762
             app/build/outputs/androidTest-results
             app/build/outputs/connected_android_test_additional_output

@@ -52,7 +52,8 @@ import uk.co.traynor.privategallery.core.vault.VaultPdfPreview
    if(busy)LinearProgressIndicator(Modifier.fillMaxWidth())
    LazyColumn(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(10.dp)) {
     if(message.isNotEmpty())item{Text(message)}
-    item {Text("Default: password-encrypted .pgevidence container with a readable PDF report, structured index, transcripts and byte-identical originals. The PDF inside is not independently password protected.")
+    item {EvidenceWorkflowHeading("Encrypted export","Review selected contents and choose a unique password.")
+     Text("Default: password-encrypted .pgevidence container with a readable PDF report, structured index, transcripts and byte-identical originals. The PDF inside is not independently password protected.")
      Text("Open this container in Evidence Locker. Plaintext re-export requires another explicit confirmation. Hashes check matching bytes, not the truth of screenshot contents or legal certification.")}
     val selected=plan
     if(selected!=null) {

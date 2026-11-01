@@ -132,7 +132,7 @@ import uk.co.traynor.privategallery.core.evidence.*
        if(!configured)Text("Set up your API key below before sending.")
       }
      }else {
-      item {Text("Select only what you intend to transmit. Default: text only. Nothing uploads until the final confirmation.")
+      item {EvidenceWorkflowHeading("Choose your analysis","Select only what you intend to transmit. Default: text only. Nothing uploads until the final confirmation.")
        Text("Transport",style=MaterialTheme.typography.titleMedium)
        FlowRow {listOfNotNull(if(allowSystemRoute)"System"else null,"VPN",if(controller.access.owner==EvidenceCatalog.Owner.HIDDEN)"Tor"else null).forEach{candidate->FilterChip(selected=mode==candidate,enabled=!busy,onClick={mode=candidate},label={Text(candidate)})}}
        TextButton(enabled=!busy&&mode!="System",onClick={val requested=mode;dismiss();onRequestPermission(requested)}){Text("Set up Android VPN / isolation permission")}

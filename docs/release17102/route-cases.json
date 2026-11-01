@@ -1,0 +1,11 @@
+{
+  "uk.co.traynor.privategallery.core.browser.hidden.NativeTorIsolation1762Test": [
+    "packagedTorNativeFormsUploadsDownloadsAndNetworkSink"
+  ],
+  "uk.co.traynor.privategallery.core.browser.hidden.HiddenVpnLive1762Test": [
+    "nativeChildPostsFormsUploadsAndRevokesOnOwnedVpn"
+  ],
+  "uk.co.traynor.privategallery.core.browser.hidden.HiddenVpnNetworkLoss1762Test": [
+    "lostOwnedNetworkRetiresNativeChildAndCannotReuseOldCapability"
+  ]
+}

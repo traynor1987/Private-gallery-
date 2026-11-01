@@ -40,7 +40,7 @@ import uk.co.traynor.privategallery.core.home.*
   if(query.isNotBlank()){kotlinx.coroutines.delay(200);results=try{search(query)}catch(cancelled:kotlinx.coroutines.CancellationException){throw cancelled}catch(_:Exception){emptyList()};searching=false}
  }
  BackHandler{when{menu!=null->menu=null;restore->restore=false;query.isNotBlank()->query="";customise->customise=false;else->onExit()}}
- val visible=preferences.layout.search(query).sortedByDescending{it in preferences.layout.favourites()}
+ val visible=preferences.layout.search(query).filter{NovaNavigation.available(it,hidden)}.sortedByDescending{it in preferences.layout.favourites()}
  val palette=MaterialTheme.colorScheme
  CompositionLocalProvider(LocalContentColor provides palette.onBackground) {
  Box(Modifier.fillMaxSize().testTag("private-home1710").background(Brush.verticalGradient(listOf(palette.primaryContainer.copy(alpha=.40f),palette.background,palette.background)))) {
@@ -52,7 +52,7 @@ import uk.co.traynor.privategallery.core.home.*
      Text("Your layout is saved privately in $space.",color=palette.onSurfaceVariant)
      GalleryCard {Row(verticalAlignment=Alignment.CenterVertically){Column(Modifier.weight(1f)){Text("Compact spacing");Text("Fit apps closer together",style=MaterialTheme.typography.bodySmall,color=palette.onSurfaceVariant)};Switch(preferences.compact,{onChange(preferences.copy(compact=it))})}}
      GalleryCard {Row(verticalAlignment=Alignment.CenterVertically){Text("Larger app icons",Modifier.weight(1f));Switch(preferences.largeIcons,{onChange(preferences.copy(largeIcons=it))})}}
-     val hiddenApps=HomeLayout.Shortcut.values().filter{it !in preferences.layout.visible()}
+     val hiddenApps=HomeLayout.Shortcut.values().filter{NovaNavigation.available(it,hidden)&&it !in preferences.layout.visible()}
      if(hiddenApps.isNotEmpty())GalleryCard {
       Text("Hidden shortcuts",style=MaterialTheme.typography.titleMedium)
       hiddenApps.forEach {app->Row(verticalAlignment=Alignment.CenterVertically){NovaAppIcon(app,36.dp);Text(app.label,Modifier.weight(1f).padding(horizontal=12.dp));TextButton(onClick={onChange(preferences.copy(layout=preferences.layout.show(app)))}){Text("Show")}}}
@@ -80,11 +80,11 @@ import uk.co.traynor.privategallery.core.home.*
         leadingIcon={Icon(Icons.Default.Search,null)},trailingIcon={if(query.isNotBlank())IconButton(onClick={query=""}){Icon(Icons.Default.Close,"Clear search")}else IconButton(onClick={customise=true}){Icon(Icons.Default.MoreVert,"Personalise Home")}},
         colors=OutlinedTextFieldDefaults.colors(unfocusedContainerColor=palette.surface.copy(alpha=.72f),focusedContainerColor=palette.surface))
       }
-      if(query.isBlank()&&preferences.recent.any{it in preferences.layout.visible()})item(span={GridItemSpan(maxLineSpan)}) {
+      if(query.isBlank()&&preferences.recent.any{NovaNavigation.available(it,hidden)&&it in preferences.layout.visible()})item(span={GridItemSpan(maxLineSpan)}) {
        Column(Modifier.padding(vertical=4.dp)) {
         Text("Recent",style=MaterialTheme.typography.labelMedium,color=palette.onSurfaceVariant,modifier=Modifier.padding(start=4.dp,bottom=4.dp))
         Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),horizontalArrangement=Arrangement.spacedBy(8.dp)) {
-         preferences.recent.filter{it in preferences.layout.visible()}.take(4).forEach {app->
+         preferences.recent.filter{NovaNavigation.available(it,hidden)&&it in preferences.layout.visible()}.take(4).forEach {app->
           AssistChip(onClick={onLaunch(app)},label={Text(app.label)},leadingIcon={Icon(novaAppSymbol(app),null,Modifier.size(16.dp))})
          }
         }

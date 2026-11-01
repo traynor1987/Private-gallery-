@@ -26,6 +26,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.*
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -154,25 +155,40 @@ internal fun VaultCameraScreen(controller:VaultCameraController,onExit:()->Unit)
                 val security=novaSecurityActions()
                 NovaAppHeader("Camera",security?.space,onHome={onExit();security?.home?.invoke()},onLock=security?.lock,onPanic=security?.panic)
             }
-            if(active && !reading) FlowRow(Modifier.fillMaxWidth().padding(horizontal=8.dp),horizontalArrangement=Arrangement.End) {
-                IconButton(onClick=onExit){Icon(Icons.Default.Close,"Stop and exit camera",tint=if(active&&black)Color.Gray else LocalContentColor.current)}
-                if(!active||!black)Text(if(active) "" else "Camera",Modifier.weight(1f),style=MaterialTheme.typography.titleMedium)
-                else Spacer(Modifier.weight(1f))
-                if(active&&!black&&!reading) {
-                    if(!video||quality in controller.supportedVideoQualities)TextButton(onClick={if(controller.pauseForSettings())active=false},enabled=!controller.busy&&countdown==0) {
-                        Text(if(!video)"$photoQuality%" else when(quality){Quality.UHD->"4K";Quality.FHD->"FHD";else->"HD"})
+            if(active && !reading && !black) {
+                val security=novaSecurityActions()
+                NovaAppHeader("Camera",security?.space,
+                    onHome={onExit();security?.home?.invoke()},onBack=onExit,
+                    onLock=security?.lock,onPanic=security?.panic)
+                Surface(color=MaterialTheme.colorScheme.surfaceContainer) {
+                    FlowRow(Modifier.fillMaxWidth().padding(horizontal=8.dp),
+                        horizontalArrangement=Arrangement.SpaceBetween,
+                        verticalArrangement=Arrangement.Center) {
+                        if(controller.hasFlash)IconButton(onClick=controller::toggleFlash,enabled=!controller.busy&&countdown==0,
+                            modifier=Modifier.semantics {stateDescription=if(controller.flash)"On" else "Off"}) {
+                            Icon(if(controller.flash)Icons.Default.FlashOn else Icons.Default.FlashOff,"Flash")
+                        }
+                        TextButton(onClick={timerSeconds=when(timerSeconds){0->3;3->10;else->0}},enabled=!controller.busy&&countdown==0) {
+                            Icon(Icons.Default.Timer,null,Modifier.size(18.dp));Spacer(Modifier.width(4.dp))
+                            Text(if(timerSeconds==0)"Timer off" else "${timerSeconds}s")
+                        }
+                        TextButton(onClick={fillPreview=!fillPreview;preview.scaleType=if(fillPreview)PreviewView.ScaleType.FILL_CENTER else PreviewView.ScaleType.FIT_CENTER},enabled=!controller.busy) {
+                            Text(if(fillPreview)"Fill" else "Fit")
+                        }
+                        IconButton(onClick={if(controller.pauseForSettings())active=false},enabled=!controller.busy&&countdown==0) {
+                            Icon(Icons.Default.Tune,"Camera modes and settings")
+                        }
                     }
-                    if(controller.hasFlash)IconButton(onClick=controller::toggleFlash,enabled=!controller.busy){Icon(if(controller.flash)Icons.Default.FlashOn else Icons.Default.FlashOff,"Flash")}
-                    TextButton(onClick={timerSeconds=when(timerSeconds){0->3;3->10;else->0}},enabled=!controller.busy&&countdown==0){Text(if(timerSeconds==0)"Timer" else "${timerSeconds}s")}
-                    TextButton(onClick={fillPreview=!fillPreview;preview.scaleType=if(fillPreview)PreviewView.ScaleType.FILL_CENTER else PreviewView.ScaleType.FIT_CENTER},enabled=!controller.busy){Text(if(fillPreview)"Fill" else "Fit")}
                 }
-                if(active&&!controller.busy&&countdown==0) IconButton(onClick={if(controller.pauseForSettings())active=false}) { Icon(Icons.Default.Tune,"Camera modes and settings") }
-                if(active&&!black) {
-                    val security=novaSecurityActions()
-                    IconButton(onClick={security?.lock?.invoke()}){Icon(Icons.Default.Lock,"Lock Space")}
-                    IconButton(onClick={security?.panic?.invoke()}){Icon(Icons.Default.PowerSettingsNew,"Panic Exit")}
+            }
+            // Concealed capture keeps its minimal exit/status strip and never exposes a preview.
+            if(active && black && !reading) Row(Modifier.fillMaxWidth().padding(horizontal=8.dp),verticalAlignment=Alignment.CenterVertically) {
+                IconButton(onClick=onExit){Icon(Icons.Default.Close,"Stop and exit camera",tint=Color.Gray)}
+                Spacer(Modifier.weight(1f))
+                if(!controller.busy&&countdown==0)IconButton(onClick={if(controller.pauseForSettings())active=false}) {
+                    Icon(Icons.Default.Tune,"Camera modes and settings",tint=Color.Gray)
                 }
-                if(active&&black)Text(if(controller.recordingNow)"REC ${controller.elapsed}s" else controller.status,
+                Text(if(controller.recordingNow)"REC ${controller.elapsed}s" else controller.status,
                     Modifier.weight(1f),color=Color.DarkGray,style=MaterialTheme.typography.labelSmall)
             }
             if(!active)Column(Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()).padding(16.dp),verticalArrangement=Arrangement.spacedBy(16.dp)) {
@@ -310,19 +326,27 @@ internal fun VaultCameraScreen(controller:VaultCameraController,onExit:()->Unit)
     if(details)CaptureDetails(controller.access,onDismiss={details=false})
 }
 
-/** Shared by production and Fold screenshot fixtures: the controls overlay the full viewfinder. */
+/** Stable framing: capture controls have their own dock, never obscure the preview. */
 @Composable
 internal fun CameraViewfinderLayout(modifier: Modifier = Modifier, preview: @Composable () -> Unit, controls: @Composable () -> Unit) {
-    BoxWithConstraints(modifier) {
-        val availableHeight = maxHeight
-        val landscape = maxWidth > maxHeight
-        Box(Modifier.fillMaxSize().background(Color.Black)) {
-            preview()
-            Surface(modifier=Modifier.align(if(landscape) Alignment.CenterEnd else Alignment.BottomCenter)
-                .then(if(landscape) Modifier.width(190.dp).fillMaxHeight() else Modifier.fillMaxWidth().heightIn(max=availableHeight*0.38f)),
-                color=Color.Black.copy(alpha=0.65f), contentColor=Color.White) {
-                Column(Modifier.verticalScroll(rememberScrollState())) { controls() }
+    BoxWithConstraints(modifier.background(Color.Black)) {
+        val landscape=maxWidth>maxHeight
+        val dockHeight=maxHeight*0.42f
+        val dockWidth=minOf(240.dp,maxWidth*0.38f)
+        val viewfinder: @Composable (Modifier) -> Unit = { area ->
+            Box(area.testTag("camera-viewfinder"),contentAlignment=Alignment.Center) { preview() }
+        }
+        val dock: @Composable (Modifier) -> Unit = { area ->
+            Surface(area.testTag("camera-capture-dock"),color=Color(0xFF101318),contentColor=Color.White) {
+                Column(Modifier.verticalScroll(rememberScrollState()).imePadding()) { controls() }
             }
+        }
+        if(landscape)Row(Modifier.fillMaxSize()) {
+            viewfinder(Modifier.weight(1f).fillMaxHeight())
+            dock(Modifier.width(dockWidth).fillMaxHeight())
+        } else Column(Modifier.fillMaxSize()) {
+            viewfinder(Modifier.weight(1f).fillMaxWidth())
+            dock(Modifier.fillMaxWidth().heightIn(max=dockHeight))
         }
     }
 }
@@ -344,16 +368,17 @@ internal fun CameraCaptureControls(
         disabledLabelColor=Color.White.copy(alpha=0.65f),
     )
     Column(Modifier.fillMaxWidth().padding(8.dp),verticalArrangement=Arrangement.spacedBy(4.dp)) {
-        FlowRow(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+        FlowRow(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(8.dp,Alignment.CenterHorizontally)) {
             FilterChip(selected=!video,colors=modeColors,onClick={onVideoChange(false)},enabled=!busy,modifier=Modifier.heightIn(min=48.dp),label={Text("Photo")})
             FilterChip(selected=video,colors=modeColors,onClick={onVideoChange(true)},enabled=!busy,modifier=Modifier.heightIn(min=48.dp),label={Text("Video")})
         }
-        FlowRow(horizontalArrangement=Arrangement.spacedBy(12.dp)) {
+        FlowRow(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(12.dp,Alignment.CenterHorizontally)) {
             Text(if(front)"Front camera" else "Rear camera",style=MaterialTheme.typography.labelMedium,color=Color.White.copy(alpha=0.85f))
             if(video)Text(if(audio)"Audio On" else "Audio Off",style=MaterialTheme.typography.labelMedium,color=Color.White.copy(alpha=0.85f))
         }
         // Announce state changes, but do not make every elapsed second a live announcement.
-        CameraMessage(status)
+        Text(status,Modifier.fillMaxWidth().padding(horizontal=8.dp).semantics {liveRegion=LiveRegionMode.Polite},
+            style=MaterialTheme.typography.bodySmall,color=Color.White.copy(alpha=0.85f),textAlign=androidx.compose.ui.text.style.TextAlign.Center)
         if(recording)Text("REC ${(elapsed/60).toString().padStart(2,'0')}:${(elapsed%60).toString().padStart(2,'0')}",
             color=Color(0xFFFF7070),style=MaterialTheme.typography.titleMedium,
             modifier=Modifier.semantics {contentDescription="Recording, ${elapsed/60} minutes ${elapsed%60} seconds"})
@@ -369,8 +394,13 @@ internal fun CameraCaptureControls(
             OutlinedIconButton(onClick=onFlash,enabled=!busy,modifier=Modifier.size(48.dp).semantics {stateDescription=if(flash)"On" else "Off"}) {Icon(if(flash)Icons.Default.FlashOn else Icons.Default.FlashOff,"Flash")}
         }
         Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceEvenly,verticalAlignment=Alignment.CenterVertically) {
-            Box(Modifier.size(48.dp),contentAlignment=Alignment.Center) {recentPreview?.let {Image(it.asImageBitmap(),"Recent encrypted capture",Modifier.fillMaxSize())}}
-            FilledIconButton(onClick=onCapture,enabled=bound&&!saving,colors=IconButtonDefaults.filledIconButtonColors(containerColor=if(video)Color(0xFFD32F2F) else Color.White,contentColor=if(video)Color.White else Color.Black),shape=androidx.compose.foundation.shape.CircleShape,modifier=Modifier.size(72.dp).border(3.dp,Color.White,androidx.compose.foundation.shape.CircleShape).semantics {contentDescription=if(video){if(recording)"Stop recording" else "Start recording"}else "Take photo"}) {
+            Surface(Modifier.size(48.dp),shape=GalleryTokens.RowShape,color=Color.White.copy(alpha=0.08f)) {
+                Box(contentAlignment=Alignment.Center) {
+                    if(recentPreview!=null)Image(recentPreview.asImageBitmap(),"Recent encrypted capture",Modifier.fillMaxSize(),contentScale=androidx.compose.ui.layout.ContentScale.Crop)
+                    else Icon(Icons.Default.PhotoLibrary,"No recent encrypted capture",tint=Color.White.copy(alpha=0.5f),modifier=Modifier.size(24.dp))
+                }
+            }
+            FilledIconButton(onClick=onCapture,enabled=bound&&!saving&&(!busy||recording),colors=IconButtonDefaults.filledIconButtonColors(containerColor=if(video)Color(0xFFD32F2F) else Color.White,contentColor=if(video)Color.White else Color.Black),shape=androidx.compose.foundation.shape.CircleShape,modifier=Modifier.size(72.dp).border(3.dp,Color.White,androidx.compose.foundation.shape.CircleShape).semantics {contentDescription=if(video){if(recording)"Stop recording" else "Start recording"}else "Take photo"}) {
                 if(saving) Text("Saving…",style=MaterialTheme.typography.labelSmall)
                 else Icon(if(video) {if(recording)Icons.Default.Stop else Icons.Default.Videocam} else Icons.Default.PhotoCamera, null, Modifier.size(36.dp))
             }

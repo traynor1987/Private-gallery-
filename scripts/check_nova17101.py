@@ -2,12 +2,14 @@
 """Verify approved artwork identity, packaged icon geometry and unchanged Android identities."""
 from pathlib import Path
 import hashlib,json,re,struct,xml.etree.ElementTree as ET
+import argparse
+parser=argparse.ArgumentParser();parser.add_argument("--code",type=int,default=53);parser.add_argument("--version",default="1.7.10.1");args=parser.parse_args()
 root=Path(__file__).resolve().parent.parent
 manifest=json.loads((root/'artwork/novaos-icon-manifest.json').read_text())
 assert hashlib.sha256((root/'artwork/novaos-approved-icon.png').read_bytes()).hexdigest()==manifest['source_sha256']
 build=(root/'app/build.gradle.kts').read_text()
 assert 'applicationId = "uk.co.traynor.privategallery"' in build
-assert 'versionCode = 53' in build and 'versionName = "1.7.10.1"' in build
+assert f'versionCode = {args.code}' in build and f'versionName = "{args.version}"' in build
 assert 'minSdk = 37' in build and 'targetSdk = 37' in build
 assert 'resValue("string", "app_name", "NovaOS")' in build
 res=root/'app/src/main/res'
@@ -22,4 +24,4 @@ for name in ('ic_launcher.xml','ic_launcher_round.xml'):
  icon=ET.parse(res/'mipmap-anydpi-v33'/name).getroot();assert icon.tag=='adaptive-icon'
  assert icon.find('monochrome').get(android+'drawable')=='@drawable/ic_private_gallery_monochrome'
 assert ET.parse(res/'drawable/ic_private_gallery_monochrome.xml').getroot().tag=='vector'
-print('PASS: approved ringed N source, adaptive/legacy/monochrome assets, NovaOS code53 identity, API37 and unchanged package')
+print(f'PASS: approved ringed N source, adaptive/legacy/monochrome assets, NovaOS code{args.code} identity, API37 and unchanged package')

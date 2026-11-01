@@ -19,7 +19,7 @@ internal fun searchPrivateHome(context:android.content.Context,access:uk.co.tray
                 repo.collections().forEach{add(it.name,"Collection",uk.co.traynor.privategallery.core.home.HomeLayout.Shortcut.COLLECTIONS)}
                 listOf(false,true).forEach{tor->
                     val apps=uk.co.traynor.privategallery.core.privateapps.HiddenPrivateAppStore(context.noBackupFilesDir,owner,authority,tor,{access.current()},{commit->lease.commit{commit.run()}}).read()
-                    apps.apps.forEach{app->add(app.name(),if(tor)"Private App · Tor"else"Private App · VPN",uk.co.traynor.privategallery.core.home.HomeLayout.Shortcut.PRIVATE_APPS)}
+                    apps.apps.forEach{app->add(app.name(),if(tor)"Private App · Tor"else"Private App · VPN",if(tor)uk.co.traynor.privategallery.core.home.HomeLayout.Shortcut.TOR_BROWSER else uk.co.traynor.privategallery.core.home.HomeLayout.Shortcut.PRIVATE_APPS)}
                 }
             }else {
                 val repo=uk.co.traynor.privategallery.core.vault.AndroidVaultRepository(context,lease.key(),{action->lease.commit{action()}},{access.current()&&lease.current()})

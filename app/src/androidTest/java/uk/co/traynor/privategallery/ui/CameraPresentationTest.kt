@@ -75,6 +75,39 @@ class CameraPresentationTest {
         compose.onNodeWithContentDescription("Switch camera").assertIsNotEnabled()
     }
 
+    @Test fun countdownPreventsDuplicateShutterInput() {
+        compose.setContent {
+            PrivateGalleryTheme {
+                CameraCaptureControls(
+                    video=false, front=false, audio=false, bound=true, busy=true,
+                    saving=false, recording=false, flash=false, hasFlash=false,
+                    zoom=0f, status="Capture in 3", elapsed=0,
+                    onVideoChange={}, onSwitchCamera={}, onCapture={ error("Countdown shutter accepted input") },
+                    onFlash={}, onZoom={},
+                )
+            }
+        }
+        compose.onNodeWithContentDescription("Take photo").assertIsNotEnabled()
+        compose.onNodeWithContentDescription("No recent encrypted capture").assertExists()
+        compose.onNodeWithText("Capture in 3").assertIsDisplayed()
+    }
+
+    @Test fun portraitDockDoesNotCoverViewfinder() {
+        compose.setContent {
+            PrivateGalleryTheme {
+                Box(Modifier.requiredSize(320.dp, 600.dp)) {
+                    CameraViewfinderLayout(Modifier.fillMaxSize(),
+                        preview={ Box(Modifier.fillMaxSize().testTag("preview-content")) },
+                        controls={ Text("Capture dock", Modifier.height(160.dp)) })
+                }
+            }
+        }
+        val preview=compose.onNodeWithTag("preview-content").fetchSemanticsNode().boundsInRoot
+        val dock=compose.onNodeWithText("Capture dock").fetchSemanticsNode().boundsInRoot
+        assertTrue("Preview must retain most of the portrait camera", preview.height >= dock.height * 2f)
+        assertTrue("Capture dock must not obscure framing", preview.bottom <= dock.top + 1f)
+    }
+
     @Test fun textBoundsCheckRejectsClippingAndTruncationButAcceptsVisibleText() {
         compose.setContent {
             PrivateGalleryTheme {

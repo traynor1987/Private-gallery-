@@ -13,7 +13,7 @@ public final class HomeLayout {
     public enum Shortcut {
         GALLERY("Gallery"), BROWSER("Browser"), PRIVATE_APPS("Private Apps"),
         EVIDENCE_LOCKER("Evidence Locker"), CAMERA("Camera"),
-        RECENTLY_DELETED("Recently Deleted"), COLLECTIONS("Collections"), SETTINGS("Settings"), VAULT("Vault"), FAVOURITES("Favourites");
+        RECENTLY_DELETED("Recently Deleted"), COLLECTIONS("Collections"), SETTINGS("Settings"), VAULT("Vault"), FAVOURITES("Favourites"), TOR_BROWSER("Tor Browser");
         public final String label;
         Shortcut(String label) { this.label = label; }
     }
@@ -31,7 +31,7 @@ public final class HomeLayout {
     public static HomeLayout defaults() {
         return new HomeLayout(List.of(Shortcut.GALLERY, Shortcut.VAULT, Shortcut.BROWSER,
             Shortcut.PRIVATE_APPS, Shortcut.EVIDENCE_LOCKER, Shortcut.CAMERA, Shortcut.COLLECTIONS,
-            Shortcut.FAVOURITES, Shortcut.RECENTLY_DELETED, Shortcut.SETTINGS), Set.of(), Set.of());
+            Shortcut.FAVOURITES, Shortcut.RECENTLY_DELETED, Shortcut.SETTINGS, Shortcut.TOR_BROWSER), Set.of(), Set.of());
     }
     public List<Shortcut> visible() {
         List<Shortcut> result = new ArrayList<>();
@@ -77,11 +77,13 @@ public final class HomeLayout {
         if (parts.length != 4 || !parts[0].equals("v1")) throw new IllegalArgumentException("Invalid layout");
         List<Shortcut> order = parse(parts[1]);
         if (order.size() != Shortcut.values().length) {
-            // The only accepted older schema is the complete eight-app 1.7.10 layout.
-            Set<Shortcut> legacy = EnumSet.allOf(Shortcut.class);
-            legacy.remove(Shortcut.VAULT); legacy.remove(Shortcut.FAVOURITES);
-            if (!legacy.equals(new java.util.HashSet<>(order))) throw new IllegalArgumentException("Incomplete layout");
-            order.add(Shortcut.VAULT); order.add(Shortcut.FAVOURITES);
+            // Accept exactly the complete historical eight- or ten-app schemas.
+            Set<Shortcut> ten = EnumSet.allOf(Shortcut.class); ten.remove(Shortcut.TOR_BROWSER);
+            Set<Shortcut> eight = EnumSet.copyOf(ten); eight.remove(Shortcut.VAULT); eight.remove(Shortcut.FAVOURITES);
+            Set<Shortcut> present = new java.util.HashSet<>(order);
+            if (!ten.equals(present) && !eight.equals(present)) throw new IllegalArgumentException("Incomplete layout");
+            if (eight.equals(present)) {order.add(Shortcut.VAULT);order.add(Shortcut.FAVOURITES);}
+            order.add(Shortcut.TOR_BROWSER);
         }
         return new HomeLayout(order, new java.util.HashSet<>(parse(parts[2])), new java.util.HashSet<>(parse(parts[3])));
     }

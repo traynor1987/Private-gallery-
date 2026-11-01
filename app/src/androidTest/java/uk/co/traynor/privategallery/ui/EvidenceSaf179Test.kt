@@ -179,7 +179,7 @@ class EvidenceSaf179Test {
   fun diagnostics():String = "foreground=${foreground.get()} accesses=${accesses.size} dismissals=${dismissals.get()} pickerLaunches=${picker.launches} reads=${provider.reads.get()} writes=${provider.writes.get()} closes=${provider.closes.get()} cancellations=${provider.cancellations.get()} providerPhase=${provider.phase.get()} exportRejected=${compose.onAllNodesWithText("Export could not complete.",substring=true).fetchSemanticsNodes().isNotEmpty()} archiveRejected=${compose.onAllNodesWithText("No report was published.",substring=true).fetchSemanticsNodes().isNotEmpty()} savingShown=${compose.onAllNodesWithText("Saving evidence export").fetchSemanticsNodes().isNotEmpty()}"
   fun show(){val registryOwner=object:ActivityResultRegistryOwner{override val activityResultRegistry=picker}
    compose.setContent{CompositionLocalProvider(LocalContext provides context,LocalActivityResultRegistryOwner provides registryOwner){PrivateGalleryTheme(AppTheme.DARK){EvidenceLockerHost(owner,true,preparePermission={Intent("synthetic.evidence179.PERMISSION")}){dismissals.incrementAndGet()}}}}
-   compose.waitUntil(20000){compose.onAllNodesWithText("Import document / image").fetchSemanticsNodes().isNotEmpty()}
+   compose.waitUntil(20000){compose.onAllNodesWithText("Import Evidence").fetchSemanticsNodes().isNotEmpty()}
   }
   fun returnFromPicker(uri:Uri?,advance:Long=0){
    compose.activityRule.scenario.moveToState(Lifecycle.State.CREATED)
@@ -218,7 +218,7 @@ class EvidenceSaf179Test {
  @Test fun hiddenExpiredPickerCannotReadDocumentAfterRealForegroundReconciliation()=importFlow(true,false,60_000)
  @Test fun hiddenReauthenticatedPickerCannotReviveOriginalAuthentication()=importFlow(true,true,60_000)
  private fun importFlow(hidden:Boolean,reauthenticate:Boolean,advance:Long){GraceWatchdog(hidden&&!reauthenticate&&advance==30_000L).use{watchdog->Harness(secret=hidden).use{f->
-  watchdog.step("composing Host");f.show();watchdog.step("launching import picker");val old=f.accesses.single();click("Import document / image")
+  watchdog.step("composing Host");f.show();watchdog.step("launching import picker");val old=f.accesses.single();click("Import Evidence")
   assertEquals("OpenDocument",f.picker.contract);assertFalse(old.current());assertEquals(0,f.provider.reads.get())
   val originalPickerRequest=checkNotNull(f.picker.request)
   watchdog.step("stopping Activity");compose.activityRule.scenario.moveToState(Lifecycle.State.CREATED);f.clock.addAndGet(advance)

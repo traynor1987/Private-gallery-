@@ -46,6 +46,7 @@ import uk.co.traynor.privategallery.core.home.HomeLayout
 internal fun novaAppSymbol(app:HomeLayout.Shortcut):ImageVector=when(app) {
  HomeLayout.Shortcut.GALLERY->Icons.Default.PhotoLibrary
  HomeLayout.Shortcut.VAULT->Icons.Default.Lock
+ HomeLayout.Shortcut.TOR_BROWSER->Icons.Default.Shield
  HomeLayout.Shortcut.BROWSER->Icons.Default.Public
  HomeLayout.Shortcut.PRIVATE_APPS->Icons.Default.Apps
  HomeLayout.Shortcut.EVIDENCE_LOCKER->Icons.Default.FactCheck
@@ -60,6 +61,7 @@ internal fun novaAppSymbol(app:HomeLayout.Shortcut):ImageVector=when(app) {
  val colors=when(app) {
   HomeLayout.Shortcut.GALLERY->listOf(Color(0xFF4A9DEC),Color(0xFF2459A3))
   HomeLayout.Shortcut.VAULT->listOf(Color(0xFF6584AC),Color(0xFF243956))
+  HomeLayout.Shortcut.TOR_BROWSER->listOf(Color(0xFF9575CD),Color(0xFF512DA8))
   HomeLayout.Shortcut.BROWSER->listOf(Color(0xFF44B3C9),Color(0xFF206880))
   HomeLayout.Shortcut.PRIVATE_APPS->listOf(Color(0xFF788AE2),Color(0xFF404C97))
   HomeLayout.Shortcut.EVIDENCE_LOCKER->listOf(Color(0xFF549F9C),Color(0xFF245653))

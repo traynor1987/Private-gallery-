@@ -26,8 +26,7 @@ import uk.co.traynor.privategallery.core.evidence.*
  LaunchedEffect(state.reviewImportIds){if(step==0&&state.reviewImportIds.isNotEmpty())selected=state.reviewImportIds.toSet()}
  fun back(){if(!busy){if(step>0)step-- else onClose()}}
  EvidencePage(::back){Column(Modifier.fillMaxSize().safeDrawingPadding().imePadding().padding(16.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){
-  Text(when(step){0->"1 · Review selected originals";1->"2 · Offline OCR review";else->"3 · Review incident groups"},style=MaterialTheme.typography.headlineSmall)
-  Text("${if(controller.access.owner==EvidenceCatalog.Owner.HIDDEN)"Hidden"else"Primary"} encrypted vault · Nothing is sent to cloud AI.")
+  EvidenceWorkflowHeading(when(step){0->"1 · Review selected originals";1->"2 · Offline OCR review";else->"3 · Review incident groups"},"${if(controller.access.owner==EvidenceCatalog.Owner.HIDDEN)"Hidden"else"Primary"} encrypted vault · Nothing is sent to cloud AI.")
   if(busy)LinearProgressIndicator(Modifier.fillMaxWidth())
   if(message.isNotEmpty())Text(message,color=MaterialTheme.colorScheme.error)
   LazyColumn(Modifier.weight(1f).fillMaxWidth(),verticalArrangement=Arrangement.spacedBy(12.dp)){
