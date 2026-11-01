@@ -49,8 +49,8 @@ import uk.co.traynor.privategallery.core.home.*
   }
   if(customise)Column(Modifier.heightIn(max=240.dp).verticalScroll(rememberScrollState())){
    Text("Appearance & Navigation",style=MaterialTheme.typography.titleMedium)
-   Row{FilterChip(preferences.startupHome,{onChange(preferences.copy(startupHome=true))},{Text("Start: Private Home")});Spacer(Modifier.width(8.dp));FilterChip(!preferences.startupHome,{onChange(preferences.copy(startupHome=false))},{Text("Gallery")})}
-   Row{FilterChip(preferences.compact,{onChange(preferences.copy(compact=!preferences.compact))},{Text("Compact")});Spacer(Modifier.width(8.dp));FilterChip(preferences.largeIcons,{onChange(preferences.copy(largeIcons=!preferences.largeIcons))},{Text("Large icons")})}
+   FlowRow{FilterChip(preferences.startupHome,{onChange(preferences.copy(startupHome=true))},{Text("Start: Private Home")});Spacer(Modifier.width(8.dp));FilterChip(!preferences.startupHome,{onChange(preferences.copy(startupHome=false))},{Text("Gallery")})}
+   FlowRow{FilterChip(preferences.compact,{onChange(preferences.copy(compact=!preferences.compact))},{Text("Compact")});Spacer(Modifier.width(8.dp));FilterChip(preferences.largeIcons,{onChange(preferences.copy(largeIcons=!preferences.largeIcons))},{Text("Large icons")})}
    TextButton(onClick={onChange(preferences.copy(layout=HomeLayout.defaults(),recent=emptyList()))}){Text("Restore default layout")}
    HomeLayout.Shortcut.values().filter{it !in preferences.layout.visible()}.forEach{item->TextButton(onClick={onChange(preferences.copy(layout=preferences.layout.show(item)))}){Text("Show ${item.label}")}}
   }

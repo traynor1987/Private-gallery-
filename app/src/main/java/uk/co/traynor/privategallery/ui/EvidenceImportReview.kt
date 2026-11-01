@@ -12,6 +12,7 @@ import java.util.UUID
 import uk.co.traynor.privategallery.core.evidence.*
 
 /** Plaintext drafts belong to this capability only; closing/locking disposes them without registration. */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable internal fun EvidenceImportReview(controller:EvidenceController,onClose:()->Unit) {
  val state by controller.state.collectAsState()
  var selected by remember(controller){mutableStateOf<Set<String>>(emptySet())}
@@ -46,7 +47,7 @@ import uk.co.traynor.privategallery.core.evidence.*
      items(draft?.evidence().orEmpty(),key={it.id()}){record->Text(record.name());OutlinedTextField(groups[record.id()].orEmpty(),{groups=groups+(record.id() to it.take(1024))},Modifier.fillMaxWidth(),label={Text("Approved incident group")})}}
    }
   }
-  Row(horizontalArrangement=Arrangement.spacedBy(12.dp)){
+  FlowRow(horizontalArrangement=Arrangement.spacedBy(12.dp),verticalArrangement=Arrangement.spacedBy(8.dp)){
    TextButton(onClick={onClose()}){Text("Cancel review")}
    TextButton(enabled=!busy,onClick=::back){Text("Back")}
    Button(enabled=!busy&&(step!=0||selected.isNotEmpty()),onClick={
