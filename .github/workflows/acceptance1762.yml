@@ -704,6 +704,12 @@ jobs:
             fs.writeFileSync(process.env.RUNNER_TEMP+'/release1710/runtime.zip',Buffer.from(zip.data));
             fs.writeFileSync(process.env.RUNNER_TEMP+'/release1710/SECURITY_REVIEW.md',review);
             fs.writeFileSync(process.env.RUNNER_TEMP+'/release1710/marker.json',JSON.stringify(marker));
+            const fixture=fs.readFileSync('docs/release1710/UpgradeFixtureTest.kt');
+            if(!/^[a-f0-9]{64}$/.test(marker.fixture_sha256)||crypto.createHash('sha256').update(fixture).digest('hex')!==marker.fixture_sha256||!review.toString().includes('Upgrade fixture SHA-256: '+marker.fixture_sha256))throw Error('Unreviewed upgrade fixture');
+            const fixturePath=process.env.RUNNER_TEMP+'/release1710/UpgradeFixtureTest.kt';
+            fs.writeFileSync(fixturePath,fixture);
+            core.exportVariable('PRIVATE_GALLERY_1710_UPGRADE_FIXTURE',fixturePath);
+            core.exportVariable('PRIVATE_GALLERY_1710_UPGRADE_FIXTURE_SHA256',marker.fixture_sha256);
             core.exportVariable('FROZEN_SOURCE',marker.source);
       - name: Validate original runtime XML and checkout immutable application source
         run: |
@@ -711,8 +717,6 @@ jobs:
           git checkout --detach "$FROZEN_SOURCE"
           mkdir -p app/build/production-evidence
           cp "$RUNNER_TEMP/release1710/marker.json" "$RUNNER_TEMP/release1710/SECURITY_REVIEW.md" app/build/production-evidence/
-          echo "PRIVATE_GALLERY_1710_UPGRADE_FIXTURE=$PWD/docs/release1710/UpgradeFixtureTest.kt" >> "$GITHUB_ENV"
-          echo "PRIVATE_GALLERY_1710_UPGRADE_FIXTURE_SHA256=$(sha256sum docs/release1710/UpgradeFixtureTest.kt | cut -d ' ' -f 1)" >> "$GITHUB_ENV"
       - name: Fetch immutable original signed code51 baseline
         uses: actions/github-script@v7
         with:
@@ -802,3 +806,10 @@ jobs:
             app/build/Private-Gallery-1.7.10-code52-owner-acceptance.apk
             app/build/production-evidence
           if-no-files-found: error
+      - name: Preserve failed release diagnostics without publishing an APK
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: private-gallery1710-release-diagnostics
+          path: app/build/production-evidence
+          if-no-files-found: warn
