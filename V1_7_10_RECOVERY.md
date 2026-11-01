@@ -1,3 +1,6 @@
+## Interrupted-work recovery — 2026-11-01
+Recovered authoritative remote HEAD 3d3385d02272249f419d089a1660ff27f72de804. Run41350699631 job124980010680 passed focused host checks, failed Kotlin compilation, and never executed runtime tests. Root cause: missing explicit imports for runtime.SideEffect, foundation.layout.consumeWindowInsets, foundation.layout.statusBarsPadding and material.icons.Icons. Added only those four imports; retained Compose BOM2024.12.01 and all working implementations. Existing1.7.10.1/code53 identity retained. Runtime, independent review, original-key52->53 upgrade and signed delivery remain pending; no success claimed.
+
 # NovaOS 1.7.10.1 professional experience — implementation in progress
 
 Continues existing release/1.7.10-private-home from authoritative d3ccfff2b433bd651c054dfc5238948b8c1eca46. Signed code52 source f301ee73320df2e366b7cd258dae5105296237a7 and APK SHA0b22f736055738f4e3f552e4939cae1ea767cbce58a4908d04666786e0c37ba2 independently reverified. Audited87 remote branch heads, maximum52: assigned patch1.7.10.1/code53. Package/original certificate/API37 policy preserved. Original release completion below is historical; NO signed code53 APK or release approval exists yet.
