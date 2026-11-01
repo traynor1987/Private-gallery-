@@ -97,6 +97,7 @@ class EvidenceOwnedRoute179Test {
   val result=JSONObject().put("schema",1).put("case",case).put("method",method).put("classname",EvidenceOwnedRoute179Test::class.java.name).put("nonce",nonce).put("source_sha",source).put("mode",if(isTor)"Tor" else "VPN").put("uid",Process.myUid())
   var clock:EvidenceRouteClock179?=null
   try {
+   if(case=="vpn_revoke")EvidenceRouteClockLifecycle179(instrumentation,arguments,nonce,source).run(output)
    val routeClock=EvidenceRouteClock179(app,arguments,case,method,nonce,source,instrumentation.javaClass.name);clock=routeClock
    until("Previous transports retired"){HiddenVpnBrowserBroker.admissionRetired()&&!HiddenVpnBrowserBroker.hasDedicatedProcess(app)&&!HiddenTorIsolationService.hasTorProcess(app)&&HiddenTorIsolationService.released()&&networks().isEmpty()}
    val profile=(VpnProfileParser.import("Disposable evidence179",shell("cat $config")) as VpnProfileImportResult.Accepted).profile
@@ -206,11 +207,12 @@ class EvidenceOwnedRoute179Test {
    repeat(10){assertFalse(connected.current());if(isTor)assertTrue(processes().isEmpty());delay(100)}
    assertNull(manager.boundNetworkForProcess);result.put("operations",operations)
   }finally{
-   try {
+   val clockReceipt=retireRouteClock179(clock){
    route?.close();coordinator?.close();access.close();session.lock();engine.disconnect()
    until("All owned services/Networks released",30){!engine.ownsTunnel&&networks().isEmpty()&&HiddenTorIsolationService.released()&&!HiddenTorIsolationService.hasTorProcess(app)&&!HiddenVpnBrowserBroker.hasDedicatedProcess(app)}
    assertNull(manager.boundNetworkForProcess);storage.deleteRecursively();activity.close()
-   }finally{clock?.let{result.put("clock",it.closeAndReceipt())}}
+   }
+   clockReceipt?.let{result.put("clock",it)}
   }
   result.put("cleanup_retired",true).put("process_binding_after_null",manager.boundNetworkForProcess==null)
   output.mkdirs();val file=File(output,"evidence179-route-$case.json");check(!file.exists());file.writeText(result.toString())

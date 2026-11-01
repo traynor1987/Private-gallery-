@@ -39,6 +39,9 @@ internal class EvidenceRouteClock179(
  private val phases=when(case){"vpn_revoke","tor_revoke"->listOf("cancel","revoke");"vpn_loss"->listOf("loss");"tor_death"->listOf("death");else->error("Unknown clock case")}
  private val lock=Any()
  private var poison:String?=null
+ private var poisonAt=0L
+ private var poisonOrder=0L
+ private var lifecycleOrder=0L
  private var closing=false
  private val requests=mutableSetOf<String>()
  private val claims=mutableListOf<Claim>()
@@ -55,8 +58,14 @@ internal class EvidenceRouteClock179(
   var pending:BroadcastReceiver.PendingResult?=null
   var finished=false
   var encoded:String?=null
+  var accepted=0
+  var finishCount=0
+  var finishThreadId=0L
+  var sampleOrder=0L
+  var finishOrder=0L
+  var finishedAt=0L
  }
- private fun bad(reason:String){synchronized(lock){if(poison==null)poison=reason}}
+ private fun bad(reason:String){synchronized(lock){if(poison==null){poison=reason;poisonAt=SystemClock.elapsedRealtimeNanos();poisonOrder=++lifecycleOrder}}}
  private fun healthy(){check(poison==null&&!closing){poison?:"Clock is closing"}}
  private fun base(kind:String)=JSONObject().put("schema",1).put("kind",kind).put("source_sha",source)
   .put("run_nonce",runNonce).put("case",case).put("method",method).put("classname",EvidenceOwnedRoute179Test::class.java.name)
@@ -78,7 +87,10 @@ internal class EvidenceRouteClock179(
    if(payload==null){pending.setResultCode(178);pending.setResultData(encode(JSONObject().put("error","clock_failed")))}
    else {val encoded=encode(payload);synchronized(lock){claim.encoded=encoded};pending.setResultCode(179);pending.setResultData(encoded)}
   }catch(failure:Throwable){bad("Clock reply failed: ${failure.javaClass.name}");pending.setResultCode(178)}
-  finally {pending.finish();claim.pending=null}
+  finally {
+   synchronized(lock){claim.finishCount++;claim.finishThreadId=Thread.currentThread().id}
+   try{pending.finish();synchronized(lock){claim.finishedAt=SystemClock.elapsedRealtimeNanos();claim.finishOrder=++lifecycleOrder}}finally{synchronized(lock){claim.pending=null}}
+  }
  }
  private val receiver=object:BroadcastReceiver(){
   override fun onReceive(unused:Context,intent:Intent){
@@ -109,7 +121,8 @@ internal class EvidenceRouteClock179(
      current.requestNonce=request;current.claimedAt=SystemClock.elapsedRealtimeNanos();current
     }
     // Only this HandlerThread owns/finishes PendingResult. It never waits on itself.
-    claim.pending=goAsync()
+    val pending=goAsync()
+    synchronized(lock){claim.pending=pending;claim.accepted++}
     handler.postDelayed({finish(claim,if(synchronized(lock){claim.sample==0L})"Clock sample deadline expired" else null)},1000)
     claim.ready.complete(Unit)
    }catch(failure:Throwable){bad("Rejected clock command: ${failure.javaClass.name}");setResultCode(178);setResultData(encode(JSONObject().put("error","clock_rejected")))}
@@ -136,10 +149,20 @@ internal class EvidenceRouteClock179(
   healthy();check(claims.lastOrNull()===claim&&claim.requestNonce!=null&&claim.sample==0L)
   val at=SystemClock.elapsedRealtimeNanos()
   check(at>=claim.claimedAt&&at-claim.claimedAt<=1_000_000_000L)
-  claim.sample=at
+  claim.sample=at;claim.sampleOrder=++lifecycleOrder
   // No serialization, host ACK, I/O, sleep or await on the action path.
   check(handler.post{finish(claim)})
   at
+ }
+ // Read-only copies for actual instrumentation lifecycle controls; no mutation/bypass.
+ fun identity():JSONObject=JSONObject().put("pid",pid).put("uid",uid).put("user",user).put("package",context.packageName).put("boot_id",boot).put("instrumentation",instrumentationName)
+ fun observation():JSONObject=synchronized(lock){
+  JSONObject().put("registered",registered).put("thread_alive",thread.isAlive).put("owner_thread_id",thread.id)
+   .put("poison",poison?:JSONObject.NULL).put("poison_elapsed_ns",poisonAt).put("poison_order",poisonOrder).put("claims",JSONArray(claims.map { claim ->
+    JSONObject().put("phase",claim.phase).put("accepted",claim.accepted).put("finish_count",claim.finishCount)
+     .put("finish_thread_id",claim.finishThreadId).put("pending",claim.pending!=null).put("sample_elapsed_ns",claim.sample)
+     .put("claimed_elapsed_ns",claim.claimedAt).put("sample_order",claim.sampleOrder).put("finish_order",claim.finishOrder).put("finish_elapsed_ns",claim.finishedAt)
+   }))
  }
  suspend fun closeAndReceipt():JSONObject=withContext(NonCancellable){
   val drained=CompletableDeferred<Unit>()
@@ -165,4 +188,18 @@ internal class EvidenceRouteClock179(
     .put("samples",JSONArray(claims.map{checkNotNull(it.encoded)})).put("closed",true)
   }
  }
+}
+
+
+/** Used by the real route finally AND injected cleanup-failure/cancellation controls. */
+internal suspend fun retireRouteClock179(clock:EvidenceRouteClock179?,cleanup:suspend ()->Unit):JSONObject? {
+ var failure:Throwable?=null
+ try{cleanup()}catch(caught:Throwable){failure=caught}
+ var receipt:JSONObject?=null
+ try{receipt=clock?.closeAndReceipt()}catch(caught:Throwable){
+  val primary=failure
+  if(primary==null)failure=caught else primary.addSuppressed(caught)
+ }
+ failure?.let{throw it}
+ return receipt
 }

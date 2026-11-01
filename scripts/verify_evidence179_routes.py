@@ -15,10 +15,12 @@ try:
     from verify_evidence179_cases import verify as verify_cases
     from evidence179_packet_policy import host_fixture_adb_multicast
     import evidence179_clock as route_clock
+    import evidence179_clock_lifecycle as clock_lifecycle
 except ModuleNotFoundError:
     from scripts.verify_evidence179_cases import verify as verify_cases
     from scripts.evidence179_packet_policy import host_fixture_adb_multicast
     from scripts import evidence179_clock as route_clock
+    from scripts import evidence179_clock_lifecycle as clock_lifecycle
 
 CASES = {
     'vpn_revoke': ('ownedVpnPostCancellationAndAuthorityRevocationNeverFallback', 'VPN', ['success', 'cancel', 'revoke', 'retired']),
@@ -222,6 +224,7 @@ def verify(args):
     require(len({(v['clock']['serial'],v['clock']['user'],v['clock']['boot_id']) for v in values.values()})==1,'Mixed clock device/user/boot identities')
     require(len({v['clock']['run_nonce'] for v in values.values()})==4,'Reused clock invocation nonce')
     require(len({p['request_nonce'] for c in clocks.values() for p in c.values()})==6,'Reused clock challenge')
+    lifecycle_paths=clock_lifecycle.verify(root,values['vpn_revoke'],args.source_sha)
     phases=lines(root/'host-phases.jsonl');require(len(phases)==8, 'Missing/duplicate host barriers')
     windows={}
     for case in CASES:
@@ -260,12 +263,12 @@ def verify(args):
     check_packets(packets,values,windows,onion,capture)
     (vpn/'packets.txt').write_text(packets)
     bound={}
-    paths=clock_paths+files+list(Path(args.android_results).rglob('*.xml'))+[Path(args.cases),root/'source-sha.txt',root/'host-phases.jsonl',root/'capture.json',root/'capture-process.json',root/'vpn-controlled-drain.json']
+    paths=clock_paths+lifecycle_paths+files+list(Path(args.android_results).rglob('*.xml'))+[Path(args.cases),root/'source-sha.txt',root/'host-phases.jsonl',root/'capture.json',root/'capture-process.json',root/'vpn-controlled-drain.json']
     paths += [p for folder in (vpn,onion_root) for p in folder.iterdir() if p.is_file() and p.suffix in ('.pcap','.jsonl','.json','.crt','.txt','.log')]
     paths += [p for p in (root/'android-output').rglob('*') if p.is_file()]
-    paths += [Path('scripts')/x for x in ('evidence179_clock.py','verify_evidence179_routes.py','verify_evidence179_cases.py','evidence179_packet_policy.py','evidence179_fixture_http.py','evidence179_fixture_endpoints.py','ci_onion_probe.py','create_hidden_vpn_fixture_tls1762.py','hidden_vpn_fixture1762.py','hidden_tor_fixture1762.py','prepare_evidence179_routes.sh','run_evidence179.sh','cleanup_evidence179_routes.sh','archive_evidence179_routes.py','wait_evidence179_peer_close.py','drain_evidence179_vpn.py','evidence179_processes.py','setup_hidden_vpn_fixture1762.sh','cleanup_hidden_vpn_fixture1762.sh')]
-    paths += [Path('docs/release179/work/task-7a-route-report.md'),Path('app/src/androidTest/java/uk/co/traynor/privategallery/core/evidence/EvidenceOwnedRoute179Test.kt'),Path('app/src/androidTest/java/uk/co/traynor/privategallery/core/evidence/EvidenceRouteClock179.kt')]
-    paths += [Path('scripts/tests')/x for x in ('test_evidence179_clock.py','test_evidence179_route_evidence.py','test_evidence179_runner.py')]
+    paths += [Path('scripts')/x for x in ('evidence179_clock_lifecycle.py','evidence179_clock.py','verify_evidence179_routes.py','verify_evidence179_cases.py','evidence179_packet_policy.py','evidence179_fixture_http.py','evidence179_fixture_endpoints.py','ci_onion_probe.py','create_hidden_vpn_fixture_tls1762.py','hidden_vpn_fixture1762.py','hidden_tor_fixture1762.py','prepare_evidence179_routes.sh','run_evidence179.sh','cleanup_evidence179_routes.sh','archive_evidence179_routes.py','wait_evidence179_peer_close.py','drain_evidence179_vpn.py','evidence179_processes.py','setup_hidden_vpn_fixture1762.sh','cleanup_hidden_vpn_fixture1762.sh')]
+    paths += [Path('docs/release179/work/task-7a-route-report.md'),Path('app/src/androidTest/java/uk/co/traynor/privategallery/core/evidence/EvidenceOwnedRoute179Test.kt'),Path('app/src/androidTest/java/uk/co/traynor/privategallery/core/evidence/EvidenceRouteClock179.kt'),Path('app/src/androidTest/java/uk/co/traynor/privategallery/core/evidence/EvidenceRouteClockLifecycle179.kt')]
+    paths += [Path('scripts/tests')/x for x in ('test_evidence179_clock_lifecycle.py','test_evidence179_clock.py','test_evidence179_route_evidence.py','test_evidence179_runner.py')]
     paths += [Path('app/src/main/java/uk/co/traynor/privategallery/core/evidence')/x for x in ('EvidenceNetwork.kt','EvidenceRouteCoordinator.kt')]
     paths += [Path('app/src/main/java/uk/co/traynor/privategallery/core/vpn/OwnedVpnDns.kt')]
     paths += [Path('app/src/debug/res/xml')/x for x in ('hidden_test_network_security.xml','hidden_network_security.xml')]

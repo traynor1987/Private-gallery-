@@ -45,6 +45,7 @@ class RunnerContinuation(unittest.TestCase):
   mkdir -p app/build/outputs/androidTest-results/connected/debug app/build/outputs/connected_android_test_additional_output
   if [[ -f "$TEST_INPUT_XML" ]]; then cp "$TEST_INPUT_XML" app/build/outputs/androidTest-results/connected/debug/synthetic.xml; fi
   printf 'synthetic additional output\n' > app/build/outputs/connected_android_test_additional_output/control.txt
+  if [[ -f "$TEST_LIFECYCLE_RECEIPT" ]]; then cp "$TEST_LIFECYCLE_RECEIPT" app/build/outputs/connected_android_test_additional_output/evidence179-clock-lifecycle.json; fi
   return "$TEST_STATUS"
  fi
  # Timeout diagnostics are device commands; no device is contacted by this host control.
@@ -73,7 +74,7 @@ class RunnerContinuation(unittest.TestCase):
             script=prefix+'case=vpn_revoke\nmethod=synthetic\n'+self.route+"printf 'ROUTE_SELECTION_PASSED\\n'\n"
         else:
             script=prefix+self.begin+"printf 'ROUTES_PERMITTED\\n'\n"+self.final+"printf 'STRICT_VALIDATOR_REACHED\\n'\n"
-        env={**os.environ,'TEST_INPUT_XML':str(self.work/'synthetic-input/synthetic.xml'),'TEST_STATUS':str(status),'TEST_CLOCK_STATUS':str(clock_status),'GITHUB_SHA':'a'*40,'EVIDENCE179_ONION_HTTPS_URL':'https://'+'a'*56+'.onion'}
+        env={**os.environ,'TEST_INPUT_XML':str(self.work/'synthetic-input/synthetic.xml'),'TEST_STATUS':str(status),'TEST_CLOCK_STATUS':str(clock_status),'TEST_LIFECYCLE_RECEIPT':str(self.work/'synthetic-lifecycle.json'),'GITHUB_SHA':'a'*40,'EVIDENCE179_ONION_HTTPS_URL':'https://'+'a'*56+'.onion'}
         return subprocess.run(['bash','-c',script],cwd=self.work,env=env,text=True,capture_output=True)
     def assert_statuses(self,original,collection):
         self.assertEqual(str(original),(self.root/'nonroute-exit-status.txt').read_text().strip())
@@ -137,6 +138,15 @@ class RunnerContinuation(unittest.TestCase):
             self.assertEqual(1,phases[-1]['clock_exit_status'])
             self.assertNotIn('PEER_CLOSE_REACHED',r.stdout)
             self.assertNotIn('ROUTE_SELECTION_PASSED',r.stdout)
+
+    def test_lifecycle_receipt_is_copied_without_rewriting_original_bytes(self):
+        self.reports(self.route_cases[:1]);raw=b'{"kind":"synthetic collection control"}\n'
+        (self.work/'synthetic-lifecycle.json').write_bytes(raw)
+        result=self.run_control(0,route=True)
+        self.assertEqual(result.returncode,0,result.stderr)
+        self.assertEqual((self.root/'evidence179-clock-lifecycle.json').read_bytes(),raw)
+        copies=list((self.root/'android-output/vpn_revoke').rglob('evidence179-clock-lifecycle.json'))
+        self.assertEqual(len(copies),1);self.assertEqual(copies[0].read_bytes(),raw)
 
     def test_missing_results_never_permit_routes(self):
         r=self.run_control(1);self.assertNotEqual(0,r.returncode);self.assertNotIn('ROUTES_PERMITTED',r.stdout)

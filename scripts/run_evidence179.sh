@@ -59,7 +59,7 @@ if source.is_dir() and list(source.rglob('*.xml')):shutil.copytree(source,dest)
 elif sys.argv[2]=='0':raise RuntimeError('Missing original XML')
 additional=pathlib.Path('app/build/outputs/connected_android_test_additional_output')
 if additional.is_dir():shutil.copytree(additional,pathlib.Path('app/build/evidence179/android-output')/sys.argv[1])
-for path in additional.rglob('evidence179-route-*.json'):
+for path in list(additional.rglob('evidence179-route-*.json'))+list(additional.rglob('evidence179-clock-lifecycle.json')):
  target=pathlib.Path('app/build/evidence179')/path.name
  assert not target.exists(),'Duplicate route output'
  shutil.copyfile(path,target)
