@@ -1,0 +1,13 @@
+# Private Gallery 1.7.10 recovery
+
+Status: baseline recovered; implementation has not started. No 1.7.10 APK or security approval exists.
+
+Branch `release/1.7.10-private-home` was created from release-control commit `3fc699ae5ecfbc7678e835240c594e38daf4e1da`, preserving the controls and evidence after signed application source `19e3275ef17746e780d64e6a684d94bab2cabdc3`. The application and Gradle build source trees are identical between those commits.
+
+GitHub Actions production run 41301316948, job 124832650609, succeeded, including original-key code 50 to 51 in-place upgrade, restart, and APK validation. Artifact 13081837273 archive SHA-256 `a7ad5e4d6c243e195a5d35db1f4a12711de1842bd6260aa318203e53ac691cb7` was independently downloaded and hashed. Its APK SHA-256 is `9f99f0e8df4dbdc6219aa147525866f0ace699b1b4ae9bab1f6b647ac4d7a178`; the APK bytes were independently hashed. The artifact reports package `uk.co.traynor.privategallery`, version 1.7.9/code 51, original certificate SHA-256 `94f2bfc6567f26d067d29077111cfd0ce86d38263c642ad115e43365f05b0d17`, and successful synthetic upgrade/restart. Physical Fold acceptance remains owner-required. Focused run 41295673256, job 124815899187, succeeded at source 19e; its published artifact is 13079244254.
+
+Do not rely on the older failure status at the top of V1_7_9_RECOVERY.md: the later successful production run supersedes it.
+
+Next: verify remote branch and no competing writer; audit all issued version codes before assigning the next unused code above 51. Implement the full owner-approved 1.7.10 specification, including Primary/Hidden navigation isolation, startup migration, Home, launcher, evidence pages and guided import, screenshot lifecycle policy, and focused tests. Keep existing encryption and routing boundaries. Review CI trigger conditions before pushing implementation; batch focused API 37 checks. Perform independent security review and verify original-key in-place upgrade from code 51 before release. Never uninstall or clear data. No production signing or owner delivery is authorised until all applicable gates actually pass.
+
+Environment observation: local Android SDK, emulator and Gradle distribution were unavailable; Gradle bootstrap failed with `Network is unreachable`. GitHub Actions provided the successful prior build and may be used for batched 1.7.10 verification after its workflow and access are reviewed. This observation does not establish that CI is unavailable.
