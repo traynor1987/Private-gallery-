@@ -1,5 +1,10 @@
 # Private Gallery 1.7.9 — current recovery status
 
+## Active final candidate
+
+Exact verified candidate: `19e3275ef17746e780d64e6a684d94bab2cabdc3`.
+Existing grouped verification: https://github.com/traynor1987/Private-gallery-/actions/runs/41295673256, job124815899187. It is active; do not duplicate or cancel it blindly. All implementation/review workers are frozen. Only two noninteractive subprocess stdin arguments changed; original Android/app sources and153-case security scope are unchanged. Source review and41localhostchecks passed; actual completed153/routeproof remains required. Unrelatedfast/178jobs skipped. No179productionAPK/finalapproval/upgrade/signing exists.
+
 ## Current state — minimal final candidate, 1 November 2026
 
 Version remains1.7.9/code51, packageuk.co.traynor.privategallery, min/target37. Latest independently fetched remote checkpoint ae93b06a2a57cbfec9226b4b78e5532f3f438f68. Execution is available again; clean checkout recovered from GitHub with no discarded work. All earlier source/review history remains preserved below. No competing writer or active CI run was observed.
