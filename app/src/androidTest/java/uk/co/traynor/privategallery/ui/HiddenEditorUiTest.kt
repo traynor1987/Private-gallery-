@@ -38,7 +38,7 @@ class HiddenEditorUiTest {
             compose.onNodeWithTag("photo-editor").assertIsDisplayed()
             compose.onNode(hasText("Hidden Space") and hasAnyAncestor(hasTestTag("photo-editor"))).assertIsDisplayed()
             compose.onNodeWithText("Adjust").performClick()
-            compose.onNodeWithText("Brightness").assertIsDisplayed()
+            compose.onNodeWithText("Brightness").performScrollTo().assertIsDisplayed()
             compose.waitUntil(10000) {runCatching {compose.onNodeWithText("Save copy").assertIsEnabled()}.isSuccess}
             compose.onNodeWithText("Save copy").performClick()
             compose.waitUntil(10000) {repo.items().size==2}

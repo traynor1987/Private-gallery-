@@ -13,7 +13,10 @@ internal fun ComposeTestRule.evidenceNode(matcher:SemanticsMatcher,last:Boolean=
   // retaining a node across the resulting scroll/IME layout keeps an obsolete node ID.
   onAllNodes(hasScrollToNodeAction()).onLast().performScrollToNode(matcher)
   waitForIdle()
- } else if(onAllNodes(matcher and hasAnyAncestor(hasScrollAction())).fetchSemanticsNodes().isNotEmpty()) {
+ }
+ // Lazy item materialization does not guarantee a deeply nested action is in the viewport.
+ // Resolve the child again before scrolling its actual bounds into view.
+ if(onAllNodes(matcher and hasAnyAncestor(hasScrollAction())).fetchSemanticsNodes().isNotEmpty()) {
   val current=if(last)onAllNodes(matcher).onLast()else onNode(matcher)
   current.performScrollTo();waitForIdle()
  }

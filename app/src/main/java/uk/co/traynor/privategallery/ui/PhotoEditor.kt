@@ -437,7 +437,7 @@ fun PhotoEditor(
                                                 android.graphics.BitmapFactory.decodeByteArray(bytes, 0, bytes.size, dimensions)
                                                 val orientation = runCatching { android.media.ExifInterface(java.io.ByteArrayInputStream(bytes))
                                                     .getAttributeInt(android.media.ExifInterface.TAG_ORIENTATION, 1) }.getOrDefault(1)
-                                                val bounds = EditorCropPresets.orientedCentered(dimensions.outWidth, dimensions.outHeight, orientation, ratio)
+                                                val bounds = EditorCropPresets.orientedCentered(dimensions.outWidth, dimensions.outHeight, orientation, draft.quarterTurns, ratio)
                                                 change(draft.copy(crop = NormalizedCrop(bounds[0], bounds[1], bounds[2], bounds[3])))
                                                 cropPreset = label
                                             } catch (_: IllegalArgumentException) {
@@ -449,9 +449,13 @@ fun PhotoEditor(
                             }
                             Text("Drag a handle for a free crop; rotate and flip apply afterwards.", style = MaterialTheme.typography.bodySmall)
                             Text("Very large copies may use a reduced resolution to fit device memory.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            FlowRow(horizontalArrangement = Arrangement.spacedBy(4.dp)) { TextButton(onClick = { cropPreset = "Free"; autoCrop() }, enabled = !busy && preview != null) { Text("Auto crop") }; TextButton(onClick = { change(draft.rotate()); tool = "Adjust" }, enabled = !busy) { Icon(Icons.Default.RotateRight, null); Text("Rotate") }; TextButton(onClick = { change(draft.copy(flipHorizontal = !draft.flipHorizontal)); tool = "Adjust" }, enabled = !busy) { Icon(Icons.Default.Flip, null); Text("Flip") } }
+                            FlowRow(horizontalArrangement = Arrangement.spacedBy(4.dp)) { TextButton(onClick = { cropPreset = "Free"; autoCrop() }, enabled = !busy && preview != null) { Text("Auto crop") }; TextButton(onClick = { change(draft.rotate()); cropPreset = "Free"; tool = "Adjust" }, enabled = !busy) { Icon(Icons.Default.RotateRight, null); Text("Rotate") }; TextButton(onClick = { change(draft.copy(flipHorizontal = !draft.flipHorizontal)); tool = "Adjust" }, enabled = !busy) { Icon(Icons.Default.Flip, null); Text("Flip") } }
                         }
                         "Adjust" -> {
+                            AdjustmentSlider("Exposure", draft.exposure, -2f..2f, !busy, { draft = draft.copy(exposure = it) }, { change(draft) },
+                                valueLabel = String.format(java.util.Locale.ROOT, "%+.1f EV", draft.exposure))
+                            AdjustmentSlider("Temperature", draft.temperature, -1f..1f, !busy, { draft = draft.copy(temperature = it) }, { change(draft) },
+                                valueLabel = when { draft.temperature > 0f -> "Warm ${(draft.temperature * 100).toInt()}%"; draft.temperature < 0f -> "Cool ${(-draft.temperature * 100).toInt()}%"; else -> "Neutral" })
                             AdjustmentSlider("Brightness", draft.brightness, -1f..1f, !busy, { draft = draft.copy(brightness = it) }, { change(draft) })
                             AdjustmentSlider("Contrast", draft.contrast, 0f..2f, !busy, { draft = draft.copy(contrast = it) }, { change(draft) })
                             AdjustmentSlider("Saturation", draft.saturation, 0f..2f, !busy, { draft = draft.copy(saturation = it) }, { change(draft) })
@@ -647,13 +651,13 @@ fun PhotoEditor(
 }
 
 @Composable
-private fun AdjustmentSlider(label: String, value: Float, range: ClosedFloatingPointRange<Float>, enabled: Boolean, changed: (Float) -> Unit, finished: () -> Unit) {
-    Column(Modifier.fillMaxWidth()) {
+private fun AdjustmentSlider(label: String, value: Float, range: ClosedFloatingPointRange<Float>, enabled: Boolean, changed: (Float) -> Unit, finished: () -> Unit, valueLabel: String = "${(value * 100).toInt()}%") {
+    Column(Modifier.fillMaxWidth().testTag("editor-adjust-$label")) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
             Text(label, style = MaterialTheme.typography.labelLarge)
-            Text("${(value * 100).toInt()}%", style = MaterialTheme.typography.labelMedium,
+            Text(valueLabel, style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
-        Slider(value, changed, Modifier.fillMaxWidth(), enabled = enabled, valueRange = range, onValueChangeFinished = finished)
+        Slider(value, changed, Modifier.fillMaxWidth().testTag("editor-slider-$label"), enabled = enabled, valueRange = range, onValueChangeFinished = finished)
     }
 }

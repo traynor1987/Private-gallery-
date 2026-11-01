@@ -59,6 +59,8 @@ object PhotoRenderer {
                 val offset = 255f * edit.brightness + 128f * (1f - contrast)
                 val adjustment = ColorMatrix(floatArrayOf(contrast,0f,0f,0f,offset, 0f,contrast,0f,0f,offset, 0f,0f,contrast,0f,offset, 0f,0f,0f,1f,0f))
                 adjustment.postConcat(saturation)
+                if (edit.exposure != 0f || edit.temperature != 0f)
+                    adjustment.postConcat(ColorMatrix(EditorToneAdjustments.matrix(edit.exposure, edit.temperature)))
                 Canvas(output).drawBitmap(transformed, 0f, 0f, Paint(Paint.ANTI_ALIAS_FLAG).apply { colorFilter = ColorMatrixColorFilter(adjustment) })
                 return output
             } catch (failure: Throwable) { output.recycle(); throw failure }

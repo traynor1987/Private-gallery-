@@ -1,0 +1,117 @@
+{
+  "uk.co.traynor.privategallery.ui.EditorWorkspacePresentationTest": [
+    "toolsKeepPreviewAndProviderDisclosureReachableAcrossFoldSizes",
+    "configuredAiSourceCanBeReplacedWithoutSendingIt",
+    "combineSetupRetainsLargeWorkingCanvas",
+    "editorControlsInheritLightAndDarkThemeAtCompactLargeFont",
+    "ownerActionsWipeSourceBeforeDispatchAndRespectExistingCapturePolicy",
+    "exposureSliderChangesActualSaveCopyAndKeepsOriginal"
+  ],
+  "uk.co.traynor.privategallery.ui.EditorToneRenderTest": [
+    "neutralMatchesOriginalAndExposureChangesSavedPixelsWithChannelClamping",
+    "temperatureMovesRedAndBlueInOppositeDirectionsAndKeepsGreenAndAlpha",
+    "rotatedPresetRendersRequestedFinalAspectRatio"
+  ],
+  "uk.co.traynor.privategallery.ui.PhotoEditorUiTest": [
+    "viewerEditEntrySaveCopyAndUnconfiguredAi",
+    "chromeHidesTogetherAndMoreUsesSheet",
+    "singleTapHidesAndShowsBothBars",
+    "entryWaitsForLegacyCropMetadata",
+    "replacementFromLaterPageStillShowsNewItem",
+    "backgroundWipesLoadedSourceBeforeResume",
+    "foldSizedCanvasesKeepSaveAndToolsReachable",
+    "toolbarCallsOnlyChosenActions",
+    "externalEditorEntryCarriesOriginInBothVaults"
+  ],
+  "uk.co.traynor.privategallery.ui.PhotoEditorSecurityTest": [
+    "renderAppliesCropRotationFlipAndAdjustments",
+    "sanitizerRemovesGpsAndRejectsInvalidImages",
+    "copyImportIsDistinctEncryptedAndOriginalUntouched"
+  ],
+  "uk.co.traynor.privategallery.ui.AiEditorFlowTest": [
+    "consentPrecedesRemoteEditAndResultWaitsForSaveCopy",
+    "localResultUsesSharedAiSaveCopyWithLocalProvenanceAndNoConsent",
+    "backgroundLockBoundaryCancelsFutureOnDeviceProviderAndWipesInput"
+  ],
+  "uk.co.traynor.privategallery.ui.AiEditorProfessionalTest": [
+    "bothSourcesCanBeReplacedWithoutChangingExactPromptAndResultCanBeDiscarded",
+    "longCombinePromptCanBeRetriedUnchangedWithGuidanceOff",
+    "lateAuthenticatedPickerLoadsAreWipedAfterBackgroundAndCannotRestorePreviews",
+    "sourceCardsAndActionsRemainReachableAcrossFoldViewports",
+    "replacementSourceIdentityReachesEverySaveRoute",
+    "promptAndGenerateRemainReachableWithKeyboardOpen"
+  ],
+  "uk.co.traynor.privategallery.ui.HiddenEditorUiTest": [
+    "sharedEditorSavesHiddenCopyAndOffersExistingCreationControls"
+  ],
+  "uk.co.traynor.privategallery.core.camera.CameraFocusHardwareTest": [
+    "boundPreviewFocusReportsHardwareResultAndRetiresOldRequests"
+  ],
+  "uk.co.traynor.privategallery.ui.CameraFocusOverlayTest": [
+    "requestedPointUsesPreviewCoordinatesAndFeedbackExpires"
+  ],
+  "uk.co.traynor.privategallery.ui.CameraPresentationTest": [
+    "recordingKeepsStopAvailableAndDisablesCameraChanges",
+    "saveAndRecoveryStatusStayReadableAndCaptureDisabledOnNarrowPane",
+    "countdownPreventsDuplicateShutterInput",
+    "portraitDockDoesNotCoverViewfinder",
+    "textBoundsCheckRejectsClippingAndTruncationButAcceptsVisibleText",
+    "coverPortraitLight",
+    "innerPortraitDark",
+    "coverLandscapeDarkLargeText",
+    "innerLandscapeLightLargeText"
+  ],
+  "uk.co.traynor.privategallery.ui.VaultCameraUiTest": [
+    "blackPhotoTapsVolumeAndNavigationGestures",
+    "readingPhotoTapsVolumeAndNavigationGestures",
+    "idlePermissionPauseReleasesCameraMonitorButActivePauseStillLocks",
+    "screenOffInvalidatesHiddenCameraAndReturnsNeutralUnlock",
+    "activityForegroundLossLocksBothVaultsAndNeverReopensHiddenCamera"
+  ],
+  "uk.co.traynor.privategallery.ui.ReadingCameraViewTest": [
+    "readingSurfaceContainsNoCameraHeadingOrPersistentInstructions",
+    "photoUsesOnlyDesignatedAreaAndExitIsAccessible",
+    "videoHasIntentionalStopAndDisabledInputsDuringFinalisation",
+    "horizontalAndVerticalDragsDoNotCapture",
+    "readingCoverPortrait",
+    "readingCoverLandscape",
+    "readingInnerPortrait",
+    "readingInnerLandscape"
+  ],
+  "uk.co.traynor.privategallery.core.camera.VaultCaptureAccessTest": [
+    "bothVaultsImportPhotoAndVideoWithHashTimestampAndNoPublicCopy",
+    "revokedHiddenCaptureSealsButCannotImportUntilIndependentAuthentication",
+    "processRecoveryKeepsIncompleteBytesAndAudioPreferencesAreVaultSpecific",
+    "equalBytesKeepDistinctOriginalIdentities",
+    "revokedDeliveryClosesTicketLease",
+    "revokedAccessCannotResumeAfterFreshAuthentication",
+    "cameraVideoValidationRejectsTruncation"
+  ],
+  "uk.co.traynor.privategallery.ui.ModalCompletion1762Test": [
+    "coverDarkStorageLongContentAndCacheConsentRemainReachable",
+    "landscapeLightRetiredModelConsentCancelsBeforeIsolatedCleanup",
+    "coverLightPanicTestConfirmationCancelsWithoutChangingSettings",
+    "landscapeDarkSourcePickerCanReachLastOfLargeVaultAtLargeText",
+    "coverLightBrowsingDataConfirmationRequiresExplicitChoiceAtLargeText",
+    "coverDarkCreateImageChoicesReferencesDiagnosticsAndConsentFitAtLargeText",
+    "coverDarkPromptEditorKeepsActionsVisibleWithActualKeyboard",
+    "coverLightCollectionActionsScrollWhileFooterStaysReachable",
+    "coverDarkSizeSelectionPresetsWrapAndKeepLastChoiceUsable",
+    "coverDarkDateTimeFieldsScaleAndKeyboardDoneCommitsOnce",
+    "landscapeLightDstGapCannotChangeOriginalMetadataOrMediaHash",
+    "innerDarkEncryptedTransferHistoryScrollsAndCancelsOnlyRecordedOperation",
+    "coverDarkDialogUsesActualAndroidLargeFontConfiguration"
+  ],
+  "uk.co.traynor.privategallery.ui.EvidenceLocker179UiTest": [
+    "primaryActualImportExtractCorrectIncidentSearchRemoveAndReopenPreservesOriginal",
+    "ownerAcceptsAndRejectsActualGroupingHintsAndOrdersUncertainTimeline",
+    "firstManualMoveUsesVisibleChronologyAndDisablesBoundaries",
+    "bulkOriginalRegistrationAndMixedExportSelectionAreOwnerReviewed",
+    "editedExtractedTimestampRemainsUserEnteredWithRawQuotePreserved",
+    "landscapeDarkLargeTextIncidentFormAndExitRemainReachable",
+    "hiddenInnerLockClearsSearchSelectionsAndDialogsWithoutDeletingEncryptedEvidence"
+  ],
+  "uk.co.traynor.privategallery.ui.Evidence179UiActionsTest": [
+    "helperScrollsToActionDeepInsideOversizedLazyCardBeforeGesture"
+  ]
+}

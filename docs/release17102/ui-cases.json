@@ -157,7 +157,8 @@
     "configuredAiSourceCanBeReplacedWithoutSendingIt",
     "combineSetupRetainsLargeWorkingCanvas",
     "editorControlsInheritLightAndDarkThemeAtCompactLargeFont",
-    "ownerActionsWipeSourceBeforeDispatchAndRespectExistingCapturePolicy"
+    "ownerActionsWipeSourceBeforeDispatchAndRespectExistingCapturePolicy",
+    "exposureSliderChangesActualSaveCopyAndKeepsOriginal"
   ],
   "uk.co.traynor.privategallery.ui.PhotoEditorUiTest": [
     "viewerEditEntrySaveCopyAndUnconfiguredAi",
@@ -335,5 +336,19 @@
   "uk.co.traynor.privategallery.ui.EvidenceSensitiveWindowProtectionTest": [
     "overlappingSensitivePagesAndFinalReleaseKeepGenericWindowSecure",
     "initiallySecureWindowRemainsSecureAfterSensitivePageCloses"
+  ],
+  "uk.co.traynor.privategallery.ui.EditorToneRenderTest": [
+    "neutralMatchesOriginalAndExposureChangesSavedPixelsWithChannelClamping",
+    "temperatureMovesRedAndBlueInOppositeDirectionsAndKeepsGreenAndAlpha",
+    "rotatedPresetRendersRequestedFinalAspectRatio"
+  ],
+  "uk.co.traynor.privategallery.core.camera.CameraFocusHardwareTest": [
+    "boundPreviewFocusReportsHardwareResultAndRetiresOldRequests"
+  ],
+  "uk.co.traynor.privategallery.ui.CameraFocusOverlayTest": [
+    "requestedPointUsesPreviewCoordinatesAndFeedbackExpires"
+  ],
+  "uk.co.traynor.privategallery.ui.Evidence179UiActionsTest": [
+    "helperScrollsToActionDeepInsideOversizedLazyCardBeforeGesture"
   ]
 }

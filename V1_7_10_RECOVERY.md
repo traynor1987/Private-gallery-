@@ -1,3 +1,11 @@
+## Live transport green; final focused UI/capture/render checks — unsigned54
+
+Source4f4dd4f15808f1aa95160da52ac49e32fd054bee run41362013309 artifact13105328926 archiveSHA256c83d50172d840c6139ffa63e9c38b03e954e29cd670bc25347616e1707af7025 independently downloaded/rawXML inspected.109UI:107pass2fail,0errors/skips;3actualVPN/Tor/networkloss cases:3pass0fail/errors/skips. Actual JavaScript/HTML/multipart bodies, WireGuard-only origin/DNS, nativeWebRTC/UDP revocation and Tor v4/v6/UDP/DNS sink/form/upload/download checks passed original runner verifiers. All earlierSAF/report/privacy/history/browser failures pass. History not reproduced; no speculativeproductfixclaimed.
+
+Remaining2UI fixes: Evidence helper nowmaterializeslazycard then scrollsactualdeepbutton; grouping/storage assertionsretained +realoversizedcardgesturetest. CreateImage focuscontrollers nowreadinsideModalBottomSheet Dialogroot (priorattempttargetedActivityroot); consentteststrengthened visibleContinue/Cancel andzeroRequests. SourceScope closures: actualExposure/TemperatureboundedneutralPhotoEdit+renderer+SaveCopy, focusednumerical/JVM/pixeltests; guardedCameraXtapfocuswithtruthfulfeedback/realhardwareandlatecallbacktests; crop presets nowaccount EXIFandquarterturns forfinaloutputratio, host RED->GREEN andrenderdimensiontest.
+
+Final target [verify17102][engine17102] usesexistingworkflow,compilesall,newJVM model+host checks,and83UIcases coveringchangededitor/camera+allEvidenceLocker/Modalcases/helperregression. No routingrerun:browser/transport source remainsbyteidenticalto4f4greenroutecheckpoint. Source-scope evidence isexplicit; completefullmatrix remains retained,notfalselyclaimedallcasesononesource. No54signingactivation/productionAPK. Cookie/providerown-keyencryption requirement remainsunresolved andindependentreleaseapprovalwithheld. Latestverifiedsigned53 stays availablebelow.
+
 ## First Android result and coordinated repair — unsigned54
 
 Sourcee3c8a97f849e11b74a0240890fee447934e6424d run41359796301 compiled app/test/JVM and passed hostchecks. Original artifact13105980445 archiveSHA256c00a7dff5199f565d19907a3a306ac66bbdf50cc22245f194ef6d7ecd037f571 was downloaded and rawXML inspected:253UI cases,234passed19failed,0errors/skips. Route stage did not execute afterUI failure, so NO newroutepass claimed.

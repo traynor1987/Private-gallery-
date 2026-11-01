@@ -40,6 +40,11 @@ class EditorWorkspacePresentationTest {
                 for (tool in listOf("Crop", "Adjust", "AI Edit")) {
                     compose.onNodeWithText(tool).performClick()
                     compose.onNodeWithText("Save copy").assertIsDisplayed()
+                    if (tool == "Adjust") {
+                        for (adjustment in listOf("Exposure", "Temperature", "Brightness", "Contrast", "Saturation")) {
+                            compose.onNodeWithTag("editor-slider-$adjustment").performScrollTo().assertIsDisplayed()
+                        }
+                    }
                     if (tool == "Crop") {
                         for (preset in listOf("Free", "Original", "1:1", "4:3", "16:9")) {
                             compose.onNodeWithTag("editor-crop-$preset").performScrollTo().assertIsDisplayed().performClick().assertIsSelected()
@@ -167,6 +172,33 @@ class EditorWorkspacePresentationTest {
             buffer.fill(0)
             compose.runOnIdle { compose.activity.window.clearFlags(android.view.WindowManager.LayoutParams.FLAG_SECURE) }
         }
+    }
+
+    @Test fun exposureSliderChangesActualSaveCopyAndKeepsOriginal() {
+        val bitmap = Bitmap.createBitmap(80, 40, Bitmap.Config.ARGB_8888).apply { eraseColor(android.graphics.Color.rgb(64,64,64)) }
+        val source = try { PhotoRenderer.encode(bitmap) } finally { bitmap.recycle() }
+        var saved = false
+        compose.setContent { PrivateGalleryTheme {
+            PhotoEditor("source", { _, done -> done(Result.success(source.copyOf())) }, onCancel = {},
+                onSave = { output, cancelled, done ->
+                    assertTrue(!cancelled())
+                    val result = PhotoRenderer.render(output, PhotoEdit(), false)
+                    try { assertTrue("Save copy must contain exposure adjustment", android.graphics.Color.red(result.getPixel(0,0)) > 64) }
+                    finally { result.recycle(); output.fill(0) }
+                    saved = true; done(Result.success(Unit))
+                })
+        } }
+        try {
+            compose.waitUntil(10000) { runCatching { compose.onNodeWithText("Save copy").assertIsEnabled() }.isSuccess }
+            compose.onNodeWithText("Adjust").performClick()
+            compose.onNodeWithTag("editor-slider-Exposure").performScrollTo().performTouchInput { swipe(centerLeft, centerRight) }
+            compose.onNodeWithTag("editor-slider-Temperature").performScrollTo().assertIsDisplayed()
+            compose.onNodeWithText("Save copy").performClick()
+            compose.waitUntil(10000) { saved }
+            val unchanged = PhotoRenderer.render(source, PhotoEdit(), false)
+            try { org.junit.Assert.assertEquals(64, android.graphics.Color.red(unchanged.getPixel(0,0))) }
+            finally { unchanged.recycle() }
+        } finally { source.fill(0) }
     }
 
 }

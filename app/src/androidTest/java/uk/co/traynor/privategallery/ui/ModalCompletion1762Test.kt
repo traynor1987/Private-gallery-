@@ -269,7 +269,36 @@ class ModalCompletion1762Test {
             compose.onNodeWithText("Effective prompt").performScrollTo().assertIsDisplayed()
             compose.onNodeWithText("Close").performClick()
             compose.onNodeWithText("Generate").performScrollTo().performClick()
-            compose.onNodeWithText("Remote image creation").assertIsDisplayed()
+            try {
+                compose.onNodeWithText("Remote image creation").assertIsDisplayed()
+                compose.onNodeWithText("Continue").assertIsDisplayed()
+                compose.onNodeWithText("Cancel").assertIsDisplayed()
+            } catch (failure: AssertionError) {
+                val state = modalCaptureState1762(compose.activity)
+                var insets = ""
+                InstrumentationRegistry.getInstrumentation().runOnMainSync {
+                    insets = android.view.inspector.WindowInspector.getGlobalWindowViews().filter { it.isAttachedToWindow }.joinToString("\n") { root ->
+                        val ime = android.view.WindowInsets.Type.ime()
+                        "${root.javaClass.name} focus=${root.hasWindowFocus()} imeVisible=${root.rootWindowInsets?.isVisible(ime)} imeBottom=${root.rootWindowInsets?.getInsets(ime)?.bottom}"
+                    }
+                }
+                val tree = compose.onAllNodes(isRoot(), useUnmergedTree = true).printToString(maxDepth = 20)
+                val diagnostics = state.description + insets + "\n" + tree
+                val capture = runCatching {
+                    val instrumentation = InstrumentationRegistry.getInstrumentation()
+                    val output = InstrumentationRegistry.getArguments().getString("additionalTestOutputDir")
+                        ?: File(instrumentation.targetContext.externalMediaDirs.first(), "additional_test_output").absolutePath
+                    val folder = File(output, "modal-completion1762").apply { mkdirs() }
+                    File(folder, "create-consent-failure.txt").writeText(diagnostics)
+                    check(!state.secure) { "Failure screenshot withheld for a secure window" }
+                    val screenshot = takeRenderedScreenshot()
+                    try { File(folder, "create-consent-failure.png").outputStream().use { screenshot.compress(Bitmap.CompressFormat.PNG, 100, it) } }
+                    finally { screenshot.recycle() }
+                    folder.absolutePath
+                }
+                throw AssertionError("Create consent requests=${requests.get()}, capture=$capture\n$diagnostics", failure)
+            }
+            compose.runOnIdle { assertEquals("Consent must precede every generation request", 0, requests.get()) }
             compose.onNodeWithText("Cancel").performClick()
             compose.runOnIdle { assertEquals(0, requests.get()) }
         } finally {

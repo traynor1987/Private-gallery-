@@ -25,6 +25,18 @@ public final class EditorCropPresetChecks {
             float[] expected=EditorCropPresets.centered(orientation>=5?3000:4000,orientation>=5?4000:3000,1f);
             for(int i=0;i<4;i++)close(expected[i],crop[i]);
         }
+        for(int orientation=1;orientation<=8;orientation++)for(int turns=0;turns<4;turns++)for(float ratio:new float[]{1f,4f/3f,16f/9f}) {
+            float[] crop=EditorCropPresets.orientedCentered(4000,3000,orientation,turns,ratio);
+            float width=(orientation>=5?3000:4000)*(crop[2]-crop[0]);
+            float height=(orientation>=5?4000:3000)*(crop[3]-crop[1]);
+            close(ratio,turns%2==0?width/height:height/width);
+            float[] original=EditorCropPresets.orientedCentered(4000,3000,orientation,turns,0f);
+            close(0,original[0]);close(0,original[1]);close(1,original[2]);close(1,original[3]);
+        }
+        for(int turns:new int[]{-1,4}) {
+            try {EditorCropPresets.orientedCentered(4000,3000,1,turns,1f);throw new AssertionError("Invalid rotation accepted");}
+            catch(IllegalArgumentException expected){}
+        }
         for (float ratio : new float[] {-1f,Float.NaN,Float.POSITIVE_INFINITY}) {
             try {EditorCropPresets.centered(4000,3000,ratio);throw new AssertionError("Invalid ratio accepted");}
             catch(IllegalArgumentException expected) {}

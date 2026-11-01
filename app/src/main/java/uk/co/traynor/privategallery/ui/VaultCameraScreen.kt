@@ -11,6 +11,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.foundation.border
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.ui.input.pointer.changedToUpIgnoreConsumed
@@ -47,6 +48,8 @@ internal fun VaultCameraScreen(controller:VaultCameraController,onExit:()->Unit)
     val activity=androidx.activity.compose.LocalActivity.current as? MainActivity
     val owner=LocalLifecycleOwner.current
     val scope=rememberCoroutineScope()
+    var focusPoint by remember {mutableStateOf<androidx.compose.ui.geometry.Offset?>(null)}
+    var focusMessage by remember {mutableStateOf("")}
     var recent by remember {mutableStateOf<android.graphics.Bitmap?>(null)}
     DisposableEffect(recent){val bitmap=recent;onDispose {bitmap?.recycle()}}
     var active by remember {mutableStateOf(false)}
@@ -117,6 +120,7 @@ internal fun VaultCameraScreen(controller:VaultCameraController,onExit:()->Unit)
             } finally {owned?.recycle()}
         }
     }
+    LaunchedEffect(active,black,reading,front,video) {focusPoint=null;focusMessage=""}
     BackHandler {onExit()}
     fun open() {
         if(!audioReady||audioSaving)return
@@ -311,6 +315,15 @@ internal fun VaultCameraScreen(controller:VaultCameraController,onExit:()->Unit)
                     CameraViewfinderLayout(Modifier.weight(1f).fillMaxWidth(),
                         preview = {
                             AndroidView(factory={preview},modifier=Modifier.fillMaxSize())
+                            Box(Modifier.fillMaxSize().pointerInput(controller,active,front,video) {
+                                detectTapGestures {point ->
+                                    controller.focus(preview,point.x,point.y) {message ->
+                                        focusPoint=androidx.compose.ui.geometry.Offset(point.x/preview.width,point.y/preview.height)
+                                        focusMessage=message
+                                    }
+                                }
+                            }.semantics {contentDescription="Camera viewfinder. Tap to focus"})
+                            CameraFocusOverlay(focusPoint,focusMessage) {focusPoint=null;focusMessage=""}
                             if(grid)androidx.compose.foundation.Canvas(Modifier.fillMaxSize().semantics {contentDescription="Camera grid"}) {
                                 for(part in 1..2) {
                                     drawLine(Color.White.copy(alpha=0.4f),androidx.compose.ui.geometry.Offset(size.width*part/3,0f),androidx.compose.ui.geometry.Offset(size.width*part/3,size.height))

@@ -31,6 +31,7 @@ internal class VaultCameraController(context: Context, val access: VaultCaptureA
     private var ticket:CaptureJournal.Ticket?=null
     private var revoked=false
     private var bindingGeneration=0
+    private var focusGeneration=0L
     private var startedAt=0L
     private var boundVideo=false
     private var authorityMonitor: Job?=null
@@ -103,6 +104,34 @@ internal class VaultCameraController(context: Context, val access: VaultCaptureA
         if(revoked)return
         displayRotation=value
         if(!busy&&access.allowed()){previewUseCase?.targetRotation=value;photo?.targetRotation=value;video?.targetRotation=value}
+    }
+    /** Preview coordinates are transformed by CameraX, including crop, rotation and mirroring. */
+    fun focus(preview:PreviewView,x:Float,y:Float,onFeedback:(String)->Unit) {
+        val target=camera ?: return
+        val generation=bindingGeneration
+        val request=++focusGeneration
+        fun current()=CameraFocusPolicy.current(request,focusGeneration,generation,bindingGeneration,
+            camera===target,bound,entered,access.allowed(),revoked,
+            ContextCompat.checkSelfPermission(app,Manifest.permission.CAMERA)==PackageManager.PERMISSION_GRANTED)
+        if(!current()||previewUseCase==null||!CameraFocusPolicy.validPoint(x,y,preview.width,preview.height))return
+        try {
+            val point=preview.meteringPointFactory.createPoint(x,y)
+            val action=FocusMeteringAction.Builder(point,FocusMeteringAction.FLAG_AF)
+                .setAutoCancelDuration(3,java.util.concurrent.TimeUnit.SECONDS).build()
+            if(!target.cameraInfo.isFocusMeteringSupported(action)) {
+                if(current())onFeedback("Tap focus unavailable on this camera")
+                return
+            }
+            val future=target.cameraControl.startFocusAndMetering(action)
+            if(current())onFeedback("Focusing…")
+            future.addListener({
+                if(current()) {
+                    val result=runCatching {future.get()}
+                    onFeedback(result.fold({if(it.isFocusSuccessful)"Focus confirmed" else "Focus not confirmed"},
+                        {"Focus unavailable"}))
+                }
+            },executor)
+        } catch(_:Exception) {if(current())onFeedback("Focus unavailable")}
     }
     fun changeZoom(value:Float){if(!revoked&&bound&&access.allowed()){zoom=value.coerceIn(0f,1f);camera?.cameraControl?.setLinearZoom(zoom)}}
     fun toggleFlash(){if(!busy&&!revoked&&hasFlash&&access.allowed()){flash=!flash;photo?.flashMode=if(flash)ImageCapture.FLASH_MODE_ON else ImageCapture.FLASH_MODE_OFF; if(video!=null)camera?.cameraControl?.enableTorch(flash)}}

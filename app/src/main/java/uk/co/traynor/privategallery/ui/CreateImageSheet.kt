@@ -31,14 +31,6 @@ fun CreateImageSheet(onGenerate: (GenerationRequest, (String) -> Unit, (Result<V
     vaultLabel: String = "Primary Space",
     onLoadPreview: (VaultItem, (Result<Bitmap>) -> Unit) -> Unit = { _, _ -> }) {
     val context = LocalContext.current
-    val focus = LocalFocusManager.current
-    val keyboard = LocalSoftwareKeyboardController.current
-    fun finishPromptEntry() {
-        // The prompt belongs to the sheet, not to the confirmation/diagnostic window.
-        // Retaining its focus reopens the IME when a child dialog closes.
-        focus.clearFocus()
-        keyboard?.hide()
-    }
     val modelStore = remember { GenerationModelStore(context) }
     val consent = remember { AiConsentStore(context) }
     val templates = remember { PromptEnhancementStore(context) }
@@ -99,6 +91,14 @@ fun CreateImageSheet(onGenerate: (GenerationRequest, (String) -> Unit, (Result<V
 
     ModalBottomSheet(onDismissRequest = { cancelGeneration(); onDismiss() },
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+        // ModalBottomSheet owns a Dialog Compose root. Use its focus owner and
+        // input controller; the Activity's locals cannot clear this prompt's focus.
+        val focus = LocalFocusManager.current
+        val keyboard = LocalSoftwareKeyboardController.current
+        fun finishPromptEntry() {
+            focus.clearFocus()
+            keyboard?.hide()
+        }
         Column(Modifier.fillMaxWidth().heightIn(max = 700.dp).verticalScroll(rememberScrollState())
             .padding(horizontal = 24.dp, vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {

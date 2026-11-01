@@ -6,7 +6,15 @@ public final class EditorCropPresets {
 
     /** EXIF orientations 5–8 exchange the visually oriented source axes. */
     public static float[] orientedCentered(int width, int height, int orientation, float ratio) {
-        return orientation >= 5 && orientation <= 8 ? centered(height, width, ratio) : centered(width, height, ratio);
+        return orientedCentered(width, height, orientation, 0, ratio);
+    }
+
+    /** Preset labels describe the final output; crop coordinates remain in original orientation. */
+    public static float[] orientedCentered(int width, int height, int orientation, int quarterTurns, float ratio) {
+        if (quarterTurns < 0 || quarterTurns > 3 || !Float.isFinite(ratio) || ratio < 0f)
+            throw new IllegalArgumentException("Invalid rotation or aspect ratio");
+        float sourceRatio = quarterTurns % 2 == 1 && ratio != 0f ? 1f / ratio : ratio;
+        return orientation >= 5 && orientation <= 8 ? centered(height, width, sourceRatio) : centered(width, height, sourceRatio);
     }
 
     /** Zero selects the original; other ratios choose the largest centered in-bounds rectangle. */

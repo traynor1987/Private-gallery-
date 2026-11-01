@@ -5,6 +5,7 @@ set -euo pipefail
 root=app/build/nova17102
 export NOVA17102_MATRIX=docs/release17102/ui-cases.json
 if [[ "${NOVA17102_REPAIR:-0}" == 1 ]]; then export NOVA17102_MATRIX=docs/release17102/repair-cases.json; fi
+if [[ "${NOVA17102_ENGINE:-0}" == 1 ]]; then export NOVA17102_MATRIX=docs/release17102/engine-cases.json; fi
 mkdir -p "$root"
 git rev-parse HEAD > "$root/source-sha.txt"
 bash scripts/home1710_emulator_preflight.sh
@@ -21,6 +22,13 @@ printf '%s\n' "$ui_status" > "$root/ui-original-exit-status.txt"
 mkdir -p "$root/ui/outputs"
 if [[ -d app/build/outputs/androidTest-results ]]; then cp -R app/build/outputs/androidTest-results "$root/ui/outputs/"; fi
 if [[ -d app/build/outputs/connected_android_test_additional_output ]]; then cp -R app/build/outputs/connected_android_test_additional_output "$root/ui/outputs/"; fi
+if [[ "${NOVA17102_ENGINE:-0}" == 1 ]]; then
+ rm -rf app/build/outputs/androidTest-results/connected/debug app/build/outputs/connected_android_test_additional_output
+ [[ "$ui_status" == 0 && "$ui_accounting_status" == 0 ]]
+ printf '%s\n' "Selected UI matrix: $NOVA17102_MATRIX; browser source unchanged from separately verified route checkpoint" > "$root/selection-scope.txt"
+ printf '%s\n' 'PASS: focused editor/camera evidence only; NO new route or signing approval' > "$root/runtime-result.txt"
+ exit 0
+fi
 rm -rf app/build/outputs/androidTest-results/connected/debug app/build/outputs/connected_android_test_additional_output
 adb push "$RUNNER_TEMP/private-gallery-vpn1762/client.conf" /data/local/tmp/hidden-vpn1762.conf
 adb shell chmod 600 /data/local/tmp/hidden-vpn1762.conf

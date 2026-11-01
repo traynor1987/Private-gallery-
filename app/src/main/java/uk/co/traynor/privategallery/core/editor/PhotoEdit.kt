@@ -11,12 +11,16 @@ data class PhotoEdit(
     val brightness: Float = 0f,
     val contrast: Float = 1f,
     val saturation: Float = 1f,
+    val exposure: Float = 0f,
+    val temperature: Float = 0f,
 ) {
     init {
         require(quarterTurns in 0..3)
         require(brightness.isFinite() && brightness in -1f..1f)
         require(contrast.isFinite() && contrast in 0f..2f)
         require(saturation.isFinite() && saturation in 0f..2f)
+        require(exposure.isFinite() && exposure in -2f..2f)
+        require(temperature.isFinite() && temperature in -1f..1f)
     }
     fun rotate() = copy(quarterTurns = (quarterTurns + 1) % 4)
 }

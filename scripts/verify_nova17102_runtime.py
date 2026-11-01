@@ -3,7 +3,7 @@
 import argparse,json,sys,zipfile,xml.etree.ElementTree as ET
 from pathlib import Path
 MATRIX=Path(__file__).resolve().parent.parent/'docs/release17102/runtime-cases.json'
-def verify(path,matrix=MATRIX):
+def verify(path,matrix=MATRIX,require_routes=True):
  expected={(cls,name) for cls,names in json.loads(matrix.read_text()).items() for name in names}
  seen=set()
  with zipfile.ZipFile(path) as z:
@@ -16,9 +16,11 @@ def verify(path,matrix=MATRIX):
     identity=(case.get('classname'),case.get('name'))
     assert identity not in seen,'Duplicate original case';seen.add(identity)
   assert seen==expected,{'missing':sorted(expected-seen),'extra':sorted(seen-expected)}
-  for suffix in ('nova17102/runtime-result.txt','nova17102/route-accounting.txt','nova17102/tor-route-result.txt'):
+  required=['nova17102/runtime-result.txt','nova17102/ui-accounting.txt']
+  if require_routes:required+=['nova17102/route-accounting.txt','nova17102/tor-route-result.txt']
+  for suffix in required:
    assert any(name.endswith(suffix) and z.getinfo(name).file_size>0 for name in names),'Missing route evidence '+suffix
  return len(seen)
 if __name__=='__main__':
- parser=argparse.ArgumentParser();parser.add_argument('archive');parser.add_argument('--matrix',type=Path,default=MATRIX);args=parser.parse_args()
- print('PASS: original selected NovaOS UI/transport XML;',verify(args.archive,args.matrix),'cases; selected matrix',args.matrix)
+ parser=argparse.ArgumentParser();parser.add_argument('archive');parser.add_argument('--matrix',type=Path,default=MATRIX);parser.add_argument('--ui-only',action='store_true');args=parser.parse_args()
+ print('PASS: original selected NovaOS UI/transport XML;',verify(args.archive,args.matrix,not args.ui_only),'cases; selected matrix',args.matrix)

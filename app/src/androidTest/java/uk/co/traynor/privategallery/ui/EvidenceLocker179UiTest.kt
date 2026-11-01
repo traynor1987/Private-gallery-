@@ -73,7 +73,9 @@ class EvidenceLocker179UiTest {
    click("Add selected to incident");click("Synthetic incident179")
    compose.waitUntil(15000){controller.state.value.catalog?.incidents()?.singleOrNull()?.evidenceIds()?.contains(corrected.id())==true&&!controller.state.value.busy}
    compose.evidenceNode(hasTestTag("evidence-search") and hasSetTextAction()).performTextReplacement("unique179")
-   compose.evidenceNode(hasText("alpha179.txt") and hasClickAction()).assertExists();compose.onNodeWithText("beta179.txt").assertDoesNotExist()
+   // Search membership is a semantics assertion; scrolling during the IME/filter relayout
+   // is unnecessary and can retain a lazy node that the new results replace.
+   compose.onNode(hasText("alpha179.txt") and hasClickAction()).assertExists();compose.onNodeWithText("beta179.txt").assertDoesNotExist()
    compose.evidenceNode(hasTestTag("evidence-search") and hasSetTextAction()).performTextClearance()
    compose.evidenceNode(hasContentDescription("Select evidence alpha179.txt")).performClick()
    compose.evidenceNode(hasText("Remove references") and hasClickAction()).performClick();compose.evidenceNode(hasText("Confirm") and hasClickAction()).performClick();waitReady(controller,1)

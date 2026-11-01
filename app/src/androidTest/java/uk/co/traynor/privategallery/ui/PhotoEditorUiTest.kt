@@ -116,7 +116,7 @@ class PhotoEditorUiTest {
             compose.runOnIdle { dimensions = size }
             compose.onNodeWithText("Save copy").assertIsDisplayed()
             compose.onNodeWithText("Adjust").assertIsDisplayed().performClick()
-            compose.onNodeWithText("Brightness").assertIsDisplayed()
+            compose.onNodeWithText("Brightness").performScrollTo().assertIsDisplayed()
             compose.waitUntil(10000) { compose.onAllNodesWithContentDescription("Photo preview").fetchSemanticsNodes().isNotEmpty() }
             val bounds = compose.onNodeWithTag("editor-canvas").fetchSemanticsNode().boundsInRoot
             assertTrue(bounds.width > 100 && bounds.height > 100)

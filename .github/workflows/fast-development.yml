@@ -471,8 +471,12 @@ jobs:
           bash scripts/check_evidence179.sh
           bash scripts/check_evidence179_ai_json.sh
           bash scripts/check_evidence179_archive.sh
+          java com.sun.tools.javac.Main -d /tmp/tone17102 app/src/main/java/uk/co/traynor/privategallery/core/editor/EditorToneAdjustments.java tests/editor_adjustments/EditorToneAdjustmentChecks.java
+          java -cp /tmp/tone17102 uk.co.traynor.privategallery.core.editor.EditorToneAdjustmentChecks
+          java com.sun.tools.javac.Main -d /tmp/focus17102 app/src/main/java/uk/co/traynor/privategallery/core/camera/CameraFocusPolicy.java app/src/test/java/uk/co/traynor/privategallery/core/camera/CameraFocusPolicyChecks.java
+          java -cp /tmp/focus17102 uk.co.traynor.privategallery.core.camera.CameraFocusPolicyChecks
       - name: Compile integrated app and Android test sources
-        run: ./gradlew :app:assembleDebug :app:assembleDebugAndroidTest :app:testDebugUnitTest --tests 'uk.co.traynor.privategallery.core.vault.VaultDocumentPolicyTest' --stacktrace
+        run: ./gradlew :app:assembleDebug :app:assembleDebugAndroidTest :app:testDebugUnitTest --tests 'uk.co.traynor.privategallery.core.vault.VaultDocumentPolicyTest' --tests 'uk.co.traynor.privategallery.core.editor.EditorToneModelTest' --stacktrace
       - uses: actions/cache/save@v4
         if: success()
         with:
@@ -481,7 +485,7 @@ jobs:
             ~/.gradle/wrapper
           key: home1710-${{ runner.os }}-${{ hashFiles('**/*.gradle*', 'gradle/wrapper/gradle-wrapper.properties') }}
       - name: Prepare disposable VPN and Tor fixtures for changed browser boundary
-        if: contains(github.event.head_commit.message, '[verify17102]')
+        if: contains(github.event.head_commit.message, '[verify17102]') && !contains(github.event.head_commit.message, '[engine17102]')
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y -qq wireguard-tools tcpdump iptables python3-cryptography tor
@@ -510,6 +514,7 @@ jobs:
       - name: Focused NovaOS applications and actual VPN Tor boundary verification
         env:
           NOVA17102_REPAIR: ${{ contains(github.event.head_commit.message, '[repair17102]') && '1' || '0' }}
+          NOVA17102_ENGINE: ${{ contains(github.event.head_commit.message, '[engine17102]') && '1' || '0' }}
         if: contains(github.event.head_commit.message, '[verify17102]')
         uses: reactivecircus/android-emulator-runner@v2
         with:
@@ -525,7 +530,7 @@ jobs:
           emulator-options: -no-window -gpu software -no-snapshot -noaudio -no-boot-anim -feature -HardwareDecoder
           script: bash scripts/run_nova17102.sh
       - name: Stop only owned disposable browser fixtures
-        if: always() && contains(github.event.head_commit.message, '[verify17102]')
+        if: always() && contains(github.event.head_commit.message, '[verify17102]') && !contains(github.event.head_commit.message, '[engine17102]')
         run: |
           bash scripts/cleanup_hidden_vpn_fixture1762.sh
           python3 scripts/ci_onion_probe.py --stop
