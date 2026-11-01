@@ -197,19 +197,7 @@ internal fun EvidenceLocker(controller:EvidenceController,onClose:()->Unit,onImp
    }
   }
  }
- if(choice=="Import")EvidenceWorkflowPage(onDismissRequest={choice=null;originalsSelected=emptySet()},title={EvidenceDialogTitle("Select existing encrypted originals")},text={
-  LazyColumn(Modifier.heightIn(max=400.dp)){
-   item{Text("Review up to 128 originals to register in this vault. Originals remain unchanged. Extraction follows registration; interrupted batches can contain committed records.")}
-   items(state.originals,key={it.item.id}){original->
-    val id=original.item.id;val chosen=id in originalsSelected
-    EvidenceSelectionRow("Register original ${original.item.displayName}",original.item.displayName,
-     "${original.item.mimeType} · ${original.item.plaintextSize} bytes",chosen,chosen||originalsSelected.size<128){checked->
-     originalsSelected=if(checked)originalsSelected+id else originalsSelected-id
-    }
-   }
-   item{Text("${originalsSelected.size} / 128 selected")}
-  }
- },confirmButton={TextButton(enabled=originalsSelected.isNotEmpty()&&!state.busy,onClick={val ids=originalsSelected.toList();choice=null;originalsSelected=emptySet();controller.registerMany(ids)}){Text("Register selected originals")}},dismissButton={TextButton(onClick={choice=null;originalsSelected=emptySet()}){Text("Cancel")}})
+ if(choice=="Import")EvidenceImportReview(controller){choice=null;originalsSelected=emptySet()}
  exportSelection?.let{initial->if(catalog!=null)EvidenceExportSelectionDialog(catalog,initial,onClose={exportSelection=null},onContinue={selection->exportSelection=null;onExport(selection)})}
  choice?.takeIf{it!="Import"}?.let{kind->
   val options=catalog?.incidents()?.filter{!it.archived()&&(kind !in listOf("Merge","Move")||it.id()!=incidentId)}?.map{it.id() to it.title()}.orEmpty()

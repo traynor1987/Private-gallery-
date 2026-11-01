@@ -161,7 +161,7 @@ internal class HiddenVpnBrowserBroker(
             processOwner=this
         }
         try {
-            val extras=Bundle().apply {putBinder(EXTRA,this@HiddenVpnBrowserBroker)}
+            val extras=Bundle().apply {putBinder(EXTRA,this@HiddenVpnBrowserBroker);putBoolean("home1710-private-apps",(context as? uk.co.traynor.privategallery.MainActivity)?.consumeHomePrivateAppsRequest()==true)}
             context.startActivity(Intent(context,HiddenVpnBrowserActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK).putExtras(extras))
             main.postDelayed({
                 if(child==null && !closed.get()) {

@@ -1247,6 +1247,10 @@ class MainActivity : FragmentActivity() {
     }
     internal fun hiddenVpnBrowserPresentationEnded(reason:Int,stoppedAt:Long,owner:HiddenVpnPresentationAuthority) {
         if(isDestroyed || !owner.delivered.compareAndSet(false,true))return
+        if(reason==uk.co.traynor.privategallery.core.browser.hidden.HiddenVpnBrowserBroker.RETURN &&
+            retained.hidden.selected && retained.hidden.session.isAuthenticationCurrent(owner.hidden)) {
+            homeVisible=true;homeRequestRevision++
+        }
         val interactive=(getSystemService(POWER_SERVICE) as android.os.PowerManager).isInteractive
         val screenOff=!interactive || reason==uk.co.traynor.privategallery.core.browser.hidden.HiddenVpnBrowserBroker.SCREEN_OFF
         if(screenOff) {deliverOwnedHiddenBrowserLoss(owner,stoppedAt,true);return}
@@ -1720,12 +1724,20 @@ class MainActivity : FragmentActivity() {
         resumePrivateAppProfileClear()
     }
 
-    private var homeVisible by mutableStateOf(false)
+    private var homeVisible:Boolean
+        get()=retained.homeVisible
+        set(value){retained.homeVisible=value}
     private var homeRequestRevision by mutableIntStateOf(0)
-    private var homePrimaryAuthentication:Long?=null
-    private var homeHiddenAuthentication:uk.co.traynor.privategallery.core.hidden.HiddenSession.Authentication?=null
+    private var homeCustomisationRequested by mutableStateOf(false)
+    private var homePrimaryAuthentication:Long?
+        get()=retained.homePrimaryAuthentication
+        set(value){retained.homePrimaryAuthentication=value}
+    private var homeHiddenAuthentication:uk.co.traynor.privategallery.core.hidden.HiddenSession.Authentication?
+        get()=retained.homeHiddenAuthentication
+        set(value){retained.homeHiddenAuthentication=value}
     internal var homeVaultMode by mutableStateOf("MEDIA")
     internal var homePrivateAppsRequested by mutableStateOf(false)
+    internal fun openHomePreferences() {homeCustomisationRequested=true;returnPrivateHome()}
     internal fun returnPrivateHome() {
         if(hideContent || !activityResumed)return
         val hidden=retained.hidden.selected
@@ -1812,6 +1824,32 @@ class MainActivity : FragmentActivity() {
         }
         return results
     }
+    internal fun consumeHomePrivateAppsRequest():Boolean {
+        if(!homePrivateAppsRequested || !retained.hidden.selected || !retained.hidden.session.isUnlocked || route!=Route.BROWSER)return false
+        homePrivateAppsRequested=false;return true
+    }
+    @Composable internal fun HomeStartupSettings() {
+        val hidden=retained.hidden.selected
+        androidx.compose.runtime.key(hidden) {
+            val access=remember {homeAccess()}
+            if(access==null)return@key
+            val store=remember(access){uk.co.traynor.privategallery.core.home.HomePreferencesStore(access,appSettings.getBoolean("home-existing-install",true))}
+            var value by remember(access){mutableStateOf<uk.co.traynor.privategallery.core.home.HomePreferences?>(null)}
+            val scope=rememberCoroutineScope()
+            DisposableEffect(access){onDispose{access.close();value=null}}
+            LaunchedEffect(access){val loaded=withContext(Dispatchers.IO){runCatching{store.read()}.getOrNull()};if(access.current())value=loaded}
+            Text("Startup Screen",style=MaterialTheme.typography.titleMedium)
+            value?.let{preferences->
+                listOf(true to "Private Home",false to "Gallery").forEach{(home,label)->
+                    GalleryChoiceRow(label,preferences.startupHome==home){scope.launch{
+                        val next=preferences.copy(startupHome=home)
+                        val saved=withContext(Dispatchers.IO){runCatching{store.write(next)}.isSuccess}
+                        if(saved&&access.current())value=next
+                    }}
+                }
+            }
+        }
+    }
     @Composable private fun HomePresentation() {
         val hidden=retained.hidden.selected
         val admitted=activityResumed && !hideContent && route in setOf(Route.GALLERY,Route.VAULT,Route.FAVOURITE,Route.BROWSER,Route.SETTINGS) &&
@@ -1847,7 +1885,7 @@ class MainActivity : FragmentActivity() {
                 scope.launch {val saved=withContext(Dispatchers.IO){runCatching{store.write(next)}.isSuccess}
                     if(saved&&access.current())preferences=next}
             }
-            if(homeVisible&&value!=null)uk.co.traynor.privategallery.ui.PrivateHome(hidden,value,::save,
+            if(homeVisible&&value!=null)uk.co.traynor.privategallery.ui.PrivateHome(hidden,value,::save,initialCustomisation=homeCustomisationRequested,
                 search={query->withContext(Dispatchers.IO){searchPrivateHome(access,query)}},
                 {item->if(access.current()){save(value.copy(recent=(listOf(item)+value.recent).distinct().take(8)));launchHomeShortcut(item)}},
                 {if(hidden)retained.hidden.lock()else lock()},::panicExit)
@@ -4486,7 +4524,8 @@ internal fun SettingsHome(
         if (category == SettingsCategory.APPEARANCE) SettingsSection(SettingsSections.APPEARANCE) {
             Text("Appearance & Navigation",style=MaterialTheme.typography.titleMedium)
             val homeActivity=LocalContext.current.playerActivity() as? MainActivity
-            TextButton(onClick={homeActivity?.returnPrivateHome()}){Text("Startup Screen and Home layout")}
+            homeActivity?.HomeStartupSettings()
+            TextButton(onClick={homeActivity?.openHomePreferences()}){Text("Customise Home layout")}
 
             Text("Theme", style = MaterialTheme.typography.titleMedium)
             Text("Choose light, dark, or follow your device.", color = MaterialTheme.colorScheme.onSurfaceVariant)

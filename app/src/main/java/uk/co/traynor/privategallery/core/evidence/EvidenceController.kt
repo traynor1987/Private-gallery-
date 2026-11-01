@@ -97,6 +97,22 @@ internal class EvidenceController(context:Context,val access:EvidenceAccess):Aut
   val operation=currentCoroutineContext()
   val existing=access.store.read().evidence().firstOrNull{it.sourceId()==sourceId}
   if(existing!=null){checkSource(existing,access.sources.inspect(sourceId));return access.store.read()}
+  val registered=readRegistration(sourceId,acquired)
+   operation.ensureActive()
+   val saved=access.store.update{catalog ->
+    operation.ensureActive();checkSource(registered,access.sources.inspect(sourceId))
+    if(catalog.evidence().any{it.sourceId()==sourceId})catalog else catalog.upsertEvidence(registered,now(),"IMPORT_EVIDENCE")
+   }
+   // OCR follows a completely authenticated source read. Registration survives extraction failure.
+   return if(extract && registered.size()<=OCR_LIMIT) {
+    runCatching{extractRecord(saved.evidence().single{it.sourceId()==sourceId},0)}.getOrElse {
+     if(it is CancellationException)throw it
+     access.checkCurrent();saved
+    }
+   } else saved
+ }
+ private suspend fun readRegistration(sourceId:String,acquired:EvidenceOriginal?=null):EvidenceCatalog.Evidence {
+  val operation=currentCoroutineContext()
   var sample:ByteArray?=null
   try {
    val registered=access.reader{!operation.isActive}.readVerified(sourceId){source,input ->
@@ -116,19 +132,41 @@ internal class EvidenceController(context:Context,val access:EvidenceAccess):Aut
       hash.joinToString(""){"%02x".format(it.toInt() and 255)},total,System.currentTimeMillis(),metadata,"","",emptyList(),emptyList(),emptyList(),emptyList())
     }finally{buffer.fill(0);chunks.forEach{it.fill(0)}}
    }
-   operation.ensureActive()
-   val saved=access.store.update{catalog ->
-    operation.ensureActive();checkSource(registered,access.sources.inspect(sourceId))
-    if(catalog.evidence().any{it.sourceId()==sourceId})catalog else catalog.upsertEvidence(registered,now(),"IMPORT_EVIDENCE")
-   }
-   // OCR follows a completely authenticated source read. Registration survives extraction failure.
-   return if(extract && registered.size()<=OCR_LIMIT) {
-    runCatching{extractRecord(saved.evidence().single{it.sourceId()==sourceId},0)}.getOrElse {
-     if(it is CancellationException)throw it
-     access.checkCurrent();saved
-    }
-   } else saved
+   operation.ensureActive();access.checkCurrent();return registered
   }finally{sample?.fill(0)}
+ }
+
+ /** Transient owner review: no catalogue mutation before the explicit Save action. */
+ suspend fun prepareImport(sourceIds:List<String>):EvidenceCatalog=withContext(Dispatchers.IO){
+  require(sourceIds.isNotEmpty()&&sourceIds.size<=128&&sourceIds.distinct().size==sourceIds.size)
+  val operation=currentCoroutineContext();var draft=EvidenceCatalog.empty(access.owner)
+  for(id in sourceIds){
+   operation.ensureActive();access.checkCurrent()
+   val record=readRegistration(id);draft=draft.upsertEvidence(record,now(),"REVIEW_IMPORT")
+   if(record.size()<=OCR_LIMIT) {
+    val extraction=withVerifiedBytes(access.reader{!operation.isActive},id,OCR_LIMIT,{checkSource(record,it)}) {bytes->ocr.recognize(bytes,record.mime(),0){current()&&operation.isActive}}
+    draft=draft.saveOcr(record.id(),extraction,now())
+   }
+  }
+  access.checkCurrent();operation.ensureActive();draft
+ }
+ fun saveReviewedImport(draft:EvidenceCatalog)=perform("Owner-reviewed evidence saved") {
+  require(draft.owner()==access.owner)
+  access.store.update {current ->
+   var result=current
+   for(record in draft.evidence()) {
+    checkSource(record,access.sources.inspect(record.sourceId()))
+    check(result.evidence().none{it.sourceId()==record.sourceId()}){"This source is already registered; review it in the library"}
+    result=result.upsertEvidence(record,now(),"OWNER_APPROVE_IMPORT")
+   }
+   for(incident in draft.incidents())result=result.upsertIncident(incident,now(),"OWNER_APPROVE_IMPORT_GROUP")
+   result
+  }
+ }
+ fun importOriginalsForReview(uris:List<Uri>)=perform("Original imported encrypted; use Add existing evidence to review before registration") {
+  require(uris.isNotEmpty()&&uris.size<=128);uris.forEach{access.checkCurrent();access.sources.import(it)};val sources=access.sources.list()
+  withContext(Dispatchers.Main.immediate){publish{it.copy(originals=sources)}}
+  access.store.read()
  }
  fun extract(evidenceId:String,rotation:Int=0)=perform("Extraction saved as unverified text") {
   val record=access.store.read().evidence().single{it.id()==evidenceId};extractRecord(record,rotation)

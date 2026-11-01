@@ -23,7 +23,7 @@ private class EvidencePickerTicket(
  val digest:String="",val stage:EvidenceOwnerSession.CipherStage?=null,val receipt:EvidenceExportReceipt?=null,
  val source:Uri?=null,val cipherDigest:String="",val mode:String="VPN",
 ) {
- val delivered=AtomicBoolean();var uri:Uri?=null;var accepted=false
+ val delivered=AtomicBoolean();var uri:Uri?=null;var accepted=false;var inputUris:List<Uri> = emptyList()
 }
 private class EvidenceArchiveRequest(val source:Uri,val destination:Uri?=null,val cipherDigest:String?=null)
 
@@ -47,6 +47,10 @@ private class EvidenceArchiveRequest(val source:Uri,val destination:Uri?=null,va
  fun dismiss(){discardDestination(pending);discardDestination(delivered);job?.cancel();controller?.let{owner.retire(it)};controller=null;aiIds=null;exportIds=null;archive=null;pending?.stage?.let{owner.discard(it)};pending=null;delivered=null;owner.close();onClose()}
  fun received(uri:Uri?,accepted:Boolean){val ticket=pending?:return;if(!ticket.delivered.compareAndSet(false,true))return;ticket.uri=uri;ticket.accepted=accepted;delivered=ticket}
  val importPicker=rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()){uri->received(uri,uri!=null)}
+ val documentImportPicker=rememberLauncherForActivityResult(ActivityResultContracts.OpenMultipleDocuments()){uris->
+  val ticket=pending
+  if(ticket!=null&&ticket.delivered.compareAndSet(false,true)){ticket.inputUris=uris.distinct().take(128);ticket.accepted=ticket.inputUris.isNotEmpty();delivered=ticket}
+ }
  val outputPicker=rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/octet-stream")){uri->received(uri,uri!=null)}
  val permissionPicker=rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()){result->received(null,result.resultCode==Activity.RESULT_OK)}
  fun handoff(ticket:EvidencePickerTicket,launch:()->Unit):Boolean {
@@ -79,7 +83,7 @@ private class EvidenceArchiveRequest(val source:Uri,val destination:Uri?=null,va
   delivered=null;pending=null
   if(!ticket.accepted){ticket.stage?.let{owner.discard(it)};notice=notice?:"Cancelled. No evidence record or original was removed.";return@withContext}
   when(ticket.kind){
-   "Import"->ticket.uri?.let{fresh.importAndRegister(it)}
+   "Import"->fresh.importOriginalsForReview(ticket.inputUris)
    "Open"->ticket.uri?.let{archive=EvidenceArchiveRequest(it)}
    "Permission"->{aiMode=ticket.mode;aiIds=ticket.evidenceIds}
    "Reexport"->ticket.uri?.let{destination->archive=EvidenceArchiveRequest(checkNotNull(ticket.source),destination,ticket.cipherDigest)}
@@ -118,7 +122,7 @@ private class EvidenceArchiveRequest(val source:Uri,val destination:Uri?=null,va
  val active=controller
  if(active!=null&&!transferring&&active.current()) {
   EvidenceLocker(active,onClose={if(controller===active){owner.retire(active);controller=null;if(pending==null)dismiss()}},
-   onImport={handoff(EvidencePickerTicket("Import")){importPicker.launch(arrayOf("image/*","application/pdf","text/plain","text/csv"))}},
+   onImport={handoff(EvidencePickerTicket("Import")){documentImportPicker.launch(arrayOf("image/*","application/pdf","text/plain","text/csv"))}},
    onAi={ids->aiIds=ids;aiMode=null},onExport={ids->exportIds=ids},
    onOpenArchive={handoff(EvidencePickerTicket("Open")){importPicker.launch(arrayOf("application/octet-stream","*/*"))}})
   aiIds?.let{ids->EvidenceAiDialog(active,ids,owner.allowsSystem(),{owner.routes(active)},onRequestPermission={mode->

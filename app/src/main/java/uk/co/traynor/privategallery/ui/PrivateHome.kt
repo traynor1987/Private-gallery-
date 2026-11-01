@@ -19,12 +19,13 @@ import uk.co.traynor.privategallery.core.home.*
 @OptIn(ExperimentalFoundationApi::class)
 @Composable internal fun PrivateHome(
  hidden:Boolean,preferences:HomePreferences,onChange:(HomePreferences)->Unit,
+ initialCustomisation:Boolean=false,
  search:suspend (String)->List<HomeSearchResult>,
  onLaunch:(HomeLayout.Shortcut)->Unit,onLock:()->Unit,onPanic:()->Unit,
 ) {
  var query by remember{mutableStateOf("")}
  var menu by remember{mutableStateOf<HomeLayout.Shortcut?>(null)}
- var customise by remember{mutableStateOf(false)}
+ var customise by remember{mutableStateOf(initialCustomisation)}
  var results by remember{mutableStateOf<List<HomeSearchResult>>(emptyList())}
  var searching by remember{mutableStateOf(false)}
  LaunchedEffect(query){results=emptyList();if(query.isNotBlank()){searching=true;kotlinx.coroutines.delay(200);results=runCatching{search(query)}.getOrDefault(emptyList());searching=false}}

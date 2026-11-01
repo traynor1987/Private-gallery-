@@ -262,7 +262,7 @@ class HiddenVpnBrowserActivity:ComponentActivity() {
         // authority, and especially before rebinding the old process to a different Network.
         if(!processAdmission.enter()) {terminate(false);return}
         try {
-            broker=checkNotNull(intent.extras?.getBinder(HiddenVpnBrowserBroker.EXTRA));intent.replaceExtras(Bundle())
+            homePrivateApps=intent.getBooleanExtra("home1710-private-apps",false);broker=checkNotNull(intent.extras?.getBinder(HiddenVpnBrowserBroker.EXTRA));intent.replaceExtras(Bundle())
             broker!!.linkToDeath(death,0)
             call(HiddenVpnBrowserBroker.CLAIM,write={it.writeStrongBinder(endpoint)},read={parcel ->
                 network=parcel.readTypedObject(Network.CREATOR);proxyPort=parcel.readInt();proxyPassword=checkNotNull(parcel.readString());storageId=checkNotNull(parcel.readString());mode=HiddenConnectionPolicy.Mode.parse(parcel.readString());check(mode!=HiddenConnectionPolicy.Mode.VPN_TOR);captureGuard.updatePolicy(parcel.readInt()==1);selectedTheme=uk.co.traynor.privategallery.core.ui.ThemePreference.decode(parcel.readString())
@@ -291,7 +291,7 @@ class HiddenVpnBrowserActivity:ComponentActivity() {
             val config=ProxyConfig.Builder().addProxyRule("http://127.0.0.1:$proxyPort").removeImplicitRules().build()
             ProxyController.getInstance().setProxyOverride(config,{command ->handler.post(command)}) {
                 if(!live()){terminate(reason=HiddenVpnBrowserBroker.BACKGROUND);return@setProxyOverride}
-                ready=true;notice=if(mode==HiddenConnectionPolicy.Mode.TOR_ONLY)"Tor only · JavaScript off · isolated DNS/network boundary" else "VPN only · session data stays separate from Primary";newTab()
+                ready=true;if(homePrivateApps){homePrivateApps=false;openPrivateApps()};notice=if(mode==HiddenConnectionPolicy.Mode.TOR_ONLY)"Tor only · JavaScript off · isolated DNS/network boundary" else "VPN only · session data stays separate from Primary";newTab()
             }
         } catch(_:Exception) {terminate(reason=HiddenVpnBrowserBroker.BACKGROUND)}
     }
@@ -499,6 +499,7 @@ class HiddenVpnBrowserActivity:ComponentActivity() {
         if(bytes==null || (ready && live()))selection.result(bytes) else {bytes.fill(0);selection.result(null)}
     }
     private var privateAppsOpen by mutableStateOf(false)
+    private var homePrivateApps=false
     private val privateAppTabs=mutableStateMapOf<WebView,uk.co.traynor.privategallery.core.privateapps.PrivateAppCatalog.App>()
     private var privateAppSettingsId by mutableStateOf<String?>(null)
     private var privateAppSwitcher by mutableStateOf(false)
@@ -650,7 +651,7 @@ class HiddenVpnBrowserActivity:ComponentActivity() {
                 Text("Hidden Browser · ${mode.indicator}",Modifier.weight(1f).padding(vertical=16.dp),style=MaterialTheme.typography.titleMedium)
                 if(uk.co.traynor.privategallery.ui.PrivacyShieldPreferences(this@HiddenVpnBrowserActivity).let {it.enabled && it.quickLock})TextButton(onClick={panic()}){Text("Quick lock")}
                 if(app==null)TextButton(onClick=::openPrivateApps,enabled=ready){Text("Private Apps")}
-                TextButton(onClick={terminate()}){Text("Done")}
+                TextButton(onClick={terminate()}){Text("Private Home")}
             }
             val focus=LocalFocusManager.current;val keyboard=LocalSoftwareKeyboardController.current
             SideEffect {clearAddressFocus={focus.clearFocus();keyboard?.hide();addressFocused=false}}
