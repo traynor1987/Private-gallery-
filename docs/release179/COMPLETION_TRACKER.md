@@ -1,5 +1,9 @@
 # 1.7.9 completion gates
 
+CURRENT: frozen19e3275ef17746e780d64e6a684d94bab2cabdc3, onegroupedAPI37run41295673256 SUCCESS, artifact13079244254/SHAed1582ae487f84d63ec98da7dfec50f78c63d0a2d82883145c718f7b0efabfc7 independentlyverified. ALL153uniquePASS,0skip/error/duplicate; fulloriginal4routeproof,6clocks/8controls; OCR/model/native/SDK/health/strictpacketsourcebindingsPASS. SameconsolidatedcanonicalSECURITY_REVIEW source/gatedbuildAPPROVED0C/I; activationdelta independentlyPASS. Existingoriginal-keyproductionworkflow nowauthorisedthroughreviewedmarker, notanadditionalAndroidsuite. Actualpresecret namespace/frozenCLIreplay, original50fixturecompile, originalkeyproductionbuild/sign,50→51install-r/restart/preservation and oneverifiedAPKdelivery REMAINMANDATORY. PhysicalFoldOWNER_REQUIRED. ReleaseNOTcompleteuntilthoseactualgatespassandAPKdelivered.
+
+Historical implementation ledger below; latest actual status above supersedes old pending-source/runtime cells. Original feature requirements remain binding and unchanged.
+
 Implementation ledger, not release approval. Latestactualf76run41260590553 has150unique executedtests ALLPASS (149nonroute+vpn_revoke),0skip/error/duplicate, includingrealHiddenlock/UI/export andeightKotlincontrols. Strictgatecorrectlyfailedbecause3routeswerenotexecuted. Actualinheritedstdin drain reproducedlocally; minimal2argumentDEVNULLfix+41hostchecks+MINIMAL179_STDINsource reviewPASS. No production/Android/fixture/workflow/securityassertion change. Onecoherentexisting153-caseverificationplanned; remaining3routes/fullpacketproof/finalreview/original-keyupgrade/signingstillmandatory.
 
 | Requirement | Verified evidence | Remaining gate |

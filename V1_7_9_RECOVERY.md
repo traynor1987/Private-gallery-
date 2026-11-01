@@ -1,5 +1,15 @@
 # Private Gallery 1.7.9 — current recovery status
 
+## Final source approved — existing production gates activated
+
+Frozen application/test source19e3275ef17746e780d64e6a684d94bab2cabdc3,1.7.9/code51/packageuk.co.traynor.privategallery/API37 unchanged. ONE focused run41295673256/job124815899187 completedSUCCESS, all10requiredstages. Originalartifact13079244254,3546864bytes,SHA256ed1582ae487f84d63ec98da7dfec50f78c63d0a2d82883145c718f7b0efabfc7. Independently verified153uniquePASS/0fail/error/skip/duplicate, fouractualroutes, sixpositiveclocks, eightactualKotlincontrols,2159originalraw/sourcehashes,3062freshdecodedpackets matchingoriginalexceptcurrenthostnamepresentation. OriginalstrictfullroutevalidatorPASS. Evidence summary docs/release179/evidence/focused179-19e-verification.json.
+
+SAME consolidatedreview canonical SECURITY_REVIEW.md APPROVED source/gatedbuild,0Critical/Important; SHA2564ea5a1368fe4b3f7e6328b5471a1a85f4947c014f42437fdcc67cc04b02ea4c4. Independent RELEASE179_ACTIVATION reviewPASS0findings verifies exactone-lineFROZEN0→19e, marker,26scope/13control/8evidencehashbindings. This push activates ONLY existing acceptance1762.yml production179 through .acceptance179-candidate. No newworkflow or Androidsuite. Preserve newercommits; rootsolewriter.
+
+NEXT: inspect the production run associated with this activation commit; do notduplicate it. Actual isolatednamespace byte-identical packet/frozenCLI replay MUSTPASS BEFORE originalsigningsecrets. Archivedcode50 verification and reviewedbaseline-compatiblefixturecompilation precede signeraccess. Then exactoriginalcertificate94f2bfc6567f26d067d29077111cfd0ce86d38263c642ad115e43365f05b0d17 build/sign, actual50seed→51install-r→verify→force-stop/restart→verify, metadata/signature/distribution/alignment and upgrade-validation MUSTPASS BEFORE publication. These productionstages are NOT yet claimedpassed. No uninstall/clear-data/newkeys. Nevermarkpartial/failureAPK asdelivery. Onpass independentlyverify oneAPK,cert,hash,filteredreceipts, saveanddeliververifieddownloadlink; updatefinalhandoff. PhysicalFold acceptance OWNER_REQUIRED. Continueautonomously; this is an active gatedrelease, notcompletion.
+
+The entries below are historical snapshots; this latest stage supersedes their pending Android/source-approval statements.
+
 ## Reviewed release-only replay portability correction
 
 Existing single candidate run41295673256/job124815899187 at19e3275ef17746e780d64e6a684d94bab2cabdc3 has passed host, app/all-instrumentation compilation, OCR/native alignment and fixture preparation; grouped Android verification remains active. Do not duplicate it. Latest Actions audit shows1006total runs, only this one active, and original1.7.8/code50 remains latest successful production run41200936129. No179APK, finalapproval, upgrade or signing exists.

@@ -464,7 +464,7 @@ jobs:
     timeout-minutes: 60
     env:
       # Intentionally inactive until exact runtime and consolidated independent review approve.
-      FROZEN_SOURCE: '0000000000000000000000000000000000000000'
+      FROZEN_SOURCE: '19e3275ef17746e780d64e6a684d94bab2cabdc3'
       PRIVATE_GALLERY_UPGRADE_BASELINE: '50'
     steps:
       - uses: actions/checkout@v4

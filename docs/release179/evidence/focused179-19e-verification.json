@@ -1,0 +1,39 @@
+{
+  "source_sha": "19e3275ef17746e780d64e6a684d94bab2cabdc3",
+  "run_id": 41295673256,
+  "artifact_id": 13079244254,
+  "artifact_digest": "sha256:ed1582ae487f84d63ec98da7dfec50f78c63d0a2d82883145c718f7b0efabfc7",
+  "unique_passed_cases": 153,
+  "errors": 0,
+  "skips": 0,
+  "original_route_proof": "PASS",
+  "controlled_routes": [
+    "vpn_revoke",
+    "vpn_loss",
+    "tor_revoke",
+    "tor_death"
+  ],
+  "positive_clock_samples": 6,
+  "actual_lifecycle_controls": 8,
+  "interface_witness": {
+    "1": "lo",
+    "2": "eth0",
+    "4": "enP46808s1",
+    "5": "pg1762"
+  },
+  "all_original_raw_source_hashes": "PASS",
+  "independent_noninterface_decode": "PASS",
+  "source_bound_route_and_packet_checks": "PASS",
+  "namespace_actual_replay": "PENDING_MANDATORY_PRESECRET",
+  "evidence_hashes": {
+    "route_proof_sha256": "b1f826bb93e41958da2d441adecd9cc59b04260068e6a513365ac426131ac929",
+    "ocr_distribution_sha256": "367a13bc325b905fdc36053fb8129f4bf70e8a785122a7d020b33e85032ac8f2",
+    "apk_native_alignment_sha256": "e3bd3b1c58aeeb624342481bfc57abea4606500b33bece786b606f4b8f69292d",
+    "final_gates_sha256": "3ca481d0413e0f9046d02e09e2fee0ae6fef7904d2c0e17f6a76ceb9ed869511",
+    "focused_gates_sha256": "ccc3c23268084a8772c08b5378b796826c2e196ef84276f2bdee5e86e01736fe",
+    "android_sdk_sha256": "26996353f2706c3b58ef78282f48d66ed8925c0ac6eb4846e4003c771f21f9e8",
+    "emulator_health_sha256": "10e570f4374bc0b95f2935098029b854aba52fdc6cb7f4199ca5263f639e01b5",
+    "raw_route_hashes_sha256": "6e7a94d242d250dcf4773cde7c4582a32161d7754e0377b505a6dce26bcebeb0"
+  },
+  "limitations": "Controlled synthetic Android17 emulator workflows; actual production pre-secret namespace replay and original-key50to51 upgrade/restart remain mandatory; physical Fold acceptance OWNER_REQUIRED."
+}
