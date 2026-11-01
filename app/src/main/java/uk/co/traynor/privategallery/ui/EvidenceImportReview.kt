@@ -32,7 +32,7 @@ import uk.co.traynor.privategallery.core.evidence.*
    when(step){
     0->{item{Text("Choose up to 128 originals. Uncheck accidental selections. OCR and grouping are reviewed before evidence registration; imported originals remain encrypted if you cancel.")}
      items(state.originals.filter{original->state.catalog?.evidence()?.none{it.sourceId()==original.item.id}!=false},key={it.item.id}){original->
-      Row{Checkbox(original.item.id in selected,{checked->selected=if(checked&&selected.size<128)selected+original.item.id else selected-original.item.id});Column{Text(original.item.displayName);Text("${original.item.mimeType} · ${original.item.plaintextSize} bytes",style=MaterialTheme.typography.labelSmall)}}
+      EvidenceSelectionRow("Register original ${original.item.displayName}",original.item.displayName,"${original.item.mimeType} · ${original.item.plaintextSize} bytes",original.item.id in selected,original.item.id in selected||selected.size<128){checked->selected=if(checked)selected+original.item.id else selected-original.item.id}
      }}
     1->items(draft?.evidence().orEmpty(),key={it.id()}){record->
      Text(record.name(),style=MaterialTheme.typography.titleMedium)

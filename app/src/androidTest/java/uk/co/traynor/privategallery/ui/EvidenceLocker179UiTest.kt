@@ -44,6 +44,11 @@ class EvidenceLocker179UiTest {
   try{compose.waitUntil(45000){val s=controller.state.value;!s.busy&&s.catalog!=null&&(count==null||s.catalog.evidence().size==count)}}
   catch(failure:ComposeTimeoutException){val s=controller.state.value;throw AssertionError("Controller readiness: expectedCount=$count actualCount=${s.catalog?.evidence()?.size} busy=${s.busy} revision=${s.catalog?.revision()} originals=${s.originals.size}",failure)}
  }
+ private fun approveImportReview(){
+  click("Run offline OCR")
+  compose.waitUntil(45000){compose.onAllNodesWithText("Review groups").fetchSemanticsNodes().isNotEmpty()}
+  click("Review groups");click("Save approved evidence")
+ }
  private fun click(text:String){compose.evidenceNode(hasText(text)).performClick()}
  private fun field(label:String)=compose.onNode(hasSetTextAction() and hasText(label))
  @Test fun primaryActualImportExtractCorrectIncidentSearchRemoveAndReopenPreservesOriginal() {
@@ -52,14 +57,14 @@ class EvidenceLocker179UiTest {
    androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().runOnMainSync{controller=EvidenceController(f.context,f.access)}
    compose.setContent{CompositionLocalProvider(LocalContext provides f.context){PrivateGalleryTheme(AppTheme.LIGHT){EvidenceLocker(controller,{},{},{},{},{})}}}
    waitReady(controller,0)
-   click("Add existing evidence");compose.evidenceNode(hasContentDescription("Register original alpha179.txt")).assertIsDisplayed().assertHeightIsAtLeast(48.dp).performClick().assertIsOn();click("Register selected originals");waitReady(controller,1)
+   click("Add existing evidence");compose.evidenceNode(hasContentDescription("Register original alpha179.txt")).assertIsDisplayed().assertHeightIsAtLeast(48.dp).performClick().assertIsOn();approveImportReview();waitReady(controller,1)
    compose.onNodeWithText("Library").performClick();compose.evidenceNode(hasText("alpha179.txt")).performClick();waitReady(controller,1)
    click("Review / correct");field("Owner-corrected text").performTextReplacement("unique179 owner corrected Alice timestamp uncertain")
    compose.onNodeWithText("Save").performClick()
    compose.waitUntil(15000){controller.state.value.catalog?.evidence()?.singleOrNull()?.transcript()?.startsWith("unique179")==true&&!controller.state.value.busy}
    val corrected=f.access.store.read().evidence().single();assertTrue(corrected.ocr().single().text().contains("arrange delivery"));assertEquals(1,corrected.corrections().size)
    compose.runOnIdle{compose.activity.onBackPressedDispatcher.onBackPressed()}
-   click("Add evidence");compose.evidenceNode(hasContentDescription("Register original beta179.txt")).assertIsDisplayed().assertHeightIsAtLeast(48.dp).performClick().assertIsOn();click("Register selected originals");waitReady(controller,2)
+   click("Add evidence");compose.evidenceNode(hasContentDescription("Register original beta179.txt")).assertIsDisplayed().assertHeightIsAtLeast(48.dp).performClick().assertIsOn();approveImportReview();waitReady(controller,2)
    compose.onNodeWithText("Incidents").performClick();click("New incident")
    field("Title").performTextReplacement("Synthetic incident179");compose.onNodeWithText("Save").performClick()
    compose.waitUntil(15000){controller.state.value.catalog?.incidents()?.size==1&&!controller.state.value.busy}
@@ -142,7 +147,7 @@ class EvidenceLocker179UiTest {
    compose.setContent{CompositionLocalProvider(LocalContext provides f.context){PrivateGalleryTheme(AppTheme.LIGHT){EvidenceLocker(controller,{},{},{},{exported=it},{})}}}
    waitReady(controller,0);click("Add existing evidence");compose.evidenceNode(hasContentDescription("Register original alpha179.txt")).assertIsDisplayed().assertHeightIsAtLeast(48.dp).performClick().assertIsOn();compose.evidenceNode(hasContentDescription("Register original beta179.txt")).assertIsDisplayed().assertHeightIsAtLeast(48.dp).performClick().assertIsOn()
    assertTrue(f.access.store.read().evidence().isEmpty())
-   compose.onNodeWithText("Register selected originals").performClick();waitReady(controller,2)
+   approveImportReview();waitReady(controller,2)
    assertEquals(2,f.access.sources.list().size)
    compose.onNodeWithText("Library").performClick();compose.evidenceNode(hasContentDescription("Select evidence beta179.txt")).performClick()
    click("Export selection")

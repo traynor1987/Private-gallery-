@@ -1829,10 +1829,13 @@ class MainActivity : FragmentActivity() {
         homePrivateAppsRequested=false;return true
     }
     @Composable internal fun HomeStartupSettings() {
+        if(!activityResumed)return
         val hidden=retained.hidden.selected
         androidx.compose.runtime.key(hidden) {
-            val access=remember {homeAccess()}
-            if(access==null)return@key
+            var admittedAccess by remember {mutableStateOf<uk.co.traynor.privategallery.core.evidence.EvidenceAccess?>(null)}
+            DisposableEffect(Unit){onDispose{admittedAccess?.close();admittedAccess=null}}
+            LaunchedEffect(Unit){kotlinx.coroutines.yield();admittedAccess=homeAccess()}
+            val access=admittedAccess ?: return@key
             val store=remember(access){uk.co.traynor.privategallery.core.home.HomePreferencesStore(access,appSettings.getBoolean("home-existing-install",true))}
             var value by remember(access){mutableStateOf<uk.co.traynor.privategallery.core.home.HomePreferences?>(null)}
             val scope=rememberCoroutineScope()
@@ -1861,8 +1864,10 @@ class MainActivity : FragmentActivity() {
             }
         }
         androidx.compose.runtime.key(hidden,if(hidden)retained.hidden.session else sessionKey,homeRequestRevision) {
-            val access=remember {homeAccess()}
-            if(access==null)return@key
+            var admittedAccess by remember {mutableStateOf<uk.co.traynor.privategallery.core.evidence.EvidenceAccess?>(null)}
+            DisposableEffect(Unit){onDispose{admittedAccess?.close();admittedAccess=null}}
+            LaunchedEffect(Unit){kotlinx.coroutines.yield();admittedAccess=homeAccess()}
+            val access=admittedAccess ?: return@key
             val store=remember(access){uk.co.traynor.privategallery.core.home.HomePreferencesStore(access,appSettings.getBoolean("home-existing-install",true))}
             var preferences by remember(access){mutableStateOf<uk.co.traynor.privategallery.core.home.HomePreferences?>(null)}
             var live by remember(access){mutableStateOf(true)}
@@ -4505,7 +4510,7 @@ internal fun SettingsHome(
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
                 Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
                     Text("Allow screenshots", style = MaterialTheme.typography.titleMedium)
-                    Text("Allows screenshots while using Private Gallery. Private content may be captured while enabled.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text("Allows capture on eligible app screens. PIN/password entry, AI credentials, export passwords, Recents and background privacy covers remain protected. Android or protected website content may still block capture.", color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 androidx.compose.material3.Switch(
                     modifier = Modifier.testTag("privacy-allow-screenshots"),
@@ -4633,7 +4638,7 @@ internal fun SettingsHome(
                         "diagnostics" -> if (category == SettingsCategory.ABOUT) { diagnosticsAuthenticated = true; category = SettingsCategory.DEBUG }
                         "enter" -> if (secretDiscovered) secretOpen = true
                         "reveal" -> if (secretOpen && hideContent) onHideContentChanged(false)
-                        "screenshots" -> if (secretOpen && !allowScreenshots) onAllowScreenshotsChanged(true)
+                        "screenshots" -> if (category == SettingsCategory.SECURITY && !secretOpen && !allowScreenshots) onAllowScreenshotsChanged(true)
                     }
                 }
             },

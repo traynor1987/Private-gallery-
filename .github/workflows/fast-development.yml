@@ -455,11 +455,38 @@ jobs:
           bash scripts/check_evidence179_ai_json.sh
           bash scripts/check_evidence179_archive.sh
       - name: Compile integrated app and Android test sources
-        run: ./gradlew :app:compileDebugKotlin :app:compileDebugAndroidTestKotlin :app:testDebugUnitTest --tests 'uk.co.traynor.privategallery.core.vault.VaultDocumentPolicyTest' --stacktrace
+        run: ./gradlew :app:assembleDebug :app:assembleDebugAndroidTest :app:testDebugUnitTest --tests 'uk.co.traynor.privategallery.core.vault.VaultDocumentPolicyTest' --stacktrace
+      - name: Enable Android emulator acceleration
+        if: contains(github.event.head_commit.message, '[verify1710]')
+        run: sudo chmod 666 /dev/kvm
+      - name: Grouped Home and changed privacy-boundary Android 17 verification
+        if: contains(github.event.head_commit.message, '[verify1710]')
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: '37.0'
+          target: google_apis
+          arch: x86_64
+          profile: pixel_2
+          cores: 4
+          ram-size: 4096M
+          heap-size: 512M
+          disk-size: 8G
+          disable-animations: true
+          emulator-options: -no-window -gpu software -no-snapshot -noaudio -no-boot-anim -feature -HardwareDecoder
+          script: ./gradlew :app:connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=uk.co.traynor.privategallery.HomeNavigation1710Test,uk.co.traynor.privategallery.core.home.Home1710Test,uk.co.traynor.privategallery.core.home.EvidenceImport1710Test,uk.co.traynor.privategallery.core.evidence.EvidenceStore179Test,uk.co.traynor.privategallery.core.evidence.EvidenceAccess179Test,uk.co.traynor.privategallery.core.evidence.EvidenceController179Test,uk.co.traynor.privategallery.EvidenceAuthority179Test,uk.co.traynor.privategallery.ui.HiddenNavigationAuthorityTest,uk.co.traynor.privategallery.ui.EvidenceLocker179UiTest,uk.co.traynor.privategallery.PrivacyViewerRepair1751Test --stacktrace
+      - uses: actions/cache/save@v4
+        if: success()
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: home1710-${{ runner.os }}-${{ hashFiles('**/*.gradle*', 'gradle/wrapper/gradle-wrapper.properties') }}
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: private-home1710-compile
+          name: private-home1710-verification
           path: |
             app/build/reports
             app/build/test-results
+            app/build/outputs/androidTest-results
+            app/build/outputs/connected_android_test_additional_output

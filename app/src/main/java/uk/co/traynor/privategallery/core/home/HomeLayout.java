@@ -77,6 +77,11 @@ public final class HomeLayout {
         if (order.size() != Shortcut.values().length) throw new IllegalArgumentException("Incomplete layout");
         return new HomeLayout(order, new java.util.HashSet<>(parse(parts[2])), new java.util.HashSet<>(parse(parts[3])));
     }
+    public HomeLayout before(Shortcut item, Shortcut target) {
+        Objects.requireNonNull(item); Objects.requireNonNull(target); if (item == target) return this;
+        List<Shortcut> next = new ArrayList<>(order); next.remove(item); next.add(next.indexOf(target), item);
+        return new HomeLayout(next, hidden, favourites);
+    }
     public HomeLayout move(Shortcut item, int position) {
         Objects.requireNonNull(item); List<Shortcut> newOrder = new ArrayList<>(order);
         newOrder.remove(item); newOrder.add(Math.max(0, Math.min(position, newOrder.size())), item);

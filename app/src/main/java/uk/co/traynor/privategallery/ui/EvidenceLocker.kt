@@ -262,7 +262,7 @@ internal data class EvidenceExportSelection(val incidentIds:List<String>,val evi
 }
 
 /** One touch/selection owner per row; the checkbox is the visual indicator. */
-@Composable private fun EvidenceSelectionRow(label:String,title:String,detail:String?,selected:Boolean,enabled:Boolean=true,onChange:(Boolean)->Unit) {
+@Composable internal fun EvidenceSelectionRow(label:String,title:String,detail:String?,selected:Boolean,enabled:Boolean=true,onChange:(Boolean)->Unit) {
  Row(Modifier.fillMaxWidth().heightIn(min=48.dp)
   .toggleable(value=selected,enabled=enabled,role=Role.Checkbox,onValueChange=onChange)
   .semantics{contentDescription=label}.padding(vertical=4.dp),verticalAlignment=androidx.compose.ui.Alignment.CenterVertically){

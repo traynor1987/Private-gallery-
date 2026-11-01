@@ -49,7 +49,7 @@ private class EvidenceArchiveRequest(val source:Uri,val destination:Uri?=null,va
  val importPicker=rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()){uri->received(uri,uri!=null)}
  val documentImportPicker=rememberLauncherForActivityResult(ActivityResultContracts.OpenMultipleDocuments()){uris->
   val ticket=pending
-  if(ticket!=null&&ticket.delivered.compareAndSet(false,true)){ticket.inputUris=uris.distinct().take(128);ticket.accepted=ticket.inputUris.isNotEmpty();delivered=ticket}
+  if(ticket!=null&&ticket.delivered.compareAndSet(false,true)){val selection=uris.distinct();ticket.inputUris=if(selection.size<=128)selection else emptyList();ticket.accepted=ticket.inputUris.isNotEmpty();if(selection.size>128)notice="Select at most 128 documents. Nothing from this oversized selection was imported.";delivered=ticket}
  }
  val outputPicker=rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/octet-stream")){uri->received(uri,uri!=null)}
  val permissionPicker=rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()){result->received(null,result.resultCode==Activity.RESULT_OK)}

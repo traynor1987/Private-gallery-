@@ -12,11 +12,12 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.text.style.TextAlign
 import uk.co.traynor.privategallery.core.home.*
 
-@OptIn(ExperimentalFoundationApi::class)
+@OptIn(ExperimentalFoundationApi::class,ExperimentalLayoutApi::class)
 @Composable internal fun PrivateHome(
  hidden:Boolean,preferences:HomePreferences,onChange:(HomePreferences)->Unit,
  initialCustomisation:Boolean=false,
@@ -32,7 +33,7 @@ import uk.co.traynor.privategallery.core.home.*
 
  BackHandler{query="";menu=null;customise=false}
  val visible=preferences.layout.search(query).sortedByDescending{it in preferences.layout.favourites()}
- Surface(Modifier.fillMaxSize(),color=MaterialTheme.colorScheme.background){Column(Modifier.fillMaxSize().safeDrawingPadding().padding(16.dp)){
+ Surface(Modifier.fillMaxSize().testTag("private-home1710"),color=MaterialTheme.colorScheme.background){Column(Modifier.fillMaxSize().safeDrawingPadding().padding(16.dp)){
   Row(verticalAlignment=Alignment.CenterVertically){Column(Modifier.weight(1f)){
    Text("Private Home",style=MaterialTheme.typography.headlineMedium)
    Text(if(hidden)"Hidden Vault" else "Primary Vault",style=MaterialTheme.typography.labelLarge)
@@ -40,6 +41,10 @@ import uk.co.traynor.privategallery.core.home.*
    IconButton(onClick=onLock){Icon(Icons.Default.Lock,"Lock vault")}
    IconButton(onClick=onPanic){Icon(Icons.Default.Close,"Panic Exit")}}
   OutlinedTextField(query,{query=it.take(256)},Modifier.fillMaxWidth(),label={Text("Search this vault")},singleLine=true,leadingIcon={Icon(Icons.Default.Search,null)})
+  if(query.isBlank()&&preferences.recent.isNotEmpty()){
+   Text("Recently opened",style=MaterialTheme.typography.labelLarge)
+   FlowRow(horizontalArrangement=Arrangement.spacedBy(8.dp)){preferences.recent.filter{it in preferences.layout.visible()}.take(4).forEach{item->AssistChip(onClick={onLaunch(item)},label={Text(item.label)})}}
+  }
   if(customise){
    Text("Appearance & Navigation",style=MaterialTheme.typography.titleMedium)
    Row{FilterChip(preferences.startupHome,{onChange(preferences.copy(startupHome=true))},{Text("Start: Private Home")});Spacer(Modifier.width(8.dp));FilterChip(!preferences.startupHome,{onChange(preferences.copy(startupHome=false))},{Text("Gallery")})}
@@ -64,7 +69,7 @@ import uk.co.traynor.privategallery.core.home.*
      DropdownMenu(menu==item,{menu=null}){
       DropdownMenuItem(text={Text(if(item in preferences.layout.favourites())"Unpin" else "Pin favourite")},onClick={val layout=if(item in preferences.layout.favourites())preferences.layout.unpin(item)else preferences.layout.pin(item);onChange(preferences.copy(layout=layout));menu=null})
       DropdownMenuItem(text={Text("Hide shortcut")},onClick={onChange(preferences.copy(layout=preferences.layout.hide(item)));menu=null})
-      visible.forEachIndexed{index,target->DropdownMenuItem(text={Text("Place before ${target.label}")},onClick={onChange(preferences.copy(layout=preferences.layout.move(item,index)));menu=null})}
+      visible.forEachIndexed{index,target->DropdownMenuItem(text={Text("Place before ${target.label}")},onClick={onChange(preferences.copy(layout=preferences.layout.before(item,target)));menu=null})}
      }}
     Spacer(Modifier.height(8.dp));Text(item.label,textAlign=TextAlign.Center,style=MaterialTheme.typography.labelLarge)
    }}

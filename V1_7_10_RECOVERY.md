@@ -33,3 +33,13 @@ Independent review identified stale Hidden Home authority after outside() and an
 Added an in-memory guided import review: select/remove encrypted originals, verify bytes and run existing offline OCR, review/correct transcripts and timestamp provenance, edit group labels to split/merge, then one explicit catalogue commit. External multi-document imports preserve encrypted originals and defer evidence registration to review. Added Android Home storage isolation/encryption/startup/revocation test source; runtime execution remains pending.
 
 First workflow attempt 41324315361 failed before any jobs started. actionlint identified a duplicate job-level `if` introduced while excluding the default fast job. Combined the branch predicate into the existing job `if`; actionlint now passes. No Android compilation or security gate passed in that failed run. Use the corrected grouped compilation next; do not repeatedly rerun the invalid source.
+
+### Verified compilation and next grouped runtime gate
+
+Run 41325009788 (source 49dafc82381cf6d7a19f40255f9ce45506666765), job 124903005350, completed successfully: all focused Home/evidence host checks, integrated app Kotlin compilation, Android test-source compilation, and focused JVM VaultDocumentPolicy tests. This is compilation/JVM evidence, not device or signing approval.
+
+New follow-up tests cover actual Main Home authentication/Hidden revocation/Panic admission, encrypted owner-specific Home preference round trips and revocation, and draft import remaining unregistered until explicit approval. Existing Evidence UI tests now follow the full-page offline OCR and grouping approval sequence, retaining their original storage/integrity assertions. A grouped `[verify1710]` push runs these with existing Evidence authority/controller/store, Hidden navigation and privacy viewer cases on API37.
+
+Screenshot Settings root cause identified: the successful `screenshots` authentication callback required `secretOpen`, while the toggle is visible only when Secret is closed. Corrected its completion guard to the active Security screen; authentication remains required. Ordinary Evidence pages now share the Activity policy; AI/export credential pages explicitly hold secure-window protection. Recents and background privacy covers remain protected.
+
+Second review concerns addressed: Startup Settings capability is admitted only while resumed and acquired after Compose disposal effects; oversized multi-import selections are rejected with an explicit message rather than silently truncated. Original-key upgrade/signing and physical Fold acceptance are still outstanding. No signed 1.7.10 artifact exists.
