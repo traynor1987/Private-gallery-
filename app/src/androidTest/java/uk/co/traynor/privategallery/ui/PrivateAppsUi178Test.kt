@@ -45,7 +45,7 @@ class PrivateAppsUi178Test {
   compose.onNodeWithText("Remove app").performClick()
   compose.waitUntil(5000){compose.onAllNodesWithText("No private apps yet").fetchSemanticsNodes().isNotEmpty()}
   compose.runOnIdle{live=false}
-  compose.waitUntil(5000){closed==2}
+  compose.waitUntil(5000){closed==3}
   compose.onNodeWithText("No private apps yet").assertDoesNotExist()
   key.fill(0);root.deleteRecursively()
  }
