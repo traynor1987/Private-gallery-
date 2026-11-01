@@ -60,7 +60,7 @@ class HiddenBrowser17LayoutTest {
             }
             capture("browser-$width-$height-$theme-$fontScale",width,height)
             compose.onNodeWithContentDescription("Browser settings").performClick()
-            compose.onNodeWithText("VPN only").assertIsDisplayed()
+            compose.onNode(hasText("VPN only") and hasAnyAncestor(hasTestTag("hidden-browser-settings"))).assertIsDisplayed()
             compose.onNodeWithText("VPN + Tor · unavailable").assertDoesNotExist()
             compose.onNodeWithText("Manage Hidden downloads").performScrollTo().assertIsDisplayed()
             capture("hidden-settings-$width-$height-$theme-$fontScale",width,height,"hidden-browser-settings")

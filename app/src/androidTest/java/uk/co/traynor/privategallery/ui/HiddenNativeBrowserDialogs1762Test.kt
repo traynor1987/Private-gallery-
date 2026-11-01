@@ -82,7 +82,7 @@ class HiddenNativeBrowserDialogs1762Test {
         var manages=0;var closes=0
         val status="Transfer status ".repeat(300)
         content(theme) {HiddenDownloadsDialog(status,{manages++},{closes++})}
-        compose.onNodeWithText("Supported GET image/video downloads are saved encrypted in Hidden Space. Return to Hidden Space to manage saved media. Returning closes all browser tabs and cancels transfers still in progress.").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("Supported GET media and document downloads are saved encrypted in Hidden Space. Return to Hidden Space to manage saved media. Returning closes all browser tabs and cancels transfers still in progress.").performScrollTo().assertIsDisplayed()
         compose.onNodeWithText("Keep browsing").assertIsDisplayed().performClick()
         compose.runOnIdle {assertEquals(0,manages);assertEquals(1,closes)}
         compose.onNodeWithText("Manage in Hidden Space").assertIsDisplayed().performClick()

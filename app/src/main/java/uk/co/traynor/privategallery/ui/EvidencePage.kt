@@ -9,9 +9,13 @@ import androidx.compose.ui.unit.dp
 
 /** Activity-owned pages inherit the vault screenshot policy; credential pages remain protected. */
 @Composable internal fun EvidencePage(onBack:()->Unit,sensitive:Boolean=false,content:@Composable ()->Unit) {
- val activity=androidx.activity.compose.LocalActivity.current as? uk.co.traynor.privategallery.MainActivity
- DisposableEffect(activity,sensitive){val token=if(sensitive)activity?.beginProtectedPage()else null
-  onDispose{token?.let{activity?.endProtectedPage(it)}}}
+ val activity=androidx.activity.compose.LocalActivity.current
+ val novaActivity=activity as? uk.co.traynor.privategallery.MainActivity
+ DisposableEffect(activity,sensitive){
+  val token=if(sensitive)novaActivity?.beginProtectedPage()else null
+  val genericProtection=if(sensitive&&novaActivity==null)activity?.window?.let{EvidenceSensitiveWindowProtection.acquire(it)}else null
+  onDispose{token?.let{novaActivity?.endProtectedPage(it)};genericProtection?.close()}
+ }
  BackHandler(onBack=onBack)
  Surface(Modifier.fillMaxSize(),color=MaterialTheme.colorScheme.background){content()}
 }

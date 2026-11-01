@@ -49,7 +49,10 @@ class EvidenceSaf179Test {
  private class Picker:ActivityResultRegistry(){
   var request:Int?=null;var contract="";var launches=0;var input:Any?=null
   override fun <I,O> onLaunch(requestCode:Int,contract:ActivityResultContract<I,O>,input:I,options:ActivityOptionsCompat?){request=requestCode;this.contract=contract.javaClass.simpleName;this.input=input;launches++}
-  fun returnDocument(uri:Uri?){assertTrue(dispatchResult(checkNotNull(request),uri))}
+  fun returnDocument(uri:Uri?){
+   if(contract=="OpenMultipleDocuments")assertTrue(dispatchResult(checkNotNull(request),listOfNotNull(uri)))
+   else assertTrue(dispatchResult(checkNotNull(request),uri))
+  }
   fun returnPermission(accepted:Boolean){assertTrue(dispatchResult(checkNotNull(request),if(accepted)android.app.Activity.RESULT_OK else android.app.Activity.RESULT_CANCELED,null))}
  }
  private class Provider(val directory:File):DocumentsProvider(){
@@ -219,7 +222,7 @@ class EvidenceSaf179Test {
  @Test fun hiddenReauthenticatedPickerCannotReviveOriginalAuthentication()=importFlow(true,true,60_000)
  private fun importFlow(hidden:Boolean,reauthenticate:Boolean,advance:Long){GraceWatchdog(hidden&&!reauthenticate&&advance==30_000L).use{watchdog->Harness(secret=hidden).use{f->
   watchdog.step("composing Host");f.show();watchdog.step("launching import picker");val old=f.accesses.single();click("Import Evidence")
-  assertEquals("OpenDocument",f.picker.contract);assertFalse(old.current());assertEquals(0,f.provider.reads.get())
+  assertEquals("OpenMultipleDocuments",f.picker.contract);assertFalse(old.current());assertEquals(0,f.provider.reads.get())
   val originalPickerRequest=checkNotNull(f.picker.request)
   watchdog.step("stopping Activity");compose.activityRule.scenario.moveToState(Lifecycle.State.CREATED);f.clock.addAndGet(advance)
   if(reauthenticate&&f.hidden==null)f.epoch.incrementAndGet()
@@ -244,7 +247,7 @@ class EvidenceSaf179Test {
      check(f.hidden.complete(f.hidden.beginAuthentication(),f.key.copyOf()))
      assertTrue(f.hidden.isUnlocked);assertFalse(f.hidden.isAuthenticationCurrent(f.authentication))
      assertEquals("The original picker must be the only launch",1,f.picker.launches)
-     assertEquals("OpenDocument",f.picker.contract);assertEquals(originalPickerRequest,f.picker.request)
+     assertEquals("OpenMultipleDocuments",f.picker.contract);assertEquals(originalPickerRequest,f.picker.request)
      assertEquals(0,f.provider.reads.get());assertEquals(1,f.accesses.size)
      val closedFlag=EvidenceOwnerSession::class.java.getDeclaredField("closed").apply{isAccessible=true}.get(f.owner) as java.util.concurrent.atomic.AtomicBoolean
      assertFalse("Original pending owner must still be live at dispatch",closedFlag.get())
@@ -272,6 +275,13 @@ class EvidenceSaf179Test {
   else {
    compose.waitUntil(15000){f.accesses.size==2}
    val fresh=f.accesses.last();assertTrue(fresh.current());assertFalse(old.current())
+   // The multi-document picker imports encrypted originals into the full-page review.
+   // Registration still requires the owner's OCR and grouping approval.
+   assertTrue("Picker return must not register evidence before review",fresh.store.read().evidence().isEmpty())
+   compose.waitUntil(15000){compose.onAllNodes(hasText("Run offline OCR") and isEnabled()).fetchSemanticsNodes().isNotEmpty()}
+   click("Run offline OCR")
+   compose.waitUntil(45000){compose.onAllNodesWithText("Review groups").fetchSemanticsNodes().isNotEmpty()}
+   click("Review groups");click("Save approved evidence")
    // A synchronous store read must not make the instrumentation wait predicate unbounded.
    val imported=java.util.concurrent.atomic.AtomicReference<EvidenceCatalog?>(null)
    val readFailure=java.util.concurrent.atomic.AtomicReference<Class<*>?>(null)
@@ -439,8 +449,8 @@ class EvidenceSaf179Test {
  private fun activeReport(action:String){Harness(seed=true).use{f->
   f.show();f.openArchive();f.waitReport()
   var flags=0
-  instrumentation.runOnMainSync{flags=(android.view.inspector.WindowInspector.getGlobalWindowViews().lastOrNull{it.isShown}?.layoutParams as? android.view.WindowManager.LayoutParams)?.flags?:0}
-  assertTrue("Topmost report dialog must use a secure Android window",(flags and android.view.WindowManager.LayoutParams.FLAG_SECURE)!=0)
+  instrumentation.runOnMainSync{flags=compose.activity.window.attributes.flags}
+  assertTrue("Full-page authenticated report must use a secure Activity window",(flags and android.view.WindowManager.LayoutParams.FLAG_SECURE)!=0)
   compose.onAllNodesWithContentDescription("Evidence security controls").onLast().performClick();click(action)
   compose.waitUntil(15000){!f.owner.sameAuthentication()&&compose.onAllNodesWithContentDescription("Authenticated evidence PDF report").fetchSemanticsNodes().isEmpty()}
   compose.waitUntil(15000){File(f.context.noBackupFilesDir,"evidence-open-primary").listFiles().orEmpty().isEmpty()}

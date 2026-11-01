@@ -1,3 +1,11 @@
+## First Android result and coordinated repair — unsigned54
+
+Sourcee3c8a97f849e11b74a0240890fee447934e6424d run41359796301 compiled app/test/JVM and passed hostchecks. Original artifact13105980445 archiveSHA256c00a7dff5199f565d19907a3a306ac66bbdf50cc22245f194ef6d7ecd037f571 was downloaded and rawXML inspected:253UI cases,234passed19failed,0errors/skips. Route stage did not execute afterUI failure, so NO newroutepass claimed.
+
+Diagnoses/fixes: staleOpenDocument fixtures now matchactualOpenMultipleDocuments + ownerapprovedOCR/group registration; originalauth/expiry/no-read/provenance retained. Sensitive report checks followactualfull-pageActivitywindow; generichostfallback now remainssecureforwindowlifetime (noeligibilityauthority), productionMain tokenpolicy unchanged. LazyEvidence matcher reacquired afterscroll/IME layout. Browsercopy/mode-label selectors corrected; obsoletepre-activationassertion updated to alreadyshippedverifiedgates withmanifest/coldrejection checksintact. Dialogfixture waitsactualfocus withinoriginal3seconds. CreateImage clearsfocus/IME beforediagnostic/consent. History timeout remainsUNRESOLVED:authorityactive andall30recordsauthenticate; onlydeepersemantics/windowdiagnostics added,no productguess or timeoutincrease.
+
+Independentreview accepted narrowrepairandcontrolledverification. Next existingfastworkflow [verify17102][repair17102] runs109cases(entirefailedclasses+2genericwindowtests) plus3liveVPN/Tor/networkloss tests. Original255UI+3route fullmatrix retained. UI failure no longer preventsindependentrouteevidence; alloriginalexitcodes/accounting retained andjobstillfailsunlessboth+packet/DNS/bodyverifierspass. This isexplicitdiagnosticscope,notfullreleaseapproval. Cookie/providerstorageapp-keyencryption remainsblocking54signing. Latest signed53 unchanged.
+
 # NovaOS1.7.10.2/code54 — internal-app overhaul, NOT RELEASE APPROVED
 
 Owner-requested continuation from authoritative73e896054b942734f8c37b5717ed05a2b8679b4f. Latest signed baseline remains1.7.10.1/code53 (details below). Audited87 remote heads max53; assigned54 on same release branch. No54 signing marker or owner APK exists.

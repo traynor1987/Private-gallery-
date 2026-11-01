@@ -332,6 +332,10 @@
     "foldCoverLandscapeDark",
     "foldInnerLandscapeLight"
   ],
+  "uk.co.traynor.privategallery.ui.EvidenceSensitiveWindowProtectionTest": [
+    "overlappingSensitivePagesAndFinalReleaseKeepGenericWindowSecure",
+    "initiallySecureWindowRemainsSecureAfterSensitivePageCloses"
+  ],
   "uk.co.traynor.privategallery.core.browser.hidden.NativeTorIsolation1762Test": [
     "packagedTorNativeFormsUploadsDownloadsAndNetworkSink"
   ],

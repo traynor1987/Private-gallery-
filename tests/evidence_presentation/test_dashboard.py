@@ -15,3 +15,8 @@ class EvidenceDashboardContract(unittest.TestCase):
         home = source.split('"Home" -> {', 1)[1].split('"Information" -> {', 1)[0]
         self.assertNotIn('A hash verifies matching bytes', home)
         self.assertIn('EvidenceDashboardOverview(', home)
+
+    def test_generic_sensitive_host_never_restores_screenshot_eligibility(self):
+        source = (UI / 'EvidenceSensitiveWindowProtection.kt').read_text()
+        self.assertNotIn('window.clearFlags(', source)
+        self.assertIn('window.addFlags(', source)

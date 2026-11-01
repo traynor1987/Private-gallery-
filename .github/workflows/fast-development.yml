@@ -508,6 +508,8 @@ jobs:
             bash scripts/home1710_emulator_preflight.sh
             ./gradlew :app:connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=uk.co.traynor.privategallery.HomeNavigation1710Test,uk.co.traynor.privategallery.NovaNavigation17101Test,uk.co.traynor.privategallery.NovaHomePresentation17101Test,uk.co.traynor.privategallery.core.home.Home1710Test,uk.co.traynor.privategallery.core.home.EvidenceImport1710Test,uk.co.traynor.privategallery.core.evidence.EvidenceStore179Test,uk.co.traynor.privategallery.core.evidence.EvidenceAccess179Test,uk.co.traynor.privategallery.core.evidence.EvidenceController179Test,uk.co.traynor.privategallery.EvidenceAuthority179Test,uk.co.traynor.privategallery.ui.HiddenNavigationAuthorityTest,uk.co.traynor.privategallery.ui.EvidenceLocker179UiTest,uk.co.traynor.privategallery.PrivacyViewerRepair1751Test,uk.co.traynor.privategallery.ui.PrivateAppsUi178Test,uk.co.traynor.privategallery.ui.PrivateAppControls178Test,uk.co.traynor.privategallery.ui.ProfessionalUiTest,uk.co.traynor.privategallery.ui.CameraPresentationTest,uk.co.traynor.privategallery.ui.ModalCompletion1762Test,uk.co.traynor.privategallery.HideContent1761Test --stacktrace
       - name: Focused NovaOS applications and actual VPN Tor boundary verification
+        env:
+          NOVA17102_REPAIR: ${{ contains(github.event.head_commit.message, '[repair17102]') && '1' || '0' }}
         if: contains(github.event.head_commit.message, '[verify17102]')
         uses: reactivecircus/android-emulator-runner@v2
         with:

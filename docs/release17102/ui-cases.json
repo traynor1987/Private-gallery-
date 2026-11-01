@@ -331,5 +331,9 @@
     "foldInnerDark",
     "foldCoverLandscapeDark",
     "foldInnerLandscapeLight"
+  ],
+  "uk.co.traynor.privategallery.ui.EvidenceSensitiveWindowProtectionTest": [
+    "overlappingSensitivePagesAndFinalReleaseKeepGenericWindowSecure",
+    "initiallySecureWindowRemainsSecureAfterSensitivePageCloses"
   ]
 }

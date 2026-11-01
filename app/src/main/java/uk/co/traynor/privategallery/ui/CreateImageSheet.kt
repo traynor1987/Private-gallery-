@@ -9,6 +9,8 @@ import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.foundation.text.KeyboardOptions
@@ -29,6 +31,14 @@ fun CreateImageSheet(onGenerate: (GenerationRequest, (String) -> Unit, (Result<V
     vaultLabel: String = "Primary Space",
     onLoadPreview: (VaultItem, (Result<Bitmap>) -> Unit) -> Unit = { _, _ -> }) {
     val context = LocalContext.current
+    val focus = LocalFocusManager.current
+    val keyboard = LocalSoftwareKeyboardController.current
+    fun finishPromptEntry() {
+        // The prompt belongs to the sheet, not to the confirmation/diagnostic window.
+        // Retaining its focus reopens the IME when a child dialog closes.
+        focus.clearFocus()
+        keyboard?.hide()
+    }
     val modelStore = remember { GenerationModelStore(context) }
     val consent = remember { AiConsentStore(context) }
     val templates = remember { PromptEnhancementStore(context) }
@@ -139,7 +149,7 @@ fun CreateImageSheet(onGenerate: (GenerationRequest, (String) -> Unit, (Result<V
                     Text("Prompt enhancement", Modifier.weight(1f))
                     Switch(enhancePrompt, { enhancePrompt = it })
                 }
-                TextButton(onClick = { diagnostic = true }) { Text("Show original and effective prompt") }
+                TextButton(onClick = { finishPromptEntry(); diagnostic = true }) { Text("Show original and effective prompt") }
                 if (model.capabilities.any { it in setOf(GenerationCapability.NEGATIVE_PROMPT, GenerationCapability.SEED, GenerationCapability.STEPS) }) {
                     TextButton(onClick = { advanced = !advanced }) { Text(if (advanced) "Hide advanced" else "Advanced") }
                     if (advanced) {
@@ -157,7 +167,7 @@ fun CreateImageSheet(onGenerate: (GenerationRequest, (String) -> Unit, (Result<V
                 }
                 Text("1 image · Uses Replicate API credit", style = MaterialTheme.typography.bodySmall)
                 if (error.isNotBlank()) Text(error, color = MaterialTheme.colorScheme.error)
-                Button(onClick = { if (consent.hasConsent(ReplicateSeedreamProvider.ID)) start() else consentPending = true },
+                Button(onClick = { finishPromptEntry(); if (consent.hasConsent(ReplicateSeedreamProvider.ID)) start() else consentPending = true },
                     modifier = Modifier.fillMaxWidth(), enabled = configured && prompt.isNotBlank()) { Text("Generate") }
             }
             Spacer(Modifier.height(20.dp))

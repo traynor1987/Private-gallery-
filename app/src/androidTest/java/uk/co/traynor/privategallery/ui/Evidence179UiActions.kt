@@ -5,13 +5,19 @@ import androidx.compose.ui.test.junit4.ComposeTestRule
 
 /** Materialize lazy rows before querying them; static dialog buttons have no scroll ancestor. */
 internal fun ComposeTestRule.evidenceNode(matcher:SemanticsMatcher,last:Boolean=false):SemanticsNodeInteraction {
- if(onAllNodes(matcher).fetchSemanticsNodes().isEmpty()) {
-  // The last registered scroll-to-node surface belongs to the topmost Evidence dialog.
+ waitForIdle()
+ val nodes=onAllNodes(matcher).fetchSemanticsNodes()
+ val lazyAncestor=onAllNodes(matcher and hasAnyAncestor(hasScrollToNodeAction())).fetchSemanticsNodes().isNotEmpty()
+ if(nodes.isEmpty()||lazyAncestor) {
+  // Resolve by matcher inside the current lazy tree. A text edit can replace lazy rows;
+  // retaining a node across the resulting scroll/IME layout keeps an obsolete node ID.
   onAllNodes(hasScrollToNodeAction()).onLast().performScrollToNode(matcher)
+  waitForIdle()
+ } else if(onAllNodes(matcher and hasAnyAncestor(hasScrollAction())).fetchSemanticsNodes().isNotEmpty()) {
+  val current=if(last)onAllNodes(matcher).onLast()else onNode(matcher)
+  current.performScrollTo();waitForIdle()
  }
- val nodes=onAllNodes(matcher)
- val node=if(last)nodes.onLast()else onNode(matcher)
- if(onAllNodes(matcher and hasAnyAncestor(hasScrollAction())).fetchSemanticsNodes().isNotEmpty())node.performScrollTo()
+ val node=if(last)onAllNodes(matcher).onLast()else onNode(matcher)
  return node
 }
 

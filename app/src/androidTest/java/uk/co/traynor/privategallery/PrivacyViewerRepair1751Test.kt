@@ -127,6 +127,10 @@ class PrivacyViewerRepair1751Test {
     dialog!!.setContentView(android.widget.TextView(compose.activity).apply {text="Credential fixture"})
     dialog!!.show()
    }
+   // show() returns before native focus handoff. Observe the credential window's
+   // actual focus before checking that temporary snapshot protection was restored.
+   compose.waitUntil(3000) { dialog?.window?.decorView?.hasWindowFocus()==true &&
+    !compose.activity.window.decorView.hasWindowFocus() }
    assertNormalWindow()
    compose.runOnIdle {
     assertTrue((checkNotNull(dialog!!.window).decorView.layoutParams as WindowManager.LayoutParams).flags and WindowManager.LayoutParams.FLAG_SECURE!=0)

@@ -391,7 +391,9 @@ class ModalCompletion1762Test {
             assertTrue("History owner must remain active",access.isActive())
             assertEquals("All encrypted fixture operations must load before rendering",30,access.history().size)
             try {waitText("History is encrypted")} catch(failure:Throwable) {
-                throw AssertionError("History active=${access.isActive()}, records=${runCatching{access.history().size}}\n"+compose.onAllNodes(isRoot(),useUnmergedTree=true).printToString(),failure)
+                throw AssertionError("History active=${access.isActive()}, records=${runCatching{access.history().size}}, lifecycle=${compose.activity.lifecycle.currentState}\n" +
+                    modalCaptureState1762(compose.activity).description +
+                    compose.onAllNodes(isRoot(),useUnmergedTree=true).printToString(maxDepth=20),failure)
             }
             compose.onNodeWithText("Close").assertIsDisplayed()
             compose.onNode(hasScrollToIndexAction()).performScrollToIndex(29)

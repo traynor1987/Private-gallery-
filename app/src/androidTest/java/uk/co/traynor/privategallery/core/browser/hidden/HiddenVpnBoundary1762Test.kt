@@ -23,7 +23,10 @@ class HiddenVpnBoundary1762Test {
         val provider=context.packageManager.resolveContentProvider(context.packageName+".hiddenbrowser",0)!!
         assertFalse(provider.exported);assertFalse(provider.grantUriPermissions)
         assertEquals(context.packageName,provider.processName)
-        assertFalse("Production activation awaits actual VPN evidence",HiddenVpnActivationGate.INTERACTIVE_VERIFIED)
+        // This shipped capability was enabled in the verified baseline. Its actual paths
+        // remain mandatory in HiddenVpnLive1762Test and NativeTorIsolation1762Test.
+        assertTrue("Retain the independently verified shipped VPN capability",HiddenVpnActivationGate.INTERACTIVE_VERIFIED)
+        assertTrue("Retain the independently verified shipped Tor capability",HiddenVpnActivationGate.TOR_NATIVE_VERIFIED)
     }
     @Test fun noCapabilityLaunchCannotBindPrimaryOrRetainChild() {
         val context=InstrumentationRegistry.getInstrumentation().targetContext
