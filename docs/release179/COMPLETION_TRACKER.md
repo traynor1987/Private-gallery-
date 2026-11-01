@@ -1,6 +1,6 @@
 # 1.7.9 completion gates
 
-Implementation ledger, not release approval. No179productionAPK exists. Latestactualsource d006ba9f/run41258646179:149nonroute148PASS1HiddenUIfail0skip; firstownedroutecasefailedAndroidICUregexpatternbeforepositiveproof,3othersunreached. AllnewKotlincompiled/OCRnativePASS. Two-testcorrection/nativeICUprobe sourceacceptedRUNTIME179_FIX5,0newC/I. Sixcalibratedsamples/eightactualKotlincontrols/full153/strictpacketproof remain mandatory; no canonicalfinalapproval/upgrade/signing.
+Implementation ledger, not release approval. Latestactualf76run41260590553 has150unique executedtests ALLPASS (149nonroute+vpn_revoke),0skip/error/duplicate, includingrealHiddenlock/UI/export andeightKotlincontrols. Strictgatecorrectlyfailedbecause3routeswerenotexecuted. Actualinheritedstdin drain reproducedlocally; minimal2argumentDEVNULLfix+41hostchecks+MINIMAL179_STDINsource reviewPASS. No production/Android/fixture/workflow/securityassertion change. Onecoherentexisting153-caseverificationplanned; remaining3routes/fullpacketproof/finalreview/original-keyupgrade/signingstillmandatory.
 
 | Requirement | Verified evidence | Remaining gate |
 |---|---|---|

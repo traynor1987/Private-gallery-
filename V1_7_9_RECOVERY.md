@@ -1,5 +1,19 @@
 # Private Gallery 1.7.9 — current recovery status
 
+## Current state — minimal final candidate, 1 November 2026
+
+Version remains1.7.9/code51, packageuk.co.traynor.privategallery, min/target37. Latest independently fetched remote checkpoint ae93b06a2a57cbfec9226b4b78e5532f3f438f68. Execution is available again; clean checkout recovered from GitHub with no discarded work. All earlier source/review history remains preserved below. No competing writer or active CI run was observed.
+
+Existing run41260590553 atf76bf4fe compiled and executed150 unique tests: ALL PASS, no errors/skips/duplicates. This includes all149nonroute cases (authentication/Hiddenlock/UI/OCR/incidents/search/AI/export/cleanup) andvpn_revoke with eight actual Kotlin lifecycle controls. Originalartifact13065343348 ZIP1785517 SHA25649ea8d8f70c5be9824319402014080588f30e740946a268a5fdfb0b9c3f73bf8 independentlyverified. Raw VPNclock/lifecycle/EOF subset independently validates; clockbrackets25.278/27.715ms. The run correctly failed its complete153-case gate because three routes never ran.
+
+Demonstrated blocker is TEST HARNESS, not an observed production/authentication failure: actual Recorder subprocess inherited the while-read route queue and consumed the remaining three lines. Local real-component reproduction confirmed that exact result. Minimal correction adds stdin=DEVNULL at the two noninteractive subprocess launch points only. Real four-row/Popen status regressions RED→GREEN,41focused host checksPASS, syntaxPASS, independent MINIMAL179_STDIN source reviewPASS/0newC-I-Minor. Android/app/workflow/fixture/version/153manifest/clock/privacy assertions are unchanged.
+
+Owner's minimal-CI policy: no new workflows, no blind reruns, no new fixture/security programme. Reuse valid source reviews and existing150passes as supporting evidence. Use ONE existing grouped focused Android job for the final coherent candidate: the existing release gate requires exact153 identities and all four fresh route windows/six positive clocks/eight negative controls under one source. Do not redesign that gate or combine/mislabel old partial runs merely to avoid the missing routes. No additional workflow may be launched while this candidate is running.
+
+After actual complete pass: independently verify source/artifact/XML/rawproof, continue the SAME consolidated security review with unchanged-source evidence, resolve any real C/I findings, freeze exact source, and use the reviewed existing original-key release/upgrade workflow. Original50→51 install-r/restart, certificate/package/version/APKSHA and one signed APK delivery remain mandatory. No canonical final approval, upgrade pass or signed179APK currently exists. Physical Fold acceptance remains OWNER_REQUIRED. Never uninstall/clear-data/generate replacement production keys/start another version.
+
+## Archived recovery entries
+
 ## Execution environment unavailable — 1 November 2026
 
 The execution environment was reported unavailable, and a local command failed with the exact message: “No usable execution environment is available. Wait for an environment to become available before using this tool.” This is a genuine execution blocker, not release completion. No production signing or APK delivery has occurred.

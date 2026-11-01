@@ -135,7 +135,7 @@ class Recorder:
         self.sequence+=1;prefix=f'{self.sequence:06d}';timed_out=False
         hs=time.monotonic_ns()
         try:
-            result=subprocess.run(argv,capture_output=True,timeout=timeout)
+            result=subprocess.run(argv,stdin=subprocess.DEVNULL,capture_output=True,timeout=timeout)
             hr=time.monotonic_ns();stdout,stderr,status=result.stdout,result.stderr,result.returncode
         except subprocess.TimeoutExpired as failure:
             hr=time.monotonic_ns();stdout,stderr,status=failure.stdout or b'',failure.stderr or b'',124;timed_out=True
@@ -173,7 +173,7 @@ def run(args):
         if command and command[0]=='--':command=command[1:]
         require(bool(command),'No Android invocation')
         command=command+clock_arguments(identity)
-        child=subprocess.Popen(command,env={**os.environ,'ANDROID_SERIAL':serial});lifecycle['child']=process_identity(child.pid)
+        child=subprocess.Popen(command,stdin=subprocess.DEVNULL,env={**os.environ,'ANDROID_SERIAL':serial});lifecycle['child']=process_identity(child.pid)
         def sample():
             try:
                 seen_process=None

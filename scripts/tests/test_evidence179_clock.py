@@ -188,9 +188,40 @@ class RawClockReplay(unittest.TestCase):
                 path.write_bytes(old)
 
 
+class RecorderStdinIsolation(unittest.TestCase):
+    def test_stdin_draining_command_preserves_all_four_route_rows(self):
+        import os
+        import subprocess
+        with tempfile.TemporaryDirectory() as temp:
+            root=Path(temp)
+            # Real shell loop, Recorder and child: removing stdin isolation lets
+            # the first command consume the remaining three route selections.
+            launcher="""import sys
+from pathlib import Path
+from scripts.evidence179_clock import Recorder
+root=Path(sys.argv[1])/sys.argv[2];root.mkdir()
+record,out,err=Recorder(root).command('stdin-control',[sys.executable,'-c','import sys;sys.stdout.buffer.write(sys.stdin.buffer.read())'])
+raise SystemExit(record['exit_status'])
+"""
+            script=r'''set -euo pipefail
+while IFS=$'\t' read -r case method; do
+ printf '%s\t%s\n' "$case" "$method" >> "$CONTROL_ROOT/visited"
+ python3 -c "$CONTROL_LAUNCHER" "$CONTROL_ROOT" "$case"
+done < <(printf 'vpn_revoke\tm1\nvpn_loss\tm2\ntor_revoke\tm3\ntor_death\tm4\n')
+'''
+            result=subprocess.run(['bash','-c',script],env={**os.environ,'CONTROL_ROOT':temp,'CONTROL_LAUNCHER':launcher},capture_output=True,text=True,timeout=10)
+            self.assertEqual(result.returncode,0,result.stderr)
+            self.assertEqual((root/'visited').read_text(),'vpn_revoke\tm1\nvpn_loss\tm2\ntor_revoke\tm3\ntor_death\tm4\n')
+            for case in ('vpn_revoke','vpn_loss','tor_revoke','tor_death'):
+                self.assertEqual((root/case/'000001.stdout').read_bytes(),b'')
+                self.assertEqual((root/case/'000001.stderr').read_bytes(),b'')
+                row=json.loads((root/case/'commands.jsonl').read_text())
+                self.assertEqual(row['exit_status'],0);self.assertFalse(row['timed_out'])
+
+
 class HostProtocolProcess(unittest.TestCase):
     """Real subprocess acquisition with a disposable fake device, never Android proof."""
-    def run_host(self,defect='',original=0):
+    def run_host(self,defect='',original=0,stdin_payload=None):
         import os
         import subprocess
         with tempfile.TemporaryDirectory() as temp:
@@ -220,7 +251,7 @@ if extras['op']=='SAMPLE':
 payload=base64.urlsafe_b64encode(json.dumps(v).encode()).decode().rstrip('=')
 print('Broadcast completed: result=179, data="'+payload+'"')
 ''');adb.chmod(0o755)
-            child=root/'invocation.py';child.write_text("import os,time,sys\nif os.environ['CLOCK_DEFECT']!='snapshot_after_exit':time.sleep(.6)\nsys.exit(int(os.environ['CLOCK_ORIGINAL']))\n")
+            child=root/'invocation.py';child.write_text("import os,time,sys\nfrom pathlib import Path\nif os.environ.get('CLOCK_READ_STDIN')=='1':Path(os.environ['CLOCK_STDIN_PATH']).write_bytes(sys.stdin.buffer.read())\nif os.environ['CLOCK_DEFECT']!='snapshot_after_exit':time.sleep(.6)\nsys.exit(int(os.environ['CLOCK_ORIGINAL']))\n")
             # This container does not expose its PID namespace in /proc. Simulate
             # only snapshots; acquisition, process wait/status and timeouts remain real.
             launcher="""from scripts import evidence179_clock as c
@@ -234,11 +265,23 @@ def snapshot(pid):
 with patch.object(c,'process_identity',snapshot):c.main()
 """
             command=['python3','-c',launcher,'--case','vpn_revoke' ,'--source-sha','b'*40,'--output',str(output),'--','python3',str(child)]
-            result=subprocess.run(command,env={**os.environ,'PATH':str(bin)+':'+os.environ['PATH'],'CLOCK_DEFECT':defect,'CLOCK_ORIGINAL':str(original)},text=True,capture_output=True,timeout=8)
+            stdin_path=root/'original-stdin.bin'
+            result=subprocess.run(command,env={**os.environ,'PATH':str(bin)+':'+os.environ['PATH'],'CLOCK_DEFECT':defect,'CLOCK_ORIGINAL':str(original),'CLOCK_READ_STDIN':str(int(stdin_payload is not None)),'CLOCK_STDIN_PATH':str(stdin_path)},input=stdin_payload,text=True,capture_output=True,timeout=8)
             self.assertTrue((output/'lifecycle.json').is_file(),result.stderr)
             lifecycle=json.loads((output/'lifecycle.json').read_text());rows=[json.loads(line) for line in (output/'commands.jsonl').read_text().splitlines()]
             raw={p.name:p.read_bytes() for p in output.iterdir()}
+            if stdin_path.exists():raw['original-stdin-observation']=stdin_path.read_bytes()
             return result,lifecycle,rows,raw
+    def test_original_child_sees_eof_without_losing_real_status(self):
+        for defect,original,clock_status in (('',0,0),('',23,0),('wrong_nonce',23,1)):
+            with self.subTest(defect=defect,original=original):
+                result,life,rows,raw=self.run_host(defect,original,stdin_payload='vpn_loss\tm2\ntor_revoke\tm3\ntor_death\tm4\n')
+                self.assertEqual(raw['original-stdin-observation'],b'')
+                self.assertEqual(life['original_exit_status'],original)
+                self.assertEqual(life['clock_exit_status'],clock_status)
+                self.assertEqual(result.returncode,original or clock_status)
+                self.assertEqual(raw['original-exit-status.txt'],(str(original)+'\n').encode())
+                self.assertEqual(raw['clock-exit-status.txt'],(str(clock_status)+'\n').encode())
     def test_real_host_commands_bracket_exactly_two_one_shot_samples(self):
         r,life,rows,raw=self.run_host()
         self.assertEqual(r.returncode,0,r.stderr+repr(life));self.assertEqual(life['clock_exit_status'],0)
