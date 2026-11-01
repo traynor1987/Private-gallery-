@@ -1,3 +1,23 @@
+# DELIVERED — NovaOS 1.7.10.1 / code53
+
+Completed2026-11-01. This final status supersedes historical in-progress/pending entries below.
+
+- Frozen signed app source: f923d62de7696e731c2ec7809d772081ab0e1204; release control2519bbd5ab4b623fe33c21e9dead1aaee8d420e3. Existing release/1.7.10-private-home retained.
+- API37 grouped verification run41354819734:104 mandatory cases,0 failures/errors/skips. Local original XML validation and independent reviewer agree. Artifact13102114242 archiveSHA44f83b2f5adfbe7ed8fac2ff3ee430109e5e3b4ee8ff6618e77dfc5aac759d31.
+- Production original-key acceptance run41355731517/job124995274579 succeeded: immutable original signed52 baseline; reviewed baseline-compatible fixture compilation; original signer; release lint/assembly; package/certificate/API37/OCR/native alignment; genuine install-r52->53 and restart without uninstall/data clear. Seed, after-upgrade and after-restart eachOK(1 test).
+- Signed artifact13103302785: https://github.com/traynor1987/Private-gallery-/actions/runs/41355731517/artifacts/13103302785
+- Archive SHA256:fcc70278aca63b71e5321fdbd1f2e16235ff5fec7f3a3cb27b731280ec5e1707.
+- APK:NovaOS-1.7.10.1-code53-owner-acceptance.apk;138241966 bytes; SHA256:8a13404b42720e5962478345fad964cdcc923a3115b632beb412a2813547a3a3.
+- Original certificate SHA256:94f2bfc6567f26d067d29077111cfd0ce86d38263c642ad115e43365f05b0d17. Downloaded APK actual v2 RSA/SHA512 signature, certificate and complete chunked content digest independently verified locally, in addition to SDK apksigner and Android install-r validation.
+- Package uk.co.traynor.privategallery;NovaOS1.7.10.1/code53;min/targetAPI37. No package/key/store identity migration.
+- Download: https://chatgpt.com/library?file_id=libfile_95022d95c0708191a5d4c75eab1023e7&account_id=personal
+
+Delivered: approved ringed N branding; immediate authenticated Nova Home root; ten adaptive launcher destinations; removed legacy bottom navigation; full-page existing internal apps and Private Apps settings/editor; coherent Home/Back/Lock/Panic; encrypted owner-specific Home state and Primary/Hidden separation; Evidence/browser/camera presentation; screenshot-policy consistency; Fold/light/dark/large-text presentation. Existing crypto/consent/transport authorities reused. Lock Home invalidation and dark Home text defects fixed and mandatory runtime assertions passed. TransferHistory transient timeout did not reproduce with stronger owner/30-record checks; no invented crypto diagnosis or product workaround.
+
+Independent source/control reviewer /root/release_security_review approved frozen source and release bindings, no unresolvedCritical/Important. Physical Galaxy Z Fold acceptance remains owner testing, not remotely claimed. Install over existing signed code52 without uninstall/clear. Check Home app launches, child/root Back/Home, Hidden PIN/timeout, Fold/theme, screenshots on eligible pages and Lock/Panic; existing encrypted content must remain.
+
+---
+
 ## Frozen code53 source and production activation
 Frozen app/source f923d62de7696e731c2ec7809d772081ab0e1204 passed run41354819734:104 Android17 cases,0 failures/errors/skips; host/JVM/app/test assembly pass. Original downloaded artifact13102114242 SHA44f83b2f5adfbe7ed8fac2ff3ee430109e5e3b4ee8ff6618e77dfc5aac759d31 independently verified against original XML. Corrected Home dark screenshots inspected. TransferHistory passed unchanged product and original assertions plus owner/30-record preconditions; no claim of a diagnosed crypto bug. Independent reviewer approved exactsource including lock/contrast changes with no unresolvedCritical/Important. Marker binds source/run/review/fixture/matrix hashes. Original-key code52->53 upgrade/restart and production validation remain mandatory. NO signed code53 delivery claimed yet.
 
