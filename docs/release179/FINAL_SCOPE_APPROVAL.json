@@ -15,7 +15,7 @@
     "scripts/validate_upgrade179.py": "b6cb50ed2c58d8489eb37845e430a082641014636321c33c65dc5e2c73071974",
     "scripts/verify_compiled_upgrade179.py": "eec6d1863d7a4db55a76bf5655158c669bb3d889f536ff544270e38c4be37fe5",
     "scripts/verify_final_scope179.py": "b21237fd95c6cfcd6cb35bde89f1fd4d5ea44f8eccd301987b6a60f68ee1fa6e",
-    "scripts/verify_synthetic_upgrade179.sh": "233246421b783cb3901dde3efb96a16ee84f5d71beaa0e8891f3e8c34fc64f9f",
+    "scripts/verify_synthetic_upgrade179.sh": "4068d99d566dff66980fa66755a244e22836018bd9eb1e8ce67af1a929b0f67a",
     "scripts/verify_upgrade179_baseline.py": "798a878d617c3ed939b7a5ed975624036cc549bfbdbc1ff157a03efe27041f3c"
   },
   "decision": "APPROVED",

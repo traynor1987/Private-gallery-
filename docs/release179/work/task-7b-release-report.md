@@ -150,3 +150,142 @@ No unchanged host aggregate or Android suite rerun. No Git/push/CI, secrets acce
 |---|---|
 | `scripts/verify_synthetic_upgrade179.sh` | `233246421b783cb3901dde3efb96a16ee84f5d71beaa0e8891f3e8c34fc64f9f` |
 | `scripts/tests/test_upgrade179_runner.py` | `8229ec344d1f1442e28896978dbd18695ef993aa8841f914b0b91aca584bbbd4` |
+
+
+## Scoped correction round3/5 — verify both schemes across the signature API range (2026-11-01)
+
+Re-read `subagent-driven-development/references/fix-loop.md` before this round. Root's second production attempt41299753877/job124828087675 again aborted before application installation, at the unchanged mandatory instrumentation v2 check. Root supplied failure artifact13080923102 (ZIP76469 bytes, SHA256 `2d3669734960c5d21bdd73123242a85128c4c7b8a57559f51b64ae41b36c6bb0`), already safely extracted under `/workspace/scratch/4181ccd09b2e/production179-retry-failure/original`. I read its signature receipt: v2false/v3true, one signer, exact original certificate. Its `control-hashes.json` records runner `233246421b783cb3901dde3efb96a16ee84f5d71beaa0e8891f3e8c34fc64f9f`, confirming the explicit-v2 signer command was the actual retry control. Seed/verify/restart receipts remain absent.
+
+### Corrected diagnosis from actual implementation
+
+The round2/root initial inference that verbose `v2: false` established a missing v2 block was **not proved and was incorrect as a diagnosis**. This boolean can mean the v2 verifier was not executed. Round2's mock command tests proved the emitted signing flag and existing gates, but did not characterize the real verifier's SDK-dependent scheme selection. The explicit v2 signing option remains appropriate and is preserved; it alone cannot force the default API37 verification path to report v2true after verifying v3.
+
+Inspected actual local apksig implementation, not just the fake tool. Root's `/tmp/apk179-verifier-bytecode.txt` was produced with:
+
+```
+java -m jdk.jdeps/com.sun.tools.javap.Main -classpath /workspace/scratch/4181ccd09b2e/apk179-host/tools/usr/share/java/apksig.jar -c -p com.android.apksig.ApkVerifier
+```
+
+`verify(DataSource)` calls `verifyAndGetMinSdkVersion` at offsets30–35. The v3 verifier is invoked at101 for a supported maximum API range. At158–172, effective minimum>=28 and a nonempty found-schemes set branches to248, skipping the v2 verifier. When minimum24 is supplied, the branch goes through175–191 and invokes `V2SchemeVerifier.verify`, preserving v3 verification and the existing unrestricted default maximum. This is verification policy, not a manifest edit.
+
+Also ran:
+
+```
+java -m jdk.jdeps/com.sun.tools.javap.Main -classpath /workspace/scratch/4181ccd09b2e/apk179-host/tools/usr/share/java/apksig.jar -c -p com.android.apksig.DefaultApkSignerEngine > /tmp/apk179-signer-engine-bytecode.txt
+```
+
+Exit0. In `outputZipSectionsInternal`, offsets90–140 test `mV2SigningEnabled`, generate the v2 block via `V2SchemeSigner.generateApkSignatureSchemeV2Block`, and add it to the output block list. Subsequent offsets142–188 independently generate/add v3 when enabled. This supports retaining explicit v2 signing and v3 together; it is not a claim to have inspected the failed instrumentation APK bytes.
+
+Read actual CLI help:
+
+```
+java -jar /workspace/scratch/4181ccd09b2e/apk179-host/tools/usr/share/java/apksigner.jar verify --help
+```
+
+Exit0. Help defines `--min-sdk-version` as the lowest API level for **signature verification**, defaults it to AndroidManifest.xml, and describes min/max overrides as a custom verification range. No app minSDK, targetSDK or emulator SDK is changed by this verification option.
+
+### Actual read-only cryptographic characterization
+
+Confirmed retained original50 APK SHA256 is exactly `df958e447ce1c5a9bc9b515d16de03c0d11a961ae6efb030b305b2dfe733ccf3`. Executed both actual local verifier commands, without any key or signing operation:
+
+```
+java -jar /workspace/scratch/4181ccd09b2e/apk179-host/tools/usr/share/java/apksigner.jar verify --verbose --print-certs /workspace/scratch/4181ccd09b2e/original178code50.apk > /tmp/upgrade179-baseline-default-verify.txt
+java -jar /workspace/scratch/4181ccd09b2e/apk179-host/tools/usr/share/java/apksigner.jar verify --min-sdk-version 24 --verbose --print-certs /workspace/scratch/4181ccd09b2e/original178code50.apk > /tmp/upgrade179-baseline-min24-verify.txt
+```
+
+Both exited0. The broadened-range verification output included:
+
+```
+Verifies
+Verified using v1 scheme (JAR signing): false
+Verified using v2 scheme (APK Signature Scheme v2): true
+Verified using v3 scheme (APK Signature Scheme v3): false
+Verified using v4 scheme (APK Signature Scheme v4): false
+Verified for SourceStamp: false
+Number of signers: 1
+Signer #1 certificate SHA-256 digest: 94f2bfc6567f26d067d29077111cfd0ce86d38263c642ad115e43365f05b0d17
+```
+
+This is genuine read-only verification of the archived original50 APK. That APK does not provide a dual-v2/v3 reproducer: its output reports v3false. The failed instrumentation APK is intentionally absent from the filtered failure artifact, so its v2 bytes cannot be independently verified locally. The locally supplied apksigner31.0.2/apksig0.9 implementation is characterization evidence, not a claim that it is byte-identical to CI build-tools36. Actual CI instrumentation cryptographic verification remains mandatory.
+
+### Minimal correction and covering tests
+
+Only the instrumentation verifier invocation changes:
+
+```
+"$sdk/apksigner" verify --min-sdk-version 24 --verbose --print-certs "$instrumentation_apk"
+```
+
+The explicit `--v2-signing-enabled true` signer option and original production key references remain untouched. v3 is not disabled; no maximum verification API is lowered. The mandatory v2true/original-certificate/one-signer checks and all original baseline/candidate package, version, API37, identity, compilation-provenance, upgrade and delivery gates remain untouched. No manifest, application, Android test, fixture, workflow, version, source approval or marker change. Reversing only this range option recovers the exact failed retry runner hash233246… above.
+
+Updated the existing two focused methods in `scripts/tests/test_upgrade179_runner.py::InstrumentationSigning179` to record and assert the actual verifier arguments, including `--min-sdk-version 24`, the same instrumentation private-copy path and unchanged verbose/cert flags. It still asserts exact v2 signing/original key environment-reference arguments and executes the retained rejection checks for v2false, foreign certificate, two signers, sign failure and verifier failure. Test keys/passwords/APKs are not created; the external signer is a process double.
+
+Covering command, before implementation:
+
+```
+PYTHONDONTWRITEBYTECODE=1 python3 -m unittest scripts.tests.test_upgrade179_runner.InstrumentationSigning179 -q
+```
+
+RED: `Ran 2 tests in 0.558s`, `FAILED (failures=1)`; the actual old verifier invocation was rejected with91 because it omitted the required verification range. After the one-line change, the same command produced:
+
+```
+----------------------------------------------------------------------
+Ran 2 tests in 0.473s
+
+OK
+```
+
+`bash -n scripts/verify_synthetic_upgrade179.sh` exited0 with no output. In-memory reverse-option/archived-control-hash and missing-upgrade-receipt assertions printed `PASS: exact single verify-range delta; prior explicit-v2 signer preserved; no archived upgrade phase receipts`.
+
+No unchanged host aggregate or153-case Android rerun. No Git/push/CI, secrets, replacement credentials/keys, APK signing/modification, device install/uninstall/data-clear or subagents. Frozen source `19e3275ef17746e780d64e6a684d94bab2cabdc3` and canonical approval are preserved. This is a correction handback for independent scoped review; real original-key instrumentation verification plus original50→51 seed/install-r/verify/restart remain for root's next single existing production attempt. No success is inferred from the mock or bytecode. Round3 handback is frozen.
+
+| Evidence/changed path | SHA256 |
+|---|---|
+| `Retry instrumentation signature receipt` | `47c847f717e50523d9e2089a15ec3d0c381b2a9d5b4d6fe29f992c2f9dfa6eb8` |
+| `Local apksig.jar characterization implementation` | `5e5c33e9c713fb599c29ac2ba591d8b1bdfd1ffbef80772eaf1788314f9ee378` |
+| `Actual original50 min24 verification output` | `6240548eacda1f37f55e7557ba266f5b1d6ad1fb692c39a7c713609d8b7a7536` |
+| `scripts/verify_synthetic_upgrade179.sh` | `4068d99d566dff66980fa66755a244e22836018bd9eb1e8ce67af1a929b0f67a` |
+| `scripts/tests/test_upgrade179_runner.py` | `c0189a5c442a7ec1932ea8f074aa24a62fab9927823bcd0cf8dd1b3f0b341ed3` |
+
+
+### Round3 pre-freeze supplement — real dual-scheme reproduction and V3 coverage boundary
+
+Root requested a specific additional check before the round3 freeze: could broader verification from24 uncover an unintended V3 coverage gap28–36 because the instrumentation manifest minSDK is37? Inspected the actual local engine's `processV3Configs` bytecode: offsets120–125 set the last/sole signer's maximum to Integer.MAX_VALUE; offsets139–150 derive its minimum from `getMinSdkFromV3SignatureAlgorithms`, not directly from manifest minSDK. That helper returns the applicable signature algorithm's supported minimum. `V3SchemeSigner.getSuggestedSignatureAlgorithms` chooses RSA_PKCS1_V1_5_WITH_SHA512 for the observed original RSA4096 public key (greater than3072 bits).
+
+Confirmed this using the actual library on the cryptographically verified original50 **public** certificate, without a private key, signer invocation or APK mutation. Scratch Java probe `/tmp/Upgrade179V3Range.java` uses `new ApkVerifier.Builder(original50).setMinCheckedPlatformVersion(24).build().verify()`, requires verified/v2/one signer, reads its public key, and calls `V3SchemeSigner.getSuggestedSignatureAlgorithms(key,37,false)`. Executed:
+
+```
+java com.sun.tools.javac.Main -cp /workspace/scratch/4181ccd09b2e/apk179-host/tools/usr/share/java/apksig.jar /tmp/Upgrade179V3Range.java
+java -cp /tmp:/workspace/scratch/4181ccd09b2e/apk179-host/tools/usr/share/java/apksig.jar Upgrade179V3Range /workspace/scratch/4181ccd09b2e/original178code50.apk > /tmp/upgrade179-v3-range.txt
+```
+
+Both exited0. Exact output:
+
+```
+Verified original public-key algorithm=RSA bits=4096
+Actual V3 algorithm for APK minSDK37=RSA_PKCS1_V1_5_WITH_SHA512 algorithmMinSDK=24
+```
+
+Together with the actual engine control flow, this yields a signature range24..Integer.MAX_VALUE, covering the V3 verifier's28..maximum range without a28–36 gap for this unrotated single RSA4096 signer. Root additionally inspected the corresponding primary AOSP engine source: https://android.googlesource.com/platform/tools/apksig/+/master/src/main/java/com/android/apksig/DefaultApkSignerEngine.java . No production change beyond the single verification-range option was needed.
+
+Root then obtained a genuine, already-signed public AOSP dual-v2/v3 diagnostic APK, resolving the earlier lack of a direct dual-scheme reproducer. Primary file: https://android.googlesource.com/platform/tools/apksig/+/refs/heads/main/src/test/resources/com/android/apksig/golden-unaligned-v2v3-out.apk ; official Git blob `c18c445a43685c42f292a5a592eb47a15cbb31be`. Root downloaded its `?format=TEXT` representation, decoded it to `/tmp/aosp179-v2v3.apk`, and ran the real local apksigner at minimum37 and24. I independently checked the8631-byte file, SHA256 `dd651a2f60754b10e352298d107f8f45395e30f08203671eb2befbdfbf216479`, and Git blob SHA1 computed as SHA1(`blob 8631` + NUL + bytes), exactly matching that official blob. This sample is strictly diagnostic, never a production baseline/candidate/test fixture or authorized production certificate.
+
+Root's actual read-only verifier operations used the same local `apksigner.jar`, with `verify --min-sdk-version 37 --verbose --print-certs /tmp/aosp179-v2v3.apk` and then `verify --min-sdk-version 24 --verbose --print-certs /tmp/aosp179-v2v3.apk`. Root reports both exit0. Outputs retained at `/tmp/aosp179-v2v3-verify-min37.txt` and `/tmp/aosp179-v2v3-verify-min24.txt` were independently read/checked by this worker without redundantly rerunning them:
+
+| Actual public-sample verification | v2 verified | v3 verified | Signers |
+|---|---|---|---|
+| minimum37, default maximum | false | true | 1 |
+| minimum24, default maximum | true | true | 1 |
+
+Both contain the identical public AOSP certificate SHA256 `fb5dbd3c669af9fc236c6991e6387b7f11ff0590997f22d0f5c74ff40e04fca8`. This directly reproduces the observed verifier skip and the broadened-range dual verification, using real cryptographic bytes and tools with no signing, key creation or device/CI operation. It does not claim the unretained failed production instrumentation APK was locally verified.
+
+As an additional negative boundary check, copied the actual successful min24 public-sample output into a temporary receipt directory and executed the runner's unchanged three instrumentation certificate/v2/single-signer assertions under `set -euo pipefail`. The real production certificate assertion rejected that genuinely signed public-sample receipt with exit1 and no continuation marker. Output: `PASS: unchanged actual production certificate gate rejected genuine public AOSP dual-signature verification receipt; exit 1`. The public sample therefore cannot satisfy or replace the original94f2… production identity gate.
+
+No new implementation change or same-source host/Android suite rerun occurred during these additional checks. The earlier statement that no dual-scheme sample was locally available is superseded by this supplied and independently hashed public AOSP sample. All production limitations remain: the upcoming original-key instrumentation and original50→51 upgrade/restart must actually execute successfully. This supplement closes the requested pre-freeze investigation; final round3 report freeze follows these evidence hashes.
+
+| Additional diagnostic evidence | SHA256 |
+|---|---|
+| `/tmp/Upgrade179V3Range.java` | `ce2c348fa4354322fdfac6e8cffcb8d5063216f3aa4cb93562221b4b17fb3de0` |
+| `/tmp/upgrade179-v3-range.txt` | `b67104ca39cae62ab74d169c5aa9a17c1272915858c4ab2917cccba68884ed1e` |
+| `/tmp/aosp179-v2v3-verify-min37.txt` | `9580277c857547142b58620434e23bf4a82a7de38790b7128f2e2af2ccdf9132` |
+| `/tmp/aosp179-v2v3-verify-min24.txt` | `804b8ff696fcbbf2facc4c81a080733c1e32c267f41336175d048591f7dd0a3a` |

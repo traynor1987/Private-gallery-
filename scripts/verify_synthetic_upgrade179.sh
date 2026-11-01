@@ -59,7 +59,7 @@ proof=json.loads(Path(sys.argv[1]).read_text())
 Path(sys.argv[2]).write_text(proof['transformed_fixture_sha256']+'  reviewed-production-fixture.kt\n')
 PYCOMPILED
 "$sdk/apksigner" sign --v2-signing-enabled true --ks "${ORG_GRADLE_PROJECT_PRIVATE_GALLERY_STORE_FILE:?}" --ks-key-alias "${KEY_ALIAS:?}" --ks-pass env:STORE_PASSWORD --key-pass env:KEY_PASSWORD "$instrumentation_apk"
-"$sdk/apksigner" verify --verbose --print-certs "$instrumentation_apk" > "$artifact_dir/upgrade-instrumentation-signature.txt"
+"$sdk/apksigner" verify --min-sdk-version 24 --verbose --print-certs "$instrumentation_apk" > "$artifact_dir/upgrade-instrumentation-signature.txt"
 grep -Fxq 'Signer #1 certificate SHA-256 digest: 94f2bfc6567f26d067d29077111cfd0ce86d38263c642ad115e43365f05b0d17' "$artifact_dir/upgrade-instrumentation-signature.txt"
 grep -Fxq 'Verified using v2 scheme (APK Signature Scheme v2): true' "$artifact_dir/upgrade-instrumentation-signature.txt"
 grep -Fxq 'Number of signers: 1' "$artifact_dir/upgrade-instrumentation-signature.txt"

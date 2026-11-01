@@ -67,7 +67,7 @@ class InstrumentationSigning179(unittest.TestCase):
         end=source.index('sha256sum "$instrumentation_apk"',start)
         block=source[start:end]
         temporary=tempfile.TemporaryDirectory();self.addCleanup(temporary.cleanup)
-        root=Path(temporary.name);record=root/'sign-arguments.json'
+        root=Path(temporary.name);record=root/'sign-arguments.json';verification_record=root/'verify-arguments.json'
         apk=root/'private-copy/instrumentation.apk';keystore=root/'original-key-reference-only.jks'
         tool=root/'apksigner'
         tool.write_text('#!'+sys.executable+'\n'+'''import json,os,sys
@@ -75,7 +75,8 @@ from pathlib import Path
 if sys.argv[1]=='sign':
     Path(os.environ['SIGN_ARGUMENTS']).write_text(json.dumps(sys.argv[1:]))
     raise SystemExit(int(os.environ['SIGN_STATUS']))
-if sys.argv[1:]!=['verify','--verbose','--print-certs',os.environ['instrumentation_apk']]:
+Path(os.environ['VERIFY_ARGUMENTS']).write_text(json.dumps(sys.argv[1:]))
+if sys.argv[1:]!=['verify','--min-sdk-version','24','--verbose','--print-certs',os.environ['instrumentation_apk']]:
     raise SystemExit(91)
 print(os.environ['SIGNATURE_FIXTURE'])
 raise SystemExit(int(os.environ['VERIFY_STATUS']))
@@ -84,18 +85,19 @@ raise SystemExit(int(os.environ['VERIFY_STATUS']))
         good='Verifies\nVerified using v2 scheme (APK Signature Scheme v2): true\nNumber of signers: 1\nSigner #1 certificate SHA-256 digest: 94f2bfc6567f26d067d29077111cfd0ce86d38263c642ad115e43365f05b0d17\n'
         env={**os.environ,'sdk':str(root),'artifact_dir':str(root),'instrumentation_apk':str(apk),
              'ORG_GRADLE_PROJECT_PRIVATE_GALLERY_STORE_FILE':str(keystore),'KEY_ALIAS':'original-alias-reference-only',
-             'SIGN_ARGUMENTS':str(record),'SIGNATURE_FIXTURE':good if signature is None else signature,
+             'SIGN_ARGUMENTS':str(record),'VERIFY_ARGUMENTS':str(verification_record),'SIGNATURE_FIXTURE':good if signature is None else signature,
              'SIGN_STATUS':str(sign_status),'VERIFY_STATUS':str(verify_status)}
         result=subprocess.run(['bash','-c','set -euo pipefail\n'+block+"printf 'SIGNATURE_ADMITTED\\n'\n"],env=env,text=True,capture_output=True)
         self.assertFalse(keystore.exists());self.assertFalse(apk.exists())
-        return result,json.loads(record.read_text()),str(keystore),str(apk),good
+        return result,json.loads(record.read_text()),str(keystore),str(apk),good,json.loads(verification_record.read_text()) if verification_record.exists() else None
 
-    def test_actual_sign_command_enables_v2_and_keeps_original_key_environment_references(self):
-        result,args,keystore,apk,_=self.signing_block()
+    def test_actual_commands_enable_v2_verify_from24_and_keep_original_key_references(self):
+        result,args,keystore,apk,_,verification_args=self.signing_block()
         self.assertEqual(0,result.returncode,result.stderr)
         self.assertEqual('SIGNATURE_ADMITTED\n',result.stdout)
         self.assertEqual(['sign','--v2-signing-enabled','true','--ks',keystore,'--ks-key-alias','original-alias-reference-only',
             '--ks-pass','env:STORE_PASSWORD','--key-pass','env:KEY_PASSWORD',apk],args)
+        self.assertEqual(['verify','--min-sdk-version','24','--verbose','--print-certs',apk],verification_args)
 
     def test_signature_gate_still_rejects_missing_v2_foreign_certificate_multiple_signers_and_tool_errors(self):
         good='Verifies\nVerified using v2 scheme (APK Signature Scheme v2): true\nNumber of signers: 1\nSigner #1 certificate SHA-256 digest: 94f2bfc6567f26d067d29077111cfd0ce86d38263c642ad115e43365f05b0d17\n'
