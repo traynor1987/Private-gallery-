@@ -29,7 +29,12 @@ class RouteEvidenceTest(unittest.TestCase):
    elif phase!='success':value['retirement']=dict(action,phase=phase,admitted_sequence=observed[1]['sequence'],admitted_epoch=observed[1]['epoch'],active_failed=True,old_route_current=False,new_post_rejected=True,credentials_retained=case in ('vpn_loss','tor_death'),wireguard_retained=case=='vpn_revoke',network_lost=case=='vpn_loss',tor_absent=mode=='Tor',admission_observed_elapsed_ns=9_000_000_000,transport_retired_elapsed_ns=10_040_000_000,remote_close='unavailable_after_path_loss' if case=='vpn_loss' else 'required_peer_close')
    if mode=='VPN':dns += [dict(name=host,qtype=q,source='10.91.0.2',time=1001) for q in (1,28)]
   if mode=='Tor':value['tor']=dict(pid=123,uid=10123,parent_uid=10123,socket_uid=10123,parent_mode=448,socket_type=49152,unix_ready=True,bootstrap=100,unix_relative='ts/synthetic/socket');value['sink']=dict(v4=1,v6=1,udp=3)
-  return value,events,dns,onion,source,dict(start=999,end=1100)
+  calibration={}
+  for phase in phases[1:-1]:
+   arm=next(x for x in events if x['phase']==phase and x['kind']=='action-arm')
+   action=value['cancel'] if phase=='cancel' else value['retirement']
+   calibration[phase]=dict(sample_elapsed_ns=action['action_elapsed_ns'],host_send_ns=int(arm['monotonic']*1e9)+10_000_000,host_receive_ns=int(arm['monotonic']*1e9)+20_000_000)
+  return value,events,dns,onion,source,calibration,dict(start=999,end=1100)
  def test_all_four_complete_cross_observations_are_accepted(self):
   for case in v.CASES:
    data=self.fixture(case);v.check_events(data[1]);self.assertEqual(v.check_case(*data),'a'*32)

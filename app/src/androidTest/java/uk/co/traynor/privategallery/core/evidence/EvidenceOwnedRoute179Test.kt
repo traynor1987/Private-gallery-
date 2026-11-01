@@ -94,8 +94,10 @@ class EvidenceOwnedRoute179Test {
   val engine=WireGuardVpnEngine(OfficialWireGuardBackend(app))
   var coordinator:EvidenceRouteCoordinator?=null;var route:EvidenceRoute?=null
   val operations=JSONArray()
-  val result=JSONObject().put("schema",1).put("case",case).put("method",method).put("classname",javaClass.name).put("nonce",nonce).put("source_sha",source).put("mode",if(isTor)"Tor" else "VPN").put("uid",Process.myUid())
+  val result=JSONObject().put("schema",1).put("case",case).put("method",method).put("classname",EvidenceOwnedRoute179Test::class.java.name).put("nonce",nonce).put("source_sha",source).put("mode",if(isTor)"Tor" else "VPN").put("uid",Process.myUid())
+  var clock:EvidenceRouteClock179?=null
   try {
+   val routeClock=EvidenceRouteClock179(app,arguments,case,method,nonce,source,instrumentation.javaClass.name);clock=routeClock
    until("Previous transports retired"){HiddenVpnBrowserBroker.admissionRetired()&&!HiddenVpnBrowserBroker.hasDedicatedProcess(app)&&!HiddenTorIsolationService.hasTorProcess(app)&&HiddenTorIsolationService.released()&&networks().isEmpty()}
    val profile=(VpnProfileParser.import("Disposable evidence179",shell("cat $config")) as VpnProfileImportResult.Accepted).profile
    coordinator=withContext(Dispatchers.Main.immediate){EvidenceRouteCoordinator(app,access,
@@ -167,8 +169,9 @@ class EvidenceOwnedRoute179Test {
     val failedAt=AtomicLong();val published=AtomicBoolean()
     val work=activeRequest(request("cancel"),failedAt,published)
     val start=event("cancel","slow-start");val arm=armAction("cancel",work,failedAt,published)
-    check(work.isActive&&!work.isCompleted&&failedAt.get()==0L)
-    val action=SystemClock.elapsedRealtimeNanos();work.cancelAndJoin()
+    val clockClaim=routeClock.prepare("cancel",arm)
+    check(work.isActive&&!work.isCompleted&&failedAt.get()==0L&&!published.get())
+    val action=routeClock.actionTimestamp(clockClaim);work.cancelAndJoin()
     assertTrue(work.isCancelled);assertFalse(published.get());assertTrue(failedAt.get()>=action);assertTrue(connected.current())
     val closed=event("cancel","slow-closed")
     result.put("cancel",JSONObject().put("start",start.getLong("sequence")).put("closed",closed.getLong("sequence")).put("cancelled",work.isCancelled)
@@ -181,8 +184,9 @@ class EvidenceOwnedRoute179Test {
    val targetPid=if(loss&&isTor)processes().single().pid else null
    if(targetPid!=null)assertEquals(result.getJSONObject("tor").getInt("pid"),targetPid)
    val arm=armAction(phase,active,failedAt,published)
-   check(active.isActive&&!active.isCompleted&&failedAt.get()==0L)
-   val action=SystemClock.elapsedRealtimeNanos()
+   val clockClaim=routeClock.prepare(phase,arm)
+   check(active.isActive&&!active.isCompleted&&failedAt.get()==0L&&!published.get())
+   val action=routeClock.actionTimestamp(clockClaim)
    if(loss){if(isTor)Process.killProcess(checkNotNull(targetPid)) else engine.disconnect()}else session.lock()
    result.put("retirement",JSONObject().put("phase",phase).put("admitted_sequence",admitted.getLong("sequence")).put("admitted_epoch",admitted.getDouble("epoch"))
     .put("admission_observed_elapsed_ns",admissionObserved).put("arm",arm).put("action_elapsed_ns",action).put("live_at_action",true))
@@ -202,9 +206,11 @@ class EvidenceOwnedRoute179Test {
    repeat(10){assertFalse(connected.current());if(isTor)assertTrue(processes().isEmpty());delay(100)}
    assertNull(manager.boundNetworkForProcess);result.put("operations",operations)
   }finally{
+   try {
    route?.close();coordinator?.close();access.close();session.lock();engine.disconnect()
    until("All owned services/Networks released",30){!engine.ownsTunnel&&networks().isEmpty()&&HiddenTorIsolationService.released()&&!HiddenTorIsolationService.hasTorProcess(app)&&!HiddenVpnBrowserBroker.hasDedicatedProcess(app)}
    assertNull(manager.boundNetworkForProcess);storage.deleteRecursively();activity.close()
+   }finally{clock?.let{result.put("clock",it.closeAndReceipt())}}
   }
   result.put("cleanup_retired",true).put("process_binding_after_null",manager.boundNetworkForProcess==null)
   output.mkdirs();val file=File(output,"evidence179-route-$case.json");check(!file.exists());file.writeText(result.toString())

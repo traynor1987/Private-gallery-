@@ -34,7 +34,7 @@ class RunnerContinuation(unittest.TestCase):
             if i==0 and failed:ET.SubElement(c,'failure').text='synthetic control fixture, not Android evidence'
             if i==1 and skipped:ET.SubElement(c,'skipped')
         ET.ElementTree(suite).write(directory/'synthetic.xml')
-    def run_control(self,status,archive_failure=False,route=False):
+    def run_control(self,status,archive_failure=False,route=False,clock_status=0):
         shutil.rmtree(self.work/'app/build',ignore_errors=True)
         self.root.mkdir(parents=True)
         if archive_failure:
@@ -51,12 +51,29 @@ class RunnerContinuation(unittest.TestCase):
  [[ "$1" == 15s ]]
 }
 '''
-        prefix='set -euo pipefail\n'+mock_timeout+'root=app/build/evidence179\nselection=synthetic\n'+self.function
+        mock_clock=r'''python3(){
+ if [[ "$1" != scripts/evidence179_clock.py ]]; then command python3 "$@"; return; fi
+ shift
+ local out clock_status=${TEST_CLOCK_STATUS:-0} status=0
+ while [[ "$1" != -- ]]; do
+  if [[ "$1" == --output ]]; then out=$2; fi
+  shift 2
+ done
+ shift
+ "$@" || status=$?
+ mkdir -p "$out"
+ printf '%s\n' "$status" > "$out/original-exit-status.txt"
+ printf '%s\n' "$clock_status" > "$out/clock-exit-status.txt"
+ if [[ "$status" != 0 ]]; then return "$status"; fi
+ return "$clock_status"
+}
+'''
+        prefix='set -euo pipefail\n'+mock_timeout+mock_clock+'root=app/build/evidence179\nselection=synthetic\n'+self.function
         if route:
             script=prefix+'case=vpn_revoke\nmethod=synthetic\n'+self.route+"printf 'ROUTE_SELECTION_PASSED\\n'\n"
         else:
             script=prefix+self.begin+"printf 'ROUTES_PERMITTED\\n'\n"+self.final+"printf 'STRICT_VALIDATOR_REACHED\\n'\n"
-        env={**os.environ,'TEST_INPUT_XML':str(self.work/'synthetic-input/synthetic.xml'),'TEST_STATUS':str(status),'GITHUB_SHA':'a'*40,'EVIDENCE179_ONION_HTTPS_URL':'https://'+'a'*56+'.onion'}
+        env={**os.environ,'TEST_INPUT_XML':str(self.work/'synthetic-input/synthetic.xml'),'TEST_STATUS':str(status),'TEST_CLOCK_STATUS':str(clock_status),'GITHUB_SHA':'a'*40,'EVIDENCE179_ONION_HTTPS_URL':'https://'+'a'*56+'.onion'}
         return subprocess.run(['bash','-c',script],cwd=self.work,env=env,text=True,capture_output=True)
     def assert_statuses(self,original,collection):
         self.assertEqual(str(original),(self.root/'nonroute-exit-status.txt').read_text().strip())
@@ -109,6 +126,18 @@ class RunnerContinuation(unittest.TestCase):
         self.assertIn('PEER_CLOSE_REACHED',r.stdout);self.assertIn('ROUTE_SELECTION_PASSED',r.stdout)
         phases=[json.loads(line) for line in (self.root/'host-phases.jsonl').read_text().splitlines()]
         self.assertEqual(0,phases[-1]['original_exit_status']);self.assertEqual(0,phases[-1]['collection_exit_status']);self.assertEqual(0,phases[-1]['peer_close_exit_status'])
+    def test_clock_failure_preserves_original_and_collection_status_and_stops_peer(self):
+        for original in (0,1,124,137):
+            self.reports(self.route_cases[:1],failed=original!=0)
+            r=self.run_control(original,route=True,clock_status=1)
+            self.assertEqual(original or 1,r.returncode,r.stderr)
+            phases=[json.loads(line) for line in (self.root/'host-phases.jsonl').read_text().splitlines()]
+            self.assertEqual(original,phases[-1]['original_exit_status'])
+            self.assertEqual(0,phases[-1]['collection_exit_status'])
+            self.assertEqual(1,phases[-1]['clock_exit_status'])
+            self.assertNotIn('PEER_CLOSE_REACHED',r.stdout)
+            self.assertNotIn('ROUTE_SELECTION_PASSED',r.stdout)
+
     def test_missing_results_never_permit_routes(self):
         r=self.run_control(1);self.assertNotEqual(0,r.returncode);self.assertNotIn('ROUTES_PERMITTED',r.stdout)
     def test_partial_duplicate_foreign_or_skipped_results_never_permit_routes(self):

@@ -26,12 +26,25 @@ run_selection() {
  # Keep device execution and evidence collection distinct for every caller/route.
  selection_original_status=0
  selection_collection_status=0
+ selection_clock_status=0
  # Clear only disposable generated instrumentation outputs, so stale XML/receipts cannot satisfy accounting.
  rm -rf app/build/outputs/androidTest-results/connected/debug app/build/outputs/connected_android_test_additional_output
- timeout --signal=TERM --kill-after=30s 15m ./gradlew :app:connectedDebugAndroidTest "-Pandroid.testInstrumentationRunnerArguments.class=$identity" \
-  -Pandroid.testInstrumentationRunnerArguments.hiddenVpnConfig=/data/local/tmp/hidden-vpn1762.conf \
-  "-Pandroid.testInstrumentationRunnerArguments.evidence179OnionHttpsUrl=$EVIDENCE179_ONION_HTTPS_URL" \
-  "-Pandroid.testInstrumentationRunnerArguments.evidence179SourceSha=$GITHUB_SHA" --stacktrace || gradle_status=$?
+ local command=(timeout --signal=TERM --kill-after=30s 15m ./gradlew :app:connectedDebugAndroidTest "-Pandroid.testInstrumentationRunnerArguments.class=$identity"
+  -Pandroid.testInstrumentationRunnerArguments.hiddenVpnConfig=/data/local/tmp/hidden-vpn1762.conf
+  "-Pandroid.testInstrumentationRunnerArguments.evidence179OnionHttpsUrl=$EVIDENCE179_ONION_HTTPS_URL"
+  "-Pandroid.testInstrumentationRunnerArguments.evidence179SourceSha=$GITHUB_SHA" --stacktrace)
+ if [[ "$label" =~ ^(vpn_revoke|vpn_loss|tor_revoke|tor_death)$ ]]; then
+  local wrapper_status=0
+  python3 scripts/evidence179_clock.py --case "$label" --source-sha "$GITHUB_SHA" --output "$root/clock/$label" -- "${command[@]}" || wrapper_status=$?
+  gradle_status=2;selection_clock_status=1
+  if [[ -f "$root/clock/$label/original-exit-status.txt" ]]; then gradle_status=$(cat "$root/clock/$label/original-exit-status.txt"); fi
+  if [[ -f "$root/clock/$label/clock-exit-status.txt" ]]; then selection_clock_status=$(cat "$root/clock/$label/clock-exit-status.txt"); fi
+  [[ "$gradle_status" =~ ^-?[0-9]+$ && "$selection_clock_status" =~ ^[01]$ ]] || return 2
+  # Wrapper/infrastructure failure must never be masked by zero status files.
+  if [[ "$wrapper_status" != 0 && "$gradle_status" == 0 && "$selection_clock_status" == 0 ]]; then selection_clock_status=1; fi
+ else
+  "${command[@]}" || gradle_status=$?
+ fi
  selection_original_status=$gradle_status
  if [[ "$gradle_status" == 124 || "$gradle_status" == 137 ]]; then
   # A hung invocation fails closed before the job deadline, preserving original test artifacts.
@@ -52,7 +65,8 @@ for path in additional.rglob('evidence179-route-*.json'):
  shutil.copyfile(path,target)
 PY
  if [[ "$gradle_status" != 0 ]]; then return "$gradle_status"; fi
- return "$selection_collection_status"
+ if [[ "$selection_collection_status" != 0 ]]; then return "$selection_collection_status"; fi
+ return "$selection_clock_status"
 }
 # BEGIN NONROUTE DIAGNOSTIC CONTINUATION
 selection_status=0
@@ -92,15 +106,17 @@ PY
  run_selection "uk.co.traynor.privategallery.core.evidence.EvidenceOwnedRoute179Test#$method" "$case"
  original_status=$selection_original_status
  collection_status=$selection_collection_status
+ clock_status=$selection_clock_status
  peer_close_status=0
- if [[ "$original_status" == 0 && "$collection_status" == 0 ]]; then python3 scripts/wait_evidence179_peer_close.py --case "$case" || peer_close_status=$?; fi
+ if [[ "$original_status" == 0 && "$collection_status" == 0 && "$clock_status" == 0 ]]; then python3 scripts/wait_evidence179_peer_close.py --case "$case" || peer_close_status=$?; fi
  set -e
- python3 - "$case" "$original_status" "$peer_close_status" "$collection_status" <<'PY'
+ python3 - "$case" "$original_status" "$peer_close_status" "$collection_status" "$clock_status" <<'PY'
 import json,os,sys,time
-with open('app/build/evidence179/host-phases.jsonl','a') as out:out.write(json.dumps(dict(case=sys.argv[1],kind='end',epoch=time.time(),source_sha=os.environ['GITHUB_SHA'],original_exit_status=int(sys.argv[2]),peer_close_exit_status=int(sys.argv[3]),collection_exit_status=int(sys.argv[4])))+'\n')
+with open('app/build/evidence179/host-phases.jsonl','a') as out:out.write(json.dumps(dict(case=sys.argv[1],kind='end',epoch=time.time(),source_sha=os.environ['GITHUB_SHA'],original_exit_status=int(sys.argv[2]),peer_close_exit_status=int(sys.argv[3]),collection_exit_status=int(sys.argv[4]),clock_exit_status=int(sys.argv[5])))+'\n')
 PY
  [[ "$original_status" == 0 ]] || exit "$original_status"
  [[ "$collection_status" == 0 ]] || exit "$collection_status"
+ [[ "$clock_status" == 0 ]] || exit "$clock_status"
  [[ "$peer_close_status" == 0 ]] || exit "$peer_close_status"
  if [[ "$case" == vpn_loss ]]; then python3 scripts/drain_evidence179_vpn.py; fi
 done < <(python3 - <<'PY'

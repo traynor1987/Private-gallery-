@@ -14,9 +14,11 @@ from cryptography.hazmat.primitives import hashes
 try:
     from verify_evidence179_cases import verify as verify_cases
     from evidence179_packet_policy import host_fixture_adb_multicast
+    import evidence179_clock as route_clock
 except ModuleNotFoundError:
     from scripts.verify_evidence179_cases import verify as verify_cases
     from scripts.evidence179_packet_policy import host_fixture_adb_multicast
+    from scripts import evidence179_clock as route_clock
 
 CASES = {
     'vpn_revoke': ('ownedVpnPostCancellationAndAuthorityRevocationNeverFallback', 'VPN', ['success', 'cancel', 'revoke', 'retired']),
@@ -70,28 +72,35 @@ def genuine_close(event):
     return allowed.get((event.get('close_type'),event.get('close_errno'))) == event.get('close_evidence') and event.get('close_evidence') is not None
 
 
-def check_action(action,arm,terminal=None):
+def check_firewall(raw):
+    rows=raw.splitlines()
+    require(len(rows)==3, 'Missing/ambiguous firewall observation')
+    require(re.fullmatch(r'Chain INPUT \(policy ACCEPT [0-9]+[KMG]? packets, [0-9]+[KMG]? bytes\)',rows[0]) is not None,'Invalid INPUT chain header')
+    require(rows[1].split()==['pkts','bytes','target','prot','opt','in','out','source','destination'],'Invalid firewall columns')
+    cells=rows[2].split()
+    require(len(cells)==11 and all(re.fullmatch(r'[0-9]+',x) is not None for x in cells[:2]),'Malformed firewall row/counters')
+    require(cells[2]=='REJECT' and cells[3] in ('all','0') and cells[4:]==['--','!pg1762','*','0.0.0.0/0','203.0.113.10','reject-with','icmp-port-unreachable'],'Missing exact all-protocol origin firewall boundary')
+
+
+def check_action(action,arm,probe,terminal=None):
     clock=action['arm']
     require(clock['sequence']==arm['sequence'] and clock['token']==arm['action_token'] and re.fullmatch(r'[a-f0-9]{32}',clock['token']) is not None,'Forged independent action receipt')
     sent=clock['sent_elapsed_ns'];received=clock['received_elapsed_ns'];at=action['action_elapsed_ns'];failed=action['request_failed_elapsed_ns']
     require(all(type(x) is int for x in (sent,received,at,failed)) and 0<sent<=received<=at<=failed, 'Pre-action request failure or invalid device causal order')
     require(action['live_at_action'] is True and action['published'] is False, 'Request was not live or published a response')
     require(failed-at<=20_000_000_000, 'Unbounded actual request failure')
+    route_clock.check_interval(action,arm,probe,terminal)
     if terminal is not None:
-        # Host arm timestamp occurred somewhere inside the device send/receive
-        # interval. This upper bound is conservative for clock offset; require
-        # closure later than every possible action time, with5ms outward margin.
-        upper=arm['monotonic']+(at-sent)/1_000_000_000+.005
-        require(terminal['monotonic']>=upper, 'Host closure not independently ordered after destructive action')
         require(0<=terminal['monotonic']-arm['monotonic']<60, 'Negative or unbounded host close duration')
         require(terminal['epoch']>=arm['epoch'], 'Negative host wall-clock close duration')
 
 
-def check_case(value, events, dns, onion, source, window):
+def check_case(value, events, dns, onion, source, calibration, window):
     case=value['case'];require(case in CASES,'Unknown Android route case')
     method,mode,phases=CASES[case]
     require(value['schema']==1 and value['method']==method and value['classname']==CLASS and value['mode']==mode,'Case identity mismatch')
     require(value['source_sha']==source and value['owner']=='HIDDEN','Source/owner mismatch')
+    require(set(calibration)==set(route_clock.PHASES[case]),'Missing/foreign clock phases')
     nonce=value['nonce'];require(re.fullmatch(r'[a-f0-9]{32}',nonce) is not None,'Invalid freshness nonce')
     require(re.fullmatch(r'[a-f0-9-]{36}',value['route_identity']) is not None,'Missing route identity')
     require(type(value['uid']) is int and value['uid']>0 and value['network_owner_uid']==value['uid'],'Unowned Android Network')
@@ -130,7 +139,7 @@ def check_case(value, events, dns, onion, source, window):
         else:
             action=value['cancel'] if phase=='cancel' else value['retirement']
             terminal=observed[3] if len(observed)==4 else None
-            check_action(action,observed[2],terminal)
+            check_action(action,observed[2],calibration[phase],terminal)
             if phase=='cancel':require(action['start']==observed[1]['sequence'] and action['closed']==observed[3]['sequence'] and action['cancelled'] is True,'Cancellation observation mismatch')
             else:
                 require(action['phase']==phase and action['admitted_sequence']==observed[1]['sequence'] and action['admitted_epoch']==observed[1]['epoch'],'Retirement before/missing actual admission')
@@ -206,12 +215,19 @@ def verify(args):
     for path in files:
         value=read(path);case=value['case'];require(case not in values and path.name==f'evidence179-route-{case}.json', 'Duplicate/misnamed route output');values[case]=value
     require(set(values)==set(CASES), 'Incorrect route selection')
+    require({p.name for p in (root/'clock').iterdir()}==set(CASES),'Missing/foreign clock case inventory')
+    clocks={};clock_paths=[]
+    for case,value in values.items():
+        clocks[case],paths=route_clock.load_case(root/'clock'/case,value,args.source_sha);clock_paths+=paths
+    require(len({(v['clock']['serial'],v['clock']['user'],v['clock']['boot_id']) for v in values.values()})==1,'Mixed clock device/user/boot identities')
+    require(len({v['clock']['run_nonce'] for v in values.values()})==4,'Reused clock invocation nonce')
+    require(len({p['request_nonce'] for c in clocks.values() for p in c.values()})==6,'Reused clock challenge')
     phases=lines(root/'host-phases.jsonl');require(len(phases)==8, 'Missing/duplicate host barriers')
     windows={}
     for case in CASES:
         observations=[x for x in phases if x['case']==case]
         require([x['kind'] for x in observations]==['start','end'] and all(x['source_sha']==args.source_sha for x in observations), 'Invalid host case barrier')
-        require(observations[1]['original_exit_status']==0 and observations[1]['peer_close_exit_status']==0, 'Original Android invocation or independent close barrier failed')
+        require(observations[1]['original_exit_status']==0 and observations[1]['peer_close_exit_status']==0 and observations[1]['collection_exit_status']==0 and observations[1]['clock_exit_status']==0, 'Original Android invocation or independent close barrier failed')
         windows[case]=dict(start=observations[0]['epoch'],end=observations[1]['epoch'])
     ordered=sorted(windows.values(),key=lambda x:x['start']);require(all(a['end']<b['start'] for a,b in zip(ordered,ordered[1:])), 'Overlapping host phases')
     drain=read(root/'vpn-controlled-drain.json')
@@ -227,14 +243,15 @@ def verify(args):
     require(all(readiness[k]==certs['onion'][k] for k in ('leaf_sha256','ca_sha256')), 'Readiness certificate mismatch')
     vpn_events=lines(vpn/'evidence179-events.jsonl');tor_events=lines(onion_root/'evidence179-events.jsonl');dns=[e for e in lines(vpn/'events.jsonl') if e['kind']=='dns']
     check_events(vpn_events);check_events(tor_events)
-    nonces=[check_case(value,tor_events if value['mode']=='Tor' else vpn_events,dns,onion,args.source_sha,windows[case]) for case,value in values.items()]
+    nonces=[check_case(value,tor_events if value['mode']=='Tor' else vpn_events,dns,onion,args.source_sha,clocks[case],windows[case]) for case,value in values.items()]
     require(len(set(nonces))==4 and len({v['route_identity'] for v in values.values()})==4, 'Reused nonce/route identity')
     require(all(e['nonce'] in nonces for e in vpn_events+tor_events), 'Foreign endpoint observations')
     handshakes=(vpn/'handshakes.txt').read_text().splitlines();require(bool(handshakes) and all(int(x.split()[-1])>0 for x in handshakes), 'No actual WireGuard handshake')
-    firewall=(vpn/'input-firewall.txt').read_text();require(re.search(r'REJECT\s+all\s+--\s+!pg1762\s+\*\s+0\.0\.0\.0/0\s+203\.0\.113\.10',firewall) is not None, 'Missing origin firewall boundary')
+    check_firewall((vpn/'input-firewall.txt').read_text())
     require((vpn/'traffic.pcap').stat().st_size>24, 'Missing raw capture')
     capture=read(root/'capture.json');require(capture['stopped'] is True and capture['ownership']=='stopped', 'Capture still live/unflushed/unowned')
     process=read(root/'capture-process.json');original_pcap=str(Path('app/build/hidden-vpn1762/traffic.pcap').resolve())
+    require(all(route_clock.read(root/'clock'/case/'lifecycle.json')['host_boot_start']==process['boot_id'] for case in CASES),'Clock/capture host boot mismatch')
     require(process['pid']>0 and process['start_ticks']>0 and bool(process['boot_id']) and Path(process['argv'][0]).name=='tcpdump' and original_pcap in process['argv'] and original_pcap in process['outputs'], 'Missing exact capture start/output ownership identity')
     require(all(capture['start'] <= int(x.split()[-1]) <= capture['end'] for x in handshakes), 'Stale WireGuard handshake')
     require(re.search(r'^0 packets dropped by kernel$', (vpn/'capture.log').read_text(), re.M) is not None, 'Capture dropped packets or never flushed')
@@ -243,11 +260,12 @@ def verify(args):
     check_packets(packets,values,windows,onion,capture)
     (vpn/'packets.txt').write_text(packets)
     bound={}
-    paths=files+list(Path(args.android_results).rglob('*.xml'))+[Path(args.cases),root/'source-sha.txt',root/'host-phases.jsonl',root/'capture.json',root/'capture-process.json',root/'vpn-controlled-drain.json']
+    paths=clock_paths+files+list(Path(args.android_results).rglob('*.xml'))+[Path(args.cases),root/'source-sha.txt',root/'host-phases.jsonl',root/'capture.json',root/'capture-process.json',root/'vpn-controlled-drain.json']
     paths += [p for folder in (vpn,onion_root) for p in folder.iterdir() if p.is_file() and p.suffix in ('.pcap','.jsonl','.json','.crt','.txt','.log')]
     paths += [p for p in (root/'android-output').rglob('*') if p.is_file()]
-    paths += [Path('scripts')/x for x in ('verify_evidence179_routes.py','verify_evidence179_cases.py','evidence179_packet_policy.py','evidence179_fixture_http.py','evidence179_fixture_endpoints.py','ci_onion_probe.py','create_hidden_vpn_fixture_tls1762.py','hidden_vpn_fixture1762.py','hidden_tor_fixture1762.py','prepare_evidence179_routes.sh','run_evidence179.sh','cleanup_evidence179_routes.sh','archive_evidence179_routes.py','wait_evidence179_peer_close.py','drain_evidence179_vpn.py','evidence179_processes.py','setup_hidden_vpn_fixture1762.sh','cleanup_hidden_vpn_fixture1762.sh')]
-    paths += [Path('docs/release179/work/task-7a-route-report.md'),Path('app/src/androidTest/java/uk/co/traynor/privategallery/core/evidence/EvidenceOwnedRoute179Test.kt')]
+    paths += [Path('scripts')/x for x in ('evidence179_clock.py','verify_evidence179_routes.py','verify_evidence179_cases.py','evidence179_packet_policy.py','evidence179_fixture_http.py','evidence179_fixture_endpoints.py','ci_onion_probe.py','create_hidden_vpn_fixture_tls1762.py','hidden_vpn_fixture1762.py','hidden_tor_fixture1762.py','prepare_evidence179_routes.sh','run_evidence179.sh','cleanup_evidence179_routes.sh','archive_evidence179_routes.py','wait_evidence179_peer_close.py','drain_evidence179_vpn.py','evidence179_processes.py','setup_hidden_vpn_fixture1762.sh','cleanup_hidden_vpn_fixture1762.sh')]
+    paths += [Path('docs/release179/work/task-7a-route-report.md'),Path('app/src/androidTest/java/uk/co/traynor/privategallery/core/evidence/EvidenceOwnedRoute179Test.kt'),Path('app/src/androidTest/java/uk/co/traynor/privategallery/core/evidence/EvidenceRouteClock179.kt')]
+    paths += [Path('scripts/tests')/x for x in ('test_evidence179_clock.py','test_evidence179_route_evidence.py','test_evidence179_runner.py')]
     paths += [Path('app/src/main/java/uk/co/traynor/privategallery/core/evidence')/x for x in ('EvidenceNetwork.kt','EvidenceRouteCoordinator.kt')]
     paths += [Path('app/src/main/java/uk/co/traynor/privategallery/core/vpn/OwnedVpnDns.kt')]
     paths += [Path('app/src/debug/res/xml')/x for x in ('hidden_test_network_security.xml','hidden_network_security.xml')]
