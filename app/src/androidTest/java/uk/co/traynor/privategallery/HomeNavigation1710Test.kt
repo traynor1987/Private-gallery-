@@ -19,7 +19,7 @@ class HomeNavigation1710Test {
   val settings=activity.getSharedPreferences("private-gallery-settings",0)
   val prior=settings.getBoolean("home-existing-install",true)
   val priorScreenshots=settings.getString("allow-screenshots",null)
-  settings.edit().putBoolean("home-existing-install",false).commit()
+  settings.edit().putBoolean("home-existing-install",true).commit()
   val key=ByteArray(32){32}
   try {
    compose.runOnIdle{route.value=Route.LOCK;state.key=null;state.session.lock();activity.returnPrivateHome()}

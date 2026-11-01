@@ -1249,6 +1249,7 @@ class MainActivity : FragmentActivity() {
         pendingHiddenDownloads=null
         if(isDestroyed || hideContent || route!=Route.BROWSER || owner.generation!=hiddenPresentationGeneration || !retained.hidden.selected || retained.hidden.destination!=Route.BROWSER ||
             !retained.hidden.session.isAuthenticationCurrent(owner.hidden))return
+        retained.homeFeatureRoot=null;homeVisible=false
         retained.hidden.select(Route.VAULT)
         openNonBrowser(Route.VAULT)
     }
@@ -1753,6 +1754,7 @@ class MainActivity : FragmentActivity() {
         if(hideContent || !activityResumed)return
         val hidden=retained.hidden.selected
         if(if(hidden)!retained.hidden.session.isUnlocked else !session.isUnlocked||sessionKey==null)return
+        if(hidden)homeHiddenAuthentication=retained.hidden.session.authentication()else homePrimaryAuthentication=session.captureAuthenticationEpoch()
         closeEvidenceLocker();retained.homeFeatureRoot=null;if(route!=Route.VAULT)openNonBrowser(Route.VAULT);homeRequestRevision++;homeVisible=true
     }
     internal fun finishHomeFeature(item:uk.co.traynor.privategallery.core.home.HomeLayout.Shortcut) {
@@ -4850,6 +4852,9 @@ internal fun VaultHome(
     var coverItems by remember(editingVaultLabel) { mutableStateOf<List<VaultItem>>(emptyList()) }
     var openCollection by remember { mutableStateOf<VaultCollection?>(null) }
     var openCollectionItems by remember { mutableStateOf<List<VaultItem>>(emptyList()) }
+    androidx.activity.compose.BackHandler(openCollection!=null || selectionMode) {
+        if(selectionMode){selectionMode=false;selectedItemIds=emptySet()}else {openCollection=null;openCollectionItems=emptyList()}
+    }
     LaunchedEffect(displayedItems) {
         selectedItemIds = selectedItemIds.intersect(displayedItems.mapTo(mutableSetOf()) { it.id })
     }

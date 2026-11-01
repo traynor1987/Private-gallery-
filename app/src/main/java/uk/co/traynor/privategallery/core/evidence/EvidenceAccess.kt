@@ -57,9 +57,11 @@ internal class EvidenceAccess private constructor(
  @Volatile private var revocation:AutoCloseable?=null
  private val cleanup=Runnable {
   if(retired.compareAndSet(false,true)) {
-   callbacks.toList().forEach{runCatching(it)};callbacks.clear()
-   resources.toList().forEach{runCatching{it.close()}};resources.clear()
-   activeLeases.toList().forEach{runCatching{it.close()}};activeLeases.clear()
+   // CHM key-set size can change between Kotlin toList's size==1 fast path and next().
+   // Collection.toArray supplies a concurrency-safe snapshot while leases remove themselves.
+   callbacks.toTypedArray().forEach{runCatching(it)};callbacks.clear()
+   resources.toTypedArray().forEach{runCatching{it.close()}};resources.clear()
+   activeLeases.toTypedArray().forEach{runCatching{it.close()}};activeLeases.clear()
    runCatching{revocation?.close()};revocation=null
   }
  }
