@@ -1344,6 +1344,12 @@ class MainActivity : FragmentActivity() {
         else scheduleOwnedVpnDisconnect()
     }
     override fun onStop() {
+        // Retain only feature navigation across Fold/rotation recreation. Authentication
+        // remains in the retained session and is checked again by onCreate.
+        if (isChangingConfigurations) retained.route = when (route) {
+            Route.GALLERY, Route.VAULT, Route.FAVOURITE, Route.BROWSER, Route.SETTINGS -> route
+            else -> if (keys.isConfigured) Route.LOCK else Route.SETUP
+        }
         trashExpiryTimer?.cancel();trashExpiryTimer=null
         mainPresentationStarted=false
         coverSensitiveContent()

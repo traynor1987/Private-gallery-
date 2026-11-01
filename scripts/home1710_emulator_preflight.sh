@@ -22,6 +22,10 @@ adb logcat -d -b crash > "$root/emulator-crash-preflight.txt"
 ! grep -Fq 'hasReadColorBufferDma' "$root/emulator-crash-preflight.txt"
 adb shell wm size 1200x1800
 adb shell wm density 160
+# Match AOSP CTS: acknowledge the emulator's one-time fullscreen tutorial.
+# This changes no app permission or focus/privacy policy.
+adb shell settings put secure immersive_mode_confirmations confirmed
+[[ "$(adb shell settings get secure immersive_mode_confirmations | tr -d '\r')" == confirmed ]]
 
 adb shell df -h /data /sdcard >> "$health"
 adb shell 'mkdir -p /sdcard/Android/media && echo ready > /sdcard/home1710-ready.tmp && cat /sdcard/home1710-ready.tmp && rm /sdcard/home1710-ready.tmp' >> "$health"
