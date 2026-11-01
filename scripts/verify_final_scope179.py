@@ -26,7 +26,7 @@ REQUIRED = {
 }
 CONTROL_PATHS = (
     '.github/workflows/acceptance1762.yml', 'scripts/verify_final_scope179.py',
-    'scripts/revalidate_runtime179.py', 'scripts/compile_upgrade179_fixture.sh',
+    'scripts/revalidate_runtime179.py', 'scripts/replay_evidence179_packets.py', 'scripts/compile_upgrade179_fixture.sh',
     'scripts/verify_compiled_upgrade179.py', 'scripts/verify_synthetic_upgrade179.sh',
     'scripts/validate_upgrade179.py', 'scripts/verify_upgrade179_baseline.py',
     'scripts/release_configuration.sh', 'scripts/curate_release179.py',

@@ -11,8 +11,10 @@ import sys
 import zipfile
 try:
     from verify_final_scope179 import cases_from_manifest, verify_xml, NETWORK
+    from replay_evidence179_packets import replay, verify_original_hashes
 except ModuleNotFoundError:
     from scripts.verify_final_scope179 import cases_from_manifest, verify_xml, NETWORK
+    from scripts.replay_evidence179_packets import replay, verify_original_hashes
 
 def require(condition,message):
     if not condition:raise ValueError(message)
@@ -106,14 +108,17 @@ def main():
         'Original capture checkout path relocated; frozen validator requires exact original GITHUB_WORKSPACE path')
     original=(root/'route-proof.json').read_bytes();args.receipts.mkdir(parents=True,exist_ok=True)
     (args.receipts/'original-ci-route-proof.json').write_bytes(original)
-    subprocess.run([sys.executable,'scripts/verify_evidence179_routes.py','--android-results',str(root/'android-results'),
-        '--vpn-root',str(root/'vpn'),'--onion-root',str(root/'onion'),'--results-root',str(root),'--source-sha',args.source,
-        '--cases','scripts/evidence179_cases.json'],check=True)
-    revalidated=(root/'route-proof.json').read_bytes()
+    verify_original_hashes(json.loads(original),root,Path.cwd())
+    # Keep the original archive extraction immutable; the frozen CLI writes its
+    # independent proof/rendering into a separate replay tree only.
+    replay_root=args.destination/'replay'/'evidence179'
+    shutil.copytree(root,replay_root)
+    replay(replay_root,args.source,args.receipts)
+    revalidated=(replay_root/'route-proof.json').read_bytes()
     bindings['raw_route_hashes_sha256']=route_comparison(json.loads(original),json.loads(revalidated),args.source,count)
     (args.receipts/'revalidated-route-proof.json').write_bytes(revalidated)
-    # Preserve the artifact's own byte-level proof; rewritten proof has separate provenance.
-    (root/'route-proof.json').write_bytes(original)
+    verify_original_hashes(json.loads(original),root,Path.cwd())
+    require((root/'route-proof.json').read_bytes()==original,'Original proof changed during replay')
     run.update(evidence_validation='PASS',validated_case_count=count,original_exit_status=0,network_evidence_revalidated=True,
         evidence_hashes=bindings,revalidated_route_proof_sha256=sha(revalidated))
     args.run.write_text(json.dumps(run,indent=2)+'\n')

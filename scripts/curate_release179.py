@@ -7,7 +7,7 @@ from pathlib import Path
 import shutil
 
 PUBLIC = {
-    'focused-run.json','original-ci-route-proof.json','revalidated-route-proof.json',
+    'focused-run.json','original-ci-route-proof.json','revalidated-route-proof.json','packet-replay.json',
     'original178code50-provenance.json','original178code50-signature.txt','original178code50-package.txt',
     'android17-sdk.json','android17-sdk-source.properties','permanent-signer.txt','signature.txt','package.txt',
     'apk-sha256.txt','source-sha.txt','release-manifest.txt','ocr-distribution.json','apk-native-alignment.txt',

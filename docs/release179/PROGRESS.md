@@ -1,5 +1,7 @@
 # SDD ledger — plan: docs/superpowers/plans/2026-10-31-evidence-locker.md
 
+2026-11-01 release-only portability correction: confirmed actual tcpdumpSLL2 currenthost interface-name lookup, not app/transport defect. Sole implementation worker release179_replay_fix froze minimal preserved-control helper/wrapper/allowlist/CONTROL_PATHS and8new tests;18focused hostmethodsPASS, actualdecoderprobesPASS. SAME consolidated reviewer independently scoped RELEASE179_PACKET_REPLAY PASS0Critical/Important/Minor. Namespace actualsuccess unexecuted locallyEPERM; existing productionpresecret must execute complete unchangedfrozenCLI or failclosed before originalkey. No workflow/app/Android/fixture/version/assertion changes, no extraCI. Sourcecandidate19e3275 single run41295673256 remainsactive; no finalapproval/upgrade/sign/APK. Root soleGitwriter; allworkersfrozen. Latest1006run audit onlyoneactive, latestsignedbaseline50 unchanged. Owner minimalCI respected; this backup skip-ci, not completion.
+
 Baseline2e420b9, branchcreatedexactremote/localrelease179, no competingwriter. AllproducttasksNOT_STARTED. Existing178 actualsignedcode50/physicalOWNER_REQUIRED. Userautonomousexecution explicitlyoptsoutofroutineapprovalquestions.
 
 Ruling: useexistingisolatedscratchcheckout onnew179branch, no extra worktree — baselineclean and no competingwriter; costifwrongbranchlease rejectsupdate.

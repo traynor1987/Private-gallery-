@@ -1,5 +1,13 @@
 # Private Gallery 1.7.9 — current recovery status
 
+## Reviewed release-only replay portability correction
+
+Existing single candidate run41295673256/job124815899187 at19e3275ef17746e780d64e6a684d94bab2cabdc3 has passed host, app/all-instrumentation compilation, OCR/native alignment and fixture preparation; grouped Android verification remains active. Do not duplicate it. Latest Actions audit shows1006total runs, only this one active, and original1.7.8/code50 remains latest successful production run41200936129. No179APK, finalapproval, upgrade or signing exists.
+
+Independent source review RELEASE179_PACKET_REPLAY accepts the narrowly scoped inactive release-control portability correction with0Critical/Important/Minor. tcpdumpSLL2 resolves captured interface indices through currenthost names, so another signingrunner cannot assume the original mapping. The preserved control helper requires all immutable original raw/source hashes, truthful complete original index/name witnesses, independently decoded packet equality, an isolated offline dummy lookup namespace, unchanged frozen validator and exact original/replayed proof comparison. Original archive extraction stays untouched. No app/Android/fixture/frozenvalidator/workflow/version/assertion changed.18focused host methods and actualtcpdump probes pass; localnamespaceEPERM means actual full replay remains mandatory in existing pre-secret production step. Source acceptance is not runtime/release approval. FROZEN_SOURCE remains zero, marker and canonical approval absent. See work/packet-replay179-report.md and reviews/RELEASE179_PACKET_REPLAY.md. This control-only backup uses skip-ci; no additional Android run is warranted by it.
+
+Continue: await existing exactsource153-case/fullrawroute proof; retrieve and independently hash/check originalartifact. Resume SAME consolidated reviewer with actual evidence. Only then freeze/approve exactsource and activate reviewed existing original-key production/50→51 install-r/restart workflow, whose new actualdecoder path must pass before secrets. No uninstall/data clear/replacement keys. Physical Fold acceptance OWNER_REQUIRED. Continue until one verified signed APK is delivered.
+
 ## Active final candidate
 
 Exact verified candidate: `19e3275ef17746e780d64e6a684d94bab2cabdc3`.
