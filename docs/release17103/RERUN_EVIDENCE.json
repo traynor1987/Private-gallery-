@@ -1,0 +1,31 @@
+{
+  "run": 41529553329,
+  "source": "b2d0239f0d40184f74a7f015bad326c80530d3b0",
+  "artifact_id": 13180569889,
+  "artifact_sha256": "dd12a4434b78be5a81f99c379b7ce7c4dca1e665fb2e92f33b7486bd10dad4d1",
+  "overall_run": "success",
+  "unique_cases": 3,
+  "passed": 3,
+  "failed": 0,
+  "cases": [
+    {
+      "class": "uk.co.traynor.privategallery.ui.HiddenRestoreDialogTest",
+      "method": "moveRequiresSeparateConfirmationAndLockRevokesDialogOnce",
+      "failed": false
+    },
+    {
+      "class": "uk.co.traynor.privategallery.ui.HiddenRestoreDialogTest",
+      "method": "choicesAreExplicitAndPrimaryRequiresFreshPinWithoutChangingHidden",
+      "failed": false
+    },
+    {
+      "class": "uk.co.traynor.privategallery.core.evidence.EvidenceAccess179Test",
+      "method": "pre_registration_preview_is_exact_origin_read_only_and_rejects_late_publication",
+      "failed": false
+    }
+  ],
+  "reused_initial_passes": 25,
+  "combined_selected_scope": 28,
+  "external_google_oauth": "UNVERIFIED / NOT APPROVED",
+  "release_signing": "BLOCKED"
+}

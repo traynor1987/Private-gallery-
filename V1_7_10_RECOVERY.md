@@ -275,3 +275,5 @@ Run41335086571 passed release build/package/cert, baseline seed, install-r and E
 ## Current UI / Private App return workstream
 
 See `docs/release17103/STATUS.md` and `ui-cases.json`. Changes are a source checkpoint, not an activated release. Preserve last signed code54 and its certificate. Google external authorization return remains blocked on a supported redirect/website handoff that preserves VPN/Tor routing; do not claim popup ownership fixes establish Google success. Use the existing focused workflow `[verify17102] [engine17102] [polish17103]`; no new workflow or release branch.
+
+Verified UI / popup checkpoint: `b2d0239f0d40184f74a7f015bad326c80530d3b0`. Focused API37 run `41529553329` SUCCESS (3/3 failed-fixture retries; 7/7 JVM), plus verified 25 passing cases from failed initial run `41528043427` against identical production source. Exact receipts/hashes are in `docs/release17103/INITIAL_EVIDENCE.json` and `RERUN_EVIDENCE.json`. No new signed APK or new-key upgrade claimed. Last signed code54 remains unchanged. Google success/cancel and the supported external return contract are the explicit signing blocker.

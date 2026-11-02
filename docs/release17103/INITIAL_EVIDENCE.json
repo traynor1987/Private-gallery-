@@ -1,0 +1,155 @@
+{
+  "run": 41528043427,
+  "source": "79f6aaa6c2d13a8d01ca06dbc602961289c23946",
+  "artifact_id": 13180652740,
+  "artifact_sha256": "1375035d1282a3955709370b12c56f83a57c40e23edd77627bc556e3030d922c",
+  "overall_run": "failure",
+  "unique_cases": 28,
+  "passed": 25,
+  "failed": 3,
+  "production_tree": "e4cb585acf3aa3029fc623e85f5a4b363428790e",
+  "reused_passed_cases": [
+    {
+      "class": "uk.co.traynor.privategallery.core.browser.hidden.HiddenPopupOwnershipWebViewTest",
+      "method": "retainedCallbacksFromClosedPopupCannotMutateSelectedOtherWebView",
+      "failed": false
+    },
+    {
+      "class": "uk.co.traynor.privategallery.core.browser.hidden.HiddenPopupOwnershipWebViewTest",
+      "method": "closeRestoresOpenerWhileLateAndRevokedCloseCannotChangeSelection",
+      "failed": false
+    },
+    {
+      "class": "uk.co.traynor.privategallery.ui.MediaPickerPresentation17103Test",
+      "method": "knownVideoDurationAndCountRemainVisible",
+      "failed": false
+    },
+    {
+      "class": "uk.co.traynor.privategallery.ui.MediaPickerPresentation17103Test",
+      "method": "boundedThumbnailPreviewOffersInfoWithoutSelecting",
+      "failed": false
+    },
+    {
+      "class": "uk.co.traynor.privategallery.ui.CollectionCoverPicker17103Test",
+      "method": "thumbnailChoiceCommitsOnlyAfterExplicitConfirm",
+      "failed": false
+    },
+    {
+      "class": "uk.co.traynor.privategallery.ui.CollectionCoverPicker17103Test",
+      "method": "cancelDiscardsDraftCoverSelection",
+      "failed": false
+    },
+    {
+      "class": "uk.co.traynor.privategallery.ui.HiddenRestoreDialogTest",
+      "method": "restoreUsesFullPageSurfaceWithReachableCancel",
+      "failed": false
+    },
+    {
+      "class": "uk.co.traynor.privategallery.core.evidence.EvidenceAccess179Test",
+      "method": "revocation_and_cancelled_verified_reads_never_return_late_plaintext",
+      "failed": false
+    },
+    {
+      "class": "uk.co.traynor.privategallery.core.evidence.EvidenceAccess179Test",
+      "method": "publication_gate_rejects_every_result_after_exact_retirement_boundary",
+      "failed": false
+    },
+    {
+      "class": "uk.co.traynor.privategallery.core.evidence.EvidenceAccess179Test",
+      "method": "source_references_are_same_vault_verified_and_read_only",
+      "failed": false
+    },
+    {
+      "class": "uk.co.traynor.privategallery.core.evidence.EvidenceAccess179Test",
+      "method": "primary_post_eof_rechecks_trashed_changed_policy_fingerprint_and_missing_payload",
+      "failed": false
+    },
+    {
+      "class": "uk.co.traynor.privategallery.ui.BrowserTransferredVaultPicker1762Test",
+      "method": "restrictedCopyRemainsExcludedWithExplanationAfterReopening",
+      "failed": false
+    },
+    {
+      "class": "uk.co.traynor.privategallery.ui.BrowserTransferredVaultPicker1762Test",
+      "method": "encryptedMoveAppearsAfterEmptyPickerIsClosedAndReopened",
+      "failed": false
+    },
+    {
+      "class": "uk.co.traynor.privategallery.ui.BrowserTransferredVaultPicker1762Test",
+      "method": "encryptedCopyAppearsAfterEmptyPickerIsClosedAndReopened",
+      "failed": false
+    },
+    {
+      "class": "uk.co.traynor.privategallery.ui.BrowserTransferredVaultPicker1762Test",
+      "method": "restrictedMoveRemainsExcludedWithExplanationAfterReopening",
+      "failed": false
+    },
+    {
+      "class": "uk.co.traynor.privategallery.ui.GalleryDialog1762Test",
+      "method": "foldCoverDark",
+      "failed": false
+    },
+    {
+      "class": "uk.co.traynor.privategallery.ui.GalleryDialog1762Test",
+      "method": "foldCoverLight",
+      "failed": false
+    },
+    {
+      "class": "uk.co.traynor.privategallery.ui.GalleryDialog1762Test",
+      "method": "foldLandscapeLight",
+      "failed": false
+    },
+    {
+      "class": "uk.co.traynor.privategallery.ui.GalleryDialog1762Test",
+      "method": "foldInnerDark",
+      "failed": false
+    },
+    {
+      "class": "uk.co.traynor.privategallery.ui.NovaBrowserPresentationTest",
+      "method": "connectionShellKeepsRetrySettingsAndPrivateDiagnosticsReachable",
+      "failed": false
+    },
+    {
+      "class": "uk.co.traynor.privategallery.ui.ProfessionalUiTest",
+      "method": "requiredVpnDoesNotCreateOrAttachWebViewUntilConnected",
+      "failed": false
+    },
+    {
+      "class": "uk.co.traynor.privategallery.ui.ProfessionalUiTest",
+      "method": "vpnTransitionDark",
+      "failed": false
+    },
+    {
+      "class": "uk.co.traynor.privategallery.ui.ProfessionalUiTest",
+      "method": "permissionAndProfileActionsAreAvailable",
+      "failed": false
+    },
+    {
+      "class": "uk.co.traynor.privategallery.ui.ProfessionalUiTest",
+      "method": "vpnTransitionLight",
+      "failed": false
+    },
+    {
+      "class": "uk.co.traynor.privategallery.ui.ModalCompletion1762Test",
+      "method": "coverDarkCreateImageChoicesReferencesDiagnosticsAndConsentFitAtLargeText",
+      "failed": false
+    }
+  ],
+  "failed_cases_require_rerun": [
+    {
+      "class": "uk.co.traynor.privategallery.ui.HiddenRestoreDialogTest",
+      "method": "moveRequiresSeparateConfirmationAndLockRevokesDialogOnce",
+      "failed": true
+    },
+    {
+      "class": "uk.co.traynor.privategallery.ui.HiddenRestoreDialogTest",
+      "method": "choicesAreExplicitAndPrimaryRequiresFreshPinWithoutChangingHidden",
+      "failed": true
+    },
+    {
+      "class": "uk.co.traynor.privategallery.core.evidence.EvidenceAccess179Test",
+      "method": "pre_registration_preview_is_exact_origin_read_only_and_rejects_late_publication",
+      "failed": true
+    }
+  ]
+}

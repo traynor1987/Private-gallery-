@@ -32,3 +32,5 @@ The existing loading and current-owner fences stay with their owners. Sort only 
 - `git diff --check` passed after edits.
 
 Implementation batch published at 4edee85 with 28 explicit Android17 selectors in existing workflow run 41527411346. Results pending at this audit update. No new branch, version/signing activation or claim that the deferred Beta disk limitation is repaired.
+
+Final focused evidence: compilation/host checks and 7 JVM cases pass; 25 original API37 cases pass at 79f6aaa and three test-only corrected retries pass at b2d0239. See STATUS.md for exact source/artifact accounting and remaining limitations. No physical Fold or Google transaction approval.
