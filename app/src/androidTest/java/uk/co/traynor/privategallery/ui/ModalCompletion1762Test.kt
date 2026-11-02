@@ -259,10 +259,10 @@ class ModalCompletion1762Test {
                 compose.onNodeWithText(label).assertIsSelected()
             }
             compose.onNodeWithText("Reference images from Vault ·", substring = true).performScrollTo().performClick()
-            compose.onNodeWithText("Done").assertIsDisplayed()
+            compose.onNodeWithTag("ai-reference-confirm").assertIsDisplayed()
             compose.onNode(hasScrollToIndexAction()).performScrollToIndex(300) // Introduction occupies index zero.
             compose.onNodeWithContentDescription("Synthetic reference 299").assertIsDisplayed().performClick()
-            compose.onNodeWithText("Done").performClick()
+            compose.onNodeWithTag("ai-reference-confirm").performClick()
             compose.onNodeWithText("Describe the image").performScrollTo().performTextInput("Synthetic fixture prompt")
             compose.onNodeWithText("Show original and effective prompt").performScrollTo().performClick()
             compose.onNodeWithText("Prompt diagnostic").assertIsDisplayed()

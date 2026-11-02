@@ -20,6 +20,10 @@ class HiddenRestoreDialogTest {
         compose.setContent {MaterialTheme {HiddenRestoreDialog(access,listOf("synthetic-id")){deliveries++}}}
         try {block(session,access){deliveries}}finally{compose.runOnIdle {access.close();session.lock()}}
     }
+    @Test fun restoreUsesFullPageSurfaceWithReachableCancel()=fixture {_,_,_ ->
+        compose.onNodeWithTag("gallery-full-page-dialog").assertIsDisplayed()
+        compose.onNodeWithText("Cancel").performScrollTo().assertIsDisplayed()
+    }
     @Test fun choicesAreExplicitAndPrimaryRequiresFreshPinWithoutChangingHidden()=fixture {session,access,count ->
         listOf("Copy to Phone Gallery","Move to Phone Gallery","Copy to Primary Space","Move to Primary Space").forEach {compose.onNodeWithText(it).performScrollTo().assertIsDisplayed()}
         compose.onNodeWithText("Copy to Primary Space").performScrollTo().performClick()

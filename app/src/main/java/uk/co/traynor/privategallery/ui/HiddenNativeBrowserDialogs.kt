@@ -8,7 +8,7 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material3.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.ui.platform.LocalFocusManager
@@ -119,14 +119,19 @@ internal data class HiddenNativeUploadItem(val id:String,val name:String,val mim
     items:List<HiddenNativeUploadItem>,loading:Boolean,multiple:Boolean,restricted:Int,types:Int,total:Int,error:String?,selected:Set<String>,
     preview:(HiddenNativeUploadItem,(Result<android.graphics.Bitmap>)->Unit)->Unit,choose:(HiddenNativeUploadItem)->Unit,
 ) {
+    var nameSort by remember { mutableStateOf(false) }
+    val displayed = if (nameSort) items.sortedBy { it.name.lowercase(java.util.Locale.ROOT) } else items
     androidx.compose.foundation.lazy.grid.LazyVerticalGrid(columns=androidx.compose.foundation.lazy.grid.GridCells.Adaptive(88.dp),modifier=Modifier.heightIn(max=360.dp),
         horizontalArrangement=Arrangement.spacedBy(8.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
         item(span={androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan)}) {
-            HiddenNativePickerIntro(multiple,restricted,types,loading,items.size,total,error,items.isEmpty())
+            Column {
+                HiddenNativePickerIntro(multiple,restricted,types,loading,items.size,total,error,items.isEmpty())
+                GalleryPickerControls(selected.size, items.size, nameSort, { nameSort = !nameSort })
+            }
         }
-        items(if(loading)0 else items.size,key={items[it].id}) {index ->
-            val item=items[index]
-            GalleryMediaSelectionTile(item.id,item.name,item.mime.startsWith("video/"),item.id in selected,!loading,{callback ->preview(item,callback)}){choose(item)}
+        items(if(loading)0 else displayed.size,key={displayed[it].id}) {index ->
+            val item=displayed[index]
+            GalleryMediaSelectionTile(item.id,item.name,item.mime.startsWith("video/"),item.id in selected,!loading,{callback ->preview(item,callback)},onSelect={choose(item)},details=item.mime)
         }
     }
 }

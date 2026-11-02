@@ -270,3 +270,8 @@ Run41333681584 passed exact-source gates, baseline-compatible fixture compilatio
 
 ## Companion AndroidX cache correction confirmed by gate
 Run41335086571 passed release build/package/cert, baseline seed, install-r and Evidence content/catalogue checks, then blocked on exact files/profileInstalled hash in candidateEvidence blanket assertion. This AndroidX ProfileVerifier runtime cache stores package update time/compilation status. Independent reviewer approved only exact top-level profileInstalled in addition to exact ProfileInstaller timestamp marker; no vault paths excluded. ReviewedfixtureSHA9132a18d30a7daa03d112b7f1bc6150975fa2de01db05f00602b0681d525eb9f. Failure diagnostics artifact13095119058 contains noAPK. Retrying same frozen application/source54greenrun with bound correctedfixture, allupgrade/restart assertions intact.
+
+
+## Current UI / Private App return workstream
+
+See `docs/release17103/STATUS.md` and `ui-cases.json`. Changes are a source checkpoint, not an activated release. Preserve last signed code54 and its certificate. Google external authorization return remains blocked on a supported redirect/website handoff that preserves VPN/Tor routing; do not claim popup ownership fixes establish Google success. Use the existing focused workflow `[verify17102] [engine17102] [polish17103]`; no new workflow or release branch.

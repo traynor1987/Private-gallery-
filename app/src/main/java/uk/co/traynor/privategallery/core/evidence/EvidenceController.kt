@@ -184,6 +184,13 @@ internal class EvidenceController(context:Context,val access:EvidenceAccess):Aut
   val record=access.store.read().evidence().single{it.id()==evidenceId}
   withVerifiedBytes(access.reader{!operation.isActive},record.sourceId(),limit,{checkSource(record,it)},consumer)
  }
+ /** Read-only pre-registration preview of the exact original selected in this owner's vault. */
+ suspend fun withSourcePreviewBytes(original:EvidenceOriginal,consumer:suspend(ByteArray)->Unit):Unit=withContext(Dispatchers.IO) {
+  val operation=currentCoroutineContext()
+  require(original.item.plaintextSize in 1..OCR_LIMIT.toLong())
+  withVerifiedBytes(access.reader{!operation.isActive},original.item.id,OCR_LIMIT,
+   {actual->EvidenceAccess.requireSameOriginal(original.item,actual.item)},consumer)
+ }
  private suspend fun extractRecord(record:EvidenceCatalog.Evidence,rotation:Int):EvidenceCatalog {
   require(record.size()<=OCR_LIMIT){"Original exceeds local OCR limit"}
   val operation=currentCoroutineContext()

@@ -1,13 +1,12 @@
 package uk.co.traynor.privategallery.ui
 
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.window.SecureFlagPolicy
 import androidx.lifecycle.Lifecycle
@@ -39,7 +38,8 @@ internal fun HiddenRestoreDialog(access:HiddenRestoreAccess,ids:List<String>,onC
         onDispose {terminal.set(true);access.close();lifecycle.removeObserver(observer)}
     }
     LaunchedEffect(access) {while(access.isActive())delay(100);finish("Restore closed. Completed destination copies remain; check both destinations before retrying. Sources without verified completed moves remain in Hidden.")}
-    Dialog(onDismissRequest={finish("Restore cancelled. Completed copies remain; incomplete moves retain their Hidden sources.")},properties=DialogProperties(usePlatformDefaultWidth=false,securePolicy=SecureFlagPolicy.SecureOn)) {
+    GalleryFullPageDialog(onDismissRequest={finish("Restore cancelled. Completed copies remain; incomplete moves retain their Hidden sources.")},properties=DialogProperties(usePlatformDefaultWidth=false,securePolicy=SecureFlagPolicy.SecureOn),
+        scrollBody=!(destination==HiddenRestoreAccess.Destination.PRIMARY && !authenticated)) {
         val content: @Composable () -> Unit = {
             val target=destination
             if(target==HiddenRestoreAccess.Destination.PRIMARY && !authenticated) {
@@ -55,8 +55,8 @@ internal fun HiddenRestoreDialog(access:HiddenRestoreAccess,ids:List<String>,onC
                         if(!terminal.get() && access.isActive()){busy=false;result.onSuccess {authenticated=true}.onFailure {error="Primary authentication failed. Check your PIN."}}
                     }
                 })
-            } else Column(Modifier.verticalScroll(rememberScrollState()).padding(20.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
-                Text("Restore ${ids.size} items",style=MaterialTheme.typography.titleLarge)
+            } else Column(verticalArrangement=Arrangement.spacedBy(8.dp)) {
+                Text("Restore ${ids.size} items",modifier=Modifier.semantics { heading() },style=MaterialTheme.typography.titleLarge)
                 if(target==null) {
                     Text("Copy keeps the Hidden original. Move removes it only after verified transfer. Vault-only edits cannot be restored to phone storage.")
                     HiddenRestoreAccess.Destination.entries.forEach {option ->
@@ -64,10 +64,10 @@ internal fun HiddenRestoreDialog(access:HiddenRestoreAccess,ids:List<String>,onC
                         TextButton(onClick={destination=option;move=true}){Text("Move to ${option.label}")}
                     }
                 } else {
-                    Text(if(move) "Move to ${target.label}? Verified sources go to Hidden Recently Deleted. Failed moves retain the source."
-                        else "Copy to ${target.label}. Hidden originals remain unchanged.")
+                    NovaTransferSummary("Hidden Space",target.label,ids.size,move)
+                    if(move)Text("Verified Hidden originals enter Hidden Recently Deleted.")
                     if(target==HiddenRestoreAccess.Destination.PHONE)Text("Documents go to Downloads; photos and videos go to Phone Gallery. These copies will be visible to other authorized apps.")
-                    if(busy){LinearProgressIndicator(Modifier.fillMaxWidth());Text("Processed ${progress.first} of ${progress.second}")}
+                    if(busy)NovaTransferProgress(progress.first,progress.second)
                     Button(enabled=!busy,onClick={
                         busy=true
                         scope.launch {
@@ -81,11 +81,6 @@ internal fun HiddenRestoreDialog(access:HiddenRestoreAccess,ids:List<String>,onC
                 TextButton(onClick={finish("Restore cancelled. Completed copies remain; incomplete moves retain their Hidden sources.")}){Text("Cancel")}
             }
         }
-        if(destination==HiddenRestoreAccess.Destination.PRIMARY && !authenticated) {
-            Surface(Modifier.fillMaxSize(), shape=MaterialTheme.shapes.extraSmall,
-                color=MaterialTheme.colorScheme.surfaceContainerHigh, content=content)
-        } else {
-            GalleryDialogSurface(Modifier.safeDrawingPadding().padding(16.dp).fillMaxWidth(), content=content)
-        }
+        content()
     }
 }

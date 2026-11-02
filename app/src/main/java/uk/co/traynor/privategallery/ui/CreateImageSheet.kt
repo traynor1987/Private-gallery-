@@ -47,6 +47,8 @@ fun CreateImageSheet(onGenerate: (GenerationRequest, (String) -> Unit, (Result<V
     var diagnostic by remember { mutableStateOf(false) }
     var pickingReferences by remember { mutableStateOf(false) }
     var referenceIds by remember { mutableStateOf<List<String>>(emptyList()) }
+    var draftReferenceIds by remember { mutableStateOf<List<String>>(emptyList()) }
+    var referenceNameSort by remember { mutableStateOf(false) }
     var busy by remember { mutableStateOf(false) }
     var stage by remember { mutableStateOf("") }
     var error by remember { mutableStateOf("") }
@@ -135,7 +137,7 @@ fun CreateImageSheet(onGenerate: (GenerationRequest, (String) -> Unit, (Result<V
                         }
                     }
                     Text("Estimated provider cost · ${model.priceFor(resolution)}", style = MaterialTheme.typography.bodySmall)
-                    TextButton(onClick = { pickingReferences = true }) {
+                    TextButton(onClick = { draftReferenceIds = referenceIds; pickingReferences = true }) {
                         Text("Reference images from Vault · ${referenceIds.size}/${model.maxReferences}")
                     }
                     if (referenceIds.isNotEmpty()) Text("Selected Vault images guide the result and are sent to Replicate with this request.", style = MaterialTheme.typography.bodySmall)
@@ -196,14 +198,18 @@ fun CreateImageSheet(onGenerate: (GenerationRequest, (String) -> Unit, (Result<V
                             Text("Select up to ${model.maxReferences} images. One output will be requested.")
                         }
                     }
-                    items(vaultImages.filter { it.mimeType.startsWith("image/") && it.plaintextSize <= PhotoRenderer.MAX_SOURCE_BYTES }, key = { it.id }) { item ->
-                        BrowserVaultUploadTile(item, item.id in referenceIds, onLoadPreview) {
-                            referenceIds = if (item.id in referenceIds) referenceIds - item.id
-                                else (referenceIds + item.id).take(model.maxReferences)
+                    items(vaultImages.filter { it.mimeType.startsWith("image/") && it.plaintextSize <= PhotoRenderer.MAX_SOURCE_BYTES }.let { eligible -> if (referenceNameSort) eligible.sortedBy { it.displayName.lowercase(java.util.Locale.ROOT) } else eligible }, key = { it.id }) { item ->
+                        BrowserVaultUploadTile(item, item.id in draftReferenceIds, onLoadPreview) {
+                            draftReferenceIds = if (item.id in draftReferenceIds) draftReferenceIds - item.id
+                                else (draftReferenceIds + item.id).take(model.maxReferences)
                         }
                     }
                 }
-                TextButton(onClick = { pickingReferences = false }) { Text("Done") }
+                GalleryPickerControls(draftReferenceIds.size, vaultImages.count { it.mimeType.startsWith("image/") && it.plaintextSize <= PhotoRenderer.MAX_SOURCE_BYTES }, referenceNameSort, { referenceNameSort = !referenceNameSort })
+                Row {
+                    TextButton(onClick = { pickingReferences = false },modifier=Modifier.testTag("ai-reference-cancel")) { Text("Cancel") }
+                    TextButton(onClick = { referenceIds = draftReferenceIds; pickingReferences = false },modifier=Modifier.testTag("ai-reference-confirm")) { Text("Confirm") }
+                }
             }
         }
     }

@@ -1012,6 +1012,7 @@ internal fun BrowserV2Home(
                 TextButton(onClick = ::cancelUpload) { Text("Cancel") }
             } },
         )
+        var uploadNameSort by remember { mutableStateOf(false) }
         if (ui.vaultPickerOpen) androidx.compose.ui.window.Dialog(onDismissRequest = ::cancelUpload,
             properties = androidx.compose.ui.window.DialogProperties(securePolicy = androidx.compose.ui.window.SecureFlagPolicy.Inherit)) {
             GalleryDialogSurface(modifier = Modifier.fillMaxWidth().heightIn(max = 560.dp)) {
@@ -1035,7 +1036,7 @@ internal fun BrowserV2Home(
                                 }
                             }
                         }
-                        items(ui.vaultItems, key = { it.id }) { item ->
+                        items(if (uploadNameSort) ui.vaultItems.sortedBy { it.displayName.lowercase(java.util.Locale.ROOT) } else ui.vaultItems, key = { it.id }) { item ->
                             BrowserVaultUploadTile(item, ui.selectedUploads.any { it.id == item.id }, onLoadVaultPreview) {
                                 ui.selectedUploads = if (ui.selectedUploads.any { it.id == item.id }) ui.selectedUploads.filterNot { it.id == item.id }
                                     else if (ui.fileMultiple) (ui.selectedUploads + item).distinctBy { it.id }.take(4) else listOf(item)
@@ -1043,6 +1044,7 @@ internal fun BrowserV2Home(
                             }
                         }
                     }
+                    GalleryPickerControls(ui.selectedUploads.size, ui.vaultItems.size, uploadNameSort, { uploadNameSort = !uploadNameSort })
                     FlowRow(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
                         TextButton(onClick = ::cancelUpload) { Text("Cancel") }
                         Button(enabled = ui.selectedUploads.isNotEmpty(), onClick = { ui.vaultPickerOpen = false }) { Text("Continue") }

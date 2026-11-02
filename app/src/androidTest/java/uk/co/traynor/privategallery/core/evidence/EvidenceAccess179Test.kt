@@ -93,4 +93,37 @@ class EvidenceAccess179Test {
   }finally{prechecked.countDown();worker.shutdownNow();access.close();key.fill(0);root.deleteRecursively()}
  }
 
+ @Test fun pre_registration_preview_is_exact_origin_read_only_and_rejects_late_publication() = kotlinx.coroutines.runBlocking {
+  val root=File(ApplicationProvider.getApplicationContext<Context>().cacheDir,"evidence-source-preview-${UUID.randomUUID()}")
+  val context=scoped(root);val key=ByteArray(32){27};val hidden=HiddenSession{100L}
+  assertTrue(hidden.complete(hidden.beginAuthentication(),ByteArray(32){47}))
+  val bytes="unregistered original".toByteArray()
+  val item=(AndroidVaultRepository(context,key).importVerified(VaultImportSource("primary.txt","text/plain",{ByteArrayInputStream(bytes)}))as ImportResult.Imported).item
+  val foreign=HiddenRepository(context,hidden).importMedia("hidden.txt","text/plain",ByteArrayInputStream(bytes))
+  val live=AtomicBoolean(true);val access=EvidenceAccess.primary(context,key,{key},{live.get()},{key.copyOf()},Any())
+  val secret=EvidenceAccess.hidden(context,hidden){true}
+  val instrumentation=androidx.test.platform.app.InstrumentationRegistry.getInstrumentation()
+  var controller:EvidenceController?=null
+  instrumentation.runOnMainSync{controller=EvidenceController(context,access)}
+  try {
+   val owned=checkNotNull(controller);var borrowed:ByteArray?=null
+   owned.withSourcePreviewBytes(access.sources.inspect(item.id)){assertArrayEquals(bytes,it);borrowed=it}
+   assertTrue(checkNotNull(borrowed).all{it==0.toByte()})
+   assertTrue(access.store.read().evidence().isEmpty())
+   var consumed=false
+   try{owned.withSourcePreviewBytes(secret.sources.inspect(foreign.id)){consumed=true};fail("Foreign original admitted")}catch(expected:IllegalStateException){}
+   assertFalse(consumed)
+   // Even a matching source id with a changed captured fingerprint must fail before decode.
+   val changed=access.sources.inspect(item.id).let{it.copy(item=it.item.copy(plaintextSha256=ByteArray(32){9}))}
+   try{owned.withSourcePreviewBytes(changed){consumed=true};fail("Changed original admitted")}catch(expected:IllegalStateException){}
+   assertFalse(consumed)
+   owned.withSourcePreviewBytes(access.sources.inspect(item.id)){
+    live.set(false)
+    instrumentation.runOnMainSync{assertFalse(access.publishIfCurrent{consumed=true})}
+   }
+   assertFalse(consumed)
+   assertTrue("Preview never writes an evidence catalogue",!File(context.filesDir,"evidence-state").walkTopDown().any{it.isFile})
+  }finally{instrumentation.runOnMainSync{controller?.close()};secret.close();hidden.lock();key.fill(0);bytes.fill(0);root.deleteRecursively()}
+ }
+
 }

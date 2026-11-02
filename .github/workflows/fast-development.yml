@@ -463,6 +463,10 @@ jobs:
           python3 -m unittest discover -s tests/evidence_presentation -p "test_*.py"
           java com.sun.tools.javac.Main -d /tmp/editor17102 app/src/main/java/uk/co/traynor/privategallery/ui/EditorCropPresets.java tests/editor_presentation/EditorCropPresetChecks.java
           java -cp /tmp/editor17102 uk.co.traynor.privategallery.ui.EditorCropPresetChecks
+          java com.sun.tools.javac.Main -d /tmp/popup17103 app/src/main/java/uk/co/traynor/privategallery/core/browser/hidden/HiddenPopupOwnership.java app/src/main/java/uk/co/traynor/privategallery/core/browser/hidden/HiddenCallbackOwners.java app/src/test/java/uk/co/traynor/privategallery/core/browser/hidden/HiddenPopupOwnershipHostChecks.java
+          java -cp /tmp/popup17103 uk.co.traynor.privategallery.core.browser.hidden.HiddenPopupOwnershipHostChecks
+          java com.sun.tools.javac.Main -d /tmp/picker17103 app/src/main/java/uk/co/traynor/privategallery/ui/PickerMediaLabels.java tests/picker_presentation/PickerMediaLabelsChecks.java
+          java -cp /tmp/picker17103 PickerMediaLabelsChecks
           python3 scripts/check_nova17101.py --code 54 --version 1.7.10.2
           java -cp /tmp/home1710 HomeLayoutChecks
           java -cp /tmp/home1710 HomePersistenceChecks
@@ -516,6 +520,7 @@ jobs:
           NOVA17102_REPAIR: ${{ contains(github.event.head_commit.message, '[repair17102]') && '1' || '0' }}
           NOVA17102_ENGINE: ${{ contains(github.event.head_commit.message, '[engine17102]') && '1' || '0' }}
           NOVA17102_BETA: ${{ contains(github.event.head_commit.message, '[beta17102]') && '1' || '0' }}
+          NOVA17103_POLISH: ${{ contains(github.event.head_commit.message, '[polish17103]') && '1' || '0' }}
           NOVA17102_CLOSURE: ${{ contains(github.event.head_commit.message, '[closure17102]') && '1' || '0' }}
         if: contains(github.event.head_commit.message, '[verify17102]')
         uses: reactivecircus/android-emulator-runner@v2

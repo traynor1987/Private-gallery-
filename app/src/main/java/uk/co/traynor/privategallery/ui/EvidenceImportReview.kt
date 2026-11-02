@@ -3,6 +3,9 @@ package uk.co.traynor.privategallery.ui
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -23,18 +26,26 @@ import uk.co.traynor.privategallery.core.evidence.*
  var transcripts by remember(controller){mutableStateOf<Map<String,String>>(emptyMap())}
  var groups by remember(controller){mutableStateOf<Map<String,String>>(emptyMap())}
  val scope=rememberCoroutineScope()
+ var nameSort by remember(controller){mutableStateOf(false)}
+ val available=state.originals.filter{original->state.catalog?.evidence()?.none{it.sourceId()==original.item.id}!=false}.let{if(nameSort)it.sortedBy{source->source.item.displayName.lowercase()}else it}
  LaunchedEffect(state.reviewImportIds){if(step==0&&state.reviewImportIds.isNotEmpty())selected=state.reviewImportIds.toSet()}
  fun back(){if(!busy){if(step>0)step-- else onClose()}}
  EvidencePage(::back){Column(Modifier.fillMaxSize().safeDrawingPadding().imePadding().padding(16.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){
   EvidenceWorkflowHeading(when(step){0->"1 · Review selected originals";1->"2 · Offline OCR review";else->"3 · Review incident groups"},"${if(controller.access.owner==EvidenceCatalog.Owner.HIDDEN)"Hidden"else"Primary"} encrypted vault · Nothing is sent to cloud AI.")
   if(busy)LinearProgressIndicator(Modifier.fillMaxWidth())
   if(message.isNotEmpty())Text(message,color=MaterialTheme.colorScheme.error)
-  LazyColumn(Modifier.weight(1f).fillMaxWidth(),verticalArrangement=Arrangement.spacedBy(12.dp)){
+  if(step==0){
+   Text("Choose up to 128 originals. Review thumbnails and selections before offline OCR. Nothing is registered until final approval.")
+   GalleryPickerControls(selected.size,available.size,nameSort,{nameSort=!nameSort})
+   LazyVerticalGrid(columns=GridCells.Adaptive(140.dp),modifier=Modifier.weight(1f).fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(12.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){
+    items(available,key={it.item.id}){original->
+     EvidenceSourceSelectionTile(controller,original,original.item.id in selected,!busy&&(original.item.id in selected||selected.size<128)){
+      selected=if(original.item.id in selected)selected-original.item.id else selected+original.item.id
+     }
+    }
+   }
+  }else LazyColumn(Modifier.weight(1f).fillMaxWidth(),verticalArrangement=Arrangement.spacedBy(12.dp)){
    when(step){
-    0->{item{Text("Choose up to 128 originals. Uncheck accidental selections. OCR and grouping are reviewed before evidence registration; imported originals remain encrypted if you cancel.")}
-     items(state.originals.filter{original->state.catalog?.evidence()?.none{it.sourceId()==original.item.id}!=false},key={it.item.id}){original->
-      EvidenceSelectionRow("Register original ${original.item.displayName}",original.item.displayName,"${original.item.mimeType} · ${original.item.plaintextSize} bytes",original.item.id in selected,original.item.id in selected||selected.size<128){checked->selected=if(checked)selected+original.item.id else selected-original.item.id}
-     }}
     1->items(draft?.evidence().orEmpty(),key={it.id()}){record->
      Text(record.name(),style=MaterialTheme.typography.titleMedium)
      Text("Original SHA-256: ${record.sha256()}",style=MaterialTheme.typography.labelSmall)
@@ -66,7 +77,7 @@ import uk.co.traynor.privategallery.core.evidence.*
      }
      controller.saveReviewedImport(reviewed);onClose()
     }
-   }){Text(when(step){0->"Run offline OCR";1->"Review groups";else->"Save approved evidence"})}
+   }){Text(when(step){0->"Confirm ${selected.size} · Run offline OCR";1->"Review groups";else->"Save approved evidence"})}
   }
  }}
 }

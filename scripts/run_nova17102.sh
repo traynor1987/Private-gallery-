@@ -14,13 +14,18 @@ if [[ "${NOVA17102_BETA:-0}" == 1 ]]; then
  [[ "${NOVA17102_ENGINE:-0}" == 1 ]]
  export NOVA17102_MATRIX=docs/release17102/beta-cases.json
 fi
+if [[ "${NOVA17103_POLISH:-0}" == 1 ]]; then
+ [[ "${NOVA17102_ENGINE:-0}" == 1 ]]
+ export NOVA17102_MATRIX=docs/release17103/ui-cases.json
+fi
 mkdir -p "$root"
 git rev-parse HEAD > "$root/source-sha.txt"
 bash scripts/home1710_emulator_preflight.sh
 python3 scripts/debug_apk_identity1762.py app/build/outputs/apk/debug/app-debug.apk
 selection=$(python3 - <<'PY'
 import json,os
-print(','.join(json.load(open(os.environ['NOVA17102_MATRIX']))))
+matrix=json.load(open(os.environ['NOVA17102_MATRIX']))
+print(','.join(f'{cls}#{method}' for cls,methods in matrix.items() for method in methods) if os.environ.get('NOVA17103_POLISH')=='1' else ','.join(matrix))
 PY
 )
 ui_status=0;ui_accounting_status=0
@@ -33,7 +38,7 @@ if [[ -d app/build/outputs/connected_android_test_additional_output ]]; then cp 
 if [[ "${NOVA17102_ENGINE:-0}" == 1 ]]; then
  rm -rf app/build/outputs/androidTest-results/connected/debug app/build/outputs/connected_android_test_additional_output
  [[ "$ui_status" == 0 && "$ui_accounting_status" == 0 ]]
- printf '%s\n' "Selected UI matrix: $NOVA17102_MATRIX; browser source unchanged from separately verified route checkpoint" > "$root/selection-scope.txt"
+ printf '%s\n' "Selected UI matrix: $NOVA17102_MATRIX; selected presentation and popup ownership scope; no external Google OAuth or live route approval" > "$root/selection-scope.txt"
  printf '%s\n' 'PASS: selected focused UI evidence only; NO new route or signing approval' > "$root/runtime-result.txt"
  exit 0
 fi

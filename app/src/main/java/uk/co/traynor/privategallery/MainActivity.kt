@@ -5138,7 +5138,7 @@ internal fun VaultHome(
     ) }
     choosingCover?.let {collection ->
         fun saveCover(id:String?) {val done:(String)->Unit={status=it;choosingCover=null;refresh()};if(onSetCollectionCover!=null)onSetCollectionCover(collection.id,id,done) else cameraActivity?.updatePrimaryCollectionPresentation(collection.id,id,null,done)}
-        CollectionCoverDialog(coverItems,collection.coverVaultItemId,::saveCover) {choosingCover=null}
+        CollectionCoverDialog(coverItems,collection.coverVaultItemId,::saveCover,onDismiss={choosingCover=null},onLoadPreview=onLoadPreview)
     }
 }
 
@@ -5577,21 +5577,18 @@ internal fun ThirdPartyLicencesDialog(notices:String,onDismiss:()->Unit) {
 internal fun ConfirmHiddenTransferDialog(count:Int,move:Boolean,busy:Boolean,onDismiss:()->Unit,onConfirm:()->Unit) {
     val action=if(move)"Move" else "Copy"
     AlertDialog(onDismissRequest=onDismiss,title={Text("$action $count selected items?")},
-        text={Text("Source: Primary Space\nDestination: Hidden Space\nSelected: $count\n\n"+
-            if(move)"Each Hidden copy is verified before its Primary original enters Recently Deleted under the Primary retention setting. Failed transfers retain their originals."
-            else "Each Hidden copy is verified. Primary originals are retained.")},
+        text={Column(verticalArrangement=Arrangement.spacedBy(12.dp)){uk.co.traynor.privategallery.ui.NovaTransferSummary("Primary Space","Hidden Space",count,move);
+            if(move)Text("Verified Primary originals enter Recently Deleted under the Primary retention setting.")}},
         confirmButton={TextButton(enabled=!busy,onClick=onConfirm){Text("$action to Hidden")}},dismissButton={TextButton(onClick=onDismiss){Text("Cancel")}})
 }
 
 @Composable
 internal fun HiddenTransferProgressDialog(completed:Int,total:Int,stopping:Boolean,onCancel:()->Unit) {
-    AlertDialog(scrollBody=false,onDismissRequest={},title={Text("Transferring to Hidden")},
-        text={Column(Modifier.heightIn(max=360.dp).verticalScroll(rememberScrollState()),verticalArrangement=Arrangement.spacedBy(12.dp)) {
-            Text("Primary Space → Hidden Space")
-            Text("$completed / $total processed · verified and failed totals follow")
-            androidx.compose.material3.LinearProgressIndicator(progress={if(total==0)0f else completed.toFloat()/total},modifier=Modifier.fillMaxWidth())
-            Text(if(stopping)"Stopping after the current copy is safely verified…" else "Keep the app open. Cancel safely stops after the current copy; originals for unfinished items are retained.")
-        }},confirmButton={TextButton(enabled=!stopping,onClick=onCancel){Text("Cancel transfer")}})
+    uk.co.traynor.privategallery.ui.GalleryFullPageDialog(onDismissRequest={if(!stopping)onCancel()}) {
+        Text("Transferring to Hidden",style=MaterialTheme.typography.titleLarge)
+        Text("Primary Space → Hidden Space")
+        uk.co.traynor.privategallery.ui.NovaTransferProgress(completed,total,stopping,onCancel)
+    }
 }
 
 internal enum class VaultActionKind {RECENTLY_DELETED,RESTORE_GALLERY,PERMANENT_DELETE}
@@ -5605,12 +5602,26 @@ internal fun VaultActionConfirmationDialog(kind:VaultActionKind,count:Int,onDism
 }
 
 @Composable
-internal fun CollectionCoverDialog(items:List<VaultItem>,selectedId:String?,onChoose:(String?)->Unit,onDismiss:()->Unit) {
-    AlertDialog(scrollBody=false,onDismissRequest=onDismiss,title={Text("Choose collection cover")},
-        text={androidx.compose.foundation.lazy.LazyColumn(Modifier.heightIn(max=360.dp).selectableGroup()) {
-            item {GalleryChoiceRow("Use automatic cover",selectedId==null){onChoose(null)}}
-            items(items.size,key={items[it].id}) {index ->val media=items[index];GalleryChoiceRow(media.displayName,selectedId==media.id){onChoose(media.id)}}
-        }},confirmButton={TextButton(onClick=onDismiss){Text("Cancel")}})
+internal fun CollectionCoverDialog(items:List<VaultItem>,selectedId:String?,onChoose:(String?)->Unit,onDismiss:()->Unit,
+    onLoadPreview:(VaultItem,(Result<Bitmap>)->Unit)->Unit={_,done->done(Result.failure(IllegalStateException("Preview unavailable")))}) {
+    var chosen by remember(selectedId){mutableStateOf(selectedId)}
+    var nameSort by remember{mutableStateOf(false)}
+    val displayed=remember(items,nameSort){if(nameSort)items.sortedBy{it.displayName.lowercase()}else items}
+    uk.co.traynor.privategallery.ui.GalleryFullPageDialog(onDismissRequest=onDismiss,scrollBody=false) {
+        Text("Choose collection cover",style=MaterialTheme.typography.titleLarge)
+        uk.co.traynor.privategallery.ui.GalleryPickerControls(if(chosen==null)0 else 1,items.size,nameSort,{nameSort=!nameSort})
+        OutlinedButton(onClick={chosen=null}){Text(if(chosen==null)"Automatic cover selected"else"Use automatic cover")}
+        androidx.compose.foundation.lazy.grid.LazyVerticalGrid(androidx.compose.foundation.lazy.grid.GridCells.Adaptive(112.dp),Modifier.weight(1f).fillMaxWidth(),
+            horizontalArrangement=Arrangement.spacedBy(8.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
+            items(displayed.size,key={displayed[it].id}){index->val media=displayed[index]
+                uk.co.traynor.privategallery.ui.BrowserVaultUploadTile(media,chosen==media.id,onLoadPreview,{chosen=media.id})
+            }
+        }
+        Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+            OutlinedButton(onClick=onDismiss,modifier=Modifier.weight(1f)){Text("Cancel")}
+            Button(onClick={onChoose(chosen)},enabled=chosen==null||items.any{it.id==chosen},modifier=Modifier.weight(1f)){Text("Confirm cover")}
+        }
+    }
 }
 
 // Process-scoped to reject an obsolete Activity's deletion completion after recreation.

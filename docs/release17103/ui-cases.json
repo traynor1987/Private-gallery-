@@ -1,0 +1,50 @@
+{
+  "uk.co.traynor.privategallery.core.browser.hidden.HiddenPopupOwnershipWebViewTest": [
+    "closeRestoresOpenerWhileLateAndRevokedCloseCannotChangeSelection",
+    "retainedCallbacksFromClosedPopupCannotMutateSelectedOtherWebView"
+  ],
+  "uk.co.traynor.privategallery.ui.MediaPickerPresentation17103Test": [
+    "boundedThumbnailPreviewOffersInfoWithoutSelecting",
+    "knownVideoDurationAndCountRemainVisible"
+  ],
+  "uk.co.traynor.privategallery.ui.CollectionCoverPicker17103Test": [
+    "thumbnailChoiceCommitsOnlyAfterExplicitConfirm",
+    "cancelDiscardsDraftCoverSelection"
+  ],
+  "uk.co.traynor.privategallery.ui.HiddenRestoreDialogTest": [
+    "restoreUsesFullPageSurfaceWithReachableCancel",
+    "choicesAreExplicitAndPrimaryRequiresFreshPinWithoutChangingHidden",
+    "moveRequiresSeparateConfirmationAndLockRevokesDialogOnce"
+  ],
+  "uk.co.traynor.privategallery.core.evidence.EvidenceAccess179Test": [
+    "source_references_are_same_vault_verified_and_read_only",
+    "revocation_and_cancelled_verified_reads_never_return_late_plaintext",
+    "primary_post_eof_rechecks_trashed_changed_policy_fingerprint_and_missing_payload",
+    "publication_gate_rejects_every_result_after_exact_retirement_boundary",
+    "pre_registration_preview_is_exact_origin_read_only_and_rejects_late_publication"
+  ],
+  "uk.co.traynor.privategallery.ui.BrowserTransferredVaultPicker1762Test": [
+    "encryptedCopyAppearsAfterEmptyPickerIsClosedAndReopened",
+    "encryptedMoveAppearsAfterEmptyPickerIsClosedAndReopened",
+    "restrictedCopyRemainsExcludedWithExplanationAfterReopening",
+    "restrictedMoveRemainsExcludedWithExplanationAfterReopening"
+  ],
+  "uk.co.traynor.privategallery.ui.GalleryDialog1762Test": [
+    "foldCoverDark",
+    "foldCoverLight",
+    "foldInnerDark",
+    "foldLandscapeLight"
+  ],
+  "uk.co.traynor.privategallery.ui.NovaBrowserPresentationTest": [
+    "connectionShellKeepsRetrySettingsAndPrivateDiagnosticsReachable"
+  ],
+  "uk.co.traynor.privategallery.ui.ProfessionalUiTest": [
+    "permissionAndProfileActionsAreAvailable",
+    "vpnTransitionLight",
+    "vpnTransitionDark",
+    "requiredVpnDoesNotCreateOrAttachWebViewUntilConnected"
+  ],
+  "uk.co.traynor.privategallery.ui.ModalCompletion1762Test": [
+    "coverDarkCreateImageChoicesReferencesDiagnosticsAndConsentFitAtLargeText"
+  ]
+}

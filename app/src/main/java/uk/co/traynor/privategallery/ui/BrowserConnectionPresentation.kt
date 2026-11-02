@@ -42,22 +42,9 @@ internal data class BrowserConnectionPresentation(
 
 @Composable
 internal fun BrowserConnectionState(presentation: BrowserConnectionPresentation, onConnect: () -> Unit, onConfigure: () -> Unit) {
-    Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
-        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            Column(Modifier.widthIn(max = 400.dp).verticalScroll(rememberScrollState()).padding(24.dp)
-                .semantics { testTag = "browser-vpn-state"; liveRegion = LiveRegionMode.Polite },
-                horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                Icon(Icons.Outlined.Shield, null, Modifier.size(32.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                Text(presentation.title, style = MaterialTheme.typography.titleLarge, textAlign = TextAlign.Center)
-                Text(presentation.detail, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center)
-                if (presentation.busy) CircularProgressIndicator(Modifier.size(32.dp).semantics {
-                    contentDescription = if (presentation.title == "Connecting securely…") "Connecting to VPN" else presentation.title
-                }, strokeWidth = 3.dp)
-                presentation.action?.let { label ->
-                    Button(onClick = if (presentation.configure) onConfigure else onConnect) { Text(label) }
-                }
-                if (!presentation.configure && !presentation.busy) TextButton(onClick = onConfigure) { Text("VPN settings") }
-            }
-        }
-    }
+    NovaConnectionPanel(false,presentation.title,presentation.detail,presentation.busy,presentation.action,
+        if(presentation.configure)onConfigure else onConnect,
+        if(!presentation.configure && !presentation.busy)"VPN settings" else null,onConfigure,
+        progressDescription=if(presentation.title=="Connecting securely…")"Connecting to VPN"else presentation.title,
+        modifier=Modifier.semantics {testTag="browser-vpn-state";liveRegion=LiveRegionMode.Polite})
 }

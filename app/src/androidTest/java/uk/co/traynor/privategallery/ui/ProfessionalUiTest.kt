@@ -34,8 +34,12 @@ class ProfessionalUiTest {
     // Only neutral synthetic-fixture preferences are scoped here; vault data and keys are untouched.
     private lateinit var panicPreferences: android.content.SharedPreferences
     private var savedPanicPreferences = emptyMap<String, Boolean?>()
+    private var oldBetaRevision:Int?=null
 
     @Before fun isolateSyntheticPanicPreferences() {
+        val beta=InstrumentationRegistry.getInstrumentation().targetContext.getSharedPreferences("nova-browser-beta",Context.MODE_PRIVATE)
+        oldBetaRevision=if(beta.contains("notice-revision"))beta.getInt("notice-revision",0)else null
+        check(beta.edit().putInt("notice-revision",1).commit())
         panicPreferences = InstrumentationRegistry.getInstrumentation().targetContext
             .getSharedPreferences("privacy-shield", Context.MODE_PRIVATE)
         savedPanicPreferences = listOf("enabled", "three-finger", "quick-lock").associateWith {
@@ -46,6 +50,9 @@ class ProfessionalUiTest {
     }
 
     @After fun restoreSyntheticPanicPreferences() {
+        val beta=InstrumentationRegistry.getInstrumentation().targetContext.getSharedPreferences("nova-browser-beta",Context.MODE_PRIVATE).edit()
+        oldBetaRevision?.let{beta.putInt("notice-revision",it)}?:beta.remove("notice-revision")
+        check(beta.commit())
         if (!::panicPreferences.isInitialized) return
         val editor = panicPreferences.edit()
         savedPanicPreferences.forEach { (key, value) ->

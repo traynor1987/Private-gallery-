@@ -12,6 +12,13 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.PlayCircle
+import androidx.compose.material.icons.filled.ZoomIn
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.TextButton
+import androidx.compose.foundation.layout.Row
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
+import androidx.compose.ui.window.SecureFlagPolicy
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -47,7 +54,8 @@ internal fun BrowserVaultUploadTile(
 ) {
     GalleryMediaSelectionTile(item.id, item.displayName, item.mimeType.startsWith("video/"), selected,
         VaultPreviewPolicy.shouldGenerate(item.mimeType, item.plaintextSize),
-        { callback -> onLoadPreview(item, callback) }, onSelect)
+        { callback -> onLoadPreview(item, callback) }, onSelect,
+        details = "${item.mimeType} · ${item.plaintextSize} bytes")
 }
 
 /** Shared app-owned media picker tile. Preview results are borrowed from the owning cache. */
@@ -60,7 +68,11 @@ internal fun GalleryMediaSelectionTile(
     shouldLoad: Boolean,
     onLoadPreview: ((Result<Bitmap>) -> Unit) -> Unit,
     onSelect: () -> Unit,
+    durationMillis: Long? = null,
+    details: String? = null,
 ) {
+    var expanded by remember(id) { mutableStateOf(false) }
+    var showInfo by remember(id) { mutableStateOf(false) }
     var preview by remember(id) { mutableStateOf<Bitmap?>(null) }
     var previewFailed by remember(id) { mutableStateOf(false) }
     DisposableEffect(id) {
@@ -85,12 +97,53 @@ internal fun GalleryMediaSelectionTile(
             border = if (selected) androidx.compose.foundation.BorderStroke(2.dp, MaterialTheme.colorScheme.primary) else null,
         ) {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                preview?.let { Image(it.asImageBitmap(), null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop) }
+                preview?.takeUnless { it.isRecycled }?.let { Image(it.asImageBitmap(), null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop) }
                     ?: Text(if (isVideo) "Video" else "Photo", style = MaterialTheme.typography.bodySmall)
-                if (isVideo) Icon(Icons.Default.PlayCircle, null, Modifier.align(Alignment.Center))
+                if (isVideo) {
+                    Icon(Icons.Default.PlayCircle, null, Modifier.align(Alignment.Center))
+                    androidx.compose.material3.Surface(Modifier.align(Alignment.BottomStart), color = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f)) {
+                        Text(PickerMediaLabels.duration(durationMillis), Modifier.padding(4.dp), style = MaterialTheme.typography.labelSmall)
+                    }
+                }
+                IconButton(onClick = { expanded = true }, enabled = preview?.isRecycled == false,
+                    modifier = Modifier.align(Alignment.BottomEnd)) {
+                    Icon(Icons.Default.ZoomIn, "Preview $label")
+                }
                 if (selected) Icon(Icons.Default.CheckCircle, null, Modifier.align(Alignment.TopEnd).padding(5.dp), tint = MaterialTheme.colorScheme.primary)
             }
         }
         Text(label, maxLines = 2, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.labelSmall)
+    }
+    if (expanded) GalleryFullPageDialog(onDismissRequest = { expanded = false; showInfo = false },
+        properties = DialogProperties(usePlatformDefaultWidth = false, securePolicy = SecureFlagPolicy.Inherit),scrollBody=false) {
+                Text("Thumbnail preview", style = MaterialTheme.typography.titleLarge)
+                Text(label, maxLines=2, overflow=TextOverflow.Ellipsis, style = MaterialTheme.typography.bodyMedium)
+                Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
+                    preview?.takeUnless { it.isRecycled }?.let {
+                        Image(it.asImageBitmap(), label, Modifier.fillMaxSize(), contentScale = ContentScale.Fit)
+                    } ?: Text("Preview unavailable")
+                }
+                if (showInfo) {
+                    Text(details ?: if (isVideo) "Video" else "Photo")
+                    if (isVideo) Text(PickerMediaLabels.duration(durationMillis))
+                    Text("Bounded thumbnail · no original is exported or opened")
+                }
+                Row {
+                    TextButton(onClick = { showInfo = !showInfo }) { Text("Info") }
+                    TextButton(onClick = { expanded = false; showInfo = false }) { Text("Close preview") }
+                }
+    }
+}
+
+
+/** Shared count and explicit local sort; it never changes the owner's eligible item set. */
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
+@Composable
+internal fun GalleryPickerControls(selectedCount: Int, availableCount: Int, nameSort: Boolean, onSort: () -> Unit) {
+    androidx.compose.foundation.layout.FlowRow(Modifier.fillMaxWidth(),
+        horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(8.dp)) {
+        Text("$selectedCount selected · $availableCount available", Modifier.padding(vertical = 12.dp),
+            style = MaterialTheme.typography.bodySmall)
+        TextButton(onClick = onSort) { Text(if (nameSort) "Sort: Name" else "Sort: Original order") }
     }
 }
