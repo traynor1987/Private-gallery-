@@ -6,6 +6,10 @@ root=app/build/nova17102
 export NOVA17102_MATRIX=docs/release17102/ui-cases.json
 if [[ "${NOVA17102_REPAIR:-0}" == 1 ]]; then export NOVA17102_MATRIX=docs/release17102/repair-cases.json; fi
 if [[ "${NOVA17102_ENGINE:-0}" == 1 ]]; then export NOVA17102_MATRIX=docs/release17102/engine-cases.json; fi
+if [[ "${NOVA17102_CLOSURE:-0}" == 1 ]]; then
+ [[ "${NOVA17102_ENGINE:-0}" == 1 ]]
+ export NOVA17102_MATRIX=docs/release17102/closure-cases.json
+fi
 mkdir -p "$root"
 git rev-parse HEAD > "$root/source-sha.txt"
 bash scripts/home1710_emulator_preflight.sh

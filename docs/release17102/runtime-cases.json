@@ -359,5 +359,8 @@
   ],
   "uk.co.traynor.privategallery.core.browser.hidden.HiddenVpnNetworkLoss1762Test": [
     "lostOwnedNetworkRetiresNativeChildAndCannotReuseOldCapability"
+  ],
+  "uk.co.traynor.privategallery.ui.CameraConcealedTapInputTest": [
+    "swipeThenRapidTapsUseFreshGestureAndLatestCallback"
   ]
 }

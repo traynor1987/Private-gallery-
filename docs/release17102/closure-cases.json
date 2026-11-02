@@ -1,0 +1,37 @@
+{
+  "uk.co.traynor.privategallery.ui.EditorWorkspacePresentationTest": [
+    "toolsKeepPreviewAndProviderDisclosureReachableAcrossFoldSizes",
+    "configuredAiSourceCanBeReplacedWithoutSendingIt",
+    "combineSetupRetainsLargeWorkingCanvas",
+    "editorControlsInheritLightAndDarkThemeAtCompactLargeFont",
+    "ownerActionsWipeSourceBeforeDispatchAndRespectExistingCapturePolicy",
+    "exposureSliderChangesActualSaveCopyAndKeepsOriginal"
+  ],
+  "uk.co.traynor.privategallery.ui.AiEditorProfessionalTest": [
+    "bothSourcesCanBeReplacedWithoutChangingExactPromptAndResultCanBeDiscarded",
+    "longCombinePromptCanBeRetriedUnchangedWithGuidanceOff",
+    "lateAuthenticatedPickerLoadsAreWipedAfterBackgroundAndCannotRestorePreviews",
+    "sourceCardsAndActionsRemainReachableAcrossFoldViewports",
+    "replacementSourceIdentityReachesEverySaveRoute",
+    "promptAndGenerateRemainReachableWithKeyboardOpen"
+  ],
+  "uk.co.traynor.privategallery.ui.VaultCameraUiTest": [
+    "blackPhotoTapsVolumeAndNavigationGestures",
+    "readingPhotoTapsVolumeAndNavigationGestures",
+    "idlePermissionPauseReleasesCameraMonitorButActivePauseStillLocks",
+    "screenOffInvalidatesHiddenCameraAndReturnsNeutralUnlock",
+    "activityForegroundLossLocksBothVaultsAndNeverReopensHiddenCamera"
+  ],
+  "uk.co.traynor.privategallery.ui.EvidenceLocker179UiTest": [
+    "primaryActualImportExtractCorrectIncidentSearchRemoveAndReopenPreservesOriginal",
+    "ownerAcceptsAndRejectsActualGroupingHintsAndOrdersUncertainTimeline",
+    "firstManualMoveUsesVisibleChronologyAndDisablesBoundaries",
+    "bulkOriginalRegistrationAndMixedExportSelectionAreOwnerReviewed",
+    "editedExtractedTimestampRemainsUserEnteredWithRawQuotePreserved",
+    "landscapeDarkLargeTextIncidentFormAndExitRemainReachable",
+    "hiddenInnerLockClearsSearchSelectionsAndDialogsWithoutDeletingEncryptedEvidence"
+  ],
+  "uk.co.traynor.privategallery.ui.CameraConcealedTapInputTest": [
+    "swipeThenRapidTapsUseFreshGestureAndLatestCallback"
+  ]
+}

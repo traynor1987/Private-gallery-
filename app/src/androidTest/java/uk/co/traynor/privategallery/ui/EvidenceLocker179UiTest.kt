@@ -73,9 +73,12 @@ class EvidenceLocker179UiTest {
    click("Add selected to incident");click("Synthetic incident179")
    compose.waitUntil(15000){controller.state.value.catalog?.incidents()?.singleOrNull()?.evidenceIds()?.contains(corrected.id())==true&&!controller.state.value.busy}
    compose.evidenceNode(hasTestTag("evidence-search") and hasSetTextAction()).performTextReplacement("unique179")
-   // Search membership is a semantics assertion; scrolling during the IME/filter relayout
-   // is unnecessary and can retain a lazy node that the new results replace.
+   // At 2x text the Library controls plus the IME can occupy the viewport, so a
+   // matching result may be genuinely uncomposed. Materialize by matcher on the
+   // list, then query afresh; do not retain a row while scrolling/filtering it.
+   compose.onNodeWithTag("evidence-list").performScrollToNode(hasText("alpha179.txt") and hasClickAction())
    compose.onNode(hasText("alpha179.txt") and hasClickAction()).assertExists();compose.onNodeWithText("beta179.txt").assertDoesNotExist()
+   assertEquals(listOf(corrected.id()),f.access.store.read().search("unique179",0,0,false).map{it.id()})
    compose.evidenceNode(hasTestTag("evidence-search") and hasSetTextAction()).performTextClearance()
    compose.evidenceNode(hasContentDescription("Select evidence alpha179.txt")).performClick()
    compose.evidenceNode(hasText("Remove references") and hasClickAction()).performClick();compose.evidenceNode(hasText("Confirm") and hasClickAction()).performClick();waitReady(controller,1)

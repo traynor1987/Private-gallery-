@@ -191,7 +191,15 @@ class EditorWorkspacePresentationTest {
         try {
             compose.waitUntil(10000) { runCatching { compose.onNodeWithText("Save copy").assertIsEnabled() }.isSuccess }
             compose.onNodeWithText("Adjust").performClick()
-            compose.onNodeWithTag("editor-slider-Exposure").performScrollTo().performTouchInput { swipe(centerLeft, centerRight) }
+            // Start on the neutral thumb, clear of Android's left-edge Back gesture area.
+            compose.onNodeWithTag("editor-slider-Exposure").performScrollTo().performTouchInput {
+                swipe(center, androidx.compose.ui.geometry.Offset(width * .85f, center.y))
+            }
+            compose.onNodeWithTag("editor-slider-Exposure").assert(
+                SemanticsMatcher("Exposure moved above neutral") {
+                    it.config[androidx.compose.ui.semantics.SemanticsProperties.ProgressBarRangeInfo].current > 0f
+                })
+            compose.onNodeWithContentDescription("Undo").assertIsEnabled()
             compose.onNodeWithTag("editor-slider-Temperature").performScrollTo().assertIsDisplayed()
             compose.onNodeWithText("Save copy").performClick()
             compose.waitUntil(10000) { saved }

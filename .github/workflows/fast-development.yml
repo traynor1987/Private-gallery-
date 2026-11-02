@@ -515,6 +515,7 @@ jobs:
         env:
           NOVA17102_REPAIR: ${{ contains(github.event.head_commit.message, '[repair17102]') && '1' || '0' }}
           NOVA17102_ENGINE: ${{ contains(github.event.head_commit.message, '[engine17102]') && '1' || '0' }}
+          NOVA17102_CLOSURE: ${{ contains(github.event.head_commit.message, '[closure17102]') && '1' || '0' }}
         if: contains(github.event.head_commit.message, '[verify17102]')
         uses: reactivecircus/android-emulator-runner@v2
         with:

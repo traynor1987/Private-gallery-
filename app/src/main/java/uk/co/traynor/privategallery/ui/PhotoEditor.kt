@@ -110,8 +110,12 @@ fun PhotoEditor(
     var resultRenderJob by remember { mutableStateOf<Job?>(null) }
     val allowedSources = remember(id, combineCandidates) { (listOf(id) + combineCandidates).distinct() }
     var combineConsent by remember(currentProvider, chosenSourceId, referenceId) { mutableStateOf(false) }
-    DisposableEffect(referenceBytes) { val bytes = referenceBytes; onDispose { bytes?.fill(0) } }
-    DisposableEffect(referencePreview) { val bitmap = referencePreview; onDispose { bitmap?.recycle() } }
+    // Capture ownership during composition: a later state publication must not become
+    // the resource owned by an earlier key's deferred DisposableEffect callback.
+    val ownedReferenceBytes = referenceBytes
+    val ownedReferencePreview = referencePreview
+    DisposableEffect(ownedReferenceBytes) { onDispose { ownedReferenceBytes?.fill(0) } }
+    DisposableEffect(ownedReferencePreview) { onDispose { ownedReferencePreview?.recycle() } }
     LaunchedEffect(referenceId, referenceLoadRevision, editorVisible) {
         referenceJob = currentCoroutineContext()[Job]
         referenceBytes = null; referencePreview = null; combineConsent = false
@@ -164,10 +168,13 @@ fun PhotoEditor(
         lifecycle.addObserver(observer)
         onDispose { active.set(false); operation?.cancel(); loadJob?.cancel(); renderJob?.cancel(); referenceJob?.cancel(); resultRenderJob?.cancel(); lifecycle.removeObserver(observer) }
     }
-    DisposableEffect(source) { val buffer = source; onDispose { buffer?.fill(0) } }
-    DisposableEffect(cloudResult) { val buffer = cloudResult; onDispose { buffer?.fill(0) } }
-    DisposableEffect(preview) { val bitmap = preview; onDispose { bitmap?.recycle() } }
-    DisposableEffect(resultPreview) { val bitmap = resultPreview; onDispose { bitmap?.recycle() } }
+    val ownedSource = source
+    val ownedPreview = preview
+    val ownedResultPreview = resultPreview
+    DisposableEffect(ownedSource) { onDispose { ownedSource?.fill(0) } }
+    DisposableEffect(aiResult) { onDispose { aiResult?.fill(0) } }
+    DisposableEffect(ownedPreview) { onDispose { ownedPreview?.recycle() } }
+    DisposableEffect(ownedResultPreview) { onDispose { ownedResultPreview?.recycle() } }
     LaunchedEffect(chosenSourceId, sourceLoadRevision, editorVisible) {
         loadJob = currentCoroutineContext()[Job]
         source = null; preview = null

@@ -12,9 +12,6 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.foundation.border
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.gestures.awaitEachGesture
-import androidx.compose.foundation.gestures.awaitFirstDown
-import androidx.compose.ui.input.pointer.changedToUpIgnoreConsumed
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -275,23 +272,7 @@ internal fun VaultCameraScreen(controller:VaultCameraController,onExit:()->Unit)
                 else if(black)Box(Modifier.weight(1f).fillMaxWidth().background(Color.Black)
                     .semantics {contentDescription=if(video)"Black video capture" else "Black photo capture";stateDescription=if(controller.recordingNow)"Recording" else controller.status
                         onClick(if(controller.recordingNow)"Stop recording" else if(video)"Start recording" else "Take photo"){input();true}}
-                    .pointerInput(controller){
-                        awaitEachGesture {
-                            val down=awaitFirstDown()
-                            var tap=true
-                            while(true) {
-                                val event=awaitPointerEvent()
-                                val change=event.changes.firstOrNull {it.id==down.id} ?: break
-                                if(change.isConsumed || event.changes.count {it.pressed}>1 ||
-                                    (change.position-down.position).getDistance()>viewConfiguration.touchSlop)tap=false
-                                if(change.changedToUpIgnoreConsumed()) {
-                                    if(tap){change.consume();input()}
-                                    break
-                                }
-                                if(!change.pressed)break
-                            }
-                        }
-                    })
+                    .cameraConcealedTapInput(controller.bound) {input()})
                 else {
                     val controls: @Composable () -> Unit = {
                             CameraCaptureControls(

@@ -113,5 +113,8 @@
   ],
   "uk.co.traynor.privategallery.ui.Evidence179UiActionsTest": [
     "helperScrollsToActionDeepInsideOversizedLazyCardBeforeGesture"
+  ],
+  "uk.co.traynor.privategallery.ui.CameraConcealedTapInputTest": [
+    "swipeThenRapidTapsUseFreshGestureAndLatestCallback"
   ]
 }
