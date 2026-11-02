@@ -22,13 +22,18 @@
 
 ## Tasks
 - [ ] Browser/launcher: host RED tests for11-app migration, Hidden-only Tor, fixed VPN/Tor launch modes and owner-isolated state; implement launch integration and coherent shell; verify routing with existing fixtures and mandatory transport assertions.
-- [ ] Evidence: add dashboard/adaptive UI tests, replace text-heavy Home with counts/actions/recent/search and Information page; retain original import/group/AI/export tests and controllers.
-- [ ] Camera: add adaptive control tests; reorganize existing camera preview/top/bottom settings without controller rewrite; retain capture/audio/black/reading/volume/revocation assertions.
-- [ ] Editor: add workspace/large-preview/collapsible-AI tests; reorganize existing PhotoEditor controls; preserve crop geometry, save-copy, consent and external-edit boundaries.
-- [ ] Integration: shared-theme/modal/screenshot/Private Apps audit; focused host/JVM and grouped API37 run using existing workflow; inspect raw XML/screenshots, fix demonstrated failures.
+- [x] Evidence: add dashboard/adaptive UI tests, replace text-heavy Home with counts/actions/recent/search and Information page; retain original import/group/AI/export tests and controllers.
+- [x] Camera: add adaptive control tests; reorganize existing camera preview/top/bottom settings without controller rewrite; retain capture/audio/black/reading/volume/revocation assertions.
+- [x] Editor: add workspace/large-preview/collapsible-AI tests; reorganize existing PhotoEditor controls; preserve crop geometry, save-copy, consent and external-edit boundaries.
+- [x] Integration: shared-theme/modal/screenshot/Private Apps audit; focused host/JVM and grouped API37 run using existing workflow; inspect raw XML/screenshots, fix demonstrated failures.
 - [ ] Independent security review: whole diff and runtime gates; resolve Critical/Important and freeze exact source.
 - [ ] Release: baseline-compatible53->54 fixture, existing production workflow, original signer, in-place upgrade/restart; download/hash/signature verification, save APK and final recovery.
 
 ## Ledger
 Ruling: supplied detailed specification plus explicit autonomous execution supersedes routine design/plan approval questions. Existing scratch clone is isolated to this task; use same release branch, no additional branch/worktree. Browser integration shares Main/Home files; app agents own disjoint Evidence/Camera/Editor presentation files and tests. Common NovaChrome is root-owned. No agent may push or trigger CI.
 Baseline: remote73e89605; latest signed53; all87 remote heads max53. Existing104-case green run41354819734 and production41355731517 retain authoritative baseline proof; do not rerun baseline Android suites.
+
+
+## Final execution checkpoint — 2026-11-02
+App source2b67f751; closure run41365205828 passed25/25API37 and7/7JVM, artifact13107287404 archiveSHA1794260bd5bbf24eb1fc5b8c5d9a06c616c8ce427086a7eb6d4f6e0ca8227056 downloaded/rawXML verified. Prior07c83 cases79pass4fail followed by allfourfailurespassingclosure;4f4 actual3VPN/Tor/network-loss checks pass. Current266fullmatrix retained, notclaimedgreenononesource. Detailedscope docs/release17102/STATUS.md.
+Browser/launcher implementation and live transport evidence completed, but browser task remains open because provider-managedWebViewcookie/profiledata is notvault-keyencrypted as requested. Independent source review complete with no additionalCritical/Important finding, but fullreleaseapproval remains blocked bythatrequirement. No54signingactivation/productionAPK/original-key53->54upgrade. Do not check Release complete or silentlywaive requirement. Latest signed candidate53 remains valid; physicalFoldacceptance pendingvalid54candidate.

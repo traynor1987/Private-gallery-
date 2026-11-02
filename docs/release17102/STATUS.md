@@ -1,6 +1,6 @@
 # NovaOS 1.7.10.2 / code54 — unsigned recovery checkpoint
 
-Application source: `07c14135e4a2eb92ac6725e096406f8ba9bcc15d`.
+Application source: `2b67f751a91961c138b4290c165415931e7c8b89`.
 Branch: `release/1.7.10-private-home`. Package: `uk.co.traynor.privategallery`. API37 only.
 Latest delivered original-key candidate remains 1.7.10.1/code53. Code54 was unused when assigned; no replacement signing key was created.
 
@@ -17,8 +17,11 @@ Latest delivered original-key candidate remains 1.7.10.1/code53. Code54 was unus
 
 - Source e3c8a97: app/test compilation and host/JVM passed; initial253 UI cases234 passed19 failed. Failures were investigated, not counted as release success.
 - Source4f4dd4f1, run41362013309:109 UI cases107 passed2 failed,0 errors/skips. All3 live VPN/Tor/network-loss cases passed original XML and actual packet/DNS/body verifiers. Downloaded artifact13105328926 archive SHA256 `c83d50172d840c6139ffa63e9c38b03e954e29cd670bc25347616e1707af7025`.
-- Source07c14135, run41363619033: host checks and app/test compilation/focused JVM passed. Final83-case API37 batch:79 passed4 failed,0 errors/skips. Original artifact13106692387 independently downloaded; archive SHA256 `9d599e3be0d4f03c564b88bb23771bcf3114ed262f156be2f5fd2b54feebb606`. Focused JVM7/7 passed (5 VaultDocumentPolicy,2 EditorToneModel). Actual tone pixel/Save Copy/rotation and camera focus/hardware tests passed; prior grouping and modal consent failures pass. Remaining exposure-slider UI, AI source replacement, concealed-camera and Evidence lazy search failures have narrow fixes queued for a25-case closure batch. It covers final Evidence/AI modal fixes, editor/camera and focused regression tests; browser production source is unchanged from4f4 routing evidence.
+- Source07c14135, run41363619033: host checks and app/test compilation/focused JVM passed. Final83-case API37 batch:79 passed4 failed,0 errors/skips. Original artifact13106692387 independently downloaded; archive SHA256 `9d599e3be0d4f03c564b88bb23771bcf3114ed262f156be2f5fd2b54feebb606`. Focused JVM7/7 passed (5 VaultDocumentPolicy,2 EditorToneModel). Actual tone pixel/Save Copy/rotation and camera focus/hardware tests passed; prior grouping and modal consent failures pass. Remaining exposure-slider UI, AI source replacement, concealed-camera and Evidence lazy search failures were corrected and passed the closure batch below. It covers final Evidence/AI modal fixes, editor/camera and focused regression tests; browser production source is unchanged from4f4 routing evidence.
 - The current full266-case matrix has NOT been claimed green on one source. No physical Samsung Fold acceptance is claimed.
+
+- Final source `2b67f751a91961c138b4290c165415931e7c8b89`, run [41365205828](https://github.com/traynor1987/Private-gallery-/actions/runs/41365205828): **25/25 API37 closure cases passed**,0 failures/errors/skips; focused JVM7/7 and host/app/test assembly passed. All four prior failures now pass, plus new concealed-gesture regression. Original artifact13107287404 downloaded and exact XML case accounting verified locally. Archive SHA256 `1794260bd5bbf24eb1fc5b8c5d9a06c616c8ce427086a7eb6d4f6e0ca8227056`.
+- Closure fixes: immutable composition ownership for editor disposal; exposure swipe starts away from Android Back edge and asserts actual slider/history before Save Copy; black-only gesture ownership with original CameraX capture assertion; lazy Evidence search materialization plus authoritative encrypted search assertion. Original timeouts and security checks retained.
 
 ## Security and release decision
 
