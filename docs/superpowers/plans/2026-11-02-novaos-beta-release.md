@@ -9,3 +9,5 @@ Alternatives: full engine replacement is explicitly deferred by owner; disabling
 Tasks: (1) labels/notice/accurate copy; (2) focused actual UI/persistence/launcher checks using existing fast workflow; (3) independent exact-source Beta review; (4) existing acceptance workflow original-key53->54 upgrade/restart/signing; (5) independently verify and deliver APK. Reuse prior source-scoped UI and live routing evidence; do not label all266 cases passed on one source.
 
 Ledger: recovered e923972e. Local label checks observed RED before implementation. Owner detailed decision and continuous-execution authorization supersede routine design-confirmation prompts. Existing isolated scratch clone/same release branch retained. Provisional security reviewer permits retention, final diff approval pending. No signing activation until new focused gates/review pass.
+
+Tasks1–3 complete:9efd1954 exactsource12/12API37+7/7JVM, downloadedartifact/hash/rawXMLindependentlyverified, finalindependentBetaapproval. Task4 originalkey53->54 productionjob activation, thenTask5actualAPKverification/delivery remain.

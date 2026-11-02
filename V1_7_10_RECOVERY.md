@@ -1,3 +1,13 @@
+# Beta source verified and production gates activated — 2026-11-02
+
+Frozen source `9efd19540a1d75efa1b30f4e23c9cbb096f93aff`, NovaOS1.7.10.2/code54. Owner-approved Browser — Beta/Tor — Beta scope explicitly defers encrypted/memory-only provider storage; accurate one-time notice and continued Help disclosure, no transport/authentication weakening. Independent `BETA_SECURITY_REVIEW.md` Decision APPROVED exactsource, no unresolvedCritical/Important implementationfinding withinacceptedBeta scope. Historical strict-storage blocker below is superseded byexplicitownerdecision, NOT fixed.
+
+Run41368247494/job125032936376 SUCCESS. Artifact13108297290 independentlydownloadedSHA256fd845324525f578d82cee2f01f7d013407e14f43dd7d26aa02755d0b34ccf073. Original12API37cases+7JVMcases,0fail/errors/skips; source receipt and exactBeta matrix accounting verified independently byrootandreviewer. Prior25UI/3liveVPN/Tor checks pinned andsource-scoped; nofull266single-sourceclaim.
+
+`.acceptance17102-candidate` pins exactsource/run/review/matrix/fixture. Existingacceptance1762 workflow reviewedcode54job nowmayactivate, requiresallgatesbeforesigneraccess. Originalsigned53baselineartifact13103302785 andsourcef923d62 pinned; originalcertificate and genuineinstall-r53->54/restart/data-preservation mandatory. No54APKdelivery claimed until production jobandindependentactualAPKchecks pass. Follow currentGitHubrun, not stalehistoricalfailures. Samebranch/package/version; no uninstall/data clear/replacementcredentials.
+
+---
+
 # Owner-approved Beta scope / code54 release preparation — 2026-11-02
 
 Continue same release/1.7.10-private-home frome923972e. Owner explicitly defers advanced encrypted/memory-only browserengine, accepts Browser/Tor Beta with accurate notice, and requires disabling any capability independently judged unsafe. This supersedes historical strict-profile requirement below; it does NOT assert the storage issue fixed.
