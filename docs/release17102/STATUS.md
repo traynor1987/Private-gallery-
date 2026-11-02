@@ -1,41 +1,45 @@
-# NovaOS 1.7.10.2 / code54 — unsigned recovery checkpoint
+# NovaOS 1.7.10.2 / code54 — signed owner acceptance APK ready
 
-Application source: `2b67f751a91961c138b4290c165415931e7c8b89`.
-Branch: `release/1.7.10-private-home`. Package: `uk.co.traynor.privategallery`. API37 only.
-Latest delivered original-key candidate remains 1.7.10.1/code53. Code54 was unused when assigned; no replacement signing key was created.
+Completed2026-11-02 on existing `release/1.7.10-private-home`. Application source `9efd19540a1d75efa1b30f4e23c9cbb096f93aff`; release activation `7f2c73fcaa32189b39829e829bcaecf7918ff50e`. Package `uk.co.traynor.privategallery`; minimum/target Android17/API37; original production certificate. Install over the existing original-key NovaOS app without uninstalling or clearing data.
 
-## Implemented
+[Download signed APK](https://chatgpt.com/library?file_id=libfile_f8a84814a5c08191b7231c39f033986e&account_id=personal)
 
-- Retained approved N branding, Nova Home root, adaptive launcher, Primary/Hidden authority boundaries and removed legacy bottom navigation. Hidden-only Tor launcher entry has fixed Tor admission; Hidden Browser has fixed VPN admission.
-- Shared themed browser connection/status shell, address/tab/bookmark/history presentation, retry/settings and Home/Lock/Panic controls. Existing actual interactive VPN and Tor transport engines preserved. Modes retain separate profiles/catalogues. Tor JavaScript/history defaults remain off; New Identity retires the complete session and requires a fresh launch, without promising a changed exit IP or full Tor Browser anonymity.
-- Evidence dashboard: counts, import, recent incidents, search, Library/Timeline/AI shortcuts and Information page. Existing full-page original-selection/OCR/correction/grouping/AI payload consent/export workflows preserved with original encrypted engine and provenance.
-- Camera viewfinder layout with top controls, bottom/adaptive side capture dock, zoom, mode, shutter, switch and recent encrypted capture. Added real CameraX tap focus with exact binding/owner/request guards and truthful transient feedback. Existing encrypted photo/video, concealed capture, microphone, volume capture and recording finalisation preserved.
-- Editor stable large preview, grouped crop/adjust/AI controls, rotation-aware aspect presets, bounded exposure/temperature rendering and Save Copy. AI provider/model disclosure collapses; source replacement and existing exact transmission consent remain. Existing secure external-edit discovery/export leases retained.
-- Modal focus/IME corrections and full-page sensitive Evidence window handling; selected light/dark theme inherited. Eligible screenshot policy remains authenticated, foreground and focused; sensitive pages/Recents/background stay protected.
+- Filename: NovaOS-1.7.10.2-code54-owner-acceptance.apk
+- APK length:138323890 bytes
+- APK SHA-256:`3e9497d87c074d6d49bfd42a2b44cc5f2cd46ec0b7476d35d030e75b9cd35ce2`
+- Signing certificate SHA-256:`94f2bfc6567f26d067d29077111cfd0ce86d38263c642ad115e43365f05b0d17`
+- Production run:[41369126405](https://github.com/traynor1987/Private-gallery-/actions/runs/41369126405), job125035601491 SUCCESS.
+- GitHub artifact:[13108872409](https://github.com/traynor1987/Private-gallery-/actions/runs/41369126405/artifacts/13108872409); archive SHA-256:`7e141abd9ba9c1e9e440dd0e08bf6cb6bfd869808f0d5bec226ff43fcb858574`.
 
-## Verification scope
+## Completed professional experience
 
-- Source e3c8a97: app/test compilation and host/JVM passed; initial253 UI cases234 passed19 failed. Failures were investigated, not counted as release success.
-- Source4f4dd4f1, run41362013309:109 UI cases107 passed2 failed,0 errors/skips. All3 live VPN/Tor/network-loss cases passed original XML and actual packet/DNS/body verifiers. Downloaded artifact13105328926 archive SHA256 `c83d50172d840c6139ffa63e9c38b03e954e29cd670bc25347616e1707af7025`.
-- Source07c14135, run41363619033: host checks and app/test compilation/focused JVM passed. Final83-case API37 batch:79 passed4 failed,0 errors/skips. Original artifact13106692387 independently downloaded; archive SHA256 `9d599e3be0d4f03c564b88bb23771bcf3114ed262f156be2f5fd2b54feebb606`. Focused JVM7/7 passed (5 VaultDocumentPolicy,2 EditorToneModel). Actual tone pixel/Save Copy/rotation and camera focus/hardware tests passed; prior grouping and modal consent failures pass. Remaining exposure-slider UI, AI source replacement, concealed-camera and Evidence lazy search failures were corrected and passed the closure batch below. It covers final Evidence/AI modal fixes, editor/camera and focused regression tests; browser production source is unchanged from4f4 routing evidence.
-- The current full266-case matrix has NOT been claimed green on one source. No physical Samsung Fold acceptance is claimed.
+- Approved ringed N artwork and NovaOS branding retained. Nova Home remains the navigation root; legacy Gallery bottom bar removed. Full-screen internal destinations, adaptive launcher, Primary/Hidden isolation and consistent Home/Back/Lock/Panic controls retained. Eleven model destinations preserve existing layout migration; Tor remains Hidden-only.
+- Browser — Beta and Tor — Beta have separate launcher entries and professional V1 address/tab/menu/navigation/connection/loading/error surfaces with light/dark themes. Primary retains its own browser; Hidden Browser has fixed VPN admission, Tor has fixed Tor admission with independent profiles/catalogues. Existing interactive VPN JavaScript/forms/POST/uploads and Tor-authorised capabilities remain. No direct fallback or new cookie persistence was added. Tor JavaScript/history defaults remain off; New Identity retires the whole session/process and requires fresh launch without promising a different exit IP or full Tor Browser anonymity.
+- A concise one-time privacy page precedes Hidden runtime composition and the Primary production destination. It stores only a nonsecret notice revision. Home/Lock/Panic remain available. Settings and Clear Session accurately disclose delayed provider file cleanup.
+- Evidence Locker has counts, import, recent incidents, search, Library/Timeline/AI shortcuts and Information. Existing full-page selection/removal/OCR/text/group review/incident/timeline/AI consent/export workflows and encrypted engine/provenance are retained. No automatic external AI transmission was added.
+- Camera controls surround an unobstructed viewfinder, with adaptive capture dock, zoom/mode/shutter/switch/recent capture and guarded real CameraX tap focus. Encrypted photo/video, concealed/reading/volume capture, audio and safe recording finalisation remain.
+- Photo Editor has stable large preview, grouped crop/adjust/AI controls, rotation-aware aspect presets and bounded exposure/temperature rendering with Save Copy. AI provider/model configuration collapses; source replacement, exact private-image transmission consent, previews and secure teardown remain. Compatible external-editor discovery and temporary export leases are retained.
+- Private Apps retains encrypted catalogues, distinct app presentation, switching, management/PWA entry and Home integration. Screenshot settings honour eligible authenticated foreground/focused pages; credentials, sensitive Evidence pages, background covers and Recents remain protected. Modal focus/IME handling and light/dark/Fold-sized controls were repaired.
 
-- Final source `2b67f751a91961c138b4290c165415931e7c8b89`, run [41365205828](https://github.com/traynor1987/Private-gallery-/actions/runs/41365205828): **25/25 API37 closure cases passed**,0 failures/errors/skips; focused JVM7/7 and host/app/test assembly passed. All four prior failures now pass, plus new concealed-gesture regression. Original artifact13107287404 downloaded and exact XML case accounting verified locally. Archive SHA256 `1794260bd5bbf24eb1fc5b8c5d9a06c616c8ce427086a7eb6d4f6e0ca8227056`.
-- Closure fixes: immutable composition ownership for editor disposal; exposure swipe starts away from Android Back edge and asserts actual slider/history before Save Copy; black-only gesture ownership with original CameraX capture assertion; lazy Evidence search materialization plus authoritative encrypted search assertion. Original timeouts and security checks retained.
+## Accepted Beta limitation
 
-## Security and release decision
+The owner explicitly deferred advanced encrypted/memory-only browser-engine replacement. WebView cookies/site/profile files can be written to ordinary app-private disk without the Hidden vault key and can remain after exit/crash until cleanup. The issue is **deferred, not fixed**. No memory-only, instant-erasure, forensic protection or full Tor Browser anonymity claim is made. Existing encrypted bookmarks/history/catalogues are separate. Independent review accepted retaining the existing Beta capability under this disclosed owner scope; no capability required disabling. VPN/Tor fail-closed routing and authentication were not waived.
 
-Independent review: `SECURITY_REVIEW_CONDITIONAL.md`. No additional unresolved Critical/Important implementation finding in reviewed changes; full signing approval withheld.
+## Verification and independent review
 
-**Blocking requirement:** Android WebView provider cookies, DOM/local storage and session profile files use ordinary isolated transient app-private directories. They are not encrypted with the originating Hidden vault key. Bookmarks/history/catalogues are vault-encrypted. Device encryption, isolated profiles, cleanup and encrypted snapshots do not encrypt live provider-managed files. A strict implementation requires a separately reviewed architecture and active-session/crash/lock/cleanup proof; do not waive this requirement implicitly or claim it met.
+- Exact source9efd1954: run41368247494/job125032936376 SUCCESS;12/12 focusedAPI37 and7/7JVM cases,0 failures/errors/skips. Actual notice acknowledgement/new composition, no acknowledgement by Home/Lock/Panic, cover/inner/theme/large-text, launcher/navigation, browser shell and nonexported native admission checks passed.
+- Artifact13108297290 archive SHA-256:fd845324525f578d82cee2f01f7d013407e14f43dd7d26aa02755d0b34ccf073; independently downloaded/source receipt/rawXML/accounting checked by root and reviewer.
+- Retained source-scoped evidence:25 app closure cases at2b67f751, artifact13107287404;3 liveVPN/Tor/network-loss cases at4f4dd4f1, artifact13105328926. Packet/DNS/body verifiers passed in that original routing run. No full266-case single-source pass is claimed. No unchanged broad device suite was rerun for Beta labels/notice.
+- `BETA_SECURITY_REVIEW.md`: exact source APPROVED under explicit owner Beta scope, fixture/matrix hashes bound before signer access. `PRODUCTION_REVIEW.md`: independent actual artifact/signature/upgrade review approved owner delivery. No unresolved Critical/Important finding within this scope.
+- Production verified original signer, release lint/build, package/version/API37, OCR distribution and16KiB alignment. Exact distributed original signed53 APK was used; baseline-compatible reviewed instrumentation compiled before signer access. Seed, actualinstall-r53->54 verification and after-restart verification each passed. Existing synthetic encrypted payloads/configuration/Evidence/Home/PrivateApps and original key access were preserved. No uninstall/data clear/replacement signer.
+- Downloaded final APK actual v2RSA/SHA512 signature, original certificate and complete134-chunk content digest independently verified locally and by reviewer, in addition to SDK apksigner and Android installation. Local verifier also rejected an altered APK. Final APK hash matches production receipt and saved delivery file.
 
-No54 production activation, signed APK, APK checksum or code53-to54 upgrade result exists. Original package/certificate/data are preserved. Signing can proceed only after the storage requirement is explicitly resolved or correctly implemented and all applicable gates pass.
+## Short physical Fold acceptance checklist
 
-## Fold owner acceptance after a valid signed candidate exists
+Physical Samsung Fold testing remains owner acceptance; it was not remotely claimed.
 
-Install over the existing original-key app without uninstall/data clear. Check cover/inner display, portrait/landscape, fold/unfold, large text and keyboard; Home/Back/Lock/Panic; independent Hidden PIN/session expiry; eligible screenshots versus sensitive pages/Recents; VPN loss fail-closed and Tor separation; Evidence selection/OCR/group save; encrypted camera photo/video finalisation; crop/adjust/AI consent/Save Copy; existing media, incidents and Private Apps after restart.
-
-
-## Final storage investigation — 2026-11-02
-
-See [independent storage review](HIDDEN_STORAGE_REVIEW.md) for the exact directories, lifecycle trace, public API limits and primary source references. This follow-up recovered4351a731, reused the verified25-case artifact, and reran host Hidden authority/browser policy checks successfully. No application source, version or workflow changed and no new CI run was started. No storage repair or production acceptance is claimed. The no-plaintext invariant remains unsatisfied across active sessions and abrupt package death; an actual nonpersistent/encrypted provider backend is required before code54 can be signed.
+1. Update the existing app; confirm existing Primary/Hidden media, incidents, Private Apps and credentials survive restart.
+2. Check cover/inner display, fold/unfold, portrait/landscape, large text, keyboard and light/dark themes.
+3. Launch apps from Home; check Back/Home/Lock/Panic and independent Hidden PIN/timeout.
+4. Read Beta notice once; check Browser/VPN loss fail-closed and separate Tor session/bookmarks.
+5. Import/OCR/group Evidence; capture encrypted photo/video; crop/adjust/AI consent/Save Copy; check eligible screenshots and protected Recents/sensitive pages.

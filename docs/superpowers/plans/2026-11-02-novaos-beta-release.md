@@ -11,3 +11,5 @@ Tasks: (1) labels/notice/accurate copy; (2) focused actual UI/persistence/launch
 Ledger: recovered e923972e. Local label checks observed RED before implementation. Owner detailed decision and continuous-execution authorization supersede routine design-confirmation prompts. Existing isolated scratch clone/same release branch retained. Provisional security reviewer permits retention, final diff approval pending. No signing activation until new focused gates/review pass.
 
 Tasks1–3 complete:9efd1954 exactsource12/12API37+7/7JVM, downloadedartifact/hash/rawXMLindependentlyverified, finalindependentBetaapproval. Task4 originalkey53->54 productionjob activation, thenTask5actualAPKverification/delivery remain.
+
+Tasks4–5 complete: production41369126405 SUCCESS originalkey53->54/restart, actualAPKsignature/cert/hash independentlyverified, ownerAPK saved andreadyfor delivery. APK SHA3e9497d87c074d6d49bfd42a2b44cc5f2cd46ec0b7476d35d030e75b9cd35ce2; final LibraryIDlibfile_f8a84814a5c08191b7231c39f033986e. Detailed finalhandoff STATUS.md. Acceptedstorage limitation deferred, physicalFold acceptance pendingowner.
