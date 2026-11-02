@@ -22,7 +22,7 @@ import androidx.compose.ui.unit.dp
    Surface(shape=RoundedCornerShape(24.dp),color=MaterialTheme.colorScheme.primaryContainer) {
     Icon(if(tor)Icons.Default.Shield else Icons.Default.VpnLock,null,Modifier.padding(22.dp).size(42.dp),tint=MaterialTheme.colorScheme.onPrimaryContainer)
    }
-   Text(if(tor)"Tor Browser"else"Private Browser",style=MaterialTheme.typography.headlineSmall)
+   Text(if(tor)"Tor — Beta"else"Browser — Beta",style=MaterialTheme.typography.headlineSmall)
    Text(if(failed)"Connection unavailable"else"Preparing your private connection",style=MaterialTheme.typography.titleMedium)
    Text(if(tor)"Tor only · JavaScript off"else"VPN only · interactive websites",color=MaterialTheme.colorScheme.onSurfaceVariant)
    if(!failed)LinearProgressIndicator(Modifier.fillMaxWidth())

@@ -42,6 +42,7 @@ import uk.co.traynor.privategallery.core.hidden.HiddenSession
 internal fun HiddenBrowserHome(session:HiddenSession,onGallery:()->Unit,onVault:()->Unit,onFavourite:()->Unit,onSettings:()->Unit,modifier:Modifier=Modifier) {
  val context=LocalContext.current
  val activity=context as? MainActivity
+ if(BrowserBetaNotice({activity?.returnPrivateHome() ?: onGallery()},modifier))return
  // Launcher identity selects transport. A legacy preference can never turn Browser into Tor.
  val mode=activity?.novaHiddenBrowserMode ?: HiddenConnectionPolicy.Mode.VPN_ONLY
  var generation by remember(session,mode){mutableIntStateOf(0)}
@@ -64,7 +65,7 @@ internal fun HiddenBrowserHome(session:HiddenSession,onGallery:()->Unit,onVault:
  val tor=mode==HiddenConnectionPolicy.Mode.TOR_ONLY
  Surface(modifier.fillMaxSize(),color=MaterialTheme.colorScheme.background) {
   Column(Modifier.fillMaxSize().imePadding()) {
-   NovaAppHeader(if(activity?.homePrivateAppsRequested==true)"Private Apps"else if(tor)"Tor Browser"else"Browser","Hidden Space",
+   NovaAppHeader(if(activity?.homePrivateAppsRequested==true)"Private Apps"else if(tor)"Tor — Beta"else"Browser — Beta","Hidden Space",
     onHome={runtime?.close();activity?.returnPrivateHome()},onLock={activity?.lockNovaSpace()},onPanic={activity?.panicExit()})
    BrowserAddressBar("",{},false,runtime?.connected!=true,{},{},{})
    NovaBrowserStatus(tor,false,runtime?.detail.orEmpty(),{settings=true})
@@ -72,7 +73,7 @@ internal fun HiddenBrowserHome(session:HiddenSession,onGallery:()->Unit,onVault:
    BrowserNavigationToolbar(false,false,0,{},{},{settings=true},{settings=true},{settings=true},{settings=true})
   }
  }
- if(settings)BrowserPanel("Connection settings",if(tor)"Tor Browser"else"Browser",{settings=false}) {
+ if(settings)BrowserPanel("Connection settings",if(tor)"Tor — Beta"else"Browser — Beta",{settings=false}) {
   Column(Modifier.testTag("hidden-browser-settings").verticalScroll(rememberScrollState()).padding(16.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
    Text(if(tor)"Tor only"else"VPN only",style=MaterialTheme.typography.titleMedium)
    Text(runtime?.status?:"Disconnected")
@@ -81,7 +82,7 @@ internal fun HiddenBrowserHome(session:HiddenSession,onGallery:()->Unit,onVault:
    TextButton(onClick=onVault){Text("Manage Hidden downloads")}
    TextButton(onClick=onSettings){Text("Workspace settings")}
    Text(runtime?.detail.orEmpty(),style=MaterialTheme.typography.bodySmall)
-   Text(if(tor)"Tor starts with JavaScript and saved history off. Tabs and cookies end with this session. Tor Browser fingerprinting protections are not provided."else"Interactive websites use the verified VPN only. Tabs and cookies remain independent of Primary and end with this session.",style=MaterialTheme.typography.bodySmall)
+   Text(if(tor)"Tor starts with JavaScript and saved history off. Tabs are not restored. WebView cookie/site files may remain on app-private disk until cleanup. Tor Browser fingerprinting protections are not provided."else"Interactive websites use the verified VPN only. Sessions remain independent of Primary. WebView cookie/site files may remain on app-private disk until cleanup.",style=MaterialTheme.typography.bodySmall)
   }
  }
 }
@@ -91,6 +92,6 @@ internal fun HiddenBrowserPreferences() {
  Column(verticalArrangement=Arrangement.spacedBy(8.dp)) {
   Text("Private browsers",style=MaterialTheme.typography.titleMedium)
   Text("Browser uses VPN only. Open Tor Browser from Hidden Home for a separate Tor session.")
-  Text("Both applications keep independent bookmarks and history in encrypted Hidden storage. Tabs and cookies are session-only. Neither application falls back to the direct network.",style=MaterialTheme.typography.bodySmall)
+  Text("Both applications keep independent bookmarks and history in encrypted Hidden storage. WebView cookie/site profiles are not vault-key encrypted; files may remain after exit/crash until cleanup. Neither application falls back to the direct network.",style=MaterialTheme.typography.bodySmall)
  }
 }

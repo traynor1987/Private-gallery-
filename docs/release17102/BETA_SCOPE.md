@@ -1,0 +1,11 @@
+# Owner-approved Browser / Tor Beta scope — 2026-11-02
+
+The owner explicitly defers a complete browser-engine replacement and advanced encrypted/memory-only profiles to a future NovaOS version. This supersedes the previous strict storage requirement for this code54 release; it does not repair or conceal the limitation. Retain existing working capabilities subject to independent review; disable an affected production capability if the reviewer finds an unresolved release-blocking risk.
+
+Browser — Beta and Tor — Beta have separate launcher entries and retain the existing professional V1 chrome. Tor remains Hidden-only. Primary, Hidden VPN and Tor isolation, authenticated admission and existing fail-closed transports are unchanged. No additional cookie persistence or network fallback is introduced.
+
+Before composing the Hidden browser runtime, a versioned one-time page explains provider-managed cookie/site disk writes without NovaOS vault-key encryption, possible retention after exit/crash until cleanup, and lack of memory-only guarantees. The same notice is shown by the Primary production browser destination. Only an integer acknowledgement is saved in app-private preferences; it contains no URL, login, cookie or Space identity. Space authentication is still mandatory. Settings/Clear Session wording retains the limitation after acknowledgement. Tor does not claim full Tor Browser anonymity protections.
+
+Remaining risk: OS/app-private isolation and device encryption protect files from ordinary other apps, but profile data is not protected by the separate Hidden vault key. A running session or a crash before cleanup may leave provider files. Forensic/compromised-app/privileged-device access is outside the claimed protection. Bookmarks/history/catalogues remain in their existing encrypted owner stores.
+
+Verification: focused12-case Beta notice/launcher/navigation/native-admission matrix; unchanged earlier25-case app closure and3-case liveVPN/Tor/network-loss artifacts retain their own source SHAs. No full266-case single-source claim. Production original-key53->54 upgrade/restart and finalAPKidentity/certificate/hash gates remain mandatory. Final independent security decision and runtime results are pending.

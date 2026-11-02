@@ -152,6 +152,7 @@ internal fun BrowserV2ProductionDestination(
     onPrepareVaultUpload: (List<VaultItem>, (Result<List<android.net.Uri>>) -> Unit) -> Unit = { _, done -> done(Result.failure(IllegalStateException("Vault upload unavailable"))) },
     onClearVaultUpload: () -> Unit = {},
 ) {
+    if (BrowserBetaNotice({ onOpenGallery?.invoke() }, modifier)) return
     SideEffect { session.recordAcceptanceUiEvent("BROWSER_ROUTE_ENTERED") }
     Column(
         modifier.fillMaxSize().then(if (acceptanceProbeEnabled) Modifier.background(Color(0xFFCC0000)) else Modifier)
@@ -813,7 +814,7 @@ internal fun BrowserV2Home(
                     onExitGallery={(context as? uk.co.traynor.privategallery.MainActivity)?.returnPrivateHome()},
                     onLockVault={(context as? uk.co.traynor.privategallery.MainActivity)?.privateAppLockVault()},
                     onQuickLock={(context as? uk.co.traynor.privategallery.MainActivity)?.panicExit()})
-                else NovaAppHeader("Browser",chromeSecurity?.space,
+                else NovaAppHeader("Browser — Beta",chromeSecurity?.space,
                     onHome=chromeSecurity?.home,onLock=chromeSecurity?.lock,onPanic=chromeSecurity?.panic,
                     actions={IconButton(onClick=::openPrivateApps){Icon(Icons.Default.Apps,"Private Apps")}})
 

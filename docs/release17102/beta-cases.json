@@ -1,0 +1,24 @@
+{
+  "uk.co.traynor.privategallery.ui.BrowserBetaNoticeTest": [
+    "contentStartsOnlyAfterAcknowledgementAndNewCompositionRemembersIt",
+    "homeLockAndPanicDoNotAcknowledgeOrStartContent",
+    "privacyDisclosureAndActionsFitCoverInnerThemesAndLargeText"
+  ],
+  "uk.co.traynor.privategallery.NovaHomePresentation17101Test": [
+    "tenApplicationsHaveAccessibleLaunchAndContextActionsOnCoverAndLargeText",
+    "coverInnerLandscapeSplitAndLargeTextRemainUsableInBothThemes",
+    "localBackAndNovaHomeStayReachableTogetherAtLargeText"
+  ],
+  "uk.co.traynor.privategallery.NovaNavigation17101Test": [
+    "authenticatedExistingInstallStartsAtNovaHomeAndAppRootReturnsHome"
+  ],
+  "uk.co.traynor.privategallery.ui.NovaBrowserPresentationTest": [
+    "connectionShellKeepsRetrySettingsAndPrivateDiagnosticsReachable"
+  ],
+  "uk.co.traynor.privategallery.core.browser.hidden.HiddenVpnBoundary1762Test": [
+    "childAndUploadProviderHaveIndependentNonExportedBoundaries",
+    "noCapabilityLaunchCannotBindPrimaryOrRetainChild",
+    "uploadUriCannotRecoverAuthorityAfterProcessOrSessionLoss",
+    "proxyRejectsPrivateAndAmbiguousDnsDestinationsIncludingUlaAndCgnat"
+  ]
+}

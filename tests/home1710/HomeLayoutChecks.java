@@ -4,6 +4,8 @@ import uk.co.traynor.privategallery.core.home.HomeLayout;
 public class HomeLayoutChecks {
   static void check(boolean condition) { if (!condition) throw new AssertionError(); }
   public static void main(String[] args) {
+    check(HomeLayout.Shortcut.BROWSER.label.equals("Browser — Beta"));
+    check(HomeLayout.Shortcut.TOR_BROWSER.label.equals("Tor — Beta"));
     HomeLayout home = HomeLayout.defaults();
     check(home.visible().size() == 11);
     home = home.hide(HomeLayout.Shortcut.BROWSER).pin(HomeLayout.Shortcut.CAMERA);

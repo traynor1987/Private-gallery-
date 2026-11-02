@@ -1,3 +1,13 @@
+# Owner-approved Beta scope / code54 release preparation — 2026-11-02
+
+Continue same release/1.7.10-private-home frome923972e. Owner explicitly defers advanced encrypted/memory-only browserengine, accepts Browser/Tor Beta with accurate notice, and requires disabling any capability independently judged unsafe. This supersedes historical strict-profile requirement below; it does NOT assert the storage issue fixed.
+
+Implemented Browser — Beta/Tor — Beta labels, shared V1shell retention, one-time pre-use privacy page gating Hidden runtime, one nonsecret revision acknowledgement, owner Home/Lock/Panic, and accurate Settings/ClearSession text. Existing transport/session/storage engines unchanged. New focused12-case Beta matrix usesexistingfastworkflow. Local launcherlabels RED->GREEN;11presentation/releasehosttests pass;4baselinecompilerdenial/validation tests pass; originalsigned53archive/APKpinchecks and retained25+3 XML/source-scopeevidence validation pass. Newruntime and finalindependentreview pending.
+
+Prepared inactiveacceptance17102 job inexistingacceptance1762 workflow, exact-source/review/matrix/fixture and prior-artifact checks before signer, originalsigned53 baseline, baseline-compatible53->54 fixture with10->11Home migration, originalcert and actualinstall-r/restart/data gates. No acceptance17102marker exists; no54signing/upgrade/APKclaimed. BETA_SCOPE.md records ownerdecision/risks. Prior evidence and old blockers below remain historical, not current owner's scope.
+
+---
+
 # Hidden Browser storage re-investigation — 2026-11-02; code54 still blocked
 
 Recovered authoritative remote HEAD `4351a7318ac55f665c906b222e7b93442c125fd0` on the existing release branch. Application code remains the verified `2b67f751a91961c138b4290c165415931e7c8b89`; no UI restart, version change, signing activation or new Android workflow/run.

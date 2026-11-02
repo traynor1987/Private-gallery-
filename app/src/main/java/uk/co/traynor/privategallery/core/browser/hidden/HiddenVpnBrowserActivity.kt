@@ -210,7 +210,7 @@ class HiddenVpnBrowserActivity:ComponentActivity() {
         val request=Parcel.obtain();val reply=Parcel.obtain()
         try {request.writeInterfaceToken(HiddenVpnBrowserBroker.DESCRIPTOR);write(request);check(checkNotNull(broker).transact(code,request,reply,0));reply.readException();return read(reply)} finally {request.recycle();reply.recycle()}
     }
-    /** URLs reach disk only through the parent-held, revocable Hidden capability. */
+    /** App-owned library writes use the parent-held revocable Hidden capability; WebView manages separate disk profiles. */
     private fun library(action:Int=0,url:String="",enabled:Boolean=false,pageTitle:String=current?.takeIf {it.url==url}?.title.orEmpty()):org.json.JSONObject? = runCatching {
         call(HiddenVpnBrowserBroker.LIBRARY,write={it.writeInt(action);it.writeString(url);if(action==4)it.writeInt(if(enabled)1 else 0);if(action==1 || action==2){
             val title=pageTitle.codePoints().toArray().filter {point -> !Character.isISOControl(point) && point !in 0xD800..0xDFFF}.toIntArray()
@@ -655,7 +655,7 @@ class HiddenVpnBrowserActivity:ComponentActivity() {
                 views.firstOrNull {System.identityHashCode(it).toString()==id}?.let {closePrivateAppSession(it)}
             })
         if(!privateAppsOpen && privateAppSettingsId==null)Column(Modifier.fillMaxSize().systemBarsPadding().imePadding()) {
-            if(app==null)uk.co.traynor.privategallery.ui.NovaAppHeader(if(mode==HiddenConnectionPolicy.Mode.TOR_ONLY)"Tor Browser"else"Browser","Hidden Space",
+            if(app==null)uk.co.traynor.privategallery.ui.NovaAppHeader(if(mode==HiddenConnectionPolicy.Mode.TOR_ONLY)"Tor — Beta"else"Browser — Beta","Hidden Space",
                 onHome={terminate()},onLock={runCatching{call(HiddenVpnBrowserBroker.LOCK_VAULT,read={Unit})};terminate()},onPanic={panic()},
                 actions={IconButton(onClick=::openPrivateApps,enabled=ready){Icon(Icons.Default.Apps,"Private Apps")}})
             val focus=LocalFocusManager.current;val keyboard=LocalSoftwareKeyboardController.current
@@ -722,7 +722,7 @@ class HiddenVpnBrowserActivity:ComponentActivity() {
         }
         if(clearSessionConfirm||newIdentityConfirm)GalleryAlertDialog(onDismissRequest={clearSessionConfirm=false;newIdentityConfirm=false},
             title={Text(if(newIdentityConfirm)"New Tor identity?"else"Clear Session?")},
-            text={Text(if(newIdentityConfirm)"Closes all tabs, cookies and active transfers, and retires this Tor process. Open Tor Browser from Home to establish a fresh circuit. Bookmarks are kept. A different exit address is not guaranteed."else"Closes this browser session and removes its cookies, tabs and saved history. Bookmarks are kept.")},
+            text={Text(if(newIdentityConfirm)"Closes tabs and active transfers and retires this Tor process. Cookie/site file cleanup may be delayed. Open Tor — Beta from Home to establish a fresh circuit. Bookmarks are kept. A different exit address is not guaranteed."else"Closes tabs and clears saved history. WebView cookie/site files are scheduled for cleanup and may remain on disk until it finishes. Bookmarks are kept.")},
             confirmButton={TextButton(onClick={if(newIdentityConfirm || library(6)!=null)terminate()else {clearSessionConfirm=false;notice="History could not be cleared. Session kept open; retry explicitly."}}){Text(if(newIdentityConfirm)"Close session and renew"else"Clear Session")}},
             dismissButton={TextButton(onClick={clearSessionConfirm=false;newIdentityConfirm=false}){Text("Cancel")}})
         requestedMode?.let {selected ->GalleryAlertDialog(onDismissRequest={requestedMode=null},title={Text("Switch to ${selected.label}?")},

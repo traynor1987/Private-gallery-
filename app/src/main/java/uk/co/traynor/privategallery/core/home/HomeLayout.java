@@ -11,9 +11,9 @@ import java.util.Set;
 /** Non-sensitive launcher arrangement. Vault-specific persistence belongs to the caller. */
 public final class HomeLayout {
     public enum Shortcut {
-        GALLERY("Gallery"), BROWSER("Browser"), PRIVATE_APPS("Private Apps"),
+        GALLERY("Gallery"), BROWSER("Browser — Beta"), PRIVATE_APPS("Private Apps"),
         EVIDENCE_LOCKER("Evidence Locker"), CAMERA("Camera"),
-        RECENTLY_DELETED("Recently Deleted"), COLLECTIONS("Collections"), SETTINGS("Settings"), VAULT("Vault"), FAVOURITES("Favourites"), TOR_BROWSER("Tor Browser");
+        RECENTLY_DELETED("Recently Deleted"), COLLECTIONS("Collections"), SETTINGS("Settings"), VAULT("Vault"), FAVOURITES("Favourites"), TOR_BROWSER("Tor — Beta");
         public final String label;
         Shortcut(String label) { this.label = label; }
     }

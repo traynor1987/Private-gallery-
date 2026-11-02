@@ -10,6 +10,10 @@ if [[ "${NOVA17102_CLOSURE:-0}" == 1 ]]; then
  [[ "${NOVA17102_ENGINE:-0}" == 1 ]]
  export NOVA17102_MATRIX=docs/release17102/closure-cases.json
 fi
+if [[ "${NOVA17102_BETA:-0}" == 1 ]]; then
+ [[ "${NOVA17102_ENGINE:-0}" == 1 ]]
+ export NOVA17102_MATRIX=docs/release17102/beta-cases.json
+fi
 mkdir -p "$root"
 git rev-parse HEAD > "$root/source-sha.txt"
 bash scripts/home1710_emulator_preflight.sh
@@ -30,7 +34,7 @@ if [[ "${NOVA17102_ENGINE:-0}" == 1 ]]; then
  rm -rf app/build/outputs/androidTest-results/connected/debug app/build/outputs/connected_android_test_additional_output
  [[ "$ui_status" == 0 && "$ui_accounting_status" == 0 ]]
  printf '%s\n' "Selected UI matrix: $NOVA17102_MATRIX; browser source unchanged from separately verified route checkpoint" > "$root/selection-scope.txt"
- printf '%s\n' 'PASS: focused editor/camera evidence only; NO new route or signing approval' > "$root/runtime-result.txt"
+ printf '%s\n' 'PASS: selected focused UI evidence only; NO new route or signing approval' > "$root/runtime-result.txt"
  exit 0
 fi
 rm -rf app/build/outputs/androidTest-results/connected/debug app/build/outputs/connected_android_test_additional_output
