@@ -1,6 +1,6 @@
 # Transfer and modal presentation audit
 
-Scope: authoritative local versionCode 54 source; presentation only. No transfer engine, authentication direction, recovery, retention, network/OAuth, picker or activity changes in this workstream.
+Scope: authoritative local versionCode 54 source; presentation only. Transfer engines, authentication direction, recovery and retention remain unchanged. Shared presentation is integrated at the activity owner callsites.
 
 ## Implemented
 
@@ -19,8 +19,8 @@ No `HiddenRestoreAccess` calls changed: close, authenticate, char-array wiping, 
 | GalleryDialogSurface | Existing bounded rounded surface; suitable for bounded content, not automatically a full-page workflow. |
 | HiddenRestoreDialog | Previously bounded destination/auth/confirmation/progress workflow; migrated here. |
 | PrimaryCopyDialog | Already secure full-screen authentication/thumbnail selection/progress; left untouched because selection belongs to picker workstream. |
-| MainActivity ConfirmHiddenTransferDialog | Already uses shared GalleryAlertDialog alias; simple explicit source/destination/count and copy/move confirmation. Keep compact. |
-| MainActivity HiddenTransferProgressDialog | Already shared alert alias with progress and safe-stop callback. Candidate for GalleryFullPageDialog integration by activity owner if full-page progress is required. Preserve empty dismissal and disabled stopping action. |
+| MainActivity ConfirmHiddenTransferDialog | Compact GalleryAlertDialog retained; shared NovaTransferSummary supplies matching direction/count/copy/move presentation. |
+| MainActivity HiddenTransferProgressDialog | Integrated by activity owner onto GalleryFullPageDialog and NovaTransferProgress. Back/Cancel uses the existing safe-stop callback; stopping disables repeat cancellation. |
 | TransferHistoryDialog | Already GalleryAlertDialog alias, but complex lazy history/resume/cancel/clear workflow remains bounded (420 dp). Full-page candidate; engines deliberately untouched. |
 | AiEditingSettings guidance editors | Secure dialogs use GalleryDialogSurface at 90% height; complex form remains bounded. Full-page candidate for form owner. |
 | MediaSelectionDialog | Already GalleryAlertDialog alias; complex date/size form remains compact. Picker owner controls migration. |
