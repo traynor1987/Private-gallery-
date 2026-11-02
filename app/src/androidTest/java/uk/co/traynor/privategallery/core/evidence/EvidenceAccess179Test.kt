@@ -111,7 +111,10 @@ class EvidenceAccess179Test {
    assertTrue(checkNotNull(borrowed).all{it==0.toByte()})
    assertTrue(access.store.read().evidence().isEmpty())
    var consumed=false
-   try{owned.withSourcePreviewBytes(secret.sources.inspect(foreign.id)){consumed=true};fail("Foreign original admitted")}catch(expected:IllegalStateException){}
+   // Foreign ids have no entry in the Primary repository; its single-item lookup rejects
+   // before any plaintext consumer is invoked. Do not require one exception subtype.
+   val foreignFailure=runCatching{owned.withSourcePreviewBytes(secret.sources.inspect(foreign.id)){consumed=true}}.exceptionOrNull()
+   assertTrue("Foreign source must fail closed",foreignFailure is IllegalStateException || foreignFailure is NoSuchElementException)
    assertFalse(consumed)
    // Even a matching source id with a changed captured fingerprint must fail before decode.
    val changed=access.sources.inspect(item.id).let{it.copy(item=it.item.copy(plaintextSha256=ByteArray(32){9}))}
