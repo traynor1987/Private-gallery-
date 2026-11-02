@@ -34,3 +34,8 @@ No54 production activation, signed APK, APK checksum or code53-to54 upgrade resu
 ## Fold owner acceptance after a valid signed candidate exists
 
 Install over the existing original-key app without uninstall/data clear. Check cover/inner display, portrait/landscape, fold/unfold, large text and keyboard; Home/Back/Lock/Panic; independent Hidden PIN/session expiry; eligible screenshots versus sensitive pages/Recents; VPN loss fail-closed and Tor separation; Evidence selection/OCR/group save; encrypted camera photo/video finalisation; crop/adjust/AI consent/Save Copy; existing media, incidents and Private Apps after restart.
+
+
+## Final storage investigation — 2026-11-02
+
+See [independent storage review](HIDDEN_STORAGE_REVIEW.md) for the exact directories, lifecycle trace, public API limits and primary source references. This follow-up recovered4351a731, reused the verified25-case artifact, and reran host Hidden authority/browser policy checks successfully. No application source, version or workflow changed and no new CI run was started. No storage repair or production acceptance is claimed. The no-plaintext invariant remains unsatisfied across active sessions and abrupt package death; an actual nonpersistent/encrypted provider backend is required before code54 can be signed.
