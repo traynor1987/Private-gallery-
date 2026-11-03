@@ -33,3 +33,19 @@ class ApprovalGate(unittest.TestCase):
   for decision in ['Decision: REJECTED\nDiscussion quotes Decision: APPROVED','Decision: REJECTED\nDecision: APPROVED']:
    report=('Source: '+'1'*40+'\n'+decision+'\nReviewer: /root/continuity_security_review\n').encode();m=marker|dict(review_sha256=hashlib.sha256(report).hexdigest());a=approval|dict(review_sha256=m['review_sha256']);r=json.dumps(a).encode();m['approval_sha256']=hashlib.sha256(r).hexdigest()
    with self.assertRaises(ValueError):validate_record(m,a,r,report,fixture,matrix)
+
+class ReviewedRuntimeArtifactSelection(unittest.TestCase):
+ def select(self,artifacts):
+  import re
+  workflow=Path('.github/workflows/acceptance1762.yml').read_text().split('  acceptance17103:\n',1)[1]
+  expression=re.search(r"const matches=(artifacts\.filter.*?);if\(matches.length!==1\)throw Error\('Ambiguous runtime artifact'\);",workflow).group(1)
+  program="const input=JSON.parse(require('fs').readFileSync(0,'utf8')); const artifacts=input.artifacts,marker=input.marker; const matches="+expression+"; if(matches.length!==1)process.exit(2); console.log(matches[0].id);"
+  return subprocess.run(['node','-e',program],input=json.dumps(dict(artifacts=artifacts,marker=dict(artifact_sha256='5'*64))),text=True,capture_output=True)
+ def artifact(self,id,digest='5',**extra):
+  return dict(id=id,name='novaos17102-verification',expired=False,digest='sha256:'+digest*64)|extra
+ def test_failed_attempt_archive_cannot_displace_exact_reviewed_archive(self):
+  result=self.select([self.artifact(1,'4'),self.artifact(2)])
+  self.assertEqual(result.returncode,0,result.stderr);self.assertEqual(result.stdout.strip(),'2')
+ def test_wrong_expired_duplicate_or_wrong_name_archive_rejected(self):
+  for artifacts in ([self.artifact(1,'4')],[self.artifact(1,expired=True)],[self.artifact(1),self.artifact(2)],[self.artifact(1,name='different')]):
+   with self.subTest(artifacts=artifacts):self.assertNotEqual(self.select(artifacts).returncode,0)

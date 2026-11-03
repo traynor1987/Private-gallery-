@@ -1153,7 +1153,7 @@ jobs:
             const job=jobs.find(j=>j.name==='private-home1710');
             if(!job||job.conclusion!=='success'||!job.steps.some(s=>s.name==='Focused NovaOS applications and actual VPN Tor boundary verification'&&s.conclusion==='success'))throw Error('Runtime job did not execute');
             const artifacts=(await github.rest.actions.listWorkflowRunArtifacts({...context.repo,run_id:marker.test_run})).data.artifacts;
-            const matches=artifacts.filter(a=>a.name==='novaos17102-verification'&&!a.expired);if(matches.length!==1)throw Error('Ambiguous runtime artifact');
+            const matches=artifacts.filter(a=>a.name==='novaos17102-verification'&&!a.expired&&a.digest==='sha256:'+marker.artifact_sha256);if(matches.length!==1)throw Error('Ambiguous runtime artifact');
             const zip=await github.rest.actions.downloadArtifact({...context.repo,artifact_id:matches[0].id,archive_format:'zip'});
             fs.mkdirSync(process.env.RUNNER_TEMP+'/release17103',{recursive:true});
             const runtimeBytes=Buffer.from(zip.data);if(crypto.createHash('sha256').update(runtimeBytes).digest('hex')!==marker.artifact_sha256)throw Error('Reviewed runtime artifact changed');
