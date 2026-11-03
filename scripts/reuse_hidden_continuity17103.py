@@ -23,6 +23,7 @@ ALLOW={
  'app/src/androidTest/java/uk/co/traynor/privategallery/core/browser/hidden/HiddenMainRuntimeContinuity17103Test.kt',
  'scripts/hidden_continuity_fixture17103.py',
  'scripts/tests/test_hidden_continuity_fixture17103.py',
+ 'scripts/tests/test_hidden_continuity_transition_fixture17103.py',
  'scripts/tests/test_hidden_continuity_document17103.py',
  'scripts/tests/test_hidden_continuity_reuse17103.py',
  'scripts/tests/test_nova17103_runtime_gate.py',

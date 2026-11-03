@@ -110,6 +110,12 @@ if os.environ.get('NOVA17103_CONTINUITY')=='1':
 print(','.join(f'{cls}#{method}' for cls,methods in matrix.items() for method in methods) if os.environ.get('NOVA17103_CONTINUITY')=='1' else ','.join(matrix))
 PY
 )
+if [[ "${NOVA17103_CONTINUITY:-0}" == 1 ]]; then
+ # Only instrumentation cleanup uses this loopback channel; the child route is unchanged.
+ # Do not replace an existing mapping, and remove only the mapping this run acquired.
+ adb reverse --no-rebind tcp:17103 tcp:17103
+ trap 'adb reverse --remove tcp:17103' EXIT
+fi
 route_status=0;route_accounting_status=0
 run_route_tests "$selection" || route_status=$?
 python3 scripts/verify_selected_android1762.py app/build/outputs/androidTest-results/connected/debug "$selection" > "$root/route-accounting.txt" || route_accounting_status=$?

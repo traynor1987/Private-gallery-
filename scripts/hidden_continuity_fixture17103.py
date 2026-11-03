@@ -1,5 +1,5 @@
 """Synthetic HTTPS site-owned state/opener fixtures. Never accepts real OAuth credentials."""
-import json, ssl, time, secrets, threading
+import json, ssl, time, secrets, threading, socketserver
 from urllib.parse import urlparse, parse_qs
 from http.cookies import SimpleCookie, CookieError
 
@@ -10,10 +10,53 @@ def cookie(handler,name):
     except CookieError:return None
 
 
+
+def arm_gate(fixture):
+    with fixture.lock:
+        previous=getattr(fixture,'continuity_gate',None)
+        if previous and not previous['release'].is_set():raise ValueError('Previous gate requires explicit cleanup')
+        token=secrets.token_hex(32)
+        fixture.continuity_gate=dict(held=False,release=threading.Event(),token=token)
+        return token
+
+
+def release_gate(fixture,token):
+    with fixture.lock:
+        gate=getattr(fixture,'continuity_gate',None)
+        if not gate or not secrets.compare_digest(gate['token'],token):return False
+        gate['release'].set()
+        return True
+
+
+def start_gate_control(fixture,port=17103):
+    """Test orchestration only: loopback release capability, no origin/browser data or routing."""
+    with fixture.lock:
+        existing=getattr(fixture,'continuity_gate_control',None)
+        if existing:return existing
+        class Control(socketserver.StreamRequestHandler):
+            def handle(self):
+                self.connection.settimeout(2)
+                try:
+                    line=self.rfile.readline(80)
+                    valid=len(line)==73 and line.startswith(b'RELEASE ') and line.endswith(b'\n')
+                    token=line[8:-1].decode('ascii') if valid else ''
+                    valid=valid and all(c in '0123456789abcdef' for c in token)
+                    released=valid and release_gate(fixture,token)
+                    self.wfile.write(b'RELEASED\n' if released else b'DENIED\n')
+                except (OSError,UnicodeError):return
+        class Server(socketserver.ThreadingTCPServer):
+            daemon_threads=True
+        server=Server(('127.0.0.1',port),Control)
+        fixture.continuity_gate_control=server
+        threading.Thread(target=server.serve_forever,daemon=True).start()
+        return server
+
+
 def before_verify_dns(fixture,name):
     if name!='example.com':return
     with fixture.lock:
         gate=getattr(fixture,'continuity_gate',None)
+        if gate and gate['release'].is_set():gate=None
         first=bool(gate and not gate['held'])
         if gate:gate['held']=True
     if gate:
@@ -25,14 +68,18 @@ def get(handler, fixture):
     path=urlparse(handler.path).path
     if path=='/continuity17103/gate':
         action=parse_qs(urlparse(handler.path).query).get('action',['status'])[0]
+        token=None
+        if action=='arm':
+            start_gate_control(fixture)
+            try:token=arm_gate(fixture)
+            except ValueError:handler.reply(b'Gate cleanup required',409);return True
+        elif action!='status':handler.reply(b'Unsupported gate action',405);return True
         with fixture.lock:
             gate=getattr(fixture,'continuity_gate',None)
-            if action=='arm':
-                if gate:gate['release'].set()
-                gate=dict(held=False,release=threading.Event());fixture.continuity_gate=gate
-            elif action=='release' and gate:gate['release'].set();fixture.continuity_gate=None
-            held=bool(gate and gate['held'])
-        handler.reply(json.dumps(dict(held=held,server_time=time.time())).encode(),mime='application/json');return True
+            held=bool(gate and gate['held'] and not gate['release'].is_set())
+        response=dict(held=held,server_time=time.time())
+        if token:response['cleanup_token']=token
+        handler.reply(json.dumps(response).encode(),mime='application/json');return True
     if not path.startswith('/continuity17103/'):return False
     if path=='/continuity17103/evidence':
         with fixture.lock:events=list(fixture.events)

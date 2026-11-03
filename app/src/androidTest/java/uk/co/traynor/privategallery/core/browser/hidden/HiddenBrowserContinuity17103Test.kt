@@ -284,7 +284,7 @@ class HiddenBrowserContinuity17103Test {
                     clickWeb("Finish website session");waitFor("Final website session, not approval UI"){visible("WEBSITE_SESSION_OK") && eventCount(route.get(),"continuity-callback",phase)==1 && eventCount(route.get(),"continuity-session",phase)==1}
                     clickWeb("Finish website session");waitFor("One-use callback replay is rejected"){visible("REJECTED")}
                     assertEquals(1,eventCount(route.get(),"continuity-begin",phase))
-                    if(phase=="a") {if(visible("Expand app controls"))click("Expand app controls");click("Private Apps library")}
+                    if(phase=="a")click("Exit App")
                 }
                 if(!expire && !processDeath && !panicDenied) {
                     clickDestructive("Panic Exit",owner) {broker===owner && !ended.get() && session.isAuthenticationCurrent(authentication) && owner.valid()}

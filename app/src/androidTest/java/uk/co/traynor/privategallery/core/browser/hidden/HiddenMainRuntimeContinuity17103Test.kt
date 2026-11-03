@@ -133,9 +133,24 @@ class HiddenMainRuntimeContinuity17103Test {
         }
     }
     private fun request(network:Network,path:String):JSONObject {
-        val connection=network.openConnection(URL("http://fixture.invalid/continuity17103/$path")) as HttpURLConnection
+        // The existing debug fixture CA protects the ephemeral cleanup capability in the capture.
+        val origin=if(path=="gate" || path.startsWith("gate?"))"https://site-a.fixture.invalid" else "http://fixture.invalid"
+        val connection=network.openConnection(URL("$origin/continuity17103/$path")) as HttpURLConnection
         connection.connectTimeout=3000;connection.readTimeout=3000
         return try {connection.inputStream.use {JSONObject(it.readBytes().toString(Charsets.UTF_8))}}finally {connection.disconnect()}
+    }
+    /** Test orchestration over adb reverse, never a browser transport or production route fallback. */
+    private fun releaseGate(token:String) {
+        require(token.matches(Regex("[0-9a-f]{64}")))
+        java.net.Socket().use {socket ->
+            socket.soTimeout=2000
+            val loopback=java.net.InetAddress.getByAddress(byteArrayOf(127,0,0,1))
+            socket.connect(java.net.InetSocketAddress(loopback,17103),2000)
+            socket.getOutputStream().apply {write(("RELEASE "+token+"\n").toByteArray(Charsets.US_ASCII));flush()}
+            val reply=ByteArray(9)
+            java.io.DataInputStream(socket.getInputStream()).readFully(reply)
+            check(reply.contentEquals("RELEASED\n".toByteArray(Charsets.US_ASCII))) {"Fixture gate cleanup was not acknowledged"}
+        }
     }
     private fun probe(client:HiddenContinuityFixtureClient,network:Network) {
         val baseline=request(network,"evidence").getJSONArray("events").length();client.probe()
@@ -264,9 +279,9 @@ class HiddenMainRuntimeContinuity17103Test {
             fixture(if(action=="expiry")AutoLockTimeout.SECONDS_30 else AutoLockTimeout.MINUTES_5) {f ->
                 val initial=checkNotNull(f.activity.hiddenOwnedVpnNetwork())
                 val timeOffset=request(initial,"evidence").getDouble("server_time")-System.currentTimeMillis()/1000.0
-                if(!bound)request(initial,"gate?action=arm")
                 val reached=CountDownLatch(1);val release=CountDownLatch(1);val pinned=AtomicBoolean();val publishedAt=java.util.concurrent.atomic.AtomicLong()
                 val client=HiddenContinuityFixtureClient(context)
+                var gateToken:String?=null
                 val callback=object:Binder() {
                     override fun onTransact(code:Int,data:Parcel,reply:Parcel?,flags:Int):Boolean {
                         check(Binder.getCallingUid()==Process.myUid());data.enforceInterface("debug.continuity17103");pinned.set(data.readInt()==1);publishedAt.set(data.readLong());reached.countDown()
@@ -274,6 +289,7 @@ class HiddenMainRuntimeContinuity17103Test {
                     }
                 }
                 try {
+                    if(!bound)gateToken=request(initial,"gate?action=arm").getString("cleanup_token")
                     probe(client,initial)
                     if(bound)client.gate(callback,pause=action=="background")
                     val stoppedAt=System.currentTimeMillis()/1000.0+timeOffset
@@ -319,7 +335,7 @@ class HiddenMainRuntimeContinuity17103Test {
                     }
                     release.countDown()
                     if(!bound && action=="background") {
-                        request(checkNotNull(fresh),"gate?action=release")
+                        releaseGate(checkNotNull(gateToken))
                         Thread.sleep(1000);assertFalse(f.owner.valid());assertTrue(f.owner.childIsAlive())
                         assertTrue(f.owner.childPresentationSnapshot().covered)
                         main {f.runtime.close()}
@@ -337,7 +353,10 @@ class HiddenMainRuntimeContinuity17103Test {
                         .put("expiry_current_live_before",action=="expiry").put("expiry_original_deadline_preserved",action=="expiry")
                         .put("native_probe_positive",true).put("transport_published",if(bound)publishedAt.get()/1000.0+(System.currentTimeMillis()-SystemClock.elapsedRealtime())/1000.0+timeOffset else JSONObject.NULL).put("boundary_reached",boundaryAt).put("suspend_started",stoppedAt).put("denied_confirmed",deniedAt).put("action_requested",actionRequestedAt).put("authority_loss",authorityLostAt).put("child_dead",System.currentTimeMillis()/1000.0+timeOffset)
                         .put("proxy_denied",true).put("retired",true).put("actual_task_background",!bound && action=="background").put("injected_on_pause",bound && action=="background"))
-                }finally {release.countDown();client?.close();f.activity.hiddenOwnedVpnNetwork()?.let {runCatching {request(it,"gate?action=release")}}}
+                }finally {
+                    release.countDown()
+                    try {client.close()}finally {gateToken?.let(::releaseGate)}
+                }
             }
         }
         receipt("hidden-continuity17103-main-races.json",JSONObject().put("production_main_runtime",true).put("cases",outcomes))
