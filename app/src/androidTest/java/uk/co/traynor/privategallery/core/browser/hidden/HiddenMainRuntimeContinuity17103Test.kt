@@ -60,7 +60,7 @@ class HiddenMainRuntimeContinuity17103Test {
         }
     }
     private fun broker(runtime:HiddenBrowserRuntime)=HiddenBrowserRuntime::class.java.getDeclaredField("interactiveBroker").apply {isAccessible=true}.get(runtime) as? HiddenVpnBrowserBroker
-    private fun front(){context.getSystemService(ActivityManager::class.java).appTasks.single {it.taskInfo.topActivity?.className==HiddenVpnBrowserActivity::class.java.name}.moveToFront()}
+    private fun front(){context.getSystemService(ActivityManager::class.java).appTasks.single {it.taskInfo?.topActivity?.className==HiddenVpnBrowserActivity::class.java.name}.moveToFront()}
     private fun route(activity:MainActivity,value:Route){MainActivity::class.java.getDeclaredMethod("setRoute",Route::class.java).apply {isAccessible=true}.invoke(activity,value)}
     private data class Fixture(val activity:MainActivity,val state:ProtectedSessionState,val runtime:HiddenBrowserRuntime,val owner:HiddenVpnBrowserBroker)
     private fun fixture(grace:AutoLockTimeout=AutoLockTimeout.MINUTES_5,run:(Fixture)->Unit) {

@@ -152,7 +152,7 @@ class HiddenBrowserContinuity17103Test {
                     val covered=owner.childPresentationSnapshot();assertTrue(covered.secure && covered.covered)
                     assertEquals(popup.viewIdentity,covered.viewIdentity);assertEquals(popup.profileIdentity,covered.profileIdentity)
                     if(panicDenied) {
-                        context.getSystemService(ActivityManager::class.java).appTasks.single {it.taskInfo.topActivity?.className==HiddenVpnBrowserActivity::class.java.name}.moveToFront()
+                        context.getSystemService(ActivityManager::class.java).appTasks.single {it.taskInfo?.topActivity?.className==HiddenVpnBrowserActivity::class.java.name}.moveToFront()
                         waitFor("Current child is reconnecting with IO still denied") {owner.continuationState()==HiddenBrowserContinuation.State.RECONNECTING && owner.retainingPresentation && !owner.valid()}
                         val denied=owner.childPresentationSnapshot();assertTrue(denied.secure && denied.covered)
                         if(lockDenied) {
@@ -188,7 +188,7 @@ class HiddenBrowserContinuity17103Test {
                     }
                     Thread.sleep(2000)
                     val foregroundAt=System.currentTimeMillis()/1000.0+timeOffset
-                    val task=context.getSystemService(ActivityManager::class.java).appTasks.single {it.taskInfo.topActivity?.className==HiddenVpnBrowserActivity::class.java.name}
+                    val task=context.getSystemService(ActivityManager::class.java).appTasks.single {it.taskInfo?.topActivity?.className==HiddenVpnBrowserActivity::class.java.name}
                     task.moveToFront()
                     waitFor("Same child resumes after fresh verified route",100){owner.valid() && resumed.get()>=(if(phase=="a")1 else 2) && visible("Approve synthetic login")}
                     failed.get()?.let {throw AssertionError("Resume adapter failed",it)}
