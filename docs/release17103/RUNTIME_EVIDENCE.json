@@ -1,0 +1,42 @@
+{
+  "source": "24c29fd86e8493b00365357071d9c45e240eb3c4",
+  "version": "1.7.10.3",
+  "version_code": 55,
+  "run": 41688397704,
+  "job": 126100834909,
+  "run_conclusion": "failure",
+  "artifact": 13257432448,
+  "archive_size": 122926299,
+  "archive_sha256": "11f7a4e51e016b3b20be0c657683194c936ad5b2a30d94c628f90eb74f4ceea8",
+  "evidence_mode": "18_reused_8_fresh",
+  "fresh_android_cases": 8,
+  "fresh_pass": 8,
+  "fresh_failed": 0,
+  "fresh_skipped": 0,
+  "main_race_receipts": 12,
+  "reused_source": "535186021598bf64fd56f2132ab4cb763332bf17",
+  "reused_run": 41682334113,
+  "reused_count": 18,
+  "aggregate_release_gate": "REJECTED",
+  "packet_assertion": "Fixture DNS appeared outside WireGuard interface",
+  "off_wireguard_dns_records": 2,
+  "off_wireguard_stun_datagrams": 6,
+  "marked_child_native_probe_datagrams": 3,
+  "host_firewall_icmp_rejections": 6,
+  "raw_sha256": {
+    "traffic.pcap": "5b1ebb4d21de3a6e32ba0722bedd60fbc923dddd3a936c42ecf8c526cc64f982",
+    "packets.txt": "31b5cf85c70dd424ca0c311d062fa164da254b2a6f54e8e29bbc31641c283c19",
+    "events.jsonl": "adfcc6f42eab6817ffb1ef48b59764268b6f9f3cb573ce74f6a5ac8a7f2555c5"
+  },
+  "diagnosis": "Retained child remains able to attempt native UDP and default-network DNS while the owned VPN is being removed, before confirmed denial. Old-Network process pin and WebView pause/blockNetworkLoads are insufficient no-egress enforcement.",
+  "next_required": "Establish and independently prove an OS-enforced no-egress boundary before and throughout tunnel teardown; preserve authorized in-memory context and all original hard revocation controls. Repeat focused evidence only after a reviewed implementation exists.",
+  "security_approval": false,
+  "signing_activated": false,
+  "original_key_54_to_55_upgrade_executed": false,
+  "code55_apk_delivered": false,
+  "limits": [
+    "No live Google credentials or tokens used.",
+    "Existing disclosed Beta Chromium disk-profile limitation is not fixed.",
+    "No packet exclusions, timestamp relaxation or replacement credentials were introduced."
+  ]
+}

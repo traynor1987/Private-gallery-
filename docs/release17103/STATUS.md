@@ -1,5 +1,7 @@
 # NovaOS UI and Private App repair checkpoint
 
+> **Current code55 status: BLOCKED by real DNS and native UDP escape during retained-child VPN teardown.** Frozen source24c29fd86e8493b00365357071d9c45e240eb3c4 has8/8 fresh Android passes plus18 compatible535 baseline passes, but the full packet gate failed. These are not release approval. No code55 production APK, activation marker or signing approval exists. The last delivered code54 record remains historical; see the latest blocker checkpoint below.
+
 Base: authoritative release/1.7.10-private-home HEAD 53da3f286a11f1431e2b465af78995f222688bd9. Same branch; no reset, replacement signing key, release activation or version increment. Last delivered production APK remains 1.7.10.2/code 54 from source 9efd19540a1d75efa1b30f4e23c9cbb096f93aff.
 
 ## Approved scope and implementation
@@ -63,3 +65,11 @@ Source535186021598bf64fd56f2132ab4cb763332bf17/run41682334113 records25/26 passe
 Production/debug/code55 are unchanged from535. Strict18-case reuse pins now reference535's complete raw archive and exact passing original evidence, with the same protected-tree fence and exact allowlist. All8 continuity tests and fresh complete packet/receipt gates remain required; seven previous continuity passes are not reused. See FAILED_RUN_DIAGNOSIS.md. This is25/26 diagnostic evidence, not aggregate approval or signing authorization. Next existing-workflow flags are[verify17102][continuity17103-retry], only after scoped review; final frozen-source security and original-key54→55 upgrade gates remain pending.
 
 Release preflight follow-up: negated grep under Bash errexit did not reliably reject the application-debuggable marker in the production/upgrade17103 scripts. Explicit nonzero rejection and actual-script host tests for production, baseline and candidate phases are required before publishing the correction. This changes release validation only; app/debug/runtime sources remain535. Only the two reviewed release scripts and existing release-control host test may be added to reuse scope; no production fence widening. The dda19 fresh-eight run was compiling at discovery; its subsequent outcome is unverified and may be superseded/cancelled by existing concurrency on the correction push. Fresh8+12-race/full-packet evidence and all final upgrade/signing approvals remain pending.
+
+## Current blocker checkpoint:24c runtime assertions pass, network isolation fails
+
+Frozen source24c29fd86e8493b00365357071d9c45e240eb3c4/run41688397704/job126100834909. Artifact13257432448:122926299 bytes; SHA25611f7a4e51e016b3b20be0c657683194c936ad5b2a30d94c628f90eb74f4ceea8. Fresh XML8/8pass, zero skipped;18 separate compatible535 baseline cases reused. All8 receipt schemas and12 exact race identities validate. Do not describe this as26 freshly executed or as aggregate security approval.
+
+Full packet validation fails: two off-WireGuard loopback DNS records plus six direct STUN datagrams (three exact child nv17103probe packets) and six ICMP rejects prove native egress during retained-child tunnel teardown. The marked packets precede denied_confirmed by231/118/88ms, but no default-route traffic is permitted in that shutdown window. The host firewall's rejection is not app containment. See FAILED_RUN_DIAGNOSIS.md for packet times, raw PCAP hash and resolver/AOSP attribution.
+
+Next work must prove an OS-level no-egress boundary before/during teardown while preserving presentation/session authentication, original grace and hard revocation. Do not substitute UI pause, proxy-only denial, retained authority, packet exceptions or relaxed timing. No further CI is scheduled by this checkpoint. Code55 remains unsigned/unactivated; no new production APK, activation marker or release approval exists. Last delivered code54 remains the shipped baseline.
