@@ -1,0 +1,23 @@
+# Primary V1 versus Hidden Beta diagnostic correction — 2026-11-03
+
+Authoritative application/control HEAD fd71f10692e48fff8344aaa25d6d63a641ed7a80 verified. Owner reports Primary V1 completes Google website login and retains it; treat this as the working behavioral reference. Do not describe Hidden failure solely as general Google incompatibility or solely cookie storage.
+
+Physical sequence screenshots 87483/87484/87486/87488/87490 confirm embedded-blocked notice, accounts.google.com page, external Google approval, Hidden connection unavailable, and newly blank connected browser. No originating Private App base origin or website callback is visible. Do not store account identifiers, passwords, OAuth query strings or tokens in diagnostics.
+
+## Confirmed source differences
+- MainActivity.cleanupStoppedPresentation does not destroy Primary V1 browserWebView. deliverStoppedPrivacy records lifecycle and applies session foreground/background policy. PrivateBrowser's disposal hook records detachment without destroying the initialized view; its normal CookieManager is independent of Hidden's isolated profile.
+- HiddenVpnBrowserActivity.onStop unconditionally calls terminate(BACKGROUND), even for a temporary switch to Google approval. terminate clears popup/Private App maps, cancels dialogs/uploads and destroys every WebView. Non-RETURN termination kills its single-use process. Navigation restoration cannot resume a destroyed page/JS transaction.
+- Its pinned network onLost and VPN capability/owner changes also terminate rather than suspend. HiddenVpnBrowserBroker.end closes proxy, cancels calls, revokes upload readers and releases the storage lease.
+- HiddenSession.isAuthorityCurrent rejects backgrounded authority; onBackgroundAt revokes operation generation. Removing only Activity.onStop termination is insufficient and could retain a WebView with stale authority.
+- MainActivity.scheduleOwnedVpnDisconnect marks the controller backgrounded and schedules a tick after 30 seconds. This is a source-supported potential route to VPN disconnection during approval, not device-timed proof of which callback fired. The screenshots alone cannot distinguish underlying tunnel loss from child/proxy teardown.
+- A fresh Hidden launch calls newTab with no previous navigation; random isolated profile lifetime/cleanup is distinct from Primary storage. Blank welcome after reconnect is consistent with fresh launch, not successful OAuth callback.
+
+## Safe repair contract still required
+Separate temporary secure background suspension from explicit Home, Close App, Lock, screen off, timeout, Panic and death. Preserve existing hidden timeout boundaries. A suspended browser must remain covered, block ALL requests including subresources/service workers/UDP/RTC, cancel privileged IO, and be unable to reuse revoked capabilities. Resume requires fresh current foreground authority and verified exact-owner VPN/Tor transport; do not keep old broker authority alive or send requests over a replacement unverified network. Rebind/reissue routing only after admission, then resume the SAME owned view/navigation where safe. POST/one-use OAuth must not be replayed as GET. Lock/timeout/Panic must still destroy retained sensitive state. No new disk cookie persistence.
+
+Use synthetic callback/POST/state fixtures to demonstrate same tab and app restoration, cancellation, VPN loss/reconnect, rejected foreign/stale state, expired grace and lock revocation. Do not claim Google approval equals website authentication. Compare actual final website session/callback to Primary, not Google approval UI alone.
+
+## Remaining required input / approval
+The initiating Private App and base origin remain unidentified in all six supplied screenshots. accounts.google.com is the identity provider, not that origin. Site-specific redirect ownership, supported external handoff and email/password alternatives cannot be verified without its base URL. External browser launching requires explicit owner consent per latest directive, plus verified callback/routing support; none is assumed. Do not claim Primary success permits copying its persistent cookie store, spoofing user agents to bypass provider restrictions, or allowing direct fallback.
+
+No production changes, new CI or signing performed in this diagnostic pass; retained passing source-scoped evidence remains valid. This report establishes the destructive lifecycle difference, not a completed repair, physical tunnel timing or Google success. Next implement the coordinated suspend/reauthorize design with focused synthetic lifecycle/route tests once its site return contract is established; seek independent security review before activation. Last signed code54 unchanged.
