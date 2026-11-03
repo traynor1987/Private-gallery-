@@ -442,13 +442,13 @@ jobs:
         with:
           script: |
             const fs=require('fs'),crypto=require('crypto');
-            const run=await github.rest.actions.getWorkflowRun({...context.repo,run_id:41657787553});
-            if(run.data.head_sha!=='17d9512fc4613c24f401ad7cba8f359310c77d88' || run.data.head_branch!=='release/1.7.10-private-home' || run.data.event!=='push')throw new Error('Pinned baseline run identity differs');
-            const artifact=await github.rest.actions.getArtifact({...context.repo,artifact_id:13240894402});
-            if(artifact.data.name!=='novaos17102-verification' || artifact.data.expired || artifact.data.workflow_run?.id!==41657787553 || artifact.data.workflow_run?.head_sha!==run.data.head_sha)throw new Error('Pinned baseline artifact identity differs');
-            const download=await github.rest.actions.downloadArtifact({...context.repo,artifact_id:13240894402,archive_format:'zip'});
+            const run=await github.rest.actions.getWorkflowRun({...context.repo,run_id:41682334113});
+            if(run.data.head_sha!=='535186021598bf64fd56f2132ab4cb763332bf17' || run.data.head_branch!=='release/1.7.10-private-home' || run.data.event!=='push')throw new Error('Pinned baseline run identity differs');
+            const artifact=await github.rest.actions.getArtifact({...context.repo,artifact_id:13253433530});
+            if(artifact.data.name!=='novaos17102-verification' || artifact.data.expired || artifact.data.workflow_run?.id!==41682334113 || artifact.data.workflow_run?.head_sha!==run.data.head_sha)throw new Error('Pinned baseline artifact identity differs');
+            const download=await github.rest.actions.downloadArtifact({...context.repo,artifact_id:13253433530,archive_format:'zip'});
             const bytes=Buffer.from(download.data);
-            if(crypto.createHash('sha256').update(bytes).digest('hex')!=='4f133eaea415a48cd1707be118d61e29f620db99f0a7a4ef3a6b51c13d74effb')throw new Error('Pinned baseline archive hash differs');
+            if(crypto.createHash('sha256').update(bytes).digest('hex')!=='87f9a4a7b829346a0ad93a89c1996016868f9d193d1b8828b4673074a09094b6')throw new Error('Pinned baseline archive hash differs');
             fs.writeFileSync(process.env.RUNNER_TEMP+'/continuity-baseline17103.zip',bytes);
       - name: Require exact source compatibility before reusing any original result
         if: contains(github.event.head_commit.message, '[verify17102]') && contains(github.event.head_commit.message, '[continuity17103-retry]')

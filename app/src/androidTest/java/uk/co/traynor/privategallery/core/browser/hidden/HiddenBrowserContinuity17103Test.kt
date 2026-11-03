@@ -31,12 +31,23 @@ class HiddenBrowserContinuity17103Test {
     private var exploring=false
     private val automation get()=if(exploring)FixtureAccessibility178.automation(instrumentation) else instrumentation.uiAutomation
     private fun shell(cmd:String)=ParcelFileDescriptor.AutoCloseInputStream(automation.executeShellCommand(cmd)).use {it.readBytes().toString(Charsets.UTF_8)}
-    private fun waitFor(message:String,seconds:Int=30,check:()->Boolean) {
+    private fun waitFor(message:String,seconds:Int=30,abort:()->String?={null},check:()->Boolean) {
         val until=SystemClock.elapsedRealtime()+seconds*1000L
-        while(SystemClock.elapsedRealtime()<until){if(runCatching(check).getOrDefault(false))return;Thread.sleep(100)}
+        fun checkFailure(){abort()?.let {captureFailure(message);throw AssertionError("$message; $it")}}
+        while(SystemClock.elapsedRealtime()<until){checkFailure();if(runCatching(check).getOrDefault(false))return;Thread.sleep(100)}
+        checkFailure()
         val passed=runCatching(check).getOrDefault(false)
         if(!passed)captureFailure(message)
         assertTrue(message,passed)
+    }
+    private fun adapterFailureClass(failure:Throwable)=when(failure) {
+        is java.net.UnknownHostException -> "UnknownHostException"
+        is java.io.IOException -> "IOException"
+        is SecurityException -> "SecurityException"
+        is IllegalStateException -> "IllegalStateException"
+        is IllegalArgumentException -> "IllegalArgumentException"
+        is AssertionError -> "AssertionError"
+        else -> "OtherFailure"
     }
     private fun nodes():List<AccessibilityNodeInfo> {
         automation.clearCache()
@@ -162,30 +173,37 @@ class HiddenBrowserContinuity17103Test {
         val privacy=uk.co.traynor.privategallery.ui.PrivacyShieldPreferences(context)
         val oldPanicEnabled=privacy.enabled;val oldShortcut=privacy.shortcut
         if(panicDenied){privacy.enabled=true;privacy.shortcut=false}
-        val resumed=AtomicInteger();val failed=AtomicReference<Throwable?>();var broker:HiddenVpnBrowserBroker?=null;var workerClient:HiddenContinuityFixtureClient?=null
+        val resumed=AtomicInteger();val failed=AtomicReference<String?>();var broker:HiddenVpnBrowserBroker?=null;var workerClient:HiddenContinuityFixtureClient?=null
+        val readiness=OwnedVpnNetworkReadiness(context)
+        fun readyNetwork()=if(engine.ownsTunnel && engine.state==VpnConnectionState.CONNECTED)network(manager)?.takeIf {readiness.isReady(it)} else null
         try {
             waitFor("Previous child retirement",20){HiddenVpnBrowserBroker.admissionRetired() && !HiddenVpnBrowserBroker.hasDedicatedProcess(context)}
             waitFor("Previous owned route retired",20){network(manager)==null}
-            engine.connect(profile);waitFor("Initial authoritative WireGuard handshake",90){engine.state==VpnConnectionState.CONNECTED && network(manager)!=null}
-            route.set(checkNotNull(network(manager)))
+            engine.connect(profile);waitFor("Initial authoritative WireGuard handshake and framework readiness",90){readyNetwork()!=null}
+            route.set(checkNotNull(readyNetwork()))
             ActivityScenario.launch(ComponentActivity::class.java).use {scenario ->
                 scenario.onActivity {activity ->
                     val owned=object:ContextWrapper(activity){override fun getNoBackupFilesDir()=root}
                     broker=HiddenVpnBrowserBroker(owned,session,route.get(),
-                        {session.isUnlocked && engine.state==VpnConnectionState.CONNECTED && network(manager)==route.get()},
+                        {session.isUnlocked && readyNetwork()==route.get()},
                         {ended.set(true)},onPanic={session.lock()},suspendTransport={pinned ->
                             engine.disconnect()
                             val deadline=SystemClock.elapsedRealtime()+2500
                             while(SystemClock.elapsedRealtime()<deadline && (engine.ownsTunnel || manager.getNetworkCapabilities(pinned)!=null))Thread.sleep(10)
                             !engine.ownsTunnel && manager.getNetworkCapabilities(pinned)==null
                         },requestReconnect={if(!panicDenied)executor.execute {
+                            var stage="FRAMEWORK_NETWORK"
                             try {
                                 engine.connect(profile)
-                                waitFor("Fresh peer-verified replacement route",90){engine.state==VpnConnectionState.CONNECTED && network(manager)!=null}
-                                val fresh=checkNotNull(network(manager));assertNotEquals(route.get(),fresh);route.set(fresh)
-                                HiddenHttpTransport.vpn(context,fresh){session.isUnlocked && network(manager)==fresh}.use {it.verifyReady()}
-                                checkNotNull(broker).prepareResume(fresh);checkNotNull(broker).publishVerifiedResume()
-                            }catch(t:Throwable){failed.set(t);broker?.close()}
+                                waitFor("Fresh peer-verified framework-ready replacement route",90){readyNetwork()!=null}
+                                val fresh=checkNotNull(readyNetwork());assertNotEquals(route.get(),fresh);route.set(fresh)
+                                stage="ROUTE_PROBE"
+                                HiddenHttpTransport.vpn(context,fresh){session.isUnlocked && readyNetwork()==fresh}.use {it.verifyReady()}
+                                stage="PREPARE_RESUME"
+                                checkNotNull(broker).prepareResume(fresh)
+                                stage="PUBLISH_TRANSPORT"
+                                checkNotNull(broker).publishVerifiedResume()
+                            }catch(t:Throwable){failed.set("stage=$stage exception=${adapterFailureClass(t)}");broker?.close()}
                         }},backgroundGrace={if(expire)30_000L else 300_000L},onResumed={resumed.incrementAndGet()})
                     checkNotNull(broker).launch()
                 }
@@ -265,8 +283,7 @@ class HiddenBrowserContinuity17103Test {
                     val foregroundAt=System.currentTimeMillis()/1000.0+timeOffset
                     val task=context.getSystemService(ActivityManager::class.java).appTasks.single {it.taskInfo?.topActivity?.className==HiddenVpnBrowserActivity::class.java.name}
                     task.moveToFront()
-                    waitFor("Same child resumes after fresh verified route",100){owner.valid() && resumed.get()>=(if(phase=="a")1 else 2) && visible("Approve synthetic login")}
-                    failed.get()?.let {throw AssertionError("Resume adapter failed",it)}
+                    waitFor("Same child resumes after fresh verified route",100,abort={failed.get()}){owner.valid() && resumed.get()>=(if(phase=="a")1 else 2) && visible("Approve synthetic login")}
                     worker?.use {it.release();waitFor("Stale worker rejected before PIN operation"){it.status()==2};assertEquals(pinBefore,pinCounter.getLong(owner))}
                     assertFalse(session.isAuthorityCurrent(oldAuthority));assertNotEquals(oldNetwork,route.get())
                     val restored=owner.childPresentationSnapshot()
@@ -295,6 +312,6 @@ class HiddenBrowserContinuity17103Test {
                     .put("suspended_io_denied",true).put("old_authority_and_proxy_dead",true).put("fresh_verified_network",true)
                     .put("cancelled_approval_no_session",true).put("authenticated_session_verified",true).put("foreign_callback_rejected",true).put("one_use_post_replay_rejected",true).put("no_get_replay",true).toString())
             }
-        }finally {diagnosticOwner=null;workerClient?.close();privacy.enabled=oldPanicEnabled;privacy.shortcut=oldShortcut;broker?.close();session.lock();engine.disconnect();executor.shutdownNow();root.deleteRecursively()}
+        }finally {diagnosticOwner=null;workerClient?.close();privacy.enabled=oldPanicEnabled;privacy.shortcut=oldShortcut;broker?.close();session.lock();readiness.close();engine.disconnect();executor.shutdownNow();root.deleteRecursively()}
     }
 }

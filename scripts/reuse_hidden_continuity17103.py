@@ -13,10 +13,10 @@ import zipfile
 from pathlib import Path
 from verify_hidden_vpn_fixture1762 import verify_fixture
 
-BASELINE_SOURCE='17d9512fc4613c24f401ad7cba8f359310c77d88'
-BASELINE_RUN=41657787553
-BASELINE_ARTIFACT=13240894402
-BASELINE_SHA256='4f133eaea415a48cd1707be118d61e29f620db99f0a7a4ef3a6b51c13d74effb'
+BASELINE_SOURCE='535186021598bf64fd56f2132ab4cb763332bf17'
+BASELINE_RUN=41682334113
+BASELINE_ARTIFACT=13253433530
+BASELINE_SHA256='87f9a4a7b829346a0ad93a89c1996016868f9d193d1b8828b4673074a09094b6'
 ALLOW={
  'app/src/androidTest/java/uk/co/traynor/privategallery/core/browser/hidden/HiddenContinuityFixtureClient.kt',
  'app/src/androidTest/java/uk/co/traynor/privategallery/core/browser/hidden/HiddenBrowserContinuity17103Test.kt',
