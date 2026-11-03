@@ -2293,6 +2293,7 @@ class MainActivity : FragmentActivity() {
             route=Route.BROWSER
             return
         }
+        if (!homePrivateAppsRequested) browserV2Session.openOrdinaryBrowser()
         revokePhoneTransfers()
         primaryCopyAccess?.close();primaryCopyAccess=null
         browserVpnPreparing = browserRequireVpn
@@ -2554,21 +2555,61 @@ class MainActivity : FragmentActivity() {
         if (!hidden) restoreBrowserPresentation()
     }
 
-    /** Reveal rereads Browser presentation only; it does not reconcile or modify Vault storage. */
+    /** A recovery handle remains bound to the Primary unlock and presentation that listed it. */
+    internal class LegacyBrowserRecoveryRequest(
+        val tabs: List<uk.co.traynor.privategallery.core.browser.v2.BrowserTab>,
+        val current: () -> Boolean,
+        val open: (String, (Boolean) -> Unit) -> Unit,
+    )
+
+    /** Read-only quarantine access; each explicit choice is reread under its originating owner. */
+    internal fun loadLegacyBrowserRecovery(onLoaded: (LegacyBrowserRecoveryRequest?) -> Unit) {
+        val controller = privateAppsController() ?: run { onLoaded(null); return }
+        val key = sessionKey?.copyOf() ?: run { onLoaded(null); return }
+        val revision = browserV2Session.runtimeMutationRevision()
+        lifecycleScope.launch(Dispatchers.IO) {
+            val entries = try {
+                runCatching { uk.co.traynor.privategallery.core.browser.v2.EncryptedBrowserSessionStore(File(filesDir, "browser-session"), key).legacyRecoveryEntries() }.getOrNull()
+            } finally { key.fill(0) }
+            withContext(Dispatchers.Main) {
+                if (!controller.isCurrent() || browserV2Session.runtimeMutationRevision() != revision || entries == null) {
+                    onLoaded(null)
+                    return@withContext
+                }
+                val recover: (String, (Boolean) -> Unit) -> Unit = recover@{ id, completed ->
+                    if (!controller.isCurrent() || entries.none { it.id == id }) { completed(false); return@recover }
+                    val readKey = sessionKey?.copyOf() ?: run { completed(false); return@recover }
+                    val chosenRevision = browserV2Session.runtimeMutationRevision()
+                    lifecycleScope.launch(Dispatchers.IO) {
+                        val chosen = try {
+                            runCatching { uk.co.traynor.privategallery.core.browser.v2.EncryptedBrowserSessionStore(File(filesDir, "browser-session"), readKey).legacyRecoveryEntries().singleOrNull { it.id == id } }.getOrNull()
+                        } finally { readKey.fill(0) }
+                        withContext(Dispatchers.Main) {
+                            val accepted = controller.isCurrent() && browserV2Session.runtimeMutationRevision() == chosenRevision && chosen != null &&
+                                runCatching { browserV2Session.openRecoveredOrdinaryTab(chosen); true }.getOrDefault(false)
+                            completed(accepted)
+                        }
+                    }
+                }
+                onLoaded(LegacyBrowserRecoveryRequest(entries, controller::isCurrent, recover))
+            }
+        }
+    }
+
+    /** Reveal rereads trusted Browser presentation only; legacy records require an explicit choice. */
     private fun restoreBrowserPresentation() {
         val owner = sessionKey ?: return
         val key = owner.copyOf()
         val generation = ++browserPresentationGeneration
-        val before = browserV2Session.metadataSnapshot()
+        val before = browserV2Session.runtimeMutationRevision()
         lifecycleScope.launch(Dispatchers.IO) {
             val bookmarks = runCatching { EncryptedBookmarkStore(File(filesDir, "browser-bookmarks"), key).list() }.getOrDefault(emptyList())
-            val browserSession = runCatching { uk.co.traynor.privategallery.core.browser.v2.EncryptedBrowserSessionStore(File(filesDir, "browser-session"), key).load() }.getOrNull()
+            val browserSession = runCatching { uk.co.traynor.privategallery.core.browser.v2.EncryptedBrowserSessionStore(File(filesDir, "browser-session"), key).loadForPresentation() }.getOrNull()
             key.fill(0)
             runOnUiThread {
                 if (!hideContent && session.isUnlocked && sessionKey === owner && generation == browserPresentationGeneration &&
-                    browserV2Session.metadataSnapshot() == before) {
+                    browserV2Session.restoreMetadataIfUnchanged(browserSession, before)) {
                     browserBookmarks = bookmarks
-                    browserSession?.let(browserV2Session::restoreMetadata)
                 }
             }
         }

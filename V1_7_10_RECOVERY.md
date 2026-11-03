@@ -1,5 +1,9 @@
 # NovaOS recovery — code55 release blocked
 
+Active full-repair development: persistent-TUN native gate and WG transport cores have host race/vet proof and scoped reviews; Android/JNI/runtime integration is still pending, so Critical C1 is not claimed fixed. Primary navigation ownership, guarded restore and preserved legacy-tab recovery compile locally;3/3 encrypted-session JVM tests pass, Android execution remains pending. See `docs/release17103/CONTINUOUS_VPN_PROGRESS.md` for exact unfinished work. Development checkpoints use `[skip ci]`; no release approval/signing activation is added.
+
+Owner UI steering (2026-11-03): immersive standalone Private Apps is recorded in `docs/PRIVATE_APPS_NEXT_UI.md` as the first planned1.7.11 UI task. It is deferred while code55 VPN/DNS containment remains unresolved; no browser presentation, version or branch change is made.
+
 > **Current code55 status: BLOCKED by real DNS and native UDP escape during retained-child VPN teardown.** Frozen source24c29fd86e8493b00365357071d9c45e240eb3c4 has8/8 fresh Android passes plus18 compatible535 baseline passes, but the full packet gate failed. These are not release approval. No code55 production APK, activation marker or signing approval exists. The last delivered code54 record remains historical; see the latest blocker checkpoint below.
 
 ## Historical delivered release — NovaOS1.7.10.2 / code54 — 2026-11-02

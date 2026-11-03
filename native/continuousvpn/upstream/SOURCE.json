@@ -1,0 +1,14 @@
+{
+  "wireguard_android_commit": "58789d6372e8948b87f5c47da7e5f2ad570eb531",
+  "wireguard_android_tag": "1.0.20230706",
+  "files": {
+    "tunnel/tools/libwg-go/api-android.go": "42cd27f8f4744aaed4d77bb8c1ac6a679501925576050edfec9245a1b6c902c0",
+    "tunnel/tools/libwg-go/go.mod": "d5bb9a6df2214360ec45ea07b2027ab8853a3b4644f0251ecd56e342403f5abc",
+    "tunnel/tools/libwg-go/go.sum": "5b3044207e4ab5adade59032cb7f4d44c7163c128340e47b7ec6940f6d1b5d95",
+    "tunnel/tools/libwg-go/jni.c": "f8758d642c1d2cd1dd1abe45f54b95481006c8b797347dd6e0f35703320b246b",
+    "tunnel/tools/libwg-go/Makefile": "e1aff919e64954021a9d5c8ea2564ba77cfe63ffdfe45f6704391dca4bc04c0f",
+    "tunnel/tools/libwg-go/goruntime-boottime-over-monotonic.diff": "149ab7d9a1c20dad61fe279a837e0e0c81c6b2f5584614ac4d4cde67008755f0",
+    "tunnel/src/main/java/com/wireguard/android/backend/GoBackend.java": "f82be1023360457378eaa4206c2d9616e62d015175dc58c82ba676640868d2e7",
+    "COPYING": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30"
+  }
+}

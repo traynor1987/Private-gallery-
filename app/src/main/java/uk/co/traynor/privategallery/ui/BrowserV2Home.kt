@@ -250,6 +250,8 @@ private class BrowserUiState {
     var bookmarksOpen by mutableStateOf(false)
     var historyOpen by mutableStateOf(false)
     var history by mutableStateOf<List<BrowserHistoryEntry>>(emptyList())
+    var legacyRecovery by mutableStateOf<uk.co.traynor.privategallery.MainActivity.LegacyBrowserRecoveryRequest?>(null)
+    var legacyRecoveryGeneration = 0L
     var findOpen by mutableStateOf(false)
     var findText by mutableStateOf("")
     var diagnosticsOpen by mutableStateOf(false)
@@ -892,7 +894,7 @@ internal fun BrowserV2Home(
                 if (acceptanceProbeEnabled) AcceptanceProbeLabel("CONTENT_HOST", Color(0xFFFFD800))
             }
             if(ui.fullscreen==null && !ui.webVideoView)BrowserChromeBar(chromeFraction, top = false) {
-                if(!appStyle)BrowserNavigationToolbar(!connectionPresentation.blocked && active.canGoBack,!connectionPresentation.blocked && active.canGoForward,session.tabs.tabs.size,
+                if(!appStyle)BrowserNavigationToolbar(!connectionPresentation.blocked && active.canGoBack,!connectionPresentation.blocked && active.canGoForward,session.ordinaryBrowserTabs().size,
                     session::goBackActive,session::goForwardActive,{ui.bookmarksOpen=true},{ui.tabSwitcher=true},::openSettings,{ui.overflow=true})
             }
         }
@@ -981,6 +983,16 @@ internal fun BrowserV2Home(
             }
             SheetAction("Bookmarks", Icons.Default.Bookmarks) { ui.overflow = false; ui.bookmarksOpen = true }
             SheetAction("History", Icons.Default.History) { ui.overflow = false; onLoadHistory { ui.history = it; ui.historyOpen = true } }
+            if (homeActivity != null) SheetAction("Recover previous tabs", Icons.Default.Restore) {
+                ui.overflow = false
+                val request = ++ui.legacyRecoveryGeneration
+                homeActivity.loadLegacyBrowserRecovery { recovery ->
+                    if (request == ui.legacyRecoveryGeneration) {
+                        ui.legacyRecovery = recovery
+                        if (recovery == null) ui.message = "Previous tabs are unavailable. Reopen Browser and retry."
+                    }
+                }
+            }
             SheetAction("Find in page", Icons.Default.Search) { ui.overflow = false; ui.findOpen = true }
             SheetAction("Screenshot to Vault", Icons.Default.Screenshot) { ui.overflow = false; saveViewportScreenshot() }
             SheetAction(if (active.desktopSite) "Mobile site" else "Desktop site", Icons.Default.Computer) { ui.overflow = false; session.setDesktopSite(active.id, !active.desktopSite) }
@@ -1073,7 +1085,7 @@ internal fun BrowserV2Home(
             }) { Text(if (ui.uploadBusy) "Preparing…" else "Upload") } },
             dismissButton = { TextButton(onClick = ::cancelUpload) { Text("Cancel") } },
         )
-        if (ui.tabSwitcher) BrowserTabsPanel(session.tabs.tabs, active.id,
+        if (ui.tabSwitcher) BrowserTabsPanel(session.ordinaryBrowserTabs(), active.id,
             onSelect = { session.select(it); ui.tabSwitcher = false }, onRemove = session::close,
             onNew = { session.newTab(); ui.tabSwitcher = false }, onClose = { ui.tabSwitcher = false })
         if (ui.bookmarksOpen) BrowserBookmarksPanel(bookmarks,
@@ -1082,6 +1094,20 @@ internal fun BrowserV2Home(
         if (ui.historyOpen) BrowserHistoryPanel(ui.history, saveHistory,
             onOpen = { session.navigateActive(it); ui.historyOpen = false },
             onClear = { onClearHistory { ui.history = emptyList() } }, onClose = { ui.historyOpen = false })
+        ui.legacyRecovery?.let { recovery ->
+            if (recovery.current()) BrowserPanel("Recover previous tabs", "Primary Space", { ui.legacyRecovery = null }) {
+                Column(Modifier.verticalScroll(rememberScrollState()).padding(16.dp)) {
+                    Text("Previous tabs have no saved app identity. Choose a tab to open in Browser. The original encrypted records are retained.")
+                    if (recovery.tabs.isEmpty()) Text("No previous tabs are available.")
+                    recovery.tabs.forEach { tab ->
+                        TextButton(onClick = {
+                            ui.legacyRecovery = null
+                            recovery.open(tab.id) { accepted -> if (!accepted) ui.message = "The previous tab could not be opened. Reopen recovery and retry." }
+                        }) { Column { Text(tab.title.ifBlank { "Previous tab" }); Text(tab.url, style = MaterialTheme.typography.bodySmall) } }
+                    }
+                }
+            }
+        }
         if(ui.findOpen)BrowserFindDialog(ui.findText,
             onValueChange={ui.findText=it;session.findInActivePage(it)},
             onNext=session::findNextInActivePage,onClose={session.clearFindInActivePage();ui.findOpen=false})

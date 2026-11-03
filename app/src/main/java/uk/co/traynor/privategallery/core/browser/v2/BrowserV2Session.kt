@@ -70,19 +70,43 @@ class BrowserV2Session(
     }
 
     private var listener: Listener = listener
+    private var runtimeMutation = 0L
+    /** Includes app-owned runtime changes that are deliberately absent from persisted metadata. */
+    fun runtimeMutationRevision(): Long = runtimeMutation
 
     val tabs = BrowserSessionManager(maximumTabs)
+    private val launchOwnership = BrowserLaunchOwnership().apply {
+        register(tabs.activeTab.id, null)
+        selected(tabs.activeTab.id)
+    }
     private val webViews = linkedMapOf<String, WebView>()
     // Presentation belongs to an existing tab, never to the selected URL or a second WebView.
     private val privateAppTabs = mutableMapOf<String, uk.co.traynor.privategallery.core.privateapps.PrivateAppCatalog.App>()
     fun privateApp(tabId: String) = privateAppTabs[tabId]
+    fun ordinaryBrowserTabs(): List<BrowserTab> {
+        val ids = launchOwnership.ordinaryTabs().toSet()
+        return tabs.tabs.filter { it.id in ids }
+    }
+    /** An explicit Browser launch restores only Browser's own tab, never the latest app URL. */
+    fun openOrdinaryBrowser() {
+        val selected = launchOwnership.ordinarySelection()
+        if (selected == null) newTab() else select(selected)
+    }
+    /** Explicit adoption creates a fresh ordinary identity; legacy IDs never acquire authority. */
+    fun openRecoveredOrdinaryTab(metadata: BrowserTab) {
+        require(BrowserSecurityPolicy.allowsNavigation(metadata.url)) { "Unsupported previous tab" }
+        val tab = newTab()
+        setDesktopSite(tab.id, metadata.desktopSite)
+        tabs.updateNavigation(tab.id, metadata.url, metadata.title, false)
+        coldRestoreIds += tab.id
+        changed()
+        activeWebViewOrNull()
+    }
     fun openPrivateApp(app: uk.co.traynor.privategallery.core.privateapps.PrivateAppCatalog.App) {
         privateAppTabs.entries.firstOrNull {it.value.id()==app.id() && tabs.tabs.any {tab->tab.id==it.key}}?.let {
             privateAppTabs[it.key]=app;select(it.key);return
         }
-        val tab = newTab(app.startUrl())
-        privateAppTabs[tab.id] = app
-        changed()
+        newOwnedTab(app.startUrl(), app)
     }
     fun removePrivateApp(appId:String) {
         privateAppTabs.filterValues {it.id()==appId}.keys.toList().forEach(::close)
@@ -475,17 +499,24 @@ class BrowserV2Session(
      * tab is discarded completely; only its already-persisted encrypted metadata can be restored
      * later. This prevents invisible WebViews from accumulating indefinitely.
      */
-    fun newTab(url: String = ""): BrowserTab {
+    fun newTab(url: String = ""): BrowserTab = newOwnedTab(url, null)
+
+    private fun newOwnedTab(url: String, app: uk.co.traynor.privategallery.core.privateapps.PrivateAppCatalog.App?): BrowserTab {
         pauseOutgoingTab()
         exitFullscreen()
         val idsBefore = tabs.tabs.mapTo(linkedSetOf()) { it.id }
         val tab = tabs.newTab()
         val retainedIds = tabs.tabs.mapTo(hashSetOf()) { it.id }
         (idsBefore - retainedIds).forEach { evictedId ->
+            launchOwnership.remove(evictedId)
             privateAppTabs.remove(evictedId)
             webViews.remove(evictedId)?.let(::destroy)
             diagnostics.record("WEBVIEW_EVICTED", mapOf("reason" to "tab_limit"))
         }
+        // Establish ownership before allocating/navigating a renderer or publishing metadata.
+        launchOwnership.register(tab.id, app?.id())
+        if (app != null) privateAppTabs[tab.id] = app
+        launchOwnership.selected(tab.id)
         webViewOrNull(tab.id)
         if (url.isNotBlank()) navigate(tab.id, url)
         changed()
@@ -504,17 +535,33 @@ class BrowserV2Session(
         if (tabs.tabs.none { it.id == tabId }) return
         if (tabId != tabs.activeTab.id) { pauseOutgoingTab(); exitFullscreen() }
         tabs.select(tabId)
+        launchOwnership.selected(tabId)
         activeWebViewOrNull()?.let { if (foreground) it.onResume() }
         changed()
     }
 
     fun close(tabId: String) {
+        val closingActive = tabs.activeTab.id == tabId
+        val closingOwner = launchOwnership.owner(tabId)
+        val existingIds = tabs.tabs.mapTo(hashSetOf()) { it.id }
+        launchOwnership.remove(tabId)
         privateAppTabs.remove(tabId)
         if (scriptDialog?.tabId == tabId) cancelScriptDialog()
         cancelNavigationTimeout(tabId); pageFailures.remove(tabId)
         if (fullscreenOwner == tabId) exitFullscreen()
         webViews.remove(tabId)?.let(::destroy)
         tabs.close(tabId)
+        if (tabs.activeTab.id !in existingIds) {
+            launchOwnership.register(tabs.activeTab.id, null)
+        }
+        if (closingActive && launchOwnership.owner(tabs.activeTab.id) != closingOwner) {
+            // Closing an ordinary tab cannot uncover a saved app from another launch context.
+            val sameOwner = tabs.tabs.firstOrNull { launchOwnership.owner(it.id) == closingOwner }?.id
+                ?: launchOwnership.ordinarySelection()
+            if (sameOwner == null) { newTab(); return }
+            tabs.select(sameOwner)
+        }
+        launchOwnership.selected(tabs.activeTab.id)
         activeWebViewOrNull()?.let { if (foreground) it.onResume() }
         changed()
     }
@@ -560,7 +607,14 @@ class BrowserV2Session(
     }
 
     fun destroyAll() {
+        val ordinarySelected = launchOwnership.ordinarySelection()
+        // App runtime cannot become ownerless Browser metadata after lock/space changes.
+        privateAppTabs.keys.toList().forEach { tabs.close(it) }
         privateAppTabs.clear()
+        if (ordinarySelected != null && tabs.tabs.any { it.id == ordinarySelected }) tabs.select(ordinarySelected)
+        launchOwnership.clear()
+        tabs.tabs.forEach { launchOwnership.register(it.id, null) }
+        launchOwnership.selected(tabs.activeTab.id)
         cancelScriptDialog()
         navigationTimeouts.keys.toList().forEach(::cancelNavigationTimeout); pageFailures.clear()
         documentRevision++
@@ -603,10 +657,20 @@ class BrowserV2Session(
         if (!BuildConfig.ACCEPTANCE_BROWSER_DIAGNOSTICS || probe == null) { onComplete(); return }
         probe.capture("OWNER_SNAPSHOT", onComplete)
     }
-    fun metadataSnapshot() = BrowserSessionSnapshot(tabs.tabs, tabs.activeTab.id)
+    fun metadataSnapshot() = BrowserSessionSnapshot(ordinaryBrowserTabs(), launchOwnership.ordinarySelection())
+    /** Async presentation reads may only replace the exact runtime in which they started. */
+    fun restoreMetadataIfUnchanged(snapshot: BrowserSessionSnapshot?, expectedRevision: Long): Boolean {
+        if (runtimeMutation != expectedRevision) return false
+        if (snapshot != null && privateAppTabs.isNotEmpty()) return false
+        snapshot?.let(::restoreMetadata)
+        return true
+    }
     fun restoreMetadata(snapshot: BrowserSessionSnapshot) {
         privateAppTabs.clear()
         tabs.restore(snapshot.tabs, snapshot.selectedTabId)
+        launchOwnership.clear()
+        tabs.tabs.forEach { launchOwnership.register(it.id, null) }
+        launchOwnership.selected(tabs.activeTab.id)
         coldRestoreIds.clear()
         coldRestoreIds += tabs.tabs.filter { it.url.isNotBlank() }.map { it.id }
         changed()
@@ -677,7 +741,11 @@ class BrowserV2Session(
         view.clearMatches()
         view.destroy()
     }
-    private fun changed() { onMetadataChanged(metadataSnapshot()); listener.onSessionChanged() }
+    private fun changed() {
+        runtimeMutation++
+        onMetadataChanged(metadataSnapshot())
+        listener.onSessionChanged()
+    }
 
     private fun recordWebViewParentEvent(category: String, view: WebView) {
         val parent = view.parent
@@ -770,9 +838,9 @@ class BrowserV2Session(
     override fun onProgress(tabId: String, progress: Int) = Unit
     override fun onCreateWindow(parentTabId: String, isDialog: Boolean, isUserGesture: Boolean): WebView? {
         // Reject before allocating a tab if the existing VPN gate is closed.
-        if (!vpnGate.permitsRemoteNetworking() || tabs.tabs.none { it.id == parentTabId }) return null
+        if (!vpnGate.permitsRemoteNetworking() || parentTabId != tabs.activeTab.id) return null
         val previousId = tabs.activeTab.id
-        val child = newTab()
+        val child = newOwnedTab("", privateAppTabs[parentTabId])
         val view = webViewOrNull(child.id)
         if (view == null) {
             close(child.id)
@@ -784,7 +852,7 @@ class BrowserV2Session(
         diagnostics.record(event, details + ("active_tab" to (tabId == tabs.activeTab.id).toString()))
     }
     override fun onWindowFocus(tabId: String) {
-        if (tabs.tabs.none { it.id == tabId }) return
+        if (!launchOwnership.canFocus(tabId, tabs.activeTab.id)) return
         pendingWindowFocus += tabId
         select(tabId)
         webViews[tabId]?.takeIf { it.isAttachedToWindow }?.let { pendingWindowFocus.remove(tabId); it.requestFocus() }

@@ -700,7 +700,7 @@ class HiddenVpnBrowserActivity:ComponentActivity() {
                 check(epoch==callbackEpoch && ready && live(token));check(HiddenConnectionPolicy.safeUrl(app.startUrl(),mode))
                 cancelUpload();cancelWebsiteDialog()
                 privateAppsOpen=false
-                val existing=views.firstOrNull {privateAppTabs[it]?.id()==app.id()}
+                val existing=views.firstOrNull {!popupOwnership.isPopup(it) && privateAppTabs[it]?.id()==app.id()}
                 if(existing!=null){privateAppTabs[existing]=app;select(existing)} else {
                 val view=checkNotNull(newTab())
                 privateAppTabs[view]=app
@@ -797,7 +797,7 @@ class HiddenVpnBrowserActivity:ComponentActivity() {
                     uk.co.traynor.privategallery.ui.PrivateAppLoading(checkNotNull(app))
             }
             @Suppress("UNUSED_VARIABLE") val revision=navigationRevision
-            if(!appStyle)BrowserNavigationToolbar(current?.canGoBack()==true,current?.canGoForward()==true,views.size,{current?.let {failures.remove(it);it.goBack()}},{current?.let {failures.remove(it);it.goForward()}},{showLibrary("Bookmarks")},{tabList=true},{library();menu=true},{library();menu=true})
+            if(!appStyle)BrowserNavigationToolbar(current?.canGoBack()==true,current?.canGoForward()==true,views.count {privateAppTabs[it]==null},{current?.let {failures.remove(it);it.goBack()}},{current?.let {failures.remove(it);it.goForward()}},{showLibrary("Bookmarks")},{tabList=true},{library();menu=true},{library();menu=true})
         }
 
         if(menu)BrowserPanel("Browser settings","Hidden ${mode.indicator}",{menu=false}) {
@@ -822,10 +822,10 @@ class HiddenVpnBrowserActivity:ComponentActivity() {
             confirmButton={TextButton(onClick={requestedMode=null;terminate(switchMode=selected)}){Text("Close tabs and switch")}},
             dismissButton={TextButton(onClick={requestedMode=null}){Text("Keep current mode")}})}
         if(tabList) {
-            val snapshot=views.toList()
+            val snapshot=views.filter {privateAppTabs[it]==null}
             BrowserTabsPanel(snapshot.map {BrowserTab(id=System.identityHashCode(it).toString(),url=it.url.orEmpty(),title=it.title.orEmpty())},System.identityHashCode(current).toString(),
-                onSelect={id ->snapshot.firstOrNull {System.identityHashCode(it).toString()==id}?.let {select(it)};tabList=false},
-                onRemove={id ->snapshot.firstOrNull {System.identityHashCode(it).toString()==id}?.let {view ->cancelWebsiteDialog();cancelUpload();val owned=popupOwnership.group(view);popupOwnership.remove(view);destroyOwnedViews(owned);if(current==null){views.lastOrNull()?.let {select(it)};if(current==null){address="";busy=false}}}},
+                onSelect={id ->snapshot.firstOrNull {it in views && privateAppTabs[it]==null && System.identityHashCode(it).toString()==id}?.let {select(it)};tabList=false},
+                onRemove={id ->snapshot.firstOrNull {it in views && privateAppTabs[it]==null && System.identityHashCode(it).toString()==id}?.let {view ->cancelWebsiteDialog();cancelUpload();val owned=popupOwnership.group(view);popupOwnership.remove(view);destroyOwnedViews(owned);if(current==null){views.lastOrNull {privateAppTabs[it]==null}?.let {select(it)};if(current==null){address="";busy=false;newTab()}}}},
                 onNew={newTab();tabList=false},onClose={tabList=false})
         }
         libraryKind?.let {kind ->
