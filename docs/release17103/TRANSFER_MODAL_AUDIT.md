@@ -40,3 +40,5 @@ No `HiddenRestoreAccess` calls changed: close, authenticate, char-array wiping, 
 - Required device follow-up: folded and unfolded windows, 200% font, landscape/short height, keyboard visible, all theme modes; scroll every destination and Cancel into view, authenticate both directions, copy/move bulk selection, stop/cancel during transfer, lock/background and recovery. No runtime claims are made by this audit.
 
 Final focused evidence: compilation/host checks and 7 JVM cases pass; 25 original API37 cases pass at 79f6aaa and three test-only corrected retries pass at b2d0239. See STATUS.md for exact source/artifact accounting and remaining limitations. No physical Fold or Google transaction approval.
+
+2026-11-03: TransferHistoryDialog migrated to GalleryFullPageDialog with weighted history list and persistent footer; resume/cancel/clear/owner authority unchanged. Existing encrypted history cancellation test passes at eaa5187. AI reference picker also uses this full-page shell; existing large-text reference/consent case passes. See CONTINUATION_EVIDENCE.json.

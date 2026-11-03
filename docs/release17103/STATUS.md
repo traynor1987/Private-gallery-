@@ -36,3 +36,7 @@ Bounded fullscreen thumbnail preview is not original-resolution preview or video
 ## Verified checkpoint / next required evidence
 
 Verified production-source checkpoint: b2d0239f0d40184f74a7f015bad326c80530d3b0 (app source identical to 79f6aaa). Source review found no remaining Important/Critical finding in changed popup/preview/transfer boundaries after retirement fencing. Google OAuth remains unapproved. Obtain the affected Private App base URL and identify whether the Google Yes screen is in NovaOS, Google app or an external browser; do not request or record authorization codes/tokens. Establish that site's provider-supported return contract and reproduce success and cancellation under verified routing before implementing an external handoff or signing. Independent UI work is checkpointed with explicit remaining picker/modal limitations, not represented as universal completion.
+
+## 2026-11-03 verified continuation
+
+Latest verified application source eaa518770f267957cc8383e1760b87167b5d32c9 adds shared full-page AI reference selection and encrypted transfer history. Run41629755724 passes 2 exact API37 behavior tests +7 JVM; archive digest/source/XML checked. Independent source review finds no Important/Critical regression in this narrow diff. CONTINUATION.md and CONTINUATION_EVIDENCE.json contain exact handover. Earlier test receipts remain source-scoped; no full updated suite claim. Google and signing blocker remains unchanged.

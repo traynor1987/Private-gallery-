@@ -1,0 +1,21 @@
+{
+  "source": "eaa518770f267957cc8383e1760b87167b5d32c9",
+  "run": 41629755724,
+  "job": 125896017941,
+  "artifact": 13228655782,
+  "archive_sha256": "2637fb1b08b103f8f5548187c9fa39e5bef7e5fd7a89ea80c8cb40aa47f2a2ff",
+  "android17_passed": 2,
+  "jvm_passed": 7,
+  "cases": [
+    {
+      "classname": "uk.co.traynor.privategallery.ui.ModalCompletion1762Test",
+      "method": "coverDarkCreateImageChoicesReferencesDiagnosticsAndConsentFitAtLargeText"
+    },
+    {
+      "classname": "uk.co.traynor.privategallery.ui.ModalCompletion1762Test",
+      "method": "innerDarkEncryptedTransferHistoryScrollsAndCancelsOnlyRecordedOperation"
+    }
+  ],
+  "google_oauth": "UNVERIFIED",
+  "signing": "BLOCKED"
+}
