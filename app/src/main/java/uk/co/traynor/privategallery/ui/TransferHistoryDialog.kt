@@ -1,6 +1,5 @@
 package uk.co.traynor.privategallery.ui
 
-import uk.co.traynor.privategallery.ui.GalleryAlertDialog as AlertDialog
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -30,9 +29,10 @@ internal fun TransferHistoryDialog(access:PrimaryCopyAccess,onDismiss:()->Unit) 
  DisposableEffect(access) {onDispose {stopped.set(true)}}
  LaunchedEffect(access,revision) {val result=withContext(Dispatchers.IO){runCatching {access.history()}};if(access.isActive())result.onSuccess {operations=it;message=if(it.isEmpty())"No recorded transfers." else "History is encrypted and visible only after Hidden authentication."}.onFailure {message="History could not be authenticated. Records retained."}}
  val time=remember {DateTimeFormatter.ofPattern("dd MMM yyyy HH:mm").withZone(ZoneId.systemDefault())}
- AlertDialog(scrollBody = false, onDismissRequest={if(!busy)onDismiss()},title={Text("Transfer history")},text={Column(verticalArrangement=Arrangement.spacedBy(8.dp)) {
+ GalleryFullPageDialog(onDismissRequest={if(!busy)onDismiss()},scrollBody=false) {
+  Text("Transfer history",style=MaterialTheme.typography.titleLarge)
   Text(message)
-  LazyColumn(Modifier.heightIn(max=420.dp)) {items(operations,key={it.id}) {op ->
+  LazyColumn(Modifier.weight(1f).fillMaxWidth()) {items(operations,key={it.id}) {op ->
    Column(Modifier.fillMaxWidth().padding(vertical=8.dp)) {
     Text("${if(op.move)"Move" else "Copy"} · ${if(op.direction=="PRIMARY_TO_HIDDEN")"Primary → Hidden" else "Hidden → Primary"}")
     Text("${time.format(Instant.ofEpochMilli(op.started))} · ${op.items.size} items")
@@ -48,5 +48,9 @@ internal fun TransferHistoryDialog(access:PrimaryCopyAccess,onDismiss:()->Unit) 
    }
   }}
   if(busy)TextButton(onClick={stopped.set(true)}) {Text("Stop after current item")}
- }},confirmButton={TextButton(enabled=!busy,onClick=onDismiss){Text("Close")}},dismissButton={TextButton(enabled=!busy,onClick={busy=true;scope.launch {val result=withContext(Dispatchers.IO){runCatching {access.clearHistory()}};busy=false;if(result.isFailure)message="History cleanup failed; media unchanged.";revision++}}){Text("Clear finished history")}})
+   FlowRow(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+   TextButton(enabled=!busy,onClick=onDismiss){Text("Close")}
+   TextButton(enabled=!busy,onClick={busy=true;scope.launch {val result=withContext(Dispatchers.IO){runCatching {access.clearHistory()}};busy=false;if(result.isFailure)message="History cleanup failed; media unchanged.";revision++}}){Text("Clear finished history")}
+  }
+ }
 }

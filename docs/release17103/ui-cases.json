@@ -1,9 +1,6 @@
 {
-  "uk.co.traynor.privategallery.ui.HiddenRestoreDialogTest": [
-    "choicesAreExplicitAndPrimaryRequiresFreshPinWithoutChangingHidden",
-    "moveRequiresSeparateConfirmationAndLockRevokesDialogOnce"
-  ],
-  "uk.co.traynor.privategallery.core.evidence.EvidenceAccess179Test": [
-    "pre_registration_preview_is_exact_origin_read_only_and_rejects_late_publication"
+  "uk.co.traynor.privategallery.ui.ModalCompletion1762Test": [
+    "innerDarkEncryptedTransferHistoryScrollsAndCancelsOnlyRecordedOperation",
+    "coverDarkCreateImageChoicesReferencesDiagnosticsAndConsentFitAtLargeText"
   ]
 }

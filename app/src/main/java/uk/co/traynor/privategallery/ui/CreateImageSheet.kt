@@ -188,9 +188,7 @@ fun CreateImageSheet(onGenerate: (GenerationRequest, (String) -> Unit, (Result<V
             Spacer(Modifier.height(12.dp)); Text("Effective prompt")
             Text(runCatching { templates.effective(prompt, PromptKind.CREATE, model.modelId, enhancePrompt) }.getOrElse { it.message ?: "Invalid template" })
         } }, confirmButton = { TextButton(onClick = { diagnostic = false }) { Text("Close") } })
-    if (pickingReferences) androidx.compose.ui.window.Dialog(onDismissRequest = { pickingReferences = false }) {
-        GalleryDialogSurface(Modifier.fillMaxWidth().heightIn(max = 600.dp)) {
-            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    if (pickingReferences) GalleryFullPageDialog(onDismissRequest = { pickingReferences = false }, scrollBody = false) {
                 LazyVerticalGrid(GridCells.Adaptive(88.dp), modifier = Modifier.weight(1f),
                     horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     item(span = { GridItemSpan(maxLineSpan) }) {
@@ -211,7 +209,5 @@ fun CreateImageSheet(onGenerate: (GenerationRequest, (String) -> Unit, (Result<V
                     TextButton(onClick = { pickingReferences = false },modifier=Modifier.testTag("ai-reference-cancel")) { Text("Cancel") }
                     TextButton(onClick = { referenceIds = draftReferenceIds; pickingReferences = false },modifier=Modifier.testTag("ai-reference-confirm")) { Text("Confirm") }
                 }
-            }
-        }
     }
 }
