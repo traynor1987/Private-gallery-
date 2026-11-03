@@ -465,9 +465,14 @@ jobs:
           java -cp /tmp/editor17102 uk.co.traynor.privategallery.ui.EditorCropPresetChecks
           java com.sun.tools.javac.Main -d /tmp/popup17103 app/src/main/java/uk/co/traynor/privategallery/core/browser/hidden/HiddenPopupOwnership.java app/src/main/java/uk/co/traynor/privategallery/core/browser/hidden/HiddenCallbackOwners.java app/src/test/java/uk/co/traynor/privategallery/core/browser/hidden/HiddenPopupOwnershipHostChecks.java
           java -cp /tmp/popup17103 uk.co.traynor.privategallery.core.browser.hidden.HiddenPopupOwnershipHostChecks
+          java com.sun.tools.javac.Main -d /tmp/continuity17103 app/src/main/java/uk/co/traynor/privategallery/core/hidden/HiddenSession.java app/src/main/java/uk/co/traynor/privategallery/core/browser/hidden/HiddenBrowserContinuation.java app/src/test/java/uk/co/traynor/privategallery/core/hidden/HiddenContinuationAuthenticationChecks.java app/src/test/java/uk/co/traynor/privategallery/core/hidden/HiddenRevocationSignalChecks.java app/src/test/java/uk/co/traynor/privategallery/core/browser/hidden/HiddenBrowserContinuationChecks.java
+          java -cp /tmp/continuity17103 uk.co.traynor.privategallery.core.hidden.HiddenContinuationAuthenticationChecks
+          java -cp /tmp/continuity17103 uk.co.traynor.privategallery.core.hidden.HiddenRevocationSignalChecks
+          java -cp /tmp/continuity17103 uk.co.traynor.privategallery.core.browser.hidden.HiddenBrowserContinuationChecks
           java com.sun.tools.javac.Main -d /tmp/picker17103 app/src/main/java/uk/co/traynor/privategallery/ui/PickerMediaLabels.java tests/picker_presentation/PickerMediaLabelsChecks.java
           java -cp /tmp/picker17103 PickerMediaLabelsChecks
-          python3 scripts/check_nova17101.py --code 54 --version 1.7.10.2
+          PYTHONDONTWRITEBYTECODE=1 python3 -m unittest scripts.tests.test_upgrade17103_controls scripts.tests.test_nova17103_runtime_gate scripts.tests.test_continuity_approval17103
+          python3 scripts/check_nova17101.py --code 55 --version 1.7.10.3
           java -cp /tmp/home1710 HomeLayoutChecks
           java -cp /tmp/home1710 HomePersistenceChecks
           PYTHONDONTWRITEBYTECODE=1 python3 -m unittest scripts.tests.test_home1710_release scripts.tests.test_nova17101_release
@@ -493,6 +498,7 @@ jobs:
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y -qq wireguard-tools tcpdump iptables python3-cryptography tor
+          PYTHONDONTWRITEBYTECODE=1 python3 -m unittest scripts.tests.test_hidden_continuity_fixture17103 scripts.tests.test_hidden_continuity_transition_fixture17103 scripts.tests.test_hidden_continuity_packets17103 scripts.tests.test_hidden_vpn_tls1762
           bash scripts/setup_hidden_vpn_fixture1762.sh
           python3 scripts/ci_onion_probe.py
       - name: Enable Android emulator acceleration
@@ -520,6 +526,7 @@ jobs:
           NOVA17102_REPAIR: ${{ contains(github.event.head_commit.message, '[repair17102]') && '1' || '0' }}
           NOVA17102_ENGINE: ${{ contains(github.event.head_commit.message, '[engine17102]') && '1' || '0' }}
           NOVA17102_BETA: ${{ contains(github.event.head_commit.message, '[beta17102]') && '1' || '0' }}
+          NOVA17103_CONTINUITY: ${{ contains(github.event.head_commit.message, '[continuity17103]') && '1' || '0' }}
           NOVA17103_POLISH: ${{ contains(github.event.head_commit.message, '[polish17103]') && '1' || '0' }}
           NOVA17102_CLOSURE: ${{ contains(github.event.head_commit.message, '[closure17102]') && '1' || '0' }}
         if: contains(github.event.head_commit.message, '[verify17102]')

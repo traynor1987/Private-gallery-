@@ -1,7 +1,8 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android" xmlns:tools="http://schemas.android.com/tools">
   <queries><provider android:authorities="uk.co.traynor.privategallery.test.browser-selection-fixture" /></queries>
   <!-- Only reserved .invalid mock origins may use HTTP in protocol-fixture tests. -->
-  <application android:networkSecurityConfig="@xml/hidden_test_network_security" tools:replace="android:networkSecurityConfig">
+  <application android:name="uk.co.traynor.privategallery.core.browser.hidden.HiddenContinuityFixtureApplication" android:networkSecurityConfig="@xml/hidden_test_network_security" tools:replace="android:networkSecurityConfig">
+    <service android:name="uk.co.traynor.privategallery.core.browser.hidden.HiddenContinuityFixtureService" android:exported="false" android:process=":hidden_vpn_browser" android:stopWithTask="true" />
     <activity android:name="uk.co.traynor.privategallery.PrivacyPauseFixtureActivity" android:exported="false" android:theme="@android:style/Theme.Material.Light.Dialog.NoActionBar" />
     <service android:name="uk.co.traynor.privategallery.CiAccessibilityService178"
         android:exported="true" android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">

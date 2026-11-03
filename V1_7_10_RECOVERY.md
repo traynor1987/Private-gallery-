@@ -281,3 +281,8 @@ Verified UI / popup checkpoint: `b2d0239f0d40184f74a7f015bad326c80530d3b0`. Focu
 
 ## 2026-11-03 continuation — verified full-page workflows, still OAuth-blocked
 Recovered newer acee549 instead of restarting from b2d0239. Source eaa518770f267957cc8383e1760b87167b5d32c9 moves AI reference selection and authenticated encrypted transfer history onto existing GalleryFullPageDialog, preserving callbacks and transfer authority. Run41629755724 SUCCESS: 2 focused API37 +7 JVM and existing host/compile gates. Receipt/hash and independent source review: docs/release17103/CONTINUATION.md / CONTINUATION_EVIDENCE.json. Reuse earlier evidence only within unchanged scope. Google success/cancel and secure supported external handoff remain unverified; no new acceptance APK or original-key upgrade performed. Do not sign as a completed Google login repair.
+
+
+## Coordinated Hidden lifecycle implementation — current candidate
+
+Supersedes the earlier diagnosis-only / missing-website blocker: the owner supplied reproduction and the shared destructive Activity/runtime/proxy/heartbeat paths are now implemented together, not an Activity-only patch. See docs/release17103/COORDINATED_IMPLEMENTATION.md and continuity-*-cases.json. Existing Primary remains the behavioral reference; Google restrictions, VPN fail-closed routing, auth/crypto boundaries and Beta disk-persistence disclosures remain. Pending candidate is1.7.10.3/code55 above last signed54. No signing marker/approval exists. Focused API37 and packet evidence, independent review and original-key54→55 upgrade remain mandatory.

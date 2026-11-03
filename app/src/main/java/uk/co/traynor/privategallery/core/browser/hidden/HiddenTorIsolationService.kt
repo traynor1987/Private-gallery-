@@ -21,14 +21,15 @@ class HiddenTorIsolationService:VpnService() {
     internal val ipv6Dropped=java.util.concurrent.atomic.AtomicLong()
     internal val udpDropped=java.util.concurrent.atomic.AtomicLong()
     private val networkEvents=object:ConnectivityManager.NetworkCallback(){override fun onLost(network:Network){if(network==ownedNetwork){revoked?.invoke();retire()}}}
-    internal var relay:HiddenTorRelayBridge?=null;private set
+    @Volatile internal var relay:HiddenTorRelayBridge?=null;private set
+    private var egressAuthority:(()->Boolean)?=null
     internal var unixPath:String?=null;private set
     private var revoked:(()->Unit)?=null
     override fun onBind(intent:Intent):IBinder?=if(intent.action==SERVICE_INTERFACE)super.onBind(intent) else binder
     override fun onStartCommand(intent:Intent?,flags:Int,startId:Int)=START_NOT_STICKY
     internal fun establish(authorized:()->Boolean,onRevoked:()->Unit,beginForeground:()->Unit={startForegroundConnection()}) {
         check(instance==null && !closed.get() && VpnService.prepare(this)==null && authorized())
-        instance=this;revoked=onRevoked
+        instance=this;revoked=onRevoked;egressAuthority=authorized
         try {
             beginForeground()
             tun=checkNotNull(Builder().setSession("Private browser isolation").setMtu(1500)
@@ -58,6 +59,19 @@ class HiddenTorIsolationService:VpnService() {
         val manager=getSystemService(ConnectivityManager::class.java)
         ownedNetwork?.let {return if(manager.getNetworkCapabilities(it)?.hasTransport(NetworkCapabilities.TRANSPORT_VPN)==true)it else null}
         return manager.allNetworks.singleOrNull {manager.getNetworkCapabilities(it)?.let {caps->caps.hasTransport(NetworkCapabilities.TRANSPORT_VPN) && caps.ownerUid==android.os.Process.myUid()}==true}.also {if(it!=null)ownedNetwork=it}
+    }
+    internal fun suspendEgress():Boolean {
+        relay?.close();relay=null
+        return !closed.get() && tun!=null && network()!=null
+    }
+    internal fun resumeEgress():Boolean {
+        if(closed.get() || tun==null || network()==null || hasTorProcess(this))return false
+        val allowed=egressAuthority ?: return false
+        if(!allowed())return false
+        relay?.close()
+        unixPath?.let {path ->val stale=File(path);if(stale.exists() && !stale.delete())return false}
+        relay=HiddenTorRelayBridge({socket->!closed.get() && allowed() && protect(socket)},{!closed.get() && allowed()})
+        return true
     }
     internal fun retire() {
         if(!closed.compareAndSet(false,true))return
@@ -100,7 +114,7 @@ class HiddenTorIsolationService:VpnService() {
 internal class HiddenTorIsolationConnection(private val context:Context,private val authorized:()->Boolean,private val onRevoked:()->Unit):java.io.Closeable {
     private var bound=false
     private var closed=false
-    private var service:HiddenTorIsolationService?=null
+    @Volatile private var service:HiddenTorIsolationService?=null
     private val connection=object:ServiceConnection {
         override fun onServiceConnected(name:ComponentName,binder:IBinder){
             if(closed)return
@@ -110,6 +124,8 @@ internal class HiddenTorIsolationConnection(private val context:Context,private 
     }
     fun start(){check(!closed);bound=context.bindService(Intent(context,HiddenTorIsolationService::class.java),connection,Context.BIND_AUTO_CREATE);check(bound)}
     fun network()=service?.network()
+    fun suspendEgress()=service?.suspendEgress()==true
+    fun resumeEgress()=service?.resumeEgress()==true
     fun droppedPackets()=service?.droppedPackets?.get() ?: 0L
     fun dropCounters():Triple<Long,Long,Long> = service?.let {Triple(it.ipv4Dropped.get(),it.ipv6Dropped.get(),it.udpDropped.get())} ?: Triple(0L,0L,0L)
     fun configuration(owner:IBinder):HiddenTorConfiguration {

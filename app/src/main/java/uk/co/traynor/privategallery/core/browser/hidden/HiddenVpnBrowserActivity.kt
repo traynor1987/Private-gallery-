@@ -62,18 +62,18 @@ import java.util.concurrent.atomic.AtomicBoolean
 
 private typealias UploadItem = HiddenNativeUploadItem
 
-/** A process lifetime is exactly one authenticated immutable VPN lease. Never restores a URL. */
+/** One authenticated in-memory presentation; each resumed IO epoch gets fresh verified routing. */
 class HiddenVpnBrowserActivity:ComponentActivity() {
     companion object {private val processAdmission=HiddenVpnProcessAdmission()}
     private val ended=AtomicBoolean()
     private val handler=Handler(Looper.getMainLooper())
     private var selectedTheme by mutableStateOf(uk.co.traynor.privategallery.core.ui.AppTheme.SYSTEM)
     private val policyRefreshQueued=AtomicBoolean()
-    private val captureGuard by lazy {HiddenBrowserCaptureGuard(this,{ready && live()},{terminate(reason=HiddenVpnBrowserBroker.BACKGROUND)})}
+    private val captureGuard by lazy {HiddenBrowserCaptureGuard(this,{ready && live()},{terminate(reason=HiddenVpnBrowserBroker.BACKGROUND)},lock={lockHidden()},panic={panic()})}
     private var broker:IBinder?=null
     private val endpoint=object:Binder() {
         override fun onTransact(code:Int,data:Parcel,reply:Parcel?,flags:Int):Boolean {
-            if(code!=HiddenVpnBrowserBroker.CHILD_SHUTDOWN && code!=HiddenVpnBrowserBroker.CHILD_SECURITY && code!=HiddenVpnBrowserBroker.CHILD_PRESENTATION)return super.onTransact(code,data,reply,flags)
+            if(code!=HiddenVpnBrowserBroker.CHILD_SHUTDOWN && code!=HiddenVpnBrowserBroker.CHILD_SECURITY && code!=HiddenVpnBrowserBroker.CHILD_PRESENTATION && code!=HiddenVpnBrowserBroker.CHILD_SUSPEND)return super.onTransact(code,data,reply,flags)
             data.enforceInterface(HiddenVpnBrowserBroker.CHILD_DESCRIPTOR)
             check(Binder.getCallingUid()==Process.myUid())
             if(code==HiddenVpnBrowserBroker.CHILD_SECURITY) {
@@ -82,10 +82,11 @@ class HiddenVpnBrowserActivity:ComponentActivity() {
                 check(latch.await(3,java.util.concurrent.TimeUnit.SECONDS));reply?.writeNoException();reply?.writeInt(if(javascript)1 else 0);reply?.writeInt(if(attached)1 else 0);return true
             }
             if(code==HiddenVpnBrowserBroker.CHILD_PRESENTATION) {
-                val latch=java.util.concurrent.CountDownLatch(1);var secure=true;var covered=true;var theme=uk.co.traynor.privategallery.core.ui.AppTheme.SYSTEM
-                handler.post {secure=window.attributes.flags and WindowManager.LayoutParams.FLAG_SECURE!=0;covered=captureGuard.covered;theme=selectedTheme;latch.countDown()}
-                check(latch.await(3,java.util.concurrent.TimeUnit.SECONDS));reply?.writeNoException();reply?.writeInt(if(secure)1 else 0);reply?.writeInt(if(covered)1 else 0);reply?.writeString(uk.co.traynor.privategallery.core.ui.ThemePreference.encode(theme));return true
+                val latch=java.util.concurrent.CountDownLatch(1);var secure=true;var covered=true;var theme=uk.co.traynor.privategallery.core.ui.AppTheme.SYSTEM;var viewIdentity=0;var profileIdentity=0;var viewCount=0;var appIdentity=0
+                handler.post {secure=window.attributes.flags and WindowManager.LayoutParams.FLAG_SECURE!=0;covered=captureGuard.covered;theme=selectedTheme;viewIdentity=System.identityHashCode(current);profileIdentity=System.identityHashCode(profile);viewCount=views.size;appIdentity=System.identityHashCode(current?.let {privateAppTabs[it]});latch.countDown()}
+                check(latch.await(3,java.util.concurrent.TimeUnit.SECONDS));reply?.writeNoException();reply?.writeInt(if(secure)1 else 0);reply?.writeInt(if(covered)1 else 0);reply?.writeString(uk.co.traynor.privategallery.core.ui.ThemePreference.encode(theme));reply?.writeInt(viewIdentity);reply?.writeInt(profileIdentity);reply?.writeInt(viewCount);reply?.writeInt(appIdentity);return true
             }
+            if(code==HiddenVpnBrowserBroker.CHILD_SUSPEND){handler.post {suspendPresentation()};return true}
             handler.post {terminate(false)}
             return true
         }
@@ -97,6 +98,10 @@ class HiddenVpnBrowserActivity:ComponentActivity() {
     private var mode=HiddenConnectionPolicy.Mode.VPN_ONLY
     private var proxyPort=0
     private var proxyPassword=""
+    @Volatile private var ioToken=""
+    @Volatile private var suspended=false
+    private var resuming=false
+    @Volatile private var callbackEpoch=0L
     private var profile:Profile?=null
     private val profileName="hidden16-"+UUID.randomUUID()
     private val views=mutableStateListOf<WebView>()
@@ -175,13 +180,19 @@ class HiddenVpnBrowserActivity:ComponentActivity() {
     private val death=IBinder.DeathRecipient {Process.killProcess(Process.myPid())}
     private val screenOff=object:BroadcastReceiver() {override fun onReceive(context:Context,intent:Intent) {terminate(reason=HiddenVpnBrowserBroker.SCREEN_OFF)}}
     private val networkEvents=object:ConnectivityManager.NetworkCallback() {
-        override fun onLost(lost:Network) {if(lost==network)handler.post {terminate(reason=HiddenVpnBrowserBroker.BACKGROUND)}}
+        override fun onLost(lost:Network) {if(lost==network)handler.post {if(lost==network)suspendPresentation()}}
         override fun onCapabilitiesChanged(changed:Network,caps:NetworkCapabilities) {
-            if(changed==network && (!caps.hasTransport(NetworkCapabilities.TRANSPORT_VPN) || caps.ownerUid!=Process.myUid()))handler.post {terminate(reason=HiddenVpnBrowserBroker.BACKGROUND)}
+            if(changed==network && (!caps.hasTransport(NetworkCapabilities.TRANSPORT_VPN) || caps.ownerUid!=Process.myUid()))handler.post {if(changed==network)suspendPresentation()}
         }
     }
     private val heartbeat=object:Runnable {override fun run() {
-        if(!live()){terminate(reason=HiddenVpnBrowserBroker.BACKGROUND);return}
+        if(suspended) {
+            val state=runCatching {call(HiddenVpnBrowserBroker.CONTINUATION,read={it.readString()})}.getOrNull()
+            if(state !in setOf("TEMPORARILY_SUSPENDED","RECONNECTING")){terminate(reason=HiddenVpnBrowserBroker.BACKGROUND);return}
+            if(lifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.RESUMED))resumePresentation()
+            handler.postDelayed(this,250);return
+        }
+        if(!live()){suspendPresentation();if(!ended.get())handler.postDelayed(this,250);return}
         pageDeadlines.forEach { (view,deadline) ->
             if(deadline.expired(SystemClock.elapsedRealtime())) {
                 failures[view]="This website did not display a page within 60 seconds. Check the address or retry using the same private connection."
@@ -192,6 +203,7 @@ class HiddenVpnBrowserActivity:ComponentActivity() {
         handler.postDelayed(this,250)
     }}
     private val panicTouch=uk.co.traynor.privategallery.core.ui.PanicTouchGate()
+    private fun lockHidden() {runCatching {call(HiddenVpnBrowserBroker.LOCK_VAULT,read={Unit})};terminate()}
     private fun panic() {
         val cover=android.view.View(this).apply {setBackgroundColor(android.graphics.Color.BLACK);isClickable=true;importantForAccessibility=android.view.View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS}
         (window.decorView as android.view.ViewGroup).addView(cover,android.view.ViewGroup.LayoutParams(-1,-1));cover.bringToFront()
@@ -206,9 +218,16 @@ class HiddenVpnBrowserActivity:ComponentActivity() {
         if(action==1){val cancel=android.view.MotionEvent.obtain(event);cancel.action=android.view.MotionEvent.ACTION_CANCEL;super.dispatchTouchEvent(cancel);cancel.recycle();panic();return true}
         return super.dispatchTouchEvent(event)
     }
-    private fun <T> call(code:Int,write:(Parcel)->Unit={},read:(Parcel)->T):T {
+    private fun captureIoToken():String {
+        check(Looper.myLooper()==Looper.getMainLooper()) { "Hidden IO must capture authority on Main before scheduling" }
+        return ioToken.also {check(it.isNotEmpty())}
+    }
+    private fun <T> call(code:Int,write:(Parcel)->Unit={},read:(Parcel)->T,authorityToken:String?=null):T {
+        val control=code in setOf(HiddenVpnBrowserBroker.CLAIM,HiddenVpnBrowserBroker.END,HiddenVpnBrowserBroker.CLEANED,HiddenVpnBrowserBroker.SUSPEND,HiddenVpnBrowserBroker.CONTINUATION,HiddenVpnBrowserBroker.RESUME,HiddenVpnBrowserBroker.RESUME_TRANSPORT,HiddenVpnBrowserBroker.RESUME_COMMIT,HiddenVpnBrowserBroker.PANIC,HiddenVpnBrowserBroker.LOCK_VAULT)
+        // Workers cannot inherit a replacement epoch after an earlier generation check.
+        val captured=if(control)null else authorityToken ?: captureIoToken()
         val request=Parcel.obtain();val reply=Parcel.obtain()
-        try {request.writeInterfaceToken(HiddenVpnBrowserBroker.DESCRIPTOR);write(request);check(checkNotNull(broker).transact(code,request,reply,0));reply.readException();return read(reply)} finally {request.recycle();reply.recycle()}
+        try {request.writeInterfaceToken(HiddenVpnBrowserBroker.DESCRIPTOR);if(!control)request.writeString(captured);write(request);check(checkNotNull(broker).transact(code,request,reply,0));reply.readException();return read(reply)} finally {request.recycle();reply.recycle()}
     }
     /** App-owned library writes use the parent-held revocable Hidden capability; WebView manages separate disk profiles. */
     private fun library(action:Int=0,url:String="",enabled:Boolean=false,pageTitle:String=current?.takeIf {it.url==url}?.title.orEmpty()):org.json.JSONObject? = runCatching {
@@ -227,22 +246,25 @@ class HiddenVpnBrowserActivity:ComponentActivity() {
         libraryTimes=libraryItems.indices.map {state.optJSONArray(prefix+"Times")?.optLong(it,0) ?: 0L}
         libraryKind=kind
     }
-    private fun live():Boolean = !ended.get() && runCatching {call(HiddenVpnBrowserBroker.CHECK,read={parcel ->
+    private fun live(authorityToken:String?=null):Boolean {
+        val epoch=callbackEpoch
+        return !ended.get() && !suspended && runCatching {call(HiddenVpnBrowserBroker.CHECK,authorityToken=authorityToken,read={parcel ->
         val allowed=parcel.readInt()==1
         val status=parcel.readString().orEmpty()
         val captureAllowed=parcel.readInt()==1
         val theme=uk.co.traynor.privategallery.core.ui.ThemePreference.decode(parcel.readString())
         val downloading=parcel.readInt()==1;val received=parcel.readLong();val total=parcel.readLong()
-        handler.post {if(!ended.get()){downloadRunning=downloading;downloadBytes=received;downloadTotal=total}}
+        handler.post {if(!ended.get() && epoch==callbackEpoch && !suspended){downloadRunning=downloading;downloadBytes=received;downloadTotal=total}}
         if(Looper.myLooper()==Looper.getMainLooper()){captureGuard.updatePolicy(captureAllowed);selectedTheme=theme}
         else if(policyRefreshQueued.compareAndSet(false,true))handler.post {
             policyRefreshQueued.set(false)
             // Re-read on Main, rather than applying an older worker's policy after a newer one.
-            if(!ended.get() && !live())terminate(reason=HiddenVpnBrowserBroker.BACKGROUND)
+            if(!ended.get() && epoch==callbackEpoch && !suspended && !live(authorityToken))suspendPresentation()
         }
-        if(status.isNotEmpty())handler.post {if(!ended.get() && status!=observedDownloadStatus){observedDownloadStatus=status;notice=status}}
-        allowed
+        if(status.isNotEmpty())handler.post {if(!ended.get() && epoch==callbackEpoch && !suspended && status!=observedDownloadStatus){observedDownloadStatus=status;notice=status}}
+        allowed && epoch==callbackEpoch && !suspended
     })}.getOrDefault(false)
+    }
     private fun cancelWebsiteDialog() {
         websiteDialog?.result?.cancel();websiteDialog=null;promptText=""
         websiteAuth?.handler?.cancel();websiteAuth=null;authUser="";authPassword=""
@@ -267,7 +289,7 @@ class HiddenVpnBrowserActivity:ComponentActivity() {
             homePrivateApps=intent.getBooleanExtra("home1710-private-apps",false);privateAppsHomeRoot=homePrivateApps;broker=checkNotNull(intent.extras?.getBinder(HiddenVpnBrowserBroker.EXTRA));intent.replaceExtras(Bundle())
             broker!!.linkToDeath(death,0)
             call(HiddenVpnBrowserBroker.CLAIM,write={it.writeStrongBinder(endpoint)},read={parcel ->
-                network=parcel.readTypedObject(Network.CREATOR);proxyPort=parcel.readInt();proxyPassword=checkNotNull(parcel.readString());storageId=checkNotNull(parcel.readString());mode=HiddenConnectionPolicy.Mode.parse(parcel.readString());check(mode!=HiddenConnectionPolicy.Mode.VPN_TOR);captureGuard.updatePolicy(parcel.readInt()==1);selectedTheme=uk.co.traynor.privategallery.core.ui.ThemePreference.decode(parcel.readString())
+                network=parcel.readTypedObject(Network.CREATOR);proxyPort=parcel.readInt();proxyPassword=checkNotNull(parcel.readString());storageId=checkNotNull(parcel.readString());mode=HiddenConnectionPolicy.Mode.parse(parcel.readString());check(mode!=HiddenConnectionPolicy.Mode.VPN_TOR);captureGuard.updatePolicy(parcel.readInt()==1);selectedTheme=uk.co.traynor.privategallery.core.ui.ThemePreference.decode(parcel.readString());ioToken=checkNotNull(parcel.readString())
             })
             val manager=getSystemService(ConnectivityManager::class.java)
             val pinned=checkNotNull(network)
@@ -291,8 +313,9 @@ class HiddenVpnBrowserActivity:ComponentActivity() {
             setContent {PrivateGalleryTheme(selectedTheme) {Surface(Modifier.fillMaxSize()) {val captureRevision=captureGuard.revision;SideEffect{captureGuard.compositionCommitted(captureRevision)};Browser()}}}
             // No WebView exists until process binding and proxy completion have both succeeded.
             val config=ProxyConfig.Builder().addProxyRule("http://127.0.0.1:$proxyPort").removeImplicitRules().build()
+            val initialToken=captureIoToken()
             ProxyController.getInstance().setProxyOverride(config,{command ->handler.post(command)}) {
-                if(!live()){terminate(reason=HiddenVpnBrowserBroker.BACKGROUND);return@setProxyOverride}
+                if(!live(initialToken)){terminate(reason=HiddenVpnBrowserBroker.BACKGROUND);return@setProxyOverride}
                 ready=true;if(homePrivateApps){homePrivateApps=false;openPrivateApps()};notice=if(mode==HiddenConnectionPolicy.Mode.TOR_ONLY)"Tor only · JavaScript off · isolated DNS/network boundary" else "VPN only · session data stays separate from Primary";newTab()
             }
         } catch(_:Exception) {terminate(reason=HiddenVpnBrowserBroker.BACKGROUND)}
@@ -315,64 +338,74 @@ class HiddenVpnBrowserActivity:ComponentActivity() {
             javaScriptCanOpenWindowsAutomatically=false;setSupportMultipleWindows(true);mediaPlaybackRequiresUserGesture=true
         }
         view.importantForAutofill=android.view.View.IMPORTANT_FOR_AUTOFILL_NO_EXCLUDE_DESCENDANTS
+        installCallbacks(view)
+        check(live());callbackViews.add(view);view.settings.blockNetworkLoads=false;views.add(view)
+        if(opener!=null){popupOwnership.addPopup(view,opener);privateAppTabs[opener]?.let {privateAppTabs[view]=it};popupDiagnostic("popup_open",view)}else popupOwnership.add(view)
+        select(view);address=""
+        return view
+    }
+    private fun installCallbacks(view:WebView) {
+        val epoch=callbackEpoch
+        val token=captureIoToken()
+        fun ownsCallback(candidate:WebView)=epoch==callbackEpoch && ownsViewCallback(candidate,token)
         view.webViewClient=object:WebViewClient() {
             override fun shouldOverrideUrlLoading(view:WebView,request:WebResourceRequest):Boolean {
-                val blocked=!ownsViewCallback(view) || !HiddenConnectionPolicy.safeUrl(request.url.toString(),mode)
+                val blocked=!ownsCallback(view) || !HiddenConnectionPolicy.safeUrl(request.url.toString(),mode)
                 if(blocked && callbackViews.contains(view))popupDiagnostic("navigation_blocked",view,scheme=request.url.scheme)
                 return blocked
             }
             override fun shouldInterceptRequest(view:WebView,request:WebResourceRequest):WebResourceResponse? =
-                if(!ownsViewCallback(view) || !HiddenConnectionPolicy.safeUrl(request.url.toString(),mode))HiddenHttpTransport.blocked() else null
+                if(!ownsCallback(view) || !HiddenConnectionPolicy.safeUrl(request.url.toString(),mode))HiddenHttpTransport.blocked() else null
             // Failure recovery belongs to explicit navigation; late provider starts must not erase Retry.
-            override fun onPageStarted(view:WebView,url:String?,icon:android.graphics.Bitmap?) {if(!ownsViewCallback(view))return;if(activeDownloadOwner?.view===view)cancelOwnedDownload();if(view !in failures)pageDeadlines.getOrPut(view){HiddenPageLoadDeadline()}.begin(SystemClock.elapsedRealtime());if(websiteDialog?.view===view || websiteAuth?.view===view || resubmit?.view===view)cancelWebsiteDialog();if(uploadView===view)cancelUpload();loadingTabs[view]=view !in failures;if(current===view){pendingDownload=null;downloadCandidate=null;busy=view !in failures;pageLoadProgress=0;if(!addressFocused)address=url.orEmpty();navigationRevision++}}
-            override fun onPageCommitVisible(view:WebView,url:String?) {if(!ownsViewCallback(view))return;pageDeadlines[view]?.visible()}
-            override fun onPageFinished(view:WebView,url:String?) {if(!ownsViewCallback(view))return;pageDeadlines[view]?.visible();loadingTabs[view]=false;if(current===view){busy=false;pageLoadProgress=100;if(!addressFocused)address=url.orEmpty();navigationRevision++};if(url!=null && view !in failures && HiddenConnectionPolicy.safeUrl(url,mode)){library(1,url,pageTitle=view.title.orEmpty())}}
-            override fun onReceivedSslError(view:WebView,handler:SslErrorHandler,error:android.net.http.SslError) {handler.cancel();if(!ownsViewCallback(view))return;pageDeadlines[view]?.visible();loadingTabs[view]=false;failures[view]="The secure connection could not be verified. No certificate exception was allowed.";if(current===view){busy=false;pageLoadProgress=100}}
+            override fun onPageStarted(view:WebView,url:String?,icon:android.graphics.Bitmap?) {if(!ownsCallback(view))return;if(activeDownloadOwner?.view===view)cancelOwnedDownload();if(view !in failures)pageDeadlines.getOrPut(view){HiddenPageLoadDeadline()}.begin(SystemClock.elapsedRealtime());if(websiteDialog?.view===view || websiteAuth?.view===view || resubmit?.view===view)cancelWebsiteDialog();if(uploadView===view)cancelUpload();loadingTabs[view]=view !in failures;if(current===view){pendingDownload=null;downloadCandidate=null;busy=view !in failures;pageLoadProgress=0;if(!addressFocused)address=url.orEmpty();navigationRevision++}}
+            override fun onPageCommitVisible(view:WebView,url:String?) {if(!ownsCallback(view))return;pageDeadlines[view]?.visible()}
+            override fun onPageFinished(view:WebView,url:String?) {if(!ownsCallback(view))return;pageDeadlines[view]?.visible();loadingTabs[view]=false;if(current===view){busy=false;pageLoadProgress=100;if(!addressFocused)address=url.orEmpty();navigationRevision++};if(url!=null && view !in failures && HiddenConnectionPolicy.safeUrl(url,mode)){library(1,url,pageTitle=view.title.orEmpty())}}
+            override fun onReceivedSslError(view:WebView,handler:SslErrorHandler,error:android.net.http.SslError) {handler.cancel();if(!ownsCallback(view))return;pageDeadlines[view]?.visible();loadingTabs[view]=false;failures[view]="The secure connection could not be verified. No certificate exception was allowed.";if(current===view){busy=false;pageLoadProgress=100}}
             override fun onReceivedHttpAuthRequest(view:WebView,handler:HttpAuthHandler,host:String,realm:String) {
-                if(!ownsViewCallback(view)){handler.cancel();return}
+                if(!ownsCallback(view)){handler.cancel();return}
                 if(host=="127.0.0.1" && realm=="Hidden VPN session")handler.proceed("hidden",proxyPassword)
-                else if(ownsViewCallback(view) && current===view && Uri.parse(view.url).host==host && Uri.parse(view.url).scheme=="https") {
+                else if(ownsCallback(view) && current===view && Uri.parse(view.url).host==host && Uri.parse(view.url).scheme=="https") {
                     cancelWebsiteDialog();websiteAuth=WebsiteAuth(view,host.take(200),realm.take(200),handler)
                 } else {handler.cancel();if(current===view)notice="Website authentication was cancelled. Only the visible HTTPS website can request credentials."}
             }
             override fun onFormResubmission(view:WebView,dontResend:Message,resend:Message) {
-                if(!ownsViewCallback(view) || current!==view){dontResend.sendToTarget();return}
+                if(!ownsCallback(view) || current!==view){dontResend.sendToTarget();return}
                 cancelWebsiteDialog()
                 if(current===view)resubmit=Resubmit(view,dontResend,resend) else dontResend.sendToTarget()
             }
             override fun onReceivedClientCertRequest(view:WebView,request:ClientCertRequest) {request.cancel()}
-            override fun onReceivedError(view:WebView,request:WebResourceRequest,error:WebResourceError) {if(!ownsViewCallback(view))return;if(request.isForMainFrame){if(uk.co.traynor.privategallery.BuildConfig.DEBUG)android.util.Log.i("HiddenBrowser","Main-frame failure mode=${mode.name} code=${error.errorCode}");pageDeadlines[view]?.visible();loadingTabs[view]=false;failures[view]=if(mode==HiddenConnectionPolicy.Mode.TOR_ONLY)"Website could not load through this Tor session." else "Website could not load through this VPN session.";if(current===view){busy=false;pageLoadProgress=100}}}
-            override fun onReceivedHttpError(view:WebView,request:WebResourceRequest,response:WebResourceResponse) {if(!ownsViewCallback(view))return;if(request.isForMainFrame){pageDeadlines[view]?.visible();loadingTabs[view]=false;failures[view]="Website returned HTTP ${response.statusCode}.";if(current===view){busy=false;pageLoadProgress=100}}}
-            override fun doUpdateVisitedHistory(view:WebView,url:String?,isReload:Boolean) {if(!ownsViewCallback(view))return;if(current===view)navigationRevision++}
-            override fun onRenderProcessGone(view:WebView,detail:RenderProcessGoneDetail):Boolean {if(ownsViewCallback(view))terminate(reason=HiddenVpnBrowserBroker.BACKGROUND);return true}
+            override fun onReceivedError(view:WebView,request:WebResourceRequest,error:WebResourceError) {if(!ownsCallback(view))return;if(request.isForMainFrame){if(uk.co.traynor.privategallery.BuildConfig.DEBUG)android.util.Log.i("HiddenBrowser","Main-frame failure mode=${mode.name} code=${error.errorCode}");pageDeadlines[view]?.visible();loadingTabs[view]=false;failures[view]=if(mode==HiddenConnectionPolicy.Mode.TOR_ONLY)"Website could not load through this Tor session." else "Website could not load through this VPN session.";if(current===view){busy=false;pageLoadProgress=100}}}
+            override fun onReceivedHttpError(view:WebView,request:WebResourceRequest,response:WebResourceResponse) {if(!ownsCallback(view))return;if(request.isForMainFrame){pageDeadlines[view]?.visible();loadingTabs[view]=false;failures[view]="Website returned HTTP ${response.statusCode}.";if(current===view){busy=false;pageLoadProgress=100}}}
+            override fun doUpdateVisitedHistory(view:WebView,url:String?,isReload:Boolean) {if(!ownsCallback(view))return;if(current===view)navigationRevision++}
+            override fun onRenderProcessGone(view:WebView,detail:RenderProcessGoneDetail):Boolean {if(callbackViews.contains(view))terminate(reason=HiddenVpnBrowserBroker.BACKGROUND);return true}
         }
         view.webChromeClient=object:WebChromeClient() {
-            override fun onProgressChanged(view:WebView,newProgress:Int) {if(!ownsViewCallback(view))return;if(newProgress>=100)loadingTabs[view]=false;if(current===view){pageLoadProgress=newProgress;busy=loadingTabs[view]==true && view !in failures;navigationRevision++}}
+            override fun onProgressChanged(view:WebView,newProgress:Int) {if(!ownsCallback(view))return;if(newProgress>=100)loadingTabs[view]=false;if(current===view){pageLoadProgress=newProgress;busy=loadingTabs[view]==true && view !in failures;navigationRevision++}}
             override fun onConsoleMessage(message:ConsoleMessage)=true
-            override fun onJsAlert(view:WebView,url:String,message:String,result:JsResult)=showWebsiteDialog(view,url,"alert",message,result)
-            override fun onJsConfirm(view:WebView,url:String,message:String,result:JsResult)=showWebsiteDialog(view,url,"confirm",message,result)
-            override fun onJsPrompt(view:WebView,url:String,message:String,defaultValue:String,result:JsPromptResult)=showWebsiteDialog(view,url,"prompt",message,result,defaultValue)
-            override fun onJsBeforeUnload(view:WebView,url:String,message:String,result:JsResult)=showWebsiteDialog(view,url,"leave",message,result)
+            override fun onJsAlert(view:WebView,url:String,message:String,result:JsResult)=if(!ownsCallback(view)){result.cancel();true}else showWebsiteDialog(view,url,"alert",message,result)
+            override fun onJsConfirm(view:WebView,url:String,message:String,result:JsResult)=if(!ownsCallback(view)){result.cancel();true}else showWebsiteDialog(view,url,"confirm",message,result)
+            override fun onJsPrompt(view:WebView,url:String,message:String,defaultValue:String,result:JsPromptResult)=if(!ownsCallback(view)){result.cancel();true}else showWebsiteDialog(view,url,"prompt",message,result,defaultValue)
+            override fun onJsBeforeUnload(view:WebView,url:String,message:String,result:JsResult)=if(!ownsCallback(view)){result.cancel();true}else showWebsiteDialog(view,url,"leave",message,result)
             override fun onPermissionRequest(request:PermissionRequest) {
                 request.deny()
-                if(ownsViewCallback(view) && current===view)notice="Camera, microphone and other device permissions are blocked in Hidden Browser. Read-only uploads require your separate confirmation."
+                if(ownsCallback(view) && current===view)notice="Camera, microphone and other device permissions are blocked in Hidden Browser. Read-only uploads require your separate confirmation."
             }
             override fun onGeolocationPermissionsShowPrompt(origin:String,callback:GeolocationPermissions.Callback) {
                 callback.invoke(origin,false,false)
-                if(ownsViewCallback(view) && current===view)notice="Location sharing is blocked in Hidden Browser. No location permission was granted."
+                if(ownsCallback(view) && current===view)notice="Location sharing is blocked in Hidden Browser. No location permission was granted."
             }
             override fun onCreateWindow(view:WebView,isDialog:Boolean,isUserGesture:Boolean,resultMsg:Message):Boolean {
-                if(!isUserGesture || !ownsViewCallback(view) || current!==view || views.size>=8)return false
+                if(!isUserGesture || !ownsCallback(view) || current!==view || views.size>=8)return false
                 val transport=resultMsg.obj as? WebView.WebViewTransport ?: return false
                 val popup=newTab(view) ?: return false
                 transport.webView=popup;resultMsg.sendToTarget();return true
             }
-            override fun onCloseWindow(window:WebView) {closePopup(window)}
+            override fun onCloseWindow(window:WebView) {if(ownsCallback(window))closePopup(window)}
             override fun onShowFileChooser(webView:WebView,callback:ValueCallback<Array<Uri>>,params:FileChooserParams):Boolean {
-                if(!ownsViewCallback(webView) || current!==webView || privateAppsOpen){callback.onReceiveValue(null);return true}
+                if(!ownsCallback(webView) || current!==webView || privateAppsOpen){callback.onReceiveValue(null);return true}
                 cancelUpload()
-                if(uk.co.traynor.privategallery.BuildConfig.DEBUG)android.util.Log.i("NativeChooser1762","callback mode=${params.mode} permission=${params.permissionMode} acceptCount=${params.acceptTypes.size} current=${current===webView} live=${live()}")
-                if(!live() || current!==webView) {callback.onReceiveValue(null);return true}
+                if(uk.co.traynor.privategallery.BuildConfig.DEBUG)android.util.Log.i("NativeChooser1762","callback mode=${params.mode} permission=${params.permissionMode} acceptCount=${params.acceptTypes.size} current=${current===webView} live=${live(token)}")
+                if(!live(token) || current!==webView) {callback.onReceiveValue(null);return true}
                 if(params.mode !in setOf(FileChooserParams.MODE_OPEN,FileChooserParams.MODE_OPEN_MULTIPLE) || params.permissionMode!=FileChooserParams.PERMISSION_MODE_READ) {
                     notice="Only read-only media uploads are supported. Folder, save and file-edit requests are blocked."
                     callback.onReceiveValue(null);return true
@@ -391,7 +424,7 @@ class HiddenVpnBrowserActivity:ComponentActivity() {
                         do {
                             val page=withContext(Dispatchers.IO) {
                                 check(uploadGeneration.get()==generation && !ended.get())
-                                val text=checkNotNull(call(HiddenVpnBrowserBroker.LIST,write={parcel ->
+                                val text=checkNotNull(call(HiddenVpnBrowserBroker.LIST,authorityToken=token,write={parcel ->
                                     parcel.writeLong(generation);parcel.writeString(query);parcel.writeInt(offset);parcel.writeStringArray(accepts)
                                 },read={it.readString()}))
                                 require(text.length<=200_000);org.json.JSONObject(text)
@@ -421,15 +454,11 @@ class HiddenVpnBrowserActivity:ComponentActivity() {
                 return true
             }
         }
-        view.setDownloadListener {url,_,_,_,_ ->if(!ownsViewCallback(view) || current!==view)return@setDownloadListener;downloadCandidate=downloadSelection(view,url);pendingDownload=downloadCandidate;notice="Automatic downloads are paused. Confirm Save GET file for a reusable supported media/document URL. POST responses, blob files and one-use downloads cannot be replayed safely."}
+        view.setDownloadListener {url,_,_,_,_ ->if(!ownsCallback(view) || current!==view)return@setDownloadListener;downloadCandidate=downloadSelection(view,url);pendingDownload=downloadCandidate;notice="Automatic downloads are paused. Confirm Save GET file for a reusable supported media/document URL. POST responses, blob files and one-use downloads cannot be replayed safely."}
         profile!!.serviceWorkerController.serviceWorkerWebSettings.apply {blockNetworkLoads=mode==HiddenConnectionPolicy.Mode.TOR_ONLY;allowContentAccess=false;allowFileAccess=false;cacheMode=WebSettings.LOAD_NO_CACHE}
         profile!!.serviceWorkerController.setServiceWorkerClient(object:ServiceWorkerClient() {
-            override fun shouldInterceptRequest(request:WebResourceRequest):WebResourceResponse? = if(!live() || !HiddenConnectionPolicy.safeUrl(request.url.toString(),mode))HiddenHttpTransport.blocked() else null
+            override fun shouldInterceptRequest(request:WebResourceRequest):WebResourceResponse? = if(epoch!=callbackEpoch || !live(token) || !HiddenConnectionPolicy.safeUrl(request.url.toString(),mode))HiddenHttpTransport.blocked() else null
         })
-        check(live());callbackViews.add(view);view.settings.blockNetworkLoads=false;views.add(view)
-        if(opener!=null){popupOwnership.addPopup(view,opener);privateAppTabs[opener]?.let {privateAppTabs[view]=it};popupDiagnostic("popup_open",view)}else popupOwnership.add(view)
-        select(view);address=""
-        return view
     }
     private fun navigate(value:String) {
         if(!ready || !live())return
@@ -443,6 +472,7 @@ class HiddenVpnBrowserActivity:ComponentActivity() {
     private fun ownsUpload(generation:Long,callback:ValueCallback<Array<Uri>>,view:WebView,origin:String):Boolean =
         ownsViewCallback(view) && uploadGeneration.get()==generation && pendingUpload===callback && uploadView===view && current===view && view.url==origin
     private fun loadUploadPreview(item:UploadItem,callback:(Result<android.graphics.Bitmap>)->Unit) {
+        val token=captureIoToken()
         val generation=uploadGeneration.get();val query=uploadQuery
         if(query.isEmpty() || uploadLoading || pendingUpload==null || ended.get())return
         val cacheKey="$generation:${item.id}"
@@ -454,7 +484,7 @@ class HiddenVpnBrowserActivity:ComponentActivity() {
                     uploadPreviewSlots.acquire()
                     try {
                         check(uploadGeneration.get()==generation && !ended.get())
-                        val bytes=checkNotNull(call(HiddenVpnBrowserBroker.PREVIEW,write={it.writeLong(generation);it.writeString(query);it.writeString(item.id)},read={it.createByteArray()}))
+                        val bytes=checkNotNull(call(HiddenVpnBrowserBroker.PREVIEW,authorityToken=token,write={it.writeLong(generation);it.writeString(query);it.writeString(item.id)},read={it.createByteArray()}))
                         try {
                             require(bytes.size<=300_000)
                             val options=android.graphics.BitmapFactory.Options().apply {inMutable=true;inPreferredConfig=android.graphics.Bitmap.Config.ARGB_8888}
@@ -464,7 +494,7 @@ class HiddenVpnBrowserActivity:ComponentActivity() {
                     } finally {uploadPreviewSlots.release()}
                 }
                 if(uploadGeneration.get()!=generation || uploadQuery!=query || pendingUpload==null || item !in uploadItems || ended.get())return@launch
-                if(!live())throw IllegalStateException("Preview session ended")
+                if(!live(token))throw IllegalStateException("Preview session ended")
                 val bitmap=checkNotNull(owned);thumbnailCache.put(cacheKey,bitmap);owned=null;callback(Result.success(bitmap))
             } catch(_:Exception) {if(uploadGeneration.get()==generation && uploadQuery==query && pendingUpload!=null)callback(Result.failure(IllegalStateException("Preview unavailable")))}
             finally {owned?.let {if(!it.isRecycled){try {if(it.isMutable)it.eraseColor(android.graphics.Color.TRANSPARENT)}finally{it.recycle()}}}}
@@ -479,29 +509,30 @@ class HiddenVpnBrowserActivity:ComponentActivity() {
     }
     private var privateAppAuthentication by mutableStateOf<uk.co.traynor.privategallery.ui.PrivateAppAuthenticationRequest?>(null)
     private fun requestPrivateAppAuthentication(completed:(Boolean)->Unit) {
-        check(ready && live())
+        val token=captureIoToken()
+        check(ready && live(token))
         privateAppAuthentication?.done?.invoke(false)
         val view=current;val revision=navigationRevision
         // PIN derivation checks this fence on IO. Never call a WebView getter off Main:
         // every navigation/reload and selection already advances navigationRevision.
-        val requestCurrent={ready && current===view && navigationRevision==revision && live()}
+        val requestCurrent={ready && current===view && navigationRevision==revision && live(token)}
         lateinit var request:uk.co.traynor.privategallery.ui.PrivateAppAuthenticationRequest
         request=uk.co.traynor.privategallery.ui.PrivateAppAuthenticationRequest(true,requestCurrent,
             {pin ->try {
-                check(ready && live())
-                call(HiddenVpnBrowserBroker.VERIFY_PRIVATE_APP_PIN,write={it.writeString(pin.concatToString())},read={it.readInt()==1})
+                check(ready && live(token))
+                call(HiddenVpnBrowserBroker.VERIFY_PRIVATE_APP_PIN,authorityToken=token,write={it.writeString(pin.concatToString())},read={it.readInt()==1})
             } finally {pin.fill('\u0000')}},
             {accepted ->if(privateAppAuthentication===request) {privateAppAuthentication=null;completed(accepted && requestCurrent())}})
         privateAppAuthentication=request
     }
 
-    private class PrivateAppIconSelection(val generation:Long,val result:(ByteArray?)->Unit)
+    private class PrivateAppIconSelection(val generation:Long,val token:String,val result:(ByteArray?)->Unit)
     private var privateAppIconSelection by mutableStateOf<PrivateAppIconSelection?>(null)
     private fun requestPrivateAppIcon(result:(ByteArray?)->Unit) {
         check(ready && live() && privateAppsOpen)
         cancelUpload();cancelWebsiteDialog()
         finishPrivateAppIcon(null)
-        privateAppIconSelection=PrivateAppIconSelection(uploadGeneration.incrementAndGet(),result)
+        privateAppIconSelection=PrivateAppIconSelection(uploadGeneration.incrementAndGet(),captureIoToken(),result)
     }
     private fun finishPrivateAppIcon(bytes:ByteArray?) {
         val selection=privateAppIconSelection;privateAppIconSelection=null
@@ -514,7 +545,7 @@ class HiddenVpnBrowserActivity:ComponentActivity() {
     private var privateAppsHomeRoot=false
     // Provider interception can arrive off the main thread; do not read Compose lists there.
     private val callbackViews=HiddenCallbackOwners<WebView>()
-    private fun ownsViewCallback(view:WebView)=callbackViews.owns(view){ready && live()}
+    private fun ownsViewCallback(view:WebView,authorityToken:String?=null)=callbackViews.owns(view){ready && live(authorityToken)}
     private val popupOwnership=HiddenPopupOwnership<WebView>()
     private val privateAppTabs=mutableStateMapOf<WebView,uk.co.traynor.privategallery.core.privateapps.PrivateAppCatalog.App>()
     private var privateAppSettingsId by mutableStateOf<String?>(null)
@@ -525,11 +556,12 @@ class HiddenVpnBrowserActivity:ComponentActivity() {
     private var screenshotReview by mutableStateOf<PrivateAppScreenshotRequest?>(null)
     private val screenshotGeneration=java.util.concurrent.atomic.AtomicLong()
     private fun requestScreenshot() {
+        val token=captureIoToken()
         val captureGeneration=screenshotGeneration.incrementAndGet()
         val view=current ?: return
         val revision=navigationRevision
         val owner=broker
-        val authorized={ownsViewCallback(view) && screenshotGeneration.get()==captureGeneration && broker===owner && !privateAppsOpen && current===view && navigationRevision==revision && ready && live() &&
+        val authorized={ownsViewCallback(view,token) && screenshotGeneration.get()==captureGeneration && broker===owner && !privateAppsOpen && current===view && navigationRevision==revision && ready && live(token) &&
             lifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.RESUMED)}
         screenshotReview=null
         view.postDelayed({
@@ -541,7 +573,7 @@ class HiddenVpnBrowserActivity:ComponentActivity() {
                         val cancelled=AtomicBoolean(false)
                         fun cancel(receipt:String?) {
                             cancelled.set(true)
-                            (receipt ?: pending.get())?.let {value ->runCatching {call(HiddenVpnBrowserBroker.SCREENSHOT_CANCEL,write={it.writeString(value)},read={Unit})}}
+                            (receipt ?: pending.get())?.let {value ->runCatching {call(HiddenVpnBrowserBroker.SCREENSHOT_CANCEL,authorityToken=token,write={it.writeString(value)},read={Unit})}}
                         }
                         screenshotReview=PrivateAppScreenshotRequest(source,"Hidden Space",{!cancelled.get() && authorized()},
                             save={capture,complete ->
@@ -550,7 +582,7 @@ class HiddenVpnBrowserActivity:ComponentActivity() {
                                         val pipes=ParcelFileDescriptor.createReliablePipe()
                                         try {
                                             check(!cancelled.get() && authorized())
-                                            val receipt=call(HiddenVpnBrowserBroker.SCREENSHOT,write={it.writeInt(1);it.writeTypedObject(pipes[0],android.os.Parcelable.PARCELABLE_WRITE_RETURN_VALUE)},read={checkNotNull(it.readString())})
+                                            val receipt=call(HiddenVpnBrowserBroker.SCREENSHOT,authorityToken=token,write={it.writeInt(1);it.writeTypedObject(pipes[0],android.os.Parcelable.PARCELABLE_WRITE_RETURN_VALUE)},read={checkNotNull(it.readString())})
                                             require(runCatching {UUID.fromString(receipt).toString()==receipt}.getOrDefault(false));pending.set(receipt)
                                             check(!cancelled.get() && authorized())
                                             ParcelFileDescriptor.AutoCloseOutputStream(pipes[1]).use {output ->capture.openStream().use {input ->
@@ -561,7 +593,7 @@ class HiddenVpnBrowserActivity:ComponentActivity() {
                                             var saved=false
                                             while(!saved) {
                                                 check(!cancelled.get() && authorized() && SystemClock.elapsedRealtime()<deadline)
-                                                val state=call(HiddenVpnBrowserBroker.CHECK,read={p ->
+                                                val state=call(HiddenVpnBrowserBroker.CHECK,authorityToken=token,read={p ->
                                                     check(p.readInt()==1);p.readString();p.readInt();p.readString();p.readInt();p.readLong();p.readLong()
                                                     val observed=p.readString();val status=p.readString();check(observed==receipt);status
                                                 })
@@ -576,7 +608,7 @@ class HiddenVpnBrowserActivity:ComponentActivity() {
                                 }.invokeOnCompletion {capture.onConsumed()}
                             },read={receipt ->
                                 check(!cancelled.get() && authorized())
-                                val descriptor=call(HiddenVpnBrowserBroker.SCREENSHOT_VIEW,write={it.writeString(receipt)},read={checkNotNull(it.readTypedObject(ParcelFileDescriptor.CREATOR))})
+                                val descriptor=call(HiddenVpnBrowserBroker.SCREENSHOT_VIEW,authorityToken=token,write={it.writeString(receipt)},read={checkNotNull(it.readTypedObject(ParcelFileDescriptor.CREATOR))})
                                 ParcelFileDescriptor.AutoCloseInputStream(descriptor).use {input ->
                                     val output=uk.co.traynor.privategallery.core.browser.v2.BrowserScreenshotBuffer(uk.co.traynor.privategallery.core.browser.v2.BrowserScreenshotPolicy.MAX_PNG_BYTES)
                                     val buffer=ByteArray(16*1024)
@@ -639,23 +671,33 @@ class HiddenVpnBrowserActivity:ComponentActivity() {
     }
     private fun openPrivateApps() { if(ready && live()){screenshotGeneration.incrementAndGet();screenshotReview=null;cancelUpload();cancelWebsiteDialog();current?.onPause();privateAppsOpen=true} }
 
-    private val privateAppsController by lazy {
+    private var privateAppsControllerEpoch=-1L
+    private var privateAppsControllerCache:uk.co.traynor.privategallery.core.privateapps.PrivateAppsController?=null
+    private val privateAppsController:uk.co.traynor.privategallery.core.privateapps.PrivateAppsController get() {
+        if(privateAppsControllerEpoch!=callbackEpoch || privateAppsControllerCache==null) {
+            privateAppsControllerEpoch=callbackEpoch
+            privateAppsControllerCache=createPrivateAppsController(callbackEpoch)
+        }
+        return checkNotNull(privateAppsControllerCache)
+    }
+    private fun createPrivateAppsController(epoch:Long):uk.co.traynor.privategallery.core.privateapps.PrivateAppsController {
+        val token=captureIoToken()
         val owner=if(mode==HiddenConnectionPolicy.Mode.TOR_ONLY)uk.co.traynor.privategallery.core.privateapps.PrivateAppStore.Owner.HIDDEN_TOR else uk.co.traynor.privategallery.core.privateapps.PrivateAppStore.Owner.HIDDEN_VPN
-        uk.co.traynor.privategallery.core.privateapps.PrivateAppsController(owner,{ready && live()},
-            {action,bytes,id ->call(HiddenVpnBrowserBroker.PRIVATE_APPS,write={parcel ->
+        return uk.co.traynor.privategallery.core.privateapps.PrivateAppsController(owner,{epoch==callbackEpoch && ready && live(token)},
+            {action,bytes,id ->call(HiddenVpnBrowserBroker.PRIVATE_APPS,authorityToken=token,write={parcel ->
                 parcel.writeInt(action);parcel.writeInt(bytes?.size ?: -1);if(bytes!=null)parcel.writeByteArray(bytes);parcel.writeString(id)
             },read={parcel ->
                 val size=parcel.readInt();require(size in 0..uk.co.traynor.privategallery.core.privateapps.PrivateAppCatalog.MAX_BYTES)
                 val data=ByteArray(size)
                 try{parcel.readByteArray(data);uk.co.traynor.privategallery.core.privateapps.PrivateAppCatalog.decode(data,mode==HiddenConnectionPolicy.Mode.TOR_ONLY)}finally{data.fill(0)}
             })},
-            {url ->check(ready && live());check(HiddenConnectionPolicy.safeUrl(url,mode));cancelUpload();cancelWebsiteDialog();checkNotNull(newTab());navigate(url)},
-            {url ->call(HiddenVpnBrowserBroker.DISCOVER_PRIVATE_APP,write={it.writeString(url)},read={parcel ->
+            {url ->check(epoch==callbackEpoch && ready && live(token));check(HiddenConnectionPolicy.safeUrl(url,mode));cancelUpload();cancelWebsiteDialog();checkNotNull(newTab());navigate(url)},
+            {url ->call(HiddenVpnBrowserBroker.DISCOVER_PRIVATE_APP,authorityToken=token,write={it.writeString(url)},read={parcel ->
                 val size=parcel.readInt();require(size in 0..uk.co.traynor.privategallery.core.privateapps.PrivateAppCommands.MAX_COMMAND_BYTES)
                 val bytes=ByteArray(size)
                 try {parcel.readByteArray(bytes);uk.co.traynor.privategallery.core.privateapps.PrivateAppCatalog.decode(bytes,mode==HiddenConnectionPolicy.Mode.TOR_ONLY).apps.single()}finally{bytes.fill(0)}
             })},onLaunchApp={app ->
-                check(ready && live());check(HiddenConnectionPolicy.safeUrl(app.startUrl(),mode))
+                check(epoch==callbackEpoch && ready && live(token));check(HiddenConnectionPolicy.safeUrl(app.startUrl(),mode))
                 cancelUpload();cancelWebsiteDialog()
                 privateAppsOpen=false
                 val existing=views.firstOrNull {privateAppTabs[it]?.id()==app.id()}
@@ -664,10 +706,13 @@ class HiddenVpnBrowserActivity:ComponentActivity() {
                 privateAppTabs[view]=app
                 navigate(app.startUrl())
                 }
-            },authenticate=::requestPrivateAppAuthentication,
-            clearProfile={check(ready && live());terminate()},requestIcon=::requestPrivateAppIcon)
+            },authenticate={done ->check(epoch==callbackEpoch && ready && live(token));requestPrivateAppAuthentication(done)},
+            clearProfile={check(epoch==callbackEpoch && ready && live(token));terminate()},requestIcon={done ->check(epoch==callbackEpoch && ready && live(token));requestPrivateAppIcon(done)})
     }
     @Composable private fun Browser() {
+        // Remove native dialog windows while denied so none can cover the neutral hard controls.
+        // WebViews/profile/opener are Activity-owned and remain the same objects off composition.
+        if(!ready)return
         privateAppAuthentication?.let {uk.co.traynor.privategallery.ui.PrivateAppAuthentication(it)}
         val app=current?.let {privateAppTabs[it]}
         val appStyle=app?.appStyle()==true
@@ -682,11 +727,11 @@ class HiddenVpnBrowserActivity:ComponentActivity() {
         },{id ->views.filter {privateAppTabs[it]?.id()==id}.toList().forEach(::closePrivateAppSession)},initialUrl=privateAppInitialUrl,initialName=privateAppInitialName,onAppSettings={id->if(ready && live())privateAppSettingsId=id},onRootExit={if(privateAppsHomeRoot)terminate()})
         privateAppIconSelection?.let {selection ->key(selection) {
             HiddenPrivateAppIconPicker(selection.generation,
-                isCurrent={privateAppIconSelection===selection && uploadGeneration.get()==selection.generation && ready && live()},
-                loadPage={query,offset ->checkNotNull(call(HiddenVpnBrowserBroker.LIST,write={parcel ->
+                isCurrent={privateAppIconSelection===selection && uploadGeneration.get()==selection.generation && ready && live(selection.token)},
+                loadPage={query,offset ->checkNotNull(call(HiddenVpnBrowserBroker.LIST,authorityToken=selection.token,write={parcel ->
                     parcel.writeLong(selection.generation);parcel.writeString(query);parcel.writeInt(offset);parcel.writeStringArray(arrayOf("image/*"))
                 },read={it.readString()})).also{require(it.length<=200_000)}},
-                loadPreview={query,id ->checkNotNull(call(HiddenVpnBrowserBroker.PREVIEW,write={parcel ->
+                loadPreview={query,id ->checkNotNull(call(HiddenVpnBrowserBroker.PREVIEW,authorityToken=selection.token,write={parcel ->
                     parcel.writeLong(selection.generation);parcel.writeString(query);parcel.writeString(id)
                 },read={it.createByteArray()}))},onResult={bytes ->
                     if(privateAppIconSelection===selection)finishPrivateAppIcon(bytes) else bytes?.fill(0)
@@ -729,6 +774,7 @@ class HiddenVpnBrowserActivity:ComponentActivity() {
                     // Keep clipping in the native hierarchy. A Compose graphics-layer clip can
                     // leave WebView virtual descendants with zero-height bounds after Fold resize.
                     (view.parent as? android.view.ViewGroup)?.removeView(view)
+                    val layoutToken=captureIoToken()
                     android.widget.FrameLayout(this@HiddenVpnBrowserActivity).apply {
                         clipChildren=true;clipToPadding=true
                         addOnLayoutChangeListener { _, left, top, right, bottom, oldLeft, oldTop, oldRight, oldBottom ->
@@ -736,7 +782,7 @@ class HiddenVpnBrowserActivity:ComponentActivity() {
                                 // Publish native descendant geometry only after Compose has applied
                                 // the new Fold bounds; configuration callbacks precede this layout.
                                 view.post {
-                                    if(live() && view === current && view.isAttachedToWindow) {
+                                    if(live(layoutToken) && view === current && view.isAttachedToWindow) {
                                         view.requestLayout();view.invalidate()
                                         view.sendAccessibilityEvent(android.view.accessibility.AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED)
                                     }
@@ -840,6 +886,64 @@ class HiddenVpnBrowserActivity:ComponentActivity() {
             dismissButton={if(dialog.kind!="alert")TextButton(onClick={cancelWebsiteDialog()}){Text("Cancel")}})}
 
     }
+    private fun suspendPresentation() {
+        if(resuming){terminate(reason=HiddenVpnBrowserBroker.BACKGROUND);return}
+        if(ended.get() || suspended)return
+        val stoppedAt=SystemClock.elapsedRealtime()
+        captureGuard.pause();suspended=true;ready=false;callbackEpoch++
+        screenshotGeneration.incrementAndGet();screenshotReview=null
+        cancelUpload();cancelWebsiteDialog();finishPrivateAppIcon(null)
+        privateAppAuthentication?.done?.invoke(false);privateAppAuthentication=null
+        pendingDownload=null;downloadCandidate=null;activeDownloadOwner=null
+        views.forEach {it.settings.blockNetworkLoads=true;it.onPause()}
+        current?.pauseTimers()
+        profile?.serviceWorkerController?.serviceWorkerWebSettings?.blockNetworkLoads=true
+        // Do not stopLoading, reload, replace profile, or reconstruct the pending POST/JS navigation.
+        val retained=runCatching {call(HiddenVpnBrowserBroker.SUSPEND,write={it.writeLong(stoppedAt)},read={it.readInt()==1})}.getOrDefault(false)
+        proxyPassword=""
+        if(!retained)terminate(reason=HiddenVpnBrowserBroker.BACKGROUND)
+    }
+    private fun resumePresentation() {
+        if(!suspended || resuming || ended.get())return
+        captureGuard.deniedForeground(true)
+        resuming=true
+        try {
+            call(HiddenVpnBrowserBroker.RESUME,read={Unit})
+            val available=call(HiddenVpnBrowserBroker.RESUME_TRANSPORT,read={parcel ->
+                if(parcel.readInt()!=1)null else {
+                    val attempt=parcel.readLong();val pinned=checkNotNull(parcel.readTypedObject(Network.CREATOR))
+                    val port=parcel.readInt();val password=checkNotNull(parcel.readString());val freshToken=checkNotNull(parcel.readString())
+                    ResumeRoute(attempt,pinned,port,password,freshToken)
+                }
+            })
+            if(available==null){resuming=false;return}
+            check(lifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.RESUMED))
+            check(call(HiddenVpnBrowserBroker.CONTINUATION,read={it.readString()})=="RECONNECTING")
+            val manager=getSystemService(ConnectivityManager::class.java)
+            val caps=checkNotNull(manager.getNetworkCapabilities(available.network))
+            check(caps.hasTransport(NetworkCapabilities.TRANSPORT_VPN) && caps.ownerUid==Process.myUid())
+            check(manager.bindProcessToNetwork(available.network) && manager.boundNetworkForProcess==available.network)
+            network=available.network;proxyPort=available.port;proxyPassword=available.password;ioToken=available.ioToken
+            val config=ProxyConfig.Builder().addProxyRule("http://127.0.0.1:$proxyPort").removeImplicitRules().build()
+            ProxyController.getInstance().setProxyOverride(config,{command ->handler.post(command)}) {
+                try {
+                    check(!ended.get() && suspended && lifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.RESUMED))
+                    val currentCaps=checkNotNull(manager.getNetworkCapabilities(available.network))
+                    check(manager.boundNetworkForProcess==available.network && currentCaps.hasTransport(NetworkCapabilities.TRANSPORT_VPN) && currentCaps.ownerUid==Process.myUid())
+                    call(HiddenVpnBrowserBroker.RESUME_COMMIT,write={it.writeLong(available.attempt);it.writeTypedObject(available.network,0)},read={Unit})
+                    callbackEpoch++
+                    views.forEach {installCallbacks(it)}
+                    suspended=false;resuming=false;ready=true
+                    views.forEach {it.settings.blockNetworkLoads=false}
+                    current?.resumeTimers();if(!privateAppsOpen)current?.onResume()
+                    pageDeadlines.values.forEach {it.visible()}
+                    notice="Private connection verified; your page is ready."
+                    captureGuard.resume()
+                }catch(_:Exception){terminate(reason=HiddenVpnBrowserBroker.BACKGROUND)}
+            }
+        }catch(_:Exception){resuming=false;terminate(reason=HiddenVpnBrowserBroker.BACKGROUND)}
+    }
+    private data class ResumeRoute(val attempt:Long,val network:Network,val port:Int,val password:String,val ioToken:String)
     private fun manageDownloads() { terminate(manageDownloads=true) }
     private fun terminate(notify:Boolean=true,reason:Int=HiddenVpnBrowserBroker.RETURN,manageDownloads:Boolean=false,switchMode:HiddenConnectionPolicy.Mode?=null) {
         if(!ended.compareAndSet(false,true))return
@@ -887,10 +991,10 @@ class HiddenVpnBrowserActivity:ComponentActivity() {
         if(!live())return
         current?.let {view ->view.requestLayout();view.invalidate()}
     }
-    override fun onResume(){super.onResume();captureGuard.resume();popupDiagnostic("resume")}
-    override fun onPause(){popupDiagnostic("pause");captureGuard.pause();super.onPause()}
+    override fun onResume(){super.onResume();if(suspended)resumePresentation() else captureGuard.resume();popupDiagnostic("resume")}
+    override fun onPause(){popupDiagnostic("pause");captureGuard.pause();if(resuming)terminate(reason=HiddenVpnBrowserBroker.BACKGROUND);super.onPause()}
     override fun onWindowFocusChanged(hasFocus:Boolean){super.onWindowFocusChanged(hasFocus);captureGuard.focusChanged(hasFocus)}
     override fun onUserLeaveHint(){captureGuard.userLeaving();super.onUserLeaveHint()}
-    override fun onStop() {popupDiagnostic("stop",reason=HiddenVpnBrowserBroker.BACKGROUND);super.onStop();terminate(reason=HiddenVpnBrowserBroker.BACKGROUND)}
+    override fun onStop() {popupDiagnostic("stop",reason=HiddenVpnBrowserBroker.BACKGROUND);super.onStop();if(resuming)terminate(reason=HiddenVpnBrowserBroker.BACKGROUND) else suspendPresentation()}
     override fun onDestroy() {captureGuard.close();if(!ended.get())terminate(reason=HiddenVpnBrowserBroker.BACKGROUND);super.onDestroy()}
 }

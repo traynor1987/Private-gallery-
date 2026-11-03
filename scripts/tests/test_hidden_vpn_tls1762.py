@@ -13,7 +13,7 @@ class HiddenVpnTlsFixtureTest(unittest.TestCase):
    names=leaf.extensions.get_extension_for_class(x509.SubjectAlternativeName).value.get_values_for_type(x509.DNSName)
    self.assertEqual({'fixture.invalid','*.fixture.invalid'},set(names))
    self.assertNotEqual(trusted.subject,leaf.subject)
- def test_public_fixture_trust_cannot_enter_release_or_tor_domains(self):
+ def test_public_fixture_trust_is_exactly_reserved_and_debug_only(self):
   main=Path('app/src/main/res/xml/hidden_network_security.xml').read_text()
   self.assertNotIn('hidden_vpn_fixture_ca',main);self.assertNotIn('fixture.invalid',main)
   # Follow the manifest-selected resource, not an unused similarly named XML.
@@ -22,7 +22,13 @@ class HiddenVpnTlsFixtureTest(unittest.TestCase):
   self.assertTrue(selected.startswith('@xml/'))
   root=ET.parse(Path('app/src/debug/res/xml')/(selected.split('/')[-1]+'.xml')).getroot()
   config=[item for item in root.findall('domain-config') if item.find('trust-anchors') is not None]
-  self.assertEqual(1,len(config))
-  self.assertEqual(['fixture.invalid'],[node.text for node in config[0].findall('domain')])
+  # Both were present before this repair: HTTPS Tor-probe and reserved VPN fixture.
+  self.assertEqual(2,len(config))
+  actual={tuple(node.text for node in item.findall('domain')):set(node.get('src') for node in item.find('trust-anchors').findall('certificates')) for item in config}
+  self.assertEqual({('onion',):{'system','@raw/hidden_vpn_fixture_ca'},('fixture.invalid',):{'@raw/hidden_vpn_fixture_ca'}},actual)
+  self.assertTrue(all(node.get('includeSubdomains')=='true' for item in config for node in item.findall('domain')))
+  self.assertEqual('false',root.find('base-config').get('cleartextTrafficPermitted'))
+  production=ET.parse('app/src/main/AndroidManifest.xml').getroot().find('application')
+  self.assertEqual('@xml/hidden_network_security',production.get('{http://schemas.android.com/apk/res/android}networkSecurityConfig'))
 
 if __name__=='__main__':unittest.main()

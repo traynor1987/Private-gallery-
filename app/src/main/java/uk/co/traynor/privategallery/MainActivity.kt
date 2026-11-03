@@ -785,7 +785,7 @@ class MainActivity : FragmentActivity() {
     /** Never resolve a native Hidden policy from the Primary screenshot preference. */
     internal fun hiddenBrowserTheme():AppTheme=appTheme
     internal fun hiddenBrowserCaptureAllowed():Boolean = retained.hidden.selected && retained.hidden.session.isUnlocked && hiddenAllowScreenshots
-    internal var hiddenBrowserOwner: uk.co.traynor.privategallery.core.browser.hidden.HiddenBrowserRuntime? = null
+    @Volatile internal var hiddenBrowserOwner: uk.co.traynor.privategallery.core.browser.hidden.HiddenBrowserRuntime? = null
     private var hiddenTorPermissionPending:Pair<uk.co.traynor.privategallery.core.browser.hidden.HiddenBrowserRuntime,kotlinx.coroutines.CompletableDeferred<Boolean>>?=null
     private val hiddenTorPermissionLauncher=registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {result ->
         val pending=hiddenTorPermissionPending;hiddenTorPermissionPending=null
@@ -805,10 +805,33 @@ class MainActivity : FragmentActivity() {
         // Retain the pending-launch marker until Android delivers its result; retire only work.
         hiddenTorPermissionPending?.takeIf {it.first===owner}?.second?.complete(false)
     }
-    internal fun hiddenBrowserPanic(owner:HiddenVpnPresentationAuthority) {
-        if(session.captureAuthenticationEpoch()==owner.primaryEpoch && retained.hidden.session.isAuthenticationCurrent(owner.hidden))panicExit()
+    internal fun hiddenBrowserPanic(owner:HiddenVpnPresentationAuthority,runtime:uk.co.traynor.privategallery.core.browser.hidden.HiddenBrowserRuntime) {
+        // Primary can expire independently while this exact Hidden presentation remains current.
+        if(ownsHiddenBrowserPresentation(runtime,owner))panicExit()
     }
     internal fun hiddenWireGuardReleased(): Boolean = !wireGuardEngine.ownsTunnel && wireGuardEngine.state == VpnConnectionState.DISCONNECTED
+    /** Called off Main by the child suspension transaction. Never clears its process pin. */
+    internal fun denyHiddenVpnNetwork(pinned:android.net.Network):Boolean {
+        wireGuardEngine.disconnect()
+        val manager=getSystemService(android.net.ConnectivityManager::class.java)
+        val deadline=android.os.SystemClock.elapsedRealtime()+2_500
+        while(android.os.SystemClock.elapsedRealtime()<deadline) {
+            if(hiddenWireGuardReleased() && manager.getNetworkCapabilities(pinned)==null)return true
+            Thread.sleep(10)
+        }
+        return false
+    }
+    internal fun hiddenBrowserTemporarilySuspended(at:Long) {
+        browserVpnDisconnectJob?.cancel();browserVpnDisconnectJob=null
+        cleanupStoppedPresentation()
+        session.onActivityStopped(at,false,true)
+        // Hidden owns its independent grace; Primary expiry must not retire the denied child.
+        if(!session.isUnlocked)lockPrimary(revokeHidden=false)
+    }
+    internal fun hiddenBrowserContinuationResumed() {
+        browserVpnDisconnectJob?.cancel();browserVpnDisconnectJob=null
+        session.onForegrounded(android.os.SystemClock.elapsedRealtime())
+    }
     internal fun hiddenOwnedVpnNetwork(): android.net.Network? {
         if (android.os.Build.VERSION.SDK_INT < 30 || !wireGuardEngine.ownsTunnel || wireGuardEngine.state != VpnConnectionState.CONNECTED) return null
         val manager = getSystemService(android.net.ConnectivityManager::class.java)
@@ -1238,7 +1261,7 @@ class MainActivity : FragmentActivity() {
         internal val hidden:uk.co.traynor.privategallery.core.hidden.HiddenSession.Authentication,
         internal val generation:Long,
     ) {internal val delivered=java.util.concurrent.atomic.AtomicBoolean();internal val downloadsDelivered=java.util.concurrent.atomic.AtomicBoolean()}
-    private var hiddenPresentationGeneration=0L
+    @Volatile private var hiddenPresentationGeneration=0L
     private var pendingHiddenDownloads:HiddenVpnPresentationAuthority?=null
     /** A child return requests navigation only; it carries no media, URL or authentication. */
     internal fun requestHiddenBrowserDownloads(owner:HiddenVpnPresentationAuthority) {
@@ -1257,6 +1280,10 @@ class MainActivity : FragmentActivity() {
         retained.hidden.select(Route.VAULT)
         openNonBrowser(Route.VAULT)
     }
+    internal fun ownsHiddenBrowserPresentation(runtime:uk.co.traynor.privategallery.core.browser.hidden.HiddenBrowserRuntime,owner:HiddenVpnPresentationAuthority):Boolean =
+        !isDestroyed && hiddenBrowserOwner===runtime && owner.generation==hiddenPresentationGeneration &&
+            retained.hidden.selected && route==Route.BROWSER && retained.hidden.destination==Route.BROWSER &&
+            retained.hidden.session.isAuthenticationCurrent(owner.hidden)
     internal fun captureHiddenVpnPresentationAuthority():HiddenVpnPresentationAuthority {
         hiddenPresentationGeneration++
         return HiddenVpnPresentationAuthority(session.captureAuthenticationEpoch(),retained.hidden.session.authentication(),hiddenPresentationGeneration)
@@ -1568,7 +1595,7 @@ class MainActivity : FragmentActivity() {
         val authenticatedEntry=sessionKey!=null || session.isUnlocked || (revokeHidden && retained.hidden.session.isUnlocked)
         val closingCamera=vaultCamera!=null
         closeVaultCamera()
-        hiddenBrowserOwner?.close()
+        if(revokeHidden || hiddenBrowserOwner?.retainingPresentation!=true)hiddenBrowserOwner?.close()
         revokePhoneTransfers()
         primaryCopyAccess?.close(); primaryCopyAccess = null
         if (revokeHidden) retained.hidden.leave()
@@ -2180,6 +2207,7 @@ class MainActivity : FragmentActivity() {
     }
 
     private fun scheduleOwnedVpnDisconnect() {
+        if(hiddenBrowserOwner?.retainingPresentation==true){browserVpnDisconnectJob?.cancel();browserVpnDisconnectJob=null;return}
         browserVpnController.onAppBackgrounded(System.currentTimeMillis())
         browserVpnState = browserVpnController.state
         browserVpnDisconnectJob?.cancel()

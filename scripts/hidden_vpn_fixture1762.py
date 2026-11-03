@@ -4,8 +4,10 @@ import argparse, base64, hashlib, http.server, json, select, ssl, socket, socket
 from pathlib import Path
 try:
     import evidence179_fixture_endpoints as evidence179
+    import hidden_continuity_fixture17103 as continuity17103
 except ModuleNotFoundError:
     from scripts import evidence179_fixture_endpoints as evidence179
+    from scripts import hidden_continuity_fixture17103 as continuity17103
 from email.parser import BytesParser
 from email import policy
 from urllib.parse import urlparse, parse_qs
@@ -76,6 +78,7 @@ class Fixture:
                 for key,value in headers:self.send_header(key,value)
                 self.end_headers();self.wfile.write(body)
             def do_GET(self):
+                if continuity17103.get(self,fixture):return
                 if evidence179.get(self,fixture.folder):return
                 if self.path=='/evidence':
                     with fixture.lock:events=list(fixture.events)
@@ -133,6 +136,7 @@ class Fixture:
                     return self.reply(b'slow complete')
                 return self.reply(PAGE)
             def do_POST(self):
+                if continuity17103.post(self,fixture):return
                 if evidence179.post(self,fixture.folder):return
                 length=int(self.headers.get('Content-Length','0'))
                 if length<1 or length>1024*1024:return self.reply(b'rejected',413)
@@ -157,6 +161,7 @@ class Fixture:
                 return self.reply(b'Unexpected synthetic body',400)
         def dns_response(packet,source,transport):
             name,kind,_=question(packet);fixture.record(kind='dns',source=source,name=name,qtype=kind,transport=transport)
+            continuity17103.before_verify_dns(fixture,name)
             if name=='slow-dns-phase.fixture.invalid':time.sleep(3)
             response=fixture_answer(packet,tcp=transport=='tcp')
             if response is None:
@@ -190,7 +195,7 @@ class Fixture:
             def handle(self):
                 packet,sock=self.request
                 if len(packet)<20 or packet[:2]!=b'\0\1' or packet[4:8]!=b'\x21\x12\xa4\x42':return
-                fixture.record(kind='stun',source=self.client_address[0])
+                fixture.record(kind='stun',source=self.client_address[0],continuity_probe=packet[8:20]==b'nv17103probe')
                 mapped=b'\0\1'+struct.pack('!H',self.client_address[1]^0x2112)+bytes(a^b for a,b in zip(socket.inet_aton(self.client_address[0]),b'\x21\x12\xa4\x42'))
                 attribute=struct.pack('!HH',0x20,len(mapped))+mapped
                 response=struct.pack('!HH',0x101,len(attribute))+packet[4:20]+attribute

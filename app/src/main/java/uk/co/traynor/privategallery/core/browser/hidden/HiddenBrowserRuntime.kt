@@ -35,6 +35,9 @@ internal class HiddenBrowserRuntime(
     private val torRouteOwner=android.os.Binder()
     private var pinnedVpn: android.net.Network? = null
     private var interactiveBroker: HiddenVpnBrowserBroker? = null
+    private var presentationOwner:MainActivity.HiddenVpnPresentationAuthority?=null
+    private fun continuationOwned()=presentationOwner?.let {activity.ownsHiddenBrowserPresentation(this,it)}==true
+    val retainingPresentation:Boolean get()=interactiveBroker?.retainingPresentation==true
     val interactiveActivityActive: Boolean get() = interactiveBroker?.active == true
     var interactiveActivityLaunched=false; private set
     @Volatile private var transport: HiddenHttpTransport? = null
@@ -132,13 +135,24 @@ internal class HiddenBrowserRuntime(
                     }
                     check(authorized())
                     val pinned=checkNotNull(pinnedVpn)
-                    val presentationOwner=activity.captureHiddenVpnPresentationAuthority()
+                    val presentationOwner=activity.captureHiddenVpnPresentationAuthority().also {this@HiddenBrowserRuntime.presentationOwner=it}
                     interactiveBroker=HiddenVpnBrowserBroker(activity,session,pinned,
-                        {authorized() && policy.canEstablish(epoch) && if(mode==HiddenConnectionPolicy.Mode.TOR_ONLY)tor?.alive()==true && torIsolation?.network()==pinned else activity.hiddenOwnedVpnNetwork()==pinned},
+                        {continuationOwned() && authorized() && policy.canEstablish(epoch) && if(mode==HiddenConnectionPolicy.Mode.TOR_ONLY)tor?.alive()==true && torIsolation?.network()==pinnedVpn else activity.hiddenOwnedVpnNetwork()==pinnedVpn},
                         {interactiveBroker=null;if(!closed.get())close()},
                         onPresentationEnded={reason,at ->activity.hiddenVpnBrowserPresentationEnded(reason,at,presentationOwner)},
-                        mode=mode,torUnixPath=torConfiguration?.unixPath,onPanic={activity.hiddenBrowserPanic(presentationOwner)},hiddenCaptureAllowed={activity.hiddenBrowserCaptureAllowed()},hiddenTheme={activity.hiddenBrowserTheme()},
-                        onManageDownloads={activity.requestHiddenBrowserDownloads(presentationOwner)})
+                        mode=mode,torUnixPath=torConfiguration?.unixPath,onPanic={activity.hiddenBrowserPanic(presentationOwner,this@HiddenBrowserRuntime)},hiddenCaptureAllowed={activity.hiddenBrowserCaptureAllowed()},hiddenTheme={activity.hiddenBrowserTheme()},
+                        onManageDownloads={activity.requestHiddenBrowserDownloads(presentationOwner)},
+                        // Only the interactive VPN path has a positive continuation fixture.
+                        // Tor keeps its shipped hard-retirement lifecycle until separately verified.
+                        suspendTransport=if(mode==HiddenConnectionPolicy.Mode.VPN_ONLY)({pinned ->
+                            transport?.close();transport=null
+                            activity.denyHiddenVpnNetwork(pinned)
+                        }) else null,
+                        requestReconnect=if(mode==HiddenConnectionPolicy.Mode.VPN_ONLY)({resumeContinuation()}) else null,
+                        continuationOwnerCurrent={continuationOwned()},
+                        backgroundGrace={uk.co.traynor.privategallery.ui.HiddenPreferences(activity).timeout.milliseconds},
+                        onSuspended={at ->status="Suspended";detail="Private browser paused within Hidden lock grace.";activity.hiddenBrowserTemporarilySuspended(at)},
+                        onResumed={status="Connected";detail="Private connection verified; previous page resumed.";activity.hiddenBrowserContinuationResumed()})
                     if(mode==HiddenConnectionPolicy.Mode.TOR_ONLY) {
                         detail="Verifying HTTPS through isolated Tor"
                         withContext(Dispatchers.IO){checkNotNull(interactiveBroker).verifyTorReady()}
@@ -148,12 +162,57 @@ internal class HiddenBrowserRuntime(
                 }
                 while(connected) {
                     delay(500)
+                    val owner=interactiveBroker
+                    if(owner?.hasPendingPanic==true)continue
+                    if(!continuationOwned()){close();break}
+                    if(owner?.retainingPresentation==true || owner?.suspending?.get()==true)continue
+                    if(owner?.continuationState() in setOf(HiddenBrowserContinuation.State.LOCKED,HiddenBrowserContinuation.State.TERMINATED)){close();break}
                     if(!authorized()) {close();break}
                     val valid=if(mode==HiddenConnectionPolicy.Mode.TOR_ONLY) withContext(Dispatchers.IO){tor?.unixReady()==true} && torIsolation?.network()==pinnedVpn else pinnedVpn!=null && activity.hiddenOwnedVpnNetwork()==pinnedVpn
-                    if(!valid) {disconnect("Connection failed","Transport lost. Requests stopped; retry explicitly.");break}
+                    if(!valid) {interactiveBroker?.requestSuspension();delay(1000);if(interactiveBroker?.retainingPresentation!=true && interactiveBroker?.suspending?.get()!=true){disconnect("Connection failed","Transport lost. Requests stopped; retry explicitly.");break}}
                 }
             } catch(_:CancellationException) {if(!closed.get())disconnect("Connection failed","Timed out during: $detail. Retry explicitly.")}
             catch(_:Exception) {disconnect("Connection failed","Failed during: $detail. Check connection settings and retry.")}
+        }
+    }
+    private var reconnectJob:Job?=null
+    private fun resumeContinuation() {
+        if(reconnectJob?.isActive==true || closed.get())return
+        val owner=interactiveBroker ?: return
+        reconnectJob=scope.launch {
+            try {
+                withTimeout(STARTUP_TIMEOUT_MS) {
+                    check(continuationOwned() && owner.retainingPresentation)
+                    authority=session.authority()
+                    status="Reconnecting";detail="Verifying the private route before resuming your page"
+                    val pinned:android.net.Network
+                    if(mode==HiddenConnectionPolicy.Mode.VPN_ONLY) {
+                        activity.prepareHiddenBrowserTransport(mode)
+                        var fresh=activity.hiddenOwnedVpnNetwork()
+                        while(fresh==null){check(continuationOwned() && owner.retainingPresentation);delay(100);fresh=activity.hiddenOwnedVpnNetwork()}
+                        pinned=fresh
+                        check(pinned!=pinnedVpn) // Old sockets stay attached to the dead Network.
+                        pinnedVpn=pinned
+                        val epoch=checkNotNull(authority)
+                        val probe=HiddenHttpTransport.vpn(activity,pinned){continuationOwned() && session.isAuthorityCurrent(epoch) && owner.retainingPresentation && activity.hiddenOwnedVpnNetwork()==pinned}
+                        transport=probe
+                        withContext(Dispatchers.IO){probe.verifyReady()}
+                    } else {
+                        // The sink is held throughout. Retire native Tor and replace protected relay credentials.
+                        tor?.close();tor=null
+                        while(HiddenTorIsolationService.hasTorProcess(activity)){check(owner.retainingPresentation);delay(50)}
+                        check(checkNotNull(torIsolation).resumeEgress())
+                        pinned=checkNotNull(torIsolation?.network())
+                        torConfiguration=checkNotNull(torIsolation).configuration(torRouteOwner)
+                        tor=HiddenTorConnection(activity.applicationContext,torConfiguration).also {it.start()}
+                        while(tor?.unixReady()!=true){check(owner.retainingPresentation);delay(100)}
+                    }
+                    check(continuationOwned() && owner.retainingPresentation && authorized())
+                    owner.prepareResume(pinned)
+                    if(mode==HiddenConnectionPolicy.Mode.TOR_ONLY)withContext(Dispatchers.IO){owner.verifyTorReadyForResume()}
+                    owner.publishVerifiedResume()
+                }
+            } catch(_:Exception) {close()}
         }
     }
     @SuppressLint("SetJavaScriptEnabled")

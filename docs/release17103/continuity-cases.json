@@ -1,0 +1,33 @@
+{
+  "uk.co.traynor.privategallery.core.browser.hidden.HiddenVpnBoundary1762Test": [
+    "childAndUploadProviderHaveIndependentNonExportedBoundaries",
+    "noCapabilityLaunchCannotBindPrimaryOrRetainChild",
+    "uploadUriCannotRecoverAuthorityAfterProcessOrSessionLoss",
+    "proxyRejectsPrivateAndAmbiguousDnsDestinationsIncludingUlaAndCgnat"
+  ],
+  "uk.co.traynor.privategallery.core.browser.hidden.HiddenSessionLibrary1762Test": [
+    "entriesAreSessionScopedBoundedAndCleared",
+    "encryptedLibrarySurvivesReauthenticationAndKeepsModesIndependent",
+    "unsafeUrlsNeverEnterTheLibrary"
+  ],
+  "uk.co.traynor.privategallery.core.browser.hidden.HiddenContinuityProxy17103Test": [
+    "preparedProxyRejectsRequestsUntilCommitAndRetiredCredentialsStayDead",
+    "staleRepositoryEpochCannotInheritForegroundAuthority"
+  ],
+  "uk.co.traynor.privategallery.core.browser.hidden.HiddenPopupOwnershipWebViewTest": [
+    "closeRestoresOpenerWhileLateAndRevokedCloseCannotChangeSelection",
+    "retainedCallbacksFromClosedPopupCannotMutateSelectedOtherWebView"
+  ],
+  "uk.co.traynor.privategallery.ui.HiddenNavigationAuthorityTest": [
+    "externalNavigationRequiresBothPrimaryAuthorityAndKey"
+  ],
+  "uk.co.traynor.privategallery.HomeNavigation1710Test": [
+    "homeRequiresAuthenticationAndSurvivesHiddenPresentationRevocation"
+  ],
+  "uk.co.traynor.privategallery.NovaNavigation17101Test": [
+    "authenticatedExistingInstallStartsAtNovaHomeAndAppRootReturnsHome"
+  ],
+  "uk.co.traynor.privategallery.HiddenContinuationPanic17103Test": [
+    "primaryExpiryDoesNotDisarmCurrentHiddenPanicAndStaleRuntimeIsDenied"
+  ]
+}

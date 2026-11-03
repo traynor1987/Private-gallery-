@@ -20,8 +20,9 @@ internal class HiddenVpnProxy(
     private val authorized: () -> Boolean,
     private val mode:HiddenConnectionPolicy.Mode=HiddenConnectionPolicy.Mode.VPN_ONLY,
     private val torUnixPath:String?=null,
+    private val leaseCurrent:()->Boolean=authorized,
 ) : Closeable {
-    constructor(context:android.content.Context,network:Network,authorized:()->Boolean):this(network.socketFactory,{uk.co.traynor.privategallery.core.vpn.OwnedVpnDns.lookup(context,network,it,authorized)},authorized)
+    constructor(context:android.content.Context,network:Network,authorized:()->Boolean,leaseCurrent:()->Boolean=authorized):this(network.socketFactory,{uk.co.traynor.privategallery.core.vpn.OwnedVpnDns.lookup(context,network,it,authorized)},authorized,leaseCurrent=leaseCurrent)
     val password = java.util.UUID.randomUUID().toString()
     private val credential = java.util.Base64.getEncoder().encodeToString(("hidden:"+password).toByteArray(Charsets.UTF_8))
     private val closed = AtomicBoolean()
@@ -32,11 +33,12 @@ internal class HiddenVpnProxy(
     private val authorityWatch=Executors.newSingleThreadScheduledExecutor()
     private val server = ServerSocket().apply { bind(InetSocketAddress(InetAddress.getByAddress(byteArrayOf(127,0,0,1)),0),32) }
     val port get() = server.localPort
-    init {authorityWatch.scheduleWithFixedDelay({if(!closed.get() && !authorized())close()},100,100,java.util.concurrent.TimeUnit.MILLISECONDS);workers.execute {
+    init {authorityWatch.scheduleWithFixedDelay({if(!closed.get() && !leaseCurrent())close()},100,100,java.util.concurrent.TimeUnit.MILLISECONDS);workers.execute {
         while(!closed.get()) {
             val socket=try {server.accept()} catch(_:Exception) {break}
             if(!slots.tryAcquire()) {socket.close();continue}
-            synchronized(admission) {if(closed.get() || !authorized()) {socket.close();slots.release();return@execute};sockets.add(socket)}
+            synchronized(admission) {if(closed.get() || !authorized()) {socket.close();slots.release();return@synchronized};sockets.add(socket)}
+            if(socket.isClosed)continue
             workers.execute { try {serve(socket)} catch(_:Exception) {} finally {sockets.remove(socket);runCatching {socket.close()};slots.release()} }
         }
     } }
@@ -113,7 +115,8 @@ internal class HiddenVpnProxy(
         authorityWatch.shutdownNow();workers.shutdownNow()
     }
     companion object {
-        fun tor(unixPath:String,authorized:()->Boolean)=HiddenVpnProxy(javax.net.SocketFactory.getDefault(),{throw java.net.UnknownHostException("Tor origin DNS prohibited")},authorized,HiddenConnectionPolicy.Mode.TOR_ONLY,unixPath)
+        fun tor(unixPath:String,authorized:()->Boolean)=tor(unixPath,authorized,authorized)
+        fun tor(unixPath:String,authorized:()->Boolean,leaseCurrent:()->Boolean)=HiddenVpnProxy(javax.net.SocketFactory.getDefault(),{throw java.net.UnknownHostException("Tor origin DNS prohibited")},authorized,HiddenConnectionPolicy.Mode.TOR_ONLY,unixPath,leaseCurrent)
         internal fun publicAddress(address:InetAddress):Boolean {
             if(address.isAnyLocalAddress || address.isLoopbackAddress || address.isLinkLocalAddress || address.isSiteLocalAddress || address.isMulticastAddress)return false
             val b=address.address

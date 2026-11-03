@@ -22,7 +22,17 @@ internal class HiddenRepository(context: Context, private val session: HiddenSes
     directorySync: (File) -> Unit = ::syncDirectory,
     private val publishIfAllowed: ((() -> Unit) -> Unit) = { it() },
 ) {
-    private val authority = session.authority()
+    // Keep the original four-argument/default constructor ABI for upgrade instrumentation.
+    // The only reassignment is the explicit-epoch constructor, before any repository operation.
+    private var authority = session.authority()
+    constructor(context:Context,session:HiddenSession,
+        directorySync:(File)->Unit=::syncDirectory,
+        publishIfAllowed:((()->Unit)->Unit)={it()},
+        operationAuthority:HiddenSession.Authority,
+    ):this(context,session,directorySync,publishIfAllowed) {
+        check(session.isAuthorityCurrent(operationAuthority)) { "Hidden operation authority revoked" }
+        authority=operationAuthority
+    }
     private val appContext = context.applicationContext
     private val resolver = context.contentResolver
     private val root = File(context.noBackupFilesDir,"hidden-media-v1")

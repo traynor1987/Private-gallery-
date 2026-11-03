@@ -18,6 +18,7 @@ public final class HiddenSession {
     private long backgroundTimeout;
     private long lastObserved;
     private RevocationRegistration revocations;
+    private RevocationRegistration authenticationRevocations;
 
     public static final class Attempt {
         private final long startedAt;
@@ -107,6 +108,7 @@ public final class HiddenSession {
     public final class RevocationRegistration implements AutoCloseable {
         private Runnable callback;
         private RevocationRegistration next;
+        private boolean authenticationOnly;
         private RevocationRegistration(Runnable callback) {this.callback=callback;}
         private void fire() {
             Runnable work=callback;callback=null;
@@ -115,9 +117,9 @@ public final class HiddenSession {
         @Override public void close() {
             synchronized(HiddenSession.this) {
                 callback=null;
-                RevocationRegistration previous=null,current=revocations;
+                RevocationRegistration previous=null,current=authenticationOnly ? authenticationRevocations : revocations;
                 while(current!=null) {
-                    if(current==this) {if(previous==null)revocations=current.next;else previous.next=current.next;current.next=null;break;}
+                    if(current==this) {if(previous==null) {if(authenticationOnly)authenticationRevocations=current.next;else revocations=current.next;} else previous.next=current.next;current.next=null;break;}
                     previous=current;current=current.next;
                 }
             }
@@ -130,6 +132,15 @@ public final class HiddenSession {
             registration.fire();return registration;
         }
         registration.next=revocations;revocations=registration;return registration;
+    }
+    /** Hard presentation revocation only. Grants no key, IO or operation authority.
+     * The callback has the same nonblocking/no-reentry contract as onRevoked. */
+    public synchronized RevocationRegistration onAuthenticationRevoked(Authentication authentication,Runnable callback) {
+        if(callback==null)throw new NullPointerException("callback");
+        RevocationRegistration registration=new RevocationRegistration(callback);
+        registration.authenticationOnly=true;
+        if(!isAuthenticationCurrent(authentication)) {registration.fire();return registration;}
+        registration.next=authenticationRevocations;authenticationRevocations=registration;return registration;
     }
     public synchronized Operation beginOperation() { return beginOperation(authority()); }
     public synchronized Operation beginOperation(Authority authority) {
@@ -173,6 +184,8 @@ public final class HiddenSession {
     }
     public synchronized void lock() {
         authenticationGeneration++;
+        RevocationRegistration current=authenticationRevocations;authenticationRevocations=null;
+        while(current!=null) {RevocationRegistration next=current.next;current.next=null;current.fire();current=next;}
         revokeOperations();
         if (key != null) Arrays.fill(key, (byte) 0);
         key = null; backgroundedAt = -1;

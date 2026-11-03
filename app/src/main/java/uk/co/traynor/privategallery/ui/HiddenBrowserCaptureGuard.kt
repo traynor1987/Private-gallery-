@@ -14,7 +14,10 @@ internal class HiddenBrowserCaptureGuard(
     private val activity:Activity,
     private val authorised:()->Boolean,
     private val failed:()->Unit,
+    private val lock:(()->Unit)?,
+    private val panic:(()->Unit)?,
 ) {
+    constructor(activity:Activity,authorised:()->Boolean,failed:()->Unit):this(activity,authorised,failed,null,null)
     private val decor get()=activity.window.decorView
     private var resumed=false
     private var closed=false
@@ -23,6 +26,9 @@ internal class HiddenBrowserCaptureGuard(
     private var frameScheduled=false
     private var previousAccessibility:Int?=null
     private var curtain:View?=null
+    private var controls:View?=null
+    private var deniedForeground=false
+    private val concealedChildren=java.util.IdentityHashMap<View,Int>()
     var revision by mutableIntStateOf(0);private set
     val covered get()=curtain?.visibility==View.VISIBLE
     private val windows=PrivacyWindowTracker(activity) {focused ->
@@ -44,12 +50,43 @@ internal class HiddenBrowserCaptureGuard(
         protect();windows.coverSecondaryWindows()
         if(previousAccessibility==null)previousAccessibility=decor.importantForAccessibility
         decor.importantForAccessibility=View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS
-        if(curtain==null)curtain=View(activity).apply {
+        if(curtain==null)curtain=android.widget.FrameLayout(activity).apply {
             setBackgroundColor(android.graphics.Color.BLACK);isClickable=true
             importantForAccessibility=View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS
+            if(lock!=null && panic!=null) {
+                controls=android.widget.LinearLayout(activity).apply {
+                    orientation=android.widget.LinearLayout.VERTICAL
+                    gravity=android.view.Gravity.CENTER
+                    importantForAccessibility=View.IMPORTANT_FOR_ACCESSIBILITY_YES
+                    addView(android.widget.TextView(activity).apply {text="Private connection paused";setTextColor(android.graphics.Color.WHITE);textSize=20f})
+                    addView(android.widget.Button(activity).apply {text="Lock Hidden Space";setOnClickListener {lock.invoke()}})
+                    addView(android.widget.Button(activity).apply {text="Panic Exit";setOnClickListener {panic.invoke()}})
+                }
+                addView(controls,android.widget.FrameLayout.LayoutParams(-1,-2,android.view.Gravity.CENTER))
+            }
             (decor as ViewGroup).addView(this,ViewGroup.LayoutParams(-1,-1))
         }
         curtain?.visibility=View.VISIBLE;curtain?.bringToFront()
+        updateControls()
+    }
+    /** Only neutral controls are exposed; every underlying content subtree stays hidden. */
+    fun deniedForeground(value:Boolean) {deniedForeground=value;if(covered)updateControls()}
+    private fun updateControls() {
+        val show=deniedForeground && !closed && controls!=null
+        val group=decor as ViewGroup
+        for(index in 0 until group.childCount) {
+            val child=group.getChildAt(index)
+            if(child!==curtain) {
+                if(!concealedChildren.containsKey(child))concealedChildren[child]=child.importantForAccessibility
+                child.importantForAccessibility=View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS
+            }
+        }
+        decor.importantForAccessibility=if(show)View.IMPORTANT_FOR_ACCESSIBILITY_AUTO else View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS
+        curtain?.importantForAccessibility=if(show)View.IMPORTANT_FOR_ACCESSIBILITY_YES else View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS
+        controls?.visibility=if(show)View.VISIBLE else View.GONE
+    }
+    private fun restoreContentAccessibility() {
+        concealedChildren.forEach {(view,value)->view.importantForAccessibility=value};concealedChildren.clear()
     }
     private fun requestFrame() {
         if(closed)return
@@ -70,7 +107,7 @@ internal class HiddenBrowserCaptureGuard(
         }
     }
     fun resume() {if(closed)return;resumed=true;requestFrame()}
-    fun pause() {resumed=false;revision++;conceal()}
+    fun pause() {resumed=false;deniedForeground=false;revision++;conceal()}
     fun focusChanged(focused:Boolean) {if(closed)return;if(!focused)protect();requestFrame()}
     fun userLeaving(){if(!closed)protect()}
     /** Composition's current epoch must reach pre-draw after authenticated owned focus. */
@@ -88,6 +125,7 @@ internal class HiddenBrowserCaptureGuard(
                 // The authority check can refresh the authoritative policy/revision.
                 if(epoch!=revision)return true
                 previousAccessibility?.let {decor.importantForAccessibility=it};previousAccessibility=null
+                restoreContentAccessibility();deniedForeground=false
                 windows.uncoverSecondaryWindows();curtain?.visibility=View.GONE
                 if(allowed) {
                     if(!windows.restore(true)){failed();return true}
@@ -101,7 +139,7 @@ internal class HiddenBrowserCaptureGuard(
     }
     fun close(){
         if(closed)return
-        resumed=false;conceal();closed=true
+        resumed=false;deniedForeground=false;conceal();closed=true
         // This single-use browser process is about to die. Keep every curtain/secure flag
         // until its windows detach; closing a tracker here would uncover a still-live Dialog.
     }

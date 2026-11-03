@@ -40,3 +40,8 @@ Verified production-source checkpoint: b2d0239f0d40184f74a7f015bad326c80530d3b0 
 ## 2026-11-03 verified continuation
 
 Latest verified application source eaa518770f267957cc8383e1760b87167b5d32c9 adds shared full-page AI reference selection and encrypted transfer history. Run41629755724 passes 2 exact API37 behavior tests +7 JVM; archive digest/source/XML checked. Independent source review finds no Important/Critical regression in this narrow diff. CONTINUATION.md and CONTINUATION_EVIDENCE.json contain exact handover. Earlier test receipts remain source-scoped; no full updated suite claim. Google and signing blocker remains unchanged.
+
+
+## Current coordinated lifecycle candidate
+
+Earlier missing-website and diagnosis-only notes above are historical. The owner supplied a multi-site reproduction; four destructive paths are now coordinated in the current implementation. COORDINATED_IMPLEMENTATION.md records exact scope, boundaries and mandatory unexecuted gates. Candidate55 follows last signed54; no new APK has been delivered or signing activated. Do not reuse an old signed APK as this repair.

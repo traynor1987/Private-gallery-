@@ -1,0 +1,23 @@
+{
+  "uk.co.traynor.privategallery.core.browser.hidden.NativeTorIsolation1762Test": [
+    "packagedTorNativeFormsUploadsDownloadsAndNetworkSink"
+  ],
+  "uk.co.traynor.privategallery.core.browser.hidden.HiddenVpnLive1762Test": [
+    "nativeChildPostsFormsUploadsAndRevokesOnOwnedVpn"
+  ],
+  "uk.co.traynor.privategallery.core.browser.hidden.HiddenVpnNetworkLoss1762Test": [
+    "lostOwnedNetworkRetiresNativeChildAndCannotReuseOldCapability"
+  ],
+  "uk.co.traynor.privategallery.core.browser.hidden.HiddenBrowserContinuity17103Test": [
+    "sameOwnedViewsResumeAcrossBackgroundAndOldEpochStaysDead",
+    "expiredGraceRetiresRetainedChild",
+    "retainedChildProcessDeathCannotResumeOldContinuation",
+    "panicDuringDeniedReconnectRevokesHiddenWithoutIoAuthority",
+    "touchExplorationCanLockDeniedReconnectWithoutUncoveringPage"
+  ],
+  "uk.co.traynor.privategallery.core.browser.hidden.HiddenMainRuntimeContinuity17103Test": [
+    "productionRuntimePreservesContinuationAfterPrimaryExpiry",
+    "productionRuntimeHandlesRouteLossDuringSuspensionHandshake",
+    "productionRuntimeRejectsVerificationAndBoundCommitRaces"
+  ]
+}
