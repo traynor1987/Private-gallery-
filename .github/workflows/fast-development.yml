@@ -489,6 +489,8 @@ jobs:
           java -cp /tmp/continuity17103 uk.co.traynor.privategallery.core.hidden.HiddenContinuationAuthenticationChecks
           java -cp /tmp/continuity17103 uk.co.traynor.privategallery.core.hidden.HiddenRevocationSignalChecks
           java -cp /tmp/continuity17103 uk.co.traynor.privategallery.core.browser.hidden.HiddenBrowserContinuationChecks
+          java com.sun.tools.javac.Main -d /tmp/vpn-readiness17103 app/src/main/java/uk/co/traynor/privategallery/core/vpn/OwnedVpnNetworkReadinessGate.java app/src/test/java/uk/co/traynor/privategallery/core/vpn/OwnedVpnNetworkReadinessChecks.java
+          java -cp /tmp/vpn-readiness17103 uk.co.traynor.privategallery.core.vpn.OwnedVpnNetworkReadinessChecks
           java com.sun.tools.javac.Main -d /tmp/picker17103 app/src/main/java/uk/co/traynor/privategallery/ui/PickerMediaLabels.java tests/picker_presentation/PickerMediaLabelsChecks.java
           java -cp /tmp/picker17103 PickerMediaLabelsChecks
           PYTHONDONTWRITEBYTECODE=1 python3 -m unittest scripts.tests.test_upgrade17103_controls scripts.tests.test_nova17103_runtime_gate scripts.tests.test_continuity_approval17103 scripts.tests.test_hidden_continuity_reuse17103 scripts.tests.test_hidden_continuity_document17103

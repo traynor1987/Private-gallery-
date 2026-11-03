@@ -832,12 +832,14 @@ class MainActivity : FragmentActivity() {
         browserVpnDisconnectJob?.cancel();browserVpnDisconnectJob=null
         session.onForegrounded(android.os.SystemClock.elapsedRealtime())
     }
+    private val hiddenVpnNetworkReadiness by lazy { uk.co.traynor.privategallery.core.vpn.OwnedVpnNetworkReadiness(applicationContext) }
     internal fun hiddenOwnedVpnNetwork(): android.net.Network? {
         if (android.os.Build.VERSION.SDK_INT < 30 || !wireGuardEngine.ownsTunnel || wireGuardEngine.state != VpnConnectionState.CONNECTED) return null
         val manager = getSystemService(android.net.ConnectivityManager::class.java)
-        return manager.allNetworks.singleOrNull { network ->
-            manager.getNetworkCapabilities(network)?.let { it.hasTransport(android.net.NetworkCapabilities.TRANSPORT_VPN) && it.ownerUid == android.os.Process.myUid() } == true
-        }
+        val network=manager.allNetworks.singleOrNull { candidate ->
+            manager.getNetworkCapabilities(candidate)?.let { it.hasTransport(android.net.NetworkCapabilities.TRANSPORT_VPN) && it.ownerUid == android.os.Process.myUid() } == true
+        } ?: return null
+        return network.takeIf {hiddenVpnNetworkReadiness.isReady(it)}
     }
     internal fun prepareHiddenBrowserTransport(mode: uk.co.traynor.privategallery.core.browser.hidden.HiddenConnectionPolicy.Mode) {
         if (!retained.hidden.selected || !retained.hidden.session.isUnlocked || route != Route.BROWSER) return
@@ -1447,6 +1449,7 @@ class MainActivity : FragmentActivity() {
         privacyWindows.close()
         biometricAttempts.lock();activeBiometricPrompt?.cancelAuthentication();activeBiometricPrompt=null
         closeVaultCamera()
+        hiddenVpnNetworkReadiness.close()
         hiddenBrowserOwner?.close()
         primaryCopyAccess?.close(); primaryCopyAccess = null
         unregisterReceiver(screenOffReceiver)

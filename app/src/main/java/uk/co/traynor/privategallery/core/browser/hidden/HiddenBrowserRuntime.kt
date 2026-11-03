@@ -175,11 +175,13 @@ internal class HiddenBrowserRuntime(
             catch(_:Exception) {disconnect("Connection failed","Failed during: $detail. Check connection settings and retry.")}
         }
     }
+    private enum class ResumeStage { OWNERSHIP, FRAMEWORK_NETWORK, ROUTE_PROBE, TOR_ROUTE, PREPARE_RESUME, PUBLISH_TRANSPORT }
     private var reconnectJob:Job?=null
     private fun resumeContinuation() {
         if(reconnectJob?.isActive==true || closed.get())return
         val owner=interactiveBroker ?: return
         reconnectJob=scope.launch {
+            var stage=ResumeStage.OWNERSHIP
             try {
                 withTimeout(STARTUP_TIMEOUT_MS) {
                     check(continuationOwned() && owner.retainingPresentation)
@@ -187,6 +189,7 @@ internal class HiddenBrowserRuntime(
                     status="Reconnecting";detail="Verifying the private route before resuming your page"
                     val pinned:android.net.Network
                     if(mode==HiddenConnectionPolicy.Mode.VPN_ONLY) {
+                        stage=ResumeStage.FRAMEWORK_NETWORK
                         activity.prepareHiddenBrowserTransport(mode)
                         var fresh=activity.hiddenOwnedVpnNetwork()
                         while(fresh==null){check(continuationOwned() && owner.retainingPresentation);delay(100);fresh=activity.hiddenOwnedVpnNetwork()}
@@ -196,8 +199,10 @@ internal class HiddenBrowserRuntime(
                         val epoch=checkNotNull(authority)
                         val probe=HiddenHttpTransport.vpn(activity,pinned){continuationOwned() && session.isAuthorityCurrent(epoch) && owner.retainingPresentation && activity.hiddenOwnedVpnNetwork()==pinned}
                         transport=probe
+                        stage=ResumeStage.ROUTE_PROBE
                         withContext(Dispatchers.IO){probe.verifyReady()}
                     } else {
+                        stage=ResumeStage.TOR_ROUTE
                         // The sink is held throughout. Retire native Tor and replace protected relay credentials.
                         tor?.close();tor=null
                         while(HiddenTorIsolationService.hasTorProcess(activity)){check(owner.retainingPresentation);delay(50)}
@@ -208,11 +213,33 @@ internal class HiddenBrowserRuntime(
                         while(tor?.unixReady()!=true){check(owner.retainingPresentation);delay(100)}
                     }
                     check(continuationOwned() && owner.retainingPresentation && authorized())
+                    stage=ResumeStage.PREPARE_RESUME
                     owner.prepareResume(pinned)
                     if(mode==HiddenConnectionPolicy.Mode.TOR_ONLY)withContext(Dispatchers.IO){owner.verifyTorReadyForResume()}
+                    stage=ResumeStage.PUBLISH_TRANSPORT
                     owner.publishVerifiedResume()
                 }
-            } catch(_:Exception) {close()}
+            } catch(failure:Exception) {
+                if(uk.co.traynor.privategallery.BuildConfig.DEBUG) {
+                    // One bounded diagnostic per failed attempt. Never include messages, stack traces or route data.
+                    val kind=when(failure) {
+                        is TimeoutCancellationException -> "TimeoutCancellationException"
+                        is CancellationException -> "CancellationException"
+                        is java.net.UnknownHostException -> "UnknownHostException"
+                        is java.io.IOException -> "IOException"
+                        is SecurityException -> "SecurityException"
+                        is IllegalStateException -> "IllegalStateException"
+                        is IllegalArgumentException -> "IllegalArgumentException"
+                        else -> "OtherException"
+                    }
+                    val owned=runCatching {continuationOwned()}.getOrDefault(false)
+                    val current=runCatching {session.isAuthorityCurrent(authority)}.getOrDefault(false)
+                    val retained=runCatching {owner.retainingPresentation}.getOrDefault(false)
+                    val child=runCatching {owner.childIsAlive()}.getOrDefault(false)
+                    android.util.Log.w("HiddenContinuation","resume_failure stage=${stage.name} exception=$kind owned=$owned current=$current retained=$retained child=$child")
+                }
+                close()
+            }
         }
     }
     @SuppressLint("SetJavaScriptEnabled")
