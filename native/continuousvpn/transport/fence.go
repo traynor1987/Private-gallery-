@@ -149,7 +149,11 @@ func (f *Fence) Release() error {
 	}
 	f.mu.Unlock()
 	if f.current != nil {
-		f.current.closeLocked()
+		if err := f.current.closeLocked(); err != nil {
+			// Retain the failed generation and lifetime TUN. Never turn an
+			// unacknowledged transport barrier into a lifetime release receipt.
+			return err
+		}
 	}
 	for _, v := range children {
 		v.gate.Invalidate(v.generation)

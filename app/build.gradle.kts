@@ -119,3 +119,33 @@ androidComponents.onVariants { variant ->
   )
 }
 tasks.named("preBuild").configure { dependsOn(prepareEvidence179Model) }
+
+// Independently named native foundation. Kept unreferenced by the active owner;
+// packaging is not permission to load a second Go runtime beside GoBackend.
+android { ndkVersion = "27.2.12479018" }
+abstract class PrepareContinuousVpnNativeTask : Exec() {
+  @get:org.gradle.api.tasks.OutputDirectory
+  abstract val librariesDirectory: org.gradle.api.file.DirectoryProperty
+  @get:org.gradle.api.tasks.Internal
+  abstract val pinnedNdkDirectory: org.gradle.api.file.DirectoryProperty
+}
+val prepareContinuousVpnNative by tasks.registering(PrepareContinuousVpnNativeTask::class) {
+  librariesDirectory.set(layout.buildDirectory.dir("generated/continuousVpnJni"))
+  // sdkComponents resolves/provisions the pinned NDK through AGP's SDK handler;
+  // existing CI needs no workflow changes or opaque native prebuilt artifacts.
+  pinnedNdkDirectory.set(androidComponents.sdkComponents.ndkDirectory)
+  inputs.files(rootProject.fileTree("native/continuousvpn") {
+    include("**/*.go", "**/go.mod", "**/go.sum", "**/*.c", "**/*.py", "**/*.diff")
+  })
+  inputs.file(rootProject.file("scripts/build_continuous_vpn_native.sh"))
+  outputs.upToDateWhen { false } // Recheck pinned toolchain and generated ELF.
+  doFirst {
+    commandLine("bash", rootProject.file("scripts/build_continuous_vpn_native.sh"),
+      librariesDirectory.get().asFile, pinnedNdkDirectory.get().asFile)
+  }
+}
+androidComponents.onVariants { variant ->
+  variant.sources.jniLibs?.addGeneratedSourceDirectory(
+    prepareContinuousVpnNative, PrepareContinuousVpnNativeTask::librariesDirectory
+  )
+}

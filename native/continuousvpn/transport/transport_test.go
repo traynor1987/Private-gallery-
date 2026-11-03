@@ -5,7 +5,10 @@ package transport
 
 import (
 	"encoding/hex"
+	"errors"
 	"net/netip"
+	"runtime"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -120,7 +123,9 @@ func TestFailedConfigurationRetiresWorkersAndNextGenerationCanStart(t *testing.T
 	if _, e := f.Replace(bad); e == nil {
 		t.Fatal("invalid config accepted")
 	}
-	await(t, f.current.Done())
+	if f.current != nil {
+		t.Fatal("failed configured device retained after successful retirement")
+	}
 	if r.closed.Load() != 0 {
 		t.Fatal("config error released fence")
 	}
@@ -351,5 +356,104 @@ func TestOlderReplaceDuringNewDeviceProtectionCannotRevokePublication(t *testing
 	}
 	if err = newest.transport.BeginProbe(); err != nil {
 		t.Fatal("new publication was revoked by older request", err)
+	}
+}
+
+func TestSuccessfulRetirementForgetsOnlyCurrentAfterBarrierAndKeepsHighWater(t *testing.T) {
+	f, _ := fixture(t, 1)
+	old, e := f.Replace(options(newFakeBind(), 3))
+	if e != nil {
+		t.Fatal(e)
+	}
+	if old.Close() != nil {
+		t.Fatal("close")
+	}
+	if f.current != nil {
+		t.Fatal("closed current retains retired device")
+	}
+	for _, g := range []uint64{1, 2, 3} {
+		if _, e := f.Replace(options(newFakeBind(), g)); e != gate.ErrGeneration {
+			t.Fatal("lost generation high water", g, e)
+		}
+	}
+	newest, e := f.Replace(options(newFakeBind(), 4))
+	if e != nil {
+		t.Fatal(e)
+	}
+	defer newest.Close()
+	old.Close()
+	if f.current != newest {
+		t.Fatal("older close forgot newer transport")
+	}
+}
+
+func TestRetiredWireGuardDeviceCollectibleWhileLifetimeFenceRemains(t *testing.T) {
+	f, r := fixture(t, 1)
+	collected := make(chan struct{})
+	func() {
+		tr, e := f.Replace(options(newFakeBind(), 1))
+		if e != nil {
+			t.Fatal(e)
+		}
+		runtime.SetFinalizer(tr.device, func(*device.Device) { close(collected) })
+		if e = tr.Close(); e != nil {
+			t.Fatal(e)
+		}
+	}()
+	deadline := time.Now().Add(5 * time.Second)
+	for time.Now().Before(deadline) {
+		runtime.GC()
+		select {
+		case <-collected:
+			if r.closed.Load() != 0 {
+				t.Fatal("collection closed lifetime TUN")
+			}
+			runtime.KeepAlive(f)
+			return
+		default:
+			runtime.Gosched()
+		}
+	}
+	t.Fatal("retired WG device remains rooted by live lifetime fence")
+}
+
+type partialTeardownFailureBind struct {
+	*fakeBind
+	fail       atomic.Bool
+	closeError error
+}
+
+func (b *partialTeardownFailureBind) Close() error {
+	err := b.fakeBind.Close()
+	if b.fail.Load() {
+		return b.closeError
+	}
+	return err
+}
+func TestFailedConstructionReturnsExactPartialTransportAndReleasePropagatesBarrier(t *testing.T) {
+	real := newFakeTun()
+	f, err := NewFence(real, 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { real.Close(); <-f.readerDone }() // End fake reader without claiming a bridge release receipt.
+	sentinel := errors.New("partial teardown failure")
+	b := &partialTeardownFailureBind{fakeBind: newFakeBind(), closeError: sentinel}
+	opts := options(b.fakeBind, 1)
+	opts.Bind = b
+	opts.Protect = func(int) bool { b.fail.Store(true); return false }
+	tr, err := f.Replace(opts)
+	if tr == nil || tr != f.current || !errors.Is(err, sentinel) {
+		t.Error("failed construction discarded partial transport/barrier error")
+	}
+	retained := f.current
+	if err = f.Release(); !errors.Is(err, sentinel) {
+		t.Errorf("final release discarded failed barrier: %v", err)
+	}
+	if real.closed.Load() != 0 || f.released || f.current != retained {
+		t.Error("failed barrier released lifetime ownership")
+	}
+	if tr != nil && !errors.Is(tr.Close(), sentinel) {
+		t.Error("failed partial handle manufactured retirement")
 	}
 }

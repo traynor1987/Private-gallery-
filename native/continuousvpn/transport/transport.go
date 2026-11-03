@@ -47,6 +47,9 @@ type Transport struct {
 // queues. It may block on old writes; call outside session monitors. A blocked
 // teardown never admits a new generation and never releases the lifetime TUN.
 // The resulting device is configured and Up, protected, and still CLOSED.
+// If construction teardown fails, return that exact partial Transport together
+// with the error. Its owner must retain it and its protector; nil is not returned
+// while a newly constructed generation has an unacknowledged retirement error.
 func (f *Fence) Replace(options Options) (*Transport, error) {
 	if options.Generation == 0 || options.Protect == nil || options.Bind == nil {
 		return nil, ErrConfig
@@ -100,7 +103,11 @@ func (f *Fence) Replace(options Options) (*Transport, error) {
 		}
 	}
 	if err != nil {
-		t.closeLocked()
+		if closeErr := t.closeLocked(); closeErr != nil {
+			// The caller must retain this exact partial generation/protector:
+			// construction failure is not a successful retirement receipt.
+			return t, errors.Join(err, closeErr)
+		}
 		return nil, err
 	}
 	return t, nil
@@ -210,5 +217,12 @@ func (t *Transport) closeLocked() error {
 	t.fence.mu.Unlock()
 	t.closed = true
 	close(t.done)
+	// Successful retirement must not keep the last closed WG device/private
+	// identity rooted by the lifetime fence. The registry's high-water mark
+	// independently preserves strict monotonic generations. Never forget a
+	// failed barrier, nor a different current transport installed later.
+	if t.closeErr == nil && t.fence.current == t {
+		t.fence.current = nil
+	}
 	return t.closeErr
 }
