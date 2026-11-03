@@ -18,6 +18,7 @@ internal fun searchPrivateHome(context:android.content.Context,access:uk.co.tray
                 repo.items().forEach{add(it.displayName,"Gallery",uk.co.traynor.privategallery.core.home.HomeLayout.Shortcut.VAULT)}
                 repo.collections().forEach{add(it.name,"Collection",uk.co.traynor.privategallery.core.home.HomeLayout.Shortcut.COLLECTIONS)}
                 listOf(false,true).forEach{tor->
+                    if(tor && !NovaReleaseFeatures.TOR_ENABLED)return@forEach
                     val apps=uk.co.traynor.privategallery.core.privateapps.HiddenPrivateAppStore(context.noBackupFilesDir,owner,authority,tor,{access.current()},{commit->lease.commit{commit.run()}}).read()
                     apps.apps.forEach{app->add(app.name(),if(tor)"Private App · Tor"else"Private App · VPN",if(tor)uk.co.traynor.privategallery.core.home.HomeLayout.Shortcut.TOR_BROWSER else uk.co.traynor.privategallery.core.home.HomeLayout.Shortcut.PRIVATE_APPS)}
                 }

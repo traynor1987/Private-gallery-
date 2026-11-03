@@ -23,8 +23,13 @@ class HiddenTorService : TorService() {
     private var owner:IBinder?=null
     private val ownerDeath=IBinder.DeathRecipient {Process.killProcess(Process.myPid())}
     // Native initialization must wait until onBind supplies the authenticated route configuration.
-    override fun onCreate() {}
+    override fun onCreate() {if(!uk.co.traynor.privategallery.core.home.NovaReleaseFeatures.TOR_ENABLED)stopSelf()}
+    override fun onStartCommand(intent:Intent?,flags:Int,startId:Int):Int {
+        if(!uk.co.traynor.privategallery.core.home.NovaReleaseFeatures.TOR_ENABLED){stopSelf();return START_NOT_STICKY}
+        return super.onStartCommand(intent,flags,startId)
+    }
     private fun initialize(intent:Intent) {
+        uk.co.traynor.privategallery.core.home.NovaReleaseFeatures.requireTorEnabled()
         check(!initialized);initialized=true
         val extras=intent.extras
         isolated=extras?.getBoolean("isolated",false)==true
@@ -73,7 +78,7 @@ class HiddenTorService : TorService() {
             return true
         }
     }
-    override fun onBind(intent: Intent): IBinder {if(!initialized)initialize(intent);return ownerBinder}
+    override fun onBind(intent: Intent): IBinder {uk.co.traynor.privategallery.core.home.NovaReleaseFeatures.requireTorEnabled();if(!initialized)initialize(intent);return ownerBinder}
     override fun onUnbind(intent: Intent): Boolean { Process.killProcess(Process.myPid()); return false }
     override fun onDestroy() { Process.killProcess(Process.myPid()) }
 }

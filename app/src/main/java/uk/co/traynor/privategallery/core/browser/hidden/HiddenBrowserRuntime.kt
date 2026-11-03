@@ -64,6 +64,9 @@ internal class HiddenBrowserRuntime(
         catch(_:Exception) { disconnect("Connection failed","Isolated browser initialization failed. No browsing is permitted.") }
     }
     private fun startAuthorized() {
+        if(!uk.co.traynor.privategallery.core.home.NovaReleaseFeatures.browserModeAllowed(mode.name)) {
+            status="Unavailable";detail="Tor is deferred in this release. No alternate connection was started.";return
+        }
         // Capture after prior Compose owners have disposed/revoked their presentation epoch.
         authority=runCatching {session.authority()}.getOrNull()
         if(!authorized()) {status="Disconnected";return}

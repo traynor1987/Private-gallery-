@@ -18,6 +18,7 @@ internal class HiddenTorConnection(private val context: Context,private val isol
         override fun onBindingDied(name: ComponentName) { remote = null }
     }
     fun start() {
+        uk.co.traynor.privategallery.core.home.NovaReleaseFeatures.requireTorEnabled()
         check(!closed.get())
         val intent=Intent(context,HiddenTorService::class.java)
         isolated?.let {value->intent.putExtras(Bundle().apply {putBoolean("isolated",true);putBinder("route-owner",value.owner);putString("unix-path",value.unixPath);putInt("relay-port",value.relayPort);putString("relay-user",value.username);putString("relay-password",value.password)})}

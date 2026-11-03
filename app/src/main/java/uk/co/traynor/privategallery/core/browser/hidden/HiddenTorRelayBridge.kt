@@ -8,6 +8,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 
 /** Sole Tor underlay egress. Never resolves a name; only authenticated numeric relay TCP. */
 internal class HiddenTorRelayBridge(private val protect:(Socket)->Boolean,private val authorized:()->Boolean):Closeable {
+    init {uk.co.traynor.privategallery.core.home.NovaReleaseFeatures.requireTorEnabled()}
     val username="tor"
     val password=java.util.UUID.randomUUID().toString()
     private val closed=AtomicBoolean()

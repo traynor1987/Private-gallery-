@@ -29,7 +29,7 @@ import uk.co.traynor.privategallery.core.evidence.*
  val state by controller.state.collectAsState()
  var model by remember(controller){mutableStateOf(EvidenceAi.Model.LUNA)}
  var task by remember(controller){mutableStateOf(EvidenceAi.Task.FACTUAL_SUMMARY)}
- var mode by remember(controller,initialMode){mutableStateOf(initialMode?.takeIf{it=="VPN"||it=="Tor"&&controller.access.owner==EvidenceCatalog.Owner.HIDDEN||it=="System"&&allowSystemRoute}?:if(allowSystemRoute)"System"else"VPN")}
+ var mode by remember(controller,initialMode){mutableStateOf(if(initialMode=="Tor")"Tor"else initialMode?.takeIf{it=="VPN"||it=="System"&&allowSystemRoute}?:if(allowSystemRoute)"System"else"VPN")}
  var images by remember(controller){mutableStateOf<Set<String>>(emptySet())}
  var preview by remember(controller){mutableStateOf<EvidenceAiPreview?>(null)}
  var result by remember(controller){mutableStateOf<EvidenceCatalog.Analysis?>(null)}
@@ -134,14 +134,15 @@ import uk.co.traynor.privategallery.core.evidence.*
      }else {
       item {EvidenceWorkflowHeading("Choose your analysis","Select only what you intend to transmit. Default: text only. Nothing uploads until the final confirmation.")
        Text("Transport",style=MaterialTheme.typography.titleMedium)
-       FlowRow {listOfNotNull(if(allowSystemRoute)"System"else null,"VPN",if(controller.access.owner==EvidenceCatalog.Owner.HIDDEN)"Tor"else null).forEach{candidate->FilterChip(selected=mode==candidate,enabled=!busy,onClick={mode=candidate},label={Text(candidate)})}}
-       TextButton(enabled=!busy&&mode!="System",onClick={val requested=mode;dismiss();onRequestPermission(requested)}){Text("Set up Android VPN / isolation permission")}
+       FlowRow {listOfNotNull(if(allowSystemRoute)"System"else null,"VPN",if(uk.co.traynor.privategallery.core.home.NovaReleaseFeatures.TOR_ENABLED&&controller.access.owner==EvidenceCatalog.Owner.HIDDEN)"Tor"else null).forEach{candidate->FilterChip(selected=mode==candidate,enabled=!busy,onClick={mode=candidate},label={Text(candidate)})}}
+       if(mode=="Tor"&&!uk.co.traynor.privategallery.core.home.NovaReleaseFeatures.TOR_ENABLED)Text("Tor is deferred. Choose VPN explicitly to continue.",color=MaterialTheme.colorScheme.error)
+       TextButton(enabled=!busy&&mode=="VPN",onClick={val requested=mode;dismiss();onRequestPermission(requested)}){Text("Set up Android VPN permission")}
        FlowRow {EvidenceAi.Model.entries.forEach{candidate->FilterChip(selected=model==candidate,enabled=!busy,onClick={model=candidate},label={Text(candidate.id)})}}
        FlowRow {EvidenceAi.Task.entries.forEach{candidate->FilterChip(selected=task==candidate,enabled=!busy,onClick={task=candidate},label={Text(candidate.label)})}}
        Text("Explicit optional images",style=MaterialTheme.typography.titleMedium)
       }
       items(selectedIds,key={it}){id->state.catalog?.evidence()?.firstOrNull{it.id()==id}?.let{record->Row{Checkbox(id in images,{checked->images=if(checked)images+id else images-id},enabled=!busy&&record.mime().startsWith("image/"));Text(record.name(),Modifier.weight(1f))}}}
-      item {Button(enabled=!busy&&selectedIds.isNotEmpty(),onClick={action{
+      item {Button(enabled=!busy&&selectedIds.isNotEmpty()&&(mode!="Tor"||uk.co.traynor.privategallery.core.home.NovaReleaseFeatures.TOR_ENABLED),onClick={action{
         val connected=createCoordinator();coordinator=connected
         var pending:EvidenceAiPreview?=null
         try {

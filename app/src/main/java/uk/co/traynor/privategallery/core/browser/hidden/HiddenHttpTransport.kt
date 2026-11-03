@@ -27,6 +27,7 @@ internal class HiddenHttpTransport private constructor(
         .callTimeout(90, TimeUnit.SECONDS).connectionPool(ConnectionPool(0, 1, TimeUnit.SECONDS)).build()
     companion object {
         fun tor(port: Int, beforeExecute: () -> Unit = {}, authorized: () -> Boolean): HiddenHttpTransport {
+            uk.co.traynor.privategallery.core.home.NovaReleaseFeatures.requireTorEnabled()
             require(port in 1..65535)
             return HiddenHttpTransport(OkHttpClient.Builder()
                 .proxy(Proxy(Proxy.Type.SOCKS, InetSocketAddress(InetAddress.getByAddress(byteArrayOf(127,0,0,1)), port)))

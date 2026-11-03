@@ -11,9 +11,12 @@ public class NovaBrowserAppsChecks {
   require(upgraded.favourites().equals(Set.of(HomeLayout.Shortcut.CAMERA)),"pins lost");
   require(HomeLayout.decode(upgraded.encode()).equals(upgraded),"roundtrip");
   var tor=HomeLayout.Shortcut.valueOf("TOR_BROWSER");
-  require(!NovaNavigation.available(tor,false)&&NovaNavigation.available(tor,true),"Tor must be Hidden-only");
+  require(!NovaNavigation.available(tor,false)&&!NovaNavigation.available(tor,true),"Tor deferred in both Spaces");
   require(NovaNavigation.browserMode(tor).equals("TOR_ONLY"),"Tor launch transport");
   require(NovaNavigation.browserMode(HomeLayout.Shortcut.BROWSER).equals("VPN_ONLY"),"Browser launch transport");
+  require(NovaReleaseFeatures.browserModeAllowed("VPN_ONLY"),"Shipping VPN remains enabled");
+  require(!NovaReleaseFeatures.browserModeAllowed("TOR_ONLY")&&!NovaReleaseFeatures.browserModeAllowed("VPN_TOR")&&!NovaReleaseFeatures.browserModeAllowed(null),"Saved/invalid modes cannot enable Tor or fallback");
+  try {NovaReleaseFeatures.requireTorEnabled();throw new AssertionError("Tor resource creation allowed");}catch(SecurityException expected){}
   System.out.println("Nova browser launcher upgrade checks passed");
  }
 }

@@ -25,9 +25,10 @@ class HiddenTorIsolationService:VpnService() {
     private var egressAuthority:(()->Boolean)?=null
     internal var unixPath:String?=null;private set
     private var revoked:(()->Unit)?=null
-    override fun onBind(intent:Intent):IBinder?=if(intent.action==SERVICE_INTERFACE)super.onBind(intent) else binder
-    override fun onStartCommand(intent:Intent?,flags:Int,startId:Int)=START_NOT_STICKY
+    override fun onBind(intent:Intent):IBinder?=if(!uk.co.traynor.privategallery.core.home.NovaReleaseFeatures.TOR_ENABLED)null else if(intent.action==SERVICE_INTERFACE)super.onBind(intent) else binder
+    override fun onStartCommand(intent:Intent?,flags:Int,startId:Int):Int {if(!uk.co.traynor.privategallery.core.home.NovaReleaseFeatures.TOR_ENABLED)stopSelf();return START_NOT_STICKY}
     internal fun establish(authorized:()->Boolean,onRevoked:()->Unit,beginForeground:()->Unit={startForegroundConnection()}) {
+        uk.co.traynor.privategallery.core.home.NovaReleaseFeatures.requireTorEnabled()
         check(instance==null && !closed.get() && VpnService.prepare(this)==null && authorized())
         instance=this;revoked=onRevoked;egressAuthority=authorized
         try {
@@ -122,7 +123,7 @@ internal class HiddenTorIsolationConnection(private val context:Context,private 
         }
         override fun onServiceDisconnected(name:ComponentName){service=null;onRevoked()}
     }
-    fun start(){check(!closed);bound=context.bindService(Intent(context,HiddenTorIsolationService::class.java),connection,Context.BIND_AUTO_CREATE);check(bound)}
+    fun start(){uk.co.traynor.privategallery.core.home.NovaReleaseFeatures.requireTorEnabled();check(!closed);bound=context.bindService(Intent(context,HiddenTorIsolationService::class.java),connection,Context.BIND_AUTO_CREATE);check(bound)}
     fun network()=service?.network()
     fun suspendEgress()=service?.suspendEgress()==true
     fun resumeEgress()=service?.resumeEgress()==true

@@ -84,7 +84,7 @@ import androidx.compose.ui.unit.dp
     Column {
             if(allowModeSwitch) {
             Text("Connection mode",style=MaterialTheme.typography.titleSmall)
-            uk.co.traynor.privategallery.core.browser.hidden.HiddenConnectionPolicy.Mode.entries.forEach {choice ->
+            uk.co.traynor.privategallery.core.browser.hidden.HiddenConnectionPolicy.Mode.entries.filter {uk.co.traynor.privategallery.core.home.NovaReleaseFeatures.browserModeAllowed(it.name)}.forEach {choice ->
                 val enabled=choice!=uk.co.traynor.privategallery.core.browser.hidden.HiddenConnectionPolicy.Mode.VPN_TOR
                 val selected=choice==if(tor)uk.co.traynor.privategallery.core.browser.hidden.HiddenConnectionPolicy.Mode.TOR_ONLY else uk.co.traynor.privategallery.core.browser.hidden.HiddenConnectionPolicy.Mode.VPN_ONLY
                 Row(Modifier.fillMaxWidth().then(Modifier.selectable(selected=selected,enabled=enabled,role=androidx.compose.ui.semantics.Role.RadioButton,onClick={if(!selected)setMode(choice)})).padding(vertical=8.dp),verticalAlignment=androidx.compose.ui.Alignment.CenterVertically) {

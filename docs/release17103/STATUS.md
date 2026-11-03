@@ -1,3 +1,7 @@
+# Owner scope freeze: Tor deferred; code55 still security-blocked
+
+Tor entry points/services are disabled without fallback; implementation and data are preserved. See `TOR_DEFERRAL.md` and `TOR_DEFERRAL_SECURITY_REVIEW.md`. Historical run41688397704 DNS/native UDP escape is VPN_ONLY and remains Critical C1. No Tor checks were deleted to mask it; no signing/upgrade/APK delivery is authorized. Version1.7.10.3/code55 unchanged.
+
 # NovaOS UI and Private App repair checkpoint
 
 > **Current code55 status: BLOCKED by real DNS and native UDP escape during retained-child VPN teardown.** Frozen source24c29fd86e8493b00365357071d9c45e240eb3c4 has8/8 fresh Android passes plus18 compatible535 baseline passes, but the full packet gate failed. These are not release approval. No code55 production APK, activation marker or signing approval exists. The last delivered code54 record remains historical; see the latest blocker checkpoint below.

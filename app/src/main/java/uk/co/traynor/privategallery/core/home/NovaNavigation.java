@@ -12,7 +12,7 @@ public final class NovaNavigation {
    default -> "VAULT";
   };
  }
- public static boolean available(HomeLayout.Shortcut app,boolean hidden) {return app!=HomeLayout.Shortcut.TOR_BROWSER || hidden;}
+ public static boolean available(HomeLayout.Shortcut app,boolean hidden) {return app!=HomeLayout.Shortcut.TOR_BROWSER || (hidden && NovaReleaseFeatures.TOR_ENABLED);}
  public static String browserMode(HomeLayout.Shortcut app) {return app==HomeLayout.Shortcut.TOR_BROWSER?"TOR_ONLY":"VPN_ONLY";}
  public static String ownerLabel(boolean hidden,boolean concealed) {return concealed?null:(hidden?"Hidden Space":"Primary Space");}
  public static String rootDestination(boolean concealed) {return concealed?"GALLERY":"HOME";}

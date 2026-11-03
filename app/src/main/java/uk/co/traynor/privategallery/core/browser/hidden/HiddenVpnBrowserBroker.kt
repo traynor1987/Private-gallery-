@@ -39,6 +39,7 @@ internal class HiddenVpnBrowserBroker(
     private val onSuspended:(Long)->Unit={},
     private val onResumed:()->Unit={},
 ) : Binder(),Closeable {
+    init {check(uk.co.traynor.privategallery.core.home.NovaReleaseFeatures.browserModeAllowed(mode.name)){"Tor is deferred in this release"}}
     private val closed=AtomicBoolean()
     private val authorityRevoked=AtomicBoolean()
     private val cleanupQueued=AtomicBoolean()
@@ -342,6 +343,7 @@ internal class HiddenVpnBrowserBroker(
                         caller() // Same live, claimed child; stale capabilities cannot select a mode.
                         require(reason==RETURN && !manage)
                         val selected=HiddenConnectionPolicy.Mode.valueOf(switchName) // Never parse with a fallback.
+                        require(uk.co.traynor.privategallery.core.home.NovaReleaseFeatures.browserModeAllowed(selected.name))
                         require(selected!=HiddenConnectionPolicy.Mode.VPN_TOR && selected!=mode)
                         // This is only a selection, never network/authentication readiness. Persist
                         // before hard retirement so returning Main can observe it on its first start.

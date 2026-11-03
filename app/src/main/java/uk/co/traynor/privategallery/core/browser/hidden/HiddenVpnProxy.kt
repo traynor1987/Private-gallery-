@@ -116,7 +116,10 @@ internal class HiddenVpnProxy(
     }
     companion object {
         fun tor(unixPath:String,authorized:()->Boolean)=tor(unixPath,authorized,authorized)
-        fun tor(unixPath:String,authorized:()->Boolean,leaseCurrent:()->Boolean)=HiddenVpnProxy(javax.net.SocketFactory.getDefault(),{throw java.net.UnknownHostException("Tor origin DNS prohibited")},authorized,HiddenConnectionPolicy.Mode.TOR_ONLY,unixPath,leaseCurrent)
+        fun tor(unixPath:String,authorized:()->Boolean,leaseCurrent:()->Boolean):HiddenVpnProxy {
+            uk.co.traynor.privategallery.core.home.NovaReleaseFeatures.requireTorEnabled()
+            return HiddenVpnProxy(javax.net.SocketFactory.getDefault(),{throw java.net.UnknownHostException("Tor origin DNS prohibited")},authorized,HiddenConnectionPolicy.Mode.TOR_ONLY,unixPath,leaseCurrent)
+        }
         internal fun publicAddress(address:InetAddress):Boolean {
             if(address.isAnyLocalAddress || address.isLoopbackAddress || address.isLinkLocalAddress || address.isSiteLocalAddress || address.isMulticastAddress)return false
             val b=address.address

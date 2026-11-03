@@ -54,6 +54,7 @@ internal object EvidenceNetwork {
  }
 
  fun tor(context:Context,unixPath:String,current:()->Boolean,onClose:()->Unit={}):EvidenceRoute {
+  uk.co.traynor.privategallery.core.home.NovaReleaseFeatures.requireTorEnabled()
   val root=File(context.applicationInfo.dataDir).canonicalFile
   val socket=File(unixPath)
   fun privateSocket():Boolean=runCatching {

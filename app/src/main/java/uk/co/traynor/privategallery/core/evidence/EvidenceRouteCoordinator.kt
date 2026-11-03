@@ -62,6 +62,7 @@ internal class EvidenceRouteCoordinator(
       EvidenceNetwork.ownedVpn(access.owner,context,pinned,authorized,onClose={close()})
      }
      "Tor" -> {
+      uk.co.traynor.privategallery.core.home.NovaReleaseFeatures.requireTorEnabled()
       require(access.owner==EvidenceCatalog.Owner.HIDDEN){"Tor evidence route belongs to Hidden"}
       requireTransportAdmission()
       require(permissionGranted()){"Android isolation permission is required before connecting"}
