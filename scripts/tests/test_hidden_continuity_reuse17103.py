@@ -18,7 +18,7 @@ class CompatibilityTests(unittest.TestCase):
   self.git(root,'init');self.git(root,'config','user.email','fixture@invalid');self.git(root,'config','user.name','Synthetic fixture')
   (root/'protected.txt').write_text('baseline');self.git(root,'add','.');self.git(root,'commit','-m','synthetic baseline');return self.git(root,'rev-parse','HEAD')
  def test_every_unlisted_path_including_production_debug_and_passed_helpers_denies(self):
-  paths=['app/src/main/java/Hidden.kt','app/src/debug/AndroidManifest.xml','app/src/main/res/xml/network.xml','app/build.gradle.kts','gradle/libs.versions.toml',
+  paths=['app/src/main/java/Hidden.kt','app/src/debug/java/uk/co/traynor/privategallery/core/browser/hidden/HiddenContinuityFixtureService.kt','app/src/debug/AndroidManifest.xml','app/src/main/res/xml/network.xml','app/build.gradle.kts','gradle/libs.versions.toml',
          'app/src/androidTest/java/HiddenVpnLive1762Test.kt','app/src/androidTest/java/FixtureAccessibility178.java','scripts/hidden_vpn_fixture1762.py','scripts/verify_hidden_vpn_fixture1762.py','native/library.so','docs/release17103/UpgradeFixtureTest.kt','docs/release17103/continuity-release-cases.json']
   with tempfile.TemporaryDirectory() as folder:
    root=Path(folder);baseline=self.setup_repo(root)
@@ -28,9 +28,12 @@ class CompatibilityTests(unittest.TestCase):
  def test_exact_allowlist_passes_but_wrong_or_non_descendant_source_denies(self):
   with tempfile.TemporaryDirectory() as folder:
    root=Path(folder);baseline=self.setup_repo(root)
-   file=root/'scripts/hidden_continuity_fixture17103.py';file.parent.mkdir();file.write_text('reviewed fixture correction');self.git(root,'add','.');self.git(root,'commit','-m','allowed');candidate=self.git(root,'rev-parse','HEAD')
+   paths=['app/src/androidTest/java/uk/co/traynor/privategallery/core/browser/hidden/HiddenContinuityFixtureClient.kt','scripts/hidden_continuity_fixture17103.py']
+   for path in paths:
+    file=root/path;file.parent.mkdir(parents=True,exist_ok=True);file.write_text('reviewed fixture correction')
+   self.git(root,'add','.');self.git(root,'commit','-m','allowed');candidate=self.git(root,'rev-parse','HEAD')
    with patch.object(reuse,'BASELINE_SOURCE',baseline):
-    proof=reuse.compatibility(root,candidate);self.assertEqual(['scripts/hidden_continuity_fixture17103.py'],[item['path'] for item in proof['changed']])
+    proof=reuse.compatibility(root,candidate);self.assertEqual(paths,[item['path'] for item in proof['changed']])
     with self.assertRaises(ValueError):reuse.compatibility(root,'HEAD')
    with patch.object(reuse,'BASELINE_SOURCE',candidate),self.assertRaisesRegex(ValueError,'ancestor'):reuse.compatibility(root,baseline)
 

@@ -59,6 +59,27 @@ class HiddenMainRuntimeContinuity17103Test {
             node.isEnabled && node.isVisibleToUser && node.performAction(AccessibilityNodeInfo.ACTION_CLICK)
         }
     }
+    private val neutralControls=setOf("Panic Exit","Lock Hidden Space")
+    /** Killing the responder can lose ACTION_CLICK's reply; terminal assertions prove the outcome. */
+    private fun clickDestructive(text:String,owner:HiddenVpnBrowserBroker,current:()->Boolean) {
+        require(text in neutralControls)
+        var control:AccessibilityNodeInfo?=null
+        waitFor("Live current child exposes neutral control $text") {
+            if(diagnosticOwner!==owner || !owner.childIsAlive() || !current())return@waitFor false
+            val fresh=nodes();val root=automation.rootInActiveWindow ?: return@waitFor false
+            if(root.packageName?.toString()!=context.packageName)return@waitFor false
+            var node=fresh.firstOrNull {it.windowId==root.windowId && it.isVisibleToUser && it.isEnabled &&
+                (it.text?.toString()?.equals(text,ignoreCase=true)==true || it.contentDescription?.toString()?.equals(text,ignoreCase=true)==true)} ?: return@waitFor false
+            while(!node.isClickable)node=node.parent ?: return@waitFor false
+            if(node.windowId!=root.windowId || !node.isVisibleToUser || !node.isEnabled ||
+                node.actionList.none {it.id==AccessibilityNodeInfo.ACTION_CLICK})return@waitFor false
+            control=node;true
+        }
+        assertTrue("Destructive action starts from the live current authenticated child",diagnosticOwner===owner && owner.childIsAlive() && current())
+        assertTrue("Destructive control belongs to secure presentation",owner.childPresentationSnapshot().secure)
+        // Exactly one dispatch. Never retry based on the dying child's boolean response.
+        checkNotNull(control).performAction(AccessibilityNodeInfo.ACTION_CLICK)
+    }
     /** Match the working native-browser fixture: HTML uses exact visible touch, never ACTION_CLICK. */
     private fun clickWeb(text:String) {
         val bounds=android.graphics.Rect()
@@ -91,14 +112,14 @@ class HiddenMainRuntimeContinuity17103Test {
             val owner=diagnosticOwner ?: return
             val root=automation.rootInActiveWindow ?: return
             if(root.packageName?.toString()!=context.packageName)return
-            val statuses=setOf("SITE_READY","FOREIGN_REJECTED","APPROVAL_RECEIVED","APPROVAL_CANCELLED","WEBSITE_SESSION_OK","REJECTED")
+            val statuses=setOf("SITE_READY","FOREIGN_REJECTED","APPROVAL_RECEIVED","APPROVAL_CANCELLED","WEBSITE_SESSION_OK","REJECTED")+neutralControls+neutralControls.map {it.uppercase(java.util.Locale.ROOT)}
             val geometry=org.json.JSONArray()
             nodes().take(500).forEach {node ->
                 val bounds=android.graphics.Rect();node.getBoundsInScreen(bounds)
                 geometry.put(JSONObject().put("class",node.className?.toString()).put("window",node.windowId)
                     .put("bounds",bounds.toShortString()).put("visible",node.isVisibleToUser).put("enabled",node.isEnabled)
                     .put("clickable",node.isClickable).put("actions",org.json.JSONArray(node.actionList.map {it.id}))
-                    .put("fixture_status",node.text?.toString()?.takeIf {it in statuses} ?: ""))
+                    .put("fixture_status",node.text?.toString()?.takeIf {it in statuses} ?: node.contentDescription?.toString()?.takeIf {it in statuses} ?: ""))
             }
             val output=File(checkNotNull(InstrumentationRegistry.getArguments().getString("additionalTestOutputDir")))
             check(output.isDirectory || output.mkdirs())
@@ -188,6 +209,8 @@ class HiddenMainRuntimeContinuity17103Test {
     }
     @Test fun productionRuntimePreservesContinuationAfterPrimaryExpiry()=fixture {f ->
         val before=f.owner.childPresentationSnapshot();val oldAuthority=f.state.hidden.session.authority()
+        val authentication=f.state.hidden.session.authentication()
+        val presentation=HiddenBrowserRuntime::class.java.getDeclaredField("presentationOwner").apply {isAccessible=true}.get(f.runtime) as MainActivity.HiddenVpnPresentationAuthority
         val old=suspend(f);front()
         waitFor("Production reconnect reuses selected profile after Primary key expired",120){f.owner.valid() && visible("SITE_READY") && f.activity.hiddenOwnedVpnNetwork()!=old}
         val after=f.owner.childPresentationSnapshot()
@@ -201,7 +224,8 @@ class HiddenMainRuntimeContinuity17103Test {
         engine.disconnect()
         waitFor("Foreground route loss resumes the same production child",120){f.owner.valid() && f.activity.hiddenOwnedVpnNetwork()!=null && f.activity.hiddenOwnedVpnNetwork()!=restoredNetwork}
         assertEquals(before.viewIdentity,f.owner.childPresentationSnapshot().viewIdentity)
-        click("Panic Exit");waitFor("Current Hidden Panic survives Primary expiry"){!f.state.hidden.session.isUnlocked && !f.owner.childIsAlive()}
+        clickDestructive("Panic Exit",f.owner) {broker(f.runtime)===f.owner && f.activity.ownsHiddenBrowserPresentation(f.runtime,presentation) && f.state.hidden.session.isAuthenticationCurrent(authentication) && f.owner.valid()}
+        waitFor("Current Hidden Panic survives Primary expiry"){!f.state.hidden.session.isUnlocked && !f.owner.childIsAlive()}
         receipt("hidden-continuity17103-main.json",JSONObject().put("production_main_runtime",true).put("primary_expired",true).put("same_view_profile_app",true).put("protected_website_session",true).put("foreground_route_loss",true).put("panic_revoked",true))
     }
     @Test fun productionRuntimeHandlesRouteLossDuringSuspensionHandshake()=fixture {f ->

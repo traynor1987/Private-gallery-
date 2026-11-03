@@ -49,3 +49,5 @@ Earlier missing-website and diagnosis-only notes above are historical. The owner
 ## Code55 failed runtime correction
 
 17d9512 built successfully;41657787553 recorded18 passing cases and8 failed new continuity fixtures. Exact artifact/accounting, confirmed native-click defect and unresolved original Foreign-status observability are documented in FAILED_RUN_DIAGNOSIS.md. Current correction is test/fixture/evidence plumbing only; production lifecycle design and1.7.10.3/code55 remain unchanged. Reuse requires machine-checked compatibility and pinned original raw archive; all8 failed cases and their fresh packet gates remain mandatory. Signing remains inactive.
+
+802831b focused8 result:2pass(expiry/death),6laterfail; original negative-callback/Private Apps setup blockers progressed successfully. Second test-only batch fixes observer service lifetime and destructive-control observation/neutral lookup. Evidence and limits recorded in FAILED_RUN_DIAGNOSIS.md. Original18 remain protected-source reuse; all8 coupled fixtures require a new grouped pass and full packet gate. No release approval or APK exists for code55 yet.

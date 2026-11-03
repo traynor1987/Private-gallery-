@@ -20,8 +20,7 @@ internal class HiddenContinuityFixtureClient(private val context:Context):Closea
     init {
         check(context.getSystemService(ActivityManager::class.java).runningAppProcesses.any {it.uid==Process.myUid() && it.processName==context.packageName+":hidden_vpn_browser"})
         try {bound=context.bindService(intent,connection,0);check(bound && connected.await(10,TimeUnit.SECONDS))}
-        catch(failure:Throwable){if(bound){context.unbindService(connection);bound=false};throw failure}
-        finally {context.stopService(intent)}
+        catch(failure:Throwable){close();throw failure}
     }
     private fun transact(code:Int,write:(Parcel)->Unit={},read:(Parcel)->Int={0}):Int {
         val request=Parcel.obtain();val reply=Parcel.obtain()
@@ -37,5 +36,12 @@ internal class HiddenContinuityFixtureClient(private val context:Context):Closea
     fun release(){transact(2)}
     fun status()=transact(3,read={it.readInt()})
     fun gate(callback:IBinder,pause:Boolean=false,target:Int=HiddenVpnBrowserBroker.RESUME_COMMIT){transact(4,write={it.writeStrongBinder(callback);it.writeInt(if(pause)1 else 0);it.writeInt(target)})}
-    override fun close(){if(bound){context.unbindService(connection);bound=false};binder=null}
+    override fun close(){
+        if(bound) {
+            bound=false
+            // A flags=0 binding does not retain a stopped service. Keep its existing
+            // started lifetime until observation ends, then retire both before revocation.
+            try {context.stopService(intent)}finally {context.unbindService(connection);binder=null}
+        }
+    }
 }

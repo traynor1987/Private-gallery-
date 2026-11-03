@@ -18,6 +18,7 @@ BASELINE_RUN=41657787553
 BASELINE_ARTIFACT=13240894402
 BASELINE_SHA256='4f133eaea415a48cd1707be118d61e29f620db99f0a7a4ef3a6b51c13d74effb'
 ALLOW={
+ 'app/src/androidTest/java/uk/co/traynor/privategallery/core/browser/hidden/HiddenContinuityFixtureClient.kt',
  'app/src/androidTest/java/uk/co/traynor/privategallery/core/browser/hidden/HiddenBrowserContinuity17103Test.kt',
  'app/src/androidTest/java/uk/co/traynor/privategallery/core/browser/hidden/HiddenMainRuntimeContinuity17103Test.kt',
  'scripts/hidden_continuity_fixture17103.py',
