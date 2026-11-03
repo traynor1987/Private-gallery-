@@ -1,4 +1,5 @@
 import tempfile,json,zipfile,unittest,sys
+from unittest.mock import patch
 from pathlib import Path
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
 from verify_nova17103_runtime import validate
@@ -50,3 +51,26 @@ class ContinuityRuntimeGate(unittest.TestCase):
    for name,data in [('continuity-transition-result.json','{"verdict":"PASS"}'),('packets.txt','no packet observations'),('events.jsonl','{}'),('traffic.pcap',b'')]:
     archive,matrix=self.archive(Path(folder),tamper=('hidden-vpn1762/continuity-final/'+name,data))
     with self.subTest(tamper=name),self.assertRaises((ValueError,AssertionError)):validate(archive,matrix,'1'*40)
+
+ def test_reused18_are_explicit_and_revalidation_is_mandatory(self):
+  with tempfile.TemporaryDirectory()as folder:
+   archive,matrix=self.archive(Path(folder));selected=json.loads(matrix.read_text())
+   fresh={(cls,method) for cls,methods in selected.items() for method in methods if cls.endswith(('HiddenBrowserContinuity17103Test','HiddenMainRuntimeContinuity17103Test'))}
+   reused={(cls,method) for cls,methods in selected.items() for method in methods}-fresh
+   def xml(cases):return '<testsuite>'+''.join('<testcase classname="'+cls+'" name="'+method+'"/>' for cls,method in sorted(cases))+'</testsuite>'
+   with zipfile.ZipFile(archive)as z:files={name:z.read(name) for name in z.namelist()}
+   files['outputs/androidTest-results/TEST.xml']=xml(fresh)
+   files['nova17102/reused/ui/outputs/androidTest-results/original.xml']=xml(reused)
+   manifest=dict(source='1'*40,reused=[list(pair) for pair in sorted(reused)],fresh=[list(pair) for pair in sorted(fresh)])
+   files['nova17102/reuse/compatibility.json']=json.dumps(manifest);files['nova17102/reuse/baseline.zip']=b'SYNTHETIC UNIT STUB'
+   def write():
+    with zipfile.ZipFile(archive,'w')as z:
+     for name,data in files.items():z.writestr(name,data)
+   write()
+   with patch('verify_nova17103_runtime.verify_reuse',return_value=manifest)as verify_original:
+    self.assertEqual(26,validate(archive,matrix,'1'*40));verify_original.assert_called_once()
+    self.assertEqual('1'*40,verify_original.call_args.args[-1])
+   with patch('verify_nova17103_runtime.verify_reuse',side_effect=ValueError('incompatible')):
+    with self.assertRaises(ValueError):validate(archive,matrix,'1'*40)
+   del files['nova17102/reuse/compatibility.json'];write()
+   with self.assertRaisesRegex(ValueError,'Unlabelled'):validate(archive,matrix,'1'*40)

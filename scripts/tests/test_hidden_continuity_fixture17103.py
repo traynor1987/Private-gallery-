@@ -33,3 +33,13 @@ class ContinuityEndpointTest(unittest.TestCase):
   self.assertEqual(403,self.send('callback',phase='b',host='site-b.fixture.invalid',cookie='continuity17103=b')[0])
  def test_get_cannot_replay_one_use_post_callback(self):
   self.assertEqual(405,self.get('callback')[0])
+ def test_negative_observation_is_owned_and_never_consumes_or_creates_session(self):
+  self.send('begin');before=dict(self.fixture.continuity_states)
+  for reason in (b'origin',b'state'):
+   self.assertEqual(200,self.send('rejected',body=reason,cookie='continuity17103=a')[0])
+  for kw in (dict(host='site-b.fixture.invalid'),dict(tls=False),dict(cookie=''),dict(body=b'secret-token')):
+   args=dict(body=b'origin',cookie='continuity17103=a');args.update(kw)
+   self.assertEqual(403,self.send('rejected',**args)[0])
+  self.assertEqual(before,self.fixture.continuity_states)
+  self.assertFalse(getattr(self.fixture,'continuity_sessions',{}))
+  self.assertEqual(200,self.send('callback',cookie='continuity17103=a')[0])

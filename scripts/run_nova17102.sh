@@ -24,6 +24,10 @@ if [[ "${NOVA17103_CONTINUITY:-0}" == 1 ]]; then
 fi
 mkdir -p "$root"
 git rev-parse HEAD > "$root/source-sha.txt"
+if [[ "${NOVA17103_REUSE:-0}" == 1 ]]; then
+ [[ "${NOVA17103_CONTINUITY:-0}" == 1 && "${NOVA17102_ENGINE:-0}" != 1 ]]
+ python3 scripts/reuse_hidden_continuity17103.py --baseline "$RUNNER_TEMP/continuity-baseline17103.zip" --source "$GITHUB_SHA" --prepare app/build
+fi
 bash scripts/home1710_emulator_preflight.sh
 python3 scripts/debug_apk_identity1762.py app/build/outputs/apk/debug/app-debug.apk
 selection=$(python3 - <<'PY'
@@ -33,12 +37,14 @@ print(','.join(f'{cls}#{method}' for cls,methods in matrix.items() for method in
 PY
 )
 ui_status=0;ui_accounting_status=0
+if [[ "${NOVA17103_REUSE:-0}" != 1 ]]; then
 ./gradlew :app:connectedDebugAndroidTest "-Pandroid.testInstrumentationRunnerArguments.class=$selection" --stacktrace || ui_status=$?
 python3 scripts/verify_selected_android1762.py app/build/outputs/androidTest-results/connected/debug "$selection" > "$root/ui-accounting.txt" || ui_accounting_status=$?
 printf '%s\n' "$ui_status" > "$root/ui-original-exit-status.txt"
 mkdir -p "$root/ui/outputs"
 if [[ -d app/build/outputs/androidTest-results ]]; then cp -R app/build/outputs/androidTest-results "$root/ui/outputs/"; fi
 if [[ -d app/build/outputs/connected_android_test_additional_output ]]; then cp -R app/build/outputs/connected_android_test_additional_output "$root/ui/outputs/"; fi
+fi
 if [[ "${NOVA17102_ENGINE:-0}" == 1 ]]; then
  rm -rf app/build/outputs/androidTest-results/connected/debug app/build/outputs/connected_android_test_additional_output
  [[ "$ui_status" == 0 && "$ui_accounting_status" == 0 ]]
@@ -52,11 +58,14 @@ adb shell chmod 600 /data/local/tmp/hidden-vpn1762.conf
 package=$(python3 scripts/debug_apk_identity1762.py app/build/outputs/apk/debug/app-debug.apk)
 bash scripts/reset_native_browser_evidence1762.sh "$package"
 run_route_tests() {
- ./gradlew :app:connectedDebugAndroidTest "-Pandroid.testInstrumentationRunnerArguments.class=$1" \
-  -Pandroid.testInstrumentationRunnerArguments.hiddenVpnConfig=/data/local/tmp/hidden-vpn1762.conf \
-  -Pandroid.testInstrumentationRunnerArguments.hiddenVpnOrigin=http://fixture.invalid \
-  "-Pandroid.testInstrumentationRunnerArguments.hiddenOnionProbeUrl=${HIDDEN_ONION_PROBE_URL:?}" \
-  "-Pandroid.testInstrumentationRunnerArguments.hiddenOnionProbeExpected=${HIDDEN_ONION_PROBE_EXPECTED:?}" --stacktrace
+ local route_args=("-Pandroid.testInstrumentationRunnerArguments.class=$1"
+  -Pandroid.testInstrumentationRunnerArguments.hiddenVpnConfig=/data/local/tmp/hidden-vpn1762.conf
+  -Pandroid.testInstrumentationRunnerArguments.hiddenVpnOrigin=http://fixture.invalid)
+ if [[ "${NOVA17103_REUSE:-0}" != 1 ]]; then
+  route_args+=("-Pandroid.testInstrumentationRunnerArguments.hiddenOnionProbeUrl=${HIDDEN_ONION_PROBE_URL:?}"
+   "-Pandroid.testInstrumentationRunnerArguments.hiddenOnionProbeExpected=${HIDDEN_ONION_PROBE_EXPECTED:?}")
+ fi
+ ./gradlew :app:connectedDebugAndroidTest "${route_args[@]}" --stacktrace
 }
 collect_native_receipts() {
  for result in vpn-native-revocation1762-result.json vpn-network-loss1762-result.json native-tor1762-result.json; do
@@ -66,7 +75,7 @@ collect_native_receipts() {
  done
 }
 baseline_status=0;baseline_accounting_status=0
-if [[ "${NOVA17103_CONTINUITY:-0}" == 1 ]]; then
+if [[ "${NOVA17103_CONTINUITY:-0}" == 1 && "${NOVA17103_REUSE:-0}" != 1 ]]; then
  # Preserve the shipped revocation check's complete observation window before a
  # later legitimate child emits new STUN. Never exempt later packets from its assertion.
  baseline_selection=$(python3 - <<'BASELINE'
@@ -133,4 +142,9 @@ else
 fi
 [[ "$ui_status" == 0 && "$ui_accounting_status" == 0 && "$route_status" == 0 && "$route_accounting_status" == 0 ]]
 printf '%s\n' "Selected UI matrix: $NOVA17102_MATRIX" > "$root/selection-scope.txt"
-printf '%s\n' 'PASS: focused UI and actual VPN/Tor route evidence; NOT signing approval' > "$root/runtime-result.txt"
+if [[ "${NOVA17103_REUSE:-0}" == 1 ]]; then
+ printf '%s\n' "18 pinned baseline cases reused; only8 continuity cases executed fresh; see reuse/compatibility.json" > "$root/selection-scope.txt"
+ printf '%s\n' 'PASS:18 compatible original-source cases reused,8 continuity cases freshly passed;26 aggregate; fresh full packet/transition evidence; NOT same-source26 or signing approval' > "$root/runtime-result.txt"
+else
+ printf '%s\n' 'PASS: focused UI and actual VPN/Tor route evidence; NOT signing approval' > "$root/runtime-result.txt"
+fi

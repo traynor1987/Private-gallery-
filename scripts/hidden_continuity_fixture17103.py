@@ -62,7 +62,7 @@ def get(handler, fixture):
 <script>const state=crypto.randomUUID(),documentId=crypto.randomUUID();let approved=false;
 fetch('/continuity17103/begin-PHASE',{method:'POST',body:state+':'+documentId}).then(()=>statusNode().textContent='SITE_READY');
 function statusNode(){return document.getElementById('status')}
-addEventListener('message',e=>{if(e.origin!=='https://provider-PHASE.fixture.invalid'||!e.data||e.data.state!==state){statusNode().textContent='FOREIGN_REJECTED';return}approved=e.data.approved;statusNode().textContent=approved?'APPROVAL_RECEIVED':'APPROVAL_CANCELLED'});
+addEventListener('message',e=>{if(e.origin!=='https://provider-PHASE.fixture.invalid'||!e.data||e.data.state!==state){statusNode().textContent='FOREIGN_REJECTED';fetch('/continuity17103/rejected-PHASE',{method:'POST',body:e.origin!=='https://provider-PHASE.fixture.invalid'?'origin':'state'}).catch(()=>{});return}approved=e.data.approved;statusNode().textContent=approved?'APPROVAL_RECEIVED':'APPROVAL_CANCELLED'});
 function finish(){if(!approved)return;fetch('/continuity17103/callback-PHASE',{method:'POST',body:state+':'+documentId}).then(r=>r.ok?fetch('/continuity17103/session-PHASE').then(s=>s.text()):Promise.resolve('REJECTED')).then(t=>statusNode().textContent=t)}
 </script><button onclick="window.open('https://provider-PHASE.fixture.invalid/continuity17103/provider-PHASE#'+state)">Open synthetic approval</button>
 <button onclick="finish()">Finish website session</button>
@@ -85,6 +85,9 @@ def post(handler, fixture):
         if '/begin-' in path:
             valid=tls and handler.headers.get('Host')=='site-'+phase+'.fixture.invalid'
             if valid:fixture.continuity_states[phase]=body
+        elif '/rejected-' in path:
+            # A synthetic diagnostic only: no supplied origin/state/token is logged.
+            valid=tls and handler.headers.get('Host')=='site-'+phase+'.fixture.invalid' and cookie(handler,'continuity17103')==phase and body in ('origin','state')
         elif '/callback-' in path:
             valid=handler.headers.get('Host')=='site-'+phase+'.fixture.invalid' and fixture.continuity_states.get(phase)==body and cookie(handler,'continuity17103')==phase and tls
             if valid:

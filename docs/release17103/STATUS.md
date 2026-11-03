@@ -45,3 +45,7 @@ Latest verified application source eaa518770f267957cc8383e1760b87167b5d32c9 adds
 ## Current coordinated lifecycle candidate
 
 Earlier missing-website and diagnosis-only notes above are historical. The owner supplied a multi-site reproduction; four destructive paths are now coordinated in the current implementation. COORDINATED_IMPLEMENTATION.md records exact scope, boundaries and mandatory unexecuted gates. Candidate55 follows last signed54; no new APK has been delivered or signing activated. Do not reuse an old signed APK as this repair.
+
+## Code55 failed runtime correction
+
+17d9512 built successfully;41657787553 recorded18 passing cases and8 failed new continuity fixtures. Exact artifact/accounting, confirmed native-click defect and unresolved original Foreign-status observability are documented in FAILED_RUN_DIAGNOSIS.md. Current correction is test/fixture/evidence plumbing only; production lifecycle design and1.7.10.3/code55 remain unchanged. Reuse requires machine-checked compatibility and pinned original raw archive; all8 failed cases and their fresh packet gates remain mandatory. Signing remains inactive.

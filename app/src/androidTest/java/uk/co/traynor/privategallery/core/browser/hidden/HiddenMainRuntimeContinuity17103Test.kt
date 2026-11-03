@@ -6,6 +6,7 @@ import android.net.Network
 import android.net.VpnService
 import android.os.*
 import android.view.accessibility.AccessibilityNodeInfo
+import android.view.MotionEvent
 import androidx.activity.compose.setContent
 import androidx.compose.material3.Text
 import androidx.lifecycle.ViewModelProvider
@@ -32,21 +33,84 @@ import java.util.concurrent.atomic.AtomicBoolean
 class HiddenMainRuntimeContinuity17103Test {
     private val instrumentation=InstrumentationRegistry.getInstrumentation()
     private val context=instrumentation.targetContext
+    private var diagnosticOwner:HiddenVpnBrowserBroker?=null
     private val automation get()=instrumentation.uiAutomation
     private fun shell(command:String)=ParcelFileDescriptor.AutoCloseInputStream(automation.executeShellCommand(command)).use {it.readBytes().toString(Charsets.UTF_8)}
     private fun waitFor(message:String,seconds:Int=30,test:()->Boolean) {
         val deadline=SystemClock.elapsedRealtime()+seconds*1000L
         while(SystemClock.elapsedRealtime()<deadline){if(runCatching(test).getOrDefault(false))return;Thread.sleep(100)}
-        assertTrue(message,runCatching(test).getOrDefault(false))
+        val passed=runCatching(test).getOrDefault(false)
+        if(!passed)captureFailure(message)
+        assertTrue(message,passed)
     }
     private fun main(block:()->Unit)=instrumentation.runOnMainSync(block)
     private fun nodes():List<AccessibilityNodeInfo> {
+        automation.clearCache()
         val all=mutableListOf<AccessibilityNodeInfo>()
         fun visit(node:AccessibilityNodeInfo?){if(node==null)return;all+=node;repeat(node.childCount){visit(node.getChild(it))}}
         visit(automation.rootInActiveWindow);return all
     }
     private fun visible(text:String)=nodes().any {it.isVisibleToUser && (it.text?.toString()==text || it.contentDescription?.toString()==text)}
-    private fun click(text:String) {waitFor("Accessible fixture action $text"){nodes().firstOrNull {it.isVisibleToUser && (it.text?.toString()==text || it.contentDescription?.toString()==text)}?.performAction(AccessibilityNodeInfo.ACTION_CLICK)==true}}
+    /** Compose labels can be non-clickable descendants of the actual native button. */
+    private fun click(text:String) {
+        waitFor("Native fixture action $text") {
+            var node=nodes().firstOrNull {it.isVisibleToUser && (it.text?.toString()==text || it.contentDescription?.toString()==text)} ?: return@waitFor false
+            while(!node.isClickable)node=node.parent ?: return@waitFor false
+            node.isEnabled && node.isVisibleToUser && node.performAction(AccessibilityNodeInfo.ACTION_CLICK)
+        }
+    }
+    /** Match the working native-browser fixture: HTML uses exact visible touch, never ACTION_CLICK. */
+    private fun clickWeb(text:String) {
+        val bounds=android.graphics.Rect()
+        var previous:android.graphics.Rect?=null
+        var scrollRequested=false
+        waitFor("Visible stable website action $text") {
+            val fresh=nodes()
+            val root=automation.rootInActiveWindow ?: return@waitFor false
+            val node=fresh.firstOrNull {it.windowId==root.windowId && it.isEnabled &&
+                (it.text?.toString()==text || it.contentDescription?.toString()==text)} ?: return@waitFor false
+            node.getBoundsInScreen(bounds)
+            val window=android.graphics.Rect();root.getBoundsInScreen(window)
+            if(!node.isVisibleToUser || bounds.isEmpty || !bounds.intersect(window)) {
+                previous=null
+                if(!scrollRequested){scrollRequested=true;node.performAction(AccessibilityNodeInfo.AccessibilityAction.ACTION_SHOW_ON_SCREEN.id)}
+                return@waitFor false
+            }
+            val stable=previous==bounds;previous=android.graphics.Rect(bounds);stable
+        }
+        val down=SystemClock.uptimeMillis()
+        for(action in intArrayOf(MotionEvent.ACTION_DOWN,MotionEvent.ACTION_UP)) {
+            val event=MotionEvent.obtain(down,SystemClock.uptimeMillis(),action,bounds.exactCenterX(),bounds.exactCenterY(),0)
+            event.source=android.view.InputDevice.SOURCE_TOUCHSCREEN
+            try {assertTrue("Website touch delivered",automation.injectInputEvent(event,true))}finally {event.recycle()}
+        }
+    }
+    /** Reserved synthetic fixture diagnostics: no URLs, free text, credentials or cleared secure flags. */
+    private fun captureFailure(stage:String) {
+        runCatching {
+            val owner=diagnosticOwner ?: return
+            val root=automation.rootInActiveWindow ?: return
+            if(root.packageName?.toString()!=context.packageName)return
+            val statuses=setOf("SITE_READY","FOREIGN_REJECTED","APPROVAL_RECEIVED","APPROVAL_CANCELLED","WEBSITE_SESSION_OK","REJECTED")
+            val geometry=org.json.JSONArray()
+            nodes().take(500).forEach {node ->
+                val bounds=android.graphics.Rect();node.getBoundsInScreen(bounds)
+                geometry.put(JSONObject().put("class",node.className?.toString()).put("window",node.windowId)
+                    .put("bounds",bounds.toShortString()).put("visible",node.isVisibleToUser).put("enabled",node.isEnabled)
+                    .put("clickable",node.isClickable).put("actions",org.json.JSONArray(node.actionList.map {it.id}))
+                    .put("fixture_status",node.text?.toString()?.takeIf {it in statuses} ?: ""))
+            }
+            val output=File(checkNotNull(InstrumentationRegistry.getArguments().getString("additionalTestOutputDir")))
+            check(output.isDirectory || output.mkdirs())
+            val name="main-continuity17103-failure-${SystemClock.elapsedRealtime()}"
+            val secure=owner.childIsAlive() && owner.childPresentationSnapshot().secure
+            File(output,"$name.json").writeText(JSONObject().put("stage",stage).put("secure",secure).put("nodes",geometry).toString())
+            // A black/platform-redacted secure screenshot is expected and remains useful window evidence.
+            if(secure)automation.takeScreenshot()?.let {bitmap ->
+                try {File(output,"$name.png").outputStream().use {bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG,100,it)}}finally {bitmap.recycle()}
+            }
+        }
+    }
     private fun request(network:Network,path:String):JSONObject {
         val connection=network.openConnection(URL("http://fixture.invalid/continuity17103/$path")) as HttpURLConnection
         connection.connectTimeout=3000;connection.readTimeout=3000
@@ -91,9 +155,9 @@ class HiddenMainRuntimeContinuity17103Test {
                 }
                 val active=checkNotNull(runtime)
                 waitFor("Production Runtime launched actual child",120){broker(active)?.valid()==true && visible("Private Apps")}
-                val owner=checkNotNull(broker(active));click("Private Apps");click("Main continuity")
+                val owner=checkNotNull(broker(active));diagnosticOwner=owner;click("Private Apps");click("Main continuity")
                 waitFor("Real HTTPS fixture document ready"){visible("SITE_READY")}
-                click("Start continuity probes")
+                clickWeb("Start continuity probes")
                 val network=checkNotNull(checkNotNull(activity).hiddenOwnedVpnNetwork())
                 val baseline=request(network,"evidence").getJSONArray("events").length()
                 waitFor("Fresh page, worker and native UDP probes") {
@@ -105,6 +169,7 @@ class HiddenMainRuntimeContinuity17103Test {
                 finally {main {active.close();checkNotNull(state).hidden.leave();checkNotNull(state).session.lock();route(checkNotNull(activity),Route.LOCK)}}
             }
         }finally {
+            diagnosticOwner=null
             main {runtime?.close();activity?.hiddenBrowserOwner?.close();state?.hidden?.leave()}
             activity?.let {host ->val method=MainActivity::class.java.getDeclaredMethod("getWireGuardEngine").apply {isAccessible=true};(method.invoke(host) as WireGuardVpnEngine).disconnect()}
             preferences.timeout=oldGrace
@@ -128,8 +193,8 @@ class HiddenMainRuntimeContinuity17103Test {
         val after=f.owner.childPresentationSnapshot()
         assertEquals(before.viewIdentity,after.viewIdentity);assertEquals(before.profileIdentity,after.profileIdentity);assertEquals(before.appIdentity,after.appIdentity)
         assertFalse(f.state.hidden.session.isAuthorityCurrent(oldAuthority));assertFalse(f.state.session.isUnlocked)
-        click("Open synthetic approval");waitFor("Owned popup"){visible("Approve synthetic login")};click("Approve synthetic login")
-        waitFor("Original opener owns callback"){visible("APPROVAL_RECEIVED")};click("Finish website session");waitFor("Protected website session"){visible("WEBSITE_SESSION_OK")}
+        clickWeb("Open synthetic approval");waitFor("Owned popup"){visible("Approve synthetic login")};clickWeb("Approve synthetic login")
+        waitFor("Original opener owns callback"){visible("APPROVAL_RECEIVED")};clickWeb("Finish website session");waitFor("Protected website session"){visible("WEBSITE_SESSION_OK")}
         // A foreground route loss exercises the Runtime monitor and child NetworkCallback together.
         val restoredNetwork=checkNotNull(f.activity.hiddenOwnedVpnNetwork())
         val engine=MainActivity::class.java.getDeclaredMethod("getWireGuardEngine").apply {isAccessible=true}.invoke(f.activity) as WireGuardVpnEngine

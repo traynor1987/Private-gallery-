@@ -4,6 +4,7 @@ import android.app.ActivityManager
 import android.content.ContextWrapper
 import android.net.*
 import android.os.*
+import android.view.accessibility.AccessibilityNodeInfo
 import android.view.MotionEvent
 import androidx.activity.ComponentActivity
 import androidx.test.core.app.ActivityScenario
@@ -26,31 +27,82 @@ import java.util.concurrent.atomic.*
 class HiddenBrowserContinuity17103Test {
     private val instrumentation=InstrumentationRegistry.getInstrumentation()
     private val context=instrumentation.targetContext
+    private var diagnosticOwner:HiddenVpnBrowserBroker?=null
     private var exploring=false
     private val automation get()=if(exploring)FixtureAccessibility178.automation(instrumentation) else instrumentation.uiAutomation
     private fun shell(cmd:String)=ParcelFileDescriptor.AutoCloseInputStream(automation.executeShellCommand(cmd)).use {it.readBytes().toString(Charsets.UTF_8)}
     private fun waitFor(message:String,seconds:Int=30,check:()->Boolean) {
         val until=SystemClock.elapsedRealtime()+seconds*1000L
         while(SystemClock.elapsedRealtime()<until){if(runCatching(check).getOrDefault(false))return;Thread.sleep(100)}
-        assertTrue(message,runCatching(check).getOrDefault(false))
+        val passed=runCatching(check).getOrDefault(false)
+        if(!passed)captureFailure(message)
+        assertTrue(message,passed)
     }
-    private fun nodes():List<android.view.accessibility.AccessibilityNodeInfo> {
+    private fun nodes():List<AccessibilityNodeInfo> {
+        automation.clearCache()
         val result=mutableListOf<android.view.accessibility.AccessibilityNodeInfo>()
         fun visit(node:android.view.accessibility.AccessibilityNodeInfo?){if(node==null)return;result+=node;repeat(node.childCount){visit(node.getChild(it))}}
         visit(automation.rootInActiveWindow);return result
     }
     private fun visible(text:String)=nodes().any {it.isVisibleToUser && (it.text?.toString()==text || it.contentDescription?.toString()==text)}
+    /** Compose labels can be non-clickable descendants of the actual native button. */
     private fun click(text:String) {
-        var last:android.graphics.Rect?=null;val bounds=android.graphics.Rect()
-        waitFor("Visible stable touch target $text") {
-            val node=nodes().firstOrNull {it.isVisibleToUser && it.isEnabled && (it.text?.toString()==text || it.contentDescription?.toString()==text)} ?: return@waitFor false
-            node.getBoundsInScreen(bounds);val stable=!bounds.isEmpty && last==bounds;last=android.graphics.Rect(bounds);stable
+        waitFor("Native fixture action $text") {
+            var node=nodes().firstOrNull {it.isVisibleToUser && (it.text?.toString()==text || it.contentDescription?.toString()==text)} ?: return@waitFor false
+            while(!node.isClickable)node=node.parent ?: return@waitFor false
+            node.isEnabled && node.isVisibleToUser && node.performAction(AccessibilityNodeInfo.ACTION_CLICK)
+        }
+    }
+    /** Match the working native-browser fixture: HTML uses exact visible touch, never ACTION_CLICK. */
+    private fun clickWeb(text:String) {
+        val bounds=android.graphics.Rect()
+        var previous:android.graphics.Rect?=null
+        var scrollRequested=false
+        waitFor("Visible stable website action $text") {
+            val fresh=nodes()
+            val root=automation.rootInActiveWindow ?: return@waitFor false
+            val node=fresh.firstOrNull {it.windowId==root.windowId && it.isEnabled &&
+                (it.text?.toString()==text || it.contentDescription?.toString()==text)} ?: return@waitFor false
+            node.getBoundsInScreen(bounds)
+            val window=android.graphics.Rect();root.getBoundsInScreen(window)
+            if(!node.isVisibleToUser || bounds.isEmpty || !bounds.intersect(window)) {
+                previous=null
+                if(!scrollRequested){scrollRequested=true;node.performAction(AccessibilityNodeInfo.AccessibilityAction.ACTION_SHOW_ON_SCREEN.id)}
+                return@waitFor false
+            }
+            val stable=previous==bounds;previous=android.graphics.Rect(bounds);stable
         }
         val down=SystemClock.uptimeMillis()
         for(action in intArrayOf(MotionEvent.ACTION_DOWN,MotionEvent.ACTION_UP)) {
             val event=MotionEvent.obtain(down,SystemClock.uptimeMillis(),action,bounds.exactCenterX(),bounds.exactCenterY(),0)
             event.source=android.view.InputDevice.SOURCE_TOUCHSCREEN
-            try{assertTrue(automation.injectInputEvent(event,true))}finally{event.recycle()}
+            try {assertTrue("Website touch delivered",automation.injectInputEvent(event,true))}finally {event.recycle()}
+        }
+    }
+    /** Reserved synthetic fixture diagnostics: no URLs, free text, credentials or cleared secure flags. */
+    private fun captureFailure(stage:String) {
+        runCatching {
+            val owner=diagnosticOwner ?: return
+            val root=automation.rootInActiveWindow ?: return
+            if(root.packageName?.toString()!=context.packageName)return
+            val statuses=setOf("SITE_READY","FOREIGN_REJECTED","APPROVAL_RECEIVED","APPROVAL_CANCELLED","WEBSITE_SESSION_OK","REJECTED")
+            val geometry=org.json.JSONArray()
+            nodes().take(500).forEach {node ->
+                val bounds=android.graphics.Rect();node.getBoundsInScreen(bounds)
+                geometry.put(JSONObject().put("class",node.className?.toString()).put("window",node.windowId)
+                    .put("bounds",bounds.toShortString()).put("visible",node.isVisibleToUser).put("enabled",node.isEnabled)
+                    .put("clickable",node.isClickable).put("actions",org.json.JSONArray(node.actionList.map {it.id}))
+                    .put("fixture_status",node.text?.toString()?.takeIf {it in statuses} ?: ""))
+            }
+            val output=File(checkNotNull(InstrumentationRegistry.getArguments().getString("additionalTestOutputDir")))
+            check(output.isDirectory || output.mkdirs())
+            val name="continuity17103-failure-${SystemClock.elapsedRealtime()}"
+            val secure=owner.childIsAlive() && owner.childPresentationSnapshot().secure
+            File(output,"$name.json").writeText(JSONObject().put("stage",stage).put("secure",secure).put("nodes",geometry).toString())
+            // A black/platform-redacted secure screenshot is expected and remains useful window evidence.
+            if(secure)automation.takeScreenshot()?.let {bitmap ->
+                try {File(output,"$name.png").outputStream().use {bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG,100,it)}}finally {bitmap.recycle()}
+            }
         }
     }
     private fun evidence(network:Network):JSONObject {
@@ -116,7 +168,7 @@ class HiddenBrowserContinuity17103Test {
                         }},backgroundGrace={if(expire)30_000L else 300_000L},onResumed={resumed.incrementAndGet()})
                     checkNotNull(broker).launch()
                 }
-                val owner=checkNotNull(broker)
+                val owner=checkNotNull(broker);diagnosticOwner=owner
                 eventBaseline=evidence(route.get()).getJSONArray("events").length()
                 waitFor("Native browser ready"){owner.valid() && visible("Private Apps")}
                 click("Private Apps")
@@ -125,16 +177,17 @@ class HiddenBrowserContinuity17103Test {
                     click("Continuity $phase")
                     waitFor("Site owns initial state"){visible("SITE_READY") && eventCount(route.get(),"continuity-begin",phase)==1}
                     val opener=owner.childPresentationSnapshot();assertTrue(opener.appIdentity!=0)
-                    click("Reject foreign callback");waitFor("Foreign origin/state rejected"){visible("FOREIGN_REJECTED")}
+                    clickWeb("Reject foreign callback");waitFor("Synthetic handler independently observed foreign callback rejection"){eventCount(route.get(),"continuity-rejected",phase)==1}
+                    waitFor("Foreign origin/state rejected"){visible("FOREIGN_REJECTED")}
                     assertEquals(0,eventCount(route.get(),"continuity-callback",phase))
-                    click("Start continuity probes")
+                    clickWeb("Start continuity probes")
                     waitFor("Real JS and worker requests precede suspension"){eventCount(route.get(),"continuity-probe",phase)>1 && eventCount(route.get(),"continuity-workerprobe",phase)>0}
                     waitFor("Real nonproxy UDP precedes suspension") {val events=evidence(route.get()).getJSONArray("events");(eventBaseline until events.length()).any {events.getJSONObject(it).optString("kind")=="stun"}}
-                    click("Open synthetic approval");waitFor("Actual second-origin popup"){visible("Approve synthetic login")}
+                    clickWeb("Open synthetic approval");waitFor("Actual second-origin popup"){visible("Approve synthetic login")}
                     if(phase=="b") {
-                        click("Cancel synthetic login");waitFor("Cancelled approval does not create website session"){visible("APPROVAL_CANCELLED")}
+                        clickWeb("Cancel synthetic login");waitFor("Cancelled approval does not create website session"){visible("APPROVAL_CANCELLED")}
                         assertEquals(0,eventCount(route.get(),"continuity-session",phase))
-                        click("Open synthetic approval");waitFor("Retry remains owned by same opener"){visible("Approve synthetic login")}
+                        clickWeb("Open synthetic approval");waitFor("Retry remains owned by same opener"){visible("Approve synthetic login")}
                     }
                     val popup=owner.childPresentationSnapshot();assertEquals(opener.viewCount+1,popup.viewCount);assertEquals(opener.appIdentity,popup.appIdentity)
                     val oldAuthority=session.authority();val oldNetwork=route.get()
@@ -204,10 +257,10 @@ class HiddenBrowserContinuity17103Test {
                     assertFalse("Revoked proxy credentials never inherit new route",oldAccepted)
                     val after=evidence(route.get()).getJSONArray("events")
                     assertFalse("No HTTP/DNS/worker/UDP fixture traffic while confirmed suspended",(0 until after.length()).any {after.getJSONObject(it).getDouble("time") in (suspendedAt+0.25)..(foregroundAt-0.25)})
-                    click("Approve synthetic login");waitFor("Original opener accepts owned state"){visible("APPROVAL_RECEIVED")}
+                    clickWeb("Approve synthetic login");waitFor("Original opener accepts owned state"){visible("APPROVAL_RECEIVED")}
                     assertEquals(opener.viewIdentity,owner.childPresentationSnapshot().viewIdentity)
-                    click("Finish website session");waitFor("Final website session, not approval UI"){visible("WEBSITE_SESSION_OK") && eventCount(route.get(),"continuity-callback",phase)==1 && eventCount(route.get(),"continuity-session",phase)==1}
-                    click("Finish website session");waitFor("One-use callback replay is rejected"){visible("REJECTED")}
+                    clickWeb("Finish website session");waitFor("Final website session, not approval UI"){visible("WEBSITE_SESSION_OK") && eventCount(route.get(),"continuity-callback",phase)==1 && eventCount(route.get(),"continuity-session",phase)==1}
+                    clickWeb("Finish website session");waitFor("One-use callback replay is rejected"){visible("REJECTED")}
                     assertEquals(1,eventCount(route.get(),"continuity-begin",phase))
                     if(phase=="a") {if(visible("Expand app controls"))click("Expand app controls");click("Private Apps library")}
                 }
@@ -220,6 +273,6 @@ class HiddenBrowserContinuity17103Test {
                     .put("suspended_io_denied",true).put("old_authority_and_proxy_dead",true).put("fresh_verified_network",true)
                     .put("cancelled_approval_no_session",true).put("authenticated_session_verified",true).put("foreign_callback_rejected",true).put("one_use_post_replay_rejected",true).put("no_get_replay",true).toString())
             }
-        }finally {workerClient?.close();privacy.enabled=oldPanicEnabled;privacy.shortcut=oldShortcut;broker?.close();session.lock();engine.disconnect();executor.shutdownNow();root.deleteRecursively()}
+        }finally {diagnosticOwner=null;workerClient?.close();privacy.enabled=oldPanicEnabled;privacy.shortcut=oldShortcut;broker?.close();session.lock();engine.disconnect();executor.shutdownNow();root.deleteRecursively()}
     }
 }

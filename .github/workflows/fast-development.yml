@@ -431,8 +431,28 @@ jobs:
     if: github.event_name == 'push' && github.ref == 'refs/heads/release/1.7.10-private-home'
     runs-on: ubuntu-24.04
     timeout-minutes: 55
+    permissions: { contents: read, actions: read }
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: ${{ contains(github.event.head_commit.message, '[continuity17103-retry]') && '0' || '1' }}
+      - name: Fetch pinned original18-case evidence for compatible focused retry
+        if: contains(github.event.head_commit.message, '[verify17102]') && contains(github.event.head_commit.message, '[continuity17103-retry]')
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs=require('fs'),crypto=require('crypto');
+            const run=await github.rest.actions.getWorkflowRun({...context.repo,run_id:41657787553});
+            if(run.data.head_sha!=='17d9512fc4613c24f401ad7cba8f359310c77d88' || run.data.head_branch!=='release/1.7.10-private-home' || run.data.event!=='push')throw new Error('Pinned baseline run identity differs');
+            const artifact=await github.rest.actions.getArtifact({...context.repo,artifact_id:13240894402});
+            if(artifact.data.name!=='novaos17102-verification' || artifact.data.expired || artifact.data.workflow_run?.id!==41657787553 || artifact.data.workflow_run?.head_sha!==run.data.head_sha)throw new Error('Pinned baseline artifact identity differs');
+            const download=await github.rest.actions.downloadArtifact({...context.repo,artifact_id:13240894402,archive_format:'zip'});
+            const bytes=Buffer.from(download.data);
+            if(crypto.createHash('sha256').update(bytes).digest('hex')!=='4f133eaea415a48cd1707be118d61e29f620db99f0a7a4ef3a6b51c13d74effb')throw new Error('Pinned baseline archive hash differs');
+            fs.writeFileSync(process.env.RUNNER_TEMP+'/continuity-baseline17103.zip',bytes);
+      - name: Require exact source compatibility before reusing any original result
+        if: contains(github.event.head_commit.message, '[verify17102]') && contains(github.event.head_commit.message, '[continuity17103-retry]')
+        run: python3 scripts/reuse_hidden_continuity17103.py --baseline "$RUNNER_TEMP/continuity-baseline17103.zip" --source "$GITHUB_SHA" --prepare app/build
       - uses: actions/setup-java@v5
         with: { distribution: temurin, java-version: '17' }
       - uses: actions/cache/restore@v4
@@ -471,7 +491,7 @@ jobs:
           java -cp /tmp/continuity17103 uk.co.traynor.privategallery.core.browser.hidden.HiddenBrowserContinuationChecks
           java com.sun.tools.javac.Main -d /tmp/picker17103 app/src/main/java/uk/co/traynor/privategallery/ui/PickerMediaLabels.java tests/picker_presentation/PickerMediaLabelsChecks.java
           java -cp /tmp/picker17103 PickerMediaLabelsChecks
-          PYTHONDONTWRITEBYTECODE=1 python3 -m unittest scripts.tests.test_upgrade17103_controls scripts.tests.test_nova17103_runtime_gate scripts.tests.test_continuity_approval17103
+          PYTHONDONTWRITEBYTECODE=1 python3 -m unittest scripts.tests.test_upgrade17103_controls scripts.tests.test_nova17103_runtime_gate scripts.tests.test_continuity_approval17103 scripts.tests.test_hidden_continuity_reuse17103 scripts.tests.test_hidden_continuity_document17103
           python3 scripts/check_nova17101.py --code 55 --version 1.7.10.3
           java -cp /tmp/home1710 HomeLayoutChecks
           java -cp /tmp/home1710 HomePersistenceChecks
@@ -500,7 +520,7 @@ jobs:
           sudo apt-get install -y -qq wireguard-tools tcpdump iptables python3-cryptography tor
           PYTHONDONTWRITEBYTECODE=1 python3 -m unittest scripts.tests.test_hidden_continuity_fixture17103 scripts.tests.test_hidden_continuity_transition_fixture17103 scripts.tests.test_hidden_continuity_packets17103 scripts.tests.test_hidden_vpn_tls1762
           bash scripts/setup_hidden_vpn_fixture1762.sh
-          python3 scripts/ci_onion_probe.py
+          if [[ '${{ contains(github.event.head_commit.message, '[continuity17103-retry]') }}' != true ]]; then python3 scripts/ci_onion_probe.py; fi
       - name: Enable Android emulator acceleration
         if: contains(github.event.head_commit.message, '[verify1710]') || contains(github.event.head_commit.message, '[verify17102]')
         run: sudo chmod 666 /dev/kvm
@@ -526,7 +546,8 @@ jobs:
           NOVA17102_REPAIR: ${{ contains(github.event.head_commit.message, '[repair17102]') && '1' || '0' }}
           NOVA17102_ENGINE: ${{ contains(github.event.head_commit.message, '[engine17102]') && '1' || '0' }}
           NOVA17102_BETA: ${{ contains(github.event.head_commit.message, '[beta17102]') && '1' || '0' }}
-          NOVA17103_CONTINUITY: ${{ contains(github.event.head_commit.message, '[continuity17103]') && '1' || '0' }}
+          NOVA17103_CONTINUITY: ${{ (contains(github.event.head_commit.message, '[continuity17103]') || contains(github.event.head_commit.message, '[continuity17103-retry]')) && '1' || '0' }}
+          NOVA17103_REUSE: ${{ contains(github.event.head_commit.message, '[continuity17103-retry]') && '1' || '0' }}
           NOVA17103_POLISH: ${{ contains(github.event.head_commit.message, '[polish17103]') && '1' || '0' }}
           NOVA17102_CLOSURE: ${{ contains(github.event.head_commit.message, '[closure17102]') && '1' || '0' }}
         if: contains(github.event.head_commit.message, '[verify17102]')
@@ -547,7 +568,7 @@ jobs:
         if: always() && contains(github.event.head_commit.message, '[verify17102]') && !contains(github.event.head_commit.message, '[engine17102]')
         run: |
           bash scripts/cleanup_hidden_vpn_fixture1762.sh
-          python3 scripts/ci_onion_probe.py --stop
+          if [[ '${{ contains(github.event.head_commit.message, '[continuity17103-retry]') }}' != true ]]; then python3 scripts/ci_onion_probe.py --stop; fi
       - uses: actions/upload-artifact@v4
         if: always()
         with:
