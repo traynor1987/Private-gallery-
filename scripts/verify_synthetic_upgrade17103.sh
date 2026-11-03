@@ -35,7 +35,13 @@ for phase in baseline candidate; do
   grep -Fq "package: name='$fixture_package' versionCode='$code' versionName='$version'" "$artifact_dir/upgrade-$phase-package.txt"
   grep -Fxq "sdkVersion:'37'" "$artifact_dir/upgrade-$phase-package.txt"
   grep -Fxq "targetSdkVersion:'37'" "$artifact_dir/upgrade-$phase-package.txt"
-  ! grep -q 'application-debuggable' "$artifact_dir/upgrade-$phase-package.txt"
+  if grep -q 'application-debuggable' "$artifact_dir/upgrade-$phase-package.txt"; then
+    echo "Debuggable $phase upgrade APK rejected" >&2
+    exit 1
+  else
+    debug_check_status=$?
+    [[ "$debug_check_status" == 1 ]] || { echo "Cannot inspect $phase upgrade APK debug flag" >&2; exit 1; }
+  fi
   "$sdk/apksigner" verify --verbose --print-certs "$apk" > "$artifact_dir/upgrade-$phase-signature.txt"
   grep -Fxq 'Verified using v2 scheme (APK Signature Scheme v2): true' "$artifact_dir/upgrade-$phase-signature.txt"
   grep -Fxq 'Number of signers: 1' "$artifact_dir/upgrade-$phase-signature.txt"

@@ -11,7 +11,13 @@ mkdir -p app/build/production-evidence
 grep -Fq "package: name='uk.co.traynor.privategallery' versionCode='$release_code' versionName='$release_version'" app/build/production-evidence/package.txt
 grep -Fxq "sdkVersion:'$release_min_sdk'" app/build/production-evidence/package.txt
 grep -q "application-label:'NovaOS'" app/build/production-evidence/package.txt
-! grep -q 'application-debuggable' app/build/production-evidence/package.txt
+if grep -q 'application-debuggable' app/build/production-evidence/package.txt; then
+  echo 'Debuggable production APK rejected' >&2
+  exit 1
+else
+  debug_check_status=$?
+  [[ "$debug_check_status" == 1 ]] || { echo 'Cannot inspect production APK debug flag' >&2; exit 1; }
+fi
 grep -Fq 'Signer #1 certificate SHA-256 digest: 94f2bfc6567f26d067d29077111cfd0ce86d38263c642ad115e43365f05b0d17' app/build/production-evidence/signature.txt
 sha256sum "$apk" > app/build/production-evidence/apk-sha256.txt
 git rev-parse HEAD > app/build/production-evidence/source-sha.txt

@@ -1,8 +1,44 @@
 """Pre-signer provenance and immutable upgrade-body checks; no Android/signing claim."""
-import importlib, unittest, tempfile, zipfile, hashlib, copy
+import importlib, unittest, tempfile, zipfile, hashlib, copy, subprocess
 from pathlib import Path
 from unittest.mock import patch
 ROOT=Path(__file__).resolve().parents[2]
+class NonDebuggablePackageGuards(unittest.TestCase):
+ def run_guard(self,phase,debuggable):
+  # Execute the actual release-script block between its adjacent identity gates.
+  # A negated grep under errexit must not permit the next gate to execute.
+  if phase=='production':
+   source=(ROOT/'scripts/verify_production_candidate17103.sh').read_text()
+   block=source.split('grep -q "application-label:\'NovaOS\'" app/build/production-evidence/package.txt\n',1)[1].split("grep -Fq 'Signer #1",1)[0]
+  else:
+   source=(ROOT/'scripts/verify_synthetic_upgrade17103.sh').read_text()
+   block=source.split('  grep -Fxq "targetSdkVersion:\'37\'" "$artifact_dir/upgrade-$phase-package.txt"\n',1)[1].split('  "$sdk/apksigner" verify',1)[0]
+  with tempfile.TemporaryDirectory() as folder:
+   root=Path(folder);evidence=root/'app/build/production-evidence';evidence.mkdir(parents=True)
+   filename='package.txt' if phase=='production' else 'upgrade-'+phase+'-package.txt'
+   if debuggable is not None:
+    (evidence/filename).write_text("package: name='uk.co.traynor.privategallery'\n"+('application-debuggable\n' if debuggable else ''))
+   program='set -euo pipefail\nartifact_dir=app/build/production-evidence\nphase=$1\n'+block+'\nprintf "REACHED_NEXT_GATE\\n"\n'
+   return subprocess.run(['bash','-c',program,'guard-test',phase],cwd=root,text=True,capture_output=True)
+ def test_debuggable_package_stops_before_next_gate_in_every_phase(self):
+  for phase in ('production','baseline','candidate'):
+   with self.subTest(phase=phase):
+    result=self.run_guard(phase,True)
+    self.assertNotEqual(result.returncode,0,result.stdout+result.stderr)
+    self.assertNotIn('REACHED_NEXT_GATE',result.stdout)
+ def test_nondebuggable_package_reaches_next_gate_in_every_phase(self):
+  for phase in ('production','baseline','candidate'):
+   with self.subTest(phase=phase):
+    result=self.run_guard(phase,False)
+    self.assertEqual(result.returncode,0,result.stderr)
+    self.assertIn('REACHED_NEXT_GATE',result.stdout)
+ def test_unreadable_package_evidence_stops_before_next_gate_in_every_phase(self):
+  for phase in ('production','baseline','candidate'):
+   with self.subTest(phase=phase):
+    result=self.run_guard(phase,None)
+    self.assertNotEqual(result.returncode,0,result.stdout+result.stderr)
+    self.assertNotIn('REACHED_NEXT_GATE',result.stdout)
+
 class ContinuityUpgradeControls(unittest.TestCase):
  def test_original54_archive_and_apk_denials(self):
   m=importlib.import_module('scripts.verify_upgrade17103_baseline')
