@@ -195,7 +195,7 @@ var _ tun.Device = (*virtualTun)(nil)
 func (v *virtualTun) enqueue(packet []byte) {
 	v.mu.Lock()
 	defer v.mu.Unlock()
-	if v.closed || !v.gate.AdmitOutbound(v.generation, packet) {
+	if v.closed || !v.gate.AdmitRealOutbound(v.generation, packet) {
 		return
 	}
 	owned := append([]byte(nil), packet...)
@@ -233,7 +233,7 @@ func (v *virtualTun) Read(b []byte, offset int) (int, error) {
 		}
 		for len(v.queue) > 0 {
 			packet := <-v.queue
-			if !v.gate.AdmitOutbound(v.generation, packet) {
+			if !v.gate.AdmitRealOutbound(v.generation, packet) {
 				zero(packet)
 				continue
 			}
@@ -262,7 +262,7 @@ func (v *virtualTun) Write(b []byte, offset int) (int, error) {
 		return 0, ErrConfig
 	}
 	n := len(b) - offset
-	_, err := v.gate.WriteInbound(v.generation, b[offset:], func() error {
+	_, err := v.gate.WriteRealInbound(v.generation, b[offset:], func() error {
 		var err error
 		n, err = v.fence.real.Write(b, offset)
 		if err != nil {

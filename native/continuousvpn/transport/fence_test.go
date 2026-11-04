@@ -282,36 +282,45 @@ func TestFatalRealReadSealsButRetainsFence(t *testing.T) {
 	}
 }
 
-func TestQueuedProbeRechecksRemovedLeaseAndZeroesBothPackets(t *testing.T) {
+func TestRealProbeDeniedAcrossLeaseReplacement(t *testing.T) {
 	f, r := fixture(t, 2)
 	v := virtual(t, f, 1)
 	v.gate.MarkOuterProtected(1)
 	v.gate.SetState(1, gate.Probe)
 	tuple := gate.Tuple{Protocol: 17, Source: netip.MustParseAddrPort("10.0.0.1:4660"), Destination: netip.MustParseAddrPort("10.0.0.2:53")}
-	id, e := v.gate.AddProbe(1, 1, tuple)
-	if e != nil {
-		t.Fatal(e)
+	id, err := v.gate.AddProbe(1, 1, tuple)
+	if err != nil {
+		t.Fatal(err)
 	}
 	feed(t, r, packet(1))
-	first := <-v.queue
-	v.queue <- first
-	if e = v.gate.RemoveProbe(1, 1, id); e != nil {
-		t.Fatal(e)
+	if len(v.queue) != 0 {
+		t.Fatal("REAL packet entered private readiness queue")
+	}
+	if err = v.gate.RemoveProbe(1, 1, id); err != nil {
+		t.Fatal(err)
 	}
 	tuple.Source = netip.MustParseAddrPort("10.0.0.1:4661")
-	if _, e = v.gate.AddProbe(1, 1, tuple); e != nil {
-		t.Fatal(e)
+	if _, err = v.gate.AddProbe(1, 1, tuple); err != nil {
+		t.Fatal(err)
 	}
 	next := packet(2)
 	next[21]++
 	feed(t, r, next)
-	buf := make([]byte, 64)
-	n, e := v.Read(buf, 0)
-	if e != nil || n != 28 || buf[1] != 2 {
-		t.Fatal("revoked queued plaintext reached WG", n, e, buf)
+	if len(v.queue) != 0 {
+		t.Fatal("new tuple granted REAL readiness aperture")
 	}
-	if !bytes.Equal(first, make([]byte, len(first))) {
-		t.Fatal("dequeued rejected plaintext not zeroed")
+	seq, err := v.gate.RevocationSequence(1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err = v.gate.Publish(1, seq); err != nil {
+		t.Fatal(err)
+	}
+	feed(t, r, packet(3))
+	buf := make([]byte, 64)
+	n, err := v.Read(buf, 0)
+	if err != nil || n != 28 || buf[1] != 3 {
+		t.Fatal("pre-publication REAL packet survived until OPEN", n, err, buf)
 	}
 }
 

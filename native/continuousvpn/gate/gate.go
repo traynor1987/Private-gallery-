@@ -310,6 +310,36 @@ func (g *Gate) admitted(generation uint64, packet []byte, inbound bool) bool {
 func (g *Gate) AdmitOutbound(generation uint64, packet []byte) bool {
 	return g.admitted(generation, packet, false)
 }
+
+// AdmitRealOutbound is exclusively for packets originating at the Android TUN.
+// Tuple equality cannot establish parent provenance: REAL packets are denied
+// throughout PROBE, even when byte-identical to registered readiness traffic.
+// The separate private-stack adapter must never call this for its own output.
+func (g *Gate) AdmitRealOutbound(generation uint64, packet []byte) bool {
+	if !g.matches(generation) {
+		return false
+	}
+	s := g.current.Load()
+	return !s.sealed && s.state == Open && validIPPacket(packet) && g.current.Load() == s
+}
+
+// WriteRealInbound brackets only actual Android TUN writes. PROBE replies belong
+// to the parent-private stack and must never reach this callback. Like all gate
+// writes, Invalidate+Drain waits for an admitted callback before denial receipt.
+func (g *Gate) WriteRealInbound(generation uint64, packet []byte, write func() error) (bool, error) {
+	if !g.matches(generation) {
+		return false, nil
+	}
+	if write == nil {
+		return false, ErrCallback
+	}
+	g.active.Add(1)
+	defer g.finish()
+	if !g.AdmitRealOutbound(generation, packet) {
+		return false, nil
+	}
+	return true, write()
+}
 func (g *Gate) finish() {
 	if g.active.Add(-1) == 0 {
 		g.mu.Lock()
