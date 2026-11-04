@@ -9,11 +9,11 @@ def verify(apk,aapt,apksigner,zipalign,source,output):
  badging=run(aapt,'dump','badging',str(apk));signature=run(apksigner,'verify','--verbose','--print-certs',str(apk));manifest=run(aapt,'dump','xmltree',str(apk),'AndroidManifest.xml')
  assert "package: name='"+PACKAGE+"'" in badging,'Wrong application ID'
  assert "sdkVersion:'37'" in badging and "targetSdkVersion:'37'" in badging,'Wrong Android compatibility'
- assert "versionCode='1'" in badging and "versionName='0.1-preview'" in badging,'Unexpected preview version'
+ assert "versionCode='2'" in badging and "versionName='0.2-preview'" in badging,'Unexpected preview version'
  assert 'application-debuggable' in badging,'Expected a development build'
  assert 'Android Debug' in signature and re.search(r'APK Signature Scheme v2\): true',signature),'Development APK signature not verified'
  certs=re.findall(r'certificate SHA-256 digest: ([a-fA-F0-9]{64})',signature)
- assert len(certs)==1 and certs[0].lower()!=PRODUCTION_CERT,'Wrong or production signing certificate'
+ assert len(certs)==1 and certs[0].lower()=='81cda5b72cb76940fa50972bc1c284b25e641b88814d2b9041c7111cb1d042d8' and certs[0].lower()!=PRODUCTION_CERT,'Wrong or production signing certificate'
  permissions=re.findall(r"^uses-permission: name='([^']+)'",badging,re.M)
  assert set(permissions)=={'android.permission.INTERNET',PACKAGE+'.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION'},permissions
  assert 'sharedUserId' not in manifest and 'uk.co.traynor.privategallery' not in manifest and 'VpnService' not in manifest,'Production/shared identity or VPN component'
@@ -29,7 +29,7 @@ def verify(apk,aapt,apksigner,zipalign,source,output):
   for i in range(count):
    ph=struct.unpack_from('<IIQQQQQQ',arm,offset+i*size)
    if ph[0]==1:assert ph[7]>=16384 and ph[2]%16384==ph[3]%16384,'ARM64 native alignment unsafe'
- result={'packageId':PACKAGE,'versionName':'0.1-preview','versionCode':1,'minSdk':37,'targetSdk':37,'sourceCommit':source,'artifactSourceCommit':'a5add01b8c8fccf88be2fce8d7280d4b6e7672e2','sourceArtifactId':13358999836,'bytes':apk.stat().st_size,'apkSha256':hashlib.sha256(apk.read_bytes()).hexdigest(),'developmentCertificateSha256':certs[0].lower(),'permissions':permissions,'packageIsolation':'verified distinct application ID; no shared UID or production classes/components','nativeAlignment':'16KB ZIP and ARM64 ELF verified','runtimeVerification':'NOT PASSED: attempt2 Package Manager Broken pipe(32) before APK installation; no UI/Fold assertions ran','experimental':True}
+ result={'packageId':PACKAGE,'versionName':'0.2-preview','versionCode':2,'minSdk':37,'targetSdk':37,'sourceCommit':source,'artifactSourceCommit':source,'bytes':apk.stat().st_size,'apkSha256':hashlib.sha256(apk.read_bytes()).hexdigest(),'developmentCertificateSha256':certs[0].lower(),'permissions':permissions,'packageIsolation':'verified distinct application ID; no shared UID or production classes/components','nativeAlignment':'16KB ZIP and ARM64 ELF verified','runtimeVerification':__import__('os').environ.get('PREVIEW_RUNTIME_RESULT','Not run in this host verification; see workflow runtime receipt'),'experimental':True}
  (out/'APK-VERIFICATION.json').write_text(json.dumps(result,indent=2)+'\n');(out/'package.txt').write_text(badging);(out/'signature.txt').write_text(signature);(out/'SHA256SUMS.txt').write_text(result['apkSha256']+'  '+apk.name+'\n')
  return result
 if __name__=='__main__':

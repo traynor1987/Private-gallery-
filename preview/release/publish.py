@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Publish only the verified experimental preview, then download it publicly."""
 import hashlib,json,os,pathlib,re,subprocess,time,urllib.request
-REPO='traynor1987/Private-gallery-';TAG='novaos-home2-store-preview-0.1'
+REPO='traynor1987/Private-gallery-';TAG='novaos-home2-store-preview-0.2'
 ROOT=pathlib.Path('preview/release-out');APK=ROOT/'NovaOS-Home2-Store-Preview.apk'
 def api(path,method='GET',data=None,missing_ok=False):
  args=['gh','api','repos/'+REPO+'/'+path]
@@ -18,14 +18,14 @@ def main():
  source=os.environ['GITHUB_SHA'];assert re.fullmatch('[a-f0-9]{40}',source)
  verification=json.loads((ROOT/'APK-VERIFICATION.json').read_text());expected=verification['apkSha256']
  assert hashlib.sha256(APK.read_bytes()).hexdigest()==expected
- body=pathlib.Path('preview/release/NOTES.md').read_text()+'\nVerified publication/source commit: `'+source+'`\n'
+ body=pathlib.Path('preview/release/NOTES.md').read_text()+'\nFocused Android runtime result: **'+verification['runtimeVerification']+'** (synthetic fixtures; no personal Google account tested).\n'+'\nVerified publication/source commit: `'+source+'`\n'
  release=api('releases/tags/'+TAG,missing_ok=True)
  if release is None:
   existing_tag=api('git/ref/tags/'+TAG,missing_ok=True)
   assert existing_tag is None or (existing_tag['object']['type']=='commit' and existing_tag['object']['sha']==source),'Existing tag points at another source; refusing publication'
-  release=api('releases','POST',{'tag_name':TAG,'target_commitish':source,'name':'NovaOS Home 2.0 + Nova Store Preview 0.1 — EXPERIMENTAL','body':body,'draft':True,'prerelease':True,'make_latest':'false'})
+  release=api('releases','POST',{'tag_name':TAG,'target_commitish':source,'name':'NovaOS Home 2.0 + Nova Store Preview 0.2 — EXPERIMENTAL','body':body,'draft':True,'prerelease':True,'make_latest':'false'})
  else:
-  assert release['prerelease'] and 'preview-artifact-13358999836' in release['body'],'Refusing to change an unrelated or production release'
+  assert release['prerelease'] and 'preview-appmode-code2' in release['body'],'Refusing to change an unrelated or production release'
  if release['draft']:
   subprocess.run(['gh','release','upload',TAG,str(APK),str(ROOT/'SHA256SUMS.txt'),str(ROOT/'APK-VERIFICATION.json'),'--repo',REPO,'--clobber'],check=True)
   release=api('releases/'+str(release['id']))

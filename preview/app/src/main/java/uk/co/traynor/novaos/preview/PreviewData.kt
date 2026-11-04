@@ -25,7 +25,7 @@ class PreviewData(private val context:Context) {
  val profileLabel get()=if(state.current=="hidden")"Hidden Preview" else "Primary Preview"
  val catalogue:List<StoreEntry> = parseCatalogue(context.assets.open("catalogue-v1.json").bufferedReader().use{it.readText()})
  fun profile(id:String)=if(id=="hidden")state.hidden else state.primary
- fun allApps(p:Profile=profile)=builtinApps+p.installed.map{LaunchApp(it.id,it.name,"website",it)}
+ fun allApps(p:Profile=profile)=builtinApps+p.installed.map{entry->val artwork=catalogue.firstOrNull{PreviewRules.key(it.url)==PreviewRules.key(entry.url)};LaunchApp(entry.id,entry.name,"website",if(artwork!=null)entry.copy(icon=artwork.icon)else entry)}
  fun app(id:String)=allApps().firstOrNull{it.id==id}
  fun drawerIds(p:Profile=profile):List<String> {
   val grouped=p.folders.flatMap{it.apps}.toSet()

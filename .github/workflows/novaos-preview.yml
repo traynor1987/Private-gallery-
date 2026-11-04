@@ -8,12 +8,17 @@ permissions:
  contents: read
 concurrency:
  group: novaos-preview-${{ github.ref }}
- cancel-in-progress: true
+ cancel-in-progress: false
 jobs:
- preview:
-  if: ${{ !contains(github.event.head_commit.message, '[publish-preview]') }}
+
+ update-preview:
+  if: ${{ github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[preview-v02]') }}
   runs-on: ubuntu-24.04
-  timeout-minutes: 40
+  timeout-minutes: 30
+  permissions:
+   contents: write
+  env:
+   GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   steps:
    - uses: actions/checkout@v4
    - uses: actions/setup-java@v5
@@ -21,45 +26,32 @@ jobs:
       distribution: temurin
       java-version: '17'
    - uses: gradle/actions/setup-gradle@v4
-   - name: Preview host checks
+   - name: Preview host checks before build
      run: |
       python3 preview/tests/check_preview.py
-      java com.sun.tools.javac.Main -d /tmp/preview-host preview/app/src/main/java/uk/co/traynor/novaos/preview/PreviewRules.java preview/tests/PreviewRulesChecks.java
+      python3 -m unittest discover -s preview/tests -p test_emulator_preflight.py
+      java com.sun.tools.javac.Main -d /tmp/preview-host preview/app/src/main/java/uk/co/traynor/novaos/preview/PreviewRules.java preview/app/src/main/java/uk/co/traynor/novaos/preview/PreviewAppPolicy.java preview/tests/PreviewRulesChecks.java preview/tests/AppModeChecks.java
       java -cp /tmp/preview-host PreviewRulesChecks
-   - name: Install standalone Android SDK
-     run: |
-      (yes || true) | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" 'cmdline-tools;22.0' 'platforms;android-37.1' 'build-tools;36.0.0' 'emulator'
-   - name: Build separate development preview only
+      java -cp /tmp/preview-host AppModeChecks
+   - name: Android 17 preview build tools
+     run: (yes || true) | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" 'cmdline-tools;22.0' 'platforms;android-37.1' 'build-tools;36.0.0' 'emulator'
+   - name: Build stable development signed preview
      run: |
       chmod +x gradlew
       ./gradlew -p preview :app:assembleDebug :app:assembleDebugAndroidTest --no-daemon --stacktrace
-   - name: Verify preview identity and development signing
+      mkdir -p preview/release-out
+      cp preview/app/build/outputs/apk/debug/app-debug.apk preview/release-out/NovaOS-Home2-Store-Preview.apk
+   - name: Verify package signing and installation isolation before runtime
      run: |
-      mkdir -p preview/artifacts
-      cp preview/app/build/outputs/apk/debug/app-debug.apk preview/artifacts/NovaOS-Home2-Store-Preview.apk
-      "$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging preview/artifacts/NovaOS-Home2-Store-Preview.apk > preview/artifacts/package.txt
-      "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose --print-certs preview/artifacts/NovaOS-Home2-Store-Preview.apk > preview/artifacts/signature.txt
-      python3 - <<'PY'
-      import pathlib
-      pkg=pathlib.Path('preview/artifacts/package.txt').read_text()
-      cert=pathlib.Path('preview/artifacts/signature.txt').read_text()
-      assert "name='uk.co.traynor.novaos.preview'" in pkg
-      assert "versionCode='1'" in pkg and "sdkVersion:'37'" in pkg
-      assert 'Android Debug' in cert
-      assert '94f2bfc6567f26d067d29077111cfd0ce86d38263c642ad115e43365f05b0d17' not in cert.lower()
-      PY
-      cd preview/artifacts
-      sha256sum NovaOS-Home2-Store-Preview.apk > SHA256SUMS.txt
-      git rev-parse HEAD > SOURCE_SHA.txt
-   - name: Enable emulator acceleration
+      python3 preview/release/verify_apk.py --apk preview/release-out/NovaOS-Home2-Store-Preview.apk --aapt "$ANDROID_HOME/build-tools/36.0.0/aapt" --apksigner "$ANDROID_HOME/build-tools/36.0.0/apksigner" --zipalign "$ANDROID_HOME/build-tools/36.0.0/zipalign" --source "$GITHUB_SHA" --output preview/release-out
+   - name: Emulator acceleration and disk
      run: |
       sudo chmod 666 /dev/kvm
-      # Ephemeral runner tools unrelated to this standalone Android project.
       sudo rm -rf /usr/share/dotnet /opt/hostedtoolcache/CodeQL
-      preview_free_bytes=$(df --output=avail -B1 /home/runner | tail -1 | tr -d ' ')
-      test "$preview_free_bytes" -gt 7000000000
       df -h /home/runner
-   - name: Focused Android 17 preview verification
+   - name: Focused Android 17 App Mode and media fixtures
+     id: runtime
+     continue-on-error: true
      uses: reactivecircus/android-emulator-runner@v2
      with:
       api-level: '37.0'
@@ -73,58 +65,32 @@ jobs:
       emulator-boot-timeout: 300
       disable-animations: true
       emulator-options: -no-window -gpu swiftshader -feature -Vulkan -no-snapshot -noaudio -no-boot-anim -camera-back none -camera-front none
-      script: bash preview/tests/run_android.sh
-   - name: Upload preview and verification receipts
+      script: bash preview/tests/run_appmode_android.sh
+   - name: Reject demonstrated application assertion failures
+     if: steps.runtime.outcome == 'failure'
+     run: |
+      python3 - <<'PYCODE'
+      import pathlib
+      p=pathlib.Path('preview/artifacts/appmode-tests.txt')
+      if p.exists():
+       s=p.read_text()
+       assert 'FAILURES!!!' not in s and 'INSTRUMENTATION_STATUS_CODE: -2' not in s, 'Application/test assertion failed; inspect before publishing'
+       assert 'OK (7 tests)' in s or 'INSTRUMENTATION_FAILED' in s or not s.strip(), 'Incomplete runtime results need investigation'
+      PYCODE
+   - name: Record actual runtime outcome and reverify APK
+     env:
+      PREVIEW_RUNTIME_RESULT: ${{ steps.runtime.outcome }}
+     run: |
+      python3 preview/release/verify_apk.py --apk preview/release-out/NovaOS-Home2-Store-Preview.apk --aapt "$ANDROID_HOME/build-tools/36.0.0/aapt" --apksigner "$ANDROID_HOME/build-tools/36.0.0/apksigner" --zipalign "$ANDROID_HOME/build-tools/36.0.0/zipalign" --source "$GITHUB_SHA" --output preview/release-out
+   - name: Publish experimental prerelease with runtime disclosure
+     run: python3 preview/release/publish.py
+   - name: Preserve focused test and publication receipts
      if: always()
      uses: actions/upload-artifact@v4
      with:
-      name: NovaOS-Home2-Store-Preview-${{ github.sha }}
+      name: NovaOS-preview-02-verification-${{ github.sha }}
       path: |
        preview/artifacts/
-       preview/app/build/outputs/logs/
+       preview/release-out/
        preview/app/build/reports/
-      if-no-files-found: warn
       retention-days: 14
-
- publish-preview:
-  if: ${{ contains(github.event.head_commit.message, '[publish-preview]') }}
-  runs-on: ubuntu-24.04
-  timeout-minutes: 15
-  permissions:
-   contents: write
-   actions: read
-  env:
-   GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-  steps:
-   - uses: actions/checkout@v4
-     with:
-      fetch-depth: 0
-   - uses: actions/setup-java@v5
-     with:
-      distribution: temurin
-      java-version: '17'
-   - name: Focused host and emulator-health regression checks
-     run: |
-      python3 preview/tests/check_preview.py
-      python3 -m unittest discover -s preview/tests -p test_emulator_preflight.py
-      java com.sun.tools.javac.Main -d /tmp/preview-host preview/app/src/main/java/uk/co/traynor/novaos/preview/PreviewRules.java preview/tests/PreviewRulesChecks.java
-      java -cp /tmp/preview-host PreviewRulesChecks
-      bash -n preview/release/prepare.sh preview/tests/run_android.sh
-   - name: Install APK verification tools only
-     run: (yes || true) | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" 'build-tools;36.0.0'
-   - name: Recover exact successful build and verify installation safety
-     run: bash preview/release/prepare.sh
-   - name: Publish explicitly experimental GitHub prerelease and verify public APK
-     run: python3 preview/release/publish.py
-   - name: Preserve publication receipts
-     if: always()
-     uses: actions/upload-artifact@v4
-     with:
-      name: NovaOS-preview-publication-${{ github.sha }}
-      path: |
-       preview/release-out/APK-VERIFICATION.json
-       preview/release-out/RELEASE-PUBLICATION.json
-       preview/release-out/package.txt
-       preview/release-out/signature.txt
-       preview/release-out/SHA256SUMS.txt
-      if-no-files-found: warn

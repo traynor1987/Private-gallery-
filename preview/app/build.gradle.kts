@@ -5,8 +5,12 @@ android {
  defaultConfig {
   applicationId = "uk.co.traynor.novaos.preview"
   minSdk = 37; targetSdk = 37
-  versionCode = 1; versionName = "0.1-preview"
+  versionCode = 2; versionName = "0.2-preview"
   testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+ }
+ signingConfigs.getByName("debug") {
+  storeFile = rootProject.file("dev-signing/preview-debug.keystore")
+  storePassword = "android"; keyAlias = "androiddebugkey"; keyPassword = "android"
  }
  buildFeatures { compose = true; buildConfig = true }
  compileOptions { sourceCompatibility = JavaVersion.VERSION_17; targetCompatibility = JavaVersion.VERSION_17 }

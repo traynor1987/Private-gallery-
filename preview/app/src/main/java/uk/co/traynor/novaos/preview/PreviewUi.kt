@@ -37,6 +37,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.semantics.*
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
@@ -75,6 +76,11 @@ private val lightColors=lightColorScheme(primary=Color(0xFF285F65),secondary=Col
    var confirmUninstall by rememberSaveable{mutableStateOf<String?>(null)}
    var reset by rememberSaveable{mutableStateOf(false)}
    val profile=data.profile
+   LaunchedEffect(state.current){pool.currentProfile=state.current;pool.syncLifecycle()}
+   pool.externalRequest?.let{request->LaunchedEffect(request){
+    if(PreviewAppPolicy.canPresentExternal(request.tabId,request.profile,pool.activeId,state.current,pool.foreground))pool.tabs.firstOrNull{it.id==request.tabId}?.app?.let{browser=it.copy(url=request.url)}
+    pool.externalRequest=null
+   }}
    val host=LocalContext.current as? android.app.Activity
    SideEffect { host?.let { activity->
     val controller=androidx.core.view.WindowCompat.getInsetsController(activity.window,activity.window.decorView)
@@ -99,9 +105,11 @@ private val lightColors=lightColorScheme(primary=Color(0xFF285F65),secondary=Col
     when {selected!=null->selected=null;openFolder!=null->openFolder=null;detailId!=null->detailId=null;editing->editing=false;quick->quick=false;drawer->drawer=false;else->screen="home"}
    }
    Surface(Modifier.fillMaxSize(),color=MaterialTheme.colorScheme.background){
+    Box(Modifier.fillMaxSize()){
+    if(pool.active?.profile==state.current)PreviewBrowser(pool,onHome={screen="home"},onExternal={url->pool.active?.app?.let{browser=it.copy(url=url)}},visible=screen=="browser")
+    if(screen!="browser")Surface(Modifier.fillMaxSize(),color=MaterialTheme.colorScheme.background){
     AnimatedContent(screen,label="preview-screen"){route->
      when(route){
-      "browser"->PreviewBrowser(pool,onHome={screen="home"},onExternal={url->pool.active?.app?.let{browser=it.copy(url=url)}})
       "store"->StoreScreen(data,onBack={screen="home"},onDetail={detailId=it.id},onCustom={custom=true})
       "wallpaper"->WallpaperScreen(data,filesDir,onPickImage,onBack={screen="home"})
       "photos"->PhotosDemo(onBack={screen="home"},onWallpaper={screen="wallpaper"})
@@ -110,10 +118,22 @@ private val lightColors=lightColorScheme(primary=Color(0xFF285F65),secondary=Col
      }
     }
    }
+   }
+   }
    if(drawer)ModalBottomSheet(onDismissRequest={drawer=false},modifier=Modifier.testTag("drawer-sheet")){
     var search by rememberSaveable{mutableStateOf("")}
     Column(Modifier.fillMaxWidth().fillMaxHeight(.9f).padding(horizontal=20.dp)){
-     Row(verticalAlignment=Alignment.CenterVertically){Text("Your apps",Modifier.weight(1f),style=MaterialTheme.typography.headlineMedium);IconButton(onClick={drawer=false}){Icon(Icons.Default.Close,"Close app drawer")}}
+     Row(verticalAlignment=Alignment.CenterVertically){
+      Text("Your apps",Modifier.weight(1f),style=MaterialTheme.typography.headlineMedium)
+      var options by remember{mutableStateOf(false)}
+      Box{
+       IconButton(onClick={options=true}){Icon(Icons.Default.MoreVert,"Choose app options")}
+       DropdownMenu(options,{options=false}){
+        data.drawerIds().forEach{id->DropdownMenuItem(text={Text(data.profile.folders.firstOrNull{it.id==id}?.name?:data.app(id)?.name?:id)},onClick={options=false;selected=id})}
+       }
+      }
+      IconButton(onClick={drawer=false}){Icon(Icons.Default.Close,"Close app drawer")}
+     }
      Text(data.profileLabel+" · demo profile",style=MaterialTheme.typography.labelMedium,color=MaterialTheme.colorScheme.primary)
      OutlinedTextField(search,{search=it},Modifier.fillMaxWidth().padding(vertical=16.dp).testTag("drawer-search"),placeholder={Text("Search apps and folders")},leadingIcon={Icon(Icons.Default.Search,null)},singleLine=true,shape=Shape)
      AdaptiveAppGrid(data,data.drawerIds().filter{id->val f=profile.folders.firstOrNull{it.id==id};(f?.name?:data.app(id)?.name?:"").contains(search,true)},onLaunch=launch,onSelect={selected=it},modifier=Modifier.weight(1f))
@@ -266,24 +286,28 @@ private val lightColors=lightColorScheme(primary=Color(0xFF285F65),secondary=Col
 @Composable private fun AppTile(data:PreviewData,id:String,onClick:()->Unit,onLongClick:()->Unit,showMenu:Boolean=true,compact:Boolean=false,onHome:Boolean=false){
  val folder=data.profile.folders.firstOrNull{it.id==id};val app=data.app(id);if(folder==null&&app==null)return
  val name=folder?.name?:app!!.name
- Column(Modifier.fillMaxWidth().combinedClickable(onClick=onClick,onLongClick=onLongClick).padding(horizontal=2.dp).testTag("app-$id"),horizontalAlignment=Alignment.CenterHorizontally){
+ Column(Modifier.fillMaxWidth().semantics{customActions=listOf(CustomAccessibilityAction("Options for $name"){onLongClick();true})}.combinedClickable(onClick=onClick,onLongClick=onLongClick).padding(horizontal=2.dp).testTag("app-$id"),horizontalAlignment=Alignment.CenterHorizontally){
   BoxWithConstraints(Modifier.fillMaxWidth(),contentAlignment=Alignment.Center){
    val size=minOf((if(compact)52 else data.profile.iconSize).dp,(maxWidth-10.dp).coerceAtLeast(32.dp))
    if(folder!=null)Surface(Modifier.size(size),shape=RoundedCornerShape(19.dp),color=Color(0xFFB4C3E0).copy(alpha=.25f)){
-    Column(Modifier.padding(8.dp),verticalArrangement=Arrangement.SpaceEvenly){folder.apps.take(4).chunked(2).forEach{row->Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceEvenly){row.forEach{member->val a=data.app(member);if(a!=null)AppIcon(a,20.dp)}}}}
+    Column(Modifier.padding(8.dp),verticalArrangement=Arrangement.SpaceEvenly){
+     repeat(2){row->Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceEvenly){repeat(2){col->
+      val member=folder.apps.getOrNull(row*2+col);val a=member?.let{data.app(it)};val cell=(size-24.dp)/2
+      if(a!=null)AppIcon(a,cell)else Spacer(Modifier.size(cell))
+     }}}
+    }
    }else AppIcon(app!!,size)
   }
   if(!compact||showMenu)Text(name,Modifier.padding(top=7.dp).fillMaxWidth(),style=MaterialTheme.typography.labelMedium,textAlign=TextAlign.Center,maxLines=2,overflow=TextOverflow.Ellipsis)
-  if(showMenu)IconButton(onClick=onLongClick,modifier=Modifier.height(28.dp).width(44.dp)){Icon(Icons.Default.MoreHoriz,"Options for $name",Modifier.size(18.dp),tint=if(onHome)Color.White.copy(alpha=.65f)else MaterialTheme.colorScheme.onSurfaceVariant)}
  }
 }
 
 @Composable internal fun AppIcon(app:LaunchApp,size:androidx.compose.ui.unit.Dp){
  val context=LocalContext.current
- val bitmap=remember(app.website?.icon){app.website?.icon?.takeIf{it.matches(Regex("icons/[a-z0-9-]+\\.png"))}?.let{runCatching{context.assets.open(it).use{stream->BitmapFactory.decodeStream(stream)?.asImageBitmap()}}.getOrNull()}}
+ val bitmap=remember(app.website?.icon){PreviewIconCache.load(context,app.website?.icon)}
  val colors=when(app.id){"store"->listOf(Color(0xFF6386FF),Color(0xFF8C4EE2));"photos"->listOf(Color(0xFFFFC28A),Color(0xFFEA778F));"settings"->listOf(Color(0xFF7E94B2),Color(0xFF4C617E));"wallpaper"->listOf(Color(0xFF80E6D1),Color(0xFF357EBA));"guide"->listOf(Color(0xFFC6B5FF),Color(0xFF7D6BBC));else->listOf(Color(0xFF536A9A),Color(0xFF343F66))}
  Box(Modifier.size(size).clip(RoundedCornerShape(size*.30f)).background(Brush.linearGradient(colors)),contentAlignment=Alignment.Center){
-  if(bitmap!=null)Image(bitmap,null,Modifier.fillMaxSize().padding(size*.13f),contentScale=ContentScale.Fit)
+  if(bitmap!=null)Image(bitmap,null,Modifier.fillMaxSize().padding(size*.13f),contentScale=ContentScale.Fit,filterQuality=androidx.compose.ui.graphics.FilterQuality.High)
   else if(app.website!=null)Text(app.name.take(2).uppercase(),fontSize=(size.value*.29f).sp,color=Color.White,fontWeight=FontWeight.SemiBold)
   else Icon(when(app.symbol){"store"->Icons.Default.ShoppingBag;"photos"->Icons.Default.PhotoLibrary;"wallpaper"->Icons.Default.Wallpaper;"settings"->Icons.Default.Settings;else->Icons.Default.AutoAwesome},null,Modifier.size(size*.49f),tint=Color.White)
  }

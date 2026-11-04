@@ -72,7 +72,7 @@ class PreviewAcceptanceTest {
   var ready=false;val deadline=SystemClock.uptimeMillis()+10000
   while(!ready&&SystemClock.uptimeMillis()<deadline){ready=js(view,"window.previewReady===true")=="true";if(!ready)SystemClock.sleep(100)}
   assertTrue(ready);assertEquals("\"kept\"",js(view,"document.getElementById('memo').value='kept'"))
-  rule.onNodeWithTag("web-return-home").performClick();rule.onNodeWithTag("preview-home").assertIsDisplayed()
+  rule.onNodeWithTag("web-app-menu").performClick();rule.onNodeWithTag("web-return-home").performClick();rule.onNodeWithTag("preview-home").assertIsDisplayed()
   rule.onNodeWithTag("open-apps").performClick();rule.onNodeWithTag("drawer-search").performTextInput("Photopea");rule.onNodeWithTag("app-"+data().entryKey(entry())).performClick()
   assertSame(view,rule.activity.browserPool.active!!.view);assertEquals("\"kept\"",js(view,"document.getElementById('memo').value"))
  }

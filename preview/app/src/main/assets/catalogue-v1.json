@@ -20,13 +20,15 @@
       "scope": null,
       "authenticationRequirements": "Ads, sign-in and regional restrictions may apply.",
       "iconSource": "https://www.youtube.com/favicon.ico",
-      "iconVerificationStatus": "retrieved and Pillow decoded; reencoded PNG",
+      "iconVerificationStatus": "HTTPS official manifest; bounded decode; PNG reencoded; 2026-11-04",
       "iconFallback": "Use text initials if candidate cannot be retrieved or decoded",
-      "iconVerifiedSource": "https://www.youtube.com/favicon.ico",
-      "iconResolvedUrl": "https://www.youtube.com/favicon.ico",
-      "iconSha256": "f62c44759a2f1a859b3867a43cf34abdc2cc959adb995522472ba6ea86598fac",
-      "iconSizeBytes": 228,
-      "iconAsset": "icons/youtube.png"
+      "iconVerifiedSource": "https://www.gstatic.com/youtube/img/web/monochrome/logo_512x512.png",
+      "iconResolvedUrl": "https://www.gstatic.com/youtube/img/web/monochrome/logo_512x512.png",
+      "iconSha256": "e6253987a33966f7b87622284dd6c7c4e349932a8c8e3a87b3b9b53d7c7ef7d6",
+      "iconSizeBytes": 5755,
+      "iconAsset": "icons/youtube.png",
+      "iconWidth": 512,
+      "iconHeight": 512
     },
     {
       "id": "youtube-music",
@@ -46,13 +48,15 @@
       "scope": null,
       "authenticationRequirements": "Browser support, account, subscription and regional restrictions may apply.",
       "iconSource": "https://music.youtube.com/favicon.ico",
-      "iconVerificationStatus": "retrieved and Pillow decoded; reencoded PNG",
+      "iconVerificationStatus": "HTTPS official website link; bounded decode; PNG reencoded; 2026-11-04",
       "iconFallback": "Use text initials if candidate cannot be retrieved or decoded",
-      "iconVerifiedSource": "https://music.youtube.com/favicon.ico",
-      "iconResolvedUrl": "https://music.youtube.com/favicon.ico",
-      "iconSha256": "cc84e123b532741c099444d28a1e237a175cceb223a93ac3b24c5333c41e2f4f",
-      "iconSizeBytes": 585,
-      "iconAsset": "icons/youtube-music.png"
+      "iconVerifiedSource": "https://music.youtube.com/img/favicon_144.png",
+      "iconResolvedUrl": "https://music.youtube.com/img/favicon_144.png",
+      "iconSha256": "9113f1144c63b01db976e36d4ad4e2988311322c721702aa74d4e39818113e3b",
+      "iconSizeBytes": 5117,
+      "iconAsset": "icons/youtube-music.png",
+      "iconWidth": 144,
+      "iconHeight": 144
     },
     {
       "id": "spotify",
@@ -72,13 +76,14 @@
       "scope": null,
       "authenticationRequirements": "Account, subscription, DRM and browser restrictions may apply.",
       "iconSource": "https://open.spotify.com/favicon.ico",
-      "iconVerificationStatus": "retrieved and Pillow decoded; reencoded PNG",
+      "iconVerificationStatus": "No suitable >=96px official icon retrieved; NovaOS vector/text fallback",
       "iconFallback": "Use text initials if candidate cannot be retrieved or decoded",
       "iconVerifiedSource": "https://open.spotify.com/favicon.ico",
       "iconResolvedUrl": "https://open.spotify.com/favicon.ico",
       "iconSha256": "45831939b9ec5ce9c4ca3941839434d390e405442bb509890c07d91e7fb84505",
       "iconSizeBytes": 2417,
-      "iconAsset": "icons/spotify.png"
+      "iconWidth": 0,
+      "iconHeight": 0
     },
     {
       "id": "reddit",
@@ -98,13 +103,14 @@
       "scope": null,
       "authenticationRequirements": "Some content and actions require sign-in; app prompts may appear.",
       "iconSource": "https://www.reddit.com/favicon.ico",
-      "iconVerificationStatus": "retrieved and Pillow decoded; reencoded PNG",
+      "iconVerificationStatus": "No suitable >=96px official icon retrieved; NovaOS vector/text fallback",
       "iconFallback": "Use text initials if candidate cannot be retrieved or decoded",
       "iconVerifiedSource": "https://www.reddit.com/favicon.ico",
       "iconResolvedUrl": "https://www.reddit.com/favicon.ico",
       "iconSha256": "68eb3070204ff7d60660feeff540d50d72832a29074f49dfbfa7caf58b1a84e9",
       "iconSizeBytes": 1784,
-      "iconAsset": "icons/reddit.png"
+      "iconWidth": 0,
+      "iconHeight": 0
     },
     {
       "id": "instagram",
@@ -124,13 +130,14 @@
       "scope": null,
       "authenticationRequirements": "Sign-in and app prompts may limit browser access.",
       "iconSource": "https://www.instagram.com/favicon.ico",
-      "iconVerificationStatus": "retrieved and Pillow decoded; reencoded PNG",
+      "iconVerificationStatus": "No suitable >=96px official icon retrieved; NovaOS vector/text fallback",
       "iconFallback": "Use text initials if candidate cannot be retrieved or decoded",
       "iconVerifiedSource": "https://www.instagram.com/favicon.ico",
       "iconResolvedUrl": "https://www.instagram.com/favicon.ico",
       "iconSha256": "3780e3fb6f0b862f807da862f1c3125408a36277afa338e97df5467135da8836",
       "iconSizeBytes": 2200,
-      "iconAsset": "icons/instagram.png"
+      "iconWidth": 0,
+      "iconHeight": 0
     },
     {
       "id": "tiktok",
@@ -150,13 +157,14 @@
       "scope": null,
       "authenticationRequirements": "Direct research fetch restricted; official domain verified through TikTok newsroom. Region and sign-in restrictions may apply.",
       "iconSource": "https://www.tiktok.com/favicon.ico",
-      "iconVerificationStatus": "retrieved and Pillow decoded; reencoded PNG",
+      "iconVerificationStatus": "No suitable >=96px official icon retrieved; NovaOS vector/text fallback",
       "iconFallback": "Use text initials if candidate cannot be retrieved or decoded",
       "iconVerifiedSource": "https://www.tiktok.com/favicon.ico",
       "iconResolvedUrl": "https://www.tiktok.com/favicon.ico",
       "iconSha256": "f7e98bda2cd9e7ecd8c9f9e07228da34c294664f771c4d68b3282db2b59e299c",
       "iconSizeBytes": 953,
-      "iconAsset": "icons/tiktok.png"
+      "iconWidth": 0,
+      "iconHeight": 0
     },
     {
       "id": "pinterest",
@@ -176,13 +184,14 @@
       "scope": null,
       "authenticationRequirements": "Direct research fetch returned 403; official newsroom confirms pinterest.com. Sign-in may be required.",
       "iconSource": "https://www.pinterest.com/favicon.ico",
-      "iconVerificationStatus": "retrieved and Pillow decoded; reencoded PNG",
+      "iconVerificationStatus": "No suitable >=96px official icon retrieved; NovaOS vector/text fallback",
       "iconFallback": "Use text initials if candidate cannot be retrieved or decoded",
       "iconVerifiedSource": "https://www.pinterest.com/favicon.ico",
       "iconResolvedUrl": "https://www.pinterest.com/favicon.ico",
       "iconSha256": "14ceb7ac4f13384d6de410b00bc0a71914fd225ca72dcc715c1694d20c4225bc",
       "iconSizeBytes": 844,
-      "iconAsset": "icons/pinterest.png"
+      "iconWidth": 0,
+      "iconHeight": 0
     },
     {
       "id": "whatsapp",
@@ -202,13 +211,15 @@
       "scope": null,
       "authenticationRequirements": "Account linking and supported browser required; mobile browser access may be limited.",
       "iconSource": "https://web.whatsapp.com/favicon.ico",
-      "iconVerificationStatus": "retrieved and Pillow decoded; reencoded PNG",
+      "iconVerificationStatus": "HTTPS official manifest; bounded decode; PNG reencoded; 2026-11-04",
       "iconFallback": "Use text initials if candidate cannot be retrieved or decoded",
-      "iconVerifiedSource": "https://web.whatsapp.com/favicon.ico",
-      "iconResolvedUrl": "https://web.whatsapp.com/favicon.ico",
-      "iconSha256": "56ab26278923f4a76027f7bfd3235be4a02a9fbbc011bb118a3d0553eb636f68",
-      "iconSizeBytes": 4445,
-      "iconAsset": "icons/whatsapp.png"
+      "iconVerifiedSource": "https://static.whatsapp.net/rsrc.php/yR/r/ivOukiEvXdZ.webp",
+      "iconResolvedUrl": "https://static.whatsapp.net/rsrc.php/yR/r/ivOukiEvXdZ.webp",
+      "iconSha256": "e2adf29f2f4120563a89957210eadffbcb056d2cad1d8af393fd50a169236d11",
+      "iconSizeBytes": 64290,
+      "iconAsset": "icons/whatsapp.png",
+      "iconWidth": 512,
+      "iconHeight": 512
     },
     {
       "id": "telegram",
@@ -228,13 +239,15 @@
       "scope": null,
       "authenticationRequirements": "Telegram account and sign-in required; browser features differ from native apps.",
       "iconSource": "https://web.telegram.org/favicon.ico",
-      "iconVerificationStatus": "retrieved and Pillow decoded; reencoded PNG",
+      "iconVerificationStatus": "HTTPS official manifest; bounded decode; PNG reencoded; 2026-11-04",
       "iconFallback": "Use text initials if candidate cannot be retrieved or decoded",
-      "iconVerifiedSource": "https://web.telegram.org/favicon.ico",
-      "iconResolvedUrl": "https://web.telegram.org/favicon.ico",
-      "iconSha256": "7805bb44e84b8336b381034f79c278a30c4db0a190494200ee0a69603ce2408f",
-      "iconSizeBytes": 848,
-      "iconAsset": "icons/telegram.png"
+      "iconVerifiedSource": "https://web.telegram.org/img/icons/icon512.png",
+      "iconResolvedUrl": "https://web.telegram.org/img/icons/icon512.png",
+      "iconSha256": "2ed90a5786347a28480c59129c3f62567cc9736f16614a805b87f54c805a54e7",
+      "iconSizeBytes": 22119,
+      "iconAsset": "icons/telegram.png",
+      "iconWidth": 512,
+      "iconHeight": 512
     },
     {
       "id": "discord",
@@ -254,13 +267,15 @@
       "scope": null,
       "authenticationRequirements": "JavaScript and account required; voice, notifications and mobile support vary.",
       "iconSource": "https://discord.com/favicon.ico",
-      "iconVerificationStatus": "retrieved and Pillow decoded; reencoded PNG",
+      "iconVerificationStatus": "HTTPS official website link; bounded decode; PNG reencoded; 2026-11-04",
       "iconFallback": "Use text initials if candidate cannot be retrieved or decoded",
       "iconVerifiedSource": "https://discord.com/assets/favicon.ico",
       "iconResolvedUrl": "https://discord.com/assets/favicon.ico",
-      "iconSha256": "3cc9880e15be7106cc928fbfef0ddea01ec68129b630ffeedadbb84eb052ef09",
-      "iconSizeBytes": 6998,
-      "iconAsset": "icons/discord.png"
+      "iconSha256": "a2c73c04525b04b719a365c43792ca9d5326219e44ec941dc7592df6452b66a9",
+      "iconSizeBytes": 8831,
+      "iconAsset": "icons/discord.png",
+      "iconWidth": 256,
+      "iconHeight": 256
     },
     {
       "id": "chatgpt",
@@ -280,13 +295,15 @@
       "scope": null,
       "authenticationRequirements": "Usage limits, account requirements and paid features may apply.",
       "iconSource": "https://chatgpt.com/favicon.ico",
-      "iconVerificationStatus": "retrieved and Pillow decoded; reencoded PNG",
+      "iconVerificationStatus": "HTTPS official website link; bounded decode; PNG reencoded; 2026-11-04",
       "iconFallback": "Use text initials if candidate cannot be retrieved or decoded",
-      "iconVerifiedSource": "https://chatgpt.com/cdn/assets/favicon-48x48.7d42b2e65f.png",
-      "iconResolvedUrl": "https://chatgpt.com/cdn/assets/favicon-48x48.7d42b2e65f.png",
-      "iconSha256": "a881ce9a80ffdb658d5a2e74ecad94acd99168785dd3cc4335bc442e44c7d112",
-      "iconSizeBytes": 2854,
-      "iconAsset": "icons/chatgpt.png"
+      "iconVerifiedSource": "https://chatgpt.com/cdn/assets/favicon-180x180.9e0103ce69.png",
+      "iconResolvedUrl": "https://chatgpt.com/cdn/assets/favicon-180x180.9e0103ce69.png",
+      "iconSha256": "b7ff5d64b427593617d3c9f354dab0b19bbb8d076ce126c9da5564931c00135e",
+      "iconSizeBytes": 4915,
+      "iconAsset": "icons/chatgpt.png",
+      "iconWidth": 180,
+      "iconHeight": 180
     },
     {
       "id": "claude",
@@ -306,13 +323,15 @@
       "scope": null,
       "authenticationRequirements": "Official help confirms claude.ai; direct research fetch restricted. Account, availability and usage limits apply.",
       "iconSource": "https://claude.ai/favicon.ico",
-      "iconVerificationStatus": "retrieved and Pillow decoded; reencoded PNG",
+      "iconVerificationStatus": "HTTPS official manifest; bounded decode; PNG reencoded; 2026-11-04",
       "iconFallback": "Use text initials if candidate cannot be retrieved or decoded",
-      "iconVerifiedSource": "https://claude.ai/favicon.ico",
-      "iconResolvedUrl": "https://claude.ai/favicon.ico",
-      "iconSha256": "3ec0f93ea36e4a43e2f311822fb5ceab1a7cbd2b965aa7f33267de30ea8877ae",
-      "iconSizeBytes": 1898,
-      "iconAsset": "icons/claude.png"
+      "iconVerifiedSource": "https://claude.ai/images/icon-512x512-v2.png",
+      "iconResolvedUrl": "https://claude.ai/images/icon-512x512-v2.png",
+      "iconSha256": "810c0adfed100a7a3f3e20df9a53d2ec2e1854ccaa369b738bb319d130fdeb59",
+      "iconSizeBytes": 23391,
+      "iconAsset": "icons/claude.png",
+      "iconWidth": 512,
+      "iconHeight": 512
     },
     {
       "id": "gemini",
@@ -332,13 +351,15 @@
       "scope": null,
       "authenticationRequirements": "Google sign-in, age, region and usage restrictions may apply.",
       "iconSource": "https://gemini.google.com/favicon.ico",
-      "iconVerificationStatus": "retrieved and Pillow decoded; reencoded PNG",
+      "iconVerificationStatus": "HTTPS official manifest; bounded decode; PNG reencoded; 2026-11-04",
       "iconFallback": "Use text initials if candidate cannot be retrieved or decoded",
       "iconVerifiedSource": "https://www.gstatic.com/lamda/images/gemini_sparkle_4g_512_lt_f94943af3be039176192d.png",
       "iconResolvedUrl": "https://www.gstatic.com/lamda/images/gemini_sparkle_4g_512_lt_f94943af3be039176192d.png",
-      "iconSha256": "0a13572361e37fdfbcf564e177876c52855ea968e4a4cd212e6df4918d230f0e",
-      "iconSizeBytes": 8847,
-      "iconAsset": "icons/gemini.png"
+      "iconSha256": "b5905f9249b6c85a73c15cd0841f4b17654e9eff03c797ad0b7379ca29d70cb8",
+      "iconSizeBytes": 69526,
+      "iconAsset": "icons/gemini.png",
+      "iconWidth": 512,
+      "iconHeight": 512
     },
     {
       "id": "perplexity",
@@ -358,13 +379,15 @@
       "scope": null,
       "authenticationRequirements": "Account and paid feature limits may apply; answers require checking.",
       "iconSource": "https://www.perplexity.ai/favicon.ico",
-      "iconVerificationStatus": "retrieved and Pillow decoded; reencoded PNG",
+      "iconVerificationStatus": "HTTPS official website link; bounded decode; PNG reencoded; 2026-11-04",
       "iconFallback": "Use text initials if candidate cannot be retrieved or decoded",
-      "iconVerifiedSource": "https://www.perplexity.ai/favicon.ico",
-      "iconResolvedUrl": "https://www.perplexity.ai/favicon.ico",
-      "iconSha256": "4c7994b154166264ef0279e706e9161e54d95f44b2af279d374f3561f27cf3f4",
-      "iconSizeBytes": 2351,
-      "iconAsset": "icons/perplexity.png"
+      "iconVerifiedSource": "https://www.perplexity.ai/favicon.png",
+      "iconResolvedUrl": "https://www.perplexity.ai/favicon.png",
+      "iconSha256": "29a3e0dcecad641e3be4ed41d5c534c7acc9178a9502e1e99f946c0e372f5e07",
+      "iconSizeBytes": 9084,
+      "iconAsset": "icons/perplexity.png",
+      "iconWidth": 192,
+      "iconHeight": 192
     },
     {
       "id": "notion",
@@ -384,13 +407,15 @@
       "scope": null,
       "authenticationRequirements": "Landing page opens first; account required for workspaces. Paid features may apply.",
       "iconSource": "https://www.notion.com/favicon.ico",
-      "iconVerificationStatus": "retrieved and Pillow decoded; reencoded PNG",
+      "iconVerificationStatus": "HTTPS official website link; bounded decode; PNG reencoded; 2026-11-04",
       "iconFallback": "Use text initials if candidate cannot be retrieved or decoded",
-      "iconVerifiedSource": "https://www.notion.com/front-static/favicon.ico",
-      "iconResolvedUrl": "https://www.notion.com/front-static/favicon.ico",
-      "iconSha256": "2326207fd779977fd0b15e7603f4b9637b9deab9852ab1b1e3c253334935c7b3",
-      "iconSizeBytes": 1511,
-      "iconAsset": "icons/notion.png"
+      "iconVerifiedSource": "https://www.notion.com/front-static/logo-ios.png",
+      "iconResolvedUrl": "https://www.notion.com/front-static/logo-ios.png",
+      "iconSha256": "18723eaf2e5ee67a88127a2e76826f1cc3a5909cc7fbb904753b17328ac00755",
+      "iconSizeBytes": 7996,
+      "iconAsset": "icons/notion.png",
+      "iconWidth": 512,
+      "iconHeight": 512
     },
     {
       "id": "trello",
@@ -410,13 +435,15 @@
       "scope": null,
       "authenticationRequirements": "Account required for boards; plan and browser limitations may apply.",
       "iconSource": "https://trello.com/favicon.ico",
-      "iconVerificationStatus": "retrieved and Pillow decoded; reencoded PNG",
+      "iconVerificationStatus": "HTTPS official favicon largest embedded frame; bounded decode; PNG reencoded; 2026-11-04",
       "iconFallback": "Use text initials if candidate cannot be retrieved or decoded",
       "iconVerifiedSource": "https://trello.com/favicon.ico",
       "iconResolvedUrl": "https://trello.com/favicon.ico",
-      "iconSha256": "40cb298a407cb20c8106ce790f9570b8bc0849f45b08810a66eabcb4413c4907",
-      "iconSizeBytes": 2827,
-      "iconAsset": "icons/trello.png"
+      "iconSha256": "693a2b68afb0a9011715b04378feff94f9a1fc34b7cbb58595448a92e9580803",
+      "iconSizeBytes": 4228,
+      "iconAsset": "icons/trello.png",
+      "iconWidth": 256,
+      "iconHeight": 256
     },
     {
       "id": "google-calendar",
@@ -436,9 +463,11 @@
       "scope": null,
       "authenticationRequirements": "Google account required; mobile browser interface may differ.",
       "iconSource": "https://calendar.google.com/favicon.ico",
-      "iconVerificationStatus": "unavailable; original text initials fallback",
+      "iconVerificationStatus": "No suitable >=96px official icon retrieved; NovaOS vector/text fallback",
       "iconFallback": "Use text initials if candidate cannot be retrieved or decoded",
-      "iconRetrievalError": "Root favicon unavailable; no decodable HTML-advertised icon in first 4 candidates."
+      "iconRetrievalError": "Root favicon unavailable; no decodable HTML-advertised icon in first 4 candidates.",
+      "iconWidth": 0,
+      "iconHeight": 0
     },
     {
       "id": "google-keep",
@@ -458,9 +487,11 @@
       "scope": null,
       "authenticationRequirements": "Google sign-in required; native features may differ.",
       "iconSource": "https://keep.google.com/favicon.ico",
-      "iconVerificationStatus": "unavailable; original text initials fallback",
+      "iconVerificationStatus": "No suitable >=96px official icon retrieved; NovaOS vector/text fallback",
       "iconFallback": "Use text initials if candidate cannot be retrieved or decoded",
-      "iconRetrievalError": "Root favicon unavailable; no decodable HTML-advertised icon in first 4 candidates."
+      "iconRetrievalError": "Root favicon unavailable; no decodable HTML-advertised icon in first 4 candidates.",
+      "iconWidth": 0,
+      "iconHeight": 0
     },
     {
       "id": "github",
@@ -480,13 +511,15 @@
       "scope": null,
       "authenticationRequirements": "Public browsing available; account required for most writing actions.",
       "iconSource": "https://github.com/favicon.ico",
-      "iconVerificationStatus": "retrieved and Pillow decoded; reencoded PNG",
+      "iconVerificationStatus": "HTTPS official website link; bounded decode; PNG reencoded; 2026-11-04",
       "iconFallback": "Use text initials if candidate cannot be retrieved or decoded",
-      "iconVerifiedSource": "https://github.com/favicon.ico",
-      "iconResolvedUrl": "https://github.com/favicon.ico",
-      "iconSha256": "9ed17b40dc7ac19c2cd2ff597987e6c387d8a92a123e30ee23ed515ffacab8c5",
-      "iconSizeBytes": 1235,
-      "iconAsset": "icons/github.png"
+      "iconVerifiedSource": "https://github.com/fluidicon.png",
+      "iconResolvedUrl": "https://github.com/fluidicon.png",
+      "iconSha256": "9baf1d4b4a8e37cd655cd8c6d5ab17d1555e2bb3536e59f2738dd323debb9348",
+      "iconSizeBytes": 42751,
+      "iconAsset": "icons/github.png",
+      "iconWidth": 512,
+      "iconHeight": 512
     },
     {
       "id": "gitlab",
@@ -506,13 +539,14 @@
       "scope": null,
       "authenticationRequirements": "May redirect to product homepage when signed out; account required for private projects.",
       "iconSource": "https://gitlab.com/favicon.ico",
-      "iconVerificationStatus": "retrieved and Pillow decoded; reencoded PNG",
+      "iconVerificationStatus": "No suitable >=96px official icon retrieved; NovaOS vector/text fallback",
       "iconFallback": "Use text initials if candidate cannot be retrieved or decoded",
       "iconVerifiedSource": "https://gitlab.com/favicon.ico",
       "iconResolvedUrl": "https://gitlab.com/assets/favicon-72a2cad5025aa931d6ea56c3201d1f18e68a8cd39788c7c80d5b2b82aa5143ef.png",
       "iconSha256": "a8f7c38948ae0b58d686f22864e2945a8cdc932665de09c85383e095d7e234a8",
       "iconSizeBytes": 860,
-      "iconAsset": "icons/gitlab.png"
+      "iconWidth": 0,
+      "iconHeight": 0
     },
     {
       "id": "stackoverflow",
@@ -532,13 +566,15 @@
       "scope": null,
       "authenticationRequirements": "Account and reputation requirements apply to some actions.",
       "iconSource": "https://stackoverflow.com/favicon.ico",
-      "iconVerificationStatus": "retrieved and Pillow decoded; reencoded PNG",
+      "iconVerificationStatus": "HTTPS official website link; bounded decode; PNG reencoded; 2026-11-04",
       "iconFallback": "Use text initials if candidate cannot be retrieved or decoded",
-      "iconVerifiedSource": "https://stackoverflow.com/favicon.ico",
-      "iconResolvedUrl": "https://stackoverflow.com/Content/Sites/stackoverflow/Img/favicon.ico?v=562fb39d93c8",
-      "iconSha256": "e3a94162baa339406e9aeac5fff10dfc14f90c684689f72cd98828d7f1d9d4b7",
-      "iconSizeBytes": 815,
-      "iconAsset": "icons/stackoverflow.png"
+      "iconVerifiedSource": "https://stackoverflow.com/Content/Sites/stackoverflow/Img/apple-touch-icon.png?v=9168b8ec82a5",
+      "iconResolvedUrl": "https://stackoverflow.com/Content/Sites/stackoverflow/Img/apple-touch-icon.png?v=9168b8ec82a5",
+      "iconSha256": "4a427d3a94882a47f4cc9cbb76442d63f4734d500f3ea527b8a794e1528da198",
+      "iconSizeBytes": 2482,
+      "iconAsset": "icons/stackoverflow.png",
+      "iconWidth": 180,
+      "iconHeight": 180
     },
     {
       "id": "codepen",
@@ -558,9 +594,11 @@
       "scope": null,
       "authenticationRequirements": "Account and paid feature limits may apply; mobile editing can be cramped.",
       "iconSource": "https://codepen.io/favicon.ico",
-      "iconVerificationStatus": "unavailable; original text initials fallback",
+      "iconVerificationStatus": "No suitable >=96px official icon retrieved; NovaOS vector/text fallback",
       "iconFallback": "Use text initials if candidate cannot be retrieved or decoded",
-      "iconRetrievalError": "HTTP Error 403: Forbidden"
+      "iconRetrievalError": "HTTP Error 403: Forbidden",
+      "iconWidth": 0,
+      "iconHeight": 0
     },
     {
       "id": "replit",
@@ -580,13 +618,15 @@
       "scope": null,
       "authenticationRequirements": "Account, compute quotas and paid features may apply.",
       "iconSource": "https://replit.com/favicon.ico",
-      "iconVerificationStatus": "retrieved and Pillow decoded; reencoded PNG",
+      "iconVerificationStatus": "HTTPS official manifest; bounded decode; PNG reencoded; 2026-11-04",
       "iconFallback": "Use text initials if candidate cannot be retrieved or decoded",
-      "iconVerifiedSource": "https://replit.com/public/icons/favicon-prompt-192-rebrand.png",
-      "iconResolvedUrl": "https://replit.com/public/icons/favicon-prompt-192-rebrand.png",
-      "iconSha256": "6ca1d2984964092b1194dc620b6c1b46b6a9887def7ca399cf53b770661241fc",
-      "iconSizeBytes": 1449,
-      "iconAsset": "icons/replit.png"
+      "iconVerifiedSource": "https://replit.com/public/icons/icon-rebrand-512x512.png",
+      "iconResolvedUrl": "https://replit.com/public/icons/icon-rebrand-512x512.png",
+      "iconSha256": "7a85fc387fa3d79df2363935841549f71a49fac152626d90e689da1f606d8b3f",
+      "iconSizeBytes": 5971,
+      "iconAsset": "icons/replit.png",
+      "iconWidth": 512,
+      "iconHeight": 512
     },
     {
       "id": "photopea",
@@ -606,13 +646,15 @@
       "scope": null,
       "authenticationRequirements": "Large files depend on device memory and performance; ads may appear.",
       "iconSource": "https://www.photopea.com/favicon.ico",
-      "iconVerificationStatus": "retrieved and Pillow decoded; reencoded PNG",
+      "iconVerificationStatus": "HTTPS official website link; bounded decode; PNG reencoded; 2026-11-04",
       "iconFallback": "Use text initials if candidate cannot be retrieved or decoded",
       "iconVerifiedSource": "https://www.photopea.com/promo/icon512.png",
       "iconResolvedUrl": "https://www.photopea.com/promo/icon512.png",
-      "iconSha256": "cb57d41f4200b41b2c64a973a5eb0c5fffa208d453cd82685855a471da2bb0e6",
-      "iconSizeBytes": 9668,
-      "iconAsset": "icons/photopea.png"
+      "iconSha256": "fc12513ca4467b98628e783683a56459033902ae9c4147106acfd0886fc0eb1b",
+      "iconSizeBytes": 36820,
+      "iconAsset": "icons/photopea.png",
+      "iconWidth": 512,
+      "iconHeight": 512
     },
     {
       "id": "squoosh",
@@ -632,13 +674,15 @@
       "scope": null,
       "authenticationRequirements": "JavaScript required; codec support and large-file performance vary by browser.",
       "iconSource": "https://squoosh.app/favicon.ico",
-      "iconVerificationStatus": "retrieved and Pillow decoded; reencoded PNG",
+      "iconVerificationStatus": "HTTPS official website link; bounded decode; PNG reencoded; 2026-11-04",
       "iconFallback": "Use text initials if candidate cannot be retrieved or decoded",
-      "iconVerifiedSource": "https://squoosh.app/c/favicon-c9cf50ef.ico",
-      "iconResolvedUrl": "https://squoosh.app/c/favicon-c9cf50ef.ico",
-      "iconSha256": "76a6637f4cd2d2bcd59192bc057d040078e70b2107b67491fe5cf223c60502b0",
-      "iconSizeBytes": 4085,
-      "iconAsset": "icons/squoosh.png"
+      "iconVerifiedSource": "https://squoosh.app/c/icon-large-maskable-c2078ced.png",
+      "iconResolvedUrl": "https://squoosh.app/c/icon-large-maskable-c2078ced.png",
+      "iconSha256": "54b50a154646f922ff0d8c44173aff47489171667e6f6d1ecc83e87bacb92ade",
+      "iconSizeBytes": 46498,
+      "iconAsset": "icons/squoosh.png",
+      "iconWidth": 512,
+      "iconHeight": 512
     },
     {
       "id": "excalidraw",
@@ -658,13 +702,15 @@
       "scope": null,
       "authenticationRequirements": "JavaScript required; collaboration and storage behavior are controlled by the service.",
       "iconSource": "https://excalidraw.com/favicon.ico",
-      "iconVerificationStatus": "retrieved and Pillow decoded; reencoded PNG",
+      "iconVerificationStatus": "HTTPS official manifest; bounded decode; PNG reencoded; 2026-11-04",
       "iconFallback": "Use text initials if candidate cannot be retrieved or decoded",
-      "iconVerifiedSource": "https://excalidraw.com/favicon.ico",
-      "iconResolvedUrl": "https://excalidraw.com/favicon.ico",
-      "iconSha256": "d016f040a2228e54e040f416696915ee25d00fe34713d1d7a8fb13c066f883fa",
-      "iconSizeBytes": 2646,
-      "iconAsset": "icons/excalidraw.png"
+      "iconVerifiedSource": "https://excalidraw.com/android-chrome-192x192.png",
+      "iconResolvedUrl": "https://excalidraw.com/android-chrome-192x192.png",
+      "iconSha256": "b785579742eb0c6b5d84bfc4b9158dbced42944eecfae705eaa258a7bc21152d",
+      "iconSizeBytes": 11002,
+      "iconAsset": "icons/excalidraw.png",
+      "iconWidth": 192,
+      "iconHeight": 192
     },
     {
       "id": "canva",
@@ -684,13 +730,14 @@
       "scope": null,
       "authenticationRequirements": "Account and paid content restrictions may apply; complex editing needs device resources.",
       "iconSource": "https://www.canva.com/favicon.ico",
-      "iconVerificationStatus": "retrieved and Pillow decoded; reencoded PNG",
+      "iconVerificationStatus": "No suitable >=96px official icon retrieved; NovaOS vector/text fallback",
       "iconFallback": "Use text initials if candidate cannot be retrieved or decoded",
       "iconVerifiedSource": "https://www.canva.com/favicon.ico",
       "iconResolvedUrl": "https://static.canva.com/static/images/favicon.ico",
       "iconSha256": "0ba75225d1785bf69bfa54b876adf0f4e322d7355de1e830f9b66e560ab0ab11",
       "iconSizeBytes": 2502,
-      "iconAsset": "icons/canva.png"
+      "iconWidth": 0,
+      "iconHeight": 0
     },
     {
       "id": "wikipedia",
@@ -710,13 +757,15 @@
       "scope": null,
       "authenticationRequirements": "Community-edited articles vary in accuracy and completeness.",
       "iconSource": "https://www.wikipedia.org/favicon.ico",
-      "iconVerificationStatus": "retrieved and Pillow decoded; reencoded PNG",
+      "iconVerificationStatus": "HTTPS official website link; bounded decode; PNG reencoded; 2026-11-04",
       "iconFallback": "Use text initials if candidate cannot be retrieved or decoded",
-      "iconVerifiedSource": "https://www.wikipedia.org/favicon.ico",
-      "iconResolvedUrl": "https://en.wikipedia.org/favicon.ico",
-      "iconSha256": "e7a524585c9de2a3add4d517e011b38f8eba043e93af70978af09d1fc1800ef8",
-      "iconSizeBytes": 1059,
-      "iconAsset": "icons/wikipedia.png"
+      "iconVerifiedSource": "https://www.wikipedia.org/static/apple-touch/wikipedia.png",
+      "iconResolvedUrl": "https://www.wikipedia.org/static/apple-touch/wikipedia.png",
+      "iconSha256": "36a8383566ca6aa03468509460734bb442d67ea161dd56be243293cf35a78862",
+      "iconSizeBytes": 3503,
+      "iconAsset": "icons/wikipedia.png",
+      "iconWidth": 160,
+      "iconHeight": 160
     },
     {
       "id": "bbc",
@@ -736,13 +785,14 @@
       "scope": null,
       "authenticationRequirements": "Direct research fetch restricted; official help confirms bbc.com. Regional content, ads or subscriptions may apply.",
       "iconSource": "https://www.bbc.com/favicon.ico",
-      "iconVerificationStatus": "retrieved and Pillow decoded; reencoded PNG",
+      "iconVerificationStatus": "No suitable >=96px official icon retrieved; NovaOS vector/text fallback",
       "iconFallback": "Use text initials if candidate cannot be retrieved or decoded",
       "iconVerifiedSource": "https://www.bbc.com/favicon.ico",
       "iconResolvedUrl": "https://www.bbc.com/favicon.ico",
       "iconSha256": "0cc4c233ff68a36fca54913e75c406838b23fee80ace01d36a944dcfb70923fd",
       "iconSizeBytes": 157,
-      "iconAsset": "icons/bbc.png"
+      "iconWidth": 0,
+      "iconHeight": 0
     },
     {
       "id": "google-maps",
@@ -762,13 +812,14 @@
       "scope": null,
       "authenticationRequirements": "JavaScript required; location permission optional; browser navigation features vary.",
       "iconSource": "https://www.google.com/favicon.ico",
-      "iconVerificationStatus": "retrieved and Pillow decoded; reencoded PNG",
+      "iconVerificationStatus": "No suitable >=96px official icon retrieved; NovaOS vector/text fallback",
       "iconFallback": "Use text initials if candidate cannot be retrieved or decoded",
       "iconVerifiedSource": "https://www.google.com/favicon.ico",
       "iconResolvedUrl": "https://www.google.com/favicon.ico",
       "iconSha256": "68db916d3a930122166645c3cb91de1ea57171a80b8a92f38b59c98af6d26bb9",
       "iconSizeBytes": 1339,
-      "iconAsset": "icons/google-maps.png"
+      "iconWidth": 0,
+      "iconHeight": 0
     },
     {
       "id": "amazon",
@@ -788,13 +839,14 @@
       "scope": null,
       "authenticationRequirements": "UK storefront; account required for purchases. Prices and availability change.",
       "iconSource": "https://www.amazon.co.uk/favicon.ico",
-      "iconVerificationStatus": "retrieved and Pillow decoded; reencoded PNG",
+      "iconVerificationStatus": "No suitable >=96px official icon retrieved; NovaOS vector/text fallback",
       "iconFallback": "Use text initials if candidate cannot be retrieved or decoded",
       "iconVerifiedSource": "https://www.amazon.co.uk/favicon.ico",
       "iconResolvedUrl": "https://www.amazon.co.uk/favicon.ico",
       "iconSha256": "cf39ef4f70ada127ce40ab44e03d155e57826b6418c8c304314100cdc58d09b9",
       "iconSizeBytes": 658,
-      "iconAsset": "icons/amazon.png"
+      "iconWidth": 0,
+      "iconHeight": 0
     },
     {
       "id": "ebay",
@@ -814,13 +866,14 @@
       "scope": null,
       "authenticationRequirements": "UK storefront; account required for buying and selling. Seller terms vary.",
       "iconSource": "https://www.ebay.co.uk/favicon.ico",
-      "iconVerificationStatus": "retrieved and Pillow decoded; reencoded PNG",
+      "iconVerificationStatus": "No suitable >=96px official icon retrieved; NovaOS vector/text fallback",
       "iconFallback": "Use text initials if candidate cannot be retrieved or decoded",
       "iconVerifiedSource": "https://www.ebay.co.uk/favicon.ico",
       "iconResolvedUrl": "https://www.ebay.co.uk/favicon.ico",
       "iconSha256": "41bc047b8935accf83ba8dfff411e23d7972689249d395842aa6fc2f59e0ad80",
       "iconSizeBytes": 176,
-      "iconAsset": "icons/ebay.png"
+      "iconWidth": 0,
+      "iconHeight": 0
     },
     {
       "id": "khan-academy",
@@ -840,13 +893,14 @@
       "scope": null,
       "authenticationRequirements": "JavaScript content was not readable in research fetch; account needed to save progress.",
       "iconSource": "https://www.khanacademy.org/favicon.ico",
-      "iconVerificationStatus": "retrieved and Pillow decoded; reencoded PNG",
+      "iconVerificationStatus": "No suitable >=96px official icon retrieved; NovaOS vector/text fallback",
       "iconFallback": "Use text initials if candidate cannot be retrieved or decoded",
       "iconVerifiedSource": "https://www.khanacademy.org/favicon.ico",
       "iconResolvedUrl": "https://www.khanacademy.org/favicon.ico",
       "iconSha256": "01a61ba1f1c5e9b4b1a89192f36795c4c9ccefe051734dcf2eb4330879219ae9",
       "iconSizeBytes": 1028,
-      "iconAsset": "icons/khan-academy.png"
+      "iconWidth": 0,
+      "iconHeight": 0
     },
     {
       "id": "freecodecamp",
@@ -866,13 +920,15 @@
       "scope": null,
       "authenticationRequirements": "JavaScript content was not readable in research fetch; account needed to save progress.",
       "iconSource": "https://www.freecodecamp.org/favicon.ico",
-      "iconVerificationStatus": "retrieved and Pillow decoded; reencoded PNG",
+      "iconVerificationStatus": "HTTPS official manifest; bounded decode; PNG reencoded; 2026-11-04",
       "iconFallback": "Use text initials if candidate cannot be retrieved or decoded",
-      "iconVerifiedSource": "https://www.freecodecamp.org/favicon-32x32.png",
-      "iconResolvedUrl": "https://www.freecodecamp.org/favicon-32x32.png",
-      "iconSha256": "500e209b1d0b46fb9b5d1890002238750f24ea48bcc7ffbb2baded345b17c03b",
-      "iconSizeBytes": 1706,
-      "iconAsset": "icons/freecodecamp.png"
+      "iconVerifiedSource": "https://www.freecodecamp.org/icons/icon-512x512.png?v=6cba562cbd10e31af925a976f3db73f7",
+      "iconResolvedUrl": "https://www.freecodecamp.org/icons/icon-512x512.png?v=6cba562cbd10e31af925a976f3db73f7",
+      "iconSha256": "e5eed7f9a3534025a4745df264df968a6f78e4758d75664b4965b1333a1299ac",
+      "iconSizeBytes": 30263,
+      "iconAsset": "icons/freecodecamp.png",
+      "iconWidth": 512,
+      "iconHeight": 512
     },
     {
       "id": "mdn",
@@ -892,13 +948,15 @@
       "scope": null,
       "authenticationRequirements": "Documentation shortcut; examples and browser compatibility information change.",
       "iconSource": "https://developer.mozilla.org/favicon.ico",
-      "iconVerificationStatus": "retrieved and Pillow decoded; reencoded PNG",
+      "iconVerificationStatus": "HTTPS official manifest; bounded decode; PNG reencoded; 2026-11-04",
       "iconFallback": "Use text initials if candidate cannot be retrieved or decoded",
-      "iconVerifiedSource": "https://developer.mozilla.org/favicon.ico",
-      "iconResolvedUrl": "https://developer.mozilla.org/favicon.ico",
-      "iconSha256": "4dd538fbd9e8a8592a73594cb6cc8038eac6bab4121bdf49ae895f730952417a",
-      "iconSizeBytes": 979,
-      "iconAsset": "icons/mdn.png"
+      "iconVerifiedSource": "https://developer.mozilla.org/favicon-512x512.png",
+      "iconResolvedUrl": "https://developer.mozilla.org/favicon-512x512.png",
+      "iconSha256": "43ea5e9125237136712f260aa517ad6b2fff831afd4bf4f900b083d4728a4598",
+      "iconSizeBytes": 9356,
+      "iconAsset": "icons/mdn.png",
+      "iconWidth": 512,
+      "iconHeight": 512
     },
     {
       "id": "w3schools",
@@ -918,13 +976,15 @@
       "scope": null,
       "authenticationRequirements": "Ads and paid courses may appear; account needed for saved progress.",
       "iconSource": "https://www.w3schools.com/favicon.ico",
-      "iconVerificationStatus": "retrieved and Pillow decoded; reencoded PNG",
+      "iconVerificationStatus": "HTTPS official manifest; bounded decode; PNG reencoded; 2026-11-04",
       "iconFallback": "Use text initials if candidate cannot be retrieved or decoded",
-      "iconVerifiedSource": "https://www.w3schools.com/favicon.ico",
-      "iconResolvedUrl": "https://www.w3schools.com/favicon.ico",
-      "iconSha256": "31d6a378248996235140e34c8103e10ca55f603285140799ad19d40feb2b9b54",
-      "iconSizeBytes": 1175,
-      "iconAsset": "icons/w3schools.png"
+      "iconVerifiedSource": "https://www.w3schools.com/android-chrome-512x512.png",
+      "iconResolvedUrl": "https://www.w3schools.com/android-chrome-512x512.png",
+      "iconSha256": "eeb2e9884b5092d575d8b2707ec527985dd4878a4b9d1109dca1b4c82bae238c",
+      "iconSizeBytes": 31057,
+      "iconAsset": "icons/w3schools.png",
+      "iconWidth": 512,
+      "iconHeight": 512
     },
     {
       "id": "duolingo",
@@ -944,9 +1004,11 @@
       "scope": null,
       "authenticationRequirements": "JavaScript content was not readable in research fetch; account and paid feature limits may apply.",
       "iconSource": "https://www.duolingo.com/favicon.ico",
-      "iconVerificationStatus": "unavailable; original text initials fallback",
+      "iconVerificationStatus": "No suitable >=96px official icon retrieved; NovaOS vector/text fallback",
       "iconFallback": "Use text initials if candidate cannot be retrieved or decoded",
-      "iconRetrievalError": "Root favicon unavailable; no decodable HTML-advertised icon in first 4 candidates."
+      "iconRetrievalError": "Root favicon unavailable; no decodable HTML-advertised icon in first 4 candidates.",
+      "iconWidth": 0,
+      "iconHeight": 0
     },
     {
       "id": "coursera",
@@ -966,13 +1028,14 @@
       "scope": null,
       "authenticationRequirements": "Enrollment, account and payment requirements vary by course.",
       "iconSource": "https://www.coursera.org/favicon.ico",
-      "iconVerificationStatus": "retrieved and Pillow decoded; reencoded PNG",
+      "iconVerificationStatus": "No suitable >=96px official icon retrieved; NovaOS vector/text fallback",
       "iconFallback": "Use text initials if candidate cannot be retrieved or decoded",
       "iconVerifiedSource": "https://www.coursera.org/favicon.ico",
       "iconResolvedUrl": "https://www.coursera.org/favicon.ico",
       "iconSha256": "8af7cd614af609eea24763ba150eb2310ce6a90c24b83f71127d66b85f6299df",
       "iconSizeBytes": 1969,
-      "iconAsset": "icons/coursera.png"
+      "iconWidth": 0,
+      "iconHeight": 0
     },
     {
       "id": "edx",
@@ -992,13 +1055,15 @@
       "scope": null,
       "authenticationRequirements": "Enrollment, account and payment requirements vary by course.",
       "iconSource": "https://www.edx.org/favicon.ico",
-      "iconVerificationStatus": "retrieved and Pillow decoded; reencoded PNG",
+      "iconVerificationStatus": "HTTPS official favicon largest embedded frame; bounded decode; PNG reencoded; 2026-11-04",
       "iconFallback": "Use text initials if candidate cannot be retrieved or decoded",
       "iconVerifiedSource": "https://www.edx.org/favicon.ico",
       "iconResolvedUrl": "https://www.edx.org/favicon.ico",
-      "iconSha256": "39a06ac1d2efb6d496188848fe9fc7bf228e00169256f434a98d1f73c8fd9a0a",
-      "iconSizeBytes": 6958,
-      "iconAsset": "icons/edx.png"
+      "iconSha256": "07ebc755b6711db613ad1928a86347f65b5154910a3632ea933669789a591307",
+      "iconSizeBytes": 6382,
+      "iconAsset": "icons/edx.png",
+      "iconWidth": 256,
+      "iconHeight": 256
     },
     {
       "id": "gutenberg",
@@ -1018,13 +1083,14 @@
       "scope": null,
       "authenticationRequirements": "Copyright status varies by country; check local requirements.",
       "iconSource": "https://www.gutenberg.org/favicon.ico",
-      "iconVerificationStatus": "retrieved and Pillow decoded; reencoded PNG",
+      "iconVerificationStatus": "No suitable >=96px official icon retrieved; NovaOS vector/text fallback",
       "iconFallback": "Use text initials if candidate cannot be retrieved or decoded",
       "iconVerifiedSource": "https://www.gutenberg.org/favicon.ico",
       "iconResolvedUrl": "https://www.gutenberg.org/favicon.ico",
       "iconSha256": "2d33569f53ed54116cd80dc1a74eeba68baa3a28d3a5f435bc38c17bf2eb4a1f",
       "iconSizeBytes": 670,
-      "iconAsset": "icons/gutenberg.png"
+      "iconWidth": 0,
+      "iconHeight": 0
     },
     {
       "id": "internet-archive",
@@ -1044,13 +1110,15 @@
       "scope": null,
       "authenticationRequirements": "JavaScript required for some features; availability and borrowing permissions vary.",
       "iconSource": "https://archive.org/favicon.ico",
-      "iconVerificationStatus": "retrieved and Pillow decoded; reencoded PNG",
+      "iconVerificationStatus": "HTTPS official website link; bounded decode; PNG reencoded; 2026-11-04",
       "iconFallback": "Use text initials if candidate cannot be retrieved or decoded",
-      "iconVerifiedSource": "https://archive.org/favicon.ico",
-      "iconResolvedUrl": "https://archive.org/favicon.ico",
-      "iconSha256": "4f17b154d03706afaadaf8163e50f8328128f5f0c7ae34cb071a75628b06ddde",
-      "iconSizeBytes": 1078,
-      "iconAsset": "icons/internet-archive.png"
+      "iconVerifiedSource": "https://archive.org/offshoot_assets/apple-touch-icon.png",
+      "iconResolvedUrl": "https://archive.org/offshoot_assets/apple-touch-icon.png",
+      "iconSha256": "c6d2a07df54988e2440f35a99eb68e5a6d9ace3457ae0423ac31ac25787ab490",
+      "iconSizeBytes": 2399,
+      "iconAsset": "icons/internet-archive.png",
+      "iconWidth": 180,
+      "iconHeight": 180
     },
     {
       "id": "google-translate",
@@ -1070,13 +1138,14 @@
       "scope": null,
       "authenticationRequirements": "Language and input features vary; translations may contain errors.",
       "iconSource": "https://translate.google.com/favicon.ico",
-      "iconVerificationStatus": "retrieved and Pillow decoded; reencoded PNG",
+      "iconVerificationStatus": "No suitable >=96px official icon retrieved; NovaOS vector/text fallback",
       "iconFallback": "Use text initials if candidate cannot be retrieved or decoded",
       "iconVerifiedSource": "https://translate.google.com/favicon.ico",
       "iconResolvedUrl": "https://translate.google.com/favicon.ico",
       "iconSha256": "2559a393bb2292906b8a722c0dd5a6bed613116c3285f0a3bddb77b867b028d1",
       "iconSizeBytes": 3159,
-      "iconAsset": "icons/google-translate.png"
+      "iconWidth": 0,
+      "iconHeight": 0
     },
     {
       "id": "deepl",
@@ -1096,13 +1165,15 @@
       "scope": null,
       "authenticationRequirements": "Free usage, language and document limits apply; paid features available.",
       "iconSource": "https://www.deepl.com/favicon.ico",
-      "iconVerificationStatus": "retrieved and Pillow decoded; reencoded PNG",
+      "iconVerificationStatus": "HTTPS official website link; bounded decode; PNG reencoded; 2026-11-04",
       "iconFallback": "Use text initials if candidate cannot be retrieved or decoded",
-      "iconVerifiedSource": "https://www.deepl.com/favicon.ico",
-      "iconResolvedUrl": "https://www.deepl.com/favicon.ico",
-      "iconSha256": "33378a719c4990a1f6a49b8e88bac75da68d6227bb8e70a8cd8756267216331e",
-      "iconSizeBytes": 5196,
-      "iconAsset": "icons/deepl.png"
+      "iconVerifiedSource": "https://www.deepl.com/favicon.ico?favicon.2q65ixsfts1dv.ico",
+      "iconResolvedUrl": "https://www.deepl.com/favicon.ico?favicon.2q65ixsfts1dv.ico",
+      "iconSha256": "0ea7258bb65122df8b63f32c05f9dd48359d62e8273adff01d81aa9921f5d0fe",
+      "iconSizeBytes": 7671,
+      "iconAsset": "icons/deepl.png",
+      "iconWidth": 256,
+      "iconHeight": 256
     },
     {
       "id": "calculator",
@@ -1122,13 +1193,15 @@
       "scope": null,
       "authenticationRequirements": "Some calculators are country specific; results should be independently checked.",
       "iconSource": "https://www.calculator.net/favicon.ico",
-      "iconVerificationStatus": "retrieved and Pillow decoded; reencoded PNG",
+      "iconVerificationStatus": "HTTPS official manifest; bounded decode; PNG reencoded; 2026-11-04",
       "iconFallback": "Use text initials if candidate cannot be retrieved or decoded",
-      "iconVerifiedSource": "https://www.calculator.net/favicon.ico",
-      "iconResolvedUrl": "https://www.calculator.net/favicon.ico",
-      "iconSha256": "678d71419fac7c5c98e59429f8113ed70a016fd88cc60067a6f3ddfe6d978add",
-      "iconSizeBytes": 210,
-      "iconAsset": "icons/calculator.png"
+      "iconVerifiedSource": "https://www.calculator.net/icon-192.png",
+      "iconResolvedUrl": "https://www.calculator.net/icon-192.png",
+      "iconSha256": "fc08f9fc7bb910dcaabe91b83ce1eeaf4414e7dc708aba596ef42d778a3eb02e",
+      "iconSizeBytes": 538,
+      "iconAsset": "icons/calculator.png",
+      "iconWidth": 192,
+      "iconHeight": 192
     },
     {
       "id": "fast",
@@ -1148,13 +1221,15 @@
       "scope": null,
       "authenticationRequirements": "Test consumes network data; results depend on connection conditions.",
       "iconSource": "https://fast.com/favicon.ico",
-      "iconVerificationStatus": "retrieved and Pillow decoded; reencoded PNG",
+      "iconVerificationStatus": "HTTPS official website link; bounded decode; PNG reencoded; 2026-11-04",
       "iconFallback": "Use text initials if candidate cannot be retrieved or decoded",
-      "iconVerifiedSource": "https://fast.com/assets/favicons/favicon-96x96.png",
-      "iconResolvedUrl": "https://fast.com/assets/favicons/favicon-96x96.png",
-      "iconSha256": "402e1772c81f33618ce1604e4e6a79be7247ba61708b8bbd8741f428b97be48d",
-      "iconSizeBytes": 7205,
-      "iconAsset": "icons/fast.png"
+      "iconVerifiedSource": "https://fast.com/assets/favicons/android-icon-192x192.png",
+      "iconResolvedUrl": "https://fast.com/assets/favicons/android-icon-192x192.png",
+      "iconSha256": "86ad4af2f7157e3d56cc2b88cceeb3e9f2853783f9a2d1b9aa1a201547d846a9",
+      "iconSizeBytes": 14357,
+      "iconAsset": "icons/fast.png",
+      "iconWidth": 192,
+      "iconHeight": 192
     },
     {
       "id": "timeanddate",
@@ -1174,13 +1249,15 @@
       "scope": null,
       "authenticationRequirements": "Ads and paid features may appear; service-specific tools have their own limits.",
       "iconSource": "https://www.timeanddate.com/favicon.ico",
-      "iconVerificationStatus": "retrieved and Pillow decoded; reencoded PNG",
+      "iconVerificationStatus": "HTTPS official manifest; bounded decode; PNG reencoded; 2026-11-04",
       "iconFallback": "Use text initials if candidate cannot be retrieved or decoded",
-      "iconVerifiedSource": "https://www.timeanddate.com/favicon.ico",
-      "iconResolvedUrl": "https://www.timeanddate.com/favicon.ico",
-      "iconSha256": "7397838136fbbcf1de573f03847f01fc0075429a67f7533b8e57e1f1ae32409a",
-      "iconSizeBytes": 2121,
-      "iconAsset": "icons/timeanddate.png"
+      "iconVerifiedSource": "https://www.timeanddate.com/android-chrome-256x256.png",
+      "iconResolvedUrl": "https://www.timeanddate.com/android-chrome-256x256.png",
+      "iconSha256": "36f32a10c6a51a87b208edd2eac8a4c4d716a1c5ed27612441b42d891cb729fc",
+      "iconSizeBytes": 7818,
+      "iconAsset": "icons/timeanddate.png",
+      "iconWidth": 256,
+      "iconHeight": 256
     },
     {
       "id": "wolframalpha",
@@ -1200,13 +1277,14 @@
       "scope": null,
       "authenticationRequirements": "JavaScript required; advanced features may require payment.",
       "iconSource": "https://www.wolframalpha.com/favicon.ico",
-      "iconVerificationStatus": "retrieved and Pillow decoded; reencoded PNG",
+      "iconVerificationStatus": "No suitable >=96px official icon retrieved; NovaOS vector/text fallback",
       "iconFallback": "Use text initials if candidate cannot be retrieved or decoded",
       "iconVerifiedSource": "https://www.wolframalpha.com/_next/static/images/favicon_b48d893b991ff67016124a4d51822e63.ico",
       "iconResolvedUrl": "https://www.wolframalpha.com/_next/static/images/favicon_b48d893b991ff67016124a4d51822e63.ico",
       "iconSha256": "442cd11cd98c5b77fff8223f9be75d9c7b878b585b19047d0e11f3383839d3c7",
       "iconSizeBytes": 1221,
-      "iconAsset": "icons/wolframalpha.png"
+      "iconWidth": 0,
+      "iconHeight": 0
     },
     {
       "id": "desmos",
@@ -1226,13 +1304,15 @@
       "scope": null,
       "authenticationRequirements": "JavaScript content was not readable in research fetch; browser and device performance vary.",
       "iconSource": "https://www.desmos.com/favicon.ico",
-      "iconVerificationStatus": "retrieved and Pillow decoded; reencoded PNG",
+      "iconVerificationStatus": "HTTPS official manifest; bounded decode; PNG reencoded; 2026-11-04",
       "iconFallback": "Use text initials if candidate cannot be retrieved or decoded",
-      "iconVerifiedSource": "https://www.desmos.com/favicon.ico",
-      "iconResolvedUrl": "https://www.desmos.com/favicon.ico",
-      "iconSha256": "783cda0613c7bf5adb76ba0867e41a11c1f4629ded981849871c70bb03de7bd7",
-      "iconSizeBytes": 1203,
-      "iconAsset": "icons/desmos.png"
+      "iconVerifiedSource": "https://www.desmos.com/assets/pwa/icon-512x512.png",
+      "iconResolvedUrl": "https://www.desmos.com/assets/pwa/icon-512x512.png",
+      "iconSha256": "56b5b740467823bf0cb5b98671855b8d4f9c0841403c2099e94bf65c66e2e77b",
+      "iconSizeBytes": 163097,
+      "iconAsset": "icons/desmos.png",
+      "iconWidth": 512,
+      "iconHeight": 512
     },
     {
       "id": "openstreetmap",
@@ -1252,13 +1332,15 @@
       "scope": null,
       "authenticationRequirements": "Map coverage varies; account required for edits.",
       "iconSource": "https://www.openstreetmap.org/favicon.ico",
-      "iconVerificationStatus": "retrieved and Pillow decoded; reencoded PNG",
+      "iconVerificationStatus": "HTTPS official website link; bounded decode; PNG reencoded; 2026-11-04",
       "iconFallback": "Use text initials if candidate cannot be retrieved or decoded",
-      "iconVerifiedSource": "https://www.openstreetmap.org/favicon.ico",
-      "iconResolvedUrl": "https://www.openstreetmap.org/favicon.ico",
-      "iconSha256": "4a31f35c582c5291a576ad735d412506c2986e7ec6f23d247a2a817b56b44695",
-      "iconSizeBytes": 5190,
-      "iconAsset": "icons/openstreetmap.png"
+      "iconVerifiedSource": "https://www.openstreetmap.org/assets/favicon-194x194-79d3fb0152c735866e64b1d7535d504483cd13c2fad0131a6142bd9629d30de2.png",
+      "iconResolvedUrl": "https://www.openstreetmap.org/assets/favicon-194x194-79d3fb0152c735866e64b1d7535d504483cd13c2fad0131a6142bd9629d30de2.png",
+      "iconSha256": "e43358b5598e0a9b73eb2da5c3cc99a53336d6c3d3f761d52c75e3f25dd760dd",
+      "iconSizeBytes": 45882,
+      "iconAsset": "icons/openstreetmap.png",
+      "iconWidth": 194,
+      "iconHeight": 194
     },
     {
       "id": "govuk",
@@ -1278,13 +1360,15 @@
       "scope": null,
       "authenticationRequirements": "UK-specific information; individual services may require identity verification or accounts.",
       "iconSource": "https://www.gov.uk/favicon.ico",
-      "iconVerificationStatus": "retrieved and Pillow decoded; reencoded PNG",
+      "iconVerificationStatus": "HTTPS official website link; bounded decode; PNG reencoded; 2026-11-04",
       "iconFallback": "Use text initials if candidate cannot be retrieved or decoded",
-      "iconVerifiedSource": "https://www.gov.uk/favicon.ico",
-      "iconResolvedUrl": "https://www.gov.uk/assets/frontend/favicon-24f9fbe064118d58937932e73edafd1d50cb60f7bd84f52308382a309bc2d655.ico",
-      "iconSha256": "a671faab7de20a9605edc48aed42620d3e648914e7601d52dbf2822d8fd16abe",
-      "iconSizeBytes": 1769,
-      "iconAsset": "icons/govuk.png"
+      "iconVerifiedSource": "https://www.gov.uk/assets/frontend/govuk-icon-180-d45a306f0549414cfa5085f16e4a3816a77558b139e5bc226f23162d1d0decb0.png",
+      "iconResolvedUrl": "https://www.gov.uk/assets/frontend/govuk-icon-180-d45a306f0549414cfa5085f16e4a3816a77558b139e5bc226f23162d1d0decb0.png",
+      "iconSha256": "d752425da77b30946c49cade150e5d454d6b10f3b649dca0fc0fd5d170565182",
+      "iconSizeBytes": 7166,
+      "iconAsset": "icons/govuk.png",
+      "iconWidth": 180,
+      "iconHeight": 180
     }
   ]
 }
