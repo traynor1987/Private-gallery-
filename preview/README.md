@@ -35,3 +35,5 @@ First focused CI run41864577746 built/signed/installed the preview, then the emu
 ## Owner acceptance
 
 Install the APK as NovaOS Preview; keep production NovaOS installed. Check Home swipes/Dock/folders, switch both demonstration profiles, select/crop wallpaper, install an app and open it internally, return Home/reopen the same app, try a supported login, rotate/fold/unfold and relaunch to confirm saved layouts. Treat all preview browsing as ordinary, non-encrypted browsing.
+
+Second run41869208311 again passed preview compilation/package/certificate gates but failed before emulator boot: host free space5782.94MB was below the userdata reservation7372.80MB. No cases ran. The next workflow frees only unrelated tools on its ephemeral runner, requires a7GB reserve, uses4GB userdata, and bounds boot/test waits. Application source is unchanged; the Library APK SHA256 remains5c72a7d6a37312dfdd6747e12b1278e483213533e1351105af1f763ca3c29993.

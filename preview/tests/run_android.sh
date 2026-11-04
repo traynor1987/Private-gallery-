@@ -15,7 +15,7 @@ adb shell cmd package resolve-activity --brief uk.co.traynor.novaos.preview > pr
 adb shell am get-current-user > preview/artifacts/current-user.txt
 adb logcat -c
 trap 'adb logcat -d -t 2000 > preview/artifacts/logcat.txt || true' EXIT
-adb shell am instrument -w -r -e class uk.co.traynor.novaos.preview.PreviewAcceptanceTest uk.co.traynor.novaos.preview.test/androidx.test.runner.AndroidJUnitRunner | tee preview/artifacts/android-tests.txt
+timeout 600s adb shell am instrument -w -r -e class uk.co.traynor.novaos.preview.PreviewAcceptanceTest uk.co.traynor.novaos.preview.test/androidx.test.runner.AndroidJUnitRunner | tee preview/artifacts/android-tests.txt
 python3 - <<'PY'
 import pathlib,re
 s=pathlib.Path('preview/artifacts/android-tests.txt').read_text()

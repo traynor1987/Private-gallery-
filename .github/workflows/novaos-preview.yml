@@ -51,7 +51,13 @@ jobs:
       sha256sum NovaOS-Home2-Store-Preview.apk > SHA256SUMS.txt
       git rev-parse HEAD > SOURCE_SHA.txt
    - name: Enable emulator acceleration
-     run: sudo chmod 666 /dev/kvm
+     run: |
+      sudo chmod 666 /dev/kvm
+      # Ephemeral runner tools unrelated to this standalone Android project.
+      sudo rm -rf /usr/share/dotnet /opt/hostedtoolcache/CodeQL
+      preview_free_bytes=$(df --output=avail -B1 /home/runner | tail -1 | tr -d ' ')
+      test "$preview_free_bytes" -gt 7000000000
+      df -h /home/runner
    - name: Focused Android 17 preview verification
      uses: reactivecircus/android-emulator-runner@v2
      with:
@@ -62,7 +68,8 @@ jobs:
       cores: 2
       ram-size: 3072M
       heap-size: 384M
-      disk-size: 6G
+      disk-size: 4096M
+      emulator-boot-timeout: 300
       disable-animations: true
       emulator-options: -no-window -gpu swiftshader -feature -Vulkan -no-snapshot -noaudio -no-boot-anim -camera-back none -camera-front none
       script: bash preview/tests/run_android.sh
