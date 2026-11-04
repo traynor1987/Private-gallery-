@@ -1,3 +1,13 @@
+# 2026-11-04 new-session recovery checkpoint
+
+Authoritative remote source recovered at `ab2d8a9428937a01cbb615768fabd028d7e4e3fb` into a separate checkout on the existing release branch. No accessible repository writer/ownership lock was found. The older clean checkout at `/workspace/scratch/ef06c7b0f118/private-gallery` contains local-only commit `65f24d82`; it was preserved untouched. `/tmp/novaos55-shipping` remains unavailable. Ownership is local to this new checkout, not a claim about inaccessible environments.
+
+Implemented and independently source-reviewed the continuation/Session lock-order prerequisite for native publication. A deterministic deadlock counterexample fails the recovered source and passes corrected source. Existing host authentication/grace/revocation checks pass. See `docs/release17103/SESSION_PUBLICATION_LOCKING.md`. This does not wire the native fence, fix Critical C1 or authorise signing. Code55, API37 and original signing policy unchanged; no CI dispatched.
+
+The owner now explicitly permits isolated Home2 preparation while code55 remains blocked; older "no UI development" entries below describe prior scope. Home2 progress must remain inactive, on this same branch, with no 1.7.11 version assignment or release over the unresolved security baseline.
+
+---
+
 # NovaOS recovery — code55 release blocked
 
 Native bridge milestone: scoped source review accepted the corrected JNI/FD/epoch and bounded-lifetime foundation; Tor-off app/test compilation plus four-ABI native merge pass locally (1m38s). Independently rebuilt native hashes match reviewed outputs. Backend/service/private readiness and runtime integration remain unfinished, so C1 remains open and no Android packet PASS/signing approval is claimed. See NATIVE_ANDROID_BRIDGE_REVIEW.md and CONTINUOUS_VPN_PROGRESS.md under docs/release17103.
