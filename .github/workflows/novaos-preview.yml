@@ -1,0 +1,79 @@
+name: NovaOS interactive Fold preview
+on:
+ push:
+  branches: [preview/home2-nova-store]
+  paths: [preview/**, .github/workflows/novaos-preview.yml]
+ workflow_dispatch:
+permissions:
+ contents: read
+concurrency:
+ group: novaos-preview-${{ github.ref }}
+ cancel-in-progress: false
+jobs:
+ preview:
+  runs-on: ubuntu-24.04
+  timeout-minutes: 40
+  steps:
+   - uses: actions/checkout@v4
+   - uses: actions/setup-java@v5
+     with:
+      distribution: temurin
+      java-version: '17'
+   - uses: gradle/actions/setup-gradle@v4
+   - name: Preview host checks
+     run: |
+      python3 preview/tests/check_preview.py
+      java com.sun.tools.javac.Main -d /tmp/preview-host preview/app/src/main/java/uk/co/traynor/novaos/preview/PreviewRules.java preview/tests/PreviewRulesChecks.java
+      java -cp /tmp/preview-host PreviewRulesChecks
+   - name: Install standalone Android SDK
+     run: |
+      (yes || true) | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" 'cmdline-tools;22.0' 'platforms;android-37.1' 'build-tools;36.0.0' 'emulator'
+   - name: Build separate development preview only
+     run: |
+      chmod +x gradlew
+      ./gradlew -p preview :app:assembleDebug :app:assembleDebugAndroidTest --no-daemon --stacktrace
+   - name: Verify preview identity and development signing
+     run: |
+      mkdir -p preview/artifacts
+      cp preview/app/build/outputs/apk/debug/app-debug.apk preview/artifacts/NovaOS-Home2-Store-Preview.apk
+      "$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging preview/artifacts/NovaOS-Home2-Store-Preview.apk > preview/artifacts/package.txt
+      "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose --print-certs preview/artifacts/NovaOS-Home2-Store-Preview.apk > preview/artifacts/signature.txt
+      python3 - <<'PY'
+      import pathlib
+      pkg=pathlib.Path('preview/artifacts/package.txt').read_text()
+      cert=pathlib.Path('preview/artifacts/signature.txt').read_text()
+      assert "name='uk.co.traynor.novaos.preview'" in pkg
+      assert "versionCode='1'" in pkg and "sdkVersion:'37'" in pkg
+      assert 'Android Debug' in cert
+      assert '94f2bfc6567f26d067d29077111cfd0ce86d38263c642ad115e43365f05b0d17' not in cert.lower()
+      PY
+      cd preview/artifacts
+      sha256sum NovaOS-Home2-Store-Preview.apk > SHA256SUMS.txt
+      git rev-parse HEAD > SOURCE_SHA.txt
+   - name: Enable emulator acceleration
+     run: sudo chmod 666 /dev/kvm
+   - name: Focused Android 17 preview verification
+     uses: reactivecircus/android-emulator-runner@v2
+     with:
+      api-level: '37.0'
+      target: google_apis
+      arch: x86_64
+      profile: pixel_2
+      cores: 4
+      ram-size: 4096M
+      heap-size: 512M
+      disk-size: 6G
+      disable-animations: true
+      emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -camera-front none
+      script: bash preview/tests/run_android.sh
+   - name: Upload preview and verification receipts
+     if: always()
+     uses: actions/upload-artifact@v4
+     with:
+      name: NovaOS-Home2-Store-Preview-${{ github.sha }}
+      path: |
+       preview/artifacts/
+       preview/app/build/outputs/logs/
+       preview/app/build/reports/
+      if-no-files-found: warn
+      retention-days: 14
