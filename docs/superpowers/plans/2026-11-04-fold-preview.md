@@ -6,10 +6,12 @@ Architecture: independently configured preview/ Gradle application, package uk.c
 
 - [x] Recover clean authoritative source, inspect writer inventory and create isolated branch/worktree.
 - [x] RED/GREEN host URL/adaptive-layout/immutable ordering rules.
-- [ ] Implement independent persisted profiles, catalogue validation and installation/uninstallation.
-- [ ] Activate adapted Home UI; drawer/folders/order/menus/dock/pages/customisation/QuickPanel; wallpapers import/preview/crop/reposition/dim/blur.
-- [ ] Add interactive Store/search/categories/details/custom sites and explicit browser disclosure.
+- [x] Implement independent persisted profiles, catalogue validation and installation/uninstallation.
+- [x] Activate adapted Home UI; drawer/folders/order/menus/dock/pages/customisation/QuickPanel; wallpapers import/preview/crop/reposition/dim/blur.
+- [x] Add interactive Store/search/categories/details/custom sites and explicit browser disclosure.
 - [ ] Focused API37 install/profile/persistence/gesture/store and cover/inner/landscape screenshots; review independent package/data boundary.
-- [ ] Development-signed APK identity/cert/hash verification, downloadable artifact, source readback and owner checklist.
+- [x] Development-signed APK identity/cert/hash verification, downloadable artifact, source readback and owner checklist.
 
 Review focus: preview-only application sandbox; untrusted URL validation; profile-local state and atomic persistence; folder/dock cleanup on uninstall; bounded image decoding; rotation/recreation and narrow/tall/landscape layouts. Explicit menu alternatives accompany gestures. No production security claim. Owner correction supersedes external-only launching: reuse Primary V1 portable policy and retained per-app tabs; separate preview WebView suffix/cookie sandbox; no UA spoofing or provider restriction bypass.
+
+Runtime verification attempted three times; all were blocked before preview test assertions by emulator infrastructure. Physical acceptance remains pending; see preview/DELIVERY.json. Source and downloadable APK preserved. No production branch or data was modified.

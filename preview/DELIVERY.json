@@ -1,0 +1,43 @@
+{
+  "applicationId": "uk.co.traynor.novaos.preview",
+  "versionName": "0.1-preview",
+  "versionCode": 1,
+  "branch": "preview/home2-nova-store",
+  "apkApplicationSourceSha": "82a375525e8e619e1c878706fb3cf1666f7612d9",
+  "verifiedCiControlSha": "a5add01b8c8fccf88be2fce8d7280d4b6e7672e2",
+  "apkSha256": "5c72a7d6a37312dfdd6747e12b1278e483213533e1351105af1f763ca3c29993",
+  "apkBytes": 55585757,
+  "developmentCertificateSha256": "81cda5b72cb76940fa50972bc1c284b25e641b88814d2b9041c7111cb1d042d8",
+  "signing": "Android Debug, APK v2 verified; production certificate differs",
+  "apkDelivery": "Locally built development APK; CI artifact builds use separate ephemeral development certificates.",
+  "catalogue": {
+    "total": 50,
+    "verifiedPwa": 0,
+    "verifiedWebApp": 0,
+    "websiteShortcut": 50,
+    "unsupportedListed": 0,
+    "compatibility": "not device certified",
+    "verifiedIcons": 46
+  },
+  "verification": {
+    "hostRuleChecks": 22,
+    "catalogueIconAndPackageChecks": "passed",
+    "appAndAndroidTestApkAssembly": "passed locally and CI",
+    "apkIdentitySignatureAnd16kbAlignment": "passed",
+    "sourceBoundaryReview": "review findings corrected; no production-data crossover found",
+    "androidRuntime": "not executed: emulator infrastructure failures before tests",
+    "physicalFold": "owner acceptance pending"
+  },
+  "ciRuns": [
+    41864577746,
+    41869208311,
+    41872542049
+  ],
+  "remaining": [
+    "Run eight focused Android17 preview cases in healthy emulator/device",
+    "Inspect cover, inner, landscape and large-text layouts",
+    "Physically test wallpaper picker/crop, folders, install/uninstall and per-profile persistence",
+    "Physically test internal app navigation/forms/login/Home return; provider restrictions may require confirmed external browser"
+  ],
+  "productionReleaseBranchUnchangedAt": "6661507b6590175acc0342139576391fef022116"
+}
