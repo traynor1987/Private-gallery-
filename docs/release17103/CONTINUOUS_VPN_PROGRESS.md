@@ -19,3 +19,7 @@ Navigation work is separately scoped: Primary explicit ordinary/app owners and o
 Immersive Private Apps is explicitly deferred as the first planned1.7.11 UI task in `../PRIVATE_APPS_NEXT_UI.md`; no new branch/version or presentation overhaul starts here. Preserve all existing UI and encryption.
 
 No new CI is justified until coherent transport integration and host/source review are complete. Production/native/build changes invalidate earlier protected-tree reuse; passing old eight cases remain historical and cannot approve changed transport. All native probes and complete packet assertions stay mandatory. A development checkpoint marked `[skip ci]` is preservation, not a green release.
+
+## 2026-11-04 recovered continuation prerequisite
+
+New-session continuation/Session monitor consolidation is implemented and independently reviewed, with a deterministic deadlock RED->GREEN regression and existing host authority/grace/revocation checks passing. See SESSION_PUBLICATION_LOCKING.md. This is partial Task3 progress only: shipping persistent-fence/native readiness/service/runtime integration and Critical C1 remain unfinished. Owner now permits separate inactive Home2 preparation; see ../release1711/PREPARATION_STATUS.md. No new CI, signing marker or release approval.

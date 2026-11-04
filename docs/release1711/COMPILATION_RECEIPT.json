@@ -1,0 +1,31 @@
+{
+  "kind": "LOCAL_COMPILATION_ONLY_NOT_RUNTIME_OR_RELEASE_APPROVAL",
+  "baseline": "ab2d8a9428937a01cbb615768fabd028d7e4e3fb",
+  "remote_session_lock_checkpoint": "2cb99f1037048e2309c85c497071687ac6ce8108",
+  "date": "2026-11-04",
+  "tasks": [
+    ":app:compileDebugKotlin",
+    ":app:compileDebugUnitTestKotlin",
+    ":app:compileDebugAndroidTestKotlin"
+  ],
+  "result": "BUILD SUCCESSFUL",
+  "duration": "21s final incremental; original full compilation 3m47s",
+  "sdk": "Android37.1; APK min/target37 unchanged",
+  "gradle": "9.5.0",
+  "java": "17",
+  "log_sha256": "aa78c3c8e209052ac55fe2f4c4ea3b8ecc1afbf8f0ace3f0aae0ccc2d4ac1b91",
+  "sources_sha256": {
+    "app/src/main/java/uk/co/traynor/privategallery/ui/HomeDesktopScreen.kt": "2b15e0068d1844cc2f66bb37ea7a220079cd5a9620126104eb080f2568e1874d",
+    "app/src/main/java/uk/co/traynor/privategallery/core/home/desktop/HomeDesktop.java": "554d2a3fe213dae80318a1a1a2ad19941ee8bee8fecbe79e2044d04dbdece776",
+    "app/src/main/java/uk/co/traynor/privategallery/core/browser/hidden/HiddenBrowserContinuation.java": "cc92db032466ed3941612dfe9d491f040d7397942b06a05e46c370b711cdb6fb",
+    "app/src/test/java/uk/co/traynor/privategallery/core/browser/hidden/HiddenBrowserContinuationChecks.java": "e01c104571771e6f415e452c036eae7cc3f3a09f01a2076926dcf6cab7be1610"
+  },
+  "not_executed": [
+    "APK assembly",
+    "Android instrumentation",
+    "Fold physical acceptance",
+    "fresh packet containment",
+    "production signing",
+    "original-key54-to55 upgrade"
+  ]
+}

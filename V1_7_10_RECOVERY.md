@@ -4,6 +4,8 @@ Authoritative remote source recovered at `ab2d8a9428937a01cbb615768fabd028d7e4e3
 
 Implemented and independently source-reviewed the continuation/Session lock-order prerequisite for native publication. A deterministic deadlock counterexample fails the recovered source and passes corrected source. Existing host authentication/grace/revocation checks pass. See `docs/release17103/SESSION_PUBLICATION_LOCKING.md`. This does not wire the native fence, fix Critical C1 or authorise signing. Code55, API37 and original signing policy unchanged; no CI dispatched.
 
+Home2 preparation now includes a host-tested immutable desktop model and inactive Compose Home/pager/dock/drawer/folder/wallpaper/edit/Quick Panel components.472 model assertions pass; app/unit-test/Android-test compilation passes locally. MainActivity still uses Classic Home. No sensitive widget data, plaintext persistence or new version/signing activation. Full limitations and continuation: `docs/release1711/PREPARATION_STATUS.md`.
+
 The owner now explicitly permits isolated Home2 preparation while code55 remains blocked; older "no UI development" entries below describe prior scope. Home2 progress must remain inactive, on this same branch, with no 1.7.11 version assignment or release over the unresolved security baseline.
 
 ---
