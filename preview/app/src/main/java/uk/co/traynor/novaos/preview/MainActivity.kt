@@ -30,7 +30,7 @@ class MainActivity:ComponentActivity() {
     val factor=minOf(1f,2048f/maxOf(w,h));decoder.setTargetSize(maxOf(1,(w*factor).toInt()),maxOf(1,(h*factor).toInt()));decoder.allocator=ImageDecoder.ALLOCATOR_SOFTWARE
    }
    val name="wallpaper-$photoProfile.jpg";val target=File(filesDir,name);val temp=File(filesDir,"$name.tmp")
-   try {temp.outputStream().use{check(bitmap.compress(Bitmap.CompressFormat.JPEG,92,it))};check(temp.renameTo(target));previewData.change(photoProfile){it.copy(wallpaper=it.wallpaper.copy(image=name,zoom=1f,x=0f,y=0f))}} finally {bitmap.recycle();temp.delete()}
+   try {temp.outputStream().use{check(bitmap.compress(Bitmap.CompressFormat.JPEG,92,it))};check(temp.renameTo(target));previewData.change(photoProfile){it.copy(wallpaper=it.wallpaper.copy(image=name,zoom=1f,x=0f,y=0f,imageRevision=System.currentTimeMillis()))}} finally {bitmap.recycle();temp.delete()}
   }.onFailure{Toast.makeText(this,"Unable to import image: ${it.message}",Toast.LENGTH_LONG).show()}
  }
  override fun onCreate(savedInstanceState:Bundle?){

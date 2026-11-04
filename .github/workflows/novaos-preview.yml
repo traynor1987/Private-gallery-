@@ -8,7 +8,7 @@ permissions:
  contents: read
 concurrency:
  group: novaos-preview-${{ github.ref }}
- cancel-in-progress: false
+ cancel-in-progress: true
 jobs:
  preview:
   runs-on: ubuntu-24.04
@@ -59,12 +59,12 @@ jobs:
       target: google_apis
       arch: x86_64
       profile: pixel_2
-      cores: 4
-      ram-size: 4096M
-      heap-size: 512M
+      cores: 2
+      ram-size: 3072M
+      heap-size: 384M
       disk-size: 6G
       disable-animations: true
-      emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -camera-front none
+      emulator-options: -no-window -gpu swiftshader -feature -Vulkan -no-snapshot -noaudio -no-boot-anim -camera-back none -camera-front none
       script: bash preview/tests/run_android.sh
    - name: Upload preview and verification receipts
      if: always()

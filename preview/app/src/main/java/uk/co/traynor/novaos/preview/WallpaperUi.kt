@@ -13,18 +13,24 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.unit.dp
 import java.io.File
 
 @Composable internal fun WallpaperScreen(data:PreviewData,filesDir:File,onPickImage:()->Unit,onBack:()->Unit){
  val profile=data.profile
- var draft by remember(data.state.current,profile.wallpaper.image,File(filesDir,profile.wallpaper.image?:"none").lastModified()){mutableStateOf(profile.wallpaper)}
+ val config=LocalConfiguration.current
+ val ratio=config.screenWidthDp.toFloat()/config.screenHeightDp.coerceAtLeast(1)
+ var draft by remember(data.state.current,profile.wallpaper.image,profile.wallpaper.imageRevision,File(filesDir,profile.wallpaper.image?:"none").lastModified()){mutableStateOf(profile.wallpaper)}
  Column(Modifier.fillMaxSize().safeDrawingPadding()){
   PreviewHeader("Wallpapers",data.profileLabel+" · demo profile",onBack)
   Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal=24.dp),verticalArrangement=Arrangement.spacedBy(14.dp)){
-   Box(Modifier.fillMaxWidth().height(240.dp).clip(RoundedCornerShape(28.dp)).testTag("wallpaper-preview")){
+   Box(Modifier.fillMaxWidth().height(250.dp),contentAlignment=Alignment.Center){
+   Box(Modifier.heightIn(max=240.dp).aspectRatio(ratio,matchHeightConstraintsFirst=true).clip(RoundedCornerShape(22.dp)).testTag("wallpaper-preview")){
     WallpaperSurface(draft,filesDir,Modifier.fillMaxSize())
-    Column(Modifier.align(Alignment.Center).padding(20.dp),horizontalAlignment=Alignment.CenterHorizontally){Text("12:45",style=MaterialTheme.typography.displayLarge,color=Color.White);Text("NovaOS Preview",color=Color.White)}
+    Column(Modifier.align(Alignment.Center).padding(20.dp),horizontalAlignment=Alignment.CenterHorizontally){Text("12:45",fontSize=(if(ratio<.6f)24 else 38).sp,color=Color.White);Text("NovaOS Preview",fontSize=9.sp,color=Color.White)}
+   }
    }
    Text("Original Nova wallpapers",style=MaterialTheme.typography.titleMedium)
    Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(8.dp)){listOf("Aurora","Midnight","Dusk").forEach{value->FilterChip(selected=draft.image==null&&draft.builtin==value,onClick={draft=draft.copy(builtin=value,image=null)},label={Text(value)})}}

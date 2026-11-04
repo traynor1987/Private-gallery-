@@ -6,6 +6,15 @@ adb install -r preview/app/build/outputs/apk/androidTest/debug/app-debug-android
 adb shell settings put global window_animation_scale 0
 adb shell settings put global transition_animation_scale 0
 adb shell settings put global animator_duration_scale 0
+# API37 boot_complete can precede SystemUI/surface stability. Settle before
+# instrumentation; never reinterpret an aborted process as a passing test.
+sleep 30
+adb shell input keyevent KEYCODE_WAKEUP
+adb shell wm dismiss-keyguard
+adb shell cmd package resolve-activity --brief uk.co.traynor.novaos.preview > preview/artifacts/activity-resolution.txt
+adb shell am get-current-user > preview/artifacts/current-user.txt
+adb logcat -c
+trap 'adb logcat -d -t 2000 > preview/artifacts/logcat.txt || true' EXIT
 adb shell am instrument -w -r -e class uk.co.traynor.novaos.preview.PreviewAcceptanceTest uk.co.traynor.novaos.preview.test/androidx.test.runner.AndroidJUnitRunner | tee preview/artifacts/android-tests.txt
 python3 - <<'PY'
 import pathlib,re

@@ -83,7 +83,7 @@ class PreviewAcceptanceTest {
    assertNotSame(first.view,pool.open(app,"hidden").view);pool.closeApp("hidden",app.id);assertTrue(pool.tabs.any{it.id==first.id})
   }
  }
- private fun shell(command:String){val fd=InstrumentationRegistry.getInstrumentation().uiAutomation.executeShellCommand(command);FileInputStream(fd.fileDescriptor).use{it.readBytes()};fd.close()}
+ private fun shell(command:String){val fd=InstrumentationRegistry.getInstrumentation().uiAutomation.executeShellCommand(command);android.os.ParcelFileDescriptor.AutoCloseInputStream(fd).use{it.readBytes()}}
  private fun screenshot(name:String){
   rule.waitForIdle();SystemClock.sleep(900)
   val image=InstrumentationRegistry.getInstrumentation().uiAutomation.takeScreenshot();val dir=File(rule.activity.filesDir,"screenshots");dir.mkdirs();File(dir,"$name.png").outputStream().use{assertTrue(image.compress(Bitmap.CompressFormat.PNG,100,it))};image.recycle()

@@ -25,7 +25,7 @@ public final class PreviewRules {
  }
  public static int columns(int width,float fontScale,int requested) {
   float scale=Math.max(1f,fontScale);
-  int safe=Math.max(1,Math.min(8,(int)(width/((width>=600?112f:84f)*scale))));
+  int safe=Math.max(1,Math.min(8,(int)(width/((width>=600?112f:74f)*scale))));
   return Math.max(1,Math.min(safe,(width>=600?safe:4)+(requested-4)));
  }
  public static List<String> move(List<String> source,String id,int delta) {

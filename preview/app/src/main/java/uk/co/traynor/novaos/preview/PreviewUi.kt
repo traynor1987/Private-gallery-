@@ -75,6 +75,12 @@ private val lightColors=lightColorScheme(primary=Color(0xFF285F65),secondary=Col
    var confirmUninstall by rememberSaveable{mutableStateOf<String?>(null)}
    var reset by rememberSaveable{mutableStateOf(false)}
    val profile=data.profile
+   val host=LocalContext.current as? android.app.Activity
+   SideEffect { host?.let { activity->
+    val controller=androidx.core.view.WindowCompat.getInsetsController(activity.window,activity.window.decorView)
+    controller.isAppearanceLightStatusBars=screen!="home"&&!dark
+    controller.isAppearanceLightNavigationBars=screen!="home"&&!dark
+   }}
    val pager=rememberPagerState(pageCount={data.profile.pages.size})
    val scope=rememberCoroutineScope()
    val currentPage=pager.currentPage.coerceIn(0,profile.pages.lastIndex)
@@ -236,7 +242,7 @@ private val lightColors=lightColorScheme(primary=Color(0xFF285F65),secondary=Col
 
 @Composable internal fun WallpaperSurface(w:Wallpaper,filesDir:File,modifier:Modifier=Modifier){
  val colors=when(w.builtin){"Midnight"->listOf(Color(0xFF080C21),Color(0xFF29315C),Color(0xFF341E55),Color(0xFF080D1A));"Dusk"->listOf(Color(0xFF3B2253),Color(0xFF7E4C76),Color(0xFFB16D6C),Color(0xFF26304B));else->listOf(Color(0xFF081A36),Color(0xFF324C92),Color(0xFF147F83),Color(0xFF091B2A))}
- val image=remember(w.image,File(filesDir,w.image?:"none").lastModified()){w.image?.let{BitmapFactory.decodeFile(File(filesDir,it).path)?.asImageBitmap()}}
+ val image=remember(w.image,w.imageRevision,File(filesDir,w.image?:"none").lastModified()){w.image?.let{BitmapFactory.decodeFile(File(filesDir,it).path)?.asImageBitmap()}}
  BoxWithConstraints(modifier.clipToBounds()){
   val density=LocalDensity.current
   val dx=with(density){maxWidth.toPx()}*(w.zoom-1f)*w.x/2;val dy=with(density){maxHeight.toPx()}*(w.zoom-1f)*w.y/2
