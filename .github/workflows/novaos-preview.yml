@@ -11,6 +11,7 @@ concurrency:
  cancel-in-progress: true
 jobs:
  preview:
+  if: ${{ !contains(github.event.head_commit.message, '[publish-preview]') }}
   runs-on: ubuntu-24.04
   timeout-minutes: 40
   steps:
@@ -84,3 +85,46 @@ jobs:
        preview/app/build/reports/
       if-no-files-found: warn
       retention-days: 14
+
+ publish-preview:
+  if: ${{ contains(github.event.head_commit.message, '[publish-preview]') }}
+  runs-on: ubuntu-24.04
+  timeout-minutes: 15
+  permissions:
+   contents: write
+   actions: read
+  env:
+   GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  steps:
+   - uses: actions/checkout@v4
+     with:
+      fetch-depth: 0
+   - uses: actions/setup-java@v5
+     with:
+      distribution: temurin
+      java-version: '17'
+   - name: Focused host and emulator-health regression checks
+     run: |
+      python3 preview/tests/check_preview.py
+      python3 -m unittest discover -s preview/tests -p test_emulator_preflight.py
+      java com.sun.tools.javac.Main -d /tmp/preview-host preview/app/src/main/java/uk/co/traynor/novaos/preview/PreviewRules.java preview/tests/PreviewRulesChecks.java
+      java -cp /tmp/preview-host PreviewRulesChecks
+      bash -n preview/release/prepare.sh preview/tests/run_android.sh
+   - name: Install APK verification tools only
+     run: (yes || true) | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" 'build-tools;36.0.0'
+   - name: Recover exact successful build and verify installation safety
+     run: bash preview/release/prepare.sh
+   - name: Publish explicitly experimental GitHub prerelease and verify public APK
+     run: python3 preview/release/publish.py
+   - name: Preserve publication receipts
+     if: always()
+     uses: actions/upload-artifact@v4
+     with:
+      name: NovaOS-preview-publication-${{ github.sha }}
+      path: |
+       preview/release-out/APK-VERIFICATION.json
+       preview/release-out/RELEASE-PUBLICATION.json
+       preview/release-out/package.txt
+       preview/release-out/signature.txt
+       preview/release-out/SHA256SUMS.txt
+      if-no-files-found: warn

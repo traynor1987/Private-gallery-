@@ -1,0 +1,21 @@
+{
+  "runId": 41872542049,
+  "attempt": 2,
+  "jobId": 126837806060,
+  "artifactId": 13358999836,
+  "sourceSha": "a5add01b8c8fccf88be2fce8d7280d4b6e7672e2",
+  "archiveSha256": "8e3156c986538c895a7237caac9deac767db87f78b38ef25808840074828277a",
+  "failureCommand": "adb install -r preview/app/build/outputs/apk/debug/app-debug.apk",
+  "error": "cmd: Failure calling service package: Broken pipe (32)",
+  "failureTimeUtc": "2026-11-04T20:23:41.8037262Z",
+  "classification": "Emulator Package Manager service failure before app installation/launch; not an observed application assertion failure",
+  "buildAndSigning": "passed",
+  "uiTestsExecuted": 0,
+  "testReportsPresent": false,
+  "screenshotsPresent": false,
+  "artifactContents": ["artifacts/SHA256SUMS.txt", "artifacts/SOURCE_SHA.txt", "artifacts/NovaOS-Home2-Store-Preview.apk", "artifacts/package.txt", "artifacts/signature.txt", "app/build/outputs/logs/manifest-merger-debug-report.txt"],
+  "demonstratedFixtureDefect": "Existing warm-up sleep was after adb install, so it could not prevent installation against an unhealthy Package Manager",
+  "correction": "Bounded stable-system_server and responsive-Package-Manager health gate before either installation; six host regression checks; no application code changes or weakened runtime assertions",
+  "runtimeResult": "Still unverified; experimental publication explicitly discloses this",
+  "publication": "Raw development APK through a separately gated GitHub prerelease publication job; essential installation safety checks mandatory"
+}
