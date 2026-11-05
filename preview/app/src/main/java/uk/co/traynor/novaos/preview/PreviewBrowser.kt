@@ -32,6 +32,11 @@ class PreviewApplication:Application(){
 }
 data class PreviewExternalRequest(val tabId:String,val profile:String,val url:String)
 class PreviewTab(val id:String,val profile:String,val app:StoreEntry,val wrapper:MutableContextWrapper,val view:WebView){
+ var resumed=true
+ var navigationRevision=0
+ var touched by mutableLongStateOf(android.os.SystemClock.uptimeMillis())
+ var mediaTitle by mutableStateOf("")
+ var mediaState by mutableStateOf("none")
  var appMode by mutableStateOf(true)
  var title by mutableStateOf(app.name)
  var url by mutableStateOf(app.url)
@@ -57,17 +62,43 @@ class PreviewBrowserModel(application:Application):AndroidViewModel(application)
   val owner="$profile:${app.id}";val old=tabs.firstOrNull{it.id==last[owner]}?:tabs.firstOrNull{it.profile==profile&&it.app.id==app.id}
   val tab=old?:create(app,profile,true);select(tab);return tab
  }
- fun select(tab:PreviewTab){activeId=tab.id;last["${tab.profile}:${tab.app.id}"]=tab.id;syncLifecycle()}
- fun syncLifecycle(){tabs.forEach{if(PreviewAppPolicy.keepRunning(foreground,it.id==activeId,it.profile==currentProfile))it.view.onResume()else it.view.onPause()}}
+ fun select(tab:PreviewTab){tab.touched=android.os.SystemClock.uptimeMillis();activeId=tab.id;last["${tab.profile}:${tab.app.id}"]=tab.id;syncLifecycle()}
+ fun syncLifecycle(){tabs.forEach{val run=it.profile==currentProfile&&PreviewShellRules.keepRunning(foreground,it.id==activeId,it.mediaState=="playing");if(run!=it.resumed){if(run)it.view.onResume()else it.view.onPause();it.resumed=run}}}
  fun create(app:StoreEntry,profile:String,load:Boolean):PreviewTab{
   require(tabs.count{it.profile==profile&&it.app.id==app.id}<8){"Close a tab before adding more (8 per app)."}
   val wrapper=MutableContextWrapper(getApplication<Application>())
   val view=WebView(wrapper)
   val tab=PreviewTab(java.util.UUID.randomUUID().toString(),profile,app,wrapper,view)
+  tab.appMode=!getApplication<Application>().getSharedPreferences("nova_shell_v1",0).getBoolean("browser:$profile:${app.id}",false)
   tabs.add(tab)
   configure(tab)
   if(load)navigate(tab,app.url)
+  syncLifecycle()
   return tab
+ }
+ fun setBrowserMode(tab:PreviewTab,browser:Boolean){
+  getApplication<Application>().getSharedPreferences("nova_shell_v1",0).edit().putBoolean("browser:${tab.profile}:${tab.app.id}",browser).apply()
+  tabs.filter{it.profile==tab.profile&&it.app.id==tab.app.id}.forEach{it.appMode=!browser}
+ }
+ fun recents(profile:String)=tabs.filter{it.profile==profile}.groupBy{it.app.id}.values.map{it.maxBy{tab->tab.touched}}.sortedByDescending{it.touched}
+ fun player(profile:String)=tabs.filter{it.profile==profile&&PreviewShellRules.mediaState(it.mediaState)}.maxWithOrNull(compareBy<PreviewTab>{PreviewShellRules.mediaPriority(it.mediaState)}.thenBy{it.touched})
+ fun pollMedia(){
+  if(!foreground)return
+  tabs.filter{it.profile==currentProfile}.toList().forEach{tab->
+   if(android.net.Uri.parse(tab.url).host=="accounts.google.com"){tab.mediaState="none";tab.mediaTitle="";syncLifecycle();return@forEach}
+   // Read public Media Session metadata only. Never read DOM/forms/cookies or install action handlers.
+   val revision=tab.navigationRevision
+   tab.view.evaluateJavascript("""(()=>{try{const m=navigator.mediaSession;if(!m)return null;const t=m.metadata?.title;return JSON.stringify({state:['playing','paused'].includes(m.playbackState)?m.playbackState:'none',title:typeof t==='string'?t.slice(0,120):''});}catch(e){return null;}})()"""){raw->
+    if(tab !in tabs||tab.profile!=currentProfile||!foreground||tab.navigationRevision!=revision)return@evaluateJavascript
+    if(raw==null||raw.length>2000){tab.mediaState="none";tab.mediaTitle="";syncLifecycle();return@evaluateJavascript}
+    val value=runCatching{org.json.JSONTokener(raw).nextValue()}.getOrNull()
+    val meta=if(value is String&&value.length<1000)runCatching{org.json.JSONObject(value)}.getOrNull()else null
+    val state=meta?.optString("state")?:"none"
+    tab.mediaState=if(PreviewShellRules.mediaState(state))state else "none"
+    tab.mediaTitle=meta?.optString("title")?.take(120)?:""
+    syncLifecycle()
+   }
+  }
  }
  fun requestExternal(tab:PreviewTab,url:String){
   tab.error="This Google OAuth authorization request requires a supported external browser. Its cookies remain in that browser; they cannot be copied into this preview."
@@ -102,7 +133,7 @@ class PreviewBrowserModel(application:Application):AndroidViewModel(application)
     if(!safe)tab.error="This link needs another application or unsupported sign-in flow. Use the browser menu for a confirmed external-browser option."
     return !safe
    }
-   override fun onPageStarted(v:WebView,url:String,icon:Bitmap?){tab.url=url;tab.error=null;update()}
+   override fun onPageStarted(v:WebView,url:String,icon:Bitmap?){tab.navigationRevision++;tab.mediaTitle="";tab.mediaState="none";tab.url=url;tab.error=null;update()}
    override fun onPageFinished(v:WebView,url:String){update();CookieManager.getInstance().flush()}
    override fun onReceivedError(v:WebView,r:WebResourceRequest,e:WebResourceError){if(r.isForMainFrame)tab.error="Page could not load. Check your connection, retry, or choose the external browser option."}
    override fun onReceivedHttpError(v:WebView,r:WebResourceRequest,e:WebResourceResponse){if(r.isForMainFrame&&e.statusCode>=400)tab.error="Website returned ${e.statusCode}. Embedded sign-in or browser compatibility may be restricted. External browsing is available from the menu."}
@@ -130,8 +161,8 @@ class PreviewBrowserModel(application:Application):AndroidViewModel(application)
  }
  fun close(tab:PreviewTab,rendererGone:Boolean=false){
   (tab.view.parent as? ViewGroup)?.removeView(tab.view);if(!rendererGone)tab.view.stopLoading();tab.view.destroy();tabs.remove(tab)
-  if(activeId==tab.id)activeId=tabs.lastOrNull{it.profile==tab.profile&&it.app.id==tab.app.id}?.id
-  last.entries.removeAll{it.value==tab.id}
+  if(activeId==tab.id)activeId=(tabs.lastOrNull{it.profile==tab.profile&&it.app.id==tab.app.id}?:tabs.filter{it.profile==tab.profile}.maxByOrNull{it.touched})?.id
+  last.entries.removeAll{it.value==tab.id};syncLifecycle()
  }
  fun closeApp(profile:String,id:String){tabs.filter{it.profile==profile&&it.app.id==id}.toList().forEach{close(it)}}
  fun closeAll(){tabs.toList().forEach{close(it)}}
@@ -157,7 +188,7 @@ class PreviewBrowserModel(application:Application):AndroidViewModel(application)
    Column(Modifier.weight(1f)){Text(tab.app.name,style=MaterialTheme.typography.titleMedium,maxLines=1);Text("Ordinary web · NovaOS Preview",style=MaterialTheme.typography.labelSmall,color=MaterialTheme.colorScheme.onSurfaceVariant)}
    IconButton(onClick={showTabs=true}){BadgedBox(badge={Badge{Text(pool.tabs.count{it.profile==tab.profile&&it.app.id==tab.app.id}.toString())}}){Icon(Icons.Default.Tab,"App tabs")}}
    Box{IconButton(onClick={menu=true}){Icon(Icons.Default.MoreVert,"Browser menu")};DropdownMenu(menu,{menu=false}){
-    DropdownMenuItem(text={Text("App Mode")},onClick={menu=false;tab.appMode=true})
+    DropdownMenuItem(text={Text("App Mode")},onClick={menu=false;pool.setBrowserMode(tab,false)})
     DropdownMenuItem(text={Text("Open externally…")},onClick={menu=false;onExternal(tab.url)})
     DropdownMenuItem(text={Text("New app tab")},onClick={menu=false;if(pool.tabs.count{it.profile==tab.profile&&it.app.id==tab.app.id}<8)pool.select(pool.create(tab.app,tab.profile,true))else showTabs=true})
     DropdownMenuItem(text={Text("Close app tab")},onClick={menu=false;pool.close(tab)})
@@ -172,9 +203,11 @@ class PreviewBrowserModel(application:Application):AndroidViewModel(application)
  }
   if(tab.progress in 1..99)LinearProgressIndicator(progress={tab.progress/100f},modifier=Modifier.fillMaxWidth())
   tab.error?.let{error->Surface(color=MaterialTheme.colorScheme.errorContainer){Column(Modifier.padding(12.dp)){Text(error,style=MaterialTheme.typography.bodySmall);Row{TextButton(onClick={tab.error=null;tab.view.reload()}){Text("Retry")};TextButton(onClick={onExternal(tab.url)}){Text("External browser…")};TextButton(onClick={tab.error=null}){Text("Dismiss")}}}}}
-  key(tab.id){AndroidView(factory={
-   (tab.view.parent as? ViewGroup)?.removeView(tab.view);tab.wrapper.baseContext=context;pool.syncLifecycle();tab.view
-  },modifier=Modifier.weight(1f).fillMaxWidth(),update={view->view.importantForAccessibility=if(visible)android.view.View.IMPORTANT_FOR_ACCESSIBILITY_AUTO else android.view.View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS},onReset=null,onRelease={view->(view.parent as? ViewGroup)?.removeView(view);view.onPause();tab.wrapper.baseContext=context.applicationContext})}
+  Box(Modifier.weight(1f).fillMaxWidth()){
+   pool.tabs.filter{it.profile==tab.profile}.sortedBy{it.id==tab.id}.forEach{retained->key(retained.id){AndroidView(factory={
+    (retained.view.parent as? ViewGroup)?.removeView(retained.view);retained.wrapper.baseContext=context;pool.syncLifecycle();retained.view
+   },modifier=Modifier.fillMaxSize(),update={view->view.importantForAccessibility=if(visible&&retained.id==tab.id)android.view.View.IMPORTANT_FOR_ACCESSIBILITY_AUTO else android.view.View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS},onReset=null,onRelease={view->(view.parent as? ViewGroup)?.removeView(view);view.onPause();retained.resumed=false;retained.wrapper.baseContext=context.applicationContext})}}
+  }
  }
  if(tab.appMode&&visible)Box(Modifier.align(Alignment.TopEnd).padding(8.dp)){
   FilledTonalIconButton(onClick={menu=true},modifier=Modifier.size(48.dp).testTag("web-app-menu")){Icon(Icons.Default.MoreVert,"App menu")}
@@ -184,7 +217,7 @@ class PreviewBrowserModel(application:Application):AndroidViewModel(application)
    DropdownMenuItem(text={Text("Back")},enabled=tab.back,onClick={menu=false;tab.view.goBack()})
    DropdownMenuItem(text={Text("Refresh")},onClick={menu=false;tab.view.reload()})
    DropdownMenuItem(text={Text("App tabs")},onClick={menu=false;showTabs=true})
-   DropdownMenuItem(text={Text("Open in Browser view")},onClick={menu=false;tab.appMode=false})
+   DropdownMenuItem(text={Text("Open in Browser view")},onClick={menu=false;pool.setBrowserMode(tab,true)})
    DropdownMenuItem(text={Text("External browser…")},onClick={menu=false;onExternal(tab.url)})
    DropdownMenuItem(text={Text("App settings & compatibility")},onClick={menu=false;settings=true})
   }

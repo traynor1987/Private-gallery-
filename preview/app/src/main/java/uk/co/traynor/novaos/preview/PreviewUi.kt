@@ -62,6 +62,10 @@ private val lightColors=lightColorScheme(primary=Color(0xFF285F65),secondary=Col
  MaterialTheme(colorScheme=if(dark)darkColors else lightColors){
   key(state.current){
    var screen by rememberSaveable{mutableStateOf("home")}
+   var recentsReturn by rememberSaveable{mutableStateOf("home")}
+   var shellSettings by rememberSaveable{mutableStateOf(false)}
+   var notifications by rememberSaveable{mutableStateOf(false)}
+   var edgePanel by rememberSaveable{mutableStateOf(false)}
    var drawer by rememberSaveable{mutableStateOf(false)}
    var quick by rememberSaveable{mutableStateOf(false)}
    var editing by rememberSaveable{mutableStateOf(false)}
@@ -77,6 +81,7 @@ private val lightColors=lightColorScheme(primary=Color(0xFF285F65),secondary=Col
    var reset by rememberSaveable{mutableStateOf(false)}
    val profile=data.profile
    LaunchedEffect(state.current){pool.currentProfile=state.current;pool.syncLifecycle()}
+   LaunchedEffect(pool,state.current){while(true){pool.pollMedia();delay(1500)}}
    pool.externalRequest?.let{request->LaunchedEffect(request){
     if(PreviewAppPolicy.canPresentExternal(request.tabId,request.profile,pool.activeId,state.current,pool.foreground))pool.tabs.firstOrNull{it.id==request.tabId}?.app?.let{browser=it.copy(url=request.url)}
     pool.externalRequest=null
@@ -101,25 +106,44 @@ private val lightColors=lightColorScheme(primary=Color(0xFF285F65),secondary=Col
      else->if(id.startsWith("folder:"))openFolder=id else data.app(id)?.website?.let{pool.open(it,data.state.current);screen="browser";drawer=false}
     }
    }
-   BackHandler(screen!="home"||drawer||quick||editing||selected!=null||openFolder!=null||detailId!=null){
-    when {selected!=null->selected=null;openFolder!=null->openFolder=null;detailId!=null->detailId=null;editing->editing=false;quick->quick=false;drawer->drawer=false;else->screen="home"}
+   val goHome:()->Unit={
+    drawer=false;quick=false;editing=false;selected=null;openFolder=null;detailId=null;edgePanel=false
+    host?.let{(it.getSystemService(android.content.Context.INPUT_METHOD_SERVICE) as? android.view.inputmethod.InputMethodManager)?.hideSoftInputFromWindow(it.window.decorView.windowToken,0)}
+    screen="home"
    }
+   val goBack:()->Unit={
+    val ime=host?.window?.decorView?.rootWindowInsets?.isVisible(android.view.WindowInsets.Type.ime())==true
+    if(ime)host?.let{(it.getSystemService(android.content.Context.INPUT_METHOD_SERVICE) as? android.view.inputmethod.InputMethodManager)?.hideSoftInputFromWindow(it.window.decorView.windowToken,0)}else when{selected!=null->selected=null;openFolder!=null->openFolder=null;detailId!=null->detailId=null;editing->editing=false;quick->quick=false;drawer->drawer=false;screen=="recents"->screen=PreviewShellRules.returnRoute(recentsReturn,pool.active?.profile==state.current);screen=="browser"&&pool.active?.view?.canGoBack()==true->pool.active?.view?.goBack();else->screen="home"}
+   }
+   LaunchedEffect(screen,pool.activeId){if(screen=="browser"&&pool.active?.profile!=state.current)screen="home"}
+   val openRecents:()->Unit={drawer=false;quick=false;if(screen!="recents"){recentsReturn=screen;screen="recents"}}
+   val resumeTab:(PreviewTab)->Unit={tab->pool.select(tab);screen="browser";edgePanel=false}
+   BackHandler(screen!="home"||drawer||quick||editing||selected!=null||openFolder!=null||detailId!=null){goBack()}
    Surface(Modifier.fillMaxSize(),color=MaterialTheme.colorScheme.background){
-    Box(Modifier.fillMaxSize()){
-    if(pool.active?.profile==state.current)PreviewBrowser(pool,onHome={screen="home"},onExternal={url->pool.active?.app?.let{browser=it.copy(url=url)}},visible=screen=="browser")
-    if(screen!="browser")Surface(Modifier.fillMaxSize(),color=MaterialTheme.colorScheme.background){
-    AnimatedContent(screen,label="preview-screen"){route->
-     when(route){
-      "store"->StoreScreen(data,onBack={screen="home"},onDetail={detailId=it.id},onCustom={custom=true})
-      "wallpaper"->WallpaperScreen(data,filesDir,onPickImage,onBack={screen="home"})
-      "photos"->PhotosDemo(onBack={screen="home"},onWallpaper={screen="wallpaper"})
-      "guide"->GuideScreen(onBack={screen="home"})
-      else->Home(data,filesDir,pager,onLaunch=launch,onSelect={selected=it},onDrawer={drawer=true},onQuick={quick=true},onEdit={editing=true})
+    Column(Modifier.fillMaxSize().navigationBarsPadding().imePadding()){
+     Box(Modifier.weight(1f).fillMaxWidth()){
+      if(pool.active?.profile==state.current)PreviewBrowser(pool,onHome=goHome,onExternal={url->pool.active?.app?.let{browser=it.copy(url=url)}},visible=screen=="browser")
+      if(screen!="browser")Surface(Modifier.fillMaxSize(),color=MaterialTheme.colorScheme.background){
+       AnimatedContent(screen,label="preview-screen"){route->
+        when(route){
+         "recents"->NovaRecents(data,pool,onHome=goHome,onResume=resumeTab)
+         "store"->StoreScreen(data,onBack=goHome,onDetail={detailId=it.id},onCustom={custom=true})
+         "wallpaper"->WallpaperScreen(data,filesDir,onPickImage,onBack=goHome)
+         "photos"->PhotosDemo(onBack=goHome,onWallpaper={screen="wallpaper"})
+         "guide"->GuideScreen(onBack=goHome)
+         else->Home(data,filesDir,pager,onLaunch=launch,onSelect={selected=it},onDrawer={drawer=true},onQuick={quick=true},onEdit={editing=true})
+        }
+       }
+      }
+      if(!drawer)NovaEdgeHandle(data.shell){edgePanel=true}
      }
+     if(screen!="browser")NovaMiniPlayer(pool,state.current,onResume=resumeTab)
+     NovaNavigation(data.shell,onRecents=openRecents,onHome=goHome,onBack=goBack)
     }
    }
-   }
-   }
+   if(shellSettings)NovaShellSettings(data){shellSettings=false}
+   if(notifications)NovaNotifications(data){notifications=false}
+   if(edgePanel)NovaEdgePanel(data,pool,onDismiss={edgePanel=false},onLaunch={id->edgePanel=false;launch(id)},onHome=goHome,onSettings={edgePanel=false;shellSettings=true})
    if(drawer)ModalBottomSheet(onDismissRequest={drawer=false},modifier=Modifier.testTag("drawer-sheet")){
     var search by rememberSaveable{mutableStateOf("")}
     Column(Modifier.fillMaxWidth().fillMaxHeight(.9f).padding(horizontal=20.dp)){
@@ -142,6 +166,9 @@ private val lightColors=lightColorScheme(primary=Color(0xFF285F65),secondary=Col
    }
    if(quick)ModalBottomSheet(onDismissRequest={quick=false}){
     Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(24.dp)){
+     ActionRow("Recent apps",Icons.Default.ViewWeek){quick=false;openRecents()}
+     ActionRow("Nova events (${data.shell.events(state.current).size})",Icons.Default.NotificationsNone){quick=false;notifications=true}
+     ActionRow("Navigation & Edge Panel",Icons.Default.Tune){quick=false;shellSettings=true}
      Text("Nova Quick Panel",style=MaterialTheme.typography.headlineMedium);Text("Controls for this preview only",color=MaterialTheme.colorScheme.onSurfaceVariant)
      Spacer(Modifier.height(18.dp))
      ActionRow("Theme · ${state.theme}",Icons.Default.Palette){data.setTheme(if(state.theme=="dark")"light"else if(state.theme=="light")"system"else "dark")}
@@ -154,6 +181,8 @@ private val lightColors=lightColorScheme(primary=Color(0xFF285F65),secondary=Col
    }
    if(editing)ModalBottomSheet(onDismissRequest={editing=false}){
     Column(Modifier.fillMaxWidth().fillMaxHeight(.85f).verticalScroll(rememberScrollState()).padding(24.dp)){
+     ActionRow("Navigation & multitasking",Icons.Default.Tune){editing=false;shellSettings=true}
+     ActionRow("Nova events",Icons.Default.NotificationsNone){editing=false;notifications=true}
      Text("Make it yours",style=MaterialTheme.typography.headlineLarge);Text("${data.profileLabel} · Home ${currentPage+1}",color=MaterialTheme.colorScheme.primary)
      ActionRow("Choose wallpaper",Icons.Default.Wallpaper){editing=false;screen="wallpaper"}
      Text("Grid density · ${profile.columns}");Slider(profile.columns.toFloat(),{v->data.change{it.copy(columns=v.toInt())}},valueRange=3f..6f,steps=2,modifier=Modifier.testTag("grid-density"))

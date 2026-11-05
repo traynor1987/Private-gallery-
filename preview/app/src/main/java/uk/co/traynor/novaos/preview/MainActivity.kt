@@ -37,7 +37,7 @@ class MainActivity:ComponentActivity() {
   super.onCreate(savedInstanceState);photoProfile=savedInstanceState?.getString("photoProfile")?:"primary";enableEdgeToEdge();browserPool.pickFiles={pickFiles.launch(arrayOf("*/*"))}
   setContent { NovaPreview(previewData,browserPool, onPickImage={photoProfile=previewData.state.current;pickPhoto.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))},onOpen={openWebsite(it)},filesDir=filesDir) }
  }
- override fun onResume(){super.onResume();browserPool.foreground=true;browserPool.syncLifecycle();browserPool.tabs.filter{it.view.parent!=null}.forEach{it.wrapper.baseContext=this;it.view.onResume()}}
+ override fun onResume(){super.onResume();browserPool.foreground=true;browserPool.tabs.filter{it.view.parent!=null}.forEach{it.wrapper.baseContext=this};browserPool.syncLifecycle()}
  override fun onStop(){super.onStop();browserPool.detachContexts();android.webkit.CookieManager.getInstance().flush()}
  override fun onDestroy(){browserPool.pickFiles=null;if(!isChangingConfigurations){browserPool.upload?.onReceiveValue(null);browserPool.upload=null};super.onDestroy()}
  override fun onSaveInstanceState(outState:Bundle){outState.putString("photoProfile",photoProfile);super.onSaveInstanceState(outState)}

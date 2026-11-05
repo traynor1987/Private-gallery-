@@ -12,7 +12,7 @@ concurrency:
 jobs:
 
  update-preview:
-  if: ${{ github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[preview-v03]') }}
+  if: ${{ github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[preview-v04]') }}
   runs-on: ubuntu-24.04
   timeout-minutes: 30
   permissions:
@@ -30,9 +30,10 @@ jobs:
      run: |
       python3 preview/tests/check_preview.py
       python3 -m unittest discover -s preview/tests -p test_emulator_preflight.py
-      java com.sun.tools.javac.Main -d /tmp/preview-host preview/app/src/main/java/uk/co/traynor/novaos/preview/PreviewRules.java preview/app/src/main/java/uk/co/traynor/novaos/preview/PreviewAppPolicy.java preview/tests/PreviewRulesChecks.java preview/tests/AppModeChecks.java
+      java com.sun.tools.javac.Main -d /tmp/preview-host preview/app/src/main/java/uk/co/traynor/novaos/preview/PreviewRules.java preview/app/src/main/java/uk/co/traynor/novaos/preview/PreviewAppPolicy.java preview/app/src/main/java/uk/co/traynor/novaos/preview/PreviewShellRules.java preview/tests/PreviewRulesChecks.java preview/tests/AppModeChecks.java preview/tests/ShellRulesChecks.java
       java -cp /tmp/preview-host PreviewRulesChecks
       java -cp /tmp/preview-host AppModeChecks
+      java -cp /tmp/preview-host ShellRulesChecks
    - name: Android 17 preview build tools
      run: (yes || true) | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" 'cmdline-tools;22.0' 'platforms;android-37.1' 'build-tools;36.0.0' 'emulator'
    - name: Build stable development signed preview
@@ -75,7 +76,7 @@ jobs:
       if p.exists():
        s=p.read_text()
        assert 'FAILURES!!!' not in s and 'INSTRUMENTATION_STATUS_CODE: -2' not in s, 'Application/test assertion failed; inspect before publishing'
-       assert 'OK (4 tests)' in s or 'INSTRUMENTATION_FAILED' in s or not s.strip(), 'Incomplete runtime results need investigation'
+       assert 'OK (7 tests)' in s or 'INSTRUMENTATION_FAILED' in s or not s.strip(), 'Incomplete runtime results need investigation'
       PYCODE
    - name: Record actual runtime outcome and reverify APK
      env:
@@ -88,7 +89,7 @@ jobs:
      if: always()
      uses: actions/upload-artifact@v4
      with:
-      name: NovaOS-preview-03-verification-${{ github.sha }}
+      name: NovaOS-preview-04-verification-${{ github.sha }}
       path: |
        preview/artifacts/
        preview/release-out/

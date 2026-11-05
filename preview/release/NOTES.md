@@ -1,31 +1,29 @@
-# NovaOS Preview 0.3 — Google navigation regression repair (EXPERIMENTAL)
+# NovaOS Home 2.0 Preview 0.4 — Navigation & Multitasking (EXPERIMENTAL)
 
-Android 17/API37, version code3, package `uk.co.traynor.novaos.preview`. Same stable development certificate as Preview0.2, so 0.2 can update without clearing preview data. Production NovaOS, Primary V1 Browser, Hidden VPN and Tor are untouched.
+Android17/API37, code4, package `uk.co.traynor.novaos.preview`. Same development certificate as Preview0.2/0.3: update in place without clearing preview settings. No production integration, signing key, credentials, vault access, Hidden VPN or Tor changes.
 
-## Exact regression
+## New
 
-Commit `05754a2b16a6208155e3e120738db8e9c9771b2d` introduced `PreviewAppPolicy.googleAccount()` and called it from both `navigate()` and `shouldOverrideUrlLoading()`. It matched the entire `accounts.google.com` host. `requestExternal()` generated the red NovaOS warning. The first preview source (`a5add01b…`) had no such host interception.
+- Internal Samsung-inspired Recents/Home/Back bar above Android's navigation area. Reversible button order; optional Nova gesture strip (up Home, sideways Back, hold Recents) with accessible menu alternatives. Keyboard navigation insets are consumed separately.
+- Nova Recents: adaptive horizontally swiped app cards, app icon/title, retained app tabs, tap Resume, swipe up to close, accessible close buttons and confirmed profile-local Close All. Safe placeholder cards avoid capturing login/account pages. Closing cards closes live pages, not installed shortcuts or stored cookies.
+- WebViews stay attached while switching between apps. Lifecycle updates occur only when state changes. Foreground selected apps remain resumed; inactive apps with public Media Session state `playing` may also remain resumed. Activity stop/profile changes still pause them. Existing audio under Nova Home remains supported where the website permits it. Screen-off/Android-level background playback remains deferred.
+- Conditional mini media surface: app name, bounded website-supplied Media Session track title/state and Return to player. Playing sessions take priority over paused ones. If WebView/site exposes no public media metadata, no playback state is invented. This host has no supported interface for invoking a site's Media Session action handlers, so Play/Pause/Previous/Next controls are not fabricated; use the actual website player. No DOM media scraping, credential access, handler replacement, autoplay or stream extraction.
+- Optional Fold Edge Panel: inset left/right handle, height position, up to6 profile-local favourite apps, recent apps, Store/Home/settings. Disabled by default, no system gesture exclusion or notification permissions.
+- Nova event centre records real successful installations and wallpaper changes, persisted per preview profile, with delete/clear controls and a40-event bound. No fabricated download/update/task events or Android notification interception.
+- Existing sharp icons, folder previews, Store search/install status, Home editing, themes and Fold layouts retained. Optional Browser Mode now persists per app/profile; App Mode remains the default.
 
-## Correction and authentication behaviour
+## Where to find it
 
-The policy now distinguishes ordinary Google website navigation (for example YouTube's first-party ServiceLogin links) from OAuth authorization requests. Ordinary HTTPS pages reach the unchanged WebView. OAuth authorization endpoints, grant parameters and wrapped OAuth continue URLs still require a confirmed supported external browser. No user-agent spoofing, injected login scripts, cookie import, certificate bypass, provider-error bypass or fabricated callback has been added. Google's website remains authoritative about accepting or rejecting an embedded browser.
+Use the bottom Nova navigation bar. In Quick Panel or Home settings choose **Navigation & multitasking** to configure controls and Edge favourites, or **Nova events** to view events. The optional Edge handle is inset24dp from the selected edge to avoid Android's gesture edge. Its availability/placement can be changed or disabled.
 
-The original source used ordinary WebView JavaScript/DOM storage and CookieManager acceptance/flush in its separate `nova_preview_v1` directory. There was no native Google SDK, registered OAuth client, cookie migration or special callback. This explains how website-issued browser cookies could retain a session. The owner confirms the original APK displayed their authenticated library, but the actual account redirect chain was not recorded, so its precise server-side authentication protocol cannot be reconstructed from source alone.
+## Verification and limits
 
-Google OAuth policy prohibits authorization requests in controlled embedded user-agents. Google Account Help also says embedded browsers may be rejected. This repair removes Nova's overbroad interception; it does not certify general Google WebView sign-in as supported. If Google rejects a flow, use the confirmed external option; signing in there does not sign in the WebView.
+Host navigation/media/lifecycle policy checks, catalogue hashes and package boundaries run before builds. Focused Android17 cases cover Recents/resume/swipe close/Close All/Back fallback, retained DOM/WebViews, mini metadata availability, lifecycle ownership, settings/events persistence and profile separation, Edge/event controls, gesture alternatives, navigation insets, existing foreground audio and Fold/large-text layouts. Exact runtime outcome is appended below. Synthetic fixtures do not certify third-party playback or personal Google authentication.
 
-Sources: https://developers.google.com/identity/protocols/oauth2/policies ; https://support.google.com/accounts/answer/7675428
+The Google navigation repair from0.3 is preserved unchanged: ordinary website navigation is allowed when the provider accepts it, OAuth authorization requests require confirmed external browsing, no UA spoofing/cookie copying/provider bypass. Preview browser cookies are ordinary app-private storage shared within demo profiles, not an encrypted vault. Live pages/Recents are memory-only and may be lost if Android kills the process or renderer. No promise of native APK/PWA installability or production security approval.
 
-## Preserved
+Owner acceptance: update0.3; play Music, tap Nova Home/Recents, resume it, open another app and return; test Back/history and reversed/gesture controls; enable/configure Edge; install an app/change wallpaper and inspect Nova events; fold/unfold/rotate; relaunch and check settings/layouts persist. Use provider controls when the mini transport interface is unavailable.
 
-Full-height App Mode and menu, retained WebView/tabs, audio under foreground Nova Home, all icon assets/cache, Store entries, profiles and layout schema. Cookies stay in ordinary preview-only Android app storage, shared within demo profiles; no encrypted-vault claim. Full Android background/screen-off audio remains unverified/unsupported.
+Old GitHub Preview0.1 used a lost temporary development key; do not uninstall it if its local data is needed. Production NovaOS must remain installed.
 
-## Verification limits and owner acceptance
-
-Host policy regressions distinguish ordinary first-party navigation from OAuth and preserve external-request ownership. Focused Android fixtures use synthetic pages, cookies and audio, not personal accounts. Runtime outcome is appended below by CI. No automated test can certify the owner's personal YouTube Music library without their device/account; reaching a login page is not counted as sign-in success.
-
-Owner acceptance: update Preview0.2, open YouTube Music, sign in only if Google accepts the unchanged browser, confirm your actual personal library appears, return Nova Home, reopen Music and check that the library/account and audio remain. Report any Google-owned rejection separately from Nova's OAuth compatibility prompt. Do not share credentials, tokens or account URLs.
-
-Older Preview0.1 from GitHub used an unsaved runner key and cannot update directly to this certificate without reinstalling that preview; do not remove it if its local data is needed. Production NovaOS must remain installed.
-
-Publication marker: preview-auth-regression-code3
+Publication marker: preview-multitasking-code4

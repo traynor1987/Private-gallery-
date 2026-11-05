@@ -16,6 +16,7 @@ data class LaunchApp(val id:String,val name:String,val symbol:String,val website
 val builtinApps = listOf(LaunchApp("store","Nova Store","store"),LaunchApp("photos","Photos demo","photos"),LaunchApp("wallpaper","Wallpapers","wallpaper"),LaunchApp("settings","Home settings","settings"),LaunchApp("guide","Preview guide","guide"))
 
 class PreviewData(private val context:Context) {
+ val shell=PreviewShellData(context)
  private val prefs=context.getSharedPreferences("nova_preview_v1",Context.MODE_PRIVATE)
  var state by mutableStateOf(load());private set
  var error by mutableStateOf<String?>(null);private set
@@ -42,20 +43,24 @@ class PreviewData(private val context:Context) {
  }
  fun change(id:String=state.current,transform:(Profile)->Profile){
   require(id in listOf("primary","hidden"))
-  val next=transform(profile(id));require(next.pages.size in 1..8 && next.dock.size<=5)
+  val before=profile(id)
+  val next=transform(before);require(next.pages.size in 1..8 && next.dock.size<=5)
   save(if(id=="hidden")state.copy(hidden=next)else state.copy(primary=next))
+  if(error==null&&before.wallpaper!=next.wallpaper)shell.record(id,"Wallpaper changed")
  }
  fun install(entry:StoreEntry){
   val url=PreviewRules.https(entry.url);val id="web:"+PreviewRules.key(url)
   if(profile.installed.any{it.id==id})return
   require(profile.installed.size<200){"Preview catalogue limit reached"}
   change{it.copy(installed=it.installed+entry.copy(id=id,url=url))}
+  if(error==null)shell.record(state.current,"Installed ${entry.name}")
  }
  fun uninstall(id:String){change{p->
   val folders=p.folders.map{it.copy(apps=it.apps.filterNot{a->a==id})}.filter{it.apps.isNotEmpty()}
   val valid=allApps(p).map{it.id}.filterNot{it==id}.toSet()+folders.map{it.id}
   p.copy(installed=p.installed.filterNot{it.id==id},pages=p.pages.map{page->page.filter{it in valid}},dock=p.dock.filterNot{it==id},folders=folders,drawerOrder=p.drawerOrder.filter{it in valid})
- }}
+ };if(error==null)shell.favourite(state.current,id,false)
+ }
  fun addHome(id:String,page:Int=0){change{p->val target=page.coerceIn(0,p.pages.lastIndex);p.copy(pages=p.pages.mapIndexed{i,items->items.filterNot{it==id}+(if(i==target)listOf(id)else emptyList())})}}
  fun removeHome(id:String){change{it.copy(pages=it.pages.map{p->p.filterNot{a->a==id}})}}
  fun pin(id:String){change{p->if(id in p.dock)p else p.copy(dock=(p.dock+id).takeLast(5))}}
