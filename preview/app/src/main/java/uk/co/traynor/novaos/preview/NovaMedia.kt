@@ -26,6 +26,9 @@ import kotlinx.coroutines.delay
 
 class NovaVideoModel(app:Application):AndroidViewModel(app){
  val wrapper=MutableContextWrapper(app)
+ private var wantsPlay=false
+ private var pendingSeek=0
+ fun detachSurface(){if(prepared){pendingSeek=maxOf(position,runCatching{view?.currentPosition?:position}.getOrDefault(position));prepared=false}}
  var view:VideoView?=null;private set
  var uri by mutableStateOf<Uri?>(null);private set
  var title by mutableStateOf("Local video");private set
@@ -46,17 +49,17 @@ class NovaVideoModel(app:Application):AndroidViewModel(app){
  var pick:(()->Unit)?=null
  var enterPip:(()->Unit)?=null
  fun open(uri:Uri,name:String,owner:String){
-  close();profile=owner;this.uri=uri;title=name.take(100).ifBlank{"Local video"};val v=VideoView(wrapper);view=v
-  v.setOnPreparedListener{p->prepared=true;duration=p.duration.coerceAtLeast(0);width=p.videoWidth.coerceAtLeast(1);height=p.videoHeight.coerceAtLeast(1);error=null;v.start();playing=true}
-  v.setOnCompletionListener{playing=false;position=duration}
-  v.setOnErrorListener{_,_,_->error="This local video could not play. Its format may be unsupported.";playing=false;prepared=false;true}
+  close();wantsPlay=true;pendingSeek=0;profile=owner;this.uri=uri;title=name.take(100).ifBlank{"Local video"};val v=VideoView(wrapper);view=v
+  v.setOnPreparedListener{p->if(view!==v)return@setOnPreparedListener;prepared=true;duration=p.duration.coerceAtLeast(0);width=p.videoWidth.coerceAtLeast(1);height=p.videoHeight.coerceAtLeast(1);error=null;if(pendingSeek>0){v.seekTo(pendingSeek);position=pendingSeek;pendingSeek=0};if(wantsPlay)v.start();playing=wantsPlay}
+  v.setOnCompletionListener{if(view===v){wantsPlay=false;playing=false;position=duration}}
+  v.setOnErrorListener{_,_,_->if(view!==v)return@setOnErrorListener true;error="This local video could not play. Its format may be unsupported.";playing=false;prepared=false;true}
   v.setVideoURI(uri)
  }
  fun poll(){val v=view?:return;if(prepared)runCatching{position=v.currentPosition.coerceAtLeast(0);playing=v.isPlaying}}
- fun pause(){if(prepared)runCatching{view?.pause()};playing=false}
- fun play(){if(prepared){view?.start();playing=true}}
- fun seek(ms:Int){if(prepared)view?.seekTo(ms.coerceIn(0,duration))}
- fun close(){(view?.parent as? ViewGroup)?.removeView(view);view?.stopPlayback();view=null;uri=null;prepared=false;playing=false;position=0;duration=0;mini=false;error=null;profile=null}
+ fun pause(){wantsPlay=false;if(prepared)runCatching{view?.pause()};playing=false}
+ fun play(){wantsPlay=true;if(prepared){view?.start();playing=true}}
+ fun seek(ms:Int){val target=ms.coerceIn(0,duration);position=target;pendingSeek=target;if(prepared){view?.seekTo(target);pendingSeek=0}}
+ fun close(){(view?.parent as? ViewGroup)?.removeView(view);view?.stopPlayback();view=null;uri=null;wantsPlay=false;pendingSeek=0;prepared=false;playing=false;position=0;duration=0;mini=false;error=null;profile=null}
  override fun onCleared(){close();pick=null;enterPip=null;wrapper.baseContext=getApplication<Application>()}
 }
 
@@ -78,7 +81,7 @@ class NovaVideoModel(app:Application):AndroidViewModel(app){
 @Composable internal fun NativeVideoSurface(video:NovaVideoModel,modifier:Modifier=Modifier){
  val context=LocalContext.current
  val view=video.view?:return
- key(view){AndroidView(factory={(view.parent as? ViewGroup)?.removeView(view);video.wrapper.baseContext=context;view},modifier=modifier,update={video.wrapper.baseContext=context},onReset=null,onRelease={(it.parent as? ViewGroup)?.removeView(it);video.wrapper.baseContext=context.applicationContext})}
+ key(view){AndroidView(factory={if(view.parent!=null)video.detachSurface();(view.parent as? ViewGroup)?.removeView(view);video.wrapper.baseContext=context;view},modifier=modifier,update={video.wrapper.baseContext=context},onReset=null,onRelease={video.detachSurface();(it.parent as? ViewGroup)?.removeView(it);video.wrapper.baseContext=context.applicationContext})}
 }
 @Composable internal fun VideoScreen(video:NovaVideoModel,onHome:()->Unit){
  LaunchedEffect(video){while(true){video.poll();delay(500)}}

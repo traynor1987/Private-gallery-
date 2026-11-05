@@ -136,6 +136,7 @@ private val lightColors=lightColorScheme(primary=Color(0xFF285F65),secondary=Col
      else->if(id.startsWith("folder:"))openFolder=id else data.app(id)?.website?.let{pool.open(it,data.state.current);screen="browser";drawer=false}
     }}
    }
+   LaunchedEffect(widgets.demoLock){if(!widgets.demoLock)locked=false}
    LaunchedEffect(locked){video.locked=locked;pool.presentationBlocked=locked;if(locked){pool.closeFullscreen()};if(locked){drawer=false;quick=false;editing=false;selected=null;openFolder=null;detailId=null;selectedWidget=null;notifications=false;edgePanel=false;shellSettings=false}}
    val goHome:()->Unit={
     drawer=false;quick=false;editing=false;selected=null;openFolder=null;detailId=null;edgePanel=false;pool.closeFullscreen()

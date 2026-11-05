@@ -50,7 +50,7 @@ internal fun searchIndex(data:PreviewData,widgets:WidgetData,pool:PreviewBrowser
     items(history.history(data.state.current),key={"history:$it"}){q->TextButton(onClick={query=q}){Icon(Icons.Default.History,null);Text(q,Modifier.padding(start=10.dp))}}
    }
    if(hits.isEmpty())item{Text("No local matches. Try an app or tool name.",Modifier.padding(vertical=24.dp))}
-   items(hits,key={it.id}){hit->ListItem(headlineContent={Text(hit.title)},supportingContent={Text("${hit.category} · ${hit.detail}")},modifier=Modifier.clickable{choose(hit)})}
+   items(hits,key={it.id}){hit->ListItem(headlineContent={Text(hit.title)},supportingContent={Text("${hit.category} · ${hit.detail}")},modifier=Modifier.testTag("nova-search-result-"+hit.id).clickable{choose(hit)})}
    if(query.isNotBlank())item{OutlinedButton(onClick={onWeb(query)},Modifier.fillMaxWidth().padding(top=20.dp)){Text("Search the web explicitly…")};Text("This opens Browser V1 with your search terms. Local search never sends them automatically.",style=MaterialTheme.typography.bodySmall)}
   }
  }
