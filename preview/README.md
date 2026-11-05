@@ -1,3 +1,7 @@
+# Current preview: 0.6 / code 6 — widgets and media
+
+See [release notes](release/NOTES.md), [layout backup format](release/HOME-BACKUP-FORMAT.md), and [production handover](release/PRODUCTION-INTEGRATION-HANDOVER.md). DELIVERY.json records the exact current release results. Older checkpoints below are historical.
+
 # Current preview: 0.5 / code 5
 
 See [release notes](release/NOTES.md) and [separate production handover](release/PRODUCTION-INTEGRATION-HANDOVER.md). The historical sections below describe earlier checkpoints, not current verification.

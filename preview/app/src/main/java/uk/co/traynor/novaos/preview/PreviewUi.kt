@@ -57,7 +57,7 @@ private val lightColors=lightColorScheme(primary=Color(0xFF285F65),secondary=Col
 /** Adapted from recovered HomeDesktopScreen: pager, dock, gesture alternatives,
  * clock, procedural wallpapers and bounded adaptive grids. Preview data only. */
 @OptIn(ExperimentalMaterial3Api::class,ExperimentalFoundationApi::class)
-@Composable fun NovaPreview(data:PreviewData,pool:PreviewBrowserModel,mind:MindData,audio:MindAudio,onPickImage:()->Unit,onOpen:(String)->Unit,filesDir:File){
+@Composable fun NovaPreview(data:PreviewData,pool:PreviewBrowserModel,mind:MindData,audio:MindAudio,widgets:WidgetData,backup:HomeBackup,searchHistory:NovaSearchHistory,video:NovaVideoModel,onPickImage:()->Unit,onOpen:(String)->Unit,filesDir:File){
  val state=data.state
  val dark=when(state.theme){"light"->false;"system"->isSystemInDarkTheme();else->true}
  MaterialTheme(colorScheme=if(dark)darkColors else lightColors){
@@ -83,11 +83,14 @@ private val lightColors=lightColorScheme(primary=Color(0xFF285F65),secondary=Col
    var addToFolder by rememberSaveable{mutableStateOf<String?>(null)}
    var confirmUninstall by rememberSaveable{mutableStateOf<String?>(null)}
    var reset by rememberSaveable{mutableStateOf(false)}
+   var selectedWidget by rememberSaveable{mutableStateOf<String?>(null)}
+   var widgetPage by rememberSaveable{mutableIntStateOf(0)}
+   var locked by rememberSaveable{mutableStateOf(widgets.demoLock)}
    val routeState=rememberSaveableStateHolder()
    val profile=data.profile
-   LaunchedEffect(state.current){pool.currentProfile=state.current;pool.syncLifecycle();audio.switchProfile(state.current)}
-   LaunchedEffect(screen){if(screen in listOf("mind","store","wallpaper","photos","guide"))data.shell.touchInternal(state.current,screen)}
-   LaunchedEffect(pool,state.current){while(true){pool.pollMedia();delay(1500)}}
+   LaunchedEffect(state.current){pool.currentProfile=state.current;pool.syncLifecycle();audio.switchProfile(state.current);if(video.profile!=null&&video.profile!=state.current)video.close()}
+   LaunchedEffect(screen){if(screen in listOf("mind","store","wallpaper","photos","guide","video","search","widgets","backup","lock-settings"))data.shell.touchInternal(state.current,screen)}
+   LaunchedEffect(pool,state.current){while(true){pool.pollMedia();audio.poll();video.poll();delay(1000)}}
    pool.externalRequest?.let{request->LaunchedEffect(request){
     if(PreviewAppPolicy.canPresentExternal(request.tabId,request.profile,pool.activeId,state.current,pool.foreground))pool.tabs.firstOrNull{it.id==request.tabId}?.app?.let{browser=it.copy(url=request.url)}
     pool.externalRequest=null
@@ -110,7 +113,18 @@ private val lightColors=lightColorScheme(primary=Color(0xFF285F65),secondary=Col
    val currentPage=pager.currentPage.coerceIn(0,profile.pages.lastIndex)
    LaunchedEffect(profile.pages.size){if(pager.currentPage>profile.pages.lastIndex)pager.scrollToPage(profile.pages.lastIndex)}
    val launch:(String)->Unit={id->
-    when(id){
+    drawer=false;quick=false;editing=false;edgePanel=false
+    when{
+     id.startsWith("resume-internal:")->{val route=id.removePrefix("resume-internal:");if(data.shell.internalRecents.any{it.first==state.current&&it.second==route})screen=route}
+     id.startsWith("recent-tab:")->{pool.tabs.firstOrNull{it.id==id.removePrefix("recent-tab:")&&it.profile==state.current}?.let{pool.select(it);screen="browser"}}
+     id.startsWith("mind:")->{mindPage=id.removePrefix("mind:");mindLaunch++;screen="mind"}
+     id.startsWith("store:")->{screen="store";detailId=id.removePrefix("store:")}
+     id.startsWith("widget:")->{val slot=widgets.slots(state.current).firstOrNull{it.id==id.removePrefix("widget:")};if(slot!=null){scope.launch{pager.scrollToPage(slot.page.coerceIn(0,profile.pages.lastIndex))};selectedWidget=slot.id};screen="home"}
+     else->when(id){
+     "widgets"->{widgetPage=currentPage;screen="widgets"}
+     "search","video","backup","lock-settings"->{screen=id}
+     "shell-settings"->{shellSettings=true}
+     "lock-now"->{locked=true}
      "mind","calm"->{mindPage=if(id=="calm")mind.preferred else "home";mindLaunch++;screen="mind";drawer=false}
      "sanctuary"->{sanctuary=true;screen="sanctuary";drawer=false}
      "browser-v1"->{pool.open(standaloneBrowser,data.state.current).let{pool.setBrowserMode(it,true)};screen="browser";drawer=false}
@@ -120,51 +134,62 @@ private val lightColors=lightColorScheme(primary=Color(0xFF285F65),secondary=Col
      "photos"->{screen="photos";drawer=false}
      "guide"->{screen="guide";drawer=false}
      else->if(id.startsWith("folder:"))openFolder=id else data.app(id)?.website?.let{pool.open(it,data.state.current);screen="browser";drawer=false}
-    }
+    }}
    }
+   LaunchedEffect(locked){video.locked=locked;pool.presentationBlocked=locked;if(locked){pool.closeFullscreen()};if(locked){drawer=false;quick=false;editing=false;selected=null;openFolder=null;detailId=null;selectedWidget=null;notifications=false;edgePanel=false;shellSettings=false}}
    val goHome:()->Unit={
-    drawer=false;quick=false;editing=false;selected=null;openFolder=null;detailId=null;edgePanel=false
+    drawer=false;quick=false;editing=false;selected=null;openFolder=null;detailId=null;edgePanel=false;pool.closeFullscreen()
     host?.let{(it.getSystemService(android.content.Context.INPUT_METHOD_SERVICE) as? android.view.inputmethod.InputMethodManager)?.hideSoftInputFromWindow(it.window.decorView.windowToken,0)}
     screen=if(sanctuary)"sanctuary"else "home"
    }
    val goBack:()->Unit={
     val ime=host?.window?.decorView?.rootWindowInsets?.isVisible(android.view.WindowInsets.Type.ime())==true
-    if(ime)host?.let{(it.getSystemService(android.content.Context.INPUT_METHOD_SERVICE) as? android.view.inputmethod.InputMethodManager)?.hideSoftInputFromWindow(it.window.decorView.windowToken,0)}else when{selected!=null->selected=null;openFolder!=null->openFolder=null;detailId!=null->detailId=null;editing->editing=false;quick->quick=false;drawer->drawer=false;screen=="recents"->screen=if(recentsReturn in listOf("mind","store","wallpaper","photos","guide")&&data.shell.internalRecents.none{it.first==state.current&&it.second==recentsReturn})"home"else PreviewShellRules.returnRoute(recentsReturn,pool.active?.profile==state.current);screen=="browser"&&pool.active?.view?.canGoBack()==true->pool.active?.view?.goBack();else->screen=if(sanctuary)"sanctuary"else "home"}
+    if(ime)host?.let{(it.getSystemService(android.content.Context.INPUT_METHOD_SERVICE) as? android.view.inputmethod.InputMethodManager)?.hideSoftInputFromWindow(it.window.decorView.windowToken,0)}else when{selected!=null->selected=null;openFolder!=null->openFolder=null;detailId!=null->detailId=null;editing->editing=false;quick->quick=false;drawer->drawer=false;screen=="recents"->screen=if(recentsReturn in listOf("mind","store","wallpaper","photos","guide","video","search","widgets","backup","lock-settings")&&data.shell.internalRecents.none{it.first==state.current&&it.second==recentsReturn})"home"else PreviewShellRules.returnRoute(recentsReturn,pool.active?.profile==state.current);screen=="browser"&&pool.active?.view?.canGoBack()==true->pool.active?.view?.goBack();else->screen=if(sanctuary)"sanctuary"else "home"}
    }
    LaunchedEffect(screen,pool.activeId){if(screen=="browser"&&pool.active?.profile!=state.current)screen="home"}
    val openRecents:()->Unit={drawer=false;quick=false;if(screen!="recents"){recentsReturn=screen;screen="recents"}}
    val resumeTab:(PreviewTab)->Unit={tab->pool.select(tab);screen="browser";edgePanel=false}
-   BackHandler(screen!="home"||drawer||quick||editing||selected!=null||openFolder!=null||detailId!=null){goBack()}
+   BackHandler(locked){ }
+   BackHandler(!locked&&(screen!="home"||drawer||quick||editing||selected!=null||openFolder!=null||detailId!=null)){goBack()}
+   if(video.pip){Box(Modifier.fillMaxSize().background(Color.Black),contentAlignment=Alignment.Center){NativeVideoSurface(video,Modifier.fillMaxWidth().aspectRatio(video.width.toFloat()/video.height))}}else if(locked){DemoLockScreen(profile.wallpaper,filesDir,object:NovaUnlockGate{override fun unlockDemonstration()=true},onUnlock={locked=false},onDisable={widgets.demoLock(false);locked=false})}else {
    Surface(Modifier.fillMaxSize(),color=MaterialTheme.colorScheme.background){
     Column(Modifier.fillMaxSize().navigationBarsPadding().imePadding()){
      Box(Modifier.weight(1f).fillMaxWidth()){
       if(pool.active?.profile==state.current)PreviewBrowser(pool,onHome=goHome,onExternal={url->pool.active?.app?.let{browser=it.copy(url=url)}},visible=screen=="browser")
       if(screen!="browser")Surface(Modifier.fillMaxSize(),color=MaterialTheme.colorScheme.background){
-       AnimatedContent(screen,label="preview-screen"){route->
+       AnimatedContent(screen,label="preview-screen",transitionSpec={if(widgets.reduced)androidx.compose.animation.ContentTransform(androidx.compose.animation.EnterTransition.None,androidx.compose.animation.ExitTransition.None)else androidx.compose.animation.ContentTransform(androidx.compose.animation.fadeIn(),androidx.compose.animation.fadeOut())}){route->
         routeState.SaveableStateProvider(route){when(route){
+         "widgets"->WidgetCentre(data,widgets,widgetPage,onBack=goHome)
+         "search"->NovaSearch(data,widgets,pool,searchHistory,onBack=goHome,onResult=launch,onWeb={query->val tab=pool.open(standaloneBrowser,state.current);pool.setBrowserMode(tab,true);pool.navigate(tab,"https://www.google.com/search?q="+java.net.URLEncoder.encode(query,"UTF-8"));screen="browser"})
+         "video"->VideoScreen(video,goHome)
+         "backup"->HomeBackupScreen(data,widgets,backup,onBack=goHome,onExport={(host as? MainActivity)?.exportHomeLayout()},onImport={(host as? MainActivity)?.importHomeLayout()})
+         "lock-settings"->LockSettings(widgets,onBack=goHome,onLock={locked=true})
          "mind"->{
           DisposableEffect(Unit){host?.window?.addFlags(android.view.WindowManager.LayoutParams.FLAG_SECURE);onDispose{host?.window?.clearFlags(android.view.WindowManager.LayoutParams.FLAG_SECURE)}}
           MindScreen(mind,state.current,audio,mindPage,mindLaunch,onHome=goHome,onSanctuary={sanctuary=true;screen="sanctuary"})
          }
          "sanctuary"->SanctuaryScreen(data,audio,onMind={mindPage="home";mindLaunch++;screen="mind"},onCalm={mindPage=mind.preferred;mindLaunch++;screen="mind"},onLaunch=launch,onExit={sanctuary=false;screen="home"})
-         "recents"->NovaRecents(data,pool,onHome=goHome,onResume=resumeTab,onInternal={id->screen=id},onCloseInternal={id->data.shell.closeInternal(state.current,id);routeState.removeState(id);if(id=="mind")audio.pause()})
+         "recents"->NovaRecents(data,pool,onHome=goHome,onResume=resumeTab,onInternal={id->screen=id},onCloseInternal={id->data.shell.closeInternal(state.current,id);routeState.removeState(id);if(id=="mind")audio.pause();if(id=="video")video.close()})
          "store"->StoreScreen(data,onBack=goHome,onDetail={detailId=it.id},onCustom={custom=true})
          "wallpaper"->WallpaperScreen(data,filesDir,onPickImage,onBack=goHome)
          "photos"->PhotosDemo(onBack=goHome,onWallpaper={screen="wallpaper"})
          "guide"->GuideScreen(onBack=goHome)
-         else->Home(data,filesDir,pager,onLaunch=launch,onSelect={selected=it},onDrawer={drawer=true},onQuick={quick=true},onEdit={editing=true})
+         else->Home(data,filesDir,pager,widgets,pool,audio,video,onWidgetEdit={selectedWidget=it},onResume=resumeTab,onLaunch=launch,onSelect={selected=it},onDrawer={drawer=true},onQuick={quick=true},onEdit={editing=true})
         }}
        }
       }
       if(!drawer)NovaEdgeHandle(data.shell){edgePanel=true}
+      VideoMiniPlayer(video){screen="video"}
+      WebsiteFullscreen(pool)
      }
      if(audio.sound.isNotBlank())Surface(tonalElevation=3.dp){Row(Modifier.fillMaxWidth().padding(horizontal=16.dp),verticalAlignment=Alignment.CenterVertically){Text("Calm · ${audio.sound}",Modifier.weight(1f));IconButton(onClick={if(audio.playing)audio.pause()else audio.resume()}){Icon(if(audio.playing)Icons.Default.Pause else Icons.Default.PlayArrow,"Toggle calm sound")};TextButton(onClick={mindPage="sounds";mindLaunch++;screen="mind"}){Text("Open")}}}
      if(screen!="browser")NovaMiniPlayer(pool,state.current,onResume=resumeTab)
      NovaNavigation(data.shell,onRecents=openRecents,onHome=goHome,onBack=goBack)
     }
    }
+   if(selectedWidget!=null)WidgetOptions(data,widgets,selectedWidget!!){selectedWidget=null}
    if(shellSettings)NovaShellSettings(data){shellSettings=false}
-   if(notifications)NovaNotifications(data,onDismiss={notifications=false},onLaunch={id->notifications=false;launch(id)})
+   if(notifications)NovaNotifications(data,onDismiss={notifications=false},onLaunch={id->notifications=false;launch(id)},media={NowPlaying(pool,audio,video,state.current,onResume=resumeTab,onVideo={screen="video";notifications=false},onAudio={notifications=false;mindPage="sounds";mindLaunch++;screen="mind"})})
    if(edgePanel)NovaEdgePanel(data,pool,onDismiss={edgePanel=false},onLaunch={id->edgePanel=false;launch(id)},onHome=goHome,onSettings={edgePanel=false;shellSettings=true})
    if(drawer)ModalBottomSheet(onDismissRequest={drawer=false},modifier=Modifier.testTag("drawer-sheet")){
     var search by rememberSaveable{mutableStateOf("")}
@@ -188,6 +213,9 @@ private val lightColors=lightColorScheme(primary=Color(0xFF285F65),secondary=Col
    }
    if(quick)ModalBottomSheet(onDismissRequest={quick=false}){
     Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(24.dp)){
+     NowPlaying(pool,audio,video,state.current,onResume={quick=false;resumeTab(it)},onVideo={quick=false;screen="video"},onAudio={quick=false;mindPage="sounds";mindLaunch++;screen="mind"})
+     ActionRow("Widget Centre",Icons.Default.Widgets){quick=false;widgetPage=currentPage;screen="widgets"}
+     ActionRow("Nova Search",Icons.Default.Search){quick=false;screen="search"}
      ActionRow("Calm Now",Icons.Default.Spa){quick=false;mindPage=mind.preferred;mindLaunch++;screen="mind"}
      ActionRow("Nova Sanctuary",Icons.Default.NightsStay){quick=false;sanctuary=true;screen="sanctuary"}
      ActionRow("Recent apps",Icons.Default.ViewWeek){quick=false;openRecents()}
@@ -205,6 +233,9 @@ private val lightColors=lightColorScheme(primary=Color(0xFF285F65),secondary=Col
    }
    if(editing)ModalBottomSheet(onDismissRequest={editing=false}){
     Column(Modifier.fillMaxWidth().fillMaxHeight(.85f).verticalScroll(rememberScrollState()).padding(24.dp)){
+     ActionRow("Widget Centre",Icons.Default.Widgets){editing=false;widgetPage=currentPage;screen="widgets"}
+     ActionRow("Home backup & restore",Icons.Default.Save){editing=false;screen="backup"}
+     ActionRow("Preview lock screen",Icons.Default.Lock){editing=false;screen="lock-settings"}
      ActionRow("Navigation & multitasking",Icons.Default.Tune){editing=false;shellSettings=true}
      ActionRow("Nova events",Icons.Default.NotificationsNone){editing=false;notifications=true}
      Text("Make it yours",style=MaterialTheme.typography.headlineLarge);Text("${data.profileLabel} · Home ${currentPage+1}",color=MaterialTheme.colorScheme.primary)
@@ -213,7 +244,7 @@ private val lightColors=lightColorScheme(primary=Color(0xFF285F65),secondary=Col
      Text("Icon size · ${profile.iconSize} dp");Slider(profile.iconSize.toFloat(),{v->data.change{it.copy(iconSize=v.toInt())}},valueRange=44f..76f)
      Text("Layouts adapt to screen width and text size.",style=MaterialTheme.typography.bodySmall)
      ActionRow("Add Home page (${profile.pages.size}/8)",Icons.Default.Add,enabled=profile.pages.size<8){data.addPage();scope.launch{pager.animateScrollToPage(data.profile.pages.lastIndex)}}
-     if(profile.pages.size>1&&profile.pages[currentPage].isEmpty())ActionRow("Remove empty page",Icons.Default.Remove){data.removePage(currentPage)}
+     if(profile.pages.size>1&&profile.pages[currentPage].isEmpty()&&widgets.slots(state.current).none{it.page==currentPage})ActionRow("Remove empty page",Icons.Default.Remove){data.removePage(currentPage)}
      if(currentPage>0)ActionRow("Move page left",Icons.Default.ChevronLeft){data.movePage(currentPage,-1);scope.launch{pager.scrollToPage(currentPage-1)}}
      if(currentPage<profile.pages.lastIndex)ActionRow("Move page right",Icons.Default.ChevronRight){data.movePage(currentPage,1);scope.launch{pager.scrollToPage(currentPage+1)}}
      ActionRow("Add apps from drawer",Icons.Default.Apps){editing=false;drawer=true}
@@ -271,6 +302,7 @@ private val lightColors=lightColorScheme(primary=Color(0xFF285F65),secondary=Col
    if(confirmUninstall!=null)AlertDialog(onDismissRequest={confirmUninstall=null},title={Text("Uninstall this shortcut?")},text={Text("Remove it from this preview profile, its folders, Home and Dock. Preview browser cookies are shared and are not selectively removed. Website accounts and external browser data remain managed by their provider/browser.")},confirmButton={TextButton(onClick={pool.closeApp(data.state.current,confirmUninstall!!);data.uninstall(confirmUninstall!!);confirmUninstall=null;detailId=null}){Text("Uninstall")}},dismissButton={TextButton(onClick={confirmUninstall=null}){Text("Cancel")}})
    browser?.let{entry->AlertDialog(onDismissRequest={browser=null},title={Text("Open in your browser?")},text={Column{Text(entry.name,style=MaterialTheme.typography.titleLarge);Text(entry.url,Modifier.padding(vertical=12.dp));Text("This leaves NovaOS Preview. Your browser handles its own accounts, cookies and permissions. The external browser has its own sessions. Signing in there does not automatically sign in the preview container. Neither preview profile is encrypted or protected.")}},confirmButton={TextButton(onClick={browser=null;onOpen(entry.url)}){Text("Open browser")}},dismissButton={TextButton(onClick={browser=null}){Text("Cancel")}})}
    data.error?.let{message->AlertDialog(onDismissRequest={},title={Text("Unable to save")},text={Text(message)},confirmButton={TextButton(onClick={data.retrySave()}){Text("Retry")}})}
+   }
   }
  }
 }
@@ -279,7 +311,7 @@ private val lightColors=lightColorScheme(primary=Color(0xFF285F65),secondary=Col
 @Composable private fun ActionRow(label:String,icon:androidx.compose.ui.graphics.vector.ImageVector,enabled:Boolean=true,onClick:()->Unit){TextButton(onClick=onClick,enabled=enabled,modifier=Modifier.fillMaxWidth().heightIn(min=52.dp),contentPadding=PaddingValues(vertical=12.dp,horizontal=4.dp)){Icon(icon,null,Modifier.size(22.dp));Text(label,Modifier.weight(1f).padding(start=14.dp),textAlign=TextAlign.Start);Icon(Icons.Default.ChevronRight,null)}}
 
 @OptIn(ExperimentalFoundationApi::class)
-@Composable private fun Home(data:PreviewData,filesDir:File,pager:PagerState,onLaunch:(String)->Unit,onSelect:(String)->Unit,onDrawer:()->Unit,onQuick:()->Unit,onEdit:()->Unit){
+@Composable private fun Home(data:PreviewData,filesDir:File,pager:PagerState,widgets:WidgetData,pool:PreviewBrowserModel,audio:MindAudio,video:NovaVideoModel,onWidgetEdit:(String)->Unit,onResume:(PreviewTab)->Unit,onLaunch:(String)->Unit,onSelect:(String)->Unit,onDrawer:()->Unit,onQuick:()->Unit,onEdit:()->Unit){
  val profile=data.profile;val scope=rememberCoroutineScope()
  BoxWithConstraints(Modifier.fillMaxSize().testTag("preview-home")){
   val compactHeight=maxHeight<500.dp
@@ -288,18 +320,20 @@ private val lightColors=lightColorScheme(primary=Color(0xFF285F65),secondary=Col
    Column(Modifier.fillMaxSize().safeDrawingPadding()){
     Row(Modifier.fillMaxWidth().padding(start=22.dp,end=8.dp),verticalAlignment=Alignment.CenterVertically){
      Image(painterResource(R.drawable.nova_identity),null,Modifier.size(28.dp));Column(Modifier.weight(1f).padding(start=9.dp)){Text("NOVAOS PREVIEW",fontSize=10.sp,letterSpacing=2.sp,fontWeight=FontWeight.Bold);Text(data.profileLabel+" · demo",style=MaterialTheme.typography.labelMedium,color=Color.White.copy(alpha=.7f))}
+     IconButton(onClick={onLaunch("search")}){Icon(Icons.Default.Search,"Open Nova Search")}
      IconButton(onClick={onLaunch("calm")}){Icon(Icons.Default.Spa,"Calm Now")}
      IconButton(onClick=onQuick){Icon(Icons.Default.Tune,"Open Quick Panel")}
-     Box{var menu by remember{mutableStateOf(false)};IconButton(onClick={menu=true}){Icon(Icons.Default.MoreVert,"Home menu")};DropdownMenu(menu,{menu=false}){DropdownMenuItem(text={Text("Apps")},onClick={menu=false;onDrawer()});DropdownMenuItem(text={Text("Edit Home")},onClick={menu=false;onEdit()});DropdownMenuItem(text={Text("Switch preview profile")},onClick={menu=false;data.switchProfile()})}}
+     Box{var menu by remember{mutableStateOf(false)};IconButton(onClick={menu=true}){Icon(Icons.Default.MoreVert,"Home menu")};DropdownMenu(menu,{menu=false}){DropdownMenuItem(text={Text("Apps")},onClick={menu=false;onDrawer()});DropdownMenuItem(text={Text("Edit Home")},onClick={menu=false;onEdit()});DropdownMenuItem(text={Text("Widget Centre")},onClick={menu=false;onLaunch("widgets")});DropdownMenuItem(text={Text("Switch preview profile")},onClick={menu=false;data.switchProfile()})}}
     }
     HorizontalPager(pager,Modifier.weight(1f).fillMaxWidth(),key={it}){page->
      Column(Modifier.fillMaxSize().combinedClickable(onClick={},onLongClick=onEdit).pointerInput(Unit){var travel=0f;detectVerticalDragGestures(onDragStart={travel=0f},onDragEnd={if(travel < -70.dp.toPx())onDrawer();if(travel > 70.dp.toPx())onQuick()},onVerticalDrag={change,amount->change.consume();travel+=amount})}.padding(horizontal=20.dp)){
-      if(page==0)HomeClock(Modifier.padding(top=if(compactHeight)4.dp else 26.dp,bottom=if(compactHeight)8.dp else 28.dp),compactHeight)
+      if(page==0&&widgets.slots(data.state.current).none{it.page==page})HomeClock(Modifier.padding(top=if(compactHeight)4.dp else 26.dp,bottom=if(compactHeight)8.dp else 28.dp),compactHeight)
+      HomeWidgets(data,widgets,pool,audio,video,page,if(compactHeight)160.dp else 340.dp,onLaunch,onResume,onWidgetEdit)
       if(profile.pages[page].isEmpty())Box(Modifier.weight(1f).fillMaxWidth().combinedClickable(onClick={},onLongClick=onEdit),contentAlignment=Alignment.Center){Text("Room for your next idea\nLong-press to edit Home",textAlign=TextAlign.Center,color=Color.White.copy(alpha=.65f))}
       else AdaptiveAppGrid(data,profile.pages[page],onLaunch,onSelect,Modifier.weight(1f),onHome=true)
      }
     }
-    Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),horizontalArrangement=Arrangement.Center){repeat(profile.pages.size){page->IconButton(onClick={scope.launch{pager.animateScrollToPage(page)}},modifier=Modifier.size(if(compactHeight)32.dp else 40.dp)){Icon(if(page==pager.currentPage)Icons.Default.Circle else Icons.Default.RadioButtonUnchecked,"Home page ${page+1}",Modifier.size(7.dp))}}}
+    Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),horizontalArrangement=Arrangement.Center){repeat(profile.pages.size){page->IconButton(onClick={scope.launch{if(widgets.reduced)pager.scrollToPage(page)else pager.animateScrollToPage(page)}},modifier=Modifier.size(if(compactHeight)32.dp else 40.dp)){Icon(if(page==pager.currentPage)Icons.Default.Circle else Icons.Default.RadioButtonUnchecked,"Home page ${page+1}",Modifier.size(7.dp))}}}
     Surface(Modifier.padding(horizontal=18.dp).fillMaxWidth(),shape=RoundedCornerShape(30.dp),color=Color.White.copy(alpha=.12f),contentColor=Color.White){
      Row(Modifier.padding(horizontal=7.dp,vertical=if(compactHeight)6.dp else 12.dp),horizontalArrangement=Arrangement.SpaceEvenly){profile.dock.forEach{id->Box(Modifier.weight(1f)){AppTile(data,id,onClick={onLaunch(id)},onLongClick={onSelect(id)},showMenu=false,compact=true)}}}
     }
@@ -363,6 +397,6 @@ private val lightColors=lightColorScheme(primary=Color(0xFF285F65),secondary=Col
  Box(Modifier.size(size).clip(RoundedCornerShape(size*.30f)).background(Brush.linearGradient(colors)),contentAlignment=Alignment.Center){
   if(bitmap!=null)Image(bitmap,null,Modifier.fillMaxSize().padding(size*.13f),contentScale=ContentScale.Fit,filterQuality=androidx.compose.ui.graphics.FilterQuality.High)
   else if(app.website!=null)Text(app.name.take(2).uppercase(),fontSize=(size.value*.29f).sp,color=Color.White,fontWeight=FontWeight.SemiBold)
-  else Icon(when(app.symbol){"mind"->Icons.Default.Spa;"browser"->Icons.Default.Language;"store"->Icons.Default.ShoppingBag;"photos"->Icons.Default.PhotoLibrary;"wallpaper"->Icons.Default.Wallpaper;"settings"->Icons.Default.Settings;else->Icons.Default.AutoAwesome},null,Modifier.size(size*.49f),tint=Color.White)
+  else Icon(when(app.symbol){"widgets"->Icons.Default.Widgets;"search"->Icons.Default.Search;"video"->Icons.Default.PlayCircle;"backup"->Icons.Default.Save;"lock"->Icons.Default.Lock;"mind"->Icons.Default.Spa;"browser"->Icons.Default.Language;"store"->Icons.Default.ShoppingBag;"photos"->Icons.Default.PhotoLibrary;"wallpaper"->Icons.Default.Wallpaper;"settings"->Icons.Default.Settings;else->Icons.Default.AutoAwesome},null,Modifier.size(size*.49f),tint=Color.White)
  }
 }

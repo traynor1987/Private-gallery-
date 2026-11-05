@@ -18,10 +18,34 @@ import java.io.File
 
 class MainActivity:ComponentActivity() {
  val previewData by lazy { PreviewData(this) }
+ val widgetData by lazy { WidgetData(this) }
+ val homeBackup by lazy { HomeBackup(this) }
+ val searchHistory by lazy { NovaSearchHistory(this) }
+ val video by lazy { ViewModelProvider(this)[NovaVideoModel::class.java] }
  val mindData by lazy { MindData(this) }
  val mindAudio by lazy { ViewModelProvider(this)[MindAudio::class.java] }
  val browserPool by lazy { ViewModelProvider(this)[PreviewBrowserModel::class.java] }
  private val pickFiles=registerForActivityResult(ActivityResultContracts.OpenMultipleDocuments()){uris->browserPool.upload?.onReceiveValue(uris.takeIf{it.isNotEmpty()}?.toTypedArray());browserPool.upload=null}
+ private var backupProfile="primary"
+ private val exportPendingFile get()=File(filesDir,"pending-home-layout-export.json")
+ private val exportHome=registerForActivityResult(ActivityResultContracts.CreateDocument("application/json")){uri->
+  if(uri!=null)runCatching{val raw=exportPendingFile.readBytes();require(raw.size<=HomeBackupCodec.MAX_BYTES);HomeBackupCodec.validate(raw.toString(Charsets.UTF_8));contentResolver.openOutputStream(uri,"wt")!!.use{it.write(raw)}}.onFailure{Toast.makeText(this,"Could not export Home layout. Please retry.",Toast.LENGTH_LONG).show()}
+  exportPendingFile.delete()
+ }
+ private val importHome=registerForActivityResult(ActivityResultContracts.OpenDocument()){uri->
+  if(uri!=null)runCatching{val raw=contentResolver.openInputStream(uri)!!.use{it.readNBytes(HomeBackupCodec.MAX_BYTES+1)};require(raw.size<=HomeBackupCodec.MAX_BYTES);homeBackup.prepare(raw.toString(Charsets.UTF_8),backupProfile)}.onFailure{homeBackup.prepare("invalid",backupProfile)}
+ }
+ private val pickVideo=registerForActivityResult(ActivityResultContracts.OpenDocument()){uri->if(uri!=null)runCatching{
+  val name=contentResolver.query(uri,arrayOf(android.provider.OpenableColumns.DISPLAY_NAME),null,null,null)?.use{if(it.moveToFirst())it.getString(0)else "Local video"}?:"Local video"
+  mindAudio.pause();video.open(uri,name,previewData.state.current)
+ }.onFailure{video.error="Could not open that local video."}}
+ fun exportHomeLayout(){runCatching{val raw=homeBackup.export(previewData,widgetData);val temp=File(filesDir,"pending-home-layout-export.tmp");temp.writeText(raw);check(temp.renameTo(exportPendingFile));exportHome.launch("NovaOS-Home-layout.json")}.onFailure{Toast.makeText(this,"Could not prepare a valid Home backup.",Toast.LENGTH_LONG).show()}}
+ fun importHomeLayout(){backupProfile=previewData.state.current;importHome.launch(arrayOf("application/json","text/plain","application/octet-stream"))}
+ fun pictureInPicture(){
+  if(!WidgetRules.pipEligible(video.uri!=null,video.prepared,video.locked)||!packageManager.hasSystemFeature(android.content.pm.PackageManager.FEATURE_PICTURE_IN_PICTURE)){video.error="PiP is unavailable. Use a prepared local video outside the preview lock.";return}
+  runCatching{val aspect=(video.width.toFloat()/video.height).coerceIn(1f/2.39f,2.39f);val params=android.app.PictureInPictureParams.Builder().setAspectRatio(android.util.Rational((aspect*1000).toInt(),1000)).setAutoEnterEnabled(false).build();check(enterPictureInPictureMode(params)){"Android declined PiP"}}.onFailure{video.error="Android PiP could not start. The video remains available inside NovaOS."}
+ }
+ override fun onPictureInPictureModeChanged(inPip:Boolean,newConfig:android.content.res.Configuration){super.onPictureInPictureModeChanged(inPip,newConfig);video.pip=inPip;if(inPip)video.mini=false}
  private var photoProfile="primary"
  private val pickPhoto=registerForActivityResult(ActivityResultContracts.PickVisualMedia()){uri->
   if(uri!=null)runCatching{
@@ -36,13 +60,13 @@ class MainActivity:ComponentActivity() {
   }.onFailure{Toast.makeText(this,"Unable to import image: ${it.message}",Toast.LENGTH_LONG).show()}
  }
  override fun onCreate(savedInstanceState:Bundle?){
-  super.onCreate(savedInstanceState);photoProfile=savedInstanceState?.getString("photoProfile")?:"primary";enableEdgeToEdge();browserPool.pickFiles={pickFiles.launch(arrayOf("*/*"))}
-  setContent { NovaPreview(previewData,browserPool,mindData,mindAudio, onPickImage={photoProfile=previewData.state.current;pickPhoto.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))},onOpen={openWebsite(it)},filesDir=filesDir) }
+  super.onCreate(savedInstanceState);photoProfile=savedInstanceState?.getString("photoProfile")?:"primary";backupProfile=savedInstanceState?.getString("backupProfile")?:"primary";enableEdgeToEdge();homeBackup.recover(previewData,widgetData);video.pick={pickVideo.launch(arrayOf("video/*"))};video.enterPip={pictureInPicture()};browserPool.pickFiles={pickFiles.launch(arrayOf("*/*"))}
+  setContent { NovaPreview(previewData,browserPool,mindData,mindAudio,widgetData,homeBackup,searchHistory,video, onPickImage={photoProfile=previewData.state.current;pickPhoto.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))},onOpen={openWebsite(it)},filesDir=filesDir) }
  }
- override fun onResume(){super.onResume();browserPool.library.refreshDownloads(previewData.shell);browserPool.foreground=true;browserPool.tabs.filter{it.view.parent!=null}.forEach{it.wrapper.baseContext=this};browserPool.syncLifecycle()}
- override fun onStop(){super.onStop();if(!isChangingConfigurations)mindAudio.pause();browserPool.detachContexts();android.webkit.CookieManager.getInstance().flush()}
- override fun onDestroy(){browserPool.pickFiles=null;if(!isChangingConfigurations){browserPool.upload?.onReceiveValue(null);browserPool.upload=null};super.onDestroy()}
- override fun onSaveInstanceState(outState:Bundle){outState.putString("photoProfile",photoProfile);super.onSaveInstanceState(outState)}
+ override fun onResume(){super.onResume();browserPool.library.refreshDownloads(previewData.shell);video.wrapper.baseContext=this;browserPool.foreground=true;browserPool.tabs.filter{it.view.parent!=null}.forEach{it.wrapper.baseContext=this};browserPool.syncLifecycle()}
+ override fun onStop(){super.onStop();if(!isChangingConfigurations){mindAudio.pause();if(!isInPictureInPictureMode)video.pause()};browserPool.detachContexts();android.webkit.CookieManager.getInstance().flush()}
+ override fun onDestroy(){video.pick=null;video.enterPip=null;browserPool.pickFiles=null;if(!isChangingConfigurations){browserPool.upload?.onReceiveValue(null);browserPool.upload=null};super.onDestroy()}
+ override fun onSaveInstanceState(outState:Bundle){outState.putString("photoProfile",photoProfile);outState.putString("backupProfile",backupProfile);super.onSaveInstanceState(outState)}
  private fun openWebsite(url:String){
   runCatching{
    val uri=Uri.parse(PreviewRules.https(url))

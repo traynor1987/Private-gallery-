@@ -12,7 +12,7 @@ concurrency:
 jobs:
 
  update-preview:
-  if: ${{ github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[preview-v05]') }}
+  if: ${{ github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[preview-v06]') }}
   runs-on: ubuntu-24.04
   timeout-minutes: 30
   permissions:
@@ -30,13 +30,12 @@ jobs:
      run: |
       python3 preview/tests/check_preview.py
       python3 -m unittest discover -s preview/tests -p 'test_*.py'
-      java com.sun.tools.javac.Main -d /tmp/preview-host preview/app/src/main/java/uk/co/traynor/novaos/preview/PreviewRules.java preview/app/src/main/java/uk/co/traynor/novaos/preview/PreviewAppPolicy.java preview/app/src/main/java/uk/co/traynor/novaos/preview/PreviewShellRules.java preview/tests/PreviewRulesChecks.java preview/tests/AppModeChecks.java preview/tests/ShellRulesChecks.java preview/app/src/main/java/uk/co/traynor/novaos/preview/MindRules.java preview/tests/MindRulesChecks.java
-      java -cp /tmp/preview-host PreviewRulesChecks
-      java -cp /tmp/preview-host AppModeChecks
-      java -cp /tmp/preview-host ShellRulesChecks
-      java -cp /tmp/preview-host MindRulesChecks
+      python3 preview/tests/run_widget_host.py
    - name: Android 17 preview build tools
-     run: (yes || true) | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" 'cmdline-tools;22.0' 'platforms;android-37.1' 'build-tools;36.0.0' 'emulator'
+     run: |
+      (yes || true) | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" 'cmdline-tools;22.0' 'platforms;android-37.1' 'build-tools;36.0.0' 'emulator'
+      cp -a "$ANDROID_HOME/cmdline-tools/22.0/." "$ANDROID_HOME/cmdline-tools/latest/"
+      test "$("$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --version)" = '22.0'
    - name: Build stable development signed preview
      run: |
       chmod +x gradlew
@@ -67,6 +66,7 @@ jobs:
       emulator-boot-timeout: 300
       disable-animations: true
       emulator-options: -no-window -gpu swiftshader -feature -Vulkan -no-snapshot -noaudio -no-boot-anim -camera-back none -camera-front none
+      pre-emulator-launch-script: python3 preview/tests/check_avd_target.py
       script: bash preview/tests/run_appmode_android.sh
    - name: Reject demonstrated application assertion failures
      if: steps.runtime.outcome == 'failure'
@@ -76,7 +76,7 @@ jobs:
       for p in pathlib.Path('preview/artifacts').glob('*tests.txt'):
        s=p.read_text()
        assert 'FAILURES!!!' not in s and 'INSTRUMENTATION_STATUS_CODE: -2' not in s, 'Application/test assertion failed; inspect before publishing'
-       assert 'OK (14 tests)' in s or 'OK (1 test)' in s or 'INSTRUMENTATION_FAILED' in s or not s.strip(), 'Incomplete runtime results need investigation'
+       assert 'OK (21 tests)' in s or 'OK (1 test)' in s or 'INSTRUMENTATION_FAILED' in s or not s.strip(), 'Incomplete runtime results need investigation'
       PYCODE
    - name: Record actual runtime outcome and reverify APK
      env:
@@ -89,7 +89,7 @@ jobs:
      if: always()
      uses: actions/upload-artifact@v4
      with:
-      name: NovaOS-preview-05-verification-${{ github.sha }}
+      name: NovaOS-preview-06-verification-${{ github.sha }}
       path: |
        preview/artifacts/
        preview/release-out/

@@ -84,11 +84,12 @@ import java.util.Date
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
-@Composable internal fun NovaNotifications(data:PreviewData,onDismiss:()->Unit,onLaunch:(String)->Unit){
+@Composable internal fun NovaNotifications(data:PreviewData,onDismiss:()->Unit,onLaunch:(String)->Unit,media:@Composable ()->Unit={}){
  val shell=data.shell;val events=shell.events(data.state.current)
  ModalBottomSheet(onDismissRequest=onDismiss){Column(Modifier.fillMaxWidth().fillMaxHeight(.8f).padding(20.dp).testTag("nova-notifications")){
   Row(verticalAlignment=Alignment.CenterVertically){Text("Nova events",Modifier.weight(1f),style=MaterialTheme.typography.headlineSmall);TextButton(onClick={shell.clear(data.state.current)},enabled=events.isNotEmpty(),modifier=Modifier.testTag("clear-events")){Text("Clear all")};IconButton(onClick=onDismiss){Icon(Icons.Default.Close,"Close Nova events")}}
   Text("Preview events only · no Android notifications",style=MaterialTheme.typography.labelMedium)
+  media()
   shell.error?.let{Text(it,color=MaterialTheme.colorScheme.error)}
   if(events.isEmpty())Text("No preview events yet.",Modifier.padding(vertical=32.dp))
   LazyColumn{items(events,key={it.id}){event->ListItem(headlineContent={Text((if(event.read)""else "● ")+event.text)},modifier=Modifier.clickable{shell.read(data.state.current,event.id);if(event.target.isNotBlank())onLaunch(event.target)},supportingContent={Text(DateFormat.getDateTimeInstance(DateFormat.SHORT,DateFormat.SHORT).format(Date(event.time)))},trailingContent={IconButton(onClick={shell.delete(data.state.current,event.id)}){Icon(Icons.Default.DeleteOutline,"Delete event")}})}}

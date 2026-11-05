@@ -6,3 +6,6 @@ p=dict(installed=[e],pages=[['folder:upgrade','store'],['wallpaper']],dock=[e['i
 state=dict(schema=1,current='primary',theme='light',primary=p,hidden=p)
 root=ET.Element('map');ET.SubElement(root,'string',name='state').text=json.dumps(state)
 ET.ElementTree(root).write('/tmp/nova05-upgrade-prefs.xml',encoding='utf-8',xml_declaration=True)
+
+mind=ET.Element('map');ET.SubElement(mind,'string',name='primary').text=json.dumps([dict(id='upgrade-mind-fixture',time=1000,text='Synthetic upgrade journal',mood='Okay',journal=True)])
+ET.ElementTree(mind).write('/tmp/nova06-upgrade-mind.xml',encoding='utf-8',xml_declaration=True)

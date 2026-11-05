@@ -2,7 +2,7 @@
  <uses-permission android:name="android.permission.INTERNET"/>
  <queries><intent><action android:name="android.intent.action.VIEW"/><category android:name="android.intent.category.BROWSABLE"/><data android:scheme="https"/></intent><intent><action android:name="android.support.customtabs.action.CustomTabsService"/></intent></queries>
  <application android:name=".PreviewApplication" android:label="NovaOS Preview" android:icon="@mipmap/ic_launcher" android:allowBackup="false" android:supportsRtl="true" android:theme="@style/PreviewTheme" android:usesCleartextTraffic="false">
-  <activity android:name=".MainActivity" android:exported="true" android:resizeableActivity="true">
+  <activity android:name=".MainActivity" android:exported="true" android:resizeableActivity="true" android:supportsPictureInPicture="true" android:configChanges="orientation|screenSize|smallestScreenSize|screenLayout">
    <intent-filter><action android:name="android.intent.action.MAIN"/><category android:name="android.intent.category.LAUNCHER"/></intent-filter>
   </activity>
  </application>

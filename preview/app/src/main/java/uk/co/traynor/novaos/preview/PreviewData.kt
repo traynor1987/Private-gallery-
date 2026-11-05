@@ -13,7 +13,7 @@ data class Wallpaper(val builtin:String="Aurora",val image:String?=null,val zoom
 data class Profile(val installed:List<StoreEntry> = emptyList(),val pages:List<List<String>> = listOf(listOf("store","folder:studio","guide"),listOf("settings")),val dock:List<String> = listOf("photos","store","wallpaper","settings"),val folders:List<AppFolder> = listOf(AppFolder("folder:studio","Studio",listOf("photos","wallpaper"))),val drawerOrder:List<String> = emptyList(),val wallpaper:Wallpaper=Wallpaper(),val columns:Int=4,val iconSize:Int=60)
 data class PreviewState(val current:String="primary",val theme:String="dark",val primary:Profile=Profile(),val hidden:Profile=Profile(wallpaper=Wallpaper(builtin="Midnight")))
 data class LaunchApp(val id:String,val name:String,val symbol:String,val website:StoreEntry?=null)
-val builtinApps = listOf(LaunchApp("mind","Nova Mind","mind"),LaunchApp("calm","Calm Now","mind"),LaunchApp("sanctuary","Nova Sanctuary","mind"),LaunchApp("browser-v1","Browser V1","browser"),LaunchApp("store","Nova Store","store"),LaunchApp("photos","Photos demo","photos"),LaunchApp("wallpaper","Wallpapers","wallpaper"),LaunchApp("settings","Home settings","settings"),LaunchApp("guide","Preview guide","guide"))
+val builtinApps = listOf(LaunchApp("widgets","Widget Centre","widgets"),LaunchApp("search","Nova Search","search"),LaunchApp("video","Nova Video","video"),LaunchApp("backup","Home backup","backup"),LaunchApp("lock-settings","Preview lock","lock"),LaunchApp("mind","Nova Mind","mind"),LaunchApp("calm","Calm Now","mind"),LaunchApp("sanctuary","Nova Sanctuary","mind"),LaunchApp("browser-v1","Browser V1","browser"),LaunchApp("store","Nova Store","store"),LaunchApp("photos","Photos demo","photos"),LaunchApp("wallpaper","Wallpapers","wallpaper"),LaunchApp("settings","Home settings","settings"),LaunchApp("guide","Preview guide","guide"))
 
 class PreviewData(private val context:Context) {
  val shell=PreviewShellData(context)
@@ -25,6 +25,20 @@ class PreviewData(private val context:Context) {
  val profile get()=if(state.current=="hidden")state.hidden else state.primary
  val profileLabel get()=if(state.current=="hidden")"Hidden Preview" else "Primary Preview"
  val catalogue:List<StoreEntry> = parseCatalogue(context.assets.open("catalogue-v1.json").bufferedReader().use{it.readText()})
+ fun layoutExport():JSONObject {
+  val o=profileJson(profile);o.remove("installed");o.put("installedIds",JSONArray(profile.installed.map{it.id}))
+  val w=o.getJSONObject("wallpaper");w.remove("imageRevision");w.put("image",profile.wallpaper.image?:"")
+  return o
+ }
+ fun snapshotLayout():String=encode(state).toString()
+ fun rollbackLayout(raw:String):Boolean {return runCatching{save(decode(JSONObject(raw)));error==null}.getOrDefault(false)}
+ fun restoreLayout(layout:JSONObject):Boolean {
+  val old=profile.installed
+  val ids=layout.getJSONArray("installedIds");val restored=(0 until ids.length()).mapNotNull{i->val id=ids.getString(i);old.firstOrNull{it.id==id}?:catalogue.firstOrNull{entryKey(it)==id}?.copy(id=id)}
+  val o=JSONObject(layout.toString());o.remove("installedIds");o.put("installed",JSONArray().apply{(old+restored).distinctBy{it.id}.forEach{put(entryJson(it))}})
+  val wall=o.getJSONObject("wallpaper");val image=wall.optString("image");if(image.isBlank()||!java.io.File(context.filesDir,image).isFile)wall.remove("image")
+  val next=readProfile(o);change{next};return error==null
+ }
  fun profile(id:String)=if(id=="hidden")state.hidden else state.primary
  fun allApps(p:Profile=profile)=builtinApps+p.installed.map{entry->val artwork=catalogue.firstOrNull{PreviewRules.key(it.url)==PreviewRules.key(entry.url)};LaunchApp(entry.id,entry.name,"website",if(artwork!=null)entry.copy(icon=artwork.icon)else entry)}
  fun app(id:String)=allApps().firstOrNull{it.id==id}
@@ -69,8 +83,17 @@ class PreviewData(private val context:Context) {
  fun moveDrawer(id:String,delta:Int){change{it.copy(drawerOrder=PreviewRules.move(drawerIds(it),id,delta))}}
  fun moveHome(id:String,page:Int,delta:Int){change{p->p.copy(pages=p.pages.mapIndexed{i,list->if(i==page)PreviewRules.move(list,id,delta)else list})}}
  fun addPage(){if(profile.pages.size<8)change{it.copy(pages=it.pages+listOf(emptyList()))}}
- fun removePage(page:Int){if(profile.pages.size>1&&profile.pages[page].isEmpty())change{it.copy(pages=it.pages.filterIndexed{i,_->i!=page})}}
- fun movePage(page:Int,delta:Int){change{p->val next=p.pages.toMutableList();val target=(page+delta).coerceIn(0,next.lastIndex);java.util.Collections.swap(next,page,target);p.copy(pages=next)}}
+ fun removePage(page:Int){
+  val w=WidgetData(context);val old=w.slots(state.current)
+  if(profile.pages.size<=1||profile.pages[page].isNotEmpty()||old.any{it.page==page})return
+  if(!w.save(state.current,old.map{if(it.page>page)it.copy(page=it.page-1)else it}))return
+  change{it.copy(pages=it.pages.filterIndexed{i,_->i!=page})};if(error!=null)w.save(state.current,old)
+ }
+ fun movePage(page:Int,delta:Int){
+  val target=(page+delta).coerceIn(0,profile.pages.lastIndex);val w=WidgetData(context);val old=w.slots(state.current)
+  if(!w.save(state.current,old.map{when(it.page){page->it.copy(page=target);target->it.copy(page=page);else->it}}))return
+  change{p->val next=p.pages.toMutableList();java.util.Collections.swap(next,page,target);p.copy(pages=next)};if(error!=null)w.save(state.current,old)
+ }
  fun createFolder(name:String,apps:List<String>,page:Int){
   require(name.trim().isNotEmpty()&&apps.distinct().size>=2)
   val id="folder:"+java.util.UUID.randomUUID().toString()

@@ -32,6 +32,7 @@ import uk.co.traynor.novaos.preview.browser.*
 class PreviewApplication:Application(){
  override fun onCreate(){super.onCreate();WebView.setDataDirectorySuffix("nova_preview_v1")}
 }
+data class PreviewFullscreen(val tabId:String,val view:android.view.View,val callback:WebChromeClient.CustomViewCallback)
 data class PreviewExternalRequest(val tabId:String,val profile:String,val url:String)
 class PreviewTab(val id:String,val profile:String,val app:StoreEntry,val wrapper:MutableContextWrapper,val view:WebView){
  var resumed=true
@@ -50,6 +51,9 @@ class PreviewTab(val id:String,val profile:String,val app:StoreEntry,val wrapper
 
 /** Preview-only owner for retained V1 WebViews. No production browser/session APIs. */
 class PreviewBrowserModel(application:Application):AndroidViewModel(application){
+ var presentationBlocked=false
+ var fullscreen by mutableStateOf<PreviewFullscreen?>(null);private set
+ fun closeFullscreen(){val old=fullscreen;fullscreen=null;(old?.view?.parent as? ViewGroup)?.removeView(old.view);if(old!=null)runCatching{old.callback.onCustomViewHidden()}}
  val library=BrowserLibrary(application)
  val tabs=mutableStateListOf<PreviewTab>()
  var activeId by mutableStateOf<String?>(null)
@@ -66,7 +70,7 @@ class PreviewBrowserModel(application:Application):AndroidViewModel(application)
   val owner="$profile:${app.id}";val old=tabs.firstOrNull{it.id==last[owner]}?:tabs.firstOrNull{it.profile==profile&&it.app.id==app.id}
   val tab=old?:create(app,profile,true);select(tab);return tab
  }
- fun select(tab:PreviewTab){tab.touched=android.os.SystemClock.uptimeMillis();activeId=tab.id;last["${tab.profile}:${tab.app.id}"]=tab.id;syncLifecycle()}
+ fun select(tab:PreviewTab){if(fullscreen?.tabId!=tab.id)closeFullscreen();tab.touched=android.os.SystemClock.uptimeMillis();activeId=tab.id;last["${tab.profile}:${tab.app.id}"]=tab.id;syncLifecycle()}
  fun syncLifecycle(){tabs.forEach{val run=it.profile==currentProfile&&PreviewShellRules.keepRunning(foreground,it.id==activeId,it.mediaState=="playing");if(run!=it.resumed){if(run)it.view.onResume()else it.view.onPause();it.resumed=run}}}
  fun create(app:StoreEntry,profile:String,load:Boolean):PreviewTab{
   require(tabs.count{it.profile==profile&&it.app.id==app.id}<8){"Close a tab before adding more (8 per app)."}
@@ -145,6 +149,8 @@ class PreviewBrowserModel(application:Application):AndroidViewModel(application)
    override fun onRenderProcessGone(v:WebView,detail:RenderProcessGoneDetail):Boolean{notice="Web renderer stopped. Return Home and reopen the app.";close(tab,rendererGone=true);return true}
   }
   view.webChromeClient=object:WebChromeClient(){
+   override fun onShowCustomView(custom:android.view.View,callback:CustomViewCallback){if(!foreground||presentationBlocked||tab.profile!=currentProfile||tab.id!=activeId){callback.onCustomViewHidden();return};closeFullscreen();fullscreen=PreviewFullscreen(tab.id,custom,callback)}
+   override fun onHideCustomView(){if(fullscreen?.tabId==tab.id)closeFullscreen()}
    override fun onProgressChanged(v:WebView,value:Int){tab.progress=value;update()}
    override fun onReceivedTitle(v:WebView,title:String?){tab.title=title?.take(160)?:tab.app.name}
    override fun onCreateWindow(v:WebView,isDialog:Boolean,isUserGesture:Boolean,result:Message):Boolean{
@@ -164,6 +170,7 @@ class PreviewBrowserModel(application:Application):AndroidViewModel(application)
   view.setDownloadListener{url,_,_,_,_->if(runCatching{PreviewRules.https(url)}.isSuccess)downloadRequest=tab to url else tab.error="This download type is unsupported. Public HTTPS files can be downloaded; blob/data links cannot."}
  }
  fun close(tab:PreviewTab,rendererGone:Boolean=false){
+  if(fullscreen?.tabId==tab.id)closeFullscreen()
   (tab.view.parent as? ViewGroup)?.removeView(tab.view);if(!rendererGone)tab.view.stopLoading();tab.view.destroy();tabs.remove(tab)
   if(activeId==tab.id)activeId=(tabs.lastOrNull{it.profile==tab.profile&&it.app.id==tab.app.id}?:tabs.filter{it.profile==tab.profile}.maxByOrNull{it.touched})?.id
   last.entries.removeAll{it.value==tab.id};syncLifecycle()
@@ -242,7 +249,7 @@ class PreviewBrowserModel(application:Application):AndroidViewModel(application)
     listOf("landscape" to "Prefer landscape","fullscreen" to "Fullscreen (hide status bar)").forEach{(flag,label)->val k="$flag:${tab.profile}:${tab.app.id}";Row(verticalAlignment=Alignment.CenterVertically){Text(label,Modifier.weight(1f));Switch(pool.library.flag(k),{pool.library.setFlag(k,it)})}}
     Text("Touch, keyboard and gamepad input depend on the game. Landscape requests may be overridden by Android on the Fold inner screen. Nova and Android navigation remain available. Offline support is not promised.")
    }
-   Text("Ordinary preview browsing. Cookies and saved website progress persist locally, shared across demonstration profiles; this is not an encrypted vault. Embedded logins depend on the provider. No browser restrictions are bypassed.",Modifier.padding(vertical=16.dp))
+   Text("Website fullscreen uses its documented WebView callback. Website mini-player and Android PiP are unavailable when provider eligibility cannot be established; use the website’s supported player. Nova Video supports user-selected local files. Ordinary preview browsing. Cookies and saved website progress persist locally, shared across demonstration profiles; this is not an encrypted vault. Embedded logins depend on the provider. No browser restrictions are bypassed.",Modifier.padding(vertical=16.dp))
    TextButton(onClick={pool.library.clear("history",tab.profile)}){Text("Clear browsing history")}
    Button(onClick={settings=false},Modifier.fillMaxWidth()){Text("Done")}
   }
