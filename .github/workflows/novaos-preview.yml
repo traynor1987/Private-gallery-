@@ -117,6 +117,8 @@ jobs:
       java-version: '17'
    - name: Recover the already tested APK without rebuilding or rerunning Android
      run: |
+      git fetch origin "$GITHUB_SHA"
+      git diff --exit-code 999a780ad37f1f326f91f9312b6fadd066edc1a2 "$GITHUB_SHA" -- preview/app preview/build.gradle.kts preview/settings.gradle.kts preview/gradle.properties gradlew gradle
       gh api repos/traynor1987/Private-gallery-/actions/artifacts/13431127529 > /tmp/verified-artifact.json
       python3 - <<'PY'
       import json
@@ -143,9 +145,12 @@ jobs:
      run: |
       python3 - <<'PY'
       import importlib.util,os,time
-      source='999a780ad37f1f326f91f9312b6fadd066edc1a2'
-      # Publisher provenance names the preserved APK source, not this metadata-only recovery workflow.
-      os.environ['GITHUB_SHA']=source
+      source=os.environ['GITHUB_SHA']
+      # Release tag names this referenced metadata commit; artifactSourceCommit remains the verified APK build source.
+      import pathlib,json
+      notes=pathlib.Path('preview/release/NOTES.md')
+      notes.write_text(notes.read_text()+'\nPublication metadata commit: '+source+'; APK build source:999a780ad37f1f326f91f9312b6fadd066edc1a2. App/build input diff verified empty; preserved APK bytes, no rebuild.\n')
+      pathlib.Path('preview/release-out/PUBLICATION-PROVENANCE.json').write_text(json.dumps({'publicationCommit':source,'apkBuildCommit':'999a780ad37f1f326f91f9312b6fadd066edc1a2','appAndBuildInputsIdentical':True,'apkRebuilt':False},indent=2)+'\n')
       spec=importlib.util.spec_from_file_location('preview_publisher','preview/release/publish.py');module=importlib.util.module_from_spec(spec);spec.loader.exec_module(module)
       original=module.api
       def retry_api(path,method='GET',data=None,missing_ok=False):
