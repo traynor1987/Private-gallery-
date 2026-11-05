@@ -1,0 +1,20 @@
+{
+  "packageId": "uk.co.traynor.novaos.preview",
+  "versionName": "0.7.1-preview",
+  "versionCode": 9,
+  "minSdk": 37,
+  "targetSdk": 37,
+  "sourceCommit": "bcf7961182debb1b52c80dc2646858062073c3e7",
+  "artifactSourceCommit": "bcf7961182debb1b52c80dc2646858062073c3e7",
+  "bytes": 61008477,
+  "apkSha256": "449b435f2ce9c5ba99984f8cffa0b874a32450309b4fff269b3111a0984098b1",
+  "developmentCertificateSha256": "81cda5b72cb76940fa50972bc1c284b25e641b88814d2b9041c7111cb1d042d8",
+  "permissions": [
+    "android.permission.INTERNET",
+    "uk.co.traynor.novaos.preview.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION"
+  ],
+  "packageIsolation": "verified distinct application ID; no shared UID or production classes/components",
+  "nativeAlignment": "16KB ZIP and ARM64 ELF verified",
+  "runtimeVerification": "Not run in this host verification; see workflow runtime receipt",
+  "experimental": true
+}

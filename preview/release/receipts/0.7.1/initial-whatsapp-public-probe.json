@@ -1,0 +1,14 @@
+{
+  "api": 37,
+  "desktopRequested": true,
+  "mobileToken": false,
+  "authenticatedChatTested": false,
+  "friendsAllowlistImplemented": false,
+  "publicLoginProbe": {
+    "url": "https:\/\/web.whatsapp.com\/",
+    "desktopLoginCues": true,
+    "mobileFallback": false,
+    "qrLikeElement": false
+  },
+  "pageError": false
+}

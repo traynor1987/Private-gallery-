@@ -52,11 +52,11 @@ class WidgetExperienceTest {
   val rowPx=156f*rule.activity.resources.displayMetrics.density*rule.activity.resources.configuration.fontScale.coerceAtLeast(1f)
   rule.onNodeWithContentDescription("Hold and drag widget",useUnmergedTree=true).performScrollTo().performTouchInput{down(center);advanceEventTime(700);moveBy(androidx.compose.ui.geometry.Offset(0f,rowPx),200);up()}
   rule.runOnUiThread{val slot=widgets().slots("primary").single();assertEquals(4,slot.w);assertEquals(1,slot.y);widgets().place("primary",id,0,0,2,2,0);widgets().add("primary","mind",2,2,0);val other=widgets().slots("primary").last();assertTrue(widgets().stack("primary",id,other.id))}
-  rule.onNodeWithTag("widget-edit-done").performClick()
+  rule.onNodeWithTag("widget-edit-done").assertIsDisplayed().performClick()
   rule.runOnUiThread{assertNull(widgets().editingId)}
   val stack=rule.onNodeWithTag("widget-stack-$id",useUnmergedTree=true).performScrollTo().assertIsDisplayed()
   fun capture(stage:String){
-   val node=stack.fetchSemanticsNode();android.util.Log.i("NovaStackDiagnostic","$stage bounds=${node.boundsInRoot}; config=${node.config}; outer=${rule.onNodeWithTag("home-pager",useUnmergedTree=true).fetchSemanticsNode().config}; layout=${widgets().snapshot("primary")}")
+   val node=stack.fetchSemanticsNode();android.util.Log.i("NovaStackDiagnostic","$stage bounds=${node.boundsInRoot}; config=${node.config}; outer=${rule.onNodeWithTag("home-pager",useUnmergedTree=true).fetchSemanticsNode().config}")
    rule.runOnUiThread{val decor=rule.activity.window.decorView;val bmp=android.graphics.Bitmap.createBitmap(decor.width,decor.height,android.graphics.Bitmap.Config.ARGB_8888);decor.draw(android.graphics.Canvas(bmp));val dir=File(rule.activity.filesDir,"widget-screenshots");dir.mkdirs();File(dir,"stack-$stage.png").outputStream().use{bmp.compress(android.graphics.Bitmap.CompressFormat.PNG,100,it)};bmp.recycle()}
   }
   capture("before");stack.performTouchInput{swipeLeft()};rule.waitForIdle();capture("after")
@@ -80,7 +80,7 @@ class WidgetExperienceTest {
    shell("wm density 420");shell("settings put system font_scale 1.3")
    for((name,size) in listOf("cover" to "904x2316","inner" to "1840x2208","landscape" to "2316x904")){
     shell("wm size $size");android.os.SystemClock.sleep(1000);rule.waitForIdle()
-    val area=rule.onNodeWithTag("home-widgets",useUnmergedTree=true).fetchSemanticsNode().boundsInRoot;val nav=rule.onNodeWithTag("nova-navigation").fetchSemanticsNode().boundsInRoot
+    val clock=rule.onNodeWithTag("home-original-clock",useUnmergedTree=true).assertIsDisplayed().fetchSemanticsNode().boundsInRoot;val area=rule.onNodeWithTag("home-widgets",useUnmergedTree=true).assertIsDisplayed().fetchSemanticsNode().boundsInRoot;assertTrue("Protected clock must not overlap widget area in $name",clock.bottom<=area.top+2||clock.right<=area.left+2);val nav=rule.onNodeWithTag("nova-navigation").fetchSemanticsNode().boundsInRoot
     assertTrue("Widgets must stay above Nova navigation in $name",area.bottom<=nav.top+2)
     val decor=rule.activity.window.decorView;val bitmap=android.graphics.Bitmap.createBitmap(decor.width,decor.height,android.graphics.Bitmap.Config.ARGB_8888);rule.runOnUiThread{decor.draw(android.graphics.Canvas(bitmap))};val dir=File(rule.activity.filesDir,"widget-screenshots");dir.mkdirs();File(dir,"widgets-$name.png").outputStream().use{assertTrue(bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG,100,it))};bitmap.recycle()
    }

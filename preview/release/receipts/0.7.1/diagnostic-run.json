@@ -1,0 +1,10 @@
+{
+  "runId": 42037831595,
+  "source": "b7de223a222fc9a9ecadb483ba6c73af590a10d1",
+  "cases": 2,
+  "passed": 1,
+  "failedAssertion": "editingId must be null after Done",
+  "finding": "Done was scrolled outside the Home viewport; widget remained editing so stack swipe was disabled",
+  "publicationDisabled": true,
+  "artifactSha256": "3db08e334917fddab4986f3f88ca44d0afef9df93fcc09be5f1656e3dc4951bb"
+}

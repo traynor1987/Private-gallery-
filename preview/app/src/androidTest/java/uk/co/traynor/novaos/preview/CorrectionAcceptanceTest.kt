@@ -61,7 +61,7 @@ class CorrectionAcceptanceTest {
   assertTrue("Drag preview cannot escape widget area",preview.bottom<=area.bottom+2&&preview.top>=area.top-2)
   rule.onNodeWithContentDescription("Hold and drag widget",useUnmergedTree=true).performTouchInput{cancel()}
   rule.runOnUiThread{assertEquals(before,w.slots("primary").single())};rule.onNodeWithTag("widget-placement-preview",useUnmergedTree=true).assertDoesNotExist()
-  rule.onNodeWithTag("widget-edit-done").performScrollTo().performClick();rule.onNodeWithTag("widget-resize-$id",useUnmergedTree=true).assertDoesNotExist();rule.onNodeWithTag("home-original-clock").assertIsDisplayed()
+  rule.onNodeWithTag("widget-edit-done").assertIsDisplayed().performClick();rule.onNodeWithTag("widget-resize-$id",useUnmergedTree=true).assertDoesNotExist();rule.onNodeWithTag("home-original-clock").assertIsDisplayed()
  }
  @Test fun rejectedResizeAndInvalidLayoutRecoveryPreserveNotesAndValidSlots(){
   rule.runOnUiThread{

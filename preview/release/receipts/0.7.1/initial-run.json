@@ -1,0 +1,10 @@
+{
+  "runId": 42035432194,
+  "source": "bcf7961182debb1b52c80dc2646858062073c3e7",
+  "cases": 31,
+  "passed": 30,
+  "failedCase": "WidgetExperienceTest.dragResizeAndStackSwipeOperateOnCurrentGeometry",
+  "upgradePassed": true,
+  "published": false,
+  "artifactSha256": "16458c4ee071185d448058e3c09bed8147fe887a9203aaeca17281aa77420a56"
+}

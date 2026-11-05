@@ -52,10 +52,10 @@ import pathlib
 s=pathlib.Path('preview/artifacts/upgrade-tests.txt').read_text()
 assert 'OK (1 test)' in s and 'FAILURES!!!' not in s and 'INSTRUMENTATION_FAILED' not in s,s[-12000:]
 PYUPGRADERESULT
-tests='uk.co.traynor.novaos.preview.WidgetExperienceTest#dragResizeAndStackSwipeOperateOnCurrentGeometry,uk.co.traynor.novaos.preview.WidgetExperienceTest#widgetFoldViewportsStayAboveNavigation'
+tests='uk.co.traynor.novaos.preview.WidgetExperienceTest#dragResizeAndStackSwipeOperateOnCurrentGeometry,uk.co.traynor.novaos.preview.WidgetExperienceTest#widgetFoldViewportsStayAboveNavigation,uk.co.traynor.novaos.preview.CorrectionAcceptanceTest#protectedClockSurvivesWidgetAddRemoveUndoAndRestart,uk.co.traynor.novaos.preview.CorrectionAcceptanceTest#dragPreviewIsClippedAndCancellationDoesNotSave,uk.co.traynor.novaos.preview.CorrectionAcceptanceTest#rejectedResizeAndInvalidLayoutRecoveryPreserveNotesAndValidSlots,uk.co.traynor.novaos.preview.PolishAcceptanceTest#widgetEditDragResizeAndAtomicCollisionPersistence,uk.co.traynor.novaos.preview.PolishAcceptanceTest#quickNotesAutosaveWithoutSaveButtonAndSurviveRecreation,uk.co.traynor.novaos.preview.PolishAcceptanceTest#ownPackageMediaSessionControlsAreRealAndAmbiguityFailsClosed,uk.co.traynor.novaos.preview.PolishAcceptanceTest#emptyHomeSwipeOpensTopPanelAndHandleDismisses,uk.co.traynor.novaos.preview.PolishAcceptanceTest#quickPanelFitsFoldViewportsAndLeavesNativeAudioRunning,uk.co.traynor.novaos.preview.MediaContinuityAcceptanceTest'
 timeout 600s adb shell am instrument -w -r -e class "$tests" uk.co.traynor.novaos.preview.test/androidx.test.runner.AndroidJUnitRunner | tee preview/artifacts/appmode-tests.txt
 python3 - <<'PY'
 import pathlib,re
 s=pathlib.Path('preview/artifacts/appmode-tests.txt').read_text()
-assert re.search(r'OK \(2 tests\)',s) and 'FAILURES!!!' not in s and 'INSTRUMENTATION_FAILED' not in s,s[-12000:]
+assert re.search(r'OK \(13 tests\)',s) and 'FAILURES!!!' not in s and 'INSTRUMENTATION_FAILED' not in s,s[-12000:]
 PY

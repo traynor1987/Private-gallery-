@@ -1,0 +1,109 @@
+INSTRUMENTATION_STATUS: class=uk.co.traynor.novaos.preview.WidgetExperienceTest
+INSTRUMENTATION_STATUS: current=1
+INSTRUMENTATION_STATUS: id=AndroidJUnitRunner
+INSTRUMENTATION_STATUS: numtests=2
+INSTRUMENTATION_STATUS: stream=
+uk.co.traynor.novaos.preview.WidgetExperienceTest:
+INSTRUMENTATION_STATUS: test=dragResizeAndStackSwipeOperateOnCurrentGeometry
+INSTRUMENTATION_STATUS_CODE: 1
+INSTRUMENTATION_STATUS: class=uk.co.traynor.novaos.preview.WidgetExperienceTest
+INSTRUMENTATION_STATUS: current=1
+INSTRUMENTATION_STATUS: id=AndroidJUnitRunner
+INSTRUMENTATION_STATUS: numtests=2
+INSTRUMENTATION_STATUS: stack=java.lang.AssertionError: expected null, but was:<d9532a9b-c8f1-4153-950a-8324da202e7f>
+	at org.junit.Assert.fail(Assert.java:89)
+	at org.junit.Assert.failNotNull(Assert.java:756)
+	at org.junit.Assert.assertNull(Assert.java:738)
+	at org.junit.Assert.assertNull(Assert.java:748)
+	at uk.co.traynor.novaos.preview.WidgetExperienceTest.dragResizeAndStackSwipeOperateOnCurrentGeometry$lambda$6(WidgetExperienceTest.kt:56)
+	at uk.co.traynor.novaos.preview.WidgetExperienceTest$$ExternalSyntheticLambda31.invoke(D8$$SyntheticClass:0)
+	at androidx.compose.ui.test.AndroidSynchronization_androidKt.runOnUiThread$lambda$0(AndroidSynchronization.android.kt:37)
+	at androidx.compose.ui.test.AndroidSynchronization_androidKt$$ExternalSyntheticLambda0.call(D8$$SyntheticClass:0)
+	at java.util.concurrent.FutureTask.run(FutureTask.java:328)
+	at java.util.concurrent.Executors$RunnableAdapter.call(Executors.java:520)
+	at java.util.concurrent.FutureTask.run(FutureTask.java:328)
+	at android.app.Instrumentation$SyncRunnable.run(Instrumentation.java:2657)
+	at android.os.Handler.handleCallback(Handler.java:1095)
+	at android.os.Handler.dispatchMessageImpl(Handler.java:135)
+	at android.os.Handler.dispatchMessage(Handler.java:125)
+	at android.os.Looper.loopOnce(Looper.java:296)
+	at android.os.Looper.loop(Looper.java:397)
+	at android.app.ActivityThread.main(ActivityThread.java:9523)
+	at java.lang.reflect.Method.invoke(Native Method)
+	at com.android.internal.os.RuntimeInit$MethodAndArgsCaller.run(RuntimeInit.java:575)
+	at com.android.internal.os.ZygoteInit.main(ZygoteInit.java:939)
+
+INSTRUMENTATION_STATUS: stream=
+Error in dragResizeAndStackSwipeOperateOnCurrentGeometry(uk.co.traynor.novaos.preview.WidgetExperienceTest):
+java.lang.AssertionError: expected null, but was:<d9532a9b-c8f1-4153-950a-8324da202e7f>
+	at org.junit.Assert.fail(Assert.java:89)
+	at org.junit.Assert.failNotNull(Assert.java:756)
+	at org.junit.Assert.assertNull(Assert.java:738)
+	at org.junit.Assert.assertNull(Assert.java:748)
+	at uk.co.traynor.novaos.preview.WidgetExperienceTest.dragResizeAndStackSwipeOperateOnCurrentGeometry$lambda$6(WidgetExperienceTest.kt:56)
+	at uk.co.traynor.novaos.preview.WidgetExperienceTest$$ExternalSyntheticLambda31.invoke(D8$$SyntheticClass:0)
+	at androidx.compose.ui.test.AndroidSynchronization_androidKt.runOnUiThread$lambda$0(AndroidSynchronization.android.kt:37)
+	at androidx.compose.ui.test.AndroidSynchronization_androidKt$$ExternalSyntheticLambda0.call(D8$$SyntheticClass:0)
+	at java.util.concurrent.FutureTask.run(FutureTask.java:328)
+	at java.util.concurrent.Executors$RunnableAdapter.call(Executors.java:520)
+	at java.util.concurrent.FutureTask.run(FutureTask.java:328)
+	at android.app.Instrumentation$SyncRunnable.run(Instrumentation.java:2657)
+	at android.os.Handler.handleCallback(Handler.java:1095)
+	at android.os.Handler.dispatchMessageImpl(Handler.java:135)
+	at android.os.Handler.dispatchMessage(Handler.java:125)
+	at android.os.Looper.loopOnce(Looper.java:296)
+	at android.os.Looper.loop(Looper.java:397)
+	at android.app.ActivityThread.main(ActivityThread.java:9523)
+	at java.lang.reflect.Method.invoke(Native Method)
+	at com.android.internal.os.RuntimeInit$MethodAndArgsCaller.run(RuntimeInit.java:575)
+	at com.android.internal.os.ZygoteInit.main(ZygoteInit.java:939)
+
+INSTRUMENTATION_STATUS: test=dragResizeAndStackSwipeOperateOnCurrentGeometry
+INSTRUMENTATION_STATUS_CODE: -2
+INSTRUMENTATION_STATUS: class=uk.co.traynor.novaos.preview.WidgetExperienceTest
+INSTRUMENTATION_STATUS: current=2
+INSTRUMENTATION_STATUS: id=AndroidJUnitRunner
+INSTRUMENTATION_STATUS: numtests=2
+INSTRUMENTATION_STATUS: stream=
+INSTRUMENTATION_STATUS: test=widgetFoldViewportsStayAboveNavigation
+INSTRUMENTATION_STATUS_CODE: 1
+INSTRUMENTATION_STATUS: class=uk.co.traynor.novaos.preview.WidgetExperienceTest
+INSTRUMENTATION_STATUS: current=2
+INSTRUMENTATION_STATUS: id=AndroidJUnitRunner
+INSTRUMENTATION_STATUS: numtests=2
+INSTRUMENTATION_STATUS: stream=.
+INSTRUMENTATION_STATUS: test=widgetFoldViewportsStayAboveNavigation
+INSTRUMENTATION_STATUS_CODE: 0
+INSTRUMENTATION_RESULT: stream=
+
+Time: 22.713
+There was 1 failure:
+1) dragResizeAndStackSwipeOperateOnCurrentGeometry(uk.co.traynor.novaos.preview.WidgetExperienceTest)
+java.lang.AssertionError: expected null, but was:<d9532a9b-c8f1-4153-950a-8324da202e7f>
+	at org.junit.Assert.fail(Assert.java:89)
+	at org.junit.Assert.failNotNull(Assert.java:756)
+	at org.junit.Assert.assertNull(Assert.java:738)
+	at org.junit.Assert.assertNull(Assert.java:748)
+	at uk.co.traynor.novaos.preview.WidgetExperienceTest.dragResizeAndStackSwipeOperateOnCurrentGeometry$lambda$6(WidgetExperienceTest.kt:56)
+	at uk.co.traynor.novaos.preview.WidgetExperienceTest$$ExternalSyntheticLambda31.invoke(D8$$SyntheticClass:0)
+	at androidx.compose.ui.test.AndroidSynchronization_androidKt.runOnUiThread$lambda$0(AndroidSynchronization.android.kt:37)
+	at androidx.compose.ui.test.AndroidSynchronization_androidKt$$ExternalSyntheticLambda0.call(D8$$SyntheticClass:0)
+	at java.util.concurrent.FutureTask.run(FutureTask.java:328)
+	at java.util.concurrent.Executors$RunnableAdapter.call(Executors.java:520)
+	at java.util.concurrent.FutureTask.run(FutureTask.java:328)
+	at android.app.Instrumentation$SyncRunnable.run(Instrumentation.java:2657)
+	at android.os.Handler.handleCallback(Handler.java:1095)
+	at android.os.Handler.dispatchMessageImpl(Handler.java:135)
+	at android.os.Handler.dispatchMessage(Handler.java:125)
+	at android.os.Looper.loopOnce(Looper.java:296)
+	at android.os.Looper.loop(Looper.java:397)
+	at android.app.ActivityThread.main(ActivityThread.java:9523)
+	at java.lang.reflect.Method.invoke(Native Method)
+	at com.android.internal.os.RuntimeInit$MethodAndArgsCaller.run(RuntimeInit.java:575)
+	at com.android.internal.os.ZygoteInit.main(ZygoteInit.java:939)
+
+FAILURES!!!
+Tests run: 2,  Failures: 1
+
+
+INSTRUMENTATION_CODE: -1

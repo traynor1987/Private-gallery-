@@ -320,6 +320,7 @@ private val lightColors=lightColorScheme(primary=Color(0xFF285F65),secondary=Col
      Box{var menu by remember{mutableStateOf(false)};IconButton(onClick={menu=true}){Icon(Icons.Default.MoreVert,"Home menu")};DropdownMenu(menu,{menu=false}){DropdownMenuItem(text={Text("Apps")},onClick={menu=false;onDrawer()});DropdownMenuItem(text={Text("Edit Home")},onClick={menu=false;onEdit()});DropdownMenuItem(text={Text("Widget Centre")},onClick={menu=false;onLaunch("widgets")});DropdownMenuItem(text={Text("Switch preview profile")},onClick={menu=false;data.switchProfile()})}}
     }
     widgets.recoveryNotice?.let{notice->Surface(color=MaterialTheme.colorScheme.secondaryContainer,contentColor=MaterialTheme.colorScheme.onSecondaryContainer){Column(Modifier.padding(12.dp)){Text(notice,style=MaterialTheme.typography.bodySmall);TextButton(onClick={widgets.dismissRecovery()}){Text("Dismiss recovery report")}}}}
+    if(widgets.editingId!=null)Row(Modifier.fillMaxWidth().padding(horizontal=20.dp),verticalAlignment=Alignment.CenterVertically){Text("Edit widgets",Modifier.weight(1f),color=Color.White);TextButton(onClick={widgets.editingId=null},modifier=Modifier.testTag("widget-edit-done")){Text("Done",color=Color.White)}}
     HorizontalPager(pager,Modifier.weight(1f).fillMaxWidth().testTag("home-pager").semantics{stateDescription="Home ${pager.currentPage+1}"},key={it}){page->
      val content:@Composable (Modifier)->Unit={modifier->
       BoxWithConstraints(modifier){

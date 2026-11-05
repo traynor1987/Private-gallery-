@@ -63,7 +63,6 @@ internal fun widgetIcon(type:String)=when(type){"clock"->Icons.Default.Schedule;
  val slots=widgets.slots(data.state.current).filter{it.page==page}
  if(slots.isEmpty()){if(widgets.undo?.first==data.state.current)TextButton(onClick={widgets.undoRemove()}){Text("Undo widget removal")};return}
  val density=LocalDensity.current;val focus=LocalFocusManager.current
- if(widgets.editingId!=null)Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically){Text("Edit widgets",Modifier.weight(1f),color=Color.White);TextButton(onClick={widgets.editingId=null},modifier=Modifier.testTag("widget-edit-done")){Text("Done",color=Color.White)}}
  BoxWithConstraints(Modifier.fillMaxWidth().clipToBounds().testTag("home-widgets")){
   val cell=maxWidth/4;val cellPx=with(density){cell.toPx()};val row=156.dp*density.fontScale.coerceAtLeast(1f);val rowPx=with(density){row.toPx()}
   Box(Modifier.fillMaxWidth().height(row*(slots.maxOf{it.y+it.h}))){
@@ -98,7 +97,7 @@ internal fun widgetIcon(type:String)=when(type){"clock"->Icons.Default.Schedule;
        val pager=rememberPagerState(initialPage=slot.active,pageCount={slot.items.size})
        LaunchedEffect(slot.active){if(pager.currentPage!=slot.active)pager.scrollToPage(slot.active)}
        LaunchedEffect(pager.settledPage){if(pager.settledPage!=slot.active)widgets.active(data.state.current,slot.id,pager.settledPage)}
-       HorizontalPager(pager,Modifier.weight(1f).fillMaxWidth().testTag("widget-stack-${slot.id}").semantics{stateDescription="Widget ${pager.currentPage+1} of ${slot.items.size}; settled=${pager.settledPage}; scrolling=${pager.isScrollInProgress}; editing=$editing"},verticalAlignment=Alignment.Top,userScrollEnabled=slot.items.size>1&&!editing,key={slot.items[it].id}){index->WidgetBody(slot.items[index],slot,data,widgets,pool,audio,video,onLaunch,onResume)}
+       HorizontalPager(pager,Modifier.weight(1f).fillMaxWidth().testTag("widget-stack-${slot.id}").semantics{stateDescription="Widget ${pager.currentPage+1} of ${slot.items.size}"},verticalAlignment=Alignment.Top,userScrollEnabled=slot.items.size>1&&!editing,key={slot.items[it].id}){index->WidgetBody(slot.items[index],slot,data,widgets,pool,audio,video,onLaunch,onResume)}
        if(slot.items.size>1)Row(Modifier.align(Alignment.CenterHorizontally),horizontalArrangement=Arrangement.spacedBy(4.dp)){repeat(slot.items.size){i->Box(Modifier.size(5.dp).background(if(i==pager.currentPage)MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline,RoundedCornerShape(3.dp)))}}
       }
       if(editing)Box(Modifier.align(Alignment.BottomEnd).size(48.dp).testTag("widget-resize-${slot.id}").pointerInput(slot.id,slot.x,slot.y,slot.w,slot.h,slot.page,cellPx,rowPx){detectDragGestures(onDragStart={dx=0f;dy=0f;target=page;resizing=true},onDragEnd={finish()},onDragCancel={dx=0f;dy=0f;resizing=false}){change,amount->change.consume();dx+=amount.x;dy+=amount.y}},contentAlignment=Alignment.Center){Icon(Icons.Default.OpenInFull,"Drag to resize widget",Modifier.size(24.dp),tint=MaterialTheme.colorScheme.primary)}
