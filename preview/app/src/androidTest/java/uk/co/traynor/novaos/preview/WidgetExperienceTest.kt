@@ -38,10 +38,10 @@ class WidgetExperienceTest {
   rule.onNodeWithTag("video-mini-player").assertExists();rule.onNodeWithContentDescription("Mini video play or pause").performClick();rule.runOnUiThread{assertFalse(rule.activity.video.playing);rule.activity.video.close()};rule.onNodeWithTag("video-mini-player").assertDoesNotExist()
  }
  @Test fun widgetOnlyPageCannotBeDeletedAndReorderingKeepsWidgets(){
-  rule.runOnUiThread{val d=data();val w=widgets();d.addPage();assertTrue(w.add("primary","clock",2,1,1));d.removePage(1);assertEquals(3,d.profile.pages.size);d.movePage(1,1);assertEquals(2,w.slots("primary").single().page);d.removePage(1);assertEquals(2,d.profile.pages.size);assertEquals(1,w.slots("primary").single().page);HomeBackupCodec.validate(rule.activity.homeBackup.export(d,w))}
+  rule.runOnUiThread{val d=data();val w=widgets();d.change{it.copy(pages=listOf(emptyList(),emptyList()))};d.addPage();assertTrue(w.add("primary","clock",2,1,1));d.removePage(1);assertEquals(3,d.profile.pages.size);d.movePage(1,1);assertEquals(2,w.slots("primary").single().page);d.removePage(1);assertEquals(2,d.profile.pages.size);assertEquals(1,w.slots("primary").single().page);HomeBackupCodec.validate(rule.activity.homeBackup.export(d,w))}
  }
  @Test fun dragResizeAndStackSwipeOperateOnCurrentGeometry(){
-  rule.runOnUiThread{widgets().add("primary","clock",2,2,0)}
+  rule.runOnUiThread{widgets().add("primary","media",2,2,0)}
   val id=widgets().slots("primary").single().id
   rule.onNodeWithTag("widget-$id").performTouchInput{down(bottomRight-androidx.compose.ui.geometry.Offset(7f,7f));moveBy(androidx.compose.ui.geometry.Offset(width.toFloat(),0f),200);up()}
   rule.waitUntil(3000){widgets().slots("primary").single().w==4}
@@ -49,5 +49,8 @@ class WidgetExperienceTest {
   rule.onNodeWithContentDescription("Hold and drag widget").performTouchInput{down(center);advanceEventTime(700);moveBy(androidx.compose.ui.geometry.Offset(0f,rowPx),200);up()}
   rule.runOnUiThread{val slot=widgets().slots("primary").single();assertEquals(4,slot.w);assertEquals(1,slot.y);widgets().place("primary",id,0,0,2,2,0);widgets().add("primary","mind",2,2,0);val other=widgets().slots("primary").last();assertTrue(widgets().stack("primary",id,other.id))}
   rule.onNodeWithTag("widget-$id").performTouchInput{swipeLeft()};rule.waitUntil(5000){widgets().slots("primary").single().active==1};assertEquals(1,WidgetData(rule.activity).slots("primary").single().active)
+ }
+ @Test fun resettingHomePreservesWidgetPagesAndSavedNotes(){
+  rule.runOnUiThread{val d=data();val w=widgets();d.addPage();w.add("primary","note",2,2,2);val slot=w.slots("primary").single();w.note("primary",slot.id,slot.items.single().id,"Synthetic retained note");d.reset();assertEquals(3,d.profile.pages.size);assertEquals(2,w.slots("primary").single().page);assertEquals("Synthetic retained note",w.slots("primary").single().items.single().config);HomeBackupCodec.validate(rule.activity.homeBackup.export(d,w))}
  }
 }

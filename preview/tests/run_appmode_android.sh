@@ -44,7 +44,7 @@ timeout 420s adb shell am instrument -w -r -e class "$tests" uk.co.traynor.novao
 python3 - <<'PY'
 import pathlib,re
 s=pathlib.Path('preview/artifacts/appmode-tests.txt').read_text()
-assert re.search(r'OK \(21 tests\)',s) and 'FAILURES!!!' not in s and 'INSTRUMENTATION_FAILED' not in s,s[-12000:]
+assert re.search(r'OK \(22 tests\)',s) and 'FAILURES!!!' not in s and 'INSTRUMENTATION_FAILED' not in s,s[-12000:]
 PY
 
 for name in home-cover home-inner home-landscape drawer-large-text; do

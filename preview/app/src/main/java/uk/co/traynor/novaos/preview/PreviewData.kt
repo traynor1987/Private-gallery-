@@ -106,7 +106,7 @@ class PreviewData(private val context:Context) {
  fun moveFolderMember(folder:String,app:String,delta:Int){change{p->p.copy(folders=p.folders.map{if(it.id==folder)it.copy(apps=PreviewRules.move(it.apps,app,delta))else it})}}
  fun dissolveFolder(id:String){change{p->p.copy(folders=p.folders.filterNot{it.id==id},pages=p.pages.map{it.filterNot{a->a==id}},drawerOrder=p.drawerOrder.filterNot{it==id})}}
  fun removeFolderMember(folder:String,app:String){change{p->val folders=p.folders.map{if(it.id==folder)it.copy(apps=it.apps.filterNot{a->a==app})else it}.filter{it.apps.isNotEmpty()};p.copy(folders=folders,pages=p.pages.map{it.filter{a->!a.startsWith("folder:")||folders.any{f->f.id==a}}})}}
- fun reset(){change{p->Profile(installed=p.installed,wallpaper=Wallpaper(builtin=if(state.current=="hidden")"Midnight" else "Aurora"))}}
+ fun reset(){val count=maxOf(2,(WidgetData(context).slots(state.current).maxOfOrNull{it.page}?:0)+1);change{p->val defaults=Profile(installed=p.installed,wallpaper=Wallpaper(builtin=if(state.current=="hidden")"Midnight" else "Aurora"));defaults.copy(pages=defaults.pages+List((count-defaults.pages.size).coerceAtLeast(0)){emptyList()})}}
  private fun load():PreviewState=runCatching{
   val raw=prefs.getString("state",null)?:return PreviewState();require(raw.length<500000);decode(JSONObject(raw))
  }.getOrDefault(PreviewState())

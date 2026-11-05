@@ -64,7 +64,7 @@ internal fun widgetIcon(type:String)=when(type){"clock"->Icons.Default.Schedule;
      Box(Modifier.fillMaxSize()){
       Column(Modifier.fillMaxSize().padding(10.dp)){
        Row(verticalAlignment=Alignment.CenterVertically){
-        Icon(widgetIcon(slot.items[WidgetRules.active(slot.active,slot.items.size)].type),"Hold and drag widget",Modifier.size(16.dp).pointerInput(slot.id,slot.x,slot.y,slot.w,slot.h,slot.page){detectDragGesturesAfterLongPress(onDragStart={dx=0f;dy=0f},onDragEnd={widgets.place(data.state.current,slot.id,(slot.x+dx/cellPx).roundToInt(),(slot.y+dy/rowPx).roundToInt(),slot.w,slot.h,slot.page);dx=0f;dy=0f},onDragCancel={dx=0f;dy=0f}){change,drag->change.consume();dx+=drag.x;dy+=drag.y}})
+        Icon(widgetIcon(slot.items[WidgetRules.active(slot.active,slot.items.size)].type),"Hold and drag widget",Modifier.size(16.dp).pointerInput(slot.id,slot.x,slot.y,slot.w,slot.h,slot.page,cellPx,rowPx){detectDragGesturesAfterLongPress(onDragStart={dx=0f;dy=0f},onDragEnd={widgets.place(data.state.current,slot.id,(slot.x+dx/cellPx).roundToInt(),(slot.y+dy/rowPx).roundToInt(),slot.w,slot.h,slot.page);dx=0f;dy=0f},onDragCancel={dx=0f;dy=0f}){change,drag->change.consume();dx+=drag.x;dy+=drag.y}})
         Spacer(Modifier.weight(1f));IconButton(onClick={onEdit(slot.id)},modifier=Modifier.size(28.dp).testTag("edit-widget-${slot.id}")){Icon(Icons.Default.MoreHoriz,"Widget options",Modifier.size(18.dp))}
        }
        val pager=rememberPagerState(initialPage=slot.active,pageCount={slot.items.size})
@@ -74,7 +74,7 @@ internal fun widgetIcon(type:String)=when(type){"clock"->Icons.Default.Schedule;
        if(slot.items.size>1)Row(Modifier.align(Alignment.CenterHorizontally),horizontalArrangement=Arrangement.spacedBy(4.dp)){repeat(slot.items.size){i->Box(Modifier.size(5.dp).background(if(i==pager.currentPage)MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline,RoundedCornerShape(3.dp)))}}
       }
       var rw by remember{mutableFloatStateOf(0f)};var rh by remember{mutableFloatStateOf(0f)}
-      Icon(Icons.Default.OpenInFull,"Drag to resize widget",Modifier.align(Alignment.BottomEnd).padding(3.dp).size(22.dp).pointerInput(slot.id,slot.x,slot.y,slot.w,slot.h,slot.page){detectDragGestures(onDragStart={rw=0f;rh=0f},onDragEnd={widgets.place(data.state.current,slot.id,slot.x,slot.y,(slot.w+rw/cellPx).roundToInt().coerceIn(1,4),(slot.h+rh/rowPx).roundToInt().coerceIn(1,4),slot.page)}){change,drag->change.consume();rw+=drag.x;rh+=drag.y}},tint=MaterialTheme.colorScheme.outline)
+      Icon(Icons.Default.OpenInFull,"Drag to resize widget",Modifier.align(Alignment.BottomEnd).padding(3.dp).size(22.dp).pointerInput(slot.id,slot.x,slot.y,slot.w,slot.h,slot.page,cellPx,rowPx){detectDragGestures(onDragStart={rw=0f;rh=0f},onDragEnd={widgets.place(data.state.current,slot.id,slot.x,slot.y,(slot.w+rw/cellPx).roundToInt().coerceIn(1,4),(slot.h+rh/rowPx).roundToInt().coerceIn(1,4),slot.page)}){change,drag->change.consume();rw+=drag.x;rh+=drag.y}},tint=MaterialTheme.colorScheme.outline)
      }
     }
    }}
