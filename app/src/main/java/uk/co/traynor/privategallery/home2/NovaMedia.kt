@@ -110,4 +110,3 @@ class NovaVideoModel(app:Application):AndroidViewModel(app){
    Row(Modifier.fillMaxWidth().height(48.dp),verticalAlignment=Alignment.CenterVertically){IconButton(onClick={if(video.playing)video.pause()else video.play()}){Icon(if(video.playing)Icons.Default.Pause else Icons.Default.PlayArrow,"Mini video play or pause")};IconButton(onClick={video.mini=false;onExpand()}){Icon(Icons.Default.OpenInFull,"Expand video")};Spacer(Modifier.weight(1f));Icon(Icons.Default.DragHandle,"Drag to resize video",Modifier.size(32.dp).pointerInput(maxW){detectDragGestures{change,drag->change.consume();video.scale=(video.scale+drag.x/with(density){maxW.toPx()}).coerceIn(.35f,.9f)}})}}}
  }
 }
-

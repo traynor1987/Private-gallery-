@@ -16,7 +16,7 @@ class NativeAppBridgeTest {
     }
     @Test fun reinstall_canonical_url_preserves_production_id_order_and_all_settings() {
         val store = Store()
-        val first = PrivateAppCatalog.App(UUID.randomUUID().toString(), "Original", "https://EXAMPLE.test:443/app", 
+        val first = PrivateAppCatalog.App(UUID.randomUUID().toString(), "Original", "https://EXAMPLE.test:443/app",
             "https://example.test/", "standalone", "aWNvbg==", true, false, true, false, "Saved report")
         store.catalog = store.catalog.upsert(first)
         val bridge = NativeAppBridge(store, { true }, {}, {}, {})

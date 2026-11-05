@@ -87,8 +87,8 @@ private val lightColors=lightColorScheme(primary=Color(0xFF285F65),secondary=Col
    var reset by remember{mutableStateOf(false)}
    var selectedWidget by remember{mutableStateOf<String?>(null)}
    var widgetPage by remember{mutableIntStateOf(0)}
-   
-   
+
+
    val profile=data.profile
    LaunchedEffect(state.current){widgets.editingId=null;pool.currentProfile=state.current;audio.switchProfile(state.current);if(video.profile!=null&&video.profile!=state.current)video.close()}
    LaunchedEffect(screen){if(screen !in listOf("browser","chat"))pool.closeFullscreen();if(screen in listOf("chat","mind","store","wallpaper","photos","guide","video","search","widgets","backup","lock-settings"))data.shell.touchInternal(state.current,screen)}
@@ -153,7 +153,7 @@ private val lightColors=lightColorScheme(primary=Color(0xFF285F65),secondary=Col
           Column(Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()).padding(24.dp)){
      Text("Home tools",style=MaterialTheme.typography.titleMedium)
      ActionRow("Widget Centre",Icons.Default.Widgets){editing=false;widgetPage=currentPage;screen="widgets"}
-     
+
      ActionRow("Lock Space",Icons.Default.Lock){onLock()}
      ActionRow("Panic Exit",Icons.Default.Security){onPanic()}
      ActionRow("Navigation & multitasking",Icons.Default.Tune){editing=false;shellSettings=true}
