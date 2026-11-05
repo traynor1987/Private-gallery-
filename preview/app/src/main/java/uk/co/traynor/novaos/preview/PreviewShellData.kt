@@ -5,9 +5,12 @@ import androidx.compose.runtime.*
 import org.json.JSONArray
 import org.json.JSONObject
 
-data class NovaEvent(val id:String,val text:String,val time:Long)
+data class NovaEvent(val id:String,val text:String,val time:Long,val target:String="",val read:Boolean=false)
 /** Preview-only preferences, never browser credentials or production stores. */
 class PreviewShellData(context:Context){
+ val internalRecents=mutableStateListOf<Pair<String,String>>()
+ fun touchInternal(profile:String,id:String){internalRecents.removeAll{it.first==profile&&it.second==id};internalRecents.add(0,profile to id)}
+ fun closeInternal(profile:String,id:String){internalRecents.removeAll{it.first==profile&&it.second==id}}
  private val prefs=context.getSharedPreferences("nova_shell_v1",Context.MODE_PRIVATE)
  var reverse by mutableStateOf(prefs.getBoolean("reverse",false));private set
  var gestures by mutableStateOf(prefs.getBoolean("gestures",false));private set
@@ -21,12 +24,13 @@ class PreviewShellData(context:Context){
    this.reverse=reverse;this.gestures=gestures;this.edge=edge;this.left=left;edgePosition=position.coerceIn(.2f,.8f);error=null
   }else error="Unable to save preview navigation settings."
  }
- fun events(profile:String):List<NovaEvent>{revision;return runCatching{val raw=prefs.getString("events:$profile","[]")!!;require(raw.length<20000);val a=JSONArray(raw);(0 until minOf(a.length(),40)).map{val e=a.getJSONObject(it);NovaEvent(e.getString("id"),e.getString("text").take(120),e.getLong("time"))}}.getOrDefault(emptyList())}
+ fun events(profile:String):List<NovaEvent>{revision;return runCatching{val raw=prefs.getString("events:$profile","[]")!!;require(raw.length<20000);val a=JSONArray(raw);(0 until minOf(a.length(),40)).map{val e=a.getJSONObject(it);NovaEvent(e.getString("id"),e.getString("text").take(120),e.getLong("time"),e.optString("target"),e.optBoolean("read",false))}}.getOrDefault(emptyList())}
  private fun saveEvents(profile:String,events:List<NovaEvent>){
-  val a=JSONArray();events.take(40).forEach{a.put(JSONObject().put("id",it.id).put("text",it.text.take(120)).put("time",it.time))}
+  val a=JSONArray();events.take(40).forEach{a.put(JSONObject().put("id",it.id).put("text",it.text.take(120)).put("time",it.time).put("target",it.target).put("read",it.read))}
   if(prefs.edit().putString("events:$profile",a.toString()).commit()){revision++;error=null}else error="Unable to save preview events."
  }
- fun record(profile:String,text:String){require(profile in listOf("primary","hidden"));saveEvents(profile,listOf(NovaEvent(java.util.UUID.randomUUID().toString(),text.take(120),System.currentTimeMillis()))+events(profile))}
+ fun record(profile:String,text:String,target:String=""){require(profile in listOf("primary","hidden"));saveEvents(profile,listOf(NovaEvent(java.util.UUID.randomUUID().toString(),text.take(120),System.currentTimeMillis(),target))+events(profile))}
+ fun read(profile:String,id:String){saveEvents(profile,events(profile).map{if(it.id==id)it.copy(read=true)else it})}
  fun clear(profile:String){saveEvents(profile,emptyList())}
  fun delete(profile:String,id:String){saveEvents(profile,events(profile).filterNot{it.id==id})}
  fun favourites(profile:String):Set<String>{revision;return prefs.getStringSet("favourites:$profile",emptySet())?.toSet()?:emptySet()}

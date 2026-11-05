@@ -27,9 +27,9 @@ class PreviewAcceptanceTest {
  private fun entry()=data().catalogue.first{it.id=="photopea"}
  @Test fun packageAndCatalogueArePreviewOnly(){
   assertEquals("uk.co.traynor.novaos.preview",rule.activity.packageName)
-  assertEquals(50,data().catalogue.size)
-  assertEquals(50,data().catalogue.count{it.classification=="Website Shortcut"})
-  assertTrue(data().catalogue.all{it.url.startsWith("https://")&&it.source.isNotBlank()&&it.date=="2026-11-04"})
+  assertEquals(90,data().catalogue.size)
+  assertEquals(54,data().catalogue.count{it.classification=="Website Shortcut"});assertEquals(35,data().catalogue.count{it.classification=="Web App"});assertEquals(1,data().catalogue.count{it.classification=="Unsupported"})
+  assertTrue(data().catalogue.all{it.url.startsWith("https://")&&it.source.isNotBlank()&&it.date==(if(it.category=="Games")"2026-11-05"else "2026-11-04")})
   val pkg=rule.activity.packageManager.getPackageInfo(rule.activity.packageName,android.content.pm.PackageManager.GET_PERMISSIONS)
   assertEquals(listOf("android.permission.INTERNET"),pkg.requestedPermissions?.filterNot{it.contains("DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION")}?:emptyList<String>())
  }

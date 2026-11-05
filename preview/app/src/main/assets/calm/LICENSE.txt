@@ -1,0 +1,1 @@
+Original procedural NovaOS sound textures generated with generate_calm.py. CC0 1.0 Universal. No third-party recordings or music.

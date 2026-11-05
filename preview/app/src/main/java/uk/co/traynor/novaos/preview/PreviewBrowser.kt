@@ -11,6 +11,8 @@ import android.webkit.*
 import androidx.lifecycle.AndroidViewModel
 import androidx.compose.runtime.*
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -48,6 +50,7 @@ class PreviewTab(val id:String,val profile:String,val app:StoreEntry,val wrapper
 
 /** Preview-only owner for retained V1 WebViews. No production browser/session APIs. */
 class PreviewBrowserModel(application:Application):AndroidViewModel(application){
+ val library=BrowserLibrary(application)
  val tabs=mutableStateListOf<PreviewTab>()
  var activeId by mutableStateOf<String?>(null)
  var notice by mutableStateOf<String?>(null)
@@ -55,6 +58,7 @@ class PreviewBrowserModel(application:Application):AndroidViewModel(application)
  var pickFiles:(()->Unit)?=null
  var foreground=true
  var currentProfile="primary"
+ var downloadRequest by mutableStateOf<Pair<PreviewTab,String>?>(null)
  var externalRequest by mutableStateOf<PreviewExternalRequest?>(null)
  private val last=mutableMapOf<String,String>()
  val active get()=tabs.firstOrNull{it.id==activeId}
@@ -69,7 +73,7 @@ class PreviewBrowserModel(application:Application):AndroidViewModel(application)
   val wrapper=MutableContextWrapper(getApplication<Application>())
   val view=WebView(wrapper)
   val tab=PreviewTab(java.util.UUID.randomUUID().toString(),profile,app,wrapper,view)
-  tab.appMode=!getApplication<Application>().getSharedPreferences("nova_shell_v1",0).getBoolean("browser:$profile:${app.id}",false)
+  tab.appMode=app.id!="browser-v1"&&!getApplication<Application>().getSharedPreferences("nova_shell_v1",0).getBoolean("browser:$profile:${app.id}",false)
   tabs.add(tab)
   configure(tab)
   if(load)navigate(tab,app.url)
@@ -115,7 +119,7 @@ class PreviewBrowserModel(application:Application):AndroidViewModel(application)
   view.layoutParams=ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,ViewGroup.LayoutParams.MATCH_PARENT)
   view.isFocusable=true;view.isFocusableInTouchMode=true
   view.settings.apply{
-   javaScriptEnabled=true;domStorageEnabled=true;databaseEnabled=false
+   javaScriptEnabled=library.flag("js:${tab.profile}:${tab.app.id}",true);domStorageEnabled=true;databaseEnabled=false
    allowFileAccess=BrowserWebSecurityPolicy.fileAccessEnabled;allowContentAccess=BrowserWebSecurityPolicy.contentAccessEnabled
    allowFileAccessFromFileURLs=false;allowUniversalAccessFromFileURLs=false
    javaScriptCanOpenWindowsAutomatically=BrowserWebSecurityPolicy.automaticWindowOpeningEnabled
@@ -134,7 +138,7 @@ class PreviewBrowserModel(application:Application):AndroidViewModel(application)
     return !safe
    }
    override fun onPageStarted(v:WebView,url:String,icon:Bitmap?){tab.navigationRevision++;tab.mediaTitle="";tab.mediaState="none";tab.url=url;tab.error=null;update()}
-   override fun onPageFinished(v:WebView,url:String){update();CookieManager.getInstance().flush()}
+   override fun onPageFinished(v:WebView,url:String){update();library.add("history",tab.profile,tab.title,url);CookieManager.getInstance().flush()}
    override fun onReceivedError(v:WebView,r:WebResourceRequest,e:WebResourceError){if(r.isForMainFrame)tab.error="Page could not load. Check your connection, retry, or choose the external browser option."}
    override fun onReceivedHttpError(v:WebView,r:WebResourceRequest,e:WebResourceResponse){if(r.isForMainFrame&&e.statusCode>=400)tab.error="Website returned ${e.statusCode}. Embedded sign-in or browser compatibility may be restricted. External browsing is available from the menu."}
    override fun onReceivedSslError(v:WebView,handler:SslErrorHandler,e:SslError){handler.cancel();tab.error="Certificate error. Connection rejected; certificate bypass is unavailable."}
@@ -157,7 +161,7 @@ class PreviewBrowserModel(application:Application):AndroidViewModel(application)
     upload?.onReceiveValue(null);upload=callback;pickFiles?.invoke();return true
    }
   }
-  view.setDownloadListener{_,_,_,_,_->tab.error="Preview downloads are not implemented. Open this page in an external browser from the menu to use its download controls."}
+  view.setDownloadListener{url,_,_,_,_->if(runCatching{PreviewRules.https(url)}.isSuccess)downloadRequest=tab to url else tab.error="This download type is unsupported. Public HTTPS files can be downloaded; blob/data links cannot."}
  }
  fun close(tab:PreviewTab,rendererGone:Boolean=false){
   (tab.view.parent as? ViewGroup)?.removeView(tab.view);if(!rendererGone)tab.view.stopLoading();tab.view.destroy();tabs.remove(tab)
@@ -174,6 +178,7 @@ class PreviewBrowserModel(application:Application):AndroidViewModel(application)
 @Composable internal fun PreviewBrowser(pool:PreviewBrowserModel,onHome:()->Unit,onExternal:(String)->Unit,visible:Boolean=true){
  val tab=pool.active
  var settings by remember{mutableStateOf(false)}
+ var libraryPage by remember{mutableStateOf<String?>(null)}
  var showTabs by remember{mutableStateOf(false)};var menu by remember{mutableStateOf(false)}
  val context=LocalContext.current
  if(tab==null){Column(Modifier.fillMaxSize().safeDrawingPadding()){PreviewHeader("Web apps","NovaOS Preview",onHome);Text(pool.notice?:"No open app tabs.",Modifier.padding(24.dp));Button(onClick=onHome,Modifier.padding(24.dp)){Text("Return Home")}};return}
@@ -188,6 +193,11 @@ class PreviewBrowserModel(application:Application):AndroidViewModel(application)
    Column(Modifier.weight(1f)){Text(tab.app.name,style=MaterialTheme.typography.titleMedium,maxLines=1);Text("Ordinary web · NovaOS Preview",style=MaterialTheme.typography.labelSmall,color=MaterialTheme.colorScheme.onSurfaceVariant)}
    IconButton(onClick={showTabs=true}){BadgedBox(badge={Badge{Text(pool.tabs.count{it.profile==tab.profile&&it.app.id==tab.app.id}.toString())}}){Icon(Icons.Default.Tab,"App tabs")}}
    Box{IconButton(onClick={menu=true}){Icon(Icons.Default.MoreVert,"Browser menu")};DropdownMenu(menu,{menu=false}){
+    DropdownMenuItem(text={Text("History")},onClick={menu=false;libraryPage="history"})
+    DropdownMenuItem(text={Text("Bookmarks")},onClick={menu=false;libraryPage="bookmarks"})
+    DropdownMenuItem(text={Text("Bookmark this page")},onClick={menu=false;pool.library.add("bookmarks",tab.profile,tab.title,tab.url)})
+    DropdownMenuItem(text={Text("Downloads")},onClick={menu=false;libraryPage="downloads"})
+    DropdownMenuItem(text={Text("Settings")},onClick={menu=false;settings=true})
     DropdownMenuItem(text={Text("App Mode")},onClick={menu=false;pool.setBrowserMode(tab,false)})
     DropdownMenuItem(text={Text("Open externally…")},onClick={menu=false;onExternal(tab.url)})
     DropdownMenuItem(text={Text("New app tab")},onClick={menu=false;if(pool.tabs.count{it.profile==tab.profile&&it.app.id==tab.app.id}<8)pool.select(pool.create(tab.app,tab.profile,true))else showTabs=true})
@@ -217,13 +227,40 @@ class PreviewBrowserModel(application:Application):AndroidViewModel(application)
    DropdownMenuItem(text={Text("Back")},enabled=tab.back,onClick={menu=false;tab.view.goBack()})
    DropdownMenuItem(text={Text("Refresh")},onClick={menu=false;tab.view.reload()})
    DropdownMenuItem(text={Text("App tabs")},onClick={menu=false;showTabs=true})
-   DropdownMenuItem(text={Text("Open in Browser view")},onClick={menu=false;pool.setBrowserMode(tab,true)})
+   DropdownMenuItem(text={Text("Open in Browser V1")},onClick={menu=false;val browser=pool.open(standaloneBrowser,tab.profile);pool.setBrowserMode(browser,true);pool.navigate(browser,tab.url)})
    DropdownMenuItem(text={Text("External browser…")},onClick={menu=false;onExternal(tab.url)})
    DropdownMenuItem(text={Text("App settings & compatibility")},onClick={menu=false;settings=true})
   }
  }
  }
- if(settings&&visible)AlertDialog(onDismissRequest={settings=false},title={Text(tab.app.name+" settings")},text={Text("Ordinary preview browsing. Cookies persist in this app’s private Android storage, shared across demo profiles; they are not an encrypted vault. Ordinary website sign-in uses this WebView’s own cookies when the website accepts it. Google may reject embedded browsers; OAuth authorization uses confirmed external browsing. External browser cookies cannot be copied here. Audio may continue under Nova Home while this preview stays foregrounded. Leaving NovaOS, switching profiles/tabs or website playback policy may pause it; Premium does not guarantee WebView background playback.")},confirmButton={TextButton(onClick={settings=false}){Text("Done")}})
+ if(settings&&visible)ModalBottomSheet(onDismissRequest={settings=false}){
+  Column(Modifier.fillMaxWidth().heightIn(max=650.dp).verticalScroll(androidx.compose.foundation.rememberScrollState()).padding(24.dp)){
+   Text("${tab.app.name} settings",style=MaterialTheme.typography.headlineSmall)
+   val key="js:${tab.profile}:${tab.app.id}"
+   Row(verticalAlignment=Alignment.CenterVertically){Text("JavaScript",Modifier.weight(1f));Switch(pool.library.flag(key,true),{enabled->pool.library.setFlag(key,enabled);pool.tabs.filter{it.profile==tab.profile&&it.app.id==tab.app.id}.forEach{it.view.settings.javaScriptEnabled=enabled};tab.view.reload()})}
+   if(tab.app.category=="Games"){
+    listOf("landscape" to "Prefer landscape","fullscreen" to "Fullscreen (hide status bar)").forEach{(flag,label)->val k="$flag:${tab.profile}:${tab.app.id}";Row(verticalAlignment=Alignment.CenterVertically){Text(label,Modifier.weight(1f));Switch(pool.library.flag(k),{pool.library.setFlag(k,it)})}}
+    Text("Touch, keyboard and gamepad input depend on the game. Landscape requests may be overridden by Android on the Fold inner screen. Nova and Android navigation remain available. Offline support is not promised.")
+   }
+   Text("Ordinary preview browsing. Cookies and saved website progress persist locally, shared across demonstration profiles; this is not an encrypted vault. Embedded logins depend on the provider. No browser restrictions are bypassed.",Modifier.padding(vertical=16.dp))
+   TextButton(onClick={pool.library.clear("history",tab.profile)}){Text("Clear browsing history")}
+   Button(onClick={settings=false},Modifier.fillMaxWidth()){Text("Done")}
+  }
+ }
+ if(libraryPage!=null&&visible)ModalBottomSheet(onDismissRequest={libraryPage=null}){
+  val kind=libraryPage!!
+  Column(Modifier.fillMaxWidth().heightIn(max=650.dp).padding(24.dp)){
+   Text(kind.replaceFirstChar{it.uppercase()},style=MaterialTheme.typography.headlineSmall)
+   if(kind=="downloads")Text("Public HTTPS downloads are saved to Android Downloads. Open Files to view them. Sign-in cookies are not forwarded to the download service.",Modifier.padding(vertical=12.dp))
+   val links=pool.library.links(kind,tab.profile)
+   if(links.isEmpty())Text("Nothing here yet.",Modifier.padding(vertical=24.dp))
+   LazyColumn(Modifier.weight(1f,false)){items(links,key={it.url}){link->ListItem(headlineContent={Text(link.title,maxLines=2)},supportingContent={Text(link.url,maxLines=2)},modifier=Modifier.clickable{if(kind!="downloads"){pool.navigate(tab,link.url);libraryPage=null}})}}
+   TextButton(onClick={pool.library.clear(kind,tab.profile)}){Text("Clear list")}
+   Button(onClick={libraryPage=null}){Text("Done")}
+  }
+ }
+ pool.downloadRequest?.takeIf{it.first.profile==tab.profile&&visible}?.let{(owner,url)->AlertDialog(onDismissRequest={pool.downloadRequest=null},title={Text("Download file?")},text={Text("Save a public HTTPS file to Android Downloads. This uses Android’s download service without website login cookies.\n\n"+Uri.parse(url).host)},confirmButton={TextButton(onClick={pool.library.download(owner.profile,url,owner.title);pool.downloadRequest=null}){Text("Download")}},dismissButton={TextButton(onClick={pool.downloadRequest=null}){Text("Cancel")}})}
+ pool.library.error?.takeIf{visible}?.let{message->AlertDialog(onDismissRequest={pool.library.error=null},title={Text("Browser")},text={Text(message)},confirmButton={TextButton(onClick={pool.library.error=null}){Text("Done")}})}
  if(showTabs&&visible)ModalBottomSheet(onDismissRequest={showTabs=false}){
   Column(Modifier.fillMaxWidth().heightIn(max=500.dp).padding(20.dp)){
    Text("${tab.app.name} tabs",style=MaterialTheme.typography.headlineSmall)

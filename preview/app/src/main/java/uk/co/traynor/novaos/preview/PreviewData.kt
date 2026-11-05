@@ -13,7 +13,7 @@ data class Wallpaper(val builtin:String="Aurora",val image:String?=null,val zoom
 data class Profile(val installed:List<StoreEntry> = emptyList(),val pages:List<List<String>> = listOf(listOf("store","folder:studio","guide"),listOf("settings")),val dock:List<String> = listOf("photos","store","wallpaper","settings"),val folders:List<AppFolder> = listOf(AppFolder("folder:studio","Studio",listOf("photos","wallpaper"))),val drawerOrder:List<String> = emptyList(),val wallpaper:Wallpaper=Wallpaper(),val columns:Int=4,val iconSize:Int=60)
 data class PreviewState(val current:String="primary",val theme:String="dark",val primary:Profile=Profile(),val hidden:Profile=Profile(wallpaper=Wallpaper(builtin="Midnight")))
 data class LaunchApp(val id:String,val name:String,val symbol:String,val website:StoreEntry?=null)
-val builtinApps = listOf(LaunchApp("store","Nova Store","store"),LaunchApp("photos","Photos demo","photos"),LaunchApp("wallpaper","Wallpapers","wallpaper"),LaunchApp("settings","Home settings","settings"),LaunchApp("guide","Preview guide","guide"))
+val builtinApps = listOf(LaunchApp("mind","Nova Mind","mind"),LaunchApp("calm","Calm Now","mind"),LaunchApp("sanctuary","Nova Sanctuary","mind"),LaunchApp("browser-v1","Browser V1","browser"),LaunchApp("store","Nova Store","store"),LaunchApp("photos","Photos demo","photos"),LaunchApp("wallpaper","Wallpapers","wallpaper"),LaunchApp("settings","Home settings","settings"),LaunchApp("guide","Preview guide","guide"))
 
 class PreviewData(private val context:Context) {
  val shell=PreviewShellData(context)
@@ -46,14 +46,14 @@ class PreviewData(private val context:Context) {
   val before=profile(id)
   val next=transform(before);require(next.pages.size in 1..8 && next.dock.size<=5)
   save(if(id=="hidden")state.copy(hidden=next)else state.copy(primary=next))
-  if(error==null&&before.wallpaper!=next.wallpaper)shell.record(id,"Wallpaper changed")
+  if(error==null&&before.wallpaper!=next.wallpaper)shell.record(id,"Wallpaper changed","wallpaper")
  }
  fun install(entry:StoreEntry){
   val url=PreviewRules.https(entry.url);val id="web:"+PreviewRules.key(url)
   if(profile.installed.any{it.id==id})return
   require(profile.installed.size<200){"Preview catalogue limit reached"}
   change{it.copy(installed=it.installed+entry.copy(id=id,url=url))}
-  if(error==null)shell.record(state.current,"Installed ${entry.name}")
+  if(error==null)shell.record(state.current,"Installed ${entry.name}",id)
  }
  fun uninstall(id:String){change{p->
   val folders=p.folders.map{it.copy(apps=it.apps.filterNot{a->a==id})}.filter{it.apps.isNotEmpty()}
@@ -89,15 +89,15 @@ class PreviewData(private val context:Context) {
  }.getOrDefault(PreviewState())
  companion object {
   fun parseCatalogue(text:String):List<StoreEntry>{
-   val root=JSONObject(text);require(root.getInt("schemaVersion")==1);val entries=root.getJSONArray("entries");require(entries.length() in 1..100)
+   val root=JSONObject(text);require(root.getInt("schemaVersion")==1);val entries=root.getJSONArray("entries");require(entries.length() in 1..150)
    val result=(0 until entries.length()).map{i->entry(entries.getJSONObject(i),false)}
    require(result.map{it.id}.distinct().size==result.size);require(result.map{PreviewRules.key(it.url)}.distinct().size==result.size)
    return result
   }
   private fun entry(o:JSONObject,local:Boolean):StoreEntry {
    val url=PreviewRules.https(o.getString("url"));val name=o.getString("name").take(80);require(name.isNotBlank())
-   require(o.optString("classification","Website Shortcut")=="Website Shortcut")
-   return StoreEntry(if(local)"web:"+PreviewRules.key(url)else o.getString("id"),name,url,o.optString("publisher","Custom website"),o.optString("category","Custom"),o.optString("description"),"Website Shortcut",o.optString("verificationSource"),o.optString("verifiedDate"),o.optString("limitations"),o.optString("iconAsset"))
+   val classification=o.optString("classification","Website Shortcut");require(classification in listOf("Website Shortcut","Web App","Verified PWA","Unsupported"))
+   return StoreEntry(if(local)"web:"+PreviewRules.key(url)else o.getString("id"),name,url,o.optString("publisher","Custom website"),o.optString("category","Custom"),o.optString("description"),classification,o.optString("verificationSource"),o.optString("verifiedDate"),o.optString("limitations"),o.optString("iconAsset"))
   }
   private fun entryJson(e:StoreEntry)=JSONObject().put("id",e.id).put("name",e.name).put("url",e.url).put("publisher",e.publisher).put("category",e.category).put("description",e.description).put("classification",e.classification).put("verificationSource",e.source).put("verifiedDate",e.date).put("limitations",e.limitations).put("iconAsset",e.icon)
   private fun strings(a:JSONArray)= (0 until a.length()).map{a.getString(it)}

@@ -1,12 +1,12 @@
 import json,pathlib,xml.etree.ElementTree as ET,hashlib,struct,re
 root=pathlib.Path(__file__).resolve().parents[1]
 data=json.loads((root/'app/src/main/assets/catalogue-v1.json').read_text())
-assert data['schemaVersion']==1 and len(data['entries'])==50
-assert len({x['id'] for x in data['entries']})==50
-assert len({x['url'] for x in data['entries']})==50
+assert data['schemaVersion']==1 and len(data['entries'])==90
+assert len({x['id'] for x in data['entries']})==90
+assert len({x['url'] for x in data['entries']})==90
 for e in data['entries']:
- assert e['url'].startswith('https://') and e['verifiedDate']=='2026-11-04'
- assert e['classification']=='Website Shortcut' and e['verificationSource'].startswith('https://')
+ assert e['url'].startswith('https://') and e['verifiedDate'] in ('2026-11-04','2026-11-05')
+ assert e['classification'] in ('Website Shortcut','Web App','Unsupported') and e['verificationSource'].startswith('https://')
  if e.get('iconAsset'):
   p=root/'app/src/main/assets'/e['iconAsset'];assert p.exists()
   raw=p.read_bytes();assert hashlib.sha256(raw).hexdigest()==e['iconSha256']
@@ -25,4 +25,4 @@ for p in (root/'app/src/main/java').rglob('*'):
  if p.is_file():
   s=p.read_text();assert 'uk.co.traynor.privategallery' not in s, p
   assert 'addJavascriptInterface' not in s and 'VpnService' not in s
-print('50 catalogue destinations, icon hashes, preview manifest/package and source boundary checks passed')
+print('90 catalogue destinations, icon hashes, preview manifest/package and source boundary checks passed')

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Publish only the verified experimental preview, then download it publicly."""
 import hashlib,json,os,pathlib,re,subprocess,time,urllib.request
-REPO='traynor1987/Private-gallery-';TAG='novaos-home2-store-preview-0.4'
+REPO='traynor1987/Private-gallery-';TAG='novaos-home2-store-preview-0.5'
 ROOT=pathlib.Path('preview/release-out');APK=ROOT/'NovaOS-Home2-Store-Preview.apk'
 def api(path,method='GET',data=None,missing_ok=False):
  args=['gh','api','repos/'+REPO+'/'+path]
@@ -23,9 +23,9 @@ def main():
  if release is None:
   existing_tag=api('git/ref/tags/'+TAG,missing_ok=True)
   assert existing_tag is None or (existing_tag['object']['type']=='commit' and existing_tag['object']['sha']==source),'Existing tag points at another source; refusing publication'
-  release=api('releases','POST',{'tag_name':TAG,'target_commitish':source,'name':'NovaOS Home 2.0 + Nova Store Preview 0.4 — EXPERIMENTAL','body':body,'draft':True,'prerelease':True,'make_latest':'false'})
+  release=api('releases','POST',{'tag_name':TAG,'target_commitish':source,'name':'NovaOS Home 2.0 + Nova Store Preview 0.5 — EXPERIMENTAL','body':body,'draft':True,'prerelease':True,'make_latest':'false'})
  else:
-  assert release['prerelease'] and 'preview-multitasking-code4' in release['body'],'Refusing to change an unrelated or production release'
+  assert release['prerelease'] and 'preview-experience-code5' in release['body'],'Refusing to change an unrelated or production release'
  if release['draft']:
   subprocess.run(['gh','release','upload',TAG,str(APK),str(ROOT/'SHA256SUMS.txt'),str(ROOT/'APK-VERIFICATION.json'),'--repo',REPO,'--clobber'],check=True)
   release=api('releases/'+str(release['id']))

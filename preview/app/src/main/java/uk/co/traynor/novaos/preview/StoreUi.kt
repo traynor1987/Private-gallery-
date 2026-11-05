@@ -31,7 +31,7 @@ import androidx.compose.ui.unit.dp
    item{Surface(shape=RoundedCornerShape(30.dp),color=Color(0xFF303F65),contentColor=Color.White){Column(Modifier.fillMaxWidth().background(Brush.linearGradient(listOf(Color(0xFF303F65),Color(0xFF455568),Color(0xFF4B3B70)))).padding(24.dp)){
     Text("YOUR WEB. YOUR SPACE.",style=MaterialTheme.typography.labelSmall)
     Text("A little more\npossibility.",style=MaterialTheme.typography.headlineLarge,fontWeight=FontWeight.Light,modifier=Modifier.padding(vertical=12.dp))
-    Text("50 official destinations. Add your favourites to Nova Home.",style=MaterialTheme.typography.bodyMedium)
+    Text("${data.catalogue.size} official destinations. Add your favourites to Nova Home.",style=MaterialTheme.typography.bodyMedium)
     TextButton(onClick={onDetail(data.catalogue.first{it.id=="photopea"})}){Text("Discover Photopea  →",color=Color(0xFFB9F6E3))}
    }}}
    item{Row(horizontalArrangement=Arrangement.spacedBy(10.dp)){FilterChip(selected=!mine,onClick={mine=false;category="All"},label={Text("Explore")},modifier=Modifier.testTag("store-explore"));FilterChip(selected=mine,onClick={mine=true;category="All"},label={Text("My Apps (${data.profile.installed.size})")},modifier=Modifier.testTag("store-my-apps"))}}
@@ -60,11 +60,11 @@ import androidx.compose.ui.unit.dp
   Column(Modifier.fillMaxWidth().fillMaxHeight(.91f).verticalScroll(rememberScrollState()).padding(24.dp)){
    Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(16.dp)){AppIcon(LaunchApp(entry.id,entry.name,"website",entry),74.dp);Column(Modifier.weight(1f)){Text(entry.name,style=MaterialTheme.typography.headlineMedium);Text(entry.publisher,color=MaterialTheme.colorScheme.onSurfaceVariant);Text(entry.category,color=MaterialTheme.colorScheme.primary,style=MaterialTheme.typography.labelLarge)};IconButton(onClick=onDismiss){Icon(Icons.Default.Close,"Close app details")}}
    Spacer(Modifier.height(22.dp))
-   if(installed==null)Button(onClick={confirm=true},Modifier.fillMaxWidth().testTag("install-app")){Icon(Icons.Default.Add,null);Text("Install in ${data.profileLabel}",Modifier.padding(start=8.dp))}
+   if(installed==null)Button(enabled=entry.classification!="Unsupported",onClick={confirm=true},modifier=Modifier.fillMaxWidth().testTag("install-app")){Icon(Icons.Default.Add,null);Text("Install in ${data.profileLabel}",Modifier.padding(start=8.dp))}
    else {Button(onClick={onOpen(installed)},Modifier.fillMaxWidth().testTag("open-installed")){Icon(Icons.Default.OpenInNew,null);Text("Open app",Modifier.padding(start=8.dp))};Row(horizontalArrangement=Arrangement.spacedBy(10.dp)){OutlinedButton(onClick={onAddHome(installed.id)},Modifier.weight(1f)){Text("Add to Home")};OutlinedButton(onClick={onPin(installed.id);pinned=true},Modifier.weight(1f)){Text(if(pinned)"Pinned ✓"else "Pin to Dock")}};TextButton(onClick={onUninstall(installed.id)}){Text("Uninstall")}}
    Text(entry.description,Modifier.padding(vertical=20.dp),style=MaterialTheme.typography.bodyLarge)
    Text("${entry.classification} · internal preview container",style=MaterialTheme.typography.titleSmall)
-   Text("Website capability classification. Manifest and PWA installability have not been tested. The container supports ordinary web navigation; individual websites may impose embedded-browser or device restrictions.",Modifier.padding(top=8.dp),style=MaterialTheme.typography.bodySmall)
+   Text("Website capability classification. Browser games are identified as Web Apps from their official destinations; PWA installability and offline operation have not been verified. The container supports ordinary web navigation; individual websites may impose embedded-browser or device restrictions.",Modifier.padding(top=8.dp),style=MaterialTheme.typography.bodySmall)
    HorizontalDivider(Modifier.padding(vertical=18.dp))
    Text("Official website",style=MaterialTheme.typography.labelLarge);Text(entry.url,Modifier.padding(top=6.dp),style=MaterialTheme.typography.bodyMedium)
    Text("Compatibility",Modifier.padding(top=18.dp),style=MaterialTheme.typography.labelLarge);Text(entry.limitations.ifBlank{"Custom destination. Not reviewed by the Nova catalogue. Compatibility is unknown."},Modifier.padding(top=6.dp),style=MaterialTheme.typography.bodySmall)

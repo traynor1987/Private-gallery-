@@ -1,3 +1,7 @@
+# Current preview: 0.5 / code 5
+
+See [release notes](release/NOTES.md) and [separate production handover](release/PRODUCTION-INTEGRATION-HANDOVER.md). The historical sections below describe earlier checkpoints, not current verification.
+
 # NovaOS Home 2.0 + Nova Store Preview
 
 Independent Android17/API37 application: `uk.co.traynor.novaos.preview`, version `0.1-preview`/code1. Development signing only. Installs alongside production NovaOS; no shared UID, production browser/profile path, production key, vault engine, VPN, Tor, account or media permission is included. It is not secure storage or a production1.7.11 release.

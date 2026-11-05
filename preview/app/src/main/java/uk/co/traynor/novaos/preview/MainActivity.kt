@@ -18,6 +18,8 @@ import java.io.File
 
 class MainActivity:ComponentActivity() {
  val previewData by lazy { PreviewData(this) }
+ val mindData by lazy { MindData(this) }
+ val mindAudio by lazy { ViewModelProvider(this)[MindAudio::class.java] }
  val browserPool by lazy { ViewModelProvider(this)[PreviewBrowserModel::class.java] }
  private val pickFiles=registerForActivityResult(ActivityResultContracts.OpenMultipleDocuments()){uris->browserPool.upload?.onReceiveValue(uris.takeIf{it.isNotEmpty()}?.toTypedArray());browserPool.upload=null}
  private var photoProfile="primary"
@@ -30,15 +32,15 @@ class MainActivity:ComponentActivity() {
     val factor=minOf(1f,2048f/maxOf(w,h));decoder.setTargetSize(maxOf(1,(w*factor).toInt()),maxOf(1,(h*factor).toInt()));decoder.allocator=ImageDecoder.ALLOCATOR_SOFTWARE
    }
    val name="wallpaper-$photoProfile.jpg";val target=File(filesDir,name);val temp=File(filesDir,"$name.tmp")
-   try {temp.outputStream().use{check(bitmap.compress(Bitmap.CompressFormat.JPEG,92,it))};check(temp.renameTo(target));previewData.change(photoProfile){it.copy(wallpaper=it.wallpaper.copy(image=name,zoom=1f,x=0f,y=0f,imageRevision=System.currentTimeMillis()))}} finally {bitmap.recycle();temp.delete()}
+   try {temp.outputStream().use{check(bitmap.compress(Bitmap.CompressFormat.JPEG,92,it))};check(temp.renameTo(target));previewData.change(photoProfile){it.copy(wallpaper=it.wallpaper.copy(image=name,zoom=1f,x=0f,y=0f,imageRevision=System.currentTimeMillis()))};if(previewData.error==null)previewData.shell.record(photoProfile,"Wallpaper import completed","wallpaper")} finally {bitmap.recycle();temp.delete()}
   }.onFailure{Toast.makeText(this,"Unable to import image: ${it.message}",Toast.LENGTH_LONG).show()}
  }
  override fun onCreate(savedInstanceState:Bundle?){
   super.onCreate(savedInstanceState);photoProfile=savedInstanceState?.getString("photoProfile")?:"primary";enableEdgeToEdge();browserPool.pickFiles={pickFiles.launch(arrayOf("*/*"))}
-  setContent { NovaPreview(previewData,browserPool, onPickImage={photoProfile=previewData.state.current;pickPhoto.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))},onOpen={openWebsite(it)},filesDir=filesDir) }
+  setContent { NovaPreview(previewData,browserPool,mindData,mindAudio, onPickImage={photoProfile=previewData.state.current;pickPhoto.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))},onOpen={openWebsite(it)},filesDir=filesDir) }
  }
- override fun onResume(){super.onResume();browserPool.foreground=true;browserPool.tabs.filter{it.view.parent!=null}.forEach{it.wrapper.baseContext=this};browserPool.syncLifecycle()}
- override fun onStop(){super.onStop();browserPool.detachContexts();android.webkit.CookieManager.getInstance().flush()}
+ override fun onResume(){super.onResume();browserPool.library.refreshDownloads(previewData.shell);browserPool.foreground=true;browserPool.tabs.filter{it.view.parent!=null}.forEach{it.wrapper.baseContext=this};browserPool.syncLifecycle()}
+ override fun onStop(){super.onStop();if(!isChangingConfigurations)mindAudio.pause();browserPool.detachContexts();android.webkit.CookieManager.getInstance().flush()}
  override fun onDestroy(){browserPool.pickFiles=null;if(!isChangingConfigurations){browserPool.upload?.onReceiveValue(null);browserPool.upload=null};super.onDestroy()}
  override fun onSaveInstanceState(outState:Bundle){outState.putString("photoProfile",photoProfile);super.onSaveInstanceState(outState)}
  private fun openWebsite(url:String){
