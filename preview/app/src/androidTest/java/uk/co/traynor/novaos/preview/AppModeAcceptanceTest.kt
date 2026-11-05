@@ -49,8 +49,23 @@ class AppModeAcceptanceTest {
   rule.activityRule.scenario.moveToState(Lifecycle.State.CREATED);assertFalse(rule.activity.browserPool.foreground)
   rule.activityRule.scenario.moveToState(Lifecycle.State.RESUMED);assertTrue(rule.activity.browserPool.foreground);assertSame(v,rule.activity.browserPool.active!!.view)
  }
- @Test fun googleLoginRequiresConfirmationAndPreservesInitiatingTab(){
+ @Test fun googleOAuthRequiresConfirmationWhileOrdinaryAccountNavigationIsPreserved(){
   val v=open()
+  // No real Google account/credential is used: inspect the actual navigation callback.
+  rule.runOnUiThread{
+   val pool=rule.activity.browserPool
+   fun request(address:String)=object:android.webkit.WebResourceRequest{
+    override fun getUrl()=android.net.Uri.parse(address)
+    override fun isForMainFrame()=true
+    override fun isRedirect()=false
+    override fun hasGesture()=true
+    override fun getMethod()="GET"
+    override fun getRequestHeaders()=emptyMap<String,String>()
+   }
+   assertFalse(v.webViewClient.shouldOverrideUrlLoading(v,request("https://accounts.google.com/ServiceLogin?service=youtube&continue=https%3A%2F%2Fmusic.youtube.com%2Fsignin")))
+   assertNull(pool.externalRequest);assertNull(pool.active!!.error)
+   assertEquals(android.webkit.WebSettings.getDefaultUserAgent(rule.activity),v.settings.userAgentString)
+  }
   rule.runOnUiThread{v.loadDataWithBaseURL("https://example.com/","<meta name='viewport' content='width=device-width'><a style='display:block;height:180px' href='https://accounts.google.com/o/oauth2/v2/auth?client_id=synthetic-test'>Google sign-in fixture</a>","text/html","UTF-8",null)}
   waitJs(v,"document.querySelector('a')!=null");tap(v)
   rule.onNodeWithText("Open in your browser?").assertIsDisplayed();rule.onNodeWithText("Cancel").performClick()
@@ -60,7 +75,7 @@ class AppModeAcceptanceTest {
   rule.onNodeWithText("Open in your browser?").assertIsDisplayed();rule.onNodeWithText("Cancel").performClick()
   assertFalse(js(v,"location.href").contains("accounts.google.com"))
   // An initial custom-app URL must also stop before embedding Google.
-  rule.runOnUiThread{val pool=rule.activity.browserPool;val tab=pool.create(pool.active!!.app.copy(id="google-fixture",url="https://accounts.google.com/"),"primary",true);assertEquals(tab.id,pool.externalRequest!!.tabId);assertNull(tab.view.url);pool.close(tab);pool.externalRequest=null}
+  rule.runOnUiThread{val pool=rule.activity.browserPool;val tab=pool.create(pool.active!!.app.copy(id="google-fixture",url="https://accounts.google.com/o/oauth2/v2/auth?client_id=synthetic-test"),"primary",true);assertEquals(tab.id,pool.externalRequest!!.tabId);assertNull(tab.view.url);pool.close(tab);pool.externalRequest=null}
   val done=CountDownLatch(1);rule.runOnUiThread{CookieManager.getInstance().setCookie("https://example.com/","nova_fixture=retained; Secure; SameSite=Lax"){done.countDown()}}
   assertTrue(done.await(5,TimeUnit.SECONDS));rule.runOnUiThread{CookieManager.getInstance().flush();assertTrue(CookieManager.getInstance().getCookie("https://example.com/").contains("nova_fixture=retained"))}
  }

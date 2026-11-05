@@ -70,12 +70,12 @@ class PreviewBrowserModel(application:Application):AndroidViewModel(application)
   return tab
  }
  fun requestExternal(tab:PreviewTab,url:String){
-  tab.error="Google sign-in requires a supported external browser. Signing in there cannot transfer its cookies into this preview."
+  tab.error="This Google OAuth authorization request requires a supported external browser. Its cookies remain in that browser; they cannot be copied into this preview."
   externalRequest=PreviewExternalRequest(tab.id,tab.profile,url)
  }
  fun navigate(tab:PreviewTab,url:String){
   val safe=PreviewRules.https(url)
-  if(PreviewAppPolicy.googleAccount(safe))requestExternal(tab,safe)else tab.view.loadUrl(safe)
+  if(PreviewAppPolicy.googleOAuthAuthorization(safe))requestExternal(tab,safe)else tab.view.loadUrl(safe)
  }
  /** Settings mirror secureBrowserWebView/Primary V1, without VPN, diagnostics,
   * vault downloads, credentials, JS bridges, altered UA or cookie migration. */
@@ -97,7 +97,7 @@ class PreviewBrowserModel(application:Application):AndroidViewModel(application)
   fun update(){tab.back=view.canGoBack();tab.forward=view.canGoForward();tab.url=view.url?.takeIf{BrowserNavigationPolicy.isWebUrl(it)}?:tab.url}
   view.webViewClient=object:WebViewClient(){
    override fun shouldOverrideUrlLoading(v:WebView,r:WebResourceRequest):Boolean{
-    if(r.isForMainFrame&&PreviewAppPolicy.googleAccount(r.url.toString())){requestExternal(tab,r.url.toString());return true}
+    if(r.isForMainFrame&&PreviewAppPolicy.googleOAuthAuthorization(r.url.toString())){requestExternal(tab,r.url.toString());return true}
     val safe=BrowserNavigationPolicy.isWebUrl(r.url.toString())
     if(!safe)tab.error="This link needs another application or unsupported sign-in flow. Use the browser menu for a confirmed external-browser option."
     return !safe
@@ -190,7 +190,7 @@ class PreviewBrowserModel(application:Application):AndroidViewModel(application)
   }
  }
  }
- if(settings&&visible)AlertDialog(onDismissRequest={settings=false},title={Text(tab.app.name+" settings")},text={Text("Ordinary preview browsing. Cookies persist in this app’s private Android storage, shared across demo profiles; they are not an encrypted vault. Google may block embedded sign-in. External browser login stays in that browser and cannot be copied here. Audio may continue under Nova Home while this preview stays foregrounded. Leaving NovaOS, switching profiles/tabs or website playback policy may pause it; Premium does not guarantee WebView background playback.")},confirmButton={TextButton(onClick={settings=false}){Text("Done")}})
+ if(settings&&visible)AlertDialog(onDismissRequest={settings=false},title={Text(tab.app.name+" settings")},text={Text("Ordinary preview browsing. Cookies persist in this app’s private Android storage, shared across demo profiles; they are not an encrypted vault. Ordinary website sign-in uses this WebView’s own cookies when the website accepts it. Google may reject embedded browsers; OAuth authorization uses confirmed external browsing. External browser cookies cannot be copied here. Audio may continue under Nova Home while this preview stays foregrounded. Leaving NovaOS, switching profiles/tabs or website playback policy may pause it; Premium does not guarantee WebView background playback.")},confirmButton={TextButton(onClick={settings=false}){Text("Done")}})
  if(showTabs&&visible)ModalBottomSheet(onDismissRequest={showTabs=false}){
   Column(Modifier.fillMaxWidth().heightIn(max=500.dp).padding(20.dp)){
    Text("${tab.app.name} tabs",style=MaterialTheme.typography.headlineSmall)
