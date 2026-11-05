@@ -76,7 +76,7 @@ jobs:
       for p in pathlib.Path('preview/artifacts').glob('*tests.txt'):
        s=p.read_text()
        assert 'FAILURES!!!' not in s and 'INSTRUMENTATION_STATUS_CODE: -2' not in s, 'Application/test assertion failed; inspect before publishing'
-       assert 'OK (31 tests)' in s or 'OK (1 test)' in s or 'INSTRUMENTATION_FAILED' in s or not s.strip(), 'Incomplete runtime results need investigation'
+       assert 'OK (2 tests)' in s or 'OK (1 test)' in s or 'INSTRUMENTATION_FAILED' in s or not s.strip(), 'Incomplete runtime results need investigation'
       PYCODE
    - name: Record actual runtime outcome and reverify APK
      env:
@@ -84,6 +84,7 @@ jobs:
      run: |
       python3 preview/release/verify_apk.py --apk preview/release-out/NovaOS-Home2-Store-Preview.apk --aapt "$ANDROID_HOME/build-tools/36.0.0/aapt" --apksigner "$ANDROID_HOME/build-tools/36.0.0/apksigner" --zipalign "$ANDROID_HOME/build-tools/36.0.0/zipalign" --source "$GITHUB_SHA" --output preview/release-out
    - name: Publish experimental prerelease with runtime disclosure
+     if: ${{ false }} # focused gesture diagnosis; do not publish
      run: python3 preview/release/publish.py
    - name: Preserve focused test and publication receipts
      if: always()

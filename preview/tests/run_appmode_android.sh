@@ -4,6 +4,7 @@ mkdir -p preview/artifacts
 # Synthetic pages/media plus an unauthenticated public WhatsApp login probe. Never link an account in CI.
 collect_receipts(){
  adb exec-out run-as uk.co.traynor.novaos.preview cat files/whatsapp-public-probe.json > preview/artifacts/whatsapp-public-probe.json || true
+ for stage in before after; do adb exec-out run-as uk.co.traynor.novaos.preview cat "files/widget-screenshots/stack-$stage.png" > "preview/artifacts/stack-$stage.png" || true; done
  adb logcat -d > preview/artifacts/appmode-logcat.txt || true
  for kind in quick widgets; do
   for name in cover inner landscape; do
@@ -51,10 +52,10 @@ import pathlib
 s=pathlib.Path('preview/artifacts/upgrade-tests.txt').read_text()
 assert 'OK (1 test)' in s and 'FAILURES!!!' not in s and 'INSTRUMENTATION_FAILED' not in s,s[-12000:]
 PYUPGRADERESULT
-tests='uk.co.traynor.novaos.preview.CorrectionAcceptanceTest,uk.co.traynor.novaos.preview.WidgetExperienceTest,uk.co.traynor.novaos.preview.PolishAcceptanceTest,uk.co.traynor.novaos.preview.MediaContinuityAcceptanceTest,uk.co.traynor.novaos.preview.AppModeAcceptanceTest#googleOAuthRequiresConfirmationWhileOrdinaryAccountNavigationIsPreserved,uk.co.traynor.novaos.preview.PreviewAcceptanceTest#primaryV1SettingsAndHomeContinuityUseSameWebView'
+tests='uk.co.traynor.novaos.preview.WidgetExperienceTest#dragResizeAndStackSwipeOperateOnCurrentGeometry,uk.co.traynor.novaos.preview.WidgetExperienceTest#widgetFoldViewportsStayAboveNavigation'
 timeout 600s adb shell am instrument -w -r -e class "$tests" uk.co.traynor.novaos.preview.test/androidx.test.runner.AndroidJUnitRunner | tee preview/artifacts/appmode-tests.txt
 python3 - <<'PY'
 import pathlib,re
 s=pathlib.Path('preview/artifacts/appmode-tests.txt').read_text()
-assert re.search(r'OK \(31 tests\)',s) and 'FAILURES!!!' not in s and 'INSTRUMENTATION_FAILED' not in s,s[-12000:]
+assert re.search(r'OK \(2 tests\)',s) and 'FAILURES!!!' not in s and 'INSTRUMENTATION_FAILED' not in s,s[-12000:]
 PY
