@@ -14,6 +14,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
@@ -60,10 +61,10 @@ internal fun widgetIcon(type:String)=when(type){"clock"->Icons.Default.Schedule;
 @OptIn(ExperimentalFoundationApi::class)
 @Composable internal fun HomeWidgets(data:PreviewData,widgets:WidgetData,pool:PreviewBrowserModel,audio:MindAudio,video:NovaVideoModel,page:Int,maxHeight:androidx.compose.ui.unit.Dp,onLaunch:(String)->Unit,onResume:(PreviewTab)->Unit,onEdit:(String)->Unit,onPage:(Int)->Unit){
  val slots=widgets.slots(data.state.current).filter{it.page==page}
- if(slots.isEmpty()){if(widgets.undo!=null)TextButton(onClick={widgets.undoRemove()}){Text("Undo widget removal")};return}
+ if(slots.isEmpty()){if(widgets.undo?.first==data.state.current)TextButton(onClick={widgets.undoRemove()}){Text("Undo widget removal")};return}
  val density=LocalDensity.current;val focus=LocalFocusManager.current
  if(widgets.editingId!=null)Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically){Text("Edit widgets",Modifier.weight(1f),color=Color.White);TextButton(onClick={widgets.editingId=null},modifier=Modifier.testTag("widget-edit-done")){Text("Done",color=Color.White)}}
- BoxWithConstraints(Modifier.fillMaxWidth().heightIn(max=maxHeight).verticalScroll(rememberScrollState()).testTag("home-widgets")){
+ BoxWithConstraints(Modifier.fillMaxWidth().clipToBounds().testTag("home-widgets")){
   val cell=maxWidth/4;val cellPx=with(density){cell.toPx()};val row=156.dp*density.fontScale.coerceAtLeast(1f);val rowPx=with(density){row.toPx()}
   Box(Modifier.fillMaxWidth().height(row*(slots.maxOf{it.y+it.h}))){
    slots.forEach{slot->key(slot.id){
@@ -71,6 +72,8 @@ internal fun widgetIcon(type:String)=when(type){"clock"->Icons.Default.Schedule;
     var resizing by remember{mutableStateOf(false)};var dragging by remember{mutableStateOf(false)}
     var target by remember{mutableIntStateOf(page)};var edge by remember{mutableFloatStateOf(.5f)};var startX by remember{mutableFloatStateOf(0f)}
     val editing=widgets.editingId==slot.id
+    LaunchedEffect(editing){if(!editing){dx=0f;dy=0f;dragging=false;resizing=false;target=page;edge=.5f}}
+    DisposableEffect(slot.id,slot.x,slot.y,slot.w,slot.h,cellPx,rowPx,page){onDispose{dx=0f;dy=0f;dragging=false;resizing=false;edge=.5f}}
     val sizes=listOf(2 to 1,2 to 2,4 to 1,4 to 2,4 to 4).filter{size->slot.items.all{item->widgetSpecs.firstOrNull{it.type==item.type}?.sizes?.contains(size)!=false}}
     val span=if(resizing)sizes.minByOrNull{kotlin.math.abs(it.first-(slot.w+dx/cellPx))+kotlin.math.abs(it.second-(slot.h+dy/rowPx))}?: (slot.w to slot.h) else slot.w to slot.h
     val cx=if(dragging)(slot.x+dx/cellPx).roundToInt().coerceIn(0,4-slot.w)else slot.x
@@ -84,7 +87,7 @@ internal fun widgetIcon(type:String)=when(type){"clock"->Icons.Default.Schedule;
      if(dragging||resizing){if(widgets.moveWidget(data.state.current,slot.id,finalX,finalY,finalSize.first,finalSize.second,target)&&target!=page)onPage(target)};dx=0f;dy=0f;dragging=false;resizing=false
     }
     if(dragging||resizing)Box(Modifier.offset(cell*cx,row*cy).width(cell*span.first).height(row*span.second).padding(4.dp).background((if(valid)MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error).copy(alpha=.18f),RoundedCornerShape(22.dp)).border(2.dp,if(valid)MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,RoundedCornerShape(22.dp)).testTag("widget-placement-preview"))
-    Surface(Modifier.offset(cell*slot.x,row*slot.y).width(cell*slot.w).height(row*slot.h).padding(4.dp).graphicsLayer{translationX=if(dragging)dx else 0f;translationY=if(dragging)dy else 0f;alpha=if(dragging).8f else 1f}.testTag("widget-${slot.id}").combinedClickable(onClick={},onLongClick={widgets.editingId=slot.id}).semantics{customActions=listOf(CustomAccessibilityAction("Edit widget"){widgets.editingId=slot.id;true})},shape=RoundedCornerShape(22.dp),border=if(editing)BorderStroke(2.dp,MaterialTheme.colorScheme.primary)else null,color=MaterialTheme.colorScheme.surface.copy(alpha=.94f),contentColor=MaterialTheme.colorScheme.onSurface,tonalElevation=2.dp){
+    Surface(Modifier.offset(cell*slot.x,row*slot.y).width(cell*slot.w).height(row*slot.h).padding(4.dp).graphicsLayer{alpha=if(dragging).55f else 1f}.testTag("widget-${slot.id}").combinedClickable(onClick={},onLongClick={widgets.editingId=slot.id}).semantics{customActions=listOf(CustomAccessibilityAction("Edit widget"){widgets.editingId=slot.id;true})},shape=RoundedCornerShape(22.dp),border=if(editing)BorderStroke(2.dp,MaterialTheme.colorScheme.primary)else null,color=MaterialTheme.colorScheme.surface.copy(alpha=.94f),contentColor=MaterialTheme.colorScheme.onSurface,tonalElevation=2.dp){
      Box(Modifier.fillMaxSize()){
       Column(Modifier.fillMaxSize().padding(10.dp)){
        Row(verticalAlignment=Alignment.CenterVertically){
@@ -104,7 +107,9 @@ internal fun widgetIcon(type:String)=when(type){"clock"->Icons.Default.Schedule;
    }}
   }
  }
- widgets.undo?.let{Row(verticalAlignment=Alignment.CenterVertically){Text("Widget removed",Modifier.weight(1f),color=Color.White);TextButton(onClick={widgets.undoRemove()}){Text("Undo")}}}
+ widgets.moveUndo?.takeIf{it.profile==data.state.current}?.let{TextButton(onClick={widgets.undoMove()},modifier=Modifier.testTag("undo-widget-move")){Text("Undo widget move",color=Color.White)}}
+ widgets.error?.let{message->Surface(color=MaterialTheme.colorScheme.errorContainer){Column(Modifier.padding(12.dp)){Text(message,style=MaterialTheme.typography.bodySmall);TextButton(onClick={widgets.clearError()}){Text("Dismiss")}}}}
+ widgets.undo?.takeIf{it.first==data.state.current}?.let{Row(verticalAlignment=Alignment.CenterVertically){Text("Widget removed",Modifier.weight(1f),color=Color.White);TextButton(onClick={widgets.undoRemove()}){Text("Undo")}}}
 }
 
 @Composable private fun WidgetBody(item:WidgetItem,slot:WidgetSlot,data:PreviewData,widgets:WidgetData,pool:PreviewBrowserModel,audio:MindAudio,video:NovaVideoModel,onLaunch:(String)->Unit,onResume:(PreviewTab)->Unit){

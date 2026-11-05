@@ -35,7 +35,7 @@ class PolishAcceptanceTest {
   rule.onNodeWithTag("nova-home").performClick();rule.onNodeWithTag("preview-home").assertIsDisplayed()
  }
  @Test fun widgetEditDragResizeAndAtomicCollisionPersistence(){
-  rule.runOnUiThread{assertTrue(w.add("primary","media",2,2,0));assertTrue(w.add("primary","mind",2,2,0))};val id=w.slots("primary").first().id
+  rule.runOnUiThread{assertTrue(w.add("primary","media",2,2,0));assertTrue(w.add("primary","mind",2,2,0));val second=w.slots("primary").last();assertFalse(w.moveWidget("primary",w.slots("primary").first().id,0,0,4,2,0));assertTrue(w.place("primary",second.id,2,5,2,2,0));w.clearError()};val id=w.slots("primary").first().id
   rule.onNodeWithTag("widget-resize-$id",useUnmergedTree=true).assertDoesNotExist()
   rule.onAllNodesWithContentDescription("Hold and drag widget",useUnmergedTree=true)[0].performTouchInput{longClick()}
   rule.onNodeWithTag("widget-edit-done").assertExists()
@@ -58,12 +58,12 @@ class PolishAcceptanceTest {
  @Test fun ownPackageMediaSessionControlsAreRealAndAmbiguityFailsClosed(){
   var pauses=0;var next=0;lateinit var session:MediaSession;var sessionReady=false;lateinit var tab:PreviewTab
   val title="SYNTHETIC-OWN-MEDIA"+"X".repeat(130);val actions=PlaybackState.ACTION_PLAY or PlaybackState.ACTION_PAUSE or PlaybackState.ACTION_SKIP_TO_NEXT
-  fun state(value:Int)=PlaybackState.Builder().setState(value,0,if(value==PlaybackState.STATE_PLAYING)1f else 0f).setActions(actions).build()
+  fun state(value:Int)=PlaybackState.Builder().setState(value,30000,if(value==PlaybackState.STATE_PLAYING)1f else 0f).setActions(actions).build()
   try{
    rule.runOnUiThread{
     val pool=rule.activity.browserPool;tab=pool.create(standaloneBrowser.copy(id="media-fixture",name="Fixture player"),"primary",false);pool.select(tab)
     tab.view.loadDataWithBaseURL("https://example.com/","<p>Synthetic native-session fixture without website metadata.</p>","text/html","UTF-8",null);tab.mediaTitle="";tab.mediaState="playing"
-    session=MediaSession(rule.activity,"Nova test fixture");sessionReady=true;session.setMetadata(MediaMetadata.Builder().putString(MediaMetadata.METADATA_KEY_TITLE,title).putString(MediaMetadata.METADATA_KEY_ARTIST,"Synthetic artist").build());session.setPlaybackState(state(PlaybackState.STATE_PLAYING));session.setCallback(object:MediaSession.Callback(){override fun onPause(){pauses++;session.setPlaybackState(state(PlaybackState.STATE_PAUSED))};override fun onSkipToNext(){next++}});session.isActive=true
+    session=MediaSession(rule.activity,"Nova test fixture");sessionReady=true;session.setMetadata(MediaMetadata.Builder().putString(MediaMetadata.METADATA_KEY_TITLE,title).putString(MediaMetadata.METADATA_KEY_ARTIST,"Synthetic artist").putLong(MediaMetadata.METADATA_KEY_DURATION,120000).build());session.setPlaybackState(state(PlaybackState.STATE_PLAYING));session.setCallback(object:MediaSession.Callback(){override fun onPause(){pauses++;session.setPlaybackState(state(PlaybackState.STATE_PAUSED))};override fun onSkipToNext(){next++}});session.isActive=true
     pool.mediaSessions.refresh(pool.tabs.toList(),"primary",true,rule.activity.mindAudio.sessionToken)
    }
    rule.runOnUiThread{

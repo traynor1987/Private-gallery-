@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 mkdir -p preview/artifacts
-# Only synthetic pages and media are exercised. Never run account login in CI.
+# Synthetic pages/media plus an unauthenticated public WhatsApp login probe. Never link an account in CI.
 collect_receipts(){
+ adb exec-out run-as uk.co.traynor.novaos.preview cat files/whatsapp-public-probe.json > preview/artifacts/whatsapp-public-probe.json || true
  adb logcat -d > preview/artifacts/appmode-logcat.txt || true
  for kind in quick widgets; do
   for name in cover inner landscape; do
@@ -16,9 +17,9 @@ python3 preview/tests/wait_for_android.py --output preview/artifacts/emulator-pr
 # Pinned prior preview, same development certificate; exercise a real in-place update.
 python3 - <<'PYUPGRADE'
 import urllib.request,hashlib,pathlib
-url='https://github.com/traynor1987/Private-gallery-/releases/download/novaos-home2-store-preview-0.6.1/NovaOS-Home2-Store-Preview.apk'
+url='https://github.com/traynor1987/Private-gallery-/releases/download/novaos-home2-store-preview-0.7/NovaOS-Home2-Store-Preview.apk'
 with urllib.request.urlopen(url,timeout=60) as r:raw=r.read(70_000_000)
-assert hashlib.sha256(raw).hexdigest()=='c78729054b1cda2b319d1ac63ebcfe760f2eb16013a538e820c3982c98d7409a'
+assert hashlib.sha256(raw).hexdigest()=='05297a501b6236832b7a2b0731446c086a944f61c22ad35047461dcdcdd9830f'
 pathlib.Path('/tmp/nova-preview-05.apk').write_bytes(raw)
 PYUPGRADE
 adb install /tmp/nova-preview-05.apk
@@ -50,10 +51,10 @@ import pathlib
 s=pathlib.Path('preview/artifacts/upgrade-tests.txt').read_text()
 assert 'OK (1 test)' in s and 'FAILURES!!!' not in s and 'INSTRUMENTATION_FAILED' not in s,s[-12000:]
 PYUPGRADERESULT
-tests='uk.co.traynor.novaos.preview.PolishAcceptanceTest#ownPackageMediaSessionControlsAreRealAndAmbiguityFailsClosed,uk.co.traynor.novaos.preview.MediaContinuityAcceptanceTest'
-timeout 420s adb shell am instrument -w -r -e class "$tests" uk.co.traynor.novaos.preview.test/androidx.test.runner.AndroidJUnitRunner | tee preview/artifacts/appmode-tests.txt
+tests='uk.co.traynor.novaos.preview.CorrectionAcceptanceTest,uk.co.traynor.novaos.preview.WidgetExperienceTest,uk.co.traynor.novaos.preview.PolishAcceptanceTest,uk.co.traynor.novaos.preview.MediaContinuityAcceptanceTest,uk.co.traynor.novaos.preview.AppModeAcceptanceTest#googleOAuthRequiresConfirmationWhileOrdinaryAccountNavigationIsPreserved,uk.co.traynor.novaos.preview.PreviewAcceptanceTest#primaryV1SettingsAndHomeContinuityUseSameWebView'
+timeout 600s adb shell am instrument -w -r -e class "$tests" uk.co.traynor.novaos.preview.test/androidx.test.runner.AndroidJUnitRunner | tee preview/artifacts/appmode-tests.txt
 python3 - <<'PY'
 import pathlib,re
 s=pathlib.Path('preview/artifacts/appmode-tests.txt').read_text()
-assert re.search(r'OK \(4 tests\)',s) and 'FAILURES!!!' not in s and 'INSTRUMENTATION_FAILED' not in s,s[-12000:]
+assert re.search(r'OK \(31 tests\)',s) and 'FAILURES!!!' not in s and 'INSTRUMENTATION_FAILED' not in s,s[-12000:]
 PY

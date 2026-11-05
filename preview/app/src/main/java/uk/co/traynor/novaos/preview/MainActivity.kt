@@ -60,7 +60,7 @@ class MainActivity:ComponentActivity() {
   }.onFailure{Toast.makeText(this,"Unable to import image: ${it.message}",Toast.LENGTH_LONG).show()}
  }
  override fun onCreate(savedInstanceState:Bundle?){
-  super.onCreate(savedInstanceState);photoProfile=savedInstanceState?.getString("photoProfile")?:"primary";backupProfile=savedInstanceState?.getString("backupProfile")?:"primary";enableEdgeToEdge();homeBackup.recover(previewData,widgetData);video.pick={pickVideo.launch(arrayOf("video/*"))};video.enterPip={pictureInPicture()};browserPool.pickFiles={pickFiles.launch(arrayOf("*/*"))}
+  super.onCreate(savedInstanceState);photoProfile=savedInstanceState?.getString("photoProfile")?:"primary";backupProfile=savedInstanceState?.getString("backupProfile")?:"primary";enableEdgeToEdge();homeBackup.recover(previewData,widgetData);widgetData.repairLayout("primary",previewData.state.primary.pages.size);widgetData.repairLayout("hidden",previewData.state.hidden.pages.size);video.pick={pickVideo.launch(arrayOf("video/*"))};video.enterPip={pictureInPicture()};browserPool.pickFiles={pickFiles.launch(arrayOf("*/*"))}
   setContent { NovaPreview(previewData,browserPool,mindData,mindAudio,widgetData,homeBackup,searchHistory,video, onPickImage={photoProfile=previewData.state.current;pickPhoto.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))},onOpen={openWebsite(it)},filesDir=filesDir) }
  }
  override fun onResume(){super.onResume();browserPool.library.refreshDownloads(previewData.shell);video.wrapper.baseContext=this;browserPool.foreground=true;browserPool.tabs.filter{it.view.parent!=null}.forEach{it.wrapper.baseContext=this};browserPool.syncLifecycle()}

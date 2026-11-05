@@ -43,3 +43,15 @@ PreviewMediaSessions.kt uses API37 getActiveSessionsForPackage(context.packageNa
 This metadata association is preview presentation logic, not an authentication identity. Production must bind native session tokens to authenticated Space-owned browser instances and revoke them on lock/timeout/Panic; do not copy title matching as a production security boundary. Protect note text, search history, widgets/configuration and callback ownership with encrypted authenticated Space storage. Keep existing production Browser V1/VPN/Tor requirements unchanged.
 
 Delivered0.7 source:3de66dd289713f003c1e8f6a064f97071ffb1709. Final native-session/media run42026621706 passed4 cases + upgrade; earlier42023130870 supplies17 unchanged UI/widget/polish passes. WebView navigator.mediaSession is unavailable on the API37 emulator: native-only sole-owner fallback was implemented without a website polyfill, and actual native callbacks passed. Real-provider publication still needs physical acceptance. See VERIFICATION-0.7.md and receipts/0.7.
+
+## Preview 0.7.1 correction boundary
+
+Desktop Site is scoped by preview profile and canonical host in BrowserLibrary; it changes only the selected WebView and preserves existing provider restrictions. Production must map preferences to authenticated Space identity and verify redirects/session isolation independently. No production browser changed.
+
+The original clock had been explicitly hidden whenever page zero contained a widget. It is now a protected separate Home element with an explicit visibility preference. Widget geometry remains metadata only; strict collisions, clipped snapped previews, cancel/undo geometry and conservative recovery do not export or overwrite note contents. Recovery retains the original invalid raw layout privately. Migrate layout metadata separately from encrypted notes; review recovery snapshot retention/encryption before production.
+
+Native MediaSession capabilities are inspected through the package-scoped Android 17 API. Package-local controls do not prove a website owns that token; unmatched sessions are labelled NovaOS native media. Production needs authenticated Space/session revocation and privacy review; no website playback polyfill, DOM scraping or broad notification access added.
+
+No Friends Mode allowlist/filter exists in this repository. The unsupported compatibility guard conceals web content when requested and persists that choice; it is not an authenticated chat adapter or approved-friends filter. Do not integrate it as such. WhatsApp linking and chat/session persistence require separately authorised owner acceptance.
+
+Production signing, encrypted storage, Primary/Hidden authentication and Recents isolation remain separate gates. Hidden VPN teardown security blockers and Tor exclusions are unchanged and outside this correction.

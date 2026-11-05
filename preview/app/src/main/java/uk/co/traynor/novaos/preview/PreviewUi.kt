@@ -88,7 +88,7 @@ private val lightColors=lightColorScheme(primary=Color(0xFF285F65),secondary=Col
    var locked by rememberSaveable{mutableStateOf(widgets.demoLock)}
    val routeState=rememberSaveableStateHolder()
    val profile=data.profile
-   LaunchedEffect(state.current){pool.currentProfile=state.current;pool.syncLifecycle();audio.switchProfile(state.current);if(video.profile!=null&&video.profile!=state.current)video.close()}
+   LaunchedEffect(state.current){widgets.editingId=null;pool.currentProfile=state.current;pool.syncLifecycle();audio.switchProfile(state.current);if(video.profile!=null&&video.profile!=state.current)video.close()}
    LaunchedEffect(screen){if(screen!="browser")pool.closeFullscreen();if(screen in listOf("mind","store","wallpaper","photos","guide","video","search","widgets","backup","lock-settings"))data.shell.touchInternal(state.current,screen)}
    LaunchedEffect(pool,state.current){while(true){pool.pollMedia();audio.poll();video.poll();delay(1000)}}
    pool.externalRequest?.let{request->LaunchedEffect(request){
@@ -145,7 +145,7 @@ private val lightColors=lightColorScheme(primary=Color(0xFF285F65),secondary=Col
    }
    val goBack:()->Unit={
     val ime=host?.window?.decorView?.rootWindowInsets?.isVisible(android.view.WindowInsets.Type.ime())==true
-    if(ime)host?.let{(it.getSystemService(android.content.Context.INPUT_METHOD_SERVICE) as? android.view.inputmethod.InputMethodManager)?.hideSoftInputFromWindow(it.window.decorView.windowToken,0)}else when{screen=="home"&&widgets.editingId!=null->widgets.editingId=null;selected!=null->selected=null;openFolder!=null->openFolder=null;detailId!=null->detailId=null;editing->editing=false;quick->quick=false;drawer->drawer=false;screen=="navigation-settings"->screen="home-settings";screen=="recents"->screen=if(recentsReturn in listOf("mind","store","wallpaper","photos","guide","video","search","widgets","backup","lock-settings")&&data.shell.internalRecents.none{it.first==state.current&&it.second==recentsReturn})"home"else PreviewShellRules.returnRoute(recentsReturn,pool.active?.profile==state.current);screen=="browser"&&pool.active?.view?.canGoBack()==true->pool.active?.view?.goBack();else->screen=if(sanctuary)"sanctuary"else "home"}
+    if(ime)host?.let{(it.getSystemService(android.content.Context.INPUT_METHOD_SERVICE) as? android.view.inputmethod.InputMethodManager)?.hideSoftInputFromWindow(it.window.decorView.windowToken,0)}else when{screen=="home"&&widgets.editingId!=null->widgets.editingId=null;selected!=null->selected=null;openFolder!=null->openFolder=null;detailId!=null->detailId=null;editing->editing=false;quick->quick=false;drawer->drawer=false;screen=="navigation-settings"->screen="home-settings";screen=="recents"->screen=if(recentsReturn in listOf("mind","store","wallpaper","photos","guide","video","search","widgets","backup","lock-settings")&&data.shell.internalRecents.none{it.first==state.current&&it.second==recentsReturn})"home"else PreviewShellRules.returnRoute(recentsReturn,pool.active?.profile==state.current);screen=="browser"&&pool.active?.view?.canGoBack()==true->pool.active?.let{pool.back(it)};else->screen=if(sanctuary)"sanctuary"else "home"}
    }
    LaunchedEffect(screen,pool.activeId){if(screen=="browser"&&pool.active?.profile!=state.current)screen="home"}
    val openRecents:()->Unit={drawer=false;quick=false;if(screen!="recents"){recentsReturn=screen;screen="recents"}}
@@ -169,6 +169,7 @@ private val lightColors=lightColorScheme(primary=Color(0xFF285F65),secondary=Col
      ActionRow("Preview lock screen",Icons.Default.Lock){editing=false;screen="lock-settings"}
      ActionRow("Navigation & multitasking",Icons.Default.Tune){editing=false;shellSettings=true}
      ActionRow("Nova events",Icons.Default.NotificationsNone){editing=false;notifications=true}
+     Row(verticalAlignment=Alignment.CenterVertically){Text("Original Home clock",Modifier.weight(1f));Switch(widgets.clockVisible(state.current),{widgets.clock(state.current,it)},modifier=Modifier.testTag("original-clock-visible"))}
      Text("Appearance & layout",style=MaterialTheme.typography.titleMedium);Text("${data.profileLabel} · Home ${currentPage+1}",color=MaterialTheme.colorScheme.primary)
      ActionRow("Choose wallpaper",Icons.Default.Wallpaper){editing=false;screen="wallpaper"}
      Text("Grid density · ${profile.columns}");Slider(profile.columns.toFloat(),{v->data.change{it.copy(columns=v.toInt())}},valueRange=3f..6f,steps=2,modifier=Modifier.testTag("grid-density"))
@@ -306,6 +307,7 @@ private val lightColors=lightColorScheme(primary=Color(0xFF285F65),secondary=Col
  val profile=data.profile;val scope=rememberCoroutineScope()
  BoxWithConstraints(Modifier.fillMaxSize().testTag("preview-home")){
   val compactHeight=maxHeight<500.dp
+  val landscapeClock=compactHeight&&maxWidth>=600.dp
   WallpaperSurface(profile.wallpaper,filesDir,Modifier.fillMaxSize())
   CompositionLocalProvider(LocalContentColor provides Color.White){
    Column(Modifier.fillMaxSize().safeDrawingPadding()){
@@ -317,12 +319,26 @@ private val lightColors=lightColorScheme(primary=Color(0xFF285F65),secondary=Col
      IconButton(onClick=onQuick){Icon(Icons.Default.Tune,"Open Quick Panel")}
      Box{var menu by remember{mutableStateOf(false)};IconButton(onClick={menu=true}){Icon(Icons.Default.MoreVert,"Home menu")};DropdownMenu(menu,{menu=false}){DropdownMenuItem(text={Text("Apps")},onClick={menu=false;onDrawer()});DropdownMenuItem(text={Text("Edit Home")},onClick={menu=false;onEdit()});DropdownMenuItem(text={Text("Widget Centre")},onClick={menu=false;onLaunch("widgets")});DropdownMenuItem(text={Text("Switch preview profile")},onClick={menu=false;data.switchProfile()})}}
     }
+    widgets.recoveryNotice?.let{notice->Surface(color=MaterialTheme.colorScheme.secondaryContainer,contentColor=MaterialTheme.colorScheme.onSecondaryContainer){Column(Modifier.padding(12.dp)){Text(notice,style=MaterialTheme.typography.bodySmall);TextButton(onClick={widgets.dismissRecovery()}){Text("Dismiss recovery report")}}}}
     HorizontalPager(pager,Modifier.weight(1f).fillMaxWidth(),key={it}){page->
-     Column(Modifier.fillMaxSize().combinedClickable(onClick={},onLongClick=onEdit).padding(horizontal=20.dp)){
-      if(page==0&&widgets.slots(data.state.current).none{it.page==page})HomeClock(Modifier.padding(top=if(compactHeight)4.dp else 26.dp,bottom=if(compactHeight)8.dp else 28.dp),compactHeight)
-      HomeWidgets(data,widgets,pool,audio,video,page,if(compactHeight)160.dp else 340.dp,onLaunch,onResume,onWidgetEdit,onPage={destination->scope.launch{pager.scrollToPage(destination)}})
-      if(profile.pages[page].isEmpty())Box(Modifier.weight(1f).fillMaxWidth().testTag("home-empty-gesture").emptyHomeSwipe({true},onQuick,onDrawer).combinedClickable(onClick={},onLongClick=onEdit),contentAlignment=Alignment.Center){Text("Room for your next idea\nLong-press to edit Home",textAlign=TextAlign.Center,color=Color.White.copy(alpha=.65f))}
-      else AdaptiveAppGrid(data,profile.pages[page],onLaunch,onSelect,Modifier.weight(1f),onHome=true,onEmptyDown=onQuick,onEmptyUp=onDrawer)
+     val content:@Composable (Modifier)->Unit={modifier->
+      BoxWithConstraints(modifier){
+       val pageHeight=maxHeight;val scroll=rememberScrollState()
+       Column(Modifier.fillMaxSize().verticalScroll(scroll).heightIn(min=pageHeight).combinedClickable(onClick={},onLongClick=onEdit).padding(horizontal=20.dp)){
+        HomeWidgets(data,widgets,pool,audio,video,page,if(compactHeight)160.dp else 340.dp,onLaunch,onResume,onWidgetEdit,onPage={destination->scope.launch{pager.scrollToPage(destination)}})
+        if(profile.pages[page].isNotEmpty())AdaptiveAppGrid(data,profile.pages[page],onLaunch,onSelect,Modifier.fillMaxWidth(),onHome=true)
+        Box(Modifier.weight(1f).heightIn(min=64.dp).fillMaxWidth().testTag("home-empty-gesture").emptyHomeSwipe({!scroll.canScrollBackward&&!scroll.canScrollForward},onQuick,onDrawer).combinedClickable(onClick={},onLongClick=onEdit),contentAlignment=Alignment.Center){if(profile.pages[page].isEmpty())Text("Room for your next idea\nLong-press to edit Home",textAlign=TextAlign.Center,color=Color.White.copy(alpha=.65f))}
+       }
+      }
+     }
+     if(landscapeClock&&page==0&&widgets.clockVisible(data.state.current)){
+      Row(Modifier.fillMaxSize()){
+       HomeClock(Modifier.width(220.dp).padding(start=20.dp,top=4.dp,end=12.dp).testTag("home-original-clock"),true)
+       content(Modifier.weight(1f).fillMaxHeight())
+      }
+     }else Column(Modifier.fillMaxSize()){
+      if(page==0&&widgets.clockVisible(data.state.current))HomeClock(Modifier.padding(horizontal=20.dp).testTag("home-original-clock").padding(top=if(compactHeight)4.dp else 26.dp,bottom=if(compactHeight)8.dp else 28.dp),compactHeight)
+      content(Modifier.weight(1f).fillMaxWidth())
      }
     }
     Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),horizontalArrangement=Arrangement.Center){repeat(profile.pages.size){page->IconButton(onClick={scope.launch{if(widgets.reduced)pager.scrollToPage(page)else pager.animateScrollToPage(page)}},modifier=Modifier.size(if(compactHeight)32.dp else 40.dp)){Icon(if(page==pager.currentPage)Icons.Default.Circle else Icons.Default.RadioButtonUnchecked,"Home page ${page+1}",Modifier.size(7.dp))}}}
@@ -356,10 +372,17 @@ private val lightColors=lightColorScheme(primary=Color(0xFF285F65),secondary=Col
 @Composable private fun AdaptiveAppGrid(data:PreviewData,ids:List<String>,onLaunch:(String)->Unit,onSelect:(String)->Unit,modifier:Modifier=Modifier,onHome:Boolean=false,onEmptyDown:()->Unit={},onEmptyUp:()->Unit={}){
  BoxWithConstraints(modifier.fillMaxWidth()){
   val columns=PreviewRules.columns(maxWidth.value.toInt(),LocalDensity.current.fontScale,data.profile.columns)
-  val grid=rememberLazyGridState()
-  val blank=if(onHome)Modifier.testTag("home-empty-gesture").emptyHomeSwipe({p->!grid.canScrollForward&&!grid.canScrollBackward&&grid.layoutInfo.visibleItemsInfo.none{item->p.x>=item.offset.x&&p.x<item.offset.x+item.size.width&&p.y>=item.offset.y&&p.y<item.offset.y+item.size.height}},onEmptyDown,onEmptyUp)else Modifier
-  LazyVerticalGrid(GridCells.Fixed(columns),Modifier.fillMaxSize().then(blank),state=grid,verticalArrangement=Arrangement.spacedBy(12.dp),contentPadding=PaddingValues(bottom=12.dp)){
-   items(ids,key={it}){id->AppTile(data,id,onClick={onLaunch(id)},onLongClick={onSelect(id)},showMenu=true,onHome=onHome)}
+  if(onHome){
+   Column(Modifier.fillMaxWidth().padding(bottom=12.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){
+    ids.chunked(columns).forEach{row->Row(Modifier.fillMaxWidth()){
+     row.forEach{id->Box(Modifier.weight(1f)){AppTile(data,id,onClick={onLaunch(id)},onLongClick={onSelect(id)},showMenu=true,onHome=true)}}
+     repeat(columns-row.size){Spacer(Modifier.weight(1f))}
+    }}
+   }
+  }else{
+   LazyVerticalGrid(GridCells.Fixed(columns),Modifier.fillMaxSize(),verticalArrangement=Arrangement.spacedBy(12.dp),contentPadding=PaddingValues(bottom=12.dp)){
+    items(ids,key={it}){id->AppTile(data,id,onClick={onLaunch(id)},onLongClick={onSelect(id)},showMenu=true,onHome=false)}
+   }
   }
  }
 }

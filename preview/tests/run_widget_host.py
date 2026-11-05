@@ -7,5 +7,5 @@ with tempfile.TemporaryDirectory(prefix='nova-widget-host-') as temp:
  assert hashlib.sha256(raw).hexdigest()=='3cf6cd6892e32e2b4c1c39e0f52f5248a2f5b37646fdfbb79a66b46b618414ed'
  jar.write_bytes(raw);production=root/'preview/app/src/main/java/uk/co/traynor/novaos/preview';tests=root/'preview/tests'
  subprocess.run(['java','com.sun.tools.javac.Main','-cp',str(jar),'-d',str(temp)]+[str(p) for p in production.glob('*.java')]+[str(p) for p in tests.glob('*Checks.java')],check=True)
- for name in ('PreviewRulesChecks','AppModeChecks','ShellRulesChecks','MindRulesChecks','WidgetRulesChecks','BackupCodecChecks','TransactionChecks','MediaContinuityRulesChecks','PolishRulesChecks'):
+ for name in ('PreviewRulesChecks','AppModeChecks','ShellRulesChecks','MindRulesChecks','WidgetRulesChecks','BackupCodecChecks','TransactionChecks','MediaContinuityRulesChecks','PolishRulesChecks','CorrectionRulesChecks'):
   subprocess.run(['java','-cp',str(temp)+':'+str(jar),name],check=True)

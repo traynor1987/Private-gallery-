@@ -78,15 +78,16 @@ class NovaVideoModel(app:Application):AndroidViewModel(app){
     val source=pool.tabs.first{it.id==platform.tabId}
     Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(12.dp)){
      platform.artwork?.let{Image(it.asImageBitmap(),"Media artwork",Modifier.size(if(compact)44.dp else 64.dp),contentScale=androidx.compose.ui.layout.ContentScale.Crop)}
-     Column(Modifier.weight(1f)){Text(source.app.name,style=MaterialTheme.typography.labelSmall,maxLines=1);Text(platform.title,style=MaterialTheme.typography.titleSmall,maxLines=if(compact)1 else 2,overflow=TextOverflow.Ellipsis);if(platform.artist.isNotBlank())Text(platform.artist,style=MaterialTheme.typography.bodySmall,maxLines=1,overflow=TextOverflow.Ellipsis)}
+     Column(Modifier.weight(1f)){Text((if(platform.providerMatched)source.app.name else "NovaOS native media")+when(platform.state){PlaybackState.STATE_PLAYING->" · playing";PlaybackState.STATE_BUFFERING->" · buffering";else->" · paused"},style=MaterialTheme.typography.labelSmall,maxLines=1);Text(platform.title,style=MaterialTheme.typography.titleSmall,maxLines=if(compact)1 else 2,overflow=TextOverflow.Ellipsis);if(platform.artist.isNotBlank())Text(platform.artist,style=MaterialTheme.typography.bodySmall,maxLines=1,overflow=TextOverflow.Ellipsis)}
     }
+    if(!compact&&platform.durationMs!=null&&platform.positionMs!=null){val position=platform.positionMs.coerceIn(0,platform.durationMs);LinearProgressIndicator(progress={position.toFloat()/platform.durationMs},modifier=Modifier.fillMaxWidth());Text("${position/1000}s / ${platform.durationMs/1000}s",style=MaterialTheme.typography.labelSmall)}
     val toggle=if(platform.playing&&platform.supports(PlaybackState.ACTION_PAUSE))PlaybackState.ACTION_PAUSE else if(!platform.playing&&platform.supports(PlaybackState.ACTION_PLAY))PlaybackState.ACTION_PLAY else PlaybackState.ACTION_PLAY_PAUSE
     fun send(action:Long){pool.mediaSessions.perform(platform.tabId,action,pool.tabs.toList(),profile,pool.foreground,pool.excludedMediaToken)}
     Row(verticalAlignment=Alignment.CenterVertically){
      if(!compact)IconButton(onClick={send(PlaybackState.ACTION_SKIP_TO_PREVIOUS)},enabled=platform.supports(PlaybackState.ACTION_SKIP_TO_PREVIOUS)){Icon(Icons.Default.SkipPrevious,"Previous media track")}
      IconButton(onClick={send(toggle)},enabled=platform.supports(toggle),modifier=Modifier.testTag("session-play-pause")){Icon(if(platform.playing)Icons.Default.Pause else Icons.Default.PlayArrow,"Media play or pause")}
      if(!compact)IconButton(onClick={send(PlaybackState.ACTION_SKIP_TO_NEXT)},enabled=platform.supports(PlaybackState.ACTION_SKIP_TO_NEXT)){Icon(Icons.Default.SkipNext,"Next media track")}
-     TextButton(onClick={onResume(source)}){Text("Return")}
+     TextButton(onClick={onResume(source)}){Text(if(platform.providerMatched)"Return"else "Open app")}
     }
    }
    nativeVideo->{Text("Local video",style=MaterialTheme.typography.labelSmall);Text(video.title,style=MaterialTheme.typography.titleSmall,maxLines=1,overflow=TextOverflow.Ellipsis);if(!compact&&video.duration>0)Slider(video.position.toFloat().coerceIn(0f,video.duration.toFloat()),{video.seek(it.toInt())},valueRange=0f..video.duration.toFloat(),enabled=video.prepared);Row(verticalAlignment=Alignment.CenterVertically){IconButton(onClick={if(video.playing)video.pause()else video.play()},enabled=video.prepared){Icon(if(video.playing)Icons.Default.Pause else Icons.Default.PlayArrow,"Video play or pause")};TextButton(onClick=onVideo){Text("Return")};if(!compact)Text("${video.position/1000}s / ${video.duration/1000}s",style=MaterialTheme.typography.labelSmall)}}
