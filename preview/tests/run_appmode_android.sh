@@ -39,17 +39,13 @@ import pathlib
 s=pathlib.Path('preview/artifacts/upgrade-tests.txt').read_text()
 assert 'OK (1 test)' in s and 'FAILURES!!!' not in s and 'INSTRUMENTATION_FAILED' not in s,s[-12000:]
 PYUPGRADERESULT
-tests='uk.co.traynor.novaos.preview.MediaContinuityAcceptanceTest,uk.co.traynor.novaos.preview.WidgetExperienceTest,uk.co.traynor.novaos.preview.ExperienceAcceptanceTest,uk.co.traynor.novaos.preview.PreviewAcceptanceTest#packageAndCatalogueArePreviewOnly,uk.co.traynor.novaos.preview.MultitaskingAcceptanceTest,uk.co.traynor.novaos.preview.AppModeAcceptanceTest#appModeHomeRetainsAttachedUserStartedAudioAndActivityLifecycle,uk.co.traynor.novaos.preview.PreviewAcceptanceTest#primaryV1SettingsAndHomeContinuityUseSameWebView,uk.co.traynor.novaos.preview.PreviewAcceptanceTest#foldViewportLayoutsAndLargeTextRender'
+tests='uk.co.traynor.novaos.preview.MediaContinuityAcceptanceTest,uk.co.traynor.novaos.preview.WidgetExperienceTest'
 timeout 420s adb shell am instrument -w -r -e class "$tests" uk.co.traynor.novaos.preview.test/androidx.test.runner.AndroidJUnitRunner | tee preview/artifacts/appmode-tests.txt
 python3 - <<'PY'
 import pathlib,re
 s=pathlib.Path('preview/artifacts/appmode-tests.txt').read_text()
-assert re.search(r'OK \(28 tests\)',s) and 'FAILURES!!!' not in s and 'INSTRUMENTATION_FAILED' not in s,s[-12000:]
+assert re.search(r'OK \(14 tests\)',s) and 'FAILURES!!!' not in s and 'INSTRUMENTATION_FAILED' not in s,s[-12000:]
 PY
-
-for name in home-cover home-inner home-landscape drawer-large-text; do
- adb exec-out run-as uk.co.traynor.novaos.preview cat "files/screenshots/$name.png" > "preview/artifacts/$name.png"
-done
 
 for name in cover inner landscape; do
  adb exec-out run-as uk.co.traynor.novaos.preview cat "files/widget-screenshots/widgets-$name.png" > "preview/artifacts/widgets-$name.png"

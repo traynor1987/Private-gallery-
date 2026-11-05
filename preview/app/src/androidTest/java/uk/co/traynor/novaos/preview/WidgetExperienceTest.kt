@@ -49,7 +49,7 @@ class WidgetExperienceTest {
   val rowPx=156f*rule.activity.resources.displayMetrics.density*rule.activity.resources.configuration.fontScale.coerceAtLeast(1f)
   rule.onNodeWithContentDescription("Hold and drag widget",useUnmergedTree=true).performScrollTo().performTouchInput{down(center);advanceEventTime(700);moveBy(androidx.compose.ui.geometry.Offset(0f,rowPx),200);up()}
   rule.runOnUiThread{val slot=widgets().slots("primary").single();assertEquals(4,slot.w);assertEquals(1,slot.y);widgets().place("primary",id,0,0,2,2,0);widgets().add("primary","mind",2,2,0);val other=widgets().slots("primary").last();assertTrue(widgets().stack("primary",id,other.id))}
-  rule.onNodeWithTag("widget-$id",useUnmergedTree=true).performTouchInput{swipeLeft()};rule.waitUntil(5000){widgets().slots("primary").single().active==1};assertEquals(1,WidgetData(rule.activity).slots("primary").single().active)
+  rule.onNodeWithTag("widget-stack-$id",useUnmergedTree=true).performScrollTo().performTouchInput{swipeLeft()};rule.waitUntil(5000){widgets().slots("primary").single().active==1};assertEquals(1,WidgetData(rule.activity).slots("primary").single().active)
  }
  @Test fun resettingHomePreservesWidgetPagesAndSavedNotes(){
   rule.runOnUiThread{val d=data();val w=widgets();d.addPage();w.add("primary","note",2,2,2);val slot=w.slots("primary").single();w.note("primary",slot.id,slot.items.single().id,"Synthetic retained note");d.reset();assertEquals(3,d.profile.pages.size);assertEquals(2,w.slots("primary").single().page);assertEquals("Synthetic retained note",w.slots("primary").single().items.single().config);HomeBackupCodec.validate(rule.activity.homeBackup.export(d,w))}
@@ -76,10 +76,14 @@ class WidgetExperienceTest {
   }finally{shell("settings put system font_scale 1.0");shell("wm size reset");shell("wm density reset")}
  }
  @Test fun websiteFullscreenReleasesToRecentsAndRejectsBackgroundRequests(){
-  launch("Browser V1","browser-v1")
+  launch("Browser V1","browser-v1");rule.waitForIdle()
   lateinit var tab:PreviewTab
   rule.runOnUiThread{val pool=rule.activity.browserPool;tab=pool.active!!;tab.view.webChromeClient!!.onShowCustomView(android.widget.FrameLayout(rule.activity),android.webkit.WebChromeClient.CustomViewCallback{})}
-  rule.onNodeWithTag("website-fullscreen").assertIsDisplayed();rule.onNodeWithTag("nova-recents").performClick();rule.onNodeWithTag("nova-recents-screen").assertIsDisplayed();rule.onNodeWithTag("website-fullscreen").assertDoesNotExist()
+  rule.runOnUiThread{assertNotNull("Foreground website fullscreen callback must be accepted",rule.activity.browserPool.fullscreen)}
+  rule.onNodeWithTag("website-fullscreen").assertIsDisplayed()
+  rule.onNodeWithTag("nova-recents").performClick()
+  rule.onNodeWithTag("nova-recents-screen").assertIsDisplayed()
+  rule.onNodeWithTag("website-fullscreen").assertDoesNotExist()
   rule.runOnUiThread{val pool=rule.activity.browserPool;assertTrue(pool.tabs.any{it===tab});tab.view.webChromeClient!!.onShowCustomView(android.widget.FrameLayout(rule.activity),android.webkit.WebChromeClient.CustomViewCallback{});assertNull(pool.fullscreen)}
  }
 }

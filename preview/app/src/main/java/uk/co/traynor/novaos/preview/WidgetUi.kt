@@ -70,7 +70,7 @@ internal fun widgetIcon(type:String)=when(type){"clock"->Icons.Default.Schedule;
        val pager=rememberPagerState(initialPage=slot.active,pageCount={slot.items.size})
        LaunchedEffect(slot.active){if(pager.currentPage!=slot.active)pager.scrollToPage(slot.active)}
        LaunchedEffect(pager.currentPage){if(pager.currentPage!=slot.active)widgets.active(data.state.current,slot.id,pager.currentPage)}
-       HorizontalPager(pager,Modifier.weight(1f).fillMaxWidth(),userScrollEnabled=slot.items.size>1,key={slot.items[it].id}){index->WidgetBody(slot.items[index],slot,data,widgets,pool,audio,video,onLaunch,onResume)}
+       HorizontalPager(pager,Modifier.weight(1f).fillMaxWidth().testTag("widget-stack-${slot.id}"),userScrollEnabled=slot.items.size>1,key={slot.items[it].id}){index->WidgetBody(slot.items[index],slot,data,widgets,pool,audio,video,onLaunch,onResume)}
        if(slot.items.size>1)Row(Modifier.align(Alignment.CenterHorizontally),horizontalArrangement=Arrangement.spacedBy(4.dp)){repeat(slot.items.size){i->Box(Modifier.size(5.dp).background(if(i==pager.currentPage)MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline,RoundedCornerShape(3.dp)))}}
       }
       var rw by remember{mutableFloatStateOf(0f)};var rh by remember{mutableFloatStateOf(0f)}

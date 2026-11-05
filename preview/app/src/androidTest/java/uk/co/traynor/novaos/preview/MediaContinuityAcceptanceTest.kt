@@ -50,6 +50,16 @@ class MediaContinuityAcceptanceTest {
  }
  @Test fun explicitCloseReleasesTheAudioSourceAndBackgroundScopeRemainsBounded(){
   val v=playing();val pool=rule.activity.browserPool;val tab=pool.active!!
+  rule.activityRule.scenario.moveToState(androidx.lifecycle.Lifecycle.State.CREATED)
+  rule.runOnUiThread{assertFalse(pool.foreground);assertFalse(tab.resumed)}
+  rule.activityRule.scenario.moveToState(androidx.lifecycle.Lifecycle.State.RESUMED);rule.waitForIdle()
+  rule.runOnUiThread{assertTrue(pool.foreground);assertTrue(tab.resumed);assertSame(v,pool.active!!.view)}
+  assertEquals("\"retained\"",js(v,"memo.value"))
+  rule.runOnUiThread{rule.activity.previewData.switchProfile()};rule.waitForIdle()
+  rule.runOnUiThread{assertEquals("hidden",pool.currentProfile);assertFalse(tab.resumed)}
+  rule.runOnUiThread{rule.activity.previewData.switchProfile()};rule.waitForIdle()
+  rule.runOnUiThread{assertEquals("primary",pool.currentProfile);assertTrue(tab.resumed);assertSame(v,pool.active!!.view)}
+  assertEquals("\"retained\"",js(v,"memo.value"))
   rule.runOnUiThread{pool.closeApp(tab.profile,tab.app.id);assertFalse(pool.tabs.any{it.view===v});assertNull(v.parent);assertNull(pool.player("primary"));assertFalse(PreviewShellRules.keepRunning(false,true,true))}
  }
 }
