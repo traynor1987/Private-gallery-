@@ -14,8 +14,17 @@
     "verifiedPwa": 0
   },
   "hostVerification": "71 Java policy assertions;7 Python tests;catalogue/icon/package and unchanged-original-record checks passed",
-  "androidAssembly": "app and instrumented test APKs built successfully",
-  "androidRuntime": "Pending focused CI; no pass claimed",
-  "physicalFold": "Owner acceptance pending",
-  "handover": "preview/release/PRODUCTION-INTEGRATION-HANDOVER.md"
+  "androidAssembly": "passed locally and in CI",
+  "androidRuntime": "NOT EXECUTED: emulator Package Manager failed installing pinned code4 APK: cmd: Failure calling service package: Broken pipe (32)",
+  "physicalFold": "Responsive layouts compiled; runtime viewport and physical hinge acceptance pending",
+  "handover": "preview/release/PRODUCTION-INTEGRATION-HANDOVER.md",
+  "apkApplicationSourceSha": "f2750627165fd379a4eee5d509df018542bf6062",
+  "apkSha256": "d02a1a924cec9f5ac6f8fd5b6781052a14c3800b4945dae45e3e5b674ed843c0",
+  "apkBytes": 60254769,
+  "apkDownloadUrl": "https://github.com/traynor1987/Private-gallery-/releases/download/novaos-home2-store-preview-0.5/NovaOS-Home2-Store-Preview.apk",
+  "releaseUrl": "https://github.com/traynor1987/Private-gallery-/releases/tag/novaos-home2-store-preview-0.5",
+  "ciRun": 41948755747,
+  "runtimeTestsExecuted": 0,
+  "previewInPlaceUpgrade": "Static package/version/certificate compatibility verified; device data-preservation fixture not executed",
+  "publication": "Experimental prerelease; public download and SHA256 verified by publication job; no Android runtime pass claimed"
 }
