@@ -60,7 +60,6 @@ class ChatLiteData(context:Context){
  var manage by rememberSaveable{mutableStateOf(false)};var diagnostics by rememberSaveable{mutableStateOf(false)};var confirmNormal by remember{mutableStateOf(false)}
  var phone by remember{mutableStateOf("")};var alias by remember{mutableStateOf("")};var token by remember{mutableIntStateOf(0)}
  androidx.activity.compose.BackHandler(manage||diagnostics){if(diagnostics)diagnostics=false else manage=false}
- DisposableEffect(context){val window=(context as? android.app.Activity)?.window;window?.addFlags(android.view.WindowManager.LayoutParams.FLAG_SECURE);onDispose{window?.clearFlags(android.view.WindowManager.LayoutParams.FLAG_SECURE)}}
  Column(Modifier.fillMaxSize().safeDrawingPadding().testTag("nova-chat-lite")){
   PreviewHeader(if(manage)"Manage Friends"else "Nova Chat Lite","Friends Mode · experimental launcher prototype",{if(manage)manage=false else onHome()})
   Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(20.dp),verticalArrangement=Arrangement.spacedBy(14.dp)){

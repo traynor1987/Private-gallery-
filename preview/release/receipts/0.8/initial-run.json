@@ -1,0 +1,10 @@
+{
+  "runId": 42057444318,
+  "source": "c80ce507112fcd9666047aa1b6cef87e511ed19d",
+  "focusedCases": 21,
+  "passed": 20,
+  "upgradePassed": 1,
+  "failure": "FLAG_SECURE cleared by outgoing animated Chat screen after Inspector mounted",
+  "published": false,
+  "artifactSha256": "41516e9ffce913196aac588fea498e8c030f11a0a6b5d9eca700264e6b716414"
+}

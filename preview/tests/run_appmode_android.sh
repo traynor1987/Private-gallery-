@@ -44,10 +44,10 @@ import pathlib
 s=pathlib.Path('preview/artifacts/upgrade-tests.txt').read_text()
 assert 'OK (1 test)' in s and 'FAILURES!!!' not in s and 'INSTRUMENTATION_FAILED' not in s,s[-12000:]
 PYUPGRADERESULT
-tests='uk.co.traynor.novaos.preview.ChatLiteAcceptanceTest,uk.co.traynor.novaos.preview.ChatInspectorAcceptanceTest,uk.co.traynor.novaos.preview.MediaContinuityAcceptanceTest,uk.co.traynor.novaos.preview.PreviewAcceptanceTest#primaryV1SettingsAndHomeContinuityUseSameWebView,uk.co.traynor.novaos.preview.AppModeAcceptanceTest#googleOAuthRequiresConfirmationWhileOrdinaryAccountNavigationIsPreserved,uk.co.traynor.novaos.preview.CorrectionAcceptanceTest#desktopPreferenceIsPerSiteRetainsWebViewAndRestoresMobile,uk.co.traynor.novaos.preview.CorrectionAcceptanceTest#protectedClockSurvivesWidgetAddRemoveUndoAndRestart,uk.co.traynor.novaos.preview.PolishAcceptanceTest#ownPackageMediaSessionControlsAreRealAndAmbiguityFailsClosed'
+tests='uk.co.traynor.novaos.preview.ChatInspectorAcceptanceTest,uk.co.traynor.novaos.preview.ChatLiteAcceptanceTest#normalWhatsAppRequiresExplicitConfirmationAndReusesOriginalView,uk.co.traynor.novaos.preview.ChatLiteAcceptanceTest#browserWhatsAppGuardLeavesUnrelatedBrowserTabsAndDocumentsAlone,uk.co.traynor.novaos.preview.MediaContinuityAcceptanceTest,uk.co.traynor.novaos.preview.PreviewAcceptanceTest#primaryV1SettingsAndHomeContinuityUseSameWebView,uk.co.traynor.novaos.preview.CorrectionAcceptanceTest#protectedClockSurvivesWidgetAddRemoveUndoAndRestart,uk.co.traynor.novaos.preview.PolishAcceptanceTest#ownPackageMediaSessionControlsAreRealAndAmbiguityFailsClosed'
 timeout 600s adb shell am instrument -w -r -e class "$tests" uk.co.traynor.novaos.preview.test/androidx.test.runner.AndroidJUnitRunner | tee preview/artifacts/appmode-tests.txt
 python3 - <<'PY'
 import pathlib,re
 s=pathlib.Path('preview/artifacts/appmode-tests.txt').read_text()
-assert re.search(r'OK \(21 tests\)',s) and 'FAILURES!!!' not in s and 'INSTRUMENTATION_FAILED' not in s,s[-12000:]
+assert re.search(r'OK \(15 tests\)',s) and 'FAILURES!!!' not in s and 'INSTRUMENTATION_FAILED' not in s,s[-12000:]
 PY

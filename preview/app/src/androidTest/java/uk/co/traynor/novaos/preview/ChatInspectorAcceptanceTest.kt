@@ -42,6 +42,12 @@ class ChatInspectorAcceptanceTest{
  @Test fun reportReviewCopyDeleteAndRestartAreExplicit(){
   fixture();open();complete();val report=model().report("primary")!!;rule.onNodeWithTag("copy-chat-report").performScrollTo().performClick();rule.runOnUiThread{val clipboard=rule.activity.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager;assertEquals(report,clipboard.primaryClip!!.getItemAt(0).text.toString())};rule.activityRule.scenario.recreate();rule.waitForIdle();rule.onNodeWithTag("chat-inspector").assertIsDisplayed();assertEquals(report,model().report("primary"));rule.onNodeWithTag("delete-chat-report").performScrollTo().performClick();assertNull(model().report("primary"));rule.onNodeWithTag("view-chat-report").assertIsNotEnabled()
  }
+ @Test fun sensitiveScreenTransitionsRetainProtectionUntilOutgoingContentIsGone(){
+  fixture();open();rule.waitForIdle();rule.runOnUiThread{assertTrue(rule.activity.window.attributes.flags and android.view.WindowManager.LayoutParams.FLAG_SECURE!=0)}
+  rule.onNodeWithTag("nova-back").performClick();rule.onNodeWithTag("nova-chat-lite").assertIsDisplayed();rule.runOnUiThread{assertTrue(rule.activity.window.attributes.flags and android.view.WindowManager.LayoutParams.FLAG_SECURE!=0)}
+  rule.onNodeWithTag("nova-home").performClick();rule.waitForIdle();rule.runOnUiThread{assertEquals(0,rule.activity.window.attributes.flags and android.view.WindowManager.LayoutParams.FLAG_SECURE)}
+  rule.onNodeWithTag("open-apps").performClick();rule.onNodeWithTag("drawer-search").performTextInput("Nova Mind");rule.onNodeWithTag("app-mind").performClick();rule.onNodeWithTag("nova-mind").assertIsDisplayed();rule.runOnUiThread{assertTrue(rule.activity.window.attributes.flags and android.view.WindowManager.LayoutParams.FLAG_SECURE!=0)}
+ }
  @Test fun inspectorStaysLocalAcrossFoldAndHomeWithoutAutomaticRestart(){
   val tab=fixture();open()
   fun shell(s:String){val fd=InstrumentationRegistry.getInstrumentation().uiAutomation.executeShellCommand(s);android.os.ParcelFileDescriptor.AutoCloseInputStream(fd).use{it.readBytes()}}

@@ -2,6 +2,7 @@ package uk.co.traynor.novaos.preview
 
 import android.graphics.BitmapFactory
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.core.updateTransition
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.*
@@ -99,8 +100,11 @@ private val lightColors=lightColorScheme(primary=Color(0xFF285F65),secondary=Col
     if(PreviewAppPolicy.canPresentExternal(request.tabId,request.profile,pool.activeId,state.current,pool.foreground))pool.tabs.firstOrNull{it.id==request.tabId}?.app?.let{browser=it.copy(url=request.url)}
     pool.externalRequest=null
    }}
+   val routeTransition=updateTransition(screen,label="preview-screen")
+   val privateRoutes=setOf("chat","chat-inspector","mind")
+   val secureWindow=locked||routeTransition.currentState in privateRoutes||routeTransition.targetState in privateRoutes
    val host=LocalContext.current as? android.app.Activity
-   SideEffect { pool.excludedMediaToken=audio.sessionToken;pool.presentationBlocked=locked||screen!="browser";host?.let { activity->
+   SideEffect { host?.window?.let{if(secureWindow)it.addFlags(android.view.WindowManager.LayoutParams.FLAG_SECURE)else it.clearFlags(android.view.WindowManager.LayoutParams.FLAG_SECURE)};pool.excludedMediaToken=audio.sessionToken;pool.presentationBlocked=locked||screen!="browser";host?.let { activity->
     val controller=androidx.core.view.WindowCompat.getInsetsController(activity.window,activity.window.decorView)
     controller.isAppearanceLightStatusBars=screen!="home"&&!dark
     controller.isAppearanceLightNavigationBars=screen!="home"&&!dark
@@ -163,7 +167,7 @@ private val lightColors=lightColorScheme(primary=Color(0xFF285F65),secondary=Col
      Box(Modifier.weight(1f).fillMaxWidth()){
       if(pool.active?.profile==state.current)PreviewBrowser(pool,onHome=goHome,onExternal={url->pool.active?.app?.let{browser=it.copy(url=url)}},visible=screen=="browser",onInspect={inspectorReturn="browser";screen="chat-inspector"})
       if(screen!="browser")Surface(Modifier.fillMaxSize(),color=MaterialTheme.colorScheme.background){
-       AnimatedContent(screen,label="preview-screen",transitionSpec={if(widgets.reduced)androidx.compose.animation.ContentTransform(androidx.compose.animation.EnterTransition.None,androidx.compose.animation.ExitTransition.None)else androidx.compose.animation.ContentTransform(androidx.compose.animation.fadeIn(),androidx.compose.animation.fadeOut())}){route->
+       routeTransition.AnimatedContent(transitionSpec={if(widgets.reduced)androidx.compose.animation.ContentTransform(androidx.compose.animation.EnterTransition.None,androidx.compose.animation.ExitTransition.None)else androidx.compose.animation.ContentTransform(androidx.compose.animation.fadeIn(),androidx.compose.animation.fadeOut())}){route->
         routeState.SaveableStateProvider(route){when(route){
          "home-settings"->Column(Modifier.fillMaxSize().safeDrawingPadding().testTag("nova-home-settings")){
           PreviewHeader("Nova Settings","Home & appearance",onBack=goHome)
@@ -199,7 +203,6 @@ private val lightColors=lightColorScheme(primary=Color(0xFF285F65),secondary=Col
          "backup"->HomeBackupScreen(data,widgets,backup,onBack=goHome,onExport={(host as? MainActivity)?.exportHomeLayout()},onImport={(host as? MainActivity)?.importHomeLayout()})
          "lock-settings"->LockSettings(widgets,onBack=goHome,onLock={locked=true})
          "mind"->{
-          DisposableEffect(Unit){host?.window?.addFlags(android.view.WindowManager.LayoutParams.FLAG_SECURE);onDispose{host?.window?.clearFlags(android.view.WindowManager.LayoutParams.FLAG_SECURE)}}
           MindScreen(mind,state.current,audio,mindPage,mindLaunch,onHome=goHome,onSanctuary={sanctuary=true;if(chat.sanctuary(state.current))chat.guard(pool,state.current);screen=if(chat.sanctuary(state.current))"chat"else "sanctuary"})
          }
          "chat-inspector"->ChatInspectorScreen(inspector,pool,state.current,onBack={screen=inspectorReturn},onHome=goHome)

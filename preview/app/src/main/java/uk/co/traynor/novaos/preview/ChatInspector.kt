@@ -61,7 +61,7 @@ class ChatInspector(context:Context){
 @Composable internal fun ChatInspectorScreen(inspector:ChatInspector,pool:PreviewBrowserModel,profile:String,onBack:()->Unit,onHome:()->Unit){
  val context=LocalContext.current;val scope=rememberCoroutineScope();var preview by rememberSaveable{mutableStateOf(false)};var copied by remember{mutableStateOf(false)}
  val report=inspector.report(profile)
- DisposableEffect(inspector,context){val window=(context as? android.app.Activity)?.window;window?.addFlags(android.view.WindowManager.LayoutParams.FLAG_SECURE);val owner=context as? androidx.lifecycle.LifecycleOwner;val observer=androidx.lifecycle.LifecycleEventObserver{_,event->if(event==androidx.lifecycle.Lifecycle.Event.ON_PAUSE)inspector.stop()};owner?.lifecycle?.addObserver(observer);onDispose{inspector.stop();owner?.lifecycle?.removeObserver(observer);window?.clearFlags(android.view.WindowManager.LayoutParams.FLAG_SECURE)}}
+ DisposableEffect(inspector,context){val owner=context as? androidx.lifecycle.LifecycleOwner;val observer=androidx.lifecycle.LifecycleEventObserver{_,event->if(event==androidx.lifecycle.Lifecycle.Event.ON_PAUSE)inspector.stop()};owner?.lifecycle?.addObserver(observer);onDispose{inspector.stop();owner?.lifecycle?.removeObserver(observer)}}
  Column(Modifier.fillMaxSize().safeDrawingPadding().testTag("chat-inspector")){
   PreviewHeader("Compatibility Inspector","Nova Chat · local experimental tool · v0.1",onBack)
   Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(20.dp),verticalArrangement=Arrangement.spacedBy(14.dp)){
