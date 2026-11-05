@@ -1,6 +1,8 @@
 package uk.co.traynor.novaos.preview
 
 import android.app.Application
+import android.media.session.PlaybackState
+import androidx.compose.ui.graphics.asImageBitmap
 import android.content.MutableContextWrapper
 import android.net.Uri
 import android.widget.VideoView
@@ -64,15 +66,33 @@ class NovaVideoModel(app:Application):AndroidViewModel(app){
 }
 
 @Composable internal fun NowPlaying(pool:PreviewBrowserModel,audio:MindAudio,video:NovaVideoModel,profile:String,onResume:(PreviewTab)->Unit,onVideo:()->Unit,onAudio:()->Unit,compact:Boolean=false,privacy:Boolean=false){
+ val platform=pool.mediaSessions.source?.takeIf{source->pool.tabs.any{it.id==source.tabId&&it.profile==profile}}
  val web=pool.player(profile)
+ val fallback=pool.recents(profile).firstOrNull{it.app.category=="Entertainment"}
  val nativeVideo=video.profile==profile&&video.uri!=null&&(video.playing||(!audio.playing&&web?.mediaState!="playing"))
  val nativeAudio=audio.sound.isNotBlank()&&audio.profileOwner==profile
  Column(Modifier.fillMaxWidth().testTag("now-playing"),verticalArrangement=Arrangement.spacedBy(3.dp)){
   if(privacy){Text("Now Playing",style=MaterialTheme.typography.labelMedium);Text(if(nativeVideo||nativeAudio||web!=null)"Media available after unlock"else "No active media",style=MaterialTheme.typography.bodySmall);return@Column}
   when{
+   platform!=null&&(platform.playing||(!video.playing&&!audio.playing))->{
+    val source=pool.tabs.first{it.id==platform.tabId}
+    Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(12.dp)){
+     platform.artwork?.let{Image(it.asImageBitmap(),"Media artwork",Modifier.size(if(compact)44.dp else 64.dp),contentScale=androidx.compose.ui.layout.ContentScale.Crop)}
+     Column(Modifier.weight(1f)){Text(source.app.name,style=MaterialTheme.typography.labelSmall,maxLines=1);Text(platform.title,style=MaterialTheme.typography.titleSmall,maxLines=if(compact)1 else 2,overflow=TextOverflow.Ellipsis);if(platform.artist.isNotBlank())Text(platform.artist,style=MaterialTheme.typography.bodySmall,maxLines=1,overflow=TextOverflow.Ellipsis)}
+    }
+    val toggle=if(platform.playing&&platform.supports(PlaybackState.ACTION_PAUSE))PlaybackState.ACTION_PAUSE else if(!platform.playing&&platform.supports(PlaybackState.ACTION_PLAY))PlaybackState.ACTION_PLAY else PlaybackState.ACTION_PLAY_PAUSE
+    fun send(action:Long){pool.mediaSessions.perform(platform.tabId,action,pool.tabs.toList(),profile,pool.foreground,pool.excludedMediaToken)}
+    Row(verticalAlignment=Alignment.CenterVertically){
+     if(!compact)IconButton(onClick={send(PlaybackState.ACTION_SKIP_TO_PREVIOUS)},enabled=platform.supports(PlaybackState.ACTION_SKIP_TO_PREVIOUS)){Icon(Icons.Default.SkipPrevious,"Previous media track")}
+     IconButton(onClick={send(toggle)},enabled=platform.supports(toggle),modifier=Modifier.testTag("session-play-pause")){Icon(if(platform.playing)Icons.Default.Pause else Icons.Default.PlayArrow,"Media play or pause")}
+     if(!compact)IconButton(onClick={send(PlaybackState.ACTION_SKIP_TO_NEXT)},enabled=platform.supports(PlaybackState.ACTION_SKIP_TO_NEXT)){Icon(Icons.Default.SkipNext,"Next media track")}
+     TextButton(onClick={onResume(source)}){Text("Return")}
+    }
+   }
    nativeVideo->{Text("Local video",style=MaterialTheme.typography.labelSmall);Text(video.title,style=MaterialTheme.typography.titleSmall,maxLines=1,overflow=TextOverflow.Ellipsis);if(!compact&&video.duration>0)Slider(video.position.toFloat().coerceIn(0f,video.duration.toFloat()),{video.seek(it.toInt())},valueRange=0f..video.duration.toFloat(),enabled=video.prepared);Row(verticalAlignment=Alignment.CenterVertically){IconButton(onClick={if(video.playing)video.pause()else video.play()},enabled=video.prepared){Icon(if(video.playing)Icons.Default.Pause else Icons.Default.PlayArrow,"Video play or pause")};TextButton(onClick=onVideo){Text("Return")};if(!compact)Text("${video.position/1000}s / ${video.duration/1000}s",style=MaterialTheme.typography.labelSmall)}}
    nativeAudio&&(audio.playing||web?.mediaState!="playing")->{Text("Nova Mind · ${if(audio.playing)"playing"else "paused"}",style=MaterialTheme.typography.labelSmall);Text(audio.sound.replaceFirstChar{it.uppercase()}+" texture",style=MaterialTheme.typography.titleSmall,maxLines=1);if(!compact&&audio.duration>0)LinearProgressIndicator(progress={audio.position.toFloat()/audio.duration},modifier=Modifier.fillMaxWidth());Row{if(!compact)IconButton(onClick={audio.previous()}){Icon(Icons.Default.SkipPrevious,"Previous calm sound")};IconButton(onClick={if(audio.playing)audio.pause()else audio.resume()}){Icon(if(audio.playing)Icons.Default.Pause else Icons.Default.PlayArrow,"Calm sound play or pause")};if(!compact)IconButton(onClick={audio.next()}){Icon(Icons.Default.SkipNext,"Next calm sound")};IconButton(onClick=onAudio){Icon(Icons.Default.OpenInNew,"Return to calm sounds")}}}
    web!=null->{Text(web.app.name,style=MaterialTheme.typography.labelSmall);Text(web.mediaTitle.ifBlank{web.app.name},maxLines=if(compact)1 else 2,overflow=TextOverflow.Ellipsis,style=MaterialTheme.typography.titleSmall);if(!compact)Text("Website reports ${web.mediaState}",style=MaterialTheme.typography.labelSmall);Row{IconButton(onClick={},enabled=false){Icon(Icons.Default.PlayArrow,"Website transport unavailable")};TextButton(onClick={onResume(web)}){Text(if(compact)"Open"else "Return to App")}}}
+   fallback!=null->{Text(fallback.app.name,style=MaterialTheme.typography.titleSmall,maxLines=1,overflow=TextOverflow.Ellipsis);Text("Playback details unavailable",style=MaterialTheme.typography.bodySmall);TextButton(onClick={onResume(fallback)}){Text("Return to Player")}}
    else->{Text("Now Playing",style=MaterialTheme.typography.labelMedium);Text("Open a player to begin.",style=MaterialTheme.typography.bodySmall)}
   }
  }

@@ -99,7 +99,9 @@ import java.util.Date
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable internal fun NovaShellSettings(data:PreviewData,onDismiss:()->Unit){
  val s=data.shell
- ModalBottomSheet(onDismissRequest=onDismiss){Column(Modifier.fillMaxWidth().fillMaxHeight(.85f).verticalScroll(rememberScrollState()).padding(24.dp).testTag("nova-shell-settings")){
+ Column(Modifier.fillMaxSize().safeDrawingPadding().testTag("nova-shell-settings")){
+  PreviewHeader("Navigation & multitasking","NovaOS settings",onBack=onDismiss)
+  Column(Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()).padding(24.dp)){
   Text("Navigation & multitasking",style=MaterialTheme.typography.headlineSmall)
   Text("Nova’s controls sit above Android’s system navigation.",Modifier.padding(vertical=12.dp))
   ListItem(headlineContent={Text("Nova gesture strip")},supportingContent={Text("Swipe up: Home · sideways: Back · hold: Recents")},trailingContent={Switch(s.gestures,{s.configure(gestures=it)},modifier=Modifier.testTag("gesture-mode"))})
@@ -111,7 +113,7 @@ import java.util.Date
    Text("Edge favourites · up to 6",Modifier.padding(top=12.dp),style=MaterialTheme.typography.titleMedium)
    data.allApps().forEach{app->Row(verticalAlignment=Alignment.CenterVertically){Checkbox(app.id in s.favourites(data.state.current),{s.favourite(data.state.current,app.id,it)});Text(app.name,maxLines=1,overflow=TextOverflow.Ellipsis)}}
   }
-  Text("Media information appears only when a website exposes public Media Session metadata. This WebView host has no supported transport-action interface; open the website player to pause or skip. No fabricated controls or Android notification access.",Modifier.padding(vertical=16.dp),style=MaterialTheme.typography.bodySmall)
+  Text("Media information appears only when a website exposes public Media Session metadata. Android17 package-local sessions enable only advertised controls when source ownership is unambiguous. Otherwise return to the website player. No fabricated controls or Android notification access.",Modifier.padding(vertical=16.dp),style=MaterialTheme.typography.bodySmall)
   s.error?.let{Text(it,color=MaterialTheme.colorScheme.error)}
   Button(onClick=onDismiss,modifier=Modifier.fillMaxWidth().testTag("shell-settings-done")){Text("Done")}
  }}

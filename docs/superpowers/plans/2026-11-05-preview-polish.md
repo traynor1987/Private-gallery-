@@ -1,0 +1,17 @@
+# Premium Preview polish implementation plan
+
+Goal: refine the accepted Nova Home design and preserve all data/media. Architecture: extend existing Compose shell/widget model; use Android17 package-local MediaSession discovery, never global notification/media access. Keep preview branch/package/development key and production isolation. User supplied complete design and autonomous execution; no new design/approval gate.
+
+## Tasks
+- [x] Add failing host checks for safe whole-layout movement/reflow, page-edge targeting and unique session attribution/action capabilities. Implement PolishRules and WidgetData transactional placement.
+- [x] Replace bottom Quick sheet with top-aligned internal overlay, compact/expanded states, drag-handle swipe-up, genuine tiles, local dim overlay and optional blurred wallpaper backing. Gesture attaches only empty Home area; widget/web/scroll gestures remain owned by children.
+- [x] Add API37 own-package MediaController adapter, exact unique source matching and advertised actions. Genuine title/artist/art only; fallback last retained source explicitly labelled metadata unavailable. No playback JavaScript, global media-key routing, permissions or provider bypass. Test native session discovery and callbacks on API37.
+- [x] Widget editing: explicit long-press edit mode/Done, drag live snapped valid/invalid preview, resize preview, collision rejection or atomic relocation of colliding widgets to safe free cells, dwell at horizontal page edges for target-page drop. Keep accessible options/page/size actions, remove/Undo and autosave notes.
+- [x] Advanced Home/navigation settings become full-screen pages with existing controls; maintain Back and internal navigation. Keep wallpaper/gradient/icons/Dock/type/palette unchanged.
+- [ ] Host checks, local app/test assembly, read-only review, one focused Android17 run covering new gestures/media/widget/notes/settings/Fold/upgrade and retained audio. Inspect screenshots, raw prerelease APK, independent hash/cert/source receipts, final handover.
+
+Review focus: ambiguous media ownership, close/profile source revocation, widget cancellation/collision atomicity, note loss on immediate navigation, Quick overlay focus/Back/insets and gesture capture.
+
+Evidence: recovered remote9c12f214 and clean existing checkout, no local Java/build writer, previous own ownership marker removed. Existing code7 APK and API37 results verified in prior release receipt; owner now confirms physical internal audio works. API37 getActiveSessionsForPackage limits queries to our own package; matching must still prove specific tab. Current Quick sheet rises from bottom; Home parent catches vertical drags over children; widget notes require manual Save. These are targeted extension points.
+
+Pre-CI: host109 Java checks and11 Python cases include exact full bounded title identity regression (observed old130-character title truncation failure, corrected without changing website controls). Read-only review found that issue; fixed both JS metadata read and native decoding. Titles over512 are rejected for matching rather than truncated; UI still bounds lines. Cross-profile retained tabs disable platform bridge; multiple native sessions require one unique playing session or one unique paused source. Full app/test assembly passes before final version/fixtures build. No new permissions, global session queries or media-key injection.

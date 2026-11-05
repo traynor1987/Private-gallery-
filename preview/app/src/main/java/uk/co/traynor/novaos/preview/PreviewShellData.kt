@@ -12,6 +12,8 @@ class PreviewShellData(context:Context){
  fun touchInternal(profile:String,id:String){internalRecents.removeAll{it.first==profile&&it.second==id};internalRecents.add(0,profile to id)}
  fun closeInternal(profile:String,id:String){internalRecents.removeAll{it.first==profile&&it.second==id}}
  private val prefs=context.getSharedPreferences("nova_shell_v1",Context.MODE_PRIVATE)
+ var dim by mutableFloatStateOf(prefs.getFloat("displayDim",0f).coerceIn(0f,.6f));private set
+ fun dim(value:Float){val next=value.coerceIn(0f,.6f);if(prefs.edit().putFloat("displayDim",next).commit())dim=next else error="Unable to save Nova dimming."}
  var reverse by mutableStateOf(prefs.getBoolean("reverse",false));private set
  var gestures by mutableStateOf(prefs.getBoolean("gestures",false));private set
  var edge by mutableStateOf(prefs.getBoolean("edge",false));private set

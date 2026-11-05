@@ -60,6 +60,8 @@ class PreviewBrowserModel(application:Application):AndroidViewModel(application)
  var notice by mutableStateOf<String?>(null)
  var upload:ValueCallback<Array<Uri>>?=null
  var pickFiles:(()->Unit)?=null
+ val mediaSessions=PreviewMediaSessions(application)
+ var excludedMediaToken:android.media.session.MediaSession.Token?=null
  var foreground=true
  var currentProfile="primary"
  var downloadRequest by mutableStateOf<Pair<PreviewTab,String>?>(null)
@@ -71,7 +73,7 @@ class PreviewBrowserModel(application:Application):AndroidViewModel(application)
   val tab=old?:create(app,profile,true);select(tab);return tab
  }
  fun select(tab:PreviewTab){if(fullscreen?.tabId!=tab.id)closeFullscreen();tab.touched=android.os.SystemClock.uptimeMillis();activeId=tab.id;last["${tab.profile}:${tab.app.id}"]=tab.id;syncLifecycle()}
- fun syncLifecycle(){tabs.forEach{val run=it.profile==currentProfile&&PreviewShellRules.keepRunning(foreground,it.id==activeId,it.mediaState=="playing");if(run!=it.resumed){if(run)it.view.onResume()else it.view.onPause();it.resumed=run}}}
+ fun syncLifecycle(){if(!foreground||tabs.none{it.id==mediaSessions.source?.tabId&&it.profile==currentProfile})mediaSessions.clear();tabs.forEach{val run=it.profile==currentProfile&&PreviewShellRules.keepRunning(foreground,it.id==activeId,it.mediaState=="playing");if(run!=it.resumed){if(run)it.view.onResume()else it.view.onPause();it.resumed=run}}}
  fun create(app:StoreEntry,profile:String,load:Boolean):PreviewTab{
   require(tabs.count{it.profile==profile&&it.app.id==app.id}<8){"Close a tab before adding more (8 per app)."}
   val wrapper=MutableContextWrapper(getApplication<Application>())
@@ -91,19 +93,20 @@ class PreviewBrowserModel(application:Application):AndroidViewModel(application)
  fun recents(profile:String)=tabs.filter{it.profile==profile}.groupBy{it.app.id}.values.map{it.maxBy{tab->tab.touched}}.sortedByDescending{it.touched}
  fun player(profile:String)=tabs.filter{it.profile==profile&&PreviewShellRules.mediaState(it.mediaState)}.maxWithOrNull(compareBy<PreviewTab>{PreviewShellRules.mediaPriority(it.mediaState)}.thenBy{it.touched})
  fun pollMedia(){
-  if(!foreground)return
+  if(!foreground){mediaSessions.clear();return}
+  mediaSessions.refresh(tabs.toList(),currentProfile,foreground,excludedMediaToken)
   tabs.filter{it.profile==currentProfile}.toList().forEach{tab->
    if(android.net.Uri.parse(tab.url).host=="accounts.google.com"){tab.mediaState="none";tab.mediaTitle="";syncLifecycle();return@forEach}
    // Read public Media Session metadata only. Never read DOM/forms/cookies or install action handlers.
    val revision=tab.navigationRevision
-   tab.view.evaluateJavascript("""(()=>{try{const m=navigator.mediaSession;if(!m)return null;const t=m.metadata?.title;return JSON.stringify({state:['playing','paused'].includes(m.playbackState)?m.playbackState:'none',title:typeof t==='string'?t.slice(0,120):''});}catch(e){return null;}})()"""){raw->
+   tab.view.evaluateJavascript("""(()=>{try{const m=navigator.mediaSession;if(!m)return null;const t=m.metadata?.title;return JSON.stringify({state:['playing','paused'].includes(m.playbackState)?m.playbackState:'none',title:typeof t==='string'&&t.length<=512?t:''});}catch(e){return null;}})()"""){raw->
     if(tab !in tabs||tab.profile!=currentProfile||!foreground||tab.navigationRevision!=revision)return@evaluateJavascript
     if(raw==null||raw.length>2000){tab.mediaState="none";tab.mediaTitle="";syncLifecycle();return@evaluateJavascript}
     val value=runCatching{org.json.JSONTokener(raw).nextValue()}.getOrNull()
     val meta=if(value is String&&value.length<1000)runCatching{org.json.JSONObject(value)}.getOrNull()else null
     val state=meta?.optString("state")?:"none"
     tab.mediaState=if(PreviewShellRules.mediaState(state))state else "none"
-    tab.mediaTitle=meta?.optString("title")?.take(120)?:""
+    tab.mediaTitle=meta?.optString("title")?.takeIf{it.length<=512}.orEmpty()
     syncLifecycle()
    }
   }
@@ -170,6 +173,7 @@ class PreviewBrowserModel(application:Application):AndroidViewModel(application)
   view.setDownloadListener{url,_,_,_,_->if(runCatching{PreviewRules.https(url)}.isSuccess)downloadRequest=tab to url else tab.error="This download type is unsupported. Public HTTPS files can be downloaded; blob/data links cannot."}
  }
  fun close(tab:PreviewTab,rendererGone:Boolean=false){
+  if(mediaSessions.source?.tabId==tab.id)mediaSessions.clear()
   if(fullscreen?.tabId==tab.id)closeFullscreen()
   (tab.view.parent as? ViewGroup)?.removeView(tab.view);if(!rendererGone)tab.view.stopLoading();tab.view.destroy();tabs.remove(tab)
   if(activeId==tab.id)activeId=(tabs.lastOrNull{it.profile==tab.profile&&it.app.id==tab.app.id}?:tabs.filter{it.profile==tab.profile}.maxByOrNull{it.touched})?.id

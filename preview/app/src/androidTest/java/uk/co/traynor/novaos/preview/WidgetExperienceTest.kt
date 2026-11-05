@@ -45,12 +45,14 @@ class WidgetExperienceTest {
  @Test fun dragResizeAndStackSwipeOperateOnCurrentGeometry(){
   rule.runOnUiThread{widgets().add("primary","media",2,2,0)}
   val id=widgets().slots("primary").single().id
+  rule.onNodeWithContentDescription("Hold and drag widget",useUnmergedTree=true).performTouchInput{longClick()}
   val widgetWidth=rule.onNodeWithTag("widget-$id",useUnmergedTree=true).fetchSemanticsNode().boundsInRoot.width
   rule.onNodeWithContentDescription("Drag to resize widget",useUnmergedTree=true).performScrollTo().performTouchInput{down(center);moveBy(androidx.compose.ui.geometry.Offset(widgetWidth,0f),200);up()}
   rule.waitUntil(3000){widgets().slots("primary").single().w==4}
   val rowPx=156f*rule.activity.resources.displayMetrics.density*rule.activity.resources.configuration.fontScale.coerceAtLeast(1f)
   rule.onNodeWithContentDescription("Hold and drag widget",useUnmergedTree=true).performScrollTo().performTouchInput{down(center);advanceEventTime(700);moveBy(androidx.compose.ui.geometry.Offset(0f,rowPx),200);up()}
   rule.runOnUiThread{val slot=widgets().slots("primary").single();assertEquals(4,slot.w);assertEquals(1,slot.y);widgets().place("primary",id,0,0,2,2,0);widgets().add("primary","mind",2,2,0);val other=widgets().slots("primary").last();assertTrue(widgets().stack("primary",id,other.id))}
+  rule.onNodeWithTag("widget-edit-done").performClick()
   rule.onNodeWithTag("widget-stack-$id",useUnmergedTree=true).performScrollTo().performTouchInput{swipeLeft()};rule.waitUntil(5000){widgets().slots("primary").single().active==1};assertEquals(1,WidgetData(rule.activity).slots("primary").single().active)
  }
  @Test fun resettingHomePreservesWidgetPagesAndSavedNotes(){

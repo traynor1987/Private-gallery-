@@ -17,6 +17,7 @@ data class WidgetSlot(val id:String,val page:Int,val x:Int,val y:Int,val w:Int,v
 class WidgetData(context:Context){
  internal val prefs=context.getSharedPreferences("nova_widgets_v1",0)
  var revision by mutableIntStateOf(0);private set
+ var editingId by mutableStateOf<String?>(null)
  var error by mutableStateOf<String?>(null);private set
  private var readBlocked=false
  var undo by mutableStateOf<Pair<String,WidgetSlot>?>(null);private set
@@ -42,10 +43,22 @@ class WidgetData(context:Context){
   if(!WidgetRules.fits(intArrayOf(x,y,w,h),all.filter{it.id!=id&&it.page==page}.map{it.rect()},-1)){error="That position is occupied or outside the page.";return false}
   return save(profile,all.map{if(it.id==id)it.copy(x=x,y=y,w=w,h=h,page=page)else it})
  }
+ fun moveLayout(profile:String,id:String,x:Int,y:Int,w:Int,h:Int,page:Int):List<WidgetSlot>?{
+  val all=slots(profile);val slot=all.firstOrNull{it.id==id}?:return null
+  if(page !in 0..7||slot.items.any{item->widgetSpecs.firstOrNull{it.type==item.type}?.sizes?.contains(w to h)==false})return null
+  val target=listOf(slot)+all.filter{it.id!=id&&it.page==page}
+  val placed=PolishRules.relocate(target.map{it.rect()},0,intArrayOf(x,y,w,h))?:return null
+  val changes=target.mapIndexed{i,s->s.copy(x=placed[i][0],y=placed[i][1],w=placed[i][2],h=placed[i][3],page=page)}.associateBy{it.id}
+  return all.map{changes[it.id]?:it}
+ }
+ fun moveWidget(profile:String,id:String,x:Int,y:Int,w:Int,h:Int,page:Int):Boolean{
+  val next=moveLayout(profile,id,x,y,w,h,page)?:run{error="No room for that placement. Your layout is unchanged.";return false}
+  return save(profile,next)
+ }
  fun remove(profile:String,id:String){val all=slots(profile);val slot=all.firstOrNull{it.id==id}?:return;if(save(profile,all.filterNot{it.id==id}))undo=profile to slot}
  fun undoRemove(){val old=undo?:return;val all=slots(old.first);val slot=old.second;val r=if(WidgetRules.fits(slot.rect(),all.filter{it.page==slot.page}.map{it.rect()},-1))slot.rect()else WidgetRules.firstFree(slot.w,slot.h,all.filter{it.page==slot.page}.map{it.rect()});if(r!=null&&save(old.first,all+slot.copy(x=r[0],y=r[1])))undo=null}
  fun active(profile:String,id:String,index:Int){save(profile,slots(profile).map{if(it.id==id)it.copy(active=WidgetRules.active(index,it.items.size))else it})}
- fun note(profile:String,id:String,itemId:String,text:String){save(profile,slots(profile).map{if(it.id==id)it.copy(items=it.items.map{item->if(item.id==itemId)item.copy(config=text.take(2000))else item})else it})}
+ fun note(profile:String,id:String,itemId:String,text:String):Boolean{return save(profile,slots(profile).map{if(it.id==id)it.copy(items=it.items.map{item->if(item.id==itemId)item.copy(config=text.take(2000))else item})else it})}
  fun stack(profile:String,id:String,otherId:String):Boolean{
   val all=slots(profile);val a=all.firstOrNull{it.id==id}?:return false;val b=all.firstOrNull{it.id==otherId}?:return false
   if(id==otherId||!WidgetRules.compatible(a.w,a.h,b.w,b.h)||a.items.size+b.items.size>8)return false

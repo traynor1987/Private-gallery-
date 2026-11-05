@@ -1,9 +1,9 @@
 {
   "applicationId": "uk.co.traynor.novaos.preview",
-  "versionName": "0.6.1-preview",
-  "versionCode": 7,
+  "versionName": "0.7-preview",
+  "versionCode": 8,
   "branch": "preview/home2-nova-store",
-  "baseline": "554e30217d8497f6068f17c04caa96045395c954",
+  "baseline": "9c12f214bc4ade7e8c1983a91d8356151f25a8a6",
   "developmentCertificateSha256": "81cda5b72cb76940fa50972bc1c284b25e641b88814d2b9041c7111cb1d042d8",
   "catalogue": {
     "total": 90,
@@ -13,9 +13,9 @@
     "gameUnsupported": 1,
     "verifiedPwa": 0
   },
-  "hostVerification": "101 Java policy/backup/rollback assertions;10 Python cases;catalogue/icon/package boundary checks",
+  "hostVerification": "109 Java assertions;11 Python tests;90 catalogue/icon/package checks",
   "androidAssembly": "passed locally and in CI",
-  "androidRuntime": "API37 run42014786860:15/15 widget/media/contrast tests plus code6\u21927 upgrade passed, including Home/journal/widgets/stack/note preservation.14 unchanged existing browser/App Mode/Recents/Mind/Fold cases passed earlier in42011342852.",
+  "androidRuntime": "Pending21 focused polish/widget/media cases plus code7\u21928 upgrade",
   "physicalFold": "Cover/inner/landscape viewport bounds and screenshot checks passed; rotation/forced Activity recreation retained synthetic audio. Physical YouTube Music/genuine fold posture/PiP acceptance pending.",
   "handover": "preview/release/PRODUCTION-INTEGRATION-HANDOVER.md",
   "widgetTypes": [
@@ -28,9 +28,9 @@
   ],
   "videoSupport": "Explicit local files: native player, mini-player, opt-in PiP. Standard website fullscreen callback only; website PiP disabled.",
   "backup": "Strict layout-only version1 JSON; preview/confirm/cancel, rollback and durable recovery; sensitive payload excluded",
-  "sourceCommit": "9ff024f5dd00104a1d93bb37fa1646c898499e1e",
-  "apkSha256": "c78729054b1cda2b319d1ac63ebcfe760f2eb16013a538e820c3982c98d7409a",
-  "apkUrl": "https://github.com/traynor1987/Private-gallery-/releases/download/novaos-home2-store-preview-0.6.1/NovaOS-Home2-Store-Preview.apk",
+  "sourceCommit": null,
+  "apkSha256": null,
+  "apkUrl": null,
   "verificationReport": "preview/release/VERIFICATION-0.6.1.md",
   "mediaContinuity": {
     "novaHome": "synthetic advancing audio and retained document passed",
@@ -40,5 +40,5 @@
     "foldUnfold": "viewport resize/recreation passed; genuine hardware posture pending",
     "androidHome": "deferred/unverified; no Android background audio claim"
   },
-  "publication": "GitHub prerelease with raw APK; public bytes and stable development certificate independently verified"
+  "publication": "pending"
 }
