@@ -34,7 +34,7 @@ jobs:
    - name: Android 17 preview build tools
      run: |
       (yes || true) | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" 'cmdline-tools;22.0' 'platforms;android-37.1' 'build-tools;36.0.0' 'emulator'
-      cp -a "$ANDROID_HOME/cmdline-tools/22.0/." "$ANDROID_HOME/cmdline-tools/latest/"
+      sudo cp -a "$ANDROID_HOME/cmdline-tools/22.0/." "$ANDROID_HOME/cmdline-tools/latest/"
       test "$("$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --version)" = '22.0'
    - name: Build stable development signed preview
      run: |
