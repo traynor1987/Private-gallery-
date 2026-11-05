@@ -1,9 +1,9 @@
 {
   "applicationId": "uk.co.traynor.novaos.preview",
-  "versionName": "0.7-preview",
-  "versionCode": 8,
+  "versionName": "0.7.1-preview",
+  "versionCode": 9,
   "branch": "preview/home2-nova-store",
-  "baseline": "9c12f214bc4ade7e8c1983a91d8356151f25a8a6",
+  "baseline": "9a7b66b584b65d98cccbc5c80c1b70eb553db868",
   "developmentCertificateSha256": "81cda5b72cb76940fa50972bc1c284b25e641b88814d2b9041c7111cb1d042d8",
   "catalogue": {
     "total": 90,
@@ -13,10 +13,10 @@
     "gameUnsupported": 1,
     "verifiedPwa": 0
   },
-  "hostVerification": "111 Java assertions;11 Python tests;90 catalogue/icon/package checks",
+  "hostVerification": "118 Java assertions; 11 Python tests; 90 catalogue/icon/package checks",
   "androidAssembly": "passed locally and in CI",
-  "androidRuntime": "All21 distinct focused cases have passing evidence:17 unchanged UI/widget/polish cases in42023130870; final native-session control case and3 retained-audio cases passed in42026621706 (4/4), plus pinned code7\u21928 upgrade (1/1).",
-  "physicalFold": "Cover/inner/landscape viewport tests and panel screenshot review passed; rotation/recreation synthetic audio passed. Genuine hardware fold posture, page-edge touch dwell and YouTube-native-session acceptance pending.",
+  "androidRuntime": "31 distinct cases have passing evidence: initial run42035432194 passed30/31; diagnostic42037831595 isolated unreachable Done (1/2); final42039524262 passed13/13 relevant cases plus code8\u21929 in-place upgrade1/1. No failed assertion removed.",
+  "physicalFold": "Cover/inner/landscape emulated layouts and clock/widget separation passed; light/dark screenshots reviewed. Actual Samsung hinge posture, live WhatsApp linking and YouTube Music controls require owner acceptance.",
   "handover": "preview/release/PRODUCTION-INTEGRATION-HANDOVER.md",
   "widgetTypes": [
     "Clock & Date",
@@ -28,10 +28,10 @@
   ],
   "videoSupport": "Explicit local files: native player, mini-player, opt-in PiP. Standard website fullscreen callback only; website PiP disabled.",
   "backup": "Strict layout-only version1 JSON; preview/confirm/cancel, rollback and durable recovery; sensitive payload excluded",
-  "sourceCommit": "3de66dd289713f003c1e8f6a064f97071ffb1709",
-  "apkSha256": "05297a501b6236832b7a2b0731446c086a944f61c22ad35047461dcdcdd9830f",
-  "apkUrl": "https://github.com/traynor1987/Private-gallery-/releases/download/novaos-home2-store-preview-0.7/NovaOS-Home2-Store-Preview.apk",
-  "verificationReport": "preview/release/VERIFICATION-0.7.md",
+  "sourceCommit": "1b1f24c5d76c4791d2bf07280c2d60b6cc1afc7b",
+  "apkSha256": "1ebbe52cafb20c5509e743e707a9866d8220e1aaef5bc10c8cd92bf0671da05d",
+  "apkUrl": "https://github.com/traynor1987/Private-gallery-/releases/download/novaos-home2-store-preview-0.7.1/NovaOS-Home2-Store-Preview.apk",
+  "verificationReport": "preview/release/VERIFICATION-0.7.1.md",
   "mediaContinuity": {
     "novaHome": "synthetic advancing audio and retained document passed",
     "anotherInstalledApp": "passed synthetic fixture",
@@ -40,6 +40,15 @@
     "foldUnfold": "viewport resize/recreation passed; genuine hardware posture pending",
     "androidHome": "deferred/unverified; no Android background audio claim"
   },
-  "publication": "Raw GitHub prerelease APK published; independent public verification recorded in receipts/0.7",
-  "mediaControls": "Native calm/video controls; advertised API37 own-package session actions for unambiguous retained web sources. Sole-source ownership supports missing navigator.mediaSession. Multiple unknown/profile sources fall back safely to Return."
+  "publication": "Raw prerelease APK independently downloaded, package/API/cert/hash/alignment verified; receipts/0.7.1",
+  "mediaControls": "API37 package-local MediaSession discovery; actual advertised native controls only, genuine metadata/progress when provided. Native Pause/Next callbacks verified. Package-only sessions labelled NovaOS native media. Real YouTube Music publication/controls remain unverified; source-app fallback remains.",
+  "desktopSite": {
+    "scope": "preview profile + canonical website host",
+    "browserV1": true,
+    "appMode": true,
+    "publicWhatsAppProbe": "Root desktop endpoint loaded with login cues, no mobile fallback or page error; QR-like element not detected. No account linked.",
+    "authenticatedChats": "not tested",
+    "sessionPersistence": "synthetic document/sessionStorage and per-site preferences passed; authenticated WhatsApp persistence unverified",
+    "friendsMode": "No allowlist implementation in source; persisted unsupported compatibility guard conceals content when explicitly requested. Normal browsing is unfiltered."
+  }
 }

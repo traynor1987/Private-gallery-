@@ -1,0 +1,13 @@
+{
+  "runId": 42039524262,
+  "source": "1b1f24c5d76c4791d2bf07280c2d60b6cc1afc7b",
+  "focusedPassed": 13,
+  "upgradePassed": 1,
+  "upgradeFromCode": 8,
+  "upgradeToCode": 9,
+  "artifactSha256": "8ff2caeb5735d3e6065fc60818d12d5a27e62f797ac0d0a245fd6458dbc5b594",
+  "published": true,
+  "independentPublicApkVerified": true,
+  "tagCommit": "1b1f24c5d76c4791d2bf07280c2d60b6cc1afc7b",
+  "allDistinctCasesHavePassingEvidence": 31
+}
