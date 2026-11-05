@@ -66,7 +66,20 @@ class PolishAcceptanceTest {
     session=MediaSession(rule.activity,"Nova test fixture");sessionReady=true;session.setMetadata(MediaMetadata.Builder().putString(MediaMetadata.METADATA_KEY_TITLE,title).putString(MediaMetadata.METADATA_KEY_ARTIST,"Synthetic artist").build());session.setPlaybackState(state(PlaybackState.STATE_PLAYING));session.setCallback(object:MediaSession.Callback(){override fun onPause(){pauses++;session.setPlaybackState(state(PlaybackState.STATE_PAUSED))};override fun onSkipToNext(){next++}});session.isActive=true
     pool.mediaSessions.refresh(pool.tabs.toList(),"primary",true,rule.activity.mindAudio.sessionToken)
    }
-   rule.waitUntil(10000){rule.activity.browserPool.mediaSessions.source!=null};panel()
+   try{rule.waitUntil(10000){tab.mediaTitle==title}}catch(failure:Throwable){
+    val latch=java.util.concurrent.CountDownLatch(1);var probe=""
+    rule.runOnUiThread{tab.view.evaluateJavascript("JSON.stringify({ready:document.readyState,media:typeof navigator.mediaSession,title:navigator.mediaSession?.metadata?.title?.length})"){probe=it;latch.countDown()}}
+    latch.await(5,java.util.concurrent.TimeUnit.SECONDS)
+    throw AssertionError("Synthetic metadata readiness failed; stored=${tab.mediaTitle.length}, js=$probe",failure)
+   }
+   rule.runOnUiThread{
+    val p=rule.activity.browserPool
+    val controllers=rule.activity.getSystemService(android.media.session.MediaSessionManager::class.java).getActiveSessionsForPackage(rule.activity.packageName).map{android.media.session.MediaController(rule.activity,it)}
+    val facts=controllers.map{listOf(it.packageName,it.metadata?.getString(MediaMetadata.METADATA_KEY_TITLE)?.length,it.playbackState?.state,it.playbackState?.actions)}
+    p.mediaSessions.refresh(p.tabs.toList(),"primary",true,rule.activity.mindAudio.sessionToken)
+    assertNotNull("Synthetic own-session source missing; tabTitleLength=${tab.mediaTitle.length}, foreground=${p.foreground}, profiles=${p.tabs.map{it.profile}}, native=$facts",p.mediaSessions.source)
+   }
+   panel()
    rule.onNodeWithText("Synthetic artist").assertExists();rule.onNodeWithTag("session-play-pause").performClick();rule.waitUntil(5000){pauses==1}
    rule.onNodeWithContentDescription("Next media track").performClick();rule.waitUntil(5000){next==1}
    rule.onNodeWithContentDescription("Previous media track").assertIsNotEnabled()
