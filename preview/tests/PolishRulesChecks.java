@@ -8,6 +8,7 @@ public class PolishRulesChecks {
   if(moved==null||moved.get(0)[0]!=2||WidgetRules.overlap(moved.get(0),moved.get(1))||source.get(0)[0]!=0)throw new AssertionError("transactional collision relocation");
   if(PolishRules.relocate(source,0,new int[]{3,0,2,2})!=null)throw new AssertionError("invalid move rejected");
   if(PolishRules.uniqueSource("Track",List.of("Track","Track"))!=-1||PolishRules.uniqueSource("Track",List.of("Other","Track"))!=1||PolishRules.uniqueSource("",List.of(""))!=-1)throw new AssertionError("no guessed media ownership");
-  System.out.println("8 polish placement/media ownership assertions passed");
+  if(PolishRules.mediaOwner("Native track",List.of(""))!=0||PolishRules.mediaOwner("Native track",List.of("","Native track"))!=-1)throw new AssertionError("sole native source without JS metadata; mixed unknown sources fail closed");
+  System.out.println("10 polish placement/media ownership assertions passed");
  }
 }

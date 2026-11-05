@@ -27,7 +27,7 @@ class PreviewMediaSessions(private val context:Context){
    val selected=(if(running.isNotEmpty())running else eligible).singleOrNull()
    val matches=listOfNotNull(selected).mapNotNull{c->
     val meta=c.metadata?:return@mapNotNull null;val title=(meta.getString(MediaMetadata.METADATA_KEY_TITLE)?:meta.getString(MediaMetadata.METADATA_KEY_DISPLAY_TITLE)).orEmpty()
-    val index=PolishRules.uniqueSource(title,tabs.map{it.mediaTitle});if(index<0)return@mapNotNull null
+    val index=PolishRules.mediaOwner(title,tabs.map{it.mediaTitle});if(index<0)return@mapNotNull null
     val tab=tabs[index];if(tab.profile!=profile)return@mapNotNull null
     val playback=c.playbackState?:return@mapNotNull null
     if(playback.state !in listOf(PlaybackState.STATE_PLAYING,PlaybackState.STATE_PAUSED,PlaybackState.STATE_BUFFERING))return@mapNotNull null
