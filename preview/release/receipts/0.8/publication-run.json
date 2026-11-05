@@ -1,0 +1,20 @@
+{
+  "runId": 42062629235,
+  "publicationCommit": "e4b9de030a4bfbe01c4052c9bb7e168be0bc4877",
+  "apkBuildCommit": "999a780ad37f1f326f91f9312b6fadd066edc1a2",
+  "appAndBuildInputsIdentical": true,
+  "apkRebuilt": false,
+  "artifactSha256": "27f5917d48165fcf32d9a6a74307bb4e5fee83d1e572f4bf3a480da1dd1c05c1",
+  "result": "success",
+  "earlierPublicationFailures": [
+    {
+      "runId": 42060100115,
+      "reason": "GitHub POST HTTP502 after runtime passed"
+    },
+    {
+      "runId": 42062124302,
+      "reason": "GitHub HTTP403 for non-referenced build commit; resolved by tagging referenced metadata with identical app inputs"
+    }
+  ],
+  "publicDownloadIndependentlyVerified": true
+}

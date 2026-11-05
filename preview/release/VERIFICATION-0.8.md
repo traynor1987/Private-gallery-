@@ -1,0 +1,32 @@
+# Preview0.8 — local Chat Compatibility Inspector verification
+
+Version0.8-preview/code10, package uk.co.traynor.novaos.preview. Android17/API37 only. Development certificate SHA25681cda5b72cb76940fa50972bc1c284b25e641b88814d2b9041c7111cb1d042d8. APK build source999a780ad37f1f326f91f9312b6fadd066edc1a2. Prerelease tag/publication metadata e4b9de030a4bfbe01c4052c9bb7e168be0bc4877 has identical app/build inputs. No rebuild, production source modification, production merge or security approval.
+
+## Delivered capabilities
+
+- Optional inspector from the existing WhatsApp app Settings or Nova Chat Lite; exact HTTPS origin required. Start is explicit, three fixed read-only local samples, no automatic resume. Stop prevents further scheduling and discards in-flight callbacks. Leaving/backgrounding cancels inspection.
+- Detects a fixed conversation-container/row candidate, bounded row signatures, bucketed rendered-row counts, geometry indications of virtualisation, fixed unread structure and bounded open-shadow-root presence. No raw names, messages, IDs, attributes, HTML, images, cookies, tokens, storage or traffic collected. No clicks, scrolling, sending, deletion, read acknowledgements or account modifications.
+- Strict closed report schema and canonical reconstruction admit only explicit keys and fixed values. No page string can enter the exported report. Native report controls: View entire report before Copy, Copy disabled while running, Delete local report. No automatic upload, report logging, screenshot capture, arbitrary JS console, privileged bridge or remote selectors/executable updates.
+- Stable non-personal row identity remains UNKNOWN; scrolling/SPA behaviour and closed shadow roots are not established. Aggregate signature equality is not full DOM equivalence. Virtualisation is a geometry hint only. Row recognition never certifies filtering attachment or WORKING state.
+- Nova Chat Lite includes manual local approvals, remove/persist, optional Sanctuary entry and a persistent opaque compatibility guard. It is a safe launcher prototype; live approved-chat reading/sending, reliable WhatsApp filtering and groups remain unsupported. Display names never match conversations. Explicit normal/unfiltered return reuses the existing WebView and preserves the linked session. Unrelated Browser V1 tabs are not concealed. Preview approval storage is not production encrypted.
+- Root main-window policy protects current AND outgoing/target sensitive routes (Chat, Inspector, Mind, demonstration lock). Child animated disposal cannot clear another screen's secure flag. Recents placeholders remain generic. Friends guard may suppress native web-media attribution conservatively; no audio pausing or engine/session replacement.
+
+## Verification
+
+Host:160 production Java policy assertions,13 Python tests,90 catalogue/icon/package checks passed. Local app and instrumentation assembly passed; package/certificate/API37/16KB alignment/production exclusion verified. No permissions added. Inspection fixtures contain synthetic private-text/phone/email/token canaries; native assertions verify no canaries in output, no cookie getter/network/send/delete activity and unchanged DOM rows/sessionStorage/WebView instance. Invalid-origin, no-consent, cancellation, unknown structure, hostile result, report review/copy/delete/restart and Fold layouts passed.
+
+Initial API37 run42057444318 atc80ce507112fcd9666047aa1b6cef87e511ed19d:20/21 cases and upgrade1/1 passed. The sole failure was the secure-window assertion: the outgoing animated Chat page cleared FLAG_SECURE after Inspector mounted. Publication blocked; no assertion weakened. The fix centralised ownership with the same route transition; added transition regression covers Inspector→Chat→Home→Mind and secure flag state.
+
+Final API37 run42060100115 at999a780ad37f1f326f91f9312b6fadd066edc1a2:15/15 directly relevant cases and code9→10 upgrade1/1 passed. Existing20 passing cases are reused;22 distinct cases have passing evidence across both runs. Browser V1, ordinary Google OAuth policy, per-site desktop preference, protected Home clock and retained synthetic audio across Home/apps/Browser/rotation/recreation have passing evidence. Upgrade retained Home wallpaper/preferences/pages/folders/Dock, installed apps, widget stacks/notes and synthetic Mind journal; file sentinel survived. No real private WhatsApp account/messages were used.
+
+Cover904×2316, inner1840×2208 and landscape2316×904 atdensity420 passed native inspector/guard layout checks. No inspector screenshots captured. Actual physical hinge posture, existing linked-account upgrade and current live WhatsApp structural results require owner testing. Owner confirmed authenticated desktop WhatsApp before this update; development never accessed that session.
+
+## Publication and provenance
+
+The final runtime job failed only after tests, when GitHub release creation returned HTTP502. Publication-only recovery42062124302 then received HTTP403 because the older build SHA no longer had a branch/tag reference. Recovery42062629235 tagged the current referenced metadata commit e4b9de030a4bfbe01c4052c9bb7e168be0bc4877 after verifying empty app/build-input diff from999a780ad37f1f326f91f9312b6fadd066edc1a2. It reused the identical verified APK, ran no build/emulator/tests, and published successfully. Both SHAs are recorded in PUBLICATION-PROVENANCE.json and RELEASE-PUBLICATION.json. Original failure and passing runtime receipts are retained.
+
+Raw prerelease APK: https://github.com/traynor1987/Private-gallery-/releases/download/novaos-home2-store-preview-0.8/NovaOS-Home2-Store-Preview.apk
+
+SHA25698c8d08327f50810dc2568db51444d49523cffe7ca52261db13b1c0cff82c412;61,156,807bytes. Independent public download matched checksum, package/API37, original development certificate,16KB ZIP/ARM64 ELF alignment and publication asset metadata. Tag independently resolves toe4b9de030a4bfbe01c4052c9bb7e168be0bc4877. Production source diff is empty. Android Home background playback remains deferred/unverified.
+
+Owner workflow: CHAT-INSPECTOR-OWNER-GUIDE.md. Open existing WhatsApp → App settings & compatibility → Nova Chat Compatibility Inspector → Start → View entire report → Copy only if satisfied → voluntarily share only the reviewed sanitised report. Do not send passwords, verification codes, tokens or personal conversation screenshots. Production integration remains separately authorised; see PRODUCTION-INTEGRATION-HANDOVER.md.

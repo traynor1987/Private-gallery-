@@ -1,0 +1,11 @@
+{
+  "releaseUrl": "https://github.com/traynor1987/Private-gallery-/releases/tag/novaos-home2-store-preview-0.8",
+  "apkUrl": "https://github.com/traynor1987/Private-gallery-/releases/download/novaos-home2-store-preview-0.8/NovaOS-Home2-Store-Preview.apk",
+  "sourceCommit": "e4b9de030a4bfbe01c4052c9bb7e168be0bc4877",
+  "artifactSourceCommit": "999a780ad37f1f326f91f9312b6fadd066edc1a2",
+  "apkSha256": "98c8d08327f50810dc2568db51444d49523cffe7ca52261db13b1c0cff82c412",
+  "certificateSha256": "81cda5b72cb76940fa50972bc1c284b25e641b88814d2b9041c7111cb1d042d8",
+  "bytes": 61156807,
+  "prerelease": true,
+  "publicDownloadVerified": true
+}

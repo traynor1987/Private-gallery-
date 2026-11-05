@@ -1,0 +1,26 @@
+{
+  "id": 435429811,
+  "prerelease": true,
+  "tag_name": "novaos-home2-store-preview-0.8",
+  "target_commitish": "e4b9de030a4bfbe01c4052c9bb7e168be0bc4877",
+  "assets": [
+    {
+      "name": "APK-VERIFICATION.json",
+      "size": 911,
+      "digest": "sha256:e0bace61c8cbcdc698678ea67d521a498f3d8281fe7e38b20780d64b88c47641",
+      "browser_download_url": "https://github.com/traynor1987/Private-gallery-/releases/download/novaos-home2-store-preview-0.8/APK-VERIFICATION.json"
+    },
+    {
+      "name": "NovaOS-Home2-Store-Preview.apk",
+      "size": 61156807,
+      "digest": "sha256:98c8d08327f50810dc2568db51444d49523cffe7ca52261db13b1c0cff82c412",
+      "browser_download_url": "https://github.com/traynor1987/Private-gallery-/releases/download/novaos-home2-store-preview-0.8/NovaOS-Home2-Store-Preview.apk"
+    },
+    {
+      "name": "SHA256SUMS.txt",
+      "size": 97,
+      "digest": "sha256:b883f35737835f82bbfe737cb34bfb66782b4df3497dd58d1d4606dd5567ade5",
+      "browser_download_url": "https://github.com/traynor1987/Private-gallery-/releases/download/novaos-home2-store-preview-0.8/SHA256SUMS.txt"
+    }
+  ]
+}

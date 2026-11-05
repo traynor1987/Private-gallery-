@@ -1,9 +1,9 @@
 {
   "applicationId": "uk.co.traynor.novaos.preview",
-  "versionName": "0.7.1-preview",
-  "versionCode": 9,
+  "versionName": "0.8-preview",
+  "versionCode": 10,
   "branch": "preview/home2-nova-store",
-  "baseline": "9a7b66b584b65d98cccbc5c80c1b70eb553db868",
+  "baseline": "2f26b313f14d255dcd83d605eb6ad62f0f67a724",
   "developmentCertificateSha256": "81cda5b72cb76940fa50972bc1c284b25e641b88814d2b9041c7111cb1d042d8",
   "catalogue": {
     "total": 90,
@@ -13,10 +13,10 @@
     "gameUnsupported": 1,
     "verifiedPwa": 0
   },
-  "hostVerification": "118 Java assertions; 11 Python tests; 90 catalogue/icon/package checks",
+  "hostVerification": "160 Java policy assertions;13 Python tests;90 catalogue/icon/package checks",
   "androidAssembly": "passed locally and in CI",
-  "androidRuntime": "31 distinct cases have passing evidence: initial run42035432194 passed30/31; diagnostic42037831595 isolated unreachable Done (1/2); final42039524262 passed13/13 relevant cases plus code8\u21929 in-place upgrade1/1. No failed assertion removed.",
-  "physicalFold": "Cover/inner/landscape emulated layouts and clock/widget separation passed; light/dark screenshots reviewed. Actual Samsung hinge posture, live WhatsApp linking and YouTube Music controls require owner acceptance.",
+  "androidRuntime": "22 distinct cases have passing evidence: initial42057444318 passed20/21 plus upgrade; final42060100115 passed15/15 plus code9\u219210 upgrade1/1. Secure-window assertion retained and transition regression added. Publication-only42062629235 succeeded without rebuild/retest.",
+  "physicalFold": "Synthetic API37 cover904x2316, inner1840x2208 and landscape2316x904 layouts passed. No inspector screenshots taken. Actual Fold hinge/linked-account structural results require owner acceptance.",
   "handover": "preview/release/PRODUCTION-INTEGRATION-HANDOVER.md",
   "widgetTypes": [
     "Clock & Date",
@@ -28,10 +28,10 @@
   ],
   "videoSupport": "Explicit local files: native player, mini-player, opt-in PiP. Standard website fullscreen callback only; website PiP disabled.",
   "backup": "Strict layout-only version1 JSON; preview/confirm/cancel, rollback and durable recovery; sensitive payload excluded",
-  "sourceCommit": "1b1f24c5d76c4791d2bf07280c2d60b6cc1afc7b",
-  "apkSha256": "1ebbe52cafb20c5509e743e707a9866d8220e1aaef5bc10c8cd92bf0671da05d",
-  "apkUrl": "https://github.com/traynor1987/Private-gallery-/releases/download/novaos-home2-store-preview-0.7.1/NovaOS-Home2-Store-Preview.apk",
-  "verificationReport": "preview/release/VERIFICATION-0.7.1.md",
+  "sourceCommit": "999a780ad37f1f326f91f9312b6fadd066edc1a2",
+  "apkSha256": "98c8d08327f50810dc2568db51444d49523cffe7ca52261db13b1c0cff82c412",
+  "apkUrl": "https://github.com/traynor1987/Private-gallery-/releases/download/novaos-home2-store-preview-0.8/NovaOS-Home2-Store-Preview.apk",
+  "verificationReport": "preview/release/VERIFICATION-0.8.md",
   "mediaContinuity": {
     "novaHome": "synthetic advancing audio and retained document passed",
     "anotherInstalledApp": "passed synthetic fixture",
@@ -40,15 +40,30 @@
     "foldUnfold": "viewport resize/recreation passed; genuine hardware posture pending",
     "androidHome": "deferred/unverified; no Android background audio claim"
   },
-  "publication": "Raw prerelease APK independently downloaded, package/API/cert/hash/alignment verified; receipts/0.7.1",
-  "mediaControls": "API37 package-local MediaSession discovery; actual advertised native controls only, genuine metadata/progress when provided. Native Pause/Next callbacks verified. Package-only sessions labelled NovaOS native media. Real YouTube Music publication/controls remain unverified; source-app fallback remains.",
+  "publication": "Raw GitHub prerelease APK; public bytes/package/API/certificate/alignment independently verified. Metadata tag has identical app/build inputs to original verified APK source; no rebuild. Receipts/0.8.",
+  "mediaControls": "API37 package-local MediaSession discovery; actual advertised native controls only, genuine metadata/progress when provided. Native Pause/Next callbacks verified. Package-only sessions labelled NovaOS native media. Real YouTube Music publication/controls remain unverified; source-app fallback remains. While Friends guard is active, web media attribution is conservatively suppressed; playback itself is not paused.",
   "desktopSite": {
     "scope": "preview profile + canonical website host",
     "browserV1": true,
     "appMode": true,
     "publicWhatsAppProbe": "Root desktop endpoint loaded with login cues, no mobile fallback or page error; QR-like element not detected. No account linked.",
-    "authenticatedChats": "not tested",
+    "authenticatedChats": "owner confirmed working on code9 Fold; not accessed by development",
     "sessionPersistence": "synthetic document/sessionStorage and per-site preferences passed; authenticated WhatsApp persistence unverified",
-    "friendsMode": "No allowlist implementation in source; persisted unsupported compatibility guard conceals content when explicitly requested. Normal browsing is unfiltered."
+    "friendsMode": "Manual local approvals launcher prototype only; reliable live WhatsApp filtering unimplemented. Guard remains opaque; normal browsing requires explicit unfiltered exit. Inspector is separate and explicit."
+  },
+  "publicationCommit": "e4b9de030a4bfbe01c4052c9bb7e168be0bc4877",
+  "chatInspector": {
+    "version": "0.1",
+    "default": "off; explicit Start only",
+    "origin": "https://web.whatsapp.com only",
+    "sampling": "3 bounded read-only local samples; stop/dispose/background discard pending results; no automatic restart",
+    "reports": "closed canonical schema; fixed values/bucketed counts; full preview before Copy; Delete local report; no uploads",
+    "readsPrivatePageTextOrIdentifiers": false,
+    "screenshots": false,
+    "accountActions": false,
+    "remoteExecutableUpdates": false,
+    "identity": "unknown; no reliable filtering claim",
+    "limitations": "fixed structural selectors; virtualisation is a geometry hint; full DOM equivalence, scrolling, closed roots and SPA navigation not established",
+    "ownerGuide": "preview/release/CHAT-INSPECTOR-OWNER-GUIDE.md"
   }
 }
