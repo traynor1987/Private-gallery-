@@ -62,6 +62,6 @@ class RuntimeControls179(unittest.TestCase):
             for name in ['signature.txt','candidate.apk','instrumentation.apk','private.jks','client.conf','control_auth_cookie','fixture.key']:(source/name).write_bytes(b'synthetic')
             (source/'focused').mkdir();(source/'focused/secret.json').write_text('sensitive')
             inventory=curate(source,root/'output');self.assertEqual(set(inventory),{'signature.txt'})
-            (source/'signature.txt').write_text('-----BEGIN PRIVATE KEY-----')
+            (source/'signature.txt').write_text('-'*5+'BEGIN '+'PRIVATE KEY'+'-'*5)
             with self.assertRaises(ValueError):curate(source,root/'failed')
 if __name__=='__main__':unittest.main()

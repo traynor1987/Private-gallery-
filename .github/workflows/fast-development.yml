@@ -4,6 +4,7 @@ name: Private Gallery fast development
     branches:
     - main
     - release/**
+    - integration/novaos-1.7-home2
     - '!release/1.7.6.2-ui-browser-polish'
     - '!release/1.7.7-recently-deleted'
     paths:
@@ -205,7 +206,7 @@ jobs:
 
           app/build/reports/lint-results-debug.html'
         if-no-files-found: warn
-    if: github.ref != 'refs/heads/release/1.7.10-private-home' && github.ref != 'refs/heads/release/1.7.8-private-apps' && github.ref != 'refs/heads/release/1.7.9-evidence-locker' && (github.event_name == 'push' || github.event.pull_request.head.repo.fork == true) && !(github.event_name == 'push' && github.ref == 'refs/heads/release/1.7.6.2-ui-browser-polish' && contains(github.event.head_commit.message, '[focused1762]'))
+    if: github.ref != 'refs/heads/integration/novaos-1.7-home2' && github.ref != 'refs/heads/release/1.7.10-private-home' && github.ref != 'refs/heads/release/1.7.8-private-apps' && github.ref != 'refs/heads/release/1.7.9-evidence-locker' && (github.event_name == 'push' || github.event.pull_request.head.repo.fork == true) && !(github.event_name == 'push' && github.ref == 'refs/heads/release/1.7.6.2-ui-browser-polish' && contains(github.event.head_commit.message, '[focused1762]'))
 
   private-apps-checkpoint:
     if: github.event_name == 'push' && github.ref == 'refs/heads/release/1.7.8-private-apps'
@@ -546,5 +547,90 @@ jobs:
             app/build/home1710
             app/build/nova17102
             app/build/hidden-vpn1762
+            app/build/outputs/androidTest-results
+            app/build/outputs/connected_android_test_additional_output
+
+  home2-integration:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/integration/novaos-1.7-home2' && contains(github.event.head_commit.message, '[home2-runtime]')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - uses: actions/setup-java@v5
+        with: { distribution: temurin, java-version: '17' }
+      - uses: actions/cache/restore@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: privacy1751-${{ runner.os }}-${{ hashFiles('**/*.gradle*', 'gradle/libs.versions.toml', 'gradle/wrapper/gradle-wrapper.properties') }}
+          restore-keys: privacy1751-${{ runner.os }}-
+      - name: Install Android 17 tools
+        run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-37.1" "build-tools;36.0.0" "emulator"
+      - name: Build isolated test identity and run JVM checks
+        run: ./gradlew testDebugUnitTest assembleDebug assembleDebugAndroidTest -Pkotlin.incremental=false --no-daemon --console=plain
+      - name: Verify reused Home policies and encrypted adapter
+        run: bash scripts/check_home2_host.sh
+      - name: Verify browser engine preservation and isolated APK
+        run: |
+          git diff --exit-code 9efd19540a1d75efa1b30f4e23c9cbb096f93aff -- app/src/main/java/uk/co/traynor/privategallery/core/browser app/src/main/java/uk/co/traynor/privategallery/core/crypto app/src/main/java/uk/co/traynor/privategallery/core/vault
+          mkdir -p app/build/home2-evidence
+          git rev-parse HEAD > app/build/home2-evidence/source-sha.txt
+          apk=app/build/outputs/apk/debug/app-debug.apk
+          "$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging "$apk" > app/build/home2-evidence/package.txt
+          grep -F "package: name='uk.co.traynor.privategallery.hiddenprototype' versionCode='56' versionName='1.7.11-TEST-ONLY'" app/build/home2-evidence/package.txt
+          grep -F "sdkVersion:'37'" app/build/home2-evidence/package.txt
+          "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --print-certs "$apk" > app/build/home2-evidence/signature.txt
+          sha256sum "$apk" > app/build/home2-evidence/SHA256SUMS.txt
+      - name: Enable emulator acceleration
+        run: sudo chmod 666 /dev/kvm
+      - name: Focused Android 17 integration and privacy tests
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: '37.0'
+          target: google_atd
+          arch: x86_64
+          profile: pixel_2
+          cores: 4
+          ram-size: 4096M
+          heap-size: 512M
+          disk-size: 8G
+          disable-animations: true
+          emulator-options: -no-window -gpu software -no-snapshot -noaudio -no-boot-anim -feature -HardwareDecoder
+          script: |
+            test "$(adb shell getprop ro.build.version.sdk | tr -d '\r')" = 37
+            adb shell wm size 1200x1800
+            adb shell wm density 160
+            adb shell settings put secure immersive_mode_confirmations confirmed
+            ./gradlew connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class="$(python3 scripts/verify_home2_runtime.py --classes)" -Pkotlin.incremental=false --no-daemon --console=plain
+      - name: Validate every selected original Android report
+        run: python3 scripts/verify_home2_runtime.py app/build/outputs/androidTest-results/connected/debug > app/build/home2-evidence/runtime.json
+      - name: Publish isolated integration test build
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          tag="novaos-1.7.11-home2-test-${GITHUB_RUN_ID}"
+          cp app/build/outputs/apk/debug/app-debug.apk app/build/home2-evidence/NovaOS-1.7.11-Home2-TEST-ONLY.apk
+          (cd app/build/home2-evidence && sha256sum NovaOS-1.7.11-Home2-TEST-ONLY.apk > SHA256SUMS.txt)
+          cat > app/build/home2-evidence/RELEASE-NOTES.md <<EOFNOTES
+          NovaOS 1.7.11 Home 2.0 integration — NON-PRODUCTION TEST ONLY
+
+          Separate package uk.co.traynor.privategallery.hiddenprototype, development certificate, code56. Installs alongside production. Contains synthetic runtime-verified Home/Space integration. It cannot upgrade or access the production installation or its encrypted data. Do not uninstall or clear production NovaOS.
+
+          Source: $GITHUB_SHA. Home/Store/widgets/Quick Panel/Mind use captured encrypted Space storage. Existing Primary V1 engine and data-directory code preserved. Hidden networking disabled; Nova Chat Lite disabled Beta. Home backup pending. Real Fold posture, live accounts, production signing and original-key code54 upgrade remain unverified. This is not approval to ship a production update.
+          EOFNOTES
+          gh release create "$tag" --prerelease --target "$GITHUB_SHA" --title "NovaOS 1.7.11 Home 2.0 — TEST ONLY" --notes-file app/build/home2-evidence/RELEASE-NOTES.md app/build/home2-evidence/NovaOS-1.7.11-Home2-TEST-ONLY.apk app/build/home2-evidence/SHA256SUMS.txt app/build/home2-evidence/runtime.json app/build/home2-evidence/signature.txt
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: novaos-home2-integration-verification
+          path: |
+            app/build/home2-evidence
+            app/build/reports
+            app/build/test-results
             app/build/outputs/androidTest-results
             app/build/outputs/connected_android_test_additional_output

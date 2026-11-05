@@ -244,6 +244,9 @@ fun PhotoEditor(
         if (!active.get() || busy || source == null || preview == null || currentProvider == null) return
         val resolved = currentProvider.resolve(capability)
         if (resolved == null) { message = "This provider does not support this edit."; return }
+        if (vaultLabel == "Hidden Space" && resolved.processing != AiProcessing.ON_DEVICE && !uk.co.traynor.privategallery.core.hidden.HiddenRemotePolicy.available) {
+            message = uk.co.traynor.privategallery.core.hidden.HiddenRemotePolicy.message; return
+        }
         if (capability == AiCapability.COMBINE_PHOTOS && (referenceBytes == null || referencePreview == null)) { message = "Choose a second photo from this vault."; return }
         if (resolved.processing == AiProcessing.CLOUD && (!sessionConsent || (capability == AiCapability.COMBINE_PHOTOS && !combineConsent))) { showConsent = true; return }
         if (!resolved.ready) { message = resolved.availabilityLabel; return }
@@ -585,8 +588,10 @@ fun PhotoEditor(
                                     Row { TextButton(onClick = { strokes = strokes.dropLast(1) }, enabled = !busy && strokes.isNotEmpty()) { Text("Undo stroke") }; TextButton(onClick = { strokes = emptyList() }, enabled = !busy && strokes.isNotEmpty()) { Text("Clear selection") } }
                                 }
                                 if (capability == AiCapability.OUTPAINT) AspectChoices(aspect, { aspect = it }, !busy)
+                                val remoteAvailable = vaultLabel != "Hidden Space" || currentProvider.processing == AiProcessing.ON_DEVICE || uk.co.traynor.privategallery.core.hidden.HiddenRemotePolicy.available
+                                if (!remoteAvailable) Text(uk.co.traynor.privategallery.core.hidden.HiddenRemotePolicy.message, style = MaterialTheme.typography.bodySmall)
                                 if (!providerReady) Text(providerStatus ?: "Unavailable", style = MaterialTheme.typography.bodySmall)
-                                Button(onClick = { generate() }, modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp).heightIn(min = 48.dp), enabled = !busy && providerReady && source != null && preview != null && (capability != AiCapability.COMBINE_PHOTOS || (referenceBytes != null && referencePreview != null)) && (capability == AiCapability.OBJECT_REMOVAL || prompt.isNotBlank() || capability == AiCapability.BACKGROUND_REMOVE)) { Text("Generate") }
+                                Button(onClick = { generate() }, modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp).heightIn(min = 48.dp), enabled = remoteAvailable && !busy && providerReady && source != null && preview != null && (capability != AiCapability.COMBINE_PHOTOS || (referenceBytes != null && referencePreview != null)) && (capability == AiCapability.OBJECT_REMOVAL || prompt.isNotBlank() || capability == AiCapability.BACKGROUND_REMOVE)) { Text("Generate") }
                             }
                         }
                     }

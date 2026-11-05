@@ -45,6 +45,7 @@ internal class HiddenEditorAccess(
     } finally {bytes.fill(0)}
     suspend fun generate(request:GenerationRequest,onStage:(String)->Unit):VaultItem {
         checkCurrent()
+        HiddenRemotePolicy.requireAvailable()
         val job=currentCoroutineContext()[kotlinx.coroutines.Job]
         val cancelled={job?.isActive!=true || !isActive()}
         var token:ByteArray?=null
@@ -76,4 +77,11 @@ internal class HiddenEditorAccess(
         } finally {token?.fill(0);remote?.fill(0);clean?.fill(0)}
     }
     override fun close() {synchronized(gate) {closed=true}}
+}
+
+/** Offline Hidden edits remain available; remote generation and edits share one deny policy. */
+internal object HiddenRemotePolicy {
+    const val available = false
+    const val message = "Networking is unavailable in Hidden Space. Offline editing remains available."
+    fun requireAvailable() = check(available) { message }
 }

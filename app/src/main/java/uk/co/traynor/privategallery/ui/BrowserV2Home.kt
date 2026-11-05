@@ -293,6 +293,10 @@ internal fun BrowserV2Home(
     val latestScrollChrome by rememberUpdatedState(scrollChrome)
     val ui = remember { BrowserUiState() }
     val context = LocalContext.current
+    val novaActivity=context.playerActivity() as? uk.co.traynor.privategallery.MainActivity
+    val novaCovered=novaActivity?.primaryBrowserCoveredByNovaHome()==true
+    // Callback authority is read at dispatch, including the interval before Compose commits Home.
+    fun novaInteractionBlocked():Boolean = novaActivity?.let{!it.primarySessionRetainedForNova() || it.primaryBrowserCoveredByNovaHome()} ?: false
     var privateApps by remember { mutableStateOf<uk.co.traynor.privategallery.core.privateapps.PrivateAppsController?>(null) }
     var privateAppSettings by remember { mutableStateOf<Pair<uk.co.traynor.privategallery.core.privateapps.PrivateAppsController,String>?>(null) }
     var privateAppSwitcher by remember { mutableStateOf(false) }
@@ -328,7 +332,7 @@ internal fun BrowserV2Home(
         val tab=session.tabs.activeTab.id
         val url=session.tabs.activeTab.url
         val view=session.activeWebViewOrNull()
-        return {view!=null && session.mediaNetworkingAllowed() && session.permissionDocumentRevision()==document &&
+        return {!novaInteractionBlocked() && view!=null && session.mediaNetworkingAllowed() && session.permissionDocumentRevision()==document &&
             session.tabs.activeTab.id==tab && session.tabs.activeTab.url==url && session.permissionViewIsCurrent(tab,view)}
     }
     fun cancelUpload() {
@@ -540,7 +544,7 @@ internal fun BrowserV2Home(
             override fun onDownload(url: String, userAgent: String, contentDisposition: String, mimeType: String) {
                 // V2's acquisition adapter is intentionally supplied by the Activity; the UI never
                 // navigates or replaces the tab in response to a Vault import result.
-                if(ui.downloadBusy)return
+                if(novaInteractionBlocked() || ui.downloadBusy)return
                 val mime=mimeType.substringBefore(';').trim().lowercase()
                 if(!uk.co.traynor.privategallery.core.vault.VaultDocumentPolicy.acceptsDownload(mime)) {ui.message="Only complete images, videos, PDF, text and CSV documents can be saved.";return}
                 val documentCurrent=permissionFence()
@@ -560,7 +564,7 @@ internal fun BrowserV2Home(
                 latestSave(source) {ui.downloadBusy=false;ui.message=it}
             }
             override fun onVideoSaveRequested() {
-                if (ui.saveBusy) return
+                if (novaInteractionBlocked() || ui.saveBusy) return
                 session.requestSaveCandidate { candidate ->
                     ui.mediaCandidate = candidate
                     if (candidate?.kind in setOf(MediaSaveKind.DIRECT, MediaSaveKind.STREAM)) ui.saveVideoDialog = true
@@ -571,19 +575,21 @@ internal fun BrowserV2Home(
                 }
             }
             override fun onImageLongPress(resourceUrl: String?) {
+                if(novaInteractionBlocked())return
                 if (resourceUrl != null && BrowserNavigationPolicy.isWebUrl(resourceUrl)) ui.pendingImageResource = resourceUrl
                 else saveViewportScreenshot()
             }
-            override fun onExternalNavigation(value: String) { ui.pendingExternalNavigation = value }
+            override fun onExternalNavigation(value: String) { if(!novaInteractionBlocked())ui.pendingExternalNavigation = value }
             override fun onHistoryVisit(title: String, url: String) = onHistoryVisited(title, url)
             override fun onFullscreen(view: View, callback: WebChromeClient.CustomViewCallback) {
-                if (latestConnectionBlocked) { callback.onCustomViewHidden(); return }
+                if (novaInteractionBlocked() || latestConnectionBlocked) { callback.onCustomViewHidden(); return }
                 ui.webVideoView = false
                 ui.fullscreen = view to callback
                 latestFullscreenChanged(true)
             }
             override fun onExitFullscreen() { ui.fullscreen = null; latestFullscreenChanged(false) }
             override fun onPermissionRequest(request:PermissionRequest) {
+                if(novaInteractionBlocked()){request.deny();return}
                 if(capabilityRequests[request]?.let {it===ui.pendingPermission}==true)return
                 ui.pendingPermission?.decision?.cancel()
                 val nativeOrigin=request.origin.toString()
@@ -615,6 +621,7 @@ internal fun BrowserV2Home(
                 capabilityRequests.remove(request)?.decision?.cancel()
             }
             override fun onGeolocationRequest(origin:String,callback:android.webkit.GeolocationPermissions.Callback) {
+                if(novaInteractionBlocked()){callback.invoke(origin,false,false);return}
                 ui.pendingGeolocation?.decision?.cancel()
                 val label=originLabel(origin)
                 if(label==null){callback.invoke(origin,false,false);return}
@@ -631,6 +638,7 @@ internal fun BrowserV2Home(
                 ui.pendingGeolocation=handle
             }
             override fun onShowFileChooser(callback: ValueCallback<Array<android.net.Uri>>, params: WebChromeClient.FileChooserParams): Boolean {
+                if(novaInteractionBlocked()){callback.onReceiveValue(null);return true}
                 // Invalidate any older asynchronous Vault query before accepting a new request.
                 cancelUpload()
                 val requestedMode=params.mode
@@ -683,12 +691,31 @@ internal fun BrowserV2Home(
             ui.pendingPermission = null
             cancelUpload()
             ui.pendingGeolocation = null
-            session.pauseForBackground()
+            session.scriptDialog?.let {session.resolveScriptDialog(it,null)}
+            if(novaActivity?.primarySessionRetainedForNova()!=true)session.pauseForBackground()
             session.bindListener(uk.co.traynor.privategallery.core.browser.v2.NoopBrowserV2Listener)
         }
     }
 
-    ui.internalMedia?.let { media ->
+    LaunchedEffect(novaCovered,session.scriptDialog) {
+        if(novaCovered) {
+            // Home owns interaction while the same native WebView continues playing underneath.
+            screenshotGeneration.incrementAndGet();screenshotReview=null
+            cancelWebsitePermissions();cancelUpload()
+            session.scriptDialog?.let {session.resolveScriptDialog(it,null)}
+            session.exitFullscreen();ui.fullscreen=null;ui.webVideoView=false;ui.internalMedia=null
+            latestFullscreenChanged(false)
+            privateApps=null;privateAppSettings=null;privateAppSwitcher=false;currentAppWebsite=null
+            ui.overflow=false;ui.tabSwitcher=false;ui.settingsOpen=false;ui.bookmarksOpen=false;ui.historyOpen=false
+            ui.findOpen=false;ui.diagnosticsOpen=false;ui.message=null;ui.pendingExternalNavigation=null
+            ui.pendingImageResource=null;ui.pendingScreenshotFallback=false;ui.pendingScreenshotCapture=null
+            ui.saveCancelled.set(true);ui.saveBusy=false;ui.saveVideoDialog=false
+            ui.downloadCancelled.set(true);ui.downloadBusy=false
+            focusManager.clearFocus(force=true)
+        }
+    }
+
+    ui.internalMedia?.takeUnless {novaCovered}?.let { media ->
         BrowserInternalMediaDialog(media,session::mediaNetworkingAllowed,
             onClose={ui.internalMedia=null},
             onReady={session.pauseActiveMedia();session.recordMediaPath("MEDIA3_DIRECT")},
@@ -747,15 +774,15 @@ internal fun BrowserV2Home(
     LaunchedEffect(homeActivity?.homePrivateAppsRequested) {
         if(homeActivity?.homePrivateAppsRequested==true){homeActivity.homePrivateAppsRequested=false;openPrivateApps()}
     }
-    BackHandler(enabled = (activePrivateApp!=null || onOpenGallery != null) && !ui.addressFocused && !active.canGoBack && ui.fullscreen == null && !ui.webVideoView && ui.internalMedia == null) { if(activePrivateApp!=null)openPrivateApps() else (context as? uk.co.traynor.privategallery.MainActivity)?.returnPrivateHome() ?: onOpenGallery?.invoke() }
-    BackHandler(enabled = ui.addressFocused) { focusManager.clearFocus(force = true) }
-    BackHandler(enabled = ui.webVideoView) { ui.webVideoView = false; latestFullscreenChanged(false) }
-    BackHandler(enabled = ui.fullscreen != null) {
+    BackHandler(enabled = !novaCovered && (activePrivateApp!=null || onOpenGallery != null) && !ui.addressFocused && !active.canGoBack && ui.fullscreen == null && !ui.webVideoView && ui.internalMedia == null) { if(activePrivateApp!=null)openPrivateApps() else (context as? uk.co.traynor.privategallery.MainActivity)?.returnPrivateHome() ?: onOpenGallery?.invoke() }
+    BackHandler(enabled = !novaCovered && ui.addressFocused) { focusManager.clearFocus(force = true) }
+    BackHandler(enabled = !novaCovered && ui.webVideoView) { ui.webVideoView = false; latestFullscreenChanged(false) }
+    BackHandler(enabled = !novaCovered && ui.fullscreen != null) {
         ui.fullscreen?.second?.onCustomViewHidden()
         ui.fullscreen = null
         latestFullscreenChanged(false)
     }
-    BackHandler(enabled = ui.fullscreen == null && !ui.webVideoView && ui.internalMedia == null && !ui.addressFocused && active.canGoBack) { session.goBackActive() }
+    BackHandler(enabled = !novaCovered && ui.fullscreen == null && !ui.webVideoView && ui.internalMedia == null && !ui.addressFocused && active.canGoBack) { session.goBackActive() }
 
     // Obtain the Android view after the listener is bound, but never let a provider failure abort
     // the surrounding Compose tree. The V2 chrome is the useful recovery surface.
@@ -765,6 +792,7 @@ internal fun BrowserV2Home(
     }
     SideEffect { session.recordAcceptanceUiEvent("BROWSER_V2_COMPOSED") }
 
+    if(!novaCovered) {
     privateApps?.let {controller ->PrivateAppsLibrary(controller,{if(privateApps===controller){privateApps=null;privateAppEditId=null;currentAppWebsite=null;if(controller.isCurrent())session.activeWebViewOrNull()?.onResume()}},privateAppEditId,session::updatePrivateApp,session::removePrivateApp,initialUrl=currentAppWebsite?.first,initialName=currentAppWebsite?.second,onAppSettings={id->if(controller.isCurrent())privateAppSettings=controller to id},onRootExit={(context as? uk.co.traynor.privategallery.MainActivity)?.finishHomeFeature(uk.co.traynor.privategallery.core.home.HomeLayout.Shortcut.PRIVATE_APPS)})}
     privateAppSettings?.let { (controller,id) ->
         PrivateAppSettings(controller,id,session::updatePrivateApp,{ui.overflow=true},{privateAppSettings=null},onEdit={privateAppSettings=null;privateAppEditId=id;openPrivateApps()},onRemoved=session::removePrivateApp)
@@ -775,6 +803,7 @@ internal fun BrowserV2Home(
             if(saved!=null)(context as? uk.co.traynor.privategallery.MainActivity)?.privateAppsController()?.open(saved.id()) {session.select(tabId)}
         },::openPrivateApps,{privateAppSwitcher=false},onCloseSession={cancelUpload();session.close(it)})
 
+    }
     val chromeSecurity=novaSecurityActions()
     if(privateApps==null && privateAppSettings==null)Box(
         modifier = modifier.fillMaxSize()
@@ -863,7 +892,13 @@ internal fun BrowserV2Home(
                                 session.onActiveWebViewHostCreated(activeWebView)
                                 activeWebView
                             },
-                            update = { session.onActiveWebViewUpdated(it) },
+                            update = { view ->
+                                view.importantForAccessibility=if(novaCovered)View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS else View.IMPORTANT_FOR_ACCESSIBILITY_AUTO
+                                view.isFocusable=!novaCovered;view.isFocusableInTouchMode=!novaCovered
+                                view.descendantFocusability=if(novaCovered)android.view.ViewGroup.FOCUS_BLOCK_DESCENDANTS else android.view.ViewGroup.FOCUS_AFTER_DESCENDANTS
+                                if(novaCovered)view.clearFocus()
+                                session.onActiveWebViewUpdated(view)
+                            },
                             // Before its first frame WebView fills the canvas with its background.
                             // AndroidView does not clip by default: constrain drawing, not geometry.
                             modifier = Modifier.fillMaxSize().clipToBounds().onGloballyPositioned { coordinates ->
@@ -906,6 +941,7 @@ internal fun BrowserV2Home(
                 Icon(Icons.Default.FileDownload, "Save video to Vault", tint = Color.White)
             }
         }
+        if(!novaCovered) {
         if(ui.downloadBusy) androidx.compose.material3.AlertDialog(
             onDismissRequest={ui.downloadCancelled.set(true);ui.downloadBusy=false},
             title={Text("Saving to Vault")},
@@ -1154,6 +1190,7 @@ internal fun BrowserV2Home(
                         if (ui.mediaCandidate?.kind in setOf(MediaSaveKind.DIRECT, MediaSaveKind.STREAM)) ui.saveVideoDialog = true
                     }
                 }
+        }
     }
 }
 

@@ -59,7 +59,7 @@ class PrivateAppDiscoveryTest {
    PrivateAppDiscovery.Resource((if(url==page)"<link rel='manifest' href='/manifest.json?x=1&amp;y=2'>" else """{"name":"App","start_url":"/app/home","scope":"/app/","display":"minimal-ui"}""").toByteArray(),if(url==page)"text/html" else "application/manifest+json")
   },{""})
   assertEquals("https://example.test/app/home",app.startUrl());assertEquals("minimal-ui",app.display())
-  assertTrue(app.appStyle());assertFalse(app.addressBar());assertTrue(app.discoveryReport().contains("inside Private Gallery"))
+  assertTrue(app.appStyle());assertFalse(app.addressBar());assertTrue(app.discoveryReport().contains("inside NovaOS"))
  }
  @Test fun website_fallback_explains_manifest_failure_without_claiming_installation() {
   val app=PrivateAppDiscovery.discover(page,false,{true},{PrivateAppDiscovery.Resource("<html>No manifest</html>".toByteArray(),"text/html")},{""})
