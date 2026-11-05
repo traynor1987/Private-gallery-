@@ -1,0 +1,34 @@
+{
+  "status": "ready",
+  "system_server_pid": "622",
+  "observations": [
+    {
+      "boot": "1",
+      "pid": "622",
+      "package": "package:/system/framework/framework-res.apk",
+      "healthy": true,
+      "elapsed": 0.17
+    },
+    {
+      "boot": "1",
+      "pid": "622",
+      "package": "package:/system/framework/framework-res.apk",
+      "healthy": true,
+      "elapsed": 5.379
+    },
+    {
+      "boot": "1",
+      "pid": "622",
+      "package": "package:/system/framework/framework-res.apk",
+      "healthy": true,
+      "elapsed": 10.642
+    },
+    {
+      "boot": "1",
+      "pid": "622",
+      "package": "package:/system/framework/framework-res.apk",
+      "healthy": true,
+      "elapsed": 15.733
+    }
+  ]
+}

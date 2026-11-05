@@ -70,3 +70,11 @@ The owner confirmed authenticated WhatsApp on the Fold; the development environm
 - Production signing/upgrade/authentication review remains separate. Primary V1 production browser, Hidden VPN/Tor and outstanding production VPN teardown blockers are untouched. No production merge or security approval.
 
 Owner workflow and limitations: CHAT-INSPECTOR-OWNER-GUIDE.md. Development must receive only a report the owner has reviewed and voluntarily copied, never passwords, verification codes, cookies, tokens or personal conversation screenshots.
+
+## Preview0.9 — Nova Chat Lite1.0 native Favourites
+
+Feature source: ff3f7683d16276a134183d4d2812354d89ede52f. FavouritesController.kt owns preview-scoped checking jobs/epochs; FavouritesRules.java owns closed native state/reveal decisions; assets/chat_favourites_v10.js implements a bundled exact-origin filter adapter. PreviewBrowser.kt retains the existing session and owns concealment/explicit normal exit; ChatLite.kt is settings/Sanctuary integration; PreviewUi.kt selects the retained source and protects sensitive transitions. No external dependencies, remote executable updates, unrestricted bridge or new authentication system.
+
+This replaces the unsupported launcher contract with verified native-filter automation on supported synthetic markup. It is not stable conversation identification or allowlist isolation. The owner uses WhatsApp's own Favourites; existing manual notes remain stored without migration or matching. Actual linked-account markup compatibility must be accepted on-device. Other chats can remain accessible through search, notifications, already-open chats and navigation. Do not promote this convenience feature to a production access-control boundary.
+
+Production needs authenticated Space-owned preferences/session jobs, revocation on lock/Panic, isolated browser contexts, secure Recents and separately verified concealment across process death/navigation. Never migrate preview cookies/tokens/credentials or plaintext personal notes. Preserve production Browser V1 and original signing/upgrade requirements. Hidden VPN/Tor and existing teardown security blockers remain excluded. No production merge authorised.

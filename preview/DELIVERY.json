@@ -1,9 +1,9 @@
 {
   "applicationId": "uk.co.traynor.novaos.preview",
-  "versionName": "0.8-preview",
-  "versionCode": 10,
+  "versionName": "0.9-preview",
+  "versionCode": 11,
   "branch": "preview/home2-nova-store",
-  "baseline": "2f26b313f14d255dcd83d605eb6ad62f0f67a724",
+  "baseline": "500509471d9a5f14723b49c40db0ab3fedcc8512",
   "developmentCertificateSha256": "81cda5b72cb76940fa50972bc1c284b25e641b88814d2b9041c7111cb1d042d8",
   "catalogue": {
     "total": 90,
@@ -13,10 +13,10 @@
     "gameUnsupported": 1,
     "verifiedPwa": 0
   },
-  "hostVerification": "160 Java policy assertions;13 Python tests;90 catalogue/icon/package checks",
+  "hostVerification": "173 Java policy assertions;13 Python tests;90 catalogue/icon/package checks",
   "androidAssembly": "passed locally and in CI",
-  "androidRuntime": "22 distinct cases have passing evidence: initial42057444318 passed20/21 plus upgrade; final42060100115 passed15/15 plus code9\u219210 upgrade1/1. Secure-window assertion retained and transition regression added. Publication-only42062629235 succeeded without rebuild/retest.",
-  "physicalFold": "Synthetic API37 cover904x2316, inner1840x2208 and landscape2316x904 layouts passed. No inspector screenshots taken. Actual Fold hinge/linked-account structural results require owner acceptance.",
+  "androidRuntime": "42099217228:21/21 focused API37 cases plus code10-to11 upgrade1/1 passed; first run, no retries",
+  "physicalFold": "API37 synthetic cover904x2316, inner1840x2208 and landscape2316x904 plus Activity recreation passed. Real hinge posture and live linked WhatsApp Favourites adapter require owner acceptance.",
   "handover": "preview/release/PRODUCTION-INTEGRATION-HANDOVER.md",
   "widgetTypes": [
     "Clock & Date",
@@ -28,10 +28,10 @@
   ],
   "videoSupport": "Explicit local files: native player, mini-player, opt-in PiP. Standard website fullscreen callback only; website PiP disabled.",
   "backup": "Strict layout-only version1 JSON; preview/confirm/cancel, rollback and durable recovery; sensitive payload excluded",
-  "sourceCommit": "999a780ad37f1f326f91f9312b6fadd066edc1a2",
-  "apkSha256": "98c8d08327f50810dc2568db51444d49523cffe7ca52261db13b1c0cff82c412",
-  "apkUrl": "https://github.com/traynor1987/Private-gallery-/releases/download/novaos-home2-store-preview-0.8/NovaOS-Home2-Store-Preview.apk",
-  "verificationReport": "preview/release/VERIFICATION-0.8.md",
+  "sourceCommit": "ff3f7683d16276a134183d4d2812354d89ede52f",
+  "apkSha256": "523bd764ba861798a28f59c1a41e6b088fe6cdbe060faabae533579a836652ad",
+  "apkUrl": "https://github.com/traynor1987/Private-gallery-/releases/download/novaos-home2-store-preview-0.9/NovaOS-Home2-Store-Preview.apk",
+  "verificationReport": "preview/release/VERIFICATION-0.9.md",
   "mediaContinuity": {
     "novaHome": "synthetic advancing audio and retained document passed",
     "anotherInstalledApp": "passed synthetic fixture",
@@ -40,18 +40,18 @@
     "foldUnfold": "viewport resize/recreation passed; genuine hardware posture pending",
     "androidHome": "deferred/unverified; no Android background audio claim"
   },
-  "publication": "Raw GitHub prerelease APK; public bytes/package/API/certificate/alignment independently verified. Metadata tag has identical app/build inputs to original verified APK source; no rebuild. Receipts/0.8.",
+  "publication": "Raw GitHub prerelease APK; independently downloaded and verified exact bytes, package/API, stable certificate and alignment. Tag and APK source are the same commit. Receipts/0.9.",
   "mediaControls": "API37 package-local MediaSession discovery; actual advertised native controls only, genuine metadata/progress when provided. Native Pause/Next callbacks verified. Package-only sessions labelled NovaOS native media. Real YouTube Music publication/controls remain unverified; source-app fallback remains. While Friends guard is active, web media attribution is conservatively suppressed; playback itself is not paused.",
   "desktopSite": {
     "scope": "preview profile + canonical website host",
     "browserV1": true,
     "appMode": true,
     "publicWhatsAppProbe": "Root desktop endpoint loaded with login cues, no mobile fallback or page error; QR-like element not detected. No account linked.",
-    "authenticatedChats": "owner confirmed working on code9 Fold; not accessed by development",
-    "sessionPersistence": "synthetic document/sessionStorage and per-site preferences passed; authenticated WhatsApp persistence unverified",
-    "friendsMode": "Manual local approvals launcher prototype only; reliable live WhatsApp filtering unimplemented. Guard remains opaque; normal browsing requires explicit unfiltered exit. Inspector is separate and explicit."
+    "authenticatedChats": "owner confirmed desktop authenticated WhatsApp and native Favourites; development did not access account",
+    "sessionPersistence": "synthetic same-WebView/sessionStorage and code10-to11 data retention passed; owner confirmed retained native Favourites before this update",
+    "friendsMode": "Nova Chat Lite1.0 automates native Favourites on supported English semantic button/tab and explicit ARIA state; verified activation/reload/lifecycle/error fixtures. No conversation allowlist or security isolation; live adapter markup pending owner acceptance."
   },
-  "publicationCommit": "e4b9de030a4bfbe01c4052c9bb7e168be0bc4877",
+  "publicationCommit": "ff3f7683d16276a134183d4d2812354d89ede52f",
   "chatInspector": {
     "version": "0.1",
     "default": "off; explicit Start only",
@@ -65,5 +65,23 @@
     "identity": "unknown; no reliable filtering claim",
     "limitations": "fixed structural selectors; virtualisation is a geometry hint; full DOM equivalence, scrolling, closed roots and SPA navigation not established",
     "ownerGuide": "preview/release/CHAT-INSPECTOR-OWNER-GUIDE.md"
+  },
+  "chatLite": {
+    "version": "1.0",
+    "launcher": "Nova Chat \u2014 Friends Mode",
+    "mechanism": "native WhatsApp Favourites; no account protocol or private message access",
+    "states": [
+      "LOGIN_REQUIRED",
+      "CHECKING",
+      "FAVOURITES_ACTIVE",
+      "FILTER_UNAVAILABLE",
+      "COMPATIBILITY_ERROR"
+    ],
+    "reveal": "current supported document and explicit Favourites selected/All unselected, no conflicting peers; click alone never sufficient",
+    "restore": "reload/navigation/reopening/resume/supported configuration; native and document-local covers during checking; no repeated click if already selected",
+    "normalExit": "explicit confirmation; same retained page/session; adapter removed",
+    "sanctuary": "optional existing preference opens the retained WhatsApp in Friends Mode; leaving does not switch All",
+    "limitations": "Convenience filter only; already-open chats/search/notifications/filter switching/navigation can expose other conversations. English supported markup only. Legacy generic app settings warning still refers to old unsupported allowlist. No absolute concealment/security boundary.",
+    "ownerGuide": "preview/release/CHAT-LITE-1.0-OWNER-GUIDE.md"
   }
 }
