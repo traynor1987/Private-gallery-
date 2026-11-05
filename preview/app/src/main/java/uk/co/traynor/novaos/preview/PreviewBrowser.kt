@@ -35,6 +35,7 @@ class PreviewApplication:Application(){
 data class PreviewFullscreen(val tabId:String,val view:android.view.View,val callback:WebChromeClient.CustomViewCallback)
 data class PreviewExternalRequest(val tabId:String,val profile:String,val url:String)
 class PreviewTab(val id:String,val profile:String,val app:StoreEntry,val wrapper:MutableContextWrapper,val view:WebView){
+ var friendsConcealed by mutableStateOf(false)
  var desktopApplied by mutableStateOf(false)
  var resumed=true
  var navigationRevision=0
@@ -117,8 +118,21 @@ class PreviewBrowserModel(application:Application):AndroidViewModel(application)
   tab.error="This Google OAuth authorization request requires a supported external browser. Its cookies remain in that browser; they cannot be copied into this preview."
   externalRequest=PreviewExternalRequest(tab.id,tab.profile,url)
  }
- fun friendsBlocked(tab:PreviewTab)=library.flag("friends-required:${tab.profile}:${tab.app.id}")
- fun requireFriends(tab:PreviewTab,required:Boolean){if(required)closeFullscreen();library.setFlag("friends-required:${tab.profile}:${tab.app.id}",required);if(required)mediaSessions.clear()}
+ private fun browserFriendsRequested(profile:String)=library.flag("friends-site:$profile:web.whatsapp.com")||library.flag("friends-required:$profile:browser-v1")
+ fun friendsBlocked(tab:PreviewTab)=if(tab.app.id=="browser-v1")tab.friendsConcealed||(browserFriendsRequested(tab.profile)&&(ChatInspectorRules.origin(tab.url)||ChatInspectorRules.origin(tab.app.url)))else library.flag("friends-required:${tab.profile}:${tab.app.id}")
+ private fun concealIfRequired(tab:PreviewTab,url:String=tab.url){
+  if(tab.app.id=="browser-v1"&&browserFriendsRequested(tab.profile)&&ChatInspectorRules.origin(url))tab.friendsConcealed=true
+  if(friendsBlocked(tab)){tab.view.visibility=android.view.View.INVISIBLE;tab.view.importantForAccessibility=android.view.View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS}
+ }
+ fun requireFriends(tab:PreviewTab,required:Boolean){
+  if(required)closeFullscreen()
+  val affected=if(tab.app.id=="browser-v1"){
+   library.setFlag("friends-site:${tab.profile}:web.whatsapp.com",required);library.setFlag("friends-required:${tab.profile}:browser-v1",false)
+   tabs.filter{it.profile==tab.profile&&it.app.id=="browser-v1"&&(it.id==tab.id||it.friendsConcealed||ChatInspectorRules.origin(it.url)||ChatInspectorRules.origin(it.app.url))}
+  }else {library.setFlag("friends-required:${tab.profile}:${tab.app.id}",required);tabs.filter{it.profile==tab.profile&&it.app.id==tab.app.id}}
+  affected.forEach{if(it.app.id=="browser-v1")it.friendsConcealed=required;it.view.visibility=if(required)android.view.View.INVISIBLE else android.view.View.VISIBLE;it.view.importantForAccessibility=if(required)android.view.View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS else android.view.View.IMPORTANT_FOR_ACCESSIBILITY_AUTO}
+  if(required)mediaSessions.clear()
+ }
  fun desktopSite(tab:PreviewTab,url:String=tab.url)=CorrectionRules.desktopAllowed(url)&&library.flag("desktop:${tab.profile}:${CorrectionRules.site(url)}")
  fun applyDesktop(tab:PreviewTab,url:String){
   val enabled=desktopSite(tab,url)
@@ -138,8 +152,8 @@ class PreviewBrowserModel(application:Application):AndroidViewModel(application)
   if(desktopSite(tab)!=enabled){tab.error="Unable to save this website preference.";return}
   reloadDesktop(tab)
  }
- fun back(tab:PreviewTab){val list=tab.view.copyBackForwardList();if(list.currentIndex>0){applyDesktop(tab,list.getItemAtIndex(list.currentIndex-1).url);tab.view.goBack()}}
- fun forward(tab:PreviewTab){val list=tab.view.copyBackForwardList();if(list.currentIndex<list.size-1){applyDesktop(tab,list.getItemAtIndex(list.currentIndex+1).url);tab.view.goForward()}}
+ fun back(tab:PreviewTab){val list=tab.view.copyBackForwardList();if(list.currentIndex>0){concealIfRequired(tab,list.getItemAtIndex(list.currentIndex-1).url);applyDesktop(tab,list.getItemAtIndex(list.currentIndex-1).url);tab.view.goBack()}}
+ fun forward(tab:PreviewTab){val list=tab.view.copyBackForwardList();if(list.currentIndex<list.size-1){concealIfRequired(tab,list.getItemAtIndex(list.currentIndex+1).url);applyDesktop(tab,list.getItemAtIndex(list.currentIndex+1).url);tab.view.goForward()}}
  fun reloadDesktop(tab:PreviewTab){
   val url=if(desktopSite(tab)&&CorrectionRules.site(tab.url)=="web.whatsapp.com"&&Uri.parse(tab.url).path.orEmpty().startsWith("/mobile"))"https://web.whatsapp.com/"else tab.url
   applyDesktop(tab,url)
@@ -147,12 +161,14 @@ class PreviewBrowserModel(application:Application):AndroidViewModel(application)
  }
  fun navigate(tab:PreviewTab,url:String){
   val safe=PreviewRules.https(url)
+  concealIfRequired(tab,safe)
   if(PreviewAppPolicy.googleOAuthAuthorization(safe))requestExternal(tab,safe)else {applyDesktop(tab,safe);tab.view.loadUrl(safe)}
  }
  /** Settings mirror secureBrowserWebView/Primary V1, without VPN, diagnostics,
   * vault downloads, credentials, JS bridges, altered UA or cookie migration. */
  private fun configure(tab:PreviewTab){
   val view=tab.view
+  concealIfRequired(tab,tab.app.url)
   view.layoutParams=ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,ViewGroup.LayoutParams.MATCH_PARENT)
   view.isFocusable=true;view.isFocusableInTouchMode=true
   view.settings.apply{
@@ -171,11 +187,11 @@ class PreviewBrowserModel(application:Application):AndroidViewModel(application)
    override fun shouldOverrideUrlLoading(v:WebView,r:WebResourceRequest):Boolean{
     if(r.isForMainFrame&&PreviewAppPolicy.googleOAuthAuthorization(r.url.toString())){requestExternal(tab,r.url.toString());return true}
     val safe=BrowserNavigationPolicy.isWebUrl(r.url.toString())
-    if(r.isForMainFrame&&safe&&r.method=="GET")applyDesktop(tab,r.url.toString())
+    if(r.isForMainFrame&&safe){concealIfRequired(tab,r.url.toString());if(r.method=="GET")applyDesktop(tab,r.url.toString())}
     if(!safe)tab.error="This link needs another application or unsupported sign-in flow. Use the browser menu for a confirmed external-browser option."
     return !safe
    }
-   override fun onPageStarted(v:WebView,url:String,icon:Bitmap?){tab.navigationRevision++;tab.mediaTitle="";tab.mediaState="none";tab.url=url;tab.error=null;update()}
+   override fun onPageStarted(v:WebView,url:String,icon:Bitmap?){concealIfRequired(tab,url);tab.navigationRevision++;tab.mediaTitle="";tab.mediaState="none";tab.url=url;tab.error=null;update()}
    override fun onPageFinished(v:WebView,url:String){if(v.progress>=100)applyDesktop(tab,url);update();library.add("history",tab.profile,tab.title,url);CookieManager.getInstance().flush()}
    override fun onReceivedError(v:WebView,r:WebResourceRequest,e:WebResourceError){if(r.isForMainFrame)tab.error="Page could not load. Check your connection, retry, or choose the external browser option."}
    override fun onReceivedHttpError(v:WebView,r:WebResourceRequest,e:WebResourceResponse){if(r.isForMainFrame&&e.statusCode>=400)tab.error="Website returned ${e.statusCode}. Embedded sign-in or browser compatibility may be restricted. External browsing is available from the menu."}
@@ -218,7 +234,7 @@ class PreviewBrowserModel(application:Application):AndroidViewModel(application)
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
-@Composable internal fun PreviewBrowser(pool:PreviewBrowserModel,onHome:()->Unit,onExternal:(String)->Unit,visible:Boolean=true){
+@Composable internal fun PreviewBrowser(pool:PreviewBrowserModel,onHome:()->Unit,onExternal:(String)->Unit,visible:Boolean=true,onInspect:(()->Unit)?=null){
  val tab=pool.active
  var settings by remember{mutableStateOf(false)}
  var libraryPage by remember{mutableStateOf<String?>(null)}
@@ -293,6 +309,7 @@ class PreviewBrowserModel(application:Application):AndroidViewModel(application)
    Row(verticalAlignment=Alignment.CenterVertically){Text("Request Desktop Site",Modifier.weight(1f));Switch(pool.desktopSite(tab),{pool.setDesktop(tab,it)},enabled=CorrectionRules.desktopAllowed(tab.url),modifier=Modifier.testTag("desktop-site-switch"))}
    Text("Saved for ${CorrectionRules.site(tab.url)} in this preview profile. Changing it reloads this page; other websites keep their own settings.",style=MaterialTheme.typography.bodySmall)
    TextButton(onClick={pool.reloadDesktop(tab)},modifier=Modifier.testTag("desktop-reload")){Text(if(pool.desktopSite(tab))"Reload in Desktop Mode"else "Reload in Mobile Mode")}
+   if(ChatInspectorRules.origin(tab.url)&&onInspect!=null)TextButton(onClick={settings=false;onInspect()},modifier=Modifier.testTag("browser-chat-inspector")){Text("Nova Chat Compatibility Inspector")}
    if(CorrectionRules.site(tab.url).endsWith("whatsapp.com"))TextButton(onClick={pool.requireFriends(tab,true);settings=false},modifier=Modifier.testTag("friends-status")){Text("Friends Mode compatibility status")}
    if(CorrectionRules.site(tab.url).endsWith("whatsapp.com"))Text("Friends Mode is not implemented in this preview. Normal WhatsApp browsing is unfiltered. No allowlist protection or authenticated-chat compatibility is claimed.",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.error)
    val key="js:${tab.profile}:${tab.app.id}"

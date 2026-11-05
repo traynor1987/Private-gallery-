@@ -138,7 +138,7 @@ import java.util.Date
  deleting?.let{entryId->AlertDialog(onDismissRequest={deleting=null},title={Text("Delete this entry?")},text={Text("This removes the local preview entry permanently.")},confirmButton={TextButton(onClick={if(data.delete(profile,entryId))deleting=null}){Text("Delete")}},dismissButton={TextButton(onClick={deleting=null}){Text("Keep")}})}
 }
 
-@Composable internal fun SanctuaryScreen(data:PreviewData,audio:MindAudio,onMind:()->Unit,onCalm:()->Unit,onLaunch:(String)->Unit,onExit:()->Unit){
+@Composable internal fun SanctuaryScreen(data:PreviewData,audio:MindAudio,chat:ChatLiteData,onMind:()->Unit,onCalm:()->Unit,onLaunch:(String)->Unit,onExit:()->Unit){
  Column(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color(0xFF173D43),Color(0xFF111D32)))).safeDrawingPadding().padding(24.dp).verticalScroll(rememberScrollState()).testTag("nova-sanctuary"),verticalArrangement=Arrangement.spacedBy(18.dp)){
   Text("Nova Sanctuary",style=MaterialTheme.typography.headlineLarge,color=Color.White)
   Text("You have room here.",style=MaterialTheme.typography.titleLarge,color=Color(0xFFBFDFD6))
@@ -146,6 +146,8 @@ import java.util.Date
   Button(onClick=onCalm,modifier=Modifier.fillMaxWidth()){Text("Calm Now")}
   OutlinedButton(onClick=onMind,modifier=Modifier.fillMaxWidth()){Text("Open Nova Mind",color=Color.White)}
   TextButton(onClick={if(audio.playing)audio.pause()else audio.play("rain")}){Text(if(audio.playing)"Pause calming sound"else "Play gentle rain",color=Color.White)}
+  OutlinedButton(onClick={onLaunch("chat")},modifier=Modifier.fillMaxWidth().testTag("sanctuary-friends")){Text("Friends Mode",color=Color.White)}
+  Row{Text("Enter Friends Mode with Sanctuary",Modifier.weight(1f),color=Color.White);Switch(chat.sanctuary(data.state.current),{chat.sanctuary(data.state.current,it)})}
   Text("Your relaxing favourites",color=Color.White)
   val favourites=data.shell.favourites(data.state.current).mapNotNull{data.app(it)}.filter{it.website!=null}
   if(favourites.isEmpty())Text("Choose your relaxing apps in Edge favourites. Your usual Home stays as you left it.",color=Color(0xFFBFDFD6))

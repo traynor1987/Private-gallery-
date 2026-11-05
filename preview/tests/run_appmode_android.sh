@@ -1,26 +1,18 @@
 #!/usr/bin/env bash
 set -euo pipefail
 mkdir -p preview/artifacts
-# Synthetic pages/media plus an unauthenticated public WhatsApp login probe. Never link an account in CI.
+# Synthetic pages/media only. Never inspect or link a real WhatsApp account in CI.
 collect_receipts(){
- adb exec-out run-as uk.co.traynor.novaos.preview cat files/whatsapp-public-probe.json > preview/artifacts/whatsapp-public-probe.json || true
- for stage in before after; do adb exec-out run-as uk.co.traynor.novaos.preview cat "files/widget-screenshots/stack-$stage.png" > "preview/artifacts/stack-$stage.png" || true; done
  adb logcat -d > preview/artifacts/appmode-logcat.txt || true
- for kind in quick widgets; do
-  for name in cover inner landscape; do
-   if [ "$kind" = quick ]; then source="files/polish-screenshots/quick-$name.png"; else source="files/widget-screenshots/widgets-$name.png"; fi
-   if adb shell "run-as uk.co.traynor.novaos.preview test -f $source"; then adb exec-out run-as uk.co.traynor.novaos.preview cat "$source" > "preview/artifacts/$kind-$name.png"; fi
-  done
- done
 }
 trap collect_receipts EXIT
 python3 preview/tests/wait_for_android.py --output preview/artifacts/emulator-preflight.json
 # Pinned prior preview, same development certificate; exercise a real in-place update.
 python3 - <<'PYUPGRADE'
 import urllib.request,hashlib,pathlib
-url='https://github.com/traynor1987/Private-gallery-/releases/download/novaos-home2-store-preview-0.7/NovaOS-Home2-Store-Preview.apk'
+url='https://github.com/traynor1987/Private-gallery-/releases/download/novaos-home2-store-preview-0.7.1/NovaOS-Home2-Store-Preview.apk'
 with urllib.request.urlopen(url,timeout=60) as r:raw=r.read(70_000_000)
-assert hashlib.sha256(raw).hexdigest()=='05297a501b6236832b7a2b0731446c086a944f61c22ad35047461dcdcdd9830f'
+assert hashlib.sha256(raw).hexdigest()=='1ebbe52cafb20c5509e743e707a9866d8220e1aaef5bc10c8cd92bf0671da05d'
 pathlib.Path('/tmp/nova-preview-05.apk').write_bytes(raw)
 PYUPGRADE
 adb install /tmp/nova-preview-05.apk
@@ -52,10 +44,10 @@ import pathlib
 s=pathlib.Path('preview/artifacts/upgrade-tests.txt').read_text()
 assert 'OK (1 test)' in s and 'FAILURES!!!' not in s and 'INSTRUMENTATION_FAILED' not in s,s[-12000:]
 PYUPGRADERESULT
-tests='uk.co.traynor.novaos.preview.WidgetExperienceTest#dragResizeAndStackSwipeOperateOnCurrentGeometry,uk.co.traynor.novaos.preview.WidgetExperienceTest#widgetFoldViewportsStayAboveNavigation,uk.co.traynor.novaos.preview.CorrectionAcceptanceTest#protectedClockSurvivesWidgetAddRemoveUndoAndRestart,uk.co.traynor.novaos.preview.CorrectionAcceptanceTest#dragPreviewIsClippedAndCancellationDoesNotSave,uk.co.traynor.novaos.preview.CorrectionAcceptanceTest#rejectedResizeAndInvalidLayoutRecoveryPreserveNotesAndValidSlots,uk.co.traynor.novaos.preview.PolishAcceptanceTest#widgetEditDragResizeAndAtomicCollisionPersistence,uk.co.traynor.novaos.preview.PolishAcceptanceTest#quickNotesAutosaveWithoutSaveButtonAndSurviveRecreation,uk.co.traynor.novaos.preview.PolishAcceptanceTest#ownPackageMediaSessionControlsAreRealAndAmbiguityFailsClosed,uk.co.traynor.novaos.preview.PolishAcceptanceTest#emptyHomeSwipeOpensTopPanelAndHandleDismisses,uk.co.traynor.novaos.preview.PolishAcceptanceTest#quickPanelFitsFoldViewportsAndLeavesNativeAudioRunning,uk.co.traynor.novaos.preview.MediaContinuityAcceptanceTest'
+tests='uk.co.traynor.novaos.preview.ChatLiteAcceptanceTest,uk.co.traynor.novaos.preview.ChatInspectorAcceptanceTest,uk.co.traynor.novaos.preview.MediaContinuityAcceptanceTest,uk.co.traynor.novaos.preview.PreviewAcceptanceTest#primaryV1SettingsAndHomeContinuityUseSameWebView,uk.co.traynor.novaos.preview.AppModeAcceptanceTest#googleOAuthRequiresConfirmationWhileOrdinaryAccountNavigationIsPreserved,uk.co.traynor.novaos.preview.CorrectionAcceptanceTest#desktopPreferenceIsPerSiteRetainsWebViewAndRestoresMobile,uk.co.traynor.novaos.preview.CorrectionAcceptanceTest#protectedClockSurvivesWidgetAddRemoveUndoAndRestart,uk.co.traynor.novaos.preview.PolishAcceptanceTest#ownPackageMediaSessionControlsAreRealAndAmbiguityFailsClosed'
 timeout 600s adb shell am instrument -w -r -e class "$tests" uk.co.traynor.novaos.preview.test/androidx.test.runner.AndroidJUnitRunner | tee preview/artifacts/appmode-tests.txt
 python3 - <<'PY'
 import pathlib,re
 s=pathlib.Path('preview/artifacts/appmode-tests.txt').read_text()
-assert re.search(r'OK \(13 tests\)',s) and 'FAILURES!!!' not in s and 'INSTRUMENTATION_FAILED' not in s,s[-12000:]
+assert re.search(r'OK \(21 tests\)',s) and 'FAILURES!!!' not in s and 'INSTRUMENTATION_FAILED' not in s,s[-12000:]
 PY
