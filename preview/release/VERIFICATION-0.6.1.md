@@ -8,7 +8,7 @@ Package:uk.co.traynor.novaos.preview. Android17/API37 only. Version0.6.1-preview
 - App and instrumentation APK assembly passed locally. Stable certificate, distinct package, Internet-only ordinary permission, production-class exclusion and16KB alignment verified.
 - Run42011342852 at74048a6b: pinned code5→6 upgrade passed including existing Home and synthetic journal fixtures;26/28 experience tests passed. All14 existing Browser/App Mode/Recents/Mind/Fold cases passed. All three media continuity cases passed. Two new widget/fullscreen UI assertions prevented publication.
 - Code6 narrowed run42013043832 at e8f7f9d220a7a7d657a6bc390a72af7a43c6175c:14/14 widget/media cases and dedicated upgrade passed; unchanged earlier14 cases are retained in source and were not rerun. Code6 published bytes independently verified; screenshot review found poor inherited widget text contrast, so the delivery patch is code7.
-- Code7: explicit theme foreground, compact Home header/footer adjustment, rendered contrast assertion, and pinned code6→7 widget/stack/note upgrade fixture. Final runtime/publication pending.
+- Code7: explicit theme foreground, compact Home header/footer adjustment, rendered contrast assertion, and pinned code6→7 widget/stack/note upgrade fixture. API37 run42014786860 at9ff024f5dd00104a1d93bb37fa1646c898499e1e passed15/15 focused cases plus the dedicated upgrade. Rendered light/dark contrast passed. Raw prerelease APK published.
 
 ## Audio continuity
 
@@ -40,3 +40,15 @@ Store preserved:90 total entries;40 Games listings (35 Web Apps,4 Website Shortc
 5. Search Breathing/Browser/2048; export layout, preview/cancel restore, then confirm restore. Check demo lock entry/exit and native local video mini/expand/PiP/close.
 
 Production integration requirements and source components are in PRODUCTION-INTEGRATION-HANDOVER.md. Real encrypted Space storage/authentication, Primary/Hidden isolation, secure Recents, original production signing and encrypted-data upgrades require separate authorization/review. Hidden VPN DNS/UDP teardown blocker and Tor are excluded.
+
+## Delivery
+
+Source commit:9ff024f5dd00104a1d93bb37fa1646c898499e1e. APK SHA256:c78729054b1cda2b319d1ac63ebcfe760f2eb16013a538e820c3982c98d7409a.
+
+Direct APK:https://github.com/traynor1987/Private-gallery-/releases/download/novaos-home2-store-preview-0.6.1/NovaOS-Home2-Store-Preview.apk
+
+Final focused run:https://github.com/traynor1987/Private-gallery-/actions/runs/42014786860 . Prior unchanged regression evidence:https://github.com/traynor1987/Private-gallery-/actions/runs/42011342852 .
+
+Code6 asset was not overwritten; code7 is the corrected owner delivery. Existing published0.5→0.6 and final0.6→0.6.1 upgrade checks both passed. Physical owner data cannot be certified remotely; install in place without clearing data.
+
+Independent public download and APK signature/package/API/alignment verification matched the published receipt. Cover/inner/landscape screenshots were visually reviewed; the code6 contrast defect is corrected and both theme contrast assertions pass. With large font sizes or short landscape height, widgets remain in a bounded scrollable viewport; some content requires vertical scrolling and narrow header labels ellipsize. Physical Fold posture transitions and real-provider playback remain pending.

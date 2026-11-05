@@ -1,8 +1,10 @@
-# Current preview: 0.6 / code 6 — widgets and media
+# Current preview: 0.6.1 / code 7 — widgets, media continuity and Home
 
 See [release notes](release/NOTES.md), [layout backup format](release/HOME-BACKUP-FORMAT.md), and [production handover](release/PRODUCTION-INTEGRATION-HANDOVER.md). DELIVERY.json records the exact current release results. Older checkpoints below are historical.
 
-# Current preview: 0.5 / code 5
+[Download the development APK](https://github.com/traynor1987/Private-gallery-/releases/download/novaos-home2-store-preview-0.6.1/NovaOS-Home2-Store-Preview.apk) · [Verification and owner checklist](release/VERIFICATION-0.6.1.md). Install in place; do not uninstall/clear data. Source9ff024f5, stable preview certificate.
+
+# Historical checkpoint: 0.5 / code 5
 
 See [release notes](release/NOTES.md) and [separate production handover](release/PRODUCTION-INTEGRATION-HANDOVER.md). The historical sections below describe earlier checkpoints, not current verification.
 

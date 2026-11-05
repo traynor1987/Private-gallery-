@@ -15,8 +15,8 @@
   },
   "hostVerification": "101 Java policy/backup/rollback assertions;10 Python cases;catalogue/icon/package boundary checks",
   "androidAssembly": "passed locally and in CI",
-  "androidRuntime": "Code6: upgrade+14 widget/media tests passed; unchanged prior14 cases passed. Code7 visual contrast/compact layout patch pending focused run.",
-  "physicalFold": "Responsive layout implementation; physical acceptance pending",
+  "androidRuntime": "API37 run42014786860:15/15 widget/media/contrast tests plus code6\u21927 upgrade passed, including Home/journal/widgets/stack/note preservation.14 unchanged existing browser/App Mode/Recents/Mind/Fold cases passed earlier in42011342852.",
+  "physicalFold": "Cover/inner/landscape viewport bounds and screenshot checks passed; rotation/forced Activity recreation retained synthetic audio. Physical YouTube Music/genuine fold posture/PiP acceptance pending.",
   "handover": "preview/release/PRODUCTION-INTEGRATION-HANDOVER.md",
   "widgetTypes": [
     "Clock & Date",
@@ -27,5 +27,18 @@
     "Nova Search"
   ],
   "videoSupport": "Explicit local files: native player, mini-player, opt-in PiP. Standard website fullscreen callback only; website PiP disabled.",
-  "backup": "Strict layout-only version1 JSON; preview/confirm/cancel, rollback and durable recovery; sensitive payload excluded"
+  "backup": "Strict layout-only version1 JSON; preview/confirm/cancel, rollback and durable recovery; sensitive payload excluded",
+  "sourceCommit": "9ff024f5dd00104a1d93bb37fa1646c898499e1e",
+  "apkSha256": "c78729054b1cda2b319d1ac63ebcfe760f2eb16013a538e820c3982c98d7409a",
+  "apkUrl": "https://github.com/traynor1987/Private-gallery-/releases/download/novaos-home2-store-preview-0.6.1/NovaOS-Home2-Store-Preview.apk",
+  "verificationReport": "preview/release/VERIFICATION-0.6.1.md",
+  "mediaContinuity": {
+    "novaHome": "synthetic advancing audio and retained document passed",
+    "anotherInstalledApp": "passed synthetic fixture",
+    "browserV1": "passed synthetic fixture",
+    "rotation": "passed synthetic fixture",
+    "foldUnfold": "viewport resize/recreation passed; genuine hardware posture pending",
+    "androidHome": "deferred/unverified; no Android background audio claim"
+  },
+  "publication": "GitHub prerelease with raw APK; public bytes and stable development certificate independently verified"
 }
