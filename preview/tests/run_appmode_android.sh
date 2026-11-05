@@ -10,9 +10,9 @@ python3 preview/tests/wait_for_android.py --output preview/artifacts/emulator-pr
 # Pinned prior preview, same development certificate; exercise a real in-place update.
 python3 - <<'PYUPGRADE'
 import urllib.request,hashlib,pathlib
-url='https://github.com/traynor1987/Private-gallery-/releases/download/novaos-home2-store-preview-0.7.1/NovaOS-Home2-Store-Preview.apk'
+url='https://github.com/traynor1987/Private-gallery-/releases/download/novaos-home2-store-preview-0.8/NovaOS-Home2-Store-Preview.apk'
 with urllib.request.urlopen(url,timeout=60) as r:raw=r.read(70_000_000)
-assert hashlib.sha256(raw).hexdigest()=='1ebbe52cafb20c5509e743e707a9866d8220e1aaef5bc10c8cd92bf0671da05d'
+assert hashlib.sha256(raw).hexdigest()=='98c8d08327f50810dc2568db51444d49523cffe7ca52261db13b1c0cff82c412'
 pathlib.Path('/tmp/nova-preview-05.apk').write_bytes(raw)
 PYUPGRADE
 adb install /tmp/nova-preview-05.apk
@@ -44,10 +44,10 @@ import pathlib
 s=pathlib.Path('preview/artifacts/upgrade-tests.txt').read_text()
 assert 'OK (1 test)' in s and 'FAILURES!!!' not in s and 'INSTRUMENTATION_FAILED' not in s,s[-12000:]
 PYUPGRADERESULT
-tests='uk.co.traynor.novaos.preview.ChatInspectorAcceptanceTest,uk.co.traynor.novaos.preview.ChatLiteAcceptanceTest#normalWhatsAppRequiresExplicitConfirmationAndReusesOriginalView,uk.co.traynor.novaos.preview.ChatLiteAcceptanceTest#browserWhatsAppGuardLeavesUnrelatedBrowserTabsAndDocumentsAlone,uk.co.traynor.novaos.preview.MediaContinuityAcceptanceTest,uk.co.traynor.novaos.preview.PreviewAcceptanceTest#primaryV1SettingsAndHomeContinuityUseSameWebView,uk.co.traynor.novaos.preview.CorrectionAcceptanceTest#protectedClockSurvivesWidgetAddRemoveUndoAndRestart,uk.co.traynor.novaos.preview.PolishAcceptanceTest#ownPackageMediaSessionControlsAreRealAndAmbiguityFailsClosed'
+tests='uk.co.traynor.novaos.preview.FavouritesAcceptanceTest,uk.co.traynor.novaos.preview.MediaContinuityAcceptanceTest,uk.co.traynor.novaos.preview.PreviewAcceptanceTest#primaryV1SettingsAndHomeContinuityUseSameWebView,uk.co.traynor.novaos.preview.AppModeAcceptanceTest#googleOAuthRequiresConfirmationWhileOrdinaryAccountNavigationIsPreserved,uk.co.traynor.novaos.preview.ChatInspectorAcceptanceTest#structuralReportHasClosedSchemaWithoutNamesMessagesTokensOrNetwork,uk.co.traynor.novaos.preview.ChatInspectorAcceptanceTest#explicitActionAndExactOriginAreRequiredAndStopCancelsSamples,uk.co.traynor.novaos.preview.ChatInspectorAcceptanceTest#sensitiveScreenTransitionsRetainProtectionUntilOutgoingContentIsGone,uk.co.traynor.novaos.preview.CorrectionAcceptanceTest#protectedClockSurvivesWidgetAddRemoveUndoAndRestart,uk.co.traynor.novaos.preview.PolishAcceptanceTest#ownPackageMediaSessionControlsAreRealAndAmbiguityFailsClosed'
 timeout 600s adb shell am instrument -w -r -e class "$tests" uk.co.traynor.novaos.preview.test/androidx.test.runner.AndroidJUnitRunner | tee preview/artifacts/appmode-tests.txt
 python3 - <<'PY'
 import pathlib,re
 s=pathlib.Path('preview/artifacts/appmode-tests.txt').read_text()
-assert re.search(r'OK \(15 tests\)',s) and 'FAILURES!!!' not in s and 'INSTRUMENTATION_FAILED' not in s,s[-12000:]
+assert re.search(r'OK \(21 tests\)',s) and 'FAILURES!!!' not in s and 'INSTRUMENTATION_FAILED' not in s,s[-12000:]
 PY

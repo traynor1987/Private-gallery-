@@ -48,51 +48,26 @@ class ChatLiteData(context:Context){
  fun isWhatsApp(tab:PreviewTab)=runCatching{Uri.parse(tab.url).host=="web.whatsapp.com"||Uri.parse(tab.app.url).host=="web.whatsapp.com"}.getOrDefault(false)
  fun guard(pool:PreviewBrowserModel,profile:String):PreviewTab?{
   val matching=pool.tabs.filter{it.profile==profile&&isWhatsApp(it)}
-  matching.forEach{pool.requireFriends(it,true)}
-  return matching.maxByOrNull{it.touched}
+  val selected=pool.active?.takeIf{it in matching}?:matching.maxByOrNull{it.touched}
+  selected?.let{pool.requireFriends(it,true)}
+  return selected
  }
 
 }
 
 @Composable internal fun ChatLiteScreen(chat:ChatLiteData,pool:PreviewBrowserModel,profile:String,onHome:()->Unit,onNormal:()->Unit,onInspect:()->Unit){
- val context=LocalContext.current
- DisposableEffect(pool,profile,pool.tabs.size){chat.guard(pool,profile);onDispose{}}
- var manage by rememberSaveable{mutableStateOf(false)};var diagnostics by rememberSaveable{mutableStateOf(false)};var confirmNormal by remember{mutableStateOf(false)}
- var phone by remember{mutableStateOf("")};var alias by remember{mutableStateOf("")};var token by remember{mutableIntStateOf(0)}
- androidx.activity.compose.BackHandler(manage||diagnostics){if(diagnostics)diagnostics=false else manage=false}
- Column(Modifier.fillMaxSize().safeDrawingPadding().testTag("nova-chat-lite")){
-  PreviewHeader(if(manage)"Manage Friends"else "Nova Chat Lite","Friends Mode · experimental launcher prototype",{if(manage)manage=false else onHome()})
-  Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(20.dp),verticalArrangement=Arrangement.spacedBy(14.dp)){
-   Text("Your chosen conversations. A quieter starting point.",style=MaterialTheme.typography.titleLarge)
-   Text("Preview approvals are stored locally and are not production encrypted. No messages are imported. This build cannot safely display filtered chats; opening stays covered until an adapter is verified.")
-   Surface(Modifier.fillMaxWidth().testTag("chat-compatibility-cover"),shape=RoundedCornerShape(24.dp),color=MaterialTheme.colorScheme.secondaryContainer){Column(Modifier.padding(20.dp),verticalArrangement=Arrangement.spacedBy(10.dp)){
-    Text(if(chat.state==ChatCompatibility.CHECKING)"Checking compatibility…"else "⚠ Nova Chat needs an update",style=MaterialTheme.typography.titleMedium)
-    Text(chat.state.name,Modifier.testTag("chat-state"));Text(chat.reason)
-    Row(Modifier.horizontalScroll(rememberScrollState())){TextButton(onClick=onInspect){Text("Retry")};TextButton(onClick=onInspect){Text("Check compatibility")};TextButton(onClick={diagnostics=!diagnostics}){Text("Open diagnostics")}}
-    if(diagnostics)Text(chat.facts,Modifier.testTag("chat-diagnostics"),style=MaterialTheme.typography.bodySmall)
-   }}
+ var confirm by remember{mutableStateOf(false)}
+ Column(Modifier.fillMaxSize().safeDrawingPadding().testTag("chat-settings")){
+  PreviewHeader("Nova Chat Lite 1.0","Native Favourites · experimental",onHome)
+  Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(24.dp),verticalArrangement=Arrangement.spacedBy(16.dp)){
+   Text("Use WhatsApp's native Favourites",style=MaterialTheme.typography.titleLarge)
+   Text("Choose your friends in WhatsApp's own Favourites list. Nova Chat restores that view after reloads and verifies its selected state before revealing the page. Existing manual approval notes remain stored locally but do not control WhatsApp's Favourites.")
+   Row{Text("Open Nova Chat in Friends Mode when entering Sanctuary",Modifier.weight(1f));Switch(chat.sanctuary(profile),{chat.sanctuary(profile,it)},modifier=Modifier.testTag("chat-sanctuary"))}
    Button(onClick=onInspect,modifier=Modifier.fillMaxWidth().testTag("open-chat-inspector")){Text("Compatibility Inspector")}
-   if(!manage)Button(onClick={manage=true},modifier=Modifier.fillMaxWidth().testTag("manage-chat-friends")){Text("Manage Friends")}
-   if(manage){
-    OutlinedTextField(alias,{alias=it.take(60)},Modifier.fillMaxWidth().testTag("chat-alias"),label={Text("Local nickname")},singleLine=true)
-    OutlinedTextField(phone,{phone=it.take(50)},Modifier.fillMaxWidth().testTag("chat-phone"),label={Text("International phone number (+country code)")},singleLine=true)
-    Button(onClick={chat.clearError();if(chat.approve(profile,phone,alias)){phone="";alias=""}},modifier=Modifier.testTag("approve-chat-friend")){Text("Approve number")}
-    Text("Phone numbers are explicit identities supplied by you, not verified WhatsApp conversation IDs. Display names are never used for matching. Groups are not supported by this prototype.",style=MaterialTheme.typography.bodySmall)
-   }
-   chat.error?.let{Text(it,color=MaterialTheme.colorScheme.error)}
-   val friends=chat.friends(profile)
-   if(friends.isEmpty())Text("No conversations approved. Unknown contacts are never added automatically.")
-   friends.forEach{friend->Card(Modifier.fillMaxWidth()){Column(Modifier.padding(16.dp)){
-    Text(friend.alias,style=MaterialTheme.typography.titleMedium)
-    if(manage){Text(friend.phone);TextButton(onClick={chat.remove(profile,friend.phone)}){Text("Remove approval")}}
-    else OutlinedButton(onClick=onInspect,modifier=Modifier.testTag("chat-approved-action")){Text("Check opening compatibility")}
-   }}}
-   Row{Text("Enter Friends Mode with Sanctuary",Modifier.weight(1f));Switch(chat.sanctuary(profile),{chat.sanctuary(profile,it)},modifier=Modifier.testTag("chat-sanctuary"))}
-   Text("Visual wellbeing feature only; not an encryption or access-control boundary. No absolute concealment claim. No sending, read acknowledgements, deletion or contact blocking is automated.",style=MaterialTheme.typography.bodySmall)
-   Text("Adapter updates require a signed NovaOS Preview APK. No remote JavaScript or selector downloads.",style=MaterialTheme.typography.bodySmall)
-   OutlinedButton(onClick={confirmNormal=true},modifier=Modifier.fillMaxWidth().testTag("chat-normal-whatsapp")){Text("Open normal WhatsApp (unfiltered)…")}
-   TextButton(onClick=onHome){Text("Return Home")}
+   Text("Favourites is a convenience filter, not isolation or encryption. Other conversations may remain accessible through search, filter switching, notifications and other WhatsApp navigation. No message bodies or contacts are collected. No sending, deletion, archiving, blocking or read acknowledgements are automated.")
+   Text("Only a unique supported filter group with explicit selected-state indicators can be revealed. Unrecognised WhatsApp versions remain covered. Normal browsing is available by explicit confirmation.")
+   OutlinedButton(onClick={confirm=true},modifier=Modifier.fillMaxWidth().testTag("chat-normal-whatsapp")){Text("Open Normal WhatsApp…")}
   }
  }
- if(confirmNormal)AlertDialog(onDismissRequest={confirmNormal=false},title={Text("Leave Friends Mode?")},text={Text("Normal WhatsApp can show every conversation, preview and unread badge. Your approvals stay saved. Continue only if you want the unfiltered interface.")},confirmButton={TextButton(onClick={confirmNormal=false;onNormal()}){Text("Open unfiltered WhatsApp")}},dismissButton={TextButton(onClick={confirmNormal=false}){Text("Stay in Friends Mode")}})
+ if(confirm)AlertDialog(onDismissRequest={confirm=false},title={Text("Leave Friends Mode?")},text={Text("Normal WhatsApp can expose every conversation. Your session is preserved.")},confirmButton={TextButton(onClick={confirm=false;onNormal()}){Text("Open unfiltered WhatsApp")}},dismissButton={TextButton(onClick={confirm=false}){Text("Stay in Friends Mode")}})
 }

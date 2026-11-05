@@ -93,18 +93,18 @@ private val lightColors=lightColorScheme(primary=Color(0xFF285F65),secondary=Col
    var locked by rememberSaveable{mutableStateOf(widgets.demoLock)}
    val routeState=rememberSaveableStateHolder()
    val profile=data.profile
-   LaunchedEffect(state.current){widgets.editingId=null;pool.currentProfile=state.current;pool.syncLifecycle();audio.switchProfile(state.current);if(video.profile!=null&&video.profile!=state.current)video.close()}
-   LaunchedEffect(screen){if(screen!="browser")pool.closeFullscreen();if(screen in listOf("chat","mind","store","wallpaper","photos","guide","video","search","widgets","backup","lock-settings"))data.shell.touchInternal(state.current,screen)}
+   LaunchedEffect(state.current){widgets.editingId=null;pool.currentProfile=state.current;pool.favourites.profileChanged();pool.recheckFriends();pool.syncLifecycle();audio.switchProfile(state.current);if(video.profile!=null&&video.profile!=state.current)video.close()}
+   LaunchedEffect(screen){if(screen=="browser")pool.active?.takeIf{pool.friendsRequested(it)}?.let{pool.favourites.ensure(it,true)};if(screen !in listOf("browser","chat"))pool.closeFullscreen();if(screen in listOf("chat","mind","store","wallpaper","photos","guide","video","search","widgets","backup","lock-settings"))data.shell.touchInternal(state.current,screen)}
    LaunchedEffect(pool,state.current){while(true){pool.pollMedia();audio.poll();video.poll();delay(1000)}}
    pool.externalRequest?.let{request->LaunchedEffect(request){
     if(PreviewAppPolicy.canPresentExternal(request.tabId,request.profile,pool.activeId,state.current,pool.foreground))pool.tabs.firstOrNull{it.id==request.tabId}?.app?.let{browser=it.copy(url=request.url)}
     pool.externalRequest=null
    }}
    val routeTransition=updateTransition(screen,label="preview-screen")
-   val privateRoutes=setOf("chat","chat-inspector","mind")
-   val secureWindow=locked||routeTransition.currentState in privateRoutes||routeTransition.targetState in privateRoutes
+   val privateRoutes=setOf("chat","chat-settings","chat-inspector","mind")
+   val secureWindow=locked||routeTransition.currentState in privateRoutes||routeTransition.targetState in privateRoutes||((routeTransition.currentState=="browser"||routeTransition.targetState=="browser")&&pool.active?.let{pool.friendsRequested(it)}==true)
    val host=LocalContext.current as? android.app.Activity
-   SideEffect { host?.window?.let{if(secureWindow)it.addFlags(android.view.WindowManager.LayoutParams.FLAG_SECURE)else it.clearFlags(android.view.WindowManager.LayoutParams.FLAG_SECURE)};pool.excludedMediaToken=audio.sessionToken;pool.presentationBlocked=locked||screen!="browser";host?.let { activity->
+   SideEffect { host?.window?.let{if(secureWindow)it.addFlags(android.view.WindowManager.LayoutParams.FLAG_SECURE)else it.clearFlags(android.view.WindowManager.LayoutParams.FLAG_SECURE)};pool.excludedMediaToken=audio.sessionToken;pool.presentationBlocked=locked||screen !in listOf("browser","chat");host?.let { activity->
     val controller=androidx.core.view.WindowCompat.getInsetsController(activity.window,activity.window.decorView)
     controller.isAppearanceLightStatusBars=screen!="home"&&!dark
     controller.isAppearanceLightNavigationBars=screen!="home"&&!dark
@@ -120,22 +120,24 @@ private val lightColors=lightColorScheme(primary=Color(0xFF285F65),secondary=Col
    val scope=rememberCoroutineScope()
    val currentPage=pager.currentPage.coerceIn(0,profile.pages.lastIndex)
    LaunchedEffect(profile.pages.size){if(pager.currentPage>profile.pages.lastIndex)pager.scrollToPage(profile.pages.lastIndex)}
+   fun openFriends(){val tab=chat.guard(pool,state.current)?:pool.open(data.catalogue.first{it.id=="whatsapp"},state.current).also{pool.requireFriends(it,true)};pool.select(tab);pool.favourites.ensure(tab,true)}
+   LaunchedEffect(screen,state.current,pool.activeId){if(screen=="chat"){if(pool.active?.let{chat.isWhatsApp(it)&&pool.friendsRequested(it)&&it.profile==state.current}!=true)openFriends()else pool.favourites.ensure(pool.active!!,true)}}
    val launch:(String)->Unit={id->
     drawer=false;quick=false;editing=false;edgePanel=false
     when{
-     id.startsWith("resume-internal:")->{val route=id.removePrefix("resume-internal:");if(data.shell.internalRecents.any{it.first==state.current&&it.second==route})screen=route}
+     id.startsWith("resume-internal:")->{val route=id.removePrefix("resume-internal:");if(data.shell.internalRecents.any{it.first==state.current&&it.second==route}){if(route=="chat")openFriends();screen=route}}
      id.startsWith("recent-tab:")->{pool.tabs.firstOrNull{it.id==id.removePrefix("recent-tab:")&&it.profile==state.current}?.let{pool.select(it);screen="browser"}}
      id.startsWith("mind:")->{mindPage=id.removePrefix("mind:");mindLaunch++;screen="mind"}
      id.startsWith("store:")->{screen="store";detailId=id.removePrefix("store:")}
      id.startsWith("widget:")->{val slot=widgets.slots(state.current).firstOrNull{it.id==id.removePrefix("widget:")};if(slot!=null){scope.launch{pager.scrollToPage(slot.page.coerceIn(0,profile.pages.lastIndex))};selectedWidget=slot.id};screen="home"}
      else->when(id){
-     "chat"->{chat.guard(pool,state.current);screen="chat"}
+     "chat"->{openFriends();screen="chat"}
      "widgets"->{widgetPage=currentPage;screen="widgets"}
      "search","video","backup","lock-settings"->{screen=id}
      "shell-settings"->{shellSettings=true}
      "lock-now"->{locked=true}
      "mind","calm"->{mindPage=if(id=="calm")mind.preferred else "home";mindLaunch++;screen="mind";drawer=false}
-     "sanctuary"->{sanctuary=true;if(chat.sanctuary(state.current))chat.guard(pool,state.current);screen=if(chat.sanctuary(state.current))"chat"else "sanctuary";drawer=false}
+     "sanctuary"->{sanctuary=true;if(chat.sanctuary(state.current))openFriends();screen=if(chat.sanctuary(state.current))"chat"else "sanctuary";drawer=false}
      "browser-v1"->{pool.open(standaloneBrowser,data.state.current).let{pool.setBrowserMode(it,true)};screen="browser";drawer=false}
      "store"->{screen="store";drawer=false}
      "settings"->{editing=true;drawer=false}
@@ -154,19 +156,20 @@ private val lightColors=lightColorScheme(primary=Color(0xFF285F65),secondary=Col
    }
    val goBack:()->Unit={
     val ime=host?.window?.decorView?.rootWindowInsets?.isVisible(android.view.WindowInsets.Type.ime())==true
-    if(ime)host?.let{(it.getSystemService(android.content.Context.INPUT_METHOD_SERVICE) as? android.view.inputmethod.InputMethodManager)?.hideSoftInputFromWindow(it.window.decorView.windowToken,0)}else when{screen=="home"&&widgets.editingId!=null->widgets.editingId=null;selected!=null->selected=null;openFolder!=null->openFolder=null;detailId!=null->detailId=null;editing->editing=false;quick->quick=false;drawer->drawer=false;screen=="chat-inspector"->screen=inspectorReturn;screen=="navigation-settings"->screen="home-settings";screen=="recents"->screen=if(recentsReturn in listOf("chat","mind","store","wallpaper","photos","guide","video","search","widgets","backup","lock-settings")&&data.shell.internalRecents.none{it.first==state.current&&it.second==recentsReturn})"home"else PreviewShellRules.returnRoute(recentsReturn,pool.active?.profile==state.current);screen=="browser"&&pool.active?.view?.canGoBack()==true->pool.active?.let{pool.back(it)};else->screen=if(sanctuary)"sanctuary"else "home"}
+    if(ime)host?.let{(it.getSystemService(android.content.Context.INPUT_METHOD_SERVICE) as? android.view.inputmethod.InputMethodManager)?.hideSoftInputFromWindow(it.window.decorView.windowToken,0)}else when{screen=="home"&&widgets.editingId!=null->widgets.editingId=null;selected!=null->selected=null;openFolder!=null->openFolder=null;detailId!=null->detailId=null;editing->editing=false;quick->quick=false;drawer->drawer=false;screen=="chat-inspector"->screen=inspectorReturn;screen=="chat-settings"->screen="chat";screen=="navigation-settings"->screen="home-settings";screen=="recents"->screen=if(recentsReturn in listOf("chat","mind","store","wallpaper","photos","guide","video","search","widgets","backup","lock-settings")&&data.shell.internalRecents.none{it.first==state.current&&it.second==recentsReturn})"home"else PreviewShellRules.returnRoute(recentsReturn,pool.active?.profile==state.current);screen in listOf("browser","chat")&&pool.active?.view?.canGoBack()==true->pool.active?.let{pool.back(it)};else->screen=if(sanctuary)"sanctuary"else "home"}
    }
    LaunchedEffect(screen,pool.activeId){if(screen=="browser"&&pool.active?.profile!=state.current)screen="home"}
    val openRecents:()->Unit={drawer=false;quick=false;if(screen!="recents"){recentsReturn=screen;screen="recents"}}
-   val resumeTab:(PreviewTab)->Unit={tab->pool.select(tab);screen="browser";edgePanel=false}
+   val resumeTab:(PreviewTab)->Unit={tab->pool.select(tab);screen=if(pool.friendsRequested(tab))"chat"else "browser";edgePanel=false}
    BackHandler(locked){ }
    BackHandler(!locked&&(widgets.editingId!=null||screen!="home"||drawer||quick||editing||selected!=null||openFolder!=null||detailId!=null)){goBack()}
    if(video.pip){Box(Modifier.fillMaxSize().background(Color.Black),contentAlignment=Alignment.Center){NativeVideoSurface(video,Modifier.fillMaxWidth().aspectRatio(video.width.toFloat()/video.height))}}else if(locked){DemoLockScreen(profile.wallpaper,filesDir,object:NovaUnlockGate{override fun unlockDemonstration()=true},onUnlock={locked=false},onDisable={widgets.demoLock(false);locked=false})}else {
    Surface(Modifier.fillMaxSize(),color=MaterialTheme.colorScheme.background){
     Column(Modifier.fillMaxSize().navigationBarsPadding().imePadding()){
      Box(Modifier.weight(1f).fillMaxWidth()){
-      if(pool.active?.profile==state.current)PreviewBrowser(pool,onHome=goHome,onExternal={url->pool.active?.app?.let{browser=it.copy(url=url)}},visible=screen=="browser",onInspect={inspectorReturn="browser";screen="chat-inspector"})
-      if(screen!="browser")Surface(Modifier.fillMaxSize(),color=MaterialTheme.colorScheme.background){
+      if(pool.active?.profile==state.current)PreviewBrowser(pool,onHome=goHome,onExternal={url->pool.active?.app?.let{browser=it.copy(url=url)}},visible=screen=="browser"||(screen=="chat"&&pool.active?.let{chat.isWhatsApp(it)&&pool.friendsRequested(it)}==true),onInspect={inspectorReturn=if(screen=="chat")"chat"else "browser";screen="chat-inspector"},onFriendsSettings={screen="chat-settings"},onNormalMode={screen="browser"})
+      if(screen=="chat"&&pool.active?.let{chat.isWhatsApp(it)&&pool.friendsRequested(it)}!=true)Surface(Modifier.fillMaxSize(),color=MaterialTheme.colorScheme.background){Box(Modifier.fillMaxSize(),contentAlignment=Alignment.Center){Text("Opening retained WhatsApp…")}}
+      if(screen !in listOf("browser","chat"))Surface(Modifier.fillMaxSize(),color=MaterialTheme.colorScheme.background){
        routeTransition.AnimatedContent(transitionSpec={if(widgets.reduced)androidx.compose.animation.ContentTransform(androidx.compose.animation.EnterTransition.None,androidx.compose.animation.ExitTransition.None)else androidx.compose.animation.ContentTransform(androidx.compose.animation.fadeIn(),androidx.compose.animation.fadeOut())}){route->
         routeState.SaveableStateProvider(route){when(route){
          "home-settings"->Column(Modifier.fillMaxSize().safeDrawingPadding().testTag("nova-home-settings")){
@@ -203,12 +206,12 @@ private val lightColors=lightColorScheme(primary=Color(0xFF285F65),secondary=Col
          "backup"->HomeBackupScreen(data,widgets,backup,onBack=goHome,onExport={(host as? MainActivity)?.exportHomeLayout()},onImport={(host as? MainActivity)?.importHomeLayout()})
          "lock-settings"->LockSettings(widgets,onBack=goHome,onLock={locked=true})
          "mind"->{
-          MindScreen(mind,state.current,audio,mindPage,mindLaunch,onHome=goHome,onSanctuary={sanctuary=true;if(chat.sanctuary(state.current))chat.guard(pool,state.current);screen=if(chat.sanctuary(state.current))"chat"else "sanctuary"})
+          MindScreen(mind,state.current,audio,mindPage,mindLaunch,onHome=goHome,onSanctuary={sanctuary=true;if(chat.sanctuary(state.current))openFriends();screen=if(chat.sanctuary(state.current))"chat"else "sanctuary"})
          }
          "chat-inspector"->ChatInspectorScreen(inspector,pool,state.current,onBack={screen=inspectorReturn},onHome=goHome)
-         "chat"->ChatLiteScreen(chat,pool,state.current,onHome=goHome,onNormal={val old=pool.tabs.filter{it.profile==state.current&&chat.isWhatsApp(it)}.maxByOrNull{it.touched};pool.tabs.filter{it.profile==state.current&&chat.isWhatsApp(it)}.toList().forEach{pool.requireFriends(it,false)};val tab=old?:pool.open(data.catalogue.first{it.id=="whatsapp"},state.current);pool.select(tab);screen="browser"},onInspect={inspectorReturn="chat";screen="chat-inspector"})
+         "chat-settings"->ChatLiteScreen(chat,pool,state.current,onHome={screen="chat"},onNormal={val old=pool.tabs.filter{it.profile==state.current&&chat.isWhatsApp(it)}.maxByOrNull{it.touched};pool.tabs.filter{it.profile==state.current&&chat.isWhatsApp(it)}.toList().forEach{pool.requireFriends(it,false)};val tab=old?:pool.open(data.catalogue.first{it.id=="whatsapp"},state.current);pool.select(tab);screen="browser"},onInspect={inspectorReturn="chat";screen="chat-inspector"})
          "sanctuary"->SanctuaryScreen(data,audio,chat,onMind={mindPage="home";mindLaunch++;screen="mind"},onCalm={mindPage=mind.preferred;mindLaunch++;screen="mind"},onLaunch=launch,onExit={sanctuary=false;screen="home"})
-         "recents"->NovaRecents(data,pool,onHome=goHome,onResume=resumeTab,onInternal={id->screen=id},onCloseInternal={id->data.shell.closeInternal(state.current,id);routeState.removeState(id);if(id=="mind")audio.pause();if(id=="video")video.close()})
+         "recents"->NovaRecents(data,pool,onHome=goHome,onResume=resumeTab,onInternal={id->if(id=="chat")openFriends();screen=id},onCloseInternal={id->data.shell.closeInternal(state.current,id);routeState.removeState(id);if(id=="mind")audio.pause();if(id=="video")video.close()})
          "store"->StoreScreen(data,onBack=goHome,onDetail={detailId=it.id},onCustom={custom=true})
          "wallpaper"->WallpaperScreen(data,filesDir,onPickImage,onBack=goHome)
          "photos"->PhotosDemo(onBack=goHome,onWallpaper={screen="wallpaper"})

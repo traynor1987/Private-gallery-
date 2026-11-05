@@ -8,6 +8,7 @@ import android.net.http.SslError
 import android.os.Message
 import android.view.ViewGroup
 import android.webkit.*
+import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.AndroidViewModel
 import androidx.compose.runtime.*
 import androidx.compose.foundation.layout.*
@@ -35,6 +36,10 @@ class PreviewApplication:Application(){
 data class PreviewFullscreen(val tabId:String,val view:android.view.View,val callback:WebChromeClient.CustomViewCallback)
 data class PreviewExternalRequest(val tabId:String,val profile:String,val url:String)
 class PreviewTab(val id:String,val profile:String,val app:StoreEntry,val wrapper:MutableContextWrapper,val view:WebView){
+ val favouritesToken=java.util.UUID.randomUUID().toString()
+ var favouritesVerified by mutableStateOf(false)
+ var favouritesState by mutableStateOf("CHECKING")
+ var favouritesReason by mutableStateOf("Checking the native Favourites filter.")
  var friendsConcealed by mutableStateOf(false)
  var desktopApplied by mutableStateOf(false)
  var resumed=true
@@ -56,6 +61,7 @@ class PreviewBrowserModel(application:Application):AndroidViewModel(application)
  var presentationBlocked=false
  var fullscreen by mutableStateOf<PreviewFullscreen?>(null);private set
  fun closeFullscreen(){val old=fullscreen;fullscreen=null;(old?.view?.parent as? ViewGroup)?.removeView(old.view);if(old!=null)runCatching{old.callback.onCustomViewHidden()}}
+ val favourites=FavouritesController(application,this,viewModelScope)
  val library=BrowserLibrary(application)
  val tabs=mutableStateListOf<PreviewTab>()
  var activeId by mutableStateOf<String?>(null)
@@ -95,6 +101,7 @@ class PreviewBrowserModel(application:Application):AndroidViewModel(application)
  fun recents(profile:String)=tabs.filter{it.profile==profile}.groupBy{it.app.id}.values.map{it.maxBy{tab->tab.touched}}.sortedByDescending{it.touched}
  fun player(profile:String)=tabs.filter{!friendsBlocked(it)&&it.profile==profile&&PreviewShellRules.mediaState(it.mediaState)}.maxWithOrNull(compareBy<PreviewTab>{PreviewShellRules.mediaPriority(it.mediaState)}.thenBy{it.touched})
  fun pollMedia(){
+  favourites.maintain()
   if(!foreground){mediaSessions.clear();return}
   if(tabs.any{friendsBlocked(it)})mediaSessions.clear()else mediaSessions.refresh(tabs.toList(),currentProfile,foreground,excludedMediaToken)
   tabs.filter{it.profile==currentProfile}.toList().forEach{tab->
@@ -119,19 +126,24 @@ class PreviewBrowserModel(application:Application):AndroidViewModel(application)
   externalRequest=PreviewExternalRequest(tab.id,tab.profile,url)
  }
  private fun browserFriendsRequested(profile:String)=library.flag("friends-site:$profile:web.whatsapp.com")||library.flag("friends-required:$profile:browser-v1")
- fun friendsBlocked(tab:PreviewTab)=if(tab.app.id=="browser-v1")tab.friendsConcealed||(browserFriendsRequested(tab.profile)&&(ChatInspectorRules.origin(tab.url)||ChatInspectorRules.origin(tab.app.url)))else library.flag("friends-required:${tab.profile}:${tab.app.id}")
+ fun friendsRequested(tab:PreviewTab)=if(tab.app.id=="browser-v1")tab.friendsConcealed||(browserFriendsRequested(tab.profile)&&(ChatInspectorRules.origin(tab.url)||ChatInspectorRules.origin(tab.app.url)))else library.flag("friends-required:${tab.profile}:${tab.app.id}")
+ fun friendsBlocked(tab:PreviewTab)=friendsRequested(tab)&&!tab.favouritesVerified
+ fun recheckFriends(){tabs.filter{friendsRequested(it)&&it.profile==currentProfile}.forEach{favourites.ensure(it,true)}}
+ fun reload(tab:PreviewTab){if(friendsRequested(tab)){tab.progress=0;favourites.invalidate(tab)};tab.view.reload()}
  private fun concealIfRequired(tab:PreviewTab,url:String=tab.url){
   if(tab.app.id=="browser-v1"&&browserFriendsRequested(tab.profile)&&ChatInspectorRules.origin(url))tab.friendsConcealed=true
-  if(friendsBlocked(tab)){tab.view.visibility=android.view.View.INVISIBLE;tab.view.importantForAccessibility=android.view.View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS}
+  if(friendsRequested(tab)){favourites.invalidate(tab);tab.view.visibility=android.view.View.INVISIBLE;tab.view.importantForAccessibility=android.view.View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS}
  }
  fun requireFriends(tab:PreviewTab,required:Boolean){
   if(required)closeFullscreen()
+  val already=tabs.filter{friendsRequested(it)}.map{it.id}.toSet()
+  if(!required)tabs.filter{it.profile==tab.profile&&(it.id==tab.id||friendsRequested(it))&&it.app.id==tab.app.id}.forEach{favourites.stop(it,true)}
   val affected=if(tab.app.id=="browser-v1"){
    library.setFlag("friends-site:${tab.profile}:web.whatsapp.com",required);library.setFlag("friends-required:${tab.profile}:browser-v1",false)
    tabs.filter{it.profile==tab.profile&&it.app.id=="browser-v1"&&(it.id==tab.id||it.friendsConcealed||ChatInspectorRules.origin(it.url)||ChatInspectorRules.origin(it.app.url))}
   }else {library.setFlag("friends-required:${tab.profile}:${tab.app.id}",required);tabs.filter{it.profile==tab.profile&&it.app.id==tab.app.id}}
   affected.forEach{if(it.app.id=="browser-v1")it.friendsConcealed=required;it.view.visibility=if(required)android.view.View.INVISIBLE else android.view.View.VISIBLE;it.view.importantForAccessibility=if(required)android.view.View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS else android.view.View.IMPORTANT_FOR_ACCESSIBILITY_AUTO}
-  if(required)mediaSessions.clear()
+  if(required){mediaSessions.clear();affected.forEach{if(it.id !in already)favourites.invalidate(it);favourites.ensure(it)}}
  }
  fun desktopSite(tab:PreviewTab,url:String=tab.url)=CorrectionRules.desktopAllowed(url)&&library.flag("desktop:${tab.profile}:${CorrectionRules.site(url)}")
  fun applyDesktop(tab:PreviewTab,url:String){
@@ -157,7 +169,7 @@ class PreviewBrowserModel(application:Application):AndroidViewModel(application)
  fun reloadDesktop(tab:PreviewTab){
   val url=if(desktopSite(tab)&&CorrectionRules.site(tab.url)=="web.whatsapp.com"&&Uri.parse(tab.url).path.orEmpty().startsWith("/mobile"))"https://web.whatsapp.com/"else tab.url
   applyDesktop(tab,url)
-  if(url!=tab.url)navigate(tab,url)else tab.view.reload()
+  if(url!=tab.url)navigate(tab,url)else reload(tab)
  }
  fun navigate(tab:PreviewTab,url:String){
   val safe=PreviewRules.https(url)
@@ -191,8 +203,8 @@ class PreviewBrowserModel(application:Application):AndroidViewModel(application)
     if(!safe)tab.error="This link needs another application or unsupported sign-in flow. Use the browser menu for a confirmed external-browser option."
     return !safe
    }
-   override fun onPageStarted(v:WebView,url:String,icon:Bitmap?){concealIfRequired(tab,url);tab.navigationRevision++;tab.mediaTitle="";tab.mediaState="none";tab.url=url;tab.error=null;update()}
-   override fun onPageFinished(v:WebView,url:String){if(v.progress>=100)applyDesktop(tab,url);update();library.add("history",tab.profile,tab.title,url);CookieManager.getInstance().flush()}
+   override fun onPageStarted(v:WebView,url:String,icon:Bitmap?){tab.progress=0;concealIfRequired(tab,url);tab.navigationRevision++;tab.mediaTitle="";tab.mediaState="none";tab.url=url;tab.error=null;update()}
+   override fun onPageFinished(v:WebView,url:String){if(friendsRequested(tab))favourites.ensure(tab);if(v.progress>=100)applyDesktop(tab,url);update();library.add("history",tab.profile,tab.title,url);CookieManager.getInstance().flush()}
    override fun onReceivedError(v:WebView,r:WebResourceRequest,e:WebResourceError){if(r.isForMainFrame)tab.error="Page could not load. Check your connection, retry, or choose the external browser option."}
    override fun onReceivedHttpError(v:WebView,r:WebResourceRequest,e:WebResourceResponse){if(r.isForMainFrame&&e.statusCode>=400)tab.error="Website returned ${e.statusCode}. Embedded sign-in or browser compatibility may be restricted. External browsing is available from the menu."}
    override fun onReceivedSslError(v:WebView,handler:SslErrorHandler,e:SslError){handler.cancel();tab.error="Certificate error. Connection rejected; certificate bypass is unavailable."}
@@ -220,6 +232,7 @@ class PreviewBrowserModel(application:Application):AndroidViewModel(application)
   view.setDownloadListener{url,_,_,_,_->if(runCatching{PreviewRules.https(url)}.isSuccess)downloadRequest=tab to url else tab.error="This download type is unsupported. Public HTTPS files can be downloaded; blob/data links cannot."}
  }
  fun close(tab:PreviewTab,rendererGone:Boolean=false){
+  favourites.stop(tab,false)
   if(mediaSessions.source?.tabId==tab.id)mediaSessions.clear()
   if(fullscreen?.tabId==tab.id)closeFullscreen()
   (tab.view.parent as? ViewGroup)?.removeView(tab.view);if(!rendererGone)tab.view.stopLoading();tab.view.destroy();tabs.remove(tab)
@@ -229,26 +242,29 @@ class PreviewBrowserModel(application:Application):AndroidViewModel(application)
  fun closeApp(profile:String,id:String){tabs.filter{it.profile==profile&&it.app.id==id}.toList().forEach{close(it)}}
  fun closeAll(){tabs.toList().forEach{close(it)}}
  fun detachActivityContexts(){tabs.forEach{it.wrapper.baseContext=getApplication<Application>()}}
- fun detachContexts(){foreground=false;syncLifecycle();detachActivityContexts()}
+ fun detachContexts(){tabs.filter{friendsRequested(it)}.forEach{favourites.invalidate(it)};foreground=false;syncLifecycle();detachActivityContexts()}
  override fun onCleared(){upload?.onReceiveValue(null);upload=null;closeAll()}
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
-@Composable internal fun PreviewBrowser(pool:PreviewBrowserModel,onHome:()->Unit,onExternal:(String)->Unit,visible:Boolean=true,onInspect:(()->Unit)?=null){
+@Composable internal fun PreviewBrowser(pool:PreviewBrowserModel,onHome:()->Unit,onExternal:(String)->Unit,visible:Boolean=true,onInspect:(()->Unit)?=null,onFriendsSettings:(()->Unit)?=null,onNormalMode:(()->Unit)?=null){
  val tab=pool.active
  var settings by remember{mutableStateOf(false)}
  var libraryPage by remember{mutableStateOf<String?>(null)}
  var showTabs by remember{mutableStateOf(false)};var menu by remember{mutableStateOf(false)}
  val context=LocalContext.current
  if(tab==null){Column(Modifier.fillMaxSize().safeDrawingPadding()){PreviewHeader("Web apps","NovaOS Preview",onHome);Text(pool.notice?:"No open app tabs.",Modifier.padding(24.dp));Button(onClick=onHome,Modifier.padding(24.dp)){Text("Return Home")}};return}
+ val friendsMode=pool.friendsRequested(tab)
  val friendsBlocked=pool.friendsBlocked(tab)
+ var normalConfirm by remember{mutableStateOf(false)}
  var address by remember(tab.id,tab.url){mutableStateOf(tab.url)}
  LaunchedEffect(friendsBlocked){if(friendsBlocked){menu=false;showTabs=false;settings=false;libraryPage=null;pool.closeFullscreen()}}
  LaunchedEffect(visible){if(!visible){menu=false;showTabs=false;settings=false}}
  BackHandler(visible){if(tab.view.canGoBack())pool.back(tab)else onHome()}
  Box(Modifier.fillMaxSize().safeDrawingPadding().testTag("preview-web-app").then(if(visible)Modifier else Modifier.clearAndSetSemantics{})){
  Column(Modifier.fillMaxSize()){
- if(!tab.appMode){
+ if(friendsMode)Row(Modifier.fillMaxWidth().heightIn(min=52.dp).padding(horizontal=12.dp).testTag("nova-chat-lite"),verticalAlignment=Alignment.CenterVertically){Column(Modifier.weight(1f)){Text("Nova Chat · Friends Mode",style=MaterialTheme.typography.titleSmall);Text(if(tab.favouritesVerified)"Favourites active · convenience filter"else tab.favouritesState,style=MaterialTheme.typography.labelSmall)};IconButton(onClick={pool.favourites.ensure(tab,true)}){Icon(Icons.Default.Refresh,"Check Favourites")};IconButton(onClick={onFriendsSettings?.invoke()}){Icon(Icons.Default.Settings,"Friends settings")};IconButton(onClick={normalConfirm=true}){Icon(Icons.Default.OpenInNew,"Open normal WhatsApp")}}
+ if(!tab.appMode&&!friendsMode){
   Row(Modifier.fillMaxWidth().padding(horizontal=4.dp),verticalAlignment=Alignment.CenterVertically){
    IconButton(onClick=onHome,modifier=Modifier.testTag("web-return-home")){Icon(Icons.Default.Home,"Return to Nova Home")}
    Column(Modifier.weight(1f)){Text(tab.app.name,style=MaterialTheme.typography.titleMedium,maxLines=1);Text("Ordinary web · NovaOS Preview",style=MaterialTheme.typography.labelSmall,color=MaterialTheme.colorScheme.onSurfaceVariant)}
@@ -269,12 +285,12 @@ class PreviewBrowserModel(application:Application):AndroidViewModel(application)
   Row(Modifier.fillMaxWidth().padding(horizontal=8.dp),verticalAlignment=Alignment.CenterVertically){
    IconButton(onClick={pool.back(tab)},enabled=tab.back){Icon(Icons.Default.ArrowBack,"Back")}
    OutlinedTextField(address,{address=it.take(2048)},Modifier.weight(1f),singleLine=true,textStyle=MaterialTheme.typography.bodySmall,shape=RoundedCornerShape(18.dp),trailingIcon={IconButton(onClick={runCatching{pool.navigate(tab,address)}.onFailure{tab.error=it.message}}){Icon(Icons.Default.ArrowForward,"Go")}})
-   IconButton(onClick={if(tab.progress<100)tab.view.stopLoading()else tab.view.reload()}){Icon(if(tab.progress<100)Icons.Default.Close else Icons.Default.Refresh,if(tab.progress<100)"Stop"else "Reload")}
+   IconButton(onClick={if(tab.progress<100)tab.view.stopLoading()else pool.reload(tab)}){Icon(if(tab.progress<100)Icons.Default.Close else Icons.Default.Refresh,if(tab.progress<100)"Stop"else "Reload")}
    IconButton(onClick={pool.forward(tab)},enabled=tab.forward){Icon(Icons.Default.ChevronRight,"Forward")}
   }
  }
   if(tab.progress in 1..99)LinearProgressIndicator(progress={tab.progress/100f},modifier=Modifier.fillMaxWidth())
-  tab.error?.let{error->Surface(color=MaterialTheme.colorScheme.errorContainer){Column(Modifier.padding(12.dp)){Text(error,style=MaterialTheme.typography.bodySmall);Row{TextButton(onClick={tab.error=null;tab.view.reload()}){Text("Retry")};TextButton(onClick={onExternal(tab.url)}){Text("External browser…")};TextButton(onClick={tab.error=null}){Text("Dismiss")}}}}}
+  tab.error?.let{error->Surface(color=MaterialTheme.colorScheme.errorContainer){Column(Modifier.padding(12.dp)){Text(error,style=MaterialTheme.typography.bodySmall);Row{TextButton(onClick={tab.error=null;pool.reload(tab)}){Text("Retry")};TextButton(onClick={onExternal(tab.url)}){Text("External browser…")};TextButton(onClick={tab.error=null}){Text("Dismiss")}}}}}
   Box(Modifier.weight(1f).fillMaxWidth()){
    pool.tabs.filter{it.profile==tab.profile}.sortedBy{it.id==tab.id}.forEach{retained->key(retained.id){AndroidView(factory={
     (retained.view.parent as? ViewGroup)?.removeView(retained.view);retained.wrapper.baseContext=context;pool.syncLifecycle();retained.view
@@ -282,19 +298,23 @@ class PreviewBrowserModel(application:Application):AndroidViewModel(application)
   }
  }
  if(friendsBlocked&&visible)Surface(Modifier.fillMaxSize().testTag("friends-compatibility-error"),color=MaterialTheme.colorScheme.background){Column(Modifier.fillMaxSize().verticalScroll(androidx.compose.foundation.rememberScrollState()).padding(24.dp),verticalArrangement=Arrangement.spacedBy(16.dp)){
-  Text("Friends Mode unavailable",style=MaterialTheme.typography.headlineSmall)
-  Text("This preview has no verified WhatsApp allowlist adapter. Chat content is concealed here; no filtering, message deletion, replies or credential interception is performed.")
-  Text("Normal WhatsApp browsing is unfiltered. This screen cannot certify authenticated-chat compatibility.",style=MaterialTheme.typography.bodySmall)
+  Text(if(tab.favouritesState=="CHECKING")"Nova Chat · checking Favourites…"else "⚠ Nova Chat needs an update",style=MaterialTheme.typography.headlineSmall)
+  Text(tab.favouritesState,Modifier.testTag("favourites-state"));Text(tab.favouritesReason)
+  Text("WhatsApp Favourites is a convenience filter. Search, notifications and other WhatsApp navigation can still expose other chats.",style=MaterialTheme.typography.bodySmall)
+  Button(onClick={pool.favourites.ensure(tab,true)},modifier=Modifier.testTag("retry-favourites")){Text("Retry")}
+  TextButton(onClick={onInspect?.invoke()},modifier=Modifier.testTag("open-chat-inspector")){Text("Open Compatibility Inspector")}
+  TextButton(onClick={onFriendsSettings?.invoke()}){Text("Friends settings")}
   Button(onClick=onHome){Text("Return Home")}
-  TextButton(onClick={pool.requireFriends(tab,false)}){Text("Use normal unfiltered browsing")}
+  TextButton(onClick={normalConfirm=true}){Text("Open Normal WhatsApp…")}
  }}
- if(tab.appMode&&visible&&!friendsBlocked)Box(Modifier.align(Alignment.TopEnd).padding(8.dp)){
+ if(normalConfirm&&visible)AlertDialog(onDismissRequest={normalConfirm=false},title={Text("Open normal WhatsApp?")},text={Text("Normal WhatsApp can expose every conversation. No cookies or linked-device data will be reset. The current filter is not changed automatically.")},confirmButton={TextButton(onClick={normalConfirm=false;pool.requireFriends(tab,false);onNormalMode?.invoke()}){Text("Open unfiltered WhatsApp")}},dismissButton={TextButton(onClick={normalConfirm=false}){Text("Stay in Friends Mode")}})
+ if(tab.appMode&&visible&&!friendsMode)Box(Modifier.align(Alignment.TopEnd).padding(8.dp)){
   FilledTonalIconButton(onClick={menu=true},modifier=Modifier.size(48.dp).testTag("web-app-menu")){Icon(Icons.Default.MoreVert,"App menu")}
   DropdownMenu(menu,{menu=false}){
    DropdownMenuItem(text={Text(tab.app.name+" · Preview")},onClick={menu=false;settings=true})
    DropdownMenuItem(text={Text("Home")},modifier=Modifier.testTag("web-return-home"),onClick={menu=false;onHome()})
    DropdownMenuItem(text={Text("Back")},enabled=tab.back,onClick={menu=false;pool.back(tab)})
-   DropdownMenuItem(text={Text("Refresh")},onClick={menu=false;tab.view.reload()})
+   DropdownMenuItem(text={Text("Refresh")},onClick={menu=false;pool.reload(tab)})
    DropdownMenuItem(text={Text("App tabs")},onClick={menu=false;showTabs=true})
    DropdownMenuItem(text={Text("Open in Browser V1")},onClick={menu=false;val browser=pool.open(standaloneBrowser,tab.profile);pool.setBrowserMode(browser,true);pool.navigate(browser,tab.url)})
    DropdownMenuItem(text={Text("External browser…")},onClick={menu=false;onExternal(tab.url)})
@@ -313,7 +333,7 @@ class PreviewBrowserModel(application:Application):AndroidViewModel(application)
    if(CorrectionRules.site(tab.url).endsWith("whatsapp.com"))TextButton(onClick={pool.requireFriends(tab,true);settings=false},modifier=Modifier.testTag("friends-status")){Text("Friends Mode compatibility status")}
    if(CorrectionRules.site(tab.url).endsWith("whatsapp.com"))Text("Friends Mode is not implemented in this preview. Normal WhatsApp browsing is unfiltered. No allowlist protection or authenticated-chat compatibility is claimed.",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.error)
    val key="js:${tab.profile}:${tab.app.id}"
-   Row(verticalAlignment=Alignment.CenterVertically){Text("JavaScript",Modifier.weight(1f));Switch(pool.library.flag(key,true),{enabled->pool.library.setFlag(key,enabled);pool.tabs.filter{it.profile==tab.profile&&it.app.id==tab.app.id}.forEach{it.view.settings.javaScriptEnabled=enabled};tab.view.reload()})}
+   Row(verticalAlignment=Alignment.CenterVertically){Text("JavaScript",Modifier.weight(1f));Switch(pool.library.flag(key,true),{enabled->pool.library.setFlag(key,enabled);pool.tabs.filter{it.profile==tab.profile&&it.app.id==tab.app.id}.forEach{it.view.settings.javaScriptEnabled=enabled};pool.reload(tab)})}
    if(tab.app.category=="Games"){
     listOf("landscape" to "Prefer landscape","fullscreen" to "Fullscreen (hide status bar)").forEach{(flag,label)->val k="$flag:${tab.profile}:${tab.app.id}";Row(verticalAlignment=Alignment.CenterVertically){Text(label,Modifier.weight(1f));Switch(pool.library.flag(k),{pool.library.setFlag(k,it)})}}
     Text("Touch, keyboard and gamepad input depend on the game. Landscape requests may be overridden by Android on the Fold inner screen. Nova and Android navigation remain available. Offline support is not promised.")
