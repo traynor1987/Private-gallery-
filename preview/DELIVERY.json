@@ -1,7 +1,7 @@
 {
   "applicationId": "uk.co.traynor.novaos.preview",
-  "versionName": "0.6-preview",
-  "versionCode": 6,
+  "versionName": "0.6.1-preview",
+  "versionCode": 7,
   "branch": "preview/home2-nova-store",
   "baseline": "554e30217d8497f6068f17c04caa96045395c954",
   "developmentCertificateSha256": "81cda5b72cb76940fa50972bc1c284b25e641b88814d2b9041c7111cb1d042d8",
@@ -15,7 +15,7 @@
   },
   "hostVerification": "101 Java policy/backup/rollback assertions;10 Python cases;catalogue/icon/package boundary checks",
   "androidAssembly": "passed locally and in CI",
-  "androidRuntime": "Pending focused API37 widgets/media/upgrade run; no runtime pass claimed",
+  "androidRuntime": "Code6: upgrade+14 widget/media tests passed; unchanged prior14 cases passed. Code7 visual contrast/compact layout patch pending focused run.",
   "physicalFold": "Responsive layout implementation; physical acceptance pending",
   "handover": "preview/release/PRODUCTION-INTEGRATION-HANDOVER.md",
   "widgetTypes": [

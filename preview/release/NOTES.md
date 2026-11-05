@@ -1,6 +1,6 @@
-# NovaOS Preview 0.6 — Widgets, Media & Home (EXPERIMENTAL)
+# NovaOS Preview 0.6.1 — Widgets, Media & Home (EXPERIMENTAL)
 
-Android17/API37 only, code6, package uk.co.traynor.novaos.preview. Same development certificate as0.5; update in place without uninstalling/clearing data. Production NovaOS is untouched.
+Android17/API37 only, code7, package uk.co.traynor.novaos.preview. Same development certificate as0.5/0.6; update in place without uninstalling/clearing data. Production NovaOS is untouched.
 
 ## New Home experience
 
@@ -20,7 +20,7 @@ Android17/API37 only, code6, package uk.co.traynor.novaos.preview. Same developm
 
 ## Verification and limits
 
-Host policy, collision/stack/PiP, backup validation and rollback tests precede Android verification. Focused runtime checks include widgets/drag/resize/stacks, Search, backup/privacy, lock concealment, native media/video, retained browser/audio, Fold viewports and pinned0.5→0.6 upgrade. Runtime results are appended to this release; source compile is not device approval. Physical Galaxy Z Fold acceptance remains with the owner.
+Host policy, collision/stack/PiP, backup validation and rollback tests precede Android verification. Focused runtime checks include widgets/drag/resize/stacks, Search, backup/privacy, lock concealment, native media/video, retained browser/audio, Fold viewports and pinned0.6→0.6.1 upgrade. Runtime results are appended to this release; source compile is not device approval. Physical Galaxy Z Fold acceptance remains with the owner.
 
 The previous emulator crash was SurfaceFlinger/mapper.ranchu ReadColorBufferDma, followed by system_server death. The workflow now replaces the runner's actually-used cmdline-tools/latest with22.0 and validates android-37.0 AVD metadata before boot. Test assertions remain strict.
 
@@ -28,6 +28,8 @@ Known limits: previews and Quick Notes are ordinary non-encrypted local storage;
 
 Owner checklist: update over0.5; check old Home data; add/move/resize clock/media; create/swipe a stack; play Music and return Home; search Breathing/Browser/2048; export a layout, preview/cancel then restore; try demo lock; choose a local video, mini/expand/PiP/close; fold/unfold and check navigation remains clear.
 
-Publication marker: preview-widgets-code6
+Publication marker: preview-widgets-code7
 
 Media continuity repair: foreground app selection no longer pauses retained WebViews merely because the website omits Media Session playback state. Configuration hand-offs preserve the original WebView/document; explicit Close destroys it. Native calm sounds/video use Android audio focus. No automatic play commands or provider-policy bypass. Physical YouTube Music acceptance still required; Android Home audio remains outside the supported scope.
+
+Visual verification patch: widget surfaces explicitly use theme onSurface text/icons, correcting inherited white text on light cards. Compact landscape Home puts Apps in the header, removes redundant profile/footer rows, and keeps branding/profile labels to one line. Published code6 is retained; this is a new code7 APK.

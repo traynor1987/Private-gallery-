@@ -9,7 +9,7 @@ def verify(apk,aapt,apksigner,zipalign,source,output):
  badging=run(aapt,'dump','badging',str(apk));signature=run(apksigner,'verify','--verbose','--print-certs',str(apk));manifest=run(aapt,'dump','xmltree',str(apk),'AndroidManifest.xml')
  assert "package: name='"+PACKAGE+"'" in badging,'Wrong application ID'
  assert "sdkVersion:'37'" in badging and "targetSdkVersion:'37'" in badging,'Wrong Android compatibility'
- assert "versionCode='6'" in badging and "versionName='0.6-preview'" in badging,'Unexpected preview version'
+ assert "versionCode='7'" in badging and "versionName='0.6.1-preview'" in badging,'Unexpected preview version'
  assert 'application-debuggable' in badging,'Expected a development build'
  assert 'Android Debug' in signature and re.search(r'APK Signature Scheme v2\): true',signature),'Development APK signature not verified'
  certs=re.findall(r'certificate SHA-256 digest: ([a-fA-F0-9]{64})',signature)
@@ -29,7 +29,7 @@ def verify(apk,aapt,apksigner,zipalign,source,output):
   for i in range(count):
    ph=struct.unpack_from('<IIQQQQQQ',arm,offset+i*size)
    if ph[0]==1:assert ph[7]>=16384 and ph[2]%16384==ph[3]%16384,'ARM64 native alignment unsafe'
- result={'packageId':PACKAGE,'versionName':'0.6-preview','versionCode':6,'minSdk':37,'targetSdk':37,'sourceCommit':source,'artifactSourceCommit':source,'bytes':apk.stat().st_size,'apkSha256':hashlib.sha256(apk.read_bytes()).hexdigest(),'developmentCertificateSha256':certs[0].lower(),'permissions':permissions,'packageIsolation':'verified distinct application ID; no shared UID or production classes/components','nativeAlignment':'16KB ZIP and ARM64 ELF verified','runtimeVerification':__import__('os').environ.get('PREVIEW_RUNTIME_RESULT','Not run in this host verification; see workflow runtime receipt'),'experimental':True}
+ result={'packageId':PACKAGE,'versionName':'0.6.1-preview','versionCode':7,'minSdk':37,'targetSdk':37,'sourceCommit':source,'artifactSourceCommit':source,'bytes':apk.stat().st_size,'apkSha256':hashlib.sha256(apk.read_bytes()).hexdigest(),'developmentCertificateSha256':certs[0].lower(),'permissions':permissions,'packageIsolation':'verified distinct application ID; no shared UID or production classes/components','nativeAlignment':'16KB ZIP and ARM64 ELF verified','runtimeVerification':__import__('os').environ.get('PREVIEW_RUNTIME_RESULT','Not run in this host verification; see workflow runtime receipt'),'experimental':True}
  (out/'APK-VERIFICATION.json').write_text(json.dumps(result,indent=2)+'\n');(out/'package.txt').write_text(badging);(out/'signature.txt').write_text(signature);(out/'SHA256SUMS.txt').write_text(result['apkSha256']+'  '+apk.name+'\n')
  return result
 if __name__=='__main__':

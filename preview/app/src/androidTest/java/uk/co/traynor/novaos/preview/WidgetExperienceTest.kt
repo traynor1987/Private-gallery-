@@ -1,5 +1,7 @@
 package uk.co.traynor.novaos.preview
 import androidx.compose.ui.test.*
+import androidx.compose.ui.graphics.toPixelMap
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
@@ -86,4 +88,15 @@ class WidgetExperienceTest {
   rule.onNodeWithTag("website-fullscreen").assertDoesNotExist()
   rule.runOnUiThread{val pool=rule.activity.browserPool;assertTrue(pool.tabs.any{it===tab});tab.view.webChromeClient!!.onShowCustomView(android.widget.FrameLayout(rule.activity),android.webkit.WebChromeClient.CustomViewCallback{});assertNull(pool.fullscreen)}
  }
+ @Test fun widgetTextHasReadableContrastInLightAndDarkThemes(){
+  rule.runOnUiThread{widgets().add("primary","media",4,1,0)}
+  for(theme in listOf("light","dark")){
+   rule.runOnUiThread{data().setTheme(theme)};rule.waitForIdle()
+   val pixels=rule.onNodeWithText("Now Playing",useUnmergedTree=true).captureToImage().toPixelMap()
+   var low=1f;var high=0f
+   for(y in 0 until pixels.height)for(x in 0 until pixels.width){val l=pixels[x,y].luminance();low=minOf(low,l);high=maxOf(high,l)}
+   assertTrue("Widget text must contrast with its actual rendered card in $theme",(high+.05f)/(low+.05f)>=4.5f)
+  }
+ }
+
 }

@@ -5,7 +5,7 @@ android {
  defaultConfig {
   applicationId = "uk.co.traynor.novaos.preview"
   minSdk = 37; targetSdk = 37
-  versionCode = 6; versionName = "0.6-preview"
+  versionCode = 7; versionName = "0.6.1-preview"
   testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
  }
  signingConfigs.getByName("debug") {

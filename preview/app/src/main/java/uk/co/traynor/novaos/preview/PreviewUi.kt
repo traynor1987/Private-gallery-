@@ -320,7 +320,8 @@ private val lightColors=lightColorScheme(primary=Color(0xFF285F65),secondary=Col
   CompositionLocalProvider(LocalContentColor provides Color.White){
    Column(Modifier.fillMaxSize().safeDrawingPadding()){
     Row(Modifier.fillMaxWidth().padding(start=22.dp,end=8.dp),verticalAlignment=Alignment.CenterVertically){
-     Image(painterResource(R.drawable.nova_identity),null,Modifier.size(28.dp));Column(Modifier.weight(1f).padding(start=9.dp)){Text("NOVAOS PREVIEW",fontSize=10.sp,letterSpacing=2.sp,fontWeight=FontWeight.Bold);Text(data.profileLabel+" · demo",style=MaterialTheme.typography.labelMedium,color=Color.White.copy(alpha=.7f))}
+     Image(painterResource(R.drawable.nova_identity),null,Modifier.size(28.dp));Column(Modifier.weight(1f).padding(start=9.dp)){Text("NOVAOS PREVIEW",fontSize=10.sp,letterSpacing=2.sp,fontWeight=FontWeight.Bold,maxLines=1,overflow=TextOverflow.Ellipsis);if(!compactHeight)Text(data.profileLabel+" · demo",style=MaterialTheme.typography.labelMedium,color=Color.White.copy(alpha=.7f),maxLines=1,overflow=TextOverflow.Ellipsis)}
+     if(compactHeight)IconButton(onClick=onDrawer,modifier=Modifier.testTag("open-apps")){Icon(Icons.Default.Apps,"Open apps")}
      IconButton(onClick={onLaunch("search")}){Icon(Icons.Default.Search,"Open Nova Search")}
      IconButton(onClick={onLaunch("calm")}){Icon(Icons.Default.Spa,"Calm Now")}
      IconButton(onClick=onQuick){Icon(Icons.Default.Tune,"Open Quick Panel")}
@@ -338,7 +339,7 @@ private val lightColors=lightColorScheme(primary=Color(0xFF285F65),secondary=Col
     Surface(Modifier.padding(horizontal=18.dp).fillMaxWidth(),shape=RoundedCornerShape(30.dp),color=Color.White.copy(alpha=.12f),contentColor=Color.White){
      Row(Modifier.padding(horizontal=7.dp,vertical=if(compactHeight)6.dp else 12.dp),horizontalArrangement=Arrangement.SpaceEvenly){profile.dock.forEach{id->Box(Modifier.weight(1f)){AppTile(data,id,onClick={onLaunch(id)},onLongClick={onSelect(id)},showMenu=false,compact=true)}}}
     }
-    TextButton(onClick=onDrawer,modifier=Modifier.align(Alignment.CenterHorizontally).height(36.dp).testTag("open-apps")){Icon(Icons.Default.KeyboardArrowUp,null,Modifier.size(18.dp),tint=Color.White);Text("Apps",Modifier.padding(start=6.dp),color=Color.White,style=MaterialTheme.typography.labelLarge)}
+    if(!compactHeight)TextButton(onClick=onDrawer,modifier=Modifier.align(Alignment.CenterHorizontally).height(36.dp).testTag("open-apps")){Icon(Icons.Default.KeyboardArrowUp,null,Modifier.size(18.dp),tint=Color.White);Text("Apps",Modifier.padding(start=6.dp),color=Color.White,style=MaterialTheme.typography.labelLarge)}
    }
   }
  }

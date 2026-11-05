@@ -60,7 +60,7 @@ internal fun widgetIcon(type:String)=when(type){"clock"->Icons.Default.Schedule;
   Box(Modifier.fillMaxWidth().height(row*(slots.maxOf{it.y+it.h}))){
    slots.forEach{slot->key(slot.id){
     var dx by remember{mutableFloatStateOf(0f)};var dy by remember{mutableFloatStateOf(0f)}
-    Surface(Modifier.offset(cell*slot.x,row*slot.y).width(cell*slot.w).height(row*slot.h).padding(4.dp).graphicsLayer{translationX=dx;translationY=dy}.testTag("widget-${slot.id}"),shape=RoundedCornerShape(22.dp),color=MaterialTheme.colorScheme.surface.copy(alpha=.94f),tonalElevation=2.dp){
+    Surface(Modifier.offset(cell*slot.x,row*slot.y).width(cell*slot.w).height(row*slot.h).padding(4.dp).graphicsLayer{translationX=dx;translationY=dy}.testTag("widget-${slot.id}"),shape=RoundedCornerShape(22.dp),color=MaterialTheme.colorScheme.surface.copy(alpha=.94f),contentColor=MaterialTheme.colorScheme.onSurface,tonalElevation=2.dp){
      Box(Modifier.fillMaxSize()){
       Column(Modifier.fillMaxSize().padding(10.dp)){
        Row(verticalAlignment=Alignment.CenterVertically){

@@ -7,9 +7,9 @@ python3 preview/tests/wait_for_android.py --output preview/artifacts/emulator-pr
 # Pinned prior preview, same development certificate; exercise a real in-place update.
 python3 - <<'PYUPGRADE'
 import urllib.request,hashlib,pathlib
-url='https://github.com/traynor1987/Private-gallery-/releases/download/novaos-home2-store-preview-0.5/NovaOS-Home2-Store-Preview.apk'
+url='https://github.com/traynor1987/Private-gallery-/releases/download/novaos-home2-store-preview-0.6/NovaOS-Home2-Store-Preview.apk'
 with urllib.request.urlopen(url,timeout=60) as r:raw=r.read(70_000_000)
-assert hashlib.sha256(raw).hexdigest()=='d02a1a924cec9f5ac6f8fd5b6781052a14c3800b4945dae45e3e5b674ed843c0'
+assert hashlib.sha256(raw).hexdigest()=='3c0958a1ad0509bfb9233c93b23ceb6a822ef5253b9d1de7bcbc9bf86e6b4d4b'
 pathlib.Path('/tmp/nova-preview-05.apk').write_bytes(raw)
 PYUPGRADE
 adb install /tmp/nova-preview-05.apk
@@ -21,6 +21,8 @@ adb push /tmp/nova05-upgrade-prefs.xml /data/local/tmp/nova05-upgrade-prefs.xml
 adb shell "run-as uk.co.traynor.novaos.preview cp /data/local/tmp/nova05-upgrade-prefs.xml shared_prefs/nova_preview_v1.xml"
 adb push /tmp/nova06-upgrade-mind.xml /data/local/tmp/nova06-upgrade-mind.xml
 adb shell "run-as uk.co.traynor.novaos.preview cp /data/local/tmp/nova06-upgrade-mind.xml shared_prefs/nova_mind_v1.xml"
+adb push /tmp/nova06-upgrade-widgets.xml /data/local/tmp/nova06-upgrade-widgets.xml
+adb shell "run-as uk.co.traynor.novaos.preview cp /data/local/tmp/nova06-upgrade-widgets.xml shared_prefs/nova_widgets_v1.xml"
 adb install -r preview/app/build/outputs/apk/debug/app-debug.apk
 adb exec-out run-as uk.co.traynor.novaos.preview cat files/nova06-upgrade-probe > preview/artifacts/upgrade-data-probe.txt
 python3 - <<'PYPROBE'
@@ -44,7 +46,7 @@ timeout 420s adb shell am instrument -w -r -e class "$tests" uk.co.traynor.novao
 python3 - <<'PY'
 import pathlib,re
 s=pathlib.Path('preview/artifacts/appmode-tests.txt').read_text()
-assert re.search(r'OK \(14 tests\)',s) and 'FAILURES!!!' not in s and 'INSTRUMENTATION_FAILED' not in s,s[-12000:]
+assert re.search(r'OK \(15 tests\)',s) and 'FAILURES!!!' not in s and 'INSTRUMENTATION_FAILED' not in s,s[-12000:]
 PY
 
 for name in cover inner landscape; do
