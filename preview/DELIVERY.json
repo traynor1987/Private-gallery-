@@ -13,10 +13,10 @@
     "gameUnsupported": 1,
     "verifiedPwa": 0
   },
-  "hostVerification": "109 Java assertions;11 Python tests;90 catalogue/icon/package checks",
+  "hostVerification": "111 Java assertions;11 Python tests;90 catalogue/icon/package checks",
   "androidAssembly": "passed locally and in CI",
-  "androidRuntime": "Pending21 focused polish/widget/media cases plus code7\u21928 upgrade",
-  "physicalFold": "Cover/inner/landscape viewport bounds and screenshot checks passed; rotation/forced Activity recreation retained synthetic audio. Physical YouTube Music/genuine fold posture/PiP acceptance pending.",
+  "androidRuntime": "All21 distinct focused cases have passing evidence:17 unchanged UI/widget/polish cases in42023130870; final native-session control case and3 retained-audio cases passed in42026621706 (4/4), plus pinned code7\u21928 upgrade (1/1).",
+  "physicalFold": "Cover/inner/landscape viewport tests and panel screenshot review passed; rotation/recreation synthetic audio passed. Genuine hardware fold posture, page-edge touch dwell and YouTube-native-session acceptance pending.",
   "handover": "preview/release/PRODUCTION-INTEGRATION-HANDOVER.md",
   "widgetTypes": [
     "Clock & Date",
@@ -28,10 +28,10 @@
   ],
   "videoSupport": "Explicit local files: native player, mini-player, opt-in PiP. Standard website fullscreen callback only; website PiP disabled.",
   "backup": "Strict layout-only version1 JSON; preview/confirm/cancel, rollback and durable recovery; sensitive payload excluded",
-  "sourceCommit": null,
-  "apkSha256": null,
-  "apkUrl": null,
-  "verificationReport": "preview/release/VERIFICATION-0.6.1.md",
+  "sourceCommit": "3de66dd289713f003c1e8f6a064f97071ffb1709",
+  "apkSha256": "05297a501b6236832b7a2b0731446c086a944f61c22ad35047461dcdcdd9830f",
+  "apkUrl": "https://github.com/traynor1987/Private-gallery-/releases/download/novaos-home2-store-preview-0.7/NovaOS-Home2-Store-Preview.apk",
+  "verificationReport": "preview/release/VERIFICATION-0.7.md",
   "mediaContinuity": {
     "novaHome": "synthetic advancing audio and retained document passed",
     "anotherInstalledApp": "passed synthetic fixture",
@@ -40,5 +40,6 @@
     "foldUnfold": "viewport resize/recreation passed; genuine hardware posture pending",
     "androidHome": "deferred/unverified; no Android background audio claim"
   },
-  "publication": "pending"
+  "publication": "Raw GitHub prerelease APK published; independent public verification recorded in receipts/0.7",
+  "mediaControls": "Native calm/video controls; advertised API37 own-package session actions for unambiguous retained web sources. Sole-source ownership supports missing navigator.mediaSession. Multiple unknown/profile sources fall back safely to Return."
 }

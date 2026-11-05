@@ -8,16 +8,17 @@ The accepted Nova Home wallpaper/gradient, palette, typography, icons, Dock, pag
 
 ## Evidence
 
--109 Java assertions,11 Python tests and90 catalogue/icon/package checks passed. The exact-title regression executed the actual public metadata read against synthetic130/513-character titles; the old prefix truncation failed before the fix. Complete bounded titles match exactly; over512 rejects rather than inventing a shortened identity.
+- 111 Java assertions,11 Python tests and90 catalogue/icon/package checks passed. The exact-title regression executed the actual public metadata read against synthetic130/513-character titles; the old prefix truncation failed before the fix. Complete bounded titles match exactly; over512 rejects rather than inventing a shortened identity.
 - Local app and test APK assembly passed; stable package/certificate, API37 floor,16KB native alignment and production-class exclusion verified. No permissions added.
-- Focused API37 run42023130870: pending21 tests plus dedicated code7→8 upgrade.
+- Initial focused API37 run42023130870: upgrade passed and20/21 cases passed. Only native-media case failed; diagnostic42024962455 established that the emulator WebView has no navigator.mediaSession.
+- Final narrow run42026621706 at3de66dd289713f003c1e8f6a064f97071ffb1709: native-control case and3 retained-audio cases passed (4/4), plus upgrade (1/1). The17 other unchanged UI/widget cases passed in42023130870. All21 distinct cases have passing evidence.
 - Existing code7 receipts and the owner's physical acceptance are reused for unchanged features; no VPN/Tor or broad production suite run.
 
 ## Media boundaries
 
-Android17 getActiveSessionsForPackage(context.packageName) only; never global notification/media-key access. Unique matched current-profile WebView title and unique native controller required. Mixed-profile retained tabs disable the bridge; ambiguity/unavailable actions fall back to Return. Native calm sounds/local video retain their real controls. No scraping, forced play commands, authentication or provider-restriction bypass.
+Android17 getActiveSessionsForPackage(context.packageName) only; never global notification/media-key access. Unique native controller and source ownership required: complete bounded metadata matching, or a sole retained web source after excluding known native players. Multiple web sources with unknown metadata fail closed. Mixed-profile retained tabs disable the bridge; ambiguity/unavailable actions fall back to Return. Native calm sounds/local video retain their real controls. No scraping, forced play commands, authentication or provider-restriction bypass.
 
-Synthetic native-session callbacks test Play/Pause/Next capability handling, disabled unsupported Previous, long title identity, ambiguity and cross-profile/source-close revocation. Real YouTube Music/native WebView session publication remains a physical acceptance item, distinct from the owner's already-confirmed internal background audio. Android Home background playback remains unverified/deferred.
+Synthetic native-session callbacks test Play/Pause/Next capability handling, disabled unsupported Previous, genuine long native title, missing website metadata, ambiguity and cross-profile/source-close revocation. Real YouTube Music/native WebView session publication remains a physical acceptance item, distinct from the owner's already-confirmed internal background audio. Android Home background playback remains unverified/deferred.
 
 ## Owner checklist
 
@@ -30,3 +31,17 @@ Synthetic native-session callbacks test Play/Pause/Next capability handling, dis
 ## Limits
 
 Blur uses the wallpaper backing, not a capture of sensitive pages. No Android connectivity/brightness/VPN controls. Short widget areas scroll; cross-page edge dwell and genuine hardware fold posture require owner acceptance. Preview notes/journal/layout storage is ordinary local data, not authenticated production encryption. Production integration remains separately authorised; see PRODUCTION-INTEGRATION-HANDOVER.md.
+
+## Published delivery
+
+APK source:3de66dd289713f003c1e8f6a064f97071ffb1709. SHA256:05297a501b6236832b7a2b0731446c086a944f61c22ad35047461dcdcdd9830f.
+
+Direct APK:https://github.com/traynor1987/Private-gallery-/releases/download/novaos-home2-store-preview-0.7/NovaOS-Home2-Store-Preview.apk
+
+Final runtime:https://github.com/traynor1987/Private-gallery-/actions/runs/42026621706 . Earlier UI/widget/Fold evidence:https://github.com/traynor1987/Private-gallery-/actions/runs/42023130870 .
+
+The final native test uses a real own-package MediaSession and deliberately absent website metadata; Pause/Next callbacks actually execute, Previous is disabled, ambiguity/profile/source-close revocation are asserted. No fake navigator API, test-only hook in product code or weakened assertion. Pure sole-source ownership regression was observed RED→GREEN before implementation.
+
+Cover/inner/landscape panel screenshots from synthetic owned decor were visually reviewed without disabling secure-window flags. Larger content scrolls on short landscapes. Actual Android17 YouTube native-session availability remains a physical-device check; existing internal audio continuity is preserved and reverified synthetically.
+
+Independent public APK:60,910,177bytes; SHA256, package/API37, stable development certificate and16KB native alignment match publication. Permanent receipts are in receipts/0.7. The earlier UI log retains its one unresolved-at-that-time native fixture failure; the final native/media log records its passing replacement plus audio regressions, so the history is not hidden. No production security approval is claimed.

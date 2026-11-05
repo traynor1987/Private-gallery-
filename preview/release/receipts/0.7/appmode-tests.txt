@@ -1,0 +1,66 @@
+INSTRUMENTATION_STATUS: class=uk.co.traynor.novaos.preview.PolishAcceptanceTest
+INSTRUMENTATION_STATUS: current=1
+INSTRUMENTATION_STATUS: id=AndroidJUnitRunner
+INSTRUMENTATION_STATUS: numtests=4
+INSTRUMENTATION_STATUS: stream=
+uk.co.traynor.novaos.preview.PolishAcceptanceTest:
+INSTRUMENTATION_STATUS: test=ownPackageMediaSessionControlsAreRealAndAmbiguityFailsClosed
+INSTRUMENTATION_STATUS_CODE: 1
+INSTRUMENTATION_STATUS: class=uk.co.traynor.novaos.preview.PolishAcceptanceTest
+INSTRUMENTATION_STATUS: current=1
+INSTRUMENTATION_STATUS: id=AndroidJUnitRunner
+INSTRUMENTATION_STATUS: numtests=4
+INSTRUMENTATION_STATUS: stream=.
+INSTRUMENTATION_STATUS: test=ownPackageMediaSessionControlsAreRealAndAmbiguityFailsClosed
+INSTRUMENTATION_STATUS_CODE: 0
+INSTRUMENTATION_STATUS: class=uk.co.traynor.novaos.preview.MediaContinuityAcceptanceTest
+INSTRUMENTATION_STATUS: current=2
+INSTRUMENTATION_STATUS: id=AndroidJUnitRunner
+INSTRUMENTATION_STATUS: numtests=4
+INSTRUMENTATION_STATUS: stream=
+uk.co.traynor.novaos.preview.MediaContinuityAcceptanceTest:
+INSTRUMENTATION_STATUS: test=rotationFoldAndActivityRecreationRetainAudioAndDocument
+INSTRUMENTATION_STATUS_CODE: 1
+INSTRUMENTATION_STATUS: class=uk.co.traynor.novaos.preview.MediaContinuityAcceptanceTest
+INSTRUMENTATION_STATUS: current=2
+INSTRUMENTATION_STATUS: id=AndroidJUnitRunner
+INSTRUMENTATION_STATUS: numtests=4
+INSTRUMENTATION_STATUS: stream=.
+INSTRUMENTATION_STATUS: test=rotationFoldAndActivityRecreationRetainAudioAndDocument
+INSTRUMENTATION_STATUS_CODE: 0
+INSTRUMENTATION_STATUS: class=uk.co.traynor.novaos.preview.MediaContinuityAcceptanceTest
+INSTRUMENTATION_STATUS: current=3
+INSTRUMENTATION_STATUS: id=AndroidJUnitRunner
+INSTRUMENTATION_STATUS: numtests=4
+INSTRUMENTATION_STATUS: stream=
+INSTRUMENTATION_STATUS: test=explicitCloseReleasesTheAudioSourceAndBackgroundScopeRemainsBounded
+INSTRUMENTATION_STATUS_CODE: 1
+INSTRUMENTATION_STATUS: class=uk.co.traynor.novaos.preview.MediaContinuityAcceptanceTest
+INSTRUMENTATION_STATUS: current=3
+INSTRUMENTATION_STATUS: id=AndroidJUnitRunner
+INSTRUMENTATION_STATUS: numtests=4
+INSTRUMENTATION_STATUS: stream=.
+INSTRUMENTATION_STATUS: test=explicitCloseReleasesTheAudioSourceAndBackgroundScopeRemainsBounded
+INSTRUMENTATION_STATUS_CODE: 0
+INSTRUMENTATION_STATUS: class=uk.co.traynor.novaos.preview.MediaContinuityAcceptanceTest
+INSTRUMENTATION_STATUS: current=4
+INSTRUMENTATION_STATUS: id=AndroidJUnitRunner
+INSTRUMENTATION_STATUS: numtests=4
+INSTRUMENTATION_STATUS: stream=
+INSTRUMENTATION_STATUS: test=homeAnotherAppAndBrowserKeepTheOriginalUnreportedAudio
+INSTRUMENTATION_STATUS_CODE: 1
+INSTRUMENTATION_STATUS: class=uk.co.traynor.novaos.preview.MediaContinuityAcceptanceTest
+INSTRUMENTATION_STATUS: current=4
+INSTRUMENTATION_STATUS: id=AndroidJUnitRunner
+INSTRUMENTATION_STATUS: numtests=4
+INSTRUMENTATION_STATUS: stream=.
+INSTRUMENTATION_STATUS: test=homeAnotherAppAndBrowserKeepTheOriginalUnreportedAudio
+INSTRUMENTATION_STATUS_CODE: 0
+INSTRUMENTATION_RESULT: stream=
+
+Time: 61.289
+
+OK (4 tests)
+
+
+INSTRUMENTATION_CODE: -1
