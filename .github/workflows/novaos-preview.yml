@@ -96,3 +96,79 @@ jobs:
        preview/release-out/
        preview/app/build/reports/
       retention-days: 14
+
+ publish-verified-preview08:
+  if: ${{ github.event_name == 'push' && contains(github.event.head_commit.message, '[preview-v08-publish]') }}
+  runs-on: ubuntu-24.04
+  timeout-minutes: 10
+  permissions:
+   contents: write
+   actions: read
+  env:
+   GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+   PREVIEW_RUNTIME_RESULT: 'API37 15/15 and code9-to10 upgrade1/1 passed in42060100115; publication-only recovery'
+  steps:
+   - uses: actions/checkout@v4
+     with:
+      ref: 999a780ad37f1f326f91f9312b6fadd066edc1a2
+   - uses: actions/setup-java@v5
+     with:
+      distribution: temurin
+      java-version: '17'
+   - name: Recover the already tested APK without rebuilding or rerunning Android
+     run: |
+      gh api repos/traynor1987/Private-gallery-/actions/artifacts/13431127529 > /tmp/verified-artifact.json
+      python3 - <<'PY'
+      import json
+      m=json.load(open('/tmp/verified-artifact.json'))
+      assert m['digest']=='sha256:5fd7a09ec9b8c54abd3cb6418575653f073f1ada4baf50a6017da4611b9d3080'
+      assert m['workflow_run']['head_sha']=='999a780ad37f1f326f91f9312b6fadd066edc1a2'
+      PY
+      gh run download 42060100115 --repo traynor1987/Private-gallery- --name NovaOS-preview-08-verification-999a780ad37f1f326f91f9312b6fadd066edc1a2 --dir /tmp/verified-preview08
+      python3 - <<'PY'
+      import pathlib,json,hashlib,shutil,subprocess
+      p=pathlib.Path('/tmp/verified-preview08')
+      assert subprocess.check_output(['git','rev-parse','HEAD'],text=True).strip()=='999a780ad37f1f326f91f9312b6fadd066edc1a2'
+      for name,expected in [('appmode-tests.txt','OK (15 tests)'),('upgrade-tests.txt','OK (1 test)')]:
+       s=(p/'artifacts'/name).read_text();assert expected in s and 'FAILURES!!!' not in s and 'INSTRUMENTATION_FAILED' not in s
+      v=json.loads((p/'release-out/APK-VERIFICATION.json').read_text());assert v['runtimeVerification']=='success' and v['sourceCommit']=='999a780ad37f1f326f91f9312b6fadd066edc1a2'
+      apk=p/'release-out/NovaOS-Home2-Store-Preview.apk';assert hashlib.sha256(apk.read_bytes()).hexdigest()=='98c8d08327f50810dc2568db51444d49523cffe7ca52261db13b1c0cff82c412'
+      shutil.copytree(p/'release-out','preview/release-out',dirs_exist_ok=True)
+      PY
+   - name: Reverify the preserved package certificate and checksum
+     run: |
+      (yes || true) | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" 'build-tools;36.0.0'
+      python3 preview/release/verify_apk.py --apk preview/release-out/NovaOS-Home2-Store-Preview.apk --aapt "$ANDROID_HOME/build-tools/36.0.0/aapt" --apksigner "$ANDROID_HOME/build-tools/36.0.0/apksigner" --zipalign "$ANDROID_HOME/build-tools/36.0.0/zipalign" --source 999a780ad37f1f326f91f9312b6fadd066edc1a2 --output preview/release-out
+   - name: Retry only prerelease publication with idempotent transient-error recovery
+     run: |
+      python3 - <<'PY'
+      import importlib.util,os,time
+      source='999a780ad37f1f326f91f9312b6fadd066edc1a2'
+      # Publisher provenance names the preserved APK source, not this metadata-only recovery workflow.
+      os.environ['GITHUB_SHA']=source
+      spec=importlib.util.spec_from_file_location('preview_publisher','preview/release/publish.py');module=importlib.util.module_from_spec(spec);spec.loader.exec_module(module)
+      original=module.api
+      def retry_api(path,method='GET',data=None,missing_ok=False):
+       for attempt in range(3):
+        try:return original(path,method,data,missing_ok)
+        except RuntimeError as error:
+         transient=any(code in str(error) for code in ['HTTP 500','HTTP 502','HTTP 503','HTTP 504'])
+         if not transient:raise
+         if path=='releases' and method=='POST':
+          # A failed POST may have created its draft. Reuse it rather than creating duplicates.
+          existing=original('releases?per_page=100')
+          matches=[r for r in existing if r['tag_name']==module.TAG]
+          assert len(matches)<=1,'Ambiguous release drafts; refusing publication'
+          if matches:
+           assert matches[0]['prerelease'] and 'preview-chat-inspector-code10' in matches[0]['body']
+           return matches[0]
+         if attempt==2:raise
+         time.sleep(5)
+      module.api=retry_api;module.main()
+      PY
+   - uses: actions/upload-artifact@v4
+     if: always()
+     with:
+      name: NovaOS-preview08-publication-recovery-${{ github.sha }}
+      path: preview/release-out/
+      retention-days: 14

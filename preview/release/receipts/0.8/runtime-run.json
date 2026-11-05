@@ -1,0 +1,14 @@
+{
+  "runId": 42060100115,
+  "source": "999a780ad37f1f326f91f9312b6fadd066edc1a2",
+  "focusedPassed": 15,
+  "upgradePassed": 1,
+  "upgradeFromCode": 9,
+  "upgradeToCode": 10,
+  "artifactSha256": "5fd7a09ec9b8c54abd3cb6418575653f073f1ada4baf50a6017da4611b9d3080",
+  "runtimeOutcome": "success",
+  "jobConclusion": "failure",
+  "jobFailure": "GitHub release POST returned HTTP502 after all verification passed",
+  "allDistinctCasesWithPassingEvidence": 22,
+  "ownerReportsOrScreenshotsCollected": false
+}
