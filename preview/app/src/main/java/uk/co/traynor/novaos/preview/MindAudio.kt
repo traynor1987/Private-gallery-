@@ -21,6 +21,7 @@ class MindAudio(app:Application):AndroidViewModel(app){
  fun next(){val names=listOf("rain","ocean","wind","fireplace","white","ambient");play(names[(names.indexOf(sound)+1).mod(names.size)])}
  fun previous(){val names=listOf("rain","ocean","wind","fireplace","white","ambient");play(names[(names.indexOf(sound)-1).mod(names.size)])}
  fun switchProfile(next:String){if(profile!=null&&profile!=next)pause();profile=next}
+ private val focus=PreviewAudioFocus(app){pause()}
  private var player:MediaPlayer?=null
  private val handler=Handler(Looper.getMainLooper())
  var sound by mutableStateOf("");private set
@@ -31,11 +32,12 @@ class MindAudio(app:Application):AndroidViewModel(app){
  private val expire=object:Runnable{override fun run(){if(deadline>0&&SystemClock.elapsedRealtime()>=deadline){pause();deadline=0}else if(deadline>0)handler.postDelayed(this,500)}}
  fun play(name:String){
   require(name in listOf("rain","ocean","wind","fireplace","white","ambient"))
+  if(!focus.acquire()){error="Audio focus is unavailable. Try Play again when NovaOS is visible.";return}
   runCatching{if(name!=sound||player==null){player?.release();player=null;val p=MediaPlayer();player=p;p.setAudioAttributes(AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_MEDIA).setContentType(AudioAttributes.CONTENT_TYPE_MUSIC).build());getApplication<Application>().assets.openFd("calm/$name.wav").use{p.setDataSource(it.fileDescriptor,it.startOffset,it.length)};p.isLooping=true;p.prepare();sound=name};player?.setVolume(volume,volume);player?.start();playing=true;poll();publish();error=null}.onFailure{pause();error="Sound unavailable. Try another texture."}
  }
- fun pause(){player?.pause();playing=false;poll();publish()}
+ fun pause(){runCatching{player?.pause()};playing=false;poll();publish();focus.release()}
  fun resume(){if(sound.isNotBlank())play(sound)}
  fun volume(value:Float){volume=value.coerceIn(0f,1f);player?.setVolume(volume,volume)}
  fun timer(minutes:Int){handler.removeCallbacks(expire);deadline=if(minutes>0)SystemClock.elapsedRealtime()+minutes*60000L else 0;if(deadline>0)handler.post(expire)}
- override fun onCleared(){session.release();handler.removeCallbacks(expire);player?.release();player=null}
+ override fun onCleared(){focus.release();session.release();handler.removeCallbacks(expire);player?.release();player=null}
 }

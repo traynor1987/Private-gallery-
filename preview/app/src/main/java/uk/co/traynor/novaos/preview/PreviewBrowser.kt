@@ -177,7 +177,8 @@ class PreviewBrowserModel(application:Application):AndroidViewModel(application)
  }
  fun closeApp(profile:String,id:String){tabs.filter{it.profile==profile&&it.app.id==id}.toList().forEach{close(it)}}
  fun closeAll(){tabs.toList().forEach{close(it)}}
- fun detachContexts(){foreground=false;syncLifecycle();tabs.forEach{it.wrapper.baseContext=getApplication<Application>()}}
+ fun detachActivityContexts(){tabs.forEach{it.wrapper.baseContext=getApplication<Application>()}}
+ fun detachContexts(){foreground=false;syncLifecycle();detachActivityContexts()}
  override fun onCleared(){upload?.onReceiveValue(null);upload=null;closeAll()}
 }
 
@@ -223,7 +224,7 @@ class PreviewBrowserModel(application:Application):AndroidViewModel(application)
   Box(Modifier.weight(1f).fillMaxWidth()){
    pool.tabs.filter{it.profile==tab.profile}.sortedBy{it.id==tab.id}.forEach{retained->key(retained.id){AndroidView(factory={
     (retained.view.parent as? ViewGroup)?.removeView(retained.view);retained.wrapper.baseContext=context;pool.syncLifecycle();retained.view
-   },modifier=Modifier.fillMaxSize(),update={view->view.importantForAccessibility=if(visible&&retained.id==tab.id)android.view.View.IMPORTANT_FOR_ACCESSIBILITY_AUTO else android.view.View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS},onReset=null,onRelease={view->(view.parent as? ViewGroup)?.removeView(view);view.onPause();retained.resumed=false;retained.wrapper.baseContext=context.applicationContext})}}
+   },modifier=Modifier.fillMaxSize(),update={view->view.importantForAccessibility=if(visible&&retained.id==tab.id)android.view.View.IMPORTANT_FOR_ACCESSIBILITY_AUTO else android.view.View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS},onReset=null,onRelease={view->(view.parent as? ViewGroup)?.removeView(view);retained.wrapper.baseContext=context.applicationContext})}}
   }
  }
  if(tab.appMode&&visible)Box(Modifier.align(Alignment.TopEnd).padding(8.dp)){

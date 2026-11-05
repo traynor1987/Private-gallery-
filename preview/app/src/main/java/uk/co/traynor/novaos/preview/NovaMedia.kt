@@ -49,7 +49,7 @@ class NovaVideoModel(app:Application):AndroidViewModel(app){
  var pick:(()->Unit)?=null
  var enterPip:(()->Unit)?=null
  fun open(uri:Uri,name:String,owner:String){
-  close();wantsPlay=true;pendingSeek=0;profile=owner;this.uri=uri;title=name.take(100).ifBlank{"Local video"};val v=VideoView(wrapper);view=v
+  close();wantsPlay=true;pendingSeek=0;profile=owner;this.uri=uri;title=name.take(100).ifBlank{"Local video"};val v=VideoView(wrapper);v.setAudioFocusRequest(android.media.AudioManager.AUDIOFOCUS_GAIN);view=v
   v.setOnPreparedListener{p->if(view!==v)return@setOnPreparedListener;prepared=true;duration=p.duration.coerceAtLeast(0);width=p.videoWidth.coerceAtLeast(1);height=p.videoHeight.coerceAtLeast(1);error=null;if(pendingSeek>0){v.seekTo(pendingSeek);position=pendingSeek;pendingSeek=0};if(wantsPlay)v.start();playing=wantsPlay}
   v.setOnCompletionListener{if(view===v){wantsPlay=false;playing=false;position=duration}}
   v.setOnErrorListener{_,_,_->if(view!==v)return@setOnErrorListener true;error="This local video could not play. Its format may be unsupported.";playing=false;prepared=false;true}

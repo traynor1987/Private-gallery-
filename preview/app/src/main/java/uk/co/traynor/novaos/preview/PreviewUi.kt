@@ -89,14 +89,14 @@ private val lightColors=lightColorScheme(primary=Color(0xFF285F65),secondary=Col
    val routeState=rememberSaveableStateHolder()
    val profile=data.profile
    LaunchedEffect(state.current){pool.currentProfile=state.current;pool.syncLifecycle();audio.switchProfile(state.current);if(video.profile!=null&&video.profile!=state.current)video.close()}
-   LaunchedEffect(screen){if(screen in listOf("mind","store","wallpaper","photos","guide","video","search","widgets","backup","lock-settings"))data.shell.touchInternal(state.current,screen)}
+   LaunchedEffect(screen){if(screen!="browser")pool.closeFullscreen();if(screen in listOf("mind","store","wallpaper","photos","guide","video","search","widgets","backup","lock-settings"))data.shell.touchInternal(state.current,screen)}
    LaunchedEffect(pool,state.current){while(true){pool.pollMedia();audio.poll();video.poll();delay(1000)}}
    pool.externalRequest?.let{request->LaunchedEffect(request){
     if(PreviewAppPolicy.canPresentExternal(request.tabId,request.profile,pool.activeId,state.current,pool.foreground))pool.tabs.firstOrNull{it.id==request.tabId}?.app?.let{browser=it.copy(url=request.url)}
     pool.externalRequest=null
    }}
    val host=LocalContext.current as? android.app.Activity
-   SideEffect { host?.let { activity->
+   SideEffect { pool.presentationBlocked=locked||screen!="browser";host?.let { activity->
     val controller=androidx.core.view.WindowCompat.getInsetsController(activity.window,activity.window.decorView)
     controller.isAppearanceLightStatusBars=screen!="home"&&!dark
     controller.isAppearanceLightNavigationBars=screen!="home"&&!dark
@@ -137,7 +137,7 @@ private val lightColors=lightColorScheme(primary=Color(0xFF285F65),secondary=Col
     }}
    }
    LaunchedEffect(widgets.demoLock){if(!widgets.demoLock)locked=false}
-   LaunchedEffect(locked){video.locked=locked;pool.presentationBlocked=locked;if(locked){pool.closeFullscreen()};if(locked){drawer=false;quick=false;editing=false;selected=null;openFolder=null;detailId=null;selectedWidget=null;notifications=false;edgePanel=false;shellSettings=false}}
+   LaunchedEffect(locked){video.locked=locked;if(locked){pool.closeFullscreen()};if(locked){drawer=false;quick=false;editing=false;selected=null;openFolder=null;detailId=null;selectedWidget=null;notifications=false;edgePanel=false;shellSettings=false}}
    val goHome:()->Unit={
     drawer=false;quick=false;editing=false;selected=null;openFolder=null;detailId=null;edgePanel=false;pool.closeFullscreen()
     host?.let{(it.getSystemService(android.content.Context.INPUT_METHOD_SERVICE) as? android.view.inputmethod.InputMethodManager)?.hideSoftInputFromWindow(it.window.decorView.windowToken,0)}

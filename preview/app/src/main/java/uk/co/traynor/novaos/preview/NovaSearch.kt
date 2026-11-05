@@ -34,7 +34,8 @@ internal fun searchIndex(data:PreviewData,widgets:WidgetData,pool:PreviewBrowser
  val games=data.catalogue.filter{it.category=="Games"&&data.installed(it)==null}.map{SearchHit("store:"+it.id,it.name,"Games",it.classification,"store:"+it.id)}
  val recents=pool.recents(data.state.current).map{SearchHit("recent:"+it.id,it.app.name,"Recent","Retained app","recent-tab:"+it.id)}
  val internal=data.shell.internalRecents.filter{it.first==data.state.current}.mapNotNull{(_,id)->data.app(id)?.let{SearchHit("recent-internal:"+id,it.name,"Recent","Nova application","resume-internal:"+id)}}
- return apps+folders+tools+settings+placed+games+recents+internal
+ val availableWidgets=widgetSpecs.map{SearchHit("widget-type:"+it.type,it.name,"Widgets",it.description,"widgets")}
+ return apps+folders+tools+settings+placed+availableWidgets+games+recents+internal
 }
 @Composable internal fun NovaSearch(data:PreviewData,widgets:WidgetData,pool:PreviewBrowserModel,history:NovaSearchHistory,onBack:()->Unit,onResult:(String)->Unit,onWeb:(String)->Unit){
  var query by rememberSaveable{mutableStateOf("")};var category by rememberSaveable{mutableStateOf("All")}

@@ -29,3 +29,5 @@ Known limits: previews and Quick Notes are ordinary non-encrypted local storage;
 Owner checklist: update over0.5; check old Home data; add/move/resize clock/media; create/swipe a stack; play Music and return Home; search Breathing/Browser/2048; export a layout, preview/cancel then restore; try demo lock; choose a local video, mini/expand/PiP/close; fold/unfold and check navigation remains clear.
 
 Publication marker: preview-widgets-code6
+
+Media continuity repair: foreground app selection no longer pauses retained WebViews merely because the website omits Media Session playback state. Configuration hand-offs preserve the original WebView/document; explicit Close destroys it. Native calm sounds/video use Android audio focus. No automatic play commands or provider-policy bypass. Physical YouTube Music acceptance still required; Android Home audio remains outside the supported scope.

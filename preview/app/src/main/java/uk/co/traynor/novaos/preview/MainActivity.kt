@@ -64,7 +64,7 @@ class MainActivity:ComponentActivity() {
   setContent { NovaPreview(previewData,browserPool,mindData,mindAudio,widgetData,homeBackup,searchHistory,video, onPickImage={photoProfile=previewData.state.current;pickPhoto.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))},onOpen={openWebsite(it)},filesDir=filesDir) }
  }
  override fun onResume(){super.onResume();browserPool.library.refreshDownloads(previewData.shell);video.wrapper.baseContext=this;browserPool.foreground=true;browserPool.tabs.filter{it.view.parent!=null}.forEach{it.wrapper.baseContext=this};browserPool.syncLifecycle()}
- override fun onStop(){super.onStop();if(!isChangingConfigurations){mindAudio.pause();if(!isInPictureInPictureMode)video.pause()};browserPool.detachContexts();android.webkit.CookieManager.getInstance().flush()}
+ override fun onStop(){super.onStop();if(!isChangingConfigurations){mindAudio.pause();if(!isInPictureInPictureMode)video.pause()};if(isChangingConfigurations)browserPool.detachActivityContexts()else browserPool.detachContexts();android.webkit.CookieManager.getInstance().flush()}
  override fun onDestroy(){video.pick=null;video.enterPip=null;browserPool.pickFiles=null;if(!isChangingConfigurations){browserPool.upload?.onReceiveValue(null);browserPool.upload=null};super.onDestroy()}
  override fun onSaveInstanceState(outState:Bundle){outState.putString("photoProfile",photoProfile);outState.putString("backupProfile",backupProfile);super.onSaveInstanceState(outState)}
  private fun openWebsite(url:String){

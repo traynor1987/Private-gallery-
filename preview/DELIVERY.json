@@ -13,7 +13,7 @@
     "gameUnsupported": 1,
     "verifiedPwa": 0
   },
-  "hostVerification": "99 Java policy/backup/rollback assertions;10 Python cases;catalogue/icon/package boundary checks",
+  "hostVerification": "101 Java policy/backup/rollback assertions;10 Python cases;catalogue/icon/package boundary checks",
   "androidAssembly": "passed locally and in CI",
   "androidRuntime": "Pending focused API37 widgets/media/upgrade run; no runtime pass claimed",
   "physicalFold": "Responsive layout implementation; physical acceptance pending",
