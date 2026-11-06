@@ -1,0 +1,23 @@
+{
+  "source": "0e7f7c07608a6b439a4471e613531a758028c849",
+  "baseline_source": "9efd19540a1d75efa1b30f4e23c9cbb096f93aff",
+  "baseline_code": 54,
+  "candidate_code": 56,
+  "test_run": 42141848244,
+  "test_artifact": 13467919132,
+  "review_sha256": "d4cdea7ca37169b7f159f71339df4da9c2e38c6c2ee4f7a7a7f3b1fc44062864",
+  "fixture_sha256": "6b665eacb36a0e5721db66c621332b2a5f3f2b49f15cd3138c539313696a778d",
+  "matrix_sha256": "6544f450036015ce3359edd8e06c9a253c883daf01da7bb518bc1e086b35a368",
+  "runtime_archive_sha256": "7329a7a3dee3589ded9cf7b00aadf2bc90589482e54c72b2d58c814e571b6cf9",
+  "controls_sha256": {
+    "compile_upgrade1711_fixture.sh": "f3bd83df7b1ae9952a159b0138b43374011626249cacb319d3b3ffca06ba85b2",
+    "verify_compiled_upgrade1711.py": "77cdfa595342e110f891a811e79c2d05623ac4ade27f65018d6319ce82816e72",
+    "verify_upgrade1711_baseline.py": "370ab0346b948000b2ae7a93a7ee80d12e580522f6b025fce4ef6c507a58f572",
+    "verify_production_candidate1711.sh": "a96058f489ac590fbbb5c259066ebf4321919a58022fbbc0fa9b86ddc4b8e176",
+    "verify_synthetic_upgrade1711.sh": "b78469f30021cf530a076ffb0f29a06524ff23c9399579880ab0218879738a16",
+    "verify_signed_upgrade1711.py": "3170680e165a6e571a953240246f4210906588b981ae0e4ca19e559512adbb62",
+    "release_configuration1711.sh": "ff10e82b6885041a6689a3c844e1db19b7342acc0f0c2ff9c0eb1f2ec64dcce9",
+    "verify_release1711_gate.py": "ab1929bd9e3734f525589cb7d5d672a40268a6c23a83cf06cbb7c5007ce9cf34"
+  },
+  "workflow_sha256": "8290adbdad12f35d2c022cf6308342d93f1ca6068550852c1aae04fff9984245"
+}
