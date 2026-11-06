@@ -28,7 +28,7 @@ parent provides exact existing app/tab/auth guard and synchronous privacy/lock r
 - [x] Write policy/lifecycle/ownership tests; observe host/JVM RED before implementing rules.
 - [x] Implement the smallest state/window owner, scoped brightness/bars/keepScreenOn and wake actions.
 - [x] Add contextual menu callback, bound same owner, Main privacy/lock/Panic hooks.
-- [ ] Test touch blocking, doubletap/accessibility/Back wake, exact restore, unchanged WebView+audio,
+- [x] Test touch blocking, doubletap/accessibility/Back wake, exact restore, unchanged WebView+audio,
   focus interruption/actual background, revocation, layout/recreation and stale callback rejection.
 - [x] Build/host/JVM verify, independent source review and separate feature checkpoint.
 
@@ -40,15 +40,19 @@ Tests: JVM policy and Android NovaScreenPinning61Test (real API boundary and UI)
 Interfaces: composable NovaScreenPinningSettings(current:()->Boolean); no Main engine mutations.
 - [x] Write guard/state tests and observe JVM RED; implement public-only state/request/settings controller.
 - [x] Integrate neutral native Privacy & Security section with captured existing Space/auth lifetime.
-- [ ] Test cancellation, foreground/revoked/keyguard/managed/unknown states, Settings return,
-  no success before actual PINNED, no automatic request/recreation persistence, supported OS exit.
+- [x] Test cancellation, foreground/revoked/keyguard/managed/unknown states, Settings return,
+  no success before actual PINNED, no automatic request/recreation persistence and genuine OS confirmation/cancel.
+- [ ] Owner acceptance: actual successful pin/unpin using Android controls on the physical Fold.
 - [x] Verify and commit independently from Black Screen.
 
 ## Release
 
 - [x] Determine next unused code above60 and pin actual original signed60 baseline and fixture.
 - [x] Run existing host/JVM checks and compile app/instrumentation before one combined API37 batch.
-- [ ] Inspect original complete XML, actual black captures/window state and retained-audio evidence.
-- [ ] Independently review exact source, controls and original runtime evidence before original signer.
-- [ ] Original-key60-to-next upgrade/preservation/restart; verify actual APK/cert/hash and publish asset.
-- [ ] Record final SHAs/results/limitations and physical Fold acceptance checklist, clean pushed tree.
+- [x] Inspect original complete XML, actual black captures/window state and retained-audio evidence.
+- [x] Independently review exact source, controls and original runtime evidence before original signer.
+- [x] Original-key60-to-next upgrade/preservation/restart; verify actual APK/cert/hash and publish asset.
+- [x] Record final SHAs/results/limitations and physical Fold acceptance checklist, clean pushed tree.
+
+Verified delivery: docs/release1711/CODE61_DELIVERY.md. Physical Fold/live YouTube Music/calls
+and actual owner pin/unpin remain acceptance, not automated completion claims.

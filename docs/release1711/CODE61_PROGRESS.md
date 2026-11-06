@@ -171,3 +171,33 @@ Home assertions remain, clock is additionally checked afterBack. No implementati
 product/engine/permission/control/matrix change or skipped test. First compilation PASS1m8;
 latest strengthened drawer-handoff assertion receives its own subsequent test compilation.
 Full fresh196 and original-key upgrade gates remain mandatory; no production61 signing yet.
+
+
+## Verified code61 delivery
+
+Frozen source2da2895e387839ec37d0590dfb713dc1bec99853/tree3b0353e37fcf51a078d721c89e29f0993e2af88b.
+Original run42266383469/job128059293010 PASS196/196Android +447JVM,0failure/error/skip.
+Runtime artifact13528247116:74887629bytes/SHA195a5bff528a86fe8af129b2585eb8a5df313d62fe16f1517f753db78036a502.
+Root and independent reviewer inspected current genuineIME/blackwindow/audio/nativePin/Panic/layout
+proofs. Exact independent review9056470dfd813d89abc4a2079d2b14445853381d4ed58ef00c40528f288e7a99
+approved original-key signer readiness; parent puregate CLI also PASS beforeactivation.
+Activation4904c937d3773aa07b117022edbcafcbcf8c5d5a contains only exactreview+freshmarker.
+Existing productionrun42269170059/job128068998830 PASS: gated originalbaseline60, fixturecompiled
+beforekeys, originalcertificate, frozen61build/releaselint/identity/signature/OCR/alignment,
+actual60->61install-rpreservation/restart, publish andoriginalkeycleanup. No ownerdata was touched.
+
+Published APK1.7.11.5/code61 originalpkg/API37,144991916bytes,
+SHA90083faaeb8ebaa896451d9dc721c4d26ee170135b3a4e1aad126038bcd7ef3e,
+originalcert94f2bfc6567f26d067d29077111cfd0ce86d38263c642ad115e43365f05b0d17.
+Original productionartifact13531400377:60738267bytes,
+SHA26d0f86d8ece1b3c22d4b41c32eddca2592e9722c3b7b93f7d420fd42aeaa678.
+Parent actualdownload/archive/CRC/APKsignature/package/zipalign/evidence/4assetdigestsPASS.
+See CODE61_DELIVERY.md for directAPK/evidence links, exact identities, scope and ownerchecklist.
+PhysicalFold/liveYouTubeMusic/accounts/incomingcalls/successfulownerpin+unpinNOTPERFORMED.
+Originalkeyemulatorupgrade preserves synthetic seeded encrypteddata; do not claim ownerphone testing.
+
+Final independent delivery review PASS: actualoriginalAPK/archive/signature/package/alignment,
+all3upgradephases,14preservedinputs+196casegate,currentassetdigests/URLs,OCR/ELF andkeycleanup
+independentlyrechecked againstfreshGitHubmetadata/logs. NoCritical/Important ormandatoryrelease
+blocker remains. Only documented physicalowneracceptance is pending. Finaldocumentationcheckpoint
+contains no application, workflow, signing-input or fixture change.
