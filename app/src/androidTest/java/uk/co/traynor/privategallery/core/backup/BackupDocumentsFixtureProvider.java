@@ -44,12 +44,19 @@ public final class BackupDocumentsFixtureProvider extends DocumentsProvider {
             return out;
         }catch(IOException e){throw new IllegalStateException(e);}finally{Binder.restoreCallingIdentity(identity);}
     }
-    @Override public Cursor queryRoots(String[] projection){MatrixCursor c=new MatrixCursor(new String[]{DocumentsContract.Root.COLUMN_ROOT_ID,DocumentsContract.Root.COLUMN_DOCUMENT_ID,DocumentsContract.Root.COLUMN_TITLE,DocumentsContract.Root.COLUMN_FLAGS,DocumentsContract.Root.COLUMN_MIME_TYPES});c.addRow(new Object[]{"nova62","root","Nova62 synthetic documents",DocumentsContract.Root.FLAG_SUPPORTS_CREATE|DocumentsContract.Root.FLAG_LOCAL_ONLY,"*/*"});return c;}
+    @Override public Cursor queryRoots(String[] projection){MatrixCursor c=new MatrixCursor(new String[]{DocumentsContract.Root.COLUMN_ROOT_ID,DocumentsContract.Root.COLUMN_DOCUMENT_ID,DocumentsContract.Root.COLUMN_TITLE,DocumentsContract.Root.COLUMN_FLAGS,DocumentsContract.Root.COLUMN_MIME_TYPES});c.addRow(new Object[]{"nova62","root","Nova62 synthetic documents",DocumentsContract.Root.FLAG_SUPPORTS_CREATE|DocumentsContract.Root.FLAG_LOCAL_ONLY|DocumentsContract.Root.FLAG_SUPPORTS_IS_CHILD,"*/*"});return c;}
     private void row(MatrixCursor c,String id)throws FileNotFoundException{boolean root=id.equals("root");File f=root?directory():file(id);if(!f.exists())throw new FileNotFoundException();c.addRow(new Object[]{id,root?DocumentsContract.Document.MIME_TYPE_DIR:"application/octet-stream",root?"Nova62 synthetic documents":"Synthetic backup "+id,root?DocumentsContract.Document.FLAG_DIR_SUPPORTS_CREATE:DocumentsContract.Document.FLAG_SUPPORTS_WRITE|DocumentsContract.Document.FLAG_SUPPORTS_DELETE,f.length()});}
     private MatrixCursor cursor(){return new MatrixCursor(new String[]{DocumentsContract.Document.COLUMN_DOCUMENT_ID,DocumentsContract.Document.COLUMN_MIME_TYPE,DocumentsContract.Document.COLUMN_DISPLAY_NAME,DocumentsContract.Document.COLUMN_FLAGS,DocumentsContract.Document.COLUMN_SIZE});}
     @Override public Cursor queryDocument(String id,String[] projection)throws FileNotFoundException{MatrixCursor c=cursor();row(c,id);return c;}
     @Override public Cursor queryChildDocuments(String parent,String[] projection,String sort)throws FileNotFoundException{MatrixCursor c=cursor();for(File f:directory().listFiles())row(c,f.getName());return c;}
     @Override public String createDocument(String parent,String mime,String name)throws FileNotFoundException{String id=UUID.randomUUID().toString();try{if(!file(id).createNewFile())throw new IOException();}catch(IOException e){throw new FileNotFoundException(e.toString());}modes.put(id,nextMode);nextMode="normal";latest=id;return id;}
+    @Override public DocumentsContract.Path findDocumentPath(String parent,String id)throws FileNotFoundException{
+        if(!id.equals("root")&&!file(id).isFile())throw new FileNotFoundException();
+        if(parent!=null&&!parent.equals("root")&&!parent.equals(id))throw new FileNotFoundException();
+        java.util.List<String> path=(id.equals("root")||id.equals(parent))
+            ?java.util.Collections.singletonList(id):java.util.Arrays.asList("root",id);
+        return new DocumentsContract.Path(parent==null?"nova62":null,path);
+    }
     @Override public boolean isChildDocument(String parent,String id){return parent.equals("root")&&!id.equals("root");}
     @Override public void deleteDocument(String id)throws FileNotFoundException{file(id).delete();modes.remove(id);}
     @Override public ParcelFileDescriptor openDocument(String id,String mode,CancellationSignal signal)throws FileNotFoundException{

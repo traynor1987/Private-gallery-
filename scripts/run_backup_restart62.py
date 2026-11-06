@@ -7,6 +7,16 @@ PACKAGE='uk.co.traynor.privategallery.hiddenprototype'
 TEST=PACKAGE+'.test/androidx.test.runner.AndroidJUnitRunner'
 CLASS='uk.co.traynor.privategallery.core.backup.BackupProcessRestartTest'
 out=ROOT/'app/build/home2-evidence/backup-restart62';out.mkdir(parents=True,exist_ok=False)
+def capture_failure(kind,value,traceback):
+ # Diagnostics are outside the strict seventeen-file restart evidence folder.
+ for label,command in (
+  ('logcat',['adb','logcat','-d','-t','2500']),
+  ('provider-package',['adb','shell','dumpsys','package',PACKAGE+'.test']),
+ ):
+  result=subprocess.run(command,capture_output=True,text=True,timeout=15)
+  (out.parent/('backup-restart62-failure-'+label+'.txt')).write_text(result.stdout+result.stderr)
+ sys.__excepthook__(kind,value,traceback)
+sys.excepthook=capture_failure
 token=uuid.uuid4().hex;source=subprocess.check_output(['git','rev-parse','HEAD'],cwd=ROOT,text=True).strip();phases=[]
 assert subprocess.check_output(['adb','shell','getprop','ro.build.version.sdk'],text=True).strip()=='37'
 for owner in ('primary','hidden'):
