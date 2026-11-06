@@ -35,11 +35,6 @@ def controls_digest(value): return sha(json.dumps(value,sort_keys=True,separator
 def source_ok(source): return isinstance(source,str) and re.fullmatch('[a-f0-9]{40}',source) is not None and source!='0'*40
 def digest_ok(value): return isinstance(value,str) and re.fullmatch('[a-f0-9]{64}',value) is not None and value!='0'*64
 
-def process_observations(text,label):
-    # AndroidJUnitRunner may print its class heading immediately before sendStatus output.
-    prefix=r'(?:uk\.co\.traynor\.privategallery\.core\.backup\.BackupProcessRestartTest:)?'
-    return re.findall(r'^'+prefix+r'INSTRUMENTATION_STATUS: '+re.escape(label)+r'=(.+)$',text,re.M)
-
 def restart_cases(files,source):
     proof=json.loads(files['receipt.json'])
     require(proof.get('schema')==1 and proof.get('source')==source,'Restart evidence source differs')
@@ -51,7 +46,7 @@ def restart_cases(files,source):
         name=phase['name'];owner,boundary=name.split('-',1)
         before=files[name+'-prepare.txt'].decode();after=files[name+'-verify.txt'].decode()
         def observation(text,label):
-            rows=process_observations(text,label)
+            rows=re.findall(r'^INSTRUMENTATION_STATUS: '+label+r'=(.+)$',text,re.M)
             require(len(rows)==1,'Missing or duplicate process observation')
             value=json.loads(rows[0]);require(value.get('token')==token and value.get('owner')==owner and value.get('boundary')==boundary,'Process phase identity differs')
             return value

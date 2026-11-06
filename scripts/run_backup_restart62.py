@@ -2,7 +2,6 @@
 """One disposable API37 target, real force-stop boundaries, original raw transcripts."""
 from pathlib import Path
 import json,os,re,subprocess,sys,time,uuid
-from verify_release1711_gate import process_observations
 ROOT=Path(__file__).resolve().parents[1]
 PACKAGE='uk.co.traynor.privategallery.hiddenprototype'
 TEST=PACKAGE+'.test/androidx.test.runner.AndroidJUnitRunner'
@@ -23,17 +22,15 @@ assert subprocess.check_output(['adb','shell','getprop','ro.build.version.sdk'],
 for owner in ('primary','hidden'):
  for boundary in ('staging','uncommitted','committed','verified'):
   name=owner+'-'+boundary
-  common=['adb','shell','am','instrument','-w','-e','nova62Token',token,'-e','nova62Owner',owner,'-e','nova62Boundary',boundary]
+  common=['adb','shell','am','instrument','-w','-r','-e','nova62Token',token,'-e','nova62Owner',owner,'-e','nova62Boundary',boundary]
   prepare=out/(name+'-prepare.txt')
   with prepare.open('w') as log:
    child=subprocess.Popen(common+['-e','class',CLASS+'#prepareBoundaryAndAwaitHostTermination',TEST],stdout=log,stderr=subprocess.STDOUT)
    try:
     deadline=time.monotonic()+40;ready=None
     while time.monotonic()<deadline:
-     text=prepare.read_text();matches=process_observations(text,'nova62_ready')
-     if matches:
-      assert len(matches)==1,'Duplicate preparation observation'
-      ready=json.loads(matches[0]);break
+     text=prepare.read_text();match=re.search(r'^INSTRUMENTATION_STATUS: nova62_ready=(.+)$',text,re.M)
+     if match:ready=json.loads(match[1]);break
      if child.poll() is not None:raise RuntimeError('Preparation exited before boundary: '+name+'\n'+text)
      time.sleep(.1)
     if ready is None:raise RuntimeError('Preparation boundary timed out: '+name)
