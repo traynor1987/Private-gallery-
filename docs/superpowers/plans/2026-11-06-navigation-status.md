@@ -20,24 +20,26 @@ provider; existing retained WebViews and upgrade lane. No new engines, crypto or
 
 ## Task1 Navigation/menu
 
-- [ ] Add failing focused tests for common row, app-only overflow and sheet-first Back.
-- [ ] Reuse a shared row in Home/native roots and supported owned workflows; wire real actions.
-- [ ] Move all twelve existing menu actions to protected bottom sheet, preserving disabled states.
-- [ ] Verify native/app bounds, retention/audio, lifecycle/lock, Primary privacy, Fold/rotation.
-- [ ] Commit coherent independently verified navigation patch.
+- [x] Add failing focused tests for common row, app-only overflow and sheet-first Back.
+- [x] Reuse a shared row in Home/native roots and supported owned workflows; wire real actions.
+- [x] Move all twelve existing menu actions to protected bottom sheet, preserving disabled states.
+- [x] Verify native/app bounds, retention/audio, lifecycle/lock and Primary privacy; automate layout bounds. Physical Fold/rotation remains owner acceptance.
+- [x] Commit coherent independently verified navigation patch.
 
 ## Task2 Status
 
-- [ ] Add failing model/provider tests with simulated battery, charging, saver and connectivity.
-- [ ] Implement callback-owned platform provider and compact native indicator; no polling/secrets.
-- [ ] Wire Home header and immersive app chrome, only with hidden real status bar.
-- [ ] Verify battery/charging, Wi-Fi/mobile/loss/validation, restricted info, layout and lifecycle.
-- [ ] Commit independently verified status enhancement.
+- [x] Add failing model/provider tests with simulated battery, charging, saver and connectivity.
+- [x] Implement callback-owned platform provider and compact native indicator; no polling/secrets.
+- [x] Wire Home header and immersive app chrome, only with hidden real status bar.
+- [x] Verify battery/charging, Wi-Fi/mobile/loss/validation, restricted info, layout and lifecycle.
+- [x] Commit independently verified status enhancement.
 
 ## Task3 Release
 
-- [ ] Verify next unused version; pin actual signed58 archive/APK as preservation baseline.
-- [ ] Run host/JVM/build before one focused API37 batch; retain original reports/matrix.
-- [ ] Independent exact-source security review before original-key signing activation.
-- [ ] Run58-to-next in-place encrypted-data preservation/restart, independently inspect APK.
-- [ ] Publish direct asset and record exact source/certificate/version/hash, physical test limits.
+- [x] Verify next unused version; pin actual signed58 archive/APK as preservation baseline.
+- [x] Run host/JVM/build and focused API37 verification; retain original failed and passing reports/matrix.
+- [x] Independent exact-source security review before original-key signing activation.
+- [x] Run58-to-next in-place encrypted-data preservation/restart, independently inspect APK.
+- [x] Publish direct asset and record exact source/certificate/version/hash, physical test limits.
+
+- [ ] Physical Galaxy Z Fold acceptance: actual posture/rotation, Samsung fingerprint, live radio/VPN transitions and personal website sessions. See docs/release1711/CODE59_DELIVERY.md.

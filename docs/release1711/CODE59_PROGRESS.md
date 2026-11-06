@@ -145,3 +145,12 @@ compiled against actual original58 in2m32s. Independent review verified original
 complete historical comparison, exact compiled inputs and unchanged other hashes; renewed
 original-key signing approval recorded in SECURITY_REVIEW.md. Original runtime gate and
 all13release controls pass again. A fresh production upgrade remains required before publication.
+
+## Verified delivery complete
+
+Production42214765335/job127881954559 SUCCEEDED at activationd62d8fc3c1fb921db52c63a1364de3edad102c13.
+Actual signed58-to59 encrypted-data preservation and restart PASS; signed owner-acceptance
+release published. Parent downloaded/verified original artifact13502360091, actual APK
+identity/certificate/hash, all three upgrade results and GitHub asset hashes. APK SHA256
+6db4f5853c8bbcdc379c0887002620d4f75cbd3c86dc98c2e46707b833d94796.
+Final details, direct download and physical acceptance limits: CODE59_DELIVERY.md.
