@@ -24,6 +24,7 @@ internal interface EvidenceSources {
  fun inspect(sourceId:String):EvidenceOriginal
  fun <T> readVerified(sourceId:String,cancelled:()->Boolean,consume:(EvidenceOriginal,InputStream)->T):T
  fun import(uri:Uri):EvidenceOriginal
+ fun imageCrop(sourceId:String):NormalizedCrop?=null
 }
 internal interface EvidenceSourceReader {
  val owner:EvidenceCatalog.Owner
@@ -108,6 +109,7 @@ internal class EvidenceAccess private constructor(
  }
  val store=EvidenceEncryptedStore(root,owner,leases)
  val sources=sourceFactory(this)
+ internal fun providerStream(context:Context,uri:Uri):InputStream=ProviderAccess.providerStream(context,uri,this)
  fun reader(cancelled:()->Boolean={false}):EvidenceSourceReader=object:EvidenceSourceReader {
   override val owner=this@EvidenceAccess.owner
   override fun current()=this@EvidenceAccess.current()&&!cancelled()
@@ -152,6 +154,10 @@ internal class EvidenceAccess private constructor(
    action(repo,lease).also{access.checkCurrent();check(lease.current())}
   }
   override fun list()=repository{repo,_->repo.items().filter{it.state==VaultItemState.COMPLETE&&EvidenceMetadata.supported(it.mimeType)&&primaryPayload(context,it.id).isFile}.map{EvidenceOriginal(it,EvidenceMetadata.fromItem(it))}}
+  override fun imageCrop(sourceId:String):NormalizedCrop?=repository{repo,_->
+   check(repo.items().any{it.id==sourceId&&it.state==VaultItemState.COMPLETE})
+   repo.imageEdit(sourceId)?.crop
+  }
   override fun inspect(sourceId:String):EvidenceOriginal {
    val source=list().singleOrNull{it.item.id==sourceId}?:error("Original unavailable in this vault")
    check(primaryPayload(context,sourceId).isFile){"Original payload unavailable"};return source

@@ -38,6 +38,8 @@ internal class SpaceContext(base: Context, private val access: EvidenceAccess) :
  }
  override fun getApplicationContext(): Context = this
  fun current(): Boolean = !closed.get() && access.current()
+ internal fun publishIfCurrent(action:()->Unit)=access.publishIfCurrent {if(!closed.get())action()}
+ internal fun onRetire(action:()->Unit)=access.onRetire(action)
  private fun checkCurrent() { check(current()) { "Space access retired; unlock the originating vault again" } }
  override fun close() {
   if (closed.compareAndSet(false, true)) {
@@ -55,6 +57,9 @@ internal class SpaceContext(base: Context, private val access: EvidenceAccess) :
  }
 
  /** Returns an opaque encrypted wallpaper reference; callers decode the returned bytes in memory. */
+ internal fun <T> wallpaperTransaction(action:()->T):T = synchronized(gate) {
+  checkCurrent();action().also { checkCurrent() }
+ }
  fun writeWallpaper(bytes: ByteArray): String = synchronized(gate) {
   checkCurrent(); require(bytes.size in 1..MAX_BYTES)
   val id = UUID.randomUUID().toString()

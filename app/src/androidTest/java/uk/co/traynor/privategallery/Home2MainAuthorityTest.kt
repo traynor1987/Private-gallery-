@@ -5,9 +5,13 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.test.core.app.ActivityScenario
 import org.junit.Assert.*
 import org.junit.Test
+import org.junit.Rule
+import androidx.compose.ui.test.*
+import androidx.compose.ui.test.junit4.createEmptyComposeRule
 
 /** Actual MainActivity authority transitions in the isolated test identity; no owner credentials. */
 class Home2MainAuthorityTest {
+ @get:Rule val compose=createEmptyComposeRule()
  private fun state(activity:MainActivity)=ViewModelProvider(activity)[ProtectedSessionState::class.java]
  @Suppress("UNCHECKED_CAST") private fun route(activity:MainActivity) = MainActivity::class.java.getDeclaredField("route\$delegate").apply{isAccessible=true}.get(activity) as MutableState<Route>
  @Test fun retained_hidden_authority_never_blocks_an_independent_primary_credential_request(){
@@ -39,5 +43,81 @@ class Home2MainAuthorityTest {
     assertFalse(activity.primarySessionRetainedForNova());assertFalse(owner.session.isUnlocked);assertFalse(owner.hidden.session.isUnlocked)
    }finally{owner.hidden.leave();owner.session.lock();owner.key=null;key.fill(0);route(activity).value=Route.LOCK}
   }}
+ }
+ @Suppress("UNCHECKED_CAST")
+ @Test fun wallpaper_capture_uses_actual_primary_image_owner_inside_retained_hidden_and_retires_on_space_change_and_panic(){
+  ActivityScenario.launch(MainActivity::class.java).use{scenario->scenario.onActivity{activity->
+   val retained=state(activity);val key=ByteArray(32){53}
+   val requests=MainActivity::class.java.getDeclaredField("novaWallpaperRequest\$delegate").apply{isAccessible=true}.get(activity)as MutableState<Any?>
+   fun captured():uk.co.traynor.privategallery.core.home2.WallpaperOwner {
+    val request=checkNotNull(requests.value)
+    return request.javaClass.getDeclaredField("owner").apply{isAccessible=true}.get(request)as uk.co.traynor.privategallery.core.home2.WallpaperOwner
+   }
+   try {
+    retained.key=key;retained.session.unlock()
+    assertTrue(retained.hidden.session.complete(retained.hidden.session.beginAuthentication(),ByteArray(32){71}))
+    retained.hidden.selected=true;retained.hidden.visible=false;retained.hidden.authenticated=true;retained.primaryGallery=true
+    retained.homeVisible=false;retained.homeHiddenAuthentication=retained.hidden.session.authentication();route(activity).value=Route.GALLERY
+    activity.openNovaWallpaper("captured-primary-image",current={retained.hidden.selected&&retained.primaryGallery&&!retained.hidden.visible})
+    val primary=captured()
+    assertEquals(uk.co.traynor.privategallery.core.evidence.EvidenceCatalog.Owner.PRIMARY,primary.owner)
+    primary.open(activity)!!.use{assertEquals(uk.co.traynor.privategallery.core.evidence.EvidenceCatalog.Owner.PRIMARY,it.access.owner)}
+    retained.hidden.visible=true
+    assertFalse(primary.current());assertTrue(retained.hidden.session.isUnlocked)
+    requests.value=null
+    val authority=retained.hidden.session.authority()
+    activity.openNovaWallpaper("captured-hidden-image",retained.hidden.session,current={retained.hidden.visible&&retained.hidden.session.isAuthorityCurrent(authority)})
+    val hidden=captured();assertEquals(uk.co.traynor.privategallery.core.evidence.EvidenceCatalog.Owner.HIDDEN,hidden.owner)
+    hidden.open(activity)!!.use{coordinator->retained.hidden.session.revokeOperations();assertFalse(coordinator.current())}
+    assertFalse(hidden.current());assertTrue(retained.hidden.session.isUnlocked)
+    requests.value=null;retained.hidden.visible=false;retained.hidden.selected=false
+    activity.openNovaWallpaper("panic-primary-image",current={true})
+    val panic=captured();assertTrue(panic.current());activity.panicExit();assertFalse(panic.current())
+   }finally{requests.value=null;retained.hidden.leave();retained.session.lock();retained.key=null;key.fill(0);route(activity).value=Route.LOCK}
+  }}
+ }
+ @Test fun real_main_primary_image_inside_retained_hidden_previews_and_applies_only_primary_wallpaper(){
+  val saved=mutableListOf<Pair<java.io.File,java.io.File>>()
+  val roots=mutableListOf<java.io.File>()
+  val key=ByteArray(32){53};var original:uk.co.traynor.privategallery.core.vault.VaultItem?=null
+  var payload:java.io.File?=null;var ciphertext=ByteArray(0)
+  try {
+   ActivityScenario.launch(MainActivity::class.java).use{scenario->
+    scenario.onActivity{activity->
+     // Preserve any other synthetic fixture ciphertext; this test owns fresh real native roots.
+     listOf(java.io.File(activity.filesDir,"vault"),java.io.File(activity.filesDir,"evidence-state"),java.io.File(activity.noBackupFilesDir,"hidden-media-v1"),java.io.File(activity.noBackupFilesDir,"evidence-state")).forEach{root->
+      if(root.exists()){val backup=java.io.File(root.parentFile,root.name+"-wallpaper-fixture-"+java.util.UUID.randomUUID());check(root.renameTo(backup));saved.add(root to backup)}
+      roots.add(root)
+     }
+     val retained=state(activity);retained.key=key;retained.session.unlock()
+     assertTrue(retained.hidden.session.complete(retained.hidden.session.beginAuthentication(),ByteArray(32){71}));retained.hidden.select()
+     enterExternalEditingMediaFixture(activity)
+     retained.hidden.visible=false;retained.primaryGallery=true;route(activity).value=Route.GALLERY
+     val bitmap=android.graphics.Bitmap.createBitmap(64,48,android.graphics.Bitmap.Config.ARGB_8888).apply{eraseColor(android.graphics.Color.MAGENTA)}
+     val bytes=java.io.ByteArrayOutputStream().use{out->bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG,100,out);out.toByteArray()};bitmap.recycle()
+     original=(uk.co.traynor.privategallery.core.vault.AndroidVaultRepository(activity,key).importVerified(
+      uk.co.traynor.privategallery.core.vault.VaultImportSource("main-wallpaper.png","image/png",{java.io.ByteArrayInputStream(bytes)}))as uk.co.traynor.privategallery.core.vault.ImportResult.Imported).item
+     bytes.fill(0);payload=java.io.File(activity.filesDir,"vault/payloads/${original!!.id}.vault");ciphertext=payload!!.readBytes()
+     @Suppress("UNCHECKED_CAST") val current=MainActivity::class.java.getDeclaredMethod("capturePrimaryEditorAuthority").apply{isAccessible=true}.invoke(activity)as ()->Boolean
+     assertTrue(current());activity.openNovaWallpaper(original!!.id,current=current)
+    }
+    compose.waitUntil(15_000){compose.onAllNodesWithTag("wallpaper-zoom").fetchSemanticsNodes().isNotEmpty()}
+    compose.onNodeWithText("Apply to Primary Space").performScrollTo().assertIsDisplayed().performClick()
+    compose.waitUntil(10_000){compose.onAllNodesWithTag("wallpaper-editor").fetchSemanticsNodes().isEmpty()}
+    scenario.onActivity{activity->
+     val retained=state(activity)
+     assertTrue(retained.hidden.selected);assertTrue(retained.hidden.session.isUnlocked)
+     uk.co.traynor.privategallery.core.evidence.EvidenceAccess.primary(activity,key,{retained.key},{retained.session.isUnlocked},{key.copyOf()},Any()).use{access->
+      uk.co.traynor.privategallery.core.home2.SpaceContext(activity,access).use{space->assertNotNull(uk.co.traynor.privategallery.core.home2.WallpaperStore(space).read().image)}
+     }
+     uk.co.traynor.privategallery.core.evidence.EvidenceAccess.hidden(activity,retained.hidden.session){true}.use{access->
+      uk.co.traynor.privategallery.core.home2.SpaceContext(activity,access).use{space->assertNull(uk.co.traynor.privategallery.core.home2.WallpaperStore(space).read().image)}
+     }
+     assertArrayEquals(ciphertext,payload!!.readBytes())
+     assertArrayEquals(original!!.plaintextSha256,uk.co.traynor.privategallery.core.vault.AndroidVaultRepository(activity,key).items().single().plaintextSha256)
+     activity.panicExit()
+    }
+   }
+  }finally{key.fill(0);ciphertext.fill(0);roots.forEach{it.deleteRecursively()};saved.asReversed().forEach{(root,backup)->check(backup.renameTo(root))}}
  }
 }

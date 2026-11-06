@@ -25,10 +25,15 @@ class PreviewData(private val context:Context,private val apps:uk.co.traynor.pri
 
  val shell=PreviewShellData(context)
  private val prefs=context.getSharedPreferences("nova_preview_v1",Context.MODE_PRIVATE)
+ private val wallpapers=uk.co.traynor.privategallery.core.home2.WallpaperStore(context as uk.co.traynor.privategallery.core.home2.SpaceContext)
  val catalogue:List<StoreEntry> = parseCatalogue(context.assets.open("catalogue-v1.json").bufferedReader().use{it.readText()})
  var state by mutableStateOf(load());private set
  var error by mutableStateOf<String?>(null);private set
  private var pending:PreviewState?=null
+ private val wallpaperListener=android.content.SharedPreferences.OnSharedPreferenceChangeListener{_,key->if(key==uk.co.traynor.privategallery.core.home2.WallpaperStore.KEY)refreshWallpaper()}
+ init {prefs.registerOnSharedPreferenceChangeListener(wallpaperListener)}
+ fun refreshWallpaper():Boolean=runCatching{state=withWallpaper(state,wallpapers.read())}.isSuccess
+ private fun withWallpaper(value:PreviewState,wallpaper:Wallpaper)=if(owner=="hidden")value.copy(hidden=value.hidden.copy(wallpaper=wallpaper))else value.copy(primary=value.primary.copy(wallpaper=wallpaper))
  fun refreshInstalled(){
   val bridge=apps?:return
   runCatching{projectApps(bridge.list())}.onSuccess{installed->
@@ -73,7 +78,8 @@ class PreviewData(private val context:Context,private val apps:uk.co.traynor.pri
   if(theme !in listOf("dark","light","system"))return false
   save(state.copy(theme=theme));return error==null
  }
- private fun save(next:PreviewState){
+ private fun save(requested:PreviewState){
+  val next=withWallpaper(requested,wallpapers.read())
   require(next.current==owner);val text=encode(next).toString()
   if(prefs.edit().putString("state",text).commit()){val changed=state.theme!=next.theme;state=next;pending=null;error=null;if(changed)onThemeCommitted?.invoke(next.theme)}else{pending=next;error="Preview changes could not be saved. Try again."}
  }
@@ -137,14 +143,14 @@ class PreviewData(private val context:Context,private val apps:uk.co.traynor.pri
  fun moveFolderMember(folder:String,app:String,delta:Int){change{p->p.copy(folders=p.folders.map{if(it.id==folder)it.copy(apps=PreviewRules.move(it.apps,app,delta))else it})}}
  fun dissolveFolder(id:String){change{p->p.copy(folders=p.folders.filterNot{it.id==id},pages=p.pages.map{it.filterNot{a->a==id}},drawerOrder=p.drawerOrder.filterNot{it==id})}}
  fun removeFolderMember(folder:String,app:String){change{p->val folders=p.folders.map{if(it.id==folder)it.copy(apps=it.apps.filterNot{a->a==app})else it}.filter{it.apps.isNotEmpty()};p.copy(folders=folders,pages=p.pages.map{it.filter{a->!a.startsWith("folder:")||folders.any{f->f.id==a}}})}}
- fun reset(){val count=maxOf(2,(WidgetData(context).slots(state.current).maxOfOrNull{it.page}?:0)+1);change{p->val defaults=Profile(installed=p.installed,wallpaper=Wallpaper(builtin=if(state.current=="hidden")"Midnight" else "Aurora"));defaults.copy(pages=defaults.pages+List((count-defaults.pages.size).coerceAtLeast(0)){emptyList()})}}
+ fun reset(){wallpapers.apply(Wallpaper(builtin=if(owner=="hidden")"Midnight"else "Aurora"),null);val count=maxOf(2,(WidgetData(context).slots(state.current).maxOfOrNull{it.page}?:0)+1);change{p->val defaults=Profile(installed=p.installed,wallpaper=Wallpaper(builtin=if(state.current=="hidden")"Midnight" else "Aurora"));defaults.copy(pages=defaults.pages+List((count-defaults.pages.size).coerceAtLeast(0)){emptyList()})}}
  private fun load():PreviewState {
   val raw=prefs.getString("state",null)
   val initial=if(raw==null)PreviewState(current=owner)else {require(raw.length<500000);decode(JSONObject(raw)).copy(current=owner)}
   val p=if(owner=="hidden")initial.hidden else initial.primary
   val installed=apps?.let{projectApps(it.list())}?:emptyList()
   val next=if(raw==null&&legacyOrder!=null)p.copy(installed=installed,pages=listOf(legacyOrder.take(8),legacyOrder.drop(8)+listOf("mind","widgets")))else p.copy(installed=installed)
-  val loaded=if(owner=="hidden")initial.copy(hidden=next)else initial.copy(primary=next)
+  val loaded=withWallpaper(if(owner=="hidden")initial.copy(hidden=next)else initial.copy(primary=next),wallpapers.read())
   if(prefs.getBoolean("native-theme-bridged",false))return loaded
   // One atomic encrypted migration preserves layout and never imports Primary policy into Hidden.
   val migrated=loaded.copy(theme=uk.co.traynor.privategallery.core.ui.NativeThemePolicy.initial(nativeThemeFallback,loaded.theme,owner=="hidden"))

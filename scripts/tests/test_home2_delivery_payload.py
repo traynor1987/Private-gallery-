@@ -25,7 +25,7 @@ class Home2DeliveryPayloadTest(unittest.TestCase):
             root = Path(temporary)
             build = root / 'app/build'
             evidence = build / 'production-evidence'
-            upgrade = evidence / 'from56'
+            upgrade = evidence / 'from57'
             upgrade.mkdir(parents=True)
             source = '2' * 40
             candidate = build / 'outputs/apk/release/app-release.apk'
@@ -65,18 +65,18 @@ class Home2DeliveryPayloadTest(unittest.TestCase):
                     if unexpected:
                         with self.assertRaisesRegex(AssertionError, 'Evidence contains'):
                             exec(compile(code, '<actual workflow staging>', 'exec'), {})
-                        self.assertFalse((build / 'NovaOS-1.7.11.1-home2-code57-evidence.zip').exists())
+                        self.assertFalse((build / 'NovaOS-1.7.11.2-home2-code58-evidence.zip').exists())
                         return
                     exec(compile(code, '<actual workflow staging>', 'exec'), {})
-                self.assertEqual(candidate.read_bytes(), (build / 'NovaOS-1.7.11.1-home2-code57-owner-acceptance.apk').read_bytes())
-                with zipfile.ZipFile(build / 'NovaOS-1.7.11.1-home2-code57-evidence.zip') as zipped:
+                self.assertEqual(candidate.read_bytes(), (build / 'NovaOS-1.7.11.2-home2-code58-owner-acceptance.apk').read_bytes())
+                with zipfile.ZipFile(build / 'NovaOS-1.7.11.2-home2-code58-evidence.zip') as zipped:
                     names = zipped.namelist()
                     self.assertFalse(any(Path(n).suffix.lower() in {'.apk', '.apks', '.aab', '.jks', '.keystore', '.zip'} for n in names))
                     for name in REPORTS:
                         self.assertEqual(('receipt:' + name).encode(), zipped.read('compiled-upgrade/' + name))
                     summary = json.loads(zipped.read('release-summary.json'))
                     self.assertEqual(digest, summary['apk_sha256'])
-                    self.assertEqual(('1.7.11.1', 57, 'PASS'), (summary['version'], summary['version_code'], summary['original_key_code56_upgrade']))
+                    self.assertEqual(('1.7.11.2', 58, 'PASS'), (summary['version'], summary['version_code'], summary['original_key_code57_upgrade']))
             finally:
                 os.chdir(prior)
 

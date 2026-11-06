@@ -6,6 +6,29 @@
     "standard_types_are_encrypted_round_trip_with_defensive_copies_and_merge",
     "wallpaper_uses_encrypted_bytes_and_rejects_foreign_or_retired_access"
   ],
+  "uk.co.traynor.privategallery.core.home2.WallpaperStoreTest": [
+    "both_owners_read_originals_without_changing_gallery_and_cancel_does_not_commit",
+    "damaged_encrypted_preferences_refuse_apply_without_replacing_existing_ciphertext",
+    "deliberate_apply_is_owner_encrypted_and_stale_home_save_preserves_it",
+    "primary_visible_crop_is_used_and_apply_never_changes_original_ciphertext",
+    "retired_coordinator_cannot_apply_or_read_after_same_hidden_authentication_returns",
+    "retired_owner_ticket_never_inherits_returned_hidden_authentication",
+    "retiring_a_stalled_system_provider_closes_read_and_wipes_accumulated_plaintext"
+  ],
+  "uk.co.traynor.privategallery.core.home2.WallpaperUiTest": [
+    "fold_aspect_ratio_reflows_preview_without_changing_normalized_crop_or_effects",
+    "gallery_apply_refreshes_retained_home_on_return_and_stale_save_preserves_it",
+    "hidden_home_vault_picker_cancel_apply_and_reopen",
+    "hidden_preselected_gallery_preview_apply_and_cancel_preserve_original",
+    "hidden_system_picker_handoff_uses_fresh_authority_with_same_authentication",
+    "leaving_hidden_presentation_closes_picker_with_independent_authentication_retained",
+    "primary_home_vault_picker_cancel_apply_and_reopen",
+    "primary_preselected_gallery_preview_apply_and_cancel_preserve_original",
+    "primary_system_picker_handoff_uses_fresh_access_and_explicit_apply",
+    "supplied_owner_factory_denial_never_falls_back_to_home_access",
+    "system_picker_result_after_hidden_lock_and_reunlock_is_rejected",
+    "unreadable_encrypted_preferences_show_safe_error_without_apply_or_overwrite"
+  ],
   "uk.co.traynor.privategallery.core.home2.MindForegroundLifecycleTest": [
     "real_mind_controller_cannot_resume_after_pause_or_authority_revocation"
   ],
@@ -96,7 +119,9 @@
   ],
   "uk.co.traynor.privategallery.Home2MainAuthorityTest": [
     "home_revokes_browser_interaction_synchronously_before_the_next_composition",
-    "retained_hidden_authority_never_blocks_an_independent_primary_credential_request"
+    "real_main_primary_image_inside_retained_hidden_previews_and_applies_only_primary_wallpaper",
+    "retained_hidden_authority_never_blocks_an_independent_primary_credential_request",
+    "wallpaper_capture_uses_actual_primary_image_owner_inside_retained_hidden_and_retires_on_space_change_and_panic"
   ],
   "uk.co.traynor.privategallery.HomeOwnedWindowPanicTest": [
     "drawerWindowUsesOneSharedCallbackAndConcealsSynchronouslyBeforeRecomposition",

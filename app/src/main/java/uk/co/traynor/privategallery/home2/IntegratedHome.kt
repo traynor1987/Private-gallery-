@@ -1,12 +1,6 @@
 package uk.co.traynor.privategallery.home2
 
-import android.app.Activity
 import android.app.Application
-import android.graphics.BitmapFactory
-import android.graphics.Bitmap
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.PickVisualMediaRequest
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.*
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.material3.*
@@ -16,15 +10,11 @@ import androidx.compose.ui.unit.dp
 import uk.co.traynor.privategallery.core.evidence.EvidenceAccess
 import uk.co.traynor.privategallery.core.home2.NativeAppsBridge
 import uk.co.traynor.privategallery.core.home2.SpaceContext
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
-import kotlinx.coroutines.launch
 
 /** Existing preview components, backed exclusively by a captured real Space authority. */
-@Composable internal fun IntegratedHome(access:EvidenceAccess,visible:Boolean,onLaunch:(String)->Unit,onLock:()->Unit,onPanic:()->Unit,onSwitch:(()->Unit)?,apps:NativeAppsBridge?,nativeThemeFallback:String?=null,onThemeCommitted:(String)->Unit={},onThemeConnection:(PreviewData?)->Unit={}) {
+@Composable internal fun IntegratedHome(access:EvidenceAccess,visible:Boolean,onLaunch:(String)->Unit,onLock:()->Unit,onPanic:()->Unit,onSwitch:(()->Unit)?,apps:NativeAppsBridge?,nativeThemeFallback:String?=null,onThemeCommitted:(String)->Unit={},onThemeConnection:(PreviewData?)->Unit={},wallpaperOwnerFactory:(()->uk.co.traynor.privategallery.core.home2.WallpaperOwner?)?=null) {
  val base=LocalContext.current
  val context=remember(access){SpaceContext(base,access)}
- val scope=rememberCoroutineScope()
  val lifecycle=androidx.lifecycle.compose.LocalLifecycleOwner.current
  var live by remember(access){mutableStateOf(true)}
  var message by remember(access){mutableStateOf<String?>(null)}
@@ -53,29 +43,9 @@ import kotlinx.coroutines.launch
   val retire=access.onRetire{android.os.Handler(android.os.Looper.getMainLooper()).post{live=false;audio.release();video.close();pool.clear();context.close()}}
   onDispose{retire.close();audio.release();video.close();pool.clear();context.close()}
  }
- val pending=remember(access){java.util.concurrent.atomic.AtomicBoolean(false)}
- var chosenUri by remember(access){mutableStateOf<android.net.Uri?>(null)}
- val picker=rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()){uri->
-  if(pending.getAndSet(false)&&context.current())chosenUri=uri
- }
- LaunchedEffect(chosenUri,visible){
-  val uri=chosenUri
-  if(uri!=null&&visible&&context.current()){
-   runCatching{
-    val bytes=withContext(Dispatchers.IO){
-     val bounds=BitmapFactory.Options().apply{inJustDecodeBounds=true}
-     context.contentResolver.openInputStream(uri).use{BitmapFactory.decodeStream(it,null,bounds)}
-     require(bounds.outWidth in 1..30000&&bounds.outHeight in 1..30000)
-     val options=BitmapFactory.Options().apply{var sample=1;while(maxOf(bounds.outWidth,bounds.outHeight)/sample>2048)sample*=2;inSampleSize=sample}
-     val bitmap=context.contentResolver.openInputStream(uri).use{BitmapFactory.decodeStream(it,null,options)}?:error("Image unavailable")
-     try{java.io.ByteArrayOutputStream().use{out->check(bitmap.compress(Bitmap.CompressFormat.JPEG,90,out));out.toByteArray()}}finally{bitmap.recycle()}
-    }
-    try{val id=withContext(Dispatchers.IO){context.writeWallpaper(bytes)};if(context.current())models.getOrThrow().data.let{data->data.change{it.copy(wallpaper=it.wallpaper.copy(image=id,imageRevision=System.currentTimeMillis()))};if(data.error==null)withContext(Dispatchers.IO){context.pruneWallpapers(setOfNotNull(data.profile.wallpaper.image))}}}finally{bytes.fill(0)}
-   }.onFailure{if(context.current())message="Wallpaper could not be imported. Existing wallpaper is unchanged."}
-   chosenUri=null
-  }
- }
- LaunchedEffect(visible){if(visible&&context.current())models.getOrNull()?.data?.refreshInstalled()}
+ var wallpaperOwner by remember{mutableStateOf<uk.co.traynor.privategallery.core.home2.WallpaperOwner?>(null)}
+ wallpaperOwner?.let{owner->WallpaperEditorHost(owner,visible,onClose={wallpaperOwner=null;if(context.current())models.getOrNull()?.data?.refreshWallpaper()})}
+ LaunchedEffect(visible){if(visible&&context.current())models.getOrNull()?.data?.let{it.refreshInstalled();it.refreshWallpaper()}}
  DisposableEffect(lifecycle){val observer=androidx.lifecycle.LifecycleEventObserver{_,event->if(event==androidx.lifecycle.Lifecycle.Event.ON_PAUSE||event==androidx.lifecycle.Lifecycle.Event.ON_STOP){audio.pause();video.pause()}};lifecycle.lifecycle.addObserver(observer);onDispose{lifecycle.lifecycle.removeObserver(observer)}}
  if(!visible||!live||!context.current())return
  val value=models.getOrElse{
@@ -84,7 +54,7 @@ import kotlinx.coroutines.launch
  }
  CompositionLocalProvider(LocalContext provides context){
   NovaPreview(value.data,pool,value.mind,audio,value.widgets,value.history,video,
-   onPickImage={if(context.current()){pending.set(true);picker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))}},
+   onPickImage={if(context.current())wallpaperOwner=if(wallpaperOwnerFactory!=null)wallpaperOwnerFactory.invoke()else uk.co.traynor.privategallery.core.home2.WallpaperOwner(access.owner,{context.current()},{access},false)},
    onOpen={},filesDir=context.filesDir,onNative={id->if(context.current()){value.data.shell.touchInternal(context.spaceId,id);onLaunch(id)}},onLock=onLock,onPanic=onPanic)
   message?.let{PanicHomeAlertDialog(onDismissRequest={message=null},title={Text("NovaOS")},text={Text(it)},confirmButton={TextButton(onClick={message=null}){Text("OK")}})}
  }

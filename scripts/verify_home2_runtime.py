@@ -4,6 +4,8 @@ import re, sys, xml.etree.ElementTree as ET, json
 root=Path(__file__).resolve().parents[1]
 classes=[
  'uk.co.traynor.privategallery.core.home2.SpacePreferencesTest',
+ 'uk.co.traynor.privategallery.core.home2.WallpaperStoreTest',
+ 'uk.co.traynor.privategallery.core.home2.WallpaperUiTest',
  'uk.co.traynor.privategallery.core.home2.MindForegroundLifecycleTest',
  'uk.co.traynor.privategallery.core.browser.v2.NovaRetainedPrivateAppsTest',
  'uk.co.traynor.privategallery.ui.NovaPrivateAppAudioTest',

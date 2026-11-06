@@ -44,6 +44,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.ensureActive
 import java.io.File
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
@@ -189,7 +190,7 @@ private val lightColors=lightColorScheme(primary=Color(0xFF285F65),secondary=Col
          "sanctuary"->SanctuaryScreen(data,audio,onMind={mindPage="home";mindLaunch++;screen="mind"},onCalm={mindPage=mind.preferred;mindLaunch++;screen="mind"},onLaunch=launch,onExit={sanctuary=false;screen="home"})
          "recents"->NovaRecents(data,pool,onHome=goHome,onResume=resumeTab,onInternal={id->if(id in nativeHomeApps)onNative(id)else screen=id},onCloseInternal={id->if(id=="browser-v1")onNative("close-browser");data.shell.closeInternal(state.current,id);if(id=="mind")audio.pause();if(id=="video")video.close()})
          "store"->StoreScreen(data,onBack=goHome,onDetail={detailId=it.id},onCustom={custom=true})
-         "wallpaper"->WallpaperScreen(data,filesDir,onPickImage,onBack=goHome)
+         "wallpaper"->LaunchedEffect(Unit){onPickImage();goHome()}
          "photos"->LaunchedEffect(Unit){onNative("photos")}
          "guide"->LaunchedEffect(Unit){onNative("native-settings")}
          else->Home(data,filesDir,pager,widgets,pool,audio,video,onWidgetEdit={selectedWidget=it},onResume=resumeTab,onLaunch=launch,onSelect={selected=it},onDrawer={drawer=true},onQuick={quick=true},onEdit={editing=true})
@@ -345,10 +346,23 @@ private val lightColors=lightColorScheme(primary=Color(0xFF285F65),secondary=Col
  Column(modifier){Text(now.format(DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT)),fontSize=if(compact)34.sp else 60.sp,fontWeight=FontWeight.Light,maxLines=1,overflow=TextOverflow.Ellipsis);Text(now.format(DateTimeFormatter.ofPattern("EEEE, d MMMM")),style=MaterialTheme.typography.bodyLarge,color=Color.White.copy(alpha=.8f))}
 }
 
-@Composable internal fun WallpaperSurface(w:Wallpaper,filesDir:File,modifier:Modifier=Modifier){
+@Composable internal fun WallpaperSurface(w:Wallpaper,filesDir:File,modifier:Modifier=Modifier,previewBitmap:android.graphics.Bitmap?=null){
  val colors=when(w.builtin){"Midnight"->listOf(Color(0xFF080C21),Color(0xFF29315C),Color(0xFF341E55),Color(0xFF080D1A));"Dusk"->listOf(Color(0xFF3B2253),Color(0xFF7E4C76),Color(0xFFB16D6C),Color(0xFF26304B));else->listOf(Color(0xFF081A36),Color(0xFF324C92),Color(0xFF147F83),Color(0xFF091B2A))}
  val wallpaperContext=LocalContext.current as? uk.co.traynor.privategallery.core.home2.SpaceContext
- val image=remember(w.image,w.imageRevision,wallpaperContext){w.image?.let{id->runCatching{wallpaperContext?.readWallpaper(id)?.let{bytes->try{BitmapFactory.decodeByteArray(bytes,0,bytes.size)?.asImageBitmap()}finally{bytes.fill(0)}}}.getOrNull()}}
+ var decoded by remember(w.image,w.imageRevision,wallpaperContext){mutableStateOf<android.graphics.Bitmap?>(null)}
+ DisposableEffect(decoded){val owned=decoded;onDispose{owned?.let(uk.co.traynor.privategallery.core.home2.WallpaperCoordinator::wipe)}}
+ DisposableEffect(wallpaperContext){val retired=wallpaperContext?.onRetire{android.os.Handler(android.os.Looper.getMainLooper()).post{decoded=null}};onDispose{retired?.close()}}
+ LaunchedEffect(w.image,w.imageRevision,wallpaperContext,previewBitmap){
+  if(previewBitmap==null&&w.image!=null&&wallpaperContext!=null){
+   var candidate:android.graphics.Bitmap?=null
+   try{
+    kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO){wallpaperContext.readWallpaper(w.image)?.let{bytes->try{candidate=BitmapFactory.decodeByteArray(bytes,0,bytes.size,BitmapFactory.Options().apply{inMutable=true})}finally{bytes.fill(0)}}}
+    kotlinx.coroutines.currentCoroutineContext().ensureActive()
+    wallpaperContext.publishIfCurrent{decoded=candidate;candidate=null}
+   }catch(cancelled:kotlinx.coroutines.CancellationException){throw cancelled}catch(_:Exception){}finally{candidate?.let(uk.co.traynor.privategallery.core.home2.WallpaperCoordinator::wipe)}
+  }
+ }
+ val image=(previewBitmap?:decoded)?.takeIf{!it.isRecycled}?.asImageBitmap()
  BoxWithConstraints(modifier.clipToBounds()){
   val density=LocalDensity.current
   val dx=with(density){maxWidth.toPx()}*(w.zoom-1f)*w.x/2;val dy=with(density){maxHeight.toPx()}*(w.zoom-1f)*w.y/2

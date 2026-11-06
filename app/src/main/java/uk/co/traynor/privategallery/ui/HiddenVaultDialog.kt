@@ -274,6 +274,14 @@ private fun HiddenVaultContent(
                             onLoadEditorBytes={id,cancelled,done ->request({editor.read(id) {cancelled() || viewer !== view}}) {result->if(viewer===view && !cancelled())done(result) else result.getOrNull()?.fill(0)}},
                             editingVaultLabel="Hidden Space",
                             onExternalEdit={id ->cameraActivity?.openExternalEdit(id,session)},
+                            onSetNovaWallpaper={id ->
+                                val authority=runCatching{session.authority()}.getOrNull()
+                                val epoch=uk.co.traynor.privategallery.core.hidden.HiddenPreviewState.epoch(session)
+                                if(authority!=null)cameraActivity?.openNovaWallpaper(id,session) {
+                                    alive.get()&&viewer===view&&editor.isActive()&&session.isAuthorityCurrent(authority)&&
+                                        uk.co.traynor.privategallery.core.hidden.HiddenPreviewState.epoch(session)==epoch
+                                }
+                            },
                             onSaveEditedCopy={id,bytes,cancelled,done ->saveEdit(id,bytes,null,cancelled,done)},
                             onSaveAiCopy={id,bytes,provenance,cancelled,done ->saveEdit(id,bytes,provenance,cancelled,done)},
                             onLoadVideoBytes={id,cancelled,progress,done ->request({check(!cancelled());repository.readForDisplay(id).also {if(cancelled()){it.fill(0);throw kotlinx.coroutines.CancellationException("Cancelled")}}}) {result ->progress(100);done(result)}},

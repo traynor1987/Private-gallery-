@@ -131,6 +131,7 @@ fun FullscreenMediaViewer(
     onImageFailure: (String) -> Unit = {},
     onPrivacyConcealed: (Int) -> Unit = {},
     onExternalEdit: ((String)->Unit)? = null,
+    onSetNovaWallpaper: ((String)->Unit)? = null,
 ) {
     if (entries.isEmpty()) return
     val pagerState = rememberPagerState(
@@ -309,6 +310,9 @@ fun FullscreenMediaViewer(
             }
             if(detailsLoad!=null && detailsBytes!=null && current.id !in restrictedIds) SheetAction("Share with privacy options",Icons.Default.Share) {showMore=false;showPrivacyShare=true}
             if(detailsLoad!=null) SheetAction("Details", Icons.Default.Info) {showMore=false;showDetails=true}
+            if(source==MediaViewerSource.VAULT&&current.mimeType.startsWith("image/"))onSetNovaWallpaper?.let {action ->
+                Box(Modifier.testTag("set-nova-wallpaper")){SheetAction("Set as NovaOS Wallpaper",Icons.Default.Wallpaper){showMore=false;action(current.id)}}
+            }
             onAddToCollection?.let { action -> SheetAction("Add to collection", Icons.Default.CreateNewFolder) { showMore = false; action(current) } }
             onRestore?.takeIf { current.id !in restrictedIds }?.let { action -> SheetAction("Restore a copy", Icons.Default.FileDownload) { showMore = false; action(current) } }
             onRestoreAndRemove?.takeIf { current.id !in restrictedIds }?.let { action -> SheetAction("Restore and remove from Vault", Icons.Default.MoveToInbox) { showMore = false; action(current) } }

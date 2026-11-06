@@ -1257,6 +1257,11 @@ class MainActivity : FragmentActivity() {
                 if(!displayPrivateHome() || browserUnderHome) Box(Modifier.fillMaxSize().then(if(browserUnderHome || evidenceOwner!=null || vaultCamera!=null)Modifier.clearAndSetSemantics{}else Modifier).then(retainedBrowserCover)) {PrivateGalleryApp(route, ::createPin, ::unlock, ::changePin, ::recoverWithOfflineKey, ::finishRecoveryKeySetup, { route = Route.RECOVER }, { route = Route.LOCK }, ::lock, ::importSelected, ::moveSelected, ::loadItems, ::loadCollections, ::loadFavouriteCollection, ::createCollection, ::addItemsToCollection, ::removeItemsFromCollection, ::renameCollection, ::deleteCollection, ::loadCollectionItems, ::readForViewing, ::loadPreview, ::loadImageEdit, ::applyImageCrop, ::undoImageCrop, ::resetImageCrop, ::restore, ::delete, biometricEnabled, ::unlockWithBiometrics, ::enrollBiometrics, ::finishSetup, autoLockTimeout, selectedNativeTheme(), if(retained.hidden.selected) hiddenAllowScreenshots else allowScreenshots, updateStatus, updateLastChecked, availableUpdate != null, mediaAccessAvailable, ::requestDeviceMediaAccess, ::deviceMediaPages, { deviceGallery.albums() }, ::loadDeviceThumbnail, ::openSettings, { openNonBrowser(Route.GALLERY); mediaAccessAvailable = hasDeviceMediaAccess() }, { openNonBrowser(Route.VAULT) }, { openNonBrowser(Route.FAVOURITE) }, ::openBrowser, ::applyAutoLockTimeout, ::applyTheme, ::applyAllowScreenshots, ::applyBrowserSearchEngine, ::applyClearBrowserDataOnLock, ::clearBrowserData, browserSearchEngine, clearBrowserDataOnLock, browserSaveHistory, ::applyBrowserSaveHistory, browserWebView, { view -> browserWebView = view }, { exit -> browserFullscreenExit = exit }, ::checkForUpdates, ::downloadUpdate, recoveryKeys.isConfigured, pendingRecoveryKey?.concatToString(), ::importBrowserSource, browserRequireVpn, browserVpnState == VpnConnectionState.CONNECTED, ::importWireGuardProfile, vpnProfileStatus, browserVpnState, browserAutoConnectVpn, ::applyBrowserAutoConnectVpn, ::applyBrowserRequireVpn, ::setFavouriteCollection, vpnProfiles, ::selectVpnProfile, ::removeVpnProfile, browserBookmarks, ::addBrowserBookmark, ::removeBrowserBookmark, browserV2Session, ::loadBrowserHistory, ::clearBrowserHistory, ::recordBrowserHistory, browserVpnPreparing, browserVpnPermissionRequired, ::requestBrowserVpnPermissionOrConnect, { item, bytes, cancelled, completed -> saveEditedCopy(item, bytes, cancelled, completed) }, ::readForEditing, { item, bytes, cancelled, completed -> saveEditedCopy(item, bytes, cancelled, completed, true) }, onReadVideoForViewing = ::readVideoForViewing, onOpenVideoSession = ::openVideoSession, onSaveAiCopy = { item, bytes, provenance, cancelled, completed -> saveEditedCopy(item, bytes, cancelled, completed, aiProvenance = provenance) }, onPrepareBrowserUpload = ::prepareBrowserUpload, onClearBrowserUpload = ::clearBrowserUploadCopies, hideContent = hideContent, secretDiscovered = secretDiscovered, onHideContentChanged = ::applyHideContent, onSecretDiscoveryChanged = ::applySecretDiscovery, onAuthenticateSensitive = ::authenticateSensitive, onCancelSensitiveAuthentication = ::cancelSensitiveAuthentication, onVerifySecretPin = ::verifySecretPin, onGenerateImage = ::generateVaultImage, onChooseBackupExport = { backupExportLauncher.launch("private-gallery-vault.pgvault") }, backupExportUri = backupExportUri, onCancelBackupExport = { backupExportUri = null }, onExportBackup = ::exportEncryptedBackup, backupStatus = backupStatus, onChooseBackupRestore = { backupRestoreLauncher.launch(arrayOf("application/octet-stream", "application/zip", "*/*")) }, backupRestoreUri = backupRestoreUri, onCancelBackupRestore = { backupRestoreUri = null }, onRestoreBackup = ::restoreEncryptedBackup, onLoadRecentlyDeleted = ::loadRecentlyDeleted, onMoveItemsToRecentlyDeleted = ::moveItemsToRecentlyDeleted, onChangeRecentlyDeleted = ::changeRecentlyDeleted, onRestoreSelectedVaultCopies = ::restoreSelectedVaultCopies, onLeaveHidden = ::leaveHiddenToDestination, hiddenState = retained.hidden, primaryAuthority = {session.isUnlocked && sessionKey != null}, onReturnToPrimary = ::returnToPrimaryVault, createPrimaryCopy = ::createPrimaryCopy, primaryGallerySelected = retained.primaryGallery, onGallerySourceSelected = ::selectGallerySource, onTransferToHidden = ::transferPrimaryToHidden, phoneMoveStatus = phoneMoveStatus, onCancelGalleryAuthentication = ::cancelGalleryAuthentication, onCapturePrimaryEditorAuthority = ::capturePrimaryEditorAuthority, onInvalidatePrimaryPresentation = ::invalidatePrimaryBrowserPresentation, onDirectHiddenUnlock = ::unlockHiddenDirect)}
                 privateAppAuthentication?.let { uk.co.traynor.privategallery.ui.PrivateAppAuthentication(it) }
                 HomePresentation()
+                novaWallpaperRequest?.let { request -> androidx.compose.runtime.key(request) {
+                    uk.co.traynor.privategallery.home2.WallpaperEditorHost(request.owner,activityResumed,request.sourceId) {
+                        if(novaWallpaperRequest===request)novaWallpaperRequest=null
+                    }
+                } }
                 evidenceOwner?.let { owner -> androidx.compose.runtime.key(owner) { uk.co.traynor.privategallery.ui.EvidenceLockerHost(owner,activityResumed) { if(evidenceOwner===owner){closeEvidenceLocker();finishHomeFeature(uk.co.traynor.privategallery.core.home.HomeLayout.Shortcut.EVIDENCE_LOCKER)} } } }
                 ExternalEditingHost()
                 vaultCamera?.let { camera -> uk.co.traynor.privategallery.ui.VaultCameraScreen(camera, ::exitVaultCamera) }
@@ -1479,6 +1484,7 @@ class MainActivity : FragmentActivity() {
     }
 
     override fun onDestroy() {
+        novaWallpaperRequest?.owner?.close();novaWallpaperRequest=null
         ownedPanicWindows.entries.toList().forEach {(window,binding)->if(window.callback===binding.callback)window.callback=binding.original}
         ownedPanicWindows.clear()
         closeEvidenceLocker()
@@ -1876,6 +1882,35 @@ class MainActivity : FragmentActivity() {
             }
         }.getOrNull()
     }
+    private class NovaWallpaperRequest(val owner:uk.co.traynor.privategallery.core.home2.WallpaperOwner,val sourceId:String)
+    private var novaWallpaperRequest by mutableStateOf<NovaWallpaperRequest?>(null)
+    private fun wallpaperOwner(hidden:uk.co.traynor.privategallery.core.hidden.HiddenSession?,presentationCurrent:()->Boolean):uk.co.traynor.privategallery.core.home2.WallpaperOwner? {
+        if(hideContent||!activityResumed||!presentationCurrent())return null
+        return runCatching {
+            if(hidden!=null) {
+                val authentication=hidden.authentication()
+                val allowed={ !hideContent&&hidden.isAuthenticationCurrent(authentication)&&presentationCurrent() }
+                uk.co.traynor.privategallery.core.home2.WallpaperOwner(uk.co.traynor.privategallery.core.evidence.EvidenceCatalog.Owner.HIDDEN,allowed,
+                    {if(allowed())uk.co.traynor.privategallery.core.evidence.EvidenceAccess.hidden(applicationContext,hidden,allowed)else null})
+            }else {
+                val identity=checkNotNull(sessionKey);val authentication=session.captureAuthenticationEpoch()
+                val allowed={ !hideContent&&sessionKey===identity&&session.isAuthenticationCurrent(authentication)&&presentationCurrent() }
+                uk.co.traynor.privategallery.core.home2.WallpaperOwner(uk.co.traynor.privategallery.core.evidence.EvidenceCatalog.Owner.PRIMARY,allowed,
+                    {if(allowed())uk.co.traynor.privategallery.core.evidence.EvidenceAccess.primary(applicationContext,identity,{sessionKey},allowed,{checkNotNull(sessionKey).copyOf()},phoneTransferGate)else null})
+            }
+        }.getOrNull()
+    }
+    private fun homeWallpaperOwner():uk.co.traynor.privategallery.core.home2.WallpaperOwner? {
+        val hidden=retained.hidden.selected;val revision=homeRequestRevision;val originRoute=route
+        return wallpaperOwner(if(hidden)retained.hidden.session else null) {
+            homeVisible&&homeRequestRevision==revision&&route==originRoute&&retained.hidden.selected==hidden
+        }
+    }
+    internal fun openNovaWallpaper(sourceId:String,hidden:uk.co.traynor.privategallery.core.hidden.HiddenSession?=null,current:()->Boolean) {
+        val owner=wallpaperOwner(hidden,current)?:return
+        novaWallpaperRequest?.owner?.close()
+        novaWallpaperRequest=NovaWallpaperRequest(owner,sourceId)
+    }
     private fun launchHomeShortcut(item:uk.co.traynor.privategallery.core.home.HomeLayout.Shortcut) {
         val hidden=retained.hidden.selected
         if(!uk.co.traynor.privategallery.core.home.NovaNavigation.available(item,hidden)||hideContent||!activityResumed||(if(hidden)!retained.hidden.session.isUnlocked else !session.isUnlocked||sessionKey==null))return
@@ -2023,7 +2058,7 @@ class MainActivity : FragmentActivity() {
     @Composable private fun HomeScopedPresentation(hidden:Boolean) {
         var admittedAccess by remember {mutableStateOf<uk.co.traynor.privategallery.core.evidence.EvidenceAccess?>(null)}
         DisposableEffect(Unit){onDispose{admittedAccess?.close();admittedAccess=null}}
-        LaunchedEffect(activityResumed){if(activityResumed&&admittedAccess==null){kotlinx.coroutines.yield();admittedAccess=homeAccess()}}
+        LaunchedEffect(activityResumed){if(activityResumed&&admittedAccess?.current()!=true){admittedAccess?.close();admittedAccess=null;kotlinx.coroutines.yield();admittedAccess=homeAccess()}}
         val access=admittedAccess ?: return
         val apps=remember(access){homeNativeApps(access)}
         uk.co.traynor.privategallery.home2.IntegratedHome(access,homeVisible&&activityResumed,
@@ -2036,6 +2071,7 @@ class MainActivity : FragmentActivity() {
                     else {appTheme=ThemePreference.decode(stored);appSettings.edit().putString("app-theme",stored).apply()}
                 }
             },
+            wallpaperOwnerFactory=::homeWallpaperOwner,
             onThemeConnection={data ->
                 if(data!=null&&access.current()) {
                     homeThemeAccess=access;homeThemeData=data
@@ -3992,6 +4028,7 @@ private fun PrivateGalleryApp(
                 onResetImageCrop = { id, completed -> request.items[id]?.let { onResetImageCrop(it, completed) } ?: completed(Result.failure(IllegalStateException("Missing Vault item"))) },
                 onCropChanged = { cropRevision++ },
                 onExternalEdit = {id ->if(request.current()&&primaryPresentation&&viewerRequest===request)metadataActivity?.openExternalEdit(id)},
+                onSetNovaWallpaper = {id ->if(request.current()&&primaryPresentation&&viewerRequest===request)metadataActivity?.openNovaWallpaper(id,current={request.current()&&primaryPresentation&&viewerRequest===request})},
                 onLoadEditorBytes = { id, cancelled, loaded -> request.items[id]?.let { onReadForEditing(it, {cancelled() || !request.current() || viewerRequest !== request}, loaded) } ?: loaded(Result.failure(IllegalStateException("Missing item"))) },
                 onAddToCollection = { entry -> onLoadCollections { if (primaryAuthority() && primaryPresentation && viewerRequest === request) { viewerCollections = it; collectionTarget = entry.id } } },
                 onSaveEditedCopy = { id, bytes, cancelled, completed ->
