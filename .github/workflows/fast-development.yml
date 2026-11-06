@@ -593,7 +593,7 @@ jobs:
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: '37.0'
-          target: google_atd
+          target: google_apis
           arch: x86_64
           profile: pixel_2
           cores: 4
@@ -604,6 +604,8 @@ jobs:
           emulator-options: -no-window -gpu software -no-snapshot -noaudio -no-boot-anim -feature -HardwareDecoder -camera-back emulated -camera-front emulated
           script: |
             test "$(adb shell getprop ro.build.version.sdk | tr -d '\r')" = 37
+            adb shell pm path com.android.systemui | tee app/build/home2-evidence/systemui-package.txt
+            grep -q '^package:' app/build/home2-evidence/systemui-package.txt
             adb shell wm size 1200x1800
             adb shell wm density 160
             adb shell settings put secure immersive_mode_confirmations confirmed

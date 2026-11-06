@@ -33,3 +33,17 @@ method-field cases fail. They were not changed or weakened for this focused UI r
 Physical Galaxy Z Fold, live VPN handshake/Android consent UI, real mobile radio transitions,
 Samsung fingerprint and third-party accounts/playback require owner acceptance. Simulated
 readiness/status and emulator tests are not claimed as physical network or Fold verification.
+
+## Runtime1 retained evidence
+
+Exact source d0babe10bf1e96e395033865030ca35362c89fba, run42199798600/job127831977600,
+artifact13493769315 SHA256ef8e42799799cd64f3e8c8774e5a26b6a81e606be99182553b2a8f987bd21e8f.
+Original XML130cases:129pass,0skip, onefailure in actualAndroidStatusBarAndCoveredSurfaceStopSubscriptions
+at setBarsVisible(true), waiting for platform status bar visibility. All first-launch, menu,
+retention/audio, navigation and security cases passed. Original ZIP/CRC and reports retained.
+The selected google_atd image removes SystemUI (Android official ATD documentation), which
+cannot exercise a real status bar show transition. Google official image metadata confirms
+system-images;android-37.0;google_apis;x86_64 exists. Change only this existing job to that
+full API37 image and require com.android.systemui before tests. No app code, cases, assertions,
+timeouts or shipping gates changed. Repeat complete exact-source130-case batch.
+Reference: https://developer.android.com/studio/test/managed-devices#whats-removed
