@@ -48,6 +48,7 @@ internal class EvidenceAiPreview internal constructor(
  selectedIds:List<String>,imageIds:List<String>,lineage:List<EvidenceCatalog.SourceFingerprint>,
  text:String,images:List<EvidenceAiImage>,body:ByteArray,
  val estimatedUsd:Double,
+ internal val reportCorpus:EvidenceAiReport.Corpus?=null,
 ) : AutoCloseable {
  val owner=catalog.owner()
  val revision=catalog.revision()
@@ -75,7 +76,7 @@ internal class EvidenceAiPreview internal constructor(
  internal fun current()=!closed.get()&&reader.current()&&route.current()&&route.owner==owner&&route.identity==routeIdentity
  @Synchronized override fun close() {
   if(!closed.compareAndSet(false,true))return
-  exactBody.fill(0);textChars.fill('\u0000');images.forEach{it.close()}
+  exactBody.fill(0);textChars.fill('\u0000');images.forEach{it.close()};reportCorpus?.close()
   if(consumed.get())route.close()
  }
 }
@@ -99,6 +100,7 @@ internal object EvidenceAi {
   val cacheWriteUsdPerMillion get()=inputUsdPerMillion*1.25
  }
  enum class Task(val label:String,val instruction:String) {
+  EVIDENCE_REPORT("Behaviour report*","Generate a qualified cited report from the explicitly selected local evidence only."),
   FACTUAL_SUMMARY("Factual summary","Summarize only explicit visible selected content. Separate facts, source claims and uncertainty."),
   GROUPING("Grouping suggestions","Suggest groups using explicit shared content; explain uncertainty and cite selected evidence IDs."),
   ORDERING("Ordering suggestions","Suggest an order using explicit dates/content. Preserve ambiguous dates and unknown time zones without inference."),
@@ -112,6 +114,7 @@ internal object EvidenceAi {
   var pending:EvidenceAiPreview?=null
   val ownedImages=mutableListOf<EvidenceAiImage>()
   var ownedBody:ByteArray?=null
+  var ownedReportCorpus:EvidenceAiReport.Corpus?=null
   try {
    val result=withContext(Dispatchers.IO) {
     require(catalog.owner()==sourceReader.owner&&catalog.owner()==route.owner){"Evidence, reader and route must belong to the same vault"}
@@ -121,7 +124,9 @@ internal object EvidenceAi {
     val ids=selectedIds.toList();val explicitImages=imageIds.toList()
     val lineage=EvidenceEgress.requireAllowed(catalog,ids,emptyList(),sourceReader,VaultEgress.AI)
     val records=ids.map{id->catalog.evidence().single{it.id()==id}}
-    val framing=exactText(records,task)
+    val reportCorpus=if(task==Task.EVIDENCE_REPORT)EvidenceAiReport.corpus(records).also{ownedReportCorpus=it}else null
+    val framing=reportCorpus?.let(EvidenceAiReport::instructions)?:exactText(records,task)
+    val outputTokens=if(task==Task.EVIDENCE_REPORT)8192 else MAX_OUTPUT_TOKENS
     val context=currentCoroutineContext()
     for(record in records) {
      context.ensureActive();check(sourceReader.current()&&route.current())
@@ -138,17 +143,17 @@ internal object EvidenceAi {
     val content=JSONArray().put(JSONObject().put("type","input_text").put("text",framing))
     ownedImages.forEach{content.put(JSONObject().put("type","input_image").put("image_url",it.dataUrl()).put("detail","high"))}
     val body=JSONObject().put("model",model.id).put("store",false).put("background",false).put("stream",false)
-     .put("reasoning",JSONObject().put("effort","none")).put("max_output_tokens",MAX_OUTPUT_TOKENS).put("tools",JSONArray())
+     .put("reasoning",JSONObject().put("effort","none")).put("max_output_tokens",outputTokens).put("tools",JSONArray())
      .put("input",JSONArray().put(JSONObject().put("role","user").put("content",content))).toString().toByteArray(Charsets.UTF_8)
     ownedBody=body;require(body.size<=MAX_BODY){"Selected request exceeds 20 MiB"}
     check(sourceReader.current()&&route.current());context.ensureActive()
     val textTokens=ceil(framing.length/4.0).toLong()
     val imageTokens=ownedImages.sumOf{ceil(ceil(it.width/32.0)*ceil(it.height/32.0)*1.2).toLong()}
-    val usd=((textTokens+imageTokens)*model.cacheWriteUsdPerMillion+MAX_OUTPUT_TOKENS*model.outputUsdPerMillion)/1000000.0
-    EvidenceAiPreview(catalog,sourceReader,route,model,task,ids,explicitImages,lineage,framing,ownedImages.toList(),body,usd).also{pending=it}
+    val usd=((textTokens+imageTokens)*model.cacheWriteUsdPerMillion+outputTokens*model.outputUsdPerMillion)/1000000.0
+    EvidenceAiPreview(catalog,sourceReader,route,model,task,ids,explicitImages,lineage,framing,ownedImages.toList(),body,usd,reportCorpus).also{pending=it}
    }
-   currentCoroutineContext().ensureActive();check(result.current());pending=null;ownedBody=null;ownedImages.clear();return result
-  }finally{pending?.close();ownedBody?.fill(0);ownedImages.forEach{it.close()}}
+   currentCoroutineContext().ensureActive();check(result.current());pending=null;ownedBody=null;ownedReportCorpus=null;ownedImages.clear();return result
+  }finally{pending?.close();ownedBody?.fill(0);ownedReportCorpus?.close();ownedImages.forEach{it.close()}}
  }
 
  /** Call only from the explicit consent action. No automatic retry or persistent consent. */
@@ -260,11 +265,14 @@ internal object EvidenceAi {
       "output_text"->{
        require(!refusal&&++outputTexts==1)
        val value=part.getString("text");key.rejectEcho(value)
-       structured=readStructure(value,preview.selectedIds.toSet(),false,0).json
+       if(preview.task!=Task.EVIDENCE_REPORT||status!="incomplete")structured=if(preview.task==Task.EVIDENCE_REPORT)JSONObject(EvidenceAiReport.encode(EvidenceAiReport.validate(value,checkNotNull(preview.reportCorpus))))else readStructure(value,preview.selectedIds.toSet(),false,0).json
       }
       "refusal"->{require(!refusal&&outputTexts==0);refusal=true;key.rejectEcho(part.optString("refusal",""))}
      }
     }
+   }
+   if(preview.task==Task.EVIDENCE_REPORT&&(refusal||status=="incomplete")) {
+    structured=JSONObject(EvidenceAiReport.encode(EvidenceAiReport.insufficient(if(refusal)"Provider refused this request"else"Provider output was incomplete; no classifications or counts were accepted")))
    }
    if(structured==null){
     require(refusal||status=="incomplete")
@@ -279,7 +287,7 @@ internal object EvidenceAi {
    require(result.length<=MAX_TEXT);key.rejectEcho(result)
    // The persisted form is independently checked under the same schema plus its
    // app-owned receipt. No unvalidated model field can acquire application authority.
-   readStructure(result,preview.selectedIds.toSet(),true,tokens("input_tokens"))
+   if(preview.task==Task.EVIDENCE_REPORT)readReportStructure(result,preview.selectedIds.toSet(),tokens("input_tokens"))else readStructure(result,preview.selectedIds.toSet(),true,tokens("input_tokens"))
    return EvidenceCatalog.Analysis(UUID.randomUUID().toString(),System.currentTimeMillis(),preview.model.id,preview.task.name,preview.bodyDigest,
     preview.selectedIds,result,tokens("input_tokens"),tokens("output_tokens"),false,preview.sourceFingerprints)
   }catch(_:Exception){throw EvidenceAiFailure("OpenAI returned an unsupported, oversized or invalid analysis response.")}
@@ -292,14 +300,30 @@ internal object EvidenceAi {
  class StructuredEvent internal constructor(ids:List<String>,val title:String,val dateTimeQuote:String?,val provenance:String,val uncertainty:String) {
   val evidenceIds:List<String> = EvidenceAi.frozen(ids)
  }
- class Details internal constructor(val summary:String,suggestions:List<StructuredSuggestion>,events:List<StructuredEvent>,val status:String,val refusal:Boolean,val cachedInputTokens:Long) {
+ class Details internal constructor(val summary:String,suggestions:List<StructuredSuggestion>,events:List<StructuredEvent>,val status:String,val refusal:Boolean,val cachedInputTokens:Long,val report:EvidenceAiReport.Report?=null) {
   val suggestions:List<StructuredSuggestion> = EvidenceAi.frozen(suggestions)
   val events:List<StructuredEvent> = EvidenceAi.frozen(events)
  }
  /** Read-only interpretation; no changes, ID expansion, date inference or owner approval. */
  fun details(analysis:EvidenceCatalog.Analysis):Details = try {
-  readStructure(analysis.text(),(if(analysis.sourceReferences().isEmpty())analysis.evidenceIds()else analysis.sourceReferences().map{it.evidenceId()}).toSet(),true,analysis.inputTokens()).details
+  val allowed=(if(analysis.sourceReferences().isEmpty())analysis.evidenceIds()else analysis.sourceReferences().map{it.evidenceId()}).toSet()
+  if(analysis.task()==Task.EVIDENCE_REPORT.name)readReportStructure(analysis.text(),allowed,analysis.inputTokens(),analysis.sourceReferences().associate{it.evidenceId() to it.fingerprint().sha256()})else readStructure(analysis.text(),allowed,true,analysis.inputTokens()).details
  }catch(_:Exception){throw EvidenceAiFailure("Saved analysis has an unsupported or invalid advisory structure.")}
+ private fun readReportStructure(value:String,allowed:Set<String>,inputTokens:Long,sourceHashes:Map<String,String> = emptyMap()):Details {
+  EvidenceStrictJson.validate(value,20,MAX_TEXT)
+  val json=JSONObject(value);val receipt=json.getJSONObject("_receipt")
+  val names=mutableSetOf<String>();val iterator=receipt.keys();while(iterator.hasNext())names+=iterator.next()
+  require(names==setOf("status","refusal","cachedInputTokens","advisory","label"))
+  val status=receipt.get("status");require(status is String&&status in setOf("completed","incomplete"))
+  val refusal=receipt.get("refusal");require(refusal is Boolean&&receipt.get("advisory")==true)
+  val cached=receipt.get("cachedInputTokens");require(cached is Int||cached is Long)
+  val count=(cached as Number).toLong();require(inputTokens in 0..1000000000L&&count in 0..inputTokens)
+  require(receipt.get("label")==receiptLabel(status,refusal,count))
+  json.remove("_receipt")
+  val report=EvidenceAiReport.readStored(json.toString(),allowed,sourceHashes)
+  if(status=="incomplete"||refusal)require(report.outcome=="INSUFFICIENT_EVIDENCE"&&report.instances.isEmpty()&&report.counts.values.all{it==0})
+  return Details(report.text(),emptyList(),emptyList(),status,refusal,count,report)
+ }
  private class Structure(val json:JSONObject,val details:Details)
  private fun <T> frozen(values:List<T>):List<T> = Collections.unmodifiableList(ArrayList(values))
  private fun receiptLabel(status:String,refusal:Boolean,cached:Long)="ADVISORY AI — "+(if(status=="incomplete")"INCOMPLETE: partial output"else"COMPLETED")+(if(refusal)"; REFUSAL"else"")+". Owner review required; no changes applied. Cached input tokens: $cached."

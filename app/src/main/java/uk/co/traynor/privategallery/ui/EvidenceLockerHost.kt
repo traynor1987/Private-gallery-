@@ -22,6 +22,7 @@ private class EvidencePickerTicket(
  val kind:String,val incidentIds:List<String> = emptyList(),val evidenceIds:List<String> = emptyList(),
  val digest:String="",val stage:EvidenceOwnerSession.CipherStage?=null,val receipt:EvidenceExportReceipt?=null,
  val source:Uri?=null,val cipherDigest:String="",val mode:String="VPN",
+ val reportId:String?=null,val task:EvidenceAi.Task?=null,
 ) {
  val delivered=AtomicBoolean();var uri:Uri?=null;var accepted=false;var inputUris:List<Uri> = emptyList()
 }
@@ -38,25 +39,29 @@ private class EvidenceArchiveRequest(val source:Uri,val destination:Uri?=null,va
  var delivered by remember(owner){mutableStateOf<EvidencePickerTicket?>(null)}
  var aiIds by remember(owner){mutableStateOf<List<String>?>(null)}
  var aiMode by remember(owner){mutableStateOf<String?>(null)}
+ var aiTask by remember(owner){mutableStateOf<EvidenceAi.Task?>(null)}
+ var reportExportId by remember(owner){mutableStateOf<String?>(null)}
+ var reportPreparing by remember(owner){mutableStateOf(false)}
  var exportIds by remember(owner){mutableStateOf<EvidenceExportSelection?>(null)}
  var archive by remember(owner){mutableStateOf<EvidenceArchiveRequest?>(null)}
  var job by remember(owner){mutableStateOf<Job?>(null)}
  var transferring by remember(owner){mutableStateOf(false)}
  var notice by remember(owner){mutableStateOf<String?>(null)}
  var startImportReview by remember(owner){mutableStateOf(false)}
- fun discardDestination(ticket:EvidencePickerTicket?){if(ticket?.kind in listOf("Encrypted","Plain","Reexport"))ticket?.uri?.let{EvidenceDocumentIo.requestPartialCleanup(context,it,ticket.source)}}
- fun dismiss(){discardDestination(pending);discardDestination(delivered);job?.cancel();controller?.let{owner.retire(it)};controller=null;aiIds=null;exportIds=null;archive=null;pending?.stage?.let{owner.discard(it)};pending=null;delivered=null;owner.close();onClose()}
+ fun discardDestination(ticket:EvidencePickerTicket?){if(ticket?.kind in listOf("Encrypted","Plain","Reexport","Report"))ticket?.uri?.let{EvidenceDocumentIo.requestPartialCleanup(context,it,ticket.source)}}
+ fun dismiss(){reportExportId=null;aiTask=null;discardDestination(pending);discardDestination(delivered);job?.cancel();controller?.let{owner.retire(it)};controller=null;aiIds=null;exportIds=null;archive=null;pending?.stage?.let{owner.discard(it)};pending=null;delivered=null;owner.close();onClose()}
  fun received(uri:Uri?,accepted:Boolean){val ticket=pending?:return;if(!ticket.delivered.compareAndSet(false,true))return;ticket.uri=uri;ticket.accepted=accepted;delivered=ticket}
  val importPicker=rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()){uri->received(uri,uri!=null)}
  val documentImportPicker=rememberLauncherForActivityResult(ActivityResultContracts.OpenMultipleDocuments()){uris->
   val ticket=pending
   if(ticket!=null&&ticket.delivered.compareAndSet(false,true)){val selection=uris.distinct();ticket.inputUris=if(selection.size<=128)selection else emptyList();ticket.accepted=ticket.inputUris.isNotEmpty();if(selection.size>128)notice="Select at most 128 documents. Nothing from this oversized selection was imported.";delivered=ticket}
  }
+ val reportPicker=rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("text/plain")){uri->received(uri,uri!=null)}
  val outputPicker=rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/octet-stream")){uri->received(uri,uri!=null)}
  val permissionPicker=rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()){result->received(null,result.resultCode==Activity.RESULT_OK)}
  fun handoff(ticket:EvidencePickerTicket,launch:()->Unit):Boolean {
   if(!activityResumed||!resumed||!owner.sameAuthentication()||controller?.current()!=true||pending!=null)return false
-  pending=ticket;delivered=null;aiIds=null;exportIds=null;archive=null;startImportReview=false
+  pending=ticket;delivered=null;aiIds=null;aiTask=null;reportExportId=null;exportIds=null;archive=null;startImportReview=false
   controller?.let{owner.retire(it)};controller=null
   try{launch()}catch(_:Throwable){ticket.stage?.let{owner.discard(it)};ticket.accepted=false;delivered=ticket;notice="The system document or permission screen could not open."}
   return true
@@ -65,7 +70,7 @@ private class EvidenceArchiveRequest(val source:Uri,val destination:Uri?=null,va
   val observer=androidx.lifecycle.LifecycleEventObserver{_,event->
    if(event==androidx.lifecycle.Lifecycle.Event.ON_RESUME)resumed=true
    if(event==androidx.lifecycle.Lifecycle.Event.ON_PAUSE||event==androidx.lifecycle.Lifecycle.Event.ON_STOP){
-    resumed=false;job?.cancel();controller?.let{owner.retire(it)};controller=null;aiIds=null;exportIds=null;archive=null
+    resumed=false;reportExportId=null;aiTask=null;job?.cancel();controller?.let{owner.retire(it)};controller=null;aiIds=null;exportIds=null;archive=null
     if(pending==null)dismiss()
    }
   }
@@ -86,8 +91,28 @@ private class EvidenceArchiveRequest(val source:Uri,val destination:Uri?=null,va
   when(ticket.kind){
    "Import"->{startImportReview=true;fresh.importOriginalsForReview(ticket.inputUris)}
    "Open"->ticket.uri?.let{archive=EvidenceArchiveRequest(it)}
-   "Permission"->{aiMode=ticket.mode;aiIds=ticket.evidenceIds}
+   "Permission"->{aiMode=ticket.mode;aiIds=ticket.evidenceIds;aiTask=ticket.task}
    "Reexport"->ticket.uri?.let{destination->archive=EvidenceArchiveRequest(checkNotNull(ticket.source),destination,ticket.cipherDigest)}
+   "Report"->{
+    val destination=ticket.uri?:return@withContext
+    val id=ticket.reportId?:return@withContext
+    transferring=true
+    job=scope.launch(start=CoroutineStart.UNDISPATCHED){
+     try {
+      withContext(Dispatchers.IO){
+       val operation=currentCoroutineContext();val reader=fresh.access.reader{!operation.isActive}
+       val catalog=fresh.access.store.read()
+       check(EvidenceEgress.digest(catalog)==ticket.digest){"Report selection changed"}
+       EvidenceReportExport.validate(catalog,id,reader)
+       evidenceDestination(context,fresh,destination){output->EvidenceReportExport.write(catalog,id,reader,output)
+        check(EvidenceEgress.digest(fresh.access.store.read())==ticket.digest);operation.ensureActive()}
+      }
+      fresh.access.publishIfCurrent{notice="Readable AI report exported separately. Original evidence was not exported or changed."}
+     }catch(cancelled:CancellationException){EvidenceDocumentIo.requestPartialCleanup(context,destination);throw cancelled}
+     catch(_:Throwable){EvidenceDocumentIo.requestPartialCleanup(context,destination);fresh.access.publishIfCurrent{notice="Report export stopped. The report, evidence or Space authority changed. Partial destination cleanup was requested."}}
+     finally{transferring=false}
+    }
+   }
    "Encrypted","Plain"->{
     val destination=ticket.uri?:return@withContext
     transferring=true
@@ -124,13 +149,19 @@ private class EvidenceArchiveRequest(val source:Uri,val destination:Uri?=null,va
  if(active!=null&&!transferring&&active.current()) {
   EvidenceLocker(active,onClose={if(controller===active){owner.retire(active);controller=null;if(pending==null)dismiss()}},
    onImport={handoff(EvidencePickerTicket("Import")){documentImportPicker.launch(arrayOf("image/*","application/pdf","text/plain","text/csv"))}},
-   onAi={ids->aiIds=ids;aiMode=null},onExport={ids->exportIds=ids},
-   onOpenArchive={handoff(EvidencePickerTicket("Open")){importPicker.launch(arrayOf("application/octet-stream","*/*"))}},startImportReview=startImportReview)
-  aiIds?.let{ids->EvidenceAiDialog(active,ids,owner.allowsSystem(),{owner.routes(active)},onRequestPermission={mode->
-   val intent=preparePermission(context)
-   if(intent==null){aiMode=mode;notice="Android VPN permission is already granted. Prepare a fresh preview on the chosen secure transport.";aiIds=ids}
-   else handoff(EvidencePickerTicket("Permission",evidenceIds=ids,mode=mode)){permissionPicker.launch(intent)}
-  },onClose={aiIds=null},initialMode=aiMode)}
+   onAi={ids->aiIds=ids;aiMode=null;aiTask=null},onExport={ids->exportIds=ids},
+   onOpenArchive={handoff(EvidencePickerTicket("Open")){importPicker.launch(arrayOf("application/octet-stream","*/*"))}},startImportReview=startImportReview,onAiReport={ids->aiIds=ids;aiMode=null;aiTask=EvidenceAi.Task.EVIDENCE_REPORT},onReportExport={reportExportId=it})
+  aiIds?.let{ids->
+   val requestPermission:(String,EvidenceAi.Task)->Unit={mode,requestedTask->
+    if(active.current()) {
+     val intent=preparePermission(context)
+     if(intent==null){aiMode=mode;aiTask=requestedTask;notice="Android VPN permission is already granted. Prepare a fresh preview on the chosen secure transport.";aiIds=ids}
+     else handoff(EvidencePickerTicket("Permission",evidenceIds=ids,mode=mode,task=requestedTask)){permissionPicker.launch(intent)}
+    }
+   }
+   EvidenceAiDialog(active,ids,owner.allowsSystem(),{owner.routes(active)},onRequestPermission={mode->requestPermission(mode,aiTask?:EvidenceAi.Task.FACTUAL_SUMMARY)},
+    onClose={aiIds=null;aiTask=null},initialMode=aiMode,initialTask=aiTask,onExportReport={reportExportId=it},onRequestPermissionWithTask=requestPermission)
+  }
   exportIds?.let{ids->EvidenceExportDialog(active,ids.incidentIds,evidenceIds=ids.evidenceIds,createStage={owner.newCipherStage()},discardStage={owner.discard(it)},onPrepared={stage,plan,receipt->
    handoff(EvidencePickerTicket("Encrypted",plan.incidentIds.toList(),plan.evidenceIds.toList(),plan.digest,stage,receipt)){outputPicker.launch("private-gallery-evidence.pgevidence")}
   },onPlaintext={plan->handoff(EvidencePickerTicket("Plain",plan.incidentIds.toList(),plan.evidenceIds.toList(),plan.digest)){outputPicker.launch("private-gallery-evidence.zip")}},onClose={exportIds=null})}
@@ -138,6 +169,16 @@ private class EvidenceArchiveRequest(val source:Uri,val destination:Uri?=null,va
    handoff(EvidencePickerTicket("Reexport",source=request.source,cipherDigest=cipherDigest)){outputPicker.launch("private-gallery-evidence.zip")}
   },onClose={archive=null})}
  }
+ reportExportId?.let{id->GalleryAlertDialog(onDismissRequest={reportExportId=null},title={EvidenceDialogTitle("Export AI report only")},text={Text("Save a readable .txt report to an Android document destination? The report includes selected quotations and AI interpretations, marked with an asterisk and disclaimer. Original evidence files are not exported. The chosen document leaves encrypted NovaOS storage.")},confirmButton={TextButton(enabled=!reportPreparing,onClick={
+  val active=controller
+  if(active!=null&&active.current()&&!reportPreparing&&pending==null){
+   reportExportId=null;reportPreparing=true
+   job=scope.launch(start=CoroutineStart.UNDISPATCHED){try {
+    val digest=withContext(Dispatchers.IO){val operation=currentCoroutineContext();val catalog=active.access.store.read();EvidenceReportExport.validate(catalog,id,active.access.reader{!operation.isActive});EvidenceEgress.digest(catalog)}
+    active.access.publishIfCurrent{handoff(EvidencePickerTicket("Report",digest=digest,reportId=id)){reportPicker.launch("NovaOS-AI-report-${id.take(8)}.txt")}}
+   }catch(cancelled:CancellationException){throw cancelled}catch(_:Throwable){active.access.publishIfCurrent{notice="This report cannot be exported under the current source or Space policy."}}finally{reportPreparing=false}}
+  }
+ }){Text("Choose report destination")}},dismissButton={TextButton(onClick={reportExportId=null}){Text("Cancel")}},properties=DialogProperties(securePolicy=SecureFlagPolicy.SecureOn))}
  if(activityResumed&&resumed&&pending!=null&&delivered==null)GalleryAlertDialog(onDismissRequest={dismiss()},title={EvidenceDialogTitle("Waiting for system picker")},text={Text("Return from Android’s picker to continue, or cancel. Passwords and readable reports are not carried through it.")},confirmButton={TextButton(onClick={dismiss()}){Text("Cancel")}},properties=DialogProperties(securePolicy=SecureFlagPolicy.SecureOn))
  if(transferring)GalleryAlertDialog(onDismissRequest={job?.cancel();dismiss()},title={EvidenceDialogTitle("Saving evidence export")},text={LinearProgressIndicator()},confirmButton={TextButton(onClick={job?.cancel();dismiss()}){Text("Cancel")}},properties=DialogProperties(securePolicy=SecureFlagPolicy.SecureOn))
  notice?.let{text->GalleryAlertDialog(onDismissRequest={notice=null},title={EvidenceDialogTitle("Evidence Locker")},text={Text(text)},confirmButton={TextButton(onClick={notice=null}){Text("Done")}},properties=DialogProperties(securePolicy=SecureFlagPolicy.SecureOn))}

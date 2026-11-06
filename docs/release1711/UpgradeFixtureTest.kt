@@ -17,7 +17,7 @@ import uk.co.traynor.privategallery.core.privateapps.*
 import uk.co.traynor.privategallery.core.camera.CameraOptions
 import uk.co.traynor.privategallery.core.camera.VaultCaptureAccess
 
-/** Reviewed release-control instrumentation for original-key code58 -> code59 upgrade.
+/** Reviewed release-control instrumentation for original-key code59 -> code60 upgrade.
  * Captured and hash-checked before frozen application checkout; never modifies baseline app.
  */
 class UpgradeFixtureTest {
@@ -28,7 +28,7 @@ class UpgradeFixtureTest {
     private val candidateCode get() = checkNotNull(arguments.getString("candidateCode")).toInt()
     private fun guard() {
         check(context.packageName == "uk.co.traynor.privategallery.hiddenprototype")
-        check(baselineCode == 58 && candidateCode == 59)
+        check(baselineCode == 59 && candidateCode == 60)
     }
     private fun hash(bytes: ByteArray) = MessageDigest.getInstance("SHA-256").digest(bytes).joinToString("") { "%02x".format(it) }
     private fun encryptedHashes(): JSONObject = JSONObject().also { result ->
@@ -394,7 +394,7 @@ class UpgradeFixtureTest {
         } finally {hidden.lock();key.fill(0)}
     }
 
-    /** Compiles against the actual signed code58 model; verifies code59 migration without rewriting ciphertext. */
+    /** Compiles against the actual signed code59 model; verifies code60 migration without rewriting ciphertext. */
     private fun homePreferences(seed:Boolean) {
         val key=PinVaultKeyStore(context).unlock("738291".toCharArray())
         val hidden=hiddenSession(false)
@@ -428,7 +428,7 @@ class UpgradeFixtureTest {
         } finally {primary.close();secret.close();hidden.lock();key.fill(0)}
     }
 
-    /** Home2 code58 APIs seed real owner-encrypted records. Candidate reads are deliberately
+    /** Home2 code59 APIs seed real owner-encrypted records. Candidate reads are deliberately
      * raw: opening the UI model may perform an explicit theme migration, outside preservation.
      * All these ciphertext files remain inside the existing complete filesystem assertions.
      */
@@ -583,7 +583,7 @@ class UpgradeFixtureTest {
             } finally {hidden.lock()}
             if(baselineCode>=36)repository.javaClass.getMethod("presentationSort",String::class.java).invoke(repository,"NAME")
             val seeded=JSONObject().put("primaryDeleted",primaryDeleted).put("hiddenDeleted",hiddenDeleted).put("primaryDates",dateSnapshot(repository)).put("hiddenDates",hiddenDates).put("hiddenMedia",hiddenMedia).put("hiddenCollection",hiddenCollection).put("hiddenFiles",hiddenHashes()).put("media",media).put("collection",collection.id).put("files",encryptedHashes())
-            // Code52 already has Evidence Locker and Home: seed before installing code59.
+            // Code52 already has Evidence Locker and Home: seed before installing code60.
             candidateEvidence(seeded,false,baselineSeed=true)
             homePreferences(seed=true)
             home2State(seeded,seed=true)

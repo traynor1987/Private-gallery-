@@ -24,11 +24,13 @@ import uk.co.traynor.privategallery.core.evidence.*
 /** Opening this screen or preparing a preview never sends evidence to the provider. */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable internal fun EvidenceAiDialog(controller:EvidenceController,selectedIds:List<String>,allowSystemRoute:Boolean,
- createCoordinator:()->EvidenceRouteConnection,onRequestPermission:(String)->Unit,onClose:()->Unit,providedCredentials:EvidenceCredentials?=null,initialMode:String?=null) {
+ createCoordinator:()->EvidenceRouteConnection,onRequestPermission:(String)->Unit,onClose:()->Unit,providedCredentials:EvidenceCredentials?=null,initialMode:String?=null,initialTask:EvidenceAi.Task?=null,onExportReport:(String)->Unit={},onRequestPermissionWithTask:((String,EvidenceAi.Task)->Unit)?=null) {
  val context=LocalContext.current.applicationContext;val scope=rememberCoroutineScope{Dispatchers.Main.immediate}
  val state by controller.state.collectAsState()
  var model by remember(controller){mutableStateOf(EvidenceAi.Model.LUNA)}
- var task by remember(controller){mutableStateOf(EvidenceAi.Task.FACTUAL_SUMMARY)}
+ var task by remember(controller,initialTask){mutableStateOf(initialTask?:EvidenceAi.Task.FACTUAL_SUMMARY)}
+ var includedIds by remember(controller,selectedIds){mutableStateOf(selectedIds.toSet())}
+ var originalId by remember(controller){mutableStateOf<String?>(null)}
  var mode by remember(controller,initialMode){mutableStateOf(initialMode?.takeIf{it=="VPN"||it=="Tor"&&controller.access.owner==EvidenceCatalog.Owner.HIDDEN||it=="System"&&allowSystemRoute}?:if(allowSystemRoute)"System"else"VPN")}
  var images by remember(controller){mutableStateOf<Set<String>>(emptySet())}
  var preview by remember(controller){mutableStateOf<EvidenceAiPreview?>(null)}
@@ -47,7 +49,7 @@ import uk.co.traynor.privategallery.core.evidence.*
  var reviewedEvent by remember(controller){mutableStateOf<AiEventReview?>(null)}
  val credentials=remember(controller,providedCredentials){providedCredentials?:EvidenceCredentials(context,controller.access){coordinator?.close()}}
  fun retirePreview(){preview?.close();preview=null;coordinator?.close();coordinator=null}
- fun dismiss(){running?.cancel();retirePreview();result=null;keyText="";message="";applyChoice=null;confirmation=null;newTitle=null;creationIds=null;eventDraft=null;reviewedEvent=null;onClose()}
+ fun dismiss(){originalId=null;running?.cancel();retirePreview();result=null;keyText="";message="";applyChoice=null;confirmation=null;newTitle=null;creationIds=null;eventDraft=null;reviewedEvent=null;onClose()}
  DisposableEffect(controller){val registration=controller.access.onRetire{android.os.Handler(android.os.Looper.getMainLooper()).post{dismiss()}};onDispose{registration.close();running?.cancel();preview?.close();coordinator?.close()}}
  LaunchedEffect(controller,credentials){
   val present=withContext(Dispatchers.IO){runCatching{credentials.isConfigured()}.getOrDefault(false)}
@@ -93,15 +95,19 @@ import uk.co.traynor.privategallery.core.evidence.*
      if(message.isNotEmpty())item{Text(message)}
      val prepared=preview;val analysis=result
      if(analysis!=null) {
-      item {Text("AI-generated advisory · not verified fact",style=MaterialTheme.typography.titleMedium);Text("${analysis.model()} · ${analysis.inputTokens()} input / ${analysis.outputTokens()} output tokens");Text(details?.summary?:analysis.text());details?.let{Text("Status ${it.status}${if(it.refusal)" · provider refusal"else""} · cached input ${it.cachedInputTokens}",style=MaterialTheme.typography.bodySmall)}
+      item {Text("AI-generated advisory · not verified fact",style=MaterialTheme.typography.titleMedium);Text("${analysis.model()} · ${analysis.inputTokens()} input / ${analysis.outputTokens()} output tokens");if(details?.report==null)Text(details?.summary?:analysis.text());details?.let{Text("Status ${it.status}${if(it.refusal)" · provider refusal"else""} · cached input ${it.cachedInputTokens}",style=MaterialTheme.typography.bodySmall)}
        FlowRow {
-        TextButton(enabled=!busy&&!saved(analysis),onClick={controller.mutate("AI advisory saved separately"){it.saveAnalysis(analysis,EvidenceController.now())}}){Text(if(saved(analysis))"Saved"else"Save advisory")}
-        TextButton(enabled=!busy&&details?.refusal!=true,onClick={confirmation="Create an incident from these selected references with a labelled AI advisory? No original will change." to {creationIds=analysis.evidenceIds();newTitle="AI-assisted incident"}}){Text("Create incident")}
-        TextButton(enabled=!busy&&details?.refusal!=true,onClick={applyChoice="Summary"}){Text("Apply to incident")}
-        TextButton(enabled=!busy&&details?.refusal!=true,onClick={applyChoice="Timeline"}){Text("Add uncertain timeline advisory")}
+        TextButton(enabled=!busy&&!saved(analysis),onClick={controller.mutate("AI advisory saved separately"){it.saveAnalysis(analysis,EvidenceController.now())}}){Text(if(saved(analysis))"Saved"else if(details?.report!=null)"Save encrypted report"else"Save advisory")}
+        if(details?.report==null)TextButton(enabled=!busy&&details?.refusal!=true,onClick={confirmation="Create an incident from these selected references with a labelled AI advisory? No original will change." to {creationIds=analysis.evidenceIds();newTitle="AI-assisted incident"}}){Text("Create incident")}
+        if(details?.report==null)TextButton(enabled=!busy&&details?.refusal!=true,onClick={applyChoice="Summary"}){Text("Apply to incident")}
+        if(details?.report==null)TextButton(enabled=!busy&&details?.refusal!=true,onClick={applyChoice="Timeline"}){Text("Add uncertain timeline advisory")}
+        if(details?.report!=null)TextButton(enabled=!busy&&saved(analysis),onClick={if(controller.current())onExportReport(analysis.id())}){Text("Export report only")}
         TextButton(enabled=!busy,onClick={result=null;retirePreview()}){Text("New analysis")}
        }
       }
+      details?.report?.let{report->item{EvidenceBehaviourReportContent(report,
+       {id->controller.current()&&evidenceReportSourceAllowed(controller.state.value.catalog,analysis,id)},
+       {id->if(controller.current()&&evidenceReportSourceAllowed(controller.state.value.catalog,analysis,id))originalId=id})}}
       details?.let{parsed->
        items(parsed.suggestions){suggestion->ElevatedCard(Modifier.fillMaxWidth()){Column(Modifier.padding(12.dp)){
         Text("AI suggestion · ${suggestion.kind}");Text(suggestion.title);Text(suggestion.reasons.joinToString("; "));Text("${suggestion.evidenceIds.size} selected source references · advisory only")
@@ -135,19 +141,23 @@ import uk.co.traynor.privategallery.core.evidence.*
       item {EvidenceWorkflowHeading("Choose your analysis","Select only what you intend to transmit. Default: text only. Nothing uploads until the final confirmation.")
        Text("Transport",style=MaterialTheme.typography.titleMedium)
        FlowRow {listOfNotNull(if(allowSystemRoute)"System"else null,"VPN",if(controller.access.owner==EvidenceCatalog.Owner.HIDDEN)"Tor"else null).forEach{candidate->FilterChip(selected=mode==candidate,enabled=!busy,onClick={mode=candidate},label={Text(candidate)})}}
-       TextButton(enabled=!busy&&mode!="System",onClick={val requested=mode;dismiss();onRequestPermission(requested)}){Text("Set up Android VPN / isolation permission")}
+       TextButton(enabled=!busy&&mode!="System",onClick={if(controller.current()){val requested=mode;val requestedTask=task;dismiss();if(onRequestPermissionWithTask!=null)onRequestPermissionWithTask(requested,requestedTask)else onRequestPermission(requested)}}){Text("Set up Android VPN / isolation permission")}
        FlowRow {EvidenceAi.Model.entries.forEach{candidate->FilterChip(selected=model==candidate,enabled=!busy,onClick={model=candidate},label={Text(candidate.id)})}}
        FlowRow {EvidenceAi.Task.entries.forEach{candidate->FilterChip(selected=task==candidate,enabled=!busy,onClick={task=candidate},label={Text(candidate.label)})}}
-       Text("Explicit optional images",style=MaterialTheme.typography.titleMedium)
+       Text("Review selected evidence",style=MaterialTheme.typography.titleMedium)
       }
-      items(selectedIds,key={it}){id->state.catalog?.evidence()?.firstOrNull{it.id()==id}?.let{record->Row{Checkbox(id in images,{checked->images=if(checked)images+id else images-id},enabled=!busy&&record.mime().startsWith("image/"));Text(record.name(),Modifier.weight(1f))}}}
-      item {Button(enabled=!busy&&selectedIds.isNotEmpty(),onClick={action{
+      items(selectedIds,key={it}){id->state.catalog?.evidence()?.firstOrNull{it.id()==id}?.let{record->Column {
+       Row {Checkbox(id in includedIds,{checked->includedIds=if(checked)includedIds+id else includedIds-id;if(!checked)images=images-id},enabled=!busy);Text("Include ${record.name()}",Modifier.weight(1f))}
+       if(id in includedIds&&record.mime().startsWith("image/"))Row {Checkbox(id in images,{checked->images=if(checked)images+id else images-id},enabled=!busy);Text("Also send the displayed image (optional)")}
+      }}}
+      item{Text("${includedIds.size} records selected. Maximum32 records /8 explicit images. Local OCR text is included; original images are off by default.")}
+      item {Button(enabled=!busy&&includedIds.size in 1..32&&images.size<=8,onClick={action{
         val connected=createCoordinator();coordinator=connected
         var pending:EvidenceAiPreview?=null
         try {
          val route=connected.connect(mode)
          val catalog=withContext(Dispatchers.IO){controller.access.store.read()}
-         pending=EvidenceAi.prepare(catalog,selectedIds,images.toList(),model,task,controller.access.reader(),route)
+         pending=EvidenceAi.prepare(catalog,selectedIds.filter{it in includedIds},images.toList(),model,task,controller.access.reader(),route)
          if(!controller.access.publishIfCurrent{preview=pending;pending=null})throw CancellationException("Evidence preview retired")
         }finally{pending?.close();if(preview==null){connected.close();coordinator=null}}
        }}){Text("Prepare exact upload preview")}}
@@ -162,6 +172,7 @@ import uk.co.traynor.privategallery.core.evidence.*
    }
   }
  }
+ originalId?.let{id->val analysis=result;if(analysis!=null&&controller.current()&&evidenceReportSourceAllowed(state.catalog,analysis,id))EvidenceOriginalView(controller,id){originalId=null}else SideEffect{originalId=null}}
  applyChoice?.let{kind->val analysis=result
   GalleryAlertDialog(onDismissRequest={applyChoice=null},title={EvidenceDialogTitle("Choose incident for labelled AI advisory")},text={LazyColumn(Modifier.heightIn(max=400.dp)){items(state.catalog?.incidents()?.filter{!it.archived()}.orEmpty(),key={it.id()}){incident->TextButton(onClick={applyChoice=null;if(analysis!=null)confirmation="Apply this AI-generated advisory to ${incident.title()}? It remains unverified and separately labelled." to {val event=reviewedEvent;reviewedEvent=null;if(kind=="Event"&&event!=null)apply(analysis,incident.id(),null,true,event.ids,event.title,event.notes,event.at)else apply(analysis,incident.id(),null,kind=="Timeline")}}){Text(incident.title())}}}},confirmButton={TextButton(onClick={applyChoice=null}){Text("Cancel")}},properties=DialogProperties(securePolicy=SecureFlagPolicy.SecureOn))
  }
