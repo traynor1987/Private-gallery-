@@ -44,9 +44,9 @@ internal object BackupDocuments62 {
      context.contentResolver.takePersistableUriPermission(uri,flags)
      result.add(uri)
     }
-    launcher.launch(null)
+    launcher.launch(android.provider.DocumentsContract.buildDocumentUri(authority,"root"))
    }
-   BackupDocumentsUi62.folder()
+   BackupDocumentsUi62.folderAtInitialRoot()
    val uri=checkNotNull(result.poll(15,java.util.concurrent.TimeUnit.SECONDS)){"No document tree result"}
    check(context.contentResolver.persistedUriPermissions.any{it.uri==uri&&it.isReadPermission&&it.isWritePermission})
    return uri
@@ -64,12 +64,13 @@ internal object BackupDocuments62 {
   persistedTree()
   return checkNotNull(context.contentResolver.call(authority,"fixture-$method",arg,extras))
  }
- fun create(mode:String="normal"):Uri {
+ // Direct document grants remain distinct for the existing per-document revocation tests.
+ fun create(mode:String="normal"):Uri=checkNotNull(call("create",mode).getParcelable("uri",Uri::class.java))
+ fun createPersisted():Uri {
   val tree=persistedTree()
   val parent=android.provider.DocumentsContract.buildDocumentUriUsingTree(tree,android.provider.DocumentsContract.getTreeDocumentId(tree))
   val uri=checkNotNull(android.provider.DocumentsContract.createDocument(context.contentResolver,parent,"application/octet-stream","Synthetic backup"))
   requirePersistedAccess(uri)
-  mode(uri,mode)
   return uri
  }
  fun mode(uri:Uri,value:String){call("mode",uri.lastPathSegment,Bundle().apply{putString("mode",value)})}

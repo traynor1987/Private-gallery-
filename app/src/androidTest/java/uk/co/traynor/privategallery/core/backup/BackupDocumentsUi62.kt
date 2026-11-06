@@ -16,6 +16,12 @@ internal object BackupDocumentsUi62 {
   check(click(waitFor{it.text?.toString()==label}))
  }
  fun open(id:String){root();check(click(waitFor{it.text?.toString()=="Synthetic backup $id"}))}
- fun folder(){root();check(click(waitFor{it.text?.toString()?.uppercase()=="USE THIS FOLDER"}));check(click(waitFor{it.text?.toString()?.uppercase()=="ALLOW"}))}
+ private fun confirmFolder(){check(click(waitFor{it.text?.toString()?.uppercase()=="USE THIS FOLDER"}));check(click(waitFor{it.text?.toString()?.uppercase()=="ALLOW"}))}
+ fun folder(){root();confirmFolder()}
+ fun folderAtInitialRoot(){
+  // OpenDocumentTree receives EXTRA_INITIAL_URI; verify the actual system picker destination.
+  waitFor{it.text?.toString()=="Nova62 synthetic documents"}
+  confirmFolder()
+ }
  fun create(){root();check(click(waitFor{it.text?.toString()?.uppercase()=="SAVE"||it.viewIdResourceName?.endsWith(":id/button1")==true}))}
 }

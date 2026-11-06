@@ -43,7 +43,7 @@ class BackupProcessRestartTest {
   f.coordinator.space.getSharedPreferences("nova_widgets_v1",0).edit().putBoolean("clock:$owner",false).commit()
   val data=JSONObject().put("mediaId",item.id).put("metadata",hash(f.metadata())).put("old",files(File(f.access.root,"home2")))
   if(boundary=="staging"||boundary=="verified"){
-   val document=BackupDocuments62.create();BackupDocuments62.requirePersistedAccess(document);data.put("uri",document.toString())
+   val document=BackupDocuments62.createPersisted();BackupDocuments62.requirePersistedAccess(document);data.put("uri",document.toString())
    val provider=SafBackupProvider(f.context,document,f.access)
    val p=if(boundary=="staging")object:BackupProvider{override val label=provider.label;override fun read()=provider.read();override fun write():java.io.OutputStream{
     val stages=File(f.context.noBackupFilesDir,"nova-backup-ciphertext");assertTrue("Encrypted archive exists at provider handoff",stages.walkTopDown().any{it.isFile&&it.length()>0});data.put("stageRoot",stages.path);hold(data)
