@@ -34,7 +34,7 @@ class AutomaticBackupRuntime62Test {
   AutomaticBackupController(f.context,f.access).use{runner->
    due();assertFalse("Locked/unavailable foreground cannot run",runner.runIfEligible());assertFalse(f.coordinator.history().contains("Last successful backup"))
    runner.resume();assertTrue(runner.runIfEligible());assertTrue(f.access.current());assertTrue(f.coordinator.history().contains("Last successful backup"));assertFalse("Not due again after success",runner.runIfEligible())
-   val first=checkNotNull(BackupDocuments62.call("latest").getString("id"));val firstUri=android.provider.DocumentsContract.buildDocumentUri(BackupDocumentsFixtureProvider.AUTHORITY,first)
+   val first=checkNotNull(BackupDocuments62.call("latest").getString("id"));val firstUri=BackupDocuments62.inPersistedTree(first)
    f.coordinator.preview(SafBackupProvider(f.context,firstUri,f.access),key.copyOf()).use{assertEquals(1,it.media)}
    due();assertTrue(runner.runIfEligible());val second=checkNotNull(BackupDocuments62.call("latest").getString("id"));assertNotEquals(first,second)
    BackupDocuments62.delete(firstUri);BackupDocuments62.delete(android.provider.DocumentsContract.buildDocumentUri(BackupDocumentsFixtureProvider.AUTHORITY,second))

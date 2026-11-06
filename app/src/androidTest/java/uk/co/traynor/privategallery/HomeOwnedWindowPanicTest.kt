@@ -375,7 +375,7 @@ class HomeOwnedWindowPanicTest {
                 compose.waitUntil(10000){prefs.getLong("due",0)>0||backup.history().contains("Last successful backup")}
                 compose.waitUntil(40000){backup.history().contains("Last successful backup")}
                 val id=checkNotNull(uk.co.traynor.privategallery.core.backup.BackupDocuments62.call("latest").getString("id"))
-                document=android.provider.DocumentsContract.buildDocumentUri(uk.co.traynor.privategallery.core.backup.BackupDocumentsFixtureProvider.AUTHORITY,id)
+                document=uk.co.traynor.privategallery.core.backup.BackupDocuments62.inPersistedTree(id)
                 backup.preview(uk.co.traynor.privategallery.core.backup.SafBackupProvider(activity,document!!,access),"synthetic real Main automatic recovery key".toCharArray()).use {assertTrue(it.settings>0)}
                 compose.onNodeWithTag("preview-home").assertIsDisplayed();compose.onAllNodesWithTag("nova-backup").assertCountEquals(0)
                 assertEquals(0L,prefs.getLong("due",0));assertFalse(backup.space.backupValues().keys.any{it.contains(uk.co.traynor.privategallery.core.backup.AutomaticBackupSettings.NAME)})
@@ -386,6 +386,8 @@ class HomeOwnedWindowPanicTest {
 
     private fun withHiddenHome(hidden:Boolean=true,test:()->Unit) {
         assertTrue("Never run this synthetic fixture against production",activity.packageName.endsWith(".hiddenprototype"))
+        // The real system picker backgrounds/locks Main. Obtain its persisted grant before unlocking this fixture.
+        uk.co.traynor.privategallery.core.backup.BackupDocuments62.persistedTree()
         val root=File(activity.cacheDir,"home-window-panic-${UUID.randomUUID()}").apply {mkdirs()}
         val prefix="panic-window-${UUID.randomUUID()}"
         val preferences=mutableSetOf<String>()

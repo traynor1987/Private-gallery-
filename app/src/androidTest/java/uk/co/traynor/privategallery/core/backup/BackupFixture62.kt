@@ -66,6 +66,7 @@ internal object BackupDocuments62 {
  }
  // Direct document grants remain distinct for the existing per-document revocation tests.
  fun create(mode:String="normal"):Uri=checkNotNull(call("create",mode).getParcelable("uri",Uri::class.java))
+ fun inPersistedTree(id:String):Uri=android.provider.DocumentsContract.buildDocumentUriUsingTree(persistedTree(),id)
  fun createPersisted():Uri {
   val tree=persistedTree()
   val parent=android.provider.DocumentsContract.buildDocumentUriUsingTree(tree,android.provider.DocumentsContract.getTreeDocumentId(tree))

@@ -12,6 +12,8 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.onClick
+import androidx.compose.ui.semantics.onLongClick
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
@@ -109,8 +111,14 @@ import uk.co.traynor.privategallery.core.home2.SpaceContext
             row.forEach{label->
                 val description=when(label){"AC"->"Clear all";"⌫"->"Delete last character";"±"->"Change sign";"*"->"Multiply";"/"->"Divide";"-"->"Subtract";"+"->"Add";"="->"Equals";"%"->"Percent";"("->"Open parenthesis";")"->"Close parenthesis";"^"->"Power";"!"->"Factorial";"sqrt("->"Square root";"sin("->"Sine";"cos("->"Cosine";"tan("->"Tangent";"log("->"Base ten logarithm";"ln("->"Natural logarithm";"pi"->"Pi";"e"->"Euler constant";"E"->"Number exponent";"."->"Decimal point";else->label}
                 Surface(Modifier.weight(1f).heightIn(min=52.dp).testTag("calculator-key-$label")
-                    .combinedClickable(role=Role.Button,onClick={onKey(label)},onLongClick=if(label=="=")onHold else null,onLongClickLabel=if(label=="=")"Hold equals"else null)
-                    .semantics{contentDescription=description},shape=RoundedCornerShape(12.dp),color=if(label=="=")MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerHigh){
+                    .semantics{
+                        contentDescription=description
+                        // Capture this composition's authority rather than combinedClickable's
+                        // updated callback holder; retained accessibility actions must expire.
+                        onClick {onKey(label);true}
+                        if(label=="=")onLongClick("Hold equals"){onHold();true}
+                    }
+                    .combinedClickable(role=Role.Button,onClick={onKey(label)},onLongClick=if(label=="=")onHold else null,onLongClickLabel=if(label=="=")"Hold equals"else null),shape=RoundedCornerShape(12.dp),color=if(label=="=")MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerHigh){
                     Box(Modifier.padding(12.dp),contentAlignment=Alignment.Center){Text(when(label){"*"->"×";"/"->"÷";"pi"->"π";"sqrt("->"√";else->label.removeSuffix("(")},style=MaterialTheme.typography.titleLarge)}
                 }
             }

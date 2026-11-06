@@ -623,6 +623,7 @@ jobs:
             adb install -r app/build/outputs/apk/debug/app-debug.apk
             adb install -r app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
             python3 scripts/run_backup_restart62.py
+            python3 scripts/run_backup_repair62.py
             bash scripts/run_home2_runtime.sh
       - name: Validate actual Backup process restart evidence
         run: python3 scripts/verify_release1711_gate.py --restart-folder app/build/home2-evidence/backup-restart62 --source "$(git rev-parse HEAD)"

@@ -12,8 +12,21 @@ internal object BackupDocumentsUi62 {
  private fun waitFor(predicate:(AccessibilityNodeInfo)->Boolean):AccessibilityNodeInfo{val until=SystemClock.uptimeMillis()+10000;while(SystemClock.uptimeMillis()<until){find(predicate)?.let{return it};Thread.sleep(50)};throw AssertionError("DocumentsUI control missing; visible labels: "+nodes().mapNotNull{it.text?:it.contentDescription}.joinToString(" | "))}
  fun root(){
   val label="Nova62 synthetic documents"
-  if(find{it.text?.toString()==label}==null){val drawer=waitFor{it.contentDescription?.toString() in listOf("Show roots","Show navigation menu","Open navigation drawer")};check(click(drawer))}
-  check(click(waitFor{it.text?.toString()==label}))
+  // Expanded DocumentsUI shows roots permanently; narrow layouts use a drawer.
+  // A root toolbar title has no clickable ancestor: it already denotes this root.
+  val visible=nodes().filter{it.text?.toString()==label}
+  if(visible.isNotEmpty()){
+   for(node in visible)if(click(node))return
+   return
+  }
+  val drawer=waitFor{it.contentDescription?.toString() in listOf("Show roots","Show navigation menu","Open navigation drawer")}
+  check(click(drawer))
+  val until=SystemClock.uptimeMillis()+10000
+  while(SystemClock.uptimeMillis()<until){
+   for(node in nodes().filter{it.text?.toString()==label})if(click(node))return
+   Thread.sleep(50)
+  }
+  throw AssertionError("DocumentsUI root row is not clickable")
  }
  fun open(id:String){root();check(click(waitFor{it.text?.toString()=="Synthetic backup $id"}))}
  private fun confirmFolder(){check(click(waitFor{it.text?.toString()?.uppercase()=="USE THIS FOLDER"}));check(click(waitFor{it.text?.toString()?.uppercase()=="ALLOW"}))}

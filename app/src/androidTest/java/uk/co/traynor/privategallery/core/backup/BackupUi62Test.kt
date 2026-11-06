@@ -24,7 +24,7 @@ import uk.co.traynor.privategallery.ReleaseScreenshots62
 
 class BackupUi62Test {
  @get:Rule val compose=createAndroidComposeRule<ComponentActivity>()
- private class Picker:ActivityResultRegistry(){var request=0;override fun<I,O>onLaunch(requestCode:Int,contract:ActivityResultContract<I,O>,input:I,options:ActivityOptionsCompat?){request=requestCode};fun deliver(uri:Uri?){check(dispatchResult(request,uri))}}
+ private class Picker:ActivityResultRegistry(){var request=0;override fun<I,O>onLaunch(requestCode:Int,contract:ActivityResultContract<I,O>,input:I,options:ActivityOptionsCompat?){request=requestCode};fun deliver(uri:Uri?)=dispatchResult(request,uri)}
  private fun fixture(hidden:Boolean=false,action:(BackupFixture62,Picker,AtomicBoolean)->Unit){
   val root=BackupFixture62.temporary("backup-ui62");val f=BackupFixture62(root,hidden);val live=AtomicBoolean(true);val auth=f.session.authentication();val picker=Picker();var attached by mutableStateOf(true)
   val owner=WallpaperOwner(if(hidden)EvidenceCatalog.Owner.HIDDEN else EvidenceCatalog.Owner.PRIMARY,{live.get()&&(!hidden||f.session.isAuthenticationCurrent(auth))},{if(hidden)EvidenceAccess.hidden(f.context,f.session){live.get()}else EvidenceAccess.primary(f.context,f.key,{f.key},{live.get()},{f.key.copyOf()},Any())})
@@ -47,7 +47,7 @@ class BackupUi62Test {
   compose.activityRule.scenario.moveToState(Lifecycle.State.RESUMED);compose.waitUntil(5000){compose.onAllNodesWithTag("nova-backup").fetchSemanticsNodes().isEmpty()};compose.onAllNodesWithText("I saved the recovery key").assertCountEquals(0)
  }
  @Test fun cancelledPickerAndLateDuplicateDoNotInstallARecoveryInput()=fixture{_,picker,_->
-  compose.onNodeWithText("Create backup").performScrollTo().performClick();compose.runOnIdle{picker.deliver(null)};compose.waitForIdle();compose.runOnIdle{picker.deliver(Uri.parse("content://invalid/late"))};compose.waitForIdle();compose.onAllNodesWithText("I saved the recovery key").assertCountEquals(0)
+  compose.onNodeWithText("Create backup").performScrollTo().performClick();compose.runOnIdle{assertTrue(picker.deliver(null))};compose.waitForIdle();compose.runOnIdle{assertFalse("Completed launcher rejects an unsolicited duplicate",picker.deliver(Uri.parse("content://invalid/late")))};compose.waitForIdle();compose.onAllNodesWithText("I saved the recovery key").assertCountEquals(0)
  }
  private fun recreate(phase:String)=fixture{f,picker,_->
   val uri=BackupDocuments62.create();val key="synthetic preview key"

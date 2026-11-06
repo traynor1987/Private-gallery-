@@ -19,7 +19,23 @@ internal val backupProviders=listOf(BackupProviderOption("Local document (SAF)",
 internal class SafBackupProvider(private val context:Context,private val uri:Uri,private val access:EvidenceAccess):BackupProvider {
  init {require(uri.scheme=="content"){"Select a document using Android's picker"}}
  override val label:String get()=runCatching{context.contentResolver.query(uri,arrayOf(OpenableColumns.DISPLAY_NAME),null,null,null)?.use{if(it.moveToFirst())it.getString(0).take(160)else null}}.getOrNull()?:"Selected local document"
- override fun read():InputStream=access.providerStream(context,uri)
+ override fun read():InputStream {
+  // A DocumentsProvider typed-read fallback can discard CancellationSignal. Backups
+  // are binary documents: use the cancellable untyped descriptor API directly.
+  access.checkCurrent();val signal=CancellationSignal();val cancel=access.onRetire{signal.cancel()}
+  var descriptor:android.os.ParcelFileDescriptor?=null
+  try {
+   val opened=checkNotNull(context.contentResolver.openFileDescriptor(uri,"r",signal));descriptor=opened
+   val stream=android.os.ParcelFileDescriptor.AutoCloseInputStream(opened)
+   val retire=access.onRetire{runCatching{stream.close()}}
+   access.checkCurrent()
+   return object:FilterInputStream(stream){
+    override fun read():Int{access.checkCurrent();return super.read().also{access.checkCurrent()}}
+    override fun read(bytes:ByteArray,offset:Int,length:Int):Int{access.checkCurrent();return super.read(bytes,offset,length).also{access.checkCurrent()}}
+    override fun close(){try{super.close()}finally{retire.close();cancel.close()}}
+   }
+  }catch(failure:Throwable){cancel.close();signal.cancel();descriptor?.close();throw failure}
+ }
  override fun write():OutputStream {
   access.checkCurrent();val signal=CancellationSignal();val cancel=access.onRetire{signal.cancel()}
   var descriptor:android.os.ParcelFileDescriptor?=null

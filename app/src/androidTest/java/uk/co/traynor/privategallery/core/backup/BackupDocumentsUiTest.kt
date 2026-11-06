@@ -19,7 +19,7 @@ class BackupDocumentsUiTest {
   val owner=WallpaperOwner(EvidenceCatalog.Owner.PRIMARY,{f.live.get()},{EvidenceAccess.primary(f.context,f.key,{f.key},{f.live.get()},{f.key.copyOf()},Any())})
   var document:android.net.Uri?=null
   try{
-   compose.setContent{if(attached)CompositionLocalProvider(LocalContext provides f.context){MaterialTheme{BackupHost(owner,true,{attached=false})}}}
+   compose.setContent{if(attached)CompositionLocalProvider(androidx.activity.compose.LocalActivityResultRegistryOwner provides compose.activity,LocalContext provides f.context){MaterialTheme{BackupHost(owner,true,{attached=false})}}}
    compose.waitUntil(10000){compose.onAllNodesWithTag("nova-backup").fetchSemanticsNodes().isNotEmpty()};compose.onNodeWithText("Create backup").performScrollTo().performClick()
    BackupDocumentsUi62.create();val id=checkNotNull(BackupDocuments62.call("latest").getString("id"));document=android.provider.DocumentsContract.buildDocumentUri(BackupDocumentsFixtureProvider.AUTHORITY,id)
    compose.waitUntil(10000){compose.onAllNodesWithText("I saved the recovery key").fetchSemanticsNodes().isNotEmpty()}
@@ -34,7 +34,7 @@ class BackupDocumentsUiTest {
   val prefs=f.context.getSharedPreferences("nova-backup-due",0);val prior=prefs.all.toMap();val scheduler=f.context.getSystemService(android.app.job.JobScheduler::class.java);val priorJob=scheduler.getPendingJob(171162)
   val owner=WallpaperOwner(EvidenceCatalog.Owner.PRIMARY,{f.live.get()},{EvidenceAccess.primary(f.context,f.key,{f.key},{f.live.get()},{f.key.copyOf()},Any())})
   try{
-   compose.setContent{if(attached)CompositionLocalProvider(LocalContext provides f.context){MaterialTheme{BackupHost(owner,true,{attached=false})}}}
+   compose.setContent{if(attached)CompositionLocalProvider(androidx.activity.compose.LocalActivityResultRegistryOwner provides compose.activity,LocalContext provides f.context){MaterialTheme{BackupHost(owner,true,{attached=false})}}}
    compose.waitUntil(10000){compose.onAllNodesWithTag("nova-backup").fetchSemanticsNodes().isNotEmpty()}
    compose.onNodeWithText("Choose automatic backup folder").performScrollTo().performClick();BackupDocumentsUi62.folder()
    compose.waitUntil(10000){compose.onAllNodesWithTag("automatic-key-saved").fetchSemanticsNodes().isNotEmpty()}
