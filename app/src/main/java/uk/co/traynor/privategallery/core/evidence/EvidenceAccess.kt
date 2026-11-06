@@ -47,7 +47,7 @@ internal data class EvidenceExportReceipt(val sha256:String,val bytes:Long,val e
 internal class EvidenceAccess private constructor(
  val owner:EvidenceCatalog.Owner,val root:File,private val rawLeases:EvidenceEncryptedStore.LeaseFactory,
  private val guard:()->Boolean,private val retireBoundary:((()->Unit)->Unit),
- sourceFactory:(EvidenceAccess)->EvidenceSources,
+ private val sourceFactory:(EvidenceAccess)->EvidenceSources,
  internal val hiddenSession:HiddenSession?=null,
 ):AutoCloseable {
  private val closed=AtomicBoolean()
@@ -120,6 +120,21 @@ internal class EvidenceAccess private constructor(
     check(current());requireSameOriginal(checkNotNull(captured).item,sources.inspect(sourceId).item);check(current())
    }
   }
+ }
+ /** Short scope-state changes must serialize with the same authenticated commit/retirement gate.
+  * Never perform provider IO, repository work or resource cleanup inside this boundary. */
+ internal fun withRetirementBoundary(action:()->Unit)=retireBoundary(action)
+ /** Restricts an existing Primary authority without copying its key into a new authority.
+  * Child leases delegate through the parent; child close only retires child resources/leases. */
+ internal fun primaryChild(authorized:()->Boolean):EvidenceAccess {
+  check(owner==EvidenceCatalog.Owner.PRIMARY);checkCurrent()
+  val child=EvidenceAccess(owner,root,leases,{this@EvidenceAccess.current()&&authorized()},retireBoundary,sourceFactory)
+  child.revocation=onRetire{child.markRevoked()}
+  if(!child.current()){
+   child.close();child.revocation?.close();child.revocation=null
+   error("Originating evidence authority retired")
+  }
+  return child
  }
  override fun close(){retireBoundary{markRevoked()}}
  companion object {

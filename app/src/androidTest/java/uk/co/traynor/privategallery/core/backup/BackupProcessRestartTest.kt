@@ -72,7 +72,11 @@ class BackupProcessRestartTest {
     assertFalse(File(f.access.root,"home2-backup-old").exists());assertFalse(File(f.access.root,"home2-backup-commit").exists())
    }else{
     val verified=boundary=="verified";assertEquals(verified,f.coordinator.history().contains("Last successful backup"))
-    if(!verified){assertTrue(f.coordinator.history().contains("Unverified"));assertFalse(File(data.getString("stageRoot")).walkTopDown().any{it.isFile})}
+    if(!verified){
+     val history=f.coordinator.space.getSharedPreferences("nova_backup_history_v1",0)
+     assertNull(history.getString("lastBackup",null));assertEquals("Unverified",org.json.JSONArray(history.getString("events","[]")).getJSONObject(0).getString("status"))
+     assertTrue(f.coordinator.history().contains("Interrupted / unverified"));assertFalse(File(data.getString("stageRoot")).walkTopDown().any{it.isFile})
+    }
     if(verified)f.coordinator.preview(SafBackupProvider(f.context,android.net.Uri.parse(data.getString("uri")),f.access),"process restart recovery key".toCharArray()).use{assertEquals(1,it.media)}
     BackupDocuments62.delete(android.net.Uri.parse(data.getString("uri")))
    }

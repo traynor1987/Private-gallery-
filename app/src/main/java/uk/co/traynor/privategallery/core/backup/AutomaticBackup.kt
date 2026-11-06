@@ -56,8 +56,8 @@ internal class AutomaticBackupController(private val context:Context,private val
  private val foreground=AtomicBoolean(false)
  private val active=AtomicReference<EvidenceAccess?>(null)
  private val retirement=origin.onRetire{pause()}
- fun resume(){if(origin.owner==EvidenceCatalog.Owner.PRIMARY&&origin.current())foreground.set(true)}
- fun pause(){foreground.set(false);active.getAndSet(null)?.close()}
+ fun resume(){origin.withRetirementBoundary{if(origin.owner==EvidenceCatalog.Owner.PRIMARY&&origin.current())foreground.set(true)}}
+ fun pause(){origin.withRetirementBoundary{foreground.set(false);active.getAndSet(null)?.close()}}
  fun runIfEligible():Boolean {
   if(origin.owner!=EvidenceCatalog.Owner.PRIMARY||!foreground.get()||!origin.current()||!running.compareAndSet(false,true))return false
   var access:EvidenceAccess?=null
@@ -65,7 +65,7 @@ internal class AutomaticBackupController(private val context:Context,private val
    val prefs=context.getSharedPreferences("nova-backup-due",0);val now=System.currentTimeMillis();val days=prefs.getInt("days",0)
    if(days !in setOf(1,7))return false
    val due=prefs.getLong("due",0).takeIf{it>0}?: (prefs.getLong("configured",now)+days*86400000L).takeIf{it<=now}?:return false
-   val child=EvidenceAccess.primary(context,origin,{if(foreground.get()&&origin.current())origin else null},{foreground.get()&&origin.current()},{origin.leases.acquire().use{it.key().copyOf()}},Any());access=child;active.set(child)
+   val child=origin.primaryChild{foreground.get()};access=child;active.set(child)
    // Publication and pause can race: recheck after registering the child so pause cannot miss it.
    if(!foreground.get()||!origin.current()){child.close();return false}
    BackupCoordinator(context,child).use{coordinator->

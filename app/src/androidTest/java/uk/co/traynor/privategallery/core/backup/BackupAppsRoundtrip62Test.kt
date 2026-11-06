@@ -15,7 +15,8 @@ class BackupAppsRoundtrip62Test {
     d.coordinator.space.getSharedPreferences("concealed-entry-excluded",0).edit().putString("secret","destination-local").commit()
     val file=BackupFile62(File(root,"archive"));val key="all registered apps recovery".toCharArray();s.coordinator.export(file,key.copyOf())
     d.coordinator.preview(file,key.copyOf()).use{d.coordinator.restoreSettings(it)}
-    val restored=ArcadeData(d.coordinator.space);assertEquals(games.tiles!!.encode(),restored.tiles!!.encode());assertEquals(games.sudoku!!.encode(),restored.sudoku!!.encode());assertEquals(games.snake!!.encode(),restored.snake!!.encode());assertEquals(listOf("2048"),restored.recent);assertTrue(restored.sound);assertEquals(4,restored.speed)
+    assertEquals(s.coordinator.space.getSharedPreferences(ArcadePreferences.NAME,0).all,d.coordinator.space.getSharedPreferences(ArcadePreferences.NAME,0).all)
+    val restored=ArcadeData(d.coordinator.space);assertEquals(games.tiles!!.encode(),restored.tiles!!.encode());assertEquals(games.sudoku!!.pause(true).encode(),restored.sudoku!!.encode());assertEquals(games.snake!!.encode(),restored.snake!!.encode());assertEquals(listOf("2048"),restored.recent);assertTrue(restored.sound);assertEquals(4,restored.speed)
     val calc=CalculatorData(d.coordinator.space);assertEquals("0.3",calc.memory!!.toPlainString());assertEquals("0.3",calc.history.single().result());assertTrue(calc.scientific)
     assertEquals("destination-local",d.coordinator.space.getSharedPreferences("concealed-entry-excluded",0).getString("secret",null))
     assertFalse(s.coordinator.space.backupValues().keys.any{it.contains("concealed")})

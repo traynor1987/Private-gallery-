@@ -124,7 +124,7 @@ and new-process verification transcripts plus one source-bound receipt. The gate
 all seventeen original files, distinct old/new PIDs, successful host force-stop/old-PID absence,
 expected deliberate process-crash output and successful native verification. These files are
 inside the exact runtime archive whose SHA-256 is independently approved. They are not synthetic
-XML cases. The main matrix contains 252 cases across 54 classes, preserving all original 196.
+XML cases. The main matrix contains 253 cases across 54 classes, preserving all original 196.
 
 ## Shell interfaces after preserving controls
 

@@ -60,4 +60,38 @@ class AutomaticBackupRuntime62Test {
   val hiddenRoot=BackupFixture62.temporary("automatic-hidden62")
   try{BackupFixture62(hiddenRoot,true).use{hidden->assertThrows(Exception::class.java){AutomaticBackupSettings.arm(hidden.context,hidden.coordinator.space,tree(),key.copyOf(),1,false,false)};AutomaticBackupController(hidden.context,hidden.access).use{it.resume();assertFalse(it.runIfEligible())};assertTrue(hidden.coordinator.space.getSharedPreferences(AutomaticBackupSettings.NAME,0).all.isEmpty())}}finally{hiddenRoot.deleteRecursively()}
  }
+ @Test fun originRetirementAtFinalHistoryCommitCannotPublishVerified()=fixture{f->
+  f.insert("authority-boundary original");AutomaticBackupSettings.arm(f.context,f.coordinator.space,tree(),key.copyOf(),1,false,false);due()
+  val ready=CountDownLatch(1);val release=CountDownLatch(1);val commits=java.util.concurrent.atomic.AtomicInteger()
+  // Decorate the real origin lease only to stop immediately before its final commit boundary.
+  // Media, encryption, actual SAF export/readback and history preferences remain production code.
+  val factory=uk.co.traynor.privategallery.core.evidence.EvidenceEncryptedStore.LeaseFactory {
+   val original=f.access.leases.acquire()
+   object:uk.co.traynor.privategallery.core.evidence.EvidenceEncryptedStore.KeyLease {
+    override fun key()=original.key()
+    override fun current()=original.current()
+    override fun close()=original.close()
+    override fun commit(action:uk.co.traynor.privategallery.core.evidence.EvidenceEncryptedStore.CommitAction){
+     if(commits.incrementAndGet()==2){ready.countDown();check(release.await(15,TimeUnit.SECONDS))}
+     original.commit(action)
+    }
+   }
+  }
+  val guard:()->Boolean={f.access.current()};val boundary:((()->Unit)->Unit)={action->synchronized(f.primaryGate){action()}}
+  val sources=uk.co.traynor.privategallery.core.evidence.EvidenceAccess::class.java.getDeclaredField("sourceFactory").apply{isAccessible=true}.get(f.access)
+  val constructor=uk.co.traynor.privategallery.core.evidence.EvidenceAccess::class.java.declaredConstructors.single{it.parameterTypes.size==7}.apply{isAccessible=true}
+  val origin=constructor.newInstance(f.access.owner,f.access.root,factory,guard,boundary,sources,null) as uk.co.traynor.privategallery.core.evidence.EvidenceAccess
+  val worker=Executors.newSingleThreadExecutor()
+  try{AutomaticBackupController(f.context,origin).use{runner->
+   runner.resume();val result=worker.submit<Boolean>{runner.runIfEligible()};assertTrue("Reached actual Verified-history publication",ready.await(15,TimeUnit.SECONDS));assertEquals(2,commits.get())
+   val before=File(f.access.root,"home2").listFiles()!!.filter{it.name.startsWith("prefs-")}.associate{it.name to it.readBytes().toList()}
+   origin.close();release.countDown();assertFalse(result.get(5,TimeUnit.SECONDS))
+   assertEquals(before,File(f.access.root,"home2").listFiles()!!.filter{it.name.startsWith("prefs-")}.associate{it.name to it.readBytes().toList()})
+   assertFalse(File(f.access.root,"home2").listFiles()!!.any{it.name.startsWith("space-")})
+   val history=f.coordinator.space.getSharedPreferences("nova_backup_history_v1",0)
+   assertNull(history.getString("lastBackup",null));assertEquals("Unverified",org.json.JSONArray(history.getString("events","[]")).getJSONObject(0).getString("status"))
+   assertFalse(f.coordinator.history().contains("Last successful backup"));assertTrue(f.access.current());assertEquals("authority-boundary original",f.read(f.items().single().id).decodeToString())
+  }}finally{release.countDown();origin.close();worker.shutdownNow();BackupDocuments62.call("latest").getString("id")?.let{BackupDocuments62.delete(android.provider.DocumentsContract.buildDocumentUri(BackupDocumentsFixtureProvider.AUTHORITY,it))}}
+ }
+
 }

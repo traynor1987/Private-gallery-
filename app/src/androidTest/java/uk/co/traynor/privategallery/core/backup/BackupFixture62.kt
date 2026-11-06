@@ -12,12 +12,12 @@ import uk.co.traynor.privategallery.core.evidence.EvidenceAccess
 import uk.co.traynor.privategallery.core.hidden.*
 import uk.co.traynor.privategallery.core.vault.*
 
-internal class BackupFixture62(val root:File, val hidden:Boolean=false, val key:ByteArray=ByteArray(32){42}):AutoCloseable {
+internal class BackupFixture62(val root:File, val hidden:Boolean=false, val key:ByteArray=ByteArray(32){42},val primaryGate:Any=Any()):AutoCloseable {
  val base=ApplicationProvider.getApplicationContext<Context>()
  val context=object:ContextWrapper(base){override fun getFilesDir()=File(root,"files").apply{mkdirs()};override fun getNoBackupFilesDir()=File(root,"private").apply{mkdirs()};override fun getCacheDir()=File(root,"cache").apply{mkdirs()};override fun getApplicationContext():Context=this}
  val live=AtomicBoolean(true)
  val session=HiddenSession{100L}.also{check(it.complete(it.beginAuthentication(),key.copyOf()))}
- val access=if(hidden)EvidenceAccess.hidden(context,session){live.get()}else EvidenceAccess.primary(context,key,{key},{live.get()},{key.copyOf()},Any())
+ val access=if(hidden)EvidenceAccess.hidden(context,session){live.get()}else EvidenceAccess.primary(context,key,{key},{live.get()},{key.copyOf()},primaryGate)
  val coordinator=BackupCoordinator(context,access)
  val primary=AndroidVaultRepository(context,key)
  val secret=HiddenRepository(context,session)
