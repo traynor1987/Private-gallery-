@@ -244,7 +244,7 @@ class Home2IntegrationTest {
   compose.onNodeWithTag("nova-store").assertIsDisplayed()
   compose.onNodeWithTag("store-search").performScrollTo().performTextInput("Photopea")
   Espresso.closeSoftKeyboard()
-  compose.onNodeWithText("Photopea").performScrollTo().performClick()
+  compose.onNode(hasText("Photopea") and hasClickAction() and !hasTestTag("store-search")).performScrollTo().performClick()
   compose.onNodeWithTag("install-app").performClick()
   compose.onNodeWithTag("confirm-install").performClick()
   compose.onNodeWithTag("open-installed").assertIsDisplayed()
@@ -261,12 +261,12 @@ class Home2IntegrationTest {
   compose.runOnIdle{assertEquals(listOf(installed.id()),appLaunches);assertTrue(nativeLaunches.isEmpty())}
   compose.onAllNodesWithTag("app-store").onLast().performClick()
   compose.onNodeWithTag("store-my-apps").performScrollTo().performClick()
-  compose.onNodeWithText("Photopea").performScrollTo().performClick()
+  compose.onNode(hasText("Photopea") and hasClickAction() and !hasTestTag("store-search")).performScrollTo().performClick()
   compose.onNodeWithTag("install-app").assertDoesNotExist()
   compose.onNodeWithTag("open-installed").assertIsDisplayed()
   compose.onNodeWithText("Uninstall").performClick()
   compose.onNodeWithText("Uninstall this shortcut?").assertIsDisplayed()
-  compose.onAllNodesWithText("Uninstall").onLast().performClick()
+  compose.onNode(hasText("Uninstall") and hasAnyAncestor(hasAnyDescendant(hasText("Uninstall this shortcut?")))).performClick()
   compose.runOnIdle{assertTrue(store.read().apps.isEmpty())}
   compose.onNodeWithContentDescription("Back to Home").performClick()
   compose.onNodeWithTag("app-web:"+installed.id()).assertDoesNotExist()
