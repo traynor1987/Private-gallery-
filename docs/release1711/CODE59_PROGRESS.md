@@ -92,3 +92,24 @@ then retains every original UUID/all-records-visible/exact-launch assertion. No 
 required result is removed, skipped or retried. Independent bounded review found no
 Important issues. Full local app/instrumentation build and406JVM passed after these changes;
 the same complete130-case full-SystemUI batch remains mandatory before signing.
+
+## Runtime5 lifecycle correction
+
+Source ae4773fdd84a37c89f5cb5540d2d55bb7f09313a, run42206787672/job127855354427,
+artifact13497997053 size1296638 SHA256b46499c18dbe9447468ef8f9f3c02effa70facc65b88a49a0d0055334895b715.
+Original ZIP/CRC and complete130 cases verified:129pass1failure0skip/error. Both previous
+statusbar suppression and repeated catalogue drawer cases now pass, along with all first-launch,
+navigation, retained audio, authentication, concealment and encrypted storage cases.
+
+Remaining failure is status subscription re-admission after an81ms pause/resume. The pause
+lifecycle callback closes synchronously, but both state writes can coalesce before Compose
+commits an effect; the unchanged root-insets observer then suppresses an identical hidden-bar
+event. Resume now reconciles the remembered session directly using latest enabled state and
+actual original root insets. Pause/lock/visible-system-bar also clear snapshots synchronously.
+The same lifecycle test retains its assertions/timeouts and now repeats three rapid cycles
+without an intervening Compose idle frame. No test selection or release gate is relaxed.
+Observer restarts now detach only their own listener: the remembered session remains the
+sole final-disposal owner, preventing a paused-effect cleanup from closing a newly resumed
+subscription or erasing its initial reading. The test checks exact opens/closes after idle,
+three rapid cycles, a fully committed paused cycle, and a fresh42% reading. Independent
+bounded source review found no Important issues; signing is still not approved.

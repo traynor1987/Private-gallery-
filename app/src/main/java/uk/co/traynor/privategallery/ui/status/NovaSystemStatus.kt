@@ -6,6 +6,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.os.PowerManager
+import android.view.WindowInsets
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
@@ -28,6 +29,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -72,13 +74,20 @@ internal fun NovaSystemStatus(
     var unlocked by remember(application) { mutableStateOf(screenAvailable(application)) }
     var snapshot by remember(source) { mutableStateOf<SystemStatusSnapshot?>(null) }
     val session = remember(source) { SystemStatusSession(source) { snapshot = it } }
+    val currentEnabled by rememberUpdatedState(enabled)
     DisposableEffect(session) { onDispose { session.close() } }
 
-    DisposableEffect(lifecycle, application, session) {
+    DisposableEffect(lifecycle, application, session, view) {
         val observer = LifecycleEventObserver { _, _ ->
             resumed = lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)
             unlocked = screenAvailable(application)
-            if (!resumed || !unlocked) session.setVisible(false, resumed, !unlocked, true)
+            // Pause/resume can both arrive before Compose commits a new effect. Reconcile
+            // every lifecycle event against original insets, even when keys coalesce.
+            val androidBarVisible = view.rootView.rootWindowInsets
+                ?.isVisible(WindowInsets.Type.statusBars()) != false
+            statusBarVisible = androidBarVisible
+            if (!resumed || !unlocked || androidBarVisible) snapshot = null
+            session.setVisible(currentEnabled, resumed, !unlocked, androidBarVisible)
         }
         lifecycle.addObserver(observer)
         onDispose { lifecycle.removeObserver(observer) }
@@ -104,7 +113,6 @@ internal fun NovaSystemStatus(
         onDispose { if (registered) application.unregisterReceiver(receiver) }
     }
     DisposableEffect(view, session, enabled, resumed, unlocked) {
-        snapshot = null
         val observer = if (enabled && resumed && unlocked) {
             AndroidStatusBarVisibilityObserver(view) { androidBarVisible ->
                 // Retire callbacks in the Android event itself, before recomposition/drawing.
@@ -114,11 +122,13 @@ internal fun NovaSystemStatus(
             }.also { it.start() }
         } else {
             session.setVisible(false, resumed, !unlocked, true)
+            snapshot = null
             null
         }
         onDispose {
             observer?.close()
-            session.setVisible(false, false, true, true)
+            // A newer lifecycle event may already have re-admitted this session. Only
+            // retire this observer; the remembered session owns real composition disposal.
         }
     }
     val visible = enabled && resumed && unlocked && !statusBarVisible

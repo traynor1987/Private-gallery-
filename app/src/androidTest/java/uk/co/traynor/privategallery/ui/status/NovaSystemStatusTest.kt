@@ -141,10 +141,32 @@ class NovaSystemStatusTest {
         setBarsVisible(false)
         compose.setContent { MaterialTheme { NovaSystemStatus(provider = provider) } }
         compose.waitUntil { provider.opens == 1 }
+        repeat(3) { cycle ->
+            // Do not wait for a Compose idle frame between lifecycle events: Android may
+            // resume before a paused composition commits, and must still re-subscribe.
+            compose.activityRule.scenario.moveToState(Lifecycle.State.STARTED)
+            compose.waitUntil { provider.closes == cycle + 1 }
+            compose.activityRule.scenario.moveToState(Lifecycle.State.RESUMED)
+            compose.waitUntil { provider.opens == cycle + 2 }
+            compose.runOnIdle {
+                assertEquals(cycle + 2, provider.opens)
+                assertEquals(cycle + 1, provider.closes)
+                provider.send(snapshot(73, false, false, null))
+            }
+            compose.onNodeWithTag("nova-system-status").assertIsDisplayed()
+        }
+        // Also cover the non-coalesced path: the paused observer effect has been disposed.
         compose.activityRule.scenario.moveToState(Lifecycle.State.STARTED)
-        compose.waitUntil { provider.closes == 1 }
+        compose.waitUntil { provider.closes == 4 }
+        compose.waitForIdle()
         compose.activityRule.scenario.moveToState(Lifecycle.State.RESUMED)
-        compose.waitUntil { provider.opens == 2 }
+        compose.waitUntil { provider.opens == 5 }
+        compose.runOnIdle {
+            assertEquals(5, provider.opens)
+            assertEquals(4, provider.closes)
+            provider.send(snapshot(42, true, false, null))
+        }
+        compose.onNodeWithTag("nova-status-percent", useUnmergedTree = true).assertTextEquals("42%")
     }
 
     private fun setBarsVisible(visible: Boolean) {
