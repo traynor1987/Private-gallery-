@@ -119,6 +119,30 @@ class Home2IntegrationTest {
   compose.waitUntil(5_000) {runCatching{compose.onNodeWithTag("drawer-sheet").assertIsDisplayed();true}.getOrDefault(false)}
   compose.onNodeWithTag("drawer-sheet").assertIsDisplayed()
  }
+ private fun pressBackFromFocusedOwnedModal() {
+  fun focusedModal()=android.view.inspector.WindowInspector.getGlobalWindowViews().lastOrNull {view ->
+   // WindowInspector lists this process's native roots. Quick Panel owns a separate app
+   // Dialog window; the underlying Activity deliberately does not have window focus.
+   view!==compose.activity.window.decorView && view.isAttachedToWindow && view.hasWindowFocus() &&
+    view.context.packageName==compose.activity.packageName &&
+    (view.layoutParams as? android.view.WindowManager.LayoutParams)?.type==android.view.WindowManager.LayoutParams.TYPE_APPLICATION
+  }
+  compose.waitUntil(5_000){compose.runOnIdle {focusedModal()!=null}}
+  compose.runOnIdle {
+   val modal=checkNotNull(focusedModal())
+   assertNotSame("Quick Panel must own a native window distinct from the Activity",compose.activity.window.decorView.windowToken,modal.windowToken)
+   android.util.Log.i("PGHomeLayoutFixture","Back target: ${modal.javaClass.name} ${modal.width}x${modal.height}, focused=${modal.hasWindowFocus()}, activityFocused=${compose.activity.window.decorView.hasWindowFocus()}")
+  }
+  val automation=InstrumentationRegistry.getInstrumentation().uiAutomation
+  val down=android.os.SystemClock.uptimeMillis()
+  for(action in listOf(android.view.KeyEvent.ACTION_DOWN,android.view.KeyEvent.ACTION_UP)) {
+   val event=android.view.KeyEvent(down,android.os.SystemClock.uptimeMillis(),action,android.view.KeyEvent.KEYCODE_BACK,0)
+   assertTrue("Android must accept the native Back event",automation.injectInputEvent(event,true))
+  }
+  compose.waitForIdle()
+  compose.onNodeWithTag("nova-quick-panel").assertDoesNotExist()
+  compose.waitUntil(5_000){compose.runOnIdle {compose.activity.window.decorView.hasWindowFocus()}}
+ }
 
  @Test fun protected_entry_never_opens_home_until_the_user_requests_native_authentication() {
   var authenticationRequests = 0
@@ -238,10 +262,13 @@ class Home2IntegrationTest {
    compose.onNodeWithTag("home-original-clock").assertIsDisplayed()
    openDrawer()
    compose.onNodeWithContentDescription("Close app drawer").performClick()
+   compose.onNodeWithTag("drawer-sheet").assertDoesNotExist()
+   compose.waitUntil(5_000){compose.runOnIdle {compose.activity.window.decorView.hasWindowFocus()}}
    compose.onNodeWithContentDescription("Open Quick Panel").performClick()
    compose.onNodeWithTag("nova-quick-panel").assertIsDisplayed()
-   Espresso.pressBack()
+   pressBackFromFocusedOwnedModal()
    compose.onNodeWithTag("preview-home").assertIsDisplayed()
+   compose.onNodeWithTag("home-original-clock").assertIsDisplayed()
   }
  }
 

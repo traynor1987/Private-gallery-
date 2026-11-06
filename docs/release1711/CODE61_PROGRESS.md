@@ -146,3 +146,28 @@ successful owner PINNED entry/unpin is physical acceptance, not established by r
 Owner prioritises Black Screen and allows pinning only if supported; genuine public Android
 prompt is now visually established, so finish the known test query correction without engine,
 permission, device-owner or confirmation bypass changes. Do not let unsupported pinning ship.
+
+
+## Fourth original API37 run — all new features pass; old modal Back driver blocked
+
+Sourcec331f0a2b5fbe00f0b3d83b68a11d7f7080dc69a, run42262420916/job128045513485,
+artifact13526063528 (8052773bytes), ZIP SHA256
+bee70105aa3d97848b3efcc9bf143602920d480f56b4d8081504d92a93e3b319.
+Original196unique:195pass/1fail/0skip. ALL7Pin cases,10Blackcomponent,3actualMainBlack and3Panic
+cases pass. Native SystemUI prompt exact instructions and No thanks/Got it captured; actual
+No thanks ACTION_CLICK removes confirmation, actual lockTaskModeState0/NONE, interactive true,
+keyguard false. This verifies ordinary request/confirmation/cancel only, not successful owner
+PINNED/unpin or privileged kiosk mode. All black/audio/IME/native Panic evidence remains pass.
+
+The only failure is existing Home2IntegrationTest layout loop, before key input: Espresso
+RootViewPicker waits10seconds for the BASE_APPLICATION Activity decor to have focus while the
+actual QuickPanel Dialog owns it. Original log first size Back delivered and dismissed correctly;
+second Dialog callback registers before Espresso incorrectly waits on underlying Activity root.
+Root and independent reviewer examined actual exception/log. Bounded test-only correction waits
+attached/focused same-package TYPE_APPLICATION modal distinct from Activity token, injects fresh
+real Android Back, then explicitly requires QuickPanel absent and Activity focus restored. It
+also requires drawer absent and Home focus before opening the next modal. All3size/clock/drawer/
+Home assertions remain, clock is additionally checked afterBack. No implementation callback,
+product/engine/permission/control/matrix change or skipped test. First compilation PASS1m8;
+latest strengthened drawer-handoff assertion receives its own subsequent test compilation.
+Full fresh196 and original-key upgrade gates remain mandatory; no production61 signing yet.
