@@ -12,9 +12,9 @@ class ExternalEditingLifecycle176Test {
  @Test fun oldHiddenOperationCannotReviveAfterConcealmentAndExplicitReopen() {
   ActivityScenario.launch(MainActivity::class.java).use {scenario ->scenario.onActivity {a ->
    val s=state(a);assertTrue(s.hidden.session.complete(s.hidden.session.beginAuthentication(),ByteArray(32){9}));s.hidden.select()
-   a.openExternalEdit("synthetic-origin",s.hidden.session);val t=checkNotNull(ticket(a));val old=allowed(a,t)
+   enterExternalEditingMediaFixture(a);a.openExternalEdit("synthetic-origin",s.hidden.session);val t=checkNotNull(ticket(a));val old=allowed(a,t)
    assertTrue(old());s.previewConcealmentEpoch++
-   a.openExternalEdit("synthetic-origin",s.hidden.session)
+   enterExternalEditingMediaFixture(a);a.openExternalEdit("synthetic-origin",s.hidden.session)
    assertSame(t,ticket(a));assertFalse("Old IO cannot inherit the new presentation",old());assertTrue(allowed(a,t)())
    s.hidden.session.lock();assertFalse(allowedOrFalse(a,t))
   }}
@@ -23,7 +23,7 @@ class ExternalEditingLifecycle176Test {
  @Test fun hiddenResultNeverFallsBackToPrimaryAndRejectedBytesAreWiped() {
   ActivityScenario.launch(MainActivity::class.java).use {scenario ->scenario.onActivity {a ->
    val s=state(a);assertTrue(s.hidden.session.complete(s.hidden.session.beginAuthentication(),ByteArray(32){9}));s.hidden.select()
-   a.openExternalEdit("synthetic-origin",s.hidden.session);val t=checkNotNull(ticket(a))
+   enterExternalEditingMediaFixture(a);a.openExternalEdit("synthetic-origin",s.hidden.session);val t=checkNotNull(ticket(a))
    s.hidden.leave();s.key=ByteArray(32){7};s.session.unlock()
    val bytes=byteArrayOf(1,2,3);var callback=false
    val done:(Result<Unit>)->Unit={assertTrue(it.isFailure);callback=true}
@@ -35,7 +35,7 @@ class ExternalEditingLifecycle176Test {
  @Test fun panicRevokesPendingExternalTicket() {
   ActivityScenario.launch(MainActivity::class.java).use {scenario ->scenario.onActivity {a ->
    val s=state(a);s.key=ByteArray(32){7};s.session.unlock()
-   a.openExternalEdit("synthetic-origin");val t=checkNotNull(ticket(a))
+   enterExternalEditingMediaFixture(a);a.openExternalEdit("synthetic-origin");val t=checkNotNull(ticket(a))
    var deleteCalled=false;var protectedAtDelete=false
    val file=object:java.io.File(a.cacheDir,"external-edit/${java.util.UUID.randomUUID()}.png") {
     override fun delete():Boolean {deleteCalled=true;protectedAtDelete=a.privacyCoverVisible()&&!s.session.isUnlocked;return true}
@@ -50,7 +50,7 @@ class ExternalEditingLifecycle176Test {
  @Test fun explicitEditorReturnRenewsOnlyUiAndOldHiddenIoStaysRevoked() {
   ActivityScenario.launch(MainActivity::class.java).use {scenario ->scenario.onActivity {a ->
    val s=state(a);assertTrue(s.hidden.session.complete(s.hidden.session.beginAuthentication(),ByteArray(32){9}));s.hidden.select()
-   a.openExternalEdit("synthetic-origin",s.hidden.session);val t=checkNotNull(ticket(a));val old=allowed(a,t)
+   enterExternalEditingMediaFixture(a);a.openExternalEdit("synthetic-origin",s.hidden.session);val t=checkNotNull(ticket(a));val old=allowed(a,t)
    s.hidden.session.onBackground(60_000);s.previewConcealmentEpoch++;s.hidden.session.onForeground();pending(t)
    assertTrue(resume(a,t));assertFalse(old());assertTrue(allowed(a,t)())
   }}
@@ -58,10 +58,59 @@ class ExternalEditingLifecycle176Test {
  @Test fun expiredHiddenEditorReturnCannotResumeAgainstPrimaryAuthentication() {
   ActivityScenario.launch(MainActivity::class.java).use {scenario ->scenario.onActivity {a ->
    val s=state(a);assertTrue(s.hidden.session.complete(s.hidden.session.beginAuthentication(),ByteArray(32){9}));s.hidden.select()
-   a.openExternalEdit("synthetic-origin",s.hidden.session);val t=checkNotNull(ticket(a));pending(t)
+   enterExternalEditingMediaFixture(a);a.openExternalEdit("synthetic-origin",s.hidden.session);val t=checkNotNull(ticket(a));pending(t)
    s.hidden.session.onBackground(0);s.hidden.session.onForeground();s.hidden.leave();s.key=ByteArray(32){7};s.session.unlock()
    assertFalse(resume(a,t));assertFalse(allowedOrFalse(a,t));assertSame(t,ticket(a))
    s.key?.fill(0);s.key=null;s.session.lock()
   }}
  }
+ private fun setRoute(a:MainActivity,route:Route) {
+  MainActivity::class.java.getDeclaredMethod("setRoute",Route::class.java).apply{isAccessible=true}.invoke(a,route)
+ }
+ private fun current(a:MainActivity,t:Any)=MainActivity::class.java.declaredMethods.single{it.name=="externalCurrent"}.apply{isAccessible=true}.invoke(a,t) as Boolean
+ private fun invoke(a:MainActivity,name:String,vararg args:Any?):Any?=MainActivity::class.java.declaredMethods.single{it.name==name}.apply{isAccessible=true}.invoke(a,*args)
+ /** Feed a real registered ActivityResult contract without opening an installed external app. */
+ private fun result(a:MainActivity,registration:Int,uri:android.net.Uri) {
+  val saved=android.os.Bundle();a.activityResultRegistry.onSaveInstanceState(saved)
+  val key="activity_rq#"+registration
+  val keys=checkNotNull(saved.getStringArrayList("KEY_COMPONENT_ACTIVITY_REGISTERED_KEYS"))
+  val codes=checkNotNull(saved.getIntegerArrayList("KEY_COMPONENT_ACTIVITY_REGISTERED_RCS"))
+  val index=keys.indexOf(key);check(index>=0){"External result registration missing"}
+  saved.putStringArrayList("KEY_COMPONENT_ACTIVITY_LAUNCHED_KEYS",arrayListOf(key))
+  a.activityResultRegistry.onRestoreInstanceState(saved)
+  assertTrue(a.activityResultRegistry.dispatchResult(codes[index],android.app.Activity.RESULT_OK,android.content.Intent().setData(uri)))
+ }
+ @Test fun browser_and_home_suspend_external_ui_but_retain_the_original_editor_result_and_file() {
+  ActivityScenario.launch(MainActivity::class.java).use{scenario->scenario.onActivity{a->
+   val s=state(a);s.key=ByteArray(32){7};s.session.unlock();enterExternalEditingMediaFixture(a)
+   a.openExternalEdit("media-context-origin");val t=checkNotNull(ticket(a))
+   val file=java.io.File(a.cacheDir,"external-edit/${java.util.UUID.randomUUID()}.png").apply{parentFile!!.mkdirs();writeBytes(byteArrayOf(1,2,3))}
+   t.javaClass.getDeclaredMethod("setFile",java.io.File::class.java).apply{isAccessible=true}.invoke(t,file)
+   MainActivity::class.java.getDeclaredField("externalEditorOwner").apply{isAccessible=true}.set(a,t)
+   val uri=android.net.Uri.parse("content://external-editor.test/edited.png")
+   try {
+    assertTrue(current(a,t));setRoute(a,Route.BROWSER)
+    assertFalse(current(a,t));result(a,0,uri)
+    assertSame(t,ticket(a));assertEquals(uri,t.javaClass.getDeclaredMethod("getResult").apply{isAccessible=true}.invoke(t))
+    assertTrue("Ordinary navigation retains the handoff file",file.isFile)
+    setRoute(a,Route.VAULT);s.homeVisible=true;assertFalse(current(a,t))
+    invoke(a,"recoverExternalReceipt");assertSame(t,ticket(a));assertTrue(file.isFile)
+    s.homeVisible=false;assertTrue(current(a,t))
+    s.hidden.session.complete(s.hidden.session.beginAuthentication(),ByteArray(32){9});s.hidden.select();assertFalse(current(a,t))
+   } finally {invoke(a,"clearExternalEdit");file.delete();s.hidden.leave();s.key?.fill(0);s.key=null;s.session.lock()}
+  }}
+ }
+ @Test fun real_picker_contract_does_not_attach_a_stale_result_to_a_new_media_ticket() {
+  ActivityScenario.launch(MainActivity::class.java).use{scenario->scenario.onActivity{a->
+   val s=state(a);s.key=ByteArray(32){7};s.session.unlock();enterExternalEditingMediaFixture(a)
+   try {
+    a.openExternalEdit("first-media");val first=checkNotNull(ticket(a))
+    MainActivity::class.java.getDeclaredField("externalPickerOwner").apply{isAccessible=true}.set(a,first)
+    a.openExternalEdit("second-media");val second=checkNotNull(ticket(a));assertNotSame(first,second)
+    result(a,1,android.net.Uri.parse("content://external-editor.test/stale.png"))
+    assertNull(second.javaClass.getDeclaredMethod("getResult").apply{isAccessible=true}.invoke(second))
+   } finally {invoke(a,"clearExternalEdit");s.key?.fill(0);s.key=null;s.session.lock()}
+  }}
+ }
+
 }

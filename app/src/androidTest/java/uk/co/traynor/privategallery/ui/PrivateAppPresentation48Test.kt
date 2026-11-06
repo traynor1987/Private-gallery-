@@ -19,18 +19,31 @@ class PrivateAppPresentation48Test {
   lateinit var session:BrowserV2Session
   val base=PrivateAppCatalog.App(UUID.randomUUID().toString(),"Standalone fixture","https://example.test/app/","https://example.test/app/","standalone","",false,true,false)
   var mounted by mutableStateOf(true)
+  var connectionBlocked by mutableStateOf(false)
   compose.runOnUiThread {
    session=BrowserV2Session(compose.activity,BrowserVpnGate{false},NoopBrowserV2Listener,rendererAllowed={false})
    session.openPrivateApp(base)
   }
   try {
-   compose.setContent {PrivateGalleryTheme {if(mounted)BrowserV2Home(session,BrowserSearchEngine.GOOGLE,{_,_->},{_,_->},false,{},emptyList(),{_,_,_->},{},{it(emptyList())},{it()},{},staticContentHost=true)}}
-   compose.onNodeWithText("Standalone fixture").assertIsDisplayed()
+   compose.setContent {PrivateGalleryTheme {if(mounted)BrowserV2Home(session,BrowserSearchEngine.GOOGLE,{_,_->},{_,_->},false,{},emptyList(),{_,_,_->},{},{it(emptyList())},{it()},{},staticContentHost=true,connectionPresentation=BrowserConnectionPresentation(connectionBlocked))}}
+   compose.onNodeWithText("Standalone fixture").assertDoesNotExist()
+   compose.onNodeWithContentDescription("App menu").assertIsDisplayed()
+   compose.onNodeWithTag("browser-v2-chrome").assertDoesNotExist()
    compose.onNodeWithTag("browser-v2-address").assertDoesNotExist()
    compose.onNodeWithTag("browser-v2-toolbar").assertDoesNotExist()
+   compose.runOnIdle {connectionBlocked=true}
+   compose.onNodeWithTag("browser-v2-chrome").assertIsDisplayed()
+   compose.onNodeWithTag("browser-vpn-state").assertIsDisplayed()
+   compose.onNodeWithTag("browser-v2-address").assertDoesNotExist()
+   compose.runOnIdle {connectionBlocked=false}
+   compose.onNodeWithTag("browser-v2-chrome").assertDoesNotExist()
    compose.onNodeWithContentDescription("App home").assertDoesNotExist()
-   compose.onNodeWithContentDescription("Expand app controls").performClick()
-   compose.onNodeWithTag("browser-v2-address").assertIsDisplayed()
+   val root=compose.onNodeWithTag("browser-v2-root").fetchSemanticsNode().boundsInRoot
+   val page=compose.onNodeWithTag("browser-v2-page-region").fetchSemanticsNode().boundsInRoot
+   assertEquals(root.top,page.top,1f);assertEquals(root.bottom,page.bottom,1f)
+   compose.onNodeWithContentDescription("App menu").performClick()
+   compose.onNodeWithText("App Settings").performScrollTo().assertIsDisplayed().performClick()
+   compose.onNodeWithTag("browser-v2-address").assertDoesNotExist()
    val tab=session.tabs.activeTab.id
    fun set(style:Boolean,address:Boolean) {
     compose.runOnIdle {
@@ -49,7 +62,8 @@ class PrivateAppPresentation48Test {
    compose.onNodeWithTag("browser-v2-address").assertIsDisplayed()
    compose.onNodeWithTag("browser-v2-toolbar").assertIsDisplayed()
    set(true,true)
-   compose.onNodeWithContentDescription("Collapse app controls").performClick()
+   compose.onNodeWithContentDescription("App menu").assertIsDisplayed()
+   compose.onNodeWithTag("browser-v2-chrome").assertDoesNotExist()
    compose.onNodeWithTag("browser-v2-address").assertDoesNotExist()
    compose.onNodeWithTag("browser-v2-toolbar").assertDoesNotExist()
   } finally {

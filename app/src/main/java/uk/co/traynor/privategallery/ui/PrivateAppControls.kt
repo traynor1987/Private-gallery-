@@ -34,7 +34,16 @@ internal fun PrivateAppControls(
     onCloseApp: (() -> Unit)? = null,
     onExitGallery: (() -> Unit)? = null,
     onLockVault: (() -> Unit)? = null,
+    immersive: Boolean = false,
+    onOpenInBrowser: (() -> Unit)? = null,
+    current: () -> Boolean = {true},
 ) {
+    if(immersive) {
+        PrivateAppOverflowControls(app,url,enabled,canGoBack,canGoForward,loading,
+            onBack,onForward,onRefresh,onExitGallery ?: onLibrary,onSettings,onCloseApp ?: onLibrary,
+            onOpenInBrowser,onSwitch,onScreenshot,onBrowserTools,onLockVault,onQuickLock,current)
+        return
+    }
     var expanded by remember(app.id()) { mutableStateOf(false) }
     Column(Modifier.fillMaxWidth().testTag("private-app-controls")) {
         val security=novaSecurityActions()
@@ -48,7 +57,7 @@ internal fun PrivateAppControls(
             if(onScreenshot!=null)IconButton(onClick=onScreenshot,enabled=enabled){Icon(Icons.Default.Screenshot,"Screenshot to Vault")}
         }
         // Origin changes and transport failures must remain visible even with controls collapsed.
-        val outside=url.isNotBlank() && !PrivateAppPolicy.inScope(url,app.scope().ifBlank {app.startUrl()})
+        val outside=url.isNotBlank() && !PrivateAppPolicy.inAppScope(url,app.startUrl(),app.scope())
         if(outside || !enabled || expanded) {
             val origin=runCatching {Uri.parse(url).let {"${it.scheme}://${it.host.orEmpty()}${if(it.port>=0)":${it.port}" else ""}"}}.getOrDefault("")
             Text(origin.ifBlank {"Opening app…"},Modifier.padding(horizontal=12.dp),style=MaterialTheme.typography.bodySmall,maxLines=1,overflow=TextOverflow.Ellipsis)
@@ -63,6 +72,58 @@ internal fun PrivateAppControls(
                 IconButton(onClick=onSettings,enabled=enabled){Icon(Icons.Default.Settings,"Private app settings")}
                 if(onCloseApp!=null)TextButton(onClick=onCloseApp){Text("Close App")}
                 IconButton(onClick=onBrowserTools){Icon(Icons.Default.Build,"Browser tools")}
+            }
+        }
+    }
+}
+
+/** An overlay: its parent positions it above the retained page without reserving page height. */
+@Composable
+private fun PrivateAppOverflowControls(
+    app: PrivateAppCatalog.App, url:String, enabled:Boolean, canGoBack:Boolean, canGoForward:Boolean, loading:Boolean,
+    onBack:()->Unit, onForward:()->Unit, onRefresh:()->Unit, onHome:()->Unit, onSettings:()->Unit, onExit:()->Unit,
+    onOpenInBrowser:(()->Unit)?, onSwitch:()->Unit, onScreenshot:(()->Unit)?, onBrowserTools:()->Unit,
+    onLockVault:(()->Unit)?, onPanic:(()->Unit)?, current:()->Boolean,
+) {
+    var expanded by remember(app.id()) {mutableStateOf(false)}
+    val isCurrent by rememberUpdatedState(current)
+    val lifecycle=androidx.lifecycle.compose.LocalLifecycleOwner.current.lifecycle
+    DisposableEffect(lifecycle) {
+        val observer=androidx.lifecycle.LifecycleEventObserver {_,event ->
+            if(event==androidx.lifecycle.Lifecycle.Event.ON_PAUSE || event==androidx.lifecycle.Lifecycle.Event.ON_STOP)expanded=false
+        }
+        lifecycle.addObserver(observer)
+        onDispose {expanded=false;lifecycle.removeObserver(observer)}
+    }
+    LaunchedEffect(app.id()) {while(isActive) {delay(100);if(!isCurrent())expanded=false}}
+    val outside=url.isNotBlank() && !PrivateAppPolicy.inAppScope(url,app.startUrl(),app.scope())
+    Column(horizontalAlignment=Alignment.End,modifier=Modifier.testTag("private-app-immersive-controls")) {
+        Box {
+            FilledTonalIconButton(onClick={if(isCurrent())expanded=true},modifier=Modifier.size(48.dp).testTag("web-app-menu")) {
+                Icon(Icons.Default.MoreVert,"App menu")
+            }
+            uk.co.traynor.privategallery.home2.PanicHomeDropdownMenu(expanded,{expanded=false}) {
+                fun act(action:()->Unit) {expanded=false;if(isCurrent())action()}
+                DropdownMenuItem(text={Text("Back")},leadingIcon={Icon(Icons.AutoMirrored.Filled.ArrowBack,null)},enabled=enabled && canGoBack,onClick={act(onBack)})
+                DropdownMenuItem(text={Text("Forward")},leadingIcon={Icon(Icons.AutoMirrored.Filled.ArrowForward,null)},enabled=enabled && canGoForward,onClick={act(onForward)})
+                DropdownMenuItem(text={Text(if(loading)"Stop loading"else"Refresh")},leadingIcon={Icon(if(loading)Icons.Default.Close else Icons.Default.Refresh,null)},enabled=enabled,onClick={act(onRefresh)})
+                DropdownMenuItem(text={Text("Home")},leadingIcon={Icon(Icons.Default.Home,null)},modifier=Modifier.testTag("web-return-home"),onClick={act(onHome)})
+                if(onOpenInBrowser!=null)DropdownMenuItem(text={Text("Open in Browser")},leadingIcon={Icon(Icons.Default.OpenInNew,null)},enabled=enabled,onClick={act(onOpenInBrowser)})
+                DropdownMenuItem(text={Text("App Settings")},leadingIcon={Icon(Icons.Default.Settings,null)},onClick={act(onSettings)})
+                DropdownMenuItem(text={Text("Exit App")},leadingIcon={Icon(Icons.Default.Close,null)},onClick={act(onExit)})
+                HorizontalDivider()
+                DropdownMenuItem(text={Text("Switch app")},leadingIcon={Icon(Icons.Default.SwapHoriz,null)},onClick={act(onSwitch)})
+                if(onScreenshot!=null)DropdownMenuItem(text={Text("Screenshot to Vault")},leadingIcon={Icon(Icons.Default.Screenshot,null)},enabled=enabled,onClick={act(onScreenshot)})
+                DropdownMenuItem(text={Text("Browser tools")},leadingIcon={Icon(Icons.Default.Build,null)},onClick={act(onBrowserTools)})
+                if(onLockVault!=null)DropdownMenuItem(text={Text("Lock Space")},leadingIcon={Icon(Icons.Default.Lock,null)},onClick={act(onLockVault)})
+                if(onPanic!=null)DropdownMenuItem(text={Text("Panic Exit")},leadingIcon={Icon(Icons.Default.Security,null)},onClick={act(onPanic)})
+            }
+        }
+        if(outside)Surface(color=MaterialTheme.colorScheme.errorContainer) {
+            Column(Modifier.widthIn(max=320.dp).padding(8.dp)) {
+                Text("Browsing outside this app's saved scope",style=MaterialTheme.typography.bodySmall)
+                val origin=runCatching {Uri.parse(url).let {"${it.scheme}://${it.host.orEmpty()}${if(it.port>=0)":${it.port}"else""}"}}.getOrDefault("")
+                Text(origin,style=MaterialTheme.typography.bodySmall,maxLines=1,overflow=TextOverflow.Ellipsis)
             }
         }
     }
@@ -110,7 +171,7 @@ internal fun PrivateAppSettings(
                     Switch(modifier=Modifier.testTag("private-app-style-toggle"),checked=item.appStyle(),enabled=!busy,
                         onCheckedChange={value ->update {controller.setAppStyle(appId,value)}})
                 }
-                Text("In app style the address bar is available when controls are expanded. Browser style keeps the usual browser tools.",style=MaterialTheme.typography.bodySmall)
+                Text("App style reduces browser controls. Browser style keeps the usual browser tools and uses the address bar preference below.",style=MaterialTheme.typography.bodySmall)
                 TextButton(onClick={onEdit()}){Text("Edit name, icon and start page")}
                 if(item.discoveryReport().isNotBlank())Text(item.discoveryReport(),style=MaterialTheme.typography.bodySmall)
                 Row(verticalAlignment=Alignment.CenterVertically) {

@@ -22,7 +22,7 @@ PYOUTPUT
 [[ ! -e "$output" ]]
 mkdir -p "$output"
 control_root=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
-baseline=9efd19540a1d75efa1b30f4e23c9cbb096f93aff
+baseline=0e7f7c07608a6b439a4471e613531a758028c849
 baseline_dir=$(mktemp -d "${RUNNER_TEMP:?}/upgrade1711-source.XXXXXX")
 trap 'rm -rf "$baseline_dir"' EXIT
 if ! git cat-file -e "$baseline^{commit}"; then git fetch --no-tags origin "$baseline"; fi

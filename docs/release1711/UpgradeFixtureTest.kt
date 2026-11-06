@@ -17,7 +17,7 @@ import uk.co.traynor.privategallery.core.privateapps.*
 import uk.co.traynor.privategallery.core.camera.CameraOptions
 import uk.co.traynor.privategallery.core.camera.VaultCaptureAccess
 
-/** Reviewed release-control instrumentation for original-key code54 -> code56 upgrade.
+/** Reviewed release-control instrumentation for original-key code56 -> code57 upgrade.
  * Captured and hash-checked before frozen application checkout; never modifies baseline app.
  */
 class UpgradeFixtureTest {
@@ -28,7 +28,7 @@ class UpgradeFixtureTest {
     private val candidateCode get() = checkNotNull(arguments.getString("candidateCode")).toInt()
     private fun guard() {
         check(context.packageName == "uk.co.traynor.privategallery.hiddenprototype")
-        check(baselineCode == 54 && candidateCode == 56)
+        check(baselineCode == 56 && candidateCode == 57)
     }
     private fun hash(bytes: ByteArray) = MessageDigest.getInstance("SHA-256").digest(bytes).joinToString("") { "%02x".format(it) }
     private fun encryptedHashes(): JSONObject = JSONObject().also { result ->
@@ -394,7 +394,7 @@ class UpgradeFixtureTest {
         } finally {hidden.lock();key.fill(0)}
     }
 
-    /** Compiles against the actual signed code54 model; verifies code56 migration without rewriting ciphertext. */
+    /** Compiles against the actual signed code56 model; verifies code57 migration without rewriting ciphertext. */
     private fun homePreferences(seed:Boolean) {
         val key=PinVaultKeyStore(context).unlock("738291".toCharArray())
         val hidden=hiddenSession(false)
@@ -425,6 +425,78 @@ class UpgradeFixtureTest {
             assertEquals(listOf("SETTINGS","GALLERY","PRIVATE_APPS","EVIDENCE_LOCKER","CAMERA","COLLECTIONS","RECENTLY_DELETED"),legacyNames(primaryValue))
             assertEquals(listOf("COLLECTIONS","BROWSER","PRIVATE_APPS","EVIDENCE_LOCKER","CAMERA","RECENTLY_DELETED","SETTINGS"),legacyNames(hiddenValue))
             if(!seed)assertEquals("Separate Tor app added to the migrated model",11,uk.co.traynor.privategallery.core.home.HomeLayout.Shortcut.values().size)
+        } finally {primary.close();secret.close();hidden.lock();key.fill(0)}
+    }
+
+    /** Home2 code56 APIs seed real owner-encrypted records. Candidate reads are deliberately
+     * raw: opening the UI model may perform an explicit theme migration, outside preservation.
+     * All these ciphertext files remain inside the existing complete filesystem assertions.
+     */
+    private fun home2State(before:JSONObject,seed:Boolean) {
+        val key=PinVaultKeyStore(context).unlock("738291".toCharArray())
+        val hidden=hiddenSession(false);val identity=Any()
+        val primary=uk.co.traynor.privategallery.core.evidence.EvidenceAccess.primary(context,identity,{identity},{true},{key.copyOf()},Any())
+        val secret=uk.co.traynor.privategallery.core.evidence.EvidenceAccess.hidden(context,hidden){true}
+        try {
+            for((owner,access) in listOf("primary" to primary,"hidden" to secret)) {
+                uk.co.traynor.privategallery.core.home2.SpaceContext(context,access).use { space ->
+                    val prefs=space.getSharedPreferences("nova_preview_v1",0)
+                    val widgets=uk.co.traynor.privategallery.home2.WidgetData(space)
+                    val mind=uk.co.traynor.privategallery.home2.MindData(space)
+                    val theme=if(owner=="primary")"light" else "dark"
+                    val note="Synthetic $owner upgrade note: keep every word"
+                    val journal="Synthetic $owner private journal"
+                    val mood=if(owner=="primary")"calm" else "hopeful"
+                    if(seed) {
+                        val wallpaper="Synthetic $owner encrypted wallpaper bytes".toByteArray()
+                        val wallpaperId=try {space.writeWallpaper(wallpaper)}finally{wallpaper.fill(0)}
+                        val model=uk.co.traynor.privategallery.home2.PreviewData(space,null)
+                        model.setTheme(theme)
+                        assertNull(model.error)
+                        assertEquals(theme,model.state.theme)
+                        model.change { profile -> profile.copy(
+                            pages=listOf(listOf("mind","vault","folder:upgrade"),listOf("camera","widgets")),
+                            dock=listOf("browser-v1","store","photos"),
+                            folders=listOf(uk.co.traynor.privategallery.home2.AppFolder("folder:upgrade","$owner tools",listOf("editor","ai-edit"))),
+                            drawerOrder=listOf("folder:upgrade","mind","vault","camera"),columns=5,iconSize=68,
+                            wallpaper=uk.co.traynor.privategallery.home2.Wallpaper("Dusk",wallpaperId,1.5f,.2f,-.3f,4f,.25f,17L)) }
+                        assertNull(model.error)
+                        assertTrue(widgets.save(owner,listOf(uk.co.traynor.privategallery.home2.WidgetSlot(
+                            "upgrade-$owner-slot",1,0,0,2,2,listOf(
+                                uk.co.traynor.privategallery.home2.WidgetItem("upgrade-$owner-note","note",note),
+                                uk.co.traynor.privategallery.home2.WidgetItem("upgrade-$owner-clock","clock")),1))))
+                        assertTrue(widgets.reduced(true));assertTrue(widgets.demoLock(true));widgets.clock(owner,false)
+                        mind.prefer("grounding")
+                        assertTrue(mind.put(owner,journal,mood,true,"upgrade-$owner-journal"))
+                        assertTrue(mind.put(owner,"",mood,false,"upgrade-$owner-mood"))
+                        before.put("home2-$owner",JSONObject().put("state",prefs.getString("state",null))
+                            .put("widgets",space.getSharedPreferences("nova_widgets_v1",0).getString("layout:$owner",null))
+                            .put("mind",space.getSharedPreferences("nova_mind_v1",0).getString(owner,null)).put("wallpaper",wallpaperId))
+                    }
+                    val expected=before.getJSONObject("home2-$owner")
+                    val raw=checkNotNull(prefs.getString("state",null))
+                    assertEquals("Preserve every serialized Home2 layout/theme field for $owner",expected.getString("state"),raw)
+                    val state=JSONObject(raw);assertEquals(owner,state.getString("current"));assertEquals(theme,state.getString("theme"))
+                    val profile=state.getJSONObject(owner)
+                    assertEquals(5,profile.getInt("columns"));assertEquals(68,profile.getInt("iconSize"))
+                    assertEquals("$owner tools",profile.getJSONArray("folders").getJSONObject(0).getString("name"))
+                    assertEquals(expected.getString("wallpaper"),profile.getJSONObject("wallpaper").getString("image"))
+                    val bytes=checkNotNull(space.readWallpaper(expected.getString("wallpaper")))
+                    try {assertArrayEquals("Synthetic $owner encrypted wallpaper bytes".toByteArray(),bytes)}finally{bytes.fill(0)}
+                    assertEquals(expected.getString("widgets"),space.getSharedPreferences("nova_widgets_v1",0).getString("layout:$owner",null))
+                    val slot=widgets.slots(owner).single();assertEquals(1,slot.page);assertEquals(1,slot.active)
+                    assertEquals(listOf("note","clock"),slot.items.map{it.type});assertEquals(note,slot.items.first().config)
+                    assertTrue(widgets.reduced);assertTrue(widgets.demoLock);assertFalse(widgets.clockVisible(owner))
+                    assertEquals(expected.getString("mind"),space.getSharedPreferences("nova_mind_v1",0).getString(owner,null))
+                    assertEquals("grounding",mind.preferred)
+                    val entries=mind.entries(owner);assertEquals(2,entries.size)
+                    assertEquals(journal,entries.single{it.journal}.text);assertEquals(mood,entries.single{!it.journal}.mood)
+                    assertTrue(entries.all{it.id.startsWith("upgrade-$owner-")&&it.time>0})
+                    val other=if(owner=="primary")"hidden" else "primary"
+                    assertTrue("Mind owners remain isolated",mind.entries(other).isEmpty())
+                    assertTrue("Widget owners remain isolated",widgets.slots(other).isEmpty())
+                }
+            }
         } finally {primary.close();secret.close();hidden.lock();key.fill(0)}
     }
 
@@ -506,9 +578,10 @@ class UpgradeFixtureTest {
             } finally {hidden.lock()}
             if(baselineCode>=36)repository.javaClass.getMethod("presentationSort",String::class.java).invoke(repository,"NAME")
             val seeded=JSONObject().put("primaryDeleted",primaryDeleted).put("hiddenDeleted",hiddenDeleted).put("primaryDates",dateSnapshot(repository)).put("hiddenDates",hiddenDates).put("hiddenMedia",hiddenMedia).put("hiddenCollection",hiddenCollection).put("hiddenFiles",hiddenHashes()).put("media",media).put("collection",collection.id).put("files",encryptedHashes())
-            // Code52 already has Evidence Locker and Home: seed before installing code56.
+            // Code52 already has Evidence Locker and Home: seed before installing code57.
             candidateEvidence(seeded,false,baselineSeed=true)
             homePreferences(seed=true)
+            home2State(seeded,seed=true)
             seeded.put("files",encryptedHashes()).put("hiddenFiles",hiddenHashes())
             proof.writeText(seeded.toString())
         } finally { key.fill(0) }
@@ -641,6 +714,7 @@ class UpgradeFixtureTest {
             }
         } finally { key.fill(0) }
         homePreferences(seed=false)
+        home2State(before,seed=false)
         assertCiphertextAfterReads(before)
         if(baselineCode>=36&&!restarted) {
             // Every original ciphertext has just been checked after reads. Only now may

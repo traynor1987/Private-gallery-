@@ -737,7 +737,6 @@ internal fun BrowserV2Home(
     val active = session.tabs.activeTab
     val activePrivateApp = session.privateApp(active.id)
     val appStyle=activePrivateApp?.appStyle()==true
-    var appControlsExpanded by remember(active.id) {mutableStateOf(false)}
     var privateAppEditId by remember {mutableStateOf<String?>(null)}
     LaunchedEffect(active.id, active.url) {
         scrollChrome.reveal(); ui.chromeVisible = true
@@ -817,6 +816,30 @@ internal fun BrowserV2Home(
 
     }
     val chromeSecurity=novaSecurityActions()
+    val showBrowserChrome=PrivateAppPresentationPolicy.showBrowserChrome(appStyle,connectionPresentation.blocked,
+        session.pageFailure(active.id)!=null,!staticContentHost && active.failure!=null)
+    val appControls: @Composable (Boolean)->Unit = { immersive ->
+        if(activePrivateApp!=null)PrivateAppControls(
+                    app=activePrivateApp,url=active.url,
+                    mode=(context as? uk.co.traynor.privategallery.MainActivity)?.privateAppConnectionLabel() ?: "Primary Space",
+                    enabled=!connectionPresentation.blocked,canGoBack=active.canGoBack,canGoForward=active.canGoForward,loading=active.loading,
+                    onBack={if(active.canGoBack)session.goBackActive() else openPrivateApps()},onForward=session::goForwardActive,
+                    onRefresh={if(active.loading)session.stopActive() else session.reloadActive()},
+                    onHome={cancelUpload();session.navigateActive(activePrivateApp.startUrl())},
+                    onLibrary=::openPrivateApps,onSwitch={screenshotGeneration.incrementAndGet();screenshotReview=null;cancelUpload();privateAppSwitcher=true},
+                    onSettings={cancelUpload();(context as? uk.co.traynor.privategallery.MainActivity)?.privateAppsController()?.let {privateAppSettings=it to activePrivateApp.id()}},
+                    onScreenshot=::saveViewportScreenshot,onBrowserTools={ui.overflow=true},
+                    onCloseApp={screenshotGeneration.incrementAndGet();cancelUpload();cancelWebsitePermissions();ui.downloadCancelled.set(true);ui.downloadBusy=false;screenshotReview=null;session.close(active.id);openPrivateApps()},
+                    onExitGallery={(context as? uk.co.traynor.privategallery.MainActivity)?.returnPrivateHome()},
+                    onLockVault={(context as? uk.co.traynor.privategallery.MainActivity)?.privateAppLockVault()},
+                    onQuickLock={(context as? uk.co.traynor.privategallery.MainActivity)?.panicExit()},
+                    immersive=immersive,current={session.tabs.activeTab.id==active.id && !novaInteractionBlocked()},onOpenInBrowser={
+                        if(!novaInteractionBlocked()) {
+                            cancelUpload();cancelWebsitePermissions();screenshotGeneration.incrementAndGet();screenshotReview=null
+                            runCatching {session.openActivePrivateAppInBrowser()}.onFailure {ui.message="This page could not open in Browser."}
+                        }
+                    })
+    }
     if(privateApps==null && privateAppSettings==null)Box(
         modifier = modifier.fillMaxSize()
             .then(if (acceptanceProbeEnabled) Modifier.background(Color(0xFF00A000)) else Modifier)
@@ -828,7 +851,7 @@ internal fun BrowserV2Home(
     ) {
         Column(Modifier.fillMaxSize().imePadding()) {
             if (acceptanceProbeEnabled) AcceptanceProbeLabel("BROWSER_V2_ROOT", Color(0xFF00A000))
-            if(ui.fullscreen==null && !ui.webVideoView)BrowserChromeBar(if(appStyle)1f else chromeFraction, top = true) { Column(
+            if(ui.fullscreen==null && !ui.webVideoView && showBrowserChrome)BrowserChromeBar(if(appStyle)1f else chromeFraction, top = true) { Column(
                 Modifier.fillMaxWidth()
                     .then(if (acceptanceProbeEnabled) Modifier.background(Color(0xFF0000CC)) else Modifier)
                     .onGloballyPositioned { coordinates ->
@@ -841,27 +864,14 @@ internal fun BrowserV2Home(
                 (context as? uk.co.traynor.privategallery.MainActivity)?.privateAppProfileClearStatus()?.let {status ->
                     Text(status,Modifier.fillMaxWidth().padding(12.dp),color=MaterialTheme.colorScheme.error)
                 }
-                if(activePrivateApp!=null)PrivateAppControls(
-                    app=activePrivateApp,url=active.url,
-                    mode=(context as? uk.co.traynor.privategallery.MainActivity)?.privateAppConnectionLabel() ?: "Primary Space",
-                    enabled=!connectionPresentation.blocked,canGoBack=active.canGoBack,canGoForward=active.canGoForward,loading=active.loading,
-                    onBack={if(active.canGoBack)session.goBackActive() else openPrivateApps()},onForward=session::goForwardActive,
-                    onRefresh={if(active.loading)session.stopActive() else session.reloadActive()},
-                    onHome={cancelUpload();session.navigateActive(activePrivateApp.startUrl())},
-                    onLibrary=::openPrivateApps,onSwitch={screenshotGeneration.incrementAndGet();screenshotReview=null;cancelUpload();privateAppSwitcher=true},
-                    onSettings={cancelUpload();(context as? uk.co.traynor.privategallery.MainActivity)?.privateAppsController()?.let {privateAppSettings=it to activePrivateApp.id()}},
-                    onScreenshot=::saveViewportScreenshot,onExpanded={appControlsExpanded=it},onBrowserTools={ui.overflow=true},
-                    onCloseApp={screenshotGeneration.incrementAndGet();cancelUpload();cancelWebsitePermissions();ui.downloadCancelled.set(true);ui.downloadBusy=false;screenshotReview=null;session.close(active.id);openPrivateApps()},
-                    onExitGallery={(context as? uk.co.traynor.privategallery.MainActivity)?.returnPrivateHome()},
-                    onLockVault={(context as? uk.co.traynor.privategallery.MainActivity)?.privateAppLockVault()},
-                    onQuickLock={(context as? uk.co.traynor.privategallery.MainActivity)?.panicExit()})
-                else NovaAppHeader("Browser — Beta",chromeSecurity?.space,
+                if(activePrivateApp!=null && !appStyle)appControls(false)
+                else NovaAppHeader(if(appStyle)activePrivateApp?.name() ?: "App" else "Browser — Beta",chromeSecurity?.space,
                     onHome=chromeSecurity?.home,onLock=chromeSecurity?.lock,onPanic=chromeSecurity?.panic,
                     actions={IconButton(onClick=::openPrivateApps){Icon(Icons.Default.Apps,"Private Apps")}})
 
                 if (acceptanceProbeEnabled) AcceptanceProbeLabel("BROWSER_CHROME", Color(0xFF0000CC))
                 if (active.loading) LinearProgressIndicator(Modifier.fillMaxWidth())
-                if(activePrivateApp==null || (activePrivateApp.addressBar() && (!appStyle || appControlsExpanded)))BrowserAddressBar(ui.address, {
+                if(PrivateAppPresentationPolicy.showAddressBar(activePrivateApp!=null,appStyle,activePrivateApp?.addressBar()==true,false))BrowserAddressBar(ui.address, {
                     ui.address=it;session.recordAcceptanceUiEvent("OMNIBOX_TEXT_CHANGED")
                 }, !connectionPresentation.blocked, active.loading, {
                     session.recordAcceptanceUiEvent("OMNIBOX_SUBMIT")
@@ -917,10 +927,13 @@ internal fun BrowserV2Home(
                     PrivateAppLoading(checkNotNull(activePrivateApp))
                 if (acceptanceProbeEnabled) AcceptanceProbeLabel("CONTENT_HOST", Color(0xFFFFD800))
             }
-            if(ui.fullscreen==null && !ui.webVideoView)BrowserChromeBar(chromeFraction, top = false) {
-                if(!appStyle)BrowserNavigationToolbar(!connectionPresentation.blocked && active.canGoBack,!connectionPresentation.blocked && active.canGoForward,session.tabs.tabs.size,
+            if(!appStyle && ui.fullscreen==null && !ui.webVideoView)BrowserChromeBar(chromeFraction, top = false) {
+                if(!appStyle)BrowserNavigationToolbar(!connectionPresentation.blocked && active.canGoBack,!connectionPresentation.blocked && active.canGoForward,session.tabs.tabs.count {session.privateApp(it.id)==null},
                     session::goBackActive,session::goForwardActive,{ui.bookmarksOpen=true},{ui.tabSwitcher=true},::openSettings,{ui.overflow=true})
             }
+        }
+        if(appStyle && !novaCovered && ui.fullscreen==null && !ui.webVideoView)Box(Modifier.align(Alignment.TopEnd).zIndex(1f)) {
+            androidx.compose.runtime.key(active.id) {appControls(true)}
         }
         if (ui.webVideoView) {
             BrowserVideoWindow()
@@ -1098,7 +1111,7 @@ internal fun BrowserV2Home(
             }) { Text(if (ui.uploadBusy) "Preparing…" else "Upload") } },
             dismissButton = { TextButton(onClick = ::cancelUpload) { Text("Cancel") } },
         )
-        if (ui.tabSwitcher) BrowserTabsPanel(session.tabs.tabs, active.id,
+        if (ui.tabSwitcher) BrowserTabsPanel(session.tabs.tabs.filter {session.privateApp(it.id)==null}, active.id,
             onSelect = { session.select(it); ui.tabSwitcher = false }, onRemove = session::close,
             onNew = { session.newTab(); ui.tabSwitcher = false }, onClose = { ui.tabSwitcher = false })
         if (ui.bookmarksOpen) BrowserBookmarksPanel(bookmarks,

@@ -79,14 +79,14 @@ class Home2IntegrationTest {
   fun originalClockVisible() = SpaceContext(context, access).use { WidgetData(it).clockVisible(spaceId) }
   override fun close() { access.close(); session.lock(); vaultKey.fill(0); root.deleteRecursively() }
  }
- private fun showHome(hidden: Boolean = false, records: List<PrivateAppCatalog.App> = emptyList()): SpaceFixture {
+ private fun showHome(hidden: Boolean = false, records: List<PrivateAppCatalog.App> = emptyList(), onSwitch:(()->Unit)?=null): SpaceFixture {
   val f = SpaceFixture(hidden, compose.activity).also { fixture = it }
   val bridge = if (hidden) null else NativeAppBridge(MemoryAppStore(records), f.access::current,
    { appLaunches.add(it) }, {}, { browsedUrls.add(it) })
   compose.setContent {
    if (attached) key(generation) {
     CompositionLocalProvider(LocalContext provides f.context) {
-     IntegratedHome(f.access, true, { nativeLaunches.add(it) }, {}, {}, null, bridge)
+     IntegratedHome(f.access, true, { nativeLaunches.add(it) }, {}, {}, onSwitch, bridge)
     }
    }
   }
@@ -285,6 +285,74 @@ class Home2IntegrationTest {
    val reopened=uk.co.traynor.privategallery.home2.PreviewData(context,bridge)
    assertEquals("My quiet app",reopened.app("web:"+original.id())!!.name)
   }
+ }
+
+ @Test fun native_theme_migration_is_once_only_and_preserves_home_customisations(){
+  val f=SpaceFixture(false,compose.activity).also{fixture=it}
+  SpaceContext(f.context,f.access).use{context->
+   val old=uk.co.traynor.privategallery.home2.PreviewData(context,null)
+   old.setTheme("light")
+   old.change{it.copy(columns=5,iconSize=68,wallpaper=it.wallpaper.copy(builtin="Dusk",dim=.35f))}
+   val layout=old.profile
+   check(context.getSharedPreferences("nova_preview_v1",Context.MODE_PRIVATE).edit().remove("native-theme-bridged").commit())
+   val published=mutableListOf<String>()
+   val migrated=uk.co.traynor.privategallery.home2.PreviewData(context,null,null,null,"dark",{published.add(it)})
+   assertEquals("dark",migrated.state.theme);assertEquals(layout,migrated.profile)
+   assertTrue(migrated.commitTheme("system"));assertEquals(listOf("system"),published)
+   val reopened=uk.co.traynor.privategallery.home2.PreviewData(context,null,null,null,"light",null)
+   assertEquals("system",reopened.state.theme);assertEquals(layout,reopened.profile)
+  }
+ }
+ @Test fun hidden_theme_never_imports_primary_native_choice_and_cannot_write_after_retirement(){
+  val f=SpaceFixture(true,compose.activity).also{fixture=it}
+  SpaceContext(f.context,f.access).use{context->
+   val data=uk.co.traynor.privategallery.home2.PreviewData(context,null,null,null,"light",null)
+   assertEquals("dark",data.state.theme)
+   assertTrue(data.commitTheme("system"))
+   val reopened=uk.co.traynor.privategallery.home2.PreviewData(context,null,null,null,"dark",null)
+   assertEquals("system",reopened.state.theme)
+   f.access.close()
+   assertTrue(runCatching{data.setTheme("light")}.isFailure)
+  }
+ }
+
+ @Test fun primary_home_discards_stale_switch_actions_across_menu_quick_panel_search_and_recents(){
+  var switched=0
+  val f=showHome(onSwitch={switched++})
+  SpaceContext(f.context,f.access).use{context->
+   val data=uk.co.traynor.privategallery.home2.PreviewData(context,null,{switched++})
+   assertNull(data.onSwitch);data.switchProfile();assertEquals(0,switched)
+  }
+  fun assertConcealed(){
+   compose.onAllNodesWithText("Switch Space").assertCountEquals(0)
+   compose.onAllNodesWithText("Return to Primary").assertCountEquals(0)
+   compose.onAllNodes(hasText("Hidden",substring=true) and !hasSetTextAction()).assertCountEquals(0)
+  }
+  compose.onNodeWithContentDescription("Home menu").performClick();assertConcealed()
+  compose.onNodeWithText("Edit Home").performClick()
+  compose.onNodeWithTag("nova-home-settings").assertIsDisplayed();assertConcealed();Espresso.pressBack()
+  compose.onNodeWithContentDescription("Home menu").performClick()
+  compose.onNodeWithText("Apps").performClick()
+  compose.onNodeWithTag("drawer-sheet").assertIsDisplayed();assertConcealed()
+  compose.onNodeWithTag("drawer-search").performTextInput("Hidden");assertConcealed()
+  Espresso.closeSoftKeyboard();compose.onNodeWithContentDescription("Close app drawer").performClick()
+  compose.onNodeWithContentDescription("Open Quick Panel").performClick()
+  compose.onNodeWithTag("quick-overlay").assertIsDisplayed();assertConcealed();Espresso.pressBack()
+  compose.onNodeWithContentDescription("Open Nova Search").performClick()
+  compose.onNodeWithTag("nova-search-input").performTextInput("Hidden");assertConcealed()
+  Espresso.closeSoftKeyboard();Espresso.pressBack()
+  compose.onNodeWithContentDescription("Navigation alternatives").performClick()
+  compose.onNodeWithText("Recents").performClick()
+  compose.onNodeWithTag("nova-recents-screen").assertIsDisplayed();assertConcealed()
+  compose.runOnIdle{assertEquals(0,switched)}
+ }
+ @Test fun authenticated_hidden_home_names_its_exit_return_to_primary(){
+  var returned=0
+  showHome(hidden=true,onSwitch={returned++})
+  compose.onNodeWithContentDescription("Home menu").performClick()
+  compose.onNodeWithText("Switch Space").assertDoesNotExist()
+  compose.onNodeWithText("Return to Primary").performClick()
+  compose.runOnIdle{assertEquals(1,returned)}
  }
 
 }

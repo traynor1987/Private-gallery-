@@ -36,7 +36,28 @@ public final class PrivateAppPolicy {
  }
  public static boolean inScope(String url,String scope) {
   if(!sameOrigin(url,scope))return false;
-  URI value=URI.create(url),base=URI.create(scope);
+  return pathInScope(URI.create(url),URI.create(scope));
+ }
+ /** App presentation only: known YouTube mobile redirects do not change transport authority. */
+ public static boolean inAppScope(String url,String startUrl,String savedScope) {
+  String scope=savedScope==null || savedScope.isBlank()?startUrl:savedScope;
+  if(inScope(url,scope))return true;
+  if(!youtubeWebAlias(url) || !youtubeWebAlias(startUrl) || !youtubeWebAlias(scope))return false;
+  URI value=URI.create(url),start=URI.create(startUrl),base=URI.create(scope);
+  // A saved scope must also contain this app's start path before it can classify aliases.
+  return pathInScope(start,base) && pathInScope(value,base);
+ }
+ private static boolean youtubeWebAlias(String url) {
+  if(!safeUrl(url,false))return false;
+  URI uri=URI.create(url);
+  if(!"https".equalsIgnoreCase(uri.getScheme()) || port(uri)!=443)return false;
+  String host=uri.getHost().toLowerCase(Locale.ROOT);
+  if(!host.equals("youtube.com") && !host.equals("www.youtube.com") && !host.equals("m.youtube.com"))return false;
+  // Do not extend scope across hosts for paths whose browser canonicalisation is ambiguous.
+  for(String segment:uri.getRawPath().split("/"))if(segment.equals(".") || segment.equals(".."))return false;
+  return true;
+ }
+ private static boolean pathInScope(URI value,URI base) {
   // Reject ambiguous encoded separators/dot segments rather than trusting renderer canonicalisation.
   for(String path:new String[]{value.getRawPath(),base.getRawPath()}) {
    String lower=path.toLowerCase(Locale.ROOT);

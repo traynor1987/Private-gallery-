@@ -78,6 +78,8 @@ class BrowserV2Session(
     // Presentation belongs to an existing tab, never to the selected URL or a second WebView.
     private val privateAppTabs = mutableMapOf<String, uk.co.traynor.privategallery.core.privateapps.PrivateAppCatalog.App>()
     fun privateApp(tabId: String) = privateAppTabs[tabId]
+    /** Restore admission must include cold app bindings, not just already-created renderers. */
+    fun hasPrivateAppTabs(): Boolean = privateAppTabs.isNotEmpty()
     /** Bounded snapshot of existing app renderers only; never activates or creates cold tabs. */
     fun createdPrivateAppWebViews(): List<Pair<String, WebView>> = tabs.tabs.mapNotNull {tab ->
         if(privateAppTabs.containsKey(tab.id))webViews[tab.id]?.let {tab.id to it} else null
@@ -86,9 +88,9 @@ class BrowserV2Session(
         privateAppTabs.entries.firstOrNull {it.value.id()==app.id() && tabs.tabs.any {tab->tab.id==it.key}}?.let {
             privateAppTabs[it.key]=app;select(it.key);return
         }
-        val tab = newTab(app.startUrl())
-        privateAppTabs[tab.id] = app
-        changed()
+        pauseOutgoingTab()
+        exitFullscreen()
+        createTab(app.startUrl(), app)
     }
     /** Explicit authenticated Nova app launch; uses the same tab registry, renderer and network gate.
      * Unlike ordinary browser tab selection, an outgoing registered Private App keeps its media.
@@ -100,9 +102,18 @@ class BrowserV2Session(
             privateAppTabs[it.key]=app;selectFromNovaHome(it.key);return
         }
         prepareNovaSwitch()
-        val tab=createTab(app.startUrl())
-        privateAppTabs[tab.id]=app
-        changed()
+        createTab(app.startUrl(), app)
+    }
+
+    /** Copies only the current destination into a fresh ordinary tab with its own back stack. */
+    fun openActivePrivateAppInBrowser(): BrowserTab {
+        requireNovaForeground()
+        val source=tabs.activeTab
+        val app=checkNotNull(privateAppTabs[source.id]) {"A saved app must be selected"}
+        val destination=source.url.ifBlank {app.startUrl()}
+        check(BrowserSecurityPolicy.allowsNavigation(destination)) {"A web address is required"}
+        prepareNovaSwitch()
+        return createTab(destination)
     }
 
     /** Existing Primary authority must be checked by the calling Activity/controller. */
@@ -533,9 +544,11 @@ class BrowserV2Session(
         return createTab("")
     }
 
-    private fun createTab(url: String): BrowserTab {
+    private fun createTab(url: String, app: uk.co.traynor.privategallery.core.privateapps.PrivateAppCatalog.App? = null): BrowserTab {
         val idsBefore = tabs.tabs.mapTo(linkedSetOf()) { it.id }
         val tab = tabs.newTab()
+        // Classify before any renderer callback or metadata publication can escape this method.
+        if(app!=null)privateAppTabs[tab.id]=app
         val retainedIds = tabs.tabs.mapTo(hashSetOf()) { it.id }
         (idsBefore - retainedIds).forEach { evictedId ->
             privateAppTabs.remove(evictedId)
@@ -575,12 +588,12 @@ class BrowserV2Session(
     }
 
     fun close(tabId: String) {
-        privateAppTabs.remove(tabId)
         if (scriptDialog?.tabId == tabId) cancelScriptDialog()
         cancelNavigationTimeout(tabId); pageFailures.remove(tabId)
         if (fullscreenOwner == tabId) exitFullscreen()
         webViews.remove(tabId)?.let(::destroy)
         tabs.close(tabId)
+        privateAppTabs.remove(tabId)
         activeWebViewOrNull()?.let { if (foreground) it.onResume() }
         changed()
     }
@@ -626,7 +639,6 @@ class BrowserV2Session(
     }
 
     fun destroyAll() {
-        privateAppTabs.clear()
         cancelScriptDialog()
         navigationTimeouts.keys.toList().forEach(::cancelNavigationTimeout); pageFailures.clear()
         documentRevision++
@@ -637,6 +649,9 @@ class BrowserV2Session(
         exitFullscreen()
         webViews.values.toList().forEach(::destroy)
         webViews.clear()
+        // A destroyed app must never reappear as an unclassified ordinary browser tab on lock.
+        privateAppTabs.keys.toList().forEach {id ->if(tabs.tabs.any {it.id==id})tabs.close(id)}
+        privateAppTabs.clear()
         tabs.tabs.forEach { tabs.detachWebView(it.id) }
         changed()
     }
@@ -669,7 +684,11 @@ class BrowserV2Session(
         if (!BuildConfig.ACCEPTANCE_BROWSER_DIAGNOSTICS || probe == null) { onComplete(); return }
         probe.capture("OWNER_SNAPSHOT", onComplete)
     }
-    fun metadataSnapshot() = BrowserSessionSnapshot(tabs.tabs, tabs.activeTab.id)
+    fun metadataSnapshot(): BrowserSessionSnapshot {
+        val ordinary=tabs.tabs.filterNot {privateAppTabs.containsKey(it.id)}
+        val selected=tabs.activeTab.id.takeIf {id ->ordinary.any {it.id==id}} ?: ordinary.lastOrNull()?.id
+        return BrowserSessionSnapshot(ordinary,selected)
+    }
     fun restoreMetadata(snapshot: BrowserSessionSnapshot) {
         privateAppTabs.clear()
         tabs.restore(snapshot.tabs, snapshot.selectedTabId)
@@ -801,7 +820,7 @@ class BrowserV2Session(
         tabs.updateNavigation(tabId, url, title, loading, canGoBack, canGoForward)
         diagnostics.record(if (loading) "MAIN_PAGE_STARTED" else "MAIN_PAGE_FINISHED")
         recordPresentationTransition(tabId, if (loading) "PAGE_STARTED" else "PAGE_FINISHED")
-        if (!loading && BrowserSecurityPolicy.allowsNavigation(url)) listener.onHistoryVisit(title, url)
+        if (!loading && !privateAppTabs.containsKey(tabId) && BrowserSecurityPolicy.allowsNavigation(url)) listener.onHistoryVisit(title, url)
         changed()
     }
     override fun onPageCommitVisible(tabId: String) {
@@ -839,7 +858,11 @@ class BrowserV2Session(
         // A retained, paused, covered or destroyed page cannot allocate a renderer or take focus.
         if (!windowInteractionAllowed(parentTabId)) return null
         val previousId = tabs.activeTab.id
-        val child = newTab()
+        val parentApp=privateAppTabs[parentTabId]
+        val child = if(parentApp==null)newTab() else {
+            // Native popup policy/lifetime is unchanged; presentation and history keep the owner.
+            pauseOutgoingTab();exitFullscreen();createTab("",parentApp)
+        }
         val view = webViewOrNull(child.id)
         if (view == null) {
             close(child.id)

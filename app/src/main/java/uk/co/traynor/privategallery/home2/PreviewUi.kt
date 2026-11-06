@@ -171,8 +171,8 @@ private val lightColors=lightColorScheme(primary=Color(0xFF285F65),secondary=Col
      if(currentPage<profile.pages.lastIndex)ActionRow("Move page right",Icons.Default.ChevronRight){data.movePage(currentPage,1);scope.launch{pager.scrollToPage(currentPage+1)}}
      ActionRow("Add apps from drawer",Icons.Default.Apps){editing=false;drawer=true}
      ActionRow("Create folder",Icons.Default.CreateNewFolder){folderCreate=true}
-     ActionRow("Theme · ${state.theme}",Icons.Default.Palette){data.setTheme(if(state.theme=="dark")"light"else "dark")}
-     data.onSwitch?.let{changeSpace->ActionRow("Switch Space",Icons.Default.SwapHoriz){changeSpace()}}
+     ActionRow("Theme · ${state.theme}",Icons.Default.Palette){data.setTheme(uk.co.traynor.privategallery.core.ui.NativeThemePolicy.next(state.theme))}
+     data.onSwitch?.takeIf{data.state.current=="hidden"}?.let{changeSpace->ActionRow("Return to Primary",Icons.Default.SwapHoriz){changeSpace()}}
      ActionRow("Restore Home defaults",Icons.Default.RestartAlt){reset=true}
           }
          }
@@ -305,7 +305,7 @@ private val lightColors=lightColorScheme(primary=Color(0xFF285F65),secondary=Col
      IconButton(onClick={onLaunch("search")}){Icon(Icons.Default.Search,"Open Nova Search")}
      IconButton(onClick={onLaunch("calm")}){Icon(Icons.Default.Spa,"Calm Now")}
      IconButton(onClick=onQuick){Icon(Icons.Default.Tune,"Open Quick Panel")}
-     Box{var menu by remember{mutableStateOf(false)};IconButton(onClick={menu=true}){Icon(Icons.Default.MoreVert,"Home menu")};PanicHomeDropdownMenu(menu,{menu=false}){DropdownMenuItem(text={Text("Apps")},onClick={menu=false;onDrawer()});DropdownMenuItem(text={Text("Edit Home")},onClick={menu=false;onEdit()});DropdownMenuItem(text={Text("Widget Centre")},onClick={menu=false;onLaunch("widgets")});data.onSwitch?.let{switch->DropdownMenuItem(text={Text("Switch Space")},onClick={menu=false;switch()})}}}
+     Box{var menu by remember{mutableStateOf(false)};IconButton(onClick={menu=true}){Icon(Icons.Default.MoreVert,"Home menu")};PanicHomeDropdownMenu(menu,{menu=false}){DropdownMenuItem(text={Text("Apps")},onClick={menu=false;onDrawer()});DropdownMenuItem(text={Text("Edit Home")},onClick={menu=false;onEdit()});DropdownMenuItem(text={Text("Widget Centre")},onClick={menu=false;onLaunch("widgets")});data.onSwitch?.takeIf{data.state.current=="hidden"}?.let{switch->DropdownMenuItem(text={Text("Return to Primary")},onClick={menu=false;switch()})}}}
     }
     widgets.recoveryNotice?.let{notice->Surface(color=MaterialTheme.colorScheme.secondaryContainer,contentColor=MaterialTheme.colorScheme.onSecondaryContainer){Column(Modifier.padding(12.dp)){Text(notice,style=MaterialTheme.typography.bodySmall);TextButton(onClick={widgets.dismissRecovery()}){Text("Dismiss recovery report")}}}}
     if(widgets.editingId!=null)Row(Modifier.fillMaxWidth().padding(horizontal=20.dp),verticalAlignment=Alignment.CenterVertically){Text("Edit widgets",Modifier.weight(1f),color=Color.White);TextButton(onClick={widgets.editingId=null},modifier=Modifier.testTag("widget-edit-done")){Text("Done",color=Color.White)}}

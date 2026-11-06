@@ -23,6 +23,46 @@
   "uk.co.traynor.privategallery.ui.NovaPrivateAppAudioTest": [
     "userStartedAudioStaysAttachedAndPlayingAcrossHomeAppAndStandaloneBrowserUntilBackground"
   ],
+  "uk.co.traynor.privategallery.core.browser.v2.PrivateAppBrowserSeparationTest": [
+    "allAppSnapshotIsEmptyWithoutCreatingAnotherTabOrRenderer",
+    "appNavigationNeverWritesStandaloneHistoryOrRestoreMetadataAndCopyGetsItsOwnTab",
+    "nativePopupNavigationKeepsItsInitiatingAppHistoryOwner",
+    "previouslyUnclassifiedRestoredTabsArePreservedWithoutDomainBasedPurging",
+    "restoreAdmissionSeesColdAppBindingEvenWhenOrdinarySnapshotIsUnchanged"
+  ],
+  "uk.co.traynor.privategallery.ui.PrivateAppImmersiveControlsTest": [
+    "overflowUsesTheTopRightAndHomeRetainsWhileExitCloses",
+    "unrelatedOriginWarningRemainsVisibleWhileHistoryControlsStayDisabledAtRoot"
+  ],
+  "uk.co.traynor.privategallery.ui.PrivateAppMainActivityAcceptanceTest": [
+    "productionAppIsFullHeightAndHomeRetainsUserStartedAudioWhileExitClosesIt",
+    "productionPopupDismissesAndCapturedMenuActionsCannotSurviveBackgroundOrLock"
+  ],
+  "uk.co.traynor.privategallery.HiddenDiscoverabilityRegressionTest": [
+    "authenticated_hidden_exit_remains_available_without_a_primary_entry_path",
+    "intent_extras_and_activity_restoration_cannot_recreate_hidden_entry",
+    "ordinary_switch_never_enters_hidden_for_any_persisted_discovery_or_concealment_flag",
+    "rendered_original_version_sequence_opens_only_the_independent_hidden_pin_entry",
+    "settings_admission_requires_fresh_completed_sequence_and_never_authenticates_hidden"
+  ],
+  "uk.co.traynor.privategallery.ui.PrivateAppPresentation48Test": [
+    "presentation_and_address_preferences_are_independent_without_permanent_app_toolbars"
+  ],
+  "uk.co.traynor.privategallery.ExternalEditingLifecycle176Test": [
+    "browser_and_home_suspend_external_ui_but_retain_the_original_editor_result_and_file",
+    "expiredHiddenEditorReturnCannotResumeAgainstPrimaryAuthentication",
+    "explicitEditorReturnRenewsOnlyUiAndOldHiddenIoStaysRevoked",
+    "hiddenResultNeverFallsBackToPrimaryAndRejectedBytesAreWiped",
+    "oldHiddenOperationCannotReviveAfterConcealmentAndExplicitReopen",
+    "panicRevokesPendingExternalTicket",
+    "real_picker_contract_does_not_attach_a_stale_result_to_a_new_media_ticket"
+  ],
+  "uk.co.traynor.privategallery.ExternalEditorRecovery1762Test": [
+    "committedHiddenImportWithoutReceiptUpdateRecoversOnceAndReportsRetainedOriginal",
+    "committedHiddenReplacementWithoutReceiptUpdateRecoversOnceAndReportsTrashedOriginal",
+    "recreationLocksThenFreshOriginalHiddenAuthenticationRecoversCancelledReceipt",
+    "repeatedGalleryFallbackReusesPublishedCopyAndNeverPreparesAnotherExport"
+  ],
   "uk.co.traynor.privategallery.ui.BrowserPermissionOwnership1762Test": [
     "mixedUnknownCapabilityCannotExpandMicrophoneOrCameraGrant"
   ],
@@ -31,12 +71,16 @@
   ],
   "uk.co.traynor.privategallery.core.home2.Home2IntegrationTest": [
     "adding_a_clock_widget_preserves_the_original_clock_and_its_visibility_setting_survives_reopen",
+    "authenticated_hidden_home_names_its_exit_return_to_primary",
     "calm_now_opens_real_breathing_through_the_space_context_and_can_pause_and_return_home",
     "cover_inner_and_landscape_layouts_keep_the_clock_drawer_and_quick_panel_reachable",
     "default_home_has_the_original_clock_and_native_settings_launches_the_production_route",
     "duplicate_addresses_and_existing_port_or_ip_apps_keep_each_uuid_and_launch_its_exact_record",
     "hidden_search_web_is_unavailable_and_a_tap_leaves_local_search_and_home_usable",
+    "hidden_theme_never_imports_primary_native_choice_and_cannot_write_after_retirement",
+    "native_theme_migration_is_once_only_and_preserves_home_customisations",
     "owner_shortcut_names_survive_catalogue_refresh_and_reopening_without_changing_native_settings",
+    "primary_home_discards_stale_switch_actions_across_menu_quick_panel_search_and_recents",
     "protected_entry_never_opens_home_until_the_user_requests_native_authentication",
     "store_install_home_launch_my_apps_and_uninstall_use_the_real_encrypted_native_catalogue"
   ],

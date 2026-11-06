@@ -21,7 +21,7 @@ import kotlinx.coroutines.withContext
 import kotlinx.coroutines.launch
 
 /** Existing preview components, backed exclusively by a captured real Space authority. */
-@Composable internal fun IntegratedHome(access:EvidenceAccess,visible:Boolean,onLaunch:(String)->Unit,onLock:()->Unit,onPanic:()->Unit,onSwitch:(()->Unit)?,apps:NativeAppsBridge?) {
+@Composable internal fun IntegratedHome(access:EvidenceAccess,visible:Boolean,onLaunch:(String)->Unit,onLock:()->Unit,onPanic:()->Unit,onSwitch:(()->Unit)?,apps:NativeAppsBridge?,nativeThemeFallback:String?=null,onThemeCommitted:(String)->Unit={},onThemeConnection:(PreviewData?)->Unit={}) {
  val base=LocalContext.current
  val context=remember(access){SpaceContext(base,access)}
  val scope=rememberCoroutineScope()
@@ -34,12 +34,17 @@ import kotlinx.coroutines.launch
   // Preserve existing real Home ordering when a prior owner layout exists. No Preview import.
   val hasPrior=java.io.File(access.root,"home1710/preferences.enc").isFile
   val legacyOrder=if(hasPrior)previous?.layout?.visible()?.mapNotNull{names[it.name]}else null
-  val data=PreviewData(context,apps,onSwitch,legacyOrder)
+  val data=PreviewData(context,apps,onSwitch,legacyOrder,nativeThemeFallback){theme->if(context.current())onThemeCommitted(theme)}
   val widgets=WidgetData(context)
   val mind=MindData(context)
   val history=NovaSearchHistory(context)
   HomeModels(data,widgets,mind,history)
  }}
+ val data=models.getOrNull()?.data
+ DisposableEffect(access,data){
+  if(data!=null&&context.current()){onThemeConnection(data);onThemeCommitted(data.state.theme)}
+  onDispose{onThemeConnection(null)}
+ }
  val application=base.applicationContext as Application
  val audio=remember(access){MindAudio(application){context.current()&&lifecycle.lifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.RESUMED)}}
  val video=remember(access){NovaVideoModel(application)}

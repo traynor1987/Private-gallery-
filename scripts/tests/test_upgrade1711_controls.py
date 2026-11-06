@@ -24,16 +24,28 @@ gate=module('verify_release1711_gate')
 
 class Upgrade1711Controls(unittest.TestCase):
     def test_exact_baseline_archive_source_payload_size_and_name_required(self):
-        for kind in ('valid','archive','source','apk','size','multiple','missing','wrong-name','duplicate'):
+        for kind in ('valid','archive','source','version','code','certificate','apk-receipt','apk','size','multiple','missing','wrong-name','duplicate','evidence-size','evidence-hash','missing-summary','duplicate-summary','evidence-extra'):
             with self.subTest(kind=kind),tempfile.TemporaryDirectory() as temporary:
                 path=Path(temporary)/'synthetic.zip';payload=b'SYNTHETIC ORIGINAL APK'
+                evidence=Path(temporary)/'evidence.zip'
+                summary=dict(source_sha=baseline.SOURCE_SHA,version='1.7.11',version_code=56,
+                             package='uk.co.traynor.privategallery',apk_sha256=hashlib.sha256(payload).hexdigest(),
+                             original_certificate_sha256=baseline.CERTIFICATE_SHA256,
+                             original_key_code54_upgrade='PASS',restart='PASS')
+                for mutation,field,value in (('source','source_sha','0'*40),('version','version','1.7.11.1'),('code','version_code',57),('certificate','original_certificate_sha256','0'*64),('apk-receipt','apk_sha256','0'*64)):
+                    if kind==mutation:summary[field]=value
+                with warnings.catch_warnings(),zipfile.ZipFile(evidence,'w') as archive:
+                    warnings.simplefilter('ignore',UserWarning)
+                    if kind!='missing-summary':archive.writestr('release-summary.json',json.dumps(summary))
+                    if kind=='duplicate-summary':archive.writestr('release-summary.json',json.dumps(summary))
                 with warnings.catch_warnings(),zipfile.ZipFile(path,'w') as archive:
                     warnings.simplefilter('ignore',UserWarning)
-                    archive.writestr('production-evidence/source-sha.txt',baseline.SOURCE_SHA if kind!='source' else '0'*40)
+                    archive.writestr(baseline.EVIDENCE_NAME,evidence.read_bytes())
                     if kind!='missing':archive.writestr(baseline.APK_NAME if kind!='wrong-name' else 'replacement.apk',payload if kind!='apk' else b'other')
                     if kind=='multiple':archive.writestr('extra.apk',payload)
                     if kind=='duplicate':archive.writestr(baseline.APK_NAME,payload)
-                with patch.object(baseline,'ARCHIVE_SHA256',baseline.hashlib.sha256(path.read_bytes()).hexdigest() if kind!='archive' else '0'*64),patch.object(baseline,'APK_SHA256',baseline.hashlib.sha256(payload).hexdigest()),patch.object(baseline,'APK_BYTES',len(payload)+(kind=='size')):
+                    if kind=='evidence-extra':archive.writestr('source-sha.txt',baseline.SOURCE_SHA)
+                with patch.object(baseline,'ARCHIVE_SHA256',hashlib.sha256(path.read_bytes()).hexdigest() if kind!='archive' else '0'*64),patch.object(baseline,'APK_SHA256',hashlib.sha256(payload).hexdigest()),patch.object(baseline,'APK_BYTES',len(payload)+(kind=='size')),patch.object(baseline,'EVIDENCE_BYTES',evidence.stat().st_size+(kind=='evidence-size')),patch.object(baseline,'EVIDENCE_SHA256',hashlib.sha256(evidence.read_bytes()).hexdigest() if kind!='evidence-hash' else '0'*64):
                     if kind=='valid':self.assertEqual(payload,baseline.validated_apk(path))
                     else:
                         with self.assertRaises(ValueError):baseline.validated_apk(path)
@@ -41,27 +53,31 @@ class Upgrade1711Controls(unittest.TestCase):
     def test_reviewed_fixture_keeps_every_original_native_assertion_and_operation(self):
         previous=(ROOT/'docs/release17102/UpgradeFixtureTest.kt').read_text()
         current=(ROOT/'docs/release1711/UpgradeFixtureTest.kt').read_text()
+        start=current.index('    /** Home2 code56 APIs seed real owner-encrypted records.')
+        end=current.index('    @Test fun seed()',start)
+        current=current[:start]+current[end:]
+        current=current.replace('            home2State(seeded,seed=true)\n','').replace('        home2State(before,seed=false)\n','')
         start=current.index('            // Persistent synthetic login marker:')
         end=current.index('            InstrumentationRegistry.getInstrumentation().runOnMainSync {manager.flush()}',start)
         current=current[:start]+current[end:]
         current=current.replace('        assertTrue("Existing persistent HttpOnly browser login survives upgrade/restart",retained.orEmpty().split(\';\').any {it.trim()=="nova1711_login=synthetic-persistent-auth"})\n','')
         for now,prior in (
-            ('code54 -> code56','code53 -> code54'),
-            ('baselineCode == 54 && candidateCode == 56','baselineCode == 53 && candidateCode == 54'),
+            ('code56 -> code57','code53 -> code54'),
+            ('baselineCode == 56 && candidateCode == 57','baselineCode == 53 && candidateCode == 54'),
             ('Encrypted browser metadata; persistent synthetic CookieManager login is checked separately below.','Explicit encrypted browser metadata only; WebView cookie/profile disk storage is a documented Beta limitation.'),
-            ('actual signed code54 model; verifies code56 migration','actual signed code53 model; verifies code54 migration'),
-            ('before installing code56','before installing code54'),
+            ('actual signed code56 model; verifies code57 migration','actual signed code53 model; verifies code54 migration'),
+            ('before installing code57','before installing code54'),
         ):current=current.replace(now,prior)
         self.assertEqual(previous,current)
         self.assertEqual(2,previous.count('File(context.filesDir, "profile'))
 
-    def test_compilation_transform_uses_actual_original54_build_and_only_two_reviewed_edits(self):
+    def test_compilation_transform_uses_actual_original56_build_and_only_two_reviewed_edits(self):
         fixture=(ROOT/'docs/release1711/UpgradeFixtureTest.kt').read_bytes()
         build=subprocess.check_output(['git','show',baseline.SOURCE_SHA+':app/build.gradle.kts'],cwd=ROOT)
         transformed,changed_build=compiled.transform(fixture,build)
         self.assertEqual(build.replace(compiled.BUILD_TARGET,b''),changed_build)
         self.assertEqual(fixture.replace(compiled.TARGET,b'uk.co.traynor.privategallery'),transformed)
-        self.assertIn(b'versionCode = 54',changed_build)
+        self.assertIn(b'versionCode = 56',changed_build)
         for bad_fixture,bad_build in ((fixture*2,build),(fixture,build*2),(b'absent',build),(fixture,b'absent')):
             with self.assertRaises(ValueError):compiled.transform(bad_fixture,bad_build)
         payload=b'SYNTHETIC INSTRUMENTATION, NOT AN APK';compiler=(ROOT/'scripts/compile_upgrade1711_fixture.sh').read_bytes()
@@ -96,7 +112,7 @@ class Upgrade1711Controls(unittest.TestCase):
             zipped.writestr('home2-evidence/source-sha.txt',source)
             zipped.writestr('outputs/androidTest-results/connected/debug/TEST-synthetic.xml',cases or '<testsuite><testcase classname="Synthetic.Case" name="passes"/></testsuite>')
         fixture=b'SYNTHETIC fixture';controls={'SYNTHETIC-control':gate.sha(b'SYNTHETIC')}
-        marker=dict(source=source,baseline_source=gate.BASELINE,baseline_code=54,candidate_code=56,test_run=123,test_artifact=456,controls_sha256=controls,fixture_sha256=gate.sha(fixture),matrix_sha256=gate.sha(matrix),runtime_archive_sha256=gate.sha(archive.read_bytes()))
+        marker=dict(source=source,baseline_source=gate.BASELINE,baseline_code=56,candidate_code=57,test_run=123,test_artifact=456,controls_sha256=controls,fixture_sha256=gate.sha(fixture),matrix_sha256=gate.sha(matrix),runtime_archive_sha256=gate.sha(archive.read_bytes()))
         review=('\n'.join(('Source: '+source,'Decision: APPROVED','Production signing: APPROVED','Upgrade fixture SHA-256: '+gate.sha(fixture),'Upgrade controls SHA-256: '+gate.controls_digest(controls),'Runtime matrix SHA-256: '+gate.sha(matrix),'Runtime archive SHA-256: '+marker['runtime_archive_sha256']))+'\n').encode()
         marker['review_sha256']=gate.sha(review)
         run=dict(id=123,event='push',head_sha=source,head_branch=gate.BRANCH,status='completed',conclusion='success',head_repository={'full_name':'traynor1987/Private-gallery-'},path='.github/workflows/fast-development.yml')
@@ -131,7 +147,7 @@ class Upgrade1711Controls(unittest.TestCase):
         for forbidden in ('adb uninstall','pm clear','apksigner" sign','STORE_PASSWORD','KEY_PASSWORD','--ks'):
             self.assertNotIn(forbidden,runner)
         self.assertIn('adb install -r "$candidate_apk"',runner)
-        self.assertIn('-e baselineCode 54 -e candidateCode 56',runner)
+        self.assertIn('-e baselineCode 56 -e candidateCode 57',runner)
         self.assertIn('run_fixture verify after-restart',runner)
 
     def test_actual_shell_controls_reject_debug_candidate_and_baseline_before_any_install(self):
@@ -146,13 +162,13 @@ class Upgrade1711Controls(unittest.TestCase):
                 executable(bins/'git','printf "%s\\n" "'+source+'"\n')
                 executable(bins/'adb','printf "%s\\n" "adb $*" >> "$TOOL_LOG"\ncase "$*" in\n"shell getprop ro.kernel.qemu") echo 1;;\n"shell getprop ro.build.version.sdk") echo 37;;\n"shell getenforce") echo Enforcing;;\n"shell pm list packages uk.co.traynor.privategallery") :;;\n*) exit 90;;\nesac\n')
                 executable(bins/'sha256sum','if [[ "$1" == "$FAKE_BASELINE" ]]; then printf "%s  %s\\n" "'+baseline.APK_SHA256+'" "$1"; else /usr/bin/sha256sum "$@"; fi\n')
-                executable(sdk/'aapt','phase=candidate; code=56; version=1.7.11\nif [[ "$*" == *"$FAKE_BASELINE"* ]]; then phase=baseline; code=54; version=1.7.10.2; fi\nprintf "package: name=\x27uk.co.traynor.privategallery\x27 versionCode=\x27%s\x27 versionName=\x27%s\x27\\n" "$code" "$version"\nprintf "sdkVersion:\x2737\x27\\ntargetSdkVersion:\x2737\x27\\napplication-label:\x27NovaOS\x27\\n"\nif [[ "$phase" == "$DEBUG_PHASE" ]]; then echo application-debuggable; fi\n')
+                executable(sdk/'aapt','phase=candidate; code=57; version=1.7.11.1\nif [[ "$*" == *"$FAKE_BASELINE"* ]]; then phase=baseline; code=56; version=1.7.11; fi\nprintf "package: name=\x27uk.co.traynor.privategallery\x27 versionCode=\x27%s\x27 versionName=\x27%s\x27\\n" "$code" "$version"\nprintf "sdkVersion:\x2737\x27\\ntargetSdkVersion:\x2737\x27\\napplication-label:\x27NovaOS\x27\\n"\nif [[ "$phase" == "$DEBUG_PHASE" ]]; then echo application-debuggable; fi\n')
                 executable(sdk/'apksigner','printf "%s\\n" "apksigner $*" >> "$TOOL_LOG"\n[[ "$1" == verify ]] || exit 91\nprintf "%s\\n" "Signer #1 certificate SHA-256 digest: 94f2bfc6567f26d067d29077111cfd0ce86d38263c642ad115e43365f05b0d17" "Verified using v2 scheme (APK Signature Scheme v2): true" "Number of signers: 1"\n')
                 original=folder/'baseline.apk';original.write_bytes(b'SYNTHETIC original APK')
                 candidate=folder/'candidate.apk';candidate.write_bytes(b'SYNTHETIC candidate APK')
                 fixture=ROOT/'docs/release1711/UpgradeFixtureTest.kt'
                 receipt=folder/'SYNTHETIC-gate.json'
-                receipt.write_text(json.dumps(dict(schema=1,decision='READY_FOR_GATED_SIGNER',source=source,baseline_source=gate.BASELINE,baseline_code=54,candidate_code=56,test_run=123,test_artifact=456,validated_case_count=1,controls_sha256=gate.controls(),fixture_sha256=gate.sha(fixture.read_bytes()),review_sha256='2'*64,matrix_sha256='3'*64,runtime_archive_sha256='4'*64)))
+                receipt.write_text(json.dumps(dict(schema=1,decision='READY_FOR_GATED_SIGNER',source=source,baseline_source=gate.BASELINE,baseline_code=56,candidate_code=57,test_run=123,test_artifact=456,validated_case_count=1,controls_sha256=gate.controls(),fixture_sha256=gate.sha(fixture.read_bytes()),review_sha256='2'*64,matrix_sha256='3'*64,runtime_archive_sha256='4'*64)))
                 environment=dict(PATH=str(bins)+':/usr/bin:/bin',TOOL_LOG=str(log),FAKE_BASELINE=str(original),DEBUG_PHASE=debug_phase,GITHUB_ACTIONS='true',GITHUB_EVENT_NAME='push',GITHUB_REPOSITORY='traynor1987/Private-gallery-',GITHUB_REF='refs/heads/'+gate.BRANCH,FROZEN_SOURCE=source,PRODUCTION_UPGRADE='1',RUNNER_TEMP=str(folder),ANDROID_HOME=str(folder/'sdk'),PRIVATE_GALLERY_1711_ROOT=str(project),PRIVATE_GALLERY_1711_GATE_RECEIPT=str(receipt),PRIVATE_GALLERY_1711_BASELINE_APK=str(original),PRIVATE_GALLERY_1711_CANDIDATE_APK=str(candidate),PRIVATE_GALLERY_1711_EVIDENCE_DIR=str(folder/'evidence'),PRIVATE_GALLERY_1711_UPGRADE_FIXTURE=str(fixture),PRIVATE_GALLERY_1711_UPGRADE_FIXTURE_SHA256=gate.sha(fixture.read_bytes()))
                 result=subprocess.run(['bash',str(ROOT/'scripts'/script)],env=environment,capture_output=True,text=True)
                 self.assertNotEqual(0,result.returncode)

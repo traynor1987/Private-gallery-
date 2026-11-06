@@ -1,4 +1,4 @@
-# Original-key code54 → code56 upgrade controls — prepared, not activated
+# Original-key code56 → code57 upgrade controls — prepared, not activated
 
 These controls prepare a future in-place production upgrade. They do not approve signing,
 publish a production APK, or establish that an upgrade passed. The production package must
@@ -9,23 +9,31 @@ or publication was used while preparing these files.
 |---|---|
 | Branch | `integration/novaos-1.7-home2` |
 | Production package | `uk.co.traynor.privategallery` |
-| Original application source | `9efd19540a1d75efa1b30f4e23c9cbb096f93aff` |
-| Original version/code | `1.7.10.2` / `54` |
-| Original artifact/run | `13108872409` / `41369126405` |
-| Original activation commit | `7f2c73fcaa32189b39829e829bcaecf7918ff50e` |
-| Original archive SHA-256 | `7e141abd9ba9c1e9e440dd0e08bf6cb6bfd869808f0d5bec226ff43fcb858574` |
-| Original APK name | `NovaOS-1.7.10.2-code54-owner-acceptance.apk` |
-| Original APK bytes | `138323890` |
-| Original APK SHA-256 | `3e9497d87c074d6d49bfd42a2b44cc5f2cd46ec0b7476d35d030e75b9cd35ce2` |
+| Original application source | `0e7f7c07608a6b439a4471e613531a758028c849` |
+| Original version/code | `1.7.11` / `56` |
+| Original artifact/run | `13469068696` / `42143438856` |
+| Original activation commit | `8803742e02d0e58e639687ff30b4b473109c0d47` |
+| Original archive SHA-256 | `aa42e6a06abd80710767cebe1b4fe58380fe68361222a7dfd2856dc7883221e6` |
+| Original APK name | `NovaOS-1.7.11-home2-code56-owner-acceptance.apk` |
+| Original APK bytes | `144418414` |
+| Original APK SHA-256 | `2efbe7a29a08a2677b04052eb268e908bb89f5a03fc23677b1791a1c11ea2141` |
 | Original certificate SHA-256 | `94f2bfc6567f26d067d29077111cfd0ce86d38263c642ad115e43365f05b0d17` |
 | Candidate application source | Freeze at the next verified runtime checkpoint; no signing approval yet |
-| Candidate version/code | `1.7.11` / `56` |
+| Candidate version/code | `1.7.11.1` / `57` |
 | Platform | Android 17 / API37; minimum and target37 |
 
 An activation/control commit may differ from the frozen application commit. Preserve reviewed
 controls before checking out the frozen application. Never substitute a rebuilt baseline APK.
-`verify_upgrade1711_baseline.py` verifies the exact archive, source receipt, APK name, size and
-hash. APK package/certificate/signature checks are separate mandatory steps.
+`verify_upgrade1711_baseline.py` requires exactly the original APK and original evidence ZIP
+inside the pinned downloaded artifact. It verifies APK name/size/hash and evidence ZIP name,
+100239-byte length and SHA-256
+`26e7c7810b6c9e6343612ba7ff75db8e7dbb3a225df78c1f72c51c536c7236d1`.
+The frozen application source/version/package/APK digest/original certificate and prior
+upgrade/restart provenance come from `release-summary.json` at the nested evidence ZIP root.
+The activation commit is distinct from the application source. The workflow separately
+requires the pinned successful push run and artifact metadata, repository, branch, activation
+SHA and archive digest through GitHub's authenticated API. APK package/certificate/signature
+checks remain separate mandatory steps.
 
 ## Required order before original-key access
 
@@ -49,7 +57,7 @@ hash. APK package/certificate/signature checks are separate mandatory steps.
    operations. Do not expose signing credentials to the capture or compilation steps.
 4. Run `verify_release1711_gate.py` against those original files. Obtain a fresh
    `READY_FOR_GATED_SIGNER` receipt; this means readiness only. Download and verify the pinned
-   original code54 APK. Compile the reviewed fixture against the exact original code54 source
+   original code56 APK. Compile the reviewed fixture against the exact original code56 source
    with `compile_upgrade1711_fixture.sh`; validate its compilation receipt. No application
    baseline is rebuilt for installation. The two permitted harness transformations remove
    the debug application ID suffix and target the fixture at the production package.
@@ -63,9 +71,9 @@ hash. APK package/certificate/signature checks are separate mandatory steps.
    only standard JAR signature entries may differ. Both original and candidate application
    APKs receive the same identity/signature checks before installation.
 7. On a fresh disposable API37 emulator with SELinux enforcing and the production package
-   initially absent, run `verify_synthetic_upgrade1711.sh`: install the exact original54 APK,
+   initially absent, run `verify_synthetic_upgrade1711.sh`: install the exact original56 APK,
    install reviewed original-key instrumentation, seed synthetic state, `adb install -r` the
-   candidate56 APK, verify, force-stop, and verify again. Never uninstall/clear seeded data.
+   candidate57 APK, verify, force-stop, and verify again. Never uninstall/clear seeded data.
    Preserve original output, hashes, compilation receipt and certificates. A signed artifact
    is not delivery-ready until these checks pass. Physical owner acceptance remains separate.
 
@@ -82,8 +90,8 @@ python3 scripts/verify_release1711_gate.py \
 ```
 
 The workflow must fetch these API responses and archive itself. Locally fabricated metadata
-is never release evidence. The marker requires `source`, `baseline_source`, `baseline_code=54`,
-`candidate_code=56`, positive `test_run` and `test_artifact`, and exact `review_sha256`,
+is never release evidence. The marker requires `source`, `baseline_source`, `baseline_code=56`,
+`candidate_code=57`, positive `test_run` and `test_artifact`, and exact `review_sha256`,
 `fixture_sha256`, `matrix_sha256`, `runtime_archive_sha256`, and `controls_sha256`.
 `controls_sha256` is the filename→hash map returned by `controls()` in the gate module.
 The matrix is a nonempty class→test-method list mapping. Review must contain these complete
@@ -101,9 +109,9 @@ Runtime archive SHA-256: <original artifact archive digest>
 
 No such approval document or signer receipt is created by this preparation. Recompute hashes
 after every control change. Current prepared fixture SHA-256 is
-`6b665eacb36a0e5721db66c621332b2a5f3f2b49f15cd3138c539313696a778d`.
+`d8db586b18552d746602e59d04edd80d91e9a89dc63088fca16b72c0c8aa868f`.
 Current eight-file canonical controls-map digest is
-`81a0dfb220376809960e3cca6b61f913eee3999766f915445f9779fd2d5f25ea`.
+`538c993c1caa383b2675ab54e24f1e0490830999d65903c4b55c07ac5333de99`.
 
 ## Shell interfaces after preserving controls
 
@@ -118,10 +126,10 @@ environment. The upgrade runner requires `PRODUCTION_UPGRADE=1`.
 | `PRIVATE_GALLERY_1711_UPGRADE_FIXTURE_SHA256` | Captured reviewed fixture digest |
 | `PRIVATE_GALLERY_1711_COMPILED_DIR` | Fresh output below `RUNNER_TEMP`; default `upgrade1711-compiled` |
 | `PRIVATE_GALLERY_1711_GATE_RECEIPT` | Exact-source reviewed gate receipt |
-| `PRIVATE_GALLERY_1711_BASELINE_APK` | Extracted pinned original54 APK |
+| `PRIVATE_GALLERY_1711_BASELINE_APK` | Extracted pinned original56 APK |
 | `PRIVATE_GALLERY_1711_CANDIDATE_APK` | Candidate APK; defaults to `app/build/outputs/apk/release/app-release.apk` |
 | `PRIVATE_GALLERY_1711_SIGNED_INSTRUMENTATION_APK` | Separately original-key-signed compiled instrumentation copy |
-| `PRIVATE_GALLERY_1711_EVIDENCE_DIR` | Fresh upgrade evidence directory; defaults to `app/build/production-evidence/from54` |
+| `PRIVATE_GALLERY_1711_EVIDENCE_DIR` | Fresh upgrade evidence directory; defaults to `app/build/production-evidence/from56` |
 
 `ANDROID_HOME/build-tools/36.0.0` supplies verification tools. The runner and candidate
 verifier read no signing credentials and perform no signing. Explicit debuggable checks use
@@ -130,9 +138,9 @@ verifier read no signing credentials and perform no signing. Explicit debuggable
 ## Preserved assertions and local preparation evidence
 
 The fixture retains every original native assertion and operation from
-`docs/release17102/UpgradeFixtureTest.kt`, except the required54→56 identity guard and comments.
+`docs/release17102/UpgradeFixtureTest.kt`, except the required56→57 identity guard and comments.
 A host regression reconstructs and compares the entire original fixture text after removing
-the additive login-cookie block. Primary and independent Hidden PINs/keys, encrypted media,
+the additive login-cookie and Home2 state blocks. Primary and independent Hidden PINs/keys, encrypted media,
 video, Recently Deleted metadata/retention, collections/favourites, media dates/sort, camera
 options/audio consent, VPN configuration, synthetic encrypted AI credential/consent, Panic
 preferences, legacy Home settings, all eleven Private App fields/order/style and all three
@@ -140,26 +148,41 @@ owner catalogues, encrypted browser tabs/history/bookmarks/preferences, and inde
 Evidence originals/OCR corrections/incidents/timeline/analyses/audit remain checked before
 and after restart. Explicit candidate style/sort writes retain their exact existing receipts.
 
+The additive Home2 fixture creates real code56 `SpaceContext` encrypted state separately for
+Primary and Hidden: complete serialized Home layout/pages/dock/folders/drawer order, columns
+and icon size, different committed owner themes, encrypted wallpaper bytes/reference/transforms,
+a stacked note/clock widget with exact note text and active index, clock/reduced-motion/lock
+preferences, and independent journal and mood records with original IDs/timestamps. Candidate
+verification checks the original complete serialized records and read-only decoded widget/Mind
+values, wallpaper plaintext bytes and owner isolation before and after restart. It reads the
+raw encrypted Home state rather than constructing the candidate UI model, whose deliberate
+first-open native-theme migration has separate focused runtime coverage. Every new Home2
+ciphertext is included in the existing full-file checks; missing records, empty fallback reads,
+altered text/layout/theme or wallpaper bytes fail preservation.
+
 The only filesystem exclusions remain the proof file itself and the exact two AndroidX runtime
 files `profileinstaller_profileWrittenFor_lastUpdateTime.dat` and `profileInstalled`; no vault
 subpath or WebView directory is newly excluded. The existing persistent synthetic cookie check
 is retained. An additive `HttpOnly; Secure; SameSite=Lax; Max-Age=604800` synthetic login cookie
-is set and flushed on original54 and verified on56 and after process restart. This uses no
+is set and flushed on original56 and verified on57 and after process restart. This uses no
 live credential or network; it establishes persistence only, not live website compatibility
 or encryption of provider-managed profile storage.
 
 Local checks completed during preparation:
 
-- Eight host control tests passed, including actual-script injected-tool rejection of
-  debuggable baseline/candidate APKs before any install/sign; provenance and runtime tampering;
-  complete original-fixture preservation; and signed-instrumentation payload integrity.
-- `bash -n` passed for all four new shell files. Python control imports/compilation passed.
-- The actual downloaded original artifact passed the new pinned-archive validator, yielding
-  the exact138323890-byte APK/hash above. Read-only `apksigner verify` confirmed one signer,
-  APKv2 verification and the original certificate.
-- Actual original-source Android fixture compilation, independent final signing approval,
-  production signing,54→56 emulator upgrade/restart, delivery and physical owner acceptance
-  remain **PENDING**. No local synthetic test output is substituted for these gates.
+- All ten host upgrade-control/staging regressions passed. They include nested evidence and
+  identity tampering, exact original-source ABI transformation, complete original-fixture
+  preservation, fail-closed signer/runtime gates, real-script debuggable APK rejection before
+  any install, signed-instrumentation payload integrity, and actual workflow staging execution.
+- `bash -n` passed for the four shell controls; all four Python controls and workflow inline
+  Python parsed successfully. The existing workflow still has eight jobs and unchanged
+  release-marker/branch interfaces; no workflow was added.
+- The actual downloaded archive passed the pinned validator with the original 144418414-byte
+  APK/hash above and the exact nested evidence checksum and source/version/certificate receipt.
+- Original-source Android fixture compilation, independent exact-source approval, candidate
+  API37 runtime evidence, production signing and 56→57 emulator upgrade/restart are not claimed
+  by these local checks. No Gradle build, CI, signer access, install or publication was used
+  while adapting the controls. Historical release/source archives remain immutable in Git.
 
 ## Published evidence excludes test packages
 

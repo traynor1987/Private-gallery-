@@ -16,12 +16,12 @@ class ExternalEditorRecovery1762Test {
   ActivityScenario.launch(MainActivity::class.java).use {scenario ->
    scenario.onActivity {a ->
     val s=state(a);assertTrue(s.hidden.session.complete(s.hidden.session.beginAuthentication(),ByteArray(32){23}));s.hidden.select()
-    a.openExternalEdit("recovery-original",s.hidden.session)
+    enterExternalEditingMediaFixture(a);a.openExternalEdit("recovery-original",s.hidden.session)
     val t=checkNotNull(ticket(a));id=t.javaClass.getDeclaredMethod("getRecoveryId").apply {isAccessible=true}.invoke(t) as String
     invoke(a,"persistExternalReceipt",t,android.net.Uri.parse("content://media/external/images/media/999999"))
     invoke(a,"clearExternalEdit")
     assertTrue(ExternalEditRecoveryStore(a.noBackupFilesDir,"hidden").ids().contains(id))
-    a.openExternalEdit("recovery-original",s.hidden.session)
+    enterExternalEditingMediaFixture(a);a.openExternalEdit("recovery-original",s.hidden.session)
     val reopened=checkNotNull(ticket(a))
     assertEquals("Cancel and reopen must reuse the durable cleanup receipt",id,reopened.javaClass.getDeclaredMethod("getRecoveryId").apply {isAccessible=true}.invoke(reopened))
     assertEquals("content://media/external/images/media/999999",reopened.javaClass.getDeclaredMethod("getExportDestination").apply {isAccessible=true}.invoke(reopened).toString())
@@ -31,10 +31,10 @@ class ExternalEditorRecovery1762Test {
    scenario.recreate()
    scenario.onActivity {a ->
     val s=state(a);assertFalse(s.hidden.session.isUnlocked);assertFalse(s.session.isUnlocked);assertNull(ticket(a))
-    s.key=ByteArray(32){25};s.session.unlock();invoke(a,"recoverExternalReceipt")
+    s.key=ByteArray(32){25};s.session.unlock();enterExternalEditingMediaFixture(a);invoke(a,"recoverExternalReceipt")
     assertNull("Primary cannot recover Hidden receipt",ticket(a));s.key?.fill(0);s.key=null;s.session.lock()
     assertTrue(s.hidden.session.complete(s.hidden.session.beginAuthentication(),ByteArray(32){23}));s.hidden.select()
-    invoke(a,"recoverExternalReceipt")
+    enterExternalEditingMediaFixture(a);invoke(a,"recoverExternalReceipt")
     val recovered=checkNotNull(ticket(a));assertEquals("recovery-original",recovered.javaClass.getDeclaredMethod("getOriginal").apply {isAccessible=true}.invoke(recovered))
     ExternalEditRecoveryStore(a.noBackupFilesDir,"hidden").acknowledge(id)
     invoke(a,"clearExternalEdit");s.hidden.leave()
@@ -44,7 +44,7 @@ class ExternalEditorRecovery1762Test {
  @Test fun repeatedGalleryFallbackReusesPublishedCopyAndNeverPreparesAnotherExport() {
   ActivityScenario.launch(MainActivity::class.java).use {scenario ->scenario.onActivity {a ->
    val s=state(a);assertTrue(s.hidden.session.complete(s.hidden.session.beginAuthentication(),ByteArray(32){23}));s.hidden.select()
-   a.openExternalEdit("repeat-export-origin",s.hidden.session);val t=checkNotNull(ticket(a))
+   enterExternalEditingMediaFixture(a);a.openExternalEdit("repeat-export-origin",s.hidden.session);val t=checkNotNull(ticket(a))
    val receipt=t.javaClass.getDeclaredMethod("getRecoveryId").apply {isAccessible=true}.invoke(t) as String
    val bytes=png();val file=uk.co.traynor.privategallery.core.media.ExternalEditLease.create(java.io.File(a.cacheDir,"external-edit"),bytes,System.currentTimeMillis())
    var uri:android.net.Uri?=null
@@ -76,7 +76,7 @@ class ExternalEditorRecovery1762Test {
      val s=state(a);assertTrue(s.hidden.session.complete(s.hidden.session.beginAuthentication(),ByteArray(32){23}));s.hidden.select()
      val repo=uk.co.traynor.privategallery.core.hidden.HiddenRepository(a,s.hidden.session)
      original=repo.importMedia("recovery.png","image/png",java.io.ByteArrayInputStream(bytes),true).id
-     a.openExternalEdit(original,s.hidden.session);val t=checkNotNull(ticket(a))
+     enterExternalEditingMediaFixture(a);a.openExternalEdit(original,s.hidden.session);val t=checkNotNull(ticket(a))
      receipt=t.javaClass.getDeclaredMethod("getRecoveryId").apply {isAccessible=true}.invoke(t) as String
      invoke(a,"persistExternalReceipt",t,null)
      // Stop at the exact production boundary: encrypted index committed; Activity receipt is still unsaved.
@@ -86,7 +86,7 @@ class ExternalEditorRecovery1762Test {
     scenario.recreate()
     scenario.onActivity {a ->
      val s=state(a);assertTrue(s.hidden.session.complete(s.hidden.session.beginAuthentication(),ByteArray(32){23}));s.hidden.select()
-     invoke(a,"recoverExternalReceipt");val t=checkNotNull(ticket(a))
+     enterExternalEditingMediaFixture(a);invoke(a,"recoverExternalReceipt");val t=checkNotNull(ticket(a))
      assertEquals(true,t.javaClass.getDeclaredMethod("getSaved").apply {isAccessible=true}.invoke(t))
      assertEquals(imported,t.javaClass.getDeclaredMethod("getImportedId").apply {isAccessible=true}.invoke(t))
      val repo=uk.co.traynor.privategallery.core.hidden.HiddenRepository(a,s.hidden.session)

@@ -18,8 +18,10 @@ val builtinApps = listOf(
  LaunchApp("chat","Nova Chat Lite · Beta","chat"),LaunchApp("widgets","Widget Centre","widgets"),LaunchApp("search","Nova Search","search"),LaunchApp("mind","Nova Mind","mind"),LaunchApp("calm","Calm Now","mind"),LaunchApp("sanctuary","Nova Sanctuary","mind"),LaunchApp("store","Nova Store","store"),LaunchApp("wallpaper","Wallpapers","wallpaper"),LaunchApp("settings","Home settings","settings"))
 
 
-class PreviewData(private val context:Context,private val apps:uk.co.traynor.privategallery.core.home2.NativeAppsBridge?,val onSwitch:(()->Unit)?=null,private val legacyOrder:List<String>?=null) {
+class PreviewData(private val context:Context,private val apps:uk.co.traynor.privategallery.core.home2.NativeAppsBridge?,onSwitch:(()->Unit)?,private val legacyOrder:List<String>?,private val nativeThemeFallback:String?,private val onThemeCommitted:((String)->Unit)?) {
+ constructor(context:Context,apps:uk.co.traynor.privategallery.core.home2.NativeAppsBridge?,onSwitch:(()->Unit)?=null,legacyOrder:List<String>?=null):this(context,apps,onSwitch,legacyOrder,null,null)
  private val owner=(context as uk.co.traynor.privategallery.core.home2.SpaceContext).spaceId
+ val onSwitch=onSwitch?.takeIf{owner=="hidden"}
 
  val shell=PreviewShellData(context)
  private val prefs=context.getSharedPreferences("nova_preview_v1",Context.MODE_PRIVATE)
@@ -66,10 +68,14 @@ class PreviewData(private val context:Context,private val apps:uk.co.traynor.pri
  fun entryKey(e:StoreEntry)=installed(e)?.id?:"catalogue:"+StoreUrl.key(e.url)
  fun installed(e:StoreEntry)=profile.installed.firstOrNull{it.id==e.id}?:profile.installed.firstOrNull{StoreUrl.key(it.url)==StoreUrl.key(e.url)}
  fun switchProfile(){onSwitch?.invoke()}
- fun setTheme(theme:String){if(theme in listOf("dark","light","system"))save(state.copy(theme=theme))}
+ fun setTheme(theme:String){commitTheme(theme)}
+ fun commitTheme(theme:String):Boolean {
+  if(theme !in listOf("dark","light","system"))return false
+  save(state.copy(theme=theme));return error==null
+ }
  private fun save(next:PreviewState){
   require(next.current==owner);val text=encode(next).toString()
-  if(prefs.edit().putString("state",text).commit()){state=next;pending=null;error=null}else{pending=next;error="Preview changes could not be saved. Try again."}
+  if(prefs.edit().putString("state",text).commit()){val changed=state.theme!=next.theme;state=next;pending=null;error=null;if(changed)onThemeCommitted?.invoke(next.theme)}else{pending=next;error="Preview changes could not be saved. Try again."}
  }
  fun change(id:String=state.current,transform:(Profile)->Profile){
   require(id==owner)
@@ -138,7 +144,12 @@ class PreviewData(private val context:Context,private val apps:uk.co.traynor.pri
   val p=if(owner=="hidden")initial.hidden else initial.primary
   val installed=apps?.let{projectApps(it.list())}?:emptyList()
   val next=if(raw==null&&legacyOrder!=null)p.copy(installed=installed,pages=listOf(legacyOrder.take(8),legacyOrder.drop(8)+listOf("mind","widgets")))else p.copy(installed=installed)
-  return if(owner=="hidden")initial.copy(hidden=next)else initial.copy(primary=next)
+  val loaded=if(owner=="hidden")initial.copy(hidden=next)else initial.copy(primary=next)
+  if(prefs.getBoolean("native-theme-bridged",false))return loaded
+  // One atomic encrypted migration preserves layout and never imports Primary policy into Hidden.
+  val migrated=loaded.copy(theme=uk.co.traynor.privategallery.core.ui.NativeThemePolicy.initial(nativeThemeFallback,loaded.theme,owner=="hidden"))
+  check(prefs.edit().putString("state",encode(migrated).toString()).putBoolean("native-theme-bridged",true).commit()) {"Theme preferences could not be saved"}
+  return migrated
  }
  companion object {
   fun parseCatalogue(text:String):List<StoreEntry>{

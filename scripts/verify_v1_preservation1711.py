@@ -1,4 +1,4 @@
-"""Pin V1 configuration/storage and characterize the sole additive app-lifecycle change."""
+"""Pin V1 configuration/storage/default tab behavior and characterize app identity fixes."""
 from pathlib import Path
 import subprocess,re,hashlib,json
 root=Path(__file__).resolve().parents[1]
@@ -21,9 +21,16 @@ def body(text,name):
   end+=1
  return text[start+1:end-1].strip()
 # These existing V1 entry points keep their original pause/selection semantics.
-for name in ('openPrivateApp','select','pauseOutgoingTab'):
+for name in ('select','pauseOutgoingTab'):
  assert body(old,name)==body(new,name),f'Legacy V1 {name} changed'
-expanded=body(new,'newTab').replace('return createTab(url)',body(new,'createTab'))
+# Saved-app launch must classify the new tab before any callback/snapshot, with identical pause behavior.
+old_app_tail='val tab = newTab(app.startUrl())\n        privateAppTabs[tab.id] = app\n        changed()'
+new_app_tail='pauseOutgoingTab()\n        exitFullscreen()\n        createTab(app.startUrl(), app)'
+assert body(new,'openPrivateApp')==body(old,'openPrivateApp').replace(old_app_tail,new_app_tail),'Unreviewed saved-app launch change'
+# Ordinary newTab uses app=null; removing only the guarded app-classification addition gives V1 body.
+creation=body(new,'createTab')
+creation=creation.replace('// Classify before any renderer callback or metadata publication can escape this method.\n        if(app!=null)privateAppTabs[tab.id]=app\n        ','')
+expanded=body(new,'newTab').replace('return createTab(url)',creation)
 assert re.sub(r'\s+',' ',body(old,'newTab'))==re.sub(r'\s+',' ',expanded),'Legacy newTab creation/eviction changed'
 def configuration(text):
  a=text.index('    private val browserV2Session by lazy')
@@ -40,4 +47,4 @@ expected_factory=expected_factory.replace('callback.invoke(value, allow, retain)
 expected_factory=expected_factory.replace('fileChooserParams: FileChooserParams): Boolean {\n', 'fileChooserParams: FileChooserParams): Boolean {\n                if (!live || webView !== this@webView) { filePathCallback.onReceiveValue(null); return true }\n')
 expected_factory=expected_factory.replace('filePathCallback.onReceiveValue(values)', 'filePathCallback.onReceiveValue(if (live) values else null)')
 assert expected_factory==(root/factory).read_text(), 'Factory changed beyond reviewed callback liveness/identity guards'
-print(json.dumps({'result':'PASS','baseline':base,'sameV1Constructor':True,'samePoliciesAndStores':True,'factoryConfigurationPreserved':True,'factoryCallbackGuardsTightened':True,'sameLegacyTabOperations':True,'additivePrivateAppLifecycleFile':session,'additiveFileSha256':hashlib.sha256((root/session).read_bytes()).hexdigest()},indent=2))
+print(json.dumps({'result':'PASS','baseline':base,'sameV1Constructor':True,'samePoliciesAndStores':True,'factoryConfigurationPreserved':True,'factoryCallbackGuardsTightened':True,'sameOrdinaryTabOperations':True,'savedAppIdentityBeforeCallbacks':True,'additivePrivateAppLifecycleFile':session,'additiveFileSha256':hashlib.sha256((root/session).read_bytes()).hexdigest()},indent=2))
