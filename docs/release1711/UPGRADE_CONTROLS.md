@@ -160,3 +160,7 @@ Local checks completed during preparation:
 - Actual original-source Android fixture compilation, independent final signing approval,
   production signing,54→56 emulator upgrade/restart, delivery and physical owner acceptance
   remain **PENDING**. No local synthetic test output is substituted for these gates.
+
+## Published evidence excludes test packages
+
+The original-key signed instrumentation exists only on the disposable runner. Published evidence includes the compilation receipt, baseline Gradle input, package/manifest reports and compilation log, plus the existing instrumentation signature/hash and payload-comparison receipts. Neither compiled nor signed test APK is copied into the evidence archive. Staging and the final ZIP reject installable packages, nested archives and signing files. The authorized NovaOS application APK is a separate release asset. The staging regressions execute the actual workflow body against synthetic inputs; all ten staging/upgrade-control tests pass. These controls still do not grant signing approval without successful frozen-source runtime evidence.

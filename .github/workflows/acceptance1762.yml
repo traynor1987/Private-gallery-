@@ -1326,7 +1326,7 @@ jobs:
       - name: Stage the one verified production APK and complete upgrade evidence
         run: |
           python3 - <<'PY'
-          import hashlib,json,os,shutil
+          import hashlib,json,os,shutil,zipfile
           from pathlib import Path
           root=Path.cwd();evidence=root/'app/build/production-evidence';upgrade=evidence/'from54'
           apk=root/'app/build/outputs/apk/release/app-release.apk';digest=hashlib.sha256(apk.read_bytes()).hexdigest()
@@ -1340,14 +1340,20 @@ jobs:
               shutil.copyfile(inputs/name,evidence/name)
           control=Path(os.environ['RUNNER_TEMP'])/'release1711-controls'
           shutil.copytree(control,evidence/'reviewed-controls')
-          shutil.copytree(Path(os.environ['PRIVATE_GALLERY_1711_COMPILED_DIR']),evidence/'compiled-upgrade')
-          shutil.copyfile(os.environ['PRIVATE_GALLERY_1711_SIGNED_INSTRUMENTATION_APK'],evidence/'signed-upgrade-instrumentation.apk')
+          compiled=Path(os.environ['PRIVATE_GALLERY_1711_COMPILED_DIR']);compiled_reports=evidence/'compiled-upgrade'
+          compiled_reports.mkdir()
+          for name in ('compilation.json','baseline-build.gradle.kts','instrumentation-package.txt','instrumentation-manifest.txt','compile.log'):
+              shutil.copyfile(compiled/name,compiled_reports/name)
           summary=dict(source_sha=os.environ['FROZEN_SOURCE'],version='1.7.11',version_code=56,package='uk.co.traynor.privategallery',apk_sha256=digest,
                        original_certificate_sha256='94f2bfc6567f26d067d29077111cfd0ce86d38263c642ad115e43365f05b0d17',original_key_code54_upgrade='PASS',restart='PASS',physical_owner_acceptance='NOT_PERFORMED')
           (evidence/'release-summary.json').write_text(json.dumps(summary,indent=2)+'\n')
           destination=root/'app/build/NovaOS-1.7.11-home2-code56-owner-acceptance.apk';shutil.copyfile(apk,destination)
           (evidence/'SHA256SUMS.txt').write_text(digest+'  '+destination.name+'\n')
-          shutil.make_archive(str(root/'app/build/NovaOS-1.7.11-home2-code56-evidence'),'zip',evidence)
+          forbidden={'.apk','.apks','.aab','.jks','.keystore','.p12','.pem','.key','.zip'}
+          assert not any(path.suffix.lower() in forbidden for path in evidence.rglob('*') if path.is_file()), 'Evidence contains an installable package, archive or signing material'
+          archive=shutil.make_archive(str(root/'app/build/NovaOS-1.7.11-home2-code56-evidence'),'zip',evidence)
+          with zipfile.ZipFile(archive) as zipped:
+              assert not any(Path(name).suffix.lower() in forbidden for name in zipped.namelist()), 'Forbidden delivery payload'
           PY
           cat > app/build/production-evidence/RELEASE-NOTES.md <<EOF
           NovaOS 1.7.11 Home 2.0 — original-key owner acceptance
