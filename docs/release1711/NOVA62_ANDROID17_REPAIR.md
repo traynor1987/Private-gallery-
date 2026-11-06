@@ -42,3 +42,8 @@ Remaining four failures were traced from original XML and per-test logcat:
 - `HomeOwnedWindowPanicTest.realSettingsRestoreLocksAndReloadsHomeMindAndWidgetsBeforeFurtherEdits`: the Activity Home helper does not reset Nova Mind's remembered shell screen. Use Nova's actual Home navigation control at both transitions; retain all lock, stale-authority and reopened-setting assertions.
 
 This round preserves the same nine-case first gate and unchanged253-case full matrix. Production signing remains unapproved and unchanged.
+
+
+## Focused CI round 2: 35120e29
+
+Run42313397508 passes **6/9 focused cases**, including actual provider-open retirement in both Spaces/read and write modes. Full verification remains correctly blocked. The remaining failures now occur after successful real picker taps: two queries throw `No compose hierarchies` during the system-Activity return transition; wait only for that specific transient state while retaining the Recovery UI requirement and deadline. Every other exception remains fatal. The create-document test reaches Verified UI but reads fixture-latest immediately after asynchronous SAVE, before createDocument has updated it; obtain the identity after actual verification, then assert destination bytes. Provider permissions and all production source remain unchanged in this test-only follow-up.

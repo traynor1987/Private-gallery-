@@ -284,7 +284,8 @@ class HomeOwnedWindowPanicTest {
                 compose.onNodeWithTag("open-apps").performClick();compose.onNodeWithTag("app-backup").performScrollTo().performClick()
                 compose.onNodeWithText("Restore").performScrollTo().performClick()
                 uk.co.traynor.privategallery.core.backup.BackupDocumentsUi62.open(checkNotNull(uri.lastPathSegment))
-                compose.waitUntil(10000){compose.onAllNodesWithText("Recovery key").fetchSemanticsNodes().isNotEmpty()}
+                // The system picker can remove all Compose roots until its result resumes Main.
+                compose.waitUntil(10000){try{compose.onAllNodesWithText("Recovery key").fetchSemanticsNodes().isNotEmpty()}catch(transition:IllegalStateException){if(transition.message?.contains("No compose hierarchies")!=true)throw transition;false}}
                 compose.onNode(hasSetTextAction()).performScrollTo().performTextInput("active main recovery key")
                 val blocked=uk.co.traynor.privategallery.core.backup.BackupDocuments62.stats().getInt("blocked")
                 val cancelled=uk.co.traynor.privategallery.core.backup.BackupDocuments62.stats().getInt("cancelled")
@@ -341,7 +342,8 @@ class HomeOwnedWindowPanicTest {
             }
             compose.onNodeWithTag("open-apps").performClick();compose.onNodeWithTag("app-backup").performScrollTo().performClick();compose.onNodeWithText("Restore").performScrollTo().performClick()
             uk.co.traynor.privategallery.core.backup.BackupDocumentsUi62.open(checkNotNull(uri.lastPathSegment))
-            compose.waitUntil(10000){compose.onAllNodesWithText("Recovery key").fetchSemanticsNodes().isNotEmpty()}
+            // The system picker can remove all Compose roots until its result resumes Main.
+                compose.waitUntil(10000){try{compose.onAllNodesWithText("Recovery key").fetchSemanticsNodes().isNotEmpty()}catch(transition:IllegalStateException){if(transition.message?.contains("No compose hierarchies")!=true)throw transition;false}}
             compose.onNode(hasSetTextAction()).performScrollTo().performTextInput("live settings recovery");compose.onNodeWithText("Validate and preview").performScrollTo().performClick()
             compose.waitUntil(15000){compose.onAllNodesWithText("Replace supported settings…").fetchSemanticsNodes().isNotEmpty()}
             compose.onNodeWithText("Replace supported settings…").performScrollTo().performClick();compose.onNodeWithText("Replace settings").performClick()
