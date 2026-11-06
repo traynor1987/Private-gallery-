@@ -12,7 +12,7 @@ import uk.co.traynor.privategallery.core.home2.NativeAppsBridge
 import uk.co.traynor.privategallery.core.home2.SpaceContext
 
 /** Existing preview components, backed exclusively by a captured real Space authority. */
-@Composable internal fun IntegratedHome(access:EvidenceAccess,visible:Boolean,onLaunch:(String)->Unit,onLock:()->Unit,onPanic:()->Unit,onSwitch:(()->Unit)?,apps:NativeAppsBridge?,nativeThemeFallback:String?=null,onThemeCommitted:(String)->Unit={},onThemeConnection:(PreviewData?)->Unit={},wallpaperOwnerFactory:(()->uk.co.traynor.privategallery.core.home2.WallpaperOwner?)?=null) {
+@Composable internal fun IntegratedHome(access:EvidenceAccess,visible:Boolean,onLaunch:(String)->Unit,onLock:()->Unit,onPanic:()->Unit,onSwitch:(()->Unit)?,apps:NativeAppsBridge?,nativeThemeFallback:String?=null,onThemeCommitted:(String)->Unit={},onThemeConnection:(PreviewData?)->Unit={},wallpaperOwnerFactory:(()->uk.co.traynor.privategallery.core.home2.WallpaperOwner?)?=null,externalRecentsRequest:Int=0,onRecentsConsumed:()->Unit={}) {
  val base=LocalContext.current
  val context=remember(access){SpaceContext(base,access)}
  val lifecycle=androidx.lifecycle.compose.LocalLifecycleOwner.current
@@ -55,7 +55,7 @@ import uk.co.traynor.privategallery.core.home2.SpaceContext
  CompositionLocalProvider(LocalContext provides context){
   NovaPreview(value.data,pool,value.mind,audio,value.widgets,value.history,video,
    onPickImage={if(context.current())wallpaperOwner=if(wallpaperOwnerFactory!=null)wallpaperOwnerFactory.invoke()else uk.co.traynor.privategallery.core.home2.WallpaperOwner(access.owner,{context.current()},{access},false)},
-   onOpen={},filesDir=context.filesDir,onNative={id->if(context.current()){value.data.shell.touchInternal(context.spaceId,id);onLaunch(id)}},onLock=onLock,onPanic=onPanic)
+   onOpen={},filesDir=context.filesDir,onNative={id->if(context.current()){value.data.shell.touchInternal(context.spaceId,id);onLaunch(id)}},onLock=onLock,onPanic=onPanic,externalRecentsRequest=externalRecentsRequest,onRecentsConsumed=onRecentsConsumed)
   message?.let{PanicHomeAlertDialog(onDismissRequest={message=null},title={Text("NovaOS")},text={Text(it)},confirmButton={TextButton(onClick={message=null}){Text("OK")}})}
  }
 }

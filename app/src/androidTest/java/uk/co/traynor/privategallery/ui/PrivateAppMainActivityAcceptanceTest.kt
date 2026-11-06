@@ -123,11 +123,13 @@ class PrivateAppMainActivityAcceptanceTest {
         }
     }
 
-    @Test fun productionAppIsFullHeightAndHomeRetainsUserStartedAudioWhileExitClosesIt()=withFixture {f ->
+    @Test fun productionAppReservesNavigationAndHomeRetainsUserStartedAudioWhileExitClosesIt()=withFixture {f ->
         val root=compose.onNodeWithTag("browser-v2-root").fetchSemanticsNode().boundsInRoot
         val page=compose.onNodeWithTag("browser-v2-page-region").fetchSemanticsNode().boundsInRoot
         val host=compose.onNodeWithTag("browser-v2-webview-host").fetchSemanticsNode().boundsInRoot
-        assertEquals(root.top,page.top,1f);assertEquals(root.bottom,page.bottom,1f)
+        val navigation=compose.onNodeWithTag("nova-navigation").fetchSemanticsNode().boundsInRoot
+        assertTrue(page.top>=root.top);assertEquals(page.bottom,navigation.top,1f)
+        assertTrue(navigation.bottom<=root.bottom)
         assertEquals(page.top,host.top,1f);assertEquals(page.bottom,host.bottom,1f)
         compose.onNodeWithTag("browser-v2-chrome").assertDoesNotExist()
         compose.onNodeWithTag("browser-v2-address").assertDoesNotExist()
@@ -138,7 +140,13 @@ class PrivateAppMainActivityAcceptanceTest {
         compose.onNodeWithTag("browser-v2-webview-host").performTouchInput {click(center)}
         compose.waitUntil(15_000) {js(f.view,"window.fixtureStarted===true && !document.getElementById('fixture-audio').paused")=="true"}
         compose.onNodeWithContentDescription("App menu").performClick()
-        compose.onNodeWithText("Home").performClick()
+        compose.onNodeWithTag("private-app-menu-sheet").assertIsDisplayed()
+        compose.runOnIdle {compose.activity.onBackPressedDispatcher.onBackPressed()}
+        compose.onNodeWithTag("private-app-menu-sheet").assertDoesNotExist()
+        compose.runOnIdle {assertEquals(f.id,f.owner.tabs.activeTab.id);assertSame(f.view,f.owner.activeWebViewOrNull());assertSame(parent,f.view.parent)}
+        assertEquals("true",js(f.view,"window.fixtureStarted===true && !document.getElementById('fixture-audio').paused"))
+        compose.onNodeWithContentDescription("App menu").performClick()
+        compose.onNodeWithText("Nova Home").performScrollTo().performClick()
         compose.onNodeWithTag("preview-home").assertIsDisplayed()
         compose.onNodeWithText("Open in Browser").assertDoesNotExist()
         compose.runOnIdle {
@@ -186,7 +194,7 @@ class PrivateAppMainActivityAcceptanceTest {
         compose.onNodeWithText("Open in Browser").assertDoesNotExist()
         compose.runOnIdle {assertSame(f.view,f.owner.activeWebViewOrNull())}
         compose.onNodeWithContentDescription("App menu").performClick()
-        val lockedOpen=action("Open in Browser");val lockedExit=action("Exit App");val lockedHome=action("Home")
+        val lockedOpen=action("Open in Browser");val lockedExit=action("Exit App");val lockedHome=action("Nova Home")
         compose.runOnIdle {
             compose.activity.lockNovaSpace()
             val lockedIds=f.owner.tabs.tabs.map {it.id}

@@ -37,6 +37,20 @@ class BrowserBetaNoticeTest {
   compose.onNodeWithTag("browser-body").assertExists()
   compose.runOnIdle{assertEquals(setOf("notice-revision"),preferences.all.keys)}
  }
+ @Test fun savedAppIdentityNeverSkipsTheSamePrivacyAcknowledgement() {
+  var starts=0
+  compose.setContent {PrivateGalleryTheme {
+   if(!BrowserBetaNotice({},appName="Music fixture")){SideEffect {starts++};Box(Modifier.testTag("app-body"))}
+  }}
+  compose.onNodeWithText("Music fixture").assertIsDisplayed()
+  compose.onNodeWithText("Browser & Tor — Beta").assertDoesNotExist()
+  compose.onNodeWithText("WebView may write cookies",substring=true).performScrollTo().assertIsDisplayed()
+  compose.onNodeWithTag("app-body").assertDoesNotExist()
+  compose.runOnIdle {assertEquals(0,starts);assertFalse(BrowserBetaAcknowledgement(context).accepted())}
+  compose.onNodeWithText("Continue to app").performScrollTo().performClick()
+  compose.onNodeWithTag("app-body").assertExists()
+  compose.runOnIdle {assertTrue(BrowserBetaAcknowledgement(context).accepted())}
+ }
  @Test fun homeLockAndPanicDoNotAcknowledgeOrStartContent() {
   var home=0;var lock=0;var panic=0;var starts=0
   compose.setContent{CompositionLocalProvider(LocalNovaSecurityActions provides NovaSecurityActions({home++},{lock++},{panic++},null)){

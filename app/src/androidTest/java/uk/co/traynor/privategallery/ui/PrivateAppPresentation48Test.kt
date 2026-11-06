@@ -32,7 +32,7 @@ class PrivateAppPresentation48Test {
    compose.onNodeWithTag("browser-v2-address").assertDoesNotExist()
    compose.onNodeWithTag("browser-v2-toolbar").assertDoesNotExist()
    compose.runOnIdle {connectionBlocked=true}
-   compose.onNodeWithTag("browser-v2-chrome").assertIsDisplayed()
+   compose.onNodeWithTag("browser-v2-chrome").assertDoesNotExist()
    compose.onNodeWithTag("browser-vpn-state").assertIsDisplayed()
    compose.onNodeWithTag("browser-v2-address").assertDoesNotExist()
    compose.runOnIdle {connectionBlocked=false}
@@ -40,7 +40,9 @@ class PrivateAppPresentation48Test {
    compose.onNodeWithContentDescription("App home").assertDoesNotExist()
    val root=compose.onNodeWithTag("browser-v2-root").fetchSemanticsNode().boundsInRoot
    val page=compose.onNodeWithTag("browser-v2-page-region").fetchSemanticsNode().boundsInRoot
-   assertEquals(root.top,page.top,1f);assertEquals(root.bottom,page.bottom,1f)
+   val nav=compose.onNodeWithTag("nova-navigation").fetchSemanticsNode().boundsInRoot
+   assertTrue(page.top>=root.top);assertEquals(page.bottom,nav.top,1f)
+   assertTrue(nav.bottom<=root.bottom)
    compose.onNodeWithContentDescription("App menu").performClick()
    compose.onNodeWithText("App Settings").performScrollTo().assertIsDisplayed().performClick()
    compose.onNodeWithTag("browser-v2-address").assertDoesNotExist()

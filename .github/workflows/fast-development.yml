@@ -583,7 +583,7 @@ jobs:
           git rev-parse HEAD > app/build/home2-evidence/source-sha.txt
           apk=app/build/outputs/apk/debug/app-debug.apk
           "$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging "$apk" > app/build/home2-evidence/package.txt
-          grep -F "package: name='uk.co.traynor.privategallery.hiddenprototype' versionCode='58' versionName='1.7.11.2-TEST-ONLY'" app/build/home2-evidence/package.txt
+          grep -F "package: name='uk.co.traynor.privategallery.hiddenprototype' versionCode='59' versionName='1.7.11.3-TEST-ONLY'" app/build/home2-evidence/package.txt
           grep -F "sdkVersion:'37'" app/build/home2-evidence/package.txt
           "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --print-certs "$apk" > app/build/home2-evidence/signature.txt
           sha256sum "$apk" > app/build/home2-evidence/SHA256SUMS.txt
@@ -615,17 +615,17 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
         run: |
-          tag="novaos-1.7.11.2-vault-wallpaper-test-${GITHUB_RUN_ID}"
-          cp app/build/outputs/apk/debug/app-debug.apk app/build/home2-evidence/NovaOS-1.7.11.2-Vault-Wallpaper-TEST-ONLY.apk
-          (cd app/build/home2-evidence && sha256sum NovaOS-1.7.11.2-Vault-Wallpaper-TEST-ONLY.apk > SHA256SUMS.txt)
+          tag="novaos-1.7.11.3-navigation-status-test-${GITHUB_RUN_ID}"
+          cp app/build/outputs/apk/debug/app-debug.apk app/build/home2-evidence/NovaOS-1.7.11.3-Navigation-Status-TEST-ONLY.apk
+          (cd app/build/home2-evidence && sha256sum NovaOS-1.7.11.3-Navigation-Status-TEST-ONLY.apk > SHA256SUMS.txt)
           cat > app/build/home2-evidence/RELEASE-NOTES.md <<EOFNOTES
-          NovaOS 1.7.11.2 encrypted Vault wallpapers — NON-PRODUCTION TEST ONLY
+          NovaOS 1.7.11.3 navigation and live status — NON-PRODUCTION TEST ONLY
 
-          Separate package uk.co.traynor.privategallery.hiddenprototype, development certificate, code58. Installs alongside production. Contains synthetic runtime-verified Home/Space integration. It cannot upgrade or access the production installation or its encrypted data. Do not uninstall or clear production NovaOS.
+          Separate package uk.co.traynor.privategallery.hiddenprototype, development certificate, code59. Installs alongside production. Contains synthetic runtime-verified Home/Space integration. It cannot upgrade or access the production installation or its encrypted data. Do not uninstall or clear production NovaOS.
 
-          Source: $GITHUB_SHA. Home/Store/widgets/Quick Panel/Mind use captured encrypted Space storage. Existing Primary V1 engine and data-directory code preserved. Hidden networking disabled; Nova Chat Lite disabled Beta. Home backup pending. Real Fold posture, live accounts, production signing and original-key code57 upgrade remain unverified. This is not approval to ship a production update.
+          Source: $GITHUB_SHA. Home/Store/widgets/Quick Panel/Mind use captured encrypted Space storage. Existing Primary V1 engine and data-directory code preserved. Hidden networking disabled; Nova Chat Lite disabled Beta. Home backup pending. Real Fold posture, live accounts, production signing and original-key code58 upgrade remain unverified. This is not approval to ship a production update.
           EOFNOTES
-          gh release create "$tag" --prerelease --target "$GITHUB_SHA" --title "NovaOS 1.7.11.2 Vault wallpapers — TEST ONLY" --notes-file app/build/home2-evidence/RELEASE-NOTES.md app/build/home2-evidence/NovaOS-1.7.11.2-Vault-Wallpaper-TEST-ONLY.apk app/build/home2-evidence/SHA256SUMS.txt app/build/home2-evidence/runtime.json app/build/home2-evidence/signature.txt
+          gh release create "$tag" --prerelease --target "$GITHUB_SHA" --title "NovaOS 1.7.11.3 Navigation and status — TEST ONLY" --notes-file app/build/home2-evidence/RELEASE-NOTES.md app/build/home2-evidence/NovaOS-1.7.11.3-Navigation-Status-TEST-ONLY.apk app/build/home2-evidence/SHA256SUMS.txt app/build/home2-evidence/runtime.json app/build/home2-evidence/signature.txt
       - uses: actions/upload-artifact@v4
         if: always()
         with:

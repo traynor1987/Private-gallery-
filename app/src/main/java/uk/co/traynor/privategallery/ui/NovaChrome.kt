@@ -108,6 +108,7 @@ internal val LocalNovaSecurityActions=androidx.compose.runtime.staticComposition
    }
    Column(Modifier.weight(1f).fillMaxWidth().verticalScroll(androidx.compose.foundation.rememberScrollState()).padding(20.dp)) {text()}
    FlowRow(Modifier.fillMaxWidth().padding(horizontal=16.dp,vertical=8.dp),horizontalArrangement=Arrangement.End) {dismissButton();confirmButton()}
+   NovaNativeNavigation(onBack=onDismissRequest)
   }
  }
 }

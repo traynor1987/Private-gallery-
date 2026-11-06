@@ -59,7 +59,7 @@ private val lightColors=lightColorScheme(primary=Color(0xFF285F65),secondary=Col
 /** Adapted from recovered HomeDesktopScreen: pager, dock, gesture alternatives,
  * clock, procedural wallpapers and bounded adaptive grids. Preview data only. */
 @OptIn(ExperimentalMaterial3Api::class,ExperimentalFoundationApi::class)
-@Composable fun NovaPreview(data:PreviewData,pool:PreviewBrowserModel,mind:MindData,audio:MindAudio,widgets:WidgetData,searchHistory:NovaSearchHistory,video:NovaVideoModel,onPickImage:()->Unit,onOpen:(String)->Unit,filesDir:File,onNative:(String)->Unit,onLock:()->Unit,onPanic:()->Unit){
+@Composable fun NovaPreview(data:PreviewData,pool:PreviewBrowserModel,mind:MindData,audio:MindAudio,widgets:WidgetData,searchHistory:NovaSearchHistory,video:NovaVideoModel,onPickImage:()->Unit,onOpen:(String)->Unit,filesDir:File,onNative:(String)->Unit,onLock:()->Unit,onPanic:()->Unit,externalRecentsRequest:Int=0,onRecentsConsumed:()->Unit={}){
  val state=data.state
  val dark=when(state.theme){"light"->false;"system"->isSystemInDarkTheme();else->true}
  MaterialTheme(colorScheme=if(dark)darkColors else lightColors){
@@ -140,6 +140,7 @@ private val lightColors=lightColorScheme(primary=Color(0xFF285F65),secondary=Col
    }
    LaunchedEffect(screen,pool.activeId){if(screen=="browser"&&pool.active?.profile!=state.current)screen="home"}
    val openRecents:()->Unit={drawer=false;quick=false;if(screen!="recents"){recentsReturn=screen;screen="recents"}}
+   LaunchedEffect(externalRecentsRequest){if(externalRecentsRequest>0){openRecents();onRecentsConsumed()}}
    val resumeTab:(PreviewTab)->Unit={tab->pool.select(tab);screen="home";edgePanel=false}
    BackHandler((widgets.editingId!=null||screen!="home"||drawer||quick||editing||selected!=null||openFolder!=null||detailId!=null)){goBack()}
    run {
@@ -300,14 +301,20 @@ private val lightColors=lightColorScheme(primary=Color(0xFF285F65),secondary=Col
   WallpaperSurface(profile.wallpaper,filesDir,Modifier.fillMaxSize())
   CompositionLocalProvider(LocalContentColor provides Color.White){
    Column(Modifier.fillMaxSize().safeDrawingPadding()){
+    BoxWithConstraints(Modifier.fillMaxWidth()){
+    val narrowStatus=maxWidth<420.dp
+    Column {
+    if(narrowStatus)Row(Modifier.fillMaxWidth().padding(horizontal=16.dp),horizontalArrangement=Arrangement.End){uk.co.traynor.privategallery.ui.status.NovaSystemStatus()}
     Row(Modifier.fillMaxWidth().padding(start=22.dp,end=8.dp),verticalAlignment=Alignment.CenterVertically){
      Image(painterResource(R.drawable.nova_identity),null,Modifier.size(28.dp));Column(Modifier.weight(1f).padding(start=9.dp)){Text("NOVAOS",fontSize=10.sp,letterSpacing=2.sp,fontWeight=FontWeight.Bold,maxLines=1,overflow=TextOverflow.Ellipsis);if(!compactHeight)Text(data.profileLabel,style=MaterialTheme.typography.labelMedium,color=Color.White.copy(alpha=.7f),maxLines=1,overflow=TextOverflow.Ellipsis)}
+     if(!narrowStatus)uk.co.traynor.privategallery.ui.status.NovaSystemStatus(modifier=Modifier.padding(end=4.dp))
      if(compactHeight)IconButton(onClick=onDrawer,modifier=Modifier.testTag("open-apps")){Icon(Icons.Default.Apps,"Open apps")}
      IconButton(onClick={onLaunch("search")}){Icon(Icons.Default.Search,"Open Nova Search")}
      IconButton(onClick={onLaunch("calm")}){Icon(Icons.Default.Spa,"Calm Now")}
      IconButton(onClick=onQuick){Icon(Icons.Default.Tune,"Open Quick Panel")}
      Box{var menu by remember{mutableStateOf(false)};IconButton(onClick={menu=true}){Icon(Icons.Default.MoreVert,"Home menu")};PanicHomeDropdownMenu(menu,{menu=false}){DropdownMenuItem(text={Text("Apps")},onClick={menu=false;onDrawer()});DropdownMenuItem(text={Text("Edit Home")},onClick={menu=false;onEdit()});DropdownMenuItem(text={Text("Widget Centre")},onClick={menu=false;onLaunch("widgets")});data.onSwitch?.takeIf{data.state.current=="hidden"}?.let{switch->DropdownMenuItem(text={Text("Return to Primary")},onClick={menu=false;switch()})}}}
     }
+    }}
     widgets.recoveryNotice?.let{notice->Surface(color=MaterialTheme.colorScheme.secondaryContainer,contentColor=MaterialTheme.colorScheme.onSecondaryContainer){Column(Modifier.padding(12.dp)){Text(notice,style=MaterialTheme.typography.bodySmall);TextButton(onClick={widgets.dismissRecovery()}){Text("Dismiss recovery report")}}}}
     if(widgets.editingId!=null)Row(Modifier.fillMaxWidth().padding(horizontal=20.dp),verticalAlignment=Alignment.CenterVertically){Text("Edit widgets",Modifier.weight(1f),color=Color.White);TextButton(onClick={widgets.editingId=null},modifier=Modifier.testTag("widget-edit-done")){Text("Done",color=Color.White)}}
     HorizontalPager(pager,Modifier.weight(1f).fillMaxWidth().testTag("home-pager").semantics{stateDescription="Home ${pager.currentPage+1}"},key={it}){page->

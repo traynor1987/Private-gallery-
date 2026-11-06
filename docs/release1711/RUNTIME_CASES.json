@@ -54,11 +54,41 @@
     "restoreAdmissionSeesColdAppBindingEvenWhenOrdinarySnapshotIsUnchanged"
   ],
   "uk.co.traynor.privategallery.ui.PrivateAppImmersiveControlsTest": [
-    "overflowUsesTheTopRightAndHomeRetainsWhileExitCloses",
+    "overflowFollowsBackAtBottomAndHomeRetainsWhileExitCloses",
     "unrelatedOriginWarningRemainsVisibleWhileHistoryControlsStayDisabledAtRoot"
   ],
+  "uk.co.traynor.privategallery.ui.NovaNavigation59Test": [
+    "capturedMenuActionRechecksAvailabilityBeforeDispatch",
+    "capturedSheetCallbackCannotReviveAfterBackgroundAndAnotherOpen",
+    "commonRowHasThreeRealActionsAndAppOverflowIsFourth",
+    "menuBackDismissesBeforePageAndDisabledRowsNeverInvoke",
+    "nativeRowDoesNotExposeAppOverflow",
+    "replacingAppWithoutReplacingHostRetiresOldMenuAndBindsNewLifecycle",
+    "sheetAdaptsToLargeTextAndRevokedAuthorityCannotAct"
+  ],
+  "uk.co.traynor.privategallery.ui.NovaPrivateAppColdLaunch59Test": [
+    "actualNativeRootsAndStandaloneBrowserShareOneRowAndRecentsWithoutAppOverflow",
+    "changedSavedDefinitionRejectsBlockedLaunchToHomeInsteadOfOrdinaryBrowser",
+    "explicitOsVpnConsentHandoffRetainsOnlyAdmissionMetadataWhileOldControllerRetires",
+    "firstColdLaunchStaysInIntendedAppWhileRequiredVpnUnavailableAndRetryKeepsUuid",
+    "pendingColdLaunchIsCancelledByHomeBackgroundAndActualLock"
+  ],
+  "uk.co.traynor.privategallery.ui.BrowserBetaNoticeTest": [
+    "contentStartsOnlyAfterAcknowledgementAndNewCompositionRemembersIt",
+    "homeLockAndPanicDoNotAcknowledgeOrStartContent",
+    "privacyDisclosureAndActionsFitCoverInnerThemesAndLargeText",
+    "savedAppIdentityNeverSkipsTheSamePrivacyAcknowledgement"
+  ],
+  "uk.co.traynor.privategallery.ui.status.NovaSystemStatusTest": [
+    "actualAndroidStatusBarAndCoveredSurfaceStopSubscriptions",
+    "allIndicatorsFitCompactHeaderAtLargeFontScale",
+    "backgroundClosesProviderAndResumeResubscribes",
+    "batteryGlyphActuallyFillsFromZeroToFullAndOmitsUnknown",
+    "exactBatteryAndRadioChangesFitFoldHeaderAndLandscape",
+    "noInternetAndAirplaneRemainDistinctFromWifiAssociation"
+  ],
   "uk.co.traynor.privategallery.ui.PrivateAppMainActivityAcceptanceTest": [
-    "productionAppIsFullHeightAndHomeRetainsUserStartedAudioWhileExitClosesIt",
+    "productionAppReservesNavigationAndHomeRetainsUserStartedAudioWhileExitClosesIt",
     "productionPopupDismissesAndCapturedMenuActionsCannotSurviveBackgroundOrLock"
   ],
   "uk.co.traynor.privategallery.HiddenDiscoverabilityRegressionTest": [

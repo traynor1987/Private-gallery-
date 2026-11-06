@@ -36,14 +36,8 @@ import java.util.Date
     Box(Modifier.width(200.dp).fillMaxHeight().testTag("nova-gesture-strip").semantics{contentDescription="Nova navigation: swipe up Home, swipe sideways Back, hold Recents";customActions=listOf(CustomAccessibilityAction("Home"){onHome();true},CustomAccessibilityAction("Back"){onBack();true},CustomAccessibilityAction("Recents"){onRecents();true})}.combinedClickable(onClick=onHome,onLongClick=onRecents).pointerInput(Unit){detectDragGestures(onDragStart={x=0f;y=0f},onDragEnd={if(y < -24)onHome()else if(abs(x)>40)onBack()}){change,drag->change.consume();x+=drag.x;y+=drag.y}},contentAlignment=Alignment.Center){Surface(Modifier.size(96.dp,4.dp),shape=RoundedCornerShape(2.dp),color=MaterialTheme.colorScheme.onSurfaceVariant){}}
     Box{IconButton(onClick={menu=true}){Icon(Icons.Default.MoreHoriz,"Navigation alternatives")};PanicHomeDropdownMenu(menu,{menu=false}){DropdownMenuItem(text={Text("Recents")},onClick={menu=false;onRecents()});DropdownMenuItem(text={Text("Home")},onClick={menu=false;onHome()});DropdownMenuItem(text={Text("Back")},onClick={menu=false;onBack()})}}
    }
-  }else Row(Modifier.fillMaxWidth().height(52.dp).testTag("nova-navigation"),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.SpaceEvenly){
-   PreviewShellRules.order(shell.reverse).split(',').forEach{action->
-    val callback=when(action){"recents"->onRecents;"home"->onHome;else->onBack}
-    IconButton(onClick=callback,modifier=Modifier.width(72.dp).testTag("nova-$action")){
-     Icon(when(action){"recents"->Icons.Default.ViewWeek;"home"->Icons.Default.CropSquare;else->Icons.Default.ChevronLeft},action.replaceFirstChar{it.uppercase()},Modifier.size(23.dp))
-    }
-   }
-  }
+  }else uk.co.traynor.privategallery.ui.NovaNavigationRow(onRecents,onHome,onBack,reverse=shell.reverse)
+
  }
 }
 

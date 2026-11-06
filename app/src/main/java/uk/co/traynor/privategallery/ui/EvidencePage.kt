@@ -17,7 +17,12 @@ import androidx.compose.ui.unit.dp
   onDispose{token?.let{novaActivity?.endProtectedPage(it)};genericProtection?.close()}
  }
  BackHandler(onBack=onBack)
- Surface(Modifier.fillMaxSize(),color=MaterialTheme.colorScheme.background){content()}
+ Surface(Modifier.fillMaxSize(),color=MaterialTheme.colorScheme.background){
+  Column(Modifier.fillMaxSize().navigationBarsPadding().imePadding()) {
+   Box(Modifier.weight(1f).fillMaxWidth()){content()}
+   NovaNativeNavigation(onBack=onBack)
+  }
+ }
 }
 
 @Composable internal fun EvidenceWorkflowPage(onDismissRequest:()->Unit,title:@Composable ()->Unit,

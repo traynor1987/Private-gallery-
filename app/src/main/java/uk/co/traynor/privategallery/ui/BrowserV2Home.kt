@@ -26,6 +26,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
@@ -57,6 +58,7 @@ import uk.co.traynor.privategallery.ui.GalleryAlertDialog as AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.MaterialTheme
@@ -86,6 +88,7 @@ import androidx.compose.ui.zIndex
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.testTag
@@ -157,8 +160,11 @@ internal fun BrowserV2ProductionDestination(
     onPrepareVaultUpload: (List<VaultItem>, (Result<List<android.net.Uri>>) -> Unit) -> Unit = { _, done -> done(Result.failure(IllegalStateException("Vault upload unavailable"))) },
     onClearVaultUpload: () -> Unit = {},
 ) {
-    if (BrowserBetaNotice({ onOpenGallery?.invoke() }, modifier)) return
-    SideEffect { session.recordAcceptanceUiEvent("BROWSER_ROUTE_ENTERED") }
+    val noticeActivity=LocalContext.current.playerActivity() as? uk.co.traynor.privategallery.MainActivity
+    val noticeApp=noticeActivity?.pendingNovaPrivateApp() ?: session.privateApp(session.tabs.activeTab.id)
+    if (BrowserBetaNotice({ onOpenGallery?.invoke() }, modifier,appName=noticeApp?.takeIf {it.appStyle()}?.name())) return
+    LaunchedEffect(noticeApp) {noticeActivity?.retryPendingNovaPrivateApp()}
+    SideEffect {session.recordAcceptanceUiEvent("BROWSER_ROUTE_ENTERED")}
     Column(
         modifier.fillMaxSize().then(if (acceptanceProbeEnabled) Modifier.background(Color(0xFFCC0000)) else Modifier)
             .onGloballyPositioned { coordinates ->
@@ -735,7 +741,11 @@ internal fun BrowserV2Home(
     // Deliberately read through revision so WebView callbacks update stable tab chrome.
     @Suppress("UNUSED_VARIABLE") val stateVersion = ui.revision
     val active = session.tabs.activeTab
-    val activePrivateApp = session.privateApp(active.id)
+    val pendingPrivateApp=novaActivity?.pendingNovaPrivateApp()
+    val activePrivateApp = pendingPrivateApp ?: session.privateApp(active.id)
+    LaunchedEffect(pendingPrivateApp,connectionPresentation.blocked) {
+        if(pendingPrivateApp!=null && !novaCovered)novaActivity?.retryPendingNovaPrivateApp()
+    }
     val appStyle=activePrivateApp?.appStyle()==true
     var privateAppEditId by remember {mutableStateOf<String?>(null)}
     LaunchedEffect(active.id, active.url) {
@@ -783,19 +793,23 @@ internal fun BrowserV2Home(
     LaunchedEffect(homeActivity?.homePrivateAppsRequested) {
         if(homeActivity?.homePrivateAppsRequested==true){homeActivity.homePrivateAppsRequested=false;openPrivateApps()}
     }
-    BackHandler(enabled = !novaCovered && (activePrivateApp!=null || onOpenGallery != null) && !ui.addressFocused && !active.canGoBack && ui.fullscreen == null && !ui.webVideoView && ui.internalMedia == null) { if(activePrivateApp!=null)openPrivateApps() else (context as? uk.co.traynor.privategallery.MainActivity)?.returnPrivateHome() ?: onOpenGallery?.invoke() }
-    BackHandler(enabled = !novaCovered && ui.addressFocused) { focusManager.clearFocus(force = true) }
-    BackHandler(enabled = !novaCovered && ui.webVideoView) { ui.webVideoView = false; latestFullscreenChanged(false) }
-    BackHandler(enabled = !novaCovered && ui.fullscreen != null) {
+    BackHandler(enabled = pendingPrivateApp==null && !novaCovered && (activePrivateApp!=null || onOpenGallery != null) && !ui.addressFocused && !active.canGoBack && ui.fullscreen == null && !ui.webVideoView && ui.internalMedia == null) { if(activePrivateApp!=null)openPrivateApps() else (context as? uk.co.traynor.privategallery.MainActivity)?.returnPrivateHome() ?: onOpenGallery?.invoke() }
+    BackHandler(enabled = pendingPrivateApp==null && !novaCovered && ui.addressFocused) { focusManager.clearFocus(force = true) }
+    BackHandler(enabled = pendingPrivateApp==null && !novaCovered && ui.webVideoView) { ui.webVideoView = false; latestFullscreenChanged(false) }
+    BackHandler(enabled = pendingPrivateApp==null && !novaCovered && ui.fullscreen != null) {
         ui.fullscreen?.second?.onCustomViewHidden()
         ui.fullscreen = null
         latestFullscreenChanged(false)
     }
-    BackHandler(enabled = !novaCovered && ui.fullscreen == null && !ui.webVideoView && ui.internalMedia == null && !ui.addressFocused && active.canGoBack) { session.goBackActive() }
+    BackHandler(enabled = pendingPrivateApp==null && !novaCovered && ui.fullscreen == null && !ui.webVideoView && ui.internalMedia == null && !ui.addressFocused && active.canGoBack) { session.goBackActive() }
+
+    BackHandler(enabled = pendingPrivateApp!=null && !novaCovered) {
+        novaActivity?.cancelPendingNovaPrivateApp();novaActivity?.returnPrivateHome()
+    }
 
     // Obtain the Android view after the listener is bound, but never let a provider failure abort
     // the surrounding Compose tree. The V2 chrome is the useful recovery surface.
-    val activeWebView = if (staticContentHost || connectionPresentation.blocked) null else session.activeWebViewOrNull()
+    val activeWebView = if (pendingPrivateApp!=null || staticContentHost || connectionPresentation.blocked) null else session.activeWebViewOrNull()
     LaunchedEffect(session, staticContentHost) {
         if (!staticContentHost) session.recordAcceptanceUiEvent("REAL_MODE_ENTERED")
     }
@@ -820,20 +834,22 @@ internal fun BrowserV2Home(
         session.pageFailure(active.id)!=null,!staticContentHost && active.failure!=null)
     val appControls: @Composable (Boolean)->Unit = { immersive ->
         if(activePrivateApp!=null)PrivateAppControls(
-                    app=activePrivateApp,url=active.url,
+                    app=activePrivateApp,url=if(pendingPrivateApp!=null)activePrivateApp.startUrl()else active.url,
                     mode=(context as? uk.co.traynor.privategallery.MainActivity)?.privateAppConnectionLabel() ?: "Primary Space",
-                    enabled=!connectionPresentation.blocked,canGoBack=active.canGoBack,canGoForward=active.canGoForward,loading=active.loading,
+                    enabled=pendingPrivateApp==null && !connectionPresentation.blocked,canGoBack=pendingPrivateApp==null && active.canGoBack,canGoForward=pendingPrivateApp==null && active.canGoForward,loading=pendingPrivateApp!=null || active.loading,
                     onBack={if(active.canGoBack)session.goBackActive() else openPrivateApps()},onForward=session::goForwardActive,
                     onRefresh={if(active.loading)session.stopActive() else session.reloadActive()},
                     onHome={cancelUpload();session.navigateActive(activePrivateApp.startUrl())},
                     onLibrary=::openPrivateApps,onSwitch={screenshotGeneration.incrementAndGet();screenshotReview=null;cancelUpload();privateAppSwitcher=true},
                     onSettings={cancelUpload();(context as? uk.co.traynor.privategallery.MainActivity)?.privateAppsController()?.let {privateAppSettings=it to activePrivateApp.id()}},
                     onScreenshot=::saveViewportScreenshot,onBrowserTools={ui.overflow=true},
-                    onCloseApp={screenshotGeneration.incrementAndGet();cancelUpload();cancelWebsitePermissions();ui.downloadCancelled.set(true);ui.downloadBusy=false;screenshotReview=null;session.close(active.id);openPrivateApps()},
+                    onCloseApp={screenshotGeneration.incrementAndGet();cancelUpload();cancelWebsitePermissions();ui.downloadCancelled.set(true);ui.downloadBusy=false;screenshotReview=null;if(pendingPrivateApp!=null)novaActivity?.cancelPendingNovaPrivateApp()else session.close(active.id);openPrivateApps()},
                     onExitGallery={(context as? uk.co.traynor.privategallery.MainActivity)?.returnPrivateHome()},
                     onLockVault={(context as? uk.co.traynor.privategallery.MainActivity)?.privateAppLockVault()},
                     onQuickLock={(context as? uk.co.traynor.privategallery.MainActivity)?.panicExit()},
-                    immersive=immersive,current={session.tabs.activeTab.id==active.id && !novaInteractionBlocked()},onOpenInBrowser={
+                    immersive=immersive,current={session.tabs.activeTab.id==active.id && !novaInteractionBlocked()},
+                    onRecents={(context as? uk.co.traynor.privategallery.MainActivity)?.openNovaRecents()},
+                    onNavigateBack={homeActivity?.onBackPressedDispatcher?.onBackPressed()},onOpenInBrowser={
                         if(!novaInteractionBlocked()) {
                             cancelUpload();cancelWebsitePermissions();screenshotGeneration.incrementAndGet();screenshotReview=null
                             runCatching {session.openActivePrivateAppInBrowser()}.onFailure {ui.message="This page could not open in Browser."}
@@ -849,7 +865,8 @@ internal fun BrowserV2Home(
             }
             .semantics { testTag = "browser-v2-root" },
     ) {
-        Column(Modifier.fillMaxSize().imePadding()) {
+        Column(Modifier.fillMaxSize().navigationBarsPadding().imePadding()) {
+            if(!novaCovered && ui.fullscreen==null && !ui.webVideoView)uk.co.traynor.privategallery.ui.status.NovaSystemStatus(enabled=!novaInteractionBlocked())
             if (acceptanceProbeEnabled) AcceptanceProbeLabel("BROWSER_V2_ROOT", Color(0xFF00A000))
             if(ui.fullscreen==null && !ui.webVideoView && showBrowserChrome)BrowserChromeBar(if(appStyle)1f else chromeFraction, top = true) { Column(
                 Modifier.fillMaxWidth()
@@ -896,7 +913,11 @@ internal fun BrowserV2Home(
             ) {
                 SideEffect { session.recordAcceptanceUiEvent("CONTENT_HOST_COMPOSED") }
                 // Retain ordinary tabs, but attach a new provider instance after renderer/VPN recovery.
-                if (connectionPresentation.blocked) {
+                if(pendingPrivateApp!=null) {
+                    PendingPrivateAppContent(pendingPrivateApp,connectionPresentation,onConnectVpn,::openSettings) {
+                        novaActivity?.retryPendingNovaPrivateApp()
+                    }
+                } else if (connectionPresentation.blocked) {
                     BrowserConnectionState(connectionPresentation, onConnectVpn, ::openSettings)
                 } else if (staticContentHost) {
                     Column(
@@ -920,10 +941,10 @@ internal fun BrowserV2Home(
                         }
                     }
                 }
-                session.pageFailure(active.id)?.takeIf { !connectionPresentation.blocked }?.let { detail ->
+                session.pageFailure(active.id)?.takeIf { pendingPrivateApp==null && !connectionPresentation.blocked }?.let { detail ->
                     BrowserPageError(detail,{session.reloadActive()},::openSettings)
                 }
-                if(appStyle && active.loading && !connectionPresentation.blocked && session.pageFailure(active.id)==null)
+                if(pendingPrivateApp==null && appStyle && active.loading && !connectionPresentation.blocked && session.pageFailure(active.id)==null)
                     PrivateAppLoading(checkNotNull(activePrivateApp))
                 if (acceptanceProbeEnabled) AcceptanceProbeLabel("CONTENT_HOST", Color(0xFFFFD800))
             }
@@ -931,9 +952,10 @@ internal fun BrowserV2Home(
                 if(!appStyle)BrowserNavigationToolbar(!connectionPresentation.blocked && active.canGoBack,!connectionPresentation.blocked && active.canGoForward,session.tabs.tabs.count {session.privateApp(it.id)==null},
                     session::goBackActive,session::goForwardActive,{ui.bookmarksOpen=true},{ui.tabSwitcher=true},::openSettings,{ui.overflow=true})
             }
-        }
-        if(appStyle && !novaCovered && ui.fullscreen==null && !ui.webVideoView)Box(Modifier.align(Alignment.TopEnd).zIndex(1f)) {
-            androidx.compose.runtime.key(active.id) {appControls(true)}
+            if(!novaCovered && ui.fullscreen==null && !ui.webVideoView) {
+                if(appStyle)androidx.compose.runtime.key(active.id) {appControls(true)}
+                else NovaNativeNavigation()
+            }
         }
         if (ui.webVideoView) {
             BrowserVideoWindow()
@@ -1311,4 +1333,24 @@ private fun browserV2ImageSource(resourceUrl: String, userAgent: String, referer
             }.inputStream
         },
     )
+}
+
+
+@Composable
+private fun PendingPrivateAppContent(
+ app:uk.co.traynor.privategallery.core.privateapps.PrivateAppCatalog.App,
+ connection:BrowserConnectionPresentation,onConnect:()->Unit,onSettings:()->Unit,onRetry:()->Unit,
+) {
+ Column(Modifier.fillMaxSize().testTag("private-app-pending-launch"),horizontalAlignment=Alignment.CenterHorizontally) {
+  Row(Modifier.fillMaxWidth().padding(20.dp),verticalAlignment=Alignment.CenterVertically) {
+   PrivateAppIcon(app.icon(),app.name(),48)
+   Text("Opening ${app.name()}",Modifier.weight(1f).padding(start=12.dp),style=MaterialTheme.typography.titleLarge)
+  }
+  if(connection.blocked)Box(Modifier.weight(1f).fillMaxWidth()) {BrowserConnectionState(connection,onConnect,onSettings)}
+  else Column(Modifier.weight(1f).fillMaxWidth(),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.Center) {
+   CircularProgressIndicator()
+   Text("Preparing your saved app…",Modifier.padding(16.dp))
+  }
+  TextButton(onClick=onRetry,modifier=Modifier.padding(8.dp).testTag("private-app-launch-retry")){Text("Retry app launch")}
+ }
 }

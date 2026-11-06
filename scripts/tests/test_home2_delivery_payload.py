@@ -25,7 +25,7 @@ class Home2DeliveryPayloadTest(unittest.TestCase):
             root = Path(temporary)
             build = root / 'app/build'
             evidence = build / 'production-evidence'
-            upgrade = evidence / 'from57'
+            upgrade = evidence / 'from58'
             upgrade.mkdir(parents=True)
             source = '2' * 40
             candidate = build / 'outputs/apk/release/app-release.apk'
@@ -41,7 +41,7 @@ class Home2DeliveryPayloadTest(unittest.TestCase):
             inputs = runner / 'release1711-inputs'
             inputs.mkdir(parents=True)
             for name in ('github-run.json', 'github-jobs.json', 'github-artifact.json',
-                         'baseline-github-run.json', 'baseline-github-artifact.json'):
+                         'baseline-github-run.json', 'baseline-github-job.json', 'baseline-github-artifact.json'):
                 (inputs / name).write_text('{}')
             controls = runner / 'release1711-controls'
             controls.mkdir()
@@ -65,20 +65,40 @@ class Home2DeliveryPayloadTest(unittest.TestCase):
                     if unexpected:
                         with self.assertRaisesRegex(AssertionError, 'Evidence contains'):
                             exec(compile(code, '<actual workflow staging>', 'exec'), {})
-                        self.assertFalse((build / 'NovaOS-1.7.11.2-home2-code58-evidence.zip').exists())
+                        self.assertFalse((build / 'NovaOS-1.7.11.3-home2-code59-evidence.zip').exists())
                         return
                     exec(compile(code, '<actual workflow staging>', 'exec'), {})
-                self.assertEqual(candidate.read_bytes(), (build / 'NovaOS-1.7.11.2-home2-code58-owner-acceptance.apk').read_bytes())
-                with zipfile.ZipFile(build / 'NovaOS-1.7.11.2-home2-code58-evidence.zip') as zipped:
+                self.assertEqual(candidate.read_bytes(), (build / 'NovaOS-1.7.11.3-home2-code59-owner-acceptance.apk').read_bytes())
+                with zipfile.ZipFile(build / 'NovaOS-1.7.11.3-home2-code59-evidence.zip') as zipped:
                     names = zipped.namelist()
                     self.assertFalse(any(Path(n).suffix.lower() in {'.apk', '.apks', '.aab', '.jks', '.keystore', '.zip'} for n in names))
                     for name in REPORTS:
                         self.assertEqual(('receipt:' + name).encode(), zipped.read('compiled-upgrade/' + name))
                     summary = json.loads(zipped.read('release-summary.json'))
                     self.assertEqual(digest, summary['apk_sha256'])
-                    self.assertEqual(('1.7.11.2', 58, 'PASS'), (summary['version'], summary['version_code'], summary['original_key_code57_upgrade']))
+                    self.assertEqual(('1.7.11.3', 59, 'PASS'), (summary['version'], summary['version_code'], summary['original_key_code58_upgrade']))
             finally:
                 os.chdir(prior)
+
+    def test_baseline_provenance_and_compilation_precede_credentials_for_existing_job(self):
+        workflow=yaml.safe_load((REPO/'.github/workflows/acceptance1762.yml').read_text())
+        self.assertEqual(8,len(workflow['jobs']))
+        steps=workflow['jobs']['home2-production']['steps']
+        fetch=next(s['with']['script'] for s in steps if s.get('name')=='Fetch original exact-source runtime API evidence and pinned signed baseline')
+        for pin in ('run_id:42171366749','job_id:127739753358','artifact_id:13481647850',
+                    "baselineJob.run_id!==42171366749", "baselineJob.name!=='home2-production'",
+                    "baselineJob.conclusion!=='success'", "baselineJob.head_sha!=='a7666cf9b44d8f193f252921e62ee0c9b33b0ecd'",
+                    '60614078','5279a40b6a1ca1242af9647cf04d98e9ede3f497ce9991b70fe9f8e6986f5dce'):
+            self.assertIn(pin,fetch)
+        compile_index=next(i for i,s in enumerate(steps) if s.get('name')=='Compile reviewed baseline-compatible fixture with no signing environment')
+        for i,step in enumerate(steps):
+            if 'secrets.PRIVATE_GALLERY_SIGNING_' in str(step): self.assertLess(compile_index,i)
+        notes=next(s['run'] for s in steps if s.get('name')=='Stage the one verified production APK and complete upgrade evidence')
+        self.assertIn('navigation bottom sheet',notes)
+        self.assertIn('status',notes)
+        self.assertNotIn('Adds Choose from NovaOS Vault',notes)
+        publish=next(s['run'] for s in steps if s.get('name')=='Publish verified original-key prerelease with direct APK and evidence assets')
+        self.assertIn('gh release create novaos-1.7.11.3-home2-code59 ',publish)
 
     def test_only_application_is_delivered_and_all_upgrade_receipts_remain(self):
         self.stage()

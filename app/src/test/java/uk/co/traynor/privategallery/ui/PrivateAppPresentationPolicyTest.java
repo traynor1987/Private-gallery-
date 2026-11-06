@@ -10,10 +10,15 @@ public class PrivateAppPresentationPolicyTest {
         assertFalse(PrivateAppPresentationPolicy.showAddressBar(true, true, true, false));
     }
 
-    @Test public void actualConnectionPageAndProviderFailuresKeepRecoveryChromeAvailable() {
-        assertTrue(PrivateAppPresentationPolicy.showBrowserChrome(true, true, false, false));
-        assertTrue(PrivateAppPresentationPolicy.showBrowserChrome(true, false, true, false));
-        assertTrue(PrivateAppPresentationPolicy.showBrowserChrome(true, false, false, true));
+    @Test public void appModeKeepsItsPresentationDuringConnectionPageAndProviderFailures() {
+        for (boolean blocked : new boolean[]{false, true}) {
+            for (boolean pageFailed : new boolean[]{false, true}) {
+                for (boolean providerFailed : new boolean[]{false, true}) {
+                    assertFalse(PrivateAppPresentationPolicy.showBrowserChrome(true, blocked, pageFailed, providerFailed));
+                    assertTrue(PrivateAppPresentationPolicy.showBrowserChrome(false, blocked, pageFailed, providerFailed));
+                }
+            }
+        }
     }
 
     @Test public void standaloneBrowserAndSavedBrowserStyleKeepTheirAddressPreferences() {

@@ -1,7 +1,16 @@
 package uk.co.traynor.privategallery.ui
 
 import android.net.Uri
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.core.MutableTransitionState
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.graphics.Color
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
@@ -37,11 +46,13 @@ internal fun PrivateAppControls(
     immersive: Boolean = false,
     onOpenInBrowser: (() -> Unit)? = null,
     current: () -> Boolean = {true},
+    onRecents: (() -> Unit)? = null,
+    onNavigateBack: (() -> Unit)? = null,
 ) {
     if(immersive) {
         PrivateAppOverflowControls(app,url,enabled,canGoBack,canGoForward,loading,
             onBack,onForward,onRefresh,onExitGallery ?: onLibrary,onSettings,onCloseApp ?: onLibrary,
-            onOpenInBrowser,onSwitch,onScreenshot,onBrowserTools,onLockVault,onQuickLock,current)
+            onOpenInBrowser,onSwitch,onScreenshot,onBrowserTools,onLockVault,onQuickLock,current,onRecents,onNavigateBack)
         return
     }
     var expanded by remember(app.id()) { mutableStateOf(false) }
@@ -77,54 +88,94 @@ internal fun PrivateAppControls(
     }
 }
 
-/** An overlay: its parent positions it above the retained page without reserving page height. */
+/** Presentation only: sheet visibility never mutates the retained tab or its renderer. */
 @Composable
 private fun PrivateAppOverflowControls(
     app: PrivateAppCatalog.App, url:String, enabled:Boolean, canGoBack:Boolean, canGoForward:Boolean, loading:Boolean,
     onBack:()->Unit, onForward:()->Unit, onRefresh:()->Unit, onHome:()->Unit, onSettings:()->Unit, onExit:()->Unit,
     onOpenInBrowser:(()->Unit)?, onSwitch:()->Unit, onScreenshot:(()->Unit)?, onBrowserTools:()->Unit,
     onLockVault:(()->Unit)?, onPanic:(()->Unit)?, current:()->Boolean,
+    onRecents:(()->Unit)?,onNavigateBack:(()->Unit)?,
 ) {
     var expanded by remember(app.id()) {mutableStateOf(false)}
+    var menuEpoch by remember(app.id()) {mutableIntStateOf(0)}
     val isCurrent by rememberUpdatedState(current)
     val lifecycle=androidx.lifecycle.compose.LocalLifecycleOwner.current.lifecycle
-    DisposableEffect(lifecycle) {
+    var foreground by remember(lifecycle) {mutableStateOf(lifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.RESUMED))}
+    fun authorized()=foreground && isCurrent()
+    fun act(action:()->Unit) {expanded=false;if(authorized())action()}
+    DisposableEffect(lifecycle,app.id()) {
         val observer=androidx.lifecycle.LifecycleEventObserver {_,event ->
-            if(event==androidx.lifecycle.Lifecycle.Event.ON_PAUSE || event==androidx.lifecycle.Lifecycle.Event.ON_STOP)expanded=false
+            foreground=lifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.RESUMED)
+            if(event==androidx.lifecycle.Lifecycle.Event.ON_PAUSE || event==androidx.lifecycle.Lifecycle.Event.ON_STOP){menuEpoch++;expanded=false}
         }
         lifecycle.addObserver(observer)
-        onDispose {expanded=false;lifecycle.removeObserver(observer)}
+        onDispose {menuEpoch++;expanded=false;lifecycle.removeObserver(observer)}
     }
     LaunchedEffect(app.id()) {while(isActive) {delay(100);if(!isCurrent())expanded=false}}
+    val stillCurrent=isCurrent()
+    SideEffect {if(!stillCurrent)expanded=false}
     val outside=url.isNotBlank() && !PrivateAppPolicy.inAppScope(url,app.startUrl(),app.scope())
-    Column(horizontalAlignment=Alignment.End,modifier=Modifier.testTag("private-app-immersive-controls")) {
-        Box {
-            FilledTonalIconButton(onClick={if(isCurrent())expanded=true},modifier=Modifier.size(48.dp).testTag("web-app-menu")) {
-                Icon(Icons.Default.MoreVert,"App menu")
-            }
-            uk.co.traynor.privategallery.home2.PanicHomeDropdownMenu(expanded,{expanded=false}) {
-                fun act(action:()->Unit) {expanded=false;if(isCurrent())action()}
-                DropdownMenuItem(text={Text("Back")},leadingIcon={Icon(Icons.AutoMirrored.Filled.ArrowBack,null)},enabled=enabled && canGoBack,onClick={act(onBack)})
-                DropdownMenuItem(text={Text("Forward")},leadingIcon={Icon(Icons.AutoMirrored.Filled.ArrowForward,null)},enabled=enabled && canGoForward,onClick={act(onForward)})
-                DropdownMenuItem(text={Text(if(loading)"Stop loading"else"Refresh")},leadingIcon={Icon(if(loading)Icons.Default.Close else Icons.Default.Refresh,null)},enabled=enabled,onClick={act(onRefresh)})
-                DropdownMenuItem(text={Text("Home")},leadingIcon={Icon(Icons.Default.Home,null)},modifier=Modifier.testTag("web-return-home"),onClick={act(onHome)})
-                if(onOpenInBrowser!=null)DropdownMenuItem(text={Text("Open in Browser")},leadingIcon={Icon(Icons.Default.OpenInNew,null)},enabled=enabled,onClick={act(onOpenInBrowser)})
-                DropdownMenuItem(text={Text("App Settings")},leadingIcon={Icon(Icons.Default.Settings,null)},onClick={act(onSettings)})
-                DropdownMenuItem(text={Text("Exit App")},leadingIcon={Icon(Icons.Default.Close,null)},onClick={act(onExit)})
-                HorizontalDivider()
-                DropdownMenuItem(text={Text("Switch app")},leadingIcon={Icon(Icons.Default.SwapHoriz,null)},onClick={act(onSwitch)})
-                if(onScreenshot!=null)DropdownMenuItem(text={Text("Screenshot to Vault")},leadingIcon={Icon(Icons.Default.Screenshot,null)},enabled=enabled,onClick={act(onScreenshot)})
-                DropdownMenuItem(text={Text("Browser tools")},leadingIcon={Icon(Icons.Default.Build,null)},onClick={act(onBrowserTools)})
-                if(onLockVault!=null)DropdownMenuItem(text={Text("Lock Space")},leadingIcon={Icon(Icons.Default.Lock,null)},onClick={act(onLockVault)})
-                if(onPanic!=null)DropdownMenuItem(text={Text("Panic Exit")},leadingIcon={Icon(Icons.Default.Security,null)},onClick={act(onPanic)})
-            }
-        }
+    val origin=runCatching {Uri.parse(url).let {"${it.scheme}://${it.host.orEmpty()}${if(it.port>=0)":${it.port}"else""}"}}.getOrDefault("")
+    val navigation:@Composable (Boolean)->Unit = { sheet ->
+        NovaNavigationRow(onRecents={act(onRecents ?: onHome)},onHome={act(onHome)},
+            onBack={if(sheet)expanded=false else act(onNavigateBack ?: onBack)},
+            onOverflow={if(sheet)expanded=false else if(authorized()){menuEpoch++;expanded=true}})
+    }
+    Column(Modifier.fillMaxWidth().testTag("private-app-immersive-controls")) {
         if(outside)Surface(color=MaterialTheme.colorScheme.errorContainer) {
-            Column(Modifier.widthIn(max=320.dp).padding(8.dp)) {
+            Column(Modifier.fillMaxWidth().padding(horizontal=12.dp,vertical=6.dp)) {
                 Text("Browsing outside this app's saved scope",style=MaterialTheme.typography.bodySmall)
-                val origin=runCatching {Uri.parse(url).let {"${it.scheme}://${it.host.orEmpty()}${if(it.port>=0)":${it.port}"else""}"}}.getOrDefault("")
                 Text(origin,style=MaterialTheme.typography.bodySmall,maxLines=1,overflow=TextOverflow.Ellipsis)
             }
+        }
+        // Keep page bounds fixed while the one visible row belongs to the secure modal window.
+        if(expanded)Spacer(Modifier.fillMaxWidth().height(56.dp))else navigation(false)
+    }
+    androidx.activity.compose.BackHandler(enabled=expanded) {expanded=false}
+    val sheetEpoch=menuEpoch
+    if(expanded && stillCurrent && foreground)uk.co.traynor.privategallery.home2.PanicHomeDialog(
+        onDismissRequest={expanded=false},
+        properties=DialogProperties(securePolicy=SecureFlagPolicy.SecureOn,usePlatformDefaultWidth=false,decorFitsSystemWindows=false),
+    ) {
+        val sheetVisible=remember {MutableTransitionState(false).apply {targetState=true}}
+        Column(Modifier.fillMaxSize().background(Color.Black.copy(alpha=.36f))
+            .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal+WindowInsetsSides.Bottom)).imePadding()) {
+            Spacer(Modifier.weight(1f).fillMaxWidth().clickable(onClickLabel="Dismiss app menu"){expanded=false})
+            BoxWithConstraints(Modifier.fillMaxWidth().weight(4f,fill=false),contentAlignment=Alignment.BottomCenter) {
+                androidx.compose.animation.AnimatedVisibility(visibleState=sheetVisible,enter=slideInVertically {it}+fadeIn()) {
+                Surface(Modifier.widthIn(max=720.dp).fillMaxWidth().heightIn(max=maxHeight).testTag("private-app-menu-sheet"),
+                    shape=RoundedCornerShape(topStart=28.dp,topEnd=28.dp),tonalElevation=6.dp,shadowElevation=12.dp) {
+                    Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(top=10.dp,bottom=8.dp)) {
+                        Surface(Modifier.align(Alignment.CenterHorizontally).size(36.dp,4.dp),shape=RoundedCornerShape(2.dp),color=MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha=.4f)) {}
+                        Row(Modifier.fillMaxWidth().padding(start=20.dp,end=8.dp,top=8.dp),verticalAlignment=Alignment.CenterVertically) {
+                            Text(app.name(),Modifier.weight(1f),style=MaterialTheme.typography.titleLarge,maxLines=2,overflow=TextOverflow.Ellipsis)
+                            IconButton(onClick={expanded=false}){Icon(Icons.Default.Close,"Close app menu")}
+                        }
+                        if(outside)Text(origin,Modifier.padding(horizontal=20.dp),style=MaterialTheme.typography.bodySmall,maxLines=1,overflow=TextOverflow.Ellipsis)
+                        @Composable fun action(label:String,icon:androidx.compose.ui.graphics.vector.ImageVector,available:Boolean=true,callback:(()->Unit)?) {
+                            val latestAvailable by rememberUpdatedState(available && callback!=null)
+                            DropdownMenuItem(text={Text(label)},leadingIcon={Icon(icon,null)},modifier=if(label=="Nova Home")Modifier.testTag("web-return-home")else Modifier,enabled=available && callback!=null,
+                                onClick={if(expanded && sheetEpoch==menuEpoch && latestAvailable && callback!=null)act(callback)})
+                        }
+                        action("Back",Icons.AutoMirrored.Filled.ArrowBack,enabled && canGoBack,onBack)
+                        action("Forward",Icons.AutoMirrored.Filled.ArrowForward,enabled && canGoForward,onForward)
+                        action(if(loading)"Stop loading"else"Refresh",if(loading)Icons.Default.Close else Icons.Default.Refresh,enabled,onRefresh)
+                        action("Nova Home",Icons.Default.Home,callback=onHome)
+                        action("Open in Browser",Icons.Default.OpenInNew,enabled,onOpenInBrowser)
+                        action("App Settings",Icons.Default.Settings,callback=onSettings)
+                        action("Exit App",Icons.Default.Close,callback=onExit)
+                        HorizontalDivider(Modifier.padding(horizontal=16.dp,vertical=6.dp))
+                        action("Switch App",Icons.Default.SwapHoriz,callback=onSwitch)
+                        action("Screenshot to Vault",Icons.Default.Screenshot,enabled,onScreenshot)
+                        action("Browser Tools",Icons.Default.Build,callback=onBrowserTools)
+                        action("Lock Space",Icons.Default.Lock,callback=onLockVault)
+                        action("Panic Exit",Icons.Default.Security,callback=onPanic)
+                    }
+                }
+                }
+            }
+            navigation(true)
         }
     }
 }

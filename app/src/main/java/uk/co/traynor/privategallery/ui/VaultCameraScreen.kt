@@ -315,6 +315,7 @@ internal fun VaultCameraScreen(controller:VaultCameraController,onExit:()->Unit)
 
                 }
             }
+            if(!active)NovaNativeNavigation(onBack=onExit)
         }
     }
     if(details)CaptureDetails(controller.access,onDismiss={details=false})

@@ -42,6 +42,7 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.consumeWindowInsets
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.verticalScroll
@@ -732,6 +733,7 @@ class MainActivity : FragmentActivity() {
     override fun onResume() {
         super.onResume()
         activityResumed = true
+        retryPendingNovaPrivateApp()
         applyPendingHiddenDownloads()
         externalTicket?.let {resumeExternalPresentation(it)}
         resumeFocusHandoffUntil=android.os.SystemClock.uptimeMillis()+1500
@@ -1142,7 +1144,10 @@ class MainActivity : FragmentActivity() {
     }
     private var hiddenVpnPermissionMode: uk.co.traynor.privategallery.core.browser.hidden.HiddenConnectionPolicy.Mode? = null
     private var vpnPermissionWasHidden = false
+    // Exact metadata-only app intent whose existing Android VPN consent Activity is active.
+    private var primaryAppVpnConsentOwner:PendingNovaPrivateApp?=null
     private val vpnPermissionLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        primaryAppVpnConsentOwner=null
         val expectedMode = hiddenVpnPermissionMode
         val wasHidden = vpnPermissionWasHidden
         hiddenVpnPermissionMode = null; vpnPermissionWasHidden = false
@@ -1419,6 +1424,11 @@ class MainActivity : FragmentActivity() {
         else scheduleOwnedVpnDisconnect()
     }
     override fun onStop() {
+        if(novaPrivateAppLaunch!=null && novaPrivateAppLaunch!==primaryAppVpnConsentOwner) {
+            cancelPendingNovaPrivateApp()
+            // Background cancellation must resume at safe Home, never at an unrelated browser tab.
+            homeVisible=true;homeRequestRevision++
+        }
         // Retain only feature navigation across Fold/rotation recreation. Authentication
         // remains in the retained session and is checked again by onCreate.
         if (isChangingConfigurations) retained.route = when (route) {
@@ -1635,6 +1645,8 @@ class MainActivity : FragmentActivity() {
     private fun lock() = lockPrimary(revokeHidden = true)
 
     private fun lockPrimary(revokeHidden: Boolean) {
+        cancelPendingNovaPrivateApp()
+        novaRecentsRequested=0
         novaCredentialsRequested=false
         if(revokeHidden || !retained.hidden.selected) {homeVisible=false;retained.homeFeatureRoot=null}
         retained.clearNovaNavigation()
@@ -1786,7 +1798,9 @@ class MainActivity : FragmentActivity() {
             },{accepted ->
                 if(privateAppAuthentication===request) {
                     privateAppAuthentication=null
-                    completed(accepted && requestCurrent())
+                    val valid=accepted && requestCurrent()
+                    if(!valid) {cancelPendingNovaPrivateApp();returnPrivateHome()}
+                    completed(valid)
                 }
             })
         privateAppAuthentication=request
@@ -1842,9 +1856,52 @@ class MainActivity : FragmentActivity() {
     internal val homeVaultMode:String
         get()=when(retained.homeFeatureRoot){"COLLECTIONS"->"COLLECTIONS";"RECENTLY_DELETED"->"TRASH";else->"MEDIA"}
     internal var homePrivateAppsRequested by mutableStateOf(false)
+    /** Presentation-only launch intent: no renderer or networking authority is granted here. */
+    private class PendingNovaPrivateApp(val app:uk.co.traynor.privategallery.core.privateapps.PrivateAppCatalog.App,
+        val current:()->Boolean,val authenticated:Boolean)
+    private var novaPrivateAppLaunch by mutableStateOf<PendingNovaPrivateApp?>(null)
+    internal fun pendingNovaPrivateApp():uk.co.traynor.privategallery.core.privateapps.PrivateAppCatalog.App? =
+        novaPrivateAppLaunch?.takeIf { !homeVisible }?.app
+    internal fun cancelPendingNovaPrivateApp() {novaPrivateAppLaunch=null;primaryAppVpnConsentOwner=null}
+    /** Admission metadata survives only the explicit OS consent handoff, never old operation leases. */
+    private fun pendingNovaAppAuthority():()->Boolean {
+        val identity=sessionKey;val authentication=session.captureAuthenticationEpoch()
+        val presentation=browserPresentationGeneration
+        return {identity!=null && sessionKey===identity && session.isAuthenticationCurrent(authentication) &&
+            !hideContent && !retained.hidden.selected && !privateAppProfileClearPending() &&
+            browserPresentationGeneration==presentation && route==Route.BROWSER &&
+            lifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.STARTED)}
+    }
+    private fun queueNovaPrivateApp(app:uk.co.traynor.privategallery.core.privateapps.PrivateAppCatalog.App,current:()->Boolean) {
+        check(current())
+        novaPrivateAppLaunch=PendingNovaPrivateApp(app,pendingNovaAppAuthority(),true)
+        retryPendingNovaPrivateApp()
+    }
+    internal fun retryPendingNovaPrivateApp() {
+        val pending=novaPrivateAppLaunch?:return
+        if(!activityResumed)return // Android consent may own the foreground; never revive an operation here.
+        if(!pending.current()) {cancelPendingNovaPrivateApp();returnPrivateHome();return}
+        if(!pending.authenticated || !browserV2Session.mediaNetworkingAllowed())return
+        if(!uk.co.traynor.privategallery.ui.BrowserBetaAcknowledgement(this).accepted())return
+        val latest=runCatching {privateAppsController()?.load()?.apps?.singleOrNull {it.id()==pending.app.id()}}.getOrNull()
+        if(latest!=pending.app || !pending.current()) {cancelPendingNovaPrivateApp();returnPrivateHome();return}
+        // Existing authenticated session API still owns UUID reuse, transport gate and renderer.
+        // Keep the app-owned presentation until the tab binding has completed synchronously.
+        runCatching {browserV2Session.openRetainedPrivateApp(pending.app)}
+            .onSuccess {if(novaPrivateAppLaunch===pending)cancelPendingNovaPrivateApp()}
+    }
+
+    private var novaRecentsRequested by mutableStateOf(0)
+    internal fun openNovaRecents() {
+        if(hideContent || !activityResumed)return
+        if(if(retained.hidden.selected)!retained.hidden.authenticated || !retained.hidden.session.isUnlocked else !session.isUnlocked || sessionKey==null)return
+        returnPrivateHome()
+        if(homeVisible)novaRecentsRequested++
+    }
     internal fun openHomePreferences() {homeCustomisationRequested=true;returnPrivateHome()}
     internal fun returnPrivateHome() {
         if(!activityResumed)return
+        cancelPendingNovaPrivateApp()
         val hidden=retained.hidden.selected
         if(if(hidden)!retained.hidden.session.isUnlocked else !session.isUnlocked||sessionKey==null)return
         if(uk.co.traynor.privategallery.core.home.NovaNavigation.rootDestination(hideContent)=="GALLERY") {
@@ -2072,6 +2129,7 @@ class MainActivity : FragmentActivity() {
                 }
             },
             wallpaperOwnerFactory=::homeWallpaperOwner,
+            externalRecentsRequest=novaRecentsRequested,onRecentsConsumed={novaRecentsRequested=0},
             onThemeConnection={data ->
                 if(data!=null&&access.current()) {
                     homeThemeAccess=access;homeThemeData=data
@@ -2135,8 +2193,16 @@ class MainActivity : FragmentActivity() {
         }
         return uk.co.traynor.privategallery.core.home2.NativeAppBridge(store,current,
             {id->
+                val intended=store.read().apps.single {it.id()==id}
                 enterBrowser()
-                runCatching {checkNotNull(privateAppsController()).launch(id)}.onFailure {homeNotice("Connect Browser before opening this private app.")}
+                val controller=privateAppsController()
+                if(controller!=null) {
+                    // Reserve the intended presentation before any optional PIN or VPN readiness UI.
+                    novaPrivateAppLaunch=PendingNovaPrivateApp(intended,controller::isCurrent,false)
+                    runCatching {controller.launch(id)}.onFailure {
+                        cancelPendingNovaPrivateApp();returnPrivateHome();homeNotice("This saved app could not open.")
+                    }
+                } else {cancelPendingNovaPrivateApp();returnPrivateHome()}
             },{id->
                 check(android.os.Looper.myLooper()===android.os.Looper.getMainLooper());check(current())
                 browserV2Session.removePrivateApp(id)
@@ -2234,8 +2300,7 @@ class MainActivity : FragmentActivity() {
                 uk.co.traynor.privategallery.core.privateapps.PrivateAppMetadataTransport.discover(url,false,
                     uk.co.traynor.privategallery.core.privateapps.PrivateAppMetadataTransport.vpn(this@MainActivity,network,allowed),allowed)
             }, onLaunchApp={app ->
-                check(current());check(browserV2Session.mediaNetworkingAllowed())
-                browserV2Session.openRetainedPrivateApp(app)
+                check(current());queueNovaPrivateApp(app,current)
             }, authenticate={completed ->requestPrivateAppAuthentication(current,completed)},
             keepSignedIn=if(androidx.webkit.WebViewFeature.isFeatureSupported(androidx.webkit.WebViewFeature.DELETE_BROWSING_DATA))({!clearBrowserDataOnLock})else null,
             changeKeepSignedIn=if(androidx.webkit.WebViewFeature.isFeatureSupported(androidx.webkit.WebViewFeature.DELETE_BROWSING_DATA))({keep ->check(current());applyClearBrowserDataOnLock(!keep)})else null,
@@ -2377,6 +2442,7 @@ class MainActivity : FragmentActivity() {
         browserVpnState = browserVpnController.onEngineState(state)
         vpnProfileStatus = wireGuardEngine.diagnosticSummary()
         browserV2Session.enforceNetworkPolicy()
+        retryPendingNovaPrivateApp()
         if (wireGuardEngine.ownsTunnel) {
             // The service is a task-removal hook only; background-start restrictions must never
             // affect the confirmed tunnel or Browser's fail-closed state.
@@ -2430,6 +2496,8 @@ class MainActivity : FragmentActivity() {
     }
 
     private fun invalidatePrimaryBrowserPresentation() {
+        cancelPendingNovaPrivateApp()
+        novaRecentsRequested=0
         revokePhoneTransfers()
         browserPresentationGeneration++
         clearBrowserUploadCopies()
@@ -2485,7 +2553,8 @@ class MainActivity : FragmentActivity() {
             // Android owns this confirmation. NovaOS never stops another app's VPN itself.
             vpnPermissionWasHidden = retained.hidden.selected
             hiddenVpnPermissionMode = if (vpnPermissionWasHidden) hiddenBrowserOwner?.mode else null
-            vpnPermissionLauncher.launch(permissionIntent)
+            primaryAppVpnConsentOwner=novaPrivateAppLaunch?.takeIf{!vpnPermissionWasHidden && it.authenticated && it.current()}
+            try {vpnPermissionLauncher.launch(permissionIntent)}catch(failure:Exception){primaryAppVpnConsentOwner=null;throw failure}
         } else connectBrowserVpn()
     }
 
@@ -2696,6 +2765,8 @@ class MainActivity : FragmentActivity() {
 
     private fun applyHideContent(hidden: Boolean) {
         if (hidden == hideContent) return
+        cancelPendingNovaPrivateApp()
+        novaRecentsRequested=0
         if (hidden) { closeEvidenceLocker();hideGate = true; hideContent = true }
         check(appSettings.edit().putString("hide-content", hidden.toString()).commit()) { "Unable to save privacy setting" }
         if (!hidden) { hideContent = false; hideGate = false }
@@ -4103,6 +4174,7 @@ internal fun ProtectedAppShell(
         containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             if(selected!=Route.BROWSER || activity?.novaConcealed()==true)Column(Modifier.statusBarsPadding()) {
+                uk.co.traynor.privategallery.ui.status.NovaSystemStatus(enabled=security!=null && activity?.novaConcealed()!=true)
                 uk.co.traynor.privategallery.ui.NovaAppHeader(
                     title=activity?.novaApplicationTitle(selected) ?: when(selected){
                         Route.GALLERY->"Gallery";Route.FAVOURITE->"Favourites";Route.BROWSER->"Browser";Route.SETTINGS->"Settings";else->"Vault"},
@@ -4113,6 +4185,13 @@ internal fun ProtectedAppShell(
                     actions={if(activity?.novaConcealed()==true)IconButton(onClick=activity::openNovaSettings){Icon(Icons.Default.Settings,"Open Settings")}},
                 )
             }
+        },
+        bottomBar = {
+            if(!hideNavigation && security!=null)uk.co.traynor.privategallery.ui.NovaNavigationRow(
+                onRecents={activity?.openNovaRecents() ?: security.home()},onHome=security.home,
+                onBack={activity?.onBackPressedDispatcher?.onBackPressed()},
+                modifier=Modifier.navigationBarsPadding().imePadding(),
+            )
         },
         content = content,
     )
