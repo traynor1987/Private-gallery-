@@ -69,3 +69,26 @@ into scripts/home2_emulator_preflight.sh invoked as one command. Three host test
 the actual script and reject wrong API, missing SystemUI, wrong AVD target, surfaceflinger
 restart and DMA crash signatures; healthy path records all15 observations. CI runs those
 checks too. No application, Android cases, assertions or timeouts changed.
+
+## Runtime4 and bounded follow-up
+
+Source1034dd6a8fe6fea8705353986336d49bd52cc6d9, run42203689872/job127845239913,
+artifact13495857907 size1301368 SHA256578bb7c9219851aa08df3f20d05e208e5ef976a481aff0504421f1535a438f3c.
+Verified actual tools22.0, AVDtargetandroid-37.0, SystemUI,15stable surfaceflinger samples,
+empty crash preflight, and complete130 originals:128pass2fail0skip/error. The tool pin
+resolved the emulator abort; every first-launch/navigation/menu/audio/security case passed.
+
+Actual status-bar transition now occurred, exposing a real suppression defect: original root
+statusBars changed visible but child-dispatched Compose visibility remained stale/consumed.
+Bounded product correction: additive root pre-draw/attach observer reads original window
+insets without replacing listeners or polling; native visible event retires subscription
+synchronously, unknown insets suppress chrome, and transition waits one draw for composition.
+Original six status test cases/assertions/timeouts are unchanged;32host checks remain green.
+
+Catalogue UUID test's repeated fake native launches keep Home in the same Activity; actual
+Gboard IME show/hide transitions move controls. Fixture helper now explicitly hides/clears
+previous search IME, waits actual hidden state, clicks Apps exactly once, waits displayed,
+then retains every original UUID/all-records-visible/exact-launch assertion. No case or
+required result is removed, skipped or retried. Independent bounded review found no
+Important issues. Full local app/instrumentation build and406JVM passed after these changes;
+the same complete130-case full-SystemUI batch remains mandatory before signing.

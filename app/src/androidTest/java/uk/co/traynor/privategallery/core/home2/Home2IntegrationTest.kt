@@ -102,7 +102,21 @@ class Home2IntegrationTest {
   }
  }
  private fun openDrawer() {
+  // The native launch fixture deliberately retains Home instead of replacing its Activity.
+  // Wait for the real previous search IME to close before targeting moving Home controls.
+  compose.runOnIdle {
+   val view=compose.activity.window.decorView
+   compose.activity.currentFocus?.clearFocus()
+   (compose.activity.getSystemService(android.content.Context.INPUT_METHOD_SERVICE) as android.view.inputmethod.InputMethodManager)
+    .hideSoftInputFromWindow(view.windowToken,0)
+  }
+  compose.waitUntil(5_000) {
+   androidx.core.view.ViewCompat.getRootWindowInsets(compose.activity.window.decorView)
+    ?.isVisible(androidx.core.view.WindowInsetsCompat.Type.ime())!=true
+  }
+  compose.waitForIdle()
   compose.onNodeWithTag("open-apps").performClick()
+  compose.waitUntil(5_000) {runCatching{compose.onNodeWithTag("drawer-sheet").assertIsDisplayed();true}.getOrDefault(false)}
   compose.onNodeWithTag("drawer-sheet").assertIsDisplayed()
  }
 
