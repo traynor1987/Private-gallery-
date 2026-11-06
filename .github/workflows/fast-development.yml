@@ -615,7 +615,7 @@ jobs:
             adb shell wm size 1200x1800
             adb shell wm density 160
             adb shell settings put secure immersive_mode_confirmations confirmed
-            ./gradlew connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class="$(python3 scripts/verify_home2_runtime.py --classes)" -Pkotlin.incremental=false --no-daemon --console=plain
+            bash scripts/run_home2_runtime.sh
       - name: Validate every selected original Android report
         run: python3 scripts/verify_home2_runtime.py app/build/outputs/androidTest-results/connected/debug > app/build/home2-evidence/runtime.json
       - name: Publish isolated integration test build

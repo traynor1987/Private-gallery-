@@ -87,6 +87,11 @@
     "exactBatteryAndRadioChangesFitFoldHeaderAndLandscape",
     "noInternetAndAirplaneRemainDistinctFromWifiAssociation"
   ],
+  "uk.co.traynor.privategallery.ui.NovaHomeStatus60Test": [
+    "actualHomeInitiallyShowsRealStatusWithoutExternalWindowManipulation",
+    "manuallyHiddenActualHomeReceivesBatteryUpdatesAndRestoresAfterNativeReturnAndResume",
+    "manuallyHiddenActualHomeStatusFitsCompactWideAndLandscapeConfigurations"
+  ],
   "uk.co.traynor.privategallery.ui.PrivateAppMainActivityAcceptanceTest": [
     "productionAppReservesNavigationAndHomeRetainsUserStartedAudioWhileExitClosesIt",
     "productionPopupDismissesAndCapturedMenuActionsCannotSurviveBackgroundOrLock"
