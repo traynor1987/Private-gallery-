@@ -1,131 +1,50 @@
-# NovaOS 1.7.11.3 navigation, status and first-launch signing review
+# Independent code60 security and correctness review
 
-Source: ab659cf3578d08cdc0deb643f887e561abb14c63
+Source: f2727d75d142c2a733c53861e1a0f74440e0b6b5
 Decision: APPROVED
 Production signing: APPROVED
-Upgrade fixture SHA-256: 67f8f46ef2381da7920f5a28b65f964137087ae068934fbae7f22bb827a299a1
-Upgrade controls SHA-256: 2246a0d8daf326cabe85bb3a6ebfb6c4e061aa79300b0f125e9358692dc446b4
-Runtime matrix SHA-256: 4f565f651cd524d5185de7262b4e3899a1d06fd1e7e609df2dc31721e6912b7c
-Runtime archive SHA-256: 194292602306328a64b67c1ba1e173448ac9bd3f6657f37f566ae6dd45c6398f
-Signing workflow SHA-256: 590e3294632c21f82933130e2cbca9025c5a15245358f7ececb1cfab4734d8bb
+Upgrade fixture SHA-256: 72efb7de5d0308898b67b8146e4b9f4ce2ab875464e3ca4f4950ea6d2e35c773
+Upgrade controls SHA-256: fcf4052b4d2a88c7b452010d6c08d5c701bffee875483a0fe4702efe37208008
+Runtime matrix SHA-256: 564061623b8cd878be4955ddadc1092a6daeb17fe88ce7d0b8e04d75c9b88c09
+Runtime archive SHA-256: 4cd70b3820f133c5bda2edd26a74f86cb1d05e839f2d44040566652d2ac57b2f
+Signing workflow SHA-256: 80841a70160f17f3cc7d013f76b1bc6b5731d82570bc196bfb767268711dcbf3
 
-Review date: 2026-11-06 UTC. Reviewer: independent navigation/status security review agent.
-Frozen tree: 408c9e0d7b2d0980c45b94c43e91b4933e0bad89.
+Review date: 2026-11-06 UTC.
+Exact source tree: 3c1141d32331fdfb26ba34f50d8200d916f0a6ee.
+Scope: the original-key NovaOS 1.7.11.4 / code60 owner-acceptance candidate only, production package uk.co.traynor.privategallery, minimum/target Android17/API37. No Critical or Important finding remains in the reviewed source and controls.
 
-This authorizes original-key signing of NovaOS 1.7.11.3/code59, package
-uk.co.traynor.privategallery, through the reviewed home2-production workflow only.
-Publication remains conditional on candidate package/certificate checks and actual original-key
-code58-to59 in-place encrypted-data preservation and restart verification. This approval does
-not assert signing or upgrade has already occurred. Physical Galaxy Z Fold acceptance is pending.
+## Approval boundary
 
-## Independently verified original evidence
+This approves use of the existing permanent original signer through the exact reviewed gated workflow. It does not certify that a signed59-to60 upgrade has already passed. Publication is conditional on that workflow independently obtaining the original successful runtime metadata/archive, passing the review/source/fixture/control/workflow gates, recompiling the reviewed instrumentation against actual signed59 application source without a signer environment, verifying the original certificate and package, building/linting the exact frozen candidate, verifying its single original signer/APKv2/package/code/platform/OCR distribution/alignment, and completing the actual original signed59-to60 encrypted-data preservation and process-restart checks on a fresh enforcing API37 emulator. A failed gate must prevent publication. Do not uninstall or clear owner data; do not substitute a rebuilt baseline or replacement key. Any change to frozen application source, reviewed controls, fixture, matrix, runtime archive or signing workflow requires renewed exact-input review.
 
-The reviewer independently refetched successful run42209939762, job127865786721 and
-artifact13499660758 through connected GitHub, and independently downloaded the original archive:
-68233934bytes, SHA256 above. CRC, safe paths and417unique archive members pass. Original
-Android XML contains130unique cases across29classes exactly matching the reviewed matrix;
-original JVM reports contain406unique cases. Zero failures, errors, skips or duplicates.
-All2763original frozen Git blobs matched the independently fetched source tree.
-The activation-only fixture correction below is separately reviewed and bound by its new hash;
-application source, runtime matrix, eight controls and signing workflow are unchanged.
+Required original certificate SHA-256: 94f2bfc6567f26d067d29077111cfd0ce86d38263c642ad115e43365f05b0d17.
 
-The actual isolated test APK has SHA256
-782758b2b86dec8e74b032d8469ecbad5c543aea5b2180dfb2c2e0b1fe4c1692,
-package uk.co.traynor.privategallery.hiddenprototype, code59/version1.7.11.3-TEST-ONLY,
-min/target37, one v2 debug signer. It is not a production upgrade. Actual aapt/apksigner
-checks match its original receipts. Parent independently repeated archive integrity, source,
-matrix, Android/JVM accounting, APK hash/signer and emulator environment checks.
+## Independently examined evidence
 
-Full API37 image includes SystemUI, tools22.0, actual AVDtargetandroid-37.0,
-15stable surfaceflinger observations and empty crash preflight. Earlier failed/superseded
-runtime attempts remain recorded in CODE59_PROGRESS.md and are not approval inputs.
-No required test was removed or skipped. The final status lifecycle case strengthens the
-original with repeated quick resume, a committed pause, exact subscription counts and fresh data.
+Authenticated GitHub connector retrieval independently confirmed successful home2-integration job127953286741 for run42235897971, every required build/policy/browser/runtime/accounting step, artifact13511693979, its exact source/branch, 74513773-byte length and advertised SHA-256. Full authenticated job logs identify the frozen source and successful builds. The original downloaded raw run/jobs/artifact responses agree: successful push, integration/novaos-1.7-home2, repository traynor1987/Private-gallery-, workflow .github/workflows/fast-development.yml, attempt1. Other workflow jobs are deliberately unselected; approval covers the complete reviewed selected matrix.
 
-## Reviewed application boundaries
+The original /tmp/nova60-runtime2.zip independently matches the authenticated digest above. ZIP CRC and unique-member checks pass. Its source receipt equals the frozen source. Original Android XML contains exactly all172 distinct reviewed cases, with zero failure/error/skip; original JVM XML contains431 distinct passing cases with zero failure/error/skip. The isolated APK identity is code60 / 1.7.11.4-TEST-ONLY / hiddenprototype, API37; it is runtime evidence, not the production-signed delivery APK.
 
-No outstanding Critical or Important findings remain.
+Original actual Main/Home JSON and PNGs were examined. The initial actual Home hides Android status bars and displays73 percent/Wi-Fi without test-forced initial hiding. Real BatteryService broadcasts update42 percent with charging bolt/Wi-Fi. Native Settings/Home return displays37 percent. Explicit pause records STARTED, a secure window and no Compose/custom-status roots; resume displays61 percent with charging bolt/Wi-Fi. Showing the Android bar suppresses the duplicate custom indicator, and locking restores the Android bar and removes Home/custom status. Compact360x800, wide840x800 and landscape840x360 captures show readable status without header overlap. The sole prior runtime failure was a paused test-driver root requirement; its narrow correction keeps foreground queries strict, adds an explicit below-RESUMED assertion and preserves all battery/resume/geometry/screenshot/lock checks. The fresh complete172-case run passes on that correction.
 
-- Shared NovaOS-owned Recents/Home/Back chrome preserves Android system/IME insets. Eligible
-  App Mode alone adds the fourth overflow control. The secure bottom sheet reuses existing
-  callbacks, dismisses on Back first, distinguishes disabled actions and rejects stale callbacks
-  across backgrounding, changed app identity, lock or revoked authority. Native menus remain
-  separate. Real WebView identity and user-started HTML audio retention tests pass.
-- Code58 did not already fix first-launch presentation. Saved app intent is retained as
-  authenticated admission metadata while actual readiness is unavailable; browser chrome is
-  never an automatic fallback for App Mode. Re-admission checks original session, saved
-  definition, presentation and the unchanged actual network gate. Explicit OS VPN consent
-  handoff retains only admission metadata, never a retired controller/transfer lease. Home,
-  ordinary background, lock and concealment cancel it. No artificial delay or weaker gate.
-- Compact battery/charging/saver/connectivity data uses supported callbacks/broadcasts;
-  association and validated internet remain distinct. Restricted radio details are omitted.
-  No location/privileged permission, network identifiers, guessed signal or unverified VPN badge.
-  Root inset visibility suppresses duplicate status chrome. Lifecycle/session generation
-  guards retire subscriptions and snapshots, including coalesced and committed pause/resume.
-- Existing authentication, concealed Hidden entry, separate Hidden PIN/no fingerprint,
-  Space-specific encryption, wallpapers, Gallery/Vault/editing, Home appearance, Store and
-  native apps remain. V1 engine configuration, ordinary browser operations, stores and session
-  file hash are preserved. No VPN/Tor repair, routing changes, new keys or plaintext import.
+Original signed59 archive independently rechecked: artifact13502360091 from successful production run42214765335/job127881954559, activation d62d8fc3c1fb921db52c63a1364de3edad102c13. Archive60654499 bytes/SHA c4ffbed29381c36f349d43e1a52c46acd778687d3cc5899e4a9d48bb64afbc6e; APK144778924 bytes/SHA 6db4f5853c8bbcdc379c0887002620d4f75cbd3c86dc98c2e46707b833d94796; evidence108169 bytes/SHA 06ce826e58021da23aac3c66a83a111008038b040c53ee6540b082cabda47c64. Nested original summary identifies application source ab659cf3578d08cdc0deb643f887e561abb14c63, code59, original certificate, historical signed58-to59 PASS and restart PASS. Authenticated baseline job/artifact metadata agrees.
 
-## Reviewed signing and upgrade controls
+The entire reviewed fixture equals the actual signed59 activation fixture (original SHA67f8f46ef2381da7920f5a28b65f964137087ae068934fbae7f22bb827a299a1) after only the five expected identity/comment substitutions. Existing encrypted-data, Home2/browser/cookie, owner-isolation, original wallpaper seeding, restart assertions and ciphertext exclusions remain preserved. The separate local actual59-source instrumentation compilation succeeded; its build file and fixture match the two permitted transformations exactly. The production workflow must still generate and validate its own fresh pre-signer compilation receipt.
 
-Eight controls, fixture, matrix and full signing workflow match these approved hashes.
-Authenticated exact-source runtime checks and original baseline-compatible fixture compilation
-run before signing credentials become available. Candidate validation and upgrade receipts gate
-publication. Signing material is removed on every outcome; evidence excludes instrumentation
-APKs, nested archives and key material.
+## Source and security conclusions
 
-Original signed58 baseline: sourcece743678cca903f41a376e5227eb381f9fbb9574,
-activationa7666cf9b44d8f193f252921e62ee0c9b33b0ecd, run42171366749,
-job127739753358, artifact13481647850. Actual archive60614078bytes SHA256
-5279a40b6a1ca1242af9647cf04d98e9ede3f497ce9991b70fe9f8e6986f5dce.
-Actual APK144697004bytes SHA256
-d28e0de4a3aa6082922e20940f73e9e5f80d4ae9487dac0761338e6550abc59b.
-Nested evidence103867bytes SHA256
-bb455929217f870a1630b8ea7469d8c1990010c31fada2a433d61ffe6c2026f1.
-Archive, APK, nested evidence, authenticated provenance and actual original signer,
-nondebuggable package/version/API37 were independently verified by parent and reviewer.
+The evidence report reuses authenticated selected sources, exact-body one-shot consent, transport retirement, encrypted owner credentials and the existing encrypted Analysis envelope. Opening/preparing/cancelling does not send evidence; each actual request consumes a fresh exact preview. Selection/catalogue/route/credential/Space retirement fail closed. Only selected records and explicitly selected images enter the payload. Credentials and original filenames/location metadata are excluded from report payload/storage/export authority. Untrusted model content cannot select tools, originals, incident mutations or destinations.
 
-Required original certificate SHA-256:
-94f2bfc6567f26d067d29077111cfd0ce86d38263c642ad115e43365f05b0d17.
+Strict local report validation binds selected IDs, fields, literal passages and local timestamp claims. Owner annotations and OCR provenance remain qualified. Every application report carries the owner's exact disclaimer, tentative assessment/count labels, alternatives, confidence and limits; incomplete/refused responses produce Insufficient Evidence with no accepted counts. Counts are local, overlap-aware and category-overlapping. Reviewed count defects are fixed: file/acquisition times cannot split repeated conversation events; occurrence authority requires the locally extracted explicit-offset claim inside the exact cited transcript passage; short date-prefixed repeats compare conservatively; authority follows the actual overlapping references; ambiguous references cannot bridge independent dated groups. Stored canonical grouping/counts remain stable. The safe omitted-chronology fallback uses only already validated transcript citations; the33-reference history regression preserves every citation while provider reference limits remain unchanged.
 
-The disposable enforcing API37 experiment must start with production package absent,
-install original58, seed synthetic encrypted Primary/Hidden media, collections, evidence,
-browser state/cookies and independent Home layouts/themes/widgets/notes/moods/journals/wallpapers,
-install59 with adb install -r, verify preservation, force-stop and verify after restart. No
-seeded data may be cleared or application uninstalled. This is not the owner's physical device.
+Saved reports reopen from encrypted immutable history. Supporting-original callbacks recheck current authority and immutable source fingerprints. Separately confirmed report-only export reacquires the same authenticated Space after the document picker using only report ID/catalogue digest. It validates every retained contributor, including removed record references, rejects Vault-only/changed/unavailable contributors, checks revocation during writes and requests partial cleanup on failure. It reads/copies no original media and introduces no plaintext cache, new encryption architecture or source-byte/hash/visibility mutation. VPN permission handoff now captures the dialog's current task before dismissal in both permission branches.
 
-## Limits
+Home status ownership is limited to live resumed Home, restores prior window visibility/behavior on exit and preserves actual-Android-bar suppression. The retained pager guard avoids encrypted preference access after Space retirement without making the underlying authority permissive.
 
-Physical Fold posture/rotation, Samsung fingerprint hardware, personal website accounts and
-live VPN/OS consent/radio transitions remain owner acceptance. Automated tests use simulated
-readiness/radio providers where reliable live transitions are unavailable; no live handshake
-or hardware verification is claimed. Third-party login/playback restrictions remain.
-Any changed frozen source, fixture, controls, workflow, matrix or archive requires new approval.
+## Explicit limits
 
-## Renewed fixture-only approval after production1 baseline seeding failure
+Physical Samsung Galaxy Fold acceptance: NOT PERFORMED.
+Live OpenAI request/provider/model behavior: NOT PERFORMED; HTTP tests use synthetic responses and no private evidence. AI classifications, intent judgments and counts remain fallible interpretations, not verified facts, diagnoses or legal determinations.
+Signed59-to60 production upgrade/restart and final candidate certificate/APK delivery verification: REQUIRED FUTURE GATES, not established by the isolated runtime APK or this review. Release lint and final production distribution checks remain mandatory in the reviewed signing workflow. This review does not authorize unrelated signing, live-account testing, source changes, relaxed assertions or publication after a failed gate.
 
-Production1 run42212278039/job127873637498 built and validated the candidate but failed
-on original58 during seed, before59 installation; publication did not occur. Original
-diagnostics artifact13499402896:102397bytes SHA256
-6cb4af078993686dc0b810810c99f569697c2686e665b1a4183a44ed52d2f8a7.
-The reviewer verified the original exception, No value for image at home2State483.
-Code58 correctly preserves its authoritative wallpaper against a stale layout snapshot;
-the old seed only wrote an encrypted blob and never committed an applied record.
-
-Renewed independent approval covers the new fixture hash above. Seed now uses original58
-WallpaperStore.apply, retains its returned opaque ID/revision, then saves Home layout.
-Every original verification assertion and ciphertext exclusion remains unchanged. An additional
-exact dedicated wallpaper-record capture/assertion strengthens each owner's preservation check.
-The reviewer directly compared the complete fixture against the historical fixture in signed58
-evidence, allowing only these explicit setup changes/additions and version identity/comments.
-
-The corrected fixture compiled against actual original58 source in2m32s, using only the existing
-two production-target transformations; exact compiled fixture/build inputs were checked.
-All13focused release-control host tests pass. The existing successful130-case runtime includes
-WallpaperStoreTest.deliberate_apply_is_owner_encrypted_and_stale_home_save_preserves_it.
-Application source/runtime evidence and all other approved hashes remain unchanged.
-No outstanding Critical or Important findings. Original-key signing remains APPROVED for
-ab659cf3578d08cdc0deb643f887e561abb14c63 with this new reviewed fixture.
-The failed first production run is nonqualifying; publication still requires a fresh successful
-actual58-to59 seed/upgrade/verification/restart through the unchanged reviewed workflow.
+The independent reviewer made no tracked source/review/marker edits and performed no build, CI trigger, signing, production installation or publication. This file is the review input for the parent to preserve and bind in the gated activation.
