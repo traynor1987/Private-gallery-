@@ -52,3 +52,13 @@ Prepared original60->61 fixture54a13a0216d40fa397c6ea0f4fc9ce9ad90cbae3d22aa0f65
 signingworkflow25d301dc2846d570f961cc38046290549e16d748439affaae8a0ddd2cc6b754f.
 13release-controltests + capturewrapper(14total)pass. Original60archive and unchangedfixture
 assertions/ciphertext exclusions reverified. Still no signer approval or new production APK.
+
+## Combined source freeze
+
+Black feature2ee99042f976863757a69437cc68bdbbca1c73e6 pushed independently ofPin ca7523e975744bcab14f21be4addf41fc05fbf08.
+Metadata now1.7.11.5/code61; complete selected runtime matrix196cases/38classes, preserving all172priorcases.
+447JVM/0failures/errors/skips, app and instrumentation compilation PASS. Lasttest-only fixture
+counter nowmeasures realbuttonclicks; adversarialJavaScriptfocus tests cannot pass byundefined
+markers. Existinghost/privateapp/V1checks PASS,14focusedrelease/capturehosttests PASS.
+Signed release is still closed; oldmarker/review60 mustnot authorize61. Next is existing
+home2-runtime workflow, originalreport/PNG review and fresh exactsource independentapproval.

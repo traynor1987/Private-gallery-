@@ -591,7 +591,7 @@ jobs:
           git rev-parse HEAD > app/build/home2-evidence/source-sha.txt
           apk=app/build/outputs/apk/debug/app-debug.apk
           "$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging "$apk" > app/build/home2-evidence/package.txt
-          grep -F "package: name='uk.co.traynor.privategallery.hiddenprototype' versionCode='60' versionName='1.7.11.4-TEST-ONLY'" app/build/home2-evidence/package.txt
+          grep -F "package: name='uk.co.traynor.privategallery.hiddenprototype' versionCode='61' versionName='1.7.11.5-TEST-ONLY'" app/build/home2-evidence/package.txt
           grep -F "sdkVersion:'37'" app/build/home2-evidence/package.txt
           "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --print-certs "$apk" > app/build/home2-evidence/signature.txt
           sha256sum "$apk" > app/build/home2-evidence/SHA256SUMS.txt
@@ -615,6 +615,8 @@ jobs:
             adb shell wm size 1200x1800
             adb shell wm density 160
             adb shell settings put secure immersive_mode_confirmations confirmed
+            adb shell settings put secure show_ime_with_hard_keyboard 1
+            adb shell settings get secure show_ime_with_hard_keyboard > app/build/home2-evidence/ime-with-hardware-keyboard.txt
             bash scripts/run_home2_runtime.sh
       - name: Validate every selected original Android report
         run: python3 scripts/verify_home2_runtime.py app/build/outputs/androidTest-results/connected/debug > app/build/home2-evidence/runtime.json
@@ -623,17 +625,17 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
         run: |
-          tag="novaos-1.7.11.4-evidence-status-test-${GITHUB_RUN_ID}"
-          cp app/build/outputs/apk/debug/app-debug.apk app/build/home2-evidence/NovaOS-1.7.11.4-Evidence-Status-TEST-ONLY.apk
-          (cd app/build/home2-evidence && sha256sum NovaOS-1.7.11.4-Evidence-Status-TEST-ONLY.apk > SHA256SUMS.txt)
+          tag="novaos-1.7.11.5-black-screen-pinning-test-${GITHUB_RUN_ID}"
+          cp app/build/outputs/apk/debug/app-debug.apk app/build/home2-evidence/NovaOS-1.7.11.5-Black-Screen-Pinning-TEST-ONLY.apk
+          (cd app/build/home2-evidence && sha256sum NovaOS-1.7.11.5-Black-Screen-Pinning-TEST-ONLY.apk > SHA256SUMS.txt)
           cat > app/build/home2-evidence/RELEASE-NOTES.md <<EOFNOTES
-          NovaOS 1.7.11.4 selected evidence reports and actual Home status — NON-PRODUCTION TEST ONLY
+          NovaOS 1.7.11.5 Black Screen and Android pinning — NON-PRODUCTION TEST ONLY
 
-          Separate package uk.co.traynor.privategallery.hiddenprototype, development certificate, code60. Installs alongside production. Contains synthetic runtime-verified Home/Space integration. It cannot upgrade or access the production installation or its encrypted data. Do not uninstall or clear production NovaOS.
+          Separate package uk.co.traynor.privategallery.hiddenprototype, development certificate, code61. Installs alongside production. Contains synthetic runtime-verified Home/Space integration. It cannot upgrade or access the production installation or its encrypted data. Do not uninstall or clear production NovaOS.
 
-          Source: $GITHUB_SHA. Home/Store/widgets/Quick Panel/Mind use captured encrypted Space storage. Existing Primary V1 engine and data-directory code preserved. Hidden networking disabled; Nova Chat Lite disabled Beta. Home backup pending. Real Fold posture, live accounts, production signing and original-key code59-to-code60 upgrade remain unverified. This is not approval to ship a production update.
+          Source: $GITHUB_SHA. Home/Store/widgets/Quick Panel/Mind use captured encrypted Space storage. Existing Primary V1 engine and data-directory code preserved. Hidden networking disabled; Nova Chat Lite disabled Beta. Home backup pending. Real Fold posture, live accounts, production signing and original-key code60-to-code61 upgrade remain unverified. This is not approval to ship a production update.
           EOFNOTES
-          gh release create "$tag" --prerelease --target "$GITHUB_SHA" --title "NovaOS 1.7.11.4 Evidence reports and Home status — TEST ONLY" --notes-file app/build/home2-evidence/RELEASE-NOTES.md app/build/home2-evidence/NovaOS-1.7.11.4-Evidence-Status-TEST-ONLY.apk app/build/home2-evidence/SHA256SUMS.txt app/build/home2-evidence/runtime.json app/build/home2-evidence/signature.txt
+          gh release create "$tag" --prerelease --target "$GITHUB_SHA" --title "NovaOS 1.7.11.5 Black Screen and Android pinning — TEST ONLY" --notes-file app/build/home2-evidence/RELEASE-NOTES.md app/build/home2-evidence/NovaOS-1.7.11.5-Black-Screen-Pinning-TEST-ONLY.apk app/build/home2-evidence/SHA256SUMS.txt app/build/home2-evidence/runtime.json app/build/home2-evidence/signature.txt
       - uses: actions/upload-artifact@v4
         if: always()
         with:

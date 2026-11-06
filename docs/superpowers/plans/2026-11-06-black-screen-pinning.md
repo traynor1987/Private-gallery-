@@ -30,7 +30,7 @@ parent provides exact existing app/tab/auth guard and synchronous privacy/lock r
 - [x] Add contextual menu callback, bound same owner, Main privacy/lock/Panic hooks.
 - [ ] Test touch blocking, doubletap/accessibility/Back wake, exact restore, unchanged WebView+audio,
   focus interruption/actual background, revocation, layout/recreation and stale callback rejection.
-- [ ] Build/host/JVM verify, independent source review and separate feature checkpoint.
+- [x] Build/host/JVM verify, independent source review and separate feature checkpoint.
 
 ## Task B Pinning
 
@@ -42,12 +42,12 @@ Interfaces: composable NovaScreenPinningSettings(current:()->Boolean); no Main e
 - [x] Integrate neutral native Privacy & Security section with captured existing Space/auth lifetime.
 - [ ] Test cancellation, foreground/revoked/keyguard/managed/unknown states, Settings return,
   no success before actual PINNED, no automatic request/recreation persistence, supported OS exit.
-- [ ] Verify and commit independently from Black Screen.
+- [x] Verify and commit independently from Black Screen.
 
 ## Release
 
-- [ ] Determine next unused code above60 and pin actual original signed60 baseline and fixture.
-- [ ] Run existing host/JVM checks and compile app/instrumentation before one combined API37 batch.
+- [x] Determine next unused code above60 and pin actual original signed60 baseline and fixture.
+- [x] Run existing host/JVM checks and compile app/instrumentation before one combined API37 batch.
 - [ ] Inspect original complete XML, actual black captures/window state and retained-audio evidence.
 - [ ] Independently review exact source, controls and original runtime evidence before original signer.
 - [ ] Original-key60-to-next upgrade/preservation/restart; verify actual APK/cert/hash and publish asset.

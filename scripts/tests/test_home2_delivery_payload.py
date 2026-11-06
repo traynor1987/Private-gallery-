@@ -25,7 +25,7 @@ class Home2DeliveryPayloadTest(unittest.TestCase):
             root = Path(temporary)
             build = root / 'app/build'
             evidence = build / 'production-evidence'
-            upgrade = evidence / 'from59'
+            upgrade = evidence / 'from60'
             upgrade.mkdir(parents=True)
             source = '2' * 40
             candidate = build / 'outputs/apk/release/app-release.apk'
@@ -65,18 +65,18 @@ class Home2DeliveryPayloadTest(unittest.TestCase):
                     if unexpected:
                         with self.assertRaisesRegex(AssertionError, 'Evidence contains'):
                             exec(compile(code, '<actual workflow staging>', 'exec'), {})
-                        self.assertFalse((build / 'NovaOS-1.7.11.4-home2-code60-evidence.zip').exists())
+                        self.assertFalse((build / 'NovaOS-1.7.11.5-home2-code61-evidence.zip').exists())
                         return
                     exec(compile(code, '<actual workflow staging>', 'exec'), {})
-                self.assertEqual(candidate.read_bytes(), (build / 'NovaOS-1.7.11.4-home2-code60-owner-acceptance.apk').read_bytes())
-                with zipfile.ZipFile(build / 'NovaOS-1.7.11.4-home2-code60-evidence.zip') as zipped:
+                self.assertEqual(candidate.read_bytes(), (build / 'NovaOS-1.7.11.5-home2-code61-owner-acceptance.apk').read_bytes())
+                with zipfile.ZipFile(build / 'NovaOS-1.7.11.5-home2-code61-evidence.zip') as zipped:
                     names = zipped.namelist()
                     self.assertFalse(any(Path(n).suffix.lower() in {'.apk', '.apks', '.aab', '.jks', '.keystore', '.zip'} for n in names))
                     for name in REPORTS:
                         self.assertEqual(('receipt:' + name).encode(), zipped.read('compiled-upgrade/' + name))
                     summary = json.loads(zipped.read('release-summary.json'))
                     self.assertEqual(digest, summary['apk_sha256'])
-                    self.assertEqual(('1.7.11.4', 60, 'PASS'), (summary['version'], summary['version_code'], summary['original_key_code59_upgrade']))
+                    self.assertEqual(('1.7.11.5', 61, 'PASS'), (summary['version'], summary['version_code'], summary['original_key_code60_upgrade']))
             finally:
                 os.chdir(prior)
 
@@ -85,20 +85,20 @@ class Home2DeliveryPayloadTest(unittest.TestCase):
         self.assertEqual(8,len(workflow['jobs']))
         steps=workflow['jobs']['home2-production']['steps']
         fetch=next(s['with']['script'] for s in steps if s.get('name')=='Fetch original exact-source runtime API evidence and pinned signed baseline')
-        for pin in ('run_id:42214765335','job_id:127881954559','artifact_id:13502360091',
-                    "baselineJob.run_id!==42214765335", "baselineJob.name!=='home2-production'",
-                    "baselineJob.conclusion!=='success'", "baselineJob.head_sha!=='d62d8fc3c1fb921db52c63a1364de3edad102c13'",
-                    '60654499','c4ffbed29381c36f349d43e1a52c46acd778687d3cc5899e4a9d48bb64afbc6e'):
+        for pin in ('run_id:42238614535','job_id:127962769022','artifact_id:13517195318',
+                    "baselineJob.run_id!==42238614535", "baselineJob.name!=='home2-production'",
+                    "baselineJob.conclusion!=='success'", "baselineJob.head_sha!=='9b21d17c180a319fe93e2d06f18b057b5c9f964c'",
+                    '60716615','1a941bac0c92f845db5599afe16831659a0b0fea4042f3c7311bbd9978290c2a'):
             self.assertIn(pin,fetch)
         compile_index=next(i for i,s in enumerate(steps) if s.get('name')=='Compile reviewed baseline-compatible fixture with no signing environment')
         gate_index=next(i for i,s in enumerate(steps) if s.get('name')=='Validate original runtime reports and independent production approval before signer access')
         self.assertLess(gate_index,compile_index)
-        tools=next(s['run'] for s in steps if s.get('name')=='Install Android 17 tools and verify the original code59 APK')
+        tools=next(s['run'] for s in steps if s.get('name')=='Install Android 17 tools and verify the original code60 APK')
         self.assertIn('cmdline-tools;22.0',tools)
         self.assertIn('platforms;android-37.1',tools)
-        upgrade_index=next(i for i,s in enumerate(steps) if s.get('name')=='Original-key code59 to code60 upgrade and restart without uninstall or clear')
+        upgrade_index=next(i for i,s in enumerate(steps) if s.get('name')=='Original-key code60 to code61 upgrade and restart without uninstall or clear')
         upgrade=steps[upgrade_index]['with']
-        self.assertEqual(('37.0','google_apis','x86_64','novaos1711-original-key-from59'),
+        self.assertEqual(('37.0','google_apis','x86_64','novaos1711-original-key-from60'),
                          (upgrade['api-level'],upgrade['target'],upgrade['arch'],upgrade['avd-name']))
         self.assertIs(True,upgrade['force-avd-creation'])
         self.assertIs(False,upgrade['disable-animations'])
@@ -109,12 +109,12 @@ class Home2DeliveryPayloadTest(unittest.TestCase):
             if 'secrets.PRIVATE_GALLERY_SIGNING_' in str(step): self.assertLess(compile_index,i)
         notes=next(s['run'] for s in steps if s.get('name')=='Stage the one verified production APK and complete upgrade evidence')
         self.assertIn('Evidence AI reports',notes)
-        self.assertIn('exact-payload consent',notes)
-        self.assertIn('actual Home status indicator',notes)
+        self.assertIn('Android screen pinning',notes)
+        self.assertIn('black-screen overlay',notes)
         self.assertIn('status',notes)
         self.assertNotIn('Adds Choose from NovaOS Vault',notes)
         publish=next(s['run'] for s in steps if s.get('name')=='Publish verified original-key prerelease with direct APK and evidence assets')
-        self.assertIn('gh release create novaos-1.7.11.4-home2-code60 ',publish)
+        self.assertIn('gh release create novaos-1.7.11.5-home2-code61 ',publish)
 
     def test_only_application_is_delivered_and_all_upgrade_receipts_remain(self):
         self.stage()

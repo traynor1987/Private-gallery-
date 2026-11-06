@@ -16,6 +16,8 @@ classes=[
  'uk.co.traynor.privategallery.ui.BrowserBetaNoticeTest',
  'uk.co.traynor.privategallery.ui.status.NovaSystemStatusTest',
  'uk.co.traynor.privategallery.ui.NovaHomeStatus60Test',
+ 'uk.co.traynor.privategallery.ui.NovaBlackScreen61Test',
+ 'uk.co.traynor.privategallery.ui.NovaScreenPinning61Test',
  'uk.co.traynor.privategallery.ui.PrivateAppMainActivityAcceptanceTest',
  'uk.co.traynor.privategallery.HiddenDiscoverabilityRegressionTest',
  'uk.co.traynor.privategallery.ui.PrivateAppPresentation48Test',

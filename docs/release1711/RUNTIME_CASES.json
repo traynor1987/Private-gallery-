@@ -54,6 +54,8 @@
     "restoreAdmissionSeesColdAppBindingEvenWhenOrdinarySnapshotIsUnchanged"
   ],
   "uk.co.traynor.privategallery.ui.PrivateAppImmersiveControlsTest": [
+    "blackScreenActionClosesSheetAndOldActionCannotInheritRevokedAuthority",
+    "blackScreenIsAbsentOutsideImmersiveModeAndCannotRunWhileUnavailable",
     "overflowFollowsBackAtBottomAndHomeRetainsWhileExitCloses",
     "unrelatedOriginWarningRemainsVisibleWhileHistoryControlsStayDisabledAtRoot"
   ],
@@ -92,7 +94,31 @@
     "manuallyHiddenActualHomeReceivesBatteryUpdatesAndRestoresAfterNativeReturnAndResume",
     "manuallyHiddenActualHomeStatusFitsCompactWideAndLandscapeConfigurations"
   ],
+  "uk.co.traynor.privategallery.ui.NovaBlackScreen61Test": [
+    "backEscapeAndEnterWakeWithoutUnderlyingActions",
+    "dialogFocusLossRestoresAndPendingRequestActivatesOnlyAfterOriginalFocusReturns",
+    "eventDrivenRefreshCancelsPendingAuthorityWithoutActivation",
+    "eventDrivenRevocationHoldsCoverAndSecureCallbackCanDismissReentrantly",
+    "fullWindowPureBlackPixelsAndExactBrightnessBarAccessibilityFocusRestore",
+    "matchingParentCoverTracksActualWindowResize",
+    "pauseAndRecreationCannotCarryActivationForward",
+    "revokedAccessibilityAndTouchNeverRestoreUnderlyingFocus",
+    "singleAndMultitouchNeverClickUnderlayAndDoubleTapWakes",
+    "visibleRealImeIsHiddenBeforeBlackScreenOwnsTouchesAndIsNotRestored"
+  ],
+  "uk.co.traynor.privategallery.ui.NovaScreenPinning61Test": [
+    "AndroidRequestFailureDoesNotClaimAPinOrRetryAutomatically",
+    "actualPublicServicesAndLegitimateOsConfirmationCancelLeaveTheDeviceUnpinned",
+    "idleIsTruthfulAndRequestIsNeverReportedAsConfirmedPinning",
+    "pauseResumeFocusAndRecreationNeverAutomaticallyRequestPinning",
+    "revokedAndUnreadableManagedKeyguardAndLockedStatesCannotInvokeTheOs",
+    "securitySettingsFallbackHandlesUnavailableActivitiesWithoutPretendingToEnablePinning",
+    "stateReadCannotReviveRevokedAuthorityAndClosedCallbacksStayRetired"
+  ],
   "uk.co.traynor.privategallery.ui.PrivateAppMainActivityAcceptanceTest": [
+    "actualBlackScreenAuthenticationExpiryCannotWakeOrRestoreARevokedPage",
+    "actualBlackScreenHomeSwitchRetainsAudioAndPanicRevokesTheNextCover",
+    "actualBlackScreenMenuKeepsPlayingWebViewBlocksTouchesAndWakesWithoutNavigation",
     "productionAppReservesNavigationAndHomeRetainsUserStartedAudioWhileExitClosesIt",
     "productionPopupDismissesAndCapturedMenuActionsCannotSurviveBackgroundOrLock"
   ],
@@ -154,6 +180,8 @@
   ],
   "uk.co.traynor.privategallery.Home2MainAuthorityTest": [
     "home_revokes_browser_interaction_synchronously_before_the_next_composition",
+    "pinning_hidden_settings_capture_requires_its_original_hidden_authentication",
+    "pinning_primary_settings_capture_retires_on_route_space_and_same_key_reauthentication",
     "real_main_primary_image_inside_retained_hidden_previews_and_applies_only_primary_wallpaper",
     "retained_hidden_authority_never_blocks_an_independent_primary_credential_request",
     "wallpaper_capture_uses_actual_primary_image_owner_inside_retained_hidden_and_retires_on_space_change_and_panic"
