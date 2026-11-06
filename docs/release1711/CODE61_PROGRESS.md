@@ -115,3 +115,34 @@ live IME band, painted keyboard contrast and two stable real display frames; aft
 requires actual IME gone and two all-opaque-black global frames. No synthetic images, arbitrary
 delay, touch-exploration setting or production implementation changed. Independent static review
 finds no Critical/Important in these bounded test-only corrections. Fresh full196 is mandatory.
+
+
+## Third original API37 run —195/196, Black Screen and Panic verified
+
+Source5714d23db8ea184b723cf3ae82ca0cadf4fc6bf7, run42258709370/job128032679636,
+artifact13523784946 (7904238bytes), ZIP SHA256
+93e8b764f9f0e4d7d4acc443c7fea88a95221f4974ba9ef843acee7cd82fea75.
+Original196unique:195pass/1fail/0skip;447JVMpass. Original actual before PNG visibly shows real
+Gboard (22contrastcells/4rows;2stableactualframes), after display is entirely opaque black;
+actual Main playing/after-script-focus and native window PNGs also all opaqueBLACK. Root and
+independent reviewer viewed original images. All10Black component+3actualMain Black tests pass.
+Panic now passes with actual native DOWN1/POINTER_DOWN2/POINTER_DOWN3, then all UP tails after
+both Spaces are locked, privacycover present, oldHidden authentication revoked and0childclicks.
+Global windows before injection contain only the actual owned popup, no pending pinning panel.
+No production Panic change was needed. Original failed cleanup interference is consistent with
+these diagnostics but no earlier native receipt was captured, so it is not retroactively proved.
+Local lintDebug also PASS5m19. Physical Fold/live YouTubeMusic/incomingcall remain unperformed.
+
+Only failure is native pinning prompt recognition. Actual screenshot and recursive hierarchy
+now prove the genuine Android prompt with exact native description/unpin instructions and
+No thanks/Got it buttons; remote findAccessibilityNodeInfosByViewId returns empty despite the
+actual child IDs. The sole bounded correction walks actual children, as the already working
+hierarchy capture/Cancel helper does; TYPE_SYSTEM/SystemUI/exactID/visibility/unpin checks and
+all real cancellation/state assertions remain strict. Product source/matrix/controls unchanged.
+Independent static rereview finds no Critical/Important. Fresh all196 pass still required.
+Pin status is refreshed at native resume/focus/Settings entry and each explicit request; a
+nonfocusable accepted prompt may leave its cached label stale until next observation. Actual
+successful owner PINNED entry/unpin is physical acceptance, not established by request/cancel.
+Owner prioritises Black Screen and allows pinning only if supported; genuine public Android
+prompt is now visually established, so finish the known test query correction without engine,
+permission, device-owner or confirmation bypass changes. Do not let unsupported pinning ship.

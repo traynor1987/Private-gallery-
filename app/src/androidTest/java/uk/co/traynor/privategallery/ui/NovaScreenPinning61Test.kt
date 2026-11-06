@@ -268,19 +268,27 @@ class NovaScreenPinning61Test {
         // AccessibilityWindowInfo.title is legitimately null for this native panel on API37.
         // Identify actual SystemUI pinning instructions, never an arbitrary SystemUI window.
         window.type == AccessibilityWindowInfo.TYPE_SYSTEM && root?.packageName?.toString() == "com.android.systemui" &&
-            root.findAccessibilityNodeInfosByViewId("com.android.systemui:id/screen_pinning_description").any {
-                it.isVisibleToUser && it.packageName?.toString() == "com.android.systemui" &&
-                    it.text?.toString()?.contains("unpin", ignoreCase = true) == true
-            }
+            findPinningInstructions(root) != null
+    }
+
+    private fun findPinningInstructions(node: AccessibilityNodeInfo?): AccessibilityNodeInfo? {
+        if (node == null) return null
+        // API37's remote find-by-ID returns empty for this panel even though its retrieved
+        // hierarchy exposes the exact ID. Walk the same real child nodes as Cancel lookup.
+        if (node.viewIdResourceName == "com.android.systemui:id/screen_pinning_description" &&
+            node.isVisibleToUser && node.packageName?.toString() == "com.android.systemui" &&
+            node.text?.toString()?.contains("unpin", ignoreCase = true) == true) return node
+        for (index in 0 until node.childCount) findPinningInstructions(node.getChild(index))?.let { return it }
+        return null
     }
 
     private fun windowSummary(automation: UiAutomation): String = automation.windows.joinToString {
         val bounds = Rect().also { bounds -> it.getBoundsInScreen(bounds) }
         val root = it.root
         val pinning = if (root?.packageName?.toString() == "com.android.systemui") {
-            root.findAccessibilityNodeInfosByViewId("com.android.systemui:id/screen_pinning_description").joinToString { node ->
+            findPinningInstructions(root)?.let { node ->
                 "${node.viewIdResourceName}:visible=${node.isVisibleToUser}:text=${node.text}"
-            }
+            }.orEmpty()
         } else ""
         "${it.title}:${it.type}:focused=${it.isFocused}:package=${root?.packageName}:bounds=$bounds:pinningInstructions=[$pinning]"
     }
