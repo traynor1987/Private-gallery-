@@ -86,3 +86,32 @@ No production implementation, matrix selection/count, timeout or security assert
 Current corrected app+instrumentation build PASS1m11;447JVM/108suites,0failure/error/skip.
 Independent source review reports no Critical/Important so far; final exact-source review and
 all196original runtime cases are still required before signing.
+
+
+## Second original API37 run —194/196, signing still blocked
+
+Source062d6ce135c718e895a5d8a11be1a9fad0707c33, run42254731335/job128018791122,
+artifact13523675704 (7890388bytes), ZIP SHA256
+3fa52b7edda54fad91de834ab277e76ab5c4b4a80b9f481e55eb4188cddf1b96.
+Original196distinct cases:194pass/2fail/0skip. All10BlackScreen component cases and3actualMain
+BlackScreen cases now pass, including retained real local HTML audio, hidden native alert
+cancellation, script-focus attack, touchblocking, wake and native lock/revocation. Actual Main
+playing and after-script-focus WindowPixelCopy PNGs reviewed, allpixels opaqueBLACK.
+The before-IME global PNG raced the compositor: insets true but no painted keyboard; this is
+not accepted as visible-keyboard visual proof. The original first-run before PNG does show it.
+
+Remaining failed native pinning test sees real SystemUI window with null accessibility title,
+so title equality was invalid. Test now identifies actual TYPE_SYSTEM/SystemUI/native visible
+screen_pinning_description/unpin instructions, saves actual timeout hierarchy/screenshot,
+and cancels a pending request through genuine screen-off on the unsecured fixture regardless
+of selector success. The old failed-selector cleanup could leave the nonfocusable native panel
+in front of subsequent native touch tests; interference remains a hypothesis until strict retry.
+Panic diagnostics disprove the initial wrong-popup hypothesis: actual focused popup/child and
+coordinates are correct, but authority stayed current. The test now additionally records actual
+popup MotionEvent receipt, unchanged policy/context/read-only gate state and global system-window
+inventories. No product hook or direct Panic call was introduced; all revoke/PIN/no-click checks
+remain. The keyboard proof now waits native frame commits and actual TYPE_INPUT_METHOD bounds,
+live IME band, painted keyboard contrast and two stable real display frames; after activation
+requires actual IME gone and two all-opaque-black global frames. No synthetic images, arbitrary
+delay, touch-exploration setting or production implementation changed. Independent static review
+finds no Critical/Important in these bounded test-only corrections. Fresh full196 is mandatory.

@@ -1,6 +1,7 @@
 package uk.co.traynor.privategallery.ui
 
 import android.app.Dialog
+import android.accessibilityservice.AccessibilityServiceInfo
 import android.graphics.Bitmap
 import android.graphics.Color
 import android.graphics.Rect
@@ -14,6 +15,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.view.WindowInsets
 import android.view.accessibility.AccessibilityNodeInfo
+import android.view.accessibility.AccessibilityWindowInfo
 import android.widget.Button
 import android.widget.FrameLayout
 import android.widget.EditText
@@ -401,29 +403,181 @@ class NovaBlackScreen61Test {
         return File(additionalOutput, "nova-black61").apply { check(isDirectory || mkdirs()) }
     }
 
+    private data class RenderedIme(val bounds: Rect)
+    private data class KeyboardContrast(val cells: Int, val rows: Int)
+
+    private fun renderedIme(): RenderedIme? {
+        val window = instrumentation.uiAutomation.windows.firstOrNull {
+            it.type == AccessibilityWindowInfo.TYPE_INPUT_METHOD
+        } ?: return null
+        val root = window.root ?: return null
+        if (!root.isVisibleToUser) return null
+        val bounds = Rect().also(window::getBoundsInScreen)
+        val rootBounds = Rect().also(root::getBoundsInScreen)
+        if (bounds.isEmpty || !bounds.intersect(rootBounds)) return null
+        return RenderedIme(bounds)
+    }
+
+    /** Use the real IME band, without depending on optional virtual accessibility key nodes. */
+    private fun keyboardPaintingBounds(bitmap: Bitmap, ime: RenderedIme, imeBottom: Int, navigationBottom: Int): Rect? {
+        if (imeBottom <= navigationBottom) return null
+        val bounds = Rect(0, bitmap.height - imeBottom, bitmap.width, bitmap.height - navigationBottom)
+        if (!bounds.intersect(ime.bounds) || bounds.width() < 24 || bounds.height() < 24) return null
+        // Keep system navigation, the IME toolbar, and window edge decoration outside the proof.
+        bounds.left += bounds.width() / 100
+        bounds.right -= bounds.width() / 100
+        bounds.top += bounds.height() / 5
+        bounds.bottom -= maxOf(2, bounds.height() / 20)
+        return bounds.takeIf { !it.isEmpty && Rect(0, 0, bitmap.width, bitmap.height).contains(it) }
+    }
+
+    /** The old uniform-gray Activity frame has no key glyph/background contrast in this band. */
+    private fun keyboardContrast(bitmap: Bitmap, bounds: Rect): KeyboardContrast {
+        var paintedCells = 0
+        var paintedRows = 0
+        for (row in 0 until 4) {
+            var rowCells = 0
+            for (column in 0 until 12) {
+                val cell = Rect(bounds.left + bounds.width() * column / 12,
+                    bounds.top + bounds.height() * row / 4,
+                    bounds.left + bounds.width() * (column + 1) / 12,
+                    bounds.top + bounds.height() * (row + 1) / 4)
+                var darkest = 255
+                var lightest = 0
+                for (y in cell.top until cell.bottom) for (x in cell.left until cell.right) {
+                    val color = bitmap.getPixel(x, y)
+                    val luma = (Color.red(color) * 299 + Color.green(color) * 587 + Color.blue(color) * 114) / 1000
+                    darkest = minOf(darkest, luma)
+                    lightest = maxOf(lightest, luma)
+                }
+                if (lightest - darkest >= 40) { paintedCells++; rowCells++ }
+            }
+            if (rowCells >= 2) paintedRows++
+        }
+        return KeyboardContrast(paintedCells, paintedRows)
+    }
+
+    private fun samePixelsIn(first: Bitmap, second: Bitmap, bounds: Rect): Boolean {
+        if (first.width != second.width || first.height != second.height ||
+            !Rect(0, 0, first.width, first.height).contains(bounds)) return false
+        for (y in bounds.top until bounds.bottom) for (x in bounds.left until bounds.right) {
+            if (first.getPixel(x, y) != second.getPixel(x, y)) return false
+        }
+        return true
+    }
+
+    private fun opaqueBlack(bitmap: Bitmap): Boolean {
+        for (y in 0 until bitmap.height) for (x in 0 until bitmap.width) {
+            if (bitmap.getPixel(x, y) != Color.BLACK) return false
+        }
+        return true
+    }
+
+    private fun nextCommittedFixtureFrame(f: Fixture, timeoutMillis: Long) {
+        val committed = CountDownLatch(1)
+        main {
+            val decor = f.activity.window.decorView
+            assertTrue("Synthetic display proof requires native hardware frame commits", decor.isHardwareAccelerated)
+            decor.viewTreeObserver.registerFrameCommitCallback { committed.countDown() }
+            decor.postInvalidateOnAnimation()
+        }
+        assertTrue("Synthetic Activity frame commits before real display capture", committed.await(timeoutMillis, TimeUnit.MILLISECONDS))
+    }
+
     private fun saveGlobalImeEvidence(f: Fixture, name: String, expectedImeVisible: Boolean) {
         // Global screenshots are restricted to this empty synthetic EditText in the debug identity.
         assertEquals(ComponentActivity::class.java, f.activity.javaClass)
         assertTrue(f.activity.packageName.endsWith(".hiddenprototype"))
-        lateinit var metadata: JSONObject
-        main {
-            val insets = checkNotNull(f.activity.window.decorView.rootWindowInsets)
-            assertEquals(expectedImeVisible, insets.isVisible(WindowInsets.Type.ime()))
-            metadata = JSONObject()
-                .put("fixture", "synthetic_component_empty_edittext_no_suggestions")
-                .put("capture", "actual_android_display_uiautomation")
-                .put("imeVisible", insets.isVisible(WindowInsets.Type.ime()))
-                .put("statusVisible", insets.isVisible(WindowInsets.Type.statusBars()))
-                .put("navigationVisible", insets.isVisible(WindowInsets.Type.navigationBars()))
+        val automation = instrumentation.uiAutomation
+        val priorFlags = automation.serviceInfo.flags
+        automation.serviceInfo = automation.serviceInfo.apply {
+            flags = flags or AccessibilityServiceInfo.FLAG_RETRIEVE_INTERACTIVE_WINDOWS
         }
-        val bitmap = checkNotNull(instrumentation.uiAutomation.takeScreenshot()) { "Real display screenshot must be available for IME proof" }
+        var previous: Bitmap? = null
+        var previousBounds: Rect? = null
+        var previousImeBounds: Rect? = null
+        var frame: Bitmap? = null
+        var validated: Bitmap? = null
+        var imeBounds: Rect? = null
+        var paintedCells = 0
+        var paintedRows = 0
+        var paintingBounds: Rect? = null
         try {
+            val until = SystemClock.uptimeMillis() + 5_000
+            while (SystemClock.uptimeMillis() < until) {
+                // Insets can precede the compositor: require actual native frames and keyboard pixels.
+                nextCommittedFixtureFrame(f, (until - SystemClock.uptimeMillis()).coerceAtLeast(1))
+                var insetVisible = false
+                var imeBottom = 0
+                var navigationBottom = 0
+                main {
+                    val insets = f.activity.window.decorView.rootWindowInsets
+                    insetVisible = insets?.isVisible(WindowInsets.Type.ime()) == true
+                    imeBottom = insets?.getInsets(WindowInsets.Type.ime())?.bottom ?: 0
+                    navigationBottom = insets?.getInsets(WindowInsets.Type.navigationBars() or WindowInsets.Type.systemGestures())?.bottom ?: 0
+                }
+                val ime = renderedIme()
+                val anyImeWindow = automation.windows.any { it.type == AccessibilityWindowInfo.TYPE_INPUT_METHOD }
+                frame = checkNotNull(automation.takeScreenshot()) { "Real display screenshot must be available for IME proof" }
+                val bitmap = checkNotNull(frame)
+                val paintBounds = ime?.let { keyboardPaintingBounds(bitmap, it, imeBottom, navigationBottom) }
+                val contrast = paintBounds?.let { keyboardContrast(bitmap, it) } ?: KeyboardContrast(0, 0)
+                paintedCells = contrast.cells
+                paintedRows = contrast.rows
+                val candidate = if (expectedImeVisible) {
+                    insetVisible && ime != null && paintBounds != null && paintedCells >= 6 && paintedRows >= 2
+                } else {
+                    !insetVisible && !anyImeWindow && opaqueBlack(bitmap)
+                }
+                val bounds = if (expectedImeVisible) paintBounds else Rect(0, 0, bitmap.width, bitmap.height)
+                val old = previous
+                if (candidate && bounds != null && previousBounds == bounds &&
+                    (!expectedImeVisible || previousImeBounds == ime?.bounds) && old != null && samePixelsIn(old, bitmap, bounds)) {
+                    validated = bitmap
+                    frame = null
+                    imeBounds = ime?.bounds
+                    paintingBounds = paintBounds
+                    break
+                }
+                previous?.recycle()
+                previous = if (candidate) bitmap else null
+                previousBounds = if (candidate) bounds?.let(::Rect) else null
+                previousImeBounds = if (candidate) ime?.bounds?.let(::Rect) else null
+                if (candidate) frame = null
+                frame?.recycle()
+                frame = null
+            }
+            val bitmap = checkNotNull(validated) {
+                "Real IME display proof timed out: expectedVisible=$expectedImeVisible paintedCells=$paintedCells paintedRows=$paintedRows"
+            }
+            lateinit var metadata: JSONObject
+            main {
+                val insets = checkNotNull(f.activity.window.decorView.rootWindowInsets)
+                assertEquals(expectedImeVisible, insets.isVisible(WindowInsets.Type.ime()))
+                metadata = JSONObject()
+                    .put("fixture", "synthetic_component_empty_edittext_no_suggestions")
+                    .put("capture", "actual_android_display_uiautomation")
+                    .put("imeVisible", insets.isVisible(WindowInsets.Type.ime()))
+                    .put("statusVisible", insets.isVisible(WindowInsets.Type.statusBars()))
+                    .put("navigationVisible", insets.isVisible(WindowInsets.Type.navigationBars()))
+                    .put("stableActualFrames", 2)
+                    .put("imeContrastRegions", paintedCells).put("imeContrastRows", paintedRows)
+                    .put("opaqueBlackDisplay", !expectedImeVisible)
+            }
+            imeBounds?.let { metadata.put("imeBounds", org.json.JSONArray(listOf(it.left, it.top, it.right, it.bottom))) }
+            paintingBounds?.let { metadata.put("imePaintingBounds", org.json.JSONArray(listOf(it.left, it.top, it.right, it.bottom))) }
             metadata.put("width", bitmap.width).put("height", bitmap.height)
+            // Save the exact validated frame; taking another screenshot would reintroduce a race.
             File(evidenceDirectory(f), "$name.png").outputStream().use {
                 assertTrue(bitmap.compress(Bitmap.CompressFormat.PNG, 100, it))
             }
             File(evidenceDirectory(f), "$name.json").writeText(metadata.toString(2))
-        } finally { bitmap.recycle() }
+        } finally {
+            frame?.recycle()
+            previous?.recycle()
+            validated?.recycle()
+            automation.serviceInfo = automation.serviceInfo.apply { flags = priorFlags }
+        }
     }
 
     private fun capture(activity: ComponentActivity): Bitmap {

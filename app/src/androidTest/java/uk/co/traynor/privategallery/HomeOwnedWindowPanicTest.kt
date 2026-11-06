@@ -1,5 +1,8 @@
+@file:OptIn(androidx.compose.ui.ExperimentalComposeUiApi::class)
 package uk.co.traynor.privategallery
 
+import android.accessibilityservice.AccessibilityServiceInfo
+import android.app.UiAutomation
 import android.content.Context
 import android.content.ContextWrapper
 import android.graphics.RectF
@@ -11,7 +14,11 @@ import android.view.Window
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.composed
+import androidx.compose.ui.input.pointer.motionEventSpy
 import androidx.compose.ui.platform.ComposeView
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.lifecycle.ViewModelProvider
@@ -74,20 +81,49 @@ class HomeOwnedWindowPanicTest {
         var shown by mutableStateOf(true);var childClicks=0
         var old:uk.co.traynor.privategallery.core.hidden.HiddenSession.Authentication?=null
         val diagnostic=JSONObject().put("fixture","synthetic_hidden_home_popup").put("stage","created")
+        val nativeEvents=JSONArray()
+        diagnostic.put("nativeEventsAtPopupBoundary",nativeEvents)
+        val automation=InstrumentationRegistry.getInstrumentation().uiAutomation
+        val originalServiceInfo=automation.serviceInfo
+        val originalFlags=originalServiceInfo.flags
         lateinit var overlay:ComposeView
         compose.runOnIdle {
             overlay=ComposeView(activity).apply {setContent {
-                PanicHomeDropdownMenu(shown,{shown=false}) {
+                val observedInput=Modifier.composed {
+                    val actualContext=LocalContext.current
+                    this.motionEventSpy {event ->
+                        // Observation only: the production modifier remains the sole Panic gate.
+                        val arrival=JSONObject().put("actionMasked",event.actionMasked).put("actionIndex",event.actionIndex)
+                            .put("pointerCount",event.pointerCount).put("downTime",event.downTime).put("eventTime",event.eventTime)
+                            .put("receivedUptime",android.os.SystemClock.uptimeMillis())
+                            .put("localContextClass",actualContext.javaClass.name)
+                            .put("contextOwnsActualActivity",actualContext.playerActivity()===activity)
+                            .put("rawX",event.rawX).put("rawY",event.rawY)
+                            .put("gatesAtArrival",panicGateDiagnostic(old))
+                        val pointers=JSONArray()
+                        for(index in 0 until event.pointerCount) pointers.put(JSONObject().put("id",event.getPointerId(index))
+                            .put("x",event.getX(index)).put("y",event.getY(index)))
+                        arrival.put("pointers",pointers)
+                        nativeEvents.put(arrival)
+                        Log.i("PGPanicFixture","Native popup input boundary: $arrival")
+                    }
+                }
+                PanicHomeDropdownMenu(shown,{shown=false},modifier=observedInput) {
                     DropdownMenuItem(text={Text("Synthetic child action")},onClick={childClicks++;shown=false})
                 }
             }}
             activity.addContentView(overlay,android.view.ViewGroup.LayoutParams(-1,-1))
         }
         try {
+            originalServiceInfo.flags=originalFlags or AccessibilityServiceInfo.FLAG_REPORT_VIEW_IDS or
+                AccessibilityServiceInfo.FLAG_RETRIEVE_INTERACTIVE_WINDOWS
+            automation.serviceInfo=originalServiceInfo
             compose.onNodeWithText("Synthetic child action").assertIsDisplayed()
+            val globalBeforeSelection=systemWindowDiagnostic(automation)
             compose.runOnIdle {
                 val original=popupWindowDiagnostic()
-                diagnostic.put("originalBeforeSelection",original).put("stage","waiting_for_popup_focus")
+                diagnostic.put("originalBeforeSelection",original).put("globalWindowsBeforeSelection",globalBeforeSelection)
+                    .put("stage","waiting_for_popup_focus")
                 Log.i("PGPanicFixture","Original windows before popup target selection: $original")
             }
             compose.waitUntil(10_000){compose.runOnIdle {focusedPopupRoot()!=null}}
@@ -95,6 +131,7 @@ class HomeOwnedWindowPanicTest {
             // Compose bounds are in this popup's window. Convert them to display coordinates,
             // rather than using the center of whichever window happened to have focus first.
             val child=compose.onNodeWithText("Synthetic child action").fetchSemanticsNode().boundsInWindow
+            val globalBeforeInjection=systemWindowDiagnostic(automation)
             val point=compose.runOnIdle {
                 assertSame("The selected popup must still own actual window focus",popup,focusedPopupRoot())
                 val screen=IntArray(2).also {popup.getLocationOnScreen(it)}
@@ -111,30 +148,40 @@ class HomeOwnedWindowPanicTest {
                 diagnostic.put("selectedRoot",windowDiagnostic(popup)).put("childScreenBounds",rectDiagnostic(childOnScreen))
                     .put("point",JSONArray().put(point.first).put(point.second))
                     .put("oldAuthBefore",owner.hidden.session.isAuthenticationCurrent(old)).put("childClicksBefore",childClicks)
+                    .put("gatesBeforeInjection",panicGateDiagnostic(old)).put("globalWindowsBeforeInjection",globalBeforeInjection)
                     .put("stage","injecting")
                 Log.i("PGPanicFixture","Selected popup input target: $diagnostic")
                 point
             }
             injectThreeFingers(popup,point)
+            val globalAfterInjection=systemWindowDiagnostic(automation)
             compose.runOnIdle {
                 diagnostic.put("oldAuthAfter",owner.hidden.session.isAuthenticationCurrent(old)).put("childClicksAfter",childClicks)
-                    .put("afterInjection",popupWindowDiagnostic()).put("stage","asserting_revocation")
+                    .put("afterInjection",popupWindowDiagnostic()).put("gatesAfterInjection",panicGateDiagnostic(old))
+                    .put("globalWindowsAfterInjection",globalAfterInjection).put("stage","asserting_revocation")
                 assertRevoked(checkNotNull(old));assertEquals("Consumed gesture tail must not click through the popup",0,childClicks);shown=false
             }
             assertPinRequired()
             diagnostic.put("stage","passed")
         } finally {
             try {
+                val globalFinally=systemWindowDiagnostic(automation)
                 compose.runOnIdle {
                     diagnostic.put("oldAuthAfter",owner.hidden.session.isAuthenticationCurrent(old)).put("childClicksAfter",childClicks)
-                        .put("finalWindows",popupWindowDiagnostic())
+                        .put("finalWindows",popupWindowDiagnostic()).put("finalGates",panicGateDiagnostic(old))
+                        .put("globalWindowsFinally",globalFinally)
                     Log.i("PGPanicFixture","Popup gesture result: $diagnostic")
                 }
                 val additional=InstrumentationRegistry.getArguments().getString("additionalTestOutputDir")
                     ?: File(activity.externalMediaDirs.firstOrNull() ?: activity.cacheDir,"additional_test_output").absolutePath
                 val directory=File(additional,"home-window-panic61").apply {check(isDirectory||mkdirs())}
                 File(directory,"popup-three-finger.json").writeText(diagnostic.toString(2))
-            } finally {compose.runOnIdle {shown=false;overlay.disposeComposition();(overlay.parent as? android.view.ViewGroup)?.removeView(overlay)}}
+            } finally {
+                try {
+                    originalServiceInfo.flags=originalFlags
+                    automation.serviceInfo=originalServiceInfo
+                } finally {compose.runOnIdle {shown=false;overlay.disposeComposition();(overlay.parent as? android.view.ViewGroup)?.removeView(overlay)}}
+            }
         }
     }
 
@@ -169,6 +216,40 @@ class HomeOwnedWindowPanicTest {
             .forEach {put(windowDiagnostic(it))}
     }
     private fun rectDiagnostic(rect:RectF)=JSONArray().put(rect.left).put(rect.top).put(rect.right).put(rect.bottom)
+    private fun panicGateDiagnostic(old:uk.co.traynor.privategallery.core.hidden.HiddenSession.Authentication?):JSONObject {
+        val preferences=activity.getSharedPreferences("privacy-shield",Context.MODE_PRIVATE)
+        val accessibility=activity.getSystemService(Context.ACCESSIBILITY_SERVICE) as android.view.accessibility.AccessibilityManager
+        val gate=MainActivity::class.java.getDeclaredField("panicTouchGate").apply {isAccessible=true}.get(activity)
+        val consumed=gate.javaClass.getDeclaredField("consumed").apply {isAccessible=true}.getBoolean(gate)
+        return JSONObject().put("enabled",preferences.getBoolean("enabled",false))
+            .put("threeFinger",preferences.getBoolean("three-finger",true)).put("touchExploration",accessibility.isTouchExplorationEnabled)
+            .put("accessibilityEnabled",accessibility.isEnabled).put("panicGateConsumed",consumed)
+            .put("activityResumed",state<Boolean>("activityResumed").value).put("route",state<Route>("route").value.name)
+            .put("oldHiddenAuthCurrent",owner.hidden.session.isAuthenticationCurrent(old)).put("hiddenUnlocked",owner.hidden.session.isUnlocked)
+            .put("hiddenSelected",owner.hidden.selected).put("primaryUnlocked",owner.session.isUnlocked)
+            .put("blackScreenActive",activity.novaBlackScreenActive).put("privacyCoverVisible",activity.privacyCoverVisible())
+    }
+    private fun systemWindowDiagnostic(automation:UiAutomation):JSONArray=JSONArray().apply {
+        for(window in automation.windows) {
+            val root=window.root
+            val bounds=android.graphics.Rect().also {window.getBoundsInScreen(it)}
+            val entry=JSONObject().put("title",window.title?.toString() ?: JSONObject.NULL).put("type",window.type).put("layer",window.layer)
+                .put("focused",window.isFocused).put("active",window.isActive).put("package",root?.packageName?.toString() ?: JSONObject.NULL)
+                .put("screenBounds",JSONArray().put(bounds.left).put(bounds.top).put(bounds.right).put(bounds.bottom))
+            if(root?.packageName?.toString()=="com.android.systemui") {
+                val pinningNodes=JSONArray()
+                for(id in listOf("screen_pinning_description","screen_pinning_text_area","screen_pinning_ok_button","screen_pinning_cancel_button","screen_pinning_buttons")) {
+                    for(node in root.findAccessibilityNodeInfosByViewId("com.android.systemui:id/$id")) {
+                        val nodeBounds=android.graphics.Rect().also {node.getBoundsInScreen(it)}
+                        pinningNodes.put(JSONObject().put("resourceId",node.viewIdResourceName).put("visible",node.isVisibleToUser)
+                            .put("clickable",node.isClickable).put("screenBounds",JSONArray().put(nodeBounds.left).put(nodeBounds.top).put(nodeBounds.right).put(nodeBounds.bottom)))
+                    }
+                }
+                entry.put("pinningResourceNodes",pinningNodes)
+            }
+            put(entry)
+        }
+    }
     private fun injectThreeFingers(root:View,selectedPoint:Pair<Float,Float>?=null) {
         val point=selectedPoint ?: compose.runOnIdle {IntArray(2).also {root.getLocationOnScreen(it)}.let {it[0]+root.width/2f to it[1]+root.height/2f}}
         val down=android.os.SystemClock.uptimeMillis()

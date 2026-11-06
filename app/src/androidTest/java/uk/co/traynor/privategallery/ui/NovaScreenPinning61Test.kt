@@ -193,15 +193,25 @@ class NovaScreenPinning61Test {
         val automation = instrumentation.uiAutomation
         val originalInfo = automation.serviceInfo
         val originalFlags = originalInfo.flags
+        var requestAttempted = false
+        var cancellationObserved = false
         try {
             // The genuine confirmation is a non-focusable SystemUI navigation-panel window.
             // rootInActiveWindow remains the app, so retrieve ALL interactive window roots.
             originalInfo.flags = originalFlags or AccessibilityServiceInfo.FLAG_REPORT_VIEW_IDS or
                 AccessibilityServiceInfo.FLAG_RETRIEVE_INTERACTIVE_WINDOWS
             automation.serviceInfo = originalInfo
-            compose.runOnIdle { assertTrue(controller.requestPinning()) }
-            waitFor("Expected Android's actual screen-pinning confirmation", { windowSummary(automation) }) {
-                pinningWindow(automation) != null
+            compose.runOnIdle { requestAttempted = true; assertTrue(controller.requestPinning()) }
+            try {
+                waitFor("Expected Android's actual screen-pinning confirmation", { windowSummary(automation) }) {
+                    pinningWindow(automation) != null
+                }
+            } catch (failure: AssertionError) {
+                try {
+                    // Evidence only: a generic SystemUI hierarchy is never accepted as a prompt.
+                    saveConfirmationEvidence(activity, automation, null, "actual-android-confirmation-timeout")
+                } catch (captureFailure: Exception) { failure.addSuppressed(captureFailure) }
+                throw failure
             }
             val confirmation = checkNotNull(pinningWindow(automation))
             val evidence = saveConfirmationEvidence(activity, automation, confirmation)
@@ -219,6 +229,7 @@ class NovaScreenPinning61Test {
                 waitFor("Android screen-off must occur") { !power.isInteractive }
             }
             waitFor("Actual Android confirmation must disappear after cancellation") { pinningWindow(automation) == null }
+            cancellationObserved = true
             wakeUnsecuredFixture(automation, power)
             waitFor("Unsecured fixture must return to its unlocked baseline") { !keyguard.isDeviceLocked && !keyguard.isKeyguardLocked }
             instrumentation.waitForIdleSync()
@@ -227,11 +238,14 @@ class NovaScreenPinning61Test {
         } finally {
             // Never alter a pre-existing pin: baseline NONE was required before this test.
             try {
-                if (pinningWindow(automation) != null) {
-                    injectKey(automation, KeyEvent.KEYCODE_SLEEP)
+                // Cleanup must not depend on the selector whose assertion may have failed.
+                // Otherwise a full-screen nonfocusable panel can intercept later tests' touches.
+                if (requestAttempted && !cancellationObserved) {
+                    if (power.isInteractive) injectKey(automation, KeyEvent.KEYCODE_SLEEP)
                     waitFor("Cleanup screen-off must cancel pending confirmation") { !power.isInteractive }
                 }
                 wakeUnsecuredFixture(automation, power)
+                waitFor("Cleanup must restore unlocked fixture") { !keyguard.isDeviceLocked && !keyguard.isKeyguardLocked }
             } finally {
                 try {
                     instrumentation.runOnMainSync {
@@ -250,13 +264,25 @@ class NovaScreenPinning61Test {
     }
 
     private fun pinningWindow(automation: UiAutomation): AccessibilityWindowInfo? = automation.windows.firstOrNull { window ->
-        window.title?.toString() == "ScreenPinningConfirmation" &&
-            window.root?.packageName?.toString() == "com.android.systemui"
+        val root = window.root
+        // AccessibilityWindowInfo.title is legitimately null for this native panel on API37.
+        // Identify actual SystemUI pinning instructions, never an arbitrary SystemUI window.
+        window.type == AccessibilityWindowInfo.TYPE_SYSTEM && root?.packageName?.toString() == "com.android.systemui" &&
+            root.findAccessibilityNodeInfosByViewId("com.android.systemui:id/screen_pinning_description").any {
+                it.isVisibleToUser && it.packageName?.toString() == "com.android.systemui" &&
+                    it.text?.toString()?.contains("unpin", ignoreCase = true) == true
+            }
     }
 
     private fun windowSummary(automation: UiAutomation): String = automation.windows.joinToString {
         val bounds = Rect().also { bounds -> it.getBoundsInScreen(bounds) }
-        "${it.title}:${it.type}:focused=${it.isFocused}:package=${it.root?.packageName}:bounds=$bounds"
+        val root = it.root
+        val pinning = if (root?.packageName?.toString() == "com.android.systemui") {
+            root.findAccessibilityNodeInfosByViewId("com.android.systemui:id/screen_pinning_description").joinToString { node ->
+                "${node.viewIdResourceName}:visible=${node.isVisibleToUser}:text=${node.text}"
+            }
+        } else ""
+        "${it.title}:${it.type}:focused=${it.isFocused}:package=${root?.packageName}:bounds=$bounds:pinningInstructions=[$pinning]"
     }
 
     private fun waitFor(message: String, diagnostics: () -> String = { "" }, condition: () -> Boolean) {
@@ -277,7 +303,12 @@ class NovaScreenPinning61Test {
         injectKey(automation, KeyEvent.KEYCODE_MENU)
     }
 
-    private fun saveConfirmationEvidence(activity: ComponentActivity, automation: UiAutomation, window: AccessibilityWindowInfo): File {
+    private fun saveConfirmationEvidence(
+        activity: ComponentActivity,
+        automation: UiAutomation,
+        window: AccessibilityWindowInfo?,
+        name: String = "actual-android-confirmation",
+    ): File {
         assertEquals(ComponentActivity::class.java, activity.javaClass)
         assertTrue(activity.packageName.endsWith(".hiddenprototype"))
         val path = InstrumentationRegistry.getArguments().getString("additionalTestOutputDir")
@@ -285,11 +316,11 @@ class NovaScreenPinning61Test {
         val directory = File(path, "nova-pinning61").apply { check(isDirectory || mkdirs()) }
         val image = checkNotNull(automation.takeScreenshot())
         try {
-            File(directory, "actual-android-confirmation.png").outputStream().use {
+            File(directory, "$name.png").outputStream().use {
                 assertTrue(image.compress(Bitmap.CompressFormat.PNG, 100, it))
             }
         } finally { image.recycle() }
-        val metadata = File(directory, "actual-android-confirmation.txt")
+        val metadata = File(directory, "$name.txt")
         metadata.writeText(buildString {
             appendLine("capture=actual_android_systemui_over_synthetic_component_activity")
             appendLine(windowSummary(automation))
@@ -298,7 +329,11 @@ class NovaScreenPinning61Test {
                 appendLine("${" ".repeat(depth)}${node.viewIdResourceName} text=${node.text} clickable=${node.isClickable}")
                 for (index in 0 until node.childCount) appendNode(node.getChild(index), depth + 1)
             }
-            appendNode(window.root)
+            if (window != null) appendNode(window.root)
+            else automation.windows.filter { it.root?.packageName?.toString() == "com.android.systemui" }.forEach {
+                appendLine("diagnostic_only_system_window=${it.title}")
+                appendNode(it.root)
+            }
         })
         return metadata
     }
