@@ -1,121 +1,103 @@
-# NovaOS 1.7.11 Home 2.0 independent source and signing review
+# NovaOS 1.7.11.1 owner acceptance fixes — independent signing review
 
-Source: 0e7f7c07608a6b439a4471e613531a758028c849
+Source: 3af2289e444771fd87188743879bec3361ea6346
 Decision: APPROVED
 Production signing: APPROVED
-Upgrade fixture SHA-256: 6b665eacb36a0e5721db66c621332b2a5f3f2b49f15cd3138c539313696a778d
-Upgrade controls SHA-256: 81a0dfb220376809960e3cca6b61f913eee3999766f915445f9779fd2d5f25ea
-Runtime matrix SHA-256: 6544f450036015ce3359edd8e06c9a253c883daf01da7bb518bc1e086b35a368
-Runtime archive SHA-256: 7329a7a3dee3589ded9cf7b00aadf2bc90589482e54c72b2d58c814e571b6cf9
-Signing workflow SHA-256: 8290adbdad12f35d2c022cf6308342d93f1ca6068550852c1aae04fff9984245
+Upgrade fixture SHA-256: d8db586b18552d746602e59d04edd80d91e9a89dc63088fca16b72c0c8aa868f
+Upgrade controls SHA-256: 538c993c1caa383b2675ab54e24f1e0490830999d65903c4b55c07ac5333de99
+Runtime matrix SHA-256: 80e4d3451886f28fbedf9cfa3541e9fd7d24575078f49d832bb35b98703828a5
+Runtime archive SHA-256: 7dae4d6674cdfa19f33443a4d5923aa8f1bb6f14d7d16df05bdf820563103a9b
+Signing workflow SHA-256: 0d6d7a1a6fbb4bee38f2342a24aa3af25c9490ca51f1000f335e40258431f261
 
-Review date: 2026-11-06 UTC. Reviewer: independent integration/security review agent.
-Frozen Git tree: `eb0dc6d332584b5955d57f42f98ce1b10d53fce7`.
+Review date: 2026-11-06 UTC. Reviewer: independent patch security review agent.
+Frozen tree: 385ce6b82765aafdfe82257837714d8f2cdf3c3b.
 
-This approves use of the existing permanent production key to build the exact source above
-as package `uk.co.traynor.privategallery`, version `1.7.11`, code `56`, through the reviewed
-`home2-production` workflow only. It approves progressing to the fresh enforcing API37
-original-key code54-to-code56 upgrade experiment. Publication remains conditional on every
-reviewed identity, signature, compiled-fixture, upgrade and restart gate passing. This review
-does not assert that production signing or that upgrade has already occurred.
+This authorizes the existing production key for NovaOS 1.7.11.1/code57, package
+uk.co.traynor.privategallery, through the reviewed home2-production workflow only.
+Publication remains conditional on original-key code56-to57 in-place upgrade, retained-data
+verification and restart passing. Signing and upgrade are not asserted by this approval.
 
-## Original evidence independently checked
+## Independently checked original evidence
 
-The authenticated GitHub run metadata identifies push run `42141848244` on
-`integration/novaos-1.7-home2`, from the exact source above, with successful conclusion and
-workflow `.github/workflows/fast-development.yml`. The reviewer independently re-fetched
-jobs and artifacts through the connected GitHub API. Job `127643806118`, `home2-integration`,
-completed successfully, including all five required build/JVM, host/encrypted-adapter,
-browser-preservation/isolated-identity, API37-runtime and original-report-validation steps.
+The reviewer re-fetched original authenticated run/jobs/artifact metadata: push run42159655175,
+job127702032743 and unexpired artifact13476681890. Source, branch, workflow and successful
+conclusions match. The original complete ZIP hash matches the authenticated artifact digest
+above. Its source receipt, isolated package/debug certificate receipt and APK checksum were
+verified. The original XML contains exactly87 unique Android cases across23 classes matching
+the checked-in source-generated matrix, and405 JVM cases, with zero failures, errors or skips.
+The root independently downloaded and repeated the original ZIP integrity, source, matrix,
+runtime and JVM accounting checks.
 
-Original artifact `13467919132`, `novaos-home2-integration-verification`, is unexpired and
-bound to that run and source. Its authenticated artifact digest matches the independently
-computed complete ZIP digest above. ZIP integrity and unique member names were checked.
-The source receipt matches the frozen source. The actual original Android XML contains
-exactly the reviewed 57 cases across 16 classes, each once, with zero failures, errors or
-skips. The checked-in matrix bytes match the source-generated matrix and the pinned digest.
-The archive also contains 399 JVM test cases with zero failures, errors or skips.
+The two earlier runtime archives remain failed evidence; neither is used for this approval.
+Corrections changed test selectors to the actual popup/default Recents controls and aligned
+normal Hidden exit assertions with the preserved existing lifecycle policy. No case was
+removed or skipped. Normal exit retains independent Hidden authentication while concealing
+its presentation; the revised case checks that ordinary Primary navigation cannot reopen it
+and Panic revokes both authorities.
 
-The archived build identity is the separate development installation
-`uk.co.traynor.privategallery.hiddenprototype`, `1.7.11-TEST-ONLY`, code56, minimum/target
-API37, label `NovaOS TEST ONLY`, signed with an Android Debug certificate. It is runtime
-evidence for the integration; it is not an original-key production upgrade artifact.
+## Reviewed application scope
 
-The selected passing runtime evidence includes:
+No unresolved Critical or Important findings remain.
 
-- Real MainActivity/Hidden Home Quick Panel and popup three-finger input through system
-  injection, synchronous drawer concealment, shared callback deduplication/restoration,
-  both Space authorities revoked, neutral lock and fresh Primary PIN entry. Popup gesture
-  tails do not invoke the child action.
-- Real encrypted Private Apps Store installation, ciphertext checks, Add to Home, exact UUID
-  launch, My Apps and uninstall. The final selector corrections preserve all assertions.
-- User-gesture-started HTML audio retained in the same attached WebView across Home, app
-  and standalone Browser switches, then paused on background; native Mind MediaSession
-  controls cannot restart playback after pause or authority retirement.
-- Inactive/stale native focus, popup, permission, geolocation and file callbacks are denied;
-  replacing a renderer does not transfer a pending interaction to its successor. Mixed
-  unknown website resources cannot expand camera/microphone grants.
-- Owner-scoped encrypted Home state, retired capabilities/editors, authenticated corruption
-  handling, wallpaper, Hidden credentials, independent entry/lock authority, encrypted
-  evidence persistence, camera capture and Panic capture recovery.
+- Installed App Mode overlays discreet controls on the full-height retained production
+  WebView. Real MainActivity tests verify native bounds, user-started audio across Home and
+  drawer reopening, actual Exit detachment, background/lock popup dismissal and stale actions.
+- The existing V1 constructor, factory settings, policies, storage and ordinary tab operations
+  remain verified against original production. App classification precedes callbacks; app
+  visits/popups do not enter future standalone history/snapshots. Open in Browser creates an
+  independent ordinary tab. Existing unclassified history/tabs and browser directories remain.
+- Home and native themes share captured owner-encrypted state. Explicit Primary preferences
+  migrate once; Hidden theme remains independent. No third-party CSS darkening is introduced.
+- YouTube presentation recognizes only exact HTTPS/default443 apex/www/mobile aliases with
+  validated paths. Generic origin/scope semantics and unrelated-origin warnings remain.
+- Global viewer/editor/recovery presentation requires a current media destination and owner.
+  Ordinary Home/Browser navigation retains legitimate pending recovery files without showing
+  media editing controls there. Real Activity result ownership and stale delivery tests pass.
+- Primary Home receives no switch action; its model also discards supplied stale callbacks.
+  Ordinary switch dispatch cannot select Hidden, including when Hidden authentication remains.
+  Settings consumes a fresh one-use concealed sequence in authenticated foreground Primary.
+  Locked Hidden restoration clears before presentation. Original concealed PIN workflow,
+  PIN-only Hidden authentication, authenticated Hidden return and Panic architecture remain.
+  Tests cover actual menus, drawer, Quick Panel, Search, Recents, version sequence/PIN entry,
+  intents, restoration, authority and Panic. Native launcher drops incoming extras; Main and
+  Hidden activities remain unexported, with no new deep links.
+- Gallery, Vault encryption, media schemas, original Home design and owner data are preserved.
+  Hidden networking and experimental Chat functionality remain disabled as before. No VPN/Tor
+  repair, new browser engine, production key, plaintext Preview import or future runtime added.
 
-## Source assessment
+## Signing and upgrade controls
 
-No unresolved Critical or Important findings remain in the reviewed integration scope.
-Production application sources are unchanged from reviewed source
-`23ee083987c39f60adbba827766f4d7c3f5e1612`; later commits add delivery controls and test-selector
-corrections. The frozen working application, controls, workflow, fixture and matrix were
-checked against HEAD without differences before this review document was written.
+The eight-file controls digest, reviewed fixture and full signing workflow match the hashes
+above. Ten host upgrade/staging regressions pass. The parent also compiled the actual reviewed
+fixture against original56 source before activation without signer access or app installation.
+The workflow must repeat its own guarded compilation before exposing signer credentials.
 
-The pinned V1-preservation verifier passes against original production source
-`9efd19540a1d75efa1b30f4e23c9cbb096f93aff`. Existing constructor/settings, security policies,
-crypto/vault/browser stores and default browser tab operations remain preserved. Additive
-Private Apps lifecycle entry points share the existing bounded renderer registry; native
-callback liveness/identity guards are deliberately tightened. No replacement browser engine,
-provider bypass, autoplay bypass, Preview credential/cookie import or media-schema rewrite
-is introduced. Provider-managed browser profile storage remains an existing platform-managed
-boundary; this review does not claim that it has become vault-encrypted.
+Baseline is the actual independently signed code56 source
+0e7f7c07608a6b439a4471e613531a758028c849, from run42143438856/artifact13469068696.
+Its original ZIP hash is aa42e6a06abd80710767cebe1b4fe58380fe68361222a7dfd2856dc7883221e6.
+The unchanged original application APK hash is
+2efbe7a29a08a2677b04052eb268e908bb89f5a03fc23677b1791a1c11ea2141.
+Nested evidence, receipt, source, certificate and byte counts are pinned and checked.
 
-Home uses captured Primary/Hidden authority and owner-authenticated encrypted persistence.
-Hidden Home web/VPN/Tor and remote-analysis networking remain unavailable in this candidate.
-Nova Chat Lite/Favourites integration and Home backup remain disabled as displayed by the UI.
-The existing Primary browser and Private Apps paths remain the supported web entry points.
+The disposable enforcing API37 upgrade must install original56, seed synthetic encrypted
+Primary/Hidden media, collections, evidence, browser state/cookies and independent Home
+layout/theme/widget/note/mood/journal/wallpaper records, install57 with adb install -r,
+verify full preservation, force-stop and repeat verification. No seeded data may be cleared
+or application uninstalled. Preserve every existing assertion and ciphertext exclusion.
+The production package must be absent before this disposable experiment.
 
-## Signing and delivery controls
+Required original certificate SHA-256:
+94f2bfc6567f26d067d29077111cfd0ce86d38263c642ad115e43365f05b0d17.
 
-The eight-file canonical controls digest, fixture and complete signing-workflow hash above
-are approved together. Ten independent host regressions passed: eight upgrade/provenance
-control checks and two tests executing the actual workflow staging body. Required order is:
+Delivery rejects debuggable/wrong-package/wrong-certificate APKs. Published evidence excludes
+instrumentation APKs, nested archives and signing material. The application APK is separate.
+Signing material is removed on every workflow outcome. Any change to frozen source, controls,
+fixture, workflow, runtime archive or matrix invalidates this approval for changed inputs.
 
-1. Re-fetch original GitHub run/jobs/artifact evidence, verify exact hashes, full runtime
-   matrix and explicit review approval before any signing environment is introduced.
-2. Preserve reviewed controls; check out the exact frozen source. Verify the pinned archived
-   original code54 APK rather than rebuilding an application baseline. Compile the reviewed
-   fixture against the actual original source with only the two reviewed package transforms,
-   before exposing signer credentials; retain and revalidate its compilation receipt.
-3. Verify availability of the existing private key and original certificate, then build/sign
-   the frozen candidate and a disposable copy of the already-compiled instrumentation.
-   Verify unchanged instrumentation payload and original certificate separately.
-4. On a fresh disposable enforcing API37 emulator with production package initially absent,
-   install the exact original54 APK, seed synthetic data, install56 with `adb install -r`,
-   verify, force-stop and verify again. Never uninstall or clear seeded application data.
-5. Publish only after all those gates succeed. Deliver the single production APK separately;
-   evidence contains receipts, hashes, manifests, reports and reviewed controls, with no
-   instrumentation APK, nested archive or signing material. Failure uploads remain selected
-   diagnostics. Signing material is removed after signing and on every workflow outcome.
+## Limits
 
-The required original certificate SHA-256 is
-`94f2bfc6567f26d067d29077111cfd0ce86d38263c642ad115e43365f05b0d17`.
-The original54 application SHA-256 is
-`3e9497d87c074d6d49bfd42a2b44cc5f2cd46ec0b7476d35d030e75b9cd35ce2`.
-Changing the frozen source, fixture, controls, matrix, runtime archive or signing workflow
-invalidates this approval for the changed inputs and requires renewed review.
-
-## Acceptance limits
-
-Physical Galaxy Fold testing and live WhatsApp/website accounts were NOT PERFORMED by this
-review or the synthetic CI matrix and remain owner acceptance work. No claim is made that
-the selected matrix exhausts every website, device posture, browser feature or external
-provider behavior. The original-key production upgrade and restart are still PENDING and
-must pass before publication. Existing production installations must be upgraded in place;
-the owner must not uninstall NovaOS or clear its data.
+The tests use synthetic data on API37; physical Galaxy Z Fold posture, personal website
+accounts and live Samsung fingerprint hardware were not tested by CI or this review.
+Physical owner acceptance remains separate. Existing production installations must upgrade
+in place without uninstalling NovaOS or clearing data. The separately requested Vault
+wallpaper enhancement is not part of this frozen release and has not changed these inputs.
