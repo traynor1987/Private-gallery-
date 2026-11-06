@@ -27,7 +27,11 @@ object ChunkedVaultVideoStore {
         RandomAccessFile(file, "r").use { input -> ByteArray(MAGIC.size).also(input::readFully).contentEquals(MAGIC) }
 
     fun writeAndVerify(id: String, source: InputStream, key: ByteArray, root: File,
-                       existingHeaderNonce: ByteArray? = null): StoredPayload {
+                       existingHeaderNonce: ByteArray? = null): StoredPayload =
+        writeAndVerify(id,source,key,root,existingHeaderNonce){false}
+
+    fun writeAndVerify(id:String,source:InputStream,key:ByteArray,root:File,
+                       existingHeaderNonce:ByteArray?,cancelled:()->Boolean):StoredPayload {
         require(id.matches(Regex("[A-Za-z0-9-]{1,120}")) && key.size == 32)
         val staging = File(root, "staging").apply { mkdirs() }
         val payloads = File(root, "payloads").apply { mkdirs() }
@@ -47,11 +51,14 @@ object ChunkedVaultVideoStore {
                 while (true) {
                     var filled = 0
                     while (filled < buffer.size) {
+                        check(!cancelled()) {"Video encryption revoked"}
                         val read = source.read(buffer, filled, buffer.size - filled)
+                        check(!cancelled()) {"Video encryption revoked"}
                         if (read < 0) break
                         if (read > 0) filled += read
                         else {
                             val one = source.read()
+                            check(!cancelled()) {"Video encryption revoked"}
                             if (one < 0) break
                             buffer[filled++] = one.toByte()
                         }
@@ -74,7 +81,9 @@ object ChunkedVaultVideoStore {
                 header.fill(0)
             }
             val stored = StoredPayload(id, temporary, size, digest.digest(), headerNonce)
-            check(open(stored, key).use { it.verifyAll() }) { "Encrypted video verification failed" }
+            check(!cancelled()) {"Video verification revoked"}
+            check(open(stored, key).use { it.verifyAll(cancelled) }) { "Encrypted video verification failed" }
+            check(!cancelled()) {"Video promotion revoked"}
             check(temporary.renameTo(destination)) { "Unable to promote encrypted video" }
             return stored.copy(file = destination)
         } catch (failure: Throwable) { temporary.delete(); throw failure }

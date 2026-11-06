@@ -29,6 +29,38 @@ internal class HiddenRepository(context: Context, private val session: HiddenSes
     private val records = HiddenRecordStore(root, directorySync)
 
     fun items(): List<VaultItem> = operation { op -> VaultPresentationStore(root,"hidden",op.key()).decorate(snapshot(op).items.filter {it.state==VaultItemState.COMPLETE}).sortedByDescending {it.addedAtEpochMillis ?: it.importedAtEpochMillis} }
+    internal fun backupSnapshot():VaultIndexSnapshot = operation {op ->snapshot(op).let {it.copy(items=VaultPresentationStore(root,"hidden",op.key()).decorate(it.items),collections=VaultPresentationStore(root,"hidden",op.key()).decorateCollections(it.collections))}}
+
+    /** Keeps all existing records. Batch media becomes visible through one authenticated metadata promotion. */
+    internal fun restorePortable(producer:uk.co.traynor.privategallery.core.backup.BackupMediaProducer,restoreFavourite:Boolean=false):Int = operation {op ->
+        val before=snapshot(op);val added=mutableListOf<VaultItem>();val ids=linkedMapOf<String,String>()
+        val staged=mutableListOf<File>();val promoted=mutableListOf<File>();var publicationAttempted=false
+        try {
+            val collections=producer.produce {source,input ->
+                checkCurrent(op);require(!ids.containsKey(source.id));require(before.items.size+added.size<10000)
+                val id=UUID.randomUUID().toString()
+                val payload=HiddenChunkStore.stage(root,id,input,op.key()){checkCurrent(op)};staged+=payload.file
+                uk.co.traynor.privategallery.core.backup.BackupMedia.verify(source,payload.size,payload.hash)
+                HiddenChunkStore.Reader(payload.file,id,payload.size,payload.hash,payload.nonce,op.key()){checkCurrent(op)}.use{it.verify()}
+                ids[source.id]=id;added+=source.copy(id=id,payloadNonce=payload.nonce)
+            }
+            val merged=try{uk.co.traynor.privategallery.core.backup.BackupMedia.merge(before,added,ids,collections,restoreFavourite)}finally{collections?.fill(0)}
+            require(merged.imageEdits.isEmpty()) {"Hidden uses edited media copies rather than a crop ledger"}
+            // Encode/validate the complete new metadata before promoting any file.
+            val json=encode(merged);decode(json)
+            val bytes=json.toString().encodeToByteArray()
+            val metadata=try{records.stage("metadata",METADATA_ID,bytes,op.key())}finally{bytes.fill(0)};staged+=metadata
+            added.forEachIndexed {i,item->
+                checkCurrent(op)
+                promoted+=records.file("media",item.id)
+                publishIfAllowed {session.commit(op){records.promote(staged[i],"media",item.id)}}
+            }
+            records.syncPromotions()
+            publishIfAllowed {session.commit(op){checkCurrent(op);publicationAttempted=true;records.promote(metadata,"metadata",METADATA_ID)}}
+            records.syncPromotions();checkCurrent(op);added.size
+        }finally {staged.forEach{it.delete()};if(!publicationAttempted)promoted.forEach{it.delete()}}
+    }
+
     fun presentationSort():String? = operation {op -> VaultPresentationStore(root,"hidden",op.key()).sort()}
     fun presentationSort(value:String) = operation {op -> VaultPresentationStore(root,"hidden",op.key(),{commit->session.commit(op){commit()}}).sort(value)}
     fun storageSummary() = operation {op ->
@@ -252,7 +284,13 @@ internal class HiddenRepository(context: Context, private val session: HiddenSes
     }
     /** Scoped original stream; EOF authenticates the complete length and digest before publication. */
     internal fun <T> withTransferSource(id:String, cancelled:()->Boolean, consume:(VaultItem,InputStream)->T):T = operation {op ->
-        val item=VaultPresentationStore(root,"hidden",op.key()).decorate(listOf(completeItem(id,op))).single()
+        readOriginalSource(VaultPresentationStore(root,"hidden",op.key()).decorate(listOf(completeItem(id,op))).single(),op,cancelled,consume)
+    }
+    internal fun <T> withBackupSource(id:String,cancelled:()->Boolean,consume:(VaultItem,InputStream)->T):T = operation {op ->
+        val item=snapshot(op).items.single{it.id==id&&it.state in setOf(VaultItemState.COMPLETE,VaultItemState.TRASHED)}
+        readOriginalSource(item,op,cancelled,consume)
+    }
+    private fun <T> readOriginalSource(item:VaultItem,op:HiddenSession.Operation,cancelled:()->Boolean,consume:(VaultItem,InputStream)->T):T {
         fun readSource(input:InputStream):T {
             var size=0L;var verified=false
             val digest=MessageDigest.getInstance("SHA-256")
@@ -269,8 +307,8 @@ internal class HiddenRepository(context: Context, private val session: HiddenSes
             }
             return consume(item,source).also {check(verified) {"Hidden source was not fully verified"}}
         }
-        if(chunked(item)) chunkReader(item,records.file("media",id),op).use {reader ->reader.stream().use {readSource(it)}}
-        else {val bytes=read(id);try {java.io.ByteArrayInputStream(bytes).use {readSource(it)}} finally {bytes.fill(0)}}
+        return if(chunked(item)) chunkReader(item,records.file("media",item.id),op).use {reader ->reader.stream().use {readSource(it)}}
+        else {val bytes=records.read("media",item.id,op.key());try {java.io.ByteArrayInputStream(bytes).use {readSource(it)}} finally {bytes.fill(0)}}
     }
     /** Recoverable removal, only for the exact authenticated source that was transferred. */
     internal fun trashVerifiedSource(expected:VaultItem) = operation {op ->
@@ -358,8 +396,8 @@ internal class HiddenRepository(context: Context, private val session: HiddenSes
         finally {bytes.fill(0);staged?.delete()}
     }
     private fun encode(s:VaultIndexSnapshot):JSONObject = JSONObject().put("domain","hidden").put("version",2)
-        .put("items",JSONArray(s.items.map {i -> JSONObject().put("id",i.id).put("mime",i.mimeType).put("name",i.displayName).put("time",i.importedAtEpochMillis).put("size",i.plaintextSize).put("hash",android.util.Base64.encodeToString(i.plaintextSha256,android.util.Base64.NO_WRAP)).put("nonce",android.util.Base64.encodeToString(i.payloadNonce,android.util.Base64.NO_WRAP)).put("origin",i.origin.name).put("vaultOnly",i.vaultOnly).put("source",i.sourceUri ?: "").put("trash",i.state==VaultItemState.TRASHED).put("deleted",i.deletedAtEpochMillis ?: 0)}))
-        .put("collections",JSONArray(s.collections.map {c -> JSONObject().put("id",c.id).put("name",c.name).put("time",c.createdAtEpochMillis).put("cover",c.coverVaultItemId ?: "")}))
+        .put("items",JSONArray(s.items.map {i -> JSONObject().put("id",i.id).put("mime",i.mimeType).put("name",i.displayName).put("time",i.importedAtEpochMillis).put("size",i.plaintextSize).put("hash",android.util.Base64.encodeToString(i.plaintextSha256,android.util.Base64.NO_WRAP)).put("nonce",android.util.Base64.encodeToString(i.payloadNonce,android.util.Base64.NO_WRAP)).put("origin",i.origin.name).put("vaultOnly",i.vaultOnly).put("source",i.sourceUri ?: "").put("trash",i.state==VaultItemState.TRASHED).put("deleted",i.deletedAtEpochMillis ?: 0).put("dates",VaultPresentationMetadata.encode(i))}))
+        .put("collections",JSONArray(s.collections.map {c -> JSONObject().put("id",c.id).put("name",c.name).put("time",c.createdAtEpochMillis).put("cover",c.coverVaultItemId ?: "").put("pinned",c.isPinned)}))
         .put("memberships",JSONArray(s.memberships.map {m -> JSONObject().put("collection",m.collectionId).put("item",m.vaultItemId).put("time",m.addedAtEpochMillis)}))
         .put("favourite",s.favouriteCollectionId ?: "")
     private fun decode(json:JSONObject):VaultIndexSnapshot {
@@ -369,9 +407,9 @@ internal class HiddenRepository(context: Context, private val session: HiddenSes
             val hash=android.util.Base64.decode(i.getString("hash"),android.util.Base64.NO_WRAP);check(hash.size==32)
             val nonce=if(i.has("nonce")) android.util.Base64.decode(i.getString("nonce"),android.util.Base64.NO_WRAP) else ByteArray(12);check(nonce.size==12)
             val size=i.getLong("size");check(size in 1..(if(nonce.any {it.toInt()!=0}) HiddenChunkStore.MAX_BYTES else HiddenRecordStore.MAX_MEDIA_BYTES.toLong()))
-            VaultItem(id,i.getString("mime"),i.getString("name"),i.getLong("time"),size,hash,nonce,if(i.getBoolean("trash")) VaultItemState.TRASHED else VaultItemState.COMPLETE,sourceUri=i.optString("source").takeIf {it.isNotEmpty()},origin=MediaOrigin.valueOf(i.optString("origin",MediaOrigin.IMPORTED.name)),vaultOnly=i.optBoolean("vaultOnly",false),deletedAtEpochMillis=i.getLong("deleted").takeIf {it>0})}
+            VaultPresentationMetadata.apply(VaultItem(id,i.getString("mime"),i.getString("name"),i.getLong("time"),size,hash,nonce,if(i.getBoolean("trash")) VaultItemState.TRASHED else VaultItemState.COMPLETE,sourceUri=i.optString("source").takeIf {it.isNotEmpty()},origin=MediaOrigin.valueOf(i.optString("origin",MediaOrigin.IMPORTED.name)),vaultOnly=i.optBoolean("vaultOnly",false),deletedAtEpochMillis=i.getLong("deleted").takeIf {it>0}),i.optJSONObject("dates") ?: JSONObject())}
         val c=json.getJSONArray("collections");check(c.length()<=1000)
-        val collections=List(c.length()){n -> c.getJSONObject(n).let {VaultCollection(it.getString("id"),it.getString("name"),it.getLong("time"),coverVaultItemId=it.optString("cover").takeIf {id->id.isNotBlank()})}}
+        val collections=List(c.length()){n -> c.getJSONObject(n).let {VaultCollection(it.getString("id"),it.getString("name"),it.getLong("time"),coverVaultItemId=it.optString("cover").takeIf {id->id.isNotBlank()},isPinned=it.optBoolean("pinned",false))}}
         val m=json.getJSONArray("memberships");check(m.length()<=100_000)
         val memberships=List(m.length()){n -> m.getJSONObject(n).let {VaultCollectionMembership(it.getString("collection"),it.getString("item"),it.getLong("time"))}}
         val favourite=json.getString("favourite").takeIf {it.isNotEmpty()}

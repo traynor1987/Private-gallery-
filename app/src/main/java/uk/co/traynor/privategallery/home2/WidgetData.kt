@@ -10,7 +10,7 @@ val widgetSpecs=listOf(
  WidgetSpec("media","Now Playing","Real native media controls, supported website information and Return to App.",listOf(2 to 2,4 to 1,4 to 2,4 to 4)),
  WidgetSpec("recents","Recent apps","Resume retained Nova apps.",listOf(2 to 2,4 to 1,4 to 2)),
  WidgetSpec("mind","Nova Mind","A gentle shortcut to breathing and grounding.",listOf(2 to 1,2 to 2,4 to 1)),
- WidgetSpec("note","Quick Note","An encrypted Space note. Text is excluded from Home backups.",listOf(2 to 2,4 to 2,4 to 4)),
+ WidgetSpec("note","Quick Note","An encrypted Space note. Included in encrypted Nova Backup.",listOf(2 to 2,4 to 2,4 to 4)),
  WidgetSpec("search","Nova Search","Find apps, settings, games and Mind tools locally.",listOf(2 to 1,4 to 1)))
 data class WidgetItem(val id:String,val type:String,val config:String="")
 data class WidgetSlot(val id:String,val page:Int,val x:Int,val y:Int,val w:Int,val h:Int,val items:List<WidgetItem>,val active:Int=0){fun rect()=intArrayOf(x,y,w,h)}

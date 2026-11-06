@@ -32,6 +32,7 @@ internal class SpaceContext(base: Context, private val access: EvidenceAccess) :
 
  init {
   checkCurrent()
+  synchronized(gate) { recoverBackupSwap() }
   retirement = access.onRetire { close() }
   if (closed.get()) retirement?.close()
   checkCurrent()
@@ -54,6 +55,114 @@ internal class SpaceContext(base: Context, private val access: EvidenceAccess) :
   checkCurrent(); require(mode == Context.MODE_PRIVATE) { "Space preferences must be private" }
   require(name.length <= 4096)
   preferences.getOrPut(name) { Preferences(name) }
+ }
+
+ /** Only audited logical namespaces are portable. Never exports device ciphertext or keys. */
+ internal fun backupValues():Map<String,ByteArray> = synchronized(gate) {
+  checkCurrent();val result=linkedMapOf<String,ByteArray>()
+  try {
+   uk.co.traynor.privategallery.core.backup.BackupPolicy.preferences.forEach {name ->
+    @Suppress("UNCHECKED_CAST") val values=getSharedPreferences(name,0).all as Map<String,Any>
+    val safe=portableValues(name,values,false)
+    if(safe.isNotEmpty())result["preferences:$name"]=encode(safe)
+   }
+   val wallpaperPreferences=getSharedPreferences("nova_preview_v1",0)
+   val applied=wallpaperPreferences.getString("wallpaper-applied-v1",null)
+   val wallpaperJson=applied?.let({org.json.JSONObject(it)}) ?: wallpaperPreferences.getString("state",null)?.let{org.json.JSONObject(it).optJSONObject(spaceId)?.optJSONObject("wallpaper")}
+   val wallpaper=wallpaperJson?.optString("image")?.takeIf(UUID_PATTERN::matches)
+   if(wallpaper!=null)result["wallpaper:$wallpaper"]=checkNotNull(readWallpaper(wallpaper)){"Referenced wallpaper is unavailable; backup cannot be complete"}
+   checkCurrent();result
+  }catch(failure:Throwable){result.values.forEach{it.fill(0)};throw failure}
+ }
+ internal fun validateBackupValues(values:Map<String,ByteArray>) = synchronized(gate) {
+  checkCurrent();require(values.size<=16&&values.values.sumOf{it.size.toLong()}<=64L*1024*1024)
+  values.forEach { (name,bytes) ->
+   require(bytes.size in 1..MAX_BYTES)
+   when {
+    name.startsWith("preferences:")-> {val namespace=name.removePrefix("preferences:");require(uk.co.traynor.privategallery.core.backup.BackupPolicy.allowed(namespace));portableValues(namespace,decode(bytes),true)}
+    name.startsWith("wallpaper:")->require(UUID_PATTERN.matches(name.removePrefix("wallpaper:")))
+    else->error("Unsupported backup preference")
+   }
+  }
+  values["preferences:nova_preview_v1"]?.let {bytes->
+   val preferences=decode(bytes)
+   val applied=preferences["wallpaper-applied-v1"] as? String
+   val wallpaper=applied?.let{org.json.JSONObject(it)}?: (preferences["state"] as? String)?.let{org.json.JSONObject(it).getJSONObject("profile").optJSONObject("wallpaper")}
+   val id=wallpaper?.optString("image")?.takeIf(UUID_PATTERN::matches)
+   require(id==null||values.containsKey("wallpaper:$id")){"Referenced wallpaper missing from archive"}
+  }
+ }
+ /** One recoverable directory swap replaces supported settings after explicit UI confirmation.
+  * The old directory survives until promotion finishes; startup repairs an interrupted rename. */
+ internal fun restoreBackupValues(values:Map<String,ByteArray>,appIds:Map<String,String> = emptyMap(),installedApps:org.json.JSONArray = org.json.JSONArray()) = synchronized(gate) {
+  validateBackupValues(values);recoverBackupSwap()
+  access.leases.acquire().use {lease ->
+   checkLease(lease);check(root.parentFile!!.isDirectory||root.parentFile!!.mkdirs())
+   val next=File(root.parentFile,"home2-backup-next-${UUID.randomUUID()}")
+   check(next.mkdir())
+   try {
+    root.listFiles().orEmpty().forEach {file ->checkLease(lease);if(file.isFile&&file.name.endsWith(".enc"))FileInputStream(file).use{input->FileOutputStream(File(next,file.name)).use{output->input.copyTo(output,65536);output.fd.sync()}}}
+    values.forEach {(name,bytes)->
+     checkLease(lease)
+     val namespace=name.substringAfter(':')
+     val kind=if(name.startsWith("preferences:"))"preferences"else "wallpaper"
+     val plain=if(kind=="preferences")encode(portableValues(namespace,decode(bytes),true,appIds,installedApps))else bytes.copyOf()
+     val file=if(kind=="preferences")File(next,"prefs-${MessageDigest.getInstance("SHA-256").digest(namespace.encodeToByteArray()).joinToString(""){"%02x".format(it)}}.enc")else File(next,"wallpaper-$namespace.enc")
+     try {
+      writeEncrypted(file,aad(kind,namespace),plain,lease)
+      val verified=checkNotNull(readEncrypted(file,aad(kind,namespace),lease))
+      try{check(MessageDigest.isEqual(plain,verified)){"Staged settings verification failed"}}finally{verified.fill(0)}
+     }finally{plain.fill(0)}
+    }
+    uk.co.traynor.privategallery.core.backup.SettingsDirectoryTransaction(root).install(next,{current()&&lease.current()}) {action->lease.commit {checkLease(lease);action()}}
+   }finally {next.deleteRecursively()}
+  }
+ }
+ private fun recoverBackupSwap() {
+  if(root.parentFile?.isDirectory==true)uk.co.traynor.privategallery.core.backup.SettingsDirectoryTransaction(root).recover()
+  root.parentFile?.listFiles().orEmpty().filter{it.name.startsWith("home2-backup-next-")}.forEach{it.deleteRecursively()}
+ }
+ private fun portableValues(name:String,values:Map<String,Any>,restore:Boolean,appIds:Map<String,String> = emptyMap(),installedApps:org.json.JSONArray = org.json.JSONArray()):MutableMap<String,Any> {
+  require(uk.co.traynor.privategallery.core.backup.BackupPolicy.allowed(name))
+  if(restore)uk.co.traynor.privategallery.core.backup.PortablePreferenceSchema.validate(name,values,spaceId)
+  val safe=linkedMapOf<String,Any>()
+  when(name) {
+   "nova_preview_v1"->{
+    values["state"]?.let {raw->
+     val state=org.json.JSONObject(raw as String)
+     if(restore) {
+      require(state.getInt("schema")==1&&state.getString("current")==spaceId)
+      val profile=state.getJSONObject("profile");profile.put("installed",installedApps)
+      fun remap(array:org.json.JSONArray):org.json.JSONArray=org.json.JSONArray().apply{repeat(array.length()){index->val id=array.getString(index);if(id.startsWith("web:"))appIds[id]?.let{put(it)}else put(id)}}
+      val pages=profile.getJSONArray("pages");for(index in 0 until pages.length())pages.put(index,remap(pages.getJSONArray(index)))
+      profile.put("dock",remap(profile.getJSONArray("dock")));profile.put("drawer",remap(profile.optJSONArray("drawer")?:org.json.JSONArray()))
+      val folders=profile.getJSONArray("folders");for(index in 0 until folders.length()){val folder=folders.getJSONObject(index);folder.put("apps",remap(folder.getJSONArray("apps")))}
+      // The legacy Home codec requires two slots; the inactive one is an empty local default.
+      val empty=org.json.JSONObject().put("installed",org.json.JSONArray()).put("pages",org.json.JSONArray().put(org.json.JSONArray()))
+       .put("dock",org.json.JSONArray()).put("folders",org.json.JSONArray()).put("wallpaper",org.json.JSONObject().put("builtin","Aurora"))
+      safe["state"]=org.json.JSONObject().put("schema",1).put("current",spaceId).put("theme",state.getString("theme"))
+       .put(spaceId,profile).put(if(spaceId=="primary")"hidden"else "primary",empty).toString()
+     } else {
+      require(state.getString("current")==spaceId)
+      val profile=state.getJSONObject(spaceId);profile.put("installed",org.json.JSONArray())
+      safe["state"]=org.json.JSONObject().put("schema",1).put("current",spaceId).put("theme",state.getString("theme")).put("profile",profile).toString()
+     }
+    }
+    values["wallpaper-applied-v1"]?.let{safe["wallpaper-applied-v1"]=it}
+    values["native-theme-bridged"]?.let{safe["native-theme-bridged"]=it}
+   }
+   "nova_widgets_v1"->{
+    listOf("reduced","clock:$spaceId").forEach{key->values[key]?.let{safe[key]=it}}
+    values["layout:$spaceId"]?.let{raw->
+     safe["layout:$spaceId"]=uk.co.traynor.privategallery.core.backup.PortableWidgets.sanitize(raw as String)
+    }
+   }
+   "nova_mind_v1"->listOf(spaceId,"preferred").forEach{key->values[key]?.let{safe[key]=it}}
+   "nova_shell_v1"->listOf("displayDim","reverse","gestures","edge","left","edgePosition","favourites:$spaceId").forEach{key->values[key]?.let{safe[key]=it}}
+   else->values.forEach{(key,value)->require(!Regex("(?i)(secret|pin|password|token|credential|cookie|api.?key)").containsMatchIn(key)){"Sensitive app setting is not eligible"};safe[key]=copy(value)}
+  }
+  if(!restore)uk.co.traynor.privategallery.core.backup.PortablePreferenceSchema.validate(name,safe,spaceId)
+  return safe
  }
 
  /** Returns an opaque encrypted wallpaper reference; callers decode the returned bytes in memory. */

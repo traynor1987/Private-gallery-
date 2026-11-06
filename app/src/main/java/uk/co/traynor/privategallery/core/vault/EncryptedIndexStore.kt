@@ -26,7 +26,7 @@ data class VaultItem(
     val origin: MediaOrigin = MediaOrigin.IMPORTED,
     val vaultOnly: Boolean = false,
     val deletedAtEpochMillis: Long? = null,
-    // Supplied by authenticated additive presentation metadata; existing index bytes stay compatible.
+    // Optional imported presentation values in v7; later authenticated local overrides take precedence.
     val addedAtEpochMillis: Long? = null,
     val capturedAtEpochMillis: Long? = null,
     val adjustedTakenAtEpochMillis: Long? = null,
@@ -37,7 +37,8 @@ data class VaultItem(
 /**
  * Atomic AES-GCM encrypted Vault metadata ledger. v3 adds non-destructive
  * image edit metadata to v2's collections/memberships; v4 adds one generic
- * favourite collection ID. All prior formats are
+ * favourite collection ID. v7 optionally retains imported dates and collection pins atomically.
+ * All prior formats are
  * readable and are rewritten only during a later metadata mutation.
  */
 class EncryptedIndexStore(
@@ -102,8 +103,10 @@ class EncryptedIndexStore(
 
     private fun serializeSnapshot(snapshot: VaultIndexSnapshot): ByteArray = ByteArrayOutputStream().use { buffer ->
         DataOutputStream(buffer).use { output ->
+            validateSnapshot(snapshot)
+            val presentation=snapshot.items.any{VaultPresentationMetadata.encode(it).length()>0}||snapshot.collections.any{it.isPinned}
             output.writeInt(FORMAT_MARKER)
-            output.writeInt(FORMAT_VERSION_6)
+            output.writeInt(if(presentation)FORMAT_VERSION_7 else FORMAT_VERSION_6)
             output.writeInt(snapshot.items.size)
             output.writeItems(snapshot.items, withProvenance = true, withDeletion = true)
             output.writeInt(snapshot.collections.size)
@@ -130,6 +133,10 @@ class EncryptedIndexStore(
             }
             output.writeBoolean(snapshot.favouriteCollectionId != null)
             snapshot.favouriteCollectionId?.let(output::writeUTF)
+            if(presentation) {
+                snapshot.items.forEach{output.writeUTF(VaultPresentationMetadata.encode(it).toString())}
+                snapshot.collections.forEach{output.writeBoolean(it.isPinned)}
+            }
         }
         buffer.toByteArray()
     }
@@ -141,7 +148,7 @@ class EncryptedIndexStore(
             return VaultIndexSnapshot(input.readItems(first))
         }
         val version = input.readInt()
-        require(version in FORMAT_VERSION_2..FORMAT_VERSION_6) { "Unsupported vault index format" }
+        require(version in FORMAT_VERSION_2..FORMAT_VERSION_7) { "Unsupported vault index format" }
         val items = input.readItems(input.readCount(MAX_ITEMS, "item"), version >= FORMAT_VERSION_5, version >= FORMAT_VERSION_6)
         val collections = List(input.readCount(MAX_COLLECTIONS, "collection")) {
             val id = input.readUTF()
@@ -170,10 +177,14 @@ class EncryptedIndexStore(
             emptyMap()
         }
         val favourite = if (version >= FORMAT_VERSION_4 && input.readBoolean()) input.readUTF() else null
-        validateSnapshot(VaultIndexSnapshot(items, collections, memberships, imageEdits, favourite))
+        val presentedItems=if(version>=FORMAT_VERSION_7)items.map{VaultPresentationMetadata.apply(it,org.json.JSONObject(input.readUTF()))}else items
+        val presentedCollections=if(version>=FORMAT_VERSION_7)collections.map{it.copy(isPinned=input.readBoolean())}else collections
+        if(version>=FORMAT_VERSION_7)require(input.available()==0){"Trailing presentation metadata"}
+        validateSnapshot(VaultIndexSnapshot(presentedItems, presentedCollections, memberships, imageEdits, favourite))
     }
 
     private fun validateSnapshot(snapshot: VaultIndexSnapshot): VaultIndexSnapshot {
+        require(snapshot.items.size<=MAX_ITEMS&&snapshot.collections.size<=MAX_COLLECTIONS&&snapshot.memberships.size<=MAX_MEMBERSHIPS&&snapshot.imageEdits.size<=MAX_IMAGE_EDITS) {"Vault index capacity exceeded"}
         val itemIds = snapshot.items.mapTo(mutableSetOf()) { it.id }
         require(snapshot.items.size == itemIds.size) { "Duplicate Vault item IDs" }
         require(snapshot.items.all { (it.state == VaultItemState.TRASHED) == (it.deletedAtEpochMillis != null) }) { "Invalid deletion metadata" }
@@ -240,6 +251,7 @@ class EncryptedIndexStore(
         const val FORMAT_VERSION_4 = 4
         const val FORMAT_VERSION_5 = 5
         const val FORMAT_VERSION_6 = 6
+        const val FORMAT_VERSION_7 = 7
         const val NO_PINNED_DESTINATION = -1
         const val MAX_ITEMS = 100_000
         const val MAX_COLLECTIONS = 10_000

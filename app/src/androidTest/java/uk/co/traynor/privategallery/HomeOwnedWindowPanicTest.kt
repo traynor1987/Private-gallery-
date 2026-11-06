@@ -52,6 +52,18 @@ class HomeOwnedWindowPanicTest {
         assertPinRequired()
     }
 
+    @Test fun backupOwnedWindowThreeFingerPanicRevokesBothSpaces()=withHiddenHome {
+        compose.onNodeWithTag("open-apps").performClick()
+        compose.onNodeWithTag("app-backup").performScrollTo().performClick()
+        compose.waitUntil(10_000){compose.onAllNodesWithTag("nova-backup").fetchSemanticsNodes().isNotEmpty()}
+        compose.waitUntil(10_000){compose.runOnIdle{bindings().isNotEmpty()}}
+        val old=compose.runOnIdle{owner.hidden.session.authentication()}
+        injectThreeFingers(compose.runOnIdle{focusedRoot()})
+        compose.runOnIdle{assertRevoked(old)}
+        assertPinRequired()
+        compose.onNodeWithTag("nova-backup").assertDoesNotExist()
+    }
+
     @Test fun drawerWindowUsesOneSharedCallbackAndConcealsSynchronouslyBeforeRecomposition()=withHiddenHome {
         compose.onNodeWithTag("open-apps").performClick()
         compose.onNodeWithTag("drawer-sheet").assertIsDisplayed()

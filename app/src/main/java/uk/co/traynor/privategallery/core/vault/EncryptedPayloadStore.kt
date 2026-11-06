@@ -29,10 +29,14 @@ class EncryptedPayloadStore(
     private val payloads = File(root, "payloads")
     private val staging = File(root, "staging")
 
-    fun writeAndVerify(id: String, source: InputStream, key: ByteArray, chunkedVideo: Boolean = false): StoredPayload {
+    // Keep the original JVM signature/default bridge for already-installed instrumentation callers.
+    fun writeAndVerify(id: String, source: InputStream, key: ByteArray, chunkedVideo: Boolean = false): StoredPayload =
+        writeAndVerify(id,source,key,chunkedVideo){false}
+
+    fun writeAndVerify(id:String,source:InputStream,key:ByteArray,chunkedVideo:Boolean,cancelled:()->Boolean):StoredPayload {
         require(ID_PATTERN.matches(id)) { "Invalid vault item id" }
         require(key.size == 32) { "Vault key must be 256 bits" }
-        if (chunkedVideo) return ChunkedVaultVideoStore.writeAndVerify(id, source, key, root)
+        if (chunkedVideo) return source.use { ChunkedVaultVideoStore.writeAndVerify(id, it, key, root, null, cancelled) }
         payloads.mkdirs()
         staging.mkdirs()
         val temporary = File(staging, "$id.part")
@@ -59,7 +63,9 @@ class EncryptedPayloadStore(
                         }
                         org.bouncycastle.crypto.io.CipherOutputStream(nonClosing,gcm).use { encrypted ->
                             while(true) {
+                                check(!cancelled()) {"Encryption revoked"}
                                 val count=input.read(buffer)
+                                check(!cancelled()) {"Encryption revoked"}
                                 if(count<0)break
                                 check(count>0)
                                 encrypted.write(buffer,0,count)
@@ -72,7 +78,8 @@ class EncryptedPayloadStore(
                 syncOutput(output)
             }
             val stored = StoredPayload(id, temporary, size, digest.digest(), checkNotNull(nonce))
-            check(verify(stored, key)) { "Encrypted payload verification failed" }
+            check(verify(stored, key, cancelled)) { "Encrypted payload verification failed" }
+            check(!cancelled()) {"Payload promotion revoked"}
             check(temporary.renameTo(destination)) { "Unable to promote verified vault payload" }
             return stored.copy(file = destination)
         } catch (failure: Throwable) {

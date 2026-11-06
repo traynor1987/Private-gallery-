@@ -21,7 +21,7 @@ files=[]
 for name,body in java.items():
  p=src/name;p.parent.mkdir(parents=True,exist_ok=True);p.write_text(body);files.append(str(p))
 jdk=Path(os.environ.get('JAVA_HOME','/tmp/nova-widget-tools/jdk-17.0.21+9'))/'bin'
-subprocess.run([str(jdk/'javac'),'-d',str(out),*files],check=True)
+subprocess.run([str(jdk/'javac'),'-d',str(out),*files,str(root/'app/src/main/java/uk/co/traynor/privategallery/home2/WidgetRules.java')],check=True)
 cache=Path(os.environ.get('GRADLE_USER_HOME',str(Path.home()/'.gradle')))/'caches/modules-2/files-2.1'
 if not cache.is_dir(): cache=Path('/tmp/nova-widget-tools/cache/caches/modules-2/files-2.1')
 # Only the compiler artifact and its declared runtime dependencies belong here.
@@ -44,6 +44,8 @@ for dependency in model.findall('{*}dependencies/{*}dependency'):
 compiler_jars.append(artifact('org.jetbrains','annotations'))
 compiler=':'.join(str(x) for x in compiler_jars)
 stdlib=next(x for x in compiler_jars if x.name.startswith('kotlin-stdlib-'))
+json_jar=artifact('org.json','json','20240303')
+classpath=str(out)+':'+str(stdlib)+':'+str(json_jar)
 kt=work/'Checks.kt'
 kt.write_text(r"""package uk.co.traynor.privategallery.core.home2
 import android.content.*
@@ -84,11 +86,38 @@ fun main(args:Array<String>){
  refused{p.all};refused{editor.commit()};check(!space.current());check(access.acquired==access.closed)
  val next=EvidenceAccess(access.root,EvidenceAccess.Owner.PRIMARY);val nextSpace=SpaceContext(base,next);check(nextSpace.getSharedPreferences("../../layout",0).getString("only",null)=="survivor");refused{p.all}
  val np=nextSpace.getSharedPreferences("../../layout",0);val ne=np.edit();nextSpace.close();refused{np.all};refused{ne.putString("fail","closed")}
- hidden.close();space.close();check(next.acquired==next.closed);root.deleteRecursively();println("PASS: encrypted types, copies, merge, listeners, owner/name AAD, corruption preservation, wallpaper, commit revocation, stale handles, lease closure")
+ hidden.close();space.close();check(next.acquired==next.closed)
+ val backupAccess=EvidenceAccess(File(root,"backup-source"),EvidenceAccess.Owner.PRIMARY);val backupSpace=SpaceContext(base,backupAccess)
+ backupSpace.getSharedPreferences("nova_mind_v1",0).edit().putString("primary","[]").putString("hidden","FOREIGN_NOTE").commit()
+ backupSpace.getSharedPreferences("nova_widgets_v1",0).edit().putString("layout:primary","[{\"id\":\"slot\",\"page\":0,\"x\":0,\"y\":0,\"w\":2,\"h\":2,\"active\":0,\"items\":[{\"id\":\"note\",\"type\":\"note\",\"config\":\"PORTABLE_NOTE\"}]}]").commit()
+ backupSpace.getSharedPreferences("credentials",0).edit().putString("token","NEVER_EXPORT").commit()
+ val values=backupSpace.backupValues();check(values.keys.none{it.contains("credentials")});check(values.values.none{it.toString(Charsets.ISO_8859_1).contains("FOREIGN_NOTE")});check(values.values.any{it.toString(Charsets.ISO_8859_1).contains("PORTABLE_NOTE")})
+ val missingWallpaper=UUID.randomUUID().toString();backupSpace.getSharedPreferences("nova_preview_v1",0).edit().putString("wallpaper-applied-v1","{\"image\":\"$missingWallpaper\"}").commit()
+ var missingRefused=false;try{backupSpace.backupValues()}catch(_:IllegalStateException){missingRefused=true};check(missingRefused){"Missing referenced wallpaper was silently skipped"}
+ backupSpace.getSharedPreferences("nova_preview_v1",0).edit().remove("wallpaper-applied-v1").commit()
+ val restoreAccess=EvidenceAccess(File(root,"backup-destination"),EvidenceAccess.Owner.PRIMARY);val restored=SpaceContext(base,restoreAccess)
+ restored.getSharedPreferences("credentials",0).edit().putString("token","existing-token").commit()
+ restored.restoreBackupValues(values);check(restored.getSharedPreferences("nova_mind_v1",0).getString("primary",null)=="[]");check(restored.getSharedPreferences("credentials",0).getString("token",null)=="existing-token")
+ check(restored.getSharedPreferences("nova_widgets_v1",0).getString("layout:primary",null)!!.contains("PORTABLE_NOTE"))
+ val bad=values.mapValues{it.value.copyOf()};bad.values.first()[0]=99
+ try{restored.restoreBackupValues(bad);error("Invalid settings accepted")}catch(_:IllegalArgumentException){}
+ check(restored.getSharedPreferences("nova_mind_v1",0).getString("primary",null)=="[]")
+ // Known-key malformed data must fail before any encrypted staging or swap.
+ fun stringRecord(key:String,value:String):ByteArray {val out=java.io.ByteArrayOutputStream();java.io.DataOutputStream(out).use{d->fun text(s:String){val b=s.toByteArray();d.writeInt(b.size);d.write(b)};d.writeInt(1);d.writeInt(1);text(key);d.writeByte(1);text(value)};return out.toByteArray()}
+ val baseline=File(restoreAccess.root,"home2").listFiles()!!.associate{it.name to it.readBytes()}
+ val malformed=listOf("nova_widgets_v1" to stringRecord("reduced","true"),"nova_preview_v1" to stringRecord("state","{\"schema\":1,\"current\":\"primary\",\"theme\":\"dark\",\"profile\":{\"installed\":[],\"pages\":[],\"dock\":[],\"folders\":[],\"wallpaper\":{}}}"))
+ malformed.forEach{(name,data)->try{restored.restoreBackupValues(mapOf("preferences:$name" to data));error("Malformed schema accepted")}catch(_:IllegalArgumentException){};val after=File(restoreAccess.root,"home2").listFiles()!!.associate{it.name to it.readBytes()};check(after.keys==baseline.keys&&after.all{(name,bytes)->bytes.contentEquals(baseline[name])});data.fill(0)}
+ restoreAccess.retireOnCommit=true;refused{restored.restoreBackupValues(values)}
+ val reopened=SpaceContext(base,EvidenceAccess(restoreAccess.root,EvidenceAccess.Owner.PRIMARY));check(reopened.getSharedPreferences("nova_mind_v1",0).getString("primary",null)=="[]");reopened.close()
+ val directory=File(restoreAccess.root,"home2");check(directory.renameTo(File(restoreAccess.root,"home2-backup-old")))
+ val recovered=SpaceContext(base,EvidenceAccess(restoreAccess.root,EvidenceAccess.Owner.PRIMARY));check(recovered.getSharedPreferences("nova_mind_v1",0).getString("primary",null)=="[]");recovered.close();backupSpace.close();values.values.forEach{it.fill(0)};bad.values.forEach{it.fill(0)}
+ println("PASS: portable allowlist, owner-only notes, credential exclusion, atomic settings restore, validation failure preservation, revocation rollback, interrupted directory recovery")
+ root.deleteRecursively();println("PASS: encrypted types, copies, merge, listeners, owner/name AAD, corruption preservation, wallpaper, commit revocation, stale handles, lease closure")
 }
 """)
-production=[root/'app/src/main/java/uk/co/traynor/privategallery/core/crypto/VaultCipher.kt',root/'app/src/main/java/uk/co/traynor/privategallery/core/home2/SpacePreferences.kt']
-args=[str(jdk/'java'),'-cp',compiler,'org.jetbrains.kotlin.cli.jvm.K2JVMCompiler','-no-stdlib','-no-reflect','-jvm-target','17','-classpath',str(out)+':'+str(stdlib),'-d',str(out),str(kt),*[str(x) for x in production]]
+production=[root/'app/src/main/java/uk/co/traynor/privategallery/core/backup/PortablePreferenceSchema.kt',
+    root/'app/src/main/java/uk/co/traynor/privategallery/core/backup/SettingsDirectoryTransaction.kt',root/'app/src/main/java/uk/co/traynor/privategallery/core/backup/BackupPolicy.kt',root/'app/src/main/java/uk/co/traynor/privategallery/core/backup/PortableWidgets.kt',root/'app/src/main/java/uk/co/traynor/privategallery/core/crypto/VaultCipher.kt',root/'app/src/main/java/uk/co/traynor/privategallery/core/home2/SpacePreferences.kt']
+args=[str(jdk/'java'),'-cp',compiler,'org.jetbrains.kotlin.cli.jvm.K2JVMCompiler','-no-stdlib','-no-reflect','-jvm-target','17','-classpath',classpath,'-d',str(out),str(kt),*[str(x) for x in production]]
 subprocess.run(args,check=True)
-subprocess.run([str(jdk/'java'),'-cp',str(out)+':'+str(stdlib),'uk.co.traynor.privategallery.core.home2.ChecksKt',str(work/'data')],check=True)
+subprocess.run([str(jdk/'java'),'-cp',classpath,'uk.co.traynor.privategallery.core.home2.ChecksKt',str(work/'data')],check=True)
 shutil.rmtree(work)

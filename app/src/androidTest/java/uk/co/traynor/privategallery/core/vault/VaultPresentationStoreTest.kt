@@ -6,6 +6,18 @@ import java.io.File
 import java.util.UUID
 
 class VaultPresentationStoreTest {
+ @Test fun importedIndexDatesAndPinsYieldToExplicitLocalReset(){
+  val root=root();val key=ByteArray(32){17}
+  try{val store=VaultPresentationStore(root,"primary",key)
+   val item=VaultItem("imported","image/jpeg","photo",1000,1,ByteArray(32),ByteArray(12),VaultItemState.COMPLETE,addedAtEpochMillis=2000,capturedAtEpochMillis=100,adjustedTakenAtEpochMillis=3000,adjustedTimeZone="UTC")
+   val album=VaultCollection("imported-album","Album",1000,isPinned=true)
+   assertEquals(3000L,store.decorate(listOf(item)).single().adjustedTakenAtEpochMillis);assertTrue(store.decorateCollections(listOf(album)).single().isPinned)
+   store.adjustDate(item.id,null,null);store.pinCollection(album.id,false,setOf(album.id))
+   val reopened=VaultPresentationStore(root,"primary",key);val displayed=reopened.decorate(listOf(item)).single()
+   assertNull(displayed.adjustedTakenAtEpochMillis);assertNull(displayed.adjustedTimeZone);assertEquals(100L,displayed.capturedAtEpochMillis);assertEquals(2000L,displayed.addedAtEpochMillis)
+   assertFalse(reopened.decorateCollections(listOf(album)).single().isPinned)
+  }finally{key.fill(0);root.deleteRecursively()}
+ }
  @Test fun adjustedDatePreservesOriginalAndCanBeRestoredAfterReopen() {
   val root=root();val key=ByteArray(32){9}
   try {

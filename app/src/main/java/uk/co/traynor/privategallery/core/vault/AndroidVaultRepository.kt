@@ -113,6 +113,29 @@ class AndroidVaultRepository @JvmOverloads constructor(
         } finally { recovered.fill(0) }
     }
 
+    internal fun backupSnapshot():VaultIndexSnapshot = synchronized(METADATA_LOCK) {
+        snapshot().let { it.copy(items=presentation.decorate(it.items),collections=presentation.decorateCollections(it.collections)) }
+    }
+
+    /** Additive import: encrypted payloads are invisible until one atomic merged index commit. */
+    internal fun restorePortable(producer:uk.co.traynor.privategallery.core.backup.BackupMediaProducer,restoreFavourite:Boolean=false):Int = synchronized(METADATA_LOCK) {
+        val before=snapshot();val added=mutableListOf<VaultItem>();val files=mutableListOf<File>();val ids=linkedMapOf<String,String>()
+        var published=false
+        try {
+            val collections=producer.produce { source,input ->
+                check(authorized());require(!ids.containsKey(source.id));require(before.items.size+added.size<100000)
+                val id=UUID.randomUUID().toString();val payload=payloads.writeAndVerify(id,input,vaultKey,source.mimeType.startsWith("video/")){!authorized()};files+=payload.file
+                uk.co.traynor.privategallery.core.backup.BackupMedia.verify(source,payload.plaintextSize,payload.plaintextSha256)
+                ids[source.id]=id;added+=source.copy(id=id,payloadNonce=payload.nonce)
+            }
+            val merged=try{uk.co.traynor.privategallery.core.backup.BackupMedia.merge(before,added,ids,collections,restoreFavourite)}finally{collections?.fill(0)}
+            check(authorized())
+            // Once promotion is attempted, preserve ciphertext even if durability becomes uncertain.
+            publish {check(authorized());published=true;index.saveSnapshot(merged,vaultKey)}
+            check(authorized());added.size
+        }finally {if(!published)files.forEach{it.delete()}}
+    }
+
     fun collections(): List<VaultCollection> = presentation.decorateCollections(snapshot().collections)
 
     fun itemsInCollection(collectionId: String): List<VaultItem> = presentation.decorate(VaultCollectionsState(snapshot()).itemsIn(collectionId))
@@ -243,8 +266,13 @@ class AndroidVaultRepository @JvmOverloads constructor(
     }
 
     /** Read-only Hidden transfer. Authentication and digest must finish at EOF before consumer publication. */
-    internal fun <T> withHiddenCopySource(id:String,cancelled:()->Boolean,consume:(VaultItem,java.io.InputStream)->T):T {
-        val item=items().single {it.id==id && it.state==VaultItemState.COMPLETE}
+    internal fun <T> withHiddenCopySource(id:String,cancelled:()->Boolean,consume:(VaultItem,java.io.InputStream)->T):T =
+        withOriginalSource(items().single {it.id==id && it.state==VaultItemState.COMPLETE},cancelled,consume)
+
+    internal fun <T> withBackupSource(id:String,cancelled:()->Boolean,consume:(VaultItem,java.io.InputStream)->T):T =
+        withOriginalSource(backupSnapshot().items.single {it.id==id && it.state in setOf(VaultItemState.COMPLETE,VaultItemState.TRASHED)},cancelled,consume)
+
+    private fun <T> withOriginalSource(item:VaultItem,cancelled:()->Boolean,consume:(VaultItem,java.io.InputStream)->T):T {
         val stored=StoredPayload(item.id,payloadFile(item),item.plaintextSize,item.plaintextSha256,item.payloadNonce)
         if(!ChunkedVaultVideoStore.isChunked(stored.file)) {
             // Explicit lightweight GCM avoids providers that buffer an entire legacy message.

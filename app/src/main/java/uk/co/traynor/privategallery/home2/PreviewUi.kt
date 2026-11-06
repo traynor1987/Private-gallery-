@@ -59,7 +59,7 @@ private val lightColors=lightColorScheme(primary=Color(0xFF285F65),secondary=Col
 /** Adapted from recovered HomeDesktopScreen: pager, dock, gesture alternatives,
  * clock, procedural wallpapers and bounded adaptive grids. Preview data only. */
 @OptIn(ExperimentalMaterial3Api::class,ExperimentalFoundationApi::class)
-@Composable fun NovaPreview(data:PreviewData,pool:PreviewBrowserModel,mind:MindData,audio:MindAudio,widgets:WidgetData,searchHistory:NovaSearchHistory,video:NovaVideoModel,onPickImage:()->Unit,onOpen:(String)->Unit,filesDir:File,onNative:(String)->Unit,onLock:()->Unit,onPanic:()->Unit,externalRecentsRequest:Int=0,onRecentsConsumed:()->Unit={}){
+@Composable fun NovaPreview(data:PreviewData,pool:PreviewBrowserModel,mind:MindData,audio:MindAudio,widgets:WidgetData,searchHistory:NovaSearchHistory,video:NovaVideoModel,onPickImage:()->Unit,onOpen:(String)->Unit,filesDir:File,onNative:(String)->Unit,onLock:()->Unit,onPanic:()->Unit,externalRecentsRequest:Int=0,onRecentsConsumed:()->Unit={},onBackup:()->Unit={}){
  val state=data.state
  val dark=when(state.theme){"light"->false;"system"->isSystemInDarkTheme();else->true}
  MaterialTheme(colorScheme=if(dark)darkColors else lightColors){
@@ -158,6 +158,7 @@ private val lightColors=lightColorScheme(primary=Color(0xFF285F65),secondary=Col
 
      ActionRow("Lock Space",Icons.Default.Lock){onLock()}
      ActionRow("Panic Exit",Icons.Default.Security){onPanic()}
+     ActionRow("Nova Backup",Icons.Default.Save){editing=false;onBackup()}
      ActionRow("Navigation & multitasking",Icons.Default.Tune){editing=false;shellSettings=true}
      ActionRow("Nova events",Icons.Default.NotificationsNone){editing=false;notifications=true}
      Row(verticalAlignment=Alignment.CenterVertically){Text("Original Home clock",Modifier.weight(1f));Switch(widgets.clockVisible(state.current),{widgets.clock(state.current,it)},modifier=Modifier.testTag("original-clock-visible"))}
@@ -182,7 +183,7 @@ private val lightColors=lightColorScheme(primary=Color(0xFF285F65),secondary=Col
          "widgets"->WidgetCentre(data,widgets,widgetPage,onBack=goHome)
          "search"->NovaSearch(data,widgets,pool,searchHistory,onBack=goHome,onResult=launch,onWeb={query->val tab=pool.open(standaloneBrowser,state.current);pool.setBrowserMode(tab,true);pool.navigate(tab,"https://www.google.com/search?q="+java.net.URLEncoder.encode(query,"UTF-8"));screen="home"})
          "video"->VideoScreen(video,goHome)
-         "backup"->Column(Modifier.padding(24.dp)){Text("Home backup is unavailable in this integration candidate.");TextButton(onClick=goHome){Text("Home")}}
+         "backup"->LaunchedEffect(Unit){onBackup();goHome()}
          "lock-settings"->LaunchedEffect(Unit){onLock()}
          "mind"->{
           MindScreen(mind,state.current,audio,mindPage,mindLaunch,onHome=goHome,onSanctuary={sanctuary=true;screen="sanctuary"})

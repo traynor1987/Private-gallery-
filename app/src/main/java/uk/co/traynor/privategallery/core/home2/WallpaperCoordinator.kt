@@ -28,6 +28,12 @@ internal class WallpaperOwner(
   if(!runCatching(authenticationCurrent).getOrDefault(false)){close();return false}
   return true
  }
+ fun openBackup(context:Context):uk.co.traynor.privategallery.core.backup.BackupCoordinator? {
+  if(!current())return null
+  val access=accessFactory()?:return null
+  return try {check(access.owner==owner&&current()&&access.current());uk.co.traynor.privategallery.core.backup.BackupCoordinator(context,access,ownsAccess)}
+  catch(failure:Throwable){access.close();throw failure}
+ }
  fun open(context:Context):WallpaperCoordinator? {
   if(!current())return null
   val access=accessFactory()?:return null

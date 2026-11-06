@@ -43,6 +43,8 @@ import uk.co.traynor.privategallery.core.home2.SpaceContext
   val retire=access.onRetire{android.os.Handler(android.os.Looper.getMainLooper()).post{live=false;audio.release();video.close();pool.clear();context.close()}}
   onDispose{retire.close();audio.release();video.close();pool.clear();context.close()}
  }
+ var backupOwner by remember{mutableStateOf<uk.co.traynor.privategallery.core.home2.WallpaperOwner?>(null)}
+ backupOwner?.let{owner->BackupHost(owner,visible,onClose={backupOwner=null},onSettingsRestored=onLock)}
  var wallpaperOwner by remember{mutableStateOf<uk.co.traynor.privategallery.core.home2.WallpaperOwner?>(null)}
  wallpaperOwner?.let{owner->WallpaperEditorHost(owner,visible,onClose={wallpaperOwner=null;if(context.current())models.getOrNull()?.data?.refreshWallpaper()})}
  LaunchedEffect(visible){if(visible&&context.current())models.getOrNull()?.data?.let{it.refreshInstalled();it.refreshWallpaper()}}
@@ -55,6 +57,7 @@ import uk.co.traynor.privategallery.core.home2.SpaceContext
  }
  CompositionLocalProvider(LocalContext provides context){
   NovaPreview(value.data,pool,value.mind,audio,value.widgets,value.history,video,
+   onBackup={if(context.current())backupOwner=if(wallpaperOwnerFactory!=null)wallpaperOwnerFactory.invoke()else uk.co.traynor.privategallery.core.home2.WallpaperOwner(access.owner,{context.current()},{access},false)},
    onPickImage={if(context.current())wallpaperOwner=if(wallpaperOwnerFactory!=null)wallpaperOwnerFactory.invoke()else uk.co.traynor.privategallery.core.home2.WallpaperOwner(access.owner,{context.current()},{access},false)},
    onOpen={},filesDir=context.filesDir,onNative={id->if(context.current()){value.data.shell.touchInternal(context.spaceId,id);onLaunch(id)}},onLock=onLock,onPanic=onPanic,externalRecentsRequest=externalRecentsRequest,onRecentsConsumed=onRecentsConsumed)
   message?.let{PanicHomeAlertDialog(onDismissRequest={message=null},title={Text("NovaOS")},text={Text(it)},confirmButton={TextButton(onClick={message=null}){Text("OK")}})}

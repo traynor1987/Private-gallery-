@@ -59,21 +59,21 @@ internal class VaultPresentationStore(root:File,domain:String,private val key:By
  fun decorate(items:List<VaultItem>):List<VaultItem> {
   val dates=runCatching {load().getJSONObject("dates")}.getOrElse {return items}
   return items.map {item->val data=dates.optJSONObject(item.id)
-   item.copy(addedAtEpochMillis=data?.optLong("added")?.takeIf {uk.co.traynor.privategallery.core.ui.MediaOrder.valid(it)>0},
-    capturedAtEpochMillis=data?.optLong("captured")?.takeIf {uk.co.traynor.privategallery.core.ui.MediaOrder.valid(it)>0} ?: legacyCapture(item),
-    adjustedTakenAtEpochMillis=data?.optLong("adjusted")?.takeIf {uk.co.traynor.privategallery.core.ui.MediaOrder.valid(it)>0},
-    adjustedTimeZone=data?.optString("zone")?.takeIf {it.isNotBlank()})
+   item.copy(addedAtEpochMillis=data?.optLong("added")?.takeIf {uk.co.traynor.privategallery.core.ui.MediaOrder.valid(it)>0} ?: item.addedAtEpochMillis,
+    capturedAtEpochMillis=data?.optLong("captured")?.takeIf {uk.co.traynor.privategallery.core.ui.MediaOrder.valid(it)>0} ?: item.capturedAtEpochMillis ?: legacyCapture(item),
+    adjustedTakenAtEpochMillis=if(data==null)item.adjustedTakenAtEpochMillis else data.optLong("adjusted").takeIf {uk.co.traynor.privategallery.core.ui.MediaOrder.valid(it)>0},
+    adjustedTimeZone=if(data==null)item.adjustedTimeZone else data.optString("zone").takeIf {it.isNotBlank()})
   }
  }
  fun decorateCollections(collections:List<VaultCollection>):List<VaultCollection> {
   val pins=load().optJSONObject("pins") ?: JSONObject()
-  return collections.map {it.copy(isPinned=pins.optBoolean(it.id,false))}.sortedWith(compareByDescending<VaultCollection> {it.isPinned}.thenBy {it.createdAtEpochMillis}.thenBy {it.id})
+  return collections.map {it.copy(isPinned=pins.optBoolean(it.id,it.isPinned))}.sortedWith(compareByDescending<VaultCollection> {it.isPinned}.thenBy {it.createdAtEpochMillis}.thenBy {it.id})
  }
  fun pinCollection(id:String,pinned:Boolean,known:Set<String>) {
   require(id in known) {"Unknown collection"}
   val json=load();val pins=json.optJSONObject("pins") ?: JSONObject()
   pins.keys().asSequence().toList().filter {it !in known}.forEach {pins.remove(it)}
-  if(pinned)pins.put(id,true) else pins.remove(id)
+  pins.put(id,pinned) // An explicit false overrides a pin imported in the index.
   json.put("pins",pins);save(json)
  }
  fun retentionDays():Int = RecentlyDeletedPolicy.validate(load().optInt("retentionDays",30))

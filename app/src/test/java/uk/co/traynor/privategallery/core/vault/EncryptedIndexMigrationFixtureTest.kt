@@ -70,6 +70,21 @@ class EncryptedIndexMigrationFixtureTest {
         } finally { root.deleteRecursively() }
     }
 
+    @Test fun `v1 through v6 read without rewriting ciphertext or changing keys`() {
+        for(version in 1..6) {
+            val root=fixtureRoot()
+            try {
+                val store=EncryptedIndexStore(root,syncOutput={})
+                if(version==1)store.save(listOf(VaultItem("legacy","image/jpeg","legacy.jpg",1,3,ByteArray(32),ByteArray(12),VaultItemState.COMPLETE)),key)
+                else writeLegacySnapshot(root,version,version>=3)
+                val file=File(root,"vault-index.enc");val before=file.readBytes();val loaded=store.loadSnapshot(key)
+                assertEquals(1,loaded.items.size);org.junit.Assert.assertArrayEquals(before,file.readBytes())
+                assertEquals(if(version>=5)MediaOrigin.LOCAL_EDIT else MediaOrigin.IMPORTED,loaded.items.single().origin)
+                assertEquals(version>=5,loaded.items.single().vaultOnly)
+            }finally{root.deleteRecursively()}
+        }
+    }
+
     private fun fixtureRoot(): File = Files.createTempDirectory("index-legacy-fixture").toFile()
 
     private fun writeLegacySnapshot(root: File, version: Int, includeEdit: Boolean) {
@@ -79,6 +94,8 @@ class EncryptedIndexMigrationFixtureTest {
                 out.writeInt(version)
                 out.writeInt(1)
                 writeItem(out)
+                if(version>=5){out.writeInt(MediaOrigin.LOCAL_EDIT.ordinal);out.writeBoolean(true)}
+                if(version>=6)out.writeBoolean(false)
                 out.writeInt(1)
                 out.writeUTF("collection-1"); out.writeUTF("Trips"); out.writeLong(42); out.writeInt(-1); out.writeBoolean(false)
                 out.writeInt(1)
