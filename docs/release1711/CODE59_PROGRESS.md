@@ -47,3 +47,17 @@ system-images;android-37.0;google_apis;x86_64 exists. Change only this existing 
 full API37 image and require com.android.systemui before tests. No app code, cases, assertions,
 timeouts or shipping gates changed. Repeat complete exact-source130-case batch.
 Reference: https://developer.android.com/studio/test/managed-devices#whats-removed
+
+## Runtime2 retained evidence
+
+Source a1ea6ff961e12d984f424c5f1c6b7bd73ee5ba1c, run42201641601/job127838096719,
+artifact13494957675 size418373 SHA25619f6b2ada7ed34729ea8189b286cea79b651410520b0d2c638ee1840056cd09b.
+SystemUI guard passed, but instrumentation aborted after12/130 when Android surfaceflinger's
+RegionSampling thread hit mapper.ranchu assertion !hasReadColorBufferDma and restarted the
+Android system. Original crash stack/ZIP/CRC verified; incomplete report is nonqualifying.
+Existing repository production and older focused lanes already pin SDK command tools22.0
+and validate AVD targetandroid-37.0 to avoid old-tool Major.Minor target misparsing and this
+graphics failure. Port that same tool pin into home2-integration and require actual22.0,
+correct target, API37, SystemUI and stable surfaceflinger before the unchanged130 tests.
+No product, cases, assertions, timeouts, GPU flags or signing controls changed.
+Primary reproduction: https://github.com/actions/runner-images/issues/14484

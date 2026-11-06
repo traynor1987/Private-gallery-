@@ -569,7 +569,14 @@ jobs:
           key: privacy1751-${{ runner.os }}-${{ hashFiles('**/*.gradle*', 'gradle/libs.versions.toml', 'gradle/wrapper/gradle-wrapper.properties') }}
           restore-keys: privacy1751-${{ runner.os }}-
       - name: Install Android 17 tools
-        run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-37.1" "build-tools;36.0.0" "emulator"
+        run: |
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --install "cmdline-tools;22.0"
+          mv "$ANDROID_HOME/cmdline-tools/latest" "$RUNNER_TEMP/previous-android-command-tools-home2"
+          ln -s "$ANDROID_HOME/cmdline-tools/22.0" "$ANDROID_HOME/cmdline-tools/latest"
+          mkdir -p app/build/home2-evidence
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --version | tee app/build/home2-evidence/command-tools-version.txt
+          grep -Fxq '22.0' app/build/home2-evidence/command-tools-version.txt
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-37.1" "build-tools;36.0.0" "emulator"
       - name: Build isolated test identity and run JVM checks
         run: ./gradlew testDebugUnitTest assembleDebug assembleDebugAndroidTest -Pkotlin.incremental=false --no-daemon --console=plain
       - name: Verify reused Home policies and encrypted adapter
@@ -606,6 +613,18 @@ jobs:
             test "$(adb shell getprop ro.build.version.sdk | tr -d '\r')" = 37
             adb shell pm path com.android.systemui | tee app/build/home2-evidence/systemui-package.txt
             grep -q '^package:' app/build/home2-evidence/systemui-package.txt
+            cat "${ANDROID_AVD_HOME:-$HOME/.android/avd}/test.ini" > app/build/home2-evidence/avd.ini
+            grep -Fxq 'target=android-37.0' app/build/home2-evidence/avd.ini
+            initial_surface=$(adb shell pidof surfaceflinger | tr -d '\r')
+            test -n "$initial_surface"
+            for observation in $(seq 1 15); do
+              current_surface=$(adb shell pidof surfaceflinger | tr -d '\r')
+              printf 'surfaceflinger[%s]=%s\n' "$observation" "$current_surface" >> app/build/home2-evidence/emulator-health.txt
+              test "$current_surface" = "$initial_surface"
+              sleep 2
+            done
+            adb logcat -d -b crash > app/build/home2-evidence/emulator-crash-preflight.txt
+            if grep -Fq 'hasReadColorBufferDma' app/build/home2-evidence/emulator-crash-preflight.txt; then exit 1; fi
             adb shell wm size 1200x1800
             adb shell wm density 160
             adb shell settings put secure immersive_mode_confirmations confirmed
