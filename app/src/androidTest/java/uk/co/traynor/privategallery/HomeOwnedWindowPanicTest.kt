@@ -327,7 +327,7 @@ class HomeOwnedWindowPanicTest {
         val modelField=MainActivity::class.java.getDeclaredField("homeThemeData").apply{isAccessible=true}
         val oldModel=compose.runOnIdle {checkNotNull(modelField.get(activity)) as uk.co.traynor.privategallery.home2.PreviewData}
         compose.onNodeWithTag("open-apps").performClick();compose.onNodeWithTag("app-mind").performScrollTo().performClick();compose.onNodeWithTag("nova-mind").assertIsDisplayed()
-        compose.runOnIdle{activity.returnPrivateHome()}
+        compose.onNodeWithTag("nova-home").performClick();compose.onNodeWithTag("preview-home").assertIsDisplayed()
         val sourceRoot=uk.co.traynor.privategallery.core.backup.BackupFixture62.temporary("live-settings62")
         val uri=uk.co.traynor.privategallery.core.backup.BackupDocuments62.create()
         try {
@@ -352,7 +352,7 @@ class HomeOwnedWindowPanicTest {
             compose.waitUntil(15000){compose.onAllNodesWithTag("preview-home").fetchSemanticsNodes().isNotEmpty()}
             val restored=compose.runOnIdle{modelField.get(activity) as uk.co.traynor.privategallery.home2.PreviewData};assertNotSame(oldModel,restored);assertEquals(5,restored.profile.columns);assertEquals(listOf("mind"),restored.profile.dock)
             compose.onNodeWithTag("app-mind").performClick();compose.onNodeWithTag("calm-now").performScrollTo().performClick();compose.onNodeWithTag("grounding-step").assertIsDisplayed()
-            compose.runOnIdle{activity.returnPrivateHome()}
+            compose.onNodeWithTag("nova-home").performClick();compose.onNodeWithTag("preview-home").assertIsDisplayed()
             compose.onAllNodesWithText("Restored synthetic note").onFirst().assertExists()
             compose.runOnIdle{restored.change{it.copy(iconSize=72)};activity.lockNovaSpace()}
             compose.onNodeWithText("Enter").performClick();"613842".forEach{compose.onNodeWithText(it.toString()).performClick()}

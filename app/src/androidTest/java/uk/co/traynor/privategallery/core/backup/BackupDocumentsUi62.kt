@@ -28,7 +28,17 @@ internal object BackupDocumentsUi62 {
   }
   throw AssertionError("DocumentsUI root row is not clickable")
  }
- fun open(id:String){root();check(click(waitFor{it.text?.toString()=="Synthetic backup $id"}))}
+ fun open(id:String){
+  root()
+  // DocumentsUI RecyclerView rows expose their label without a clickable ancestor.
+  // Tap the real visible row; the caller still requires the genuine picker result.
+  val node=waitFor{it.isVisibleToUser&&it.isEnabled&&it.text?.toString()=="Synthetic backup $id"}
+  val bounds=android.graphics.Rect();node.getBoundsInScreen(bounds);check(!bounds.isEmpty)
+  val down=SystemClock.uptimeMillis()
+  fun event(action:Int)=android.view.MotionEvent.obtain(down,SystemClock.uptimeMillis(),action,bounds.exactCenterX(),bounds.exactCenterY(),0).apply{source=android.view.InputDevice.SOURCE_TOUCHSCREEN}
+  val press=event(android.view.MotionEvent.ACTION_DOWN);val release=event(android.view.MotionEvent.ACTION_UP)
+  try{check(automation.injectInputEvent(press,true));check(automation.injectInputEvent(release,true))}finally{press.recycle();release.recycle()}
+ }
  private fun confirmFolder(){check(click(waitFor{it.text?.toString()?.uppercase()=="USE THIS FOLDER"}));check(click(waitFor{it.text?.toString()?.uppercase()=="ALLOW"}))}
  fun folder(){root();confirmFolder()}
  fun folderAtInitialRoot(){

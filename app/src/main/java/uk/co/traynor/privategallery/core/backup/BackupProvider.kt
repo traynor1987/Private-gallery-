@@ -20,22 +20,26 @@ internal class SafBackupProvider(private val context:Context,private val uri:Uri
  init {require(uri.scheme=="content"){"Select a document using Android's picker"}}
  override val label:String get()=runCatching{context.contentResolver.query(uri,arrayOf(OpenableColumns.DISPLAY_NAME),null,null,null)?.use{if(it.moveToFirst())it.getString(0).take(160)else null}}.getOrNull()?:"Selected local document"
  override fun read():InputStream {
-  // A DocumentsProvider typed-read fallback can discard CancellationSignal. Backups
-  // are binary documents: use the cancellable untyped descriptor API directly.
+  // ContentResolver routes read-only descriptors through typed asset fallback, whose
+  // DocumentsProvider implementation drops CancellationSignal. Use the public direct
+  // file API while retaining the provider client until its descriptor is closed.
   access.checkCurrent();val signal=CancellationSignal();val cancel=access.onRetire{signal.cancel()}
+  var client:android.content.ContentProviderClient?=null
   var descriptor:android.os.ParcelFileDescriptor?=null
   try {
-   val opened=checkNotNull(context.contentResolver.openFileDescriptor(uri,"r",signal));descriptor=opened
+   val provider=checkNotNull(context.contentResolver.acquireUnstableContentProviderClient(uri));client=provider
+   val opened=checkNotNull(provider.openFile(uri,"r",signal));descriptor=opened
    val stream=android.os.ParcelFileDescriptor.AutoCloseInputStream(opened)
-   val retire=access.onRetire{runCatching{stream.close()}}
+   val retire=access.onRetire{try{stream.close()}finally{provider.close()}}
    access.checkCurrent()
    return object:FilterInputStream(stream){
     override fun read():Int{access.checkCurrent();return super.read().also{access.checkCurrent()}}
     override fun read(bytes:ByteArray,offset:Int,length:Int):Int{access.checkCurrent();return super.read(bytes,offset,length).also{access.checkCurrent()}}
-    override fun close(){try{super.close()}finally{retire.close();cancel.close()}}
+    override fun close(){try{super.close()}finally{retire.close();cancel.close();provider.close()}}
    }
-  }catch(failure:Throwable){cancel.close();signal.cancel();descriptor?.close();throw failure}
+  }catch(failure:Throwable){cancel.close();signal.cancel();try{descriptor?.close()}finally{client?.close()};throw failure}
  }
+
  override fun write():OutputStream {
   access.checkCurrent();val signal=CancellationSignal();val cancel=access.onRetire{signal.cancel()}
   var descriptor:android.os.ParcelFileDescriptor?=null

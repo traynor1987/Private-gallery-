@@ -21,7 +21,7 @@ class BackupDocumentsUiTest {
   try{
    compose.setContent{if(attached)CompositionLocalProvider(androidx.activity.compose.LocalActivityResultRegistryOwner provides compose.activity,LocalContext provides f.context){MaterialTheme{BackupHost(owner,true,{attached=false})}}}
    compose.waitUntil(10000){compose.onAllNodesWithTag("nova-backup").fetchSemanticsNodes().isNotEmpty()};compose.onNodeWithText("Create backup").performScrollTo().performClick()
-   BackupDocumentsUi62.create();val id=checkNotNull(BackupDocuments62.call("latest").getString("id"));document=android.provider.DocumentsContract.buildDocumentUri(BackupDocumentsFixtureProvider.AUTHORITY,id)
+   BackupDocumentsUi62.create();val id=checkNotNull(BackupDocuments62.call("latest").getString("id"));document=BackupDocuments62.inPersistedTree(id)
    compose.waitUntil(10000){compose.onAllNodesWithText("I saved the recovery key").fetchSemanticsNodes().isNotEmpty()}
    // The first checkbox here is the explicit recovery-key acknowledgement, not a scheduling control.
    compose.onAllNodes(isToggleable()).onFirst().performScrollTo().performClick();compose.onNodeWithText("Encrypt and verify destination").performScrollTo().performClick()
