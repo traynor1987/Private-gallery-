@@ -65,12 +65,16 @@ class Home2IntegrationTest {
   }
   private val vaultKey = ByteArray(32) { if (hidden) 73 else 31 }
   private val identity = Any()
+  private val gate = Any()
   private val session = HiddenSession { android.os.SystemClock.elapsedRealtime() }
   val access: EvidenceAccess = if (hidden) {
    check(session.complete(session.beginAuthentication(), vaultKey.copyOf()))
    EvidenceAccess.hidden(context, session) { true }
-  } else EvidenceAccess.primary(context, identity, { identity }, { true }, { vaultKey.copyOf() }, Any())
+  } else EvidenceAccess.primary(context, identity, { identity }, { true }, { vaultKey.copyOf() }, gate)
   val spaceId get() = if (hidden) "hidden" else "primary"
+  fun nativeCatalogue() = uk.co.traynor.privategallery.core.privateapps.PrimaryPrivateAppAccess(
+   File(context.filesDir,"private-apps"),identity,{identity},access::current,{vaultKey.copyOf()},gate)
+  fun catalogueFiles() = File(context.filesDir,"private-apps").walkTopDown().filter{it.isFile}.toList()
   fun widgets() = SpaceContext(context, access).use { WidgetData(it).slots(spaceId) }
   fun originalClockVisible() = SpaceContext(context, access).use { WidgetData(it).clockVisible(spaceId) }
   override fun close() { access.close(); session.lock(); vaultKey.fill(0); root.deleteRecursively() }
@@ -225,6 +229,47 @@ class Home2IntegrationTest {
    Espresso.pressBack()
    compose.onNodeWithTag("preview-home").assertIsDisplayed()
   }
+ }
+
+ @Test fun store_install_home_launch_my_apps_and_uninstall_use_the_real_encrypted_native_catalogue(){
+  val f=SpaceFixture(false,compose.activity).also{fixture=it}
+  val store=f.nativeCatalogue()
+  val bridge=NativeAppBridge(store,f.access::current,{appLaunches.add(it)}, {}, {})
+  compose.setContent {
+   if(attached)CompositionLocalProvider(LocalContext provides f.context){
+    IntegratedHome(f.access,true,{nativeLaunches.add(it)},{},{},null,bridge)
+   }
+  }
+  compose.onAllNodesWithTag("app-store").onLast().performClick()
+  compose.onNodeWithTag("nova-store").assertIsDisplayed()
+  compose.onNodeWithTag("store-search").performScrollTo().performTextInput("Photopea")
+  Espresso.closeSoftKeyboard()
+  compose.onNodeWithText("Photopea").performScrollTo().performClick()
+  compose.onNodeWithTag("install-app").performClick()
+  compose.onNodeWithTag("confirm-install").performClick()
+  compose.onNodeWithTag("open-installed").assertIsDisplayed()
+  val installed=compose.runOnIdle{store.read().apps.single()}
+  assertEquals("Photopea",installed.name());assertTrue(installed.appStyle());assertFalse(installed.addressBar())
+  assertTrue(f.catalogueFiles().isNotEmpty())
+  assertTrue("Private Apps names and addresses stay encrypted on disk",f.catalogueFiles().none{
+   val bytes=it.readBytes().toString(Charsets.ISO_8859_1)
+   bytes.contains("Photopea")||bytes.contains(installed.startUrl())
+  })
+  compose.onNodeWithText("Add to Home").performClick()
+  compose.onNodeWithTag("preview-home").assertIsDisplayed()
+  compose.onNodeWithTag("app-web:"+installed.id()).performClick()
+  compose.runOnIdle{assertEquals(listOf(installed.id()),appLaunches);assertTrue(nativeLaunches.isEmpty())}
+  compose.onAllNodesWithTag("app-store").onLast().performClick()
+  compose.onNodeWithTag("store-my-apps").performScrollTo().performClick()
+  compose.onNodeWithText("Photopea").performScrollTo().performClick()
+  compose.onNodeWithTag("install-app").assertDoesNotExist()
+  compose.onNodeWithTag("open-installed").assertIsDisplayed()
+  compose.onNodeWithText("Uninstall").performClick()
+  compose.onNodeWithText("Uninstall this shortcut?").assertIsDisplayed()
+  compose.onAllNodesWithText("Uninstall").onLast().performClick()
+  compose.runOnIdle{assertTrue(store.read().apps.isEmpty())}
+  compose.onNodeWithContentDescription("Back to Home").performClick()
+  compose.onNodeWithTag("app-web:"+installed.id()).assertDoesNotExist()
  }
 
  @Test fun owner_shortcut_names_survive_catalogue_refresh_and_reopening_without_changing_native_settings(){

@@ -133,7 +133,7 @@ internal fun widgetIcon(type:String)=when(type){"clock"->Icons.Default.Schedule;
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable internal fun WidgetOptions(data:PreviewData,widgets:WidgetData,id:String,onDismiss:()->Unit){
  val slot=widgets.slots(data.state.current).firstOrNull{it.id==id}?:run{onDismiss();return}
- ModalBottomSheet(onDismissRequest=onDismiss){Column(Modifier.fillMaxWidth().heightIn(max=650.dp).verticalScroll(rememberScrollState()).padding(24.dp).testTag("widget-options")){
+ PanicHomeModalBottomSheet(onDismissRequest=onDismiss){Column(Modifier.fillMaxWidth().heightIn(max=650.dp).verticalScroll(rememberScrollState()).padding(24.dp).testTag("widget-options")){
   Text(if(slot.items.size>1)"Widget stack"else "Widget options",style=MaterialTheme.typography.headlineSmall)
   Text("Hold and drag the widget’s top-left icon to move. Drag its corner to resize.",Modifier.padding(vertical=12.dp))
   Row{listOf(-1 to 0,0 to -1,0 to 1,1 to 0).forEach{(x,y)->IconButton(onClick={widgets.place(data.state.current,id,slot.x+x,slot.y+y,slot.w,slot.h,slot.page)}){Icon(when{ x<0->Icons.Default.ArrowBack;x>0->Icons.Default.ArrowForward;y<0->Icons.Default.ArrowUpward;else->Icons.Default.ArrowDownward},"Move widget")}}}

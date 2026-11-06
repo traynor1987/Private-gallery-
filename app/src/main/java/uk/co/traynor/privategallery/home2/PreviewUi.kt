@@ -210,7 +210,7 @@ private val lightColors=lightColorScheme(primary=Color(0xFF285F65),secondary=Col
    if(data.shell.dim>0)Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha=data.shell.dim)))
    if(notifications)NovaNotifications(data,onDismiss={notifications=false},onLaunch={id->notifications=false;launch(id)},media={NowPlaying(pool,audio,video,state.current,onResume=resumeTab,onVideo={screen="video";notifications=false},onAudio={notifications=false;mindPage="sounds";mindLaunch++;screen="mind"})})
    if(edgePanel)NovaEdgePanel(data,pool,onDismiss={edgePanel=false},onLaunch={id->edgePanel=false;launch(id)},onHome=goHome,onSettings={edgePanel=false;shellSettings=true})
-   if(drawer)ModalBottomSheet(onDismissRequest={drawer=false},modifier=Modifier.testTag("drawer-sheet")){
+   if(drawer)PanicHomeModalBottomSheet(onDismissRequest={drawer=false},modifier=Modifier.testTag("drawer-sheet")){
     var search by remember{mutableStateOf("")}
     Column(Modifier.fillMaxWidth().fillMaxHeight(.9f).padding(horizontal=20.dp)){
      Row(verticalAlignment=Alignment.CenterVertically){
@@ -218,7 +218,7 @@ private val lightColors=lightColorScheme(primary=Color(0xFF285F65),secondary=Col
       var options by remember{mutableStateOf(false)}
       Box{
        IconButton(onClick={options=true}){Icon(Icons.Default.MoreVert,"Choose app options")}
-       DropdownMenu(options,{options=false}){
+       PanicHomeDropdownMenu(options,{options=false}){
         data.drawerIds().forEach{id->DropdownMenuItem(text={Text(data.profile.folders.firstOrNull{it.id==id}?.name?:data.app(id)?.name?:id)},onClick={options=false;selected=id})}
        }
       }
@@ -237,7 +237,7 @@ private val lightColors=lightColorScheme(primary=Color(0xFF285F65),secondary=Col
    val chosenId=selected
    if(chosenId!=null){
     val folder=profile.folders.firstOrNull{it.id==chosenId};val app=data.app(chosenId)
-    ModalBottomSheet(onDismissRequest={selected=null}){
+    PanicHomeModalBottomSheet(onDismissRequest={selected=null}){
      Column(Modifier.fillMaxWidth().heightIn(max=620.dp).verticalScroll(rememberScrollState()).padding(24.dp)){
       Text(folder?.name?:app?.name?:"Shortcut",style=MaterialTheme.typography.headlineMedium)
       if(folder!=null)ActionRow("Open folder",Icons.Default.FolderOpen){selected=null;openFolder=chosenId}
@@ -264,7 +264,7 @@ private val lightColors=lightColorScheme(primary=Color(0xFF285F65),secondary=Col
     }
    }
    val activeFolder=profile.folders.firstOrNull{it.id==openFolder}
-   if(activeFolder!=null)ModalBottomSheet(onDismissRequest={openFolder=null}){
+   if(activeFolder!=null)PanicHomeModalBottomSheet(onDismissRequest={openFolder=null}){
     Column(Modifier.fillMaxWidth().heightIn(max=650.dp).padding(20.dp)){
      Row(verticalAlignment=Alignment.CenterVertically){Text(activeFolder.name,Modifier.weight(1f),style=MaterialTheme.typography.headlineMedium);IconButton(onClick={rename=activeFolder.id}){Icon(Icons.Default.Edit,"Rename folder")};IconButton(onClick={openFolder=null}){Icon(Icons.Default.Close,"Close folder")}}
      AdaptiveAppGrid(data,activeFolder.apps,onLaunch={openFolder=null;launch(it)},onSelect={openFolder=null;selected=it},modifier=Modifier.heightIn(min=170.dp,max=420.dp))
@@ -273,15 +273,15 @@ private val lightColors=lightColorScheme(primary=Color(0xFF285F65),secondary=Col
     }
    }
    if(folderCreate)CreateFolderDialog(data,currentPage,onDismiss={folderCreate=false})
-   if(addToFolder!=null)AlertDialog(onDismissRequest={addToFolder=null},title={Text("Choose folder")},text={Column{profile.folders.forEach{f->TextButton(onClick={data.folderAdd(f.id,addToFolder!!);addToFolder=null}){Text(f.name)}};TextButton(onClick={addToFolder=null;folderCreate=true}){Text("Create a new folder")}}},confirmButton={TextButton(onClick={addToFolder=null}){Text("Cancel")}})
-   if(rename!=null){var text by remember(rename){mutableStateOf(profile.folders.firstOrNull{it.id==rename}?.name?:data.app(rename!!)?.name?:"")};AlertDialog(onDismissRequest={rename=null},title={Text("Rename")},text={OutlinedTextField(text,{text=it.take(40)},label={Text("Name")})},confirmButton={TextButton(onClick={data.rename(rename!!,text);rename=null},enabled=text.isNotBlank()){Text("Save")}},dismissButton={TextButton(onClick={rename=null}){Text("Cancel")}})}
-   if(reset)AlertDialog(onDismissRequest={reset=false},title={Text("Restore this Home?")},text={Text("Reset this Space’s layout, wallpaper, folders and Dock. Installed shortcuts remain in the drawer.")},confirmButton={TextButton(onClick={data.reset();reset=false}){Text("Restore")}},dismissButton={TextButton(onClick={reset=false}){Text("Cancel")}})
+   if(addToFolder!=null)PanicHomeAlertDialog(onDismissRequest={addToFolder=null},title={Text("Choose folder")},text={Column{profile.folders.forEach{f->TextButton(onClick={data.folderAdd(f.id,addToFolder!!);addToFolder=null}){Text(f.name)}};TextButton(onClick={addToFolder=null;folderCreate=true}){Text("Create a new folder")}}},confirmButton={TextButton(onClick={addToFolder=null}){Text("Cancel")}})
+   if(rename!=null){var text by remember(rename){mutableStateOf(profile.folders.firstOrNull{it.id==rename}?.name?:data.app(rename!!)?.name?:"")};PanicHomeAlertDialog(onDismissRequest={rename=null},title={Text("Rename")},text={OutlinedTextField(text,{text=it.take(40)},label={Text("Name")})},confirmButton={TextButton(onClick={data.rename(rename!!,text);rename=null},enabled=text.isNotBlank()){Text("Save")}},dismissButton={TextButton(onClick={rename=null}){Text("Cancel")}})}
+   if(reset)PanicHomeAlertDialog(onDismissRequest={reset=false},title={Text("Restore this Home?")},text={Text("Reset this Space’s layout, wallpaper, folders and Dock. Installed shortcuts remain in the drawer.")},confirmButton={TextButton(onClick={data.reset();reset=false}){Text("Restore")}},dismissButton={TextButton(onClick={reset=false}){Text("Cancel")}})
    val detail=detailId?.let{id->data.catalogue.firstOrNull{it.id==id}?:profile.installed.firstOrNull{it.id==id}}
    if(detail!=null)AppDetails(data,detail,onDismiss={detailId=null},onOpen={pool.open(it,data.state.current);detailId=null;screen="home"},onUninstall={confirmUninstall=it},onAddHome={data.addHome(it,currentPage);detailId=null;screen="home"},onPin={data.pin(it)})
    if(custom)CustomWebsiteDialog(onDismiss={custom=false},onInstall={entry->data.install(entry);custom=false;detailId=data.entryKey(entry)})
-   if(confirmUninstall!=null)AlertDialog(onDismissRequest={confirmUninstall=null},title={Text("Uninstall this shortcut?")},text={Text("Remove it from this Space, its folders, Home and Dock. Browser cookies are shared and are not selectively removed. Website accounts and external browser data remain managed by their provider/browser.")},confirmButton={TextButton(onClick={pool.closeApp(data.state.current,confirmUninstall!!);data.uninstall(confirmUninstall!!);confirmUninstall=null;detailId=null}){Text("Uninstall")}},dismissButton={TextButton(onClick={confirmUninstall=null}){Text("Cancel")}})
-   pool.error?.let{message->AlertDialog(onDismissRequest={pool.error=null},title={Text("Browsing unavailable")},text={Text(message)},confirmButton={TextButton(onClick={pool.error=null}){Text("OK")}})}
-   data.error?.let{message->AlertDialog(onDismissRequest={},title={Text("Unable to save")},text={Text(message)},confirmButton={TextButton(onClick={data.retrySave()}){Text("Retry")}})}
+   if(confirmUninstall!=null)PanicHomeAlertDialog(onDismissRequest={confirmUninstall=null},title={Text("Uninstall this shortcut?")},text={Text("Remove it from this Space, its folders, Home and Dock. Browser cookies are shared and are not selectively removed. Website accounts and external browser data remain managed by their provider/browser.")},confirmButton={TextButton(onClick={pool.closeApp(data.state.current,confirmUninstall!!);data.uninstall(confirmUninstall!!);confirmUninstall=null;detailId=null}){Text("Uninstall")}},dismissButton={TextButton(onClick={confirmUninstall=null}){Text("Cancel")}})
+   pool.error?.let{message->PanicHomeAlertDialog(onDismissRequest={pool.error=null},title={Text("Browsing unavailable")},text={Text(message)},confirmButton={TextButton(onClick={pool.error=null}){Text("OK")}})}
+   data.error?.let{message->PanicHomeAlertDialog(onDismissRequest={},title={Text("Unable to save")},text={Text(message)},confirmButton={TextButton(onClick={data.retrySave()}){Text("Retry")}})}
    }
   }
  }
@@ -305,7 +305,7 @@ private val lightColors=lightColorScheme(primary=Color(0xFF285F65),secondary=Col
      IconButton(onClick={onLaunch("search")}){Icon(Icons.Default.Search,"Open Nova Search")}
      IconButton(onClick={onLaunch("calm")}){Icon(Icons.Default.Spa,"Calm Now")}
      IconButton(onClick=onQuick){Icon(Icons.Default.Tune,"Open Quick Panel")}
-     Box{var menu by remember{mutableStateOf(false)};IconButton(onClick={menu=true}){Icon(Icons.Default.MoreVert,"Home menu")};DropdownMenu(menu,{menu=false}){DropdownMenuItem(text={Text("Apps")},onClick={menu=false;onDrawer()});DropdownMenuItem(text={Text("Edit Home")},onClick={menu=false;onEdit()});DropdownMenuItem(text={Text("Widget Centre")},onClick={menu=false;onLaunch("widgets")});data.onSwitch?.let{switch->DropdownMenuItem(text={Text("Switch Space")},onClick={menu=false;switch()})}}}
+     Box{var menu by remember{mutableStateOf(false)};IconButton(onClick={menu=true}){Icon(Icons.Default.MoreVert,"Home menu")};PanicHomeDropdownMenu(menu,{menu=false}){DropdownMenuItem(text={Text("Apps")},onClick={menu=false;onDrawer()});DropdownMenuItem(text={Text("Edit Home")},onClick={menu=false;onEdit()});DropdownMenuItem(text={Text("Widget Centre")},onClick={menu=false;onLaunch("widgets")});data.onSwitch?.let{switch->DropdownMenuItem(text={Text("Switch Space")},onClick={menu=false;switch()})}}}
     }
     widgets.recoveryNotice?.let{notice->Surface(color=MaterialTheme.colorScheme.secondaryContainer,contentColor=MaterialTheme.colorScheme.onSecondaryContainer){Column(Modifier.padding(12.dp)){Text(notice,style=MaterialTheme.typography.bodySmall);TextButton(onClick={widgets.dismissRecovery()}){Text("Dismiss recovery report")}}}}
     if(widgets.editingId!=null)Row(Modifier.fillMaxWidth().padding(horizontal=20.dp),verticalAlignment=Alignment.CenterVertically){Text("Edit widgets",Modifier.weight(1f),color=Color.White);TextButton(onClick={widgets.editingId=null},modifier=Modifier.testTag("widget-edit-done")){Text("Done",color=Color.White)}}

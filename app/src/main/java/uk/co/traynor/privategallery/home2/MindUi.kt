@@ -134,7 +134,7 @@ import java.util.Date
    Row{TextButton(onClick={id=entry.id;text=entry.text;mood=entry.mood;editing=true}){Text("Edit")};TextButton(onClick={deleting=entry.id}){Text("Delete")}}
   }}}
  }
- deleting?.let{entryId->AlertDialog(onDismissRequest={deleting=null},title={Text("Delete this entry?")},text={Text("This removes the encrypted entry permanently.")},confirmButton={TextButton(onClick={if(data.delete(profile,entryId))deleting=null}){Text("Delete")}},dismissButton={TextButton(onClick={deleting=null}){Text("Keep")}})}
+ deleting?.let{entryId->PanicHomeAlertDialog(onDismissRequest={deleting=null},title={Text("Delete this entry?")},text={Text("This removes the encrypted entry permanently.")},confirmButton={TextButton(onClick={if(data.delete(profile,entryId))deleting=null}){Text("Delete")}},dismissButton={TextButton(onClick={deleting=null}){Text("Keep")}})}
 }
 
 @Composable internal fun SanctuaryScreen(data:PreviewData,audio:MindAudio,onMind:()->Unit,onCalm:()->Unit,onLaunch:(String)->Unit,onExit:()->Unit){

@@ -761,7 +761,7 @@ class MainActivity : FragmentActivity() {
         // The cover is removed only by a pre-draw registered after the neutral composition commits.
     }
     private val panicTouchGate = uk.co.traynor.privategallery.core.ui.PanicTouchGate()
-    override fun dispatchTouchEvent(event: android.view.MotionEvent): Boolean {
+    internal fun dispatchOwnedPanicTouch(event:android.view.MotionEvent,downstream:(android.view.MotionEvent)->Boolean):Boolean {
         val settings = uk.co.traynor.privategallery.ui.PrivacyShieldPreferences(this)
         val exploring = (getSystemService(ACCESSIBILITY_SERVICE) as? android.view.accessibility.AccessibilityManager)?.isTouchExplorationEnabled == true
         val dispatch = panicTouchGate.dispatch(event.actionMasked,event.pointerCount,settings.enabled && settings.shortcut,exploring)
@@ -769,11 +769,36 @@ class MainActivity : FragmentActivity() {
         if (dispatch == 1) {
             val cancel = android.view.MotionEvent.obtain(event)
             cancel.action = android.view.MotionEvent.ACTION_CANCEL
-            super.dispatchTouchEvent(cancel); cancel.recycle()
+            try {downstream(cancel)} finally {cancel.recycle()}
             panicExit()
             return true
         }
-        return super.dispatchTouchEvent(event)
+        return downstream(event)
+    }
+    override fun dispatchTouchEvent(event: android.view.MotionEvent): Boolean = dispatchOwnedPanicTouch(event) {super.dispatchTouchEvent(it)}
+    private class OwnedPanicWindow(val original:android.view.Window.Callback,val callback:android.view.Window.Callback,var references:Int=1)
+    private val ownedPanicWindows=java.util.IdentityHashMap<android.view.Window,OwnedPanicWindow>()
+    /** One callback per actual app-owned Dialog window, even when nested content binds it twice. */
+    internal fun bindOwnedPanicWindow(window:android.view.Window):AutoCloseable {
+        check(android.os.Looper.myLooper()===android.os.Looper.getMainLooper())
+        if(window===this.window)return AutoCloseable {}
+        val binding=ownedPanicWindows[window]?.also {it.references++} ?: run {
+            val original=window.callback?:return AutoCloseable {}
+            val callback=object:android.view.Window.Callback by original {
+                override fun dispatchTouchEvent(event:android.view.MotionEvent):Boolean = dispatchOwnedPanicTouch(event,original::dispatchTouchEvent)
+            }
+            OwnedPanicWindow(original,callback).also {ownedPanicWindows[window]=it;window.callback=callback}
+        }
+        var closed=false
+        return AutoCloseable {
+            if(!closed) {
+                closed=true;binding.references--
+                if(binding.references==0 && ownedPanicWindows[window]===binding) {
+                    ownedPanicWindows.remove(window)
+                    if(window.callback===binding.callback)window.callback=binding.original
+                }
+            }
+        }
     }
     override fun onPause() {
         activityResumed = false
@@ -1434,6 +1459,8 @@ class MainActivity : FragmentActivity() {
     }
 
     override fun onDestroy() {
+        ownedPanicWindows.entries.toList().forEach {(window,binding)->if(window.callback===binding.callback)window.callback=binding.original}
+        ownedPanicWindows.clear()
         closeEvidenceLocker()
         pendingHiddenReturn=null
         pendingHiddenDownloads=null

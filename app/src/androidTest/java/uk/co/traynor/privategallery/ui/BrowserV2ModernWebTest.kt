@@ -4,6 +4,9 @@ import android.webkit.WebView
 import androidx.activity.ComponentActivity
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onAllNodesWithTag
+import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.espresso.Espresso.onView
@@ -142,6 +145,13 @@ class BrowserV2ModernWebTest {
             acceptanceProbeEnabled = false, staticContentHost = false,
         ) } }
         compose.waitForIdle()
+        // A fresh test package must complete the same first-use notice as a real user.
+        // Without this prerequisite the browser UI/listener never mounts and no view can focus.
+        if(compose.onAllNodesWithTag("browser-beta-continue").fetchSemanticsNodes().isNotEmpty()) {
+            compose.onNodeWithTag("browser-beta-continue").performScrollTo().performClick()
+        }
+        compose.onNodeWithTag("browser-v2-chrome").assertIsDisplayed()
+        compose.onNodeWithTag("browser-v2-webview-host").assertIsDisplayed()
     }
 
     private fun load(body: String) {

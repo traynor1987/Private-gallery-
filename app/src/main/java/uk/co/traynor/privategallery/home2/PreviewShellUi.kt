@@ -34,7 +34,7 @@ import java.util.Date
    var x by remember{mutableFloatStateOf(0f)};var y by remember{mutableFloatStateOf(0f)};var menu by remember{mutableStateOf(false)}
    Row(Modifier.fillMaxWidth().height(52.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.Center){
     Box(Modifier.width(200.dp).fillMaxHeight().testTag("nova-gesture-strip").semantics{contentDescription="Nova navigation: swipe up Home, swipe sideways Back, hold Recents";customActions=listOf(CustomAccessibilityAction("Home"){onHome();true},CustomAccessibilityAction("Back"){onBack();true},CustomAccessibilityAction("Recents"){onRecents();true})}.combinedClickable(onClick=onHome,onLongClick=onRecents).pointerInput(Unit){detectDragGestures(onDragStart={x=0f;y=0f},onDragEnd={if(y < -24)onHome()else if(abs(x)>40)onBack()}){change,drag->change.consume();x+=drag.x;y+=drag.y}},contentAlignment=Alignment.Center){Surface(Modifier.size(96.dp,4.dp),shape=RoundedCornerShape(2.dp),color=MaterialTheme.colorScheme.onSurfaceVariant){}}
-    Box{IconButton(onClick={menu=true}){Icon(Icons.Default.MoreHoriz,"Navigation alternatives")};DropdownMenu(menu,{menu=false}){DropdownMenuItem(text={Text("Recents")},onClick={menu=false;onRecents()});DropdownMenuItem(text={Text("Home")},onClick={menu=false;onHome()});DropdownMenuItem(text={Text("Back")},onClick={menu=false;onBack()})}}
+    Box{IconButton(onClick={menu=true}){Icon(Icons.Default.MoreHoriz,"Navigation alternatives")};PanicHomeDropdownMenu(menu,{menu=false}){DropdownMenuItem(text={Text("Recents")},onClick={menu=false;onRecents()});DropdownMenuItem(text={Text("Home")},onClick={menu=false;onHome()});DropdownMenuItem(text={Text("Back")},onClick={menu=false;onBack()})}}
    }
   }else Row(Modifier.fillMaxWidth().height(52.dp).testTag("nova-navigation"),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.SpaceEvenly){
    PreviewShellRules.order(shell.reverse).split(',').forEach{action->
@@ -75,7 +75,7 @@ import java.util.Date
   }
   if(apps.isNotEmpty()||internal.isNotEmpty())TextButton(onClick={closeAll=true},modifier=Modifier.align(Alignment.CenterHorizontally).padding(12.dp).testTag("recents-close-all")){Text("Close all apps")}
  }
- if(closeAll)AlertDialog(onDismissRequest={closeAll=false},title={Text("Close this profile’s web apps?")},text={Text("Playback stops and live pages close. Installed apps, layout and browser cookies remain.")},confirmButton={TextButton(onClick={pool.tabs.filter{it.profile==data.state.current}.toList().forEach{pool.close(it)};internal.toList().forEach(onCloseInternal);closeAll=false},modifier=Modifier.testTag("confirm-close-all")){Text("Close all")}},dismissButton={TextButton(onClick={closeAll=false}){Text("Cancel")}})
+ if(closeAll)PanicHomeAlertDialog(onDismissRequest={closeAll=false},title={Text("Close this profile’s web apps?")},text={Text("Playback stops and live pages close. Installed apps, layout and browser cookies remain.")},confirmButton={TextButton(onClick={pool.tabs.filter{it.profile==data.state.current}.toList().forEach{pool.close(it)};internal.toList().forEach(onCloseInternal);closeAll=false},modifier=Modifier.testTag("confirm-close-all")){Text("Close all")}},dismissButton={TextButton(onClick={closeAll=false}){Text("Cancel")}})
 }
 
 @Composable internal fun NovaMiniPlayer(pool:PreviewBrowserModel,profile:String,onResume:(PreviewTab)->Unit){
@@ -86,7 +86,7 @@ import java.util.Date
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable internal fun NovaNotifications(data:PreviewData,onDismiss:()->Unit,onLaunch:(String)->Unit,media:@Composable ()->Unit={}){
  val shell=data.shell;val events=shell.events(data.state.current)
- ModalBottomSheet(onDismissRequest=onDismiss){Column(Modifier.fillMaxWidth().fillMaxHeight(.8f).padding(20.dp).testTag("nova-notifications")){
+ PanicHomeModalBottomSheet(onDismissRequest=onDismiss){Column(Modifier.fillMaxWidth().fillMaxHeight(.8f).padding(20.dp).testTag("nova-notifications")){
   Row(verticalAlignment=Alignment.CenterVertically){Text("Nova events",Modifier.weight(1f),style=MaterialTheme.typography.headlineSmall);TextButton(onClick={shell.clear(data.state.current)},enabled=events.isNotEmpty(),modifier=Modifier.testTag("clear-events")){Text("Clear all")};IconButton(onClick=onDismiss){Icon(Icons.Default.Close,"Close Nova events")}}
   Text("Internal Nova events only · no Android notifications",style=MaterialTheme.typography.labelMedium)
   media()
@@ -127,7 +127,7 @@ import java.util.Date
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable internal fun NovaEdgePanel(data:PreviewData,pool:PreviewBrowserModel,onDismiss:()->Unit,onLaunch:(String)->Unit,onHome:()->Unit,onSettings:()->Unit){
- ModalBottomSheet(onDismissRequest=onDismiss){Column(Modifier.fillMaxWidth().heightIn(max=600.dp).verticalScroll(rememberScrollState()).padding(24.dp).testTag("nova-edge-panel")){
+ PanicHomeModalBottomSheet(onDismissRequest=onDismiss){Column(Modifier.fillMaxWidth().heightIn(max=600.dp).verticalScroll(rememberScrollState()).padding(24.dp).testTag("nova-edge-panel")){
   Row(verticalAlignment=Alignment.CenterVertically){Text("Nova Edge",Modifier.weight(1f),style=MaterialTheme.typography.headlineSmall);IconButton(onClick=onDismiss){Icon(Icons.Default.Close,"Close Edge Panel")}}
   Row(Modifier.horizontalScroll(rememberScrollState())){TextButton(onClick={onLaunch("calm")}){Text("Calm Now")};TextButton(onClick={onLaunch("mind")}){Text("Nova Mind")};TextButton(onClick={onLaunch("browser-v1")}){Text("Browser V1")};TextButton(onClick=onHome,modifier=Modifier.testTag("edge-home")){Text("Home")};TextButton(onClick={onLaunch("store")},modifier=Modifier.testTag("edge-store")){Text("Nova Store")};TextButton(onClick=onSettings){Text("Settings")}}
   Text("Favourites",style=MaterialTheme.typography.titleMedium)

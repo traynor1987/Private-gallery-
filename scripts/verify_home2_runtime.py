@@ -13,6 +13,7 @@ classes=[
  'uk.co.traynor.privategallery.ui.DiscreetPinUnlockTest',
  'uk.co.traynor.privategallery.SmartUnlockLifecycle173Test',
  'uk.co.traynor.privategallery.Home2MainAuthorityTest',
+ 'uk.co.traynor.privategallery.HomeOwnedWindowPanicTest',
  'uk.co.traynor.privategallery.core.hidden.HiddenCredentialStoreTest',
  'uk.co.traynor.privategallery.core.evidence.EvidenceStore179Test',
  'uk.co.traynor.privategallery.core.camera.VaultCaptureAccessTest',

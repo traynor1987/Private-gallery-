@@ -81,7 +81,7 @@ import kotlinx.coroutines.launch
   NovaPreview(value.data,pool,value.mind,audio,value.widgets,value.history,video,
    onPickImage={if(context.current()){pending.set(true);picker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))}},
    onOpen={},filesDir=context.filesDir,onNative={id->if(context.current()){value.data.shell.touchInternal(context.spaceId,id);onLaunch(id)}},onLock=onLock,onPanic=onPanic)
-  message?.let{AlertDialog(onDismissRequest={message=null},title={Text("NovaOS")},text={Text(it)},confirmButton={TextButton(onClick={message=null}){Text("OK")}})}
+  message?.let{PanicHomeAlertDialog(onDismissRequest={message=null},title={Text("NovaOS")},text={Text(it)},confirmButton={TextButton(onClick={message=null}){Text("OK")}})}
  }
 }
 private data class HomeModels(val data:PreviewData,val widgets:WidgetData,val mind:MindData,val history:NovaSearchHistory)

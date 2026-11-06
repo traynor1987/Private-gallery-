@@ -57,7 +57,7 @@ internal fun Modifier.emptyHomeSwipe(empty:(Offset)->Boolean,onDown:()->Unit,onU
  var panelHeight by remember{mutableFloatStateOf(300f)};var closing by remember{mutableStateOf(false)}
  val scope=rememberCoroutineScope()
  val close:()->Unit={if(!closing){closing=true;scope.launch{entry.animateTo(-panelHeight,tween(if(widgets.reduced)0 else 180));onDismiss()}}}
- Dialog(onDismissRequest=close,properties=DialogProperties(usePlatformDefaultWidth=false,decorFitsSystemWindows=false)){
+ PanicHomeDialog(onDismissRequest=close,properties=DialogProperties(usePlatformDefaultWidth=false,decorFitsSystemWindows=false)){
   val threshold=with(LocalDensity.current){24.dp.toPx()}
   val window=(LocalView.current.parent as? DialogWindowProvider)?.window
   SideEffect{window?.addFlags(android.view.WindowManager.LayoutParams.FLAG_SECURE)}

@@ -37,7 +37,8 @@
     "duplicate_addresses_and_existing_port_or_ip_apps_keep_each_uuid_and_launch_its_exact_record",
     "hidden_search_web_is_unavailable_and_a_tap_leaves_local_search_and_home_usable",
     "owner_shortcut_names_survive_catalogue_refresh_and_reopening_without_changing_native_settings",
-    "protected_entry_never_opens_home_until_the_user_requests_native_authentication"
+    "protected_entry_never_opens_home_until_the_user_requests_native_authentication",
+    "store_install_home_launch_my_apps_and_uninstall_use_the_real_encrypted_native_catalogue"
   ],
   "uk.co.traynor.privategallery.ui.DiscreetPinUnlockTest": [
     "backgroundClearsDiscreetIntentAndPin",
@@ -52,6 +53,11 @@
   "uk.co.traynor.privategallery.Home2MainAuthorityTest": [
     "home_revokes_browser_interaction_synchronously_before_the_next_composition",
     "retained_hidden_authority_never_blocks_an_independent_primary_credential_request"
+  ],
+  "uk.co.traynor.privategallery.HomeOwnedWindowPanicTest": [
+    "drawerWindowUsesOneSharedCallbackAndConcealsSynchronouslyBeforeRecomposition",
+    "popupSystemThreeFingerTouchCannotLeakAChildClickAfterPanic",
+    "systemThreeFingerTouchInHiddenQuickPanelLocksBothSpacesAndRequiresPrimaryPin"
   ],
   "uk.co.traynor.privategallery.core.hidden.HiddenCredentialStoreTest": [
     "atomicBackupIsRecoveredAndOrphanNewRecordDoesNotPermitReplacement",

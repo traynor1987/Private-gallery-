@@ -55,7 +55,7 @@ import androidx.compose.ui.unit.dp
 @Composable internal fun AppDetails(data:PreviewData,entry:StoreEntry,onDismiss:()->Unit,onOpen:(StoreEntry)->Unit,onUninstall:(String)->Unit,onAddHome:(String)->Unit,onPin:(String)->Unit){
  var confirm by remember(entry.id){mutableStateOf(false)};var pinned by remember{mutableStateOf(false)}
  val installed=data.installed(entry)
- ModalBottomSheet(onDismissRequest=onDismiss){
+ PanicHomeModalBottomSheet(onDismissRequest=onDismiss){
   Column(Modifier.fillMaxWidth().fillMaxHeight(.91f).verticalScroll(rememberScrollState()).padding(24.dp)){
    Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(16.dp)){AppIcon(LaunchApp(entry.id,entry.name,"website",entry),74.dp);Column(Modifier.weight(1f)){Text(entry.name,style=MaterialTheme.typography.headlineMedium);Text(entry.publisher,color=MaterialTheme.colorScheme.onSurfaceVariant);Text(entry.category,color=MaterialTheme.colorScheme.primary,style=MaterialTheme.typography.labelLarge)};IconButton(onClick=onDismiss){Icon(Icons.Default.Close,"Close app details")}}
    Spacer(Modifier.height(22.dp))
@@ -72,12 +72,12 @@ import androidx.compose.ui.unit.dp
    if(entry.source.isNotEmpty())Text(entry.source,style=MaterialTheme.typography.bodySmall)
   }
  }
- if(confirm)AlertDialog(onDismissRequest={confirm=false},title={Text("Install ${entry.name}?")},text={Text("Add ${entry.url} to ${data.profileLabel}. This creates an encrypted Private Apps entry; it does not install an Android package or open the website yet.")},confirmButton={TextButton(onClick={data.install(entry);confirm=false},modifier=Modifier.testTag("confirm-install")){Text("Install")}},dismissButton={TextButton(onClick={confirm=false}){Text("Cancel")}})
+ if(confirm)PanicHomeAlertDialog(onDismissRequest={confirm=false},title={Text("Install ${entry.name}?")},text={Text("Add ${entry.url} to ${data.profileLabel}. This creates an encrypted Private Apps entry; it does not install an Android package or open the website yet.")},confirmButton={TextButton(onClick={data.install(entry);confirm=false},modifier=Modifier.testTag("confirm-install")){Text("Install")}},dismissButton={TextButton(onClick={confirm=false}){Text("Cancel")}})
 }
 
 @Composable internal fun CustomWebsiteDialog(onDismiss:()->Unit,onInstall:(StoreEntry)->Unit){
  var name by remember{mutableStateOf("")};var url by remember{mutableStateOf("https://")};var error by remember{mutableStateOf<String?>(null)}
- AlertDialog(onDismissRequest=onDismiss,title={Text("Add a website")},text={Column(verticalArrangement=Arrangement.spacedBy(10.dp)){
+ PanicHomeAlertDialog(onDismissRequest=onDismiss,title={Text("Add a website")},text={Column(verticalArrangement=Arrangement.spacedBy(10.dp)){
   Text("Custom Website Shortcut. PWA metadata is not inspected. You choose whether to trust this destination.",style=MaterialTheme.typography.bodySmall)
   OutlinedTextField(name,{name=it.take(40)},label={Text("App name")},singleLine=true)
   OutlinedTextField(url,{url=it.take(2048)},label={Text("HTTPS website")},singleLine=true)
@@ -87,7 +87,7 @@ import androidx.compose.ui.unit.dp
 
 @Composable internal fun CreateFolderDialog(data:PreviewData,page:Int,onDismiss:()->Unit){
  var name by remember{mutableStateOf("")};var apps by remember{mutableStateOf(setOf<String>())}
- AlertDialog(onDismissRequest=onDismiss,title={Text("Create folder")},text={Column{
+ PanicHomeAlertDialog(onDismissRequest=onDismiss,title={Text("Create folder")},text={Column{
   OutlinedTextField(name,{name=it.take(32)},label={Text("Folder name")},singleLine=true)
   Text("Select at least two apps",Modifier.padding(top=10.dp),style=MaterialTheme.typography.labelMedium)
   Column(Modifier.heightIn(max=280.dp).verticalScroll(rememberScrollState())){data.allApps().forEach{app->Row(Modifier.fillMaxWidth().clickable{apps=if(app.id in apps)apps-app.id else apps+app.id},verticalAlignment=Alignment.CenterVertically){Checkbox(app.id in apps,{apps=if(it)apps+app.id else apps-app.id});Text(app.name)}}}
