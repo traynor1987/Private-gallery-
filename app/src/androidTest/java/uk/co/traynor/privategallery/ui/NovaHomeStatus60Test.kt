@@ -194,8 +194,14 @@ class NovaHomeStatus60Test {
         assertBattery(37)
         checkpoint("returned-to-actual-home", requireScreenshot = true)
         compose.activityRule.scenario.moveToState(Lifecycle.State.STARTED)
-        compose.waitUntil(10_000) { nodes("nova-system-status").isEmpty() }
-        checkpoint("paused-no-custom-status")
+        instrumentation.runOnMainSync {
+            assertFalse("Paused Home must not retain a resumed lifecycle",
+                activity.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED))
+        }
+        // A deliberately paused/stopped Activity can unregister its entire Compose root.
+        // That is a valid absence here; foreground queries must still require a hierarchy.
+        compose.waitUntil(10_000) { nodes("nova-system-status", atLeastOneRootRequired = false).isEmpty() }
+        checkpoint("paused-no-custom-status", allowNoRoots = true)
         setBattery(61, true)
         compose.activityRule.scenario.moveToState(Lifecycle.State.RESUMED)
         compose.waitUntil(15_000) { nodes("preview-home").size == 1 }
@@ -282,7 +288,8 @@ class NovaHomeStatus60Test {
         return battery
     }
 
-    private fun nodes(tag: String) = compose.onAllNodesWithTag(tag, useUnmergedTree = true).fetchSemanticsNodes()
+    private fun nodes(tag: String, atLeastOneRootRequired: Boolean = true) =
+        compose.onAllNodesWithTag(tag, useUnmergedTree = true).fetchSemanticsNodes(atLeastOneRootRequired)
 
     private fun assertBattery(percent: Int) {
         compose.waitUntil(10_000) { nodes("nova-status-percent").singleOrNull()?.config
@@ -309,7 +316,7 @@ class NovaHomeStatus60Test {
         assertTrue("Status must fit Home vertically: $status in $home", status.top >= home.top && status.bottom <= home.bottom)
     }
 
-    private fun checkpoint(phase: String, requireScreenshot: Boolean = false) {
+    private fun checkpoint(phase: String, requireScreenshot: Boolean = false, allowNoRoots: Boolean = false) {
         val record = JSONObject().put("case", caseName).put("phase", phase).put("synthetic", true)
         instrumentation.runOnMainSync {
             val decor = activity.window.decorView
@@ -347,7 +354,7 @@ class NovaHomeStatus60Test {
         try {
             val views = JSONArray()
             for (tag in listOf("preview-home", "nova-system-status", "nova-status-percent", "nova-status-radio")) {
-                val found = nodes(tag)
+                val found = nodes(tag, atLeastOneRootRequired = !allowNoRoots)
                 val entry = JSONObject().put("tag", tag).put("count", found.size)
                 val bounds = JSONArray()
                 found.forEach { node ->
@@ -365,7 +372,7 @@ class NovaHomeStatus60Test {
         } catch (failure: Throwable) { record.put("semanticsError", failure.javaClass.name) }
         val stem = "$caseName-${sequence++}-$phase"
         try {
-            if (nodes("preview-home").size == 1) {
+            if (nodes("preview-home", atLeastOneRootRequired = !allowNoRoots).size == 1) {
                 val bitmap = compose.onNodeWithTag("preview-home").captureToImage().asAndroidBitmap()
                 File(output, "$stem.png").outputStream().use {
                     check(bitmap.compress(Bitmap.CompressFormat.PNG, 100, it))

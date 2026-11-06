@@ -102,3 +102,28 @@ stored-only chronology cap correction and passes afterward; provider references 
 Independent source rereview reports no outstanding Critical/Important findings, checkpoint-ready
 only. Full172-case API37 runtime, actual Home PNG review and production signing remain pending.
 Runtime matrix SHA256 564061623b8cd878be4955ddadc1092a6daeb17fe88ce7d0b8e04d75c9b88c09.
+
+## First combined runtime — original failed archive retained
+
+Source dbb946485d4f52231e90dd86723ad35e0d5d1647; run42233044111/job127943488970.
+Artifact13510099839,6946168bytes, SHA256
+925ca3a19eeb2bac642b6d760de44504827d1d6ef8c6e2c8ac9a70fdd1f795a9.
+Original archive/CRC/provenance and reports independently verified:431JVM pass,172Android
+executed,171pass/1failure/0skips. All report/consent/export/UI, prior wallpaper, privacy,
+retained-browser/audio and other selected cases pass. This run is not release approval.
+
+Actual Main/Home now initially hides Android status bars and visibly renders the real status.
+Original PNGs show73percent/Wi-Fi in360x800,840x800 and840x360 configurations;42percent plus
+charging bolt/Wi-Fi after BatteryService broadcasts;37percent after native Settings/Home return.
+Parent and independent reviewer inspected original PNGs: readable, no header control overlap.
+Lock restores the Android bar and removes Home/custom row. This is emulator evidence, not
+physical Samsung Fold verification.
+
+The sole failure occurs after ActivityScenario.moveToState(STARTED): the Compose test driver
+requires a root while a deliberately paused Activity can unregister all roots. The test-only
+correction uses the supported fetchSemanticsNodes(atLeastOneRootRequired=false) only for that
+paused absence and its diagnostic capture; foreground calls remain strict and an explicit
+lifecycle-below-RESUMED assertion is added. All battery/charging/resume/geometry/screenshot/
+lock assertions remain. No production change, timeout increase, arbitrary delay or assertion
+removal. Independent rereview approves this bounded rerun checkpoint. Fresh exact-source
+172-case success remains mandatory before signing.
