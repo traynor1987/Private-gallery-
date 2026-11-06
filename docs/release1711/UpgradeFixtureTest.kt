@@ -449,7 +449,10 @@ class UpgradeFixtureTest {
                     val mood=if(owner=="primary")"calm" else "hopeful"
                     if(seed) {
                         val wallpaper="Synthetic $owner encrypted wallpaper bytes".toByteArray()
-                        val wallpaperId=try {space.writeWallpaper(wallpaper)}finally{wallpaper.fill(0)}
+                        val appliedWallpaper=try {uk.co.traynor.privategallery.core.home2.WallpaperStore(space).apply(
+                            uk.co.traynor.privategallery.home2.Wallpaper("Dusk",null,1.5f,.2f,-.3f,4f,.25f,17L),wallpaper)
+                        }finally{wallpaper.fill(0)}
+                        val wallpaperId=checkNotNull(appliedWallpaper.image)
                         val model=uk.co.traynor.privategallery.home2.PreviewData(space,null)
                         model.setTheme(theme)
                         assertNull(model.error)
@@ -459,7 +462,7 @@ class UpgradeFixtureTest {
                             dock=listOf("browser-v1","store","photos"),
                             folders=listOf(uk.co.traynor.privategallery.home2.AppFolder("folder:upgrade","$owner tools",listOf("editor","ai-edit"))),
                             drawerOrder=listOf("folder:upgrade","mind","vault","camera"),columns=5,iconSize=68,
-                            wallpaper=uk.co.traynor.privategallery.home2.Wallpaper("Dusk",wallpaperId,1.5f,.2f,-.3f,4f,.25f,17L)) }
+                            wallpaper=appliedWallpaper) }
                         assertNull(model.error)
                         assertTrue(widgets.save(owner,listOf(uk.co.traynor.privategallery.home2.WidgetSlot(
                             "upgrade-$owner-slot",1,0,0,2,2,listOf(
@@ -471,7 +474,8 @@ class UpgradeFixtureTest {
                         assertTrue(mind.put(owner,"",mood,false,"upgrade-$owner-mood"))
                         before.put("home2-$owner",JSONObject().put("state",prefs.getString("state",null))
                             .put("widgets",space.getSharedPreferences("nova_widgets_v1",0).getString("layout:$owner",null))
-                            .put("mind",space.getSharedPreferences("nova_mind_v1",0).getString(owner,null)).put("wallpaper",wallpaperId))
+                            .put("mind",space.getSharedPreferences("nova_mind_v1",0).getString(owner,null)).put("wallpaper",wallpaperId)
+                            .put("wallpaperRecord",checkNotNull(prefs.getString(uk.co.traynor.privategallery.core.home2.WallpaperStore.KEY,null))))
                     }
                     val expected=before.getJSONObject("home2-$owner")
                     val raw=checkNotNull(prefs.getString("state",null))
@@ -481,6 +485,7 @@ class UpgradeFixtureTest {
                     assertEquals(5,profile.getInt("columns"));assertEquals(68,profile.getInt("iconSize"))
                     assertEquals("$owner tools",profile.getJSONArray("folders").getJSONObject(0).getString("name"))
                     assertEquals(expected.getString("wallpaper"),profile.getJSONObject("wallpaper").getString("image"))
+                    assertEquals(expected.getString("wallpaperRecord"),prefs.getString(uk.co.traynor.privategallery.core.home2.WallpaperStore.KEY,null))
                     val bytes=checkNotNull(space.readWallpaper(expected.getString("wallpaper")))
                     try {assertArrayEquals("Synthetic $owner encrypted wallpaper bytes".toByteArray(),bytes)}finally{bytes.fill(0)}
                     assertEquals(expected.getString("widgets"),space.getSharedPreferences("nova_widgets_v1",0).getString("layout:$owner",null))

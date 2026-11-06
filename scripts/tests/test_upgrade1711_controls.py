@@ -98,6 +98,23 @@ class Upgrade1711Controls(unittest.TestCase):
                              ('Home2 code57 APIs','Home2 code58 APIs'),
                              ('before installing code58','before installing code59')):
             previous=previous.replace(before,after)
+        # Original58 rejects stale Home wallpaper changes; seed via its committed store.
+        old_seed='                        val wallpaperId=try {space.writeWallpaper(wallpaper)}finally{wallpaper.fill(0)}'
+        new_seed=(
+            '                        val appliedWallpaper=try {uk.co.traynor.privategallery.core.home2.WallpaperStore(space).apply(\n'
+            '                            uk.co.traynor.privategallery.home2.Wallpaper("Dusk",null,1.5f,.2f,-.3f,4f,.25f,17L),wallpaper)\n'
+            '                        }finally{wallpaper.fill(0)}\n'
+            '                        val wallpaperId=checkNotNull(appliedWallpaper.image)')
+        self.assertEqual(1,previous.count(old_seed))
+        previous=previous.replace(old_seed,new_seed)
+        old_draft='wallpaper=uk.co.traynor.privategallery.home2.Wallpaper("Dusk",wallpaperId,1.5f,.2f,-.3f,4f,.25f,17L)) }'
+        self.assertEqual(1,previous.count(old_draft))
+        previous=previous.replace(old_draft,'wallpaper=appliedWallpaper) }')
+        record='                            .put("wallpaperRecord",checkNotNull(prefs.getString(uk.co.traynor.privategallery.core.home2.WallpaperStore.KEY,null))))'
+        previous=previous.replace('.put("wallpaper",wallpaperId))','.put("wallpaper",wallpaperId)\n'+record)
+        original_assert='                    assertEquals(expected.getString("wallpaper"),profile.getJSONObject("wallpaper").getString("image"))\n'
+        added_assert='                    assertEquals(expected.getString("wallpaperRecord"),prefs.getString(uk.co.traynor.privategallery.core.home2.WallpaperStore.KEY,null))\n'
+        previous=previous.replace(original_assert,original_assert+added_assert)
         self.assertEqual(previous,(ROOT/'docs/release1711/UpgradeFixtureTest.kt').read_text())
 
     def test_compilation_transform_uses_actual_original58_build_and_only_two_reviewed_edits(self):

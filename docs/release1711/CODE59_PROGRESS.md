@@ -113,3 +113,35 @@ sole final-disposal owner, preventing a paused-effect cleanup from closing a new
 subscription or erasing its initial reading. The test checks exact opens/closes after idle,
 three rapid cycles, a fully committed paused cycle, and a fresh42% reading. Independent
 bounded source review found no Important issues; signing is still not approved.
+
+## Runtime6 passed; production1 seed correction
+
+Exact application sourceab659cf3578d08cdc0deb643f887e561abb14c63, run42209939762,
+job127865786721, artifact13499660758:68233934bytes, original ZIP SHA256
+194292602306328a64b67c1ba1e173448ac9bd3f6657f37f566ae6dd45c6398f.
+Parent and independent reviewer verified authenticated provenance, CRC/safe members, frozen
+source, exactly130Android/29classes and406JVM unique passes with zero failures/errors/skips.
+Actual test APK identity/hash/signer and fullSystemUI/tools22/API37 receipts also pass.
+Original-key signing was independently approved with the then-reviewed fixture.
+
+First production run42212278039/job127873637498 at activation5ee4c8f0b982b765655fa547c4d4042dfd5b3b99
+built and validated the original-key candidate, but stopped during seed on original58 BEFORE
+installing59. No APK was published. Original diagnostic artifact13499402896:102397bytes,
+SHA2566cb4af078993686dc0b810810c99f569697c2686e665b1a4183a44ed52d2f8a7.
+Seed failed with JSONObject No value for image at home2State line483. Code58 correctly
+rejects stale Home wallpaper changes: writing a blob then model.change cannot replace its
+authoritative applied record. This is fixture setup, not a candidate migration/data-loss result.
+
+Correction only to the review-bound upgrade fixture: seed through original58 WallpaperStore.apply,
+retain its returned opaque ID and revision, then save the layout. All original verification
+assertions and ciphertext exclusions remain; exact dedicated wallpaper-record preservation
+is additionally asserted for both Spaces before/after upgrade and restart. The complete signed58
+fixture-comparison host test permits only this explicit seed replacement and additive assertion.
+It failed against the old setup and passes after the correction; all13focused release controls
+pass. Original58 compilation and renewed independent fixture signing approval are required.
+Application/runtime source, controls, workflow and130-case matrix are unchanged.
+Corrected fixture SHA25667f8f46ef2381da7920f5a28b65f964137087ae068934fbae7f22bb827a299a1
+compiled against actual original58 in2m32s. Independent review verified original failure,
+complete historical comparison, exact compiled inputs and unchanged other hashes; renewed
+original-key signing approval recorded in SECURITY_REVIEW.md. Original runtime gate and
+all13release controls pass again. A fresh production upgrade remains required before publication.

@@ -195,3 +195,13 @@ Local checks completed during preparation:
 ## Published evidence excludes test packages
 
 The original-key signed instrumentation exists only on the disposable runner. Published evidence includes the compilation receipt, baseline Gradle input, package/manifest reports and compilation log, plus the existing instrumentation signature/hash and payload-comparison receipts. Neither compiled nor signed test APK is copied into the evidence archive. Staging and the final ZIP reject installable packages, nested archives and signing files. The authorized NovaOS application APK is a separate release asset. The staging regressions execute the actual workflow body against synthetic inputs; all thirteen staging/upgrade-control tests pass. These controls still do not grant signing approval without successful frozen-source runtime evidence.
+
+### Original58 authoritative wallpaper seed
+
+Original58 deliberately preserves the separately committed wallpaper when a retained Home
+layout saves. The upgrade fixture therefore seeds with WallpaperStore.apply, keeps its returned
+opaque image reference/revision, and only then saves the Home layout. Direct blob creation plus
+a stale layout mutation does not establish an applied wallpaper and is not a valid seed.
+The fixture preserves every original assertion/exclusion and adds exact applied-record equality
+for each owner. Full encrypted-file snapshots are still taken after seeding. The fixture remains
+compiled against actual original58, and its new hash requires renewed independent approval.

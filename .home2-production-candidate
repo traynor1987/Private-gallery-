@@ -5,8 +5,8 @@
   "candidate_code": 59,
   "test_run": 42209939762,
   "test_artifact": 13499660758,
-  "review_sha256": "0b29249ead9161d40dc1cea8da62b5deb2fa7f52f33f0b85fc1182b356f97fcb",
-  "fixture_sha256": "2e6d4ab486eaf81899c4a4b6679d303990c4cca97b29f4364c3eef0fbb719b5d",
+  "review_sha256": "79d73780259a6fcdab35414a2968242818a9eb8f18dc0d58a6a08c6f51e26a5e",
+  "fixture_sha256": "67f8f46ef2381da7920f5a28b65f964137087ae068934fbae7f22bb827a299a1",
   "matrix_sha256": "4f565f651cd524d5185de7262b4e3899a1d06fd1e7e609df2dc31721e6912b7c",
   "runtime_archive_sha256": "194292602306328a64b67c1ba1e173448ac9bd3f6657f37f566ae6dd45c6398f",
   "controls_sha256": {

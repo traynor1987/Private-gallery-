@@ -3,7 +3,7 @@
 Source: ab659cf3578d08cdc0deb643f887e561abb14c63
 Decision: APPROVED
 Production signing: APPROVED
-Upgrade fixture SHA-256: 2e6d4ab486eaf81899c4a4b6679d303990c4cca97b29f4364c3eef0fbb719b5d
+Upgrade fixture SHA-256: 67f8f46ef2381da7920f5a28b65f964137087ae068934fbae7f22bb827a299a1
 Upgrade controls SHA-256: 2246a0d8daf326cabe85bb3a6ebfb6c4e061aa79300b0f125e9358692dc446b4
 Runtime matrix SHA-256: 4f565f651cd524d5185de7262b4e3899a1d06fd1e7e609df2dc31721e6912b7c
 Runtime archive SHA-256: 194292602306328a64b67c1ba1e173448ac9bd3f6657f37f566ae6dd45c6398f
@@ -25,7 +25,9 @@ artifact13499660758 through connected GitHub, and independently downloaded the o
 68233934bytes, SHA256 above. CRC, safe paths and417unique archive members pass. Original
 Android XML contains130unique cases across29classes exactly matching the reviewed matrix;
 original JVM reports contain406unique cases. Zero failures, errors, skips or duplicates.
-All2763current Git blobs match the independently fetched frozen source tree.
+All2763original frozen Git blobs matched the independently fetched source tree.
+The activation-only fixture correction below is separately reviewed and bound by its new hash;
+application source, runtime matrix, eight controls and signing workflow are unchanged.
 
 The actual isolated test APK has SHA256
 782758b2b86dec8e74b032d8469ecbad5c543aea5b2180dfb2c2e0b1fe4c1692,
@@ -100,3 +102,30 @@ live VPN/OS consent/radio transitions remain owner acceptance. Automated tests u
 readiness/radio providers where reliable live transitions are unavailable; no live handshake
 or hardware verification is claimed. Third-party login/playback restrictions remain.
 Any changed frozen source, fixture, controls, workflow, matrix or archive requires new approval.
+
+## Renewed fixture-only approval after production1 baseline seeding failure
+
+Production1 run42212278039/job127873637498 built and validated the candidate but failed
+on original58 during seed, before59 installation; publication did not occur. Original
+diagnostics artifact13499402896:102397bytes SHA256
+6cb4af078993686dc0b810810c99f569697c2686e665b1a4183a44ed52d2f8a7.
+The reviewer verified the original exception, No value for image at home2State483.
+Code58 correctly preserves its authoritative wallpaper against a stale layout snapshot;
+the old seed only wrote an encrypted blob and never committed an applied record.
+
+Renewed independent approval covers the new fixture hash above. Seed now uses original58
+WallpaperStore.apply, retains its returned opaque ID/revision, then saves Home layout.
+Every original verification assertion and ciphertext exclusion remains unchanged. An additional
+exact dedicated wallpaper-record capture/assertion strengthens each owner's preservation check.
+The reviewer directly compared the complete fixture against the historical fixture in signed58
+evidence, allowing only these explicit setup changes/additions and version identity/comments.
+
+The corrected fixture compiled against actual original58 source in2m32s, using only the existing
+two production-target transformations; exact compiled fixture/build inputs were checked.
+All13focused release-control host tests pass. The existing successful130-case runtime includes
+WallpaperStoreTest.deliberate_apply_is_owner_encrypted_and_stale_home_save_preserves_it.
+Application source/runtime evidence and all other approved hashes remain unchanged.
+No outstanding Critical or Important findings. Original-key signing remains APPROVED for
+ab659cf3578d08cdc0deb643f887e561abb14c63 with this new reviewed fixture.
+The failed first production run is nonqualifying; publication still requires a fresh successful
+actual58-to59 seed/upgrade/verification/restart through the unchanged reviewed workflow.
