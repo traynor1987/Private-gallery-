@@ -95,7 +95,11 @@ class NovaHomeStatus60Test {
         check(BuildConfig.DEBUG) { "Synthetic status fixtures require the isolated test identity" }
         caseName = name
         sequence = 0
-        output = File(checkNotNull(activity.getExternalFilesDir(null)), "nova-status60").apply { mkdirs() }
+        // UTP collects this directory before uninstalling the isolated application. External
+        // files disappear at uninstall and cannot be recovered by a post-Gradle adb pull.
+        val additionalOutput = InstrumentationRegistry.getArguments().getString("additionalTestOutputDir")
+            ?: File(checkNotNull(activity.externalMediaDirs.firstOrNull()), "additional_test_output").absolutePath
+        output = File(additionalOutput, "nova-status60").apply { check(isDirectory || mkdirs()) }
         val retained = ViewModelProvider(activity)[ProtectedSessionState::class.java]
         val settings = activity.getSharedPreferences("private-gallery-settings", 0)
         val previous = settings.all.toMap()
@@ -112,9 +116,18 @@ class NovaHomeStatus60Test {
                 retained.hidden.leave(); retained.key = key; retained.session.unlock()
                 retained.homePrimaryAuthentication = null; retained.homeVisible = false
                 route().value = Route.VAULT
+                // The ordinary owner preference is changed only inside this DEBUG synthetic
+                // Primary fixture, and the complete settings snapshot is restored in finally.
+                call("applyAllowScreenshots", true)
             }
             compose.waitUntil(15_000) { nodes("preview-home").size == 1 }
             compose.onNodeWithTag("preview-home").assertIsDisplayed()
+            compose.waitUntil(10_000) {
+                compose.runOnIdle {
+                    activity.window.decorView.hasWindowFocus() && !activity.privacyCoverVisible() &&
+                        activity.window.attributes.flags and WindowManager.LayoutParams.FLAG_SECURE == 0
+                }
+            }
             checkpoint("default-home-before-window-manipulation")
             body()
         } catch (failure: Throwable) {
@@ -145,11 +158,15 @@ class NovaHomeStatus60Test {
     // Removing Home's ownership of its immersive bar policy must fail this contract. Unlike the
     // isolated code59 tests, this method never hides bars on the Activity's behalf.
     @Test fun actualHomeInitiallyShowsRealStatusWithoutExternalWindowManipulation() = fixture("initial-home") {
-        compose.waitForIdle()
-        checkpoint("initial-home-contract")
+        compose.waitUntil(10_000) { barsVisible() == false }
         assertEquals("Actual Home must establish its immersive status-bar policy", false, barsVisible())
         assertBattery(73)
         assertStatusFits()
+        checkpoint("initial-home-contract", requireScreenshot = true)
+        compose.runOnIdle { activity.lockNovaSpace() }
+        compose.waitUntil(10_000) { nodes("preview-home").isEmpty() && barsVisible() == true }
+        compose.onNodeWithTag("nova-system-status").assertDoesNotExist()
+        checkpoint("locked-home-restores-android-bar")
     }
 
     // Manual hiding is diagnostic isolation: failures here implicate the actual provider, Space
@@ -158,11 +175,11 @@ class NovaHomeStatus60Test {
         setBars(false)
         assertBattery(73) // Seeded before Home: exercises the real sticky initial snapshot.
         assertStatusFits()
-        checkpoint("manual-hide-sticky73")
+        checkpoint("manual-hide-sticky73", requireScreenshot = true)
         setBattery(42, true)
         assertBattery(42)
         assertCharging()
-        checkpoint("real-battery-broadcast42-charging")
+        checkpoint("real-battery-broadcast42-charging", requireScreenshot = true)
         setBars(true)
         compose.onNodeWithTag("nova-system-status").assertDoesNotExist()
         checkpoint("android-bar-visible-no-duplicate")
@@ -175,7 +192,7 @@ class NovaHomeStatus60Test {
         compose.onNodeWithTag("nova-home").assertIsDisplayed().performClick()
         compose.waitUntil(15_000) { nodes("preview-home").size == 1 }
         assertBattery(37)
-        checkpoint("returned-to-actual-home")
+        checkpoint("returned-to-actual-home", requireScreenshot = true)
         compose.activityRule.scenario.moveToState(Lifecycle.State.STARTED)
         compose.waitUntil(10_000) { nodes("nova-system-status").isEmpty() }
         checkpoint("paused-no-custom-status")
@@ -185,7 +202,7 @@ class NovaHomeStatus60Test {
         assertBattery(61)
         assertCharging()
         assertStatusFits()
-        checkpoint("resumed-real-battery61")
+        checkpoint("resumed-real-battery61", requireScreenshot = true)
     }
 
     @Test fun manuallyHiddenActualHomeStatusFitsCompactWideAndLandscapeConfigurations() = fixture("actual-window-bounds") {
@@ -209,7 +226,7 @@ class NovaHomeStatus60Test {
                 setBars(false)
                 assertBattery(73)
                 assertStatusFits()
-                checkpoint("$label-real-window")
+                checkpoint("$label-real-window", requireScreenshot = true)
                 compose.onNodeWithContentDescription("Open Quick Panel").assertIsDisplayed()
             }
         } finally {
@@ -277,8 +294,11 @@ class NovaHomeStatus60Test {
 
     private fun assertCharging() {
         compose.waitUntil(10_000) { nodes("nova-system-status").singleOrNull()?.config
-            ?.getOrNull(SemanticsProperties.ContentDescription)?.any { "Charging" in it } == true }
-        compose.onNodeWithTag("nova-system-status").assertContentDescriptionContains("Charging")
+            ?.getOrNull(SemanticsProperties.ContentDescription)?.any { "Charging" in it.split(", ") } == true }
+        val descriptions = compose.onNodeWithTag("nova-system-status").fetchSemanticsNode()
+            .config.getOrNull(SemanticsProperties.ContentDescription).orEmpty()
+        assertTrue("Status must report the real charging state: $descriptions",
+            descriptions.any { "Charging" in it.split(", ") })
     }
 
     private fun assertStatusFits() {
@@ -289,7 +309,7 @@ class NovaHomeStatus60Test {
         assertTrue("Status must fit Home vertically: $status in $home", status.top >= home.top && status.bottom <= home.bottom)
     }
 
-    private fun checkpoint(phase: String) {
+    private fun checkpoint(phase: String, requireScreenshot: Boolean = false) {
         val record = JSONObject().put("case", caseName).put("phase", phase).put("synthetic", true)
         instrumentation.runOnMainSync {
             val decor = activity.window.decorView
@@ -359,5 +379,6 @@ class NovaHomeStatus60Test {
         } finally {
             File(output, "$stem.json").writeText(record.toString(2))
         }
+        if (requireScreenshot) assertTrue("Actual Home screenshot is required; capture state: $record", record.has("screenshot"))
     }
 }

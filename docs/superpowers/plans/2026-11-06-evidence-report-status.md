@@ -21,27 +21,27 @@ existing authenticated viewer/document handoff; actual Android status provider a
 
 ## Task1 Existing report extension
 
-- [ ] Add failing synthetic report cases for refs/quotes, duplicates/counts, alternatives/context.
-- [ ] Implement EvidenceAiReport.Report with outcome/assessment/confidence/alternatives/limits,
+- [x] Add failing synthetic report cases for refs/quotes, duplicates/counts, alternatives/context.
+- [x] Implement EvidenceAiReport.Report with outcome/assessment/confidence/alternatives/limits,
   chronology, deduplicated instances/categories/references, counts and deterministic text().
-- [ ] Integrate Task.EVIDENCE_REPORT, exact preview and nullable Details.report; preserve old tasks.
+- [x] Integrate Task.EVIDENCE_REPORT, exact preview and nullable Details.report; preserve old tasks.
 - [ ] Test consent/cancel/revocation/Space isolation and backwards-compatible encrypted history.
 
 ## Task2 UI and report-only export
 
-- [ ] Add report choice, exact payload/selection review, native report display and source links.
-- [ ] Add encrypted report history/reopen and safe report-only export with owner confirmation.
+- [x] Add report choice, exact payload/selection review, native report display and source links.
+- [x] Add encrypted report history/reopen and safe report-only export with owner confirmation.
 - [ ] Test no upload on open/preview/cancel, no originals in export, no stale/foreign viewer access.
 
 ## Task3 Actual Home status
 
-- [ ] Reproduce/capture actual Main/Home with real provider/window state and battery broadcasts.
-- [ ] Apply the proven bounded integration fix; retain real-bar suppression and callback retirement.
+- [x] Reproduce/capture actual Main/Home with real provider/window state and battery broadcasts.
+- [x] Apply the proven bounded integration fix; retain real-bar suppression and callback retirement.
 - [ ] Verify visible initial/update/charging state and compact/wide/landscape bounds; preserve UI.
 
 ## Task4 Verified release
 
-- [ ] Verify next code and pin actual signed59 baseline and unchanged preservation assertions.
+- [x] Verify next code and pin actual signed59 baseline and unchanged preservation assertions.
 - [ ] Compile app/tests, run host/JVM and focused API37 original reports with screenshots.
 - [ ] Independently review exact source and all security/upgrade controls before signing.
 - [ ] Verify original-key59-to-next preservation/restart, actual APK/cert/hash and publish direct asset.

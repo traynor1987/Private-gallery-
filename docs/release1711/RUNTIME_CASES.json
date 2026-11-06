@@ -175,6 +175,57 @@
     "encryptedOwnersPersistSeparatelyAndNeverWriteSearchableEvidenceText",
     "interruptedUpdateLeavesLastCiphertextAndWrongKeyCannotReplaceIt"
   ],
+  "uk.co.traynor.privategallery.core.evidence.EvidenceAi179Test": [
+    "actualIdentityRevisionCorrectionForeignReaderAndFailedAuthenticatedEofRejectConsent",
+    "actualKeyEchoIncludingEscapedJsonNeverEntersAdvisory",
+    "bodyAndConsentModelDigestChangeAndClosedCopiesCannotBeUsed",
+    "changedDigestRevisionRouteAndForeignCredentialRetireConsent",
+    "credentialRemovalDuringBodyWriteCancelsRouteAndPublishesNoAnalysis",
+    "credentialReplacementDuringResponseWaitRejectsAndWipesLateBytes",
+    "defaultFilenameNameIsExcludedFromExactPreviewAndOneShotBodyWithSelectedOcr",
+    "foreignOwnerVaultOnlyAndChangedSourcesBlockBeforeCredentialReadOrPost",
+    "imagesAreExplicitBoundedReencodedAndThumbnailCopiesAreIndependent",
+    "incompleteWithoutOutputIsLabelledAndOutputCharacterOverflowIsRejected",
+    "onlySingleStrictObjectAcceptsSelectedStructuredReferencesAndWrappersFailClosed",
+    "prepareCancellationAfterConsumedBytesBeforeReaderReturnPublishesNothing",
+    "prepareMakesZeroPostsAndExactFramingHasOnlySelectedContent",
+    "refusalIncompleteAndForeignStructuredReferencesRemainBoundedAdvisory",
+    "retainedUnrelatedIncidentAndAnalysisTextNeverEnterDirectSelectedPayload",
+    "revocationAfterSendNeverPublishesAndProviderFailuresNeverEchoSecrets",
+    "selectedRecordImageAndTextQuotaBoundariesHavePositiveAndNegativeCases",
+    "selectedTextAndResponseLimitsAreRejectedWithoutTruncatingConsent",
+    "simultaneousOneShotAttemptsAdmitAtMostOnePostAndRetireBothResults",
+    "strictOuterAndOutputGrammarRejectsCommentQuotesSingleQuotesTrailingAndDeepInput",
+    "typedDetailsReusesStrictSchemaAndSelectedIdsAndKeepsReceiptAppOwned"
+  ],
+  "uk.co.traynor.privategallery.core.evidence.EvidenceAiReportConsent60Test": [
+    "cancelChangedCatalogueAndSpaceRetirementNeverPost",
+    "incompleteAndRefusalReportsAlwaysRemainInsufficientAndUncounted",
+    "reportPreviewPostsNothingAndEachSendRequiresFreshConsent",
+    "retiredResponseCannotPublishOrPersistAReport",
+    "truncatedIncompleteJsonBecomesAppOwnedInsufficientReport"
+  ],
+  "uk.co.traynor.privategallery.core.evidence.EvidenceReportExport60Test": [
+    "everyOutputChunkIsBoundedAndRetainedBuffersAreWipedOnSuccess",
+    "foreignOwnerUnknownAnalysisAndGenericAdvisoryFailBeforeOutput",
+    "malformedSavedReportNeverWritesAnyBytes",
+    "policyChangeDuringOutputIsCaughtByPostWriteFingerprintCheck",
+    "removedRecordStillRequiresEveryRetainedContributorAndMissingSourceBlocks",
+    "revocationBeforeAndDuringOutputNeverReturnsSuccessAndWipesMutableBuffer",
+    "vaultOnlyAndChangedHistoricalSourcesBlockEvenAfterTheirRecordsAreRemoved",
+    "writesOnlyChosenReportAndNeverReadsOrCopiesOriginalsOrCatalogueAnnotations"
+  ],
+  "uk.co.traynor.privategallery.ui.EvidenceAi179UiTest": [
+    "actualPreviewNeedsExplicitSendAndSeparateOwnerApplication"
+  ],
+  "uk.co.traynor.privategallery.ui.EvidenceReport60UiTest": [
+    "nativeReportShowsQualifiedCountsDisclaimerPassageAndSourceAction",
+    "revokedSourceIsDisabledAndCapturedActionCannotOpenIt"
+  ],
+  "uk.co.traynor.privategallery.ui.EvidenceReportWorkflow60Test": [
+    "explicitConsentEncryptedHistoryAndLinkedOriginalPreserveEvidence",
+    "permissionRequestKeepsCurrentTaskAfterDismissAndTaskChipChange"
+  ],
   "uk.co.traynor.privategallery.core.camera.VaultCaptureAccessTest": [
     "bothVaultsImportPhotoAndVideoWithHashTimestampAndNoPublicCopy",
     "cameraVideoValidationRejectsTruncation",

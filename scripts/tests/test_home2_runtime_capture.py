@@ -18,6 +18,8 @@ class HomeRuntimeCapture(unittest.TestCase):
     ran=subprocess.run(['bash',str(ROOT/'scripts/run_home2_runtime.sh')],cwd=p,env=env,capture_output=True,text=True)
     self.assertEqual(result,ran.returncode,ran.stderr)
     self.assertIn('connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=Synthetic.SelectedCase',(p/'gradle-args.txt').read_text())
-    self.assertIn('pull /sdcard/Android/data/uk.co.traynor.privategallery.hiddenprototype/files/nova-status60',(p/'adb-args.txt').read_text())
+    self.assertIn('-Pandroid.enableAdditionalTestOutput=true',(p/'gradle-args.txt').read_text())
+    self.assertIn('-Pandroid.testInstrumentationRunnerArguments.additionalTestOutputDir=/sdcard/Android/media/uk.co.traynor.privategallery.hiddenprototype/additional_test_output',(p/'gradle-args.txt').read_text())
+    self.assertIn('pull /sdcard/Android/media/uk.co.traynor.privategallery.hiddenprototype/additional_test_output/nova-status60',(p/'adb-args.txt').read_text())
 
 if __name__=='__main__':unittest.main()

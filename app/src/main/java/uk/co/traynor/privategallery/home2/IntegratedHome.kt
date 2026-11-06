@@ -47,6 +47,7 @@ import uk.co.traynor.privategallery.core.home2.SpaceContext
  wallpaperOwner?.let{owner->WallpaperEditorHost(owner,visible,onClose={wallpaperOwner=null;if(context.current())models.getOrNull()?.data?.refreshWallpaper()})}
  LaunchedEffect(visible){if(visible&&context.current())models.getOrNull()?.data?.let{it.refreshInstalled();it.refreshWallpaper()}}
  DisposableEffect(lifecycle){val observer=androidx.lifecycle.LifecycleEventObserver{_,event->if(event==androidx.lifecycle.Lifecycle.Event.ON_PAUSE||event==androidx.lifecycle.Lifecycle.Event.ON_STOP){audio.pause();video.pause()}};lifecycle.lifecycle.addObserver(observer);onDispose{lifecycle.lifecycle.removeObserver(observer)}}
+ NovaHomeStatusBarPolicy(visible&&live&&context.current())
  if(!visible||!live||!context.current())return
  val value=models.getOrElse{
   Column(Modifier.fillMaxSize().safeDrawingPadding().padding(24.dp)){Text("Home could not open. Existing encrypted data has been preserved.");TextButton(onClick=onLock){Text("Lock Space")}}

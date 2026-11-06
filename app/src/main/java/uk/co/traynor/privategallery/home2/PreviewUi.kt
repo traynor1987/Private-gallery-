@@ -294,7 +294,12 @@ private val lightColors=lightColorScheme(primary=Color(0xFF285F65),secondary=Col
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable private fun Home(data:PreviewData,filesDir:File,pager:PagerState,widgets:WidgetData,pool:PreviewBrowserModel,audio:MindAudio,video:NovaVideoModel,onWidgetEdit:(String)->Unit,onResume:(PreviewTab)->Unit,onLaunch:(String)->Unit,onSelect:(String)->Unit,onDrawer:()->Unit,onQuick:()->Unit,onEdit:()->Unit){
+ val space=LocalContext.current as? uk.co.traynor.privategallery.core.home2.SpaceContext
+ if(space?.current()==false)return
  val profile=data.profile;val scope=rememberCoroutineScope()
+ // Lazy pager items can be remeasured after their enclosing Space has been retired.
+ // Resolve the encrypted preference in the admitted parent, never from a retained item.
+ val originalClockVisible=widgets.clockVisible(data.state.current)
  BoxWithConstraints(Modifier.fillMaxSize().testTag("preview-home")){
   val compactHeight=maxHeight<500.dp
   val landscapeClock=compactHeight&&maxWidth>=600.dp
@@ -318,6 +323,7 @@ private val lightColors=lightColorScheme(primary=Color(0xFF285F65),secondary=Col
     widgets.recoveryNotice?.let{notice->Surface(color=MaterialTheme.colorScheme.secondaryContainer,contentColor=MaterialTheme.colorScheme.onSecondaryContainer){Column(Modifier.padding(12.dp)){Text(notice,style=MaterialTheme.typography.bodySmall);TextButton(onClick={widgets.dismissRecovery()}){Text("Dismiss recovery report")}}}}
     if(widgets.editingId!=null)Row(Modifier.fillMaxWidth().padding(horizontal=20.dp),verticalAlignment=Alignment.CenterVertically){Text("Edit widgets",Modifier.weight(1f),color=Color.White);TextButton(onClick={widgets.editingId=null},modifier=Modifier.testTag("widget-edit-done")){Text("Done",color=Color.White)}}
     HorizontalPager(pager,Modifier.weight(1f).fillMaxWidth().testTag("home-pager").semantics{stateDescription="Home ${pager.currentPage+1}"},key={it}){page->
+     if(space?.current()==false)return@HorizontalPager
      val content:@Composable (Modifier)->Unit={modifier->
       BoxWithConstraints(modifier){
        val pageHeight=maxHeight;val scroll=rememberScrollState()
@@ -328,13 +334,13 @@ private val lightColors=lightColorScheme(primary=Color(0xFF285F65),secondary=Col
        }
       }
      }
-     if(landscapeClock&&page==0&&widgets.clockVisible(data.state.current)){
+     if(landscapeClock&&page==0&&originalClockVisible){
       Row(Modifier.fillMaxSize()){
        HomeClock(Modifier.width(220.dp).padding(start=20.dp,top=4.dp,end=12.dp).testTag("home-original-clock"),true)
        content(Modifier.weight(1f).fillMaxHeight())
       }
      }else Column(Modifier.fillMaxSize()){
-      if(page==0&&widgets.clockVisible(data.state.current))HomeClock(Modifier.padding(horizontal=20.dp).testTag("home-original-clock").padding(top=if(compactHeight)4.dp else 26.dp,bottom=if(compactHeight)8.dp else 28.dp),compactHeight)
+      if(page==0&&originalClockVisible)HomeClock(Modifier.padding(horizontal=20.dp).testTag("home-original-clock").padding(top=if(compactHeight)4.dp else 26.dp,bottom=if(compactHeight)8.dp else 28.dp),compactHeight)
       content(Modifier.weight(1f).fillMaxWidth())
      }
     }
