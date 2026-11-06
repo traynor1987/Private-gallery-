@@ -15,7 +15,7 @@ Ruling: Execute detailed owner scope without further design permission — owner
 | D/all | Runtime/release | Final API37/security/original upgrade gates; no safe update claim on failure. |
 
 - [x] Recovery baseline and isolated worktree
-- [ ] A backup implemented/reviewed/pushed
+- [x] A backup implemented/reviewed/pushed
 - [ ] B arcade implemented/reviewed/pushed
 - [ ] C calculator implemented/reviewed/pushed
 - [ ] Consolidated API37 verification
@@ -34,3 +34,13 @@ Task1 fix round1/5: four findings open. Ruling: implement safe logical gallery d
 Task1 fix round1 implementation: I1–I4 repaired and ready for scoped independent review. Final targeted JVM60/0 (11 classes), app/instrumentation Kotlin/Java compilation, Home host checks and legacy payload API linkage inspection pass. Added durable settings transaction/failure injection, complete supported preference validation, actual Primary second-readback cancellation, safe remapped dates/pins/Primary crop/favourite recovery, and byte-stable v1–v6 index reads. Native runtime remains pending. Evidence and exact commands: NOVA62_BACKUP_REPORT.md. This records implementation completion only; independent review/publishing remains the next gate.
 
 Task1 scoped re-review: I1–I4 accepted at checkpoint level; no further findings in that scope. Fix round2 addressed the newly introduced cross-Space UI wording in a7718d6f: authenticated-owner descriptions replace the combined Primary/Hidden text. Bounded policy regression compiled production code, failed against the combined wording (4 tests / 1 failure), then passed (4 tests / 0 failures); actual BackupUi call-site inspected and diff whitespace checks pass. No broad suite or native runtime rerun. Final owner-specific sentence inspection/publishing remains with the root; B may proceed after that gate.
+
+Task1 complete: local recovery/implementation history 678f0701 through 4e186eb3 preserved; published A is f6e1b82d40985f66309d82bf72c8e7312074bfb6. Independent scoped review clean: /tmp/nova62-backup-r1-review.md. Task2 underway with sole Arcade writer; three native games and strict save codec/Backup schema validation. No release or native acceptance claim.
+
+Task1 minor (deferred): hydrate schedule checkbox controls from persisted settings in final repair wave; root observed charging/Wi-Fi controls reopening as true while status reads saved choices.
+
+Task2 implementation complete pending independent review/push: three offline native games, encrypted per-Space saves/settings/records/recents, functional optional sound/haptics, existing Home shortcuts and strict actual-codec Backup schema validation. Pure host122/0; real SpaceContext/Home host checks pass; focused JVM10/0 across2classes and app/instrumentation Kotlin/Java compile pass. Native fixtures compiled, not executed. Evidence/limits: NOVA62_ARCADE_REPORT.md. Root owns independent review and publication.
+
+Task2 fix round1/5: Important Sudoku repeated-completion credit repaired with persisted, strict completedOnce state retained across Undo/save/reopen/Backup and reset by a new puzzle. Completion achievements also credit once. Related minor M1 repaired: completed Sudoku remains visible after reopen. Minor M2 dense engine formatting deferred to final triage (no broad rewrite during correctness fix). Host126/0 and actual ArcadeData + SpaceContext/VaultCipher host persistence/Backup assertions pass; frozen scoped JVM/compile confirmation pending below. Independent re-review/publication remain root-owned.
+
+Task2 fix round1 final verification: focused JVM11/0 (7 Arcade +4 schema), app/instrumentation Kotlin/Java compile pass in1m29; log /tmp/nova62-arcade-r1-final-green.log. Real model/encrypted persistence host proof and strict malformed-credit restore preservation pass. Native execution remains pending. I1/M1 ready for scoped independent re-review; M2 formatting deferred.

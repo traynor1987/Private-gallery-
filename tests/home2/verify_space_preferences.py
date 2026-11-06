@@ -21,7 +21,7 @@ files=[]
 for name,body in java.items():
  p=src/name;p.parent.mkdir(parents=True,exist_ok=True);p.write_text(body);files.append(str(p))
 jdk=Path(os.environ.get('JAVA_HOME','/tmp/nova-widget-tools/jdk-17.0.21+9'))/'bin'
-subprocess.run([str(jdk/'javac'),'-d',str(out),*files,str(root/'app/src/main/java/uk/co/traynor/privategallery/home2/WidgetRules.java')],check=True)
+subprocess.run([str(jdk/'javac'),'-d',str(out),*files,*[str(p) for p in (root/'app/src/main/java/uk/co/traynor/privategallery/core/arcade').glob('*.java')],str(root/'app/src/main/java/uk/co/traynor/privategallery/home2/WidgetRules.java')],check=True)
 cache=Path(os.environ.get('GRADLE_USER_HOME',str(Path.home()/'.gradle')))/'caches/modules-2/files-2.1'
 if not cache.is_dir(): cache=Path('/tmp/nova-widget-tools/cache/caches/modules-2/files-2.1')
 # Only the compiler artifact and its declared runtime dependencies belong here.
@@ -46,6 +46,16 @@ compiler=':'.join(str(x) for x in compiler_jars)
 stdlib=next(x for x in compiler_jars if x.name.startswith('kotlin-stdlib-'))
 json_jar=artifact('org.json','json','20240303')
 classpath=str(out)+':'+str(stdlib)+':'+str(json_jar)
+compose=work/'ComposeState.kt'
+compose.write_text("""package androidx.compose.runtime
+import kotlin.reflect.KProperty
+class MutableState<T>(var value:T)
+fun <T> mutableStateOf(value:T)=MutableState(value)
+fun mutableIntStateOf(value:Int)=MutableState(value)
+fun mutableLongStateOf(value:Long)=MutableState(value)
+operator fun <T> MutableState<T>.getValue(owner:Any?,property:KProperty<*>):T=value
+operator fun <T> MutableState<T>.setValue(owner:Any?,property:KProperty<*>,next:T){value=next}
+""")
 kt=work/'Checks.kt'
 kt.write_text(r"""package uk.co.traynor.privategallery.core.home2
 import android.content.*
@@ -91,6 +101,16 @@ fun main(args:Array<String>){
  backupSpace.getSharedPreferences("nova_mind_v1",0).edit().putString("primary","[]").putString("hidden","FOREIGN_NOTE").commit()
  backupSpace.getSharedPreferences("nova_widgets_v1",0).edit().putString("layout:primary","[{\"id\":\"slot\",\"page\":0,\"x\":0,\"y\":0,\"w\":2,\"h\":2,\"active\":0,\"items\":[{\"id\":\"note\",\"type\":\"note\",\"config\":\"PORTABLE_NOTE\"}]}]").commit()
  backupSpace.getSharedPreferences("credentials",0).edit().putString("token","NEVER_EXPORT").commit()
+ val tiles=uk.co.traynor.privategallery.core.arcade.Game2048.create(71).move(0).encode()
+ val snake=uk.co.traynor.privategallery.core.arcade.SnakeGame.create(72).encode()
+ val arcade=uk.co.traynor.privategallery.home2.ArcadeData(backupSpace)
+ arcade.save(uk.co.traynor.privategallery.core.arcade.SudokuGame.create(3,73))
+ val editable=(0..80).filter{arcade.sudoku!!.given(it)==0};val finalCell=editable.last()
+ editable.dropLast(1).forEach{i->arcade.save(arcade.sudoku!!.enter(i,arcade.sudoku!!.solution()[i],false))};arcade.save(arcade.sudoku!!.hint(finalCell))
+ check(arcade.sudokuWins==1&&"sudoku-no-hints" !in arcade.achievements)
+ repeat(3){arcade.save(arcade.sudoku!!.undo());arcade.save(arcade.sudoku!!.enter(finalCell,arcade.sudoku!!.solution()[finalCell],false));check(arcade.sudokuWins==1&&"sudoku-no-hints" !in arcade.achievements)}
+ val credited=arcade.sudoku!!;arcade.save(credited.undo());val sudoku=arcade.sudoku!!.encode();check(credited.completedOnce)
+ backupSpace.getSharedPreferences("nova_arcade_v1",0).edit().putString("save:2048",tiles).putString("save:snake",snake).putString("save:sudoku",sudoku).putString("recent","sudoku,2048,snake").putBoolean("sound",true).commit()
  val values=backupSpace.backupValues();check(values.keys.none{it.contains("credentials")});check(values.values.none{it.toString(Charsets.ISO_8859_1).contains("FOREIGN_NOTE")});check(values.values.any{it.toString(Charsets.ISO_8859_1).contains("PORTABLE_NOTE")})
  val missingWallpaper=UUID.randomUUID().toString();backupSpace.getSharedPreferences("nova_preview_v1",0).edit().putString("wallpaper-applied-v1","{\"image\":\"$missingWallpaper\"}").commit()
  var missingRefused=false;try{backupSpace.backupValues()}catch(_:IllegalStateException){missingRefused=true};check(missingRefused){"Missing referenced wallpaper was silently skipped"}
@@ -102,10 +122,19 @@ fun main(args:Array<String>){
  val bad=values.mapValues{it.value.copyOf()};bad.values.first()[0]=99
  try{restored.restoreBackupValues(bad);error("Invalid settings accepted")}catch(_:IllegalArgumentException){}
  check(restored.getSharedPreferences("nova_mind_v1",0).getString("primary",null)=="[]")
+ check(restored.getSharedPreferences("nova_arcade_v1",0).getString("save:2048",null)==tiles)
+ check(restored.getSharedPreferences("nova_arcade_v1",0).getString("save:snake",null)==snake)
+ check(restored.getSharedPreferences("nova_arcade_v1",0).getString("save:sudoku",null)==sudoku)
+ val restoredSudoku=uk.co.traynor.privategallery.core.arcade.SudokuGame.decode(restored.getSharedPreferences("nova_arcade_v1",0).getString("save:sudoku",null)!!);check(restoredSudoku.completedOnce&&!restoredSudoku.complete())
+ val restoredModel=uk.co.traynor.privategallery.home2.ArcadeData(restored);restoredModel.save(restoredModel.sudoku!!.pause(false));restoredModel.save(restoredModel.sudoku!!.enter(finalCell,restoredModel.sudoku!!.solution()[finalCell],false));check(restoredModel.sudokuWins==1)
+ val finishedReopen=uk.co.traynor.privategallery.home2.ArcadeData(restored);check(finishedReopen.sudoku!!.complete()&&!finishedReopen.sudoku!!.paused)
+ restoredModel.start("sudoku",0);check(!restoredModel.sudoku!!.completedOnce);for(i in 0..80)if(restoredModel.sudoku!!.given(i)==0)restoredModel.save(restoredModel.sudoku!!.enter(i,restoredModel.sudoku!!.solution()[i],false));check(restoredModel.sudokuWins==2&&"sudoku-no-hints" in restoredModel.achievements)
+ check(restored.getSharedPreferences("nova_arcade_v1",0).getBoolean("sound",false))
  // Known-key malformed data must fail before any encrypted staging or swap.
  fun stringRecord(key:String,value:String):ByteArray {val out=java.io.ByteArrayOutputStream();java.io.DataOutputStream(out).use{d->fun text(s:String){val b=s.toByteArray();d.writeInt(b.size);d.write(b)};d.writeInt(1);d.writeInt(1);text(key);d.writeByte(1);text(value)};return out.toByteArray()}
  val baseline=File(restoreAccess.root,"home2").listFiles()!!.associate{it.name to it.readBytes()}
- val malformed=listOf("nova_widgets_v1" to stringRecord("reduced","true"),"nova_preview_v1" to stringRecord("state","{\"schema\":1,\"current\":\"primary\",\"theme\":\"dark\",\"profile\":{\"installed\":[],\"pages\":[],\"dock\":[],\"folders\":[],\"wallpaper\":{}}}"))
+ val invalidCredit=java.util.Base64.getDecoder().decode(credited.encode()).also{it[it.lastIndex]=0}
+ val malformed=listOf("nova_arcade_v1" to stringRecord("save:sudoku",java.util.Base64.getEncoder().encodeToString(invalidCredit)),"nova_arcade_v1" to stringRecord("sound","true"),"nova_arcade_v1" to stringRecord("save:2048","bad"),"nova_arcade_v1" to stringRecord("save:snake","bad"),"nova_arcade_v1" to stringRecord("save:sudoku","bad"),"nova_widgets_v1" to stringRecord("reduced","true"),"nova_preview_v1" to stringRecord("state","{\"schema\":1,\"current\":\"primary\",\"theme\":\"dark\",\"profile\":{\"installed\":[],\"pages\":[],\"dock\":[],\"folders\":[],\"wallpaper\":{}}}"))
  malformed.forEach{(name,data)->try{restored.restoreBackupValues(mapOf("preferences:$name" to data));error("Malformed schema accepted")}catch(_:IllegalArgumentException){};val after=File(restoreAccess.root,"home2").listFiles()!!.associate{it.name to it.readBytes()};check(after.keys==baseline.keys&&after.all{(name,bytes)->bytes.contentEquals(baseline[name])});data.fill(0)}
  restoreAccess.retireOnCommit=true;refused{restored.restoreBackupValues(values)}
  val reopened=SpaceContext(base,EvidenceAccess(restoreAccess.root,EvidenceAccess.Owner.PRIMARY));check(reopened.getSharedPreferences("nova_mind_v1",0).getString("primary",null)=="[]");reopened.close()
@@ -115,9 +144,9 @@ fun main(args:Array<String>){
  root.deleteRecursively();println("PASS: encrypted types, copies, merge, listeners, owner/name AAD, corruption preservation, wallpaper, commit revocation, stale handles, lease closure")
 }
 """)
-production=[root/'app/src/main/java/uk/co/traynor/privategallery/core/backup/PortablePreferenceSchema.kt',
+production=[root/'app/src/main/java/uk/co/traynor/privategallery/home2/ArcadeData.kt',root/'app/src/main/java/uk/co/traynor/privategallery/core/backup/PortablePreferenceSchema.kt',
     root/'app/src/main/java/uk/co/traynor/privategallery/core/backup/SettingsDirectoryTransaction.kt',root/'app/src/main/java/uk/co/traynor/privategallery/core/backup/BackupPolicy.kt',root/'app/src/main/java/uk/co/traynor/privategallery/core/backup/PortableWidgets.kt',root/'app/src/main/java/uk/co/traynor/privategallery/core/crypto/VaultCipher.kt',root/'app/src/main/java/uk/co/traynor/privategallery/core/home2/SpacePreferences.kt']
-args=[str(jdk/'java'),'-cp',compiler,'org.jetbrains.kotlin.cli.jvm.K2JVMCompiler','-no-stdlib','-no-reflect','-jvm-target','17','-classpath',classpath,'-d',str(out),str(kt),*[str(x) for x in production]]
+args=[str(jdk/'java'),'-cp',compiler,'org.jetbrains.kotlin.cli.jvm.K2JVMCompiler','-no-stdlib','-no-reflect','-jvm-target','17','-classpath',classpath,'-d',str(out),str(compose),str(kt),*[str(x) for x in production]]
 subprocess.run(args,check=True)
 subprocess.run([str(jdk/'java'),'-cp',classpath,'uk.co.traynor.privategallery.core.home2.ChecksKt',str(work/'data')],check=True)
 shutil.rmtree(work)

@@ -67,6 +67,7 @@ private val lightColors=lightColorScheme(primary=Color(0xFF285F65),secondary=Col
    var sanctuary by remember{mutableStateOf(false)}
    var mindLaunch by remember{mutableIntStateOf(0)}
    var mindPage by remember{mutableStateOf("home")}
+   var arcadeGame by remember{mutableStateOf<String?>(null)}
    var screen by remember{mutableStateOf("home")}
    var inspectorReturn by remember{mutableStateOf("chat")}
    var recentsReturn by remember{mutableStateOf("home")}
@@ -92,7 +93,7 @@ private val lightColors=lightColorScheme(primary=Color(0xFF285F65),secondary=Col
 
    val profile=data.profile
    LaunchedEffect(state.current){widgets.editingId=null;pool.currentProfile=state.current;audio.switchProfile(state.current);if(video.profile!=null&&video.profile!=state.current)video.close()}
-   LaunchedEffect(screen){if(screen !in listOf("browser","chat"))pool.closeFullscreen();if(screen in listOf("chat","mind","store","wallpaper","photos","guide","video","search","widgets","backup","lock-settings"))data.shell.touchInternal(state.current,screen)}
+   LaunchedEffect(screen){if(screen !in listOf("browser","chat"))pool.closeFullscreen();if(screen in listOf("chat","mind","store","wallpaper","photos","guide","video","search","widgets","backup","arcade","lock-settings"))data.shell.touchInternal(state.current,screen)}
    LaunchedEffect(pool,state.current){while(true){pool.pollMedia();audio.poll();video.poll();delay(1000)}}
    val routeTransition=updateTransition(screen,label="preview-screen")
    val host=LocalContext.current.let { (it as? uk.co.traynor.privategallery.core.home2.SpaceContext)?.baseContext ?: it } as? android.app.Activity
@@ -114,6 +115,7 @@ private val lightColors=lightColorScheme(primary=Color(0xFF285F65),secondary=Col
      "search"->{screen=id}
      "video"->{onNative("photos")}
      "backup"->{screen="backup"}
+     "arcade","arcade-2048","arcade-sudoku","arcade-snake"->{arcadeGame=id.removePrefix("arcade-").takeIf{it!="arcade"};screen="arcade"}
      "lock-settings"->{onLock()}
      "shell-settings"->{shellSettings=true}
      "lock-now"->{onLock()}
@@ -136,7 +138,7 @@ private val lightColors=lightColorScheme(primary=Color(0xFF285F65),secondary=Col
    }
    val goBack:()->Unit={
     val ime=host?.window?.decorView?.rootWindowInsets?.isVisible(android.view.WindowInsets.Type.ime())==true
-    if(ime)host?.let{(it.getSystemService(android.content.Context.INPUT_METHOD_SERVICE) as? android.view.inputmethod.InputMethodManager)?.hideSoftInputFromWindow(it.window.decorView.windowToken,0)}else when{screen=="home"&&widgets.editingId!=null->widgets.editingId=null;selected!=null->selected=null;openFolder!=null->openFolder=null;detailId!=null->detailId=null;editing->editing=false;quick->quick=false;drawer->drawer=false;screen=="chat-inspector"->screen=inspectorReturn;screen=="chat-settings"->screen="chat";screen=="navigation-settings"->screen="home-settings";screen=="recents"->screen=if(recentsReturn in listOf("chat","mind","store","wallpaper","photos","guide","video","search","widgets","backup","lock-settings")&&data.shell.internalRecents.none{it.first==state.current&&it.second==recentsReturn})"home"else PreviewShellRules.returnRoute(recentsReturn,pool.active?.profile==state.current);else->screen=if(sanctuary)"sanctuary"else "home"}
+    if(ime)host?.let{(it.getSystemService(android.content.Context.INPUT_METHOD_SERVICE) as? android.view.inputmethod.InputMethodManager)?.hideSoftInputFromWindow(it.window.decorView.windowToken,0)}else when{screen=="home"&&widgets.editingId!=null->widgets.editingId=null;selected!=null->selected=null;openFolder!=null->openFolder=null;detailId!=null->detailId=null;editing->editing=false;quick->quick=false;drawer->drawer=false;screen=="chat-inspector"->screen=inspectorReturn;screen=="chat-settings"->screen="chat";screen=="navigation-settings"->screen="home-settings";screen=="recents"->screen=if(recentsReturn in listOf("chat","mind","store","wallpaper","photos","guide","video","search","widgets","backup","arcade","lock-settings")&&data.shell.internalRecents.none{it.first==state.current&&it.second==recentsReturn})"home"else PreviewShellRules.returnRoute(recentsReturn,pool.active?.profile==state.current);else->screen=if(sanctuary)"sanctuary"else "home"}
    }
    LaunchedEffect(screen,pool.activeId){if(screen=="browser"&&pool.active?.profile!=state.current)screen="home"}
    val openRecents:()->Unit={drawer=false;quick=false;if(screen!="recents"){recentsReturn=screen;screen="recents"}}
@@ -184,6 +186,7 @@ private val lightColors=lightColorScheme(primary=Color(0xFF285F65),secondary=Col
          "search"->NovaSearch(data,widgets,pool,searchHistory,onBack=goHome,onResult=launch,onWeb={query->val tab=pool.open(standaloneBrowser,state.current);pool.setBrowserMode(tab,true);pool.navigate(tab,"https://www.google.com/search?q="+java.net.URLEncoder.encode(query,"UTF-8"));screen="home"})
          "video"->VideoScreen(video,goHome)
          "backup"->LaunchedEffect(Unit){onBackup();goHome()}
+         "arcade"->ArcadeScreen(data,arcadeGame,screen==route,onHome=goHome)
          "lock-settings"->LaunchedEffect(Unit){onLock()}
          "mind"->{
           MindScreen(mind,state.current,audio,mindPage,mindLaunch,onHome=goHome,onSanctuary={sanctuary=true;screen="sanctuary"})
@@ -434,7 +437,7 @@ private val lightColors=lightColorScheme(primary=Color(0xFF285F65),secondary=Col
  Box(Modifier.size(size).clip(RoundedCornerShape(size*.30f)).background(Brush.linearGradient(colors)),contentAlignment=Alignment.Center){
   if(bitmap!=null)Image(bitmap,null,Modifier.fillMaxSize().padding(size*.13f),contentScale=ContentScale.Fit,filterQuality=androidx.compose.ui.graphics.FilterQuality.High)
   else if(app.website!=null)Text(app.name.take(2).uppercase(),fontSize=(size.value*.29f).sp,color=Color.White,fontWeight=FontWeight.SemiBold)
-  else Icon(when(app.symbol){"chat"->Icons.Default.ChatBubbleOutline;"widgets"->Icons.Default.Widgets;"search"->Icons.Default.Search;"video"->Icons.Default.PlayCircle;"backup"->Icons.Default.Save;"lock"->Icons.Default.Lock;"mind"->Icons.Default.Spa;"browser"->Icons.Default.Language;"store"->Icons.Default.ShoppingBag;"photos"->Icons.Default.PhotoLibrary;"wallpaper"->Icons.Default.Wallpaper;"settings"->Icons.Default.Settings;"camera"->Icons.Default.PhotoCamera;"evidence"->Icons.Default.FolderSpecial;"edit"->Icons.Default.Edit;"apps"->Icons.Default.Apps;"trash"->Icons.Default.DeleteOutline;"folder"->Icons.Default.Folder;"heart"->Icons.Default.Favorite;else->Icons.Default.AutoAwesome},null,Modifier.size(size*.49f),tint=Color.White)
+  else Icon(when(app.symbol){"chat"->Icons.Default.ChatBubbleOutline;"widgets"->Icons.Default.Widgets;"search"->Icons.Default.Search;"video"->Icons.Default.PlayCircle;"backup"->Icons.Default.Save;"arcade"->Icons.Default.SportsEsports;"lock"->Icons.Default.Lock;"mind"->Icons.Default.Spa;"browser"->Icons.Default.Language;"store"->Icons.Default.ShoppingBag;"photos"->Icons.Default.PhotoLibrary;"wallpaper"->Icons.Default.Wallpaper;"settings"->Icons.Default.Settings;"camera"->Icons.Default.PhotoCamera;"evidence"->Icons.Default.FolderSpecial;"edit"->Icons.Default.Edit;"apps"->Icons.Default.Apps;"trash"->Icons.Default.DeleteOutline;"folder"->Icons.Default.Folder;"heart"->Icons.Default.Favorite;else->Icons.Default.AutoAwesome},null,Modifier.size(size*.49f),tint=Color.White)
  }
 }
 
