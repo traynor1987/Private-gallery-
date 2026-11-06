@@ -14,6 +14,8 @@ internal class HiddenVaultState {
     var destination by mutableStateOf(Route.VAULT)
     var authenticated by mutableStateOf(false)
     fun select(destination:Route=Route.VAULT) {selected=true;visible=true;this.destination=destination}
+    /** Concealed alternate entry must retire any retained authentication before selecting the PIN view. */
+    fun selectLocked() {lock();select()}
     fun outside() {session.revokeOperations();visible=false}
     fun lock() {session.lock();authenticated=false}
     fun leave() {session.lock();selected=false;visible=false;authenticated=false}

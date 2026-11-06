@@ -2079,7 +2079,7 @@ class MainActivity : FragmentActivity() {
             retained.novaPosition.record(novaHiddenNavigationIdentity(),0,id)
         }else retained.novaPosition.record(if(session.isUnlocked)sessionKey else null,session.captureAuthenticationEpoch(),id)
     }
-    /** Only the concealed Settings sequence may admit a locked Hidden entry. */
+    /** The existing concealed Settings sequence admits the independent Hidden PIN entry. */
     internal fun openHiddenFromSettings(sequence:uk.co.traynor.privategallery.core.hidden.HiddenEntrySequence) {
         dismissNovaBlackScreen()
         // Consume even a rejected dispatch so it cannot be replayed after navigation/authentication.
@@ -2089,6 +2089,26 @@ class MainActivity : FragmentActivity() {
             !session.isUnlocked || sessionKey==null)return
         invalidatePrimaryBrowserPresentation();homeVisible=false
         retained.hidden.select()
+    }
+    /** An in-process calculator gesture admits only the existing independent PIN presentation. */
+    internal fun openHiddenFromCalculator(context:uk.co.traynor.privategallery.core.home2.SpaceContext,
+        gesture:uk.co.traynor.privategallery.core.calculator.CalculatorGesture,current:()->Boolean) {
+        val completed=gesture.consume() // Consume even a rejected dispatch; never replay later.
+        if(!completed || !BuildConfig.HIDDEN_ENABLED || !current() || !context.current() || context.spaceId!="primary" ||
+            !activityResumed || hideContent || retained.hidden.selected || !homeVisible || !displayPrivateHome() ||
+            !session.isUnlocked || sessionKey==null || !lifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.RESUMED))return
+        if(!uk.co.traynor.privategallery.core.hidden.HiddenCalculatorEntryStore(applicationContext).enabled())return
+        if(!current() || !context.current())return
+        dismissNovaBlackScreen();invalidatePrimaryBrowserPresentation();homeVisible=false
+        retained.hidden.selectLocked() // A retained session can never turn this gesture into an unlock.
+    }
+    @Composable internal fun HiddenCalculatorEntrySettings() {
+        if(!activityResumed || hideContent || route!=Route.SETTINGS || displayPrivateHome() || !retained.hidden.selected ||
+            !retained.hidden.authenticated || !retained.hidden.session.isUnlocked)return
+        val hidden=retained.hidden.session
+        val identity=novaHiddenNavigationIdentity()?:return
+        val current=remember(hidden,identity){captureNovaPinningAuthority()}
+        uk.co.traynor.privategallery.home2.HiddenCalculatorSettings(this,hidden,identity,current)
     }
     internal fun switchNovaSpace() {
         if(hideContent || !activityResumed || !retained.hidden.selected ||
@@ -4101,6 +4121,7 @@ private fun PrivateGalleryApp(
                     HiddenPolicySettings(hiddenTimeout,onTimeoutChanged={ value ->
                         if(hiddenState.session.isUnlocked) { hiddenPolicy.timeout=value;hiddenTimeout=value }
                     },onUsePrimary=onReturnToPrimary)
+                    metadataActivity?.HiddenCalculatorEntrySettings()
                 }) else null)
             else -> Unit
         }

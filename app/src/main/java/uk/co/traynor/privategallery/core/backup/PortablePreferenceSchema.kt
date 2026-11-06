@@ -31,9 +31,9 @@ internal object PortablePreferenceSchema {
     listOf("reverse","gestures","edge","left").forEach(::boolean);floating("displayDim",0f,.6f);floating("edgePosition",.2f,.8f)
     values["favourites:$owner"]?.let{value->require(value is Set<*>&&value.size<=6&&value.all{it is String&&reference.matches(it)})}
    }
-   // Arcade uses the same complete codec as local loads. Calculator remains reserved until its schema is installed.
+   // Both app imports use the same complete codecs as local loads.
    "nova_arcade_v1"->uk.co.traynor.privategallery.core.arcade.ArcadePreferences.validate(values)
-   "nova_calculator_v1"->require(values.isEmpty()){"Application backup schema is not installed"}
+   "nova_calculator_v1"->uk.co.traynor.privategallery.core.calculator.CalculatorPreferences.validate(values)
    else->error("Unsupported preference namespace")
   }
  }

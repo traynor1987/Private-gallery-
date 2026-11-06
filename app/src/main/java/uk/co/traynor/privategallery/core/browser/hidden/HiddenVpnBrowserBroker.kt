@@ -343,7 +343,8 @@ internal class HiddenVpnBrowserBroker(
                         try {
                             require(data.dataAvail()==0 && pin.size in 6..12 && pin.all {it in '0'..'9'})
                             synchronized(gate) {check(valid());val now=SystemClock.elapsedRealtime();check(now-lastPinAttempt>=1000);lastPinAttempt=now}
-                            candidate=runCatching {uk.co.traynor.privategallery.core.hidden.HiddenCredentialStore(context).unlock(pin)}.getOrNull()
+                            candidate=uk.co.traynor.privategallery.core.hidden.HiddenCredentialStore(context).unlockForComparison(pin)
+                            // Cooldown/storage failure propagates through the existing fail-closed Binder error path.
                             val matched=session.beginOperation().use {op ->synchronized(gate) {check(valid() && session.isCurrent(op));candidate?.let {java.security.MessageDigest.isEqual(it,op.key())}==true}}
                             result.writeNoException();result.writeInt(if(matched)1 else 0)
                         }finally {pin.fill('\u0000');candidate?.fill(0)}

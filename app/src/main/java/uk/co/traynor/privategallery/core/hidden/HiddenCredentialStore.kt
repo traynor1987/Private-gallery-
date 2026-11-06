@@ -24,6 +24,7 @@ internal class HiddenCredentialStore(context: Context, namespace: String = "defa
     private val file = File(root, "credential")
     private val atomic = AtomicFile(file)
     private val alias = "${context.packageName}.hidden.v1.$namespace"
+    private val attempts = HiddenPinAttemptStore(context, namespace)
 
     val isConfigured: Boolean get() = synchronized(gate) { hasRecord() }
 
@@ -67,7 +68,9 @@ internal class HiddenCredentialStore(context: Context, namespace: String = "defa
         try {
             check(hasRecord()) { "Hidden credentials are not configured" }
             inner = decrypt(readRecord())
-            HiddenPinEnvelope.unwrap(pin, inner)
+            attempts.reserve()
+            val key = HiddenPinEnvelope.unwrap(pin, inner)
+            try { attempts.succeeded(); key } catch (failure:Throwable) { key.fill(0); throw failure }
         } finally { inner?.fill(0); pin.fill('\u0000') }
     }
 
@@ -85,11 +88,14 @@ internal class HiddenCredentialStore(context: Context, namespace: String = "defa
     fun pinMatches(pin: CharArray): Boolean = synchronized(gate) {
         try {
             if (!hasRecord() || pin.size !in 6..12 || pin.any { it !in '0'..'9' }) return@synchronized false
-            val key = try { unlock(pin) } catch (_: HiddenPinEnvelope.InvalidPin) { return@synchronized false }
+            val key = unlockForComparison(pin) ?: return@synchronized false
             key.fill(0)
             true
         } finally { pin.fill('\u0000') }
     }
+
+    /** Only a proven PIN mismatch becomes null; cooldown and unavailable storage remain errors. */
+    fun unlockForComparison(pin: CharArray): ByteArray? = try { unlock(pin) } catch (_: HiddenPinEnvelope.InvalidPin) { null }
 
     private fun hasRecord(): Boolean = file.exists() || File(file.path + ".bak").exists() || File(file.path + ".new").exists()
 

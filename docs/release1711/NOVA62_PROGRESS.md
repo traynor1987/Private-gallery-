@@ -16,7 +16,7 @@ Ruling: Execute detailed owner scope without further design permission — owner
 
 - [x] Recovery baseline and isolated worktree
 - [x] A backup implemented/reviewed/pushed
-- [ ] B arcade implemented/reviewed/pushed
+- [x] B arcade implemented/reviewed/pushed
 - [ ] C calculator implemented/reviewed/pushed
 - [ ] Consolidated API37 verification
 - [ ] Independent final security review
@@ -44,3 +44,19 @@ Task2 implementation complete pending independent review/push: three offline nat
 Task2 fix round1/5: Important Sudoku repeated-completion credit repaired with persisted, strict completedOnce state retained across Undo/save/reopen/Backup and reset by a new puzzle. Completion achievements also credit once. Related minor M1 repaired: completed Sudoku remains visible after reopen. Minor M2 dense engine formatting deferred to final triage (no broad rewrite during correctness fix). Host126/0 and actual ArcadeData + SpaceContext/VaultCipher host persistence/Backup assertions pass; frozen scoped JVM/compile confirmation pending below. Independent re-review/publication remain root-owned.
 
 Task2 fix round1 final verification: focused JVM11/0 (7 Arcade +4 schema), app/instrumentation Kotlin/Java compile pass in1m29; log /tmp/nova62-arcade-r1-final-green.log. Real model/encrypted persistence host proof and strict malformed-credit restore preservation pass. Native execution remains pending. I1/M1 ready for scoped independent re-review; M2 formatting deferred.
+
+
+## Task 2 completed and Task 3 review recovery — 2026-11-06
+
+Task2 complete: reviewed/pushed remote `69b44c8c8b79e719e87dea69446d6938523c11b3`, preserving local implementation/review sequence `f6e1b82d..f006204c`. Independent re-review `/tmp/nova62-arcade-r1-review.md` has no blocking findings. I1 Sudoku repeated credit and M1 completion reopen are closed; M2 engine formatting remains deferred. Task1 scheduling-checkbox minor remains assigned to the release writer.
+
+Task3 initial implementation committed as `780b71ae3790ff712d067f347bbc2a6e29a6b14d`, starting at remote69b44c8c. Calculator, strict actual Backup codec, optional default-off concealed gesture and persistent shared Hidden PIN throttle were implemented. Initial host70/0, focused JVM12/0, application/instrumentation compilation and credential ABI checks passed. Native execution remained pending. Exact capabilities/limits/seed/broker allowance: NOVA62_CALCULATOR_REPORT.md.
+
+Task3 independent review `/tmp/nova62-calculator-review.md` found no Critical issue and two Important findings: I1 fractional powers silently underflowing to zero, and I2 sign reversal removing parentheses that enclose only the initial negative term. Settings authority inspection passed. Checkpoint C has not yet received scoped repair approval or root publication.
+
+Task3 fix round1/5: both findings implemented with test-first reproductions. I1 rejects a floating zero produced by a positive fractional-power base and preserves the existing decimal-to-double nonzero guard; true zero powers, ordinary fractional powers and tiny integer powers remain valid. Root explicitly ruled that analogous nonzero DEG-to-RAD conversion underflow belongs to the same correctness repair; that guard is included, with true zero/ordinary DEG and tiny RAD regression cases. I2 unwraps only a proven outer negation, with actual CalculatorData mixed-function/nested/double-toggle tests.
+
+Round1 evidence: arithmetic `/tmp/nova62-calculator-r1-underflow-red.log`, actual Backup import `/tmp/nova62-calculator-r1-import-red.log`, actual model sign `/tmp/nova62-calculator-r1-sign-red.log`, DEG conversion `/tmp/nova62-calculator-r1-angle-red.log` all reproduced before repair. Pure host89/0 and concealed-entry wiring checks pass (`/tmp/nova62-calculator-r1-host-green.log`). Final real model/Backup host and focused JVM/compile confirmation follow below. No native runtime, push, workflow, version, signing or release-gate edits occur in this round; root owns scoped re-review/publication.
+
+
+Task3 fix round1 final verification: actual CalculatorData sign/double-toggle and SpaceContext/VaultCipher Backup rejection/preservation host tests **passed**, `/tmp/nova62-calculator-r1-model-green.log`. Frozen focused Gradle **BUILD SUCCESSFUL in 2m2s**, JVM **14/0 across3classes** (Calculator7, throttle3, portable schema4); application/instrumentation Kotlin/Java compilation passed, `/tmp/nova62-calculator-r1-frozen-build.log`. Source/staged whitespace checks pass. I1/I2, including the root-authorized DEG conversion guard, are ready for scoped independent re-review. Native execution remains unperformed; root owns review, push and final release gates.

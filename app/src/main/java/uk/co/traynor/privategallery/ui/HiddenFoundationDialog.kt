@@ -117,11 +117,15 @@ internal fun HiddenFoundationDialog(
                 candidate=key
                 val accepted=session.complete(attempt,key)
                 withContext(Dispatchers.Main){if(alive.get()){configured=true;unlocked=accepted;busy=false;report(accepted)}}
-            } catch(_:Exception) {
+            } catch(failure:Exception) {
                 session.rejectAuthentication(attempt)
                 withContext(Dispatchers.Main){if(alive.get()){
                     configured=store.isConfigured;busy=false
-                    message="Could not unlock or create Hidden. Check the PIN; setup requires a different PIN from Primary. Existing credentials were retained."
+                    message=when(failure) {
+                        is uk.co.traynor.privategallery.core.hidden.HiddenPinCooldown -> failure.message.orEmpty()
+                        is uk.co.traynor.privategallery.core.hidden.HiddenPinUnavailable -> "Authentication temporarily unavailable. Existing credentials were retained."
+                        else -> "Could not unlock or create Hidden. Check the PIN; setup requires a different PIN from Primary. Existing credentials were retained."
+                    }
                 }}
             } finally {input.fill('\u0000');candidate?.fill(0)}
         }
