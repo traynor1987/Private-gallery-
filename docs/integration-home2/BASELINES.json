@@ -19,7 +19,7 @@
   "targetCode": 56,
   "versionAudit": "88 remote Android build configurations inspected; highest assigned55; original signed baseline54. Code56 selected above both.",
   "security": "Existing Primary/Hidden credentials, keys, media schema unchanged; V1 configuration/stores/default tab semantics retained with additive Private Apps lifecycle APIs. New Home state uses owner-authenticated encrypted EvidenceAccess leases and native VaultCipher. Hidden web/Tor/remote AI disabled. No Preview cookies, tokens, notes or plaintext journals migrated.",
-  "productionUpgrade": "PENDING. No production signing or shipping approval. No production APK published.",
+  "productionUpgrade": "PASS: original signed54 -> original-key56 in place and after force-stop/restart on fresh enforcing API37 emulator, run42143438856. Physical Galaxy Z Fold/live-account acceptance remains owner required.",
   "testIdentity": "uk.co.traynor.privategallery.hiddenprototype; version1.7.11-TEST-ONLY; development signature; separate installation, never production upgrade",
   "storageSchema": {
     "primary": "files/vault: vault-index.enc format6, existing encrypted payloads and presentation records unchanged",
@@ -28,5 +28,14 @@
     "evidence": "existing owner-encrypted Evidence schema2, original v1 bounded reads preserved",
     "home": "additive owner-authenticated home2 encrypted envelopes; no Preview plaintext or credential imports"
   },
-  "browserPreservation": "Same V1 constructor, settings, policies, cookie/profile/data stores and normal tab operations. Additive Private Apps lifecycle entry points use the same existing bounded WebView registry. Native stale callback/permission fences are tightened; no replacement engine or provider bypass."
+  "browserPreservation": "Same V1 constructor, settings, policies, cookie/profile/data stores and normal tab operations. Additive Private Apps lifecycle entry points use the same existing bounded WebView registry. Native stale callback/permission fences are tightened; no replacement engine or provider bypass.",
+  "delivery": {
+    "source": "0e7f7c07608a6b439a4471e613531a758028c849",
+    "activation": "8803742e02d0e58e639687ff30b4b473109c0d47",
+    "version": "1.7.11",
+    "code": 56,
+    "apkSha256": "2efbe7a29a08a2677b04052eb268e908bb89f5a03fc23677b1791a1c11ea2141",
+    "url": "https://github.com/traynor1987/Private-gallery-/releases/download/novaos-1.7.11-home2-code56/NovaOS-1.7.11-home2-code56-owner-acceptance.apk",
+    "physicalAcceptance": "OWNER_REQUIRED"
+  }
 }
