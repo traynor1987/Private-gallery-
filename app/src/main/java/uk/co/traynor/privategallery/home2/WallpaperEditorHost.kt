@@ -31,7 +31,7 @@ private class WallpaperPickerTicket {var delivered=false;var uri:Uri?=null}
 @Composable internal fun WallpaperEditorHost(owner:WallpaperOwner,activityResumed:Boolean,initialSourceId:String?=null,onClose:()->Unit) {
  val context=LocalContext.current
  val lifecycle=androidx.lifecycle.compose.LocalLifecycleOwner.current.lifecycle
- val scope=rememberCoroutineScope()
+ val scope=rememberCoroutineScope{Dispatchers.Main.immediate}
  var resumed by remember(owner){mutableStateOf(lifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.RESUMED))}
  var active by remember(owner){mutableStateOf<WallpaperCoordinator?>(null)}
  var image by remember(owner){mutableStateOf<WallpaperImage?>(null)}
@@ -85,19 +85,19 @@ private class WallpaperPickerTicket {var delivered=false;var uri:Uri?=null}
   val retired=captured?.access?.onRetire{Handler(Looper.getMainLooper()).post{if(active===captured){if(pending!=null)retire()else dismiss()}}}
   onDispose{retired?.close()}
  }
- LaunchedEffect(owner) {
+ LaunchedEffect(owner) {withContext(Dispatchers.Main.immediate) {
   while(isActive){delay(250);if(!owner.current()){dismiss();break};if(pending==null&&active?.current()==false){dismiss();break}}
- }
- LaunchedEffect(owner,activityResumed,resumed,delivered) {
-  if(!activityResumed||!resumed)return@LaunchedEffect
-  if(startupFailure)return@LaunchedEffect
-  if(!owner.current()){dismiss();return@LaunchedEffect}
-  if(pending!=null&&delivered==null)return@LaunchedEffect
-  if(active!=null&&delivered==null)return@LaunchedEffect
+ }}
+ LaunchedEffect(owner,activityResumed,resumed,delivered) {withContext(Dispatchers.Main.immediate) {
+  if(!activityResumed||!resumed)return@withContext
+  if(startupFailure)return@withContext
+  if(!owner.current()){dismiss();return@withContext}
+  if(pending!=null&&delivered==null)return@withContext
+  if(active!=null&&delivered==null)return@withContext
   retire()
-  val coordinator=runCatching{owner.open(context)}.getOrNull()?:run{dismiss();return@LaunchedEffect}
+  val coordinator=runCatching{owner.open(context)}.getOrNull()?:run{dismiss();return@withContext}
   active=coordinator
-  val applied=try{coordinator.wallpaper()}catch(_:Exception){retire();startupFailure=true;return@LaunchedEffect}
+  val applied=try{coordinator.wallpaper()}catch(_:Exception){retire();startupFailure=true;return@withContext}
   coordinator.access.publishIfCurrent{draft=applied}
   val result=delivered;delivered=null;pending=null
   if(result!=null) {
@@ -109,7 +109,7 @@ private class WallpaperPickerTicket {var delivered=false;var uri:Uri?=null}
     finally{candidate?.close();if(active===coordinator&&operation===currentCoroutineContext()[Job])busy=false}
    }}
   }else if(!sourceConsumed&&initialSourceId!=null){sourceConsumed=true;select(coordinator,initialSourceId)}
- }
+ }}
  val coordinator=active
  if(activityResumed&&resumed&&startupFailure)PanicHomeAlertDialog(onDismissRequest={dismiss()},title={Text("Wallpapers")},
   text={Text("Wallpapers could not open. Existing encrypted settings have been preserved.",Modifier.testTag("wallpaper-open-error"))},
@@ -154,7 +154,10 @@ private class WallpaperPickerTicket {var delivered=false;var uri:Uri?=null}
  DisposableEffect(coordinator,item.id){onDispose{image?.close();image=null}}
  LaunchedEffect(coordinator,item.id) {
   var candidate:WallpaperImage?=null
-  try{withContext(Dispatchers.IO){candidate=coordinator.image(item.id,true)};ensureActive();coordinator.access.publishIfCurrent{image=candidate;candidate=null}}
+  try{
+   withContext(Dispatchers.IO){candidate=coordinator.image(item.id,true)}
+   withContext(Dispatchers.Main.immediate){ensureActive();coordinator.access.publishIfCurrent{image=candidate;candidate=null}}
+  }
   catch(cancelled:CancellationException){throw cancelled}catch(_:Exception){}finally{candidate?.close()}
  }
  Surface(Modifier.aspectRatio(1f).testTag("wallpaper-vault-item-${item.id}").clickable(enabled=enabled){onSelect(item.id)},shape=androidx.compose.foundation.shape.RoundedCornerShape(14.dp),color=MaterialTheme.colorScheme.surfaceContainerHigh) {
