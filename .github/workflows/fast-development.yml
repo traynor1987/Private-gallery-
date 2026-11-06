@@ -583,6 +583,7 @@ jobs:
         run: |
           bash scripts/check_home2_host.sh
           bash scripts/check_private_apps178.sh
+          PYTHONDONTWRITEBYTECODE=1 python3 scripts/tests/test_home2_emulator_preflight.py
       - name: Verify browser engine preservation and isolated APK
         run: |
           python3 scripts/verify_v1_preservation1711.py
@@ -610,21 +611,7 @@ jobs:
           disable-animations: true
           emulator-options: -no-window -gpu software -no-snapshot -noaudio -no-boot-anim -feature -HardwareDecoder -camera-back emulated -camera-front emulated
           script: |
-            test "$(adb shell getprop ro.build.version.sdk | tr -d '\r')" = 37
-            adb shell pm path com.android.systemui | tee app/build/home2-evidence/systemui-package.txt
-            grep -q '^package:' app/build/home2-evidence/systemui-package.txt
-            cat "${ANDROID_AVD_HOME:-$HOME/.android/avd}/test.ini" > app/build/home2-evidence/avd.ini
-            grep -Fxq 'target=android-37.0' app/build/home2-evidence/avd.ini
-            initial_surface=$(adb shell pidof surfaceflinger | tr -d '\r')
-            test -n "$initial_surface"
-            for observation in $(seq 1 15); do
-              current_surface=$(adb shell pidof surfaceflinger | tr -d '\r')
-              printf 'surfaceflinger[%s]=%s\n' "$observation" "$current_surface" >> app/build/home2-evidence/emulator-health.txt
-              test "$current_surface" = "$initial_surface"
-              sleep 2
-            done
-            adb logcat -d -b crash > app/build/home2-evidence/emulator-crash-preflight.txt
-            if grep -Fq 'hasReadColorBufferDma' app/build/home2-evidence/emulator-crash-preflight.txt; then exit 1; fi
+            bash scripts/home2_emulator_preflight.sh
             adb shell wm size 1200x1800
             adb shell wm density 160
             adb shell settings put secure immersive_mode_confirmations confirmed

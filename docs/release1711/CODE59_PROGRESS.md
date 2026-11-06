@@ -61,3 +61,11 @@ graphics failure. Port that same tool pin into home2-integration and require act
 correct target, API37, SystemUI and stable surfaceflinger before the unchanged130 tests.
 No product, cases, assertions, timeouts, GPU flags or signing controls changed.
 Primary reproduction: https://github.com/actions/runner-images/issues/14484
+
+Runtime3 b8379d3d8dc76b932a7080108982f49c2e558366/run42203253768 is superseded
+before qualification: the emulator runner executes each inline script line in a separate
+shell, so a multi-line preflight cannot retain variables/loops there. Move health checks
+into scripts/home2_emulator_preflight.sh invoked as one command. Three host tests execute
+the actual script and reject wrong API, missing SystemUI, wrong AVD target, surfaceflinger
+restart and DMA crash signatures; healthy path records all15 observations. CI runs those
+checks too. No application, Android cases, assertions or timeouts changed.
