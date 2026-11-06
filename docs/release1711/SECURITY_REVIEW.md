@@ -1,103 +1,93 @@
-# NovaOS 1.7.11.1 owner acceptance fixes — independent signing review
+# NovaOS 1.7.11.2 Vault wallpaper — independent signing review
 
-Source: 3af2289e444771fd87188743879bec3361ea6346
+Source: ce743678cca903f41a376e5227eb381f9fbb9574
 Decision: APPROVED
 Production signing: APPROVED
-Upgrade fixture SHA-256: d8db586b18552d746602e59d04edd80d91e9a89dc63088fca16b72c0c8aa868f
-Upgrade controls SHA-256: 538c993c1caa383b2675ab54e24f1e0490830999d65903c4b55c07ac5333de99
-Runtime matrix SHA-256: 80e4d3451886f28fbedf9cfa3541e9fd7d24575078f49d832bb35b98703828a5
-Runtime archive SHA-256: 7dae4d6674cdfa19f33443a4d5923aa8f1bb6f14d7d16df05bdf820563103a9b
-Signing workflow SHA-256: 0d6d7a1a6fbb4bee38f2342a24aa3af25c9490ca51f1000f335e40258431f261
+Upgrade fixture SHA-256: 80f4e185bac42114b54f91bef7fe5e3f6d9feeefca79ae761ee3040372a066c8
+Upgrade controls SHA-256: 20e6acabaea36a2038028a133f4a4ca24f193d80e0dba48040634d55fd367ef1
+Runtime matrix SHA-256: cb59e1d4f9e115c38e319059de91595b070b6641660af539e922ffb18e719d2b
+Runtime archive SHA-256: e3986eb7464c2706819914706417ec516b07c3a7fde7c6a7df23f3a3fd1ace87
+Signing workflow SHA-256: 7456c5571eca908b9df17b3702a815d8b970311814335bd3dbf720d1d841dc58
 
-Review date: 2026-11-06 UTC. Reviewer: independent patch security review agent.
-Frozen tree: 385ce6b82765aafdfe82257837714d8f2cdf3c3b.
+Review date: 2026-11-06 UTC. Reviewer: independent wallpaper security review agent.
+Frozen tree: 76d26382fcfe9a2d2c2a32365383439f43b91be8.
 
-This authorizes the existing production key for NovaOS 1.7.11.1/code57, package
-uk.co.traynor.privategallery, through the reviewed home2-production workflow only.
-Publication remains conditional on original-key code56-to57 in-place upgrade, retained-data
-verification and restart passing. Signing and upgrade are not asserted by this approval.
+This authorizes original-key production signing of NovaOS 1.7.11.2/code58,
+package uk.co.traynor.privategallery, through the reviewed home2-production workflow only.
+Publication remains conditional on successful original code57-to58 in-place upgrade,
+retained-data verification and restart. This approval does not assert signing or upgrade
+has already occurred. Physical Galaxy Z Fold acceptance is not claimed.
 
-## Independently checked original evidence
+## Independently verified original evidence
 
-The reviewer re-fetched original authenticated run/jobs/artifact metadata: push run42159655175,
-job127702032743 and unexpired artifact13476681890. Source, branch, workflow and successful
-conclusions match. The original complete ZIP hash matches the authenticated artifact digest
-above. Its source receipt, isolated package/debug certificate receipt and APK checksum were
-verified. The original XML contains exactly87 unique Android cases across23 classes matching
-the checked-in source-generated matrix, and405 JVM cases, with zero failures, errors or skips.
-The root independently downloaded and repeated the original ZIP integrity, source, matrix,
-runtime and JVM accounting checks.
+The reviewer independently re-fetched successful exact-source GitHub run42169911689,
+job127735051647 and artifact13480494453. The original ZIP is67564861 bytes and matches
+its authenticated digest above. Exactly108 unique Android cases across25 classes match
+this matrix, plus405 JVM cases, with zero failures, errors, skips or duplicates.
+Isolated debug APK identity, API37 and source receipt were checked. The parent repeated
+original archive integrity, source, matrix, Android and JVM accounting checks.
 
-The two earlier runtime archives remain failed evidence; neither is used for this approval.
-Corrections changed test selectors to the actual popup/default Recents controls and aligned
-normal Hidden exit assertions with the preserved existing lifecycle policy. No case was
-removed or skipped. Normal exit retains independent Hidden authentication while concealing
-its presentation; the revised case checks that ordinary Primary navigation cannot reopen it
-and Panic revokes both authorities.
+Earlier failed runs42166340511 and42168412479 remain failed evidence, not approval inputs.
+Diagnostics established post-IO Compose publication could resume off Main under the test
+interceptor. The bounded fix explicitly retains Main affinity for publication and lifecycle
+work, with IO and authority checks unchanged. All108 cases remain.
 
-## Reviewed application scope
+## Reviewed application changes
 
 No unresolved Critical or Important findings remain.
 
-- Installed App Mode overlays discreet controls on the full-height retained production
-  WebView. Real MainActivity tests verify native bounds, user-started audio across Home and
-  drawer reopening, actual Exit detachment, background/lock popup dismissal and stale actions.
-- The existing V1 constructor, factory settings, policies, storage and ordinary tab operations
-  remain verified against original production. App classification precedes callbacks; app
-  visits/popups do not enter future standalone history/snapshots. Open in Browser creates an
-  independent ordinary tab. Existing unclassified history/tabs and browser directories remain.
-- Home and native themes share captured owner-encrypted state. Explicit Primary preferences
-  migrate once; Hidden theme remains independent. No third-party CSS darkening is introduced.
-- YouTube presentation recognizes only exact HTTPS/default443 apex/www/mobile aliases with
-  validated paths. Generic origin/scope semantics and unrelated-origin warnings remain.
-- Global viewer/editor/recovery presentation requires a current media destination and owner.
-  Ordinary Home/Browser navigation retains legitimate pending recovery files without showing
-  media editing controls there. Real Activity result ownership and stale delivery tests pass.
-- Primary Home receives no switch action; its model also discards supplied stale callbacks.
-  Ordinary switch dispatch cannot select Hidden, including when Hidden authentication remains.
-  Settings consumes a fresh one-use concealed sequence in authenticated foreground Primary.
-  Locked Hidden restoration clears before presentation. Original concealed PIN workflow,
-  PIN-only Hidden authentication, authenticated Hidden return and Panic architecture remain.
-  Tests cover actual menus, drawer, Quick Panel, Search, Recents, version sequence/PIN entry,
-  intents, restoration, authority and Panic. Native launcher drops incoming extras; Main and
-  Hidden activities remain unexported, with no new deep links.
-- Gallery, Vault encryption, media schemas, original Home design and owner data are preserved.
-  Hidden networking and experimental Chat functionality remain disabled as before. No VPN/Tor
-  repair, new browser engine, production key, plaintext Preview import or future runtime added.
+- Wallpapers and the encrypted image viewer share one native Vault grid/editor workflow,
+  using the existing authenticated repository, verified reader and crop policy. Original
+  media remains unchanged.
+- Captured authentication and presentation authority restrict selection and Apply to its
+  actual Primary or Hidden owner. Factory denial cannot fall back to weaker authority.
+  Primary-visible images in retained Hidden presentation use Primary authority explicitly.
+- Sensitive images and encoded drafts are bounded, owned and retired on session or
+  presentation revocation. Provider streams close on retirement. IO publication rechecks
+  authority. No public files, decrypted shared URIs, external editors or persistent
+  plaintext thumbnails are introduced.
+- Existing Space-specific encrypted wallpaper storage and keys are reused. Apply serializes
+  write, preference commit and pruning. Cancel publishes no draft. Stale Home saves cannot
+  replace the authoritative wallpaper record. Corrupt preferences fail safely without Apply.
+  Home refreshes on close and resume.
+- Existing Nova wallpapers, system picker, blur, dimming, crop, Fold rendering, Gallery
+  editing, original media and neutral lock-screen wallpaper are preserved.
+- Code57 privacy, authentication, Browser V1 and immersive App Mode fixes remain included.
+  No Home redesign, encryption/schema replacement, plaintext Preview import or VPN/Tor work.
 
-## Signing and upgrade controls
+## Reviewed signing and upgrade controls
 
-The eight-file controls digest, reviewed fixture and full signing workflow match the hashes
-above. Ten host upgrade/staging regressions pass. The parent also compiled the actual reviewed
-fixture against original56 source before activation without signer access or app installation.
-The workflow must repeat its own guarded compilation before exposing signer credentials.
+The current eight controls, preservation fixture, matrix and full signing workflow match
+these approved hashes. Original runtime gates and fixture compilation against original
+signed57 source run before signing credentials become available.
 
-Baseline is the actual independently signed code56 source
-0e7f7c07608a6b439a4471e613531a758028c849, from run42143438856/artifact13469068696.
-Its original ZIP hash is aa42e6a06abd80710767cebe1b4fe58380fe68361222a7dfd2856dc7883221e6.
-The unchanged original application APK hash is
-2efbe7a29a08a2677b04052eb268e908bb89f5a03fc23677b1791a1c11ea2141.
-Nested evidence, receipt, source, certificate and byte counts are pinned and checked.
+Baseline: actual signed57 source3af2289e444771fd87188743879bec3361ea6346,
+activation79c9edb79f9d57b43144ff1bc3d61633478418c4, run42161566466,
+artifact13477498130. Baseline provenance was independently refetched; the actual archive,
+APK and nested evidence were verified. Original archive:60512367 bytes, SHA-256
+1a3051db04518097e2e793f2e02595c2f6df5e2ec76e6a532de0f54dadce9903.
+Original APK:144500338 bytes, SHA-256
+c499ac46b393d1eaac6e625b172415a4e226c5d13452f4fcdfb9391755d01c76.
+Nested evidence:103746 bytes, SHA-256
+4c206eaad1db0fb6d8c1f0f1add302094c1554b5f19aaa6560cf6c9a8e73c73c.
 
-The disposable enforcing API37 upgrade must install original56, seed synthetic encrypted
-Primary/Hidden media, collections, evidence, browser state/cookies and independent Home
-layout/theme/widget/note/mood/journal/wallpaper records, install57 with adb install -r,
-verify full preservation, force-stop and repeat verification. No seeded data may be cleared
-or application uninstalled. Preserve every existing assertion and ciphertext exclusion.
-The production package must be absent before this disposable experiment.
+The disposable enforcing API37 experiment must begin with the production package absent,
+install original57, seed synthetic encrypted Primary/Hidden media, collections, evidence,
+browser state/cookies and independent Home layout/theme/widgets/notes/mood/journal/wallpaper,
+install58 in place with adb install -r, verify preservation, force-stop and repeat after
+restart. No seeded data may be cleared or application uninstalled. Existing assertions
+and ciphertext exclusions remain. This is not a test on the owner's device.
 
 Required original certificate SHA-256:
 94f2bfc6567f26d067d29077111cfd0ce86d38263c642ad115e43365f05b0d17.
 
-Delivery rejects debuggable/wrong-package/wrong-certificate APKs. Published evidence excludes
-instrumentation APKs, nested archives and signing material. The application APK is separate.
-Signing material is removed on every workflow outcome. Any change to frozen source, controls,
-fixture, workflow, runtime archive or matrix invalidates this approval for changed inputs.
+Wrong-package, debuggable or wrong-certificate APKs fail. Publication requires passing
+upgrade receipts. Evidence excludes instrumentation APKs, nested archives and signing
+material. Signing material is removed on every outcome. Any changed frozen source,
+fixture, controls, workflow, matrix or archive requires new approval.
 
 ## Limits
 
-The tests use synthetic data on API37; physical Galaxy Z Fold posture, personal website
-accounts and live Samsung fingerprint hardware were not tested by CI or this review.
-Physical owner acceptance remains separate. Existing production installations must upgrade
-in place without uninstalling NovaOS or clearing data. The separately requested Vault
-wallpaper enhancement is not part of this frozen release and has not changed these inputs.
+API37 verification uses synthetic emulator data. Physical Fold posture, real Samsung
+fingerprint hardware and personal website accounts require owner acceptance. Upgrade
+NovaOS in place without uninstalling it or clearing encrypted data.
