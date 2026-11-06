@@ -32,19 +32,19 @@ Owner: wallpaper feature agent. Files: new core/home2 wallpaper coordinator/owne
 home2 editor/grid; SpacePreferences.kt, PreviewData.kt, WallpaperUi.kt, IntegratedHome.kt,
 PreviewUi.kt, MainActivity.kt, FullscreenMediaViewer.kt and HiddenVaultDialog.kt only as needed.
 
-- [ ] Add focused tests before product changes for owner isolation/cancel/apply/retirement.
-- [ ] Implement metadata-only WallpaperOwner with sameAuthentication/freshAccess/presentation
+- [x] Add focused tests before product changes for owner isolation/cancel/apply/retirement.
+- [x] Implement metadata-only WallpaperOwner with sameAuthentication/freshAccess/presentation
   validity, shared WallpaperEditorHost and closable coordinator. Exact private API may follow
   existing EvidenceOwnerSession naming; publish the agreed interface to parent before wiring.
-- [ ] List/read through captured EvidenceAccess sources/reader; bounded, oriented, owned
+- [x] List/read through captured EvidenceAccess sources/reader; bounded, oriented, owned
   in-memory bitmap decoding, no cache-owned Gallery bitmap recycling.
-- [ ] Reuse native preview/crop/blur/dim controls. Add unique source/grid/action tags and only
+- [x] Reuse native preview/crop/blur/dim controls. Add unique source/grid/action tags and only
   show encrypted-image viewer action with an authorized callback.
-- [ ] Atomically commit owner-encrypted wallpaper preference, preserve old data on failure,
+- [x] Atomically commit owner-encrypted wallpaper preference, preserve old data on failure,
   and make ordinary stale Home saves harmless. Deliberate reset remains functional.
-- [ ] Wire Home/system and Gallery entrypoints into same host. Return to original destination.
+- [x] Wire Home/system and Gallery entrypoints into same host. Return to original destination.
   Reuse existing handoff and secure/Panic window wrappers; original lock screen stays bundled.
-- [ ] Verify tests cover real repositories, unchanged originals, ciphertext-only output, both
+- [x] Verify tests cover real repositories, unchanged originals, ciphertext-only output, both
   owners, Primary-in-Hidden, cancel, stale delivery, timeout/lock/Panic/Space changes and Fold.
 
 ### Task2 — Coordinated verification and independent enhancement checkpoint
@@ -52,11 +52,11 @@ PreviewUi.kt, MainActivity.kt, FullscreenMediaViewer.kt and HiddenVaultDialog.kt
 Owner: parent. Release controls agent owns existing acceptance job/eight controls/fixture/tests;
 parent owns version, existing fast workflow, runtime selector/matrix and signing activation.
 
-- [ ] Pin actual original-key57 APK/archive/evidence as the58 upgrade baseline.
-- [ ] Run host/JVM and full app/instrumentation compilation before one focused API37 batch.
-- [ ] Review feature security/source/test selectors; use actual defaults and scoped nodes.
-- [ ] Commit/push the wallpaper enhancement independently after local verification.
-- [ ] Require exact-source original complete Android reports with no failures/errors/skips.
-- [ ] Independently approve source/controls/evidence, compile fixture against original57,
+- [x] Pin actual original-key57 APK/archive/evidence as the58 upgrade baseline.
+- [x] Run host/JVM and full app/instrumentation compilation before one focused API37 batch.
+- [x] Review feature security/source/test selectors; use actual defaults and scoped nodes.
+- [x] Commit/push the wallpaper enhancement independently after local verification.
+- [x] Require exact-source original complete Android reports with no failures/errors/skips.
+- [x] Independently approve source/controls/evidence, compile fixture against original57,
   sign with original key, verify57→58 in-place upgrade/data/restart on a disposable emulator.
-- [ ] Verify published APK package/version/certificate/hash and provide direct GitHub asset.
+- [x] Verify published APK package/version/certificate/hash and provide direct GitHub asset.
