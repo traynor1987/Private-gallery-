@@ -102,6 +102,22 @@ class BrowserPermissionOwnership1762Test {
         compose.runOnIdle{assertEquals(listOf(Manifest.permission.RECORD_AUDIO),registryOwner.value.launches[1].second);registryOwner.value.result(1,mapOf(Manifest.permission.RECORD_AUDIO to true))}
         compose.runOnIdle{assertEquals(listOf(listOf(PermissionRequest.RESOURCE_AUDIO_CAPTURE)),b.grants);assertEquals(1,a.denied)}
     }
+    @Test fun mixedUnknownCapabilityCannotExpandMicrophoneOrCameraGrant() {
+        mount()
+        for(known in listOf(PermissionRequest.RESOURCE_AUDIO_CAPTURE,PermissionRequest.RESOURCE_VIDEO_CAPTURE)) {
+            val mixed=Permission("https://mixed-capability.example",arrayOf(known,"synthetic.UNKNOWN_RESOURCE"))
+            capability(mixed)
+            compose.runOnIdle {assertEquals(1,mixed.denied);assertTrue(mixed.grants.isEmpty());assertTrue(registryOwner.value.launches.isEmpty())}
+        }
+        compose.onNodeWithText("Allow this time").assertDoesNotExist()
+        val microphone=Permission("https://known-capability.example",arrayOf(PermissionRequest.RESOURCE_AUDIO_CAPTURE))
+        capability(microphone);compose.onNodeWithText("Allow this time").performClick()
+        compose.runOnIdle {
+            assertEquals(listOf(Manifest.permission.RECORD_AUDIO),registryOwner.value.launches.single().second)
+            registryOwner.value.result(0,mapOf(Manifest.permission.RECORD_AUDIO to true))
+            assertEquals(listOf(listOf(PermissionRequest.RESOURCE_AUDIO_CAPTURE)),microphone.grants)
+        }
+    }
     @Test fun locationResultKeepsExactOriginAndReplacementNeedsItsOwnConsent() {
         mount();val a=mutableListOf<Pair<String,Boolean>>();val b=mutableListOf<Pair<String,Boolean>>()
         geo("https://location-a.example/"){site,allow->a+=site to allow};compose.onNodeWithText("Allow this time").performClick()

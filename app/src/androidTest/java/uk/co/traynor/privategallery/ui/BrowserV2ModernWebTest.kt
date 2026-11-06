@@ -102,15 +102,25 @@ class BrowserV2ModernWebTest {
         compose.runOnIdle { assertEquals(1, session.tabs.tabs.size) }
     }
 
-    @Test fun windowFocusRequestSelectsExistingTabWithoutCreatingAnother() {
+    @Test fun inactiveNativeFocusCannotSelectTabButExplicitSelectionKeepsExistingView() {
         mount()
         val opener = compose.runOnIdle { session.tabs.activeTab.id }
+        val original = compose.runOnIdle { session.activeWebView() }
         compose.runOnIdle { session.newTab() }
+        val selected = compose.runOnIdle { session.tabs.activeTab.id }
         compose.runOnIdle { session.webView(opener).webChromeClient!!.onRequestFocus(session.webView(opener)) }
+        compose.waitForIdle()
+        compose.runOnIdle {
+            assertEquals("Inactive page cannot change the user's current tab",selected,session.tabs.activeTab.id)
+            assertEquals(2,session.tabs.tabs.size)
+            session.select(opener)
+            session.onWindowFocus(opener)
+        }
         compose.waitForIdle()
         compose.runOnIdle {
             assertEquals(opener, session.tabs.activeTab.id)
             assertEquals(2, session.tabs.tabs.size)
+            assertSame(original,session.activeWebView())
             assertTrue(session.activeWebView().hasFocus())
         }
     }

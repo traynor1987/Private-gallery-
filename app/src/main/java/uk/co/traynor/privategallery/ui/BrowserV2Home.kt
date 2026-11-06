@@ -81,6 +81,11 @@ import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.zIndex
+import androidx.compose.ui.focus.focusProperties
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.testTag
@@ -119,8 +124,8 @@ import uk.co.traynor.privategallery.core.browser.BrowserDownloadPolicy
 import uk.co.traynor.privategallery.core.browser.BrowserNavigationPolicy
 
 /**
- * Compose chrome for the Activity-owned V2 session. AndroidView only attaches the selected tab's
- * WebView. It never constructs, reconfigures or destroys it as a recomposition side effect.
+ * Compose chrome for the Activity-owned V2 session. Existing Private App views stay attached behind
+ * the active page. Compose never creates a renderer, changes its settings or owns its lifetime.
  */
 @Composable
 internal fun BrowserV2ProductionDestination(
@@ -517,6 +522,8 @@ internal fun BrowserV2Home(
 
     DisposableEffect(session) {
         session.bindListener(object : BrowserV2Session.Listener {
+            override fun allowWindowInteraction():Boolean = !novaInteractionBlocked() &&
+                videoLifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.RESUMED)
             override fun onSessionChanged() {
                 val tab=session.tabs.activeTab.id;val document=session.permissionDocumentRevision()
                 if(ui.permissionTabId!=tab || ui.permissionDocumentRevision!=document) {
@@ -596,6 +603,9 @@ internal fun BrowserV2Home(
                 val origin=originLabel(nativeOrigin)
                 if(origin==null){request.deny();return}
                 val resources=request.resources.copyOf()
+                if(resources.isEmpty() || resources.any {it!=PermissionRequest.RESOURCE_VIDEO_CAPTURE && it!=PermissionRequest.RESOURCE_AUDIO_CAPTURE}) {
+                    request.deny();return
+                }
                 val required=resources.mapNotNull {when(it){
                     PermissionRequest.RESOURCE_VIDEO_CAPTURE->Manifest.permission.CAMERA
                     PermissionRequest.RESOURCE_AUDIO_CAPTURE->Manifest.permission.RECORD_AUDIO
@@ -800,7 +810,9 @@ internal fun BrowserV2Home(
     if(privateAppSwitcher)PrivateAppSwitcher(
         session.tabs.tabs.mapNotNull { tab -> session.privateApp(tab.id)?.let { tab.id to it } },active.id,
         {tabId ->cancelUpload();val saved=session.privateApp(tabId)
-            if(saved!=null)(context as? uk.co.traynor.privategallery.MainActivity)?.privateAppsController()?.open(saved.id()) {session.select(tabId)}
+            if(saved!=null)(context as? uk.co.traynor.privategallery.MainActivity)?.privateAppsController()?.open(saved.id()) {
+                if(session.mediaNetworkingAllowed() && (context as? uk.co.traynor.privategallery.MainActivity)?.primarySessionRetainedForNova()==true)session.selectFromNovaHome(tabId)
+            }
         },::openPrivateApps,{privateAppSwitcher=false},onCloseSession={cancelUpload();session.close(it)})
 
     }
@@ -884,39 +896,18 @@ internal fun BrowserV2Home(
                     ) {
                         Text("BROWSER CONTENT HOST")
                     }
-                } else if (activeWebView != null) {
-                    androidx.compose.runtime.key(active.id, activeWebView) {
-                        AndroidView(
-                            factory = {
-                                session.recordAcceptanceUiEvent("WEBVIEW_HOST_REQUESTED")
-                                session.onActiveWebViewHostCreated(activeWebView)
-                                activeWebView
-                            },
-                            update = { view ->
-                                view.importantForAccessibility=if(novaCovered)View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS else View.IMPORTANT_FOR_ACCESSIBILITY_AUTO
-                                view.isFocusable=!novaCovered;view.isFocusableInTouchMode=!novaCovered
-                                view.descendantFocusability=if(novaCovered)android.view.ViewGroup.FOCUS_BLOCK_DESCENDANTS else android.view.ViewGroup.FOCUS_AFTER_DESCENDANTS
-                                if(novaCovered)view.clearFocus()
-                                session.onActiveWebViewUpdated(view)
-                            },
-                            // Before its first frame WebView fills the canvas with its background.
-                            // AndroidView does not clip by default: constrain drawing, not geometry.
-                            modifier = Modifier.fillMaxSize().clipToBounds().onGloballyPositioned { coordinates ->
-                                val origin = coordinates.positionInRoot()
-                                session.recordAcceptanceUiEvent("WEBVIEW_HOST_MEASURED", mapOf("x" to origin.x.toInt().toString(), "y" to origin.y.toInt().toString(), "width" to coordinates.size.width.toString(), "height" to coordinates.size.height.toString()))
-                            }.semantics { testTag = "browser-v2-webview-host" },
-                            onRelease = session::onActiveWebViewDetached,
-                        )
-                    }
                 } else {
-                    Column(
-                        modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(24.dp),
-                        verticalArrangement = Arrangement.Center,
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                    ) {
-                        Text("BROWSER UNAVAILABLE", style = MaterialTheme.typography.titleMedium)
-                        Text("The Android WebView provider could not start. Your tabs remain available.", color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        TextButton(onClick = { session.retryActiveWebView() }) { Text("Retry") }
+                    RetainedPrivateAppWebViews(session,active.id,activeWebView,novaCovered)
+                    if(activeWebView==null) {
+                        Column(
+                            modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(24.dp),
+                            verticalArrangement = Arrangement.Center,
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                        ) {
+                            Text("BROWSER UNAVAILABLE", style = MaterialTheme.typography.titleMedium)
+                            Text("The Android WebView provider could not start. Your tabs remain available.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            TextButton(onClick = { session.retryActiveWebView() }) { Text("Retry") }
+                        }
                     }
                 }
                 session.pageFailure(active.id)?.takeIf { !connectionPresentation.blocked }?.let { detail ->
@@ -1191,6 +1182,47 @@ internal fun BrowserV2Home(
                     }
                 }
         }
+    }
+}
+
+/** One stable AndroidView per already-created Private App. Inactive pages stay attached but cannot
+ * draw, take focus, receive touch or enter accessibility traversal. No cold tab is activated here. */
+@Composable
+internal fun RetainedPrivateAppWebViews(
+    session:BrowserV2Session,
+    activeTabId:String,
+    activeWebView:android.webkit.WebView?,
+    covered:Boolean,
+    modifier:Modifier=Modifier,
+) {
+    val created=session.createdPrivateAppWebViews()
+    val hosts=if(activeWebView!=null && created.none {it.first==activeTabId})created+listOf(activeTabId to activeWebView) else created
+    Box(modifier.fillMaxSize()) {
+        hosts.forEach { (id,view) -> androidx.compose.runtime.key(id,view) {
+            val active=id==activeTabId && view===activeWebView
+            val interactive=active&&!covered
+            val hiddenInput=if(interactive)Modifier else Modifier.clearAndSetSemantics{}.focusProperties {canFocus=false}.pointerInput(Unit) {
+                awaitPointerEventScope {while(true)awaitPointerEvent(androidx.compose.ui.input.pointer.PointerEventPass.Initial).changes.forEach {it.consume()}}
+            }
+            AndroidView(
+                factory={session.recordAcceptanceUiEvent("WEBVIEW_HOST_REQUESTED");session.onActiveWebViewHostCreated(view);view},
+                update={host ->
+                    host.importantForAccessibility=if(interactive)View.IMPORTANT_FOR_ACCESSIBILITY_AUTO else View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS
+                    host.isEnabled=interactive;host.isFocusable=interactive;host.isFocusableInTouchMode=interactive
+                    host.descendantFocusability=if(interactive)android.view.ViewGroup.FOCUS_AFTER_DESCENDANTS else android.view.ViewGroup.FOCUS_BLOCK_DESCENDANTS
+                    if(!interactive)host.clearFocus()
+                    if(active)session.onActiveWebViewUpdated(host)
+                },
+                modifier=Modifier.fillMaxSize().zIndex(if(active)1f else 0f).graphicsLayer(alpha=if(interactive)1f else 0f)
+                    .clipToBounds().then(hiddenInput).onGloballyPositioned {coordinates ->
+                        if(active) {
+                            val origin=coordinates.positionInRoot()
+                            session.recordAcceptanceUiEvent("WEBVIEW_HOST_MEASURED",mapOf("x" to origin.x.toInt().toString(),"y" to origin.y.toInt().toString(),"width" to coordinates.size.width.toString(),"height" to coordinates.size.height.toString()))
+                        }
+                    }.semantics {testTag=if(active)"browser-v2-webview-host" else "browser-v2-retained-private-app-$id"},
+                onRelease=session::onActiveWebViewDetached,
+            )
+        }}
     }
 }
 

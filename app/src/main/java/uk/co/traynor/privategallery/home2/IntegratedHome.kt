@@ -25,6 +25,7 @@ import kotlinx.coroutines.launch
  val base=LocalContext.current
  val context=remember(access){SpaceContext(base,access)}
  val scope=rememberCoroutineScope()
+ val lifecycle=androidx.lifecycle.compose.LocalLifecycleOwner.current
  var live by remember(access){mutableStateOf(true)}
  var message by remember(access){mutableStateOf<String?>(null)}
  val models=remember(access){runCatching {
@@ -40,7 +41,7 @@ import kotlinx.coroutines.launch
   HomeModels(data,widgets,mind,history)
  }}
  val application=base.applicationContext as Application
- val audio=remember(access){MindAudio(application){context.current()}}
+ val audio=remember(access){MindAudio(application){context.current()&&lifecycle.lifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.RESUMED)}}
  val video=remember(access){NovaVideoModel(application)}
  val pool=remember(access){PreviewBrowserModel(apps,onLaunch){context.current()}.also{it.currentProfile=context.spaceId}}
  DisposableEffect(access){
@@ -70,8 +71,7 @@ import kotlinx.coroutines.launch
   }
  }
  LaunchedEffect(visible){if(visible&&context.current())models.getOrNull()?.data?.refreshInstalled()}
- val lifecycle=androidx.lifecycle.compose.LocalLifecycleOwner.current
- DisposableEffect(lifecycle){val observer=androidx.lifecycle.LifecycleEventObserver{_,event->if(event==androidx.lifecycle.Lifecycle.Event.ON_STOP){audio.pause();video.pause()}};lifecycle.lifecycle.addObserver(observer);onDispose{lifecycle.lifecycle.removeObserver(observer)}}
+ DisposableEffect(lifecycle){val observer=androidx.lifecycle.LifecycleEventObserver{_,event->if(event==androidx.lifecycle.Lifecycle.Event.ON_PAUSE||event==androidx.lifecycle.Lifecycle.Event.ON_STOP){audio.pause();video.pause()}};lifecycle.lifecycle.addObserver(observer);onDispose{lifecycle.lifecycle.removeObserver(observer)}}
  if(!visible||!live||!context.current())return
  val value=models.getOrElse{
   Column(Modifier.fillMaxSize().safeDrawingPadding().padding(24.dp)){Text("Home could not open. Existing encrypted data has been preserved.");TextButton(onClick=onLock){Text("Lock Space")}}

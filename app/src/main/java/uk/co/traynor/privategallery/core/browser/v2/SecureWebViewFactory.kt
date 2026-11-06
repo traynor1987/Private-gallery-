@@ -149,7 +149,7 @@ class SecureWebViewFactory(
             override fun onProgressChanged(view: WebView, newProgress: Int) = callbacks.onProgress(tabId, newProgress)
 
             override fun onCreateWindow(view: WebView, isDialog: Boolean, isUserGesture: Boolean, resultMsg: Message): Boolean {
-                if (!live) return false
+                if (!live || view !== this@webView) return false
                 if (contentBlocker.shouldBlockPopup(pageUrl.get(), isUserGesture)) {
                     event("WINDOW_CREATE_RESULT", mapOf("accepted" to "false", "reason" to "automatic_popup_blocked"))
                     return false
@@ -173,8 +173,8 @@ class SecureWebViewFactory(
                 return true
             }
 
-            override fun onRequestFocus(view: WebView) { event("WINDOW_FOCUS_REQUEST"); callbacks.onWindowFocus(tabId) }
-            override fun onCloseWindow(window: WebView) { event("WINDOW_CLOSE_REQUEST"); callbacks.onCloseWindow(tabId) }
+            override fun onRequestFocus(view: WebView) { if(!live || view !== this@webView)return; event("WINDOW_FOCUS_REQUEST"); callbacks.onWindowFocus(tabId) }
+            override fun onCloseWindow(window: WebView) { if(!live || window !== this@webView)return; event("WINDOW_CLOSE_REQUEST"); callbacks.onCloseWindow(tabId) }
             override fun onShowCustomView(view: View, callback: CustomViewCallback) { if (!live) { callback.onCustomViewHidden(); return }; event("FULLSCREEN_REQUEST"); callbacks.onShowCustomView(tabId, view, callback) }
             override fun onHideCustomView() { if (!live) return; event("FULLSCREEN_EXIT"); callbacks.onHideCustomView(tabId) }
             override fun onJsAlert(view: WebView, url: String, message: String, result: android.webkit.JsResult): Boolean {
@@ -199,6 +199,7 @@ class SecureWebViewFactory(
                 return super.onConsoleMessage(consoleMessage)
             }
             override fun onPermissionRequest(request: android.webkit.PermissionRequest) {
+                if (!live) { request.deny(); return }
                 event("PERMISSION_REQUEST", mapOf("resource_count" to request.resources.size.toString()))
                 val wrapped = BrowserPermissionRequest(request) { decision, count ->
                     permissions.remove(request)
@@ -211,20 +212,22 @@ class SecureWebViewFactory(
                 permissions.remove(request)?.let { it.canceled(); callbacks.onPermissionRequestCanceled(tabId, it) }
             }
             override fun onGeolocationPermissionsShowPrompt(origin: String, callback: GeolocationPermissions.Callback) {
+                if (!live) { callback.invoke(origin, false, false); return }
                 event("PERMISSION_REQUEST", mapOf("kind" to "geolocation"))
                 callbacks.onGeolocationRequest(tabId, origin) { value, allow, retain ->
                     event("PERMISSION_RESULT", mapOf("kind" to "geolocation", "granted" to allow.toString()))
-                    callback.invoke(value, allow, retain)
+                    callback.invoke(value, allow && live, retain && live)
                 }
             }
             override fun onShowFileChooser(webView: WebView, filePathCallback: android.webkit.ValueCallback<Array<android.net.Uri>>, fileChooserParams: FileChooserParams): Boolean {
+                if (!live || webView !== this@webView) { filePathCallback.onReceiveValue(null); return true }
                 event("FILE_CHOOSER_REQUEST", mapOf("mode" to fileChooserParams.mode.toString()))
                 var completed = false
                 val accepted = callbacks.onShowFileChooser(tabId, { values ->
                     if (!completed) {
                         completed = true
                         event("FILE_CHOOSER_RESULT", mapOf("selected_count" to (values?.size ?: 0).toString()))
-                        filePathCallback.onReceiveValue(values)
+                        filePathCallback.onReceiveValue(if (live) values else null)
                     }
                 }, fileChooserParams)
                 if (!accepted && !completed) event("FILE_CHOOSER_RESULT", mapOf("decision" to "unhandled"))

@@ -9,6 +9,10 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.requiredSize
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.test.espresso.Espresso
@@ -197,4 +201,44 @@ class Home2IntegrationTest {
   compose.onNodeWithTag("widget-${slot.id}").assertIsDisplayed()
   compose.runOnIdle { assertEquals(listOf(slot), f.widgets()) }
  }
+ @Test fun cover_inner_and_landscape_layouts_keep_the_clock_drawer_and_quick_panel_reachable() {
+  val f=SpaceFixture(false).also{fixture=it}
+  var width by mutableIntStateOf(360)
+  var height by mutableIntStateOf(720)
+  val bridge=NativeAppBridge(MemoryAppStore(emptyList()),f.access::current,{}, {}, {})
+  compose.setContent {
+   if(attached)CompositionLocalProvider(LocalContext provides f.context){
+    Box(Modifier.requiredSize(width.dp,height.dp)){
+     IntegratedHome(f.access,true,{nativeLaunches.add(it)},{},{},null,bridge)
+    }
+   }
+  }
+  for(size in listOf(360 to 720,840 to 720,840 to 360)){
+   compose.runOnIdle{width=size.first;height=size.second}
+   compose.onNodeWithTag("preview-home").assertIsDisplayed()
+   compose.onNodeWithTag("home-original-clock").assertIsDisplayed()
+   openDrawer()
+   compose.onNodeWithContentDescription("Close app drawer").performClick()
+   compose.onNodeWithContentDescription("Open Quick Panel").performClick()
+   compose.onNodeWithTag("nova-quick-panel").assertIsDisplayed()
+   Espresso.pressBack()
+   compose.onNodeWithTag("preview-home").assertIsDisplayed()
+  }
+ }
+
+ @Test fun owner_shortcut_names_survive_catalogue_refresh_and_reopening_without_changing_native_settings(){
+  val f=SpaceFixture(false).also{fixture=it}
+  val original=PrivateAppCatalog.App("00000000-0000-4000-8000-000000000061","Native Original","https://example.test/","","standalone","",false,false,true)
+  val store=MemoryAppStore(listOf(original));val bridge=NativeAppBridge(store,f.access::current,{},{},{})
+  SpaceContext(f.context,f.access).use{context->
+   val data=uk.co.traynor.privategallery.home2.PreviewData(context,bridge)
+   data.rename("web:"+original.id(),"My quiet app")
+   data.refreshInstalled()
+   assertEquals("My quiet app",data.app("web:"+original.id())!!.name)
+   assertEquals(original,store.read().apps.single())
+   val reopened=uk.co.traynor.privategallery.home2.PreviewData(context,bridge)
+   assertEquals("My quiet app",reopened.app("web:"+original.id())!!.name)
+  }
+ }
+
 }

@@ -2008,7 +2008,11 @@ class MainActivity : FragmentActivity() {
             // Browser has its own ordinary tab; selecting its icon must not reopen an app-mode tab.
             val ordinary=browserV2Session.tabs.activeTab.takeIf {browserV2Session.privateApp(it.id)==null}
                 ?: browserV2Session.tabs.tabs.firstOrNull {browserV2Session.privateApp(it.id)==null}
-            if(ordinary!=null)browserV2Session.select(ordinary.id) else browserV2Session.newTab()
+            if(browserV2Session.mediaNetworkingAllowed()) {
+                if(ordinary!=null)browserV2Session.selectFromNovaHome(ordinary.id) else browserV2Session.newTabFromNovaHome()
+            } else {
+                if(ordinary!=null)browserV2Session.select(ordinary.id) else browserV2Session.newTab()
+            }
         }
         if(id=="editor")homeNotice("Choose a photo, then tap Edit.")
         if(id=="ai-edit")homeNotice("Choose a photo, tap Edit, then AI Edit.")
@@ -2128,7 +2132,7 @@ class MainActivity : FragmentActivity() {
                     uk.co.traynor.privategallery.core.privateapps.PrivateAppMetadataTransport.vpn(this@MainActivity,network,allowed),allowed)
             }, onLaunchApp={app ->
                 check(current());check(browserV2Session.mediaNetworkingAllowed())
-                browserV2Session.openPrivateApp(app)
+                browserV2Session.openRetainedPrivateApp(app)
             }, authenticate={completed ->requestPrivateAppAuthentication(current,completed)},
             keepSignedIn=if(androidx.webkit.WebViewFeature.isFeatureSupported(androidx.webkit.WebViewFeature.DELETE_BROWSING_DATA))({!clearBrowserDataOnLock})else null,
             changeKeepSignedIn=if(androidx.webkit.WebViewFeature.isFeatureSupported(androidx.webkit.WebViewFeature.DELETE_BROWSING_DATA))({keep ->check(current());applyClearBrowserDataOnLock(!keep)})else null,
@@ -2344,6 +2348,9 @@ class MainActivity : FragmentActivity() {
         route = Route.BROWSER
         browserVpnDisconnectJob?.cancel()
         val ownerKey = sessionKey ?: return
+        // Explicit authenticated foreground entry may follow a detached-browser Android pause.
+        // Existing resumeForeground still enforces the unchanged VPN/renderer gate.
+        if(primarySessionRetainedForNova())browserV2Session.resumeForeground()
         val ownerGeneration = browserPresentationGeneration
         val key = ownerKey.copyOf()
         lifecycleScope.launch(Dispatchers.IO) {

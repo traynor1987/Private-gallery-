@@ -26,6 +26,8 @@ class BrowserV2Session(
     },
 ) : BrowserWebViewCallbacks {
     interface Listener {
+        /** Native window callbacks require a live interactive browser presentation. */
+        fun allowWindowInteraction(): Boolean = false
         fun onUserScroll(deltaY: Int, atTop: Boolean) = Unit
         fun onSessionChanged()
         fun onMessage(message: BrowserMessage)
@@ -76,6 +78,10 @@ class BrowserV2Session(
     // Presentation belongs to an existing tab, never to the selected URL or a second WebView.
     private val privateAppTabs = mutableMapOf<String, uk.co.traynor.privategallery.core.privateapps.PrivateAppCatalog.App>()
     fun privateApp(tabId: String) = privateAppTabs[tabId]
+    /** Bounded snapshot of existing app renderers only; never activates or creates cold tabs. */
+    fun createdPrivateAppWebViews(): List<Pair<String, WebView>> = tabs.tabs.mapNotNull {tab ->
+        if(privateAppTabs.containsKey(tab.id))webViews[tab.id]?.let {tab.id to it} else null
+    }
     fun openPrivateApp(app: uk.co.traynor.privategallery.core.privateapps.PrivateAppCatalog.App) {
         privateAppTabs.entries.firstOrNull {it.value.id()==app.id() && tabs.tabs.any {tab->tab.id==it.key}}?.let {
             privateAppTabs[it.key]=app;select(it.key);return
@@ -83,6 +89,30 @@ class BrowserV2Session(
         val tab = newTab(app.startUrl())
         privateAppTabs[tab.id] = app
         changed()
+    }
+    /** Explicit authenticated Nova app launch; uses the same tab registry, renderer and network gate.
+     * Unlike ordinary browser tab selection, an outgoing registered Private App keeps its media.
+     * This never starts playback or grants foreground, renderer, transport or vault authority.
+     */
+    fun openRetainedPrivateApp(app: uk.co.traynor.privategallery.core.privateapps.PrivateAppCatalog.App) {
+        requireNovaForeground()
+        privateAppTabs.entries.firstOrNull {it.value.id()==app.id() && tabs.tabs.any {tab->tab.id==it.key}}?.let {
+            privateAppTabs[it.key]=app;selectFromNovaHome(it.key);return
+        }
+        prepareNovaSwitch()
+        val tab=createTab(app.startUrl())
+        privateAppTabs[tab.id]=app
+        changed()
+    }
+
+    /** Existing Primary authority must be checked by the calling Activity/controller. */
+    private fun requireNovaForeground() {
+        check(android.os.Looper.myLooper()===android.os.Looper.getMainLooper())
+        check(rendererAllowed() && mediaNetworkingAllowed()) {"Foreground browser admission is required"}
+    }
+    private fun prepareNovaSwitch() {
+        if(privateAppTabs.containsKey(tabs.activeTab.id))cancelScriptDialog() else pauseOutgoingTab()
+        exitFullscreen()
     }
     fun removePrivateApp(appId:String) {
         privateAppTabs.filterValues {it.id()==appId}.keys.toList().forEach(::close)
@@ -350,7 +380,9 @@ class BrowserV2Session(
 
     fun onActiveWebViewUpdated(view: WebView) {
         val activeId = tabs.activeTab.id
-        if (pendingWindowFocus.remove(activeId)) view.post { if (view.isAttachedToWindow) view.requestFocus() }
+        if (pendingWindowFocus.remove(activeId)) view.post {
+            if (windowInteractionAllowed(activeId) && webViews[activeId]===view && view.isAttachedToWindow) view.requestFocus()
+        }
         if (!BuildConfig.ACCEPTANCE_BROWSER_DIAGNOSTICS) return
         androidViewUpdateCount++
         recordWebViewParentEvent("WEBVIEW_HOST_UPDATED", view)
@@ -478,6 +510,17 @@ class BrowserV2Session(
     fun newTab(url: String = ""): BrowserTab {
         pauseOutgoingTab()
         exitFullscreen()
+        return createTab(url)
+    }
+
+    /** Blank standalone Browser entry only; ordinary newTab retains its existing pause behavior. */
+    fun newTabFromNovaHome(): BrowserTab {
+        requireNovaForeground()
+        prepareNovaSwitch()
+        return createTab("")
+    }
+
+    private fun createTab(url: String): BrowserTab {
         val idsBefore = tabs.tabs.mapTo(linkedSetOf()) { it.id }
         val tab = tabs.newTab()
         val retainedIds = tabs.tabs.mapTo(hashSetOf()) { it.id }
@@ -505,6 +548,16 @@ class BrowserV2Session(
         if (tabId != tabs.activeTab.id) { pauseOutgoingTab(); exitFullscreen() }
         tabs.select(tabId)
         activeWebViewOrNull()?.let { if (foreground) it.onResume() }
+        changed()
+    }
+
+    /** Home/Private Apps switcher only. The ordinary tab switcher continues to call select. */
+    fun selectFromNovaHome(tabId: String) {
+        requireNovaForeground()
+        if(tabs.tabs.none {it.id==tabId})return
+        if(tabId!=tabs.activeTab.id)prepareNovaSwitch()
+        tabs.select(tabId)
+        activeWebViewOrNull()?.let {if(foreground)it.onResume()}
         changed()
     }
 
@@ -769,8 +822,8 @@ class BrowserV2Session(
     }
     override fun onProgress(tabId: String, progress: Int) = Unit
     override fun onCreateWindow(parentTabId: String, isDialog: Boolean, isUserGesture: Boolean): WebView? {
-        // Reject before allocating a tab if the existing VPN gate is closed.
-        if (!vpnGate.permitsRemoteNetworking() || tabs.tabs.none { it.id == parentTabId }) return null
+        // A retained, paused, covered or destroyed page cannot allocate a renderer or take focus.
+        if (!windowInteractionAllowed(parentTabId)) return null
         val previousId = tabs.activeTab.id
         val child = newTab()
         val view = webViewOrNull(child.id)
@@ -784,13 +837,16 @@ class BrowserV2Session(
         diagnostics.record(event, details + ("active_tab" to (tabId == tabs.activeTab.id).toString()))
     }
     override fun onWindowFocus(tabId: String) {
-        if (tabs.tabs.none { it.id == tabId }) return
+        if (!windowInteractionAllowed(tabId)) return
         pendingWindowFocus += tabId
         select(tabId)
         webViews[tabId]?.takeIf { it.isAttachedToWindow }?.let { pendingWindowFocus.remove(tabId); it.requestFocus() }
     }
     override fun onPermissionRequestCanceled(tabId: String, request: android.webkit.PermissionRequest) = listener.onPermissionRequestCanceled(request)
-    override fun onCloseWindow(tabId: String) { if (tabs.tabs.any { it.id == tabId }) close(tabId) }
+    private fun windowInteractionAllowed(tabId:String):Boolean =
+        mediaNetworkingAllowed() && rendererAllowed() && tabId==tabs.activeTab.id && webViews[tabId]!=null &&
+            runCatching {listener.allowWindowInteraction()}.getOrDefault(false)
+    override fun onCloseWindow(tabId: String) { if (windowInteractionAllowed(tabId)) close(tabId) }
     override fun onShowCustomView(tabId: String, view: View, callback: WebChromeClient.CustomViewCallback) {
         if (tabId != tabs.activeTab.id || !mediaNetworkingAllowed() || fullscreenCallback != null) {
             callback.onCustomViewHidden(); return

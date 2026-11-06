@@ -1,5 +1,5 @@
 from pathlib import Path
-import subprocess, tempfile, os, shutil, re
+import subprocess, tempfile, os, shutil, re, xml.etree.ElementTree as ET
 """Focused host checks using real SpaceContext/VaultCipher, minimal Android and lease fixtures.
 
 The native instrumentation tests exercise EvidenceAccess on device. This runner checks
@@ -24,9 +24,26 @@ jdk=Path(os.environ.get('JAVA_HOME','/tmp/nova-widget-tools/jdk-17.0.21+9'))/'bi
 subprocess.run([str(jdk/'javac'),'-d',str(out),*files],check=True)
 cache=Path(os.environ.get('GRADLE_USER_HOME',str(Path.home()/'.gradle')))/'caches/modules-2/files-2.1'
 if not cache.is_dir(): cache=Path('/tmp/nova-widget-tools/cache/caches/modules-2/files-2.1')
-jars=list(cache.rglob('*.jar'))
-compiler=':'.join(str(x) for x in jars)
-stdlib=sorted((x for x in jars if re.fullmatch(r'kotlin-stdlib-[0-9.]+.jar',x.name)),key=lambda x:tuple(map(int,re.findall(r'\d+',x.name))))[-1]
+# Only the compiler artifact and its declared runtime dependencies belong here.
+# Gradle plugin jars also define K2JVMCompiler; a cache-wide classpath loads the wrong class.
+def version_key(value): return tuple(map(int,re.findall(r"\d+",value)))
+def artifact(group,name,version=None):
+ module=cache/group/name
+ versions=[v for v in module.iterdir() if v.is_dir()] if module.is_dir() else []
+ selected=module/version if version and (module/version).is_dir() else max(versions,key=lambda v:version_key(v.name))
+ matches=list(selected.glob(name+"-"+selected.name+".jar"))+list(selected.glob("*/"+name+"-"+selected.name+".jar"))
+ assert len(matches)==1,(group,name,version,matches)
+ return matches[0]
+compiler_jar=artifact('org.jetbrains.kotlin','kotlin-compiler-embeddable')
+pom=next(compiler_jar.parent.parent.glob('*/*.pom'))
+model=ET.parse(pom).getroot()
+compiler_jars=[compiler_jar]
+for dependency in model.findall('{*}dependencies/{*}dependency'):
+ group=dependency.find('{*}groupId').text;name=dependency.find('{*}artifactId').text;version=dependency.find('{*}version').text
+ compiler_jars.append(artifact(group,name,version))
+compiler_jars.append(artifact('org.jetbrains','annotations'))
+compiler=':'.join(str(x) for x in compiler_jars)
+stdlib=next(x for x in compiler_jars if x.name.startswith('kotlin-stdlib-'))
 kt=work/'Checks.kt'
 kt.write_text(r"""package uk.co.traynor.privategallery.core.home2
 import android.content.*

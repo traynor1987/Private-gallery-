@@ -35,8 +35,8 @@ class PreviewData(private val context:Context,private val apps:uk.co.traynor.pri
   }.onFailure{error="Installed apps could not be refreshed. Existing settings are preserved."}
  }
  private fun projectApps(values:List<uk.co.traynor.privategallery.core.privateapps.PrivateAppCatalog.App>)=values.map{app->
-  catalogue.firstOrNull{StoreUrl.key(it.url)==StoreUrl.key(app.startUrl())}?.copy(id="web:"+app.id(),name=app.name(),url=app.startUrl())
-   ?:StoreEntry("web:"+app.id(),app.name(),app.startUrl(),"Custom website","Custom","Existing Private App")
+  catalogue.firstOrNull{StoreUrl.key(it.url)==StoreUrl.key(app.startUrl())}?.copy(id="web:"+app.id(),name=prefs.getString("label:"+app.id(),app.name())?:app.name(),url=app.startUrl())
+   ?:StoreEntry("web:"+app.id(),prefs.getString("label:"+app.id(),app.name())?:app.name(),app.startUrl(),"Custom website","Custom","Existing Private App")
  }
  fun retrySave(){pending?.let{save(it)}}
  val profile get()=if(state.current=="hidden")state.hidden else state.primary
@@ -91,7 +91,7 @@ class PreviewData(private val context:Context,private val apps:uk.co.traynor.pri
  fun uninstall(id:String){
   val entry=profile.installed.firstOrNull{it.id==id}?:return
   val bridge=apps?:return
-  runCatching{bridge.uninstall(id.removePrefix("web:"))}.getOrElse{error="This app could not be removed.";return}
+  runCatching{bridge.uninstall(id.removePrefix("web:"));prefs.edit().remove("label:"+id.removePrefix("web:")).commit()}.getOrElse{error="This app could not be removed.";return}
   change{p->
   val folders=p.folders.map{it.copy(apps=it.apps.filterNot{a->a==id})}.filter{it.apps.isNotEmpty()}
   val valid=allApps(p).map{it.id}.filterNot{it==id}.toSet()+folders.map{it.id}
@@ -124,7 +124,9 @@ class PreviewData(private val context:Context,private val apps:uk.co.traynor.pri
    val groups=p.folders.map{it.copy(apps=it.apps.filterNot{a->a in apps})}.filter{it.apps.isNotEmpty()}+AppFolder(id,name.trim().take(32),apps.distinct())
    p.copy(pages=pages.map{row->row.filter{!it.startsWith("folder:")||groups.any{f->f.id==it}}},folders=groups,drawerOrder=p.drawerOrder.filter{!it.startsWith("folder:")||groups.any{f->f.id==it}})}
  }
- fun rename(id:String,name:String){if(name.isBlank())return;change{p->if(id.startsWith("folder:"))p.copy(folders=p.folders.map{if(it.id==id)it.copy(name=name.trim().take(32))else it}) else p.copy(installed=p.installed.map{if(it.id==id)it.copy(name=name.trim().take(40))else it})}}
+ fun rename(id:String,name:String){if(name.isBlank())return
+  if(id.startsWith("web:")&&!prefs.edit().putString("label:"+id.removePrefix("web:"),name.trim().take(40)).commit()){error="Shortcut name could not be saved.";return}
+  change{p->if(id.startsWith("folder:"))p.copy(folders=p.folders.map{if(it.id==id)it.copy(name=name.trim().take(32))else it}) else p.copy(installed=p.installed.map{if(it.id==id)it.copy(name=name.trim().take(40))else it})}}
  fun folderAdd(folder:String,app:String){change{p->val groups=p.folders.map{f->f.copy(apps=if(f.id==folder)(f.apps+app).distinct()else f.apps.filterNot{it==app})}.filter{it.apps.isNotEmpty()};p.copy(folders=groups,pages=p.pages.map{row->row.filter{!it.startsWith("folder:")||groups.any{f->f.id==it}}},drawerOrder=p.drawerOrder.filter{!it.startsWith("folder:")||groups.any{f->f.id==it}})}}
  fun moveFolderMember(folder:String,app:String,delta:Int){change{p->p.copy(folders=p.folders.map{if(it.id==folder)it.copy(apps=PreviewRules.move(it.apps,app,delta))else it})}}
  fun dissolveFolder(id:String){change{p->p.copy(folders=p.folders.filterNot{it.id==id},pages=p.pages.map{it.filterNot{a->a==id}},drawerOrder=p.drawerOrder.filterNot{it==id})}}

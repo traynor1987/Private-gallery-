@@ -18,7 +18,15 @@
   "targetVersion": "1.7.11",
   "targetCode": 56,
   "versionAudit": "88 remote Android build configurations inspected; highest assigned55; original signed baseline54. Code56 selected above both.",
-  "security": "Existing Primary/Hidden credentials, keys, media schema and core browser engine files unchanged. New Home state uses owner-authenticated encrypted EvidenceAccess leases and native VaultCipher. Hidden web/Tor/remote AI disabled. No Preview cookies, tokens, notes or plaintext journals migrated.",
+  "security": "Existing Primary/Hidden credentials, keys, media schema unchanged; V1 configuration/stores/default tab semantics retained with additive Private Apps lifecycle APIs. New Home state uses owner-authenticated encrypted EvidenceAccess leases and native VaultCipher. Hidden web/Tor/remote AI disabled. No Preview cookies, tokens, notes or plaintext journals migrated.",
   "productionUpgrade": "PENDING. No production signing or shipping approval. No production APK published.",
-  "testIdentity": "uk.co.traynor.privategallery.hiddenprototype; version1.7.11-TEST-ONLY; development signature; separate installation, never production upgrade"
+  "testIdentity": "uk.co.traynor.privategallery.hiddenprototype; version1.7.11-TEST-ONLY; development signature; separate installation, never production upgrade",
+  "storageSchema": {
+    "primary": "files/vault: vault-index.enc format6, existing encrypted payloads and presentation records unchanged",
+    "hidden": "noBackup/hidden-media-v1: owner Hidden JSON metadata version2 (reads1..2), encrypted records unchanged",
+    "privateApps": "existing owner catalogues encoding2 (reads1..2), original UUIDs/settings retained",
+    "evidence": "existing owner-encrypted Evidence schema2, original v1 bounded reads preserved",
+    "home": "additive owner-authenticated home2 encrypted envelopes; no Preview plaintext or credential imports"
+  },
+  "browserPreservation": "Same V1 constructor, settings, policies, cookie/profile/data stores and normal tab operations. Additive Private Apps lifecycle entry points use the same existing bounded WebView registry. Native stale callback/permission fences are tightened; no replacement engine or provider bypass."
 }

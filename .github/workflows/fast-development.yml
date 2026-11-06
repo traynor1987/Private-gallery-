@@ -576,7 +576,7 @@ jobs:
         run: bash scripts/check_home2_host.sh
       - name: Verify browser engine preservation and isolated APK
         run: |
-          git diff --exit-code 9efd19540a1d75efa1b30f4e23c9cbb096f93aff -- app/src/main/java/uk/co/traynor/privategallery/core/browser app/src/main/java/uk/co/traynor/privategallery/core/crypto app/src/main/java/uk/co/traynor/privategallery/core/vault
+          python3 scripts/verify_v1_preservation1711.py
           mkdir -p app/build/home2-evidence
           git rev-parse HEAD > app/build/home2-evidence/source-sha.txt
           apk=app/build/outputs/apk/debug/app-debug.apk
@@ -599,7 +599,7 @@ jobs:
           heap-size: 512M
           disk-size: 8G
           disable-animations: true
-          emulator-options: -no-window -gpu software -no-snapshot -noaudio -no-boot-anim -feature -HardwareDecoder
+          emulator-options: -no-window -gpu software -no-snapshot -noaudio -no-boot-anim -feature -HardwareDecoder -camera-back emulated -camera-front emulated
           script: |
             test "$(adb shell getprop ro.build.version.sdk | tr -d '\r')" = 37
             adb shell wm size 1200x1800
