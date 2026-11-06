@@ -127,3 +127,16 @@ lifecycle-below-RESUMED assertion is added. All battery/charging/resume/geometry
 lock assertions remain. No production change, timeout increase, arbitrary delay or assertion
 removal. Independent rereview approves this bounded rerun checkpoint. Fresh exact-source
 172-case success remains mandatory before signing.
+
+## Verified delivery
+
+Final sourcef2727d75d142c2a733c53861e1a0f74440e0b6b5 passed fresh172Android/431JVM.
+Runtime42235897971/job127953286741/artifact13511693979 originalZIP74513773bytes/SHA
+4cd70b3820f133c5bda2edd26a74f86cb1d05e839f2d44040566652d2ac57b2f.
+Independent review approved exact source and all gates, SHA854cfc29fff3692e5acd3a63d9c1ab993cde50907467dc31d7c4c4b8d44b750f.
+Activation9b21d17c180a319fe93e2d06f18b057b5c9f964c; production42238614535/job127962769022 SUCCESS.
+Actual signed59->60 synthetic encrypted-data preservation and force-stop/restart PASS.
+Final original-key APK1.7.11.4/code60,144942764bytes/SHA
+d21b9134409f24bd460368b36aea715de82b6e00d98a303f0bdd9c514b3f1f82, published at tag
+novaos-1.7.11.4-home2-code60. Parent originaldownload, certificate/package/hash and asset verification PASS.
+Physical Fold/liveOpenAI NOTPERFORMED. Complete facts and acceptance checklist: CODE60_DELIVERY.md.
