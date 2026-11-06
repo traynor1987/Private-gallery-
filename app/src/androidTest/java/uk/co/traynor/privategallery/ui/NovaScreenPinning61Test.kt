@@ -1,13 +1,19 @@
 package uk.co.traynor.privategallery.ui
 
 import android.app.ActivityManager
+import android.app.UiAutomation
 import android.app.KeyguardManager
 import android.app.admin.DevicePolicyManager
 import android.accessibilityservice.AccessibilityServiceInfo
 import android.content.ActivityNotFoundException
+import android.graphics.Bitmap
+import android.graphics.Rect
+import android.os.PowerManager
+import android.os.SystemClock
 import android.provider.Settings
 import android.view.KeyEvent
 import android.view.accessibility.AccessibilityNodeInfo
+import android.view.accessibility.AccessibilityWindowInfo
 import androidx.activity.ComponentActivity
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
@@ -17,6 +23,7 @@ import org.junit.Assert.*
 import org.junit.Assume.assumeTrue
 import org.junit.Rule
 import org.junit.Test
+import java.io.File
 import uk.co.traynor.privategallery.core.security.NovaScreenPinningPolicy.State
 
 /** Component tests replace only external OS responses. One test exercises and cancels the actual
@@ -167,9 +174,11 @@ class NovaScreenPinning61Test {
         val manager = activity.getSystemService(ActivityManager::class.java)
         val keyguard = activity.getSystemService(KeyguardManager::class.java)
         val policy = activity.getSystemService(DevicePolicyManager::class.java)
-        assumeTrue("Requires an initially unpinned, unlocked, unmanaged foreground test task",
+        val power = activity.getSystemService(PowerManager::class.java)
+        assumeTrue("Requires an initially unpinned, unsecured, unlocked, interactive unmanaged fixture; secure Samsung exit remains physical acceptance",
             manager.lockTaskModeState == ActivityManager.LOCK_TASK_MODE_NONE &&
-                !keyguard.isDeviceLocked && !keyguard.isKeyguardLocked && !policy.isLockTaskPermitted(activity.packageName))
+                power.isInteractive && !keyguard.isDeviceSecure && !keyguard.isDeviceLocked &&
+                !keyguard.isKeyguardLocked && !policy.isLockTaskPermitted(activity.packageName))
         val platform = AndroidNovaScreenPinningPlatform(activity)
         lateinit var controller: NovaScreenPinningController
         compose.runOnIdle {
@@ -185,31 +194,113 @@ class NovaScreenPinning61Test {
         val originalInfo = automation.serviceInfo
         val originalFlags = originalInfo.flags
         try {
-            originalInfo.flags = originalFlags or AccessibilityServiceInfo.FLAG_REPORT_VIEW_IDS
+            // The genuine confirmation is a non-focusable SystemUI navigation-panel window.
+            // rootInActiveWindow remains the app, so retrieve ALL interactive window roots.
+            originalInfo.flags = originalFlags or AccessibilityServiceInfo.FLAG_REPORT_VIEW_IDS or
+                AccessibilityServiceInfo.FLAG_RETRIEVE_INTERACTIVE_WINDOWS
             automation.serviceInfo = originalInfo
             compose.runOnIdle { assertTrue(controller.requestPinning()) }
-            val until = android.os.SystemClock.uptimeMillis() + 8_000
-            var cancel: AccessibilityNodeInfo? = null
-            while (cancel == null && android.os.SystemClock.uptimeMillis() < until) {
-                cancel = findCancel(automation.rootInActiveWindow)
-                if (cancel == null) android.os.SystemClock.sleep(50)
+            waitFor("Expected Android's actual screen-pinning confirmation", { windowSummary(automation) }) {
+                pinningWindow(automation) != null
             }
-            assertNotNull("Expected Android's actual screen-pinning confirmation", cancel)
+            val confirmation = checkNotNull(pinningWindow(automation))
+            val evidence = saveConfirmationEvidence(activity, automation, confirmation)
             assertEquals("A request must not pin before Android confirmation", ActivityManager.LOCK_TASK_MODE_NONE, manager.lockTaskModeState)
-            assertTrue(cancel!!.performAction(AccessibilityNodeInfo.ACTION_CLICK))
+            val cancel = findCancel(confirmation.root)
+            if (cancel != null) {
+                evidence.appendText("cancel_path=native_systemui_cancel_node_ACTION_CLICK\n")
+                assertTrue(cancel.performAction(AccessibilityNodeInfo.ACTION_CLICK))
+            } else {
+                // Android hides the button group on gesture/large-screen layouts. Its real
+                // ACTION_SCREEN_OFF handler cancels the confirmation without accepting a pin.
+                // This fixture is unsecured, so normal wake/menu restores it without credentials.
+                evidence.appendText("cancel_path=native_KEYCODE_SLEEP_ACTION_SCREEN_OFF\n")
+                injectKey(automation, KeyEvent.KEYCODE_SLEEP)
+                waitFor("Android screen-off must occur") { !power.isInteractive }
+            }
+            waitFor("Actual Android confirmation must disappear after cancellation") { pinningWindow(automation) == null }
+            wakeUnsecuredFixture(automation, power)
+            waitFor("Unsecured fixture must return to its unlocked baseline") { !keyguard.isDeviceLocked && !keyguard.isKeyguardLocked }
             instrumentation.waitForIdleSync()
             assertEquals(ActivityManager.LOCK_TASK_MODE_NONE, manager.lockTaskModeState)
+            evidence.appendText("confirmation_after_cancel=absent\nlockTaskModeState=${manager.lockTaskModeState}\ninteractive=${power.isInteractive}\nkeyguardLocked=${keyguard.isKeyguardLocked}\nrestore_actions=KEYCODE_WAKEUP_if_asleep,KEYCODE_MENU_unsecured_only\n")
         } finally {
             // Never alter a pre-existing pin: baseline NONE was required before this test.
-            if (findCancel(automation.rootInActiveWindow) != null) instrumentation.sendKeyDownUpSync(KeyEvent.KEYCODE_BACK)
-            instrumentation.runOnMainSync {
-                if (manager.lockTaskModeState == ActivityManager.LOCK_TASK_MODE_PINNED) activity.stopLockTask()
-                controller.close()
+            try {
+                if (pinningWindow(automation) != null) {
+                    injectKey(automation, KeyEvent.KEYCODE_SLEEP)
+                    waitFor("Cleanup screen-off must cancel pending confirmation") { !power.isInteractive }
+                }
+                wakeUnsecuredFixture(automation, power)
+            } finally {
+                try {
+                    instrumentation.runOnMainSync {
+                        try {
+                            if (manager.lockTaskModeState == ActivityManager.LOCK_TASK_MODE_PINNED) activity.stopLockTask()
+                        } finally { controller.close() }
+                    }
+                } finally {
+                    originalInfo.flags = originalFlags
+                    automation.serviceInfo = originalInfo
+                }
             }
-            originalInfo.flags = originalFlags
-            automation.serviceInfo = originalInfo
         }
         assertEquals("Confirmation cancellation must restore baseline", ActivityManager.LOCK_TASK_MODE_NONE, manager.lockTaskModeState)
+        assertTrue("Interactive baseline must be restored", power.isInteractive)
+    }
+
+    private fun pinningWindow(automation: UiAutomation): AccessibilityWindowInfo? = automation.windows.firstOrNull { window ->
+        window.title?.toString() == "ScreenPinningConfirmation" &&
+            window.root?.packageName?.toString() == "com.android.systemui"
+    }
+
+    private fun windowSummary(automation: UiAutomation): String = automation.windows.joinToString {
+        val bounds = Rect().also { bounds -> it.getBoundsInScreen(bounds) }
+        "${it.title}:${it.type}:focused=${it.isFocused}:package=${it.root?.packageName}:bounds=$bounds"
+    }
+
+    private fun waitFor(message: String, diagnostics: () -> String = { "" }, condition: () -> Boolean) {
+        val until = SystemClock.uptimeMillis() + 8_000
+        while (!condition() && SystemClock.uptimeMillis() < until) SystemClock.sleep(50)
+        assertTrue("$message ${diagnostics()}", condition())
+    }
+
+    private fun injectKey(automation: UiAutomation, code: Int) {
+        val now = SystemClock.uptimeMillis()
+        assertTrue(automation.injectInputEvent(KeyEvent(now, now, KeyEvent.ACTION_DOWN, code, 0), true))
+        assertTrue(automation.injectInputEvent(KeyEvent(now, now, KeyEvent.ACTION_UP, code, 0), true))
+    }
+
+    private fun wakeUnsecuredFixture(automation: UiAutomation, power: PowerManager) {
+        if (!power.isInteractive) injectKey(automation, KeyEvent.KEYCODE_WAKEUP)
+        waitFor("Interactive fixture must wake") { power.isInteractive }
+        injectKey(automation, KeyEvent.KEYCODE_MENU)
+    }
+
+    private fun saveConfirmationEvidence(activity: ComponentActivity, automation: UiAutomation, window: AccessibilityWindowInfo): File {
+        assertEquals(ComponentActivity::class.java, activity.javaClass)
+        assertTrue(activity.packageName.endsWith(".hiddenprototype"))
+        val path = InstrumentationRegistry.getArguments().getString("additionalTestOutputDir")
+            ?: File(checkNotNull(activity.externalMediaDirs.firstOrNull()), "additional_test_output").absolutePath
+        val directory = File(path, "nova-pinning61").apply { check(isDirectory || mkdirs()) }
+        val image = checkNotNull(automation.takeScreenshot())
+        try {
+            File(directory, "actual-android-confirmation.png").outputStream().use {
+                assertTrue(image.compress(Bitmap.CompressFormat.PNG, 100, it))
+            }
+        } finally { image.recycle() }
+        val metadata = File(directory, "actual-android-confirmation.txt")
+        metadata.writeText(buildString {
+            appendLine("capture=actual_android_systemui_over_synthetic_component_activity")
+            appendLine(windowSummary(automation))
+            fun appendNode(node: AccessibilityNodeInfo?, depth: Int = 0) {
+                if (node == null || depth > 16) return
+                appendLine("${" ".repeat(depth)}${node.viewIdResourceName} text=${node.text} clickable=${node.isClickable}")
+                for (index in 0 until node.childCount) appendNode(node.getChild(index), depth + 1)
+            }
+            appendNode(window.root)
+        })
+        return metadata
     }
 
     private fun findCancel(node: AccessibilityNodeInfo?): AccessibilityNodeInfo? {

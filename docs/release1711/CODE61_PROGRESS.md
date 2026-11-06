@@ -62,3 +62,27 @@ counter nowmeasures realbuttonclicks; adversarialJavaScriptfocus tests cannot pa
 markers. Existinghost/privateapp/V1checks PASS,14focusedrelease/capturehosttests PASS.
 Signed release is still closed; oldmarker/review60 mustnot authorize61. Next is existing
 home2-runtime workflow, originalreport/PNG review and fresh exactsource independentapproval.
+
+
+## First original API37 run and bounded fixture corrections
+
+Source489d1449e8a799cd0d4bc052feba9430f78dcee6, run42250235674/job128003065064,
+original artifact13520568221 (7781223bytes), ZIP SHA256
+e5e247587dc1ae8e9ef02688d1ac5dadd4b341e70918e9717fc650a32f07cf5d.
+Original reports:196Android,192pass/4fail/0skip;447JVMgreen. No production approval.
+Original screenshots reviewed: actual Main app window pure black with real local HTML audio
+playing; actual IME visible before overlay and absent after it. These do not prove live YouTube
+Music, incoming-call or physical Fold acceptance. A transient Android status bar remained in
+the component global capture; the actual Main capture was fully black.
+
+Four test-only corrections retain all existing assertions: timestamp injected wake key events
+(Android explicitly dropped timestamp-zero events as stale); retrieve all actual interactive
+SystemUI windows for the nonfocusable screen-pinning confirmation, cancel through actual native
+Cancel or Android screen-off on an initially unsecured fixture; poll the modal JavaScript
+callback asynchronously so Compose can deliver its cancellation; wait actual owned popup focus
+and target measured child bounds for three-finger Panic, recording root/coordinates/auth/click
+results. The original Panic failure is unresolved until a new strict runtime pass.
+No production implementation, matrix selection/count, timeout or security assertion changed.
+Current corrected app+instrumentation build PASS1m11;447JVM/108suites,0failure/error/skip.
+Independent source review reports no Critical/Important so far; final exact-source review and
+all196original runtime cases are still required before signing.

@@ -212,10 +212,16 @@ class NovaBlackScreen61Test {
         for (key in listOf(KeyEvent.KEYCODE_BACK, KeyEvent.KEYCODE_ESCAPE, KeyEvent.KEYCODE_ENTER)) {
             main { assertTrue(f.request()) }
             await("Cover owns focus") { f.cover()?.hasFocus() == true }
+            val down = SystemClock.uptimeMillis()
             for (action in listOf(KeyEvent.ACTION_DOWN, KeyEvent.ACTION_UP)) {
-                assertTrue(instrumentation.uiAutomation.injectInputEvent(KeyEvent(action, key), true))
+                // The short KeyEvent(action, code) constructor has zero timestamps; Android
+                // rejects those injected events as stale before they reach this window.
+                val event = KeyEvent(down, SystemClock.uptimeMillis(), action, key, 0, 0,
+                    android.view.KeyCharacterMap.VIRTUAL_KEYBOARD, 0, 0, android.view.InputDevice.SOURCE_KEYBOARD)
+                assertTrue("Android accepts fresh ${KeyEvent.keyCodeToString(key)} action=$action down=${event.downTime} time=${event.eventTime}",
+                    instrumentation.uiAutomation.injectInputEvent(event, true))
             }
-            await("Wake key releases cover") { !f.controller.active }
+            await("Wake key ${KeyEvent.keyCodeToString(key)} releases cover") { !f.controller.active }
             main { assertEquals(0, f.clicks) }
         }
     }

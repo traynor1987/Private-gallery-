@@ -2,6 +2,8 @@ package uk.co.traynor.privategallery
 
 import android.content.Context
 import android.content.ContextWrapper
+import android.graphics.RectF
+import android.util.Log
 import android.view.InputDevice
 import android.view.MotionEvent
 import android.view.View
@@ -19,6 +21,8 @@ import java.util.UUID
 import org.junit.Assert.*
 import org.junit.Rule
 import org.junit.Test
+import org.json.JSONArray
+import org.json.JSONObject
 import uk.co.traynor.privategallery.core.security.PinVaultKeyStore
 import uk.co.traynor.privategallery.home2.PanicHomeDropdownMenu
 import uk.co.traynor.privategallery.ui.playerActivity
@@ -68,6 +72,8 @@ class HomeOwnedWindowPanicTest {
 
     @Test fun popupSystemThreeFingerTouchCannotLeakAChildClickAfterPanic()=withHiddenHome {
         var shown by mutableStateOf(true);var childClicks=0
+        var old:uk.co.traynor.privategallery.core.hidden.HiddenSession.Authentication?=null
+        val diagnostic=JSONObject().put("fixture","synthetic_hidden_home_popup").put("stage","created")
         lateinit var overlay:ComposeView
         compose.runOnIdle {
             overlay=ComposeView(activity).apply {setContent {
@@ -79,11 +85,57 @@ class HomeOwnedWindowPanicTest {
         }
         try {
             compose.onNodeWithText("Synthetic child action").assertIsDisplayed()
-            val old=compose.runOnIdle {owner.hidden.session.authentication()}
-            injectThreeFingers(compose.runOnIdle {focusedRoot()})
-            compose.runOnIdle {assertRevoked(old);assertEquals("Consumed gesture tail must not click through the popup",0,childClicks);shown=false}
+            compose.runOnIdle {
+                val original=popupWindowDiagnostic()
+                diagnostic.put("originalBeforeSelection",original).put("stage","waiting_for_popup_focus")
+                Log.i("PGPanicFixture","Original windows before popup target selection: $original")
+            }
+            compose.waitUntil(10_000){compose.runOnIdle {focusedPopupRoot()!=null}}
+            val popup=compose.runOnIdle {checkNotNull(focusedPopupRoot())}
+            // Compose bounds are in this popup's window. Convert them to display coordinates,
+            // rather than using the center of whichever window happened to have focus first.
+            val child=compose.onNodeWithText("Synthetic child action").fetchSemanticsNode().boundsInWindow
+            val point=compose.runOnIdle {
+                assertSame("The selected popup must still own actual window focus",popup,focusedPopupRoot())
+                val screen=IntArray(2).also {popup.getLocationOnScreen(it)}
+                val inWindow=IntArray(2).also {popup.getLocationInWindow(it)}
+                val childOnScreen=RectF(child.left+screen[0]-inWindow[0],child.top+screen[1]-inWindow[1],
+                    child.right+screen[0]-inWindow[0],child.bottom+screen[1]-inWindow[1])
+                val popupOnScreen=RectF(screen[0].toFloat(),screen[1].toFloat(),(screen[0]+popup.width).toFloat(),(screen[1]+popup.height).toFloat())
+                val point=childOnScreen.centerX() to childOnScreen.centerY()
+                for(offset in listOf(-12f,0f,12f)) {
+                    assertTrue("Every injected pointer must start inside the actual popup child",childOnScreen.contains(point.first+offset,point.second))
+                    assertTrue("Every injected pointer must start inside the focused popup window",popupOnScreen.contains(point.first+offset,point.second))
+                }
+                old=owner.hidden.session.authentication()
+                diagnostic.put("selectedRoot",windowDiagnostic(popup)).put("childScreenBounds",rectDiagnostic(childOnScreen))
+                    .put("point",JSONArray().put(point.first).put(point.second))
+                    .put("oldAuthBefore",owner.hidden.session.isAuthenticationCurrent(old)).put("childClicksBefore",childClicks)
+                    .put("stage","injecting")
+                Log.i("PGPanicFixture","Selected popup input target: $diagnostic")
+                point
+            }
+            injectThreeFingers(popup,point)
+            compose.runOnIdle {
+                diagnostic.put("oldAuthAfter",owner.hidden.session.isAuthenticationCurrent(old)).put("childClicksAfter",childClicks)
+                    .put("afterInjection",popupWindowDiagnostic()).put("stage","asserting_revocation")
+                assertRevoked(checkNotNull(old));assertEquals("Consumed gesture tail must not click through the popup",0,childClicks);shown=false
+            }
             assertPinRequired()
-        } finally {compose.runOnIdle {shown=false;overlay.disposeComposition();(overlay.parent as? android.view.ViewGroup)?.removeView(overlay)}}
+            diagnostic.put("stage","passed")
+        } finally {
+            try {
+                compose.runOnIdle {
+                    diagnostic.put("oldAuthAfter",owner.hidden.session.isAuthenticationCurrent(old)).put("childClicksAfter",childClicks)
+                        .put("finalWindows",popupWindowDiagnostic())
+                    Log.i("PGPanicFixture","Popup gesture result: $diagnostic")
+                }
+                val additional=InstrumentationRegistry.getArguments().getString("additionalTestOutputDir")
+                    ?: File(activity.externalMediaDirs.firstOrNull() ?: activity.cacheDir,"additional_test_output").absolutePath
+                val directory=File(additional,"home-window-panic61").apply {check(isDirectory||mkdirs())}
+                File(directory,"popup-three-finger.json").writeText(diagnostic.toString(2))
+            } finally {compose.runOnIdle {shown=false;overlay.disposeComposition();(overlay.parent as? android.view.ViewGroup)?.removeView(overlay)}}
+        }
     }
 
     private fun assertRevoked(old:uk.co.traynor.privategallery.core.hidden.HiddenSession.Authentication) {
@@ -102,8 +154,23 @@ class HomeOwnedWindowPanicTest {
     private fun focusedRoot():View = android.view.inspector.WindowInspector.getGlobalWindowViews().last {
         it.isAttachedToWindow && it.hasWindowFocus() && it.context.playerActivity()===activity
     }
-    private fun injectThreeFingers(root:View) {
-        val point=compose.runOnIdle {IntArray(2).also {root.getLocationOnScreen(it)}.let {it[0]+root.width/2f to it[1]+root.height/2f}}
+    private fun focusedPopupRoot():View? = android.view.inspector.WindowInspector.getGlobalWindowViews().lastOrNull {
+        it!==activity.window.decorView && it.isAttachedToWindow && it.hasWindowFocus() &&
+            it.context.playerActivity()===activity && it.javaClass.simpleName=="PopupLayout"
+    }
+    private fun windowDiagnostic(root:View):JSONObject {
+        val screen=IntArray(2).also {root.getLocationOnScreen(it)}
+        return JSONObject().put("class",root.javaClass.name).put("activityDecor",root===activity.window.decorView)
+            .put("attached",root.isAttachedToWindow).put("focused",root.hasWindowFocus())
+            .put("screenBounds",JSONArray().put(screen[0]).put(screen[1]).put(screen[0]+root.width).put(screen[1]+root.height))
+    }
+    private fun popupWindowDiagnostic():JSONArray = JSONArray().apply {
+        android.view.inspector.WindowInspector.getGlobalWindowViews().filter {it.context.playerActivity()===activity}
+            .forEach {put(windowDiagnostic(it))}
+    }
+    private fun rectDiagnostic(rect:RectF)=JSONArray().put(rect.left).put(rect.top).put(rect.right).put(rect.bottom)
+    private fun injectThreeFingers(root:View,selectedPoint:Pair<Float,Float>?=null) {
+        val point=selectedPoint ?: compose.runOnIdle {IntArray(2).also {root.getLocationOnScreen(it)}.let {it[0]+root.width/2f to it[1]+root.height/2f}}
         val down=android.os.SystemClock.uptimeMillis()
         for((action,count) in listOf(MotionEvent.ACTION_DOWN to 1,(MotionEvent.ACTION_POINTER_DOWN or (1 shl MotionEvent.ACTION_POINTER_INDEX_SHIFT)) to 2,(MotionEvent.ACTION_POINTER_DOWN or (2 shl MotionEvent.ACTION_POINTER_INDEX_SHIFT)) to 3,(MotionEvent.ACTION_POINTER_UP or (2 shl MotionEvent.ACTION_POINTER_INDEX_SHIFT)) to 3,(MotionEvent.ACTION_POINTER_UP or (1 shl MotionEvent.ACTION_POINTER_INDEX_SHIFT)) to 2,MotionEvent.ACTION_UP to 1)) {
             event(down,action,count,point.first,point.second).let {try {assertTrue(InstrumentationRegistry.getInstrumentation().uiAutomation.injectInputEvent(it,true))} finally {it.recycle()}}

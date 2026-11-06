@@ -231,7 +231,7 @@ class PrivateAppMainActivityAcceptanceTest {
             compose.runOnIdle{assertTrue(compose.activity.novaBlackScreenActive)}
             assertEquals("1",js(f.view,"window.fixtureClicks"))
             assertEquals("true",js(f.view,"setTimeout(function(){window.blackAlertBefore=1;alert('Synthetic black screen prompt');window.blackAlertAfter=1;},0);true"))
-            compose.waitUntil(10000){js(f.view,"window.blackAlertAfter===1")=="true"}
+            awaitBlackJavascript(f.view,"window.blackAlertAfter===1","The hidden native alert is cancelled and the original script resumes")
             assertEquals("true",js(f.view,"(function(){var field=document.createElement('input');field.id='synthetic-black-focus';document.body.appendChild(field);field.focus();window.focus();return true;})()"))
             compose.waitForIdle()
             compose.runOnIdle{assertTrue(checkNotNull(compose.activity.window.decorView.findViewWithTag<android.view.View>("nova-black-screen")).hasFocus())}
@@ -276,6 +276,20 @@ class PrivateAppMainActivityAcceptanceTest {
             assertFalse(compose.activity.requestNovaBlackScreen(original))
         }
         compose.onNodeWithTag("preview-home").assertDoesNotExist()
+    }
+    /** A modal renderer can withhold JS callbacks until Compose handles its native result.
+     * Keep the test predicate nonblocking so waitUntil can advance actual Compose frames. */
+    private fun awaitBlackJavascript(view:WebView,expression:String,label:String) {
+        val result=java.util.concurrent.atomic.AtomicReference<String?>(null)
+        val pending=java.util.concurrent.atomic.AtomicBoolean(false)
+        try {compose.waitUntil(10000){
+            if(result.get()=="true")true else {
+                if(pending.compareAndSet(false,true))compose.activity.runOnUiThread {
+                    view.evaluateJavascript(expression){result.set(it);pending.set(false)}
+                }
+                false
+            }
+        }}catch(failure:Throwable){throw AssertionError("$label; last asynchronous result=${result.get()} pending=${pending.get()}",failure)}
     }
     private fun startBlackAudio(f:Fixture) {
         compose.onNodeWithTag("browser-v2-webview-host").performTouchInput{click(center)}
