@@ -72,8 +72,16 @@ class HiddenDiscoverabilityRegressionTest {
     primary();state<Boolean>("hideContent").value=false
     assertTrue(owner.hidden.session.complete(owner.hidden.session.beginAuthentication(),ByteArray(32){83}))
     owner.hidden.select();owner.hidden.authenticated=true
-    activity.switchNovaSpace();assertFalse(owner.hidden.selected);assertFalse(owner.hidden.session.isUnlocked)
-    activity.switchNovaSpace();assertFalse(owner.hidden.selected)
+    val hiddenAuthentication=owner.hidden.session.authentication()
+    activity.switchNovaSpace()
+    assertFalse(owner.hidden.selected);assertFalse(owner.hidden.visible)
+    assertTrue("Returning to Primary preserves Hidden's independent authentication timeout",owner.hidden.session.isAuthenticationCurrent(hiddenAuthentication))
+    activity.switchNovaSpace()
+    assertFalse("Primary navigation cannot re-enter even while Hidden authentication is retained",owner.hidden.selected)
+    assertFalse(owner.hidden.visible);assertTrue(owner.hidden.session.isAuthenticationCurrent(hiddenAuthentication))
+    activity.panicExit()
+    assertFalse(owner.hidden.session.isAuthenticationCurrent(hiddenAuthentication));assertFalse(owner.hidden.session.isUnlocked)
+    assertFalse(owner.session.isUnlocked);assertNull(owner.key)
    }finally{state<Boolean>("hideContent").value=oldHide;cleanup()}
   }
  }

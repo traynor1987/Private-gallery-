@@ -332,7 +332,7 @@ class Home2IntegrationTest {
   compose.onNodeWithText("Edit Home").performClick()
   compose.onNodeWithTag("nova-home-settings").assertIsDisplayed();assertConcealed();Espresso.pressBack()
   compose.onNodeWithContentDescription("Home menu").performClick()
-  compose.onNodeWithText("Apps").performClick()
+  compose.onNode(hasText("Apps") and hasAnyAncestor(isPopup())).performClick()
   compose.onNodeWithTag("drawer-sheet").assertIsDisplayed();assertConcealed()
   compose.onNodeWithTag("drawer-search").performTextInput("Hidden");assertConcealed()
   Espresso.closeSoftKeyboard();compose.onNodeWithContentDescription("Close app drawer").performClick()
