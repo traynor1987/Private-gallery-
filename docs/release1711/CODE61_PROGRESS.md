@@ -31,3 +31,24 @@ proofs, inspect screenshots, independent exactsource review, original-key60->61 
 preservation/restart and actual APK/certificate/hash verification before owner delivery.
 No new signed61 APK or production approval exists yet. Physical Fold, YouTubeMusic accounts and
 incoming calls require owner acceptance; simulated local audio is not a live-service guarantee.
+
+## Black Screen checkpoint — runtime pending
+
+Pinning source checkpointca7523e975744bcab14f21be4addf41fc05fbf08 pushed.
+Black component andMain/AppMode integration compile,447JVM pass, newestcounter/focus tests
+compile (1m7). Nativewindow ownership preserves exactbrightness/bars, view-scoped keepScreenOn,
+fullopaqueBlack+touch/generic blocking, doubletap onlysecondUP, accessibility/Back/Escape wake,
+realIMEhide, retiredCovercallbackidentity, focus/pause/recreation cleanup, synchronous native
+privacy/lock/Panic cleanup and original captured auth/app/tab/document/WebView eligibility.
+No WebView engine/storage mutation. BrowserV1preservationPASSsame8f4...sessionfilehash.
+ActualMain tests use real productionfactory and user-started silent WAV; mandatory WindowPixelCopy
+PNGs/JSON and realIMEbefore/after globalcapture are synthetic fixtures, not realservice proof.
+Source rereview no remainingCritical/Important before checkpoint; all196Android/38classes remain
+unexecuted untilcombinedbatch. TheAVD explicitly enables softIME with hardwarekeyboard so its
+visible-keyboard precondition is meaningful; no productsetting/permission is changed.
+
+Prepared original60->61 fixture54a13a0216d40fa397c6ea0f4fc9ce9ad90cbae3d22aa0f65abeca88700759f6,
+8controls digest07ce7ca56072e062a414f1fc1c7a0b83437b8bdd6992c247531868c200ac9223,
+signingworkflow25d301dc2846d570f961cc38046290549e16d748439affaae8a0ddd2cc6b754f.
+13release-controltests + capturewrapper(14total)pass. Original60archive and unchangedfixture
+assertions/ciphertext exclusions reverified. Still no signer approval or new production APK.

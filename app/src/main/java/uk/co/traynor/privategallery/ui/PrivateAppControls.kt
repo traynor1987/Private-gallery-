@@ -48,11 +48,12 @@ internal fun PrivateAppControls(
     current: () -> Boolean = {true},
     onRecents: (() -> Unit)? = null,
     onNavigateBack: (() -> Unit)? = null,
+    onBlackScreen: (() -> Unit)? = null,
 ) {
     if(immersive) {
         PrivateAppOverflowControls(app,url,enabled,canGoBack,canGoForward,loading,
             onBack,onForward,onRefresh,onExitGallery ?: onLibrary,onSettings,onCloseApp ?: onLibrary,
-            onOpenInBrowser,onSwitch,onScreenshot,onBrowserTools,onLockVault,onQuickLock,current,onRecents,onNavigateBack)
+            onOpenInBrowser,onSwitch,onScreenshot,onBrowserTools,onLockVault,onQuickLock,current,onRecents,onNavigateBack,onBlackScreen)
         return
     }
     var expanded by remember(app.id()) { mutableStateOf(false) }
@@ -96,6 +97,7 @@ private fun PrivateAppOverflowControls(
     onOpenInBrowser:(()->Unit)?, onSwitch:()->Unit, onScreenshot:(()->Unit)?, onBrowserTools:()->Unit,
     onLockVault:(()->Unit)?, onPanic:(()->Unit)?, current:()->Boolean,
     onRecents:(()->Unit)?,onNavigateBack:(()->Unit)?,
+    onBlackScreen:(()->Unit)?,
 ) {
     var expanded by remember(app.id()) {mutableStateOf(false)}
     var menuEpoch by remember(app.id()) {mutableIntStateOf(0)}
@@ -169,6 +171,11 @@ private fun PrivateAppOverflowControls(
                         action("Switch App",Icons.Default.SwapHoriz,callback=onSwitch)
                         action("Screenshot to Vault",Icons.Default.Screenshot,enabled,onScreenshot)
                         action("Browser Tools",Icons.Default.Build,callback=onBrowserTools)
+                        if(onBlackScreen!=null && app.appStyle()) {
+                            action("Black Screen Mode",Icons.Default.BrightnessLow,enabled,onBlackScreen)
+                            Text("Black-screen overlay. Double tap, Android Back or the accessibility Wake action restores NovaOS. The display stays on and still uses power.",
+                                Modifier.padding(horizontal=20.dp,vertical=4.dp),style=MaterialTheme.typography.bodySmall)
+                        }
                         action("Lock Space",Icons.Default.Lock,callback=onLockVault)
                         action("Panic Exit",Icons.Default.Security,callback=onPanic)
                     }

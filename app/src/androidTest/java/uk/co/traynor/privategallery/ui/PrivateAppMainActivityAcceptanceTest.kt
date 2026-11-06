@@ -62,11 +62,11 @@ class PrivateAppMainActivityAcceptanceTest {
         }}}.commit()
     }
 
-    private fun withFixture(test:(Fixture)->Unit) {
+    private fun withFixture(allowCapture:Boolean=false,test:(Fixture)->Unit) {
         val activity=compose.activity
         val state=ViewModelProvider(activity)[ProtectedSessionState::class.java]
         val settings=activity.getSharedPreferences("private-gallery-settings",0)
-        val names=listOf("browser-vpn-required","browser-vpn-auto-connect","browser-save-history","browser-clear-data-on-lock","auto-lock-timeout","hide-content")
+        val names=listOf("browser-vpn-required","browser-vpn-auto-connect","browser-save-history","browser-clear-data-on-lock","auto-lock-timeout","hide-content","allow-screenshots")
         val previous=names.associateWith {settings.all[it]}
         val beta=activity.getSharedPreferences("nova-browser-beta",0)
         val oldBeta=mapOf("notice-revision" to beta.all["notice-revision"])
@@ -81,6 +81,7 @@ class PrivateAppMainActivityAcceptanceTest {
                 invoke(activity,"applyClearBrowserDataOnLock",false)
                 invoke(activity,"applyAutoLockTimeout",AutoLockTimeout.MINUTES_5)
                 invoke(activity,"applyHideContent",false)
+                if(allowCapture)invoke(activity,"applyAllowScreenshots",true)
                 state.hidden.leave();state.key=key;state.session.unlock()
                 state.homePrimaryAuthentication=state.session.captureAuthenticationEpoch();state.homeVisible=false
                 route(activity).value=Route.VAULT
@@ -214,6 +215,109 @@ class PrivateAppMainActivityAcceptanceTest {
         assertTrue("Local fixture JavaScript callback",done.await(10,TimeUnit.SECONDS))
         return checkNotNull(value)
     }
+
+    @Test fun actualBlackScreenMenuKeepsPlayingWebViewBlocksTouchesAndWakesWithoutNavigation()=withFixture(allowCapture=true) {f ->
+        startBlackAudio(f)
+        val originalParent=compose.runOnIdle{f.view.parent}
+        val url=js(f.view,"location.href")
+        val brightness=compose.runOnIdle{compose.activity.window.attributes.screenBrightness}
+        compose.runOnIdle{compose.activity.window.attributes=compose.activity.window.attributes.apply{screenBrightness=.68f}}
+        try {
+            showBlack(f)
+            captureBlackWindow(f,"actual-main-playing")
+            val before=js(f.view,"document.getElementById('fixture-audio').currentTime").toDouble()
+            compose.waitUntil(10000){js(f.view,"!document.getElementById('fixture-audio').paused")=="true" && js(f.view,"document.getElementById('fixture-audio').currentTime").toDouble()>before}
+            blackTap(0)
+            compose.runOnIdle{assertTrue(compose.activity.novaBlackScreenActive)}
+            assertEquals("1",js(f.view,"window.fixtureClicks"))
+            assertEquals("true",js(f.view,"setTimeout(function(){window.blackAlertBefore=1;alert('Synthetic black screen prompt');window.blackAlertAfter=1;},0);true"))
+            compose.waitUntil(10000){js(f.view,"window.blackAlertAfter===1")=="true"}
+            assertEquals("true",js(f.view,"(function(){var field=document.createElement('input');field.id='synthetic-black-focus';document.body.appendChild(field);field.focus();window.focus();return true;})()"))
+            compose.waitForIdle()
+            compose.runOnIdle{assertTrue(checkNotNull(compose.activity.window.decorView.findViewWithTag<android.view.View>("nova-black-screen")).hasFocus())}
+            captureBlackWindow(f,"actual-main-after-script-focus")
+            compose.runOnIdle{assertTrue(compose.activity.novaBlackScreenActive);compose.activity.onBackPressedDispatcher.onBackPressed()}
+            compose.waitUntil(10000){!compose.activity.novaBlackScreenActive}
+            compose.runOnIdle{assertEquals(.68f,compose.activity.window.attributes.screenBrightness,0f)}
+            assertEquals(url,js(f.view,"location.href"));assertEquals("1",js(f.view,"window.fixtureClicks"))
+            showBlack(f);blackTap(0);blackTap(70)
+            compose.waitUntil(10000){!compose.activity.novaBlackScreenActive}
+            compose.runOnIdle{assertSame(f.view,f.owner.activeWebViewOrNull());assertSame(originalParent,f.view.parent);assertEquals(f.id,f.owner.tabs.activeTab.id);assertEquals(.68f,compose.activity.window.attributes.screenBrightness,0f)}
+            assertEquals("true",js(f.view,"window.fixtureStarted===true && !document.getElementById('fixture-audio').paused"))
+            assertEquals("1",js(f.view,"window.fixtureClicks"))
+        }finally{compose.runOnIdle{compose.activity.dismissNovaBlackScreen();compose.activity.window.attributes=compose.activity.window.attributes.apply{screenBrightness=brightness}}}
+    }
+    @Test fun actualBlackScreenHomeSwitchRetainsAudioAndPanicRevokesTheNextCover()=withFixture {f ->
+        startBlackAudio(f);showBlack(f)
+        val original=compose.runOnIdle{compose.activity.captureNovaBlackScreenAuthority(f.id,f.app,f.view)}
+        compose.runOnIdle{compose.activity.returnPrivateHome();assertFalse(compose.activity.novaBlackScreenActive);assertFalse(original())}
+        assertEquals("true",js(f.view,"!document.getElementById('fixture-audio').paused"))
+        compose.runOnIdle{
+            invoke(compose.activity,"launchHomeShortcut",HomeLayout.Shortcut.BROWSER)
+            f.owner.openRetainedPrivateApp(f.app)
+        }
+        compose.waitUntil(15000){compose.onAllNodesWithContentDescription("App menu").fetchSemanticsNodes().isNotEmpty()}
+        showBlack(f)
+        val before=compose.runOnIdle{checkNotNull(compose.activity.window.decorView.findViewWithTag<android.view.View>("nova-black-screen"))}
+        compose.runOnIdle{compose.activity.panicExit();assertFalse(compose.activity.novaBlackScreenActive)}
+        compose.waitUntil(10000){!ViewModelProvider(compose.activity)[ProtectedSessionState::class.java].session.isUnlocked}
+        compose.runOnIdle{before.performAccessibilityAction(android.view.accessibility.AccessibilityNodeInfo.ACTION_CLICK,null);assertFalse(compose.activity.novaBlackScreenActive);assertFalse(original())}
+    }
+    @Test fun actualBlackScreenAuthenticationExpiryCannotWakeOrRestoreARevokedPage()=withFixture {f ->
+        startBlackAudio(f);showBlack(f)
+        val original=compose.runOnIdle{compose.activity.captureNovaBlackScreenAuthority(f.id,f.app,f.view)}
+        val cover=compose.runOnIdle{checkNotNull(compose.activity.window.decorView.findViewWithTag<android.view.View>("nova-black-screen"))}
+        compose.runOnIdle{
+            ViewModelProvider(compose.activity)[ProtectedSessionState::class.java].session.lock()
+            compose.activity.refreshNovaBlackScreenAuthority()
+            assertFalse(compose.activity.novaBlackScreenActive);assertFalse(original())
+            cover.performAccessibilityAction(android.view.accessibility.AccessibilityNodeInfo.ACTION_CLICK,null)
+            assertFalse(ViewModelProvider(compose.activity)[ProtectedSessionState::class.java].session.isUnlocked)
+            assertFalse(compose.activity.requestNovaBlackScreen(original))
+        }
+        compose.onNodeWithTag("preview-home").assertDoesNotExist()
+    }
+    private fun startBlackAudio(f:Fixture) {
+        compose.onNodeWithTag("browser-v2-webview-host").performTouchInput{click(center)}
+        compose.waitUntil(15000){js(f.view,"window.fixtureStarted===true && !document.getElementById('fixture-audio').paused")=="true"}
+    }
+    private fun showBlack(f:Fixture) {
+        compose.onNodeWithContentDescription("App menu").performClick()
+        compose.onNodeWithText("Black Screen Mode").performScrollTo().performClick()
+        compose.waitUntil(15000){compose.runOnIdle{compose.activity.novaBlackScreenActive && compose.activity.window.decorView.hasWindowFocus()}}
+        compose.runOnIdle{assertSame(f.view,f.owner.activeWebViewOrNull());assertEquals(f.id,f.owner.tabs.activeTab.id);assertEquals(0f,compose.activity.window.attributes.screenBrightness,0f)}
+    }
+    private var blackTapBase=0L
+    private fun blackTap(offset:Long) {
+        compose.runOnIdle {
+            if(offset==0L)blackTapBase=android.os.SystemClock.uptimeMillis()
+            val down=blackTapBase+offset;val decor=compose.activity.window.decorView
+            for((action,at)in listOf(android.view.MotionEvent.ACTION_DOWN to down,android.view.MotionEvent.ACTION_UP to down+5)) {
+                val event=android.view.MotionEvent.obtain(down,at,action,decor.width/2f,decor.height/2f,0)
+                try{compose.activity.dispatchTouchEvent(event)}finally{event.recycle()}
+            }
+        }
+    }
+    private fun captureBlackWindow(f:Fixture,label:String) {
+        compose.waitUntil(10000){compose.runOnIdle{compose.activity.window.decorView.rootWindowInsets?.let{
+            !it.isVisible(android.view.WindowInsets.Type.statusBars()) && !it.isVisible(android.view.WindowInsets.Type.navigationBars()) && !it.isVisible(android.view.WindowInsets.Type.ime())}==true}}
+        val bitmap=compose.runOnIdle{
+            assertEquals(0,compose.activity.window.attributes.flags and android.view.WindowManager.LayoutParams.FLAG_SECURE)
+            android.graphics.Bitmap.createBitmap(compose.activity.window.decorView.width,compose.activity.window.decorView.height,android.graphics.Bitmap.Config.ARGB_8888)
+        }
+        try {
+            val gate=CountDownLatch(1);var status=-1
+            compose.runOnIdle{android.view.PixelCopy.request(compose.activity.window,bitmap,{status=it;gate.countDown()},android.os.Handler(android.os.Looper.getMainLooper()))}
+            assertTrue(gate.await(10,TimeUnit.SECONDS));assertEquals(android.view.PixelCopy.SUCCESS,status)
+            val pixels=IntArray(bitmap.width*bitmap.height);bitmap.getPixels(pixels,0,bitmap.width,0,0,bitmap.width,bitmap.height)
+            assertTrue("Actual Main window must be opaque pure black",pixels.all{it==android.graphics.Color.BLACK})
+            val additional=InstrumentationRegistry.getArguments().getString("additionalTestOutputDir")?:File(compose.activity.externalMediaDirs.first(),"additional_test_output").absolutePath
+            val output=File(additional,"nova-black61").apply{check(isDirectory||mkdirs())}
+            File(output,"$label.png").outputStream().use{assertTrue(bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG,100,it))}
+            File(output,"$label.json").writeText(org.json.JSONObject().put("synthetic",true).put("actualMain",true).put("sdk",android.os.Build.VERSION.SDK_INT).put("app",f.app.id()).put("tab",f.id).put("sameWebView",true).put("playing",js(f.view,"!document.getElementById('fixture-audio').paused")).put("pureBlack",true).put("brightness",0).put("width",bitmap.width).put("height",bitmap.height).toString(2))
+        }finally{bitmap.recycle()}
+    }
+
     private fun html():String {
         val rate=8_000;val data=rate*20*2
         val wav=ByteBuffer.allocate(44+data).order(ByteOrder.LITTLE_ENDIAN)
@@ -222,7 +326,8 @@ class PrivateAppMainActivityAcceptanceTest {
         wav.put("data".toByteArray());wav.putInt(data)
         return """<!doctype html><meta name="viewport" content="width=device-width,initial-scale=1">
             <style>html,body{margin:0;height:100%;width:100%}button{height:100%;width:100%;font:24px sans-serif}</style>
-            <button onclick="document.getElementById('fixture-audio').play().then(()=>window.fixtureStarted=true)">Play synthetic silent audio</button>
+            <script>window.fixtureClicks=0;</script>
+            <button onclick="window.fixtureClicks++;document.getElementById('fixture-audio').play().then(()=>window.fixtureStarted=true)">Play synthetic silent audio</button>
             <audio id="fixture-audio" loop preload="auto" src="data:audio/wav;base64,${Base64.getEncoder().encodeToString(wav.array())}"></audio>""".trimIndent()
     }
 }

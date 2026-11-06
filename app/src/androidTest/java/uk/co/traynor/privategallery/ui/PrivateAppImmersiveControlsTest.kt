@@ -1,6 +1,9 @@
 package uk.co.traynor.privategallery.ui
 
 import androidx.activity.ComponentActivity
+import androidx.compose.runtime.*
+import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.ui.Alignment
@@ -57,4 +60,30 @@ class PrivateAppImmersiveControlsTest {
             compose.onNodeWithText(it).performScrollTo().assertIsDisplayed()
         }
     }
+    @Test fun blackScreenActionClosesSheetAndOldActionCannotInheritRevokedAuthority() {
+        val saved=app();var current by mutableStateOf(true);var calls=0
+        compose.setContent {PrivateGalleryTheme {PrivateAppControls(saved,saved.startUrl(),"Primary Space",true,true,true,false,
+            {},{},{},{},{},{},{},immersive=true,current={current},onBlackScreen={calls++})}}
+        compose.onNodeWithContentDescription("App menu").performClick()
+        val item=compose.onNodeWithText("Black Screen Mode").performScrollTo()
+        val captured=item.fetchSemanticsNode().config[SemanticsActions.OnClick].action!!
+        compose.runOnIdle{current=false};compose.runOnIdle{captured();assertEquals(0,calls)}
+        compose.runOnIdle{current=true}
+        compose.onNodeWithContentDescription("App menu").performClick()
+        compose.onNodeWithText("Black Screen Mode").performScrollTo().performClick()
+        compose.runOnIdle{assertEquals(1,calls)}
+        compose.onNodeWithTag("private-app-menu-sheet").assertDoesNotExist()
+    }
+    @Test fun blackScreenIsAbsentOutsideImmersiveModeAndCannotRunWhileUnavailable() {
+        val saved=app();var immersive by mutableStateOf(false);var calls=0
+        compose.setContent {PrivateGalleryTheme {PrivateAppControls(saved,saved.startUrl(),"Primary Space",false,false,false,false,
+            {},{},{},{},{},{},{},immersive=immersive,onBlackScreen={calls++})}}
+        compose.onNodeWithText("Black Screen Mode").assertDoesNotExist()
+        compose.runOnIdle{immersive=true}
+        compose.onNodeWithContentDescription("App menu").performClick()
+        val disabled=compose.onNodeWithText("Black Screen Mode").performScrollTo().assertIsNotEnabled()
+        val action=disabled.fetchSemanticsNode().config.getOrNull(SemanticsActions.OnClick)?.action
+        compose.runOnIdle{action?.invoke();assertEquals(0,calls)}
+    }
+
 }

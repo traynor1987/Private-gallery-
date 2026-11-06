@@ -306,6 +306,9 @@ internal fun BrowserV2Home(
     val context = LocalContext.current
     val novaActivity=context.playerActivity() as? uk.co.traynor.privategallery.MainActivity
     val novaCovered=novaActivity?.primaryBrowserCoveredByNovaHome()==true
+    val blackScreenActive=novaActivity?.novaBlackScreenActive==true
+    DisposableEffect(novaActivity){onDispose{novaActivity?.dismissNovaBlackScreen()}}
+    SideEffect{novaActivity?.refreshNovaBlackScreenAuthority()}
     // Callback authority is read at dispatch, including the interval before Compose commits Home.
     fun novaInteractionBlocked():Boolean = novaActivity?.let{!it.primarySessionRetainedForNova() || it.primaryBrowserCoveredByNovaHome()} ?: false
     var privateApps by remember { mutableStateOf<uk.co.traynor.privategallery.core.privateapps.PrivateAppsController?>(null) }
@@ -528,7 +531,7 @@ internal fun BrowserV2Home(
 
     DisposableEffect(session) {
         session.bindListener(object : BrowserV2Session.Listener {
-            override fun allowWindowInteraction():Boolean = !novaInteractionBlocked() &&
+            override fun allowWindowInteraction():Boolean = novaActivity?.novaBlackScreenActive!=true && !novaInteractionBlocked() &&
                 videoLifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.RESUMED)
             override fun onSessionChanged() {
                 val tab=session.tabs.activeTab.id;val document=session.permissionDocumentRevision()
@@ -832,7 +835,11 @@ internal fun BrowserV2Home(
     val chromeSecurity=novaSecurityActions()
     val showBrowserChrome=PrivateAppPresentationPolicy.showBrowserChrome(appStyle,connectionPresentation.blocked,
         session.pageFailure(active.id)!=null,!staticContentHost && active.failure!=null)
+    LaunchedEffect(blackScreenActive,session.scriptDialog) {
+        if(blackScreenActive){cancelWebsitePermissions();session.scriptDialog?.let{session.resolveScriptDialog(it,null)}}
+    }
     val appControls: @Composable (Boolean)->Unit = { immersive ->
+        val blackAuthority=if(activePrivateApp!=null)novaActivity?.captureNovaBlackScreenAuthority(active.id,activePrivateApp,activeWebView)else null
         if(activePrivateApp!=null)PrivateAppControls(
                     app=activePrivateApp,url=if(pendingPrivateApp!=null)activePrivateApp.startUrl()else active.url,
                     mode=(context as? uk.co.traynor.privategallery.MainActivity)?.privateAppConnectionLabel() ?: "Primary Space",
@@ -848,6 +855,9 @@ internal fun BrowserV2Home(
                     onLockVault={(context as? uk.co.traynor.privategallery.MainActivity)?.privateAppLockVault()},
                     onQuickLock={(context as? uk.co.traynor.privategallery.MainActivity)?.panicExit()},
                     immersive=immersive,current={session.tabs.activeTab.id==active.id && !novaInteractionBlocked()},
+                    onBlackScreen=if(immersive && pendingPrivateApp==null && !connectionPresentation.blocked && activeWebView!=null && blackAuthority!=null)({
+                        if(!active.loading && blackAuthority())novaActivity?.requestNovaBlackScreen(blackAuthority)
+                    })else null,
                     onRecents={(context as? uk.co.traynor.privategallery.MainActivity)?.openNovaRecents()},
                     onNavigateBack={homeActivity?.onBackPressedDispatcher?.onBackPressed()},onOpenInBrowser={
                         if(!novaInteractionBlocked()) {
@@ -967,7 +977,7 @@ internal fun BrowserV2Home(
                 Icon(Icons.Default.FileDownload, "Save video to Vault", tint = Color.White)
             }
         }
-        if(!novaCovered) {
+        if(!novaCovered && !blackScreenActive) {
         if(ui.downloadBusy) androidx.compose.material3.AlertDialog(
             onDismissRequest={ui.downloadCancelled.set(true);ui.downloadBusy=false},
             title={Text("Saving to Vault")},

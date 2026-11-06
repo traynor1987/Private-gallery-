@@ -606,6 +606,35 @@ class MainActivity : FragmentActivity() {
         return super.onKeyUp(keyCode, event)
     }
     private var privacyCover: android.view.View? = null
+    private var novaBlackScreenController:uk.co.traynor.privategallery.ui.NovaBlackScreenController?=null
+    internal val novaBlackScreenActive:Boolean get()=novaBlackScreenController?.active==true
+    internal fun dismissNovaBlackScreen(){novaBlackScreenController?.dismiss()}
+    internal fun refreshNovaBlackScreenAuthority(){novaBlackScreenController?.refreshAuthority()}
+    internal fun requestNovaBlackScreen(current:()->Boolean):Boolean {
+        if(!activityResumed || !current())return false
+        val controller=novaBlackScreenController ?: uk.co.traynor.privategallery.ui.NovaBlackScreenController(this,onRevoked={
+            coverSensitiveContent();lockNovaSpace()
+        }).also{novaBlackScreenController=it}
+        return controller.request(current)
+    }
+    /** Presentation permission reuses the original Primary auth/app/tab/document and renderer. */
+    internal fun captureNovaBlackScreenAuthority(tabId:String,app:uk.co.traynor.privategallery.core.privateapps.PrivateAppCatalog.App,
+                                                view:android.webkit.WebView?):()->Boolean {
+        val owner=sessionKey
+        val authentication=session.captureAuthenticationEpoch()
+        val presentation=browserPresentationGeneration
+        val document=browserV2Session.permissionDocumentRevision()
+        return {
+            owner!=null && sessionKey===owner && session.isAuthenticationCurrent(authentication) &&
+                browserPresentationGeneration==presentation && primarySessionRetainedForNova() &&
+                !primaryBrowserCoveredByNovaHome() && route==Route.BROWSER && app.appStyle() && view!=null &&
+                browserV2Session.mediaNetworkingAllowed() && browserV2Session.tabs.activeTab.id==tabId &&
+                browserV2Session.privateApp(tabId)==app && browserV2Session.activeWebViewOrNull()===view &&
+                browserV2Session.permissionDocumentRevision()==document && browserV2Session.pageFailure(tabId)==null &&
+                browserV2Session.tabs.activeTab.failure==null && !browserV2Session.tabs.activeTab.loading
+        }
+    }
+
     private var activityResumed by mutableStateOf(false)
     private var panicCoverPending by mutableStateOf(false)
     private var panicUncoverScheduled = false
@@ -689,6 +718,7 @@ class MainActivity : FragmentActivity() {
     internal fun privacyCoverVisible(): Boolean = privacyCover?.visibility == android.view.View.VISIBLE
     internal val previewConcealmentEpoch: Int get() = retained.previewConcealmentEpoch
     private fun coverSensitiveContent() {
+        dismissNovaBlackScreen()
         if (!privacyCoverVisible()) retained.previewConcealmentEpoch++
         if(!privacyWindows.protect()) lock()
         privacyWindows.coverSecondaryWindows()
@@ -816,6 +846,7 @@ class MainActivity : FragmentActivity() {
         }
     }
     override fun onPause() {
+        dismissNovaBlackScreen()
         activityResumed = false
         browserV2Session.pauseForBackground()
         // Secure even during pause-only Recents/permission transitions; keep owned UI visible.
@@ -1494,6 +1525,7 @@ class MainActivity : FragmentActivity() {
     }
 
     override fun onDestroy() {
+        novaBlackScreenController?.close();novaBlackScreenController=null
         novaWallpaperRequest?.owner?.close();novaWallpaperRequest=null
         ownedPanicWindows.entries.toList().forEach {(window,binding)->if(window.callback===binding.callback)window.callback=binding.original}
         ownedPanicWindows.clear()
@@ -1645,6 +1677,7 @@ class MainActivity : FragmentActivity() {
     private fun lock() = lockPrimary(revokeHidden = true)
 
     private fun lockPrimary(revokeHidden: Boolean) {
+        dismissNovaBlackScreen()
         cancelPendingNovaPrivateApp()
         novaRecentsRequested=0
         novaCredentialsRequested=false
@@ -1900,6 +1933,7 @@ class MainActivity : FragmentActivity() {
     }
     internal fun openHomePreferences() {homeCustomisationRequested=true;returnPrivateHome()}
     internal fun returnPrivateHome() {
+        dismissNovaBlackScreen()
         if(!activityResumed)return
         cancelPendingNovaPrivateApp()
         val hidden=retained.hidden.selected
@@ -2039,6 +2073,7 @@ class MainActivity : FragmentActivity() {
     }
     /** Only the concealed Settings sequence may admit a locked Hidden entry. */
     internal fun openHiddenFromSettings(sequence:uk.co.traynor.privategallery.core.hidden.HiddenEntrySequence) {
+        dismissNovaBlackScreen()
         // Consume even a rejected dispatch so it cannot be replayed after navigation/authentication.
         val completed=sequence.consumeCompletion()
         if(!completed || !BuildConfig.HIDDEN_ENABLED || !activityResumed || hideContent ||
@@ -2054,6 +2089,7 @@ class MainActivity : FragmentActivity() {
         if(session.isUnlocked && sessionKey!=null)returnPrivateHome()
     }
     internal fun lockNovaSpace() {
+        dismissNovaBlackScreen()
         homeVisible=false;retained.homeFeatureRoot=null
         retained.clearNovaNavigation()
         if(retained.hidden.selected)retained.hidden.lock()else lock()
@@ -2416,6 +2452,7 @@ class MainActivity : FragmentActivity() {
     }
 
     private fun openNonBrowser(destination: Route) {
+        dismissNovaBlackScreen()
         revokePhoneTransfers()
         primaryCopyAccess?.close();primaryCopyAccess=null
         leaveBrowserIfOpen()
@@ -2786,6 +2823,7 @@ class MainActivity : FragmentActivity() {
     }
 
     private fun applyHideContent(hidden: Boolean) {
+        dismissNovaBlackScreen()
         if (hidden == hideContent) return
         cancelPendingNovaPrivateApp()
         novaRecentsRequested=0
