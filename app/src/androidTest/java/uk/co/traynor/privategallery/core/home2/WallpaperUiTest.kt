@@ -72,14 +72,23 @@ class WallpaperUiTest {
  private fun home(hidden:Boolean) {
   val f=Fixture(compose.activity,hidden).also{fixture=it}
   val access=f.access()
+  val ownerRequests=java.util.concurrent.atomic.AtomicInteger()
   var connected:PreviewData?=null
-  compose.setContent{if(attached)CompositionLocalProvider(LocalContext provides f.context){IntegratedHome(access,true,{}, {}, {},null,null,onThemeConnection={connected=it},wallpaperOwnerFactory=f::owner)}}
+  compose.setContent{if(attached)CompositionLocalProvider(LocalContext provides f.context){IntegratedHome(access,true,{}, {}, {},null,null,onThemeConnection={connected=it},wallpaperOwnerFactory={ownerRequests.incrementAndGet();f.owner()})}}
   compose.onNodeWithTag("app-wallpaper").performClick()
   compose.onNodeWithTag("wallpaper-editor").assertIsDisplayed()
   compose.onNodeWithText("Original Nova wallpapers").performScrollTo().assertIsDisplayed()
   compose.onNodeWithTag("choose-system-wallpaper").performScrollTo().assertIsDisplayed()
-  compose.onNodeWithTag("choose-vault-wallpaper").performScrollTo().performClick()
-  compose.waitUntil(10_000){compose.onAllNodesWithTag("wallpaper-vault-item-${f.source.id}").fetchSemanticsNodes().isNotEmpty()}
+  try {
+   compose.onNodeWithTag("choose-vault-wallpaper").performScrollTo().performClick()
+   compose.onNodeWithTag("wallpaper-vault-grid").assertIsDisplayed()
+   compose.waitUntil(10_000){compose.onAllNodesWithTag("wallpaper-vault-item-${f.source.id}").fetchSemanticsNodes().isNotEmpty()}
+  }catch(failure:Throwable) {
+   val roots=compose.onAllNodes(isRoot(),useUnmergedTree=true)
+   val hierarchy=(0 until roots.fetchSemanticsNodes().size).joinToString("\n"){roots[it].printToString()}
+   val sources=runCatching{f.access().use{sourceAccess->WallpaperCoordinator(f.context,sourceAccess).use{source->source.images().map{it.id}}}}
+   throw AssertionError("Authenticated Home wallpaper grid did not publish its existing source. hidden=$hidden ownerRequests=${ownerRequests.get()} sourceId=${f.source.id} freshSources=$sources\n$hierarchy",failure)
+  }
   compose.onNodeWithTag("wallpaper-vault-item-${f.source.id}").performClick()
   compose.waitUntil(10_000){compose.onAllNodesWithTag("wallpaper-zoom").fetchSemanticsNodes().isNotEmpty()}
   compose.onNodeWithTag("cancel-wallpaper").performScrollTo().performClick()
