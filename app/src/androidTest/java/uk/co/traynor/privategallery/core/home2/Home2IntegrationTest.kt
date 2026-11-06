@@ -341,8 +341,7 @@ class Home2IntegrationTest {
   compose.onNodeWithContentDescription("Open Nova Search").performClick()
   compose.onNodeWithTag("nova-search-input").performTextInput("Hidden");assertConcealed()
   Espresso.closeSoftKeyboard();Espresso.pressBack()
-  compose.onNodeWithContentDescription("Navigation alternatives").performClick()
-  compose.onNodeWithText("Recents").performClick()
+  compose.onNodeWithTag("nova-recents").performClick()
   compose.onNodeWithTag("nova-recents-screen").assertIsDisplayed();assertConcealed()
   compose.runOnIdle{assertEquals(0,switched)}
  }
