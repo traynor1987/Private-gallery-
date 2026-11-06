@@ -128,7 +128,7 @@ class BrowserV2Session(
     private val mediaProbing = mutableSetOf<String>()
     private val mediaProbeScope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO)
     private val runtimeProbes = mutableMapOf<WebView, BrowserRuntimeProbe>()
-    private val pendingWindowFocus = mutableSetOf<String>()
+    private val pendingWindowFocus = mutableMapOf<String, WebView>()
     private val presentationProbes = mutableMapOf<WebView, BrowserWebViewPresentationProbe>()
     /** Restored tabs are cold metadata until Browser becomes visible after unlock. */
     private val coldRestoreIds = linkedSetOf<String>()
@@ -220,6 +220,7 @@ class BrowserV2Session(
 
     fun pauseForBackground() {
         foreground = false
+        pendingWindowFocus.clear()
         cancelScriptDialog()
         exitFullscreen()
         webViews.values.forEach { it.evaluateJavascript(BrowserVideoAssistant.PAUSE, null); it.onPause() }
@@ -380,8 +381,20 @@ class BrowserV2Session(
 
     fun onActiveWebViewUpdated(view: WebView) {
         val activeId = tabs.activeTab.id
-        if (pendingWindowFocus.remove(activeId)) view.post {
-            if (windowInteractionAllowed(activeId) && webViews[activeId]===view && view.isAttachedToWindow) view.requestFocus()
+        if (pendingWindowFocus[activeId]===view) {
+            val request=Runnable {
+                if(pendingWindowFocus[activeId]!==view)return@Runnable
+                if(!windowInteractionAllowed(activeId) || webViews[activeId]!==view)pendingWindowFocus.remove(activeId)
+                else if(view.isAttachedToWindow && view.requestFocus())pendingWindowFocus.remove(activeId)
+            }
+            if(view.isAttachedToWindow)view.post(request)
+            else view.addOnAttachStateChangeListener(object:View.OnAttachStateChangeListener {
+                override fun onViewAttachedToWindow(attached:View) {
+                    attached.removeOnAttachStateChangeListener(this)
+                    attached.post(request)
+                }
+                override fun onViewDetachedFromWindow(detached:View) {}
+            })
         }
         if (!BuildConfig.ACCEPTANCE_BROWSER_DIAGNOSTICS) return
         androidViewUpdateCount++
@@ -717,6 +730,7 @@ class BrowserV2Session(
     }
 
     private fun destroy(view: WebView) {
+        pendingWindowFocus.entries.removeAll {it.value===view}
         webViews.entries.firstOrNull { it.value === view }?.key?.let(::cancelNavigationTimeout)
         runtimeProbes.remove(view)?.dispose()
         view.setOnTouchListener(null)
@@ -838,9 +852,10 @@ class BrowserV2Session(
     }
     override fun onWindowFocus(tabId: String) {
         if (!windowInteractionAllowed(tabId)) return
-        pendingWindowFocus += tabId
+        val view=webViews[tabId]?:return
+        pendingWindowFocus[tabId]=view
         select(tabId)
-        webViews[tabId]?.takeIf { it.isAttachedToWindow }?.let { pendingWindowFocus.remove(tabId); it.requestFocus() }
+        if(view.isAttachedToWindow && view.requestFocus())pendingWindowFocus.remove(tabId)
     }
     override fun onPermissionRequestCanceled(tabId: String, request: android.webkit.PermissionRequest) = listener.onPermissionRequestCanceled(request)
     private fun windowInteractionAllowed(tabId:String):Boolean =

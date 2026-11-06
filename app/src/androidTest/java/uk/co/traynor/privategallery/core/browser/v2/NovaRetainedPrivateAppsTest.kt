@@ -223,14 +223,23 @@ class NovaRetainedPrivateAppsTest {
             val original=owner.activeWebView();val id=owner.tabs.activeTab.id;val chrome=checkNotNull(original.webChromeClient)
             chrome.onRequestFocus(foreign)
             assertEquals(0,forwardedFocus);assertEquals(0,windowEvents)
+            fun pending():Map<*,*> = BrowserV2Session::class.java.getDeclaredField("pendingWindowFocus").apply {isAccessible=true}.get(owner) as Map<*,*>
+            owner.onWindowFocus(id)
+            assertSame("An unattached host retains focus only for its original renderer",original,pending()[id])
+            val replacement=checkNotNull(owner.retryActiveWebView())
+            assertTrue("Same-tab replacement cannot inherit the original renderer's ticket",pending().isEmpty())
+            owner.onWindowFocus(id);assertSame(replacement,pending()[id])
+            owner.pauseForBackground();assertTrue("Background retires outstanding native interaction",pending().isEmpty())
+            owner.resumeForeground();owner.onWindowFocus(id);assertSame(replacement,pending()[id])
             owner.destroyAll()
+            assertTrue("Lock/destroy retires every outstanding native interaction",pending().isEmpty())
             chrome.onRequestFocus(original)
             assertFalse(chrome.onCreateWindow(original,false,true,android.os.Message.obtain()))
             chrome.onCloseWindow(original)
             owner.onWindowFocus(id)
             assertNull(owner.onCreateWindow(id,false,true))
             assertEquals(0,forwardedFocus);assertEquals(0,windowEvents)
-            assertEquals("A queued destroyed-view callback must not construct a replacement",1,creations)
+            assertEquals("Queued destroyed-view callbacks cannot construct another renderer after the explicit retry",2,creations)
         } finally {foreign.destroy();owner.destroyAll()}
     }
 

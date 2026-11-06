@@ -117,6 +117,7 @@ class BrowserV2ModernWebTest {
             session.onWindowFocus(opener)
         }
         compose.waitForIdle()
+        compose.waitUntil(10_000) {compose.runOnIdle {original.isAttachedToWindow && original.hasFocus()}}
         compose.runOnIdle {
             assertEquals(opener, session.tabs.activeTab.id)
             assertEquals(2, session.tabs.tabs.size)

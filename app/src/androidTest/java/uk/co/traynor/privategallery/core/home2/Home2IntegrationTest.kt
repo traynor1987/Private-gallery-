@@ -14,7 +14,8 @@ import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.test.*
-import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.activity.ComponentActivity
+import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.test.espresso.Espresso
 import androidx.test.platform.app.InstrumentationRegistry
 import java.io.File
@@ -37,7 +38,7 @@ import uk.co.traynor.privategallery.home2.WidgetData
  * making network requests or granting the launcher a browser/session implementation.
  */
 class Home2IntegrationTest {
- @get:Rule val compose = createComposeRule()
+ @get:Rule val compose = createAndroidComposeRule<ComponentActivity>()
  private var fixture: SpaceFixture? = null
  private var attached by mutableStateOf(true)
  private var generation by mutableIntStateOf(0)
@@ -53,8 +54,7 @@ class Home2IntegrationTest {
    change.apply(catalog).also { catalog = it }
   }
  }
- private class SpaceFixture(val hidden: Boolean) : AutoCloseable {
-  private val base = InstrumentationRegistry.getInstrumentation().targetContext
+ private class SpaceFixture(val hidden: Boolean, private val base: Context) : AutoCloseable {
   private val root = File(base.cacheDir, "home2-integration-${UUID.randomUUID()}")
   val context: Context = object : ContextWrapper(base) {
    override fun getFilesDir() = File(root, "files").apply { mkdirs() }
@@ -76,7 +76,7 @@ class Home2IntegrationTest {
   override fun close() { access.close(); session.lock(); vaultKey.fill(0); root.deleteRecursively() }
  }
  private fun showHome(hidden: Boolean = false, records: List<PrivateAppCatalog.App> = emptyList()): SpaceFixture {
-  val f = SpaceFixture(hidden).also { fixture = it }
+  val f = SpaceFixture(hidden, compose.activity).also { fixture = it }
   val bridge = if (hidden) null else NativeAppBridge(MemoryAppStore(records), f.access::current,
    { appLaunches.add(it) }, {}, { browsedUrls.add(it) })
   compose.setContent {
@@ -91,9 +91,10 @@ class Home2IntegrationTest {
  }
  @After fun closeSpace() {
   if (fixture != null) {
-   compose.runOnIdle { attached = false }
-   compose.waitForIdle()
-   fixture?.close(); fixture = null
+   try {
+    compose.runOnIdle { attached = false }
+    compose.waitForIdle()
+   } finally { fixture?.close(); fixture = null }
   }
  }
  private fun openDrawer() {
@@ -202,7 +203,7 @@ class Home2IntegrationTest {
   compose.runOnIdle { assertEquals(listOf(slot), f.widgets()) }
  }
  @Test fun cover_inner_and_landscape_layouts_keep_the_clock_drawer_and_quick_panel_reachable() {
-  val f=SpaceFixture(false).also{fixture=it}
+  val f=SpaceFixture(false, compose.activity).also{fixture=it}
   var width by mutableIntStateOf(360)
   var height by mutableIntStateOf(720)
   val bridge=NativeAppBridge(MemoryAppStore(emptyList()),f.access::current,{}, {}, {})
@@ -227,7 +228,7 @@ class Home2IntegrationTest {
  }
 
  @Test fun owner_shortcut_names_survive_catalogue_refresh_and_reopening_without_changing_native_settings(){
-  val f=SpaceFixture(false).also{fixture=it}
+  val f=SpaceFixture(false, compose.activity).also{fixture=it}
   val original=PrivateAppCatalog.App("00000000-0000-4000-8000-000000000061","Native Original","https://example.test/","","standalone","",false,false,true)
   val store=MemoryAppStore(listOf(original));val bridge=NativeAppBridge(store,f.access::current,{},{},{})
   SpaceContext(f.context,f.access).use{context->
