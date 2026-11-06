@@ -2,6 +2,7 @@
 """One disposable API37 target, real force-stop boundaries, original raw transcripts."""
 from pathlib import Path
 import json,os,re,subprocess,sys,time,uuid
+from verify_release1711_gate import process_observations
 ROOT=Path(__file__).resolve().parents[1]
 PACKAGE='uk.co.traynor.privategallery.hiddenprototype'
 TEST=PACKAGE+'.test/androidx.test.runner.AndroidJUnitRunner'
@@ -29,8 +30,10 @@ for owner in ('primary','hidden'):
    try:
     deadline=time.monotonic()+40;ready=None
     while time.monotonic()<deadline:
-     text=prepare.read_text();match=re.search(r'^INSTRUMENTATION_STATUS: nova62_ready=(.+)$',text,re.M)
-     if match:ready=json.loads(match[1]);break
+     text=prepare.read_text();matches=process_observations(text,'nova62_ready')
+     if matches:
+      assert len(matches)==1,'Duplicate preparation observation'
+      ready=json.loads(matches[0]);break
      if child.poll() is not None:raise RuntimeError('Preparation exited before boundary: '+name+'\n'+text)
      time.sleep(.1)
     if ready is None:raise RuntimeError('Preparation boundary timed out: '+name)

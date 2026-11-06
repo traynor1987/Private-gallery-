@@ -15,6 +15,18 @@ def evidence():
  data['receipt.json']=json.dumps(dict(schema=1,source=source,token=token,phases=phases))
  return {k:v.encode() for k,v in data.items()}
 class RestartControls(unittest.TestCase):
+ def test_android_junit_class_prefix_on_status_line_is_real_output(self):
+  data=evidence();prefix=b'uk.co.traynor.privategallery.core.backup.BackupProcessRestartTest:'
+  for name in data:
+   if name.endswith(('-prepare.txt','-verify.txt')):data[name]=prefix+data[name]
+  self.assertEqual(8,gate.restart_cases(data,'1'*40))
+  # Retain exact-one-observation validation for class-prefixed output too.
+  name='primary-staging-prepare.txt';data[name]+=data[name]
+  with self.assertRaises(ValueError):gate.restart_cases(data,'1'*40)
+  data=evidence();name='primary-staging-prepare.txt';data[name]+=prefix+data[name]
+  with self.assertRaises(ValueError):gate.restart_cases(data,'1'*40)
+  data=evidence();data[name]=b'arbitrary-prefix:'+data[name]
+  with self.assertRaises(ValueError):gate.restart_cases(data,'1'*40)
  def test_complete_distinct_actual_process_phases_required(self):
   self.assertEqual(8,gate.restart_cases(evidence(),'1'*40))
   for mutation in ('missing','duplicate','failure','token','same-pid','not-killed','seed-passed','source'):
