@@ -51,6 +51,7 @@ class ArcadeUiTest {
    compose.runOnIdle{game=id;width=size.first;height=size.second}
    compose.onNodeWithTag(if(id=="2048")"tiles-board"else "$id-board").performScrollTo().assertIsDisplayed()
    when(id){"2048"->compose.onNodeWithContentDescription("Move left").performScrollTo().assertIsDisplayed();"sudoku"->compose.onNodeWithTag("sudoku-number-1").performScrollTo().assertIsDisplayed();else->compose.onNodeWithTag("snake-pause").performScrollTo().assertIsDisplayed()}
+   if(id=="sudoku"&&size.second==720){compose.onNodeWithTag("sudoku-board").performScrollTo();uk.co.traynor.privategallery.ReleaseScreenshots62.capture(compose.onRoot(),"arcade-sudoku-${size.first}")}
   };space.close()
  }
  @Test fun snakeLifecyclePauseDiscardsQueuedInputAndResumeIsExplicit(){

@@ -5,10 +5,10 @@ set -euo pipefail
 control_root=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 cd "${PRIVATE_GALLERY_1711_ROOT:-$control_root/..}"
 source "$control_root/release_configuration1711.sh"
-[[ "$baseline_code" == 60 && "$release_code" == 61 && "$baseline_sha" == f2727d75d142c2a733c53861e1a0f74440e0b6b5 ]]
-archived_baseline="${PRIVATE_GALLERY_1711_BASELINE_APK:?Exact archived signed 1.7.11.4 code60 APK required}"
+[[ "$baseline_code" == 61 && "$release_code" == 62 && "$baseline_sha" == 2da2895e387839ec37d0590dfb713dc1bec99853 ]]
+archived_baseline="${PRIVATE_GALLERY_1711_BASELINE_APK:?Exact archived signed 1.7.11.5 code61 APK required}"
 [[ -f "$archived_baseline" && -s "$archived_baseline" ]] || { echo 'Archived baseline APK unavailable' >&2; exit 1; }
-[[ "$(sha256sum "$archived_baseline" | cut -d ' ' -f 1)" == d21b9134409f24bd460368b36aea715de82b6e00d98a303f0bdd9c514b3f1f82 ]] || { echo 'Archived baseline APK hash mismatch' >&2; exit 1; }
+[[ "$(sha256sum "$archived_baseline" | cut -d ' ' -f 1)" == 90083faaeb8ebaa896451d9dc721c4d26ee170135b3a4e1aad126038bcd7ef3e ]] || { echo 'Archived baseline APK hash mismatch' >&2; exit 1; }
 readonly archived_baseline
 [[ "$(git rev-parse HEAD)" == "${FROZEN_SOURCE:?Exact tested source required}" ]]
 python3 "$control_root/verify_release1711_gate.py" --receipt "${PRIVATE_GALLERY_1711_GATE_RECEIPT:?Exact-source reviewed pre-signer gate required}" --source "$FROZEN_SOURCE"
@@ -25,7 +25,7 @@ if grep -Fxq "package:$fixture_package" <<< "$installed_packages"; then
   exit 1
 fi
 project_root=$(pwd)
-artifact_dir="${PRIVATE_GALLERY_1711_EVIDENCE_DIR:-$project_root/app/build/production-evidence/from60}"
+artifact_dir="${PRIVATE_GALLERY_1711_EVIDENCE_DIR:-$project_root/app/build/production-evidence/from61}"
 [[ ! -e "$artifact_dir" ]] || { echo "Fresh upgrade evidence directory required" >&2; exit 1; }
 mkdir -p "$artifact_dir"
 sdk="$ANDROID_HOME/build-tools/36.0.0"
@@ -33,7 +33,7 @@ candidate_apk="${PRIVATE_GALLERY_1711_CANDIDATE_APK:-$project_root/app/build/out
 test -s "$candidate_apk"
 # Verify immutable application identities before installing either application.
 for phase in baseline candidate; do
-  if [[ "$phase" == baseline ]]; then apk="$archived_baseline"; code=60; version=1.7.11.4; else apk="$candidate_apk"; code=61; version=1.7.11.5; fi
+  if [[ "$phase" == baseline ]]; then apk="$archived_baseline"; code=61; version=1.7.11.5; else apk="$candidate_apk"; code=62; version=1.7.11.6; fi
   "$sdk/aapt" dump badging "$apk" > "$artifact_dir/upgrade-$phase-package.txt"
   grep -Fq "package: name='$fixture_package' versionCode='$code' versionName='$version'" "$artifact_dir/upgrade-$phase-package.txt"
   grep -Fxq "sdkVersion:'37'" "$artifact_dir/upgrade-$phase-package.txt"
@@ -75,7 +75,7 @@ adb install "$instrumentation_apk"
 run_fixture() {
   local phase=$1 label=$2 restart=false
   if [[ "$label" == after-restart ]]; then restart=true; fi
-  adb shell am instrument -w -e restartCheck "$restart" -e baselineCode 60 -e candidateCode 61 -e class "uk.co.traynor.privategallery.upgrade.UpgradeFixtureTest#$phase" "$fixture_package.test/androidx.test.runner.AndroidJUnitRunner" | tee "$artifact_dir/upgrade-$label.txt"
+  adb shell am instrument -w -e restartCheck "$restart" -e baselineCode 61 -e candidateCode 62 -e class "uk.co.traynor.privategallery.upgrade.UpgradeFixtureTest#$phase" "$fixture_package.test/androidx.test.runner.AndroidJUnitRunner" | tee "$artifact_dir/upgrade-$label.txt"
   python3 - "$artifact_dir/upgrade-$label.txt" <<'PY'
 from pathlib import Path
 import re,sys
@@ -89,4 +89,4 @@ adb install -r "$candidate_apk"
 run_fixture verify verify
 adb shell am force-stop "$fixture_package"
 run_fixture verify after-restart
-printf '%s\n' 'PASS: original signed code60 -> code61 in-place upgrade/restart; all legacy encrypted data/configuration and additive owner-encrypted evidence preserved' > "$artifact_dir/upgrade-result.txt"
+printf '%s\n' 'PASS: original signed code61 -> code62 in-place upgrade/restart; all legacy encrypted data/configuration and additive owner-encrypted evidence preserved' > "$artifact_dir/upgrade-result.txt"

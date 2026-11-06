@@ -45,10 +45,16 @@ class CalculatorUiTest {
  @Test fun foldSizesLargeTextScientificAndStandardControlsRemainReachable(){
   val space=fixture();var width by mutableIntStateOf(360);var height by mutableIntStateOf(720)
   compose.setContent{if(attached)CompositionLocalProvider(LocalContext provides space){val density=LocalDensity.current;CompositionLocalProvider(LocalDensity provides Density(density.density,1.5f)){Box(Modifier.requiredSize(width.dp,height.dp)){CalculatorScreen(onHome={})}}}}
+  for(size in listOf(360 to 720,840 to 720)){
+   compose.runOnIdle{width=size.first;height=size.second}
+   compose.onNodeWithTag("calculator-expression").performScrollTo()
+   uk.co.traynor.privategallery.ReleaseScreenshots62.capture(compose.onRoot(),"calculator-standard-${size.first}")
+  }
   compose.onNodeWithText("Scientific").performScrollTo().performClick()
   for(size in listOf(360 to 720,840 to 720,840 to 360)){
    compose.runOnIdle{width=size.first;height=size.second}
    for(description in listOf("Sine","Square root","Factorial","Equals","Change sign","Delete last character"))compose.onNodeWithContentDescription(description).performScrollTo().assertIsDisplayed()
+   if(size.second==720){compose.onNodeWithTag("calculator-expression").performScrollTo();uk.co.traynor.privategallery.ReleaseScreenshots62.capture(compose.onRoot(),"calculator-scientific-${size.first}")}
   };space.close()
  }
  @Test fun longPressSequenceHasNeutralSemanticsNeverEvaluatesAndStaleCallbacksCannotAct(){

@@ -17,7 +17,7 @@ import uk.co.traynor.privategallery.core.privateapps.*
 import uk.co.traynor.privategallery.core.camera.CameraOptions
 import uk.co.traynor.privategallery.core.camera.VaultCaptureAccess
 
-/** Reviewed release-control instrumentation for original-key code60 -> code61 upgrade.
+/** Reviewed release-control instrumentation for original-key code61 -> code62 upgrade.
  * Captured and hash-checked before frozen application checkout; never modifies baseline app.
  */
 class UpgradeFixtureTest {
@@ -28,7 +28,7 @@ class UpgradeFixtureTest {
     private val candidateCode get() = checkNotNull(arguments.getString("candidateCode")).toInt()
     private fun guard() {
         check(context.packageName == "uk.co.traynor.privategallery.hiddenprototype")
-        check(baselineCode == 60 && candidateCode == 61)
+        check(baselineCode == 61 && candidateCode == 62)
     }
     private fun hash(bytes: ByteArray) = MessageDigest.getInstance("SHA-256").digest(bytes).joinToString("") { "%02x".format(it) }
     private fun encryptedHashes(): JSONObject = JSONObject().also { result ->
@@ -394,7 +394,7 @@ class UpgradeFixtureTest {
         } finally {hidden.lock();key.fill(0)}
     }
 
-    /** Compiles against the actual signed code60 model; verifies code61 migration without rewriting ciphertext. */
+    /** Compiles against the actual signed code61 model; verifies code62 migration without rewriting ciphertext. */
     private fun homePreferences(seed:Boolean) {
         val key=PinVaultKeyStore(context).unlock("738291".toCharArray())
         val hidden=hiddenSession(false)
@@ -428,7 +428,7 @@ class UpgradeFixtureTest {
         } finally {primary.close();secret.close();hidden.lock();key.fill(0)}
     }
 
-    /** Home2 code60 APIs seed real owner-encrypted records. Candidate reads are deliberately
+    /** Home2 code61 APIs seed real owner-encrypted records. Candidate reads are deliberately
      * raw: opening the UI model may perform an explicit theme migration, outside preservation.
      * All these ciphertext files remain inside the existing complete filesystem assertions.
      */
@@ -504,6 +504,35 @@ class UpgradeFixtureTest {
             }
         } finally {primary.close();secret.close();hidden.lock();key.fill(0)}
     }
+
+    // BEGIN NOVA62 PORTABLE APP FIXTURE: baseline61 SpaceContext APIs only.
+    private fun portableApps62(seed:Boolean) {
+        val key=PinVaultKeyStore(context).unlock("738291".toCharArray())
+        val hidden=hiddenSession(false);val identity=Any()
+        val primary=uk.co.traynor.privategallery.core.evidence.EvidenceAccess.primary(context,identity,{identity},{true},{key.copyOf()},Any())
+        val secret=uk.co.traynor.privategallery.core.evidence.EvidenceAccess.hidden(context,hidden){true}
+        val arcade=linkedMapOf<String,Any>(
+            "save:2048" to "TkFSAQEAAAAQAAAAAgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACAAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAAAAAAAtUzaWPu+6LwBAAAAEAAAAAIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHjd5uX9KfCS",
+            "save:sudoku" to "TkFSAQIAAAAAAAAAUQAAAAkAAAAAAAAAAAAAAAUAAAAGAAAAAwAAAAEAAAAHAAAAAAAAAAAAAAACAAAABwAAAAkAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABgAAAAAAAAAHAAAAAgAAAAAAAAAAAAAACAAAAAcAAAABAAAACAAAAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAJAAAAAwAAAAAAAAACAAAAAAAAAAcAAAAIAAAAAQAAAAYAAAAFAAAAAAAAAAcAAAAAAAAAAAAAAAQAAAADAAAAAAAAAAMAAAAEAAAABQAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQAAAAgAAAAJAAAAAAAAAAMAAAAFAAAABAAAAAgAAAAHAAAACQAAAAAAAAAAAAAAAAAAAAIAAAAAAAAAAAAAAFEAAAAJAAAACAAAAAQAAAAFAAAABgAAAAMAAAABAAAABwAAAAIAAAABAAAAAgAAAAcAAAAJAAAABAAAAAgAAAAFAAAABgAAAAMAAAAFAAAAAwAAAAYAAAABAAAABwAAAAIAAAAJAAAABAAAAAgAAAAHAAAAAQAAAAgAAAAEAAAAAwAAAAkAAAAGAAAAAgAAAAUAAAAEAAAACQAAAAMAAAAGAAAAAgAAAAUAAAAHAAAACAAAAAEAAAAGAAAABQAAAAIAAAAHAAAACAAAAAEAAAAEAAAAAwAAAAkAAAADAAAABAAAAAUAAAACAAAAAQAAAAYAAAAIAAAACQAAAAcAAAACAAAABgAAAAEAAAAIAAAACQAAAAcAAAADAAAABQAAAAQAAAAIAAAABwAAAAkAAAADAAAABQAAAAQAAAACAAAAAQAAAAYAAAAAAAAAAAAAAABRAAAACQAAAAAAAAAAAAAABQAAAAYAAAADAAAAAQAAAAcAAAAAAAAAAAAAAAIAAAAHAAAACQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAGAAAAAAAAAAcAAAACAAAAAAAAAAAAAAAIAAAABwAAAAEAAAAIAAAABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAkAAAADAAAAAAAAAAIAAAAAAAAABwAAAAgAAAABAAAABgAAAAUAAAAAAAAABwAAAAAAAAAAAAAABAAAAAMAAAAAAAAAAwAAAAQAAAAFAAAAAAAAAAEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABAAAACAAAAAkAAAAAAAAAAwAAAAUAAAAEAAAACAAAAAcAAAAJAAAAAAAAAAAAAAAAAAAAAgAAAAAAAAAAAAAAUQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
+            "save:snake" to "TkFSAQMAAAADAAAAiAAAAIcAAACGAAAAAAAAAAAAAABwAAAAAJ43ebl/SnxTAQA=",
+            "sound" to true,"haptics" to false,"speed" to 3)
+        val calculator=linkedMapOf<String,Any>("angle" to "DEG","scientific" to true,"history-enabled" to true,
+            "memory" to "0.3","history" to "AAAAAQAAAAEABzAuMSswLjIAAzAuMwA=")
+        try {
+            for(access in listOf(primary,secret))uk.co.traynor.privategallery.core.home2.SpaceContext(context,access).use {space->
+                for((namespace,expected) in listOf("nova_arcade_v1" to arcade,"nova_calculator_v1" to calculator)) {
+                    val preferences=space.getSharedPreferences(namespace,0)
+                    if(seed)assertTrue(preferences.edit().also{editor->expected.forEach{(name,value)->when(value){is String->editor.putString(name,value);is Boolean->editor.putBoolean(name,value);is Int->editor.putInt(name,value)}}}.commit())
+                    assertEquals("Future namespace bytes remain unchanged across real package upgrade",expected,preferences.all)
+                    if(!seed){
+                        val validator=Class.forName(if(namespace=="nova_arcade_v1")"uk.co.traynor.privategallery.core.arcade.ArcadePreferences" else "uk.co.traynor.privategallery.core.calculator.CalculatorPreferences")
+                        validator.getMethod("validate",Map::class.java).invoke(null,preferences.all)
+                    }
+                }
+            }
+        }finally{primary.close();secret.close();hidden.lock();key.fill(0)}
+    }
+    // END NOVA62 PORTABLE APP FIXTURE
 
     @Test fun seed() {
         guard(); check(!proof.exists())
@@ -583,10 +612,11 @@ class UpgradeFixtureTest {
             } finally {hidden.lock()}
             if(baselineCode>=36)repository.javaClass.getMethod("presentationSort",String::class.java).invoke(repository,"NAME")
             val seeded=JSONObject().put("primaryDeleted",primaryDeleted).put("hiddenDeleted",hiddenDeleted).put("primaryDates",dateSnapshot(repository)).put("hiddenDates",hiddenDates).put("hiddenMedia",hiddenMedia).put("hiddenCollection",hiddenCollection).put("hiddenFiles",hiddenHashes()).put("media",media).put("collection",collection.id).put("files",encryptedHashes())
-            // Code52 already has Evidence Locker and Home: seed before installing code61.
+            // Code52 already has Evidence Locker and Home: seed before installing code62.
             candidateEvidence(seeded,false,baselineSeed=true)
             homePreferences(seed=true)
             home2State(seeded,seed=true)
+            portableApps62(seed=true) // NOVA62 addition
             seeded.put("files",encryptedHashes()).put("hiddenFiles",hiddenHashes())
             proof.writeText(seeded.toString())
         } finally { key.fill(0) }
@@ -720,6 +750,7 @@ class UpgradeFixtureTest {
         } finally { key.fill(0) }
         homePreferences(seed=false)
         home2State(before,seed=false)
+        portableApps62(seed=false) // NOVA62 addition
         assertCiphertextAfterReads(before)
         if(baselineCode>=36&&!restarted) {
             // Every original ciphertext has just been checked after reads. Only now may

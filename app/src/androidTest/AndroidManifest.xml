@@ -7,5 +7,10 @@
       android:authorities="uk.co.traynor.privategallery.test.browser-selection-fixture"
       android:exported="true" android:grantUriPermissions="true"
       android:readPermission="uk.co.traynor.privategallery.test.READ_BROWSER_SELECTION" />
+    <provider android:name="uk.co.traynor.privategallery.core.backup.BackupDocumentsFixtureProvider"
+      android:authorities="uk.co.traynor.privategallery.test.backup-documents" android:exported="true"
+      android:grantUriPermissions="true" android:permission="android.permission.MANAGE_DOCUMENTS">
+      <intent-filter><action android:name="android.content.action.DOCUMENTS_PROVIDER" /></intent-filter>
+    </provider>
   </application>
 </manifest>

@@ -15,7 +15,7 @@ import zipfile
 
 ROOT=Path(__file__).resolve().parents[1]
 BRANCH='integration/novaos-1.7-home2'
-BASELINE='f2727d75d142c2a733c53861e1a0f74440e0b6b5'
+BASELINE='2da2895e387839ec37d0590dfb713dc1bec99853'
 CONTROLS=('compile_upgrade1711_fixture.sh','verify_compiled_upgrade1711.py',
           'verify_upgrade1711_baseline.py','verify_production_candidate1711.sh',
           'verify_synthetic_upgrade1711.sh','verify_signed_upgrade1711.py',
@@ -24,7 +24,8 @@ REQUIRED_STEPS={'Build isolated test identity and run JVM checks',
                 'Verify reused Home policies and encrypted adapter',
                 'Verify browser engine preservation and isolated APK',
                 'Focused Android 17 integration and privacy tests',
-                'Validate every selected original Android report'}
+                'Validate every selected original Android report',
+                'Validate actual Backup process restart evidence'}
 
 def sha(raw): return hashlib.sha256(raw).hexdigest()
 def require(ok,message):
@@ -34,6 +35,29 @@ def controls_digest(value): return sha(json.dumps(value,sort_keys=True,separator
 def source_ok(source): return isinstance(source,str) and re.fullmatch('[a-f0-9]{40}',source) is not None and source!='0'*40
 def digest_ok(value): return isinstance(value,str) and re.fullmatch('[a-f0-9]{64}',value) is not None and value!='0'*64
 
+def restart_cases(files,source):
+    proof=json.loads(files['receipt.json'])
+    require(proof.get('schema')==1 and proof.get('source')==source,'Restart evidence source differs')
+    token=proof.get('token');require(isinstance(token,str) and re.fullmatch('[a-f0-9]{32}',token),'Restart token invalid')
+    expected={owner+'-'+boundary for owner in ('primary','hidden') for boundary in ('staging','uncommitted','committed','verified')}
+    phases=proof.get('phases',[]);require(len(phases)==8 and {p.get('name') for p in phases}==expected,'Missing or duplicate restart phase')
+    require(set(files)=={'receipt.json'}|{name+suffix for name in expected for suffix in ('-prepare.txt','-verify.txt')},'Unexpected or missing restart evidence')
+    for phase in phases:
+        name=phase['name'];owner,boundary=name.split('-',1)
+        before=files[name+'-prepare.txt'].decode();after=files[name+'-verify.txt'].decode()
+        def observation(text,label):
+            rows=re.findall(r'^INSTRUMENTATION_STATUS: '+label+r'=(.+)$',text,re.M)
+            require(len(rows)==1,'Missing or duplicate process observation')
+            value=json.loads(rows[0]);require(value.get('token')==token and value.get('owner')==owner and value.get('boundary')==boundary,'Process phase identity differs')
+            return value
+        ready=observation(before,'nova62_ready');verified=observation(after,'nova62_verified')
+        require(type(ready.get('pid')) is int and ready['pid']>0 and phase.get('old_pid')==ready['pid'],'Original PID differs')
+        require(phase.get('kill_exit')==0 and phase.get('absent_after_kill') is True,'Process was not stopped')
+        require('OK (' not in before and 'shortMsg=Process crashed' in before,'Prepared process was not killed')
+        require(verified.get('oldPid')==ready['pid'] and type(verified.get('pid')) is int and verified['pid']>0 and verified['pid']!=ready['pid'],'Recovery did not use a new process')
+        require(after.count('OK (1 test)')==1 and 'INSTRUMENTATION_CODE: -1' in after and not any(x in after for x in ('FAILURES!!!','INSTRUMENTATION_FAILED','shortMsg=','FAILURE:')),'Recovery verification failed')
+    return len(phases)
+
 def runtime_cases(archive,matrix,source):
     expected={(cls,name) for cls,names in matrix.items() for name in names}
     require(expected and sum(len(names) for names in matrix.values())==len(expected),'Empty or duplicate reviewed runtime matrix')
@@ -42,6 +66,10 @@ def runtime_cases(archive,matrix,source):
         names=zipped.namelist();require(len(names)==len(set(names)),'Duplicate runtime archive members')
         sources=[name for name in names if name.endswith('home2-evidence/source-sha.txt')]
         require(len(sources)==1 and zipped.read(sources[0]).decode().strip()==source,'Runtime source differs')
+        restart_prefixes=[name[:-len('receipt.json')] for name in names if name.endswith('home2-evidence/backup-restart62/receipt.json')]
+        require(len(restart_prefixes)==1,'Missing original process restart evidence')
+        prefix=restart_prefixes[0]
+        restart_cases({name[len(prefix):]:zipped.read(name) for name in names if name.startswith(prefix) and not name.endswith('/')},source)
         for name in names:
             if 'outputs/androidTest-results/' not in name or not name.endswith('.xml'): continue
             for case in ET.fromstring(zipped.read(name)).iter('testcase'):
@@ -54,7 +82,7 @@ def runtime_cases(archive,matrix,source):
 
 def validate(marker,review,run,jobs,artifact,archive,matrix_raw,current_controls,fixture):
     source=marker.get('source');require(source_ok(source),'Unfrozen candidate source')
-    require(marker.get('baseline_source')==BASELINE and marker.get('baseline_code')==60 and marker.get('candidate_code')==61,'Wrong upgrade identity')
+    require(marker.get('baseline_source')==BASELINE and marker.get('baseline_code')==61 and marker.get('candidate_code')==62,'Wrong upgrade identity')
     require(marker.get('controls_sha256')==current_controls,'Release controls changed after review')
     require(marker.get('review_sha256')==sha(review),'Independent review changed')
     require(marker.get('fixture_sha256')==sha(fixture),'Upgrade fixture changed')
@@ -79,23 +107,28 @@ def validate(marker,review,run,jobs,artifact,archive,matrix_raw,current_controls
     require(REQUIRED_STEPS<=passed,'Required runtime/build/identity step did not run')
     count=runtime_cases(archive,json.loads(matrix_raw),source)
     return dict(schema=1,decision='READY_FOR_GATED_SIGNER',source=source,baseline_source=BASELINE,
-                baseline_code=60,candidate_code=61,test_run=marker['test_run'],test_artifact=marker['test_artifact'],review_sha256=sha(review),
+                baseline_code=61,candidate_code=62,test_run=marker['test_run'],test_artifact=marker['test_artifact'],review_sha256=sha(review),
                 fixture_sha256=sha(fixture),controls_sha256=current_controls,matrix_sha256=sha(matrix_raw),
-                runtime_archive_sha256=marker['runtime_archive_sha256'],validated_case_count=count)
+                runtime_archive_sha256=marker['runtime_archive_sha256'],validated_case_count=count,validated_restart_count=8)
 
 def check_receipt(proof,source,current_controls,fixture):
     require(source_ok(source) and proof.get('schema')==1 and proof.get('decision')=='READY_FOR_GATED_SIGNER','Missing reviewed signer gate')
-    require(proof.get('source')==source and proof.get('baseline_source')==BASELINE and proof.get('baseline_code')==60 and proof.get('candidate_code')==61,'Signer gate source/identity differs')
+    require(proof.get('source')==source and proof.get('baseline_source')==BASELINE and proof.get('baseline_code')==61 and proof.get('candidate_code')==62,'Signer gate source/identity differs')
     require(proof.get('controls_sha256')==current_controls and proof.get('fixture_sha256')==sha(fixture),'Signer gate controls/fixture differ')
     require(type(proof.get('test_run')) is int and proof['test_run']>0 and type(proof.get('validated_case_count')) is int and proof['validated_case_count']>0,'Missing original runtime accounting')
+    require(proof.get('validated_restart_count')==8,'Missing actual restart phase accounting')
     require(type(proof.get('test_artifact')) is int and proof['test_artifact']>0,'Missing original runtime artifact')
     for field in ('review_sha256','matrix_sha256','runtime_archive_sha256'): require(digest_ok(proof.get(field)),'Missing signer evidence '+field)
 
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--receipt',type=Path);parser.add_argument('--source')
+    parser.add_argument('--receipt',type=Path);parser.add_argument('--source');parser.add_argument('--restart-folder',type=Path)
     for name in ('marker','review','run','jobs','artifact','runtime-archive','matrix','output'):parser.add_argument('--'+name,type=Path)
     args=parser.parse_args();fixture=(ROOT/'docs/release1711/UpgradeFixtureTest.kt').read_bytes();current=controls()
+    if args.restart_folder:
+        require(source_ok(args.source),'Exact runtime source required')
+        count=restart_cases({p.name:p.read_bytes() for p in args.restart_folder.iterdir() if p.is_file()},args.source)
+        print('PASS: '+str(count)+' original killed-process recovery phases');return
     if args.receipt:
         check_receipt(json.loads(args.receipt.read_bytes()),args.source,current,fixture)
         print('PASS: exact-source pre-signer approval receipt; production upgrade remains unverified');return

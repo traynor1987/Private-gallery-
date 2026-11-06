@@ -17,7 +17,7 @@ Ruling: Execute detailed owner scope without further design permission — owner
 - [x] Recovery baseline and isolated worktree
 - [x] A backup implemented/reviewed/pushed
 - [x] B arcade implemented/reviewed/pushed
-- [ ] C calculator implemented/reviewed/pushed
+- [x] C calculator implemented/reviewed/pushed
 - [ ] Consolidated API37 verification
 - [ ] Independent final security review
 - [ ] Original-key upgrade and release
@@ -60,3 +60,20 @@ Round1 evidence: arithmetic `/tmp/nova62-calculator-r1-underflow-red.log`, actua
 
 
 Task3 fix round1 final verification: actual CalculatorData sign/double-toggle and SpaceContext/VaultCipher Backup rejection/preservation host tests **passed**, `/tmp/nova62-calculator-r1-model-green.log`. Frozen focused Gradle **BUILD SUCCESSFUL in 2m2s**, JVM **14/0 across3classes** (Calculator7, throttle3, portable schema4); application/instrumentation Kotlin/Java compilation passed, `/tmp/nova62-calculator-r1-frozen-build.log`. Source/staged whitespace checks pass. I1/I2, including the root-authorized DEG conversion guard, are ready for scoped independent re-review. Native execution remains unperformed; root owns review, push and final release gates.
+
+
+## Task 3 settled and Task 4 release preparation — 2026-11-06
+
+Task3 is reviewed and pushed at `8470eb501709c7a75ba3ef6c025f9378d055301c`, tree-identical to reviewed local `2be3ecd4`; scoped review `/tmp/nova62-calculator-r1-review.md` accepts I1/I2 and the DEG underflow guard. A (`f6e1b82d`), B (`69b44c8c`) and C (`8470eb50`) are all reviewed/pushed. Historical pending entries above record their then-current state.
+
+Task4 sole writer began from clean8470eb50. Root rechecked remote release history20:34 UTC: signed1.7.11.5/code61 remained latest, no62. Candidate assigned1.7.11.6/code62, unchanged production package/API37/permanent certificate. Existing release controls now pin immutable signed61 and prepare61→62. No signing marker or prior approval was activated.
+
+Final feature review Part1 `/tmp/nova62-final-feature-review.md` found Important I1 wallpaper import bounds and Minor M1 schedule checkbox hydration. Both are repaired in this release-preparation delta; independent Part2 acceptance remains pending. Android decoder bounds reject malformed/oversize normalized wallpaper before staging; defensive sampled rendering bounds legacy image allocation. M1 hydrates saved controls and preserves selected conditions across the system picker. Minor M2 Arcade engine formatting is deferred: correctness tests and independent functional review are clean; a broad style-only rewrite would enlarge the security/release review without changing requested behavior.
+
+Ruling: due checks alone did not fulfill optional automatic scheduling. This delta completes explicit opt-in Primary automatic local backup: owner-selected persisted SAF folder, acknowledged generated recovery key, encrypted per-Space schedule material excluded from portable archives, eligible foreground unlocked Home execution, daily/weekly charging/Wi-Fi constraints, verified actual destination/history, single inflight worker and bounded retries. Locked sessions need unlock; no Hidden automatic authority or authentication lifetime extension. Evidence Locker remains an explicit unsupported portable category under the owner's allowed unsupported-category exception; audit lineage is not bypassed.
+
+Ruling: one final whole-branch review is split across immutable feature641cd9c6→8470eb50 and the complete8470eb50→release-preparation delta to overlap reading. Every changed file still receives review; exact final-source signing approval follows original CI evidence. Full-range checks mitigate omitted-delta risk. Root owns final review, the one consolidated runtime job and any subsequent original-key activation.
+
+Task4 preparation includes all196 original runtime cases plus focused native additions (252 total/54classes), eight separate genuine killed-process phases, synthetic screenshots in the existing artifact, host Arcade/Calculator/scheduler checks, narrow six-Vault-file/one-broker preservation allowances, and baseline-compatible app seeds. APK/instrumentation build and focused local checks are recorded in `NOVA62_RELEASE_PREP_REPORT.md`. Android execution, physical Fold acceptance, original-key upgrade and release are pending; no mandatory security check is waived.
+
+Task4 preparation completed and locally verified: targeted Backup JVM29/0, control/capture16/0, Arcade126/0, Calculator89/0, automatic policy12/0, Home/encrypted adapter host checks, exact preservation gate, debug APK identity, immutable signed61 archive/signature readback and final app/instrumentation builds pass. Last instrumentation build1m4. Ready for immutable Part2 review and root-owned consolidated runtime; writer authority returned after this preparation commit. No native/production acceptance claimed.

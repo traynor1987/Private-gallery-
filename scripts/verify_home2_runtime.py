@@ -3,6 +3,22 @@ from pathlib import Path
 import re, sys, xml.etree.ElementTree as ET, json
 root=Path(__file__).resolve().parents[1]
 classes=[
+ 'uk.co.traynor.privategallery.core.backup.BackupRuntimeTest',
+ 'uk.co.traynor.privategallery.core.backup.AutomaticBackupRuntime62Test',
+ 'uk.co.traynor.privategallery.core.backup.BackupWallpaperBounds62Test',
+ 'uk.co.traynor.privategallery.core.backup.BackupUiTest',
+ 'uk.co.traynor.privategallery.core.backup.BackupSafRuntimeTest',
+ 'uk.co.traynor.privategallery.core.backup.BackupScheduleRuntimeTest',
+ 'uk.co.traynor.privategallery.core.backup.BackupAppsRoundtrip62Test',
+ 'uk.co.traynor.privategallery.core.backup.BackupUi62Test',
+ 'uk.co.traynor.privategallery.core.backup.BackupDocumentsUiTest',
+ 'uk.co.traynor.privategallery.core.vault.VaultPresentationStoreTest',
+ 'uk.co.traynor.privategallery.core.arcade.ArcadePersistenceTest',
+ 'uk.co.traynor.privategallery.home2.ArcadeUiTest',
+ 'uk.co.traynor.privategallery.core.calculator.CalculatorPersistenceTest',
+ 'uk.co.traynor.privategallery.core.hidden.HiddenCalculatorSecurityTest',
+ 'uk.co.traynor.privategallery.home2.CalculatorUiTest',
+ 'uk.co.traynor.privategallery.CalculatorMainSecurity62Test',
  'uk.co.traynor.privategallery.core.home2.SpacePreferencesTest',
  'uk.co.traynor.privategallery.core.home2.WallpaperStoreTest',
  'uk.co.traynor.privategallery.core.home2.WallpaperUiTest',

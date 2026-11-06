@@ -1,0 +1,70 @@
+package uk.co.traynor.privategallery.core.backup
+
+import android.net.Uri
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.LocalActivityResultRegistryOwner
+import androidx.activity.result.ActivityResultRegistry
+import androidx.activity.result.ActivityResultRegistryOwner
+import androidx.activity.result.contract.ActivityResultContract
+import androidx.core.app.ActivityOptionsCompat
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.runtime.*
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.test.*
+import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.lifecycle.Lifecycle
+import org.junit.Assert.*
+import org.junit.Rule
+import org.junit.Test
+import java.util.concurrent.atomic.AtomicBoolean
+import uk.co.traynor.privategallery.core.evidence.*
+import uk.co.traynor.privategallery.core.home2.WallpaperOwner
+import uk.co.traynor.privategallery.home2.BackupHost
+import uk.co.traynor.privategallery.ReleaseScreenshots62
+
+class BackupUi62Test {
+ @get:Rule val compose=createAndroidComposeRule<ComponentActivity>()
+ private class Picker:ActivityResultRegistry(){var request=0;override fun<I,O>onLaunch(requestCode:Int,contract:ActivityResultContract<I,O>,input:I,options:ActivityOptionsCompat?){request=requestCode};fun deliver(uri:Uri?){check(dispatchResult(request,uri))}}
+ private fun fixture(hidden:Boolean=false,action:(BackupFixture62,Picker,AtomicBoolean)->Unit){
+  val root=BackupFixture62.temporary("backup-ui62");val f=BackupFixture62(root,hidden);val live=AtomicBoolean(true);val auth=f.session.authentication();val picker=Picker();var attached by mutableStateOf(true)
+  val owner=WallpaperOwner(if(hidden)EvidenceCatalog.Owner.HIDDEN else EvidenceCatalog.Owner.PRIMARY,{live.get()&&(!hidden||f.session.isAuthenticationCurrent(auth))},{if(hidden)EvidenceAccess.hidden(f.context,f.session){live.get()}else EvidenceAccess.primary(f.context,f.key,{f.key},{live.get()},{f.key.copyOf()},Any())})
+  try{compose.setContent{if(attached)CompositionLocalProvider(LocalContext provides f.context,LocalActivityResultRegistryOwner provides object:ActivityResultRegistryOwner{override val activityResultRegistry=picker}){MaterialTheme{BackupHost(owner,true,onClose={attached=false})}}}
+   compose.waitUntil(10000){compose.onAllNodesWithTag("nova-backup").fetchSemanticsNodes().isNotEmpty()};action(f,picker,live)
+  }finally{compose.runOnIdle{attached=false;live.set(false)};f.close();root.deleteRecursively()}
+ }
+ @Test fun primaryScheduleHydratesPersistedCheckboxesAndHasNoHiddenDisclosure() {
+  val prefs=compose.activity.getSharedPreferences("nova-backup-due",0);val charging=prefs.getBoolean("charging",true);val wifi=prefs.getBoolean("wifi",true)
+  try{prefs.edit().putBoolean("charging",false).putBoolean("wifi",true).commit()
+   fixture{_,_,_->compose.onNodeWithTag("backup-charging").performScrollTo().assertIsOff();compose.onNodeWithTag("backup-wifi").performScrollTo().assertIsOn();compose.onAllNodes(hasText("Hidden",substring=true,ignoreCase=true)).assertCountEquals(0)
+    compose.onNodeWithText("Nova Backup").performScrollTo();ReleaseScreenshots62.capture(compose.onNodeWithTag("nova-backup"),"primary-backup")
+   }
+  }finally{prefs.edit().putBoolean("charging",charging).putBoolean("wifi",wifi).commit()}
+ }
+ @Test fun authenticatedHiddenHasNoScheduleControls()=fixture(true){_,_,_->compose.onNodeWithTag("backup-charging").assertDoesNotExist();compose.onAllNodesWithText("Scheduled due checks").assertCountEquals(0)}
+ @Test fun primaryRetirementDuringPickerRejectsLateAndDuplicateResult()=fixture{_,picker,live->
+  compose.onNodeWithText("Create backup").performScrollTo().performClick();compose.activityRule.scenario.moveToState(Lifecycle.State.CREATED)
+  compose.runOnIdle{live.set(false);picker.deliver(Uri.parse("content://invalid/stale"));picker.deliver(Uri.parse("content://invalid/duplicate"))}
+  compose.activityRule.scenario.moveToState(Lifecycle.State.RESUMED);compose.waitUntil(5000){compose.onAllNodesWithTag("nova-backup").fetchSemanticsNodes().isEmpty()};compose.onAllNodesWithText("I saved the recovery key").assertCountEquals(0)
+ }
+ @Test fun cancelledPickerAndLateDuplicateDoNotInstallARecoveryInput()=fixture{_,picker,_->
+  compose.onNodeWithText("Create backup").performScrollTo().performClick();compose.runOnIdle{picker.deliver(null)};compose.waitForIdle();compose.runOnIdle{picker.deliver(Uri.parse("content://invalid/late"))};compose.waitForIdle();compose.onAllNodesWithText("I saved the recovery key").assertCountEquals(0)
+ }
+ private fun recreate(phase:String)=fixture{f,picker,_->
+  val uri=BackupDocuments62.create();val key="synthetic preview key"
+  try{
+   if(phase=="preview")f.coordinator.export(SafBackupProvider(f.context,uri,f.access),key.toCharArray())
+   compose.onNodeWithText(if(phase=="preview")"Restore"else "Create backup").performScrollTo().performClick()
+   if(phase!="picker"){
+    compose.runOnIdle{picker.deliver(uri)}
+    if(phase=="preview"){
+     compose.waitUntil(10000){compose.onAllNodesWithText("Recovery key").fetchSemanticsNodes().isNotEmpty()};compose.onNode(hasSetTextAction()).performScrollTo().performTextInput(key);compose.onNodeWithText("Validate and preview").performScrollTo().performClick()
+     compose.waitUntil(15000){compose.onAllNodes(hasText("Restore preview",substring=true)).fetchSemanticsNodes().isNotEmpty()};compose.onAllNodes(hasText("Hidden",substring=true,ignoreCase=true)).assertCountEquals(0)
+    }else compose.waitUntil(10000){compose.onAllNodesWithText("I saved the recovery key").fetchSemanticsNodes().isNotEmpty()}
+   }
+   compose.activityRule.scenario.recreate();compose.waitForIdle();compose.onAllNodesWithTag("nova-backup").assertCountEquals(0);compose.onAllNodesWithText(key).assertCountEquals(0)
+  }finally{BackupDocuments62.delete(uri)}
+ }
+ @Test fun pendingPickerDoesNotSurviveActualActivityRecreation()=recreate("picker")
+ @Test fun recoveryInputDoesNotSurviveActualActivityRecreation()=recreate("recovery")
+ @Test fun authenticatedPreviewDoesNotSurviveActualActivityRecreation()=recreate("preview")
+}

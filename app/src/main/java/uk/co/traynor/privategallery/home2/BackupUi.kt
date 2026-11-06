@@ -22,7 +22,7 @@ import uk.co.traynor.privategallery.core.backup.*
 import uk.co.traynor.privategallery.core.crypto.RecoveryKey
 import uk.co.traynor.privategallery.core.home2.WallpaperOwner
 
-private class BackupPickerTicket(val restore:Boolean){var delivered=false;var uri:Uri?=null}
+private class BackupPickerTicket(val restore:Boolean,val tree:Boolean=false){var delivered=false;var uri:Uri?=null}
 
 /** Pending SAF requests retain only a ticket and URI. Fresh same-auth authority is acquired on resume. */
 @Composable internal fun BackupHost(owner:WallpaperOwner,visible:Boolean,onClose:()->Unit,onSettingsRestored:()->Unit={}){
@@ -34,6 +34,9 @@ private class BackupPickerTicket(val restore:Boolean){var delivered=false;var ur
  var pending by remember(owner){mutableStateOf<BackupPickerTicket?>(null)}
  var delivered by remember(owner){mutableStateOf<BackupPickerTicket?>(null)}
  var selected by remember(owner){mutableStateOf<Uri?>(null)}
+ var automaticTree by remember(owner){mutableStateOf<Uri?>(null)}
+ var automaticArmed by remember(owner){mutableStateOf(false)}
+ var automaticDays by remember(owner){mutableIntStateOf(1)}
  var restoring by remember(owner){mutableStateOf(false)}
  var recovery by remember(owner){mutableStateOf("")}
  var saved by remember(owner){mutableStateOf(false)}
@@ -48,7 +51,7 @@ private class BackupPickerTicket(val restore:Boolean){var delivered=false;var ur
  var wifi by remember(owner){mutableStateOf(true)}
  var schedule by remember(owner){mutableStateOf("")}
  val closeCallback by rememberUpdatedState(onClose)
- fun retire(){job?.cancel();job=null;plan?.close();plan=null;active?.close();active=null;recovery="";selected=null;saved=false;message=null;history="";busy=false}
+ fun retire(){job?.cancel();job=null;plan?.close();plan=null;active?.close();active=null;recovery="";selected=null;automaticTree=null;saved=false;message=null;history="";busy=false}
  fun dismiss(){retire();pending=null;delivered=null;owner.close();closeCallback()}
  fun operation(secret:CharArray?=null,block:suspend (BackupCoordinator)->String){
   val captured=active?:return;if(busy)return;busy=true;message=null
@@ -59,8 +62,9 @@ private class BackupPickerTicket(val restore:Boolean){var delivered=false;var ur
   }
   job?.invokeOnCompletion{secret?.fill('\u0000')}
  }
- val create=rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/octet-stream")){uri->pending?.takeIf{!it.delivered&&!it.restore}?.let{it.delivered=true;it.uri=uri;delivered=it}}
- val open=rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()){uri->pending?.takeIf{!it.delivered&&it.restore}?.let{it.delivered=true;it.uri=uri;delivered=it}}
+ val create=rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/octet-stream")){uri->pending?.takeIf{!it.delivered&&!it.restore&&!it.tree}?.let{it.delivered=true;it.uri=uri;delivered=it}}
+ val open=rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()){uri->pending?.takeIf{!it.delivered&&it.restore&&!it.tree}?.let{it.delivered=true;it.uri=uri;delivered=it}}
+ val tree=rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()){uri->pending?.takeIf{!it.delivered&&it.tree}?.let{it.delivered=true;it.uri=uri;delivered=it}}
  DisposableEffect(owner,lifecycle){
   val observer=androidx.lifecycle.LifecycleEventObserver{_,event->
    if(event==androidx.lifecycle.Lifecycle.Event.ON_RESUME)resumed=true
@@ -81,9 +85,20 @@ private class BackupPickerTicket(val restore:Boolean){var delivered=false;var ur
   retire();val coordinator=runCatching{owner.openBackup(context)}.getOrNull()?:run{dismiss();return@LaunchedEffect};active=coordinator
   try {val values=withContext(Dispatchers.IO){coordinator.history() to coordinator.storageBytes()};coordinator.access.publishIfCurrent{history=values.first;storage=values.second}}
   catch(_:Exception){message="Encrypted storage could not be read. Existing data is preserved."}
-  if(coordinator.owner=="primary")schedule=BackupSchedule.status(context)
+  if(coordinator.owner=="primary"){
+   val preferences=context.getSharedPreferences("nova-backup-due",0)
+   if(delivered==null){
+    charging=preferences.getBoolean("charging",true);wifi=preferences.getBoolean("wifi",true)
+    automaticDays=preferences.getInt("days",1).takeIf{it==1||it==7}?:1
+   }
+   automaticArmed=runCatching{AutomaticBackupSettings.armed(coordinator.space)}.getOrDefault(false)
+   schedule=BackupSchedule.status(context)
+  }
   val ticket=delivered;pending=null;delivered=null
-  if(ticket?.uri!=null){selected=ticket.uri;restoring=ticket.restore;if(!restoring){val key=RecoveryKey.generate();try{recovery=key.concatToString()}finally{key.fill('\u0000')}}}
+  if(ticket?.uri!=null){
+   if(ticket.tree)automaticTree=ticket.uri else {selected=ticket.uri;restoring=ticket.restore}
+   if(!ticket.restore){val key=RecoveryKey.generate();try{recovery=key.concatToString()}finally{key.fill('\u0000')}}
+  }
  }
  if(!visible||!resumed||active==null)return
  val coordinator=active!!
@@ -123,10 +138,28 @@ private class BackupPickerTicket(val restore:Boolean){var delivered=false;var ur
      OutlinedButton(enabled=!busy&&candidate.settings>0,onClick={confirmSettings=true}){Text("Replace supported settings…")}
     }
     if(coordinator.owner=="primary"){
-     HorizontalDivider();Text("Scheduled due checks",style=MaterialTheme.typography.titleMedium)
-     Text("$schedule\nSensitive backups require an unlocked foreground session and your recovery key. No automatic archive is created while locked.")
-     Row{Checkbox(charging,{charging=it},enabled=!busy);Text("Only while charging")};Row{Checkbox(wifi,{wifi=it},enabled=!busy);Text("Only on Wi-Fi")}
-     Row{listOf("Off" to 0,"Daily" to 1,"Weekly" to 7).forEach{(label,days)->TextButton(enabled=!busy,onClick={runCatching{BackupSchedule.configure(context,days,charging,wifi)}.onSuccess{schedule=BackupSchedule.status(context)}.onFailure{message="Android could not save the schedule."}}){Text(label)}}}
+     HorizontalDivider();Text("Automatic local backup",style=MaterialTheme.typography.titleMedium)
+     Text(if(automaticArmed)"$schedule\nEnabled for this Space. A due backup runs automatically when Home is foreground, this Space is unlocked, and the chosen conditions are met. Lock, Panic or background cancels active work. No archive is created while locked." else "Off until you choose a folder and save its recovery key. The key and folder are kept encrypted in this Space for automatic use; they are excluded from portable backups.")
+     Row{Checkbox(charging,{charging=it},enabled=!busy,modifier=Modifier.testTag("backup-charging"));Text("Only while charging")};Row{Checkbox(wifi,{wifi=it},enabled=!busy,modifier=Modifier.testTag("backup-wifi"));Text("Only on Wi-Fi")}
+     Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){listOf("Daily" to 1,"Weekly" to 7).forEach{(label,days)->FilterChip(automaticDays==days,{automaticDays=days},label={Text(label)},enabled=!busy)}}
+     OutlinedButton(enabled=!busy,onClick={plan?.close();plan=null;pending=BackupPickerTicket(false,true);tree.launch(null)}){Text("Choose automatic backup folder")}
+     if(automaticTree!=null){
+      Text("Save this recovery key outside this device. It protects future automatic backups in the selected folder.")
+      SelectionContainer{Text(recovery,style=MaterialTheme.typography.bodyLarge)}
+      Row{Checkbox(saved,{saved=it},enabled=!busy,modifier=Modifier.testTag("automatic-key-saved"));Text("I saved the automatic backup recovery key")}
+      Button(enabled=!busy&&saved&&recovery.isNotBlank(),onClick={val secret=recovery.toCharArray();recovery="";val destination=automaticTree!!;val days=automaticDays;val charge=charging;val network=wifi;operation(secret){captured->
+       AutomaticBackupSettings.arm(context,captured.space,destination,secret,days,charge,network)
+       withContext(Dispatchers.Main.immediate){captured.access.publishIfCurrent{automaticTree=null;saved=false;automaticArmed=true;schedule=BackupSchedule.status(context)}}
+       "Automatic backups enabled. Keep the recovery key safe; future files are verified after writing."
+      }}){Text("Enable automatic backup")}
+     }
+     if(automaticArmed){
+      OutlinedButton(enabled=!busy,onClick={val days=automaticDays;val charge=charging;val network=wifi;operation{captured->
+       checkNotNull(AutomaticBackupSettings.read(captured.space)).use{config->AutomaticBackupSettings.arm(context,captured.space,config.tree,config.recovery.copyOf(),days,charge,network)}
+       withContext(Dispatchers.Main.immediate){captured.access.publishIfCurrent{schedule=BackupSchedule.status(context)}};"Automatic schedule updated."
+      }}){Text("Save schedule restrictions")}
+      TextButton(enabled=!busy,onClick={operation{captured->AutomaticBackupSettings.disable(context,captured.space);withContext(Dispatchers.Main.immediate){captured.access.publishIfCurrent{automaticArmed=false;schedule=BackupSchedule.status(context)}};"Automatic backups disabled."}}){Text("Turn automatic backup off")}
+     }
     }
     if(busy)LinearProgressIndicator(Modifier.fillMaxWidth())
     message?.let{Text(it)}

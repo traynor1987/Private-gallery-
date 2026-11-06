@@ -274,7 +274,117 @@ class HomeOwnedWindowPanicTest {
         Array(count){index->MotionEvent.PointerProperties().apply {id=index;toolType=MotionEvent.TOOL_TYPE_FINGER}},
         Array(count){index->MotionEvent.PointerCoords().apply {this.x=x+(index-1)*12;this.y=y;pressure=1f;size=1f}},0,0,1f,1f,0,0,InputDevice.SOURCE_TOUCHSCREEN,0)
 
-    private fun withHiddenHome(test:()->Unit) {
+    @Test fun activeBackupIoStopsAtRealMainLockPanicAndBackgroundInBothSpaces() {
+        for(hidden in listOf(false,true)) for(action in listOf("lock","panic","background")) withHiddenHome(hidden) {
+            val access=compose.runOnIdle {MainActivity::class.java.getDeclaredMethod("homeAccess").apply{isAccessible=true}.invoke(activity) as uk.co.traynor.privategallery.core.evidence.EvidenceAccess}
+            val uri=uk.co.traynor.privategallery.core.backup.BackupDocuments62.create()
+            try {
+                uk.co.traynor.privategallery.core.backup.BackupCoordinator(activity,access).use{backup->backup.export(uk.co.traynor.privategallery.core.backup.SafBackupProvider(activity,uri,access),"active main recovery key".toCharArray())}
+                uk.co.traynor.privategallery.core.backup.BackupDocuments62.mode(uri,"block-read")
+                compose.onNodeWithTag("open-apps").performClick();compose.onNodeWithTag("app-backup").performScrollTo().performClick()
+                compose.onNodeWithText("Restore").performScrollTo().performClick()
+                uk.co.traynor.privategallery.core.backup.BackupDocumentsUi62.open(checkNotNull(uri.lastPathSegment))
+                compose.waitUntil(10000){compose.onAllNodesWithText("Recovery key").fetchSemanticsNodes().isNotEmpty()}
+                compose.onNode(hasSetTextAction()).performScrollTo().performTextInput("active main recovery key")
+                val blocked=uk.co.traynor.privategallery.core.backup.BackupDocuments62.stats().getInt("blocked")
+                val cancelled=uk.co.traynor.privategallery.core.backup.BackupDocuments62.stats().getInt("cancelled")
+                compose.onNodeWithText("Validate and preview").performScrollTo().performClick()
+                compose.waitUntil(15000){uk.co.traynor.privategallery.core.backup.BackupDocuments62.stats().getInt("blocked")>blocked}
+                when(action){
+                    "lock"->compose.runOnIdle{activity.lockNovaSpace()}
+                    "panic"->injectThreeFingers(compose.runOnIdle{focusedRoot()})
+                    else->compose.activityRule.scenario.moveToState(androidx.lifecycle.Lifecycle.State.CREATED)
+                }
+                compose.waitUntil(5000){uk.co.traynor.privategallery.core.backup.BackupDocuments62.stats().getInt("cancelled")>cancelled}
+                if(action=="background")compose.activityRule.scenario.moveToState(androidx.lifecycle.Lifecycle.State.RESUMED)
+                compose.waitUntil(5000){compose.onAllNodesWithTag("nova-backup").fetchSemanticsNodes().isEmpty()}
+                compose.onAllNodes(hasText("Restore preview",substring=true)).assertCountEquals(0)
+                if(action=="panic")compose.runOnIdle{assertFalse(owner.session.isUnlocked);assertFalse(owner.hidden.session.isUnlocked)}
+            }finally{access.close();uk.co.traynor.privategallery.core.backup.BackupDocuments62.delete(uri)}
+        }
+    }
+
+    @Test fun backupControlsRemainReachableAcrossActualNarrowExpandedResizeAndRecreation()=withHiddenHome(false) {
+        val automation=InstrumentationRegistry.getInstrumentation().uiAutomation
+        fun shell(command:String)=automation.executeShellCommand(command).use{android.os.ParcelFileDescriptor.AutoCloseInputStream(it).readBytes().decodeToString()}
+        val size=shell("wm size");val override=Regex("Override size: (\\d+x\\d+)").find(size)?.groupValues?.get(1)
+        try {
+            for((width,height,label) in listOf(Triple(360,720,"cover"),Triple(840,720,"expanded"))) {
+                shell("wm size ${width}x$height")
+                compose.waitForIdle()
+                if(compose.onAllNodesWithTag("nova-backup").fetchSemanticsNodes().isEmpty()) {
+                    compose.runOnIdle{activity.returnPrivateHome()};compose.onNodeWithTag("open-apps").performClick();compose.onNodeWithTag("app-backup").performScrollTo().performClick()
+                }
+                compose.onNodeWithText("Create backup").performScrollTo().assertIsDisplayed();compose.onNodeWithText("Restore").performScrollTo().assertIsDisplayed()
+                compose.onNodeWithText("Nova Backup").performScrollTo();ReleaseScreenshots62.capture(compose.onNodeWithTag("nova-backup"),"backup-primary-$label")
+                compose.onAllNodes(hasText("Hidden",substring=true,ignoreCase=true)).assertCountEquals(0)
+            }
+            compose.activityRule.scenario.recreate();compose.waitForIdle();compose.onAllNodesWithText("I saved the recovery key").assertCountEquals(0);compose.onAllNodesWithTag("nova-backup").assertCountEquals(0)
+        }finally{shell(if(override==null)"wm size reset" else "wm size $override")}
+    }
+
+    @Test fun realSettingsRestoreLocksAndReloadsHomeMindAndWidgetsBeforeFurtherEdits()=withHiddenHome(false) {
+        val modelField=MainActivity::class.java.getDeclaredField("homeThemeData").apply{isAccessible=true}
+        val oldModel=compose.runOnIdle {checkNotNull(modelField.get(activity)) as uk.co.traynor.privategallery.home2.PreviewData}
+        compose.onNodeWithTag("open-apps").performClick();compose.onNodeWithTag("app-mind").performScrollTo().performClick();compose.onNodeWithTag("nova-mind").assertIsDisplayed()
+        compose.runOnIdle{activity.returnPrivateHome()}
+        val sourceRoot=uk.co.traynor.privategallery.core.backup.BackupFixture62.temporary("live-settings62")
+        val uri=uk.co.traynor.privategallery.core.backup.BackupDocuments62.create()
+        try {
+            uk.co.traynor.privategallery.core.backup.BackupFixture62(sourceRoot).use{source->
+                val model=uk.co.traynor.privategallery.home2.PreviewData(source.coordinator.space,null)
+                model.change{it.copy(pages=listOf(listOf("mind","nova-calculator")),dock=listOf("mind"),columns=5)}
+                uk.co.traynor.privategallery.home2.MindData(source.coordinator.space).prefer("grounding")
+                val widgets=uk.co.traynor.privategallery.home2.WidgetData(source.coordinator.space)
+                assertTrue(widgets.save("primary",listOf(uk.co.traynor.privategallery.home2.WidgetSlot("restored-slot",0,0,0,2,2,listOf(uk.co.traynor.privategallery.home2.WidgetItem("restored-note","note","Restored synthetic note")),0))))
+                source.coordinator.export(uk.co.traynor.privategallery.core.backup.SafBackupProvider(source.context,uri,source.access),"live settings recovery".toCharArray())
+            }
+            compose.onNodeWithTag("open-apps").performClick();compose.onNodeWithTag("app-backup").performScrollTo().performClick();compose.onNodeWithText("Restore").performScrollTo().performClick()
+            uk.co.traynor.privategallery.core.backup.BackupDocumentsUi62.open(checkNotNull(uri.lastPathSegment))
+            compose.waitUntil(10000){compose.onAllNodesWithText("Recovery key").fetchSemanticsNodes().isNotEmpty()}
+            compose.onNode(hasSetTextAction()).performScrollTo().performTextInput("live settings recovery");compose.onNodeWithText("Validate and preview").performScrollTo().performClick()
+            compose.waitUntil(15000){compose.onAllNodesWithText("Replace supported settings…").fetchSemanticsNodes().isNotEmpty()}
+            compose.onNodeWithText("Replace supported settings…").performScrollTo().performClick();compose.onNodeWithText("Replace settings").performClick()
+            compose.waitUntil(15000){compose.runOnIdle{!owner.session.isUnlocked}};compose.onNodeWithTag("nova-protected-lock").assertIsDisplayed()
+            // A stale model's old capability must refuse writes after successful restore.
+            compose.runOnIdle{assertTrue(runCatching{oldModel.setTheme("dark")}.isFailure||oldModel.error!=null)}
+            compose.onNodeWithText("Enter").performClick();"613842".forEach{compose.onNodeWithText(it.toString()).performClick()}
+            compose.waitUntil(15000){compose.onAllNodesWithTag("preview-home").fetchSemanticsNodes().isNotEmpty()}
+            val restored=compose.runOnIdle{modelField.get(activity) as uk.co.traynor.privategallery.home2.PreviewData};assertNotSame(oldModel,restored);assertEquals(5,restored.profile.columns);assertEquals(listOf("mind"),restored.profile.dock)
+            compose.onNodeWithTag("app-mind").performClick();compose.onNodeWithTag("calm-now").performScrollTo().performClick();compose.onNodeWithTag("grounding-step").assertIsDisplayed()
+            compose.runOnIdle{activity.returnPrivateHome()}
+            compose.onAllNodesWithText("Restored synthetic note").onFirst().assertExists()
+            compose.runOnIdle{restored.change{it.copy(iconSize=72)};activity.lockNovaSpace()}
+            compose.onNodeWithText("Enter").performClick();"613842".forEach{compose.onNodeWithText(it.toString()).performClick()}
+            compose.waitUntil(15000){compose.onAllNodesWithTag("preview-home").fetchSemanticsNodes().isNotEmpty()}
+            val reopened=compose.runOnIdle{modelField.get(activity) as uk.co.traynor.privategallery.home2.PreviewData};assertEquals(5,reopened.profile.columns);assertEquals(72,reopened.profile.iconSize);assertEquals(listOf("mind"),reopened.profile.dock)
+        }finally{uk.co.traynor.privategallery.core.backup.BackupDocuments62.delete(uri);sourceRoot.deleteRecursively()}
+    }
+
+    @Test fun realForegroundHomeExecutesScheduledPrimaryBackupWithoutManualBackupAction()=withHiddenHome(false) {
+        val access=compose.runOnIdle {MainActivity::class.java.getDeclaredMethod("homeAccess").apply{isAccessible=true}.invoke(activity) as uk.co.traynor.privategallery.core.evidence.EvidenceAccess}
+        val tree=checkNotNull(uk.co.traynor.privategallery.core.backup.BackupDocuments62.call("tree").getParcelable("uri",android.net.Uri::class.java))
+        var document:android.net.Uri?=null
+        try {
+            uk.co.traynor.privategallery.core.backup.BackupCoordinator(activity,access).use {backup->
+                uk.co.traynor.privategallery.core.backup.AutomaticBackupSettings.arm(activity,backup.space,tree,"synthetic real Main automatic recovery key".toCharArray(),1,false,false)
+                val prefs=activity.getSharedPreferences("nova-backup-due",0)
+                check(prefs.edit().putLong("configured",System.currentTimeMillis()-86400001L).putLong("due",0).commit())
+                val output=InstrumentationRegistry.getInstrumentation().uiAutomation.executeShellCommand("cmd jobscheduler run -f ${activity.packageName} 171162").use{android.os.ParcelFileDescriptor.AutoCloseInputStream(it).readBytes().decodeToString()}
+                assertTrue(output,output.contains("Running job"))
+                compose.waitUntil(10000){prefs.getLong("due",0)>0||backup.history().contains("Last successful backup")}
+                compose.waitUntil(40000){backup.history().contains("Last successful backup")}
+                val id=checkNotNull(uk.co.traynor.privategallery.core.backup.BackupDocuments62.call("latest").getString("id"))
+                document=android.provider.DocumentsContract.buildDocumentUri(uk.co.traynor.privategallery.core.backup.BackupDocumentsFixtureProvider.AUTHORITY,id)
+                backup.preview(uk.co.traynor.privategallery.core.backup.SafBackupProvider(activity,document!!,access),"synthetic real Main automatic recovery key".toCharArray()).use {assertTrue(it.settings>0)}
+                compose.onNodeWithTag("preview-home").assertIsDisplayed();compose.onAllNodesWithTag("nova-backup").assertCountEquals(0)
+                assertEquals(0L,prefs.getLong("due",0));assertFalse(backup.space.backupValues().keys.any{it.contains(uk.co.traynor.privategallery.core.backup.AutomaticBackupSettings.NAME)})
+                uk.co.traynor.privategallery.core.backup.AutomaticBackupSettings.disable(activity,backup.space)
+            }
+        } finally {access.close();document?.let{uk.co.traynor.privategallery.core.backup.BackupDocuments62.delete(it)}}
+    }
+
+    private fun withHiddenHome(hidden:Boolean=true,test:()->Unit) {
         assertTrue("Never run this synthetic fixture against production",activity.packageName.endsWith(".hiddenprototype"))
         val root=File(activity.cacheDir,"home-window-panic-${UUID.randomUUID()}").apply {mkdirs()}
         val prefix="panic-window-${UUID.randomUUID()}"
@@ -287,17 +397,19 @@ class HomeOwnedWindowPanicTest {
         val priorKeys=keysField.get(activity);val keys=PinVaultKeyStore(context);val key=keys.create("613842".toCharArray())
         val panic=activity.getSharedPreferences("privacy-shield",Context.MODE_PRIVATE)
         val names=listOf("enabled","three-finger","quick-lock");val priorPanic=names.associateWith {panic.all[it]}
+        val schedulePrefs=activity.getSharedPreferences("nova-backup-due",0);val priorSchedule=schedulePrefs.all.toMap()
+        val scheduler=activity.getSystemService(android.app.job.JobScheduler::class.java);val priorJob=scheduler.getPendingJob(171162)
         val priorHide=state<Boolean>("hideContent").value;val priorBiometric=state<Boolean>("biometricEnabled").value
-        val isolated=listOf("home2","home1710").map {File(activity.noBackupFilesDir,"evidence-state/$it")}
+        val isolated=listOf(File(activity.filesDir,"vault"),File(activity.filesDir,"evidence-state"),File(activity.noBackupFilesDir,"hidden-media-v1"),File(activity.noBackupFilesDir,"evidence-state"))
         val saved=isolated.associateWith {directory->
-            if(!directory.exists())null else File(root,"saved-${directory.name}").also {check(directory.renameTo(it)){"Preserve existing synthetic Home files before this fixture"}}
+            if(!directory.exists())null else File(root,"saved-${java.util.UUID.randomUUID()}").also {check(directory.renameTo(it)){"Preserve existing synthetic Home files before this fixture"}}
         }
         try {
             compose.runOnIdle {
                 check(panic.edit().putBoolean("enabled",true).putBoolean("three-finger",true).putBoolean("quick-lock",false).commit())
                 keysField.set(activity,keys);state<Boolean>("hideContent").value=false;state<Boolean>("biometricEnabled").value=false
                 owner.key=key;owner.session.unlock()
-                owner.hidden.select();assertTrue(owner.hidden.session.complete(owner.hidden.session.beginAuthentication(),ByteArray(32){79}));owner.hidden.authenticated=true
+                if(hidden){owner.hidden.select();assertTrue(owner.hidden.session.complete(owner.hidden.session.beginAuthentication(),ByteArray(32){79}));owner.hidden.authenticated=true}else owner.hidden.leave()
                 state<Route>("route").value=Route.VAULT;activity.privacySettingsChanged();activity.returnPrivateHome()
             }
             compose.onNodeWithTag("preview-home").assertIsDisplayed()
@@ -308,6 +420,8 @@ class HomeOwnedWindowPanicTest {
             isolated.forEach {it.deleteRecursively();saved[it]?.let {backup->check(backup.renameTo(it))}}
             compose.runOnIdle {state<Boolean>("hideContent").value=priorHide;state<Boolean>("biometricEnabled").value=priorBiometric}
             panic.edit().also {editor->names.forEach {name->val value=priorPanic[name];if(value==null)editor.remove(name)else editor.putBoolean(name,value as Boolean)}}.commit()
+            scheduler.cancel(171162);if(priorJob!=null)scheduler.schedule(priorJob)
+            schedulePrefs.edit().clear().also {editor->priorSchedule.forEach{(name,value)->when(value){is Boolean->editor.putBoolean(name,value);is Int->editor.putInt(name,value);is Long->editor.putLong(name,value);is String->editor.putString(name,value)}}}.commit()
             preferences.forEach {activity.deleteSharedPreferences(it)};key.fill(0);root.deleteRecursively()
         }
     }

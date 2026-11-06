@@ -6,10 +6,36 @@ base='9efd19540a1d75efa1b30f4e23c9cbb096f93aff'
 session='app/src/main/java/uk/co/traynor/privategallery/core/browser/v2/BrowserV2Session.kt'
 factory='app/src/main/java/uk/co/traynor/privategallery/core/browser/v2/SecureWebViewFactory.kt'
 main='app/src/main/java/uk/co/traynor/privategallery/MainActivity.kt'
+vault='app/src/main/java/uk/co/traynor/privategallery/core/vault'
+broker='app/src/main/java/uk/co/traynor/privategallery/core/browser/hidden/HiddenVpnBrowserBroker.kt'
+# Independently reviewed A/C changes only. The baseline stays pinned to original V1.
+VAULT={
+ 'AndroidVaultRepository.kt':('M','9d53858b7e3d950d7075f439ff5214b0d4e4cbd6cea11087cba35f28e419f66b'),
+ 'ChunkedVaultVideoStore.kt':('M','7f6aa651ae4cb1e75fef5e4a48b8e7c3c1aeab5c03bedc882998655069f301d5'),
+ 'EncryptedIndexStore.kt':('M','577b58a5886b79957cef1c799dbfece8bea9d8febc0d081f31ebdb162fabc152'),
+ 'EncryptedPayloadStore.kt':('M','abf4c91c1675d95c6258e04d9fc1bd64b1bfd0b583c609e86cfd7d6b69b370f0'),
+ 'VaultPresentationMetadata.kt':('A','60d02f692b7f54b0c38aed286b932859026c15126a1c78c770e6c61734836a8e'),
+ 'VaultPresentationStore.kt':('M','5104ccbbf78308454d5f05cf8836d2daf26808d49c92276f287b6e8fd6f69f6c')}
+def exact_delta(repo,baseline,scope,allowed):
+ def git(*args):return subprocess.check_output(['git',*args],cwd=repo)
+ expected={(status,path) for path,(status,digest) in allowed.items()}
+ for revision in (['HEAD'],[]):
+  rows=git('diff','--name-status','--no-renames',baseline,*revision,'--',scope).decode().splitlines()
+  actual={tuple(row.split('\t')) for row in rows}
+  assert actual==expected,('Unreviewed changed path/status',actual^expected)
+ assert not git('ls-files','--others','--',scope).strip(),'Untracked protected source'
+ for path,(status,digest) in allowed.items():
+  assert hashlib.sha256(git('show','HEAD:'+path)).hexdigest()==digest,('Unreviewed committed blob',path)
+  assert hashlib.sha256((repo/path).read_bytes()).hexdigest()==digest,('Unreviewed working blob',path)
+exact_delta(root,base,vault,{vault+'/'+name:value for name,value in VAULT.items()})
+# Broker comparison now propagates cooldown/unavailable errors; no networking change is allowed.
+exact_delta(root,base,broker,{broker:('M','38cf1b02530da82dc1aeb54ea562316d8d4108542eaa0eddc983819cbee13ead')})
+for scope in ('core/browser','core/crypto'):
+ assert not subprocess.check_output(['git','ls-files','--others','--','app/src/main/java/uk/co/traynor/privategallery/'+scope],cwd=root).strip(),'Untracked protected source'
 subprocess.run(['git','diff','--exit-code',base,'--',
  'app/src/main/java/uk/co/traynor/privategallery/core/browser',
  'app/src/main/java/uk/co/traynor/privategallery/core/crypto',
- 'app/src/main/java/uk/co/traynor/privategallery/core/vault',':(exclude)'+session,':(exclude)'+factory],cwd=root,check=True)
+ ':(exclude)'+session,':(exclude)'+factory,':(exclude)'+broker],cwd=root,check=True)
 def historical(path):return subprocess.check_output(['git','show',base+':'+path],cwd=root).decode()
 old=historical(session);new=(root/session).read_text()
 def body(text,name):

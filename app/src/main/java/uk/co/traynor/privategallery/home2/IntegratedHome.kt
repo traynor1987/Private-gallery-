@@ -44,6 +44,7 @@ import uk.co.traynor.privategallery.core.home2.SpaceContext
   onDispose{retire.close();audio.release();video.close();pool.clear();context.close()}
  }
  var backupOwner by remember{mutableStateOf<uk.co.traynor.privategallery.core.home2.WallpaperOwner?>(null)}
+ AutomaticBackupHost(access,visible&&backupOwner==null)
  backupOwner?.let{owner->BackupHost(owner,visible,onClose={backupOwner=null},onSettingsRestored=onLock)}
  var wallpaperOwner by remember{mutableStateOf<uk.co.traynor.privategallery.core.home2.WallpaperOwner?>(null)}
  wallpaperOwner?.let{owner->WallpaperEditorHost(owner,visible,onClose={wallpaperOwner=null;if(context.current())models.getOrNull()?.data?.refreshWallpaper()})}

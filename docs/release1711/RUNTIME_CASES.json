@@ -1,4 +1,87 @@
 {
+  "uk.co.traynor.privategallery.core.backup.BackupRuntimeTest": [
+    "bothSpacesReencryptMediaCollectionsNotesAndPreferencesOnReplacementDevice",
+    "bothSpacesRestoreDatesPinsAndConfirmedFavouriteThenAllowLocalOverrides",
+    "foreignAndRetiredPlansCannotCrossAuthorities",
+    "interruptedAndOutOfStorageBatchKeepsExistingIndexInBothSpaces",
+    "largeMultiChunkMediaRoundtripUsesBoundedStreamsInBothSpaces",
+    "providerTamperingNeverRecordsVerifiedDestination",
+    "savedAppDefinitionsStripCredentialQueriesPreserveExistingIdsAndMapHomeShortcuts"
+  ],
+  "uk.co.traynor.privategallery.core.backup.AutomaticBackupRuntime62Test": [
+    "encryptedOptInRunsOnEligibleForegroundWithoutManualBackupAndVerifiesUniqueFiles",
+    "failedScheduledDestinationWaitsForBoundedRetryAndNeverClaimsVerified",
+    "pauseCancelsAutomaticRealProviderIoAndNoHiddenAuthorityCanArmOrRun"
+  ],
+  "uk.co.traynor.privategallery.core.backup.BackupWallpaperBounds62Test": [
+    "oversizedAuthenticatedWallpaperAndInvalidImageAreRejectedBeforeSettingsOverwrite"
+  ],
+  "uk.co.traynor.privategallery.core.backup.BackupUiTest": [
+    "hiddenLockAndReunlockRejectsOldPickerResult",
+    "hiddenPickerResumesOnlyWithSamePinAuthentication",
+    "primaryPickerResumesWithFreshAuthority"
+  ],
+  "uk.co.traynor.privategallery.core.backup.BackupSafRuntimeTest": [
+    "openedReadAndWriteDescriptorsCloseWhenTheirAuthorityRetires",
+    "providerDenialTruncationTamperAndReliablePipeErrorsNeverBecomeVerified",
+    "realDocumentDescriptorsRoundtripIndependentKeysInBothSpaces",
+    "retirementCancelsRealProviderOpenAndPreservesOriginalsInBothSpaces",
+    "revokedGrantAndRemovedDocumentCannotBeRead"
+  ],
+  "uk.co.traynor.privategallery.core.backup.BackupScheduleRuntimeTest": [
+    "androidJobConstraintsContainNoSecretsAndLockedDueCheckCreatesNoArchive",
+    "nativeEncryptedDirectorySyncFailureRestoresExactOriginalCiphertext"
+  ],
+  "uk.co.traynor.privategallery.core.backup.BackupAppsRoundtrip62Test": [
+    "actualArchiveReencryptsAllRegisteredGameAndCalculatorSchemasForEachSpace"
+  ],
+  "uk.co.traynor.privategallery.core.backup.BackupUi62Test": [
+    "authenticatedHiddenHasNoScheduleControls",
+    "authenticatedPreviewDoesNotSurviveActualActivityRecreation",
+    "cancelledPickerAndLateDuplicateDoNotInstallARecoveryInput",
+    "pendingPickerDoesNotSurviveActualActivityRecreation",
+    "primaryRetirementDuringPickerRejectsLateAndDuplicateResult",
+    "primaryScheduleHydratesPersistedCheckboxesAndHasNoHiddenDisclosure",
+    "recoveryInputDoesNotSurviveActualActivityRecreation"
+  ],
+  "uk.co.traynor.privategallery.core.backup.BackupDocumentsUiTest": [
+    "actualTreePickerRequiresRecoveryAcknowledgementBeforeArmingEncryptedAutomaticSchedule",
+    "androidCreateDocumentResultResumesAndWritesActualGrantedDestination"
+  ],
+  "uk.co.traynor.privategallery.core.vault.VaultPresentationStoreTest": [
+    "adjustedDatePreservesOriginalAndCanBeRestoredAfterReopen",
+    "domainsRemainIndependentAndCorruptionNeverReplacesExistingFile",
+    "historicalRecordsBeyondTwentyThousandRemainReadableAndPruneOnNewPublication",
+    "importedIndexDatesAndPinsYieldToExplicitLocalReset",
+    "missingOriginalDateAndRevokedAdjustmentAreSafe",
+    "oldCaptureImportedTodayHasIndependentDatesAndEncryptedPreference",
+    "revokedPublicationLeavesPreviousEncryptedMetadataUntouched"
+  ],
+  "uk.co.traynor.privategallery.core.arcade.ArcadePersistenceTest": [
+    "bothSpacesKeepIndependentEncryptedGamesRecordsAndSettingsAfterReopen"
+  ],
+  "uk.co.traynor.privategallery.home2.ArcadeUiTest": [
+    "catalogueShortcutLaunchesNativeGameAndAddsToExistingHomeLayout",
+    "coverInnerLandscapeKeepBoardsAndTouchControlsReachable",
+    "snakeLifecyclePauseDiscardsQueuedInputAndResumeIsExplicit"
+  ],
+  "uk.co.traynor.privategallery.core.calculator.CalculatorPersistenceTest": [
+    "historyMemoryPreferencesAreEncryptedIsolatedPortableAndRetired"
+  ],
+  "uk.co.traynor.privategallery.core.hidden.HiddenCalculatorSecurityTest": [
+    "allComparisonPathsThrottleRecreatedStoresAndLeavePrimaryEnvelopesUnchanged",
+    "concealedConfigurationDefaultsOffRequiresCurrentIndependentAuthenticationAndContainsNoPin",
+    "concealedSelectionAlwaysRevokesRetainedAuthenticationAndNeedsFreshPin",
+    "encryptedCooldownSurvivesReopenCorruptionAndClockRollbackWithBoundedRecovery"
+  ],
+  "uk.co.traynor.privategallery.home2.CalculatorUiTest": [
+    "drawerLaunchArithmeticMemoryHistoryAndCopyUseNativeCalculator",
+    "foldSizesLargeTextScientificAndStandardControlsRemainReachable",
+    "longPressSequenceHasNeutralSemanticsNeverEvaluatesAndStaleCallbacksCannotAct"
+  ],
+  "uk.co.traynor.privategallery.CalculatorMainSecurity62Test": [
+    "actualCalculatorAdmissionRequiresIndependentPinAndPanicRejectsRetainedCallbacks"
+  ],
   "uk.co.traynor.privategallery.core.home2.SpacePreferencesTest": [
     "hidden_handles_remain_retired_when_the_same_vault_is_unlocked_again",
     "owner_and_preference_names_are_authenticated_and_corruption_is_preserved",
@@ -187,8 +270,13 @@
     "wallpaper_capture_uses_actual_primary_image_owner_inside_retained_hidden_and_retires_on_space_change_and_panic"
   ],
   "uk.co.traynor.privategallery.HomeOwnedWindowPanicTest": [
+    "activeBackupIoStopsAtRealMainLockPanicAndBackgroundInBothSpaces",
+    "backupControlsRemainReachableAcrossActualNarrowExpandedResizeAndRecreation",
+    "backupOwnedWindowThreeFingerPanicRevokesBothSpaces",
     "drawerWindowUsesOneSharedCallbackAndConcealsSynchronouslyBeforeRecomposition",
     "popupSystemThreeFingerTouchCannotLeakAChildClickAfterPanic",
+    "realForegroundHomeExecutesScheduledPrimaryBackupWithoutManualBackupAction",
+    "realSettingsRestoreLocksAndReloadsHomeMindAndWidgetsBeforeFurtherEdits",
     "systemThreeFingerTouchInHiddenQuickPanelLocksBothSpacesAndRequiresPrimaryPin"
   ],
   "uk.co.traynor.privategallery.core.hidden.HiddenCredentialStoreTest": [

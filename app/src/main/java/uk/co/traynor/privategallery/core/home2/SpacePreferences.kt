@@ -80,7 +80,7 @@ internal class SpaceContext(base: Context, private val access: EvidenceAccess) :
    require(bytes.size in 1..MAX_BYTES)
    when {
     name.startsWith("preferences:")-> {val namespace=name.removePrefix("preferences:");require(uk.co.traynor.privategallery.core.backup.BackupPolicy.allowed(namespace));portableValues(namespace,decode(bytes),true)}
-    name.startsWith("wallpaper:")->require(UUID_PATTERN.matches(name.removePrefix("wallpaper:")))
+    name.startsWith("wallpaper:")->{require(UUID_PATTERN.matches(name.removePrefix("wallpaper:")));StoredWallpaperImage.validateImport(bytes)}
     else->error("Unsupported backup preference")
    }
   }

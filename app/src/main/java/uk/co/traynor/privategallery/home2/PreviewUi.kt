@@ -375,7 +375,7 @@ private val lightColors=lightColorScheme(primary=Color(0xFF285F65),secondary=Col
   if(previewBitmap==null&&w.image!=null&&wallpaperContext!=null){
    var candidate:android.graphics.Bitmap?=null
    try{
-    kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO){wallpaperContext.readWallpaper(w.image)?.let{bytes->try{candidate=BitmapFactory.decodeByteArray(bytes,0,bytes.size,BitmapFactory.Options().apply{inMutable=true})}finally{bytes.fill(0)}}}
+    kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO){wallpaperContext.readWallpaper(w.image)?.let{bytes->try{candidate=uk.co.traynor.privategallery.core.home2.StoredWallpaperImage.decodeStored(bytes)}finally{bytes.fill(0)}}}
     kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main.immediate){
      kotlinx.coroutines.currentCoroutineContext().ensureActive()
      wallpaperContext.publishIfCurrent{decoded=candidate;candidate=null}
