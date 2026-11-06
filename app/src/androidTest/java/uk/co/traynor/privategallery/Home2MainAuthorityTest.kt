@@ -120,4 +120,41 @@ class Home2MainAuthorityTest {
    }
   }finally{key.fill(0);ciphertext.fill(0);roots.forEach{it.deleteRecursively()};saved.asReversed().forEach{(root,backup)->check(backup.renameTo(root))}}
  }
+ @Test fun pinning_primary_settings_capture_retires_on_route_space_and_same_key_reauthentication(){
+  ActivityScenario.launch(MainActivity::class.java).use{scenario->scenario.onActivity{activity->
+   val retained=state(activity);val key=ByteArray(32){61}
+   try {
+    retained.hidden.leave();retained.key=key;retained.session.unlock()
+    retained.homePrimaryAuthentication=retained.session.captureAuthenticationEpoch();retained.homeVisible=false;route(activity).value=Route.SETTINGS
+    val original=activity.captureNovaPinningAuthority();assertTrue(original())
+    route(activity).value=Route.VAULT;assertFalse(original());route(activity).value=Route.SETTINGS
+    retained.hidden.selected=true;assertFalse(original());retained.hidden.selected=false
+    retained.session.lock();assertFalse(original())
+    retained.session.unlock();retained.homePrimaryAuthentication=retained.session.captureAuthenticationEpoch()
+    assertFalse("The same key object cannot revive a previous pinning credential",original())
+    val fresh=activity.captureNovaPinningAuthority();assertTrue(fresh())
+    activity.panicExit();assertFalse(fresh());assertFalse(original())
+   }finally{retained.hidden.leave();retained.session.lock();retained.key=null;key.fill(0);route(activity).value=Route.LOCK}
+  }}
+ }
+ @Test fun pinning_hidden_settings_capture_requires_its_original_hidden_authentication(){
+  ActivityScenario.launch(MainActivity::class.java).use{scenario->scenario.onActivity{activity->
+   val retained=state(activity);val key=ByteArray(32){62}
+   try {
+    retained.session.lock();retained.key=null
+    assertTrue(retained.hidden.session.complete(retained.hidden.session.beginAuthentication(),key.copyOf()))
+    retained.hidden.selected=true;retained.hidden.authenticated=true
+    retained.homeHiddenAuthentication=retained.hidden.session.authentication();retained.homeVisible=false;route(activity).value=Route.SETTINGS
+    val original=activity.captureNovaPinningAuthority();assertTrue(original())
+    retained.hidden.selected=false;assertFalse(original());retained.hidden.selected=true
+    retained.hidden.session.lock();assertFalse(original())
+    assertTrue(retained.hidden.session.complete(retained.hidden.session.beginAuthentication(),key.copyOf()))
+    retained.hidden.authenticated=true;retained.homeHiddenAuthentication=retained.hidden.session.authentication()
+    assertFalse("A later Hidden PIN session cannot inherit the old action",original())
+    val fresh=activity.captureNovaPinningAuthority();assertTrue(fresh())
+    activity.panicExit();assertFalse(fresh());assertFalse(original());assertFalse(retained.hidden.session.isUnlocked)
+   }finally{retained.hidden.leave();retained.session.lock();retained.key=null;key.fill(0);route(activity).value=Route.LOCK}
+  }}
+ }
+
 }

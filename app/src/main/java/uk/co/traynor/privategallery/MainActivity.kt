@@ -2074,6 +2074,28 @@ class MainActivity : FragmentActivity() {
             runCatching {uk.co.traynor.privategallery.core.home.HomeLayout.Shortcut.valueOf(name)}.getOrNull()
         }?.takeIf {uk.co.traynor.privategallery.core.home.NovaNavigation.route(it)=="VAULT"}?.label ?: "Vault"
     }
+    /** A captured Settings action cannot inherit a different Space or a later unlock. */
+    internal fun captureNovaPinningAuthority(): () -> Boolean {
+        val hidden=retained.hidden.selected
+        val owner=sessionKey
+        val authentication=session.captureAuthenticationEpoch()
+        val hiddenAuthentication=if(hidden)novaHiddenNavigationIdentity()else null
+        return {
+            activityResumed && !hideContent && route==Route.SETTINGS && !displayPrivateHome() &&
+                retained.hidden.selected==hidden && lifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.RESUMED) &&
+                if(hidden) retained.hidden.authenticated && retained.hidden.session.isAuthenticationCurrent(hiddenAuthentication)
+                else owner!=null && sessionKey===owner && session.isAuthenticationCurrent(authentication)
+        }
+    }
+    @Composable internal fun NovaPinningSettings() {
+        if(!activityResumed || hideContent || route!=Route.SETTINGS || displayPrivateHome())return
+        val hidden=retained.hidden.selected
+        val owner=sessionKey
+        val authentication=session.captureAuthenticationEpoch()
+        val hiddenAuthentication=if(hidden)novaHiddenNavigationIdentity()else null
+        val current=remember(hidden,owner,authentication,hiddenAuthentication){captureNovaPinningAuthority()}
+        uk.co.traynor.privategallery.ui.NovaScreenPinningSettings(current,this)
+    }
     @Composable internal fun HomeStartupSettings() {
         if(!activityResumed || hideContent)return
         uk.co.traynor.privategallery.ui.GalleryCard {
@@ -4795,6 +4817,9 @@ internal fun SettingsHome(
         if (category == SettingsCategory.GALLERY) SettingsSection("Camera preferences") {
             Text("Open Camera from either vault menu to choose photo or video, microphone audio, quality and vibration before capturing.", style = MaterialTheme.typography.bodyMedium)
             Text("Audio preferences are protected separately in each vault. Black-Screen Camera keeps the capture surface black.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        if (category == SettingsCategory.SECURITY && !secretOpen && !hideContent) {
+            (LocalContext.current.playerActivity() as? MainActivity)?.NovaPinningSettings()
         }
         if (category == SettingsCategory.SECURITY && !secretOpen) SettingsSection("Panic Exit") {
             val shieldActivity = LocalContext.current.playerActivity() as? MainActivity
