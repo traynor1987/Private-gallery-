@@ -25,7 +25,7 @@ class VisualFoundationTest {
     @get:Rule val compose = createAndroidComposeRule<ComponentActivity>()
 
     @Test fun coreModulesNavigateWithDemoStatusAtFoldWidths() = verifyModules(
-        listOf("health", "notes", "files", "calendar", "tasks", "clipboard"),
+        listOf("health", "notes", "files", "calendar", "tasks", "clipboard", "time"),
     )
 
     private fun verifyModules(ids: List<String>) {
@@ -53,6 +53,10 @@ class VisualFoundationTest {
                     compose.onNodeWithTag("visual-demo-indicator").assertIsDisplayed()
                     val section = module.sections[index]
                     compose.onNodeWithText(section.headline).performScrollTo().assertIsDisplayed()
+                    if (section.timeline.isNotEmpty()) {
+                        assertTrue(section.timeline.sumOf { it.minutes } == 1440)
+                        compose.onNodeWithTag("visual-daily-timeline").performScrollTo().assertIsDisplayed()
+                    }
                     if (section.trend != null) {
                         compose.onNodeWithText(section.trend.title).performScrollTo().assertIsDisplayed()
                         ReleaseScreenshots62.capture(compose.onNodeWithTag("visual-screen-$id"), "visual-$id-trend-$index-$targetWidth")

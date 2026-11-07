@@ -64,6 +64,8 @@ jobs:
 
         '
     - name: Verify release gates
+      env:
+        PYTHONPATH: ${{ github.workspace }}
       run: 'PYTHONDONTWRITEBYTECODE=1 python3 scripts/tests/test_ci_emulator_storage.py
 
         PYTHONDONTWRITEBYTECODE=1 python3 scripts/tests/test_release1751_configuration.py
@@ -629,7 +631,8 @@ jobs:
             if [ "$GITHUB_REF" != refs/heads/feature/novaos-visual-foundation ] || [ "$NOVA_VISUAL_FULL" = true ]; then adb install -r app/build/outputs/apk/debug/app-debug.apk && adb install -r app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk && python3 scripts/run_backup_restart62.py && python3 scripts/run_backup_repair62.py --redesign && bash scripts/run_home2_runtime.sh; fi
       - name: Validate visual checkpoint report
         if: github.ref == 'refs/heads/feature/novaos-visual-foundation'
-        run: grep -Ex 'Android 17 visual checkpoint: [0-9]+/[0-9]+ PASS' app/build/home2-evidence/visual-checkpoint/result.txt
+        run: |
+          grep -Ex 'Android 17 visual checkpoint: [0-9]+/[0-9]+ PASS' app/build/home2-evidence/visual-checkpoint/result.txt
       - name: Validate actual Backup process restart evidence
         if: github.ref != 'refs/heads/feature/novaos-visual-foundation' || contains(github.event.head_commit.message, '[visual-full]')
         run: python3 scripts/verify_release1711_gate.py --restart-folder app/build/home2-evidence/backup-restart62 --source "$(git rev-parse HEAD)"

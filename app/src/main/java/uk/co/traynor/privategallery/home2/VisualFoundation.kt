@@ -38,14 +38,16 @@ internal data class VisualSection(
     val metrics: List<VisualMetric> = emptyList(),
     val rows: List<VisualRow> = emptyList(),
     val trend: VisualTrend? = null,
+    val timeline: List<VisualTimeSlice> = emptyList(),
 )
 
 internal data class VisualMetric(val label: String, val value: String)
 internal data class VisualRow(val title: String, val detail: String, val badge: String? = null)
 internal data class VisualTrend(val title: String, val unit: String, val points: List<VisualTrendPoint>)
 internal data class VisualTrendPoint(val label: String, val value: Int)
+internal data class VisualTimeSlice(val label: String, val minutes: Int)
 
-internal val visualModules get() = visualCore
+internal val visualModules get() = visualCore + visualTime
 
 /** Presentation state belongs to this authenticated Home composition, never to a Space store. */
 internal class VisualNavigator {
@@ -206,6 +208,7 @@ private fun VisualModuleBody(module: VisualModule, navigator: VisualNavigator, o
                 } else {
                     VisualHero(section.headline, section.detail)
                     section.trend?.let { VisualTrendCard(it) }
+                    if (section.timeline.isNotEmpty()) VisualTimelineCard(section.timeline)
                     if (section.metrics.isNotEmpty()) {
                         FlowRow(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                             section.metrics.forEach { metric ->
@@ -283,6 +286,36 @@ private fun VisualTrendCard(trend: VisualTrend) {
         }
     }
 }
+
+@Composable
+private fun VisualTimelineCard(slices: List<VisualTimeSlice>) {
+    val colors = MaterialTheme.colorScheme
+    val accents = listOf(colors.primary, colors.secondary, colors.tertiary, colors.primaryContainer)
+    Surface(shape = RoundedCornerShape(20.dp), color = colors.surfaceContainer, modifier = Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(16.dp).testTag("visual-daily-timeline"), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Text("24-hour timeline", style = MaterialTheme.typography.titleMedium)
+            Text("Synthetic DEMO · sample day", style = MaterialTheme.typography.labelMedium)
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+                slices.forEachIndexed { index, slice ->
+                    Box(Modifier.weight(slice.minutes.toFloat()).height(22.dp)
+                        .background(accents[index % accents.size], RoundedCornerShape(4.dp)))
+                }
+            }
+            var start = 0
+            slices.forEachIndexed { index, slice ->
+                val end = start + slice.minutes
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Box(Modifier.size(10.dp).background(accents[index % accents.size], RoundedCornerShape(3.dp)))
+                    Text("${visualClock(start)}–${visualClock(end)} · ${slice.label}", style = MaterialTheme.typography.bodySmall)
+                }
+                start = end
+            }
+        }
+    }
+}
+
+private fun visualClock(minute: Int): String =
+    "${(minute / 60).toString().padStart(2, '0')}:${(minute % 60).toString().padStart(2, '0')}"
 
 @Composable
 internal fun VisualCatalogueEntry(tag: String, onOpen: () -> Unit) {
