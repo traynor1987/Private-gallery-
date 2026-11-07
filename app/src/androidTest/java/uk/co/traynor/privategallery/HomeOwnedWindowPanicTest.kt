@@ -350,14 +350,14 @@ class HomeOwnedWindowPanicTest {
             compose.waitUntil(15000){compose.runOnIdle{!owner.session.isUnlocked}};compose.onNodeWithTag("nova-protected-lock").assertIsDisplayed()
             // A stale model's old capability must refuse writes after successful restore.
             compose.runOnIdle{assertTrue(runCatching{oldModel.setTheme("dark")}.isFailure||oldModel.error!=null)}
-            compose.onNodeWithTag("enter-novaos").performClick();"613842".forEach{compose.onNodeWithText(it.toString()).performClick()}
+            compose.onNodeWithTag("enter-novaos").performClick();"613842".forEach{compose.onNodeWithText(it.toString()).performClick()};compose.onNodeWithText("Unlock").performClick()
             compose.waitUntil(15000){compose.onAllNodesWithTag("preview-home").fetchSemanticsNodes().isNotEmpty()}
             val restored=compose.runOnIdle{modelField.get(activity) as uk.co.traynor.privategallery.home2.PreviewData};assertNotSame(oldModel,restored);assertEquals(5,restored.profile.columns);assertEquals(listOf("mind"),restored.profile.dock)
             compose.onNodeWithTag("app-mind").performClick();compose.onNodeWithTag("calm-now").performScrollTo().performClick();compose.onNodeWithTag("grounding-step").assertIsDisplayed()
             compose.onNodeWithTag("nova-home").performClick();compose.onNodeWithTag("preview-home").assertIsDisplayed()
             compose.onAllNodesWithText("Restored synthetic note").onFirst().assertExists()
             compose.runOnIdle{restored.change{it.copy(iconSize=72)};activity.lockNovaSpace()}
-            compose.onNodeWithTag("enter-novaos").performClick();"613842".forEach{compose.onNodeWithText(it.toString()).performClick()}
+            compose.onNodeWithTag("enter-novaos").performClick();"613842".forEach{compose.onNodeWithText(it.toString()).performClick()};compose.onNodeWithText("Unlock").performClick()
             compose.waitUntil(15000){compose.onAllNodesWithTag("preview-home").fetchSemanticsNodes().isNotEmpty()}
             val reopened=compose.runOnIdle{modelField.get(activity) as uk.co.traynor.privategallery.home2.PreviewData};assertEquals(5,reopened.profile.columns);assertEquals(72,reopened.profile.iconSize);assertEquals(listOf("mind"),reopened.profile.dock)
         }finally{uk.co.traynor.privategallery.core.backup.BackupDocuments62.delete(uri);sourceRoot.deleteRecursively()}
@@ -399,6 +399,11 @@ class HomeOwnedWindowPanicTest {
         }
         val keysField=MainActivity::class.java.getDeclaredField("keys").apply {isAccessible=true}
         val priorKeys=keysField.get(activity);val keys=PinVaultKeyStore(context);val key=keys.create("613842".toCharArray())
+        val recoveryField=MainActivity::class.java.getDeclaredField("recoveryKeys").apply{isAccessible=true}
+        val priorRecovery=recoveryField.get(activity)
+        // These picker-return tests model an existing fully provisioned vault, not
+        // first-unlock recovery migration. Use the actual isolated encrypted store.
+        val fixtureRecovery=if(pickerGrace)uk.co.traynor.privategallery.core.security.RecoveryVaultKeyStore(context).also{it.create(key).fill('\u0000');check(it.isConfigured)}else null
         val panic=activity.getSharedPreferences("privacy-shield",Context.MODE_PRIVATE)
         val names=listOf("enabled","three-finger","quick-lock");val priorPanic=names.associateWith {panic.all[it]}
         val schedulePrefs=activity.getSharedPreferences("nova-backup-due",0);val priorSchedule=schedulePrefs.all.toMap()
@@ -417,7 +422,7 @@ class HomeOwnedWindowPanicTest {
         try {
             compose.runOnIdle {
                 check(panic.edit().putBoolean("enabled",true).putBoolean("three-finger",true).putBoolean("quick-lock",false).commit())
-                keysField.set(activity,keys);state<Boolean>("hideContent").value=false;state<Boolean>("biometricEnabled").value=false
+                keysField.set(activity,keys);if(fixtureRecovery!=null)recoveryField.set(activity,fixtureRecovery);state<Boolean>("hideContent").value=false;state<Boolean>("biometricEnabled").value=false
                 // Real system picker return is tested under an explicitly configured,
                 // supported grace policy. Production's IMMEDIATELY default must still lock.
                 if(pickerGrace)timeout(uk.co.traynor.privategallery.core.security.AutoLockTimeout.MINUTES_5)
@@ -428,7 +433,7 @@ class HomeOwnedWindowPanicTest {
             compose.onNodeWithTag("preview-home").assertIsDisplayed()
             test()
         } finally {
-            compose.runOnIdle {owner.hidden.leave();owner.session.lock();owner.key=null;owner.homeVisible=false;activity.closeNovaCredentials();keysField.set(activity,priorKeys);state<Route>("route").value=Route.LOCK}
+            compose.runOnIdle {owner.hidden.leave();owner.session.lock();owner.key=null;owner.homeVisible=false;activity.closeNovaCredentials();keysField.set(activity,priorKeys);recoveryField.set(activity,priorRecovery);state<Route>("route").value=Route.LOCK}
             compose.waitForIdle()
             isolated.forEach {it.deleteRecursively();saved[it]?.let {backup->check(backup.renameTo(it))}}
             compose.runOnIdle {state<Boolean>("hideContent").value=priorHide;state<Boolean>("biometricEnabled").value=priorBiometric}
