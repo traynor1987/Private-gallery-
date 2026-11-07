@@ -2,12 +2,14 @@ package uk.co.traynor.privategallery.ui
 
 import android.content.Context
 import android.content.ContextWrapper
+import android.view.accessibility.AccessibilityNodeInfo
 import androidx.activity.ComponentActivity
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.test.platform.app.InstrumentationRegistry
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.util.UUID
@@ -116,7 +118,16 @@ class EvidenceReportWorkflow60Test {
    compose.evidenceNode(hasText("Close") and hasClickAction()).performClick()
    compose.onNodeWithText("AI reports").performClick();compose.evidenceNode(hasText("Open report ${saved.id().take(8)}")).performClick()
    compose.evidenceNode(hasText("Open supporting evidence ${id.take(8)}")).performClick()
-   compose.waitUntil(15000){compose.onAllNodesWithText("Verified original bytes · display rendering only").fetchSemanticsNodes().isNotEmpty()}
+   val verifiedOriginal="Verified original bytes · display rendering only"
+   val automation=InstrumentationRegistry.getInstrumentation().uiAutomation
+   fun hasVerifiedOriginal(node:AccessibilityNodeInfo?):Boolean {
+    if(node==null)return false
+    if(node.isVisibleToUser&&node.text?.toString()==verifiedOriginal)return true
+    return (0 until node.childCount).any{hasVerifiedOriginal(node.getChild(it))}
+   }
+   // Let Compose advance frames without entering Espresso idling on every poll while the preview lays out.
+   compose.waitUntil(15000){hasVerifiedOriginal(automation.rootInActiveWindow)}
+   compose.onNodeWithText(verifiedOriginal).assertIsDisplayed()
    compose.onNodeWithText(quote).assertExists();assertEquals(2,repo.items().size)
    compose.runOnIdle{controller.close()}
    compose.waitUntil(10000){compose.onAllNodesWithText("AI evidence report*").fetchSemanticsNodes().isEmpty()}

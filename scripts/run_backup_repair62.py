@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Run and verify the nine observed API37 failures before the complete mandatory matrix."""
+"""Run and verify targeted API37 regressions before the complete mandatory matrix."""
 from pathlib import Path
 import argparse
 import json, shutil, subprocess, sys, xml.etree.ElementTree as ET
@@ -16,11 +16,17 @@ CASES={
 expected={(PREFIX+cls,name) for cls,names in CASES.items() for name in names}
 if __name__=='__main__':
  parser=argparse.ArgumentParser(description=__doc__)
- parser.add_argument('--single',action='store_true',help='Run only the settings restore regression')
+ selection_group=parser.add_mutually_exclusive_group()
+ selection_group.add_argument('--single',action='store_true',help='Run only the settings restore regression')
+ selection_group.add_argument('--evidence-report',action='store_true',help='Run only the Evidence Locker report regression')
  args=parser.parse_args()
+ directory='focused-repair62'
  if args.single:
   expected={(PREFIX+'HomeOwnedWindowPanicTest','realSettingsRestoreLocksAndReloadsHomeMindAndWidgetsBeforeFurtherEdits')}
- directory='single-repair62' if args.single else 'focused-repair62'
+  directory='single-repair62'
+ if args.evidence_report:
+  expected={(PREFIX+'ui.EvidenceReportWorkflow60Test','explicitConsentEncryptedHistoryAndLinkedOriginalPreserveEvidence')}
+  directory='evidence-report62'
  out=ROOT/'app/build/home2-evidence'/directory
  out.mkdir(parents=True,exist_ok=True)
  selection=','.join(cls+'#'+name for cls,name in sorted(expected))
