@@ -45,6 +45,7 @@ import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.ensureActive
+import uk.co.traynor.privategallery.core.sanctuary.SanctuaryStore
 import java.io.File
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
@@ -64,6 +65,12 @@ private val lightColors=lightColorScheme(primary=Color(0xFF285F65),secondary=Col
  val dark=when(state.theme){"light"->false;"system"->isSystemInDarkTheme();else->true}
  MaterialTheme(colorScheme=if(dark)darkColors else lightColors){
   key(state.current){
+   val localContext = LocalContext.current
+   val application = ((localContext as? uk.co.traynor.privategallery.core.home2.SpaceContext)?.baseContext
+    ?: localContext).applicationContext
+   val sanctuaryStore = remember(application) {
+    if (state.current == "primary") SanctuaryStore.get(application) else null
+   }
    var sanctuary by remember{mutableStateOf(false)}
    var mindLaunch by remember{mutableIntStateOf(0)}
    var mindPage by remember{mutableStateOf("home")}
@@ -103,7 +110,7 @@ private val lightColors=lightColorScheme(primary=Color(0xFF285F65),secondary=Col
    LaunchedEffect(screen){if(screen !in listOf("browser","chat"))pool.closeFullscreen();if(screen in listOf("chat","mind","store","wallpaper","photos","guide","video","search","widgets","backup","arcade","nova-calculator","lock-settings"))data.shell.touchInternal(state.current,screen)}
    LaunchedEffect(pool,state.current){while(true){pool.pollMedia();audio.poll();video.poll();delay(1000)}}
    val routeTransition=updateTransition(screen,label="preview-screen")
-   val host=LocalContext.current.let { (it as? uk.co.traynor.privategallery.core.home2.SpaceContext)?.baseContext ?: it } as? android.app.Activity
+   val host=((localContext as? uk.co.traynor.privategallery.core.home2.SpaceContext)?.baseContext ?: localContext) as? android.app.Activity
    val pager=rememberPagerState(pageCount={data.profile.pages.size})
    val scope=rememberCoroutineScope()
    val currentPage=pager.currentPage.coerceIn(0,profile.pages.lastIndex)
@@ -129,7 +136,7 @@ private val lightColors=lightColorScheme(primary=Color(0xFF285F65),secondary=Col
      "lock-now"->{onLock()}
      "panic"->{onPanic()}
      "mind","calm"->{mindPage=if(id=="calm")mind.preferred else "home";mindLaunch++;screen="mind";drawer=false}
-     "sanctuary"->{sanctuary=true;screen="sanctuary";drawer=false}
+     "sanctuary"->{sanctuary=sanctuaryStore==null;screen="sanctuary";drawer=false}
      "browser-v1"->{pool.open(standaloneBrowser,data.state.current).let{pool.setBrowserMode(it,true)};screen="home";drawer=false}
      "store"->{screen="store";drawer=false}
      "settings"->{editing=true;drawer=false}
@@ -147,7 +154,7 @@ private val lightColors=lightColorScheme(primary=Color(0xFF285F65),secondary=Col
    }
    val goBack:()->Unit={
     val ime=host?.window?.decorView?.rootWindowInsets?.isVisible(android.view.WindowInsets.Type.ime())==true
-    if(ime)host?.let{(it.getSystemService(android.content.Context.INPUT_METHOD_SERVICE) as? android.view.inputmethod.InputMethodManager)?.hideSoftInputFromWindow(it.window.decorView.windowToken,0)}else when{screen=="home"&&widgets.editingId!=null->widgets.editingId=null;selected!=null->selected=null;openFolder!=null->openFolder=null;detailId!=null->detailId=null;editing->editing=false;quick->quick=false;drawer->drawer=false;screen=="visual-foundation"->{if(!visual.back())screen=visualReturn};screen=="chat-inspector"->screen=inspectorReturn;screen=="chat-settings"->screen="chat";screen=="navigation-settings"->screen="home-settings";screen=="recents"->screen=if(recentsReturn in listOf("chat","mind","store","wallpaper","photos","guide","video","search","widgets","backup","arcade","nova-calculator","lock-settings")&&data.shell.internalRecents.none{it.first==state.current&&it.second==recentsReturn})"home"else PreviewShellRules.returnRoute(recentsReturn,pool.active?.profile==state.current);else->screen=if(sanctuary)"sanctuary"else "home"}
+    if(ime)host?.let{(it.getSystemService(android.content.Context.INPUT_METHOD_SERVICE) as? android.view.inputmethod.InputMethodManager)?.hideSoftInputFromWindow(it.window.decorView.windowToken,0)}else when{screen=="home"&&widgets.editingId!=null->widgets.editingId=null;selected!=null->selected=null;openFolder!=null->openFolder=null;detailId!=null->detailId=null;editing->editing=false;quick->quick=false;drawer->drawer=false;screen=="visual-foundation"->{if(!visual.back())screen=visualReturn};screen=="chat-inspector"->screen=inspectorReturn;screen=="chat-settings"->screen="chat";screen=="navigation-settings"||screen=="sanctuary-settings"->screen="home-settings";screen=="recents"->screen=if(recentsReturn in listOf("chat","mind","store","wallpaper","photos","guide","video","search","widgets","backup","arcade","nova-calculator","lock-settings")&&data.shell.internalRecents.none{it.first==state.current&&it.second==recentsReturn})"home"else PreviewShellRules.returnRoute(recentsReturn,pool.active?.profile==state.current);else->screen=if(sanctuary)"sanctuary"else "home"}
    }
    LaunchedEffect(screen,pool.activeId){if(screen=="browser"&&pool.active?.profile!=state.current)screen="home"}
    val openRecents:()->Unit={drawer=false;quick=false;if(screen!="recents"){recentsReturn=screen;screen="recents"}}
@@ -167,6 +174,7 @@ private val lightColors=lightColorScheme(primary=Color(0xFF285F65),secondary=Col
      Text("Home tools",style=MaterialTheme.typography.titleMedium)
      ActionRow("Widget Centre",Icons.Default.Widgets){editing=false;widgetPage=currentPage;screen="widgets"}
 
+     if(sanctuaryStore!=null)ActionRow("Sanctuary",Icons.Default.Security){screen="sanctuary-settings"}
      ActionRow("Lock Space",Icons.Default.Lock){onLock()}
      ActionRow("Panic Exit",Icons.Default.Security){onPanic()}
      ActionRow("Nova Backup",Icons.Default.Save){editing=false;onBackup()}
@@ -191,6 +199,9 @@ private val lightColors=lightColorScheme(primary=Color(0xFF285F65),secondary=Col
           }
          }
          "navigation-settings"->NovaShellSettings(data){screen="home-settings"}
+         "sanctuary-settings"->if(sanctuaryStore!=null) SanctuarySettings(
+          sanctuaryStore,onEnded={screen="home-settings"},onBack={screen="home-settings"},
+         )
          "widgets"->WidgetCentre(data,widgets,widgetPage,onBack=goHome)
          "search"->NovaSearch(data,widgets,pool,searchHistory,onBack=goHome,onResult=launch,onWeb={query->val tab=pool.open(standaloneBrowser,state.current);pool.setBrowserMode(tab,true);pool.navigate(tab,"https://www.google.com/search?q="+java.net.URLEncoder.encode(query,"UTF-8"));screen="home"})
          "video"->VideoScreen(video,goHome)
@@ -199,10 +210,22 @@ private val lightColors=lightColorScheme(primary=Color(0xFF285F65),secondary=Col
          "arcade"->ArcadeScreen(data,arcadeGame,screen==route,onHome=goHome)
          "lock-settings"->LaunchedEffect(Unit){onLock()}
          "mind"->{
-          MindScreen(mind,state.current,audio,mindPage,mindLaunch,onHome=goHome,onSanctuary={sanctuary=true;screen="sanctuary"})
+          MindScreen(mind,state.current,audio,mindPage,mindLaunch,onHome=goHome,onSanctuary={sanctuary=sanctuaryStore==null;screen="sanctuary"})
          }
          "chat","chat-inspector","chat-settings"->Column(Modifier.fillMaxSize().safeDrawingPadding().padding(24.dp)){PreviewHeader("Nova Chat Lite · Beta","Not enabled in this integration",goHome);Text("Native Favourites integration remains disabled pending production session and privacy verification. Normal WhatsApp is available through Nova Store in Primary Space.")}
-         "sanctuary"->SanctuaryScreen(data,audio,onMind={mindPage="home";mindLaunch++;screen="mind"},onCalm={mindPage=mind.preferred;mindLaunch++;screen="mind"},onLaunch=launch,onExit={sanctuary=false;screen="home"})
+         "sanctuary"->if(sanctuaryStore==null) {
+          SanctuaryScreen(data,audio,onMind={mindPage="home";mindLaunch++;screen="mind"},
+           onCalm={mindPage=mind.preferred;mindLaunch++;screen="mind"},onLaunch=launch,
+           onExit={sanctuary=false;screen="home"})
+         } else {
+          SanctuaryHome(
+           store=sanctuaryStore,androidApps=emptyMap(),
+           novaApps=data.allApps().filter{it.id!="sanctuary"}.associate{it.id to it.name},
+           protectionStatus="Focus timer only · Android protection is inactive",
+           onStart=sanctuaryStore::start,onPermissions={},onLaunchAndroid={},onLaunchNova=launch,
+           onBack={sanctuary=false;screen="home"},
+          )
+         }
          "recents"->NovaRecents(data,pool,onHome=goHome,onResume=resumeTab,onInternal={id->if(id in nativeHomeApps)onNative(id)else screen=id},onCloseInternal={id->if(id=="browser-v1")onNative("close-browser");data.shell.closeInternal(state.current,id);if(id=="mind")audio.pause();if(id=="video")video.close()})
          "visual-foundation"->if(state.current=="primary")VisualFoundation(
           visual,onClose={screen=visualReturn},onRealApp={id->visual.reset();screen="home";launch(id)},
