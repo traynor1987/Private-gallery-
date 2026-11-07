@@ -622,8 +622,8 @@ jobs:
             adb shell settings get secure show_ime_with_hard_keyboard > app/build/home2-evidence/ime-with-hardware-keyboard.txt
             adb install -r app/build/outputs/apk/debug/app-debug.apk
             adb install -r app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
-            python3 scripts/run_backup_repair62.py --evidence-report
             python3 scripts/run_backup_restart62.py
+            python3 scripts/run_backup_repair62.py --evidence-report
             python3 scripts/run_backup_repair62.py --single
             python3 scripts/run_backup_repair62.py
             bash scripts/run_home2_runtime.sh
