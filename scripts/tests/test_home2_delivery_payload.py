@@ -141,7 +141,13 @@ class Home2DeliveryPayloadTest(unittest.TestCase):
         self.assertIn('needs.home2-production.outputs.apk_sha256',str(publish))
         self.assertIn('novaos-1.7.30-visual-foundation-code65',str(publish))
         self.assertIn('--prerelease --latest=false',str(publish))
-        self.assertIn('--verify-tag',str(publish))
+        self.assertIn('--target "$FROZEN_SOURCE"',str(publish))
+        self.assertNotIn('gh api --method POST',str(publish))
+        self.assertIn("needs.home2-production.result == 'skipped'",publish['if'])
+        self.assertIn('[home2-publish-code65]',publish['if'])
+        recover=next(step for step in publish['steps'] if step.get('name')=='Recover the signed Code 65 artifact from acceptance run 32')
+        for requirement in ('42410507182','128517442213','13589877482',"job.conclusion!=='success'",'d2b6c0a22bfc5cb663ef79bec6e929ec494fb338b106d950468df3e1d2b8c3f9'):
+            self.assertIn(requirement,recover['with']['script'])
         self.assertNotIn('gh release upload',str(publish))
 
     def test_publication_rejects_wrong_source_bytes_upgrade_and_extra_files(self):

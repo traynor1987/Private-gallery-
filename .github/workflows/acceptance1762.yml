@@ -2,7 +2,7 @@ name: Private Gallery original-key owner acceptance
 on:
   push:
     branches: [release/1.7.7-recently-deleted, release/1.7.8-private-apps, release/1.7.9-evidence-locker, release/1.7.10-private-home, integration/novaos-1.7-home2, feature/novaos-visual-foundation]
-    paths: ['.acceptance1762-candidate', '.acceptance178-candidate', '.acceptance179-candidate', '.acceptance1710-candidate', '.acceptance17101-candidate', '.acceptance17102-candidate', '.home2-production-candidate']
+    paths: ['.github/workflows/acceptance1762.yml', '.acceptance1762-candidate', '.acceptance178-candidate', '.acceptance179-candidate', '.acceptance1710-candidate', '.acceptance17101-candidate', '.acceptance17102-candidate', '.home2-production-candidate']
 permissions:
   contents: read
   actions: read
@@ -1416,7 +1416,7 @@ jobs:
           if-no-files-found: warn
   home2-publish:
     needs: home2-production
-    if: needs.home2-production.result == 'success' && github.repository == 'traynor1987/Private-gallery-' && github.event_name == 'push' && github.ref == 'refs/heads/feature/novaos-visual-foundation'
+    if: ${{ !cancelled() && (needs.home2-production.result == 'success' || (needs.home2-production.result == 'skipped' && contains(github.event.head_commit.message, '[home2-publish-code65]') && !contains(github.event.head_commit.message, '[home2-sign]'))) && github.repository == 'traynor1987/Private-gallery-' && github.event_name == 'push' && github.ref == 'refs/heads/feature/novaos-visual-foundation' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     permissions:
@@ -1433,10 +1433,46 @@ jobs:
       - name: Set the temporary publication directory
         run: echo "DELIVERY_DIR=$RUNNER_TEMP/novaos-code65-delivery" >> "$GITHUB_ENV"
       - name: Download the verified application from this signing run
+        if: needs.home2-production.result == 'success'
         uses: actions/download-artifact@v4
         with:
           name: novaos-1.7.30-visual-foundation-code65-owner-review
           path: ${{ env.DELIVERY_DIR }}
+      - name: Recover the signed Code 65 artifact from acceptance run 32
+        if: needs.home2-production.result == 'skipped'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs=require('fs'), path=require('path'), crypto=require('crypto');
+            const run_id=42410507182, job_id=128517442213, artifact_id=13589877482;
+            const activation='00aea5defcde28b7afe2c8b6715c5a3029e5f246';
+            const expected='d2b6c0a22bfc5cb663ef79bec6e929ec494fb338b106d950468df3e1d2b8c3f9';
+            const run=(await github.rest.actions.getWorkflowRun({...context.repo,run_id})).data;
+            if(run.path.split('@')[0]!=='.github/workflows/acceptance1762.yml'||run.head_sha!==activation||run.head_branch!=='feature/novaos-visual-foundation'||run.event!=='push'||run.status!=='completed')throw Error('Wrong original acceptance run');
+            const job=(await github.rest.actions.getJobForWorkflowRun({...context.repo,job_id})).data;
+            if(job.run_id!==run_id||job.head_sha!==activation||job.name!=='home2-production'||job.conclusion!=='success')throw Error('Original signing and upgrade job did not pass');
+            const artifact=(await github.rest.actions.getArtifact({...context.repo,artifact_id})).data;
+            if(artifact.expired||artifact.name!=='novaos-1.7.30-visual-foundation-code65-owner-review'||artifact.workflow_run?.id!==run_id||artifact.workflow_run?.head_sha!==activation||artifact.digest!=='sha256:'+expected)throw Error('Wrong original signed artifact');
+            const archive=Buffer.from((await github.rest.actions.downloadArtifact({...context.repo,artifact_id,archive_format:'zip'})).data);
+            if(archive.length!==61355596||crypto.createHash('sha256').update(archive).digest('hex')!==expected)throw Error('Original signed artifact bytes differ');
+            fs.writeFileSync(path.join(process.env.RUNNER_TEMP,'original-code65-delivery.zip'),archive,{flag:'wx'});
+            core.exportVariable('FROZEN_SOURCE','a02cfcf6bb3bbae15f00935c2b2124ae7eb4e674');
+            core.exportVariable('EXPECTED_APK_SHA256','fa0dafcf314d06a5e6c5cf02a162cff7e62660ab7805dea925cec8ed6794fb7e');
+            core.exportVariable('VERIFIED_SIGNING_RUN',String(run_id));
+      - name: Extract the exact two verified Code 65 delivery files
+        if: needs.home2-production.result == 'skipped'
+        run: |
+          python3 - <<'PYRECOVERY'
+          import os,shutil,zipfile
+          from pathlib import Path
+          directory=Path(os.environ['DELIVERY_DIR']);directory.mkdir()
+          expected={os.environ['APK_NAME'],'NovaOS-1.7.30-visual-foundation-code65-evidence.zip'}
+          with zipfile.ZipFile(Path(os.environ['RUNNER_TEMP'])/'original-code65-delivery.zip') as archive:
+              assert sorted(archive.namelist())==sorted(expected)
+              for name in expected:
+                  with archive.open(name) as source, (directory/name).open('xb') as dest:
+                      shutil.copyfileobj(source,dest)
+          PYRECOVERY
       - name: Recheck the exact signed delivery before publication
         run: |
           python3 - <<'PYPUBLISH'
@@ -1467,9 +1503,9 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           tag=novaos-1.7.30-visual-foundation-code65
-          if ! gh api --method POST "repos/$GITHUB_REPOSITORY/git/refs" -f ref="refs/tags/$tag" -f sha="$FROZEN_SOURCE" >/dev/null; then
-            # A prior interrupted publication may already have created the exact tag.
-            existing=$(gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/$tag" --jq '.object | [.type,.sha] | @tsv')
+          tags=$(gh api "repos/$GITHUB_REPOSITORY/git/matching-refs/tags/$tag")
+          existing=$(jq -r --arg ref "refs/tags/$tag" '.[] | select(.ref == $ref) | .object | [.type,.sha] | @tsv' <<< "$tags")
+          if [[ -n "$existing" ]]; then
             test "$existing" = "commit"$'\t'"$FROZEN_SOURCE"
           fi
           cat > "$RUNNER_TEMP/novaos-code65-release-notes.md" <<EOFNOTES
@@ -1482,8 +1518,10 @@ jobs:
           Install over the existing NovaOS installation. Do not uninstall it or clear its data.
 
           Source: $FROZEN_SOURCE
-          Verification: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID
+          Verification: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/${VERIFIED_SIGNING_RUN:-$GITHUB_RUN_ID}
           EOFNOTES
           gh release create "$tag" "$DELIVERY_DIR/$APK_NAME" "$DELIVERY_DIR/SHA256SUMS.txt" \
-            --repo "$GITHUB_REPOSITORY" --verify-tag --prerelease --latest=false \
+            --repo "$GITHUB_REPOSITORY" --target "$FROZEN_SOURCE" --prerelease --latest=false \
             --title 'NovaOS 1.7.30 Visual Foundation (Code 65)' --notes-file "$RUNNER_TEMP/novaos-code65-release-notes.md"
+          actual=$(gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/$tag" --jq '.object | [.type,.sha] | @tsv')
+          test "$actual" = "commit"$'\t'"$FROZEN_SOURCE"
