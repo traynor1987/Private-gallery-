@@ -219,6 +219,7 @@ private val memoryCommands=listOf(
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable private fun CalculatorReadout(
     model:CalculatorData,copied:Boolean,onHome:()->Unit,onHelp:()->Unit,onInput:(String)->Unit,onCopy:()->Unit,
     onScientific:()->Unit,onAngle:()->Unit,onMemory:()->Unit,onHistory:()->Unit,
@@ -226,7 +227,7 @@ private val memoryCommands=listOf(
     val palette=MaterialTheme.colorScheme
     Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically){
         Column(Modifier.weight(1f).padding(vertical=4.dp)){
-            Text("Calculator",style=MaterialTheme.typography.titleLarge,fontWeight=FontWeight.SemiBold)
+            Text("Calculator",style=MaterialTheme.typography.titleLarge,fontWeight=FontWeight.SemiBold,color=palette.onBackground)
             Text(if(model.scientific)"Scientific mode" else "Standard mode",
                 style=MaterialTheme.typography.labelMedium,color=palette.onSurfaceVariant)
         }
@@ -269,7 +270,7 @@ private val memoryCommands=listOf(
                 contentPadding=PaddingValues(horizontal=6.dp)){Text(if(copied)"Copied"else "Copy")}
         }
     }
-    Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),verticalAlignment=Alignment.CenterVertically){
+    FlowRow(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(2.dp)){
         FilterChip(model.scientific,onScientific,label={Text("Scientific")},modifier=Modifier.heightIn(min=48.dp))
         if(model.scientific)TextButton(onClick=onAngle,modifier=Modifier.heightIn(min=48.dp),
             contentPadding=PaddingValues(horizontal=6.dp)){Text(if(model.radians)"RAD"else "DEG")}

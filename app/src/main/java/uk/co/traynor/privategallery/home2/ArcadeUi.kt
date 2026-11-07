@@ -270,11 +270,11 @@ private fun ArcadeCatalogue(home: PreviewData, model: ArcadeData, onOpen: (Arcad
         val expanded = maxWidth >= 660.dp
         Column(
             Modifier.widthIn(max = 960.dp).fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 8.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             Surface(shape = ArcadeShape, color = MaterialTheme.colorScheme.surfaceVariant) {
-                Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("Play at your pace", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold)
+                Column(Modifier.fillMaxWidth().padding(10.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                    Text("Play at your pace", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         ArcadeMetric("2048 best", model.bestTiles.toString(), Modifier.weight(1f))
                         ArcadeMetric("Sudoku solved", model.sudokuWins.toString(), Modifier.weight(1f))
@@ -314,9 +314,9 @@ private fun ArcadeGameTile(
         ArcadeTitle.SNAKE -> "Best ${model.bestSnake}"
     }
     Surface(modifier, shape = ArcadeShape, color = MaterialTheme.colorScheme.surface) {
-        Column(Modifier.padding(horizontal = 12.dp, vertical = 8.dp)) {
+        Column(Modifier.padding(horizontal = 12.dp, vertical = 6.dp)) {
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                ArcadeArtwork(game, Modifier.size(58.dp))
+                ArcadeArtwork(game, Modifier.size(50.dp))
                 Column(Modifier.weight(1f)) {
                     Text(game.label, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
                     Text(game.genre, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)

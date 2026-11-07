@@ -79,6 +79,9 @@ class ArcadeUiTest {
   for (size in listOf(360,840)) {
    compose.runOnIdle{width=size}
    compose.onNodeWithTag("play-2048").assertIsDisplayed()
+   val snake=compose.onNodeWithTag("play-snake").assertIsDisplayed().getUnclippedBoundsInRoot()
+   val nav=compose.onNodeWithTag("nova-home").getUnclippedBoundsInRoot()
+   assertTrue("All three game actions must fit above Nova navigation",snake.bottom<=nav.top)
    ReleaseScreenshots62.capture(compose.onNodeWithTag("arcade-review-viewport"),"arcade-hub-$size")
   }
   for(id in listOf("2048","sudoku","snake"))for(size in listOf(360 to 720,840 to 720,840 to 360)){
