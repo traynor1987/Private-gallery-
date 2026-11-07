@@ -27,13 +27,13 @@ import androidx.compose.ui.unit.dp
  Column(Modifier.fillMaxSize().safeDrawingPadding().testTag("nova-store")){
   PreviewHeader("Nova Store",data.profileLabel,onBack){IconButton(onClick=onCustom){Icon(Icons.Default.Add,"Install custom website")}}
   LazyColumn(Modifier.fillMaxSize(),contentPadding=PaddingValues(horizontal=20.dp,vertical=8.dp),verticalArrangement=Arrangement.spacedBy(14.dp)){
+   if(onVisualFoundation!=null)item{VisualCatalogueEntry("store-visual-foundation",onVisualFoundation)}
    item{Surface(shape=RoundedCornerShape(30.dp),color=Color(0xFF303F65),contentColor=Color.White){Column(Modifier.fillMaxWidth().background(Brush.linearGradient(listOf(Color(0xFF303F65),Color(0xFF455568),Color(0xFF4B3B70)))).padding(24.dp)){
     Text("YOUR WEB. YOUR SPACE.",style=MaterialTheme.typography.labelSmall)
     Text("A little more\npossibility.",style=MaterialTheme.typography.headlineLarge,fontWeight=FontWeight.Light,modifier=Modifier.padding(vertical=12.dp))
     Text("${data.catalogue.size} official destinations. Add your favourites to Nova Home.",style=MaterialTheme.typography.bodyMedium)
     TextButton(onClick={onDetail(data.catalogue.first{it.id=="photopea"})}){Text("Discover Photopea  →",color=Color(0xFFB9F6E3))}
    }}}
-   if(onVisualFoundation!=null)item{VisualCatalogueEntry("store-visual-foundation",onVisualFoundation)}
    item{Row(horizontalArrangement=Arrangement.spacedBy(10.dp)){FilterChip(selected=!mine,onClick={mine=false;category="All"},label={Text("Explore")},modifier=Modifier.testTag("store-explore"));FilterChip(selected=mine,onClick={mine=true;category="All"},label={Text("My Apps (${data.profile.installed.size})")},modifier=Modifier.testTag("store-my-apps"))}}
    item{OutlinedTextField(query,{query=it},Modifier.fillMaxWidth().testTag("store-search"),placeholder={Text(if(mine)"Search installed apps"else "Find something useful")},leadingIcon={Icon(Icons.Default.Search,null)},singleLine=true,shape=RoundedCornerShape(22.dp))}
    item{Row(Modifier.horizontalScroll(rememberScrollState()),horizontalArrangement=Arrangement.spacedBy(8.dp)){(listOf("All")+data.catalogue.map{it.category}.distinct().sorted()).forEach{value->FilterChip(selected=category==value,onClick={category=value},label={Text(value)})}}}
