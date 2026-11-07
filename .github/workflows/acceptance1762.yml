@@ -1124,6 +1124,9 @@ jobs:
     permissions:
       contents: read
       actions: read
+    outputs:
+      frozen_source: ${{ steps.verified-delivery.outputs.frozen_source }}
+      apk_sha256: ${{ steps.verified-delivery.outputs.apk_sha256 }}
     defaults:
       run:
         shell: bash
@@ -1167,7 +1170,7 @@ jobs:
                         'PRIVATE_GALLERY_1711_UPGRADE_FIXTURE':control/'docs/release1711/UpgradeFixtureTest.kt',
                         'PRIVATE_GALLERY_1711_GATE_RECEIPT':inputs/'gate.json',
                         'PRIVATE_GALLERY_1711_COMPILED_DIR':Path(os.environ['RUNNER_TEMP'])/'upgrade1711-compiled',
-                        'PRIVATE_GALLERY_1711_BASELINE_APK':Path(os.environ['RUNNER_TEMP'])/'original1711code63.apk',
+                        'PRIVATE_GALLERY_1711_BASELINE_APK':Path(os.environ['RUNNER_TEMP'])/'original1711code64.apk',
                         'PRIVATE_GALLERY_1711_SIGNED_INSTRUMENTATION_APK':Path(os.environ['RUNNER_TEMP'])/'release1711-signed/instrumentation.apk'}
               for name,value in settings.items(): output.write(name+'='+str(value)+'\n')
           PY
@@ -1196,18 +1199,18 @@ jobs:
             const runtime=Buffer.from((await github.rest.actions.downloadArtifact({...context.repo,artifact_id:artifact.id,archive_format:'zip'})).data);
             if(hash(runtime)!==marker.runtime_archive_sha256)throw Error('Original runtime archive changed');
             fs.writeFileSync(path.join(root,'original-runtime.zip'),runtime);
-            const baselineRun=(await github.rest.actions.getWorkflowRun({...context.repo,run_id:42386518404})).data;
+            const baselineRun=(await github.rest.actions.getWorkflowRun({...context.repo,run_id:42398677707})).data;
             write('baseline-github-run.json',baselineRun);
-            if(baselineRun.event!=='push'||baselineRun.head_branch!=='integration/novaos-1.7-home2'||baselineRun.head_repository?.full_name!=='traynor1987/Private-gallery-'||baselineRun.status!=='completed'||baselineRun.conclusion!=='success'||baselineRun.head_sha!=='278bcc5b1ba7f75eac73f2a171711a7255c8dae9'||baselineRun.path.split('@')[0]!=='.github/workflows/acceptance1762.yml')throw Error('Pinned baseline run differs');
-            const baselineJob=(await github.rest.actions.getJobForWorkflowRun({...context.repo,job_id:128444994749})).data;
+            if(baselineRun.event!=='push'||baselineRun.head_branch!=='feature/novaos-visual-foundation'||baselineRun.head_repository?.full_name!=='traynor1987/Private-gallery-'||baselineRun.status!=='completed'||baselineRun.conclusion!=='success'||baselineRun.head_sha!=='826ab9a48bcd20ff6dd764bf1c5caa770d45f676'||baselineRun.path.split('@')[0]!=='.github/workflows/acceptance1762.yml')throw Error('Pinned baseline run differs');
+            const baselineJob=(await github.rest.actions.getJobForWorkflowRun({...context.repo,job_id:128481534136})).data;
             write('baseline-github-job.json',baselineJob);
-            if(baselineJob.id!==128444994749||baselineJob.run_id!==42386518404||baselineJob.name!=='home2-production'||baselineJob.status!=='completed'||baselineJob.conclusion!=='success'||baselineJob.head_sha!=='278bcc5b1ba7f75eac73f2a171711a7255c8dae9')throw Error('Pinned baseline job differs');
-            const baseline=(await github.rest.actions.getArtifact({...context.repo,artifact_id:13580371185})).data;
+            if(baselineJob.id!==128481534136||baselineJob.run_id!==42398677707||baselineJob.name!=='home2-production'||baselineJob.status!=='completed'||baselineJob.conclusion!=='success'||baselineJob.head_sha!=='826ab9a48bcd20ff6dd764bf1c5caa770d45f676')throw Error('Pinned baseline job differs');
+            const baseline=(await github.rest.actions.getArtifact({...context.repo,artifact_id:13584728173})).data;
             write('baseline-github-artifact.json',baseline);
-            if(baseline.expired||baseline.name!=='novaos-1.7.11.7-home2-code63-owner-acceptance'||baseline.size_in_bytes!==60999212||baseline.workflow_run?.id!==42386518404||baseline.workflow_run?.head_sha!=='278bcc5b1ba7f75eac73f2a171711a7255c8dae9'||baseline.digest!=='sha256:ac871706d60359a2f08f12806bf146829b1d9e848d172d7e3edeb608507e8b6a')throw Error('Pinned baseline artifact differs');
+            if(baseline.expired||baseline.name!=='novaos-1.7.30-visual-foundation-code64-owner-review'||baseline.size_in_bytes!==61126104||baseline.workflow_run?.id!==42398677707||baseline.workflow_run?.head_sha!=='826ab9a48bcd20ff6dd764bf1c5caa770d45f676'||baseline.digest!=='sha256:46aed1b6c8b0019bc60df1e6d8de422467aecb8a8bb5f1c4e9c63e8ae0a9cbcf')throw Error('Pinned baseline artifact differs');
             const bytes=Buffer.from((await github.rest.actions.downloadArtifact({...context.repo,artifact_id:baseline.id,archive_format:'zip'})).data);
-            if(bytes.length!==60999212||hash(bytes)!=='ac871706d60359a2f08f12806bf146829b1d9e848d172d7e3edeb608507e8b6a')throw Error('Original baseline archive changed');
-            fs.writeFileSync(path.join(root,'original-code63.zip'),bytes);
+            if(bytes.length!==61126104||hash(bytes)!=='46aed1b6c8b0019bc60df1e6d8de422467aecb8a8bb5f1c4e9c63e8ae0a9cbcf')throw Error('Original baseline archive changed');
+            fs.writeFileSync(path.join(root,'original-code64.zip'),bytes);
       - name: Validate original runtime reports and independent production approval before signer access
         run: |
           controls="$RUNNER_TEMP/release1711-controls"
@@ -1231,20 +1234,20 @@ jobs:
             ~/.gradle/wrapper
           key: privacy1751-${{ runner.os }}-${{ hashFiles('**/*.gradle*', 'gradle/libs.versions.toml', 'gradle/wrapper/gradle-wrapper.properties') }}
           restore-keys: privacy1751-${{ runner.os }}-
-      - name: Install Android 17 tools and verify the original code63 APK
+      - name: Install Android 17 tools and verify the original code64 APK
         run: |
           sudo rm -rf /usr/share/dotnet /usr/share/swift /opt/ghc /usr/local/.ghcup /opt/hostedtoolcache/CodeQL
           "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --install "cmdline-tools;22.0"
           mv "$ANDROID_HOME/cmdline-tools/latest" "$RUNNER_TEMP/previous-android-command-tools1711"
           ln -s "$ANDROID_HOME/cmdline-tools/22.0" "$ANDROID_HOME/cmdline-tools/latest"
           "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-37.1" "build-tools;36.0.0" "emulator"
-          python3 "$RUNNER_TEMP/release1711-controls/scripts/verify_upgrade1711_baseline.py" "$RUNNER_TEMP/release1711-inputs/original-code63.zip" "$PRIVATE_GALLERY_1711_BASELINE_APK" | tee app/build/production-evidence/baseline-archive-validation.txt
+          python3 "$RUNNER_TEMP/release1711-controls/scripts/verify_upgrade1711_baseline.py" "$RUNNER_TEMP/release1711-inputs/original-code64.zip" "$PRIVATE_GALLERY_1711_BASELINE_APK" | tee app/build/production-evidence/baseline-archive-validation.txt
           "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose --print-certs "$PRIVATE_GALLERY_1711_BASELINE_APK" > app/build/production-evidence/baseline-signature.txt
           grep -Fxq 'Signer #1 certificate SHA-256 digest: 94f2bfc6567f26d067d29077111cfd0ce86d38263c642ad115e43365f05b0d17' app/build/production-evidence/baseline-signature.txt
           grep -Fxq 'Verified using v2 scheme (APK Signature Scheme v2): true' app/build/production-evidence/baseline-signature.txt
           grep -Fxq 'Number of signers: 1' app/build/production-evidence/baseline-signature.txt
           "$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging "$PRIVATE_GALLERY_1711_BASELINE_APK" > app/build/production-evidence/baseline-package.txt
-          grep -Fq "package: name='uk.co.traynor.privategallery' versionCode='63' versionName='1.7.11.7'" app/build/production-evidence/baseline-package.txt
+          grep -Fq "package: name='uk.co.traynor.privategallery' versionCode='64' versionName='1.7.30-visual-foundation'" app/build/production-evidence/baseline-package.txt
           grep -Fxq "sdkVersion:'37'" app/build/production-evidence/baseline-package.txt
           grep -Fxq "targetSdkVersion:'37'" app/build/production-evidence/baseline-package.txt
           if grep -q 'application-debuggable' app/build/production-evidence/baseline-package.txt; then exit 1; fi
@@ -1278,7 +1281,7 @@ jobs:
           jarsigner -verify "$probe/probe.jar" > "$probe/verification.txt"
           grep -q 'jar verified' "$probe/verification.txt"
           printf 'PASS: existing permanent private key; original certificate SHA256 94f2bfc6567f26d067d29077111cfd0ce86d38263c642ad115e43365f05b0d17\n' > app/build/production-evidence/permanent-signer.txt
-      - name: Build the frozen original-key 1.7.30-visual-foundation code64 owner review
+      - name: Build the frozen original-key 1.7.30-visual-foundation code65 release candidate
         env:
           ORG_GRADLE_PROJECT_PRIVATE_GALLERY_STORE_FILE: ${{ runner.temp }}/private-gallery-release.jks
           ORG_GRADLE_PROJECT_PRIVATE_GALLERY_STORE_PASSWORD: ${{ secrets.PRIVATE_GALLERY_SIGNING_STORE_PASSWORD }}
@@ -1308,7 +1311,7 @@ jobs:
           "$ANDROID_HOME/build-tools/36.0.0/zipalign" -c -P 16 -v 4 app/build/outputs/apk/release/app-release.apk > app/build/production-evidence/alignment.txt
       - name: Enable emulator acceleration
         run: sudo chmod 666 /dev/kvm
-      - name: Original-key code63 to code64 upgrade and restart without uninstall or clear
+      - name: Original-key code64 to code65 upgrade and restart without uninstall or clear
         uses: reactivecircus/android-emulator-runner@v2
         env:
           PRODUCTION_UPGRADE: '1'
@@ -1316,7 +1319,7 @@ jobs:
           api-level: '37.0'
           target: google_apis
           arch: x86_64
-          avd-name: novaos1711-original-key-from63
+          avd-name: novaos1711-original-key-from64
           force-avd-creation: true
           profile: pixel_2
           cores: 4
@@ -1327,11 +1330,12 @@ jobs:
           emulator-options: -no-window -gpu software -no-snapshot -noaudio -no-boot-anim -feature -HardwareDecoder
           script: bash "$RUNNER_TEMP/release1711-controls/scripts/verify_synthetic_upgrade1711.sh"
       - name: Stage the one verified production APK and complete upgrade evidence
+        id: verified-delivery
         run: |
           python3 - <<'PY'
           import hashlib,json,os,shutil,zipfile
           from pathlib import Path
-          root=Path.cwd();evidence=root/'app/build/production-evidence';upgrade=evidence/'from63'
+          root=Path.cwd();evidence=root/'app/build/production-evidence';upgrade=evidence/'from64'
           apk=root/'app/build/outputs/apk/release/app-release.apk';digest=hashlib.sha256(apk.read_bytes()).hexdigest()
           assert (upgrade/'upgrade-result.txt').read_text().startswith('PASS:')
           assert (upgrade/'upgrade-candidate-source-sha.txt').read_text().strip()==os.environ['FROZEN_SOURCE']
@@ -1347,34 +1351,36 @@ jobs:
           compiled_reports.mkdir()
           for name in ('compilation.json','baseline-build.gradle.kts','instrumentation-package.txt','instrumentation-manifest.txt','compile.log'):
               shutil.copyfile(compiled/name,compiled_reports/name)
-          summary=dict(source_sha=os.environ['FROZEN_SOURCE'],version='1.7.30-visual-foundation',version_code=64,package='uk.co.traynor.privategallery',apk_sha256=digest,
-                       original_certificate_sha256='94f2bfc6567f26d067d29077111cfd0ce86d38263c642ad115e43365f05b0d17',original_key_code63_upgrade='PASS',restart='PASS',physical_owner_acceptance='NOT_PERFORMED')
+          summary=dict(source_sha=os.environ['FROZEN_SOURCE'],version='1.7.30-visual-foundation',version_code=65,package='uk.co.traynor.privategallery',apk_sha256=digest,
+                       original_certificate_sha256='94f2bfc6567f26d067d29077111cfd0ce86d38263c642ad115e43365f05b0d17',original_key_code64_upgrade='PASS',restart='PASS',physical_owner_acceptance='NOT_PERFORMED')
           (evidence/'release-summary.json').write_text(json.dumps(summary,indent=2)+'\n')
-          destination=root/'app/build/NovaOS-1.7.30-visual-foundation-code64-owner-review.apk';shutil.copyfile(apk,destination)
+          destination=root/'app/build/NovaOS-1.7.30-visual-foundation-code65-owner-review.apk';shutil.copyfile(apk,destination)
           (evidence/'SHA256SUMS.txt').write_text(digest+'  '+destination.name+'\n')
           (evidence/'REVIEW-NOTES.md').write_text(
               '# NovaOS 1.7.30 visual foundation · owner review\n\n'
               f"Frozen application source `{summary['source_sha']}`.\n\n"
-              'Original production package and signing certificate. Android version code 64, API 37.\n\n'
+              'Original production package and signing certificate. Android version code 65, API 37.\n\n'
               'Unfinished modules use clearly labelled synthetic DEMO data. Demo screens do not activate protection, '
               'perform analysis on personal data, request sensitive permissions, or connect external services.\n\n'
-              'The pinned original-key Code 63 APK passed an in-place upgrade with retained-data checks, a force-stop '
+              'The pinned original-key Code 64 APK passed an in-place upgrade with retained-data checks, a force-stop '
               'and repeat verification on an enforcing API 37 emulator. Physical Galaxy Z Fold acceptance remains pending.\n\n'
               'Install over the existing production installation. Do not uninstall NovaOS or clear its data.\n'
           )
           forbidden={'.apk','.apks','.aab','.jks','.keystore','.p12','.pem','.key','.zip'}
           assert not any(path.suffix.lower() in forbidden for path in evidence.rglob('*') if path.is_file()), 'Evidence contains an installable package, archive or signing material'
-          archive=shutil.make_archive(str(root/'app/build/NovaOS-1.7.30-visual-foundation-code64-evidence'),'zip',evidence)
+          archive=shutil.make_archive(str(root/'app/build/NovaOS-1.7.30-visual-foundation-code65-evidence'),'zip',evidence)
           with zipfile.ZipFile(archive) as zipped:
               assert not any(Path(name).suffix.lower() in forbidden for name in zipped.namelist()), 'Forbidden delivery payload'
+          with open(os.environ['GITHUB_OUTPUT'],'a') as output:
+              output.write(f'frozen_source={summary["source_sha"]}\napk_sha256={digest}\n')
           PY
       - name: Preserve verified delivery and evidence
         uses: actions/upload-artifact@v4
         with:
-          name: novaos-1.7.30-visual-foundation-code64-owner-review
+          name: novaos-1.7.30-visual-foundation-code65-owner-review
           path: |
-            app/build/NovaOS-1.7.30-visual-foundation-code64-owner-review.apk
-            app/build/NovaOS-1.7.30-visual-foundation-code64-evidence.zip
+            app/build/NovaOS-1.7.30-visual-foundation-code65-owner-review.apk
+            app/build/NovaOS-1.7.30-visual-foundation-code65-evidence.zip
           if-no-files-found: error
           retention-days: 30
       - name: Remove original signing material on every outcome
@@ -1395,7 +1401,7 @@ jobs:
               original=evidence/name
               if original.is_file() and not original.is_symlink(): shutil.copyfile(original,destination/name)
           for name in ('upgrade-baseline-package.txt','upgrade-candidate-package.txt','upgrade-baseline-signature.txt','upgrade-candidate-signature.txt','upgrade-instrumentation-signature.txt','upgrade-compilation.json','upgrade-seed.txt','upgrade-verify.txt','upgrade-after-restart.txt','upgrade-result.txt'):
-              original=evidence/'from63'/name
+              original=evidence/'from64'/name
               if original.is_file() and not original.is_symlink(): shutil.copyfile(original,destination/name)
           for name in ('lint-results-release.html','lint-results-release.xml'):
               original=Path('app/build/reports')/name
@@ -1408,3 +1414,75 @@ jobs:
           name: novaos1711-production-failure-diagnostics
           path: ${{ runner.temp }}/release1711-failure
           if-no-files-found: warn
+  home2-publish:
+    needs: home2-production
+    if: needs.home2-production.result == 'success' && github.repository == 'traynor1987/Private-gallery-' && github.event_name == 'push' && github.ref == 'refs/heads/feature/novaos-visual-foundation'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: write
+      actions: read
+    defaults:
+      run:
+        shell: bash
+    env:
+      FROZEN_SOURCE: ${{ needs.home2-production.outputs.frozen_source }}
+      EXPECTED_APK_SHA256: ${{ needs.home2-production.outputs.apk_sha256 }}
+      DELIVERY_DIR: ${{ runner.temp }}/novaos-code65-delivery
+      APK_NAME: NovaOS-1.7.30-visual-foundation-code65-owner-review.apk
+    steps:
+      - name: Download the verified application from this signing run
+        uses: actions/download-artifact@v4
+        with:
+          name: novaos-1.7.30-visual-foundation-code65-owner-review
+          path: ${{ env.DELIVERY_DIR }}
+      - name: Recheck the exact signed delivery before publication
+        run: |
+          python3 - <<'PYPUBLISH'
+          import hashlib,json,os,re,zipfile
+          from pathlib import Path
+          directory=Path(os.environ['DELIVERY_DIR'])
+          apk_name=os.environ['APK_NAME']
+          evidence_name='NovaOS-1.7.30-visual-foundation-code65-evidence.zip'
+          assert {item.name for item in directory.iterdir()}=={apk_name,evidence_name}
+          assert all(item.is_file() and not item.is_symlink() for item in directory.iterdir())
+          source=os.environ['FROZEN_SOURCE'];digest=os.environ['EXPECTED_APK_SHA256']
+          assert re.fullmatch('[0-9a-f]{40}',source) and source!='0'*40
+          assert re.fullmatch('[0-9a-f]{64}',digest) and digest!='0'*64
+          with (directory/apk_name).open('rb') as apk:
+              assert hashlib.file_digest(apk,'sha256').hexdigest()==digest
+          with zipfile.ZipFile(directory/evidence_name) as archive:
+              assert archive.namelist().count('release-summary.json')==1
+              summary=json.loads(archive.read('release-summary.json'))
+          assert summary['source_sha']==source and summary['apk_sha256']==digest
+          assert summary['version']=='1.7.30-visual-foundation' and summary['version_code']==65
+          assert summary['package']=='uk.co.traynor.privategallery'
+          assert summary['original_certificate_sha256']=='94f2bfc6567f26d067d29077111cfd0ce86d38263c642ad115e43365f05b0d17'
+          assert summary['original_key_code64_upgrade']=='PASS' and summary['restart']=='PASS'
+          (directory/'SHA256SUMS.txt').write_text(f'{digest}  {apk_name}\n')
+          PYPUBLISH
+      - name: Publish the signed APK and checksum as a GitHub prerelease
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag=novaos-1.7.30-visual-foundation-code65
+          if ! gh api --method POST "repos/$GITHUB_REPOSITORY/git/refs" -f ref="refs/tags/$tag" -f sha="$FROZEN_SOURCE" >/dev/null; then
+            # A prior interrupted publication may already have created the exact tag.
+            existing=$(gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/$tag" --jq '.object | [.type,.sha] | @tsv')
+            test "$existing" = "commit"$'\t'"$FROZEN_SOURCE"
+          fi
+          cat > "$RUNNER_TEMP/novaos-code65-release-notes.md" <<EOFNOTES
+          NovaOS 1.7.30 Visual Foundation · Android version code 65
+
+          This build includes the redesigned native demo apps. Demo data is synthetic. Sanctuary protection and live integrations are inactive.
+
+          The APK uses the existing production package and signing certificate. The signed Code 64 to Code 65 in-place upgrade and restart passed on Android 17. Physical Galaxy Z Fold verification remains pending.
+
+          Install over the existing NovaOS installation. Do not uninstall it or clear its data.
+
+          Source: $FROZEN_SOURCE
+          Verification: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID
+          EOFNOTES
+          gh release create "$tag" "$DELIVERY_DIR/$APK_NAME" "$DELIVERY_DIR/SHA256SUMS.txt" \
+            --repo "$GITHUB_REPOSITORY" --verify-tag --prerelease --latest=false \
+            --title 'NovaOS 1.7.30 Visual Foundation (Code 65)' --notes-file "$RUNNER_TEMP/novaos-code65-release-notes.md"

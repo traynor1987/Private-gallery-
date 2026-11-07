@@ -1,16 +1,16 @@
-# NovaOS 1.7.30 Code 64 independent owner-review signing assessment
+# NovaOS 1.7.30 Code 65 independent signing and release review
 
-Source: 2fe2e6b4f959704524fe4f7a3f44dcd770a5cdfb
+Source: a02cfcf6bb3bbae15f00935c2b2124ae7eb4e674
 Decision: APPROVED
 Production signing: APPROVED
-Upgrade fixture SHA-256: 30db424f69e6b2ebe991417a8225f2decfa9b482cda2c31cd4a7f65c8ccf24cc
-Upgrade controls SHA-256: fa7889fac08bc0951e40f9fe5837a06699bcfc04bc371144d241fee6425fd0c1
+Upgrade fixture SHA-256: 7bf614cc4b4fbd999ce3d1057203b6501db58084f3fe7482d098d5804669f79a
+Upgrade controls SHA-256: 25939febb6b27ff40dcff7729637fe2479fc36b9bf8e20ebc55a5fce8c818a46
 Runtime matrix SHA-256: 789b0eef5c8a8383ffefa050bb69064f32a447201838e2e61e6a204ee2092694
-Runtime archive SHA-256: beb6091f0bba83512ea704025c9c5cdc7af732d49aeb27b5a0003ff62af122d2
-Signing workflow SHA-256: ffa833b76b315c93bb2bb9a0b684653542fccc6ac1bcddf8ccfe098b3705a67d
+Runtime archive SHA-256: 87bd1b8eb8d0dae92ace57f4ef6f040b00a29fa1e7052501a8ddc97b67f64a49
+Signing workflow SHA-256: c81216e64f44c03408aa88fe734c3376084c926dcd6c7962f698a385386be857
 
-The independent review verified the exact source, GitHub Actions run 42396312889, job 128474328794, and the original runtime artifact 13584571814. All 263 required Android cases, eight killed-process Backup recovery phases, and nine focused visual cases passed. The source run also passed 501 JVM tests.
+The independent reviewer verified exact-source run 42407843492, integration job 128509305948 and original artifact 13589406066. All 263 Android 17 regression cases, eight Backup killed-process phases, nine focused visual cases and 501 JVM tests passed.
 
-The thirty synthetic demos add no Android permissions or real data connections. AndroidManifest, MainActivity and the core security engines match the archived baseline. The app drawer keeps the demo catalogue out of Hidden Space. The candidate retains the production package and the original signing identity.
+The redesign is confined to synthetic visual workspaces. Android manifest, Primary and Hidden access paths, production application ID, and encrypted stores retain the reviewed Code 64 behavior. The pinned archived original-key Code 64 APK from run 42398677707 and artifact 13584728173 is the upgrade baseline.
 
-Approval applies to the guarded Code 63 to Code 64 original-key upgrade and an owner-review artifact. Delivery requires the original-key in-place upgrade, encrypted fixture checks, restart and artifact verification. Physical Fold acceptance remains an owner review item.
+Owner authorized signing and release. Approval covers gated Code 64 to Code 65 original-key upgrade and publication of only the verified APK and checksum as a GitHub prerelease after upgrade and restart verification. Physical Galaxy Z Fold acceptance remains pending.
