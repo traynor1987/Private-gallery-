@@ -21,6 +21,8 @@ import java.io.File
 import java.util.UUID
 import uk.co.traynor.privategallery.core.evidence.EvidenceAccess
 import uk.co.traynor.privategallery.core.home2.SpaceContext
+import uk.co.traynor.privategallery.core.ui.AppTheme
+import uk.co.traynor.privategallery.ui.PrivateGalleryTheme
 
 class CalculatorUiTest {
  @get:Rule val compose=createAndroidComposeRule<ComponentActivity>()
@@ -37,18 +39,31 @@ class CalculatorUiTest {
   compose.onNodeWithTag("open-apps").performClick();compose.onNodeWithTag("drawer-search").performTextInput("Nova Calculator");compose.onNodeWithTag("app-nova-calculator").performClick()
   compose.onNodeWithTag("calculator").assertIsDisplayed();compose.onNodeWithTag("calculator-expression").performTextInput("0.1+0.2")
   compose.onNodeWithTag("calculator-key-=").performScrollTo().performClick();compose.onNodeWithTag("calculator-result").performScrollTo().assertTextEquals("0.3")
-  compose.onNodeWithContentDescription("Store in memory").performScrollTo().performClick();compose.onNodeWithText("Copy").performScrollTo().performClick()
+  compose.onNodeWithText("Memory").performScrollTo().performClick()
+  compose.onNodeWithContentDescription("Store in memory").performScrollTo().performClick()
+  compose.onNodeWithText("Copy").performScrollTo().performClick()
   compose.runOnIdle{assertEquals("0.3",CalculatorData(space).memory!!.toPlainString());assertEquals("0.3",(compose.activity.getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager).primaryClip!!.getItemAt(0).text.toString())}
   compose.onNodeWithText("History").performScrollTo().performClick();compose.onNodeWithTag("calculator-history-0").performScrollTo().assertExists()
   compose.onNodeWithContentDescription("Save calculation history").performScrollTo().performClick();compose.runOnIdle{assertTrue(CalculatorData(space).history.isEmpty())};space.close()
  }
  @Test fun foldSizesLargeTextScientificAndStandardControlsRemainReachable(){
   val space=fixture();var width by mutableIntStateOf(360);var height by mutableIntStateOf(720)
-  compose.setContent{if(attached)CompositionLocalProvider(LocalContext provides space){val density=LocalDensity.current;CompositionLocalProvider(LocalDensity provides Density(density.density,1.5f)){Box(Modifier.requiredSize(width.dp,height.dp)){CalculatorScreen(onHome={})}}}}
-  for(size in listOf(360 to 720,840 to 720)){
+  compose.setContent{
+   if(attached) CompositionLocalProvider(LocalContext provides space){
+    val density=LocalDensity.current
+    CompositionLocalProvider(LocalDensity provides Density(density.density,1.5f)){
+     PrivateGalleryTheme(AppTheme.DARK){
+      Box(Modifier.requiredSize(width.dp,height.dp)){CalculatorScreen(onHome={})}
+     }
+    }
+   }
+  }
+  for(size in listOf(360 to 720,840 to 720,840 to 360)){
    compose.runOnIdle{width=size.first;height=size.second}
-   compose.onNodeWithTag("calculator-expression").performScrollTo()
-   uk.co.traynor.privategallery.ReleaseScreenshots62.capture(compose.onRoot(),"calculator-standard-${size.first}")
+   compose.onNodeWithTag("calculator-key-(").performScrollTo().assertIsDisplayed().assertTextEquals("(")
+   compose.onNodeWithTag("calculator-key-)").performScrollTo().assertIsDisplayed().assertTextEquals(")")
+   compose.onNodeWithContentDescription("Equals").performScrollTo().assertIsDisplayed()
+   if(size.second==720){compose.onNodeWithTag("calculator-expression").performScrollTo();uk.co.traynor.privategallery.ReleaseScreenshots62.capture(compose.onRoot(),"calculator-standard-${size.first}")}
   }
   compose.onNodeWithText("Scientific").performScrollTo().performClick()
   for(size in listOf(360 to 720,840 to 720,840 to 360)){

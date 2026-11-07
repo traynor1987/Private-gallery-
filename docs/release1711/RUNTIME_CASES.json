@@ -43,7 +43,8 @@
     "pendingPickerDoesNotSurviveActualActivityRecreation",
     "primaryRetirementDuringPickerRejectsLateAndDuplicateResult",
     "primaryScheduleHydratesPersistedCheckboxesAndHasNoHiddenDisclosure",
-    "recoveryInputDoesNotSurviveActualActivityRecreation"
+    "recoveryInputDoesNotSurviveActualActivityRecreation",
+    "syntheticDashboardPreviewShowsReadableSizes"
   ],
   "uk.co.traynor.privategallery.core.backup.BackupDocumentsUiTest": [
     "actualTreePickerRequiresRecoveryAcknowledgementBeforeArmingEncryptedAutomaticSchedule",

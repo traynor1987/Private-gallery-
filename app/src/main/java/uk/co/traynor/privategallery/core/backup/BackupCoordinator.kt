@@ -133,15 +133,24 @@ internal class BackupCoordinator(private val context:Context,val access:Evidence
   }catch(failure:Throwable){if(current())runCatching{record("Failed","Saved apps restore did not verify",0,"App definitions restore")};throw failure}
   finally{bytes?.fill(0)}
  }
- fun history():String {
+ data class HistoryEntry(val status:String,val operation:String,val destination:String,val bytes:Long,val date:Long)
+ data class HistorySnapshot(val lastBackup:HistoryEntry?,val events:List<HistoryEntry>)
+ fun historySnapshot():HistorySnapshot {
   checkCurrent();val preferences=space.getSharedPreferences("nova_backup_history_v1",0)
-  val last=preferences.getString("lastBackup",null)?.let(::JSONObject)
-  val events=org.json.JSONArray(preferences.getString("events","[]"))
-  fun line(event:JSONObject):String {
+  fun entry(event:JSONObject):HistoryEntry {
    val status=event.getString("status").let{if(it=="Unverified")"Interrupted / unverified"else it}
-   return "$status · ${event.getString("operation")} · ${event.getString("destination")} · ${event.getLong("bytes")} bytes · ${java.text.DateFormat.getDateTimeInstance().format(java.util.Date(event.getLong("date")))}"
+   return HistoryEntry(status,event.getString("operation"),event.getString("destination"),event.getLong("bytes"),event.getLong("date"))
   }
-  return (last?.let{"Last successful backup: ${line(it)}"}?:"No verified backup yet")+"\n"+(0 until events.length()).joinToString("\n"){line(events.getJSONObject(it))}
+  val last=preferences.getString("lastBackup",null)?.let(::JSONObject)?.let(::entry)
+  val events=org.json.JSONArray(preferences.getString("events","[]"))
+  return HistorySnapshot(last,List(events.length()){entry(events.getJSONObject(it))})
+ }
+ fun history():String {
+  val snapshot=historySnapshot()
+  fun line(event:HistoryEntry):String {
+   return "${event.status} · ${event.operation} · ${event.destination} · ${event.bytes} bytes · ${java.text.DateFormat.getDateTimeInstance().format(java.util.Date(event.date))}"
+  }
+  return (snapshot.lastBackup?.let{"Last successful backup: ${line(it)}"}?:"No verified backup yet")+"\n"+snapshot.events.joinToString("\n",transform=::line)
  }
  private fun record(status:String,destination:String,bytes:Long,operation:String="Backup"){
   checkCurrent();val preferences=space.getSharedPreferences("nova_backup_history_v1",0)

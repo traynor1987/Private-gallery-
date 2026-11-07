@@ -17,7 +17,7 @@ import uk.co.traynor.privategallery.core.privateapps.*
 import uk.co.traynor.privategallery.core.camera.CameraOptions
 import uk.co.traynor.privategallery.core.camera.VaultCaptureAccess
 
-/** Reviewed release-control instrumentation for original-key code61 -> code62 upgrade.
+/** Reviewed release-control instrumentation for original-key code62 -> code63 upgrade.
  * Captured and hash-checked before frozen application checkout; never modifies baseline app.
  */
 class UpgradeFixtureTest {
@@ -28,7 +28,7 @@ class UpgradeFixtureTest {
     private val candidateCode get() = checkNotNull(arguments.getString("candidateCode")).toInt()
     private fun guard() {
         check(context.packageName == "uk.co.traynor.privategallery.hiddenprototype")
-        check(baselineCode == 61 && candidateCode == 62)
+        check(baselineCode == 62 && candidateCode == 63)
     }
     private fun hash(bytes: ByteArray) = MessageDigest.getInstance("SHA-256").digest(bytes).joinToString("") { "%02x".format(it) }
     private fun encryptedHashes(): JSONObject = JSONObject().also { result ->
@@ -394,7 +394,7 @@ class UpgradeFixtureTest {
         } finally {hidden.lock();key.fill(0)}
     }
 
-    /** Compiles against the actual signed code61 model; verifies code62 migration without rewriting ciphertext. */
+    /** Compiles against the actual signed code62 model; verifies code63 migration without rewriting ciphertext. */
     private fun homePreferences(seed:Boolean) {
         val key=PinVaultKeyStore(context).unlock("738291".toCharArray())
         val hidden=hiddenSession(false)
@@ -428,7 +428,7 @@ class UpgradeFixtureTest {
         } finally {primary.close();secret.close();hidden.lock();key.fill(0)}
     }
 
-    /** Home2 code61 APIs seed real owner-encrypted records. Candidate reads are deliberately
+    /** Home2 code62 APIs seed real owner-encrypted records. Candidate reads are deliberately
      * raw: opening the UI model may perform an explicit theme migration, outside preservation.
      * All these ciphertext files remain inside the existing complete filesystem assertions.
      */
@@ -505,7 +505,7 @@ class UpgradeFixtureTest {
         } finally {primary.close();secret.close();hidden.lock();key.fill(0)}
     }
 
-    // BEGIN NOVA62 PORTABLE APP FIXTURE: baseline61 SpaceContext APIs only.
+    // BEGIN NOVA62 PORTABLE APP FIXTURE: baseline62 SpaceContext APIs only.
     private fun portableApps62(seed:Boolean) {
         val key=PinVaultKeyStore(context).unlock("738291".toCharArray())
         val hidden=hiddenSession(false);val identity=Any()
@@ -523,12 +523,34 @@ class UpgradeFixtureTest {
                 for((namespace,expected) in listOf("nova_arcade_v1" to arcade,"nova_calculator_v1" to calculator)) {
                     val preferences=space.getSharedPreferences(namespace,0)
                     if(seed)assertTrue(preferences.edit().also{editor->expected.forEach{(name,value)->when(value){is String->editor.putString(name,value);is Boolean->editor.putBoolean(name,value);is Int->editor.putInt(name,value)}}}.commit())
-                    assertEquals("Future namespace bytes remain unchanged across real package upgrade",expected,preferences.all)
+                    assertEquals("Owner-encrypted app preferences remain unchanged across real package upgrade",expected,preferences.all)
                     if(!seed){
                         val validator=Class.forName(if(namespace=="nova_arcade_v1")"uk.co.traynor.privategallery.core.arcade.ArcadePreferences" else "uk.co.traynor.privategallery.core.calculator.CalculatorPreferences")
                         validator.getMethod("validate",Map::class.java).invoke(null,preferences.all)
                     }
                 }
+                // BEGIN CODE621 BACKUP HISTORY FIXTURE
+                val primarySpace=access===primary
+                val destination=if(primarySpace)"fixture-primary-backup.nova" else "fixture-hidden-backup.nova"
+                val archiveBytes=if(primarySpace)64_000_000L else 2_500_000_000L
+                val verified=JSONObject()
+                    .put("status","Verified").put("operation","Backup")
+                    .put("destination",destination).put("bytes",archiveBytes).put("date",1_700_000_000_000L)
+                val failed=JSONObject()
+                    .put("status","Failed").put("operation","Restore")
+                    .put("destination",destination).put("bytes",0L).put("date",1_700_000_060_000L)
+                val history=space.getSharedPreferences("nova_backup_history_v1",0)
+                val expectedHistory=mapOf(
+                    "lastBackup" to verified.toString(),
+                    "events" to org.json.JSONArray().put(failed).put(verified).toString(),
+                )
+                if(seed) {
+                    val editor=history.edit()
+                    expectedHistory.forEach{(name,value)->editor.putString(name,value)}
+                    assertTrue(editor.commit())
+                }
+                assertEquals("Owner-encrypted Backup history survives package upgrade and restart",expectedHistory,history.all)
+                // END CODE621 BACKUP HISTORY FIXTURE
             }
         }finally{primary.close();secret.close();hidden.lock();key.fill(0)}
     }
@@ -612,7 +634,7 @@ class UpgradeFixtureTest {
             } finally {hidden.lock()}
             if(baselineCode>=36)repository.javaClass.getMethod("presentationSort",String::class.java).invoke(repository,"NAME")
             val seeded=JSONObject().put("primaryDeleted",primaryDeleted).put("hiddenDeleted",hiddenDeleted).put("primaryDates",dateSnapshot(repository)).put("hiddenDates",hiddenDates).put("hiddenMedia",hiddenMedia).put("hiddenCollection",hiddenCollection).put("hiddenFiles",hiddenHashes()).put("media",media).put("collection",collection.id).put("files",encryptedHashes())
-            // Code52 already has Evidence Locker and Home: seed before installing code62.
+            // Code52 already has Evidence Locker and Home: seed before installing code63.
             candidateEvidence(seeded,false,baselineSeed=true)
             homePreferences(seed=true)
             home2State(seeded,seed=true)

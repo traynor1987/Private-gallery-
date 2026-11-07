@@ -25,7 +25,7 @@ class BackupDocumentsUiTest {
    compose.waitUntil(10000){compose.onAllNodesWithText("I saved the recovery key").fetchSemanticsNodes().isNotEmpty()}
    // The first checkbox here is the explicit recovery-key acknowledgement, not a scheduling control.
    compose.onAllNodes(isToggleable()).onFirst().performScrollTo().performClick();compose.onNodeWithText("Encrypt and verify destination").performScrollTo().performClick()
-   compose.waitUntil(15000){compose.onAllNodes(hasText("Verified actual destination bytes",substring=true)).fetchSemanticsNodes().isNotEmpty()}
+   compose.waitUntil(15000){compose.onAllNodes(hasText("Destination verified",substring=true) and hasAnyAncestor(hasTestTag("backup-operation-result"))).fetchSemanticsNodes().isNotEmpty()}
    // Accessibility SAVE returns before asynchronous document creation. Read the
    // identity only after Backup has verified the actual picker destination.
    val id=checkNotNull(BackupDocuments62.call("latest").getString("id"));document=BackupDocuments62.inPersistedTree(id)

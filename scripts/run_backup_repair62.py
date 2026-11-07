@@ -20,6 +20,7 @@ if __name__=='__main__':
  selection_group.add_argument('--single',action='store_true',help='Run only the settings restore regression')
  selection_group.add_argument('--evidence-report',action='store_true',help='Run only the Evidence Locker report regression')
  selection_group.add_argument('--wallpaper',action='store_true',help='Run only the Primary Vault wallpaper regression')
+ selection_group.add_argument('--redesign',action='store_true',help='Run the Backup, Arcade and Calculator presentation tests')
  args=parser.parse_args()
  directory='focused-repair62'
  if args.single:
@@ -31,8 +32,14 @@ if __name__=='__main__':
  if args.wallpaper:
   expected={(PREFIX+'core.home2.WallpaperUiTest','primary_home_vault_picker_cancel_apply_and_reopen')}
   directory='wallpaper62'
+ if args.redesign:
+  matrix=json.loads((ROOT/'docs/release1711/RUNTIME_CASES.json').read_text())
+  classes={PREFIX+name for name in ('core.backup.BackupUiTest','core.backup.BackupUi62Test','home2.ArcadeUiTest','home2.CalculatorUiTest','CalculatorMainSecurity62Test')}
+  expected={(cls,name) for cls in classes for name in matrix[cls]}
+  directory='redesign621'
  out=ROOT/'app/build/home2-evidence'/directory
- out.mkdir(parents=True,exist_ok=True)
+ if out.exists():shutil.rmtree(out)
+ out.mkdir(parents=True)
  selection=','.join(cls+'#'+name for cls,name in sorted(expected))
  command=['./gradlew','connectedDebugAndroidTest','-Pandroid.testInstrumentationRunnerArguments.class='+selection,'-Pkotlin.incremental=false','--no-daemon','--console=plain']
  result=subprocess.run(command,cwd=ROOT)

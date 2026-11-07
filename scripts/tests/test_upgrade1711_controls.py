@@ -22,6 +22,30 @@ compiled=module('verify_compiled_upgrade1711')
 signed=module('verify_signed_upgrade1711')
 gate=module('verify_release1711_gate')
 
+FIXTURE_PATH='docs/release1711/UpgradeFixtureTest.kt'
+FIXTURE_UPGRADE_LABELS=(
+    ('code61 -> code62','code62 -> code63'),
+    ('baselineCode == 61 && candidateCode == 62','baselineCode == 62 && candidateCode == 63'),
+    ('actual signed code61 model; verifies code62 migration','actual signed code62 model; verifies code63 migration'),
+    ('Home2 code61 APIs','Home2 code62 APIs'),
+    ('before installing code62','before installing code63'),
+    ('baseline61 SpaceContext APIs','baseline62 SpaceContext APIs'),
+    ('Future namespace bytes remain unchanged','Owner-encrypted app preferences remain unchanged'),
+)
+
+def original_labels(text):
+    begin='                // BEGIN CODE621 BACKUP HISTORY FIXTURE\n'
+    end='                // END CODE621 BACKUP HISTORY FIXTURE\n'
+    assert text.count(begin)==text.count(end)==1
+    start=text.index(begin)
+    stop=text.index(end,start)+len(end)
+    assert hashlib.sha256(text[start:stop].encode()).hexdigest()=='f5bef6acda2b8c4cb424391fbfee081c5e544de04997b7bf739a55b8491f3c7d'
+    text=text[:start]+text[stop:]
+    for original,current in FIXTURE_UPGRADE_LABELS:
+        assert text.count(current)==1
+        text=text.replace(current,original)
+    return text
+
 def without_portable_apps62(text):
     start=text.index('    // BEGIN NOVA62 PORTABLE APP FIXTURE:')
     end=text.index('    @Test fun seed()',start)
@@ -34,13 +58,13 @@ def without_portable_apps62(text):
     return text
 
 class Upgrade1711Controls(unittest.TestCase):
-    def test_signed61_baseline_is_pinned_and_release62_configuration_rejects_prior_baseline(self):
-        self.assertEqual(('2da2895e387839ec37d0590dfb713dc1bec99853', '4904c937d3773aa07b117022edbcafcbcf8c5d5a',
-                          42269170059, 128068998830, 13531400377),
+    def test_signed62_baseline_is_pinned_and_release63_configuration_rejects_prior_baseline(self):
+        self.assertEqual(('35d061c2c94297f7e063cc0b47037409f3642f9e', '9643ba5f7ff62b498f9414a6b92e4ffe66d3bd9d',
+                          42372575268, 128403584014, 13573884565),
                          (baseline.SOURCE_SHA, baseline.ACTIVATION_SHA, baseline.RUN_ID, getattr(baseline,'JOB_ID',None), baseline.ARTIFACT_ID))
-        self.assertEqual(('26d0f86d8ece1b3c22d4b41c32eddca2592e9722c3b7b93f7d420fd42aeaa678',60738267,
-                          '90083faaeb8ebaa896451d9dc721c4d26ee170135b3a4e1aad126038bcd7ef3e',144991916,
-                          '50fc64664a648aa78c049b9e6b55cb2cbaf4918029df208d0f4c6638a46f0948',112168),
+        self.assertEqual(('8fd0c13009c170dd1dbbff4178e527258d9a0c3c038f31f20dbd8793597bf766',60941459,
+                          'd49cd333fa1834bfd844147babc323bd6e4b557ecd183d8fb9d50e4e084ac09e',145516232,
+                          '2dc55e2810cc7e7cbc34a2b5b5aa86840bf223e1511cc949238037f5d935e058',111114),
                          (baseline.ARCHIVE_SHA256,baseline.ARCHIVE_BYTES,baseline.APK_SHA256,baseline.APK_BYTES,baseline.EVIDENCE_SHA256,baseline.EVIDENCE_BYTES))
         self.assertEqual(baseline.SOURCE_SHA,compiled.BASELINE)
         self.assertEqual(baseline.SOURCE_SHA,gate.BASELINE)
@@ -48,8 +72,8 @@ class Upgrade1711Controls(unittest.TestCase):
         env=dict(PATH='/usr/bin:/bin',GITHUB_REF='refs/heads/'+gate.BRANCH)
         result=subprocess.run(['bash','-ec',command],cwd=ROOT,env=env,capture_output=True,text=True)
         self.assertEqual(0,result.returncode,result.stderr)
-        self.assertEqual('1.7.11.6/62/1.7.11.5/61/'+baseline.SOURCE_SHA,result.stdout.strip())
-        for wrong in ('60','62'):
+        self.assertEqual('1.7.11.7/63/1.7.11.6/62/'+baseline.SOURCE_SHA,result.stdout.strip())
+        for wrong in ('61','63'):
             rejected=subprocess.run(['bash','-ec',command],cwd=ROOT,env=dict(env,PRIVATE_GALLERY_UPGRADE_BASELINE=wrong),capture_output=True,text=True)
             self.assertNotEqual(0,rejected.returncode)
 
@@ -58,11 +82,11 @@ class Upgrade1711Controls(unittest.TestCase):
             with self.subTest(kind=kind),tempfile.TemporaryDirectory() as temporary:
                 path=Path(temporary)/'synthetic.zip';payload=b'SYNTHETIC ORIGINAL APK'
                 evidence=Path(temporary)/'evidence.zip'
-                summary=dict(source_sha=baseline.SOURCE_SHA,version='1.7.11.5',version_code=61,
+                summary=dict(source_sha=baseline.SOURCE_SHA,version='1.7.11.6',version_code=62,
                              package='uk.co.traynor.privategallery',apk_sha256=hashlib.sha256(payload).hexdigest(),
                              original_certificate_sha256=baseline.CERTIFICATE_SHA256,
-                             original_key_code60_upgrade='PASS',restart='PASS')
-                for mutation,field,value in (('source','source_sha','0'*40),('version','version','1.7.11.6'),('code','version_code',62),('certificate','original_certificate_sha256','0'*64),('apk-receipt','apk_sha256','0'*64),('prior-upgrade','original_key_code60_upgrade','FAIL'),('restart','restart','FAIL')):
+                             original_key_code61_upgrade='PASS',restart='PASS')
+                for mutation,field,value in (('source','source_sha','0'*40),('version','version','1.7.11.7'),('code','version_code',63),('certificate','original_certificate_sha256','0'*64),('apk-receipt','apk_sha256','0'*64),('prior-upgrade','original_key_code61_upgrade','FAIL'),('restart','restart','FAIL')):
                     if kind==mutation:summary[field]=value
                 with warnings.catch_warnings(),zipfile.ZipFile(evidence,'w') as archive:
                     warnings.simplefilter('ignore',UserWarning)
@@ -82,7 +106,7 @@ class Upgrade1711Controls(unittest.TestCase):
 
     def test_reviewed_fixture_keeps_every_original_native_assertion_and_operation(self):
         previous=(ROOT/'docs/release17102/UpgradeFixtureTest.kt').read_text()
-        current=without_portable_apps62((ROOT/'docs/release1711/UpgradeFixtureTest.kt').read_text())
+        current=without_portable_apps62(original_labels((ROOT/FIXTURE_PATH).read_text()))
         start=current.index('    /** Home2 code61 APIs seed real owner-encrypted records.')
         end=current.index('    @Test fun seed()',start)
         current=current[:start]+current[end:]
@@ -102,7 +126,7 @@ class Upgrade1711Controls(unittest.TestCase):
         self.assertEqual(2,previous.count('File(context.filesDir, "profile'))
 
     def test_signed61_fixture_preserves_all_home2_browser_operations_and_ciphertext_exclusions(self):
-        previous=subprocess.check_output(['git','show',baseline.ACTIVATION_SHA+':docs/release1711/UpgradeFixtureTest.kt'],cwd=ROOT)
+        previous=subprocess.check_output(['git','show','4904c937d3773aa07b117022edbcafcbcf8c5d5a:'+FIXTURE_PATH],cwd=ROOT)
         self.assertEqual('54a13a0216d40fa397c6ea0f4fc9ce9ad90cbae3d22aa0f65abeca88700759f6',hashlib.sha256(previous).hexdigest())
         previous=previous.decode()
         for before,after in (('code60 -> code61','code61 -> code62'),
@@ -112,17 +136,22 @@ class Upgrade1711Controls(unittest.TestCase):
                              ('before installing code61','before installing code62')):
             self.assertEqual(1,previous.count(before))
             previous=previous.replace(before,after)
-        self.assertEqual(previous,without_portable_apps62((ROOT/'docs/release1711/UpgradeFixtureTest.kt').read_text()))
+        self.assertEqual(previous,without_portable_apps62(original_labels((ROOT/FIXTURE_PATH).read_text())))
         self.assertIn('WallpaperStore(space).apply(',previous)
         self.assertIn('assertEquals(expected.getString("wallpaperRecord"),prefs.getString(uk.co.traynor.privategallery.core.home2.WallpaperStore.KEY,null))',previous)
 
-    def test_compilation_transform_uses_actual_original61_build_and_only_two_reviewed_edits(self):
+    def test_signed62_fixture_keeps_all_preservation_assertions(self):
+        previous=subprocess.check_output(['git','show',baseline.ACTIVATION_SHA+':'+FIXTURE_PATH],cwd=ROOT)
+        self.assertEqual('537cccc991eeaba3c6e89d684048f81f89d8f4f9d8823dfeba2b4ff1028e51bb',hashlib.sha256(previous).hexdigest())
+        self.assertEqual(previous.decode(),original_labels((ROOT/FIXTURE_PATH).read_text()))
+
+    def test_compilation_transform_uses_actual_original62_build_and_only_two_reviewed_edits(self):
         fixture=(ROOT/'docs/release1711/UpgradeFixtureTest.kt').read_bytes()
         build=subprocess.check_output(['git','show',baseline.SOURCE_SHA+':app/build.gradle.kts'],cwd=ROOT)
         transformed,changed_build=compiled.transform(fixture,build)
         self.assertEqual(build.replace(compiled.BUILD_TARGET,b''),changed_build)
         self.assertEqual(fixture.replace(compiled.TARGET,b'uk.co.traynor.privategallery'),transformed)
-        self.assertIn(b'versionCode = 61',changed_build)
+        self.assertIn(b'versionCode = 62',changed_build)
         for bad_fixture,bad_build in ((fixture*2,build),(fixture,build*2),(b'absent',build),(fixture,b'absent')):
             with self.assertRaises(ValueError):compiled.transform(bad_fixture,bad_build)
         payload=b'SYNTHETIC INSTRUMENTATION, NOT AN APK';compiler=(ROOT/'scripts/compile_upgrade1711_fixture.sh').read_bytes()
@@ -159,7 +188,7 @@ class Upgrade1711Controls(unittest.TestCase):
             for name,data in evidence().items():zipped.writestr('home2-evidence/backup-restart62/'+name,data)
             zipped.writestr('outputs/androidTest-results/connected/debug/TEST-synthetic.xml',cases or '<testsuite><testcase classname="Synthetic.Case" name="passes"/></testsuite>')
         fixture=b'SYNTHETIC fixture';controls={'SYNTHETIC-control':gate.sha(b'SYNTHETIC')}
-        marker=dict(source=source,baseline_source=gate.BASELINE,baseline_code=61,candidate_code=62,test_run=123,test_artifact=456,controls_sha256=controls,fixture_sha256=gate.sha(fixture),matrix_sha256=gate.sha(matrix),runtime_archive_sha256=gate.sha(archive.read_bytes()))
+        marker=dict(source=source,baseline_source=gate.BASELINE,baseline_code=62,candidate_code=63,test_run=123,test_artifact=456,controls_sha256=controls,fixture_sha256=gate.sha(fixture),matrix_sha256=gate.sha(matrix),runtime_archive_sha256=gate.sha(archive.read_bytes()))
         review=('\n'.join(('Source: '+source,'Decision: APPROVED','Production signing: APPROVED','Upgrade fixture SHA-256: '+gate.sha(fixture),'Upgrade controls SHA-256: '+gate.controls_digest(controls),'Runtime matrix SHA-256: '+gate.sha(matrix),'Runtime archive SHA-256: '+marker['runtime_archive_sha256']))+'\n').encode()
         marker['review_sha256']=gate.sha(review)
         run=dict(id=123,event='push',head_sha=source,head_branch=gate.BRANCH,status='completed',conclusion='success',head_repository={'full_name':'traynor1987/Private-gallery-'},path='.github/workflows/fast-development.yml')
@@ -194,7 +223,7 @@ class Upgrade1711Controls(unittest.TestCase):
         for forbidden in ('adb uninstall','pm clear','apksigner" sign','STORE_PASSWORD','KEY_PASSWORD','--ks'):
             self.assertNotIn(forbidden,runner)
         self.assertIn('adb install -r "$candidate_apk"',runner)
-        self.assertIn('-e baselineCode 61 -e candidateCode 62',runner)
+        self.assertIn('-e baselineCode "$baseline_code" -e candidateCode "$release_code"',runner)
         self.assertIn('run_fixture verify after-restart',runner)
 
     def test_actual_shell_controls_reject_debug_candidate_and_baseline_before_any_install(self):
@@ -209,13 +238,13 @@ class Upgrade1711Controls(unittest.TestCase):
                 executable(bins/'git','printf "%s\\n" "'+source+'"\n')
                 executable(bins/'adb','printf "%s\\n" "adb $*" >> "$TOOL_LOG"\ncase "$*" in\n"shell getprop ro.kernel.qemu") echo 1;;\n"shell getprop ro.build.version.sdk") echo 37;;\n"shell getenforce") echo Enforcing;;\n"shell pm list packages uk.co.traynor.privategallery") :;;\n*) exit 90;;\nesac\n')
                 executable(bins/'sha256sum','if [[ "$1" == "$FAKE_BASELINE" ]]; then printf "%s  %s\\n" "'+baseline.APK_SHA256+'" "$1"; else /usr/bin/sha256sum "$@"; fi\n')
-                executable(sdk/'aapt','phase=candidate; code=62; version=1.7.11.6\nif [[ "$*" == *"$FAKE_BASELINE"* ]]; then phase=baseline; code=61; version=1.7.11.5; fi\nprintf "package: name=\x27uk.co.traynor.privategallery\x27 versionCode=\x27%s\x27 versionName=\x27%s\x27\\n" "$code" "$version"\nprintf "sdkVersion:\x2737\x27\\ntargetSdkVersion:\x2737\x27\\napplication-label:\x27NovaOS\x27\\n"\nif [[ "$phase" == "$DEBUG_PHASE" ]]; then echo application-debuggable; fi\n')
+                executable(sdk/'aapt','phase=candidate; code=63; version=1.7.11.7\nif [[ "$*" == *"$FAKE_BASELINE"* ]]; then phase=baseline; code=62; version=1.7.11.6; fi\nprintf "package: name=\x27uk.co.traynor.privategallery\x27 versionCode=\x27%s\x27 versionName=\x27%s\x27\\n" "$code" "$version"\nprintf "sdkVersion:\x2737\x27\\ntargetSdkVersion:\x2737\x27\\napplication-label:\x27NovaOS\x27\\n"\nif [[ "$phase" == "$DEBUG_PHASE" ]]; then echo application-debuggable; fi\n')
                 executable(sdk/'apksigner','printf "%s\\n" "apksigner $*" >> "$TOOL_LOG"\n[[ "$1" == verify ]] || exit 91\nprintf "%s\\n" "Signer #1 certificate SHA-256 digest: 94f2bfc6567f26d067d29077111cfd0ce86d38263c642ad115e43365f05b0d17" "Verified using v2 scheme (APK Signature Scheme v2): true" "Number of signers: 1"\n')
                 original=folder/'baseline.apk';original.write_bytes(b'SYNTHETIC original APK')
                 candidate=folder/'candidate.apk';candidate.write_bytes(b'SYNTHETIC candidate APK')
                 fixture=ROOT/'docs/release1711/UpgradeFixtureTest.kt'
                 receipt=folder/'SYNTHETIC-gate.json'
-                receipt.write_text(json.dumps(dict(schema=1,decision='READY_FOR_GATED_SIGNER',source=source,baseline_source=gate.BASELINE,baseline_code=61,candidate_code=62,test_run=123,test_artifact=456,validated_case_count=1,validated_restart_count=8,controls_sha256=gate.controls(),fixture_sha256=gate.sha(fixture.read_bytes()),review_sha256='2'*64,matrix_sha256='3'*64,runtime_archive_sha256='4'*64)))
+                receipt.write_text(json.dumps(dict(schema=1,decision='READY_FOR_GATED_SIGNER',source=source,baseline_source=gate.BASELINE,baseline_code=62,candidate_code=63,test_run=123,test_artifact=456,validated_case_count=1,validated_restart_count=8,controls_sha256=gate.controls(),fixture_sha256=gate.sha(fixture.read_bytes()),review_sha256='2'*64,matrix_sha256='3'*64,runtime_archive_sha256='4'*64)))
                 environment=dict(PATH=str(bins)+':/usr/bin:/bin',TOOL_LOG=str(log),FAKE_BASELINE=str(original),DEBUG_PHASE=debug_phase,GITHUB_ACTIONS='true',GITHUB_EVENT_NAME='push',GITHUB_REPOSITORY='traynor1987/Private-gallery-',GITHUB_REF='refs/heads/'+gate.BRANCH,FROZEN_SOURCE=source,PRODUCTION_UPGRADE='1',RUNNER_TEMP=str(folder),ANDROID_HOME=str(folder/'sdk'),PRIVATE_GALLERY_1711_ROOT=str(project),PRIVATE_GALLERY_1711_GATE_RECEIPT=str(receipt),PRIVATE_GALLERY_1711_BASELINE_APK=str(original),PRIVATE_GALLERY_1711_CANDIDATE_APK=str(candidate),PRIVATE_GALLERY_1711_EVIDENCE_DIR=str(folder/'evidence'),PRIVATE_GALLERY_1711_UPGRADE_FIXTURE=str(fixture),PRIVATE_GALLERY_1711_UPGRADE_FIXTURE_SHA256=gate.sha(fixture.read_bytes()))
                 result=subprocess.run(['bash',str(ROOT/'scripts'/script)],env=environment,capture_output=True,text=True)
                 self.assertNotEqual(0,result.returncode)

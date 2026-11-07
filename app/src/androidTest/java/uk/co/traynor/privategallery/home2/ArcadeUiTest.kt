@@ -6,17 +6,20 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
-import androidx.test.core.app.ActivityScenario
 import org.junit.After
 import org.junit.Assert.*
 import org.junit.Rule
 import org.junit.Test
 import java.io.File
 import java.util.UUID
+import uk.co.traynor.privategallery.ReleaseScreenshots62
+import uk.co.traynor.privategallery.core.ui.AppTheme
+import uk.co.traynor.privategallery.ui.PrivateGalleryTheme
 import uk.co.traynor.privategallery.core.evidence.EvidenceAccess
 import uk.co.traynor.privategallery.core.home2.SpaceContext
 import uk.co.traynor.privategallery.core.arcade.*
@@ -34,28 +37,80 @@ class ArcadeUiTest {
  @After fun close(){compose.runOnIdle{attached=false};access?.close();root?.deleteRecursively()}
  @Test fun catalogueShortcutLaunchesNativeGameAndAddsToExistingHomeLayout(){
   val space=fixture()
+  val seeded=Game2048(intArrayOf(0,2,2,0, 0,0,0,0, 0,0,0,0, 0,0,0,0),0,2026,null)
+  ArcadeData(space).save(seeded)
   compose.setContent{if(attached)CompositionLocalProvider(LocalContext provides context!!){IntegratedHome(access!!,true,{}, {}, {},null,null)}}
   compose.onNodeWithTag("open-apps").performClick();compose.onNodeWithTag("drawer-search").performTextInput("Nova Arcade");compose.onNodeWithTag("app-arcade").performClick()
   compose.onNodeWithTag("nova-arcade").assertIsDisplayed();compose.onNodeWithTag("shortcut-2048").performScrollTo().performClick()
+  compose.onNodeWithTag("arcade-achievements").performClick()
+  compose.onNodeWithTag("arcade-achievement-progress").assertIsDisplayed()
+  compose.onNodeWithContentDescription("Back to Home").performClick()
+  compose.onNodeWithTag("arcade-settings").performClick()
+  compose.onNodeWithContentDescription("Snake speed").assertIsDisplayed()
+  compose.onNodeWithContentDescription("Back to Home").performClick()
   compose.runOnIdle{assertTrue(PreviewData(space,null).profile.pages.any{"arcade-2048" in it})}
-  compose.onNodeWithTag("play-2048").performScrollTo().performClick();compose.onNodeWithTag("tiles-board").assertIsDisplayed()
+  compose.onNodeWithTag("continue-2048").performScrollTo().performClick()
+  compose.onNodeWithTag("tiles-board").assertIsDisplayed().performTouchInput { swipeLeft() }
+  compose.runOnIdle {
+   val moved=checkNotNull(ArcadeData(space).tiles)
+   assertEquals(4L,moved.score)
+   assertTrue(moved.canUndo())
+   assertEquals(seeded.move(0).encode(),moved.encode())
+  }
+  compose.onNodeWithTag("arcade-directions").performScrollTo().performClick()
   compose.onNodeWithContentDescription("Move left").performScrollTo().performClick()
   compose.runOnIdle{assertNotNull(ArcadeData(space).tiles)}
   compose.onNodeWithTag("nova-home").performClick();compose.onNodeWithTag("app-arcade-2048").performClick();compose.onNodeWithTag("tiles-board").assertIsDisplayed()
   space.close()
  }
  @Test fun coverInnerLandscapeKeepBoardsAndTouchControlsReachable(){
-  val space=fixture();var width by mutableIntStateOf(360);var height by mutableIntStateOf(720);var game by mutableStateOf("2048")
-  compose.setContent{if(attached)CompositionLocalProvider(LocalContext provides space){Box(Modifier.requiredSize(width.dp,height.dp)){key(game){ArcadeScreen(PreviewData(space,null),game,onHome={})}}}}
+  val space=fixture();var width by mutableIntStateOf(360);var height by mutableIntStateOf(720);var game by mutableStateOf<String?>(null)
+  val home=PreviewData(space,null)
+  compose.setContent{
+   if(attached)CompositionLocalProvider(LocalContext provides space){
+    PrivateGalleryTheme(AppTheme.DARK){
+     Column(Modifier.requiredSize(width.dp,height.dp).testTag("arcade-review-viewport").navigationBarsPadding()){
+      Box(Modifier.weight(1f).fillMaxWidth()){key(game){ArcadeScreen(home,game,onHome={})}}
+      NovaNavigation(home.shell,onRecents={},onHome={},onBack={})
+     }
+    }
+   }
+  }
+  for (size in listOf(360,840)) {
+   compose.runOnIdle{width=size}
+   compose.onNodeWithTag("play-2048").assertIsDisplayed()
+   ReleaseScreenshots62.capture(compose.onNodeWithTag("arcade-review-viewport"),"arcade-hub-$size")
+  }
   for(id in listOf("2048","sudoku","snake"))for(size in listOf(360 to 720,840 to 720,840 to 360)){
    compose.runOnIdle{game=id;width=size.first;height=size.second}
-   compose.onNodeWithTag(if(id=="2048")"tiles-board"else "$id-board").performScrollTo().assertIsDisplayed()
-   when(id){"2048"->compose.onNodeWithContentDescription("Move left").performScrollTo().assertIsDisplayed();"sudoku"->compose.onNodeWithTag("sudoku-number-1").performScrollTo().assertIsDisplayed();else->compose.onNodeWithTag("snake-pause").performScrollTo().assertIsDisplayed()}
-   if(id=="sudoku"&&size.second==720){compose.onNodeWithTag("sudoku-board").performScrollTo();uk.co.traynor.privategallery.ReleaseScreenshots62.capture(compose.onRoot(),"arcade-sudoku-${size.first}")}
+   val board=compose.onNodeWithTag(if(id=="2048")"tiles-board"else "$id-board")
+   if(size.second==720){
+    board.assertIsDisplayed()
+    val bounds=board.getUnclippedBoundsInRoot()
+    assertEquals("Square $id board at ${size.first}dp",bounds.width.value,bounds.height.value,1f)
+    val essential=compose.onNodeWithTag(when(id){"2048"->"arcade-directions";"sudoku"->"sudoku-number-9";else->"snake-pause"})
+    essential.assertIsDisplayed()
+    val nav=compose.onNodeWithTag("nova-home").getUnclippedBoundsInRoot()
+    assertTrue("$id controls must fit above Nova navigation",essential.getUnclippedBoundsInRoot().bottom<=nav.top)
+    ReleaseScreenshots62.capture(compose.onNodeWithTag("arcade-review-viewport"),"arcade-$id-${size.first}")
+   }
+   if(size.first<600)board.performScrollTo()
+   board.assertIsDisplayed()
+   when(id){
+    "2048"->compose.onNodeWithTag("arcade-directions").performScrollTo().assertIsDisplayed()
+    "sudoku"->{
+     compose.onNodeWithTag("sudoku-number-1").performScrollTo().assertIsDisplayed().assertHeightIsAtLeast(48.dp)
+     compose.onNodeWithTag("sudoku-number-9").performScrollTo().assertIsDisplayed().assertHeightIsAtLeast(48.dp)
+     compose.onNodeWithTag("sudoku-pause").performScrollTo().assertIsDisplayed()
+    }
+    else->compose.onNodeWithTag("snake-pause").performScrollTo().assertIsDisplayed()
+   }
+   if(size.first>=600)board.assertIsDisplayed()
   };space.close()
  }
  @Test fun snakeLifecyclePauseDiscardsQueuedInputAndResumeIsExplicit(){
   val space=fixture();compose.setContent{if(attached)CompositionLocalProvider(LocalContext provides space){ArcadeScreen(PreviewData(space,null),"snake",onHome={})}}
+  compose.onNodeWithTag("arcade-directions").performScrollTo().performClick()
   compose.onNodeWithTag("snake-pause").performScrollTo().performClick()
   compose.onNodeWithContentDescription("Move down").performScrollTo().performClick();compose.onNodeWithContentDescription("Move left").performScrollTo().performClick()
   compose.activityRule.scenario.moveToState(Lifecycle.State.CREATED)

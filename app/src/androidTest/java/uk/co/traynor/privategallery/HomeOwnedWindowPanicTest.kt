@@ -310,14 +310,15 @@ class HomeOwnedWindowPanicTest {
         fun shell(command:String)=automation.executeShellCommand(command).use{android.os.ParcelFileDescriptor.AutoCloseInputStream(it).readBytes().decodeToString()}
         val size=shell("wm size");val override=Regex("Override size: (\\d+x\\d+)").find(size)?.groupValues?.get(1)
         try {
-            for((width,height,label) in listOf(Triple(360,720,"cover"),Triple(840,720,"expanded"))) {
+            for((width,height) in listOf(360 to 720,840 to 720)) {
                 shell("wm size ${width}x$height")
                 compose.waitForIdle()
                 if(compose.onAllNodesWithTag("nova-backup").fetchSemanticsNodes().isEmpty()) {
                     compose.runOnIdle{activity.returnPrivateHome()};compose.onNodeWithTag("open-apps").performClick();compose.onNodeWithTag("app-backup").performScrollTo().performClick()
                 }
                 compose.onNodeWithText("Create backup").performScrollTo().assertIsDisplayed();compose.onNodeWithText("Restore").performScrollTo().assertIsDisplayed()
-                compose.onNodeWithText("Nova Backup").performScrollTo();ReleaseScreenshots62.capture(compose.onNodeWithTag("nova-backup"),"backup-primary-$label")
+                compose.onNodeWithText("Nova Backup").assertIsDisplayed()
+                assertTrue("Backup remains protected at ${width}x$height",uk.co.traynor.privategallery.ui.modalCaptureState1762(activity).secure)
                 compose.onAllNodes(hasText("Hidden",substring=true,ignoreCase=true)).assertCountEquals(0)
             }
             compose.activityRule.scenario.recreate();compose.waitForIdle();compose.onAllNodesWithText("I saved the recovery key").assertCountEquals(0);compose.onAllNodesWithTag("nova-backup").assertCountEquals(0)
