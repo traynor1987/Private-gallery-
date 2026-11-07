@@ -30,6 +30,7 @@ else:sys.exit(9)
  def test_healthy_platform_records_all_observations(self):self.execute()
  def test_feature_branch_uses_the_same_preflight(self):
   self.execute(branch='feature/novaos-visual-foundation')
+  self.execute(branch='feature/novaos-sanctuary')
   self.execute(mode='wrong-api',branch='feature/novaos-visual-foundation')
   self.execute(branch='feature/another-branch',permitted=False)
  def test_rejects_incorrect_api_systemui_metadata_restarts_and_dma(self):
