@@ -47,9 +47,23 @@ class UpgradeFixtureTest {
             result.put(it.relativeTo(context.noBackupFilesDir).path,hash(it.readBytes()))
         }
     }
+    private val hiddenAttemptsPath="hidden-v1-default/attempts-v1"
+    private var verifiedHiddenAttemptsSha256:String?=null
+
+    private fun authenticatedAttempts():ByteArray =
+        checkNotNull(HiddenProtectedRecord(context,"default","attempts-v1").read())
+
     private fun hiddenSession(create:Boolean):HiddenSession {
         val store=HiddenCredentialStore(context)
         val key=if(create)store.create("905184".toCharArray()) else store.unlock("905184".toCharArray())
+        if(!create)try {
+            val actual=authenticatedAttempts()
+            val expected=HiddenPinThrottle.empty().encode()
+            try {
+                assertArrayEquals("Successful Hidden PIN resets the authenticated attempt record",expected,actual)
+                verifiedHiddenAttemptsSha256=hash(File(context.noBackupFilesDir,hiddenAttemptsPath).readBytes())
+            } finally {actual.fill(0);expected.fill(0)}
+        } catch(failure:Throwable) {key.fill(0);throw failure}
         return HiddenSession(android.os.SystemClock::elapsedRealtime).also {assertTrue(it.complete(it.beginAuthentication(),key))}
     }
     /** Encrypted browser metadata; persistent synthetic CookieManager login is checked separately below. */
@@ -191,7 +205,13 @@ class UpgradeFixtureTest {
             for(tor in listOf(false,true))privateAppStyleRoundTrip {HiddenPrivateAppStore(context.noBackupFilesDir,hidden,hidden.authority(),tor)}
         } finally {hidden.lock()}
     }
-    private fun expectedCiphertext(before:JSONObject,field:String,path:String,restarted:Boolean):String {
+    private fun expectedCiphertext(before:JSONObject,field:String,path:String,restarted:Boolean,afterHiddenAuthentication:Boolean=false):String {
+        // Successful authentication deliberately reseals the attempt state with a fresh IV.
+        // Before authentication compare the exact seed or pre-restart ciphertext.
+        if(field=="hiddenFiles"&&path==hiddenAttemptsPath) {
+            if(afterHiddenAuthentication)return checkNotNull(verifiedHiddenAttemptsSha256)
+            if(restarted)return before.getString("candidateHiddenAttemptsSha256")
+        }
         if(restarted && privateAppCiphertext(path))return before.getJSONObject("candidatePrivateAppFiles").getJSONObject(field).getString(path)
         if(restarted && path.endsWith("presentation-v1/state.enc"))return before.getJSONObject(if(field=="files")"candidatePresentationFiles" else "candidateHiddenPresentationFiles").getString(path)
         return before.getJSONObject(field).getString(path)
@@ -384,10 +404,10 @@ class UpgradeFixtureTest {
                     wanted.keys().forEach {path->assertEquals("Existing code51 owner-encrypted evidence survives upgrade/restart unchanged",wanted.getString(path),actual.getString(path))}
                 }
             } else before.put("primaryEvidenceCatalogSha256",primaryHash).put("hiddenEvidenceCatalogSha256",hiddenHash).put("candidateEvidenceFiles",current)
-            // Recheck every original encrypted file after additive writes. Only the exact
-            // already-reviewed app-style/order and presentation records use candidate hashes.
+            // Recheck every original encrypted file after additive writes, including the
+            // attempt ciphertext verified after this authentication and before evidence reads.
             if(!baselineSeed)for((root,field) in listOf(context.filesDir to "files",context.noBackupFilesDir to "hiddenFiles")) {
-                before.getJSONObject(field).keys().forEach {path->assertEquals("Additive evidence preserves original $field/$path",expectedCiphertext(before,field,path,true),hash(File(root,path).readBytes()))}
+                before.getJSONObject(field).keys().forEach {path->assertEquals("Additive evidence preserves original $field/$path",expectedCiphertext(before,field,path,true,afterHiddenAuthentication=true),hash(File(root,path).readBytes()))}
             }
             assertEquals(2,AndroidVaultRepository(context,key).items().size)
             assertEquals(2,HiddenRepository(context,hidden).items().size)
@@ -678,7 +698,7 @@ class UpgradeFixtureTest {
             val expected=before.getJSONObject(field)
             expected.keys().forEach { path ->
                 if(!path.endsWith("presentation-v1/state.enc")) {
-                    assertEquals("Preserve ciphertext after reads $field/$path",expectedCiphertext(before,field,path,arguments.getString("restartCheck")=="true"),hash(File(root,path).readBytes()))
+                    assertEquals("Preserve ciphertext after reads $field/$path",expectedCiphertext(before,field,path,arguments.getString("restartCheck")=="true",afterHiddenAuthentication=true),hash(File(root,path).readBytes()))
                 }
             }
         }
@@ -715,8 +735,15 @@ class UpgradeFixtureTest {
         files.keys().forEach { path -> assertEquals("Preserve encrypted file $path", expectedCiphertext(before,"files",path,restarted), hash(File(context.filesDir,path).readBytes())) }
         assertEquals("SECONDS_30",context.getSharedPreferences("hidden-v1-policy",0).getString("background-timeout",null))
         val hiddenFiles=before.getJSONObject("hiddenFiles")
+        assertTrue("Seed snapshot includes Hidden PIN attempts",hiddenFiles.has(hiddenAttemptsPath))
         hiddenFiles.keys().forEach {path ->assertEquals("Preserve Hidden encrypted file $path",expectedCiphertext(before,"hiddenFiles",path,restarted),hash(File(context.noBackupFilesDir,path).readBytes()))}
-        assertTrue(runCatching {HiddenCredentialStore(context).unlock("738291".toCharArray())}.isFailure)
+        val rejected=runCatching {HiddenCredentialStore(context).unlock("738291".toCharArray()).fill(0)}
+        assertTrue(rejected.isFailure)
+        assertTrue("The Primary PIN is an actual Hidden PIN mismatch",rejected.exceptionOrNull() is HiddenPinEnvelope.InvalidPin)
+        val failedAttempts=authenticatedAttempts()
+        try {
+            assertEquals("The rejected PIN persists one authenticated attempt",1,HiddenPinThrottle.decode(failedAttempts).failures)
+        } finally {failedAttempts.fill(0)}
         val hidden=hiddenSession(false)
         try {
             val repo=HiddenRepository(context,hidden)
@@ -784,6 +811,7 @@ class UpgradeFixtureTest {
             assertEquals(1,primary.length());assertEquals(1,secret.length())
             before.put("candidatePresentationFiles",primary).put("candidateHiddenPresentationFiles",secret)
             candidateEvidence(before,false)
+            before.put("candidateHiddenAttemptsSha256",checkNotNull(verifiedHiddenAttemptsSha256))
             proof.writeText(before.toString())
         }
         if(restarted)candidateEvidence(before,true)

@@ -1,5 +1,6 @@
 """Synthetic control tampering tests; no Android build/signing/upgrade proof is manufactured."""
 import copy
+import difflib
 import hashlib
 import importlib.util
 import json
@@ -34,6 +35,12 @@ FIXTURE_UPGRADE_LABELS=(
 )
 
 def original_labels(text):
+    # Only the reviewed Hidden attempt-record change may differ from the prior fixture.
+    frozen=subprocess.check_output(['git','show','4738bcb12abb91ed289a78fcdcfaec7bc631cf0f:'+FIXTURE_PATH],cwd=ROOT)
+    assert hashlib.sha256(frozen).hexdigest()=='9446b116dc59df701db2cc6b70c695706bf20496c019cddd06434b97f56f802d'
+    delta=''.join(difflib.unified_diff(frozen.decode().splitlines(keepends=True),text.splitlines(keepends=True)))
+    assert hashlib.sha256(delta.encode()).hexdigest()=='c5b8edff83d9d244039b63e5fb6cab4642b5320b557025100182f3de1fa98356'
+    text=frozen.decode()
     begin='                // BEGIN CODE621 BACKUP HISTORY FIXTURE\n'
     end='                // END CODE621 BACKUP HISTORY FIXTURE\n'
     assert text.count(begin)==text.count(end)==1
