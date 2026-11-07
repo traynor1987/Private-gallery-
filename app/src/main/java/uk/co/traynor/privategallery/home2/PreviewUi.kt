@@ -46,6 +46,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.ensureActive
 import uk.co.traynor.privategallery.core.sanctuary.SanctuaryStore
+import uk.co.traynor.privategallery.core.sanctuary.SanctuaryGuardian
 import java.io.File
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
@@ -71,6 +72,7 @@ private val lightColors=lightColorScheme(primary=Color(0xFF285F65),secondary=Col
    val sanctuaryStore = remember(application) {
     if (state.current == "primary") SanctuaryStore.get(application) else null
    }
+   var guardianStatus by remember { mutableStateOf("Guardian off") }
    var sanctuary by remember{mutableStateOf(false)}
    var mindLaunch by remember{mutableIntStateOf(0)}
    var mindPage by remember{mutableStateOf("home")}
@@ -154,7 +156,15 @@ private val lightColors=lightColorScheme(primary=Color(0xFF285F65),secondary=Col
    }
    val goBack:()->Unit={
     val ime=host?.window?.decorView?.rootWindowInsets?.isVisible(android.view.WindowInsets.Type.ime())==true
-    if(ime)host?.let{(it.getSystemService(android.content.Context.INPUT_METHOD_SERVICE) as? android.view.inputmethod.InputMethodManager)?.hideSoftInputFromWindow(it.window.decorView.windowToken,0)}else when{screen=="home"&&widgets.editingId!=null->widgets.editingId=null;selected!=null->selected=null;openFolder!=null->openFolder=null;detailId!=null->detailId=null;editing->editing=false;quick->quick=false;drawer->drawer=false;screen=="visual-foundation"->{if(!visual.back())screen=visualReturn};screen=="chat-inspector"->screen=inspectorReturn;screen=="chat-settings"->screen="chat";screen=="navigation-settings"||screen=="sanctuary-settings"->screen="home-settings";screen=="recents"->screen=if(recentsReturn in listOf("chat","mind","store","wallpaper","photos","guide","video","search","widgets","backup","arcade","nova-calculator","lock-settings")&&data.shell.internalRecents.none{it.first==state.current&&it.second==recentsReturn})"home"else PreviewShellRules.returnRoute(recentsReturn,pool.active?.profile==state.current);else->screen=if(sanctuary)"sanctuary"else "home"}
+    if(ime)host?.let{(it.getSystemService(android.content.Context.INPUT_METHOD_SERVICE) as? android.view.inputmethod.InputMethodManager)?.hideSoftInputFromWindow(it.window.decorView.windowToken,0)}else when{screen=="home"&&widgets.editingId!=null->widgets.editingId=null;selected!=null->selected=null;openFolder!=null->openFolder=null;detailId!=null->detailId=null;editing->editing=false;quick->quick=false;drawer->drawer=false;screen=="visual-foundation"->{if(!visual.back())screen=visualReturn};screen=="chat-inspector"->screen=inspectorReturn;screen=="chat-settings"->screen="chat";screen=="navigation-settings"||screen=="sanctuary-settings"->screen="home-settings";screen=="sanctuary-permissions"->screen="sanctuary";screen=="recents"->screen=if(recentsReturn in listOf("chat","mind","store","wallpaper","photos","guide","video","search","widgets","backup","arcade","nova-calculator","lock-settings")&&data.shell.internalRecents.none{it.first==state.current&&it.second==recentsReturn})"home"else PreviewShellRules.returnRoute(recentsReturn,pool.active?.profile==state.current);else->screen=if(sanctuary)"sanctuary"else "home"}
+   }
+   LaunchedEffect(screen, sanctuaryStore) {
+    if (sanctuaryStore != null && screen in setOf("sanctuary", "sanctuary-settings", "sanctuary-permissions")) {
+     while (true) {
+      guardianStatus = SanctuaryGuardian.status(application)
+      delay(500)
+     }
+    }
    }
    LaunchedEffect(screen,pool.activeId){if(screen=="browser"&&pool.active?.profile!=state.current)screen="home"}
    val openRecents:()->Unit={drawer=false;quick=false;if(screen!="recents"){recentsReturn=screen;screen="recents"}}
@@ -200,7 +210,12 @@ private val lightColors=lightColorScheme(primary=Color(0xFF285F65),secondary=Col
          }
          "navigation-settings"->NovaShellSettings(data){screen="home-settings"}
          "sanctuary-settings"->if(sanctuaryStore!=null) SanctuarySettings(
-          sanctuaryStore,onEnded={screen="home-settings"},onBack={screen="home-settings"},
+          sanctuaryStore,onEnded={SanctuaryGuardian.stop(application);screen="home-settings"},onBack={screen="home-settings"},
+         )
+         "sanctuary-permissions"->if(sanctuaryStore!=null) SanctuaryPermissionScreen(
+          application,guardianStatus,sanctuaryStore.current.collectAsState().value!=null,
+          onResume={SanctuaryGuardian.start(application);guardianStatus=SanctuaryGuardian.status(application)},
+          onBack={screen="sanctuary"},
          )
          "widgets"->WidgetCentre(data,widgets,widgetPage,onBack=goHome)
          "search"->NovaSearch(data,widgets,pool,searchHistory,onBack=goHome,onResult=launch,onWeb={query->val tab=pool.open(standaloneBrowser,state.current);pool.setBrowserMode(tab,true);pool.navigate(tab,"https://www.google.com/search?q="+java.net.URLEncoder.encode(query,"UTF-8"));screen="home"})
@@ -219,10 +234,15 @@ private val lightColors=lightColorScheme(primary=Color(0xFF285F65),secondary=Col
            onExit={sanctuary=false;screen="home"})
          } else {
           SanctuaryHome(
-           store=sanctuaryStore,androidApps=emptyMap(),
+           store=sanctuaryStore,androidApps=remember(application){SanctuaryGuardian.installedApps(application)},
            novaApps=data.allApps().filter{it.id!="sanctuary"}.associate{it.id to it.name},
-           protectionStatus="Focus timer only · Android protection is inactive",
-           onStart=sanctuaryStore::start,onPermissions={},onLaunchAndroid={},onLaunchNova=launch,
+           protectionStatus=guardianStatus,
+           onStart={mode->sanctuaryStore.start(mode).also{started->
+            if(started){SanctuaryGuardian.start(application);guardianStatus=SanctuaryGuardian.status(application)}
+           }},
+           onPermissions={screen="sanctuary-permissions"},
+           onLaunchAndroid={pkg->SanctuaryGuardian.launch(application,pkg)},
+           onLaunchNova=launch,
            onBack={sanctuary=false;screen="home"},
           )
          }
