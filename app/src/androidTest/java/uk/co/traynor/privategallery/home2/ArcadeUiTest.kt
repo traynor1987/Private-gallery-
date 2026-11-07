@@ -87,7 +87,7 @@ class ArcadeUiTest {
    if(size.second==720){
     board.assertIsDisplayed()
     val bounds=board.getUnclippedBoundsInRoot()
-    assertEquals("Square $id board at ${size.first}dp",bounds.width.value,bounds.height.value,1f)
+    assertEquals("Square $id board at ${size.first}dp",(bounds.right-bounds.left).value,(bounds.bottom-bounds.top).value,1f)
     val essential=compose.onNodeWithTag(when(id){"2048"->"arcade-directions";"sudoku"->"sudoku-number-9";else->"snake-pause"})
     essential.assertIsDisplayed()
     val nav=compose.onNodeWithTag("nova-home").getUnclippedBoundsInRoot()
