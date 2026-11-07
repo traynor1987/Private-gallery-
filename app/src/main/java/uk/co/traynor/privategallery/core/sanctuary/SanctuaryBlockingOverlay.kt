@@ -42,7 +42,7 @@ internal class SanctuaryBlockingOverlay(
         gravity = Gravity.CENTER
         textSize = 32f
         typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
-        setTextColor(foreground)
+        setTextColor(overlayTextColor)
         importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_YES
     }
     private val ring = CountdownRing(context)
@@ -105,7 +105,7 @@ internal class SanctuaryBlockingOverlay(
             setPadding(dp(24), dp(36), dp(24), dp(36))
         }
         column.label("NOVA SANCTUARY  /  ${session.mode.label.uppercase(Locale.ROOT)}", 13f, accent, 8)
-        column.label("Make room for what matters.", 29f, foreground, 16, heading = true)
+        column.label("Make room for what matters.", 29f, overlayTextColor, 16, heading = true)
         column.addView(FrameLayout(context).apply {
             addView(ring, FrameLayout.LayoutParams(dp(154), dp(154), Gravity.CENTER))
             addView(timer, FrameLayout.LayoutParams(dp(154), dp(154), Gravity.CENTER))
@@ -113,7 +113,7 @@ internal class SanctuaryBlockingOverlay(
         column.label("This app is outside your approved list.", 16f, muted, 4)
         column.label("Pause. Breathe out slowly. Choose where to spend your attention.", 14f, muted, 20)
         column.addAction("Return to NovaOS", prominent = true, onClick = onNova)
-        column.label("Approved Android apps", 16f, foreground, 8, heading = true, top = 12)
+        column.label("Approved Android apps", 16f, overlayTextColor, 8, heading = true, top = 12)
         SanctuaryGuardian.installedApps(service)
             .filterKeys { it in session.androidApps }
             .forEach { (pkg, label) ->
@@ -157,7 +157,7 @@ internal class SanctuaryBlockingOverlay(
             textSize = 15f
             minimumHeight = dp(48)
             setPadding(dp(12), dp(8), dp(12), dp(8))
-            setTextColor(if (prominent) Color.rgb(11, 43, 40) else foreground)
+            setTextColor(if (prominent) Color.rgb(11, 43, 40) else overlayTextColor)
             val base = GradientDrawable().apply {
                 setColor(if (prominent) accent else Color.rgb(37, 54, 70))
                 cornerRadius = dp(14).toFloat()
@@ -194,7 +194,7 @@ internal class SanctuaryBlockingOverlay(
     }
 
     private companion object {
-        val foreground = Color.rgb(242, 249, 248)
+        val overlayTextColor = Color.rgb(242, 249, 248)
         val muted = Color.rgb(191, 213, 220)
         val accent = Color.rgb(154, 233, 221)
     }
