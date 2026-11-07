@@ -31,6 +31,7 @@ internal class SanctuaryBlockingOverlay(
     onPhone: () -> Unit,
     onSettings: () -> Unit,
     onApp: (String) -> Unit,
+    onNovaApp: (String) -> Unit,
 ) {
     private val display = service.getSystemService(DisplayManager::class.java)?.getDisplay(Display.DEFAULT_DISPLAY)
         ?: throw IllegalStateException("Default display unavailable")
@@ -46,7 +47,7 @@ internal class SanctuaryBlockingOverlay(
         importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_YES
     }
     private val ring = CountdownRing(context)
-    private val surface = buildSurface(service, session, onNova, onPhone, onSettings, onApp)
+    private val surface = buildSurface(service, session, onNova, onPhone, onSettings, onApp, onNovaApp)
 
     init {
         windows.addView(surface, WindowManager.LayoutParams(
@@ -86,6 +87,7 @@ internal class SanctuaryBlockingOverlay(
         onPhone: () -> Unit,
             onSettings: () -> Unit,
         onApp: (String) -> Unit,
+        onNovaApp: (String) -> Unit,
     ): ScrollView = ScrollView(context).apply {
         isFillViewport = true
         isClickable = true
@@ -113,9 +115,14 @@ internal class SanctuaryBlockingOverlay(
         column.label("This app is outside your approved list.", 16f, muted, 4)
         column.label("Pause. Breathe out slowly. Choose where to spend your attention.", 14f, muted, 20)
         column.addAction("Return to NovaOS", prominent = true, onClick = onNova)
+        val novaApps = SanctuaryGuardian.overlayNovaApps.filterKeys { it in session.novaApps }
+        if (novaApps.isNotEmpty()) {
+            column.label("Approved NovaOS apps", 16f, overlayTextColor, 8, heading = true, top = 12)
+            novaApps.forEach { (route, label) -> column.addAction(label) { onNovaApp(route) } }
+        }
         column.label("Approved Android apps", 16f, overlayTextColor, 8, heading = true, top = 12)
         SanctuaryGuardian.installedApps(service)
-            .filterKeys { it in session.androidApps }
+            .filterKeys { session.allowExternalApps && it in session.androidApps }
             .forEach { (pkg, label) ->
                 column.addAction(label) { onApp(pkg) }
             }

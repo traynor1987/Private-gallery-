@@ -43,7 +43,7 @@ class SanctuaryGuardianService : Service() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         val store = SanctuaryStore.get(this)
         val session = store.refresh()
-        if (session == null || !SanctuaryGuardian.isActivated(this, session.id) || !SanctuaryGuardian.hasPermissions(this)) {
+        if (session?.enableGuardian != true || !SanctuaryGuardian.isActivated(this, session.id) || !SanctuaryGuardian.hasPermissions(this)) {
             SanctuaryGuardian.clearActivation(this)
             stopSelf()
             return START_NOT_STICKY
@@ -83,7 +83,7 @@ class SanctuaryGuardianService : Service() {
         val power = getSystemService(PowerManager::class.java)
         while (scope.isActive) {
             val session = store.refresh()
-            if (session?.id != sessionId || !SanctuaryGuardian.isActivated(this, sessionId) ||
+            if (session?.id != sessionId || !session.enableGuardian || !SanctuaryGuardian.isActivated(this, sessionId) ||
                 !SanctuaryGuardian.hasPermissions(this)
             ) {
                 hideOverlay()
@@ -121,7 +121,7 @@ class SanctuaryGuardianService : Service() {
                 hideOverlay()
                 continue
             }
-            val block = observer.shouldBlock(foreground, session.androidApps, essential)
+            val block = observer.shouldBlock(foreground, if (session.allowExternalApps) session.androidApps else emptySet(), essential)
             if (block && elapsed >= hiddenUntil) {
                 val remaining = store.remainingMillis(session)
                 if (remaining <= 0) {
@@ -154,6 +154,7 @@ class SanctuaryGuardianService : Service() {
                 onPhone = { launchApproved { SanctuaryGuardian.openPhone(this) } },
                 onSettings = { launchApproved { SanctuaryGuardian.openSystemSettings(this) } },
                 onApp = { pkg -> launchApproved { SanctuaryGuardian.launch(this, pkg) } },
+                onNovaApp = { route -> launchApproved { SanctuaryGuardian.openApprovedNova(this, route) } },
             ).also { overlay = it }
             view.update(session, remaining)
             true

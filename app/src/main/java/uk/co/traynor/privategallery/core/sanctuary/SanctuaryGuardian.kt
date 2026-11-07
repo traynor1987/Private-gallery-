@@ -13,6 +13,7 @@ import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Process
+import android.os.SystemClock
 import android.provider.Settings
 import android.telecom.TelecomManager
 import uk.co.traynor.privategallery.MainActivity
@@ -23,6 +24,28 @@ object SanctuaryGuardian {
     internal enum class MonitorState { PAUSED, STARTING, WAITING, MONITORING, BLOCKING, FAILED }
 
     @Volatile internal var monitorState = MonitorState.PAUSED
+    internal val overlayNovaApps = mapOf("arcade" to "Nova Arcade", "mind" to "Nova Mind", "nova-calculator" to "Nova Calculator")
+
+    private data class NovaDestination(val route: String, val session: String, val deadline: Long)
+    @Volatile private var novaDestination: NovaDestination? = null
+
+    internal fun openApprovedNova(context: Context, route: String): Boolean {
+        val session = SanctuaryStore.get(context).refresh() ?: return false
+        if (route !in overlayNovaApps || route !in session.novaApps) return false
+        val request = NovaDestination(route, session.id, SystemClock.elapsedRealtime() + 60_000L)
+        novaDestination = request
+        return openNova(context).also { if (!it && novaDestination == request) novaDestination = null }
+    }
+
+    internal fun takeApprovedNova(context: Context): String? {
+        val request = novaDestination ?: return null
+        novaDestination = null
+        val session = SanctuaryStore.get(context).refresh() ?: return null
+        return request.route.takeIf {
+            request.session == session.id && SystemClock.elapsedRealtime() < request.deadline &&
+                it in overlayNovaApps && it in session.novaApps
+        }
+    }
 
     @Suppress("DEPRECATION")
     fun hasUsageAccess(context: Context): Boolean =
@@ -43,6 +66,7 @@ object SanctuaryGuardian {
 
     fun status(context: Context): String = when {
         SanctuaryStore.get(context).current.value == null -> "Guardian off"
+        SanctuaryStore.get(context).current.value?.enableGuardian == false -> "Guardian off · Disabled for this session"
         !hasUsageAccess(context) -> "Protection paused · Usage Access is off"
         !hasOverlayAccess(context) -> "Protection paused · Display over other apps is off"
         !hasNotificationAccess(context) -> "Protection paused · Notifications are off"
@@ -101,7 +125,7 @@ object SanctuaryGuardian {
 
     fun launch(context: Context, packageName: String): Boolean {
         val session = SanctuaryStore.get(context).refresh() ?: return false
-        if (packageName !in session.androidApps && packageName !in essentialPackages(context)) return false
+        if ((!session.allowExternalApps || packageName !in session.androidApps) && packageName !in essentialPackages(context)) return false
         val intent = context.packageManager.getLaunchIntentForPackage(packageName) ?: return false
         return open(context, intent)
     }
@@ -142,7 +166,7 @@ object SanctuaryGuardian {
     fun start(context: Context): Boolean {
         val app = application(context)
         val session = SanctuaryStore.get(app).refresh() ?: return false
-        if (!hasPermissions(app)) return false
+        if (!session.enableGuardian || !hasPermissions(app)) return false
         if (!writeActivation(app, session.id)) return false
         monitorState = MonitorState.STARTING
         return requestStart(app)
@@ -151,15 +175,17 @@ object SanctuaryGuardian {
     fun stop(context: Context) {
         val app = application(context)
         clearActivation(app)
+        novaDestination = null
         monitorState = MonitorState.PAUSED
         app.stopService(Intent(app, SanctuaryGuardianService::class.java))
     }
 
     internal fun resumeAfterBoot(context: Context) {
+        SanctuaryDnd.reconcile(context)
         val session = SanctuaryStore.get(context).refresh() ?: return
         val boot = bootCount(context)
         val activation = preferences(context)
-        if (boot < 0 || activation.getInt("boot", -1) !in 0 until boot ||
+        if (!session.enableGuardian || boot < 0 || activation.getInt("boot", -1) !in 0 until boot ||
             !isActivated(context, session.id) || !hasPermissions(context) || wasStoppedByUser(context, session.startedAt)
         ) return
         if (writeActivation(context, session.id)) requestStart(context)

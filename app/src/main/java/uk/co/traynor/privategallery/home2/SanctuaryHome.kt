@@ -60,6 +60,10 @@ internal fun SanctuaryHome(
     onLaunchAndroid: (String) -> Unit,
     onLaunchNova: (String) -> Unit,
     onBack: () -> Unit,
+    pinningControls: (@Composable () -> Unit)? = null,
+    dndStatus: String? = null,
+    onDndSettings: (() -> Unit)? = null,
+    onExtended: (() -> Unit)? = null,
 ) {
     val session by store.current.collectAsState()
     var selected by remember { mutableStateOf(SanctuaryMode.SELF_CARE) }
@@ -129,16 +133,36 @@ internal fun SanctuaryHome(
             }
         } else {
             SanctuaryLauncher(current, androidApps, novaApps, onLaunchAndroid, onLaunchNova, wide)
+            if (current.offerPinning && pinningControls != null) {
+                SanctuaryTitle("Android screen pinning")
+                Text(
+                    "Pinning keeps NovaOS on screen and makes switching to approved Android apps harder. Android provides the unpin gesture.",
+                    style = MaterialTheme.typography.bodySmall,
+                )
+                pinningControls()
+            }
             SanctuaryBreathing()
             if (current.mode == SanctuaryMode.PANIC) {
                 SanctuaryCheckIn(remaining, onExtend = { hours ->
-                    message = if (store.extend(hours)) null else "The session could not be extended."
+                    message = if (store.extend(hours)) {
+                        onExtended?.invoke()
+                        null
+                    } else "The session could not be extended."
                 })
             }
             Text("To end early, use NovaOS Settings → Sanctuary.", style = MaterialTheme.typography.bodySmall)
         }
+        val dndSelected = current?.enableDnd ?: presets.getValue(selected).enableDnd
+        if (dndSelected) {
+            dndStatus?.let { Text(it, modifier = Modifier.testTag("sanctuary-dnd-status"), style = MaterialTheme.typography.bodySmall) }
+            onDndSettings?.let { SanctuaryMenuRow("Do Not Disturb access", "Android controls notification filtering and exceptions", it, "sanctuary-dnd-settings") }
+        }
         SanctuaryMenuRow("App Guardian setup", "Permissions and protection status", onPermissions, "sanctuary-permissions")
         SanctuaryMenuRow("Session history", "Recent sessions on this device", { viewHistory = true }, "sanctuary-history")
+        if (onPhone != null) SanctuaryMenuRow(
+            "Open Phone", "Call a trusted contact or reach emergency services",
+            onPhone, "sanctuary-open-phone",
+        )
         SanctuaryRecoveryNote()
     }
 }
@@ -312,6 +336,10 @@ private fun SanctuaryPresetEditor(
     var duration by remember(mode) { mutableStateOf(initial.minutes.toString()) }
     var android by remember(mode) { mutableStateOf(initial.androidApps) }
     var nova by remember(mode) { mutableStateOf(initial.novaApps) }
+    var dnd by remember(mode) { mutableStateOf(initial.enableDnd) }
+    var pinning by remember(mode) { mutableStateOf(initial.offerPinning) }
+    var guardian by remember(mode) { mutableStateOf(initial.enableGuardian) }
+    var externalApps by remember(mode) { mutableStateOf(initial.allowExternalApps) }
     var error by remember(mode) { mutableStateOf(false) }
     val minutes = duration.toIntOrNull()?.takeIf { it in 1..1440 }
     SanctuaryScaffold(mode.label, "Mode preferences", onBack, "sanctuary-preset-editor") {
@@ -322,14 +350,60 @@ private fun SanctuaryPresetEditor(
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), singleLine = true,
             modifier = Modifier.fillMaxWidth().testTag("sanctuary-preset-duration"),
         )
-        Button(onClick = { minutes?.let { error = !onSave(SanctuaryPreset(it, android, nova)) } },
-            enabled = minutes != null, modifier = Modifier.heightIn(min = 48.dp).testTag("sanctuary-save-preset")) { Text("Save mode") }
+        Button(
+            onClick = {
+                minutes?.let {
+                    error = !onSave(initial.copy(
+                        minutes = it,
+                        androidApps = android,
+                        novaApps = nova,
+                        enableDnd = dnd,
+                        offerPinning = pinning,
+                        enableGuardian = guardian,
+                        allowExternalApps = externalApps,
+                    ))
+                }
+            },
+            enabled = minutes != null,
+            modifier = Modifier.heightIn(min = 48.dp).testTag("sanctuary-save-preset"),
+        ) { Text("Save mode") }
         if (error) Text("Could not save this preset.", color = MaterialTheme.colorScheme.error)
+        SanctuaryTitle("Focus options")
+        SanctuaryModeSwitch("Do Not Disturb", "Filters interruptions through Android. Calls and alerts follow your system exceptions.",
+            dnd, "sanctuary-option-dnd") { dnd = it }
+        SanctuaryModeSwitch("Offer Android screen pinning", "You decide when to pin. Pinning makes Android app switching harder.",
+            pinning, "sanctuary-option-pinning") { pinning = it }
+        SanctuaryModeSwitch("App Guardian", "Shows the blocking screen when Android detects an unapproved app and permissions are granted.",
+            guardian, "sanctuary-option-guardian") { guardian = it }
+        SanctuaryModeSwitch("Allow approved Android apps", "Shows your selected Android apps in the launcher. Phone and recovery controls stay available.",
+            externalApps, "sanctuary-option-external-apps") { externalApps = it }
         SanctuaryTitle("NovaOS apps")
         SanctuaryChoices(novaApps, nova, "internal") { id, enabled -> nova = if (enabled) nova + id else nova - id }
         SanctuaryTitle("Android apps")
-        Text("Select installed apps. Essential device and recovery controls stay available.", style = MaterialTheme.typography.bodySmall)
-        SanctuaryChoices(androidApps, android, "android") { id, enabled -> android = if (enabled) android + id else android - id }
+        if (externalApps) {
+            Text("Select installed apps. Essential device and recovery controls stay available.", style = MaterialTheme.typography.bodySmall)
+            SanctuaryChoices(androidApps, android, "android") { id, enabled -> android = if (enabled) android + id else android - id }
+        } else {
+            Text("The Android allowlist is saved for when this option is enabled again.", style = MaterialTheme.typography.bodySmall)
+        }
+    }
+}
+
+@Composable
+private fun SanctuaryModeSwitch(title: String, description: String, enabled: Boolean, tag: String, onChange: (Boolean) -> Unit) {
+    Surface(shape = RoundedCornerShape(16.dp), color = MaterialTheme.colorScheme.surfaceContainer) {
+        Row(
+            Modifier.fillMaxWidth().heightIn(min = 56.dp).toggleable(enabled, role = Role.Switch, onValueChange = onChange)
+                .testTag(tag).padding(12.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(Modifier.weight(1f)) {
+                Text(title, style = MaterialTheme.typography.titleSmall)
+                Text(description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            Switch(checked = enabled, onCheckedChange = null)
+        }
     }
 }
 
@@ -359,7 +433,10 @@ private fun SanctuaryLauncher(
     SanctuaryTitle("Approved apps")
     val internal = novaApps.filterKeys { it in session.novaApps }
     val external = androidApps.filterKeys { it in session.androidApps }
-    if (wide) {
+    if (!session.allowExternalApps) {
+        SanctuaryLaunchGroup("Inside NovaOS", internal, "internal", onNova)
+        Text("Approved Android app shortcuts are off for this mode.", style = MaterialTheme.typography.bodySmall)
+    } else if (wide) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             Column(Modifier.weight(1f)) { SanctuaryLaunchGroup("Inside NovaOS", internal, "internal", onNova) }
             Column(Modifier.weight(1f)) { SanctuaryLaunchGroup("Android apps", external, "android", onAndroid) }

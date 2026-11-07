@@ -100,6 +100,34 @@ class SanctuaryUiTest {
         compose.runOnIdle { check(store.current.value == null) }
     }
 
+    @Test fun workPinningIsOffAndModeOptionsAreSavedIndependently() {
+        val persistence = object : SanctuaryPersistence {
+            private var state: SanctuarySnapshot? = null
+            override fun read() = state
+            override fun write(value: SanctuarySnapshot): Boolean {
+                state = value
+                return true
+            }
+        }
+        val store = SanctuaryStore(persistence) { SanctuaryTime(1_000_000_000L, 120_000L, 1) }
+        compose.setContent {
+            SanctuaryHome(store, emptyMap(), emptyMap(), "Guardian off", store::start, {}, {}, {}, {})
+        }
+        compose.onNodeWithTag("sanctuary-mode-work").performScrollTo().performClick()
+        compose.onNodeWithTag("sanctuary-edit-preset").performScrollTo().performClick()
+        compose.onNodeWithTag("sanctuary-option-pinning").performScrollTo().assertIsOff()
+        compose.onNodeWithTag("sanctuary-option-dnd").performScrollTo().assertIsOff().performClick()
+        compose.onNodeWithTag("sanctuary-option-guardian").performScrollTo().assertIsOn().performClick()
+        compose.onNodeWithTag("sanctuary-option-external-apps").performScrollTo().assertIsOn().performClick()
+        compose.onNodeWithTag("sanctuary-save-preset").performScrollTo().performClick()
+        compose.runOnIdle {
+            val work = store.preset(SanctuaryMode.WORK)
+            check(work.enableDnd && !work.offerPinning && !work.enableGuardian && !work.allowExternalApps)
+            val gaming = store.preset(SanctuaryMode.GAMING)
+            check(!gaming.enableDnd && gaming.enableGuardian && gaming.allowExternalApps)
+        }
+    }
+
     private fun openHomeSettings() {
         compose.onNodeWithTag("open-apps").performClick()
         compose.onNodeWithTag("drawer-search").performTextInput("Home settings")

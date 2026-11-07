@@ -43,7 +43,15 @@ enum class SanctuaryMode(val label: String, val defaultMinutes: Int) {
     }
 }
 
-data class SanctuaryPreset(val minutes: Int, val androidApps: Set<String>, val novaApps: Set<String>)
+data class SanctuaryPreset(
+    val minutes: Int,
+    val androidApps: Set<String>,
+    val novaApps: Set<String>,
+    val enableDnd: Boolean = false,
+    val offerPinning: Boolean = false,
+    val enableGuardian: Boolean = true,
+    val allowExternalApps: Boolean = true,
+)
 
 data class SanctuarySession(
     val id: String,
@@ -55,6 +63,10 @@ data class SanctuarySession(
     val extensions: Int,
     internal val elapsedExpiry: Long = 0,
     internal val bootCount: Int = -1,
+    val enableDnd: Boolean = false,
+    val offerPinning: Boolean = false,
+    val enableGuardian: Boolean = true,
+    val allowExternalApps: Boolean = true,
 )
 
 enum class SanctuaryOutcome { EXPIRED, ENDED }
@@ -113,6 +125,10 @@ class SanctuaryStore internal constructor(
         val session = SanctuarySession(
             UUID.randomUUID().toString(), mode, time.wall, time.wall + duration,
             preset.androidApps, preset.novaApps, 0, time.elapsed + duration, time.boot,
+            enableDnd = preset.enableDnd,
+            offerPinning = preset.offerPinning,
+            enableGuardian = preset.enableGuardian,
+            allowExternalApps = preset.allowExternalApps,
         )
         return commit(state.copy(session = session))
     }
@@ -260,7 +276,9 @@ internal object SanctuaryCodec {
         .put("presets", JSONObject().apply {
             value.presets.forEach { (mode, preset) ->
                 put(mode.name, JSONObject().put("minutes", preset.minutes)
-                    .putApps(preset.androidApps, preset.novaApps))
+                    .putApps(preset.androidApps, preset.novaApps)
+                    .put("enableDnd", preset.enableDnd).put("offerPinning", preset.offerPinning)
+                    .put("enableGuardian", preset.enableGuardian).put("allowExternalApps", preset.allowExternalApps))
             }
         })
         .put("session", value.session?.let {
@@ -268,6 +286,8 @@ internal object SanctuaryCodec {
                 .put("startedAt", it.startedAt).put("expiresAt", it.expiresAt)
                 .putApps(it.androidApps, it.novaApps).put("extensions", it.extensions)
                 .put("elapsedExpiry", it.elapsedExpiry).put("bootCount", it.bootCount)
+                .put("enableDnd", it.enableDnd).put("offerPinning", it.offerPinning)
+                .put("enableGuardian", it.enableGuardian).put("allowExternalApps", it.allowExternalApps)
         } ?: JSONObject.NULL)
         .put("history", JSONArray(value.history.map {
             JSONObject().put("mode", it.mode.name).put("startedAt", it.startedAt)
@@ -286,6 +306,10 @@ internal object SanctuaryCodec {
                 val preset = presets.getJSONObject(key)
                 mode to SanctuaryPreset(
                     preset.getInt("minutes"), preset.apps("androidApps", packageId), preset.apps("novaApps", novaId),
+                    enableDnd = preset.optBoolean("enableDnd", false),
+                    offerPinning = preset.optBoolean("offerPinning", false),
+                    enableGuardian = preset.optBoolean("enableGuardian", true),
+                    allowExternalApps = preset.optBoolean("allowExternalApps", true),
                 ).also { require(it.isValid()) }
             },
             root.optJSONObject("session")?.let {
@@ -300,6 +324,10 @@ internal object SanctuaryCodec {
                 SanctuarySession(
                     id, SanctuaryMode.valueOf(it.getString("mode")), startedAt, expiresAt,
                     it.apps("androidApps", packageId), it.apps("novaApps", novaId), extensions, elapsedExpiry, boot,
+                    enableDnd = it.optBoolean("enableDnd", false),
+                    offerPinning = it.optBoolean("offerPinning", false),
+                    enableGuardian = it.optBoolean("enableGuardian", true),
+                    allowExternalApps = it.optBoolean("allowExternalApps", true),
                 )
             },
             root.getJSONArray("history").let { history ->

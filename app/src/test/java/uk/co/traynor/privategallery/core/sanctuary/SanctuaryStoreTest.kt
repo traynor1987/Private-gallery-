@@ -2,6 +2,7 @@ package uk.co.traynor.privategallery.core.sanctuary
 
 import org.junit.Assert.*
 import org.junit.Test
+import org.json.JSONObject
 
 class SanctuaryStoreTest {
     private class Disk : SanctuaryPersistence {
@@ -30,6 +31,7 @@ class SanctuaryStoreTest {
         assertEquals(listOf(120, 60, 90, 240, 720), SanctuaryMode.entries.map { store.preset(it).minutes })
         assertEquals(5, SanctuaryMode.entries.map { store.preset(it).novaApps }.distinct().size)
         assertTrue("com.google.android.apps.maps" in store.preset(SanctuaryMode.WORK).androidApps)
+        assertFalse(store.preset(SanctuaryMode.WORK).offerPinning)
         assertTrue("com.whatsapp" !in store.preset(SanctuaryMode.PANIC).androidApps)
         for (mode in SanctuaryMode.entries) {
             assertTrue(store.start(mode))
@@ -113,6 +115,44 @@ class SanctuaryStoreTest {
         assertFalse(store.extend(3))
         assertFalse(store.end(SanctuaryStore.END_PHRASE))
         assertEquals(initial, store.current.value)
+    }
+
+    @Test fun runningSessionKeepsItsOptionsAfterPresetEditsAndProcessRecreation() {
+        val fixture = Fixture()
+        val store = fixture.open()
+        val defaults = store.preset(SanctuaryMode.PANIC)
+        val options = defaults.copy(
+            enableDnd = true, offerPinning = true, enableGuardian = false, allowExternalApps = false,
+        )
+        assertTrue(store.savePreset(SanctuaryMode.PANIC, options))
+        assertTrue(store.start(SanctuaryMode.PANIC))
+        assertTrue(store.savePreset(SanctuaryMode.PANIC, defaults))
+        assertTrue(store.extend(1))
+        fixture.disk.snapshot = SanctuaryCodec.decode(SanctuaryCodec.encode(checkNotNull(fixture.disk.snapshot)))
+        val restored = fixture.open()
+        val active = checkNotNull(restored.current.value)
+        assertEquals(defaults, restored.preset(SanctuaryMode.PANIC))
+        assertTrue(active.enableDnd)
+        assertTrue(active.offerPinning)
+        assertFalse(active.enableGuardian)
+        assertFalse(active.allowExternalApps)
+    }
+
+    @Test fun legacyRecordsKeepTheirSessionAndUseCompatibleOptionDefaults() {
+        val fixture = Fixture()
+        val store = fixture.open()
+        val legacyPreset = store.preset(SanctuaryMode.WORK)
+        assertTrue(store.savePreset(SanctuaryMode.WORK, legacyPreset))
+        assertTrue(store.start(SanctuaryMode.WORK))
+        val original = checkNotNull(fixture.disk.snapshot)
+        val legacyJson = JSONObject(SanctuaryCodec.encode(original).decodeToString())
+        val preset = legacyJson.getJSONObject("presets").getJSONObject(SanctuaryMode.WORK.name)
+        val session = legacyJson.getJSONObject("session")
+        for (field in listOf("enableDnd", "offerPinning", "enableGuardian", "allowExternalApps")) {
+            preset.remove(field)
+            session.remove(field)
+        }
+        assertEquals(original, SanctuaryCodec.decode(legacyJson.toString().encodeToByteArray()))
     }
 
     @Test fun serializedStateIsBoundedAndCarriesOnlySessionMetadata() {
