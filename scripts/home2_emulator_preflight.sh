@@ -1,7 +1,11 @@
 #!/usr/bin/env bash
 # Full API37/SystemUI health only. Never changes application or routing policy.
 set -euo pipefail
-[[ "${GITHUB_ACTIONS:-}" == true && "${GITHUB_REF:-}" == refs/heads/integration/novaos-1.7-home2 ]]
+[[ "${GITHUB_ACTIONS:-}" == true ]]
+case "${GITHUB_REF:-}" in
+  refs/heads/integration/novaos-1.7-home2|refs/heads/feature/novaos-visual-foundation) ;;
+  *) exit 1 ;;
+esac
 root=${1:-app/build/home2-evidence}
 mkdir -p "$root"
 [[ "$(adb shell getprop ro.build.version.sdk | tr -d '\r')" == 37 ]]
