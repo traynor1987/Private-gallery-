@@ -194,7 +194,7 @@ private fun VisualModuleBody(module: VisualModule, navigator: VisualNavigator, o
     val sections = remember(module.id) { LazyListState() }
     val scroll = rememberScrollState()
     val detail = navigator.detail
-    LaunchedEffect(navigator.section, detail) {
+    LaunchedEffect(module.id, navigator.section, detail) {
         scroll.scrollTo(0)
         if (detail == null) {
             val visible = sections.layoutInfo.visibleItemsInfo.any { it.index == navigator.section }

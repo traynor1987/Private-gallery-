@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -19,6 +18,7 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
@@ -133,8 +133,8 @@ private fun NotesWorkspace(navigator: VisualNavigator) {
         }
     }
     val visible = notes.filter { note ->
-        (notebook == null || note.book == notebook) &&
-            (navigator.section != 2 || note.tag == "Draft") &&
+        if (navigator.section == 2) note.tag == "Draft"
+        else (notebook == null || note.book == notebook) &&
             (!favourites || note.favourite) && (tag == null || tag == note.tag) &&
             (query.isBlank() || listOf(note.title, note.text, note.book, note.tag).any { it.contains(query.trim(), ignoreCase = true) })
     }
@@ -175,7 +175,13 @@ private fun NotePreview(note: SampleNote, modifier: Modifier, onClick: () -> Uni
         "Outdoors" -> colours.tertiaryContainer to colours.onTertiaryContainer
         else -> colours.secondaryContainer to colours.onSecondaryContainer
     }
-    Surface(onClick, modifier.heightIn(min = 132.dp), RoundedCornerShape(18.dp), background, foreground) {
+    Surface(
+        onClick = onClick,
+        modifier = modifier.heightIn(min = 132.dp),
+        shape = RoundedCornerShape(18.dp),
+        color = background,
+        contentColor = foreground,
+    ) {
         Column(Modifier.padding(13.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
                 Icon(if (note.checks.isEmpty()) Icons.Default.StickyNote2 else Icons.Default.Checklist, null, Modifier.size(16.dp))
@@ -192,6 +198,7 @@ private fun NotePreview(note: SampleNote, modifier: Modifier, onClick: () -> Uni
 @Composable
 private fun NoteEditor(note: SampleNote, onChange: (SampleNote) -> Unit) {
     var notebooks by remember { mutableStateOf(false) }
+    val focus = LocalFocusManager.current
     val sample = "Temporary draft · session only"
     Column(Modifier.fillMaxWidth().testTag("visual-detail"), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -227,6 +234,7 @@ private fun NoteEditor(note: SampleNote, onChange: (SampleNote) -> Unit) {
             }
         }
         TextButton({
+            focus.clearFocus()
             onChange(note.copy(checks = note.checks + ("Example checklist item ${note.checks.size + 1}" to false)))
         }) {
             Icon(Icons.Default.Checklist, null)
@@ -319,7 +327,7 @@ private fun FilesWorkspace(module: VisualModule, navigator: VisualNavigator) {
         }
         if (folders.isNotEmpty()) {
             IconButton({ grid = !grid }) {
-                Icon(if (grid) Icons.AutoMirrored.Filled.List else Icons.Default.GridView, if (grid) "List folders" else "Grid folders")
+                Icon(if (grid) Icons.Default.ViewList else Icons.Default.GridView, if (grid) "List folders" else "Grid folders")
             }
         }
     }
@@ -465,13 +473,17 @@ private fun CalendarWorkspace(module: VisualModule, navigator: VisualNavigator) 
             }
         }
         1 -> {
-            WorkspaceLabel("May 11–17", "Week 20")
+            val week = (day + 3) / 7
+            val first = week * 7 - 3
+            WorkspaceLabel("May ${first.coerceAtLeast(1)}–${first + 6}", "Week ${18 + week}")
             Surface(shape = RoundedCornerShape(18.dp), color = colors.surfaceContainer) {
                 Row(Modifier.fillMaxWidth().padding(8.dp)) {
                     weekdays.forEachIndexed { index, label ->
                         Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
                             Text(label, style = MaterialTheme.typography.labelSmall, maxLines = 1)
-                            CalendarDay(index + 11, day, onSelect = { day = it })
+                            val date = first + index
+                            if (date > 0) CalendarDay(date, day, onSelect = { day = it })
+                            else Spacer(Modifier.height(48.dp))
                         }
                     }
                 }
