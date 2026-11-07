@@ -30,20 +30,21 @@ internal object BackupDocumentsUi62 {
  }
  fun open(id:String){
   root()
-  // DocumentsUI RecyclerView rows expose their label without a clickable ancestor.
-  // Tap the real visible row; the caller still requires the genuine picker result.
+  // Resolve the visible label to its real actionable DocumentsUI file card.
+  // The caller still requires the genuine picker result.
   val node=waitFor{it.isVisibleToUser&&it.isEnabled&&it.text?.toString()=="Synthetic backup $id"}
-  val bounds=android.graphics.Rect();node.getBoundsInScreen(bounds);check(!bounds.isEmpty)
   val active=checkNotNull(automation.rootInActiveWindow);check(active.windowId==node.windowId)
-  val down=SystemClock.uptimeMillis()
-  fun event(action:Int)=android.view.MotionEvent.obtain(down,SystemClock.uptimeMillis(),action,1,
-   arrayOf(android.view.MotionEvent.PointerProperties().apply{this.id=0;toolType=android.view.MotionEvent.TOOL_TYPE_FINGER}),
-   arrayOf(android.view.MotionEvent.PointerCoords().apply{x=bounds.exactCenterX();y=bounds.exactCenterY();pressure=1f;size=1f}),
-   0,0,1f,1f,0,0,android.view.InputDevice.SOURCE_TOUCHSCREEN,0)
-  for(action in intArrayOf(android.view.MotionEvent.ACTION_DOWN,android.view.MotionEvent.ACTION_UP)){
-   val touch=event(action)
-   try{check(touch.getToolType(0)==android.view.MotionEvent.TOOL_TYPE_FINGER);check(automation.injectInputEvent(touch,true))}finally{touch.recycle()}
+  // DocumentsUI nests the title more than five levels below its actionable card.
+  // Activate that exact real card, as assistive technology does; never fabricate a result.
+  var ancestor:AccessibilityNodeInfo?=node
+  var card:AccessibilityNodeInfo?=null
+  while(ancestor!=null&&ancestor.windowId==active.windowId){
+   if(ancestor.viewIdResourceName?.endsWith(":id/item_root")==true){card=ancestor;break}
+   ancestor=ancestor.parent
   }
+  val selected=checkNotNull(card){"Document title has no actual DocumentsUI file card"}
+  check(selected.isVisibleToUser&&selected.isEnabled&&selected.isClickable)
+  selected.performAction(AccessibilityNodeInfo.ACTION_CLICK)
   val target=InstrumentationRegistry.getInstrumentation().targetContext.packageName
   val until=SystemClock.uptimeMillis()+10000
   while(SystemClock.uptimeMillis()<until){if(automation.rootInActiveWindow?.packageName?.toString()==target)return;Thread.sleep(50)}
