@@ -353,7 +353,10 @@ class HomeOwnedWindowPanicTest {
             compose.onNodeWithTag("enter-novaos").performClick();"613842".forEach{compose.onNodeWithText(it.toString()).performClick()};compose.onNodeWithText("Unlock").performClick()
             compose.waitUntil(15000){compose.onAllNodesWithTag("preview-home").fetchSemanticsNodes().isNotEmpty()}
             val restored=compose.runOnIdle{modelField.get(activity) as uk.co.traynor.privategallery.home2.PreviewData};assertNotSame(oldModel,restored);assertEquals(5,restored.profile.columns);assertEquals(listOf("mind"),restored.profile.dock)
-            compose.onNodeWithTag("app-mind").performClick();compose.onNodeWithTag("calm-now").performScrollTo().performClick();compose.onNodeWithTag("grounding-step").assertIsDisplayed()
+            val restoredMindTile = hasTestTag("app-mind") and hasAnyAncestor(hasTestTag("home-pager"))
+            compose.onNode(restoredMindTile).assertIsDisplayed().performClick()
+            compose.onNodeWithTag("calm-now").performScrollTo().performClick()
+            compose.onNodeWithTag("grounding-step").assertIsDisplayed()
             compose.onNodeWithTag("nova-home").performClick();compose.onNodeWithTag("preview-home").assertIsDisplayed()
             compose.onAllNodesWithText("Restored synthetic note").onFirst().assertExists()
             compose.runOnIdle{restored.change{it.copy(iconSize=72)};activity.lockNovaSpace()}

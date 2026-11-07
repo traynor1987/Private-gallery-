@@ -623,6 +623,7 @@ jobs:
             adb install -r app/build/outputs/apk/debug/app-debug.apk
             adb install -r app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
             python3 scripts/run_backup_restart62.py
+            python3 scripts/run_backup_repair62.py --single
             python3 scripts/run_backup_repair62.py
             bash scripts/run_home2_runtime.sh
       - name: Validate actual Backup process restart evidence
@@ -630,6 +631,7 @@ jobs:
       - name: Validate every selected original Android report
         run: python3 scripts/verify_home2_runtime.py app/build/outputs/androidTest-results/connected/debug > app/build/home2-evidence/runtime.json
       - name: Publish isolated integration test build
+        if: ${{ !contains(github.event.head_commit.message, '[verification-only]') }}
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
