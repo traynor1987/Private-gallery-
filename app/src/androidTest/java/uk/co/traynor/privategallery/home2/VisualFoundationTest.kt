@@ -121,10 +121,10 @@ class VisualFoundationTest {
                 val module = visualModules.single { it.id == id }
                 module.sections.indices.forEach { index ->
                     compose.onNodeWithTag("visual-sections").performScrollToNode(hasTestTag("visual-section-$index"))
-                    compose.onNodeWithTag("visual-section-$index").assertIsDisplayed().performClick()
+                    compose.onNodeWithTag("visual-section-$index").assertIsDisplayed().assertHeightIsAtLeast(48.dp).performClick().assertIsSelected()
                     compose.onNodeWithTag("visual-demo-indicator").assertIsDisplayed()
                     val section = module.sections[index]
-                    compose.onNodeWithText(section.headline).performScrollTo().assertIsDisplayed()
+                    compose.onNodeWithTag("visual-active-section").assertIsDisplayed()
                     if (section.timeline.isNotEmpty()) {
                         assertTrue(section.timeline.sumOf { it.minutes } == 1440)
                         compose.onNodeWithTag("visual-daily-timeline").performScrollTo().assertIsDisplayed()
@@ -133,20 +133,50 @@ class VisualFoundationTest {
                         compose.onNodeWithText(section.trend.title).performScrollTo().assertIsDisplayed()
                         ReleaseScreenshots62.capture(compose.onNodeWithTag("visual-screen-$id"), "visual-$id-trend-$index-$targetWidth")
                     }
-                    if (section.rows.isNotEmpty()) {
+                    if (section.rows.isNotEmpty() && id in setOf("health", "time", "keys", "app-permissions", "privacy-dashboard", "spaces")) {
                         compose.onNodeWithTag("visual-row-0").performScrollTo().assertIsDisplayed().performClick()
-                        compose.onNodeWithText("Example detail · no action has been performed").performScrollTo().assertIsDisplayed()
+                        compose.onNodeWithTag("visual-detail").assertIsDisplayed()
                         compose.onNodeWithContentDescription("Back to demo section").performClick()
                     }
                 }
                 compose.runOnIdle { navigator.openSection(0) }
                 compose.onNodeWithTag("visual-sections").performScrollToNode(hasTestTag("visual-section-0"))
                 ReleaseScreenshots62.capture(compose.onNodeWithTag("visual-screen-$id"), "visual-$id-$targetWidth")
+                when (id) {
+                    "notes" -> verifyNotesEditor(targetWidth)
+                    "files" -> verifyFilesHierarchy(targetWidth)
+                }
                 compose.onNodeWithContentDescription("Back to visual catalogue").performClick()
                 compose.onNodeWithTag("visual-catalogue-list").assertIsDisplayed()
             }
         }
         compose.runOnIdle { assertTrue(launches.isEmpty()) }
+    }
+
+    private fun verifyNotesEditor(width: Int) {
+        val screen = compose.onNodeWithTag("visual-screen-notes")
+        compose.onNodeWithTag("visual-notes-new").performScrollTo().assertIsDisplayed().performClick()
+        compose.onNodeWithTag("visual-detail").assertIsDisplayed()
+        compose.onNodeWithTag("visual-note-title").performScrollTo().performTextReplacement("Review note")
+        compose.onNodeWithTag("visual-note-body").performScrollTo().performTextInput("A temporary example.")
+        compose.onNodeWithText("Add checklist item").performScrollTo().performClick()
+        compose.onNodeWithTag("visual-note-check-0").performScrollTo().performClick().assertIsOn()
+        compose.onNodeWithContentDescription("Back to demo section").assertIsDisplayed()
+        ReleaseScreenshots62.capture(screen, "visual-notes-editor-$width")
+        compose.onNodeWithContentDescription("Back to demo section").performClick()
+        compose.onNodeWithText("Review note").performScrollTo().assertIsDisplayed()
+    }
+
+    private fun verifyFilesHierarchy(width: Int) {
+        compose.onNodeWithTag("visual-files-folder-Project Aurora").performScrollTo().performClick()
+        compose.onNodeWithTag("visual-files-folder-Maps").performScrollTo().performClick()
+        compose.onNodeWithTag("visual-files-preview-Trail-map.png").performScrollTo().performClick()
+        compose.onNodeWithTag("visual-detail").assertIsDisplayed()
+        ReleaseScreenshots62.capture(compose.onNodeWithTag("visual-screen-files"), "visual-files-preview-$width")
+        compose.onNodeWithContentDescription("Back to demo section").performClick()
+        compose.onNodeWithTag("visual-files-preview-Trail-map.png").performScrollTo().assertIsDisplayed()
+        repeat(2) { compose.onNodeWithContentDescription("Back to demo section").performClick() }
+        compose.onNodeWithTag("visual-files-folder-Project Aurora").performScrollTo().assertIsDisplayed()
     }
 
     @Test fun catalogueOpensFromRealPrimaryHomeAndStoreButIsAbsentInHidden() {

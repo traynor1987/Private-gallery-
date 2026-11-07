@@ -3,6 +3,7 @@ package uk.co.traynor.privategallery.home2
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -15,12 +16,9 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.foundation.background
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 
 internal data class VisualModule(
@@ -64,6 +62,8 @@ internal class VisualNavigator {
     var detail by mutableStateOf<VisualRow?>(null)
         private set
 
+    private val detailHistory = mutableListOf<VisualRow>()
+
     fun open(id: String) {
         moduleId = id
         openSection(0)
@@ -72,9 +72,14 @@ internal class VisualNavigator {
     fun openSection(index: Int) {
         section = index
         detail = null
+        detailHistory.clear()
     }
 
-    fun inspect(row: VisualRow) { detail = row }
+    fun inspect(row: VisualRow) {
+        if (detail == row) return
+        detail?.let(detailHistory::add)
+        detail = row
+    }
 
     fun reset() {
         moduleId = null
@@ -82,7 +87,7 @@ internal class VisualNavigator {
     }
 
     fun back(): Boolean {
-        if (detail != null) detail = null
+        if (detail != null) detail = detailHistory.removeLastOrNull()
         else if (moduleId != null) reset()
         else return false
         return true
@@ -100,7 +105,7 @@ internal fun VisualFoundation(navigator: VisualNavigator, onClose: () -> Unit, o
             ).testTag(module?.let { "visual-screen-${it.id}" } ?: "visual-catalogue"),
         ) {
             Row(
-                Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 6.dp),
+                Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 2.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 val backLabel = when {
@@ -113,7 +118,7 @@ internal fun VisualFoundation(navigator: VisualNavigator, onClose: () -> Unit, o
                 }
                 Column(Modifier.weight(1f)) {
                     Text(module?.title ?: "Nova Visual Foundation", style = MaterialTheme.typography.titleLarge)
-                    Text(if (module?.id == "sanctuary") "Protection is not active" else "Synthetic examples",
+                    Text(if (module?.id == "sanctuary") "Protection is not active" else "Synthetic data",
                         color = colors.onSurfaceVariant, style = MaterialTheme.typography.labelMedium)
                 }
                 VisualDemoIndicator()
@@ -136,7 +141,7 @@ internal fun VisualDemoIndicator() {
         color = colors.tertiaryContainer,
         contentColor = colors.onTertiaryContainer,
     ) {
-        Text("DEMO", Modifier.padding(horizontal = 12.dp, vertical = 7.dp), style = MaterialTheme.typography.labelLarge)
+        Text("DEMO", Modifier.padding(horizontal = 9.dp, vertical = 5.dp), style = MaterialTheme.typography.labelMedium)
     }
 }
 
@@ -148,13 +153,7 @@ private fun VisualCatalogue(onOpen: (String) -> Unit, onRealApp: (String) -> Uni
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         item {
-            VisualHero(
-                "Explore the next NovaOS apps",
-                "Every app below is a built-in visual demo. The examples are fictional and actions stay on this screen.",
-            )
-        }
-        item {
-            Text("Available · demonstration only", style = MaterialTheme.typography.titleMedium)
+            Text("Demo apps", style = MaterialTheme.typography.titleMedium)
         }
         visualGroups.forEach { (group, modules) ->
           item(key = group) { Text(group, style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary) }
@@ -181,9 +180,6 @@ private fun VisualCatalogue(onOpen: (String) -> Unit, onRealApp: (String) -> Uni
           }
         }
         item {
-            VisualHero("Planned · unavailable", "Live integrations and engines are unavailable in these demos.")
-        }
-        item {
             Text("Installed · functional", style = MaterialTheme.typography.titleMedium)
             TextButton(onClick = { onRealApp("mind") }) { Text("Open Nova Mind") }
             TextButton(onClick = { onRealApp("evidence") }) { Text("Open Evidence Locker") }
@@ -191,151 +187,69 @@ private fun VisualCatalogue(onOpen: (String) -> Unit, onRealApp: (String) -> Uni
     }
 }
 
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun VisualModuleBody(module: VisualModule, navigator: VisualNavigator, onRealApp: (String) -> Unit) {
-    val section = module.sections[navigator.section]
     val guardian = remember(module.id) { if (module.id == "sanctuary") VisualGuardianState() else null }
     val people = remember(module.id) { if (module.id == "people") VisualPeopleState() else null }
+    val sections = remember(module.id) { LazyListState() }
+    val scroll = rememberScrollState()
+    val detail = navigator.detail
+    LaunchedEffect(navigator.section, detail) {
+        scroll.scrollTo(0)
+        if (detail == null) {
+            val visible = sections.layoutInfo.visibleItemsInfo.any { it.index == navigator.section }
+            if (!visible) sections.scrollToItem(navigator.section)
+        }
+    }
     Column(Modifier.fillMaxSize().padding(horizontal = 16.dp)) {
-        LazyRow(Modifier.fillMaxWidth().testTag("visual-sections"), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            items(module.sections.indices.toList()) { index ->
-                FilterChip(
-                    selected = index == navigator.section,
-                    onClick = { navigator.openSection(index) },
-                    label = { Text(module.sections[index].title) },
-                    modifier = Modifier.heightIn(min = 48.dp).testTag("visual-section-$index"),
-                )
-            }
-        }
-        key(module.id, navigator.section, navigator.detail) {
-            val detail = navigator.detail
-            Column(
-                Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()).padding(vertical = 10.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
+        if (detail == null) {
+            LazyRow(
+                Modifier.fillMaxWidth().testTag("visual-sections"),
+                state = sections,
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
             ) {
-                if (detail != null) {
-                    VisualHero(detail.title, detail.detail)
-                    Text("Example detail · no action has been performed", style = MaterialTheme.typography.labelMedium)
-                } else {
-                    VisualHero(section.headline, section.detail)
-                    guardian?.let { VisualGuardianControls(navigator.section, it, navigator::openSection) }
-                    people?.let { VisualPeopleControls(navigator.section, it, navigator::openSection) }
-                    VisualStudioPreview(module.id, navigator.section)
-                    section.trend?.let { VisualTrendCard(it) }
-                    if (section.timeline.isNotEmpty()) VisualTimelineCard(section.timeline)
-                    if (section.metrics.isNotEmpty()) {
-                        FlowRow(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                            section.metrics.forEach { metric ->
-                                Surface(shape = RoundedCornerShape(18.dp), color = MaterialTheme.colorScheme.surfaceContainerHigh) {
-                                    Column(Modifier.widthIn(min = 120.dp).padding(14.dp)) {
-                                        Text(metric.value, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-                                        Text(metric.label, style = MaterialTheme.typography.labelMedium)
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    section.rows.forEachIndexed { index, row ->
-                        VisualActionCard(row.title, row.detail, row.badge, Modifier.testTag("visual-row-$index")) { navigator.inspect(row) }
-                    }
-                    if (navigator.section == 0) when (module.id) {
-                        "ai" -> VisualActionCard("Open Nova Mind", "Open the existing private Mind app.", "Functional") { onRealApp("mind") }
-                        "ai-search" -> VisualActionCard("Open Evidence Locker", "Open the existing Evidence Locker and its own access controls.", "Functional") { onRealApp("evidence") }
-                        "update-centre" -> VisualActionCard("Open Nova Backup", "Open the existing encrypted Backup app. Review or create backups there.", "Functional") { onRealApp("backup") }
-                    }
+                items(module.sections.indices.toList(), key = { it }) { index ->
+                    FilterChip(
+                        selected = index == navigator.section,
+                        onClick = { navigator.openSection(index) },
+                        label = { Text(module.sections[index].title) },
+                        modifier = Modifier.heightIn(min = 48.dp).testTag("visual-section-$index"),
+                    )
                 }
             }
         }
-    }
-}
-
-@Composable
-internal fun VisualHero(title: String, detail: String) {
-    val colors = MaterialTheme.colorScheme
-    Surface(shape = RoundedCornerShape(26.dp), color = colors.surfaceVariant) {
         Column(
-            Modifier.fillMaxWidth().background(Brush.linearGradient(listOf(colors.secondaryContainer, colors.surfaceVariant)))
-                .padding(20.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
+            Modifier.weight(1f).fillMaxWidth().verticalScroll(scroll).padding(top = 8.dp, bottom = 16.dp)
+                .testTag("visual-active-section"),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            Text(title, style = MaterialTheme.typography.headlineSmall, color = colors.onSurface)
-            Text(detail, style = MaterialTheme.typography.bodyMedium, color = colors.onSurface)
+            key(module.id) {
+                when {
+                    module in visualCore && module.id != "health" -> VisualProductivityDesign(module, navigator)
+                    module in visualUtilities -> VisualUtilityDesign(module, navigator, onRealApp)
+                    detail != null -> VisualExampleDetail(module, detail)
+                    module.id == "health" || module.id == "time" -> VisualHealthTimeDesign(module, navigator)
+                    module in visualStudios -> VisualStudioDesign(module, navigator)
+                    else -> VisualPrivacyAiDesign(module, navigator, guardian, people, onRealApp)
+                }
+            }
         }
     }
 }
 
 @Composable
-internal fun VisualActionCard(title: String, detail: String, badge: String? = null, modifier: Modifier = Modifier, onClick: () -> Unit) {
-    Surface(
-        onClick = onClick, modifier = modifier.fillMaxWidth().heightIn(min = 56.dp),
-        shape = RoundedCornerShape(18.dp), color = MaterialTheme.colorScheme.surfaceContainer,
+private fun VisualExampleDetail(module: VisualModule, row: VisualRow) {
+    Column(
+        Modifier.fillMaxWidth().testTag("visual-detail").padding(vertical = 12.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
-            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text(title, style = MaterialTheme.typography.titleMedium)
-                Text(detail, style = MaterialTheme.typography.bodySmall)
-            }
-            badge?.let { Text(it, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary) }
-            Icon(Icons.Default.ChevronRight, null)
-        }
+        Icon(module.icon, null, Modifier.size(36.dp), tint = MaterialTheme.colorScheme.primary)
+        Text(row.title, style = MaterialTheme.typography.headlineSmall)
+        row.badge?.let { Text(it, color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.labelLarge) }
+        HorizontalDivider()
+        Text(row.detail, style = MaterialTheme.typography.bodyLarge)
     }
 }
-
-@Composable
-private fun VisualTrendCard(trend: VisualTrend) {
-    val colors = MaterialTheme.colorScheme
-    val peak = trend.points.maxOf { it.value }.coerceAtLeast(1)
-    Surface(shape = RoundedCornerShape(20.dp), color = colors.surfaceContainer, modifier = Modifier.fillMaxWidth()) {
-        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Text(trend.title, style = MaterialTheme.typography.titleMedium)
-            Text("Synthetic DEMO · ${trend.unit}", style = MaterialTheme.typography.labelMedium)
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                trend.points.forEach { point ->
-                    Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text("${point.value}", style = MaterialTheme.typography.labelMedium)
-                        Box(Modifier.height(86.dp), contentAlignment = Alignment.BottomCenter) {
-                            Box(Modifier.widthIn(max = 36.dp).fillMaxWidth()
-                                .height((80f * point.value / peak).coerceAtLeast(0f).dp)
-                                .background(colors.primary, RoundedCornerShape(topStart = 7.dp, topEnd = 7.dp)))
-                        }
-                        Text(point.label, style = MaterialTheme.typography.labelSmall, textAlign = TextAlign.Center)
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun VisualTimelineCard(slices: List<VisualTimeSlice>) {
-    val colors = MaterialTheme.colorScheme
-    val accents = listOf(colors.primary, colors.secondary, colors.tertiary, colors.primaryContainer)
-    Surface(shape = RoundedCornerShape(20.dp), color = colors.surfaceContainer, modifier = Modifier.fillMaxWidth()) {
-        Column(Modifier.padding(16.dp).testTag("visual-daily-timeline"), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Text("24-hour timeline", style = MaterialTheme.typography.titleMedium)
-            Text("Synthetic DEMO · sample day", style = MaterialTheme.typography.labelMedium)
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(2.dp)) {
-                slices.forEachIndexed { index, slice ->
-                    Box(Modifier.weight(slice.minutes.toFloat()).height(22.dp)
-                        .background(accents[index % accents.size], RoundedCornerShape(4.dp)))
-                }
-            }
-            var start = 0
-            slices.forEachIndexed { index, slice ->
-                val end = start + slice.minutes
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Box(Modifier.size(10.dp).background(accents[index % accents.size], RoundedCornerShape(3.dp)))
-                    Text("${visualClock(start)}–${visualClock(end)} · ${slice.label}", style = MaterialTheme.typography.bodySmall)
-                }
-                start = end
-            }
-        }
-    }
-}
-
-private fun visualClock(minute: Int): String =
-    "${(minute / 60).toString().padStart(2, '0')}:${(minute % 60).toString().padStart(2, '0')}"
 
 @Composable
 internal fun VisualCatalogueEntry(tag: String, onOpen: () -> Unit) {
