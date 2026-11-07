@@ -37,7 +37,10 @@ internal object BackupDocuments62 {
    it.uri.authority==authority && android.provider.DocumentsContract.isTreeUri(it.uri) && it.isReadPermission && it.isWritePermission
   }?.let{return it.uri}
   val result=java.util.concurrent.ArrayBlockingQueue<Uri>(1)
-  androidx.test.core.app.ActivityScenario.launch(androidx.activity.ComponentActivity::class.java).use{scenario->
+  // The class overload clears the target task, which may contain the MainActivity under test.
+  val helperIntent=android.content.Intent(context,androidx.activity.ComponentActivity::class.java)
+   .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK or android.content.Intent.FLAG_ACTIVITY_MULTIPLE_TASK)
+  androidx.test.core.app.ActivityScenario.launch<androidx.activity.ComponentActivity>(helperIntent).use{scenario->
    scenario.onActivity{activity->
     val launcher=activity.activityResultRegistry.register("backup-tree62",androidx.activity.result.contract.ActivityResultContracts.OpenDocumentTree()){uri->
      checkNotNull(uri){"Synthetic document tree selection cancelled"}
