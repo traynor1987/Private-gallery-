@@ -1428,9 +1428,10 @@ jobs:
     env:
       FROZEN_SOURCE: ${{ needs.home2-production.outputs.frozen_source }}
       EXPECTED_APK_SHA256: ${{ needs.home2-production.outputs.apk_sha256 }}
-      DELIVERY_DIR: ${{ runner.temp }}/novaos-code65-delivery
       APK_NAME: NovaOS-1.7.30-visual-foundation-code65-owner-review.apk
     steps:
+      - name: Set the temporary publication directory
+        run: echo "DELIVERY_DIR=$RUNNER_TEMP/novaos-code65-delivery" >> "$GITHUB_ENV"
       - name: Download the verified application from this signing run
         uses: actions/download-artifact@v4
         with:
