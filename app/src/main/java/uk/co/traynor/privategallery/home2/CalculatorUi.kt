@@ -105,6 +105,7 @@ import uk.co.traynor.privategallery.core.home2.SpaceContext
         contentAlignment=Alignment.TopCenter,
     ) {
         val wide=maxWidth>=650.dp
+        val separateScientificColumn=maxWidth>=760.dp
         val short=maxHeight<440.dp
         val keyHeight=when {
             short->48.dp
@@ -116,7 +117,7 @@ import uk.co.traynor.privategallery.core.home2.SpaceContext
         if(wide){
             Row(layout,horizontalArrangement=Arrangement.spacedBy(22.dp),verticalAlignment=Alignment.Bottom){
                 Column(Modifier.weight(if(model.scientific)1f else .85f).align(Alignment.Top)){readout()}
-                if(model.scientific&&maxWidth>=760.dp){
+                if(model.scientific&&separateScientificColumn){
                     CalculatorScienceKeys(key,keyHeight,Modifier.weight(.8f))
                     CalculatorStandardKeys(key,hold,keyHeight,sideParentheses=short,modifier=Modifier.weight(1.35f))
                 }else{
