@@ -19,6 +19,7 @@ if __name__=='__main__':
  selection_group=parser.add_mutually_exclusive_group()
  selection_group.add_argument('--single',action='store_true',help='Run only the settings restore regression')
  selection_group.add_argument('--evidence-report',action='store_true',help='Run only the Evidence Locker report regression')
+ selection_group.add_argument('--wallpaper',action='store_true',help='Run only the Primary Vault wallpaper regression')
  args=parser.parse_args()
  directory='focused-repair62'
  if args.single:
@@ -27,6 +28,9 @@ if __name__=='__main__':
  if args.evidence_report:
   expected={(PREFIX+'ui.EvidenceReportWorkflow60Test','explicitConsentEncryptedHistoryAndLinkedOriginalPreserveEvidence')}
   directory='evidence-report62'
+ if args.wallpaper:
+  expected={(PREFIX+'core.home2.WallpaperUiTest','primary_home_vault_picker_cancel_apply_and_reopen')}
+  directory='wallpaper62'
  out=ROOT/'app/build/home2-evidence'/directory
  out.mkdir(parents=True,exist_ok=True)
  selection=','.join(cls+'#'+name for cls,name in sorted(expected))

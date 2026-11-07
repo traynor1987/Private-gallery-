@@ -623,6 +623,7 @@ jobs:
             adb install -r app/build/outputs/apk/debug/app-debug.apk
             adb install -r app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
             python3 scripts/run_backup_restart62.py
+            python3 scripts/run_backup_repair62.py --wallpaper
             python3 scripts/run_backup_repair62.py --evidence-report
             python3 scripts/run_backup_repair62.py --single
             python3 scripts/run_backup_repair62.py

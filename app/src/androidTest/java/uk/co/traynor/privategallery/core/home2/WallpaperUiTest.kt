@@ -3,6 +3,8 @@ package uk.co.traynor.privategallery.core.home2
 import android.content.Context
 import android.content.ContextWrapper
 import android.graphics.Bitmap
+import android.view.WindowManager
+import android.view.inspector.WindowInspector
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.LocalActivityResultRegistryOwner
 import androidx.activity.result.ActivityResultRegistry
@@ -33,6 +35,8 @@ import uk.co.traynor.privategallery.core.vault.*
 import uk.co.traynor.privategallery.home2.*
 import uk.co.traynor.privategallery.ui.FullscreenMediaViewer
 import uk.co.traynor.privategallery.ui.ViewerMediaEntry
+import uk.co.traynor.privategallery.ui.modalCaptureState1762
+import uk.co.traynor.privategallery.ui.playerActivity
 import uk.co.traynor.privategallery.core.ui.MediaViewerSource
 
 class WallpaperUiTest {
@@ -69,6 +73,31 @@ class WallpaperUiTest {
   override fun close(){selected=false;session.lock();key.fill(0);ciphertext.fill(0);root.deleteRecursively()}
  }
  @After fun finish(){if(fixture!=null){compose.runOnIdle{attached=false};compose.waitForIdle();fixture?.close();fixture=null}}
+ private fun selectVaultWallpaper(f:Fixture) {
+  val activity=compose.activity
+  val tile=hasTestTag("wallpaper-vault-item-${f.source.id}") and hasClickAction() and isEnabled() and
+   hasAnyAncestor(hasTestTag("wallpaper-vault-grid"))
+  try {
+   // A composed tile can be disabled during loading, and dialog layout can precede Android window focus.
+   compose.waitUntil(10_000) {
+    compose.runOnUiThread {
+     WindowInspector.getGlobalWindowViews().any { view ->
+      view!==activity.window.decorView && view.context.playerActivity()===activity &&
+       view.isAttachedToWindow && view.hasWindowFocus() &&
+       (view.layoutParams as? WindowManager.LayoutParams)?.type==WindowManager.LayoutParams.TYPE_APPLICATION
+     }
+    } && compose.onAllNodes(tile).fetchSemanticsNodes().size==1
+   }
+   compose.onNode(tile).assertIsDisplayed().performTouchInput{click()}
+   compose.waitUntil(10_000){compose.onAllNodesWithTag("wallpaper-zoom").fetchSemanticsNodes().isNotEmpty()}
+   compose.onNodeWithTag("wallpaper-zoom").performScrollTo().assertIsDisplayed()
+  }catch(timeout:ComposeTimeoutException) {
+   val grid=compose.onAllNodesWithTag("wallpaper-vault-grid").fetchSemanticsNodes().isNotEmpty()
+   val readyTiles=compose.onAllNodes(tile).fetchSemanticsNodes().size
+   val loadError=compose.onAllNodesWithText("Image unavailable. Choose another image.").fetchSemanticsNodes().isNotEmpty()
+   throw AssertionError("Vault selection did not reach the zoom editor. grid=$grid readyTiles=$readyTiles loadError=$loadError\n${modalCaptureState1762(activity).description}",timeout)
+  }
+ }
  private fun home(hidden:Boolean) {
   val f=Fixture(compose.activity,hidden).also{fixture=it}
   val access=f.access()
@@ -89,15 +118,15 @@ class WallpaperUiTest {
    val sources=runCatching{f.access().use{sourceAccess->WallpaperCoordinator(f.context,sourceAccess).use{source->source.images().map{it.id}}}}
    throw AssertionError("Authenticated Home wallpaper grid did not publish its existing source. hidden=$hidden ownerRequests=${ownerRequests.get()} sourceId=${f.source.id} freshSources=$sources\n$hierarchy",failure)
   }
-  compose.onNodeWithTag("wallpaper-vault-item-${f.source.id}").performClick()
-  compose.waitUntil(10_000){compose.onAllNodesWithTag("wallpaper-zoom").fetchSemanticsNodes().isNotEmpty()}
+  selectVaultWallpaper(f)
   compose.onNodeWithTag("cancel-wallpaper").performScrollTo().performClick()
+  val homeWindow=compose.activity.window.decorView
+  compose.waitUntil(10_000){compose.runOnUiThread{homeWindow.hasWindowFocus()}}
+  compose.onNodeWithTag("wallpaper-editor").assertDoesNotExist()
   compose.runOnIdle{assertNull(f.wallpaper().image);f.assertOriginal()}
   compose.onNodeWithTag("app-wallpaper").performClick()
   compose.onNodeWithTag("choose-vault-wallpaper").performScrollTo().performClick()
-  compose.waitUntil(10_000){compose.onAllNodesWithTag("wallpaper-vault-item-${f.source.id}").fetchSemanticsNodes().isNotEmpty()}
-  compose.onNodeWithTag("wallpaper-vault-item-${f.source.id}").performClick()
-  compose.waitUntil(10_000){compose.onAllNodesWithTag("wallpaper-zoom").fetchSemanticsNodes().isNotEmpty()}
+  selectVaultWallpaper(f)
   compose.onNodeWithTag("apply-wallpaper").performScrollTo().performClick()
   compose.waitUntil(10_000){compose.onAllNodesWithTag("wallpaper-editor").fetchSemanticsNodes().isEmpty()}
   compose.runOnIdle{assertNotNull(f.wallpaper().image);assertEquals(f.wallpaper(),connected?.profile?.wallpaper);f.assertOriginal()}
