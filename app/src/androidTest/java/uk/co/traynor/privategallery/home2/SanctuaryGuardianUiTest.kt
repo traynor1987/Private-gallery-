@@ -94,8 +94,7 @@ class SanctuaryGuardianUiTest {
                 // A successful startActivity is insufficient. Confirm the approved app became foreground.
                 waitUntil("Approved Android app became the focused window without an overlay") {
                     val windows = shell("dumpsys window windows")
-                    windows.lineSequence().any { "mCurrentFocus" in it && external in it } &&
-                        !overlayPresent(windows) &&
+                    approvedAppIsForeground(external) && !overlayPresent(windows) &&
                         SanctuaryGuardian.monitorState == SanctuaryGuardian.MonitorState.MONITORING
                 }
                 assertTrue(store.end(SanctuaryStore.END_PHRASE))
@@ -110,6 +109,13 @@ class SanctuaryGuardianUiTest {
             shell("appops set $packageName SYSTEM_ALERT_WINDOW default")
             shell("appops set $packageName GET_USAGE_STATS default")
         }
+    }
+
+    private fun approvedAppIsForeground(packageName: String): Boolean {
+        if (instrumentation.uiAutomation.rootInActiveWindow?.packageName?.toString() == packageName) return true
+        val activity = Regex("(?:topResumedActivity|mResumedActivity)[=:].*\\b" +
+            Regex.escape(packageName) + "/")
+        return shell("dumpsys activity activities").lineSequence().any(activity::containsMatchIn)
     }
 
     private fun launchExternal(packageName: String) {
