@@ -595,10 +595,18 @@ jobs:
           git rev-parse HEAD > app/build/home2-evidence/source-sha.txt
           apk=app/build/outputs/apk/debug/app-debug.apk
           "$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging "$apk" > app/build/home2-evidence/package.txt
-          grep -F "package: name='uk.co.traynor.privategallery.hiddenprototype' versionCode='63' versionName='1.7.11.7-TEST-ONLY'" app/build/home2-evidence/package.txt
+          if [[ "$GITHUB_REF" == refs/heads/feature/novaos-visual-foundation ]]; then
+            grep -F "package: name='uk.co.traynor.privategallery.hiddenprototype' versionCode='64' versionName='1.7.30-visual-foundation-TEST-ONLY'" app/build/home2-evidence/package.txt
+          else
+            grep -F "package: name='uk.co.traynor.privategallery.hiddenprototype' versionCode='63' versionName='1.7.11.7-TEST-ONLY'" app/build/home2-evidence/package.txt
+          fi
           grep -F "sdkVersion:'37'" app/build/home2-evidence/package.txt
           "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --print-certs "$apk" > app/build/home2-evidence/signature.txt
           sha256sum "$apk" > app/build/home2-evidence/SHA256SUMS.txt
+      - name: Verify visual-only platform boundary
+        if: github.ref == 'refs/heads/feature/novaos-visual-foundation'
+        run: |
+          git diff --exit-code 278bcc5b1ba7f75eac73f2a171711a7255c8dae9 -- app/src/main/AndroidManifest.xml app/src/main/java/uk/co/traynor/privategallery/core app/src/main/java/uk/co/traynor/privategallery/MainActivity.kt
       - name: Enable emulator acceleration
         run: sudo chmod 666 /dev/kvm
       - name: Focused Android 17 integration and privacy tests

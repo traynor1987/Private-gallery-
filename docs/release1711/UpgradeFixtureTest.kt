@@ -17,7 +17,7 @@ import uk.co.traynor.privategallery.core.privateapps.*
 import uk.co.traynor.privategallery.core.camera.CameraOptions
 import uk.co.traynor.privategallery.core.camera.VaultCaptureAccess
 
-/** Reviewed release-control instrumentation for original-key code62 -> code63 upgrade.
+/** Reviewed release-control instrumentation for original-key code63 -> code64 upgrade.
  * Captured and hash-checked before frozen application checkout; never modifies baseline app.
  */
 class UpgradeFixtureTest {
@@ -28,7 +28,7 @@ class UpgradeFixtureTest {
     private val candidateCode get() = checkNotNull(arguments.getString("candidateCode")).toInt()
     private fun guard() {
         check(context.packageName == "uk.co.traynor.privategallery.hiddenprototype")
-        check(baselineCode == 62 && candidateCode == 63)
+        check(baselineCode == 63 && candidateCode == 64)
     }
     private fun hash(bytes: ByteArray) = MessageDigest.getInstance("SHA-256").digest(bytes).joinToString("") { "%02x".format(it) }
     private fun encryptedHashes(): JSONObject = JSONObject().also { result ->
@@ -414,7 +414,7 @@ class UpgradeFixtureTest {
         } finally {hidden.lock();key.fill(0)}
     }
 
-    /** Compiles against the actual signed code62 model; verifies code63 migration without rewriting ciphertext. */
+    /** Compiles against the actual signed code63 model; verifies code64 upgrade without rewriting ciphertext. */
     private fun homePreferences(seed:Boolean) {
         val key=PinVaultKeyStore(context).unlock("738291".toCharArray())
         val hidden=hiddenSession(false)
@@ -448,7 +448,7 @@ class UpgradeFixtureTest {
         } finally {primary.close();secret.close();hidden.lock();key.fill(0)}
     }
 
-    /** Home2 code62 APIs seed real owner-encrypted records. Candidate reads are deliberately
+    /** Home2 code63 APIs seed real owner-encrypted records. Candidate reads are deliberately
      * raw: opening the UI model may perform an explicit theme migration, outside preservation.
      * All these ciphertext files remain inside the existing complete filesystem assertions.
      */
@@ -525,7 +525,7 @@ class UpgradeFixtureTest {
         } finally {primary.close();secret.close();hidden.lock();key.fill(0)}
     }
 
-    // BEGIN NOVA62 PORTABLE APP FIXTURE: baseline62 SpaceContext APIs only.
+    // BEGIN NOVA62 PORTABLE APP FIXTURE: baseline63 SpaceContext APIs only.
     private fun portableApps62(seed:Boolean) {
         val key=PinVaultKeyStore(context).unlock("738291".toCharArray())
         val hidden=hiddenSession(false);val identity=Any()
@@ -654,7 +654,7 @@ class UpgradeFixtureTest {
             } finally {hidden.lock()}
             if(baselineCode>=36)repository.javaClass.getMethod("presentationSort",String::class.java).invoke(repository,"NAME")
             val seeded=JSONObject().put("primaryDeleted",primaryDeleted).put("hiddenDeleted",hiddenDeleted).put("primaryDates",dateSnapshot(repository)).put("hiddenDates",hiddenDates).put("hiddenMedia",hiddenMedia).put("hiddenCollection",hiddenCollection).put("hiddenFiles",hiddenHashes()).put("media",media).put("collection",collection.id).put("files",encryptedHashes())
-            // Code52 already has Evidence Locker and Home: seed before installing code63.
+            // Code52 already has Evidence Locker and Home: seed before installing code64.
             candidateEvidence(seeded,false,baselineSeed=true)
             homePreferences(seed=true)
             home2State(seeded,seed=true)

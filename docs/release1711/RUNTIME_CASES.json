@@ -6,7 +6,9 @@
     "coreModulesNavigateWithDemoStatusAtFoldWidths",
     "peopleShowsOnlyScriptedRepliesAndClearsItsOwnDemoState",
     "privacyModulesNavigateWithDemoStatusAtFoldWidths",
-    "sanctuaryCountdownAndTypedExitAreOnlySimulated"
+    "sanctuaryCountdownAndTypedExitAreOnlySimulated",
+    "studioControlsChangeOnlyTheLocalExample",
+    "systemModulesNavigateWithDemoStatusAtFoldWidths"
   ],
   "uk.co.traynor.privategallery.core.backup.BackupRuntimeTest": [
     "bothSpacesReencryptMediaCollectionsNotesAndPreferencesOnReplacementDevice",

@@ -47,7 +47,13 @@ internal data class VisualTrend(val title: String, val unit: String, val points:
 internal data class VisualTrendPoint(val label: String, val value: Int)
 internal data class VisualTimeSlice(val label: String, val minutes: Int)
 
-internal val visualModules get() = visualCore + visualTime + visualPrivacy + visualSanctuary + visualPeople + visualAi
+private val visualGroups = listOf(
+    "Core applications" to (visualCore + visualTime),
+    "Privacy & security" to (visualPrivacy + visualSanctuary),
+    "AI experience" to (listOf(visualPeople) + visualAi),
+    "System & utilities" to (visualStudios + visualUtilities),
+)
+internal val visualModules = visualGroups.flatMap { it.second }
 
 /** Presentation state belongs to this authenticated Home composition, never to a Space store. */
 internal class VisualNavigator {
@@ -150,7 +156,9 @@ private fun VisualCatalogue(onOpen: (String) -> Unit, onRealApp: (String) -> Uni
         item {
             Text("Available · demonstration only", style = MaterialTheme.typography.titleMedium)
         }
-        items(visualModules, key = { it.id }) { module ->
+        visualGroups.forEach { (group, modules) ->
+          item(key = group) { Text(group, style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary) }
+          items(modules, key = { it.id }) { module ->
             Surface(
                 onClick = { onOpen(module.id) },
                 modifier = Modifier.fillMaxWidth().heightIn(min = 64.dp).testTag("visual-module-${module.id}"),
@@ -170,6 +178,7 @@ private fun VisualCatalogue(onOpen: (String) -> Unit, onRealApp: (String) -> Uni
                     Icon(Icons.Default.ChevronRight, null)
                 }
             }
+          }
         }
         item {
             VisualHero("Planned · unavailable", "Live integrations and engines are unavailable in these demos.")
@@ -212,6 +221,7 @@ private fun VisualModuleBody(module: VisualModule, navigator: VisualNavigator, o
                     VisualHero(section.headline, section.detail)
                     guardian?.let { VisualGuardianControls(navigator.section, it, navigator::openSection) }
                     people?.let { VisualPeopleControls(navigator.section, it, navigator::openSection) }
+                    VisualStudioPreview(module.id, navigator.section)
                     section.trend?.let { VisualTrendCard(it) }
                     if (section.timeline.isNotEmpty()) VisualTimelineCard(section.timeline)
                     if (section.metrics.isNotEmpty()) {
@@ -232,6 +242,7 @@ private fun VisualModuleBody(module: VisualModule, navigator: VisualNavigator, o
                     if (navigator.section == 0) when (module.id) {
                         "ai" -> VisualActionCard("Open Nova Mind", "Open the existing private Mind app.", "Functional") { onRealApp("mind") }
                         "ai-search" -> VisualActionCard("Open Evidence Locker", "Open the existing Evidence Locker and its own access controls.", "Functional") { onRealApp("evidence") }
+                        "update-centre" -> VisualActionCard("Open Nova Backup", "Open the existing encrypted Backup app. Review or create backups there.", "Functional") { onRealApp("backup") }
                     }
                 }
             }
@@ -285,7 +296,7 @@ private fun VisualTrendCard(trend: VisualTrend) {
                         Text("${point.value}", style = MaterialTheme.typography.labelMedium)
                         Box(Modifier.height(86.dp), contentAlignment = Alignment.BottomCenter) {
                             Box(Modifier.widthIn(max = 36.dp).fillMaxWidth()
-                                .height((80f * point.value / peak).coerceAtLeast(3f).dp)
+                                .height((80f * point.value / peak).coerceAtLeast(0f).dp)
                                 .background(colors.primary, RoundedCornerShape(topStart = 7.dp, topEnd = 7.dp)))
                         }
                         Text(point.label, style = MaterialTheme.typography.labelSmall, textAlign = TextAlign.Center)

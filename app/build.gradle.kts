@@ -10,8 +10,8 @@ android {
     applicationId = "uk.co.traynor.privategallery"
     minSdk = 37
     targetSdk = 37
-    versionCode = 63
-    versionName = "1.7.11.7"
+    versionCode = 64
+    versionName = "1.7.30-visual-foundation"
     resValue("string", "app_name", "NovaOS")
     buildConfigField("boolean", "HIDDEN_PROTOTYPE", "false")
     buildConfigField("boolean", "HIDDEN_ENABLED", "true")

@@ -34,6 +34,25 @@ class VisualFoundationTest {
 
     @Test fun aiModulesNavigateWithDemoStatusAtFoldWidths() = verifyModules(listOf("people", "ai", "ai-search"))
 
+    @Test fun systemModulesNavigateWithDemoStatusAtFoldWidths() = verifyModules(listOf(
+        "desktop-mode", "control-centre", "themes-studio", "lock-studio", "pip-controls", "contacts",
+        "notifications", "media", "downloads", "screen-recorder", "share-hub", "automations",
+        "app-usage", "update-centre", "browser-privacy",
+    ))
+
+    @Test fun studioControlsChangeOnlyTheLocalExample() {
+        val navigator = VisualNavigator().apply { open("desktop-mode") }
+        compose.setContent { VisualFoundation(navigator, onClose = {}, onRealApp = { error("Unexpected real app") }) }
+        compose.onNodeWithTag("studio-desktop-layout-1").performScrollTo().performClick().assertIsSelected()
+        compose.onNodeWithText("Sample calendar").assertDoesNotExist()
+        compose.runOnIdle { navigator.open("themes-studio") }
+        compose.onNodeWithTag("studio-theme-palette-1").performScrollTo().performClick().assertIsSelected()
+        compose.runOnIdle { navigator.open("lock-studio") }
+        compose.onNodeWithTag("studio-lock-alert").performScrollTo().performClick()
+        compose.onNodeWithText("Example alert · Calendar").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithTag("visual-demo-indicator").assertIsDisplayed()
+    }
+
     @Test fun peopleShowsOnlyScriptedRepliesAndClearsItsOwnDemoState() {
         val navigator = VisualNavigator().apply { open("people") }
         compose.setContent { VisualFoundation(navigator, onClose = {}, onRealApp = { error("Unexpected real app") }) }
@@ -59,7 +78,9 @@ class VisualFoundationTest {
         compose.onNodeWithText("Open Nova Mind").performScrollTo().performClick()
         compose.runOnIdle { navigator.open("ai-search") }
         compose.onNodeWithText("Open Evidence Locker").performScrollTo().performClick()
-        compose.runOnIdle { assertTrue(launches == listOf("mind", "evidence")) }
+        compose.runOnIdle { navigator.open("update-centre") }
+        compose.onNodeWithText("Open Nova Backup").performScrollTo().performClick()
+        compose.runOnIdle { assertTrue(launches == listOf("mind", "evidence", "backup")) }
     }
 
     @Test fun sanctuaryCountdownAndTypedExitAreOnlySimulated() {
@@ -94,7 +115,7 @@ class VisualFoundationTest {
             compose.runOnIdle { width = targetWidth }
             for (id in ids) {
                 compose.onNodeWithTag("visual-catalogue-list").performScrollToNode(hasTestTag("visual-module-$id"))
-                compose.onNodeWithTag("visual-module-$id").assertIsDisplayed().performClick()
+                compose.onNodeWithTag("visual-module-$id").assertIsDisplayed().assertHeightIsAtLeast(48.dp).performClick()
                 compose.onNodeWithTag("visual-demo-indicator").assertIsDisplayed()
                 compose.onNodeWithTag("visual-screen-$id").assertIsDisplayed()
                 val module = visualModules.single { it.id == id }
