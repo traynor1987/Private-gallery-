@@ -15,7 +15,7 @@ trap capture EXIT
   -Pandroid.enableAdditionalTestOutput=true \
   -Pandroid.testInstrumentationRunnerArguments.additionalTestOutputDir=/sdcard/Android/media/uk.co.traynor.privategallery.hiddenprototype/additional_test_output \
   -Pkotlin.incremental=false --no-daemon --console=plain
-python3 - <<'PY'
+python3 - <<'PY' | tee "$output/result.txt"
 from pathlib import Path
 import re
 import xml.etree.ElementTree as ET
