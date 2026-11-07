@@ -1,7 +1,9 @@
 {
   "uk.co.traynor.privategallery.home2.VisualFoundationTest": [
     "catalogueOpensFromRealPrimaryHomeAndStoreButIsAbsentInHidden",
-    "coreModulesNavigateWithDemoStatusAtFoldWidths"
+    "coreModulesNavigateWithDemoStatusAtFoldWidths",
+    "privacyModulesNavigateWithDemoStatusAtFoldWidths",
+    "sanctuaryCountdownAndTypedExitAreOnlySimulated"
   ],
   "uk.co.traynor.privategallery.core.backup.BackupRuntimeTest": [
     "bothSpacesReencryptMediaCollectionsNotesAndPreferencesOnReplacementDevice",

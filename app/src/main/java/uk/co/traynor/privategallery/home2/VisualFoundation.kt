@@ -47,7 +47,7 @@ internal data class VisualTrend(val title: String, val unit: String, val points:
 internal data class VisualTrendPoint(val label: String, val value: Int)
 internal data class VisualTimeSlice(val label: String, val minutes: Int)
 
-internal val visualModules get() = visualCore + visualTime
+internal val visualModules get() = visualCore + visualTime + visualPrivacy + visualSanctuary
 
 /** Presentation state belongs to this authenticated Home composition, never to a Space store. */
 internal class VisualNavigator {
@@ -107,7 +107,8 @@ internal fun VisualFoundation(navigator: VisualNavigator, onClose: () -> Unit, o
                 }
                 Column(Modifier.weight(1f)) {
                     Text(module?.title ?: "Nova Visual Foundation", style = MaterialTheme.typography.titleLarge)
-                    Text("Synthetic examples", color = colors.onSurfaceVariant, style = MaterialTheme.typography.labelMedium)
+                    Text(if (module?.id == "sanctuary") "Protection is not active" else "Synthetic examples",
+                        color = colors.onSurfaceVariant, style = MaterialTheme.typography.labelMedium)
                 }
                 VisualDemoIndicator()
             }
@@ -185,6 +186,7 @@ private fun VisualCatalogue(onOpen: (String) -> Unit, onRealApp: (String) -> Uni
 @Composable
 private fun VisualModuleBody(module: VisualModule, navigator: VisualNavigator, onRealApp: (String) -> Unit) {
     val section = module.sections[navigator.section]
+    val guardian = remember(module.id) { if (module.id == "sanctuary") VisualGuardianState() else null }
     Column(Modifier.fillMaxSize().padding(horizontal = 16.dp)) {
         LazyRow(Modifier.fillMaxWidth().testTag("visual-sections"), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             items(module.sections.indices.toList()) { index ->
@@ -207,6 +209,7 @@ private fun VisualModuleBody(module: VisualModule, navigator: VisualNavigator, o
                     Text("Example detail · no action has been performed", style = MaterialTheme.typography.labelMedium)
                 } else {
                     VisualHero(section.headline, section.detail)
+                    guardian?.let { VisualGuardianControls(navigator.section, it, navigator::openSection) }
                     section.trend?.let { VisualTrendCard(it) }
                     if (section.timeline.isNotEmpty()) VisualTimelineCard(section.timeline)
                     if (section.metrics.isNotEmpty()) {
@@ -323,5 +326,22 @@ internal fun VisualCatalogueEntry(tag: String, onOpen: () -> Unit) {
         Icon(Icons.Default.Science, null)
         Spacer(Modifier.width(8.dp))
         Text("Visual Foundation · DEMO")
+    }
+}
+
+@Composable
+internal fun VisualDrawerTile(module: VisualModule, onOpen: () -> Unit) {
+    val colors = MaterialTheme.colorScheme
+    Surface(
+        onClick = onOpen, modifier = Modifier.fillMaxWidth().heightIn(min = 80.dp)
+            .padding(horizontal = 4.dp).testTag("drawer-visual-${module.id}"),
+        shape = RoundedCornerShape(18.dp), color = colors.surfaceContainer,
+    ) {
+        Column(Modifier.padding(8.dp), horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Icon(module.icon, null, tint = colors.primary)
+            Text(module.title, style = MaterialTheme.typography.labelMedium, textAlign = TextAlign.Center)
+            Text("DEMO", style = MaterialTheme.typography.labelSmall, color = colors.primary)
+        }
     }
 }

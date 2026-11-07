@@ -247,7 +247,9 @@ private val lightColors=lightColorScheme(primary=Color(0xFF285F65),secondary=Col
      Text(data.profileLabel,style=MaterialTheme.typography.labelMedium,color=MaterialTheme.colorScheme.primary)
      OutlinedTextField(search,{search=it},Modifier.fillMaxWidth().padding(vertical=16.dp).testTag("drawer-search"),placeholder={Text("Search apps and folders")},leadingIcon={Icon(Icons.Default.Search,null)},singleLine=true,shape=Shape)
      if(state.current=="primary")VisualCatalogueEntry("drawer-visual-foundation"){openVisual("home")}
-     AdaptiveAppGrid(data,data.drawerIds().filter{id->val f=profile.folders.firstOrNull{it.id==id};(f?.name?:data.app(id)?.name?:"").contains(search,true)},onLaunch=launch,onSelect={selected=it},modifier=Modifier.weight(1f))
+     val visualMatches=if(state.current=="primary"&&search.isNotBlank())visualModules.filter{it.title.contains(search.trim(),true)}else emptyList()
+     AdaptiveAppGrid(data,data.drawerIds().filter{id->val f=profile.folders.firstOrNull{it.id==id};(f?.name?:data.app(id)?.name?:"").contains(search,true)},onLaunch=launch,onSelect={selected=it},modifier=Modifier.weight(1f),
+      visualMatches=visualMatches,onVisual={id->openVisual("home");visual.open(id)})
      TextButton(onClick={folderCreate=true}){Icon(Icons.Default.CreateNewFolder,null);Text("Create folder",Modifier.padding(start=8.dp))}
     }
    }
@@ -407,7 +409,7 @@ private val lightColors=lightColorScheme(primary=Color(0xFF285F65),secondary=Col
  }
 }
 
-@Composable private fun AdaptiveAppGrid(data:PreviewData,ids:List<String>,onLaunch:(String)->Unit,onSelect:(String)->Unit,modifier:Modifier=Modifier,onHome:Boolean=false,onEmptyDown:()->Unit={},onEmptyUp:()->Unit={}){
+@Composable private fun AdaptiveAppGrid(data:PreviewData,ids:List<String>,onLaunch:(String)->Unit,onSelect:(String)->Unit,modifier:Modifier=Modifier,onHome:Boolean=false,onEmptyDown:()->Unit={},onEmptyUp:()->Unit={},visualMatches:List<VisualModule> = emptyList(),onVisual:(String)->Unit={}){
  BoxWithConstraints(modifier.fillMaxWidth()){
   val columns=PreviewRules.columns(maxWidth.value.toInt(),LocalDensity.current.fontScale,data.profile.columns)
   if(onHome){
@@ -420,6 +422,7 @@ private val lightColors=lightColorScheme(primary=Color(0xFF285F65),secondary=Col
   }else{
    LazyVerticalGrid(GridCells.Fixed(columns),Modifier.fillMaxSize(),verticalArrangement=Arrangement.spacedBy(12.dp),contentPadding=PaddingValues(bottom=12.dp)){
     items(ids,key={it}){id->AppTile(data,id,onClick={onLaunch(id)},onLongClick={onSelect(id)},showMenu=true,onHome=false)}
+    items(visualMatches,key={"visual:${it.id}"}){module->VisualDrawerTile(module){onVisual(module.id)}}
    }
   }
  }

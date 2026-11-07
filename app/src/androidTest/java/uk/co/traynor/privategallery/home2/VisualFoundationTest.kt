@@ -28,6 +28,27 @@ class VisualFoundationTest {
         listOf("health", "notes", "files", "calendar", "tasks", "clipboard", "time"),
     )
 
+    @Test fun privacyModulesNavigateWithDemoStatusAtFoldWidths() = verifyModules(
+        listOf("keys", "app-permissions", "privacy-dashboard", "spaces", "sanctuary"),
+    )
+
+    @Test fun sanctuaryCountdownAndTypedExitAreOnlySimulated() {
+        val navigator = VisualNavigator().apply { open("sanctuary"); openSection(1) }
+        compose.setContent { VisualFoundation(navigator, onClose = {}, onRealApp = { error("Unexpected real app") }) }
+        compose.onNodeWithTag("guardian-duration-15").performScrollTo().performClick()
+        compose.onNodeWithTag("guardian-start").performScrollTo().performClick()
+        compose.onNodeWithTag("guardian-remaining").performScrollTo().assertTextEquals("15:00")
+        ReleaseScreenshots62.capture(compose.onNodeWithTag("visual-screen-sanctuary"), "visual-sanctuary-countdown")
+        compose.onNodeWithTag("guardian-advance").performScrollTo().performClick()
+        compose.onNodeWithTag("guardian-remaining").performScrollTo().assertTextEquals("10:00")
+        compose.onNodeWithTag("guardian-open-exit").performScrollTo().performClick()
+        compose.onNodeWithTag("guardian-confirm-exit").performScrollTo().assertIsNotEnabled()
+        compose.onNodeWithTag("guardian-exit-phrase").performScrollTo().performTextInput("END DEMO")
+        compose.onNodeWithTag("guardian-confirm-exit").performScrollTo().assertIsEnabled().performClick()
+        compose.onNodeWithTag("guardian-remaining").performScrollTo().assertTextEquals("Demo session ended")
+        compose.onNodeWithTag("guardian-inactive").performScrollTo().assertIsDisplayed()
+    }
+
     private fun verifyModules(ids: List<String>) {
         val navigator = VisualNavigator()
         var width by mutableIntStateOf(360)
@@ -112,10 +133,19 @@ class VisualFoundationTest {
             compose.onNodeWithContentDescription("Close visual catalogue").performClick()
             compose.onNodeWithTag("nova-store").assertIsDisplayed()
 
+            compose.onNodeWithTag("nova-home").performClick()
+            compose.onNodeWithTag("open-apps").performClick()
+            compose.onNodeWithTag("drawer-search").performTextInput("Nova Time")
+            compose.onNodeWithTag("drawer-visual-time").assertIsDisplayed().performClick()
+            compose.onNodeWithTag("visual-screen-time").assertIsDisplayed()
+            compose.onNodeWithTag("visual-demo-indicator").assertIsDisplayed()
+
             compose.runOnIdle { access = hidden }
             compose.onNodeWithTag("open-apps").performClick()
             compose.onNodeWithTag("drawer-sheet").assertIsDisplayed()
             compose.onNodeWithTag("drawer-visual-foundation").assertDoesNotExist()
+            compose.onNodeWithTag("drawer-search").performTextInput("Nova Time")
+            compose.onNodeWithTag("drawer-visual-time").assertDoesNotExist()
             compose.onNodeWithTag("visual-catalogue-list").assertDoesNotExist()
         } finally {
             compose.runOnIdle { attached = false }
