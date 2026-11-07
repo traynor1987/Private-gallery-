@@ -71,17 +71,17 @@ private val lightColors=lightColorScheme(primary=Color(0xFF285F65),secondary=Col
    var screen by remember{mutableStateOf("home")}
    val visual = remember { VisualNavigator() }
    var visualReturn by remember { mutableStateOf("home") }
-   val openVisual: (String) -> Unit = { origin ->
-    if (state.current == "primary") {
-     visual.reset(); visualReturn=origin; drawer=false; screen="visual-foundation"
-    }
-   }
    var inspectorReturn by remember{mutableStateOf("chat")}
    var recentsReturn by remember{mutableStateOf("home")}
    var shellSettings by remember{mutableStateOf(false)}
    var notifications by remember{mutableStateOf(false)}
    var edgePanel by remember{mutableStateOf(false)}
    var drawer by remember{mutableStateOf(false)}
+   val openVisual: (String) -> Unit = { origin ->
+    if (state.current == "primary") {
+     visual.reset(); visualReturn=origin; drawer=false; screen="visual-foundation"
+    }
+   }
    var quick by remember{mutableStateOf(false)}
    var editing by remember{mutableStateOf(false)}
    var selected by remember{mutableStateOf<String?>(null)}

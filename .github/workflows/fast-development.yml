@@ -64,8 +64,6 @@ jobs:
 
         '
     - name: Verify release gates
-      env:
-        PYTHONPATH: ${{ github.workspace }}
       run: 'PYTHONDONTWRITEBYTECODE=1 python3 scripts/tests/test_ci_emulator_storage.py
 
         PYTHONDONTWRITEBYTECODE=1 python3 scripts/tests/test_release1751_configuration.py
@@ -209,7 +207,7 @@ jobs:
 
           app/build/reports/lint-results-debug.html'
         if-no-files-found: warn
-    if: github.ref != 'refs/heads/integration/novaos-1.7-home2' && github.ref != 'refs/heads/release/1.7.10-private-home' && github.ref != 'refs/heads/release/1.7.8-private-apps' && github.ref != 'refs/heads/release/1.7.9-evidence-locker' && (github.event_name == 'push' || github.event.pull_request.head.repo.fork == true) && !(github.event_name == 'push' && github.ref == 'refs/heads/release/1.7.6.2-ui-browser-polish' && contains(github.event.head_commit.message, '[focused1762]'))
+    if: github.ref != 'refs/heads/integration/novaos-1.7-home2' && github.ref != 'refs/heads/feature/novaos-visual-foundation' && github.ref != 'refs/heads/release/1.7.10-private-home' && github.ref != 'refs/heads/release/1.7.8-private-apps' && github.ref != 'refs/heads/release/1.7.9-evidence-locker' && (github.event_name == 'push' || github.event.pull_request.head.repo.fork == true) && !(github.event_name == 'push' && github.ref == 'refs/heads/release/1.7.6.2-ui-browser-polish' && contains(github.event.head_commit.message, '[focused1762]'))
 
   private-apps-checkpoint:
     if: github.event_name == 'push' && github.ref == 'refs/heads/release/1.7.8-private-apps'
