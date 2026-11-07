@@ -275,7 +275,7 @@ class HomeOwnedWindowPanicTest {
         Array(count){index->MotionEvent.PointerCoords().apply {this.x=x+(index-1)*12;this.y=y;pressure=1f;size=1f}},0,0,1f,1f,0,0,InputDevice.SOURCE_TOUCHSCREEN,0)
 
     @Test fun activeBackupIoStopsAtRealMainLockPanicAndBackgroundInBothSpaces() {
-        for(hidden in listOf(false,true)) for(action in listOf("lock","panic","background")) withHiddenHome(hidden) {
+        for(hidden in listOf(false,true)) for(action in listOf("lock","panic","background")) withHiddenHome(hidden,pickerGrace=true) {
             val access=compose.runOnIdle {MainActivity::class.java.getDeclaredMethod("homeAccess").apply{isAccessible=true}.invoke(activity) as uk.co.traynor.privategallery.core.evidence.EvidenceAccess}
             val uri=uk.co.traynor.privategallery.core.backup.BackupDocuments62.create()
             try {
@@ -324,7 +324,7 @@ class HomeOwnedWindowPanicTest {
         }finally{shell(if(override==null)"wm size reset" else "wm size $override")}
     }
 
-    @Test fun realSettingsRestoreLocksAndReloadsHomeMindAndWidgetsBeforeFurtherEdits()=withHiddenHome(false) {
+    @Test fun realSettingsRestoreLocksAndReloadsHomeMindAndWidgetsBeforeFurtherEdits()=withHiddenHome(false,pickerGrace=true) {
         val modelField=MainActivity::class.java.getDeclaredField("homeThemeData").apply{isAccessible=true}
         val oldModel=compose.runOnIdle {checkNotNull(modelField.get(activity)) as uk.co.traynor.privategallery.home2.PreviewData}
         compose.onNodeWithTag("open-apps").performClick();compose.onNodeWithTag("app-mind").performScrollTo().performClick();compose.onNodeWithTag("nova-mind").assertIsDisplayed()
@@ -386,7 +386,7 @@ class HomeOwnedWindowPanicTest {
         } finally {access.close();document?.let{uk.co.traynor.privategallery.core.backup.BackupDocuments62.delete(it)}}
     }
 
-    private fun withHiddenHome(hidden:Boolean=true,test:()->Unit) {
+    private fun withHiddenHome(hidden:Boolean=true,pickerGrace:Boolean=false,test:()->Unit) {
         assertTrue("Never run this synthetic fixture against production",activity.packageName.endsWith(".hiddenprototype"))
         // The real system picker backgrounds/locks Main. Obtain its persisted grant before unlocking this fixture.
         uk.co.traynor.privategallery.core.backup.BackupDocuments62.persistedTree()
@@ -404,6 +404,12 @@ class HomeOwnedWindowPanicTest {
         val schedulePrefs=activity.getSharedPreferences("nova-backup-due",0);val priorSchedule=schedulePrefs.all.toMap()
         val scheduler=activity.getSystemService(android.app.job.JobScheduler::class.java);val priorJob=scheduler.getPendingJob(171162)
         val priorHide=state<Boolean>("hideContent").value;val priorBiometric=state<Boolean>("biometricEnabled").value
+        val lockSettings=activity.getSharedPreferences("private-gallery-settings",Context.MODE_PRIVATE)
+        val priorStoredTimeout=lockSettings.getString("auto-lock-timeout",null)
+        val priorTimeout=state<uk.co.traynor.privategallery.core.security.AutoLockTimeout>("autoLockTimeout").value
+        fun timeout(value:uk.co.traynor.privategallery.core.security.AutoLockTimeout){
+            MainActivity::class.java.getDeclaredMethod("applyAutoLockTimeout",uk.co.traynor.privategallery.core.security.AutoLockTimeout::class.java).apply{isAccessible=true}.invoke(activity,value)
+        }
         val isolated=listOf(File(activity.filesDir,"vault"),File(activity.filesDir,"evidence-state"),File(activity.noBackupFilesDir,"hidden-media-v1"),File(activity.noBackupFilesDir,"evidence-state"))
         val saved=isolated.associateWith {directory->
             if(!directory.exists())null else File(root,"saved-${java.util.UUID.randomUUID()}").also {check(directory.renameTo(it)){"Preserve existing synthetic Home files before this fixture"}}
@@ -412,6 +418,9 @@ class HomeOwnedWindowPanicTest {
             compose.runOnIdle {
                 check(panic.edit().putBoolean("enabled",true).putBoolean("three-finger",true).putBoolean("quick-lock",false).commit())
                 keysField.set(activity,keys);state<Boolean>("hideContent").value=false;state<Boolean>("biometricEnabled").value=false
+                // Real system picker return is tested under an explicitly configured,
+                // supported grace policy. Production's IMMEDIATELY default must still lock.
+                if(pickerGrace)timeout(uk.co.traynor.privategallery.core.security.AutoLockTimeout.MINUTES_5)
                 owner.key=key;owner.session.unlock()
                 if(hidden){owner.hidden.select();assertTrue(owner.hidden.session.complete(owner.hidden.session.beginAuthentication(),ByteArray(32){79}));owner.hidden.authenticated=true}else owner.hidden.leave()
                 state<Route>("route").value=Route.VAULT;activity.privacySettingsChanged();activity.returnPrivateHome()
@@ -426,6 +435,10 @@ class HomeOwnedWindowPanicTest {
             panic.edit().also {editor->names.forEach {name->val value=priorPanic[name];if(value==null)editor.remove(name)else editor.putBoolean(name,value as Boolean)}}.commit()
             scheduler.cancel(171162);if(priorJob!=null)scheduler.schedule(priorJob)
             schedulePrefs.edit().clear().also {editor->priorSchedule.forEach{(name,value)->when(value){is Boolean->editor.putBoolean(name,value);is Int->editor.putInt(name,value);is Long->editor.putLong(name,value);is String->editor.putString(name,value)}}}.commit()
+            if(pickerGrace){
+                compose.runOnIdle{timeout(priorTimeout)}
+                lockSettings.edit().also{editor->if(priorStoredTimeout==null)editor.remove("auto-lock-timeout")else editor.putString("auto-lock-timeout",priorStoredTimeout)}.commit()
+            }
             preferences.forEach {activity.deleteSharedPreferences(it)};key.fill(0);root.deleteRecursively()
         }
     }
