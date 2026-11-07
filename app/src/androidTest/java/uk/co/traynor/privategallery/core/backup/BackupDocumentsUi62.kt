@@ -34,10 +34,27 @@ internal object BackupDocumentsUi62 {
   // Tap the real visible row; the caller still requires the genuine picker result.
   val node=waitFor{it.isVisibleToUser&&it.isEnabled&&it.text?.toString()=="Synthetic backup $id"}
   val bounds=android.graphics.Rect();node.getBoundsInScreen(bounds);check(!bounds.isEmpty)
+  val active=checkNotNull(automation.rootInActiveWindow);check(active.windowId==node.windowId)
   val down=SystemClock.uptimeMillis()
-  fun event(action:Int)=android.view.MotionEvent.obtain(down,SystemClock.uptimeMillis(),action,bounds.exactCenterX(),bounds.exactCenterY(),0).apply{source=android.view.InputDevice.SOURCE_TOUCHSCREEN}
-  val press=event(android.view.MotionEvent.ACTION_DOWN);val release=event(android.view.MotionEvent.ACTION_UP)
-  try{check(automation.injectInputEvent(press,true));check(automation.injectInputEvent(release,true))}finally{press.recycle();release.recycle()}
+  fun event(action:Int)=android.view.MotionEvent.obtain(down,SystemClock.uptimeMillis(),action,1,
+   arrayOf(android.view.MotionEvent.PointerProperties().apply{this.id=0;toolType=android.view.MotionEvent.TOOL_TYPE_FINGER}),
+   arrayOf(android.view.MotionEvent.PointerCoords().apply{x=bounds.exactCenterX();y=bounds.exactCenterY();pressure=1f;size=1f}),
+   0,0,1f,1f,0,0,android.view.InputDevice.SOURCE_TOUCHSCREEN,0)
+  for(action in intArrayOf(android.view.MotionEvent.ACTION_DOWN,android.view.MotionEvent.ACTION_UP)){
+   val touch=event(action)
+   try{check(touch.getToolType(0)==android.view.MotionEvent.TOOL_TYPE_FINGER);check(automation.injectInputEvent(touch,true))}finally{touch.recycle()}
+  }
+  val target=InstrumentationRegistry.getInstrumentation().targetContext.packageName
+  val until=SystemClock.uptimeMillis()+10000
+  while(SystemClock.uptimeMillis()<until){if(automation.rootInActiveWindow?.packageName?.toString()==target)return;Thread.sleep(50)}
+  val details=org.json.JSONArray()
+  for(n in nodes()){
+   val r=android.graphics.Rect();n.getBoundsInScreen(r)
+   details.put(org.json.JSONObject().put("package",n.packageName).put("text",n.text).put("description",n.contentDescription).put("id",n.viewIdResourceName).put("clickable",n.isClickable).put("enabled",n.isEnabled).put("visible",n.isVisibleToUser).put("bounds",r.toShortString()))
+  }
+  android.util.Log.e("BackupPicker62",details.toString())
+  throw AssertionError("Real document picker did not return to NovaOS; active="+automation.rootInActiveWindow?.packageName+"; controls="+details)
+
  }
  private fun confirmFolder(){check(click(waitFor{it.text?.toString()?.uppercase()=="USE THIS FOLDER"}));check(click(waitFor{it.text?.toString()?.uppercase()=="ALLOW"}))}
  fun folder(){root();confirmFolder()}

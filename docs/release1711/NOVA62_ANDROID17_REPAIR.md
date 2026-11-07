@@ -47,3 +47,8 @@ This round preserves the same nine-case first gate and unchanged253-case full ma
 ## Focused CI round 2: 35120e29
 
 Run42313397508 passes **6/9 focused cases**, including actual provider-open retirement in both Spaces/read and write modes. Full verification remains correctly blocked. The remaining failures now occur after successful real picker taps: two queries throw `No compose hierarchies` during the system-Activity return transition; wait only for that specific transient state while retaining the Recovery UI requirement and deadline. Every other exception remains fatal. The create-document test reaches Verified UI but reads fixture-latest immediately after asynchronous SAVE, before createDocument has updated it; obtain the identity after actual verification, then assert destination bytes. Provider permissions and all production source remain unchanged in this test-only follow-up.
+
+
+## Focused CI round 3: fe60c326
+
+Run42314812391 passes **7/9 focused cases**; actual create-document verification now passes. Both remaining real-Main cases time out awaiting Recovery UI after the shared document-row driver. After three attempts, the shared picker interaction was re-examined instead of extending deadlines. Its simple MotionEvent constructor leaves PointerProperties.toolType UNKNOWN, whereas RecyclerView selection gesture routing uses FINGER. The existing working Panic gesture fixture explicitly sets FINGER. The driver now uses that same supported pointer representation, asserts the type, constructs each event at dispatch, checks its active window, and requires actual picker return. Failure logs include the actual accessibility controls. No URI result is fabricated and no permission or production source changes.
