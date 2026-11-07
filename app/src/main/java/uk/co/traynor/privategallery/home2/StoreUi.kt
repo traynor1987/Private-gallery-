@@ -21,7 +21,7 @@ import androidx.compose.ui.unit.dp
 @Composable internal fun PreviewHeader(title:String,subtitle:String,onBack:()->Unit,actions:@Composable RowScope.()->Unit={}){
  Row(Modifier.fillMaxWidth().padding(start=4.dp,end=14.dp,top=8.dp,bottom=8.dp),verticalAlignment=Alignment.CenterVertically){IconButton(onClick=onBack){Icon(Icons.Default.ArrowBack,"Back to Home")};Column(Modifier.weight(1f)){Text(title,style=MaterialTheme.typography.headlineSmall);Text(subtitle,style=MaterialTheme.typography.labelMedium,color=MaterialTheme.colorScheme.onSurfaceVariant)};actions()}
 }
-@Composable internal fun StoreScreen(data:PreviewData,onBack:()->Unit,onDetail:(StoreEntry)->Unit,onCustom:()->Unit){
+@Composable internal fun StoreScreen(data:PreviewData,onBack:()->Unit,onDetail:(StoreEntry)->Unit,onCustom:()->Unit,onVisualFoundation:(()->Unit)?=null){
  var query by remember{mutableStateOf("")};var category by remember{mutableStateOf("All")};var mine by remember{mutableStateOf(false)}
  val entries=(if(mine)data.profile.installed else data.catalogue).filter{(category=="All"||it.category==category)&&(it.name.contains(query,true)||it.description.contains(query,true)||it.publisher.contains(query,true))}
  Column(Modifier.fillMaxSize().safeDrawingPadding().testTag("nova-store")){
@@ -33,6 +33,7 @@ import androidx.compose.ui.unit.dp
     Text("${data.catalogue.size} official destinations. Add your favourites to Nova Home.",style=MaterialTheme.typography.bodyMedium)
     TextButton(onClick={onDetail(data.catalogue.first{it.id=="photopea"})}){Text("Discover Photopea  →",color=Color(0xFFB9F6E3))}
    }}}
+   if(onVisualFoundation!=null)item{VisualCatalogueEntry("store-visual-foundation",onVisualFoundation)}
    item{Row(horizontalArrangement=Arrangement.spacedBy(10.dp)){FilterChip(selected=!mine,onClick={mine=false;category="All"},label={Text("Explore")},modifier=Modifier.testTag("store-explore"));FilterChip(selected=mine,onClick={mine=true;category="All"},label={Text("My Apps (${data.profile.installed.size})")},modifier=Modifier.testTag("store-my-apps"))}}
    item{OutlinedTextField(query,{query=it},Modifier.fillMaxWidth().testTag("store-search"),placeholder={Text(if(mine)"Search installed apps"else "Find something useful")},leadingIcon={Icon(Icons.Default.Search,null)},singleLine=true,shape=RoundedCornerShape(22.dp))}
    item{Row(Modifier.horizontalScroll(rememberScrollState()),horizontalArrangement=Arrangement.spacedBy(8.dp)){(listOf("All")+data.catalogue.map{it.category}.distinct().sorted()).forEach{value->FilterChip(selected=category==value,onClick={category=value},label={Text(value)})}}}

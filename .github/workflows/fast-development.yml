@@ -5,6 +5,7 @@ name: Private Gallery fast development
     - main
     - release/**
     - integration/novaos-1.7-home2
+    - feature/novaos-visual-foundation
     - '!release/1.7.6.2-ui-browser-polish'
     - '!release/1.7.7-recently-deleted'
     paths:
@@ -551,9 +552,9 @@ jobs:
             app/build/outputs/connected_android_test_additional_output
 
   home2-integration:
-    if: github.event_name == 'push' && github.ref == 'refs/heads/integration/novaos-1.7-home2' && contains(github.event.head_commit.message, '[home2-runtime]')
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/integration/novaos-1.7-home2' || github.ref == 'refs/heads/feature/novaos-visual-foundation') && contains(github.event.head_commit.message, '[home2-runtime]')
     runs-on: ubuntu-24.04
-    timeout-minutes: 45
+    timeout-minutes: ${{ github.ref == 'refs/heads/feature/novaos-visual-foundation' && 60 || 45 }}
     permissions:
       contents: write
     steps:
@@ -601,6 +602,8 @@ jobs:
       - name: Enable emulator acceleration
         run: sudo chmod 666 /dev/kvm
       - name: Focused Android 17 integration and privacy tests
+        env:
+          NOVA_VISUAL_FULL: ${{ contains(github.event.head_commit.message, '[visual-full]') }}
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: '37.0'
@@ -622,15 +625,16 @@ jobs:
             adb shell settings get secure show_ime_with_hard_keyboard > app/build/home2-evidence/ime-with-hardware-keyboard.txt
             adb install -r app/build/outputs/apk/debug/app-debug.apk
             adb install -r app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
-            python3 scripts/run_backup_restart62.py
-            python3 scripts/run_backup_repair62.py --redesign
-            bash scripts/run_home2_runtime.sh
+            if [[ "$GITHUB_REF" == refs/heads/feature/novaos-visual-foundation ]]; then bash scripts/run_visual_checkpoint.sh; fi
+            if [[ "$GITHUB_REF" != refs/heads/feature/novaos-visual-foundation || "$NOVA_VISUAL_FULL" == true ]]; then adb install -r app/build/outputs/apk/debug/app-debug.apk && adb install -r app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk && python3 scripts/run_backup_restart62.py && python3 scripts/run_backup_repair62.py --redesign && bash scripts/run_home2_runtime.sh; fi
       - name: Validate actual Backup process restart evidence
+        if: github.ref != 'refs/heads/feature/novaos-visual-foundation' || contains(github.event.head_commit.message, '[visual-full]')
         run: python3 scripts/verify_release1711_gate.py --restart-folder app/build/home2-evidence/backup-restart62 --source "$(git rev-parse HEAD)"
       - name: Validate every selected original Android report
+        if: github.ref != 'refs/heads/feature/novaos-visual-foundation' || contains(github.event.head_commit.message, '[visual-full]')
         run: python3 scripts/verify_home2_runtime.py app/build/outputs/androidTest-results/connected/debug > app/build/home2-evidence/runtime.json
       - name: Publish isolated integration test build
-        if: ${{ !contains(github.event.head_commit.message, '[verification-only]') }}
+        if: github.ref == 'refs/heads/integration/novaos-1.7-home2' && !contains(github.event.head_commit.message, '[verification-only]')
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}

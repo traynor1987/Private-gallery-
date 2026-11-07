@@ -69,6 +69,13 @@ private val lightColors=lightColorScheme(primary=Color(0xFF285F65),secondary=Col
    var mindPage by remember{mutableStateOf("home")}
    var arcadeGame by remember{mutableStateOf<String?>(null)}
    var screen by remember{mutableStateOf("home")}
+   val visual = remember { VisualNavigator() }
+   var visualReturn by remember { mutableStateOf("home") }
+   val openVisual: (String) -> Unit = { origin ->
+    if (state.current == "primary") {
+     visual.reset(); visualReturn=origin; drawer=false; screen="visual-foundation"
+    }
+   }
    var inspectorReturn by remember{mutableStateOf("chat")}
    var recentsReturn by remember{mutableStateOf("home")}
    var shellSettings by remember{mutableStateOf(false)}
@@ -135,11 +142,12 @@ private val lightColors=lightColorScheme(primary=Color(0xFF285F65),secondary=Col
    val goHome:()->Unit={
     widgets.editingId=null;drawer=false;quick=false;editing=false;selected=null;openFolder=null;detailId=null;edgePanel=false;pool.closeFullscreen()
     host?.let{(it.getSystemService(android.content.Context.INPUT_METHOD_SERVICE) as? android.view.inputmethod.InputMethodManager)?.hideSoftInputFromWindow(it.window.decorView.windowToken,0)}
+    visual.reset()
     screen=if(sanctuary)"sanctuary"else "home"
    }
    val goBack:()->Unit={
     val ime=host?.window?.decorView?.rootWindowInsets?.isVisible(android.view.WindowInsets.Type.ime())==true
-    if(ime)host?.let{(it.getSystemService(android.content.Context.INPUT_METHOD_SERVICE) as? android.view.inputmethod.InputMethodManager)?.hideSoftInputFromWindow(it.window.decorView.windowToken,0)}else when{screen=="home"&&widgets.editingId!=null->widgets.editingId=null;selected!=null->selected=null;openFolder!=null->openFolder=null;detailId!=null->detailId=null;editing->editing=false;quick->quick=false;drawer->drawer=false;screen=="chat-inspector"->screen=inspectorReturn;screen=="chat-settings"->screen="chat";screen=="navigation-settings"->screen="home-settings";screen=="recents"->screen=if(recentsReturn in listOf("chat","mind","store","wallpaper","photos","guide","video","search","widgets","backup","arcade","nova-calculator","lock-settings")&&data.shell.internalRecents.none{it.first==state.current&&it.second==recentsReturn})"home"else PreviewShellRules.returnRoute(recentsReturn,pool.active?.profile==state.current);else->screen=if(sanctuary)"sanctuary"else "home"}
+    if(ime)host?.let{(it.getSystemService(android.content.Context.INPUT_METHOD_SERVICE) as? android.view.inputmethod.InputMethodManager)?.hideSoftInputFromWindow(it.window.decorView.windowToken,0)}else when{screen=="home"&&widgets.editingId!=null->widgets.editingId=null;selected!=null->selected=null;openFolder!=null->openFolder=null;detailId!=null->detailId=null;editing->editing=false;quick->quick=false;drawer->drawer=false;screen=="visual-foundation"->{if(!visual.back())screen=visualReturn};screen=="chat-inspector"->screen=inspectorReturn;screen=="chat-settings"->screen="chat";screen=="navigation-settings"->screen="home-settings";screen=="recents"->screen=if(recentsReturn in listOf("chat","mind","store","wallpaper","photos","guide","video","search","widgets","backup","arcade","nova-calculator","lock-settings")&&data.shell.internalRecents.none{it.first==state.current&&it.second==recentsReturn})"home"else PreviewShellRules.returnRoute(recentsReturn,pool.active?.profile==state.current);else->screen=if(sanctuary)"sanctuary"else "home"}
    }
    LaunchedEffect(screen,pool.activeId){if(screen=="browser"&&pool.active?.profile!=state.current)screen="home"}
    val openRecents:()->Unit={drawer=false;quick=false;if(screen!="recents"){recentsReturn=screen;screen="recents"}}
@@ -196,7 +204,11 @@ private val lightColors=lightColorScheme(primary=Color(0xFF285F65),secondary=Col
          "chat","chat-inspector","chat-settings"->Column(Modifier.fillMaxSize().safeDrawingPadding().padding(24.dp)){PreviewHeader("Nova Chat Lite · Beta","Not enabled in this integration",goHome);Text("Native Favourites integration remains disabled pending production session and privacy verification. Normal WhatsApp is available through Nova Store in Primary Space.")}
          "sanctuary"->SanctuaryScreen(data,audio,onMind={mindPage="home";mindLaunch++;screen="mind"},onCalm={mindPage=mind.preferred;mindLaunch++;screen="mind"},onLaunch=launch,onExit={sanctuary=false;screen="home"})
          "recents"->NovaRecents(data,pool,onHome=goHome,onResume=resumeTab,onInternal={id->if(id in nativeHomeApps)onNative(id)else screen=id},onCloseInternal={id->if(id=="browser-v1")onNative("close-browser");data.shell.closeInternal(state.current,id);if(id=="mind")audio.pause();if(id=="video")video.close()})
-         "store"->StoreScreen(data,onBack=goHome,onDetail={detailId=it.id},onCustom={custom=true})
+         "visual-foundation"->if(state.current=="primary")VisualFoundation(
+          visual,onClose={screen=visualReturn},onRealApp={id->visual.reset();screen="home";launch(id)},
+         )
+         "store"->StoreScreen(data,onBack=goHome,onDetail={detailId=it.id},onCustom={custom=true},
+          onVisualFoundation=if(state.current=="primary"){{openVisual("store")}}else null)
          "wallpaper"->LaunchedEffect(Unit){onPickImage();goHome()}
          "photos"->LaunchedEffect(Unit){onNative("photos")}
          "guide"->LaunchedEffect(Unit){onNative("native-settings")}
@@ -235,6 +247,7 @@ private val lightColors=lightColorScheme(primary=Color(0xFF285F65),secondary=Col
      Text(data.profileLabel,style=MaterialTheme.typography.labelMedium,color=MaterialTheme.colorScheme.primary)
      OutlinedTextField(search,{search=it},Modifier.fillMaxWidth().padding(vertical=16.dp).testTag("drawer-search"),placeholder={Text("Search apps and folders")},leadingIcon={Icon(Icons.Default.Search,null)},singleLine=true,shape=Shape)
      AdaptiveAppGrid(data,data.drawerIds().filter{id->val f=profile.folders.firstOrNull{it.id==id};(f?.name?:data.app(id)?.name?:"").contains(search,true)},onLaunch=launch,onSelect={selected=it},modifier=Modifier.weight(1f))
+     if(state.current=="primary")VisualCatalogueEntry("drawer-visual-foundation"){openVisual("home")}
      TextButton(onClick={folderCreate=true}){Icon(Icons.Default.CreateNewFolder,null);Text("Create folder",Modifier.padding(start=8.dp))}
     }
    }
