@@ -64,6 +64,7 @@ internal fun SanctuaryHome(
     dndStatus: String? = null,
     onDndSettings: (() -> Unit)? = null,
     onExtended: (() -> Unit)? = null,
+    onPhone: (() -> Unit)? = null,
 ) {
     val session by store.current.collectAsState()
     var selected by remember { mutableStateOf(SanctuaryMode.SELF_CARE) }
