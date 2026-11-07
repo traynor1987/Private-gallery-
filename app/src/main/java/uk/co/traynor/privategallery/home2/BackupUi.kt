@@ -97,9 +97,6 @@ private data class BackupNotice(val message: String, val failed: Boolean = false
   if(pending!=null&&delivered==null)return@LaunchedEffect
   if(active!=null&&delivered==null)return@LaunchedEffect
   retire();val coordinator=runCatching{owner.openBackup(context)}.getOrNull()?:run{dismiss();return@LaunchedEffect};active=coordinator
-  try {val values=withContext(Dispatchers.IO){coordinator.historySnapshot() to coordinator.storageBytes()};coordinator.access.publishIfCurrent{history=values.first;storage=values.second}}
-  catch(cancelled:CancellationException){throw cancelled}
-  catch(_:Exception){coordinator.access.publishIfCurrent{notice=BackupNotice("Encrypted storage could not be read. Existing data is preserved.",failed=true)}}
   if(coordinator.owner=="primary"){
    val preferences=context.getSharedPreferences("nova-backup-due",0)
    if(delivered==null){
@@ -113,6 +110,19 @@ private data class BackupNotice(val message: String, val failed: Boolean = false
   if(ticket?.uri!=null){
    if(ticket.tree)automaticTree=ticket.uri else {selected=ticket.uri;restoring=ticket.restore}
    if(!ticket.restore){val key=RecoveryKey.generate();try{recovery=key.concatToString()}finally{key.fill('\u0000')}}
+  }
+ }
+ LaunchedEffect(active){
+  val coordinator=active?:return@LaunchedEffect
+  val currentJob=job
+  val snapshot=try {
+   withContext(Dispatchers.IO){coordinator.historySnapshot() to coordinator.storageBytes()}
+  }catch(cancelled:CancellationException){throw cancelled}catch(_:Exception){null}
+  withContext(Dispatchers.Main.immediate){
+   if(active===coordinator&&job===currentJob)coordinator.access.publishIfCurrent{
+    if(snapshot==null)notice=BackupNotice("Encrypted storage could not be read. Existing data is preserved.",failed=true)
+    else {history=snapshot.first;storage=snapshot.second}
+   }
   }
  }
  if(!visible||!resumed||active==null)return
