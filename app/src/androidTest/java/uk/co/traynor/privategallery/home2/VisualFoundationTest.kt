@@ -68,6 +68,7 @@ class VisualFoundationTest {
                     }
                 }
                 compose.runOnIdle { navigator.openSection(0) }
+                compose.onNodeWithTag("visual-sections").performScrollToNode(hasTestTag("visual-section-0"))
                 ReleaseScreenshots62.capture(compose.onNodeWithTag("visual-screen-$id"), "visual-$id-$targetWidth")
                 compose.onNodeWithContentDescription("Back to visual catalogue").performClick()
                 compose.onNodeWithTag("visual-catalogue-list").assertIsDisplayed()
@@ -105,7 +106,7 @@ class VisualFoundationTest {
             compose.onNodeWithTag("nova-home").performClick()
             compose.onNodeWithTag("open-apps").performClick()
             compose.onNodeWithTag("drawer-search").performTextInput("Nova Store")
-            compose.onNodeWithTag("app-store").performClick()
+            compose.onNode(hasTestTag("app-store") and hasAnyAncestor(hasTestTag("drawer-sheet"))).assertIsDisplayed().performClick()
             compose.onNodeWithTag("store-visual-foundation").assertIsDisplayed().performClick()
             compose.onNodeWithTag("visual-catalogue-list").assertIsDisplayed()
             compose.onNodeWithContentDescription("Close visual catalogue").performClick()
