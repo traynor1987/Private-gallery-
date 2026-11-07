@@ -47,7 +47,7 @@ internal data class VisualTrend(val title: String, val unit: String, val points:
 internal data class VisualTrendPoint(val label: String, val value: Int)
 internal data class VisualTimeSlice(val label: String, val minutes: Int)
 
-internal val visualModules get() = visualCore + visualTime + visualPrivacy + visualSanctuary
+internal val visualModules get() = visualCore + visualTime + visualPrivacy + visualSanctuary + visualPeople + visualAi
 
 /** Presentation state belongs to this authenticated Home composition, never to a Space store. */
 internal class VisualNavigator {
@@ -187,6 +187,7 @@ private fun VisualCatalogue(onOpen: (String) -> Unit, onRealApp: (String) -> Uni
 private fun VisualModuleBody(module: VisualModule, navigator: VisualNavigator, onRealApp: (String) -> Unit) {
     val section = module.sections[navigator.section]
     val guardian = remember(module.id) { if (module.id == "sanctuary") VisualGuardianState() else null }
+    val people = remember(module.id) { if (module.id == "people") VisualPeopleState() else null }
     Column(Modifier.fillMaxSize().padding(horizontal = 16.dp)) {
         LazyRow(Modifier.fillMaxWidth().testTag("visual-sections"), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             items(module.sections.indices.toList()) { index ->
@@ -210,6 +211,7 @@ private fun VisualModuleBody(module: VisualModule, navigator: VisualNavigator, o
                 } else {
                     VisualHero(section.headline, section.detail)
                     guardian?.let { VisualGuardianControls(navigator.section, it, navigator::openSection) }
+                    people?.let { VisualPeopleControls(navigator.section, it, navigator::openSection) }
                     section.trend?.let { VisualTrendCard(it) }
                     if (section.timeline.isNotEmpty()) VisualTimelineCard(section.timeline)
                     if (section.metrics.isNotEmpty()) {
@@ -226,6 +228,10 @@ private fun VisualModuleBody(module: VisualModule, navigator: VisualNavigator, o
                     }
                     section.rows.forEachIndexed { index, row ->
                         VisualActionCard(row.title, row.detail, row.badge, Modifier.testTag("visual-row-$index")) { navigator.inspect(row) }
+                    }
+                    if (navigator.section == 0) when (module.id) {
+                        "ai" -> VisualActionCard("Open Nova Mind", "Open the existing private Mind app.", "Functional") { onRealApp("mind") }
+                        "ai-search" -> VisualActionCard("Open Evidence Locker", "Open the existing Evidence Locker and its own access controls.", "Functional") { onRealApp("evidence") }
                     }
                 }
             }

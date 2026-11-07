@@ -1,7 +1,10 @@
 {
   "uk.co.traynor.privategallery.home2.VisualFoundationTest": [
+    "aiEntryPointsOnlyLaunchExistingAppsOnExplicitTap",
+    "aiModulesNavigateWithDemoStatusAtFoldWidths",
     "catalogueOpensFromRealPrimaryHomeAndStoreButIsAbsentInHidden",
     "coreModulesNavigateWithDemoStatusAtFoldWidths",
+    "peopleShowsOnlyScriptedRepliesAndClearsItsOwnDemoState",
     "privacyModulesNavigateWithDemoStatusAtFoldWidths",
     "sanctuaryCountdownAndTypedExitAreOnlySimulated"
   ],

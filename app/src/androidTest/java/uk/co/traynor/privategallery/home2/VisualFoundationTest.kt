@@ -32,6 +32,36 @@ class VisualFoundationTest {
         listOf("keys", "app-permissions", "privacy-dashboard", "spaces", "sanctuary"),
     )
 
+    @Test fun aiModulesNavigateWithDemoStatusAtFoldWidths() = verifyModules(listOf("people", "ai", "ai-search"))
+
+    @Test fun peopleShowsOnlyScriptedRepliesAndClearsItsOwnDemoState() {
+        val navigator = VisualNavigator().apply { open("people") }
+        compose.setContent { VisualFoundation(navigator, onClose = {}, onRealApp = { error("Unexpected real app") }) }
+        compose.onNodeWithTag("people-character-orbit").performScrollTo().assertIsDisplayed().performClick()
+        compose.onNodeWithTag("people-profile").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithTag("people-open-conversation").performScrollTo().performClick()
+        compose.onNodeWithTag("people-show-reply").performScrollTo().performClick()
+        compose.onNodeWithTag("people-demo-reply").performScrollTo().assertIsDisplayed()
+        ReleaseScreenshots62.capture(compose.onNodeWithTag("visual-screen-people"), "visual-people-conversation")
+        compose.onNodeWithTag("visual-sections").performScrollToNode(hasTestTag("visual-section-7"))
+        compose.onNodeWithTag("visual-section-7").performClick()
+        compose.onNodeWithTag("people-delete-demo").performScrollTo().performClick()
+        compose.onNodeWithTag("people-confirm-delete").performScrollTo().performClick()
+        compose.onNodeWithTag("people-deleted").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithTag("visual-demo-indicator").assertIsDisplayed()
+    }
+
+    @Test fun aiEntryPointsOnlyLaunchExistingAppsOnExplicitTap() {
+        val navigator = VisualNavigator().apply { open("ai") }
+        val launches = mutableListOf<String>()
+        compose.setContent { VisualFoundation(navigator, onClose = {}, onRealApp = { launches.add(it) }) }
+        compose.runOnIdle { assertTrue(launches.isEmpty()) }
+        compose.onNodeWithText("Open Nova Mind").performScrollTo().performClick()
+        compose.runOnIdle { navigator.open("ai-search") }
+        compose.onNodeWithText("Open Evidence Locker").performScrollTo().performClick()
+        compose.runOnIdle { assertTrue(launches == listOf("mind", "evidence")) }
+    }
+
     @Test fun sanctuaryCountdownAndTypedExitAreOnlySimulated() {
         val navigator = VisualNavigator().apply { open("sanctuary"); openSection(1) }
         compose.setContent { VisualFoundation(navigator, onClose = {}, onRealApp = { error("Unexpected real app") }) }
