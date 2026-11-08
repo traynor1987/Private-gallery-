@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
 set -euo pipefail
 # Production-only disposable emulator. Never uninstall or clear seeded application data.
-[[ "${GITHUB_ACTIONS:-}" == true && "${GITHUB_EVENT_NAME:-}" == push && "${GITHUB_REPOSITORY:-}" == traynor1987/Private-gallery- && "${GITHUB_REF:-}" == refs/heads/feature/novaos-visual-foundation && "${PRODUCTION_UPGRADE:-}" == 1 ]] || { echo 'Unsupported upgrade invocation' >&2; exit 1; }
+[[ "${GITHUB_ACTIONS:-}" == true && "${GITHUB_EVENT_NAME:-}" == push && "${GITHUB_REPOSITORY:-}" == traynor1987/Private-gallery- && "${GITHUB_REF:-}" == refs/heads/feature/novaos-sanctuary-integration && "${PRODUCTION_UPGRADE:-}" == 1 ]] || { echo 'Unsupported upgrade invocation' >&2; exit 1; }
 control_root=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 cd "${PRIVATE_GALLERY_1711_ROOT:-$control_root/..}"
 source "$control_root/release_configuration1711.sh"
-[[ "$baseline_code" == 64 && "$release_code" == 65 && "$baseline_sha" == 2fe2e6b4f959704524fe4f7a3f44dcd770a5cdfb ]]
-archived_baseline="${PRIVATE_GALLERY_1711_BASELINE_APK:?Exact archived signed 1.7.30 visual foundation Code 64 APK required}"
+[[ "$baseline_code" == 65 && "$release_code" == 66 && "$baseline_sha" == a02cfcf6bb3bbae15f00935c2b2124ae7eb4e674 ]]
+archived_baseline="${PRIVATE_GALLERY_1711_BASELINE_APK:?Exact archived signed 1.7.30 visual foundation Code 65 APK required}"
 [[ -f "$archived_baseline" && -s "$archived_baseline" ]] || { echo 'Archived baseline APK unavailable' >&2; exit 1; }
-[[ "$(sha256sum "$archived_baseline" | cut -d ' ' -f 1)" == bd1fda10b71c2099cdafd5989e8a20bb20496be1d358bf958a44316241c69d69 ]] || { echo 'Archived baseline APK hash mismatch' >&2; exit 1; }
+[[ "$(sha256sum "$archived_baseline" | cut -d ' ' -f 1)" == fa0dafcf314d06a5e6c5cf02a162cff7e62660ab7805dea925cec8ed6794fb7e ]] || { echo 'Archived baseline APK hash mismatch' >&2; exit 1; }
 readonly archived_baseline
 [[ "$(git rev-parse HEAD)" == "${FROZEN_SOURCE:?Exact tested source required}" ]]
 python3 "$control_root/verify_release1711_gate.py" --receipt "${PRIVATE_GALLERY_1711_GATE_RECEIPT:?Exact-source reviewed pre-signer gate required}" --source "$FROZEN_SOURCE"
@@ -25,7 +25,7 @@ if grep -Fxq "package:$fixture_package" <<< "$installed_packages"; then
   exit 1
 fi
 project_root=$(pwd)
-artifact_dir="${PRIVATE_GALLERY_1711_EVIDENCE_DIR:-$project_root/app/build/production-evidence/from64}"
+artifact_dir="${PRIVATE_GALLERY_1711_EVIDENCE_DIR:-$project_root/app/build/production-evidence/from65}"
 [[ ! -e "$artifact_dir" ]] || { echo "Fresh upgrade evidence directory required" >&2; exit 1; }
 mkdir -p "$artifact_dir"
 sdk="$ANDROID_HOME/build-tools/36.0.0"
@@ -89,4 +89,4 @@ adb install -r "$candidate_apk"
 run_fixture verify verify
 adb shell am force-stop "$fixture_package"
 run_fixture verify after-restart
-printf '%s\n' 'PASS: original signed code64 -> code65 in-place upgrade/restart; all legacy encrypted data/configuration and additive owner-encrypted evidence preserved' > "$artifact_dir/upgrade-result.txt"
+printf '%s\n' 'PASS: original signed code65 -> code66 in-place upgrade/restart; all legacy encrypted data/configuration and additive owner-encrypted evidence preserved' > "$artifact_dir/upgrade-result.txt"

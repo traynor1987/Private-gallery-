@@ -1,0 +1,308 @@
+name: NovaOS Sanctuary production upgrade
+on:
+  push:
+    branches: [feature/novaos-sanctuary-integration]
+    paths: ['.sanctuary-production-candidate']
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: production1762
+  cancel-in-progress: false
+jobs:
+  sanctuary-production:
+    if: github.repository == 'traynor1987/Private-gallery-' && github.event_name == 'push' && github.ref == 'refs/heads/feature/novaos-sanctuary-integration' && contains(github.event.head_commit.message, '[home2-sign]')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    permissions:
+      contents: read
+      actions: read
+    outputs:
+      frozen_source: ${{ steps.verified-delivery.outputs.frozen_source }}
+      apk_sha256: ${{ steps.verified-delivery.outputs.apk_sha256 }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0, persist-credentials: false }
+      - name: Preserve reviewed marker controls fixture and workflow before source checkout
+        run: |
+          python3 - <<'PY'
+          import hashlib,json,os,re,shutil,subprocess
+          from pathlib import Path
+          source_root=Path.cwd();control=Path(os.environ['RUNNER_TEMP'])/'release1711-controls'
+          inputs=Path(os.environ['RUNNER_TEMP'])/'release1711-inputs'
+          assert not control.exists() and not inputs.exists()
+          control.mkdir();inputs.mkdir()
+          paths=['.sanctuary-production-candidate','.github/workflows/sanctuary-production.yml',
+                 'docs/release1711/UpgradeFixtureTest.kt','docs/release1711/SECURITY_REVIEW.md',
+                 'docs/release1711/RUNTIME_CASES.json','docs/release1711/UPGRADE_CONTROLS.md']
+          names=('compile_upgrade1711_fixture.sh','verify_compiled_upgrade1711.py','verify_upgrade1711_baseline.py',
+                 'verify_production_candidate1711.sh','verify_synthetic_upgrade1711.sh','verify_signed_upgrade1711.py',
+                 'release_configuration1711.sh','verify_release1711_gate.py')
+          paths+=['scripts/'+name for name in names]
+          for name in paths:
+              original=source_root/name
+              assert original.is_file() and not original.is_symlink(), 'Missing original reviewed input: '+name
+              destination=control/name;destination.parent.mkdir(parents=True,exist_ok=True)
+              shutil.copyfile(original,destination)
+          marker=json.loads((control/'.sanctuary-production-candidate').read_bytes())
+          assert marker['source']=='de641d42df1ddae6ba6a59a23f0bc44af85ae1f9' and marker['test_run']==42430643629 and marker['test_artifact']==13597499947
+          assert re.fullmatch('[a-f0-9]{64}',marker['fixture_sha256'])
+          workflow=hashlib.sha256((control/'.github/workflows/sanctuary-production.yml').read_bytes()).hexdigest()
+          assert marker.get('workflow_sha256')==workflow, 'Signing workflow changed after review'
+          review=(control/'docs/release1711/SECURITY_REVIEW.md').read_text()
+          assert 'Signing workflow SHA-256: '+workflow in review.splitlines(), 'Missing exact workflow approval'
+          (inputs/'release-control-sha.txt').write_text(subprocess.check_output(['git','rev-parse','HEAD'],text=True))
+          (inputs/'preserved-inputs-sha256.json').write_text(json.dumps({name:hashlib.sha256((control/name).read_bytes()).hexdigest() for name in paths},indent=2)+'\n')
+          with open(os.environ['GITHUB_ENV'],'a') as output:
+              output.write('FROZEN_SOURCE='+marker['source']+'\n')
+              output.write('PRIVATE_GALLERY_1711_UPGRADE_FIXTURE_SHA256='+marker['fixture_sha256']+'\n')
+              settings={'PRIVATE_GALLERY_1711_ROOT':source_root,
+                        'PRIVATE_GALLERY_1711_UPGRADE_FIXTURE':control/'docs/release1711/UpgradeFixtureTest.kt',
+                        'PRIVATE_GALLERY_1711_GATE_RECEIPT':inputs/'gate.json',
+                        'PRIVATE_GALLERY_1711_COMPILED_DIR':Path(os.environ['RUNNER_TEMP'])/'upgrade1711-compiled',
+                        'PRIVATE_GALLERY_1711_BASELINE_APK':Path(os.environ['RUNNER_TEMP'])/'original1711code65.apk',
+                        'PRIVATE_GALLERY_1711_SIGNED_INSTRUMENTATION_APK':Path(os.environ['RUNNER_TEMP'])/'release1711-signed/instrumentation.apk'}
+              for name,value in settings.items(): output.write(name+'='+str(value)+'\n')
+          PY
+      - name: Fetch original exact-source runtime API evidence and pinned signed baseline
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs=require('fs'),crypto=require('crypto'),path=require('path');
+            const root=path.join(process.env.RUNNER_TEMP,'release1711-inputs');
+            const marker=JSON.parse(fs.readFileSync(path.join(process.env.RUNNER_TEMP,'release1711-controls/.sanctuary-production-candidate'),'utf8'));
+            const write=(name,value)=>fs.writeFileSync(path.join(root,name),JSON.stringify(value,null,2)+'\n');
+            const hash=bytes=>crypto.createHash('sha256').update(bytes).digest('hex');
+            if(context.repo.owner!=='traynor1987'||context.repo.repo!=='Private-gallery-'||context.eventName!=='push'||context.ref!=='refs/heads/feature/novaos-sanctuary-integration')throw Error('Wrong release context');
+            if(!Number.isSafeInteger(marker.test_run)||marker.test_run<=0||!Number.isSafeInteger(marker.test_artifact)||marker.test_artifact<=0)throw Error('Missing immutable runtime IDs');
+            const run=(await github.rest.actions.getWorkflowRun({...context.repo,run_id:marker.test_run})).data;
+            write('github-run.json',run);
+            if(run.head_sha!==marker.source||run.head_branch!=='feature/novaos-sanctuary-integration'||run.event!=='push'||run.status!=='completed'||run.conclusion!=='success'||run.head_repository?.full_name!=='traynor1987/Private-gallery-'||run.path.split('@')[0]!=='.github/workflows/fast-development.yml')throw Error('Runtime source/branch/workflow did not pass');
+            const jobs=(await github.rest.actions.listJobsForWorkflowRun({...context.repo,run_id:run.id,per_page:100})).data;
+            write('github-jobs.json',jobs);
+            if(jobs.total_count!==jobs.jobs.length)throw Error('Incomplete original jobs response');
+            const matching=jobs.jobs.filter(j=>j.name==='home2-integration');
+            if(matching.length!==1||matching[0].conclusion!=='success')throw Error('Missing successful integration job');
+            const artifact=(await github.rest.actions.getArtifact({...context.repo,artifact_id:marker.test_artifact})).data;
+            write('github-artifact.json',artifact);
+            if(artifact.expired||artifact.name!=='novaos-home2-integration-verification'||artifact.workflow_run?.id!==run.id||artifact.workflow_run?.head_sha!==marker.source||artifact.digest!=='sha256:'+marker.runtime_archive_sha256)throw Error('Runtime artifact identity/digest differs');
+            const runtime=Buffer.from((await github.rest.actions.downloadArtifact({...context.repo,artifact_id:artifact.id,archive_format:'zip'})).data);
+            if(hash(runtime)!==marker.runtime_archive_sha256)throw Error('Original runtime archive changed');
+            fs.writeFileSync(path.join(root,'original-runtime.zip'),runtime);
+            const baselineRun=(await github.rest.actions.getWorkflowRun({...context.repo,run_id:42410507182})).data;
+            write('baseline-github-run.json',baselineRun);
+            // Code 65 signing and upgrade passed. Only its separate GitHub Releases publication failed.
+            if(baselineRun.event!=='push'||baselineRun.head_branch!=='feature/novaos-visual-foundation'||baselineRun.head_repository?.full_name!=='traynor1987/Private-gallery-'||baselineRun.status!=='completed'||baselineRun.conclusion!=='failure'||baselineRun.head_sha!=='00aea5defcde28b7afe2c8b6715c5a3029e5f246'||baselineRun.path.split('@')[0]!=='.github/workflows/acceptance1762.yml')throw Error('Pinned baseline run differs');
+            const baselineJob=(await github.rest.actions.getJobForWorkflowRun({...context.repo,job_id:128517442213})).data;
+            write('baseline-github-job.json',baselineJob);
+            if(baselineJob.id!==128517442213||baselineJob.run_id!==42410507182||baselineJob.name!=='home2-production'||baselineJob.status!=='completed'||baselineJob.conclusion!=='success'||baselineJob.head_sha!=='00aea5defcde28b7afe2c8b6715c5a3029e5f246')throw Error('Pinned baseline job differs');
+            const baseline=(await github.rest.actions.getArtifact({...context.repo,artifact_id:13589877482})).data;
+            write('baseline-github-artifact.json',baseline);
+            if(baseline.expired||baseline.name!=='novaos-1.7.30-visual-foundation-code65-owner-review'||baseline.size_in_bytes!==61355596||baseline.workflow_run?.id!==42410507182||baseline.workflow_run?.head_sha!=='00aea5defcde28b7afe2c8b6715c5a3029e5f246'||baseline.digest!=='sha256:d2b6c0a22bfc5cb663ef79bec6e929ec494fb338b106d950468df3e1d2b8c3f9')throw Error('Pinned baseline artifact differs');
+            const bytes=Buffer.from((await github.rest.actions.downloadArtifact({...context.repo,artifact_id:baseline.id,archive_format:'zip'})).data);
+            if(bytes.length!==61355596||hash(bytes)!=='d2b6c0a22bfc5cb663ef79bec6e929ec494fb338b106d950468df3e1d2b8c3f9')throw Error('Original baseline archive changed');
+            fs.writeFileSync(path.join(root,'original-code65.zip'),bytes);
+      - name: Validate original runtime reports and independent production approval before signer access
+        run: |
+          controls="$RUNNER_TEMP/release1711-controls"
+          inputs="$RUNNER_TEMP/release1711-inputs"
+          python3 "$controls/scripts/verify_release1711_gate.py" \
+            --marker "$controls/.sanctuary-production-candidate" --review "$controls/docs/release1711/SECURITY_REVIEW.md" \
+            --run "$inputs/github-run.json" --jobs "$inputs/github-jobs.json" --artifact "$inputs/github-artifact.json" \
+            --runtime-archive "$inputs/original-runtime.zip" --matrix "$controls/docs/release1711/RUNTIME_CASES.json" \
+            --output "$PRIVATE_GALLERY_1711_GATE_RECEIPT"
+          git cat-file -e "$FROZEN_SOURCE^{commit}"
+          git checkout --detach "$FROZEN_SOURCE"
+          test "$(git rev-parse HEAD)" = "$FROZEN_SOURCE"
+          mkdir -p app/build/production-evidence
+          cp "$inputs/gate.json" "$inputs/release-control-sha.txt" "$inputs/preserved-inputs-sha256.json" app/build/production-evidence/
+      - uses: actions/setup-java@v5
+        with: { distribution: temurin, java-version: '17' }
+      - uses: actions/cache/restore@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: privacy1751-${{ runner.os }}-${{ hashFiles('**/*.gradle*', 'gradle/libs.versions.toml', 'gradle/wrapper/gradle-wrapper.properties') }}
+          restore-keys: privacy1751-${{ runner.os }}-
+      - name: Install Android 17 tools and verify the original code65 APK
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/share/swift /opt/ghc /usr/local/.ghcup /opt/hostedtoolcache/CodeQL
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --install "cmdline-tools;22.0"
+          mv "$ANDROID_HOME/cmdline-tools/latest" "$RUNNER_TEMP/previous-android-command-tools1711"
+          ln -s "$ANDROID_HOME/cmdline-tools/22.0" "$ANDROID_HOME/cmdline-tools/latest"
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-37.1" "build-tools;36.0.0" "emulator"
+          python3 "$RUNNER_TEMP/release1711-controls/scripts/verify_upgrade1711_baseline.py" "$RUNNER_TEMP/release1711-inputs/original-code65.zip" "$PRIVATE_GALLERY_1711_BASELINE_APK" | tee app/build/production-evidence/baseline-archive-validation.txt
+          "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose --print-certs "$PRIVATE_GALLERY_1711_BASELINE_APK" > app/build/production-evidence/baseline-signature.txt
+          grep -Fxq 'Signer #1 certificate SHA-256 digest: 94f2bfc6567f26d067d29077111cfd0ce86d38263c642ad115e43365f05b0d17' app/build/production-evidence/baseline-signature.txt
+          grep -Fxq 'Verified using v2 scheme (APK Signature Scheme v2): true' app/build/production-evidence/baseline-signature.txt
+          grep -Fxq 'Number of signers: 1' app/build/production-evidence/baseline-signature.txt
+          "$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging "$PRIVATE_GALLERY_1711_BASELINE_APK" > app/build/production-evidence/baseline-package.txt
+          grep -Fq "package: name='uk.co.traynor.privategallery' versionCode='65' versionName='1.7.30-visual-foundation'" app/build/production-evidence/baseline-package.txt
+          grep -Fxq "sdkVersion:'37'" app/build/production-evidence/baseline-package.txt
+          grep -Fxq "targetSdkVersion:'37'" app/build/production-evidence/baseline-package.txt
+          if grep -q 'application-debuggable' app/build/production-evidence/baseline-package.txt; then exit 1; fi
+      - name: Compile reviewed baseline-compatible fixture with no signing environment
+        run: |
+          controls="$RUNNER_TEMP/release1711-controls/scripts"
+          python3 "$controls/verify_release1711_gate.py" --receipt "$PRIVATE_GALLERY_1711_GATE_RECEIPT" --source "$FROZEN_SOURCE"
+          bash "$controls/compile_upgrade1711_fixture.sh"
+          python3 "$controls/verify_compiled_upgrade1711.py" --directory "$PRIVATE_GALLERY_1711_COMPILED_DIR" --source "$FROZEN_SOURCE" --fixture "$PRIVATE_GALLERY_1711_UPGRADE_FIXTURE" --compiler "$controls/compile_upgrade1711_fixture.sh"
+          chmod -R a-w "$PRIVATE_GALLERY_1711_COMPILED_DIR"
+      # Existing permanent credentials are introduced only after original runtime/review and compilation pass.
+      - name: Verify the existing permanent private key and original certificate
+        env:
+          KEYSTORE_BASE64: ${{ secrets.PRIVATE_GALLERY_SIGNING_KEYSTORE_BASE64 }}
+          STORE_PASSWORD: ${{ secrets.PRIVATE_GALLERY_SIGNING_STORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.PRIVATE_GALLERY_SIGNING_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.PRIVATE_GALLERY_SIGNING_KEY_PASSWORD }}
+        run: |
+          source "$RUNNER_TEMP/release1711-controls/scripts/release_configuration1711.sh"
+          test "$(git rev-parse HEAD)" = "$FROZEN_SOURCE"
+          : "${KEYSTORE_BASE64:?Original signer unavailable}" "${STORE_PASSWORD:?}" "${KEY_ALIAS:?}" "${KEY_PASSWORD:?}"
+          umask 077
+          printf '%s' "$KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/private-gallery-release.jks"
+          probe=$(mktemp -d "$RUNNER_TEMP/signer1711.XXXXXX")
+          trap 'rm -rf "$probe"' EXIT
+          keytool -exportcert -keystore "$RUNNER_TEMP/private-gallery-release.jks" -storepass:env STORE_PASSWORD -alias "$KEY_ALIAS" -file "$probe/cert.der" >/dev/null 2>&1
+          test "$(sha256sum "$probe/cert.der" | cut -d ' ' -f 1)" = 94f2bfc6567f26d067d29077111cfd0ce86d38263c642ad115e43365f05b0d17
+          printf 'Original NovaOS private-key availability probe\n' > "$probe/probe.txt"
+          jar cf "$probe/probe.jar" -C "$probe" probe.txt
+          jarsigner -keystore "$RUNNER_TEMP/private-gallery-release.jks" -storepass:env STORE_PASSWORD -keypass:env KEY_PASSWORD "$probe/probe.jar" "$KEY_ALIAS" >/dev/null 2>&1
+          jarsigner -verify "$probe/probe.jar" > "$probe/verification.txt"
+          grep -q 'jar verified' "$probe/verification.txt"
+          printf 'PASS: existing permanent private key; original certificate SHA256 94f2bfc6567f26d067d29077111cfd0ce86d38263c642ad115e43365f05b0d17\n' > app/build/production-evidence/permanent-signer.txt
+      - name: Build the frozen original-key NovaOS 1.7.31 Sanctuary Code 66 release candidate
+        env:
+          ORG_GRADLE_PROJECT_PRIVATE_GALLERY_STORE_FILE: ${{ runner.temp }}/private-gallery-release.jks
+          ORG_GRADLE_PROJECT_PRIVATE_GALLERY_STORE_PASSWORD: ${{ secrets.PRIVATE_GALLERY_SIGNING_STORE_PASSWORD }}
+          ORG_GRADLE_PROJECT_PRIVATE_GALLERY_KEY_ALIAS: ${{ secrets.PRIVATE_GALLERY_SIGNING_KEY_ALIAS }}
+          ORG_GRADLE_PROJECT_PRIVATE_GALLERY_KEY_PASSWORD: ${{ secrets.PRIVATE_GALLERY_SIGNING_KEY_PASSWORD }}
+        run: |
+          test "$(git rev-parse HEAD)" = "$FROZEN_SOURCE"
+          ./gradlew lintRelease assembleRelease --stacktrace --no-daemon --console=plain
+      - name: Sign a disposable copy of the already compiled instrumentation and verify its payload
+        env:
+          STORE_PASSWORD: ${{ secrets.PRIVATE_GALLERY_SIGNING_STORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.PRIVATE_GALLERY_SIGNING_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.PRIVATE_GALLERY_SIGNING_KEY_PASSWORD }}
+        run: |
+          trap 'rm -f "$RUNNER_TEMP/private-gallery-release.jks"' EXIT
+          controls="$RUNNER_TEMP/release1711-controls/scripts"
+          python3 "$controls/verify_compiled_upgrade1711.py" --directory "$PRIVATE_GALLERY_1711_COMPILED_DIR" --source "$FROZEN_SOURCE" --fixture "$PRIVATE_GALLERY_1711_UPGRADE_FIXTURE" --compiler "$controls/compile_upgrade1711_fixture.sh"
+          mkdir "$RUNNER_TEMP/release1711-signed"
+          cp "$PRIVATE_GALLERY_1711_COMPILED_DIR/instrumentation.apk" "$PRIVATE_GALLERY_1711_SIGNED_INSTRUMENTATION_APK"
+          chmod u+w "$PRIVATE_GALLERY_1711_SIGNED_INSTRUMENTATION_APK"
+          "$ANDROID_HOME/build-tools/36.0.0/apksigner" sign --ks "$RUNNER_TEMP/private-gallery-release.jks" --ks-pass env:STORE_PASSWORD --ks-key-alias "$KEY_ALIAS" --key-pass env:KEY_PASSWORD --min-sdk-version 24 "$PRIVATE_GALLERY_1711_SIGNED_INSTRUMENTATION_APK"
+          python3 "$controls/verify_signed_upgrade1711.py" "$PRIVATE_GALLERY_1711_COMPILED_DIR/instrumentation.apk" "$PRIVATE_GALLERY_1711_SIGNED_INSTRUMENTATION_APK" | tee app/build/production-evidence/instrumentation-payload-validation.txt
+      - name: Verify frozen candidate package signature OCR distribution and 16KiB alignment
+        run: |
+          bash "$RUNNER_TEMP/release1711-controls/scripts/verify_production_candidate1711.sh"
+          python3 scripts/verify_evidence179_distribution.py app/build/outputs/apk/release/app-release.apk arm64-v8a,x86_64 app/build/production-evidence/ocr-distribution.json
+          "$ANDROID_HOME/build-tools/36.0.0/zipalign" -c -P 16 -v 4 app/build/outputs/apk/release/app-release.apk > app/build/production-evidence/alignment.txt
+      - name: Enable emulator acceleration
+        run: sudo chmod 666 /dev/kvm
+      - name: Original-key code65 to code66 upgrade and restart without uninstall or clear
+        uses: reactivecircus/android-emulator-runner@v2
+        env:
+          PRODUCTION_UPGRADE: '1'
+        with:
+          api-level: '37.0'
+          target: google_apis
+          arch: x86_64
+          avd-name: novaos1711-original-key-from65
+          force-avd-creation: true
+          profile: pixel_2
+          cores: 4
+          ram-size: 4096M
+          heap-size: 512M
+          disk-size: 8G
+          disable-animations: false
+          emulator-options: -no-window -gpu software -no-snapshot -noaudio -no-boot-anim -feature -HardwareDecoder
+          script: bash "$RUNNER_TEMP/release1711-controls/scripts/verify_synthetic_upgrade1711.sh"
+      - name: Stage the one verified production APK and complete upgrade evidence
+        id: verified-delivery
+        run: |
+          python3 - <<'PY'
+          import hashlib,json,os,shutil,zipfile
+          from pathlib import Path
+          root=Path.cwd();evidence=root/'app/build/production-evidence';upgrade=evidence/'from65'
+          apk=root/'app/build/outputs/apk/release/app-release.apk';digest=hashlib.sha256(apk.read_bytes()).hexdigest()
+          assert (upgrade/'upgrade-result.txt').read_text().startswith('PASS:')
+          assert (upgrade/'upgrade-candidate-source-sha.txt').read_text().strip()==os.environ['FROZEN_SOURCE']
+          assert (upgrade/'upgrade-candidate-sha256.txt').read_text().split()[0]==digest
+          for phase in ('seed','verify','after-restart'):
+              assert 'OK (1 test)' in (upgrade/f'upgrade-{phase}.txt').read_text()
+          inputs=Path(os.environ['RUNNER_TEMP'])/'release1711-inputs'
+          for name in ('github-run.json','github-jobs.json','github-artifact.json','baseline-github-run.json','baseline-github-job.json','baseline-github-artifact.json'):
+              shutil.copyfile(inputs/name,evidence/name)
+          control=Path(os.environ['RUNNER_TEMP'])/'release1711-controls'
+          shutil.copytree(control,evidence/'reviewed-controls')
+          compiled=Path(os.environ['PRIVATE_GALLERY_1711_COMPILED_DIR']);compiled_reports=evidence/'compiled-upgrade'
+          compiled_reports.mkdir()
+          for name in ('compilation.json','baseline-build.gradle.kts','instrumentation-package.txt','instrumentation-manifest.txt','compile.log'):
+              shutil.copyfile(compiled/name,compiled_reports/name)
+          summary=dict(source_sha=os.environ['FROZEN_SOURCE'],version='1.7.31',version_code=66,package='uk.co.traynor.privategallery',apk_sha256=digest,
+                       original_certificate_sha256='94f2bfc6567f26d067d29077111cfd0ce86d38263c642ad115e43365f05b0d17',original_key_code65_upgrade='PASS',restart='PASS',physical_owner_acceptance='OWNER_REPORTED_TESTED')
+          (evidence/'release-summary.json').write_text(json.dumps(summary,indent=2)+'\n')
+          destination=root/'app/build/NovaOS-1.7.31-sanctuary-code66-owner-review.apk';shutil.copyfile(apk,destination)
+          (evidence/'SHA256SUMS.txt').write_text(digest+'  '+destination.name+'\n')
+          (evidence/'REVIEW-NOTES.md').write_text(
+              '# NovaOS 1.7.31 Sanctuary · production upgrade\n\n'
+              f"Frozen application source `{summary['source_sha']}`.\n\n"
+              'Original production package and signing certificate. Android version code 66, API 37.\n\n'
+              'The pinned original-key Code 65 APK passed an in-place upgrade with retained-data checks, a force-stop '
+              'and repeat verification on an enforcing API 37 emulator. The owner reported testing the isolated Sanctuary build.\n\n'
+              'Install over the existing production installation. Do not uninstall NovaOS or clear its data.\n'
+          )
+          forbidden={'.apk','.apks','.aab','.jks','.keystore','.p12','.pem','.key','.zip'}
+          assert not any(path.suffix.lower() in forbidden for path in evidence.rglob('*') if path.is_file()), 'Evidence contains an installable package, archive or signing material'
+          archive=shutil.make_archive(str(root/'app/build/NovaOS-1.7.31-sanctuary-code66-evidence'),'zip',evidence)
+          with zipfile.ZipFile(archive) as zipped:
+              assert not any(Path(name).suffix.lower() in forbidden for name in zipped.namelist()), 'Forbidden delivery payload'
+          with open(os.environ['GITHUB_OUTPUT'],'a') as output:
+              output.write(f'frozen_source={summary["source_sha"]}\napk_sha256={digest}\n')
+          PY
+      - name: Preserve verified delivery and evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: novaos-1.7.31-sanctuary-code66-owner-review
+          path: |
+            app/build/NovaOS-1.7.31-sanctuary-code66-owner-review.apk
+            app/build/NovaOS-1.7.31-sanctuary-code66-evidence.zip
+          if-no-files-found: error
+          retention-days: 30
+      - name: Remove original signing material on every outcome
+        if: always()
+        run: rm -f "$RUNNER_TEMP/private-gallery-release.jks"
+      - name: Select failed diagnostics without any APK archive or signing material
+        if: failure()
+        run: |
+          python3 - <<'PY'
+          import os,shutil
+          from pathlib import Path
+          temporary=Path(os.environ['RUNNER_TEMP']);destination=temporary/'release1711-failure';destination.mkdir(exist_ok=True)
+          evidence=Path('app/build/production-evidence');inputs=temporary/'release1711-inputs'
+          for name in ('github-run.json','github-jobs.json','github-artifact.json','baseline-github-run.json','baseline-github-job.json','baseline-github-artifact.json','gate.json','release-control-sha.txt','preserved-inputs-sha256.json'):
+              original=inputs/name
+              if original.is_file() and not original.is_symlink(): shutil.copyfile(original,destination/name)
+          for name in ('baseline-signature.txt','baseline-package.txt','baseline-archive-validation.txt','signature.txt','package.txt','source-sha.txt','apk-sha256.txt','ocr-distribution.json','alignment.txt','instrumentation-payload-validation.txt','release-summary.json'):
+              original=evidence/name
+              if original.is_file() and not original.is_symlink(): shutil.copyfile(original,destination/name)
+          for name in ('upgrade-baseline-package.txt','upgrade-candidate-package.txt','upgrade-baseline-signature.txt','upgrade-candidate-signature.txt','upgrade-instrumentation-signature.txt','upgrade-compilation.json','upgrade-seed.txt','upgrade-verify.txt','upgrade-after-restart.txt','upgrade-result.txt'):
+              original=evidence/'from65'/name
+              if original.is_file() and not original.is_symlink(): shutil.copyfile(original,destination/name)
+          for name in ('lint-results-release.html','lint-results-release.xml'):
+              original=Path('app/build/reports')/name
+              if original.is_file() and not original.is_symlink(): shutil.copyfile(original,destination/name)
+          PY
+      - name: Preserve only selected failed release diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: novaos1711-production-failure-diagnostics
+          path: ${{ runner.temp }}/release1711-failure
+          if-no-files-found: warn
