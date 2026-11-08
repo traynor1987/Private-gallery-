@@ -6,6 +6,7 @@ import android.net.Uri
 import android.os.CancellationSignal
 import android.provider.DocumentsContract
 import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -52,10 +53,12 @@ private class EvidenceArchiveRequest(val source:Uri,val destination:Uri?=null,va
  fun dismiss(){reportExportId=null;aiTask=null;discardDestination(pending);discardDestination(delivered);job?.cancel();controller?.let{owner.retire(it)};controller=null;aiIds=null;exportIds=null;archive=null;pending?.stage?.let{owner.discard(it)};pending=null;delivered=null;owner.close();onClose()}
  fun received(uri:Uri?,accepted:Boolean){val ticket=pending?:return;if(!ticket.delivered.compareAndSet(false,true))return;ticket.uri=uri;ticket.accepted=accepted;delivered=ticket}
  val importPicker=rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()){uri->received(uri,uri!=null)}
- val documentImportPicker=rememberLauncherForActivityResult(ActivityResultContracts.OpenMultipleDocuments()){uris->
+ fun receiveImport(uris:List<Uri>){
   val ticket=pending
   if(ticket!=null&&ticket.delivered.compareAndSet(false,true)){val selection=uris.distinct();ticket.inputUris=if(selection.size<=128)selection else emptyList();ticket.accepted=ticket.inputUris.isNotEmpty();if(selection.size>128)notice="Select at most 128 documents. Nothing from this oversized selection was imported.";delivered=ticket}
  }
+ val documentImportPicker=rememberLauncherForActivityResult(ActivityResultContracts.OpenMultipleDocuments(),::receiveImport)
+ val photoImportPicker=rememberLauncherForActivityResult(ActivityResultContracts.PickMultipleVisualMedia(128),::receiveImport)
  val reportPicker=rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("text/plain")){uri->received(uri,uri!=null)}
  val outputPicker=rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/octet-stream")){uri->received(uri,uri!=null)}
  val permissionPicker=rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()){result->received(null,result.resultCode==Activity.RESULT_OK)}
@@ -149,6 +152,7 @@ private class EvidenceArchiveRequest(val source:Uri,val destination:Uri?=null,va
  if(active!=null&&!transferring&&active.current()) {
   EvidenceLocker(active,onClose={if(controller===active){owner.retire(active);controller=null;if(pending==null)dismiss()}},
    onImport={handoff(EvidencePickerTicket("Import")){documentImportPicker.launch(arrayOf("image/*","application/pdf","text/plain","text/csv"))}},
+   onImportPhotos={handoff(EvidencePickerTicket("Import")){photoImportPicker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))}},
    onAi={ids->aiIds=ids;aiMode=null;aiTask=null},onExport={ids->exportIds=ids},
    onOpenArchive={handoff(EvidencePickerTicket("Open")){importPicker.launch(arrayOf("application/octet-stream","*/*"))}},startImportReview=startImportReview,onAiReport={ids->aiIds=ids;aiMode=null;aiTask=EvidenceAi.Task.EVIDENCE_REPORT},onReportExport={reportExportId=it})
   aiIds?.let{ids->

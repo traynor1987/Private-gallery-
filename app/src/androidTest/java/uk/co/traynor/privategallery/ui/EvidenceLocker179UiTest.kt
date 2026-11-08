@@ -51,6 +51,14 @@ class EvidenceLocker179UiTest {
  }
  private fun click(text:String){compose.evidenceNode(hasText(text)).performClick()}
  private fun field(label:String)=compose.onNode(hasSetTextAction() and hasText(label))
+ private fun chooseTimestamp(hour:Int){
+  click("Choose date and time")
+  compose.onNodeWithTag("media-date-picker").assertExists()
+  compose.onNodeWithText("Next").performClick()
+  compose.onNodeWithTag("media-hour").performTextReplacement(hour.toString())
+  compose.onNodeWithTag("media-minute").performTextReplacement("00")
+  compose.onNodeWithText("Save date").performClick()
+ }
  @Test fun primaryActualImportExtractCorrectIncidentSearchRemoveAndReopenPreservesOriginal() {
   val f=fixture()
   try {
@@ -58,18 +66,18 @@ class EvidenceLocker179UiTest {
    compose.setContent{CompositionLocalProvider(LocalContext provides f.context){PrivateGalleryTheme(AppTheme.LIGHT){EvidenceLocker(controller,{},{},{},{},{})}}}
    waitReady(controller,0)
    click("Add existing evidence");compose.evidenceNode(hasContentDescription("Register original alpha179.txt")).assertIsDisplayed().assertHeightIsAtLeast(48.dp).performClick().assertIsOn();approveImportReview();waitReady(controller,1)
-   compose.onNodeWithText("Library").performClick();compose.evidenceNode(hasText("alpha179.txt")).performClick();waitReady(controller,1)
+   compose.onNodeWithText("Evidence").performClick();compose.evidenceNode(hasText("alpha179.txt")).performClick();waitReady(controller,1)
    click("Review / correct");field("Owner-corrected text").performTextReplacement("unique179 owner corrected Alice timestamp uncertain")
    compose.onNodeWithText("Save").performClick()
    compose.waitUntil(15000){controller.state.value.catalog?.evidence()?.singleOrNull()?.transcript()?.startsWith("unique179")==true&&!controller.state.value.busy}
    val corrected=f.access.store.read().evidence().single();assertTrue(corrected.ocr().single().text().contains("arrange delivery"));assertEquals(1,corrected.corrections().size)
    compose.runOnIdle{compose.activity.onBackPressedDispatcher.onBackPressed()}
    click("Add evidence");compose.evidenceNode(hasContentDescription("Register original beta179.txt")).assertIsDisplayed().assertHeightIsAtLeast(48.dp).performClick().assertIsOn();approveImportReview();waitReady(controller,2)
-   compose.onNodeWithText("Incidents").performClick();click("New incident")
+   compose.onNodeWithText("Timeline").performClick();click("New incident")
    field("Title").performTextReplacement("Synthetic incident179");compose.onNodeWithText("Save").performClick()
    compose.waitUntil(15000){controller.state.value.catalog?.incidents()?.size==1&&!controller.state.value.busy}
    compose.runOnIdle{compose.activity.onBackPressedDispatcher.onBackPressed()}
-   compose.onNodeWithText("Library").performClick();compose.evidenceNode(hasContentDescription("Select evidence alpha179.txt")).performClick()
+   compose.onNodeWithText("Evidence").performClick();compose.evidenceNode(hasContentDescription("Select evidence alpha179.txt")).performClick()
    click("Add selected to incident");click("Synthetic incident179")
    compose.waitUntil(15000){controller.state.value.catalog?.incidents()?.singleOrNull()?.evidenceIds()?.contains(corrected.id())==true&&!controller.state.value.busy}
    compose.evidenceNode(hasTestTag("evidence-search") and hasSetTextAction()).performTextReplacement("unique179")
@@ -103,8 +111,8 @@ class EvidenceLocker179UiTest {
    field("New incident title").performTextReplacement("Approved group179");compose.onNodeWithText("Save").performClick()
    compose.waitUntil(15000){controller.state.value.catalog?.incidents()?.size==1&&!controller.state.value.busy}
    val grouped=f.access.store.read();assertEquals(2,grouped.incidents().single().evidenceIds().size);assertEquals("ACCEPT_SUGGESTION",grouped.audit().last().action())
-   compose.onNodeWithText("Incidents").performClick();compose.evidenceNode(hasText("Approved group179")).performClick()
-   click("Add event");field("Title").performTextReplacement("Late event179");field("Timestamp (ISO with offset; blank is uncertain)").performTextReplacement("2026-10-31T12:00:00Z");compose.onNodeWithText("Save").performClick()
+   compose.onNodeWithText("Timeline").performClick();compose.evidenceNode(hasText("Approved group179")).performClick()
+   click("Add event");field("Title").performTextReplacement("Late event179");chooseTimestamp(12);compose.onNodeWithText("Save").performClick()
    compose.waitUntil(15000){controller.state.value.catalog?.incidents()?.singleOrNull()?.events()?.size==1&&!controller.state.value.busy}
    click("Add event");field("Title").performTextReplacement("Uncertain event179");compose.onNodeWithText("Save").performClick()
    compose.waitUntil(15000){controller.state.value.catalog?.incidents()?.singleOrNull()?.events()?.size==2&&!controller.state.value.busy}
@@ -130,7 +138,7 @@ class EvidenceLocker179UiTest {
   try {
    androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().runOnMainSync{controller=EvidenceController(f.context,f.access)}
    compose.setContent{CompositionLocalProvider(LocalContext provides f.context){PrivateGalleryTheme(AppTheme.LIGHT){EvidenceLocker(controller,{},{},{},{},{})}}}
-   waitReady(controller);compose.onNodeWithText("Incidents").performClick();click("Chronology179")
+   waitReady(controller);compose.onNodeWithText("Timeline").performClick();click("Chronology179")
    fun arrow(at:Long,label:String)=compose.evidenceNode(hasText(label) and hasAnyAncestor(hasTestTag("evidence-event-${events.single{it.timestamp()==at}.id()}")))
    arrow(100,"Move earlier").assertIsNotEnabled()
    arrow(0,"Move later").assertIsNotEnabled()
@@ -154,7 +162,7 @@ class EvidenceLocker179UiTest {
    assertTrue(f.access.store.read().evidence().isEmpty())
    approveImportReview();waitReady(controller,2)
    assertEquals(2,f.access.sources.list().size)
-   compose.onNodeWithText("Library").performClick();compose.evidenceNode(hasContentDescription("Select evidence beta179.txt")).performClick()
+   compose.onNodeWithText("Evidence").performClick();compose.evidenceNode(hasContentDescription("Select evidence beta179.txt")).performClick()
    click("Export selection")
    compose.evidenceNode(hasContentDescription("Export incident First selected179")).performClick()
    compose.evidenceNode(hasContentDescription("Export incident Second selected179")).performClick()
@@ -176,8 +184,8 @@ class EvidenceLocker179UiTest {
    f.access.store.update{it.saveOcr(record.id(),extraction,1).upsertIncident(incident,2,"CREATE")}
    compose.runOnIdle{controller.refresh()};waitReady(controller,1)
    compose.setContent{CompositionLocalProvider(LocalContext provides f.context){PrivateGalleryTheme(AppTheme.LIGHT){EvidenceLocker(controller,{},{},{},{},{})}}}
-   compose.onNodeWithText("Incidents").performClick();click("Reviewed time179");click("Review time: 10:00")
-   field("Timestamp (ISO offset; blank keeps uncertain)").performTextReplacement("2026-10-31T10:00:00Z");compose.onNodeWithText("Save").performClick()
+   compose.onNodeWithText("Timeline").performClick();click("Reviewed time179");click("Review time: 10:00")
+   chooseTimestamp(10);compose.onNodeWithText("Save").performClick()
    compose.waitUntil(15000){!controller.state.value.busy&&controller.state.value.catalog?.incidents()?.single()?.events()?.size==1}
    val event=f.access.store.read().incidents().single().events().single()
    assertEquals("USER",event.provenance());assertTrue(event.notes().contains("OCR page 1: 10:00"));assertTrue(event.notes().contains("Date and timezone unavailable"))
@@ -207,7 +215,7 @@ class EvidenceLocker179UiTest {
    androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().runOnMainSync{controller=EvidenceController(f.context,f.access)}
    compose.setContent{CompositionLocalProvider(LocalContext provides f.context){PrivateGalleryTheme(AppTheme.DARK){EvidenceLocker(controller,{closed.incrementAndGet()},{},{},{},{})}}}
    compose.runOnIdle{controller.register(f.ids.first())};waitReady(controller,1)
-   compose.onNodeWithText("Library").performClick();compose.onNodeWithTag("evidence-search").performTextReplacement("Alice")
+   compose.onNodeWithText("Evidence").performClick();compose.onNodeWithTag("evidence-search").performTextReplacement("Alice")
    // Finish the real IME transition before scrolling this large-text Library viewport.
    var libraryWindow:android.view.View?=null
    androidx.test.espresso.Espresso.onView(androidx.test.espresso.matcher.ViewMatchers.isRoot())

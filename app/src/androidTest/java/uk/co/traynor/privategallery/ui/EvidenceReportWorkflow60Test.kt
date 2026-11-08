@@ -116,7 +116,7 @@ class EvidenceReportWorkflow60Test {
    assertTrue(access.store.read().incidents().isEmpty());assertArrayEquals(original.plaintextSha256,repo.items().single{it.id==original.id}.plaintextSha256)
    compose.evidenceNode(hasText("Export report only")).performClick();assertEquals(saved.id(),export)
    compose.evidenceNode(hasText("Close") and hasClickAction()).performClick()
-   compose.onNodeWithText("AI reports").performClick();compose.evidenceNode(hasText("Open report ${saved.id().take(8)}")).performClick()
+   compose.onNodeWithText("Nova AI").performClick();compose.evidenceNode(hasText("Open report ${saved.id().take(8)}")).performClick()
    compose.evidenceNode(hasText("Open supporting evidence ${id.take(8)}")).performClick()
    val verifiedOriginal="Verified original bytes · display rendering only"
    val automation=InstrumentationRegistry.getInstrumentation().uiAutomation

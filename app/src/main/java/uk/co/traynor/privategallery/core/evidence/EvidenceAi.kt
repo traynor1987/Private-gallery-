@@ -49,6 +49,7 @@ internal class EvidenceAiPreview internal constructor(
  text:String,images:List<EvidenceAiImage>,body:ByteArray,
  val estimatedUsd:Double,
  internal val reportCorpus:EvidenceAiReport.Corpus?=null,
+ internal val requiresCitedAnswer:Boolean=false,
 ) : AutoCloseable {
  val owner=catalog.owner()
  val revision=catalog.revision()
@@ -84,6 +85,7 @@ internal class EvidenceAiPreview internal constructor(
 /** Owner-supplied credentials and owner-confirmed, one-shot Responses requests only. */
 internal object EvidenceAi {
  const val ENDPOINT="https://api.openai.com/v1/responses"
+ const val CONNECTION_TEST_PROMPT="Reply with OK. This is a NovaOS connection test."
  const val PRICING_REVISION="2026-10-31:5.6-standard-usd"
  const val DISCLOSURE="Sends the exact displayed selected text and explicitly selected images to OpenAI using the displayed route and owner API key. store:false does not promise zero retention: abuse-monitoring content may be retained up to 30 days, with exceptions and account-specific controls. API data is not used for training by default unless opted in. AI output is advisory, may be wrong, and never changes originals or incidents automatically. USD estimates use approximate characters/4 plus bounded image patches, conservative input/cache-write pricing and maximum output; rates/account terms may change. This is not a guaranteed charge or spending cap."
  private const val MAX_RECORDS=32
@@ -110,7 +112,7 @@ internal object EvidenceAi {
  }
 
  suspend fun prepare(catalog:EvidenceCatalog,selectedIds:List<String>,imageIds:List<String> = emptyList(),model:Model=Model.LUNA,
-  task:Task=Task.FACTUAL_SUMMARY,sourceReader:EvidenceSourceReader,route:EvidenceRoute):EvidenceAiPreview {
+  task:Task=Task.FACTUAL_SUMMARY,sourceReader:EvidenceSourceReader,route:EvidenceRoute,question:String?=null):EvidenceAiPreview {
   var pending:EvidenceAiPreview?=null
   val ownedImages=mutableListOf<EvidenceAiImage>()
   var ownedBody:ByteArray?=null
@@ -118,6 +120,7 @@ internal object EvidenceAi {
   try {
    val result=withContext(Dispatchers.IO) {
     require(catalog.owner()==sourceReader.owner&&catalog.owner()==route.owner){"Evidence, reader and route must belong to the same vault"}
+    require(question==null||task==Task.EVIDENCE_REPORT){"Questions require the cited report format"}
     require(selectedIds.size in 1..MAX_RECORDS&&selectedIds.distinct().size==selectedIds.size){"Select 1–32 distinct evidence records"}
     require(imageIds.size<=MAX_IMAGES&&imageIds.distinct().size==imageIds.size&&selectedIds.containsAll(imageIds)){"Select at most 8 images from the selected evidence"}
     check(sourceReader.current()&&route.current()){"Evidence access or route retired"}
@@ -125,7 +128,7 @@ internal object EvidenceAi {
     val lineage=EvidenceEgress.requireAllowed(catalog,ids,emptyList(),sourceReader,VaultEgress.AI)
     val records=ids.map{id->catalog.evidence().single{it.id()==id}}
     val reportCorpus=if(task==Task.EVIDENCE_REPORT)EvidenceAiReport.corpus(records).also{ownedReportCorpus=it}else null
-    val framing=reportCorpus?.let(EvidenceAiReport::instructions)?:exactText(records,task)
+    val framing=reportCorpus?.let{EvidenceAiReport.instructions(it,question)}?:exactText(records,task)
     val outputTokens=if(task==Task.EVIDENCE_REPORT)8192 else MAX_OUTPUT_TOKENS
     val context=currentCoroutineContext()
     for(record in records) {
@@ -150,10 +153,47 @@ internal object EvidenceAi {
     val textTokens=ceil(framing.length/4.0).toLong()
     val imageTokens=ownedImages.sumOf{ceil(ceil(it.width/32.0)*ceil(it.height/32.0)*1.2).toLong()}
     val usd=((textTokens+imageTokens)*model.cacheWriteUsdPerMillion+outputTokens*model.outputUsdPerMillion)/1000000.0
-    EvidenceAiPreview(catalog,sourceReader,route,model,task,ids,explicitImages,lineage,framing,ownedImages.toList(),body,usd,reportCorpus).also{pending=it}
+    EvidenceAiPreview(catalog,sourceReader,route,model,task,ids,explicitImages,lineage,framing,ownedImages.toList(),body,usd,reportCorpus,question!=null).also{pending=it}
    }
    currentCoroutineContext().ensureActive();check(result.current());pending=null;ownedBody=null;ownedReportCorpus=null;ownedImages.clear();return result
   }finally{pending?.close();ownedBody?.fill(0);ownedReportCorpus?.close();ownedImages.forEach{it.close()}}
+ }
+
+ /** Explicit settings action. No evidence reader, catalogue, question or owner data enters this body. */
+ suspend fun testConnection(route:EvidenceRoute,credential:EvidenceCredentials,model:Model):Unit = withContext(Dispatchers.IO) {
+  var key:EvidenceCredentials.Key?=null
+  var body:ByteArray?=null
+  var response:AiHttpResponse?=null
+  try {
+   check(route.current()&&route.owner==credential.owner)
+   val sendKey=credential.acquireForSend(route.owner);key=sendKey
+   sendKey.cancelOnRevocation{route.close()}
+   val probe=JSONObject().put("model",model.id).put("input",CONNECTION_TEST_PROMPT)
+    .put("store",false).put("background",false).put("stream",false)
+    .put("reasoning",JSONObject().put("effort","none")).put("max_output_tokens",16)
+    .put("tools",JSONArray()).toString().toByteArray(Charsets.UTF_8)
+   body=probe
+   val request=AiHttpRequest("POST",ENDPOINT,mapOf("Authorization" to sendKey.authorization(),"Content-Type" to "application/json","Accept" to "application/json"),
+    AiRequestBody{output->check(route.current()&&sendKey.current());output.write(probe);check(route.current()&&sendKey.current())},32768)
+   currentCoroutineContext().ensureActive();check(route.current()&&sendKey.current())
+   val received=route.execute(request);response=received
+   currentCoroutineContext().ensureActive();check(route.current()&&sendKey.current())
+   when(received.status) {
+    401,403->throw EvidenceAiFailure("OpenAI rejected this vault's API credential.")
+    429->throw EvidenceAiFailure("OpenAI rate limited this request or the account limit was reached.")
+    !in 200..299->throw EvidenceAiFailure("OpenAI did not accept this model connection test.")
+   }
+   require(received.bytes.size<=32768)
+   val decoded=Charsets.UTF_8.newDecoder().decode(java.nio.ByteBuffer.wrap(received.bytes)).toString()
+   sendKey.rejectEcho(decoded)
+   EvidenceStrictJson.validate(decoded,32,32768)
+   val result=JSONObject(decoded)
+   check(result.getString("object")=="response"&&result.getString("status") in setOf("completed","incomplete"))
+   currentCoroutineContext().ensureActive();check(route.current()&&sendKey.current())
+  }catch(cancelled:CancellationException){throw cancelled}
+  catch(failure:EvidenceAiFailure){throw failure}
+  catch(_:Exception){throw EvidenceAiFailure("Connection test could not verify the selected route and model.")}
+  finally{response?.bytes?.fill(0);body?.fill(0);key?.close();route.close()}
  }
 
  /** Call only from the explicit consent action. No automatic retry or persistent consent. */
@@ -265,7 +305,13 @@ internal object EvidenceAi {
       "output_text"->{
        require(!refusal&&++outputTexts==1)
        val value=part.getString("text");key.rejectEcho(value)
-       if(preview.task!=Task.EVIDENCE_REPORT||status!="incomplete")structured=if(preview.task==Task.EVIDENCE_REPORT)JSONObject(EvidenceAiReport.encode(EvidenceAiReport.validate(value,checkNotNull(preview.reportCorpus))))else readStructure(value,preview.selectedIds.toSet(),false,0).json
+       if(preview.task!=Task.EVIDENCE_REPORT||status!="incomplete") {
+        structured=if(preview.task==Task.EVIDENCE_REPORT) {
+         val corpus=checkNotNull(preview.reportCorpus)
+         val report=if(preview.requiresCitedAnswer)EvidenceAiReport.validateAnswer(value,corpus)else EvidenceAiReport.validate(value,corpus)
+         JSONObject(EvidenceAiReport.encode(report))
+        }else readStructure(value,preview.selectedIds.toSet(),false,0).json
+       }
       }
       "refusal"->{require(!refusal&&outputTexts==0);refusal=true;key.rejectEcho(part.optString("refusal",""))}
      }

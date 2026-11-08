@@ -16,6 +16,7 @@ import androidx.compose.ui.unit.dp
  evidenceCount:Int,incidentCount:Int,busy:Boolean,query:String,onQuery:(String)->Unit,
  onImport:()->Unit,onExisting:()->Unit,onLibrary:()->Unit,onTimeline:()->Unit,onAi:()->Unit,
  onNewIncident:()->Unit,onArchive:()->Unit,onRefresh:()->Unit,
+ onConnect:(()->Unit)?=null,onPhotos:(()->Unit)?=null,
 ) {
  Column(verticalArrangement=Arrangement.spacedBy(16.dp)) {
   Card(colors=CardDefaults.cardColors(containerColor=MaterialTheme.colorScheme.primaryContainer),modifier=Modifier.fillMaxWidth()) {
@@ -25,8 +26,8 @@ import androidx.compose.ui.unit.dp
      EvidenceDashboardCount(evidenceCount,"Evidence records")
      EvidenceDashboardCount(incidentCount,"Active incidents")
     }
-    Button(enabled=!busy,onClick=onImport,modifier=Modifier.fillMaxWidth().heightIn(min=48.dp)) {
-     Icon(Icons.Default.Add,contentDescription=null);Spacer(Modifier.width(8.dp));Text("Import Evidence")
+    Button(enabled=!busy,onClick=onConnect?:onImport,modifier=Modifier.fillMaxWidth().heightIn(min=48.dp)) {
+     Icon(Icons.Default.Add,contentDescription=null);Spacer(Modifier.width(8.dp));Text(if(onConnect==null)"Import Evidence" else "Connect Vault collection")
     }
    }
   }
@@ -38,6 +39,8 @@ import androidx.compose.ui.unit.dp
    EvidenceDashboardAction("AI analysis",Icons.Default.AutoAwesome,onAi)
   }
   FlowRow(horizontalArrangement=Arrangement.spacedBy(8.dp),verticalArrangement=Arrangement.spacedBy(4.dp)) {
+   if(onConnect!=null)TextButton(enabled=!busy,onClick=onImport){Text("Import Evidence")}
+   onPhotos?.let{TextButton(enabled=!busy,onClick=it){Text("Pick screenshots")}}
    TextButton(enabled=!busy,onClick=onExisting){Text("Add existing evidence")}
    TextButton(enabled=!busy,onClick=onNewIncident){Text("New incident")}
    TextButton(enabled=!busy,onClick=onArchive){Text("Open encrypted export")}

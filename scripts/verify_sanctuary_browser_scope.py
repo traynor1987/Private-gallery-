@@ -1,24 +1,28 @@
-"""Check the scope of the Sanctuary integration against the verified Code 65 source."""
+"""Keep the signed Code 67 engines and package configuration pinned during Evidence Locker 2.0."""
 from pathlib import Path
 import subprocess
 
 ROOT = Path(__file__).resolve().parents[1]
-BASE = "a02cfcf6bb3bbae15f00935c2b2124ae7eb4e674"
+BASE = "5ee1a5458bb5d62daeae2369ee9dde05952a0faa"
 CORE = "app/src/main/java/uk/co/traynor/privategallery/core"
-EXCEPTIONS = (
-    f":(exclude){CORE}/sanctuary/**",
-    f":(exclude){CORE}/browser/v2/BrowserV2Session.kt",
-    f":(exclude){CORE}/browser/v2/SecureWebViewFactory.kt",
-)
-for revision in (("HEAD",), ()):
-    subprocess.run(
-        ["git", "diff", "--exit-code", BASE, *revision, "--", CORE, *EXCEPTIONS],
-        cwd=ROOT, check=True,
+EVIDENCE = f"{CORE}/evidence"
+EXPECTED_CORE = {
+    f"{EVIDENCE}/{name}" for name in (
+        "EvidenceAccess.kt", "EvidenceAi.kt", "EvidenceAiReport.kt", "EvidenceChronology68.kt",
+        "EvidenceCollectionSync.kt", "EvidenceController.kt", "EvidenceMetadata.kt", "EvidenceReview68.kt",
     )
+} | {f"{CORE}/sanctuary/SanctuaryPatternLearning68.kt"}
+
+for revision in (("HEAD",), ()):
+    raw = subprocess.check_output(
+        ["git", "diff", "--name-only", BASE, *revision, "--", CORE], cwd=ROOT, text=True,
+    )
+    unexpected = set(raw.splitlines()) - EXPECTED_CORE
+    assert not unexpected, f"Unexpected core changes: {sorted(unexpected)}"
 build_file = "app/build.gradle.kts"
 original = subprocess.check_output(["git", "show", f"{BASE}:{build_file}"], cwd=ROOT, text=True)
-expected = original.replace("versionCode = 65", "versionCode = 67", 1).replace(
-    'versionName = "1.7.30-visual-foundation"', 'versionName = "1.7.32"', 1,
+expected = original.replace("versionCode = 67", "versionCode = 68", 1).replace(
+    'versionName = "1.7.32"', 'versionName = "1.7.33"', 1,
 )
 assert (ROOT / build_file).read_text() == expected, "Unexpected production package or build configuration change"
-print("PASS: encrypted engines, Hidden browser boundaries and package configuration match Code 65")
+print("PASS: Code 67 encrypted engines, Hidden browser boundaries and package configuration preserved")

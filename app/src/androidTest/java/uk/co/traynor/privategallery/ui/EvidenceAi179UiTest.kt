@@ -81,13 +81,13 @@ class EvidenceAi179UiTest {
    assertEquals(listOf(catalog.analyses().single().id()),catalog.incidents().single().analysisIds())
    assertArrayEquals(original.plaintextSha256,repo.items().single().plaintextSha256)
    compose.onNodeWithText("Close").performClick()
-   compose.onNodeWithText("Incidents").performClick();compose.evidenceNode(hasText("Owner-approved AI179")).performClick()
+   compose.onNodeWithText("Timeline").performClick();compose.evidenceNode(hasText("Owner-approved AI179")).performClick()
    compose.evidenceNode(hasText("Synthetic advisory179. The visible timestamp is uncertain.")).assertIsDisplayed()
    compose.runOnIdle{compose.activity.onBackPressedDispatcher.onBackPressed()}
-   compose.onNodeWithText("Library").performClick();compose.evidenceNode(hasContentDescription("Select evidence selected179.txt")).performClick()
+   compose.onNodeWithText("Evidence").performClick();compose.evidenceNode(hasContentDescription("Select evidence selected179.txt")).performClick()
    compose.evidenceNode(hasText("Remove references")).performClick();compose.evidenceNode(hasText("Confirm") and hasClickAction()).performClick()
    compose.waitUntil(15000){!controller.state.value.busy&&controller.state.value.catalog?.evidence()?.isEmpty()==true}
-   compose.onNodeWithText("Incidents").performClick();compose.evidenceNode(hasText("Owner-approved AI179")).performClick()
+   compose.onNodeWithText("Timeline").performClick();compose.evidenceNode(hasText("Owner-approved AI179")).performClick()
    compose.evidenceNode(hasText("Synthetic advisory179. The visible timestamp is uncertain.")).assertIsDisplayed()
    compose.evidenceNode(hasText("Advisory event: Retained structured event179",substring=true)).assertIsDisplayed()
    compose.evidenceNode(hasText("Historical / unattached advisory source",substring=true),last=true).assertIsDisplayed()

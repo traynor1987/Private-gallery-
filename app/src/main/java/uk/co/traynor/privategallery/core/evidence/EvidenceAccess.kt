@@ -25,6 +25,9 @@ internal interface EvidenceSources {
  fun <T> readVerified(sourceId:String,cancelled:()->Boolean,consume:(EvidenceOriginal,InputStream)->T):T
  fun import(uri:Uri):EvidenceOriginal
  fun imageCrop(sourceId:String):NormalizedCrop?=null
+ fun collections():List<VaultCollection> = emptyList()
+ fun collectionSnapshot(ids:Set<String>):EvidenceCollectionSnapshot = EvidenceCollectionSnapshot(emptyMap(),emptySet())
+ fun collectionIndexFile():File? = null
 }
 internal interface EvidenceSourceReader {
  val owner:EvidenceCatalog.Owner
@@ -164,6 +167,12 @@ internal class EvidenceAccess private constructor(
   }
  }
  private class PrimarySources(private val context:Context,private val access:EvidenceAccess):EvidenceSources {
+  override fun collections() = repository { repo, _ -> repo.collections() }
+  override fun collectionSnapshot(ids:Set<String>) = repository { repo, _ ->
+   evidenceCollections(repo.backupSnapshot(), ids) { primaryPayload(context, it).isFile }
+  }
+  override fun collectionIndexFile() = File(context.filesDir, "vault/vault-index.enc")
+
   private fun <T> repository(action:(AndroidVaultRepository,EvidenceEncryptedStore.KeyLease)->T):T=access.leases.acquire().use{lease ->
    access.checkCurrent();val repo=AndroidVaultRepository(context,lease.key(),{publish->lease.commit{publish()}},{access.current()&&lease.current()})
    action(repo,lease).also{access.checkCurrent();check(lease.current())}
@@ -200,6 +209,18 @@ internal class EvidenceAccess private constructor(
  private class HiddenSources(context:Context,session:HiddenSession,private val access:EvidenceAccess):EvidenceSources {
   private val context=context
   private val repo=HiddenRepository(context,session,publishIfAllowed={publish->synchronized(session){access.checkCurrent();publish();access.checkCurrent()}})
+
+  override fun collections():List<VaultCollection> {
+   access.checkCurrent()
+   return repo.collections().also { access.checkCurrent() }
+  }
+  override fun collectionSnapshot(ids:Set<String>):EvidenceCollectionSnapshot {
+   access.checkCurrent()
+   return evidenceCollections(repo.backupSnapshot(), ids) { hiddenPayload(context, it).isFile }
+    .also { access.checkCurrent() }
+  }
+  override fun collectionIndexFile() = File(context.noBackupFilesDir,
+   "hidden-media-v1/metadata-00000000-0000-0000-0000-000000000000.enc")
   override fun list():List<EvidenceOriginal>{access.checkCurrent();return repo.items().filter{it.state==VaultItemState.COMPLETE&&EvidenceMetadata.supported(it.mimeType)&&hiddenPayload(context,it.id).isFile}.map{EvidenceOriginal(it,EvidenceMetadata.fromItem(it))}.also{access.checkCurrent()}}
   override fun inspect(sourceId:String):EvidenceOriginal {
    val source=list().singleOrNull{it.item.id==sourceId}?:error("Original unavailable in this vault")

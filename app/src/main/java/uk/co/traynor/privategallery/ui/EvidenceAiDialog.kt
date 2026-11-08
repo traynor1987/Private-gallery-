@@ -29,6 +29,8 @@ import uk.co.traynor.privategallery.core.evidence.*
  val state by controller.state.collectAsState()
  var model by remember(controller){mutableStateOf(EvidenceAi.Model.LUNA)}
  var task by remember(controller,initialTask){mutableStateOf(initialTask?:EvidenceAi.Task.FACTUAL_SUMMARY)}
+ var question by remember(controller){mutableStateOf("")}
+ var cloudPreviews by remember(controller,selectedIds){mutableStateOf(selectedIds.isNotEmpty())}
  var includedIds by remember(controller,selectedIds){mutableStateOf(selectedIds.toSet())}
  var originalId by remember(controller){mutableStateOf<String?>(null)}
  var mode by remember(controller,initialMode){mutableStateOf(initialMode?.takeIf{it=="VPN"||it=="Tor"&&controller.access.owner==EvidenceCatalog.Owner.HIDDEN||it=="System"&&allowSystemRoute}?:if(allowSystemRoute)"System"else"VPN")}
@@ -49,7 +51,7 @@ import uk.co.traynor.privategallery.core.evidence.*
  var reviewedEvent by remember(controller){mutableStateOf<AiEventReview?>(null)}
  val credentials=remember(controller,providedCredentials){providedCredentials?:EvidenceCredentials(context,controller.access){coordinator?.close()}}
  fun retirePreview(){preview?.close();preview=null;coordinator?.close();coordinator=null}
- fun dismiss(){originalId=null;running?.cancel();retirePreview();result=null;keyText="";message="";applyChoice=null;confirmation=null;newTitle=null;creationIds=null;eventDraft=null;reviewedEvent=null;onClose()}
+ fun dismiss(){originalId=null;running?.cancel();retirePreview();result=null;keyText="";question="";message="";applyChoice=null;confirmation=null;newTitle=null;creationIds=null;eventDraft=null;reviewedEvent=null;onClose()}
  DisposableEffect(controller){val registration=controller.access.onRetire{android.os.Handler(android.os.Looper.getMainLooper()).post{dismiss()}};onDispose{registration.close();running?.cancel();preview?.close();coordinator?.close()}}
  LaunchedEffect(controller,credentials){
   val present=withContext(Dispatchers.IO){runCatching{credentials.isConfigured()}.getOrDefault(false)}
@@ -79,7 +81,7 @@ import uk.co.traynor.privategallery.core.evidence.*
    val stored=current.analyses().single{it.id()==analysis.id()}
    val original=if(incidentId==null)EvidenceCatalog.Incident(UUID.randomUUID().toString(),title.orEmpty(),0,0,"","",emptyList(),ids,emptyList(),false,false,emptyList())else current.incidents().single{it.id()==incidentId}
    val reference="AI-generated advisory ${stored.id()} (${stored.model()}); unverified, owner-approved reference. Original evidence unchanged."
-   val event=if(timeline)listOf(EvidenceCatalog.Event(UUID.randomUUID().toString(),ids,eventTime,"AI_INFERRED",eventTitle,reference+"\n"+eventNotes))else emptyList()
+   val event=if(timeline)listOf(EvidenceCatalog.Event(UUID.randomUUID().toString(),ids,eventTime,if(eventTime>0)"USER"else"AI_INFERRED",eventTitle,reference+"\n"+eventNotes))else emptyList()
    val updated=EvidenceCatalog.Incident(original.id(),original.title(),original.startAt(),original.endAt(),original.description(),original.notes()+"\n"+reference,original.tags(),original.evidenceIds(),original.events()+event,original.manualOrder(),original.archived(),(original.lineage()+stored.lineage()).distinct())
    current.upsertIncident(updated,EvidenceController.now(),if(timeline)"OWNER_APPLY_AI_TIMELINE"else"OWNER_APPLY_AI_SUMMARY").associateAnalysis(stored.id(),original.id(),EvidenceController.now())
   }
@@ -139,34 +141,65 @@ import uk.co.traynor.privategallery.core.evidence.*
       }
      }else {
       item {EvidenceWorkflowHeading("Choose your analysis","Select only what you intend to transmit. Default: text only. Nothing uploads until the final confirmation.")
+       Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween) {
+        Text(if(cloudPreviews)"Allow cloud previews"else"Local only",Modifier.weight(1f))
+        Switch(checked=cloudPreviews,onCheckedChange={cloudPreviews=it},enabled=!busy)
+       }
+       Text("OCR and timeline organisation run locally. Allowing a cloud preview still requires your explicit confirmation for each upload.")
        Text("Transport",style=MaterialTheme.typography.titleMedium)
        FlowRow {listOfNotNull(if(allowSystemRoute)"System"else null,"VPN",if(controller.access.owner==EvidenceCatalog.Owner.HIDDEN)"Tor"else null).forEach{candidate->FilterChip(selected=mode==candidate,enabled=!busy,onClick={mode=candidate},label={Text(candidate)})}}
        TextButton(enabled=!busy&&mode!="System",onClick={if(controller.current()){val requested=mode;val requestedTask=task;dismiss();if(onRequestPermissionWithTask!=null)onRequestPermissionWithTask(requested,requestedTask)else onRequestPermission(requested)}}){Text("Set up Android VPN / isolation permission")}
        FlowRow {EvidenceAi.Model.entries.forEach{candidate->FilterChip(selected=model==candidate,enabled=!busy,onClick={model=candidate},label={Text(candidate.id)})}}
        FlowRow {EvidenceAi.Task.entries.forEach{candidate->FilterChip(selected=task==candidate,enabled=!busy,onClick={task=candidate},label={Text(candidate.label)})}}
+       if(task==EvidenceAi.Task.EVIDENCE_REPORT) {
+        OutlinedTextField(question,{question=it.take(EvidenceAiReport.MAX_QUESTION_CHARACTERS)},enabled=!busy&&cloudPreviews,
+         label={Text("Ask Nova AI about the selected evidence")},placeholder={Text("Which messages requested an immediate reply?")},
+         supportingText={Text("Optional. Your question appears in the exact cloud preview.")},maxLines=4,modifier=Modifier.fillMaxWidth())
+       }else{
+        TextButton(enabled=!busy&&cloudPreviews,onClick={task=EvidenceAi.Task.EVIDENCE_REPORT}){Text("Ask a question with sources")}
+       }
        Text("Review selected evidence",style=MaterialTheme.typography.titleMedium)
       }
       items(selectedIds,key={it}){id->state.catalog?.evidence()?.firstOrNull{it.id()==id}?.let{record->Column {
        Row {Checkbox(id in includedIds,{checked->includedIds=if(checked)includedIds+id else includedIds-id;if(!checked)images=images-id},enabled=!busy);Text("Include ${record.name()}",Modifier.weight(1f))}
        if(id in includedIds&&record.mime().startsWith("image/"))Row {Checkbox(id in images,{checked->images=if(checked)images+id else images-id},enabled=!busy);Text("Also send the displayed image (optional)")}
       }}}
-      item{Text("${includedIds.size} records selected. Maximum32 records /8 explicit images. Local OCR text is included; original images are off by default.")}
-      item {Button(enabled=!busy&&includedIds.size in 1..32&&images.size<=8,onClick={action{
+      item{
+       Text("${includedIds.size} records selected. Maximum 32 records and 8 explicit images. Local OCR text is included. Images are off by default.")
+       if(selectedIds.isEmpty())Text("Select evidence in Evidence Locker to start a cited analysis.")
+      }
+      item {Button(enabled=!busy&&cloudPreviews&&includedIds.size in 1..32&&images.size<=8,onClick={action{
         val connected=createCoordinator();coordinator=connected
         var pending:EvidenceAiPreview?=null
         try {
          val route=connected.connect(mode)
          val catalog=withContext(Dispatchers.IO){controller.access.store.read()}
-         pending=EvidenceAi.prepare(catalog,selectedIds.filter{it in includedIds},images.toList(),model,task,controller.access.reader(),route)
+         val requestedQuestion=question.trim().takeIf{task==EvidenceAi.Task.EVIDENCE_REPORT&&it.isNotEmpty()}
+         pending=EvidenceAi.prepare(catalog,selectedIds.filter{it in includedIds},images.toList(),model,task,controller.access.reader(),route,requestedQuestion)
          if(!controller.access.publishIfCurrent{preview=pending;pending=null})throw CancellationException("Evidence preview retired")
         }finally{pending?.close();if(preview==null){connected.close();coordinator=null}}
        }}){Text("Prepare exact upload preview")}}
      }
-     item {HorizontalDivider();Text("Owner API key · ${if(controller.access.owner==EvidenceCatalog.Owner.PRIMARY)"Primary"else"Hidden"}",style=MaterialTheme.typography.titleMedium)
-      Text("${if(configured)"Configured"else"Not configured"}. Key is stored encrypted on this device, separately for this vault. Never included in evidence or exports.",style=MaterialTheme.typography.bodySmall)
+     item {HorizontalDivider();Text("Nova AI settings",style=MaterialTheme.typography.titleMedium)
+      Text("Cloud analysis uses OpenAI. OpenAI API billing is separate from your ChatGPT subscription.",style=MaterialTheme.typography.bodySmall)
+      Text("Owner API key · ${if(controller.access.owner==EvidenceCatalog.Owner.PRIMARY)"Primary"else"Hidden"}",style=MaterialTheme.typography.titleMedium)
+      Text("${if(configured)"Configured"else"Not configured"}. The key is encrypted on this device with Android Keystore protection, separately for this vault. A compromised device may still expose a locally stored key.",style=MaterialTheme.typography.bodySmall)
       OutlinedTextField(keyText,{keyText=it.take(8192)},enabled=!busy,label={Text("OpenAI API key")},visualTransformation=PasswordVisualTransformation(),keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Password,autoCorrectEnabled=false),modifier=Modifier.fillMaxWidth())
       FlowRow {TextButton(enabled=!busy&&keyText.isNotEmpty(),onClick={val chars=keyText.toCharArray();keyText="";action{try{withContext(Dispatchers.IO){credentials.setup(chars)};controller.access.publishIfCurrent{configured=true;message="API key stored for this vault"}}finally{chars.fill('\u0000')}}}){Text("Save key")}
-       TextButton(enabled=!busy&&configured,onClick={confirmation="Remove this vault's API key and cancel any outstanding analysis?" to {action{withContext(Dispatchers.IO){credentials.remove()};retirePreview();controller.access.publishIfCurrent{configured=false;message="API key removed"}}}}){Text("Remove key")}}
+       TextButton(enabled=!busy&&configured,onClick={confirmation="Remove this vault's API key and cancel any outstanding analysis?" to {action{withContext(Dispatchers.IO){credentials.remove()};retirePreview();controller.access.publishIfCurrent{configured=false;message="API key removed"}}}}){Text("Remove key")}
+       if(prepared==null&&analysis==null)TextButton(enabled=!busy&&configured,onClick={
+        val routeMode=mode;val testModel=model
+        confirmation="Test ${testModel.id} over $routeMode? This sends a fixed test prompt to OpenAI and may incur a small API charge. No evidence or question is sent." to {action{
+         val connected=createCoordinator();coordinator=connected
+         try{
+          EvidenceAi.testConnection(connected.connect(routeMode),credentials,testModel)
+          controller.access.publishIfCurrent{message="OpenAI accepted the connection test for ${testModel.id}."}
+         }catch(failure:EvidenceAiFailure){
+          controller.access.publishIfCurrent{message=failure.message.orEmpty()}
+         }finally{connected.close();coordinator=null}
+        }}
+       }){Text("Test connection")}
+      }
      }
     }
    }
@@ -178,11 +211,13 @@ import uk.co.traynor.privategallery.core.evidence.*
  }
  newTitle?.let{title->GalleryAlertDialog(onDismissRequest={newTitle=null},title={EvidenceDialogTitle("Review incident title")},text={OutlinedTextField(title,{newTitle=it.take(1024)},label={Text("Title")})},confirmButton={TextButton(enabled=title.isNotBlank(),onClick={val analysis=result;val ids=creationIds;newTitle=null;creationIds=null;if(analysis!=null)apply(analysis,null,title,false,ids?:analysis.evidenceIds())}){Text("Create")}},dismissButton={TextButton(onClick={newTitle=null}){Text("Cancel")}},properties=DialogProperties(securePolicy=SecureFlagPolicy.SecureOn))}
  eventDraft?.let{event->
-  var title by remember(event){mutableStateOf(event.title)};var date by remember(event){mutableStateOf("")};var notes by remember(event){mutableStateOf("Visible date/time: ${event.dateTimeQuote?:"Unavailable"}\n${event.provenance}\nUncertainty: ${event.uncertainty}")};var invalid by remember(event){mutableStateOf(false)}
+  var title by remember(event){mutableStateOf(event.title)};var date by remember(event){mutableLongStateOf(0L)};var notes by remember(event){mutableStateOf("Visible date/time: ${event.dateTimeQuote?:"Unavailable"}\n${event.provenance}\nUncertainty: ${event.uncertainty}")}
   GalleryAlertDialog(onDismissRequest={eventDraft=null},title={EvidenceDialogTitle("Review AI-extracted event")},text={LazyColumn(Modifier.heightIn(max=360.dp)){item{
-   Text("AI dates remain inferred. Leave timestamp blank unless you explicitly choose an ISO date/time with offset; no missing time zone is invented.")
-   OutlinedTextField(title,{title=it.take(1024)},label={Text("Event title")});OutlinedTextField(date,{date=it.take(64);invalid=false},label={Text("ISO timestamp with offset, optional")});OutlinedTextField(notes,{notes=it.take(12000)},label={Text("Provenance and owner review")});if(invalid)Text("Enter a valid explicit ISO timestamp or leave blank.",color=MaterialTheme.colorScheme.error)
-  }}},confirmButton={TextButton(enabled=title.isNotBlank(),onClick={runCatching{val at=if(date.isBlank())0L else java.time.Instant.parse(date.trim()).toEpochMilli().also{require(it>=0)};AiEventReview(event.evidenceIds,title,notes,at)}.onSuccess{reviewedEvent=it;eventDraft=null;applyChoice="Event"}.onFailure{invalid=true}}){Text("Choose incident")}},dismissButton={TextButton(onClick={eventDraft=null}){Text("Cancel")}},properties=DialogProperties(securePolicy=SecureFlagPolicy.SecureOn))
+   Text("Leave the event time unknown unless you can confirm it. A date you choose is recorded as your confirmation, and the AI advisory stays labelled.")
+   OutlinedTextField(title,{title=it.take(1024)},label={Text("Event title")})
+   EvidenceDateTimeField("Confirmed event time, optional",date){date=it.coerceAtLeast(0L)}
+   OutlinedTextField(notes,{notes=it.take(12000)},label={Text("Provenance and owner review")})
+  }}},confirmButton={TextButton(enabled=title.isNotBlank(),onClick={reviewedEvent=AiEventReview(event.evidenceIds,title,notes,date);eventDraft=null;applyChoice="Event"}){Text("Choose incident")}},dismissButton={TextButton(onClick={eventDraft=null}){Text("Cancel")}},properties=DialogProperties(securePolicy=SecureFlagPolicy.SecureOn))
  }
  confirmation?.let{(text,confirmed)->GalleryAlertDialog(onDismissRequest={confirmation=null},title={EvidenceDialogTitle("Confirm")},text={Text(text)},confirmButton={TextButton(onClick={confirmation=null;if(controller.current())confirmed()}){Text("Confirm")}},dismissButton={TextButton(onClick={confirmation=null}){Text("Cancel")}},properties=DialogProperties(securePolicy=SecureFlagPolicy.SecureOn))}
 }

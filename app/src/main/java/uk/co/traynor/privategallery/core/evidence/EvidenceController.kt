@@ -10,18 +10,31 @@ import java.util.UUID
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
 /** A screen-scoped owner capability. No key, original bytes or plaintext index is persisted here. */
 internal class EvidenceController(context:Context,val access:EvidenceAccess):AutoCloseable {
  data class State(val catalog:EvidenceCatalog?=null,val originals:List<EvidenceOriginal> = emptyList(),
-  val busy:Boolean=false,val message:String?=null,val integrity:Map<String,String> = emptyMap(),val reviewImportIds:List<String> = emptyList())
+  val busy:Boolean=false,val message:String?=null,val integrity:Map<String,String> = emptyMap(),val reviewImportIds:List<String> = emptyList(),
+  val collections:List<EvidenceCollectionOption> = emptyList(),
+  val connections:List<EvidenceCollectionConnection> = emptyList(),
+  val collectionProgress:EvidenceCollectionProgress? = null,
+  val syncingCollections:Boolean=false,
+  val chronology:EvidenceChronology68.Result?=null)
  private val importAcquisitions=java.util.concurrent.ConcurrentHashMap<String,EvidenceOriginal>()
  private val main=Handler(Looper.getMainLooper())
  private val scope=CoroutineScope(SupervisorJob()+Dispatchers.Main.immediate)
  private val mutex=Mutex()
  private val ocr=EvidenceOcr(context.applicationContext)
+ private val collectionSync=EvidenceCollectionSync(access)
+ private val reviewStore=lazy { EvidenceReview68(context.applicationContext,access) }
+ private var collectionJob:Job?=null
+ private var collectionPaused=false
+ private val reviewRevision=MutableStateFlow(0)
  private val mutable=MutableStateFlow(State())
  val state=mutable.asStateFlow()
  private val retirement=access.onRetire {
@@ -33,18 +46,46 @@ internal class EvidenceController(context:Context,val access:EvidenceAccess):Aut
   if(Looper.myLooper()===Looper.getMainLooper())mutable.value=State() else main.post{mutable.value=State()}
  }
  private fun publish(change:(State)->State)=access.publishIfCurrent{mutable.value=change(mutable.value)}
- init {refresh()}
+ init {
+  refresh()
+  scope.launch {
+   try {
+    collectionSync.changes().collectLatest {
+     if(!collectionPaused && mutable.value.connections.isNotEmpty()) syncCollections(retryPending=false)
+    }
+   }catch(cancelled:CancellationException){throw cancelled}
+   catch(_:Exception){publish{it.copy(message="Collection updates could not be watched. You can check for new evidence manually.")}}
+  }
+  scope.launch {
+   kotlinx.coroutines.flow.combine(mutable.map{it.catalog}.distinctUntilChanged(),reviewRevision){catalog,_->catalog}
+    .collectLatest {catalog->
+     if(catalog==null||!current())return@collectLatest
+     try {
+      val analysis=withContext(Dispatchers.IO){
+       ensureActive()
+       val reviewed=reviewStore.value
+       val skipped=reviewed.skipped()
+       EvidenceChronology68.analyse(catalog.evidence(),confirmed=reviewed.confirmed(),current={access.current()}).let { result ->
+        result.copy(review=result.review.filterNot { EvidenceReview68.key(it) in skipped })
+       }.also{access.checkCurrent();ensureActive()}
+      }
+      publish{it.copy(chronology=analysis)}
+     }catch(cancelled:CancellationException){throw cancelled}
+     catch(_:Exception){publish{it.copy(chronology=null)}}
+    }
+  }
+ }
  fun current()=access.current()
  private class BulkRegistrationFailure(val sourceIds:List<String>,cause:Throwable):Exception(cause)
- private fun perform(label:String,success:((EvidenceCatalog)->String)?=null,work:suspend ()->EvidenceCatalog) {
-  scope.launch {
+ private fun perform(label:String,success:((EvidenceCatalog)->String)?=null,work:suspend ()->EvidenceCatalog):Job {
+  return scope.launch {
    mutex.withLock {
     if(!current())return@withLock
     if(!publish{it.copy(busy=true,message=null)})return@withLock
     try {
      val next=withContext(Dispatchers.IO){ensureActive();access.checkCurrent();work().also{access.checkCurrent();ensureActive()}}
      publish{it.copy(catalog=next,busy=false,message=success?.invoke(next)?:label)}
-    }catch(cancelled:CancellationException){throw cancelled
+    }catch(cancelled:CancellationException){publish{it.copy(busy=false)};throw cancelled
     }catch(failure:Throwable){
      // A prior item may have committed, or promotion may have preceded an fsync failure.
      // Reread instead of hiding committed records or blindly replaying the operation.
@@ -61,7 +102,7 @@ internal class EvidenceController(context:Context,val access:EvidenceAccess):Aut
    }
   }
  }
- fun refresh()=perform("Evidence Locker ready") {
+ fun refresh() {perform("Evidence Locker ready") {
   val catalog=access.store.read();val sources=access.sources.list();val byId=sources.associateBy{it.item.id}
   // One cheap live catalogue snapshot, never a substitute for authenticated full-byte verification.
   val integrity=catalog.evidence().associate{record ->
@@ -72,8 +113,61 @@ internal class EvidenceController(context:Context,val access:EvidenceAccess):Aut
    }catch(_:IllegalStateException){"Original unavailable or changed; do not rely on this reference"}
    record.id() to status
   }
-  withContext(Dispatchers.Main.immediate){publish{it.copy(catalog=catalog,originals=sources,integrity=integrity)}}
+  val collections=collectionSync.available()
+  val connections=collectionSync.connections()
+  withContext(Dispatchers.Main.immediate){publish{it.copy(catalog=catalog,originals=sources,integrity=integrity,
+    collections=collections,connections=connections)}}
   catalog
+ }.invokeOnCompletion {
+  scope.launch { if(!collectionPaused && mutable.value.connections.isNotEmpty())syncCollections() }
+ }}
+ fun connectCollection(id:String) {
+  perform("Collection connected") {
+   val connections=collectionSync.connect(id)
+   withContext(Dispatchers.Main.immediate){publish{it.copy(connections=connections)}}
+   access.store.read()
+  }.invokeOnCompletion {scope.launch {syncCollections()}}
+ }
+ fun disconnectCollection(id:String) {
+  perform("Collection disconnected. Existing evidence was kept.") {
+   val connections=collectionSync.disconnect(id)
+   withContext(Dispatchers.Main.immediate){publish{it.copy(connections=connections)}}
+   access.store.read()
+  }
+ }
+ fun syncCollections() = syncCollections(retryPending=true)
+ private fun syncCollections(retryPending:Boolean) {
+  if(!current()||collectionJob?.isActive==true||mutable.value.connections.isEmpty())return
+  collectionPaused=false
+  publish{it.copy(syncingCollections=true,collectionProgress=null)}
+  val job=perform("Collection scan complete") {
+   collectionSync.sync(progress={progress->
+    main.post {if(mutable.value.syncingCollections)publish{it.copy(collectionProgress=progress)}}
+   },register={original->registerRecord(original.item.id,extract=true,acquired=original)},
+   retryExtraction=if(retryPending)({record->extractRecord(record,0)})else null)
+  }
+  collectionJob=job
+  job.invokeOnCompletion {scope.launch {
+   if(collectionJob===job)publish{it.copy(syncingCollections=false,
+    message=if(collectionPaused)"Collection processing paused. Saved evidence was kept." else it.message)}
+  }}
+ }
+ fun cancelCollectionSync() {collectionPaused=true;collectionJob?.cancel()}
+ fun confirmMessageTime(location:EvidenceChronology68.MessageLocation,timestamp:Long) {
+  perform("Message date confirmed") {
+   val catalog=access.store.read()
+   check(EvidenceChronology68.analyse(catalog.evidence(),current={access.current()}).messages.any{location in it.locations})
+   reviewStore.value.confirm(location,timestamp)
+   withContext(Dispatchers.Main.immediate){reviewRevision.value++}
+   catalog
+  }
+ }
+ fun skipReview(review:EvidenceChronology68.Review) {
+  perform("Review item skipped") {
+   reviewStore.value.skip(review)
+   withContext(Dispatchers.Main.immediate){reviewRevision.value++}
+   access.store.read()
+  }
  }
  /** Transforms are trusted local UI operations, never model output or imported JSON. */
  fun mutate(label:String,transform:(EvidenceCatalog)->EvidenceCatalog)=perform(label){access.store.update(transform)}
@@ -211,7 +305,7 @@ internal class EvidenceController(context:Context,val access:EvidenceAccess):Aut
   catalog
  }
  fun cancelOperations(){close()}
- override fun close(){access.close();retirement.close();scope.cancel();clearOnMain()}
+ override fun close(){access.close();retirement.close();scope.cancel();if(reviewStore.isInitialized())reviewStore.value.close();clearOnMain()}
  companion object {
   private const val METADATA_LIMIT=2*1024*1024
   private const val OCR_LIMIT=32*1024*1024
