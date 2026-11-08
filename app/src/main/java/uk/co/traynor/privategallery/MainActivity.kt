@@ -240,6 +240,13 @@ private class ByteArrayMediaDataSource(private val bytes: ByteArray) : MediaData
     override fun close() = Unit
 }
 
+internal const val ACTION_OPEN_PRIVATE_WORKSPACE = "uk.co.traynor.privategallery.action.OPEN_PRIVATE_WORKSPACE"
+
+internal fun privateWorkspaceEntryIntent(context: android.content.Context): Intent =
+    Intent(context, MainActivity::class.java).setAction(ACTION_OPEN_PRIVATE_WORKSPACE).addFlags(
+        Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
+    )
+
 class MainActivity : FragmentActivity() {
     private class ExternalTicket(val original:String,val hidden:uk.co.traynor.privategallery.core.hidden.HiddenSession?, val recoveryId:String=java.util.UUID.randomUUID().toString()) {
         var file by mutableStateOf<java.io.File?>(null)
@@ -1241,6 +1248,25 @@ class MainActivity : FragmentActivity() {
         }
     }
 
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        if (intent.action == ACTION_OPEN_PRIVATE_WORKSPACE) enterPrivateWorkspaceFromLauncher()
+    }
+
+    private fun enterPrivateWorkspaceFromLauncher() {
+        // The neutral launcher has no Vault authority. Consume the request once, including on recreation.
+        setIntent(Intent(this, MainActivity::class.java))
+        if (session.isUnlocked || sessionKey != null || retained.hidden.session.isUnlocked || retained.hidden.selected) {
+            panicCoverPending = true
+            coverSensitiveContent()
+            lock()
+            clearExternalEdit()
+        }
+        retained.route = if (keys.isConfigured) Route.LOCK else Route.SETUP
+        route = retained.route
+        if (route == Route.LOCK) requestNovaCredentials()
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         uk.co.traynor.privategallery.core.evidence.EvidenceStagingCleanup.cleanOnce(applicationContext)
         super.onCreate(savedInstanceState)
@@ -1314,6 +1340,7 @@ class MainActivity : FragmentActivity() {
         if(savedInstanceState==null) automaticBiometricPromptAttempted = false
         if(retained.hidden.selected && !retained.hidden.session.isUnlocked)retained.hidden.leave()
         route = if ((session.isUnlocked && sessionKey != null) || (retained.hidden.selected && retained.hidden.session.isUnlocked)) retained.route else if (keys.isConfigured) Route.LOCK else Route.SETUP
+        if (intent.action == ACTION_OPEN_PRIVATE_WORKSPACE) enterPrivateWorkspaceFromLauncher()
         setContent {
             PrivateGalleryTheme(selectedNativeTheme()) {
                 val browserUnderHome=primaryBrowserCoveredByNovaHome()

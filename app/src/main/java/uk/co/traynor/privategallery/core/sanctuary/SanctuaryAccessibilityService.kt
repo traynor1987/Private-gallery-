@@ -70,6 +70,10 @@ internal object SanctuaryAccessibility {
 
     fun canObserve(owner: SanctuaryAccessibilityService): Boolean = service === owner && armedSince != null
 
+    fun signalPolicyChange() {
+        transitions.trySend(Unit)
+    }
+
     suspend fun awaitTransition(timeout: Long) {
         withTimeoutOrNull(timeout) { transitions.receive() }
     }

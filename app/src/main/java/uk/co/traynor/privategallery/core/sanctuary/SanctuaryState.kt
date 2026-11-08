@@ -86,11 +86,19 @@ data class SanctuaryHistoryEntry(
     val outcome: SanctuaryOutcome,
 )
 
+internal data class SanctuaryApprovalChange(
+    val mode: SanctuaryMode,
+    val at: Long,
+    val packageName: String,
+    val approved: Boolean,
+)
+
 internal data class SanctuaryTime(val wall: Long, val elapsed: Long, val boot: Int)
 internal data class SanctuarySnapshot(
     val presets: Map<SanctuaryMode, SanctuaryPreset> = emptyMap(),
     val session: SanctuarySession? = null,
     val history: List<SanctuaryHistoryEntry> = emptyList(),
+    val approvals: List<SanctuaryApprovalChange> = emptyList(),
 )
 
 internal interface SanctuaryPersistence {
@@ -122,7 +130,38 @@ class SanctuaryStore internal constructor(
             novaApps = immutableSet(preset.novaApps),
             blockedNovaApps = immutableSet(preset.blockedNovaApps),
         )
-        return commit(state.copy(presets = state.presets + (mode to copy)))
+        val changes = approvalChanges(mode, preset(mode).androidApps, copy.androidApps)
+        return commit(state.copy(
+            presets = state.presets + (mode to copy),
+            approvals = changes,
+        ))
+    }
+
+    /** An explicit Primary owner approval edit updates both this mode and its live Android policy. */
+    @Synchronized
+    internal fun saveAndroidApprovals(sessionId: String, mode: SanctuaryMode, packages: Set<String>): Boolean {
+        if (!packages.validIds(packageId)) return false
+        val live = refresh()?.takeIf { it.id == sessionId && it.mode == mode } ?: return false
+        val selected = immutableSet(packages)
+        val previous = preset(mode)
+        if (selected == live.androidApps && selected == previous.androidApps) return true
+        return commit(state.copy(
+            session = live.copy(androidApps = selected),
+            presets = state.presets + (mode to previous.copy(androidApps = selected)),
+            approvals = approvalChanges(mode, live.androidApps, selected),
+        ))
+    }
+
+    @Synchronized
+    internal fun approvalHistory(): List<SanctuaryApprovalChange> = state.approvals.toList()
+
+    private fun approvalChanges(
+        mode: SanctuaryMode, previous: Set<String>, next: Set<String>,
+    ): List<SanctuaryApprovalChange> {
+        val now = clock().wall.coerceAtLeast(0L)
+        val removed = (previous - next).sorted().map { SanctuaryApprovalChange(mode, now, it, false) }
+        val added = (next - previous).sorted().map { SanctuaryApprovalChange(mode, now, it, true) }
+        return (removed + added + state.approvals).take(APPROVAL_HISTORY_LIMIT)
     }
 
     @Synchronized
@@ -236,6 +275,7 @@ class SanctuaryStore internal constructor(
 private const val MINUTE_MS = 60_000L
 private const val MAX_REMAINING_MS = 7 * 24 * 60 * MINUTE_MS
 private const val HISTORY_LIMIT = 30
+private const val APPROVAL_HISTORY_LIMIT = 120
 private const val MAX_IDS = 512
 private const val MAX_RECORD_BYTES = 2 * 1024 * 1024
 private val packageId = Regex("[A-Za-z][A-Za-z0-9_]*(\\.[A-Za-z][A-Za-z0-9_]*)+")
@@ -314,6 +354,12 @@ internal object SanctuaryCodec {
             JSONObject().put("mode", it.mode.name).put("startedAt", it.startedAt)
                 .put("endedAt", it.endedAt).put("extensions", it.extensions).put("outcome", it.outcome.name)
         }))
+        .apply {
+            if (value.approvals.isNotEmpty()) put("approvals", JSONArray(value.approvals.map {
+                JSONObject().put("mode", it.mode.name).put("at", it.at)
+                    .put("package", it.packageName).put("approved", it.approved)
+            }))
+        }
         .toString().encodeToByteArray().also { require(it.size <= MAX_RECORD_BYTES) }
 
     fun decode(bytes: ByteArray): SanctuarySnapshot {
@@ -366,6 +412,16 @@ internal object SanctuaryCodec {
                     ).also { require(it.startedAt >= 0 && it.endedAt >= it.startedAt && it.extensions >= 0) }
                 }
             },
+            root.optJSONArray("approvals")?.let { approvals ->
+                require(approvals.length() <= APPROVAL_HISTORY_LIMIT)
+                List(approvals.length()) { index ->
+                    val item = approvals.getJSONObject(index)
+                    SanctuaryApprovalChange(
+                        SanctuaryMode.valueOf(item.getString("mode")), item.getLong("at"),
+                        item.getString("package"), item.getBoolean("approved"),
+                    ).also { require(it.at >= 0 && it.packageName.length in 1..180 && packageId.matches(it.packageName)) }
+                }
+            }.orEmpty(),
         )
     }
 

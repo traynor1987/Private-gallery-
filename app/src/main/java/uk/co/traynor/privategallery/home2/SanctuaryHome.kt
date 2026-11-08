@@ -39,6 +39,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
+import uk.co.traynor.privategallery.core.sanctuary.SanctuaryLauncherPolicy
 import uk.co.traynor.privategallery.core.sanctuary.SanctuaryMode
 import uk.co.traynor.privategallery.core.sanctuary.SanctuaryPreset
 import uk.co.traynor.privategallery.core.sanctuary.SanctuarySession
@@ -73,6 +74,7 @@ internal fun SanctuaryHome(
     val session by store.current.collectAsState()
     var selected by remember { mutableStateOf(SanctuaryMode.SELF_CARE) }
     var edit by remember { mutableStateOf<SanctuaryMode?>(null) }
+    var editAndroid by remember(session?.id) { mutableStateOf(false) }
     var presetRevision by remember { mutableIntStateOf(0) }
     var message by remember { mutableStateOf<String?>(null) }
     var viewHistory by remember { mutableStateOf(false) }
@@ -84,9 +86,23 @@ internal fun SanctuaryHome(
             delay(500)
         }
     }
-    BackHandler(edit != null || viewHistory) {
+    BackHandler(edit != null || editAndroid || viewHistory) {
         edit = null
+        editAndroid = false
         viewHistory = false
+    }
+    if (editAndroid && session != null) {
+        val active = checkNotNull(session)
+        SanctuaryLiveAndroidApprovals(active, androidApps, { editAndroid = false }) { packages ->
+            store.saveAndroidApprovals(active.id, active.mode, packages).also { saved ->
+                if (saved) {
+                    SanctuaryLauncherPolicy.signalPolicyChange()
+                    presetRevision++
+                    editAndroid = false
+                }
+            }
+        }
+        return
     }
     edit?.let { mode ->
         SanctuaryPresetEditor(
@@ -151,6 +167,10 @@ internal fun SanctuaryHome(
             }
         } else {
             SanctuaryLauncher(current, androidApps, novaApps, novaAppUrls, onLaunchAndroid, onLaunchNova, wide)
+            SanctuaryMenuRow(
+                "Review approved Android apps", "Changes apply to Nova Launcher and App Guardian",
+                { editAndroid = true }, "sanctuary-review-android-approvals",
+            )
             if (current.offerPinning && pinningControls != null) {
                 SanctuaryTitle("Android screen pinning")
                 Text(
@@ -568,8 +588,47 @@ private fun SanctuaryCheckIn(remaining: Long, onExtend: (Int) -> Unit) {
 }
 
 @Composable
+private fun SanctuaryLiveAndroidApprovals(
+    session: SanctuarySession,
+    apps: Map<String, String>,
+    onBack: () -> Unit,
+    onSave: (Set<String>) -> Boolean,
+) {
+    var selected by remember(session.id, session.androidApps) { mutableStateOf(session.androidApps) }
+    var saveFailed by remember { mutableStateOf(false) }
+    SanctuaryScaffold("Approved Android apps", session.mode.label, onBack, "sanctuary-live-android-apps") {
+        Text("Changes take effect after you save. Emergency and system recovery apps stay available.")
+        if (!session.allowExternalApps) {
+            Text("This session disables external apps. Your choices will be available for future sessions that allow them.")
+        }
+        if (apps.isEmpty()) Text("No installed Android apps are visible.")
+        apps.forEach { (packageName, label) ->
+            val checked = packageName in selected
+            Row(
+                Modifier.fillMaxWidth().heightIn(min = 48.dp).toggleable(checked, role = Role.Checkbox) { enabled ->
+                    selected = if (enabled) selected + packageName else selected - packageName
+                    saveFailed = false
+                },
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Checkbox(checked, onCheckedChange = null)
+                Spacer(Modifier.width(10.dp))
+                Text(label)
+            }
+        }
+        Button(
+            onClick = { saveFailed = !onSave(selected) },
+            enabled = selected != session.androidApps,
+            modifier = Modifier.testTag("sanctuary-save-live-android-approvals"),
+        ) { Text("Save approved apps") }
+        if (saveFailed) Text("Could not save changes. Your current approvals are intact.")
+    }
+}
+
+@Composable
 private fun SanctuaryHistory(store: SanctuaryStore, onBack: () -> Unit) {
     val entries = remember(store) { store.history() }
+    val approvals = remember(store) { store.approvalHistory() }
     val dates = remember { DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT) }
     SanctuaryScaffold("Session history", "Stored locally on this device", onBack, "sanctuary-history-screen") {
         if (entries.isEmpty()) Text("Completed sessions will appear here.")
@@ -581,6 +640,16 @@ private fun SanctuaryHistory(store: SanctuaryStore, onBack: () -> Unit) {
                     Text("${entry.outcome.name.lowercase(Locale.ROOT).replaceFirstChar(Char::uppercaseChar)} · ${entry.extensions} extensions",
                         style = MaterialTheme.typography.bodySmall)
                 }
+            }
+        }
+        if (approvals.isNotEmpty()) {
+            SanctuaryTitle("Approved app changes")
+            approvals.forEach { change ->
+                Text(
+                    "${if (change.approved) "Approved" else "Revoked"} · ${change.packageName}",
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+                Text("${change.mode.label} · ${dates.format(Date(change.at))}", style = MaterialTheme.typography.bodySmall)
             }
         }
     }
@@ -606,7 +675,7 @@ private fun SanctuaryMenuRow(title: String, subtitle: String, onClick: () -> Uni
 private fun SanctuaryRecoveryNote() {
     Text("Recovery and trusted contact", style = MaterialTheme.typography.titleMedium)
     Text(
-        "Android Phone, emergency calling and device Settings remain available. In Android Settings you can revoke permissions or force stop NovaOS. Guardian availability depends on Android.",
+        "Android Phone, emergency calling and device Settings remain available. To switch Home apps, open Android Settings → Apps → Default apps → Home app. If Nova Launcher cannot open, use the Settings gear from Android Quick Settings. Guardian availability depends on Android.",
         style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
     )
     Text(

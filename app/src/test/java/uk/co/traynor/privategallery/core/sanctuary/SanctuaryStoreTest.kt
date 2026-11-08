@@ -199,6 +199,31 @@ class SanctuaryStoreTest {
         assertFalse(session.allowsNovaApp("chat"))
     }
 
+    @Test fun liveAndroidApprovalsPersistAndAuditWithoutChangingSessionOptions() {
+        val fixture = Fixture()
+        val store = fixture.open()
+        val original = store.preset(SanctuaryMode.WORK).copy(allowExternalApps = false, enableDnd = true)
+        assertTrue(store.savePreset(SanctuaryMode.WORK, original))
+        assertTrue(store.start(SanctuaryMode.WORK))
+        val live = checkNotNull(store.current.value)
+        assertFalse(store.saveAndroidApprovals(live.id, SanctuaryMode.GAMING, setOf("com.example.work")))
+        fixture.disk.writable = false
+        assertFalse(store.saveAndroidApprovals(live.id, SanctuaryMode.WORK, setOf("com.example.work")))
+        assertEquals(live, store.current.value)
+        fixture.disk.writable = true
+        assertTrue(store.saveAndroidApprovals(live.id, SanctuaryMode.WORK, setOf("com.example.work")))
+        fixture.disk.snapshot = SanctuaryCodec.decode(SanctuaryCodec.encode(checkNotNull(fixture.disk.snapshot)))
+        val reopened = fixture.open()
+        assertEquals(live.copy(androidApps = setOf("com.example.work")), reopened.current.value)
+        assertEquals(original.copy(androidApps = setOf("com.example.work")), reopened.preset(SanctuaryMode.WORK))
+        assertTrue(reopened.approvalHistory().any { it.packageName == "com.example.work" && it.approved })
+        assertTrue(reopened.approvalHistory().any { it.packageName == "com.google.android.apps.maps" && !it.approved })
+        assertTrue(reopened.end(SanctuaryStore.END_PHRASE))
+        assertTrue(reopened.start(SanctuaryMode.WORK))
+        assertFalse(reopened.saveAndroidApprovals(live.id, SanctuaryMode.WORK, emptySet()))
+        assertEquals(setOf("com.example.work"), reopened.current.value?.androidApps)
+    }
+
     @Test fun serializedStateIsBoundedAndCarriesOnlySessionMetadata() {
         val fixture = Fixture()
         val store = fixture.open()

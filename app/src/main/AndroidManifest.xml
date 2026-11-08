@@ -23,6 +23,7 @@
     <intent><action android:name="android.intent.action.MAIN" /><category android:name="android.intent.category.LAUNCHER" /></intent>
     <intent><action android:name="android.intent.action.MAIN" /><category android:name="android.intent.category.HOME" /></intent>
     <intent><action android:name="android.intent.action.DIAL" /></intent>
+    <intent><action android:name="android.appwidget.action.APPWIDGET_BIND" /></intent>
     <intent><action android:name="android.settings.SETTINGS" /></intent>
     <intent><action android:name="android.settings.USAGE_ACCESS_SETTINGS" /></intent>
     <intent><action android:name="android.settings.ACCESSIBILITY_SETTINGS" /></intent>
@@ -94,6 +95,19 @@
       <intent-filter>
         <action android:name="android.intent.action.MAIN" />
         <category android:name="android.intent.category.LAUNCHER" />
+      </intent-filter>
+    </activity>
+    <activity
+        android:name=".launcher.NovaLauncherActivity"
+        android:label="@string/nova_launcher_name"
+        android:exported="true"
+        android:excludeFromRecents="true"
+        android:launchMode="singleTask"
+        android:taskAffinity="${applicationId}.novalauncher">
+      <intent-filter>
+        <action android:name="android.intent.action.MAIN" />
+        <category android:name="android.intent.category.HOME" />
+        <category android:name="android.intent.category.DEFAULT" />
       </intent-filter>
     </activity>
     <service

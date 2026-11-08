@@ -105,6 +105,13 @@ import java.util.Date
   Text("Navigation & multitasking",style=MaterialTheme.typography.headlineSmall)
   Text("Nova’s controls sit above Android’s system navigation.",Modifier.padding(vertical=12.dp))
   uk.co.traynor.privategallery.ui.NovaNavigationHapticsSetting()
+  val context=androidx.compose.ui.platform.LocalContext.current
+  if(androidx.activity.compose.LocalActivity.current is uk.co.traynor.privategallery.MainActivity) {
+   TextButton(onClick={
+    context.startActivity(android.content.Intent(context,uk.co.traynor.privategallery.launcher.NovaLauncherActivity::class.java)
+     .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK))
+   }){Text("Preview Nova Launcher")}
+  }
   ListItem(headlineContent={Text("Nova gesture strip")},supportingContent={Text("Swipe up: Home · sideways: Back · hold: Recents")},trailingContent={Switch(s.gestures,{s.configure(gestures=it)},modifier=Modifier.testTag("gesture-mode"))})
   ListItem(headlineContent={Text("Back on the left")},supportingContent={Text("Swap Back and Recents")},trailingContent={Switch(s.reverse,{s.configure(reverse=it)},modifier=Modifier.testTag("reverse-nav"))})
   ListItem(headlineContent={Text("Fold Edge Panel")},supportingContent={Text("Optional inset handle; does not replace Android gestures")},trailingContent={Switch(s.edge,{s.configure(edge=it)},modifier=Modifier.testTag("edge-enabled"))})

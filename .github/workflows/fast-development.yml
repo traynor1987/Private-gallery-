@@ -556,7 +556,7 @@ jobs:
   home2-integration:
     if: github.event_name == 'push' && (github.ref == 'refs/heads/integration/novaos-1.7-home2' || github.ref == 'refs/heads/feature/novaos-visual-foundation' || (github.ref == 'refs/heads/feature/novaos-sanctuary' || github.ref == 'refs/heads/feature/novaos-sanctuary-integration')) && contains(github.event.head_commit.message, '[home2-runtime]')
     runs-on: ubuntu-24.04
-    timeout-minutes: ${{ (github.ref == 'refs/heads/feature/novaos-visual-foundation' || (github.ref == 'refs/heads/feature/novaos-sanctuary' || github.ref == 'refs/heads/feature/novaos-sanctuary-integration')) && 60 || 45 }}
+    timeout-minutes: ${{ github.ref == 'refs/heads/feature/novaos-sanctuary-integration' && 75 || (github.ref == 'refs/heads/feature/novaos-visual-foundation' || github.ref == 'refs/heads/feature/novaos-sanctuary') && 60 || 45 }}
     permissions:
       contents: write
     steps:
@@ -609,7 +609,7 @@ jobs:
           apk=app/build/outputs/apk/debug/app-debug.apk
           "$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging "$apk" > app/build/home2-evidence/package.txt
           if [[ "$GITHUB_REF" == refs/heads/feature/novaos-sanctuary-integration ]]; then
-            grep -F "package: name='uk.co.traynor.privategallery.hiddenprototype' versionCode='69' versionName='1.7.34-TEST-ONLY'" app/build/home2-evidence/package.txt
+            grep -F "package: name='uk.co.traynor.privategallery.hiddenprototype' versionCode='70' versionName='1.7.35-TEST-ONLY'" app/build/home2-evidence/package.txt
           elif [[ "$GITHUB_REF" == refs/heads/feature/novaos-sanctuary ]]; then
             grep -F "package: name='uk.co.traynor.privategallery.hiddenprototype' versionCode='66' versionName='1.7.31-TEST-ONLY'" app/build/home2-evidence/package.txt
           elif [[ "$GITHUB_REF" == refs/heads/feature/novaos-visual-foundation ]]; then
@@ -654,7 +654,7 @@ jobs:
             adb shell settings get secure show_ime_with_hard_keyboard > app/build/home2-evidence/ime-with-hardware-keyboard.txt
             adb install -r app/build/outputs/apk/debug/app-debug.apk
             adb install -r app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
-            if [ "$GITHUB_REF" = refs/heads/feature/novaos-sanctuary-integration ]; then bash scripts/run_evidence69_checks.sh && bash scripts/run_evidence68_checks.sh; fi
+            if [ "$GITHUB_REF" = refs/heads/feature/novaos-sanctuary-integration ]; then bash scripts/run_launcher70_checks.sh && bash scripts/run_evidence69_checks.sh && bash scripts/run_evidence68_checks.sh; fi
             if [ "$GITHUB_REF" = refs/heads/feature/novaos-sanctuary-integration ]; then bash scripts/run_visual_checkpoint.sh NovaWebScroll67Test navigation-web uk.co.traynor.privategallery.ui; fi
             if [ "$GITHUB_REF" = refs/heads/feature/novaos-visual-foundation ] || [ "$GITHUB_REF" = refs/heads/feature/novaos-sanctuary ] || [ "$GITHUB_REF" = refs/heads/feature/novaos-sanctuary-integration ]; then bash scripts/run_visual_checkpoint.sh; fi
             if [ "$GITHUB_REF" = refs/heads/feature/novaos-sanctuary ] || [ "$GITHUB_REF" = refs/heads/feature/novaos-sanctuary-integration ]; then bash scripts/run_visual_checkpoint.sh SanctuaryUiTest sanctuary-checkpoint; fi

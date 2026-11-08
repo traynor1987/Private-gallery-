@@ -23,7 +23,7 @@ import uk.co.traynor.privategallery.core.home2.SpaceContext
 
 /** User-facing capability checks and explicit, allowlisted launch operations. */
 object SanctuaryGuardian {
-    internal enum class MonitorState { PAUSED, STARTING, WAITING, MONITORING, BLOCKING, NAVIGATING_HOME, HOLDING_HOME, COVER_ONLY, FAILED }
+    internal enum class MonitorState { PAUSED, STARTING, WAITING, MONITORING, BLOCKING, SHIELDING, NAVIGATING_HOME, HOLDING_HOME, COVER_ONLY, FAILED }
 
     @Volatile internal var monitorState = MonitorState.PAUSED
     internal val overlayNovaApps = mapOf("arcade" to "Nova Arcade", "mind" to "Nova Mind", "nova-calculator" to "Nova Calculator")
@@ -83,7 +83,7 @@ object SanctuaryGuardian {
         val pm = context.packageManager
         val activity = pm.resolveActivity(home, flags)?.activityInfo ?: return null
         return activity.packageName.takeIf {
-            it != context.packageName && pm.queryIntentActivities(home, flags).any { match ->
+            activity.exported && pm.queryIntentActivities(home, flags).any { match ->
                 match.activityInfo.packageName == activity.packageName && match.activityInfo.name == activity.name
             }
         }
@@ -95,6 +95,8 @@ object SanctuaryGuardian {
     fun status(context: Context): String = when {
         SanctuaryStore.get(context).current.value == null -> "Guardian off"
         SanctuaryStore.get(context).current.value?.enableGuardian == false -> "Guardian off · Disabled for this session"
+        SanctuaryStore.get(context).current.value?.let(SanctuaryLauncherPolicy::isPaused) == true ->
+            "Android app protection paused by owner"
         !hasUsageAccess(context) -> "Protection paused · Usage Access is off"
         !hasOverlayAccess(context) -> "Protection paused · Display over other apps is off"
         !hasNotificationAccess(context) -> "Protection paused · Notifications are off"
@@ -108,6 +110,7 @@ object SanctuaryGuardian {
             } else {
                 "Covering an unapproved app · Home navigation unavailable"
             }
+            MonitorState.SHIELDING -> "Covering an unapproved app · Persistent shield"
             MonitorState.NAVIGATING_HOME -> "Covering an unapproved app · Moving to Android Home"
             MonitorState.HOLDING_HOME -> "Protection active · Android Home is behind Sanctuary"
             MonitorState.COVER_ONLY -> "Covering an unapproved app · Android Home could not be confirmed"
@@ -131,6 +134,9 @@ object SanctuaryGuardian {
         openSystem(context, Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName))
 
     fun openSystemSettings(context: Context): Boolean = openSystem(context, Intent(Settings.ACTION_SETTINGS))
+
+    internal fun openHomeSettings(context: Context): Boolean =
+        openSystem(context, Intent(Settings.ACTION_HOME_SETTINGS)) || openSystemSettings(context)
 
     fun openPhone(context: Context): Boolean {
         val dial = Intent(Intent.ACTION_DIAL)
@@ -166,7 +172,9 @@ object SanctuaryGuardian {
 
     fun launch(context: Context, packageName: String): Boolean {
         val session = SanctuaryStore.get(context).refresh() ?: return false
-        if ((!session.allowExternalApps || packageName !in session.androidApps) && packageName !in essentialPackages(context)) return false
+        if (packageName !in approvedAndroidApps(session) && packageName !in essentialPackages(context) &&
+            packageName !in SanctuaryLauncherPolicy.temporaryPackages(session) && !SanctuaryLauncherPolicy.isPaused(session)
+        ) return false
         val intent = context.packageManager.getLaunchIntentForPackage(packageName) ?: return false
         return open(context, intent)
     }
@@ -183,6 +191,8 @@ object SanctuaryGuardian {
             .forEach { add(it.activityInfo.packageName) }
         for (intent in listOf(
             Intent(Settings.ACTION_SETTINGS),
+            Intent(Settings.ACTION_HOME_SETTINGS),
+            Intent(Settings.ACTION_SECURITY_SETTINGS),
             Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS),
             Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS),
             Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION),

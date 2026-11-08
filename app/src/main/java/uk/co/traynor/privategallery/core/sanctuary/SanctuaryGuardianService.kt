@@ -37,6 +37,7 @@ class SanctuaryGuardianService : Service() {
     private var monitoring: Job? = null
     private var monitoredSessionId: String? = null
     private var overlay: SanctuaryBlockingOverlay? = null
+    private var overlayApprovedApps = emptySet<String>()
     private val homeTransition = SanctuaryHomeTransition()
     private var hiddenUntil = 0L
     private var failed = false
@@ -113,6 +114,13 @@ class SanctuaryGuardianService : Service() {
             }
             suspended = false
             SanctuaryAccessibility.setArmed(SanctuaryAccessibility.connected)
+            if (SanctuaryLauncherPolicy.launcherVisible()) {
+                homeTransition.reset()
+                hideOverlay()
+                SanctuaryGuardian.monitorState = SanctuaryGuardian.MonitorState.MONITORING
+                SanctuaryAccessibility.awaitTransition(IDLE_INTERVAL)
+                continue
+            }
             val elapsed = SystemClock.elapsedRealtime()
             if (elapsed >= refreshEssentialAt) {
                 val destinations = withContext(Dispatchers.IO) {
@@ -133,13 +141,23 @@ class SanctuaryGuardianService : Service() {
             val foreground = withContext(Dispatchers.IO) { observer.foreground() }
             if (store.current.value?.id != sessionId || !SanctuaryGuardian.isActivated(this, sessionId) ||
                 !SanctuaryGuardian.hasPermissions(this) ||
-                power?.isInteractive != true || keyguard?.isKeyguardLocked != false
+                power?.isInteractive != true || keyguard?.isKeyguardLocked != false ||
+                SanctuaryLauncherPolicy.launcherVisible()
             ) {
                 hideOverlay()
                 continue
             }
             val observation = SanctuaryAccessibility.recent()
-            val approved = if (session.allowExternalApps) session.androidApps else emptySet()
+            val latest = store.current.value ?: continue
+            if (SanctuaryLauncherPolicy.isPaused(latest)) {
+                homeTransition.reset()
+                hideOverlay()
+                SanctuaryGuardian.monitorState = SanctuaryGuardian.MonitorState.MONITORING
+                SanctuaryAccessibility.awaitTransition(IDLE_INTERVAL)
+                continue
+            }
+            val persistentShield = SanctuaryLauncherPolicy.outsideProtectionEnabled(this)
+            val approved = approvedAndroidApps(latest) + SanctuaryLauncherPolicy.temporaryPackages(latest)
             // A recent approved or recovery window takes priority over a lagging Usage Access sample.
             // Our own overlay can emit a window event and is not evidence of an underlay change.
             val safeTransition = observation?.packageName?.takeIf {
@@ -148,7 +166,15 @@ class SanctuaryGuardianService : Service() {
             val current = safeTransition ?: foreground
             val block = observer.shouldBlock(current, approved, essential)
             val now = SystemClock.elapsedRealtime()
-            var display = homeTransition.observe(current, block, homePackage, now)
+            // Never hold an overlay on Nova Launcher. The stock-Home hold still serves
+            // users who keep their existing Home app.
+            val holdHome = homePackage?.takeUnless { it == packageName }
+            var display = if (persistentShield) {
+                homeTransition.reset()
+                if (block) Display.BLOCKED else Display.NONE
+            } else {
+                homeTransition.observe(current, block, holdHome, now)
+            }
             if (now < hiddenUntil || display == Display.NONE) {
                 hideOverlay()
                 SanctuaryGuardian.monitorState = if (current == null) {
@@ -157,35 +183,40 @@ class SanctuaryGuardianService : Service() {
                     SanctuaryGuardian.MonitorState.MONITORING
                 }
             } else {
-                val remaining = store.remainingMillis(session)
+                val remaining = store.remainingMillis(latest)
                 if (remaining <= 0) {
                     hideOverlay()
                     continue
                 }
-                if (!showOverlay(session, remaining, display)) {
+                if (!showOverlay(latest, remaining, display)) {
                     fail()
                     return
                 }
                 // HOME is more intrusive than a cover. Require both detection sources to agree,
                 // a resolved launcher, and a still-active, unlocked session before using it.
-                if (display == Display.BLOCKED && current != null && current == foreground &&
+                if (!persistentShield && display == Display.BLOCKED && current != null && current == foreground &&
                     observation != null && observation.packageName == current && homePackage != null &&
                     activity?.lockTaskModeState == ActivityManager.LOCK_TASK_MODE_NONE &&
                     SanctuaryGuardian.hasAccessibilityAccess(this) &&
                     SanctuaryGuardian.hasLauncherEntry(this, current) &&
                     power?.isInteractive == true && keyguard?.isKeyguardLocked == false &&
-                    store.refresh()?.id == sessionId && SanctuaryGuardian.isActivated(this, sessionId) &&
-                    homeTransition.beginHome(current, now)
+                    store.refresh()?.takeIf { it.id == sessionId }?.let {
+                        !SanctuaryLauncherPolicy.isPaused(it) && current !in approvedAndroidApps(it) &&
+                            current !in SanctuaryLauncherPolicy.temporaryPackages(it)
+                    } == true && !SanctuaryLauncherPolicy.launcherVisible() &&
+                    !SanctuaryLauncherPolicy.outsideProtectionEnabled(this) &&
+                    SanctuaryGuardian.isActivated(this, sessionId) && homeTransition.beginHome(current, now)
                 ) {
                     homeTransition.finishHome(SanctuaryAccessibility.requestHome(observation))
-                    display = homeTransition.observe(current, true, homePackage, now)
-                    overlay?.update(session, remaining, display)
+                    display = homeTransition.observe(current, true, holdHome, now)
+                    overlay?.update(latest, remaining, display)
                 }
                 SanctuaryGuardian.monitorState = when (display) {
                     Display.REDIRECTING -> SanctuaryGuardian.MonitorState.NAVIGATING_HOME
                     Display.HELD_ON_HOME -> SanctuaryGuardian.MonitorState.HOLDING_HOME
                     Display.DEGRADED -> SanctuaryGuardian.MonitorState.COVER_ONLY
-                    else -> SanctuaryGuardian.MonitorState.BLOCKING
+                    else -> if (persistentShield) SanctuaryGuardian.MonitorState.SHIELDING
+                        else SanctuaryGuardian.MonitorState.BLOCKING
                 }
             }
             SanctuaryAccessibility.awaitTransition(POLL_INTERVAL)
@@ -194,6 +225,8 @@ class SanctuaryGuardianService : Service() {
 
     private fun showOverlay(session: SanctuarySession, remaining: Long, display: Display): Boolean {
         return try {
+            val approved = approvedAndroidApps(session)
+            if (overlay != null && approved != overlayApprovedApps) hideOverlay()
             val view = overlay ?: SanctuaryBlockingOverlay(
                 this,
                 session,
@@ -202,7 +235,10 @@ class SanctuaryGuardianService : Service() {
                 onSettings = { launchApproved { SanctuaryGuardian.openSystemSettings(this) } },
                 onApp = { pkg -> launchApproved { SanctuaryGuardian.launch(this, pkg) } },
                 onNovaApp = { route -> launchApproved { SanctuaryGuardian.openApprovedNova(this, route) } },
-            ).also { overlay = it }
+            ).also {
+                overlay = it
+                overlayApprovedApps = approved
+            }
             view.update(session, remaining, display)
             true
         } catch (_: IllegalStateException) {
@@ -230,6 +266,7 @@ class SanctuaryGuardianService : Service() {
     private fun hideOverlay() {
         overlay?.close()
         overlay = null
+        overlayApprovedApps = emptySet()
     }
 
     private fun fail() {
@@ -271,6 +308,7 @@ class SanctuaryGuardianService : Service() {
         const val CHANNEL = "sanctuary_guardian"
         const val NOTIFICATION_ID = 17131
         const val POLL_INTERVAL = 350L
+        private const val IDLE_INTERVAL = 1_500L
     }
 }
 
