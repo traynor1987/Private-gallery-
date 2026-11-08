@@ -10,7 +10,7 @@ import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.graphics.drawable.RippleDrawable
 import android.hardware.display.DisplayManager
-import android.view.Display
+import android.view.Display as AndroidDisplay
 import android.view.Gravity
 import android.view.View
 import android.view.WindowInsets
@@ -34,7 +34,7 @@ internal class SanctuaryBlockingOverlay(
     onApp: (String) -> Unit,
     onNovaApp: (String) -> Unit,
 ) {
-    private val display = service.getSystemService(DisplayManager::class.java)?.getDisplay(Display.DEFAULT_DISPLAY)
+    private val display = service.getSystemService(DisplayManager::class.java)?.getDisplay(AndroidDisplay.DEFAULT_DISPLAY)
         ?: throw IllegalStateException("Default display unavailable")
     private val type = WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
     private val context = service.createDisplayContext(display).createWindowContext(type, null)

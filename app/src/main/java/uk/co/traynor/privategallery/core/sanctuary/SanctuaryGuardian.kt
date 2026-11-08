@@ -158,6 +158,12 @@ object SanctuaryGuardian {
             .toMap()
     }
 
+    internal fun hasLauncherEntry(context: Context, packageName: String): Boolean {
+        val launcher = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER).setPackage(packageName)
+        return context.packageManager.queryIntentActivities(launcher, PackageManager.ResolveInfoFlags.of(0))
+            .any { it.activityInfo.exported }
+    }
+
     fun launch(context: Context, packageName: String): Boolean {
         val session = SanctuaryStore.get(context).refresh() ?: return false
         if ((!session.allowExternalApps || packageName !in session.androidApps) && packageName !in essentialPackages(context)) return false

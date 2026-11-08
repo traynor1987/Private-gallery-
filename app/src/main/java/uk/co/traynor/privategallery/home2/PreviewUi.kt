@@ -42,6 +42,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.semantics.*
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.ensureActive
@@ -172,8 +175,16 @@ private val lightColors=lightColorScheme(primary=Color(0xFF285F65),secondary=Col
      else->if(id.startsWith("folder:"))openFolder=id else if(data.app(id)?.website!=null){pool.open(data.app(id)!!.website!!,data.state.current);drawer=false}else onNative(id)
     }}
    }
-   LaunchedEffect(sanctuaryStore) {
-    if (sanctuaryStore != null) SanctuaryGuardian.takeApprovedNova(application)?.let(launch)
+   val latestLaunch by rememberUpdatedState(launch)
+   val lifecycle = LocalLifecycleOwner.current.lifecycle
+   DisposableEffect(lifecycle, sanctuaryStore) {
+    val observer = LifecycleEventObserver { _, event ->
+     if (event == Lifecycle.Event.ON_RESUME && sanctuaryStore != null) {
+      SanctuaryGuardian.takeApprovedNova(application)?.let(latestLaunch)
+     }
+    }
+    lifecycle.addObserver(observer)
+    onDispose { lifecycle.removeObserver(observer) }
    }
    val goHome:()->Unit={
     widgets.editingId=null;drawer=false;quick=false;editing=false;selected=null;openFolder=null;detailId=null;edgePanel=false;pool.closeFullscreen()
@@ -210,12 +221,12 @@ private val lightColors=lightColorScheme(primary=Color(0xFF285F65),secondary=Col
           PreviewHeader("Nova Settings","Home & appearance",onBack=goHome)
           Column(Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()).padding(24.dp)){
      Text("Home tools",style=MaterialTheme.typography.titleMedium)
-     ActionRow("Widget Centre",Icons.Default.Widgets){editing=false;widgetPage=currentPage;screen="widgets"}
+     ActionRow("Widget Centre",Icons.Default.Widgets){launch("widgets")}
 
      if(sanctuaryStore!=null)ActionRow("Sanctuary",Icons.Default.Security){screen="sanctuary-settings"}
      ActionRow("Lock Space",Icons.Default.Lock){onLock()}
      ActionRow("Panic Exit",Icons.Default.Security){onPanic()}
-     ActionRow("Nova Backup",Icons.Default.Save){editing=false;onBackup()}
+     ActionRow("Nova Backup",Icons.Default.Save){launch("backup")}
      ActionRow("Navigation & multitasking",Icons.Default.Tune){editing=false;shellSettings=true}
      ActionRow("Nova events",Icons.Default.NotificationsNone){editing=false;notifications=true}
      Row(verticalAlignment=Alignment.CenterVertically){Text("Original Home clock",Modifier.weight(1f));Switch(widgets.clockVisible(state.current),{widgets.clock(state.current,it)},modifier=Modifier.testTag("original-clock-visible"))}
@@ -359,7 +370,7 @@ private val lightColors=lightColorScheme(primary=Color(0xFF285F65),secondary=Col
    }
    if(quick)NovaQuickPanel(data,pool,audio,video,widgets,filesDir,onDismiss={quick=false},onAction={id->
     quick=false
-    when(id){"recents"->openRecents();"events"->notifications=true;"home-settings"->screen="home-settings";"widgets"->{widgetPage=currentPage;screen="widgets"};else->launch(id)}
+    when(id){"recents"->openRecents();"events"->notifications=true;"home-settings"->screen="home-settings";else->launch(id)}
    },onResume=resumeTab)
    val chosenId=selected
    if(chosenId!=null){

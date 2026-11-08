@@ -172,6 +172,7 @@ class SanctuaryGuardianService : Service() {
                     observation != null && observation.packageName == current && homePackage != null &&
                     activity?.lockTaskModeState == ActivityManager.LOCK_TASK_MODE_NONE &&
                     SanctuaryGuardian.hasAccessibilityAccess(this) &&
+                    SanctuaryGuardian.hasLauncherEntry(this, current) &&
                     power?.isInteractive == true && keyguard?.isKeyguardLocked == false &&
                     store.refresh()?.id == sessionId && SanctuaryGuardian.isActivated(this, sessionId) &&
                     homeTransition.beginHome(current, now)

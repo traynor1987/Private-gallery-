@@ -94,7 +94,7 @@ class BrowserV2Session(
 
     /** Update presentation only; retained renderers, cookies and saved app identity stay intact. */
     fun enforceDestinationPolicy() {
-        webViews.forEach { (id, view) -> setViewRestricted(id, view, tabRestricted(id)) }
+        webViews.toList().forEach { (id, view) -> setViewRestricted(id, view, tabRestricted(id)) }
         listener.onSessionChanged()
     }
 
@@ -664,14 +664,15 @@ class BrowserV2Session(
 
     private fun travelHistory(offset: Int) {
         val view = activeWebViewOrNull() ?: return
-        if (!view.canGoBackOrForward(offset)) return
+        val canTravel = if (offset < 0) view.canGoBack() else view.canGoForward()
+        if (!canTravel) return
         val history = view.copyBackForwardList()
-        val item = history.getItemAtIndex(history.currentIndex + offset) ?: return
-        if (destinationRestricted(item.url.orEmpty()) || destinationRestricted(item.originalUrl.orEmpty())) {
+        val item = history.getItemAtIndex(history.currentIndex + offset)
+        if (item != null && (destinationRestricted(item.url.orEmpty()) || destinationRestricted(item.originalUrl.orEmpty()))) {
             reportRestrictedDestination()
             return
         }
-        view.goBackOrForward(offset)
+        if (offset < 0) view.goBack() else view.goForward()
     }
     fun findInActivePage(text: String) { activeWebViewOrNull()?.findAllAsync(text) }
     fun findNextInActivePage(forward: Boolean) { activeWebViewOrNull()?.findNext(forward) }
@@ -757,6 +758,7 @@ class BrowserV2Session(
     }
     fun restoreMetadata(snapshot: BrowserSessionSnapshot) {
         privateAppTabs.clear()
+        restrictedDocuments.clear()
         tabs.restore(snapshot.tabs, snapshot.selectedTabId)
         coldRestoreIds.clear()
         coldRestoreIds += tabs.tabs.filter { it.url.isNotBlank() }.map { it.id }
@@ -924,6 +926,7 @@ class BrowserV2Session(
         }
     }
     override fun onTitle(tabId: String, title: String, canGoBack: Boolean, canGoForward: Boolean) {
+        if (tabRestricted(tabId)) return
         val tab = tabs.tabs.firstOrNull { it.id == tabId } ?: return
         tabs.updateNavigation(tabId, tab.url, title, tab.loading, canGoBack, canGoForward)
         changed()
@@ -943,7 +946,7 @@ class BrowserV2Session(
     override fun onProgress(tabId: String, progress: Int) = Unit
     override fun onCreateWindow(parentTabId: String, isDialog: Boolean, isUserGesture: Boolean): WebView? {
         // A retained, paused, covered or destroyed page cannot allocate a renderer or take focus.
-        if (!windowInteractionAllowed(parentTabId) || tabRestricted(parentTabId)) return null
+        if (!windowInteractionAllowed(parentTabId)) return null
         val previousId = tabs.activeTab.id
         val parentApp=privateAppTabs[parentTabId]
         val child = if(parentApp==null)newTab() else {
@@ -970,10 +973,10 @@ class BrowserV2Session(
     override fun onPermissionRequestCanceled(tabId: String, request: android.webkit.PermissionRequest) = listener.onPermissionRequestCanceled(request)
     private fun windowInteractionAllowed(tabId:String):Boolean =
         mediaNetworkingAllowed() && rendererAllowed() && tabId==tabs.activeTab.id && webViews[tabId]!=null &&
-            runCatching {listener.allowWindowInteraction()}.getOrDefault(false)
+            !tabRestricted(tabId) && runCatching {listener.allowWindowInteraction()}.getOrDefault(false)
     override fun onCloseWindow(tabId: String) { if (windowInteractionAllowed(tabId)) close(tabId) }
     override fun onShowCustomView(tabId: String, view: View, callback: WebChromeClient.CustomViewCallback) {
-        if (tabId != tabs.activeTab.id || !mediaNetworkingAllowed() || fullscreenCallback != null) {
+        if (tabId != tabs.activeTab.id || !mediaNetworkingAllowed() || fullscreenCallback != null || tabRestricted(tabId)) {
             callback.onCustomViewHidden(); return
         }
         fullscreenOwner = tabId
@@ -983,19 +986,19 @@ class BrowserV2Session(
     }
     override fun onHideCustomView(tabId: String) { if (fullscreenOwner == tabId) exitFullscreen() }
     override fun onPermissionRequest(tabId:String,request:android.webkit.PermissionRequest) {
-        if(tabId!=tabs.activeTab.id || webViews[tabId]==null || !mediaNetworkingAllowed()){request.deny();return}
+        if(tabId!=tabs.activeTab.id || webViews[tabId]==null || !mediaNetworkingAllowed() || tabRestricted(tabId)){request.deny();return}
         listener.onPermissionRequest(request)
     }
     override fun onGeolocationRequest(tabId:String,origin:String,callback:android.webkit.GeolocationPermissions.Callback) {
-        if(tabId!=tabs.activeTab.id || webViews[tabId]==null || !mediaNetworkingAllowed()){callback.invoke(origin,false,false);return}
+        if(tabId!=tabs.activeTab.id || webViews[tabId]==null || !mediaNetworkingAllowed() || tabRestricted(tabId)){callback.invoke(origin,false,false);return}
         listener.onGeolocationRequest(origin,callback)
     }
     override fun onShowFileChooser(tabId:String,callback:android.webkit.ValueCallback<Array<android.net.Uri>>,params:WebChromeClient.FileChooserParams):Boolean {
-        if(tabId!=tabs.activeTab.id || webViews[tabId]==null || !mediaNetworkingAllowed()){callback.onReceiveValue(null);return true}
+        if(tabId!=tabs.activeTab.id || webViews[tabId]==null || !mediaNetworkingAllowed() || tabRestricted(tabId)){callback.onReceiveValue(null);return true}
         return listener.onShowFileChooser(callback,params)
     }
     override fun onDownload(tabId: String, url: String, userAgent: String, contentDisposition: String, mimeType: String) {
-        if(tabId!=tabs.activeTab.id || !webViews.containsKey(tabId) || !foreground)return
+        if(tabId!=tabs.activeTab.id || !webViews.containsKey(tabId) || !foreground || tabRestricted(tabId) || destinationRestricted(url))return
         if (mediaNetworkingAllowed()) listener.onDownload(url, userAgent, contentDisposition, mimeType) else listener.onMessage(BrowserMessage.VpnRequired)
     }
     override fun onImageLongPress(tabId: String, resourceUrl: String?) = listener.onImageLongPress(resourceUrl)
