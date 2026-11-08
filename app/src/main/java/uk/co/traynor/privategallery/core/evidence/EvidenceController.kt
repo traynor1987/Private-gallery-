@@ -25,7 +25,8 @@ internal class EvidenceController(context:Context,val access:EvidenceAccess):Aut
   val collectionProgress:EvidenceCollectionProgress? = null,
   val syncingCollections:Boolean=false,
   val chronology:EvidenceChronology68.Result?=null,
-  val chronologyUnavailable:Boolean=false)
+  val chronologyUnavailable:Boolean=false,
+  val conversationZone:java.time.ZoneId?=null)
  private val importAcquisitions=java.util.concurrent.ConcurrentHashMap<String,EvidenceOriginal>()
  private val main=Handler(Looper.getMainLooper())
  private val scope=CoroutineScope(SupervisorJob()+Dispatchers.Main.immediate)
@@ -63,16 +64,17 @@ internal class EvidenceController(context:Context,val access:EvidenceAccess):Aut
     .collectLatest {catalog->
      if(catalog==null||!current())return@collectLatest
      try {
-      val analysis=withContext(Dispatchers.IO){
+      val (analysis,zone)=withContext(Dispatchers.IO){
        ensureActive()
        val operation=currentCoroutineContext()
        val reviewed=reviewStore.value
        val skipped=reviewed.skipped()
-       EvidenceChronology68.analyse(catalog.evidence(),confirmed=reviewed.confirmed(),current={operation.isActive&&access.current()}).let { result ->
-        result.copy(review=result.review.filterNot { EvidenceReview68.key(it) in skipped })
+       val zone=reviewed.conversationZone()
+       EvidenceChronology68.analyse(catalog.evidence(),conversationZone=zone,confirmed=reviewed.confirmed(),current={operation.isActive&&access.current()}).let { result ->
+        result.copy(review=result.review.filterNot { EvidenceReview68.key(it) in skipped }) to zone
        }.also{access.checkCurrent();ensureActive()}
       }
-      publish{it.copy(chronology=analysis,chronologyUnavailable=false)}
+      publish{it.copy(chronology=analysis,chronologyUnavailable=false,conversationZone=zone)}
      }catch(cancelled:CancellationException){throw cancelled}
      catch(_:Exception){publish{it.copy(chronology=null,chronologyUnavailable=true)}}
     }
@@ -169,11 +171,18 @@ internal class EvidenceController(context:Context,val access:EvidenceAccess):Aut
   perform("Message date confirmed") {
    val catalog=access.store.read()
    val review=reviewStore.value
-   val message=EvidenceChronology68.analyse(catalog.evidence(),confirmed=review.confirmed(),current={access.current()})
+   val message=EvidenceChronology68.analyse(catalog.evidence(),conversationZone=review.conversationZone(),confirmed=review.confirmed(),current={access.current()})
     .messages.single{location in it.locations}
    review.confirm(message.locations,timestamp)
    withContext(Dispatchers.Main.immediate){reviewRevision.value++}
    catalog
+  }
+ }
+ fun setConversationZone(zone:java.time.ZoneId?) {
+  perform(if(zone==null)"Conversation time zone cleared" else "Conversation time zone saved") {
+   reviewStore.value.setConversationZone(zone)
+   withContext(Dispatchers.Main.immediate){reviewRevision.value++}
+   access.store.read()
   }
  }
  fun skipReview(review:EvidenceChronology68.Review) {

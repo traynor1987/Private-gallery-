@@ -85,6 +85,7 @@ class EvidenceAi179UiTest {
    compose.evidenceNode(hasText("Synthetic advisory179. The visible timestamp is uncertain.")).assertIsDisplayed()
    compose.runOnIdle{compose.activity.onBackPressedDispatcher.onBackPressed()}
    compose.onNodeWithText("Evidence").performClick();compose.evidenceNode(hasContentDescription("Select evidence selected179.txt")).performClick()
+   compose.evidenceNode(hasText("Evidence tools")).performClick()
    compose.evidenceNode(hasText("Remove references")).performClick();compose.evidenceNode(hasText("Confirm") and hasClickAction()).performClick()
    compose.waitUntil(15000){!controller.state.value.busy&&controller.state.value.catalog?.evidence()?.isEmpty()==true}
    compose.onNodeWithText("Timeline").performClick();compose.evidenceNode(hasText("Owner-approved AI179")).performClick()

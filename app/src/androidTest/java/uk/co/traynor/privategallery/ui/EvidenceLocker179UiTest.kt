@@ -78,7 +78,7 @@ class EvidenceLocker179UiTest {
    compose.waitUntil(15000){controller.state.value.catalog?.incidents()?.size==1&&!controller.state.value.busy}
    compose.runOnIdle{compose.activity.onBackPressedDispatcher.onBackPressed()}
    compose.onNodeWithText("Evidence").performClick();compose.evidenceNode(hasContentDescription("Select evidence alpha179.txt")).performClick()
-   click("Add selected to incident");click("Synthetic incident179")
+   click("Evidence tools");click("Add selected to incident");click("Synthetic incident179")
    compose.waitUntil(15000){controller.state.value.catalog?.incidents()?.singleOrNull()?.evidenceIds()?.contains(corrected.id())==true&&!controller.state.value.busy}
    compose.evidenceNode(hasTestTag("evidence-search") and hasSetTextAction()).performTextReplacement("unique179")
    // At 2x text the Library controls plus the IME can occupy the viewport, so a
@@ -163,7 +163,7 @@ class EvidenceLocker179UiTest {
    approveImportReview();waitReady(controller,2)
    assertEquals(2,f.access.sources.list().size)
    compose.onNodeWithText("Evidence").performClick();compose.evidenceNode(hasContentDescription("Select evidence beta179.txt")).performClick()
-   click("Export selection")
+   click("Evidence tools");click("Export selection")
    compose.evidenceNode(hasContentDescription("Export incident First selected179")).performClick()
    compose.evidenceNode(hasContentDescription("Export incident Second selected179")).performClick()
    assertNull(exported)

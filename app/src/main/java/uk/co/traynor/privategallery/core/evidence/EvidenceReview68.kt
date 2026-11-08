@@ -4,6 +4,7 @@ import android.content.Context
 import org.json.JSONArray
 import uk.co.traynor.privategallery.core.home2.SpaceContext
 import java.time.Instant
+import java.time.ZoneId
 import java.security.MessageDigest
 
 /** Device-local annotations are keyed to the exact OCR or correction revision that was reviewed. */
@@ -18,6 +19,12 @@ internal class EvidenceReview68(context: Context, access: EvidenceAccess) : Auto
             put(EvidenceChronology68.MessageLocation(row.getString(0), row.getString(1), row.getInt(2), row.getInt(3)),
                 Instant.ofEpochMilli(row.getLong(4)))
         }
+    }
+
+    fun conversationZone(): ZoneId? = preferences.getString("conversation-zone", null)?.let(ZoneId::of)
+
+    fun setConversationZone(zone: ZoneId?) {
+        check(preferences.edit().putString("conversation-zone", zone?.id).commit())
     }
 
     fun skipped(): Set<String> = preferences.all.keys.filter { it.startsWith("skip-") }.toSet()

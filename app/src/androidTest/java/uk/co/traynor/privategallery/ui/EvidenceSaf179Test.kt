@@ -190,7 +190,7 @@ class EvidenceSaf179Test {
    instrumentation.runOnMainSync{picker.returnDocument(uri)}
    compose.activityRule.scenario.moveToState(Lifecycle.State.RESUMED)
   }
-  fun exportDialog(){click("Incidents");click("Picker incident179");click("Export");click("Review export")
+  fun exportDialog(){click("Timeline");click("Picker incident179");click("Incident tools");click("Export");click("Review export")
    compose.waitUntil(15000){compose.onAllNodesWithText("Export password (at least 12 characters)").fetchSemanticsNodes().isNotEmpty()}
   }
   fun encryptedPicker():ByteArray {
@@ -378,7 +378,7 @@ class EvidenceSaf179Test {
  @Test fun permissionReturnUsesFreshControllerAndRequiresNewPreviewWithoutAutoConnecting()=permissionReturn(false)
  @Test fun permissionReturnAfterReauthenticationCannotReopenAiOrStartTransport()=permissionReturn(true)
  private fun permissionReturn(stale:Boolean){Harness(seed=true).use{f->
-  f.show();click("Incidents");click("Picker incident179");click("AI analysis");click("Set up Android VPN / isolation permission")
+  f.show();click("Timeline");click("Picker incident179");click("AI analysis");click("Set up Android VPN / isolation permission")
   assertEquals("StartActivityForResult",f.picker.contract);assertFalse(f.accesses.first().current());assertEquals(0,f.routeCreations.get())
   compose.activityRule.scenario.moveToState(Lifecycle.State.CREATED)
   if(stale)f.epoch.incrementAndGet()

@@ -61,6 +61,7 @@ internal fun EvidenceLocker(controller:EvidenceController,onClose:()->Unit,onImp
  val catalog=state.catalog
  val record=catalog?.evidence()?.firstOrNull{it.id()==evidenceId}
  val incident=catalog?.incidents()?.firstOrNull{it.id()==incidentId}
+ var toolsExpanded by remember(page,evidenceId,incidentId){mutableStateOf(false)}
  fun change(label:String,action:(EvidenceCatalog)->EvidenceCatalog){if(controller.current())controller.mutate(label,action)}
  fun incidentForm(existing:EvidenceCatalog.Incident?=null){
   form=EvidenceForm(if(existing==null)"Create incident"else"Edit incident",listOf("Title","Description","Notes","Tags (comma separated)","Start (ISO date/time with offset, optional)","End (ISO date/time with offset, optional)"),
@@ -91,20 +92,26 @@ internal fun EvidenceLocker(controller:EvidenceController,onClose:()->Unit,onImp
      state.message?.let{item{Text(it,style=MaterialTheme.typography.bodySmall)}}
      if(record!=null) {
       item {Text(record.name(),style=MaterialTheme.typography.titleLarge);Text("Original reference · ${record.mime()} · ${record.size()} bytes")
-       Text("SHA-256 ${record.sha256()}",style=MaterialTheme.typography.bodySmall)
        Text("Imported ${time(record.importedAt())}; vault added ${time(record.metadata().dateAddedAt())}; capture ${time(record.metadata().captureAt())}",style=MaterialTheme.typography.bodySmall)
-       Text("Source claims: ${record.metadata().sourceName()} · ${record.metadata().width()} × ${record.metadata().height()}. Dates and metadata are claims, not proof.",style=MaterialTheme.typography.bodySmall)
        FlowRow {
         TextButton(enabled=!busy,onClick={viewOriginal=record.id()}){Text("View original")}
-        TextButton(enabled=!busy,onClick={controller.verify(record.id())}){Text("Verify integrity")}
         TextButton(enabled=!busy,onClick={controller.extract(record.id())}){Text("Extract text")}
-        TextButton(enabled=!busy,onClick={form=EvidenceForm("Rotate local extraction",listOf("Degrees: 0, 90, 180 or 270"),listOf("90")){v->val rotation=v[0].toInt();require(rotation in listOf(0,90,180,270));controller.extract(record.id(),rotation)}}){Text("Rotate extraction")}
         TextButton(enabled=!busy,onClick={form=EvidenceForm("Edit evidence",listOf("Name","Description","Notes","Tags (comma separated)","Participants (owner identified)"),listOf(record.name(),record.description(),record.notes(),record.tags().joinToString(", "),record.participants().joinToString(", "))){v->require(v[0].isNotBlank()){ "Evidence name is required" };change("Evidence saved"){it.upsertEvidence(EvidenceController.annotated(record,v[0],v[1],v[2],tags(v[3]),tags(v[4])),EvidenceController.now(),"OWNER_EDIT_EVIDENCE")}}}){Text("Edit")}
         TextButton(onClick={selected=setOf(record.id());choice="Assign"}){Text("Add to incident")}
        }
-       state.integrity[record.id()]?.let{Text(it)}
-       Text(record.description());Text("Owner notes: ${record.notes()}")
-       record.metadata().embedded().forEach{(key,value)->Text("$key: $value",style=MaterialTheme.typography.bodySmall)}
+       if(record.description().isNotBlank())Text(record.description())
+       if(record.notes().isNotBlank())Text("Owner notes: ${record.notes()}")
+       TextButton(onClick={toolsExpanded=!toolsExpanded}){Text(if(toolsExpanded)"Hide original details" else "Original details")}
+       if(toolsExpanded){
+        Text("SHA-256 ${record.sha256()}",style=MaterialTheme.typography.bodySmall)
+        Text("${record.metadata().sourceName()} · ${record.metadata().width()} × ${record.metadata().height()}",style=MaterialTheme.typography.bodySmall)
+        state.integrity[record.id()]?.let{Text(it)}
+        record.metadata().embedded().forEach{(key,value)->Text("$key: $value",style=MaterialTheme.typography.bodySmall)}
+        FlowRow{
+        TextButton(enabled=!busy,onClick={controller.verify(record.id())}){Text("Verify integrity")}
+        TextButton(enabled=!busy,onClick={form=EvidenceForm("Rotate local extraction",listOf("Degrees: 0, 90, 180 or 270"),listOf("90")){v->val rotation=v[0].toInt();require(rotation in listOf(0,90,180,270));controller.extract(record.id(),rotation)}}){Text("Rotate extraction")}
+        }
+       }
       }
       items(record.ocr(),key={it.id()}){extraction ->
        ElevatedCard(Modifier.fillMaxWidth()){Column(Modifier.padding(12.dp)){
@@ -121,14 +128,17 @@ internal fun EvidenceLocker(controller:EvidenceController,onClose:()->Unit,onImp
        FlowRow {
         TextButton(enabled=!busy,onClick={incidentForm(incident)}){Text("Edit")}
         TextButton(enabled=!busy,onClick={change(if(incident.archived())"Restored"else"Archived"){it.archive(incident.id(),!incident.archived(),EvidenceController.now())}}){Text(if(incident.archived())"Restore"else"Archive")}
-        TextButton(enabled=!busy,onClick={exportSelection=EvidenceExportSelection(listOf(incident.id()),emptyList())}){Text("Export")}
         TextButton(enabled=!busy&&incident.evidenceIds().isNotEmpty(),onClick={onAi(incident.evidenceIds())}){Text("AI analysis")};TextButton(enabled=!busy&&incident.evidenceIds().isNotEmpty(),onClick={onAiReport(incident.evidenceIds())}){Text("Behaviour report*")}
+        TextButton(onClick={toolsExpanded=!toolsExpanded}){Text(if(toolsExpanded)"Hide incident tools" else "Incident tools")}
+        if(toolsExpanded){
+         TextButton(enabled=!busy,onClick={exportSelection=EvidenceExportSelection(listOf(incident.id()),emptyList())}){Text("Export")}
         TextButton(enabled=!busy,onClick={choice="Merge"}){Text("Merge")}
         TextButton(enabled=!busy&&selected.any{it in incident.evidenceIds()},onClick={choice="Move"}){Text("Move selected to another incident")}
         TextButton(enabled=!busy&&selected.any{it in incident.evidenceIds()},onClick={val ids=selected.filter{it in incident.evidenceIds()};confirmation="Remove these selected incident references? Originals, notes and contributing lineage remain preserved." to {change("Selected references removed from incident"){it.unlink(ids,incident.id(),EvidenceController.now())};selected=emptySet()}}){Text("Remove selected from incident")}
 
         TextButton(enabled=!busy&&selected.isNotEmpty(),onClick={form=EvidenceForm("Split selected evidence into new incident",listOf("New title"),listOf("Split incident")){v->change("Incident split"){it.split(incident.id(),selected.filter{it in incident.evidenceIds()},UUID.randomUUID().toString(),v[0],EvidenceController.now())};selected=emptySet()}}){Text("Split selected")}
         TextButton(enabled=!busy,onClick={confirmation="Delete this incident and its annotations? Original evidence remains in the vault." to {change("Incident deleted; originals retained"){it.deleteIncident(incident.id(),EvidenceController.now())};incidentId=null}}){Text("Delete incident")}
+        }
         TextButton(enabled=!busy,onClick={form=EvidenceForm("Add timeline entry",listOf("Title","Owner notes","Timestamp (ISO with offset; blank is uncertain)","Provenance: USER or INFERRED"),listOf("","","","USER")){v->
          require(v[3] in listOf("USER","INFERRED")){"Manual timestamps must remain owner-entered or inferred"}
          val event=EvidenceCatalog.Event(UUID.randomUUID().toString(),selected.filter{it in incident.evidenceIds()},epoch(v[2]),v[3],v[0],v[1])
@@ -222,7 +232,7 @@ internal fun EvidenceLocker(controller:EvidenceController,onClose:()->Unit,onImp
        }
        item{Text("Saved encrypted AI reports*",style=MaterialTheme.typography.titleLarge);Text(EvidenceAiReport.DISCLAIMER)}
        val reports=catalog.analyses().filter{it.task()==EvidenceAi.Task.EVIDENCE_REPORT.name}.sortedByDescending{it.at()}
-       if(reports.isEmpty())item{Text("No saved reports. Select records in Evidence, choose Behaviour report*, review the exact payload, then explicitly confirm any request.")}
+       if(reports.isEmpty())item{Text("No saved reports. Select records in Evidence, choose Ask Nova AI, review the exact payload, then explicitly confirm any request.")}
        items(reports,key={it.id()}){analysis->ElevatedCard(Modifier.fillMaxWidth()){Column(Modifier.padding(12.dp)){
         Text("AI evidence report* · ${time(analysis.at())}")
         Text("${analysis.evidenceIds().size} selected evidence references · ${analysis.model()}",style=MaterialTheme.typography.bodySmall)
@@ -246,7 +256,20 @@ internal fun EvidenceLocker(controller:EvidenceController,onClose:()->Unit,onImp
          Text("Filters use the screenshot or import date.",style=MaterialTheme.typography.bodySmall)
          FilterChip(selected=archived,onClick={archived=!archived},label={Text("Include archived incidents")})
         }
-        FlowRow {TextButton(enabled=!busy,onClick={originalsSelected=emptySet();choice="Import"}){Text("Add evidence")};TextButton(enabled=!busy&&selected.isNotEmpty(),onClick={choice="Assign"}){Text("Add selected to incident")};TextButton(enabled=!busy&&selected.isNotEmpty(),onClick={choice="Move"}){Text("Move to incident")};TextButton(enabled=!busy,onClick={exportSelection=EvidenceExportSelection(emptyList(),selected.toList())}){Text("Export selection")};TextButton(enabled=!busy&&selected.isNotEmpty(),onClick={onAi(selected.toList())}){Text("AI analysis")};TextButton(enabled=!busy&&selected.isNotEmpty(),onClick={onAiReport(selected.toList())}){Text("Behaviour report*")};TextButton(enabled=!busy&&selected.isNotEmpty(),onClick={confirmation="Remove selected evidence records and annotations? Encrypted originals and Recently Deleted remain unchanged." to {val ids=selected.toList();controller.removeEvidenceReferences(ids);selected=emptySet()}}){Text("Remove references")}}
+        FlowRow {
+         TextButton(enabled=!busy,onClick={originalsSelected=emptySet();choice="Import"}){Text("Add evidence")}
+         TextButton(enabled=!busy&&selected.isNotEmpty(),onClick={onAiReport(selected.toList())}){Text("Ask Nova AI")}
+         TextButton(onClick={toolsExpanded=!toolsExpanded}){Text(if(toolsExpanded)"Hide evidence tools" else "Evidence tools")}
+        }
+        if(toolsExpanded)FlowRow {
+         TextButton(enabled=!busy&&selected.isNotEmpty(),onClick={choice="Assign"}){Text("Add selected to incident")}
+         TextButton(enabled=!busy&&selected.isNotEmpty(),onClick={choice="Move"}){Text("Move to incident")}
+         TextButton(enabled=!busy,onClick={exportSelection=EvidenceExportSelection(emptyList(),selected.toList())}){Text("Export selection")}
+         TextButton(enabled=!busy&&selected.isNotEmpty(),onClick={onAi(selected.toList())}){Text("AI analysis")}
+         TextButton(enabled=!busy&&selected.isNotEmpty(),onClick={confirmation="Remove selected evidence records and annotations? Encrypted originals remain in the Vault." to {
+          controller.removeEvidenceReferences(selected.toList());selected=emptySet()
+         }}){Text("Remove references")}
+        }
        }
        val dates=runCatching{evidenceLocalDateRange(from,through,ZoneId.systemDefault())}.getOrNull()
        if(dates==null)item{Text("Choose an end date on or after the start date.",color=MaterialTheme.colorScheme.error)}
@@ -256,7 +279,15 @@ internal fun EvidenceLocker(controller:EvidenceController,onClose:()->Unit,onImp
        item {FlowRow {TextButton(enabled=!busy,onClick={incidentForm()}){Text("New incident")};TextButton(enabled=!busy,onClick={exportSelection=EvidenceExportSelection(emptyList(),selected.toList())}){Text("Export selection")};FilterChip(selected=archived,onClick={archived=!archived},label={Text("Include archived")})}
         OutlinedTextField(query,{query=it.take(1000)},label={Text("Search incidents, timeline and notes")},modifier=Modifier.fillMaxWidth())
         TextButton(onClick={dateFilters=!dateFilters}){Text(if(dateFilters)"Hide filters" else "Filters")}
-        if(dateFilters)FlowRow {EvidenceDateField("From date",from){from=it};EvidenceDateField("Through date",through){through=it}}
+        if(dateFilters){
+         FlowRow {EvidenceDateField("From date",from){from=it};EvidenceDateField("Through date",through){through=it}}
+         Text(state.conversationZone?.let{"Conversation time zone · ${it.id}"}?:"Conversation time zone · unknown",style=MaterialTheme.typography.bodySmall)
+         if(state.conversationZone==null)TextButton(enabled=!busy,onClick={
+          val zone=ZoneId.systemDefault()
+          confirmation="Use ${zone.id} for conversation times in this Space when a screenshot does not show its time zone? Leave it unknown if the conversation may use another zone." to {controller.setConversationZone(zone)}
+         }){Text("Use phone time zone")}
+         else TextButton(enabled=!busy,onClick={controller.setConversationZone(null)}){Text("Clear conversation time zone")}
+        }
         Text("Unknown dates remain visible and labelled uncertain.",style=MaterialTheme.typography.bodySmall)}
        val range=runCatching{evidenceLocalDateRange(from,through,ZoneId.systemDefault())}.getOrNull()
        if(range==null)item{Text("Enter valid UTC dates, or leave blank.",color=MaterialTheme.colorScheme.error)}
