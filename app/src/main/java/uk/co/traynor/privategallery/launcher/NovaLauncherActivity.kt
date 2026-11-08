@@ -611,7 +611,7 @@ class NovaLauncherActivity : ComponentActivity() {
         fun resize(size: SizeF) {
             if (dimensions == size || childCount == 0) return
             dimensions = size
-            runCatching { widget?.updateAppWidgetSize(null, listOf(size)) }
+            runCatching { widget?.updateAppWidgetSize(Bundle(), listOf(size)) }
         }
 
         private fun intercept(): Boolean = SanctuaryLauncherPolicy.launcherProtectionActive(context).also { active ->

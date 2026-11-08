@@ -73,7 +73,7 @@ internal fun LauncherSetup(
     )
     val titles = listOf("Choose starting layout", "Foldable configuration", "Appearance",
         "App drawer and search", "Sanctuary protection", "Preview and activate")
-    val onBack = { if (step > 0) step-- else actions.continueWithCurrentHome() }
+    val onBack: () -> Unit = { if (step > 0) step-- else actions.continueWithCurrentHome() }
     BackHandler(step > 0, onBack = onBack)
     LauncherPanel(titles[step], onBack) {
         Row(Modifier.fillMaxWidth().padding(bottom = 8.dp), horizontalArrangement = Arrangement.SpaceBetween) {
