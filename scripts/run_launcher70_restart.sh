@@ -9,6 +9,9 @@ output=app/build/home2-evidence/launcher-process-70
 mkdir -p "$output"
 api=$(adb shell getprop ro.build.version.sdk | tr -d '\r')
 [[ "$api" == 37 && "$(adb shell getprop ro.kernel.qemu | tr -d '\r')" == 1 ]]
+# Connected Gradle suites can uninstall both APKs when their runner exits.
+adb install -r app/build/outputs/apk/debug/app-debug.apk
+adb install -r app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
 prefs=shared_prefs/nova_android_home_v1.xml
 backup=files/launcher-70-restart-backup.xml
 adb shell am force-stop "$package"
