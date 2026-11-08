@@ -1,5 +1,6 @@
 package uk.co.traynor.privategallery.core.sanctuary
 
+import android.app.ActivityManager
 import android.app.KeyguardManager
 import android.app.Notification
 import android.app.NotificationChannel
@@ -25,16 +26,18 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import uk.co.traynor.privategallery.R
+import uk.co.traynor.privategallery.core.sanctuary.SanctuaryHomeTransition.Display
 
 /**
  * Observes package lifecycle events only while explicitly armed for a valid session.
- * A suspended or ambiguous foreground never receives an overlay.
+ * A suspended or ambiguous foreground never starts a block or a Home request.
  */
 class SanctuaryGuardianService : Service() {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private var monitoring: Job? = null
     private var monitoredSessionId: String? = null
     private var overlay: SanctuaryBlockingOverlay? = null
+    private val homeTransition = SanctuaryHomeTransition()
     private var hiddenUntil = 0L
     private var failed = false
 
@@ -50,6 +53,8 @@ class SanctuaryGuardianService : Service() {
         }
         if (monitoring?.isActive == true && monitoredSessionId == session.id) return START_STICKY
         monitoring?.cancel()
+        SanctuaryAccessibility.setArmed(false)
+        homeTransition.reset()
         hideOverlay()
         hiddenUntil = 0L
         monitoredSessionId = session.id
@@ -69,6 +74,7 @@ class SanctuaryGuardianService : Service() {
 
     override fun onDestroy() {
         scope.cancel()
+        SanctuaryAccessibility.setArmed(false)
         hideOverlay()
         if (!failed) SanctuaryGuardian.monitorState = SanctuaryGuardian.MonitorState.PAUSED
         super.onDestroy()
@@ -77,15 +83,19 @@ class SanctuaryGuardianService : Service() {
     private suspend fun monitor(store: SanctuaryStore, sessionId: String) {
         val observer = SanctuaryUsageObserver(this)
         var essential = emptySet<String>()
+        var homePackage: String? = null
         var refreshEssentialAt = 0L
         var suspended = false
         val keyguard = getSystemService(KeyguardManager::class.java)
         val power = getSystemService(PowerManager::class.java)
+        val activity = getSystemService(ActivityManager::class.java)
         while (scope.isActive) {
             val session = store.refresh()
             if (session?.id != sessionId || !session.enableGuardian || !SanctuaryGuardian.isActivated(this, sessionId) ||
                 !SanctuaryGuardian.hasPermissions(this)
             ) {
+                SanctuaryAccessibility.setArmed(false)
+                homeTransition.reset()
                 hideOverlay()
                 SanctuaryGuardian.clearActivation(this, sessionId)
                 stopSelf()
@@ -93,6 +103,8 @@ class SanctuaryGuardianService : Service() {
             }
             if (power?.isInteractive != true || keyguard?.isKeyguardLocked != false) {
                 if (!suspended) observer.suspendTracking()
+                SanctuaryAccessibility.setArmed(false)
+                homeTransition.reset()
                 suspended = true
                 hideOverlay()
                 SanctuaryGuardian.monitorState = SanctuaryGuardian.MonitorState.WAITING
@@ -100,11 +112,13 @@ class SanctuaryGuardianService : Service() {
                 continue
             }
             suspended = false
+            SanctuaryAccessibility.setArmed(SanctuaryAccessibility.connected)
             val elapsed = SystemClock.elapsedRealtime()
             if (elapsed >= refreshEssentialAt) {
-                essential = withContext(Dispatchers.IO) {
+                val destinations = withContext(Dispatchers.IO) {
                     try {
-                        SanctuaryGuardian.essentialPackages(this@SanctuaryGuardianService)
+                        SanctuaryGuardian.essentialPackages(this@SanctuaryGuardianService) to
+                            SanctuaryGuardian.resolvedHomePackage(this@SanctuaryGuardianService)
                     } catch (_: SecurityException) {
                         null
                     }
@@ -112,40 +126,72 @@ class SanctuaryGuardianService : Service() {
                     fail()
                     return
                 }
+                essential = destinations.first
+                homePackage = destinations.second
                 refreshEssentialAt = elapsed + 5_000L
             }
             val foreground = withContext(Dispatchers.IO) { observer.foreground() }
-            if (store.current.value?.id != sessionId || !SanctuaryGuardian.hasPermissions(this) ||
+            if (store.current.value?.id != sessionId || !SanctuaryGuardian.isActivated(this, sessionId) ||
+                !SanctuaryGuardian.hasPermissions(this) ||
                 power?.isInteractive != true || keyguard?.isKeyguardLocked != false
             ) {
                 hideOverlay()
                 continue
             }
-            val block = observer.shouldBlock(foreground, if (session.allowExternalApps) session.androidApps else emptySet(), essential)
-            if (block && elapsed >= hiddenUntil) {
+            val observation = SanctuaryAccessibility.recent()
+            val approved = if (session.allowExternalApps) session.androidApps else emptySet()
+            // A recent approved or recovery window takes priority over a lagging Usage Access sample.
+            // Our own overlay can emit a window event and is not evidence of an underlay change.
+            val safeTransition = observation?.packageName?.takeIf {
+                it != packageName && it != homePackage && (it in essential || it in approved)
+            }
+            val current = safeTransition ?: foreground
+            val block = observer.shouldBlock(current, approved, essential)
+            val now = SystemClock.elapsedRealtime()
+            var display = homeTransition.observe(current, block, homePackage, now)
+            if (now < hiddenUntil || display == Display.NONE) {
+                hideOverlay()
+                SanctuaryGuardian.monitorState = if (current == null) {
+                    SanctuaryGuardian.MonitorState.WAITING
+                } else {
+                    SanctuaryGuardian.MonitorState.MONITORING
+                }
+            } else {
                 val remaining = store.remainingMillis(session)
                 if (remaining <= 0) {
                     hideOverlay()
                     continue
                 }
-                if (!showOverlay(session, remaining)) {
+                if (!showOverlay(session, remaining, display)) {
                     fail()
                     return
                 }
-                SanctuaryGuardian.monitorState = SanctuaryGuardian.MonitorState.BLOCKING
-            } else {
-                hideOverlay()
-                SanctuaryGuardian.monitorState = if (foreground == null) {
-                    SanctuaryGuardian.MonitorState.WAITING
-                } else {
-                    SanctuaryGuardian.MonitorState.MONITORING
+                // HOME is more intrusive than a cover. Require both detection sources to agree,
+                // a resolved launcher, and a still-active, unlocked session before using it.
+                if (display == Display.BLOCKED && current != null && current == foreground &&
+                    observation != null && observation.packageName == current && homePackage != null &&
+                    activity?.lockTaskModeState == ActivityManager.LOCK_TASK_MODE_NONE &&
+                    SanctuaryGuardian.hasAccessibilityAccess(this) &&
+                    power?.isInteractive == true && keyguard?.isKeyguardLocked == false &&
+                    store.refresh()?.id == sessionId && SanctuaryGuardian.isActivated(this, sessionId) &&
+                    homeTransition.beginHome(current, now)
+                ) {
+                    homeTransition.finishHome(SanctuaryAccessibility.requestHome(observation))
+                    display = homeTransition.observe(current, true, homePackage, now)
+                    overlay?.update(session, remaining, display)
+                }
+                SanctuaryGuardian.monitorState = when (display) {
+                    Display.REDIRECTING -> SanctuaryGuardian.MonitorState.NAVIGATING_HOME
+                    Display.HELD_ON_HOME -> SanctuaryGuardian.MonitorState.HOLDING_HOME
+                    Display.DEGRADED -> SanctuaryGuardian.MonitorState.COVER_ONLY
+                    else -> SanctuaryGuardian.MonitorState.BLOCKING
                 }
             }
-            delay(POLL_INTERVAL)
+            SanctuaryAccessibility.awaitTransition(POLL_INTERVAL)
         }
     }
 
-    private fun showOverlay(session: SanctuarySession, remaining: Long): Boolean {
+    private fun showOverlay(session: SanctuarySession, remaining: Long, display: Display): Boolean {
         return try {
             val view = overlay ?: SanctuaryBlockingOverlay(
                 this,
@@ -156,7 +202,7 @@ class SanctuaryGuardianService : Service() {
                 onApp = { pkg -> launchApproved { SanctuaryGuardian.launch(this, pkg) } },
                 onNovaApp = { route -> launchApproved { SanctuaryGuardian.openApprovedNova(this, route) } },
             ).also { overlay = it }
-            view.update(session, remaining)
+            view.update(session, remaining, display)
             true
         } catch (_: IllegalStateException) {
             false
@@ -174,6 +220,7 @@ class SanctuaryGuardianService : Service() {
     private fun launchApproved(action: () -> Boolean) {
         if (action()) {
             hiddenUntil = SystemClock.elapsedRealtime() + 1_500L
+            homeTransition.dismissHomeHold()
             hideOverlay()
             SanctuaryGuardian.monitorState = SanctuaryGuardian.MonitorState.MONITORING
         }
@@ -185,6 +232,8 @@ class SanctuaryGuardianService : Service() {
     }
 
     private fun fail() {
+        SanctuaryAccessibility.setArmed(false)
+        homeTransition.reset()
         hideOverlay()
         failed = true
         SanctuaryGuardian.clearActivation(this)

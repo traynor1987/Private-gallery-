@@ -7,6 +7,7 @@ name: Private Gallery fast development
     - integration/novaos-1.7-home2
     - feature/novaos-visual-foundation
     - feature/novaos-sanctuary
+    - feature/novaos-sanctuary-integration
     - '!release/1.7.6.2-ui-browser-polish'
     - '!release/1.7.7-recently-deleted'
     paths:
@@ -27,7 +28,7 @@ name: Private Gallery fast development
 permissions:
   contents: read
 concurrency:
-  group: fast-${{ github.ref == 'refs/heads/feature/novaos-sanctuary' && github.sha || github.ref }}
+  group: fast-${{ (github.ref == 'refs/heads/feature/novaos-sanctuary' || github.ref == 'refs/heads/feature/novaos-sanctuary-integration') && github.sha || github.ref }}
   cancel-in-progress: true
 jobs:
   fast:
@@ -208,7 +209,7 @@ jobs:
 
           app/build/reports/lint-results-debug.html'
         if-no-files-found: warn
-    if: github.ref != 'refs/heads/integration/novaos-1.7-home2' && github.ref != 'refs/heads/feature/novaos-visual-foundation' && github.ref != 'refs/heads/feature/novaos-sanctuary' && github.ref != 'refs/heads/release/1.7.10-private-home' && github.ref != 'refs/heads/release/1.7.8-private-apps' && github.ref != 'refs/heads/release/1.7.9-evidence-locker' && (github.event_name == 'push' || github.event.pull_request.head.repo.fork == true) && !(github.event_name == 'push' && github.ref == 'refs/heads/release/1.7.6.2-ui-browser-polish' && contains(github.event.head_commit.message, '[focused1762]'))
+    if: github.ref != 'refs/heads/integration/novaos-1.7-home2' && github.ref != 'refs/heads/feature/novaos-visual-foundation' && (github.ref != 'refs/heads/feature/novaos-sanctuary' && github.ref != 'refs/heads/feature/novaos-sanctuary-integration') && github.ref != 'refs/heads/release/1.7.10-private-home' && github.ref != 'refs/heads/release/1.7.8-private-apps' && github.ref != 'refs/heads/release/1.7.9-evidence-locker' && (github.event_name == 'push' || github.event.pull_request.head.repo.fork == true) && !(github.event_name == 'push' && github.ref == 'refs/heads/release/1.7.6.2-ui-browser-polish' && contains(github.event.head_commit.message, '[focused1762]'))
 
   private-apps-checkpoint:
     if: github.event_name == 'push' && github.ref == 'refs/heads/release/1.7.8-private-apps'
@@ -553,9 +554,9 @@ jobs:
             app/build/outputs/connected_android_test_additional_output
 
   home2-integration:
-    if: github.event_name == 'push' && (github.ref == 'refs/heads/integration/novaos-1.7-home2' || github.ref == 'refs/heads/feature/novaos-visual-foundation' || github.ref == 'refs/heads/feature/novaos-sanctuary') && contains(github.event.head_commit.message, '[home2-runtime]')
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/integration/novaos-1.7-home2' || github.ref == 'refs/heads/feature/novaos-visual-foundation' || (github.ref == 'refs/heads/feature/novaos-sanctuary' || github.ref == 'refs/heads/feature/novaos-sanctuary-integration')) && contains(github.event.head_commit.message, '[home2-runtime]')
     runs-on: ubuntu-24.04
-    timeout-minutes: ${{ (github.ref == 'refs/heads/feature/novaos-visual-foundation' || github.ref == 'refs/heads/feature/novaos-sanctuary') && 60 || 45 }}
+    timeout-minutes: ${{ (github.ref == 'refs/heads/feature/novaos-visual-foundation' || (github.ref == 'refs/heads/feature/novaos-sanctuary' || github.ref == 'refs/heads/feature/novaos-sanctuary-integration')) && 60 || 45 }}
     permissions:
       contents: write
     steps:
@@ -591,12 +592,20 @@ jobs:
           PYTHONDONTWRITEBYTECODE=1 python3 scripts/tests/test_home2_emulator_preflight.py
       - name: Verify browser engine preservation and isolated APK
         run: |
-          python3 scripts/verify_v1_preservation1711.py
+          if [[ "$GITHUB_REF" == refs/heads/feature/novaos-sanctuary-integration ]]; then
+            baseline="$RUNNER_TEMP/sanctuary-v1-baseline"
+            git worktree add --detach "$baseline" 3f2bac952d68f54566251126329b643da498ca44
+            python3 "$baseline/scripts/verify_v1_preservation1711.py"
+            git worktree remove "$baseline"
+            python3 scripts/verify_sanctuary_browser_scope.py
+          else
+            python3 scripts/verify_v1_preservation1711.py
+          fi
           mkdir -p app/build/home2-evidence
           git rev-parse HEAD > app/build/home2-evidence/source-sha.txt
           apk=app/build/outputs/apk/debug/app-debug.apk
           "$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging "$apk" > app/build/home2-evidence/package.txt
-          if [[ "$GITHUB_REF" == refs/heads/feature/novaos-sanctuary ]]; then
+          if [[ "$GITHUB_REF" == refs/heads/feature/novaos-sanctuary || "$GITHUB_REF" == refs/heads/feature/novaos-sanctuary-integration ]]; then
             grep -F "package: name='uk.co.traynor.privategallery.hiddenprototype' versionCode='66' versionName='1.7.31-TEST-ONLY'" app/build/home2-evidence/package.txt
           elif [[ "$GITHUB_REF" == refs/heads/feature/novaos-visual-foundation ]]; then
             grep -F "package: name='uk.co.traynor.privategallery.hiddenprototype' versionCode='65' versionName='1.7.30-visual-foundation-TEST-ONLY'" app/build/home2-evidence/package.txt
@@ -640,23 +649,25 @@ jobs:
             adb shell settings get secure show_ime_with_hard_keyboard > app/build/home2-evidence/ime-with-hardware-keyboard.txt
             adb install -r app/build/outputs/apk/debug/app-debug.apk
             adb install -r app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
-            if [ "$GITHUB_REF" = refs/heads/feature/novaos-visual-foundation ] || [ "$GITHUB_REF" = refs/heads/feature/novaos-sanctuary ]; then bash scripts/run_visual_checkpoint.sh; fi
-            if [ "$GITHUB_REF" = refs/heads/feature/novaos-sanctuary ]; then bash scripts/run_visual_checkpoint.sh SanctuaryUiTest sanctuary-checkpoint; fi
-            if [ "$GITHUB_REF" = refs/heads/feature/novaos-sanctuary ]; then bash scripts/run_visual_checkpoint.sh SanctuaryDndUiTest sanctuary-dnd; fi
-            if [ "$GITHUB_REF" = refs/heads/feature/novaos-sanctuary ]; then bash scripts/run_visual_checkpoint.sh SanctuaryGuardianUiTest sanctuary-guardian; fi
-            if { [ "$GITHUB_REF" != refs/heads/feature/novaos-visual-foundation ] && [ "$GITHUB_REF" != refs/heads/feature/novaos-sanctuary ]; } || [ "$NOVA_VISUAL_FULL" = true ]; then adb install -r app/build/outputs/apk/debug/app-debug.apk && adb install -r app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk && python3 scripts/run_backup_restart62.py && python3 scripts/run_backup_repair62.py --redesign && bash scripts/run_home2_runtime.sh; fi
+            if [ "$GITHUB_REF" = refs/heads/feature/novaos-visual-foundation ] || [ "$GITHUB_REF" = refs/heads/feature/novaos-sanctuary ] || [ "$GITHUB_REF" = refs/heads/feature/novaos-sanctuary-integration ]; then bash scripts/run_visual_checkpoint.sh; fi
+            if [ "$GITHUB_REF" = refs/heads/feature/novaos-sanctuary ] || [ "$GITHUB_REF" = refs/heads/feature/novaos-sanctuary-integration ]; then bash scripts/run_visual_checkpoint.sh SanctuaryUiTest sanctuary-checkpoint; fi
+            if [ "$GITHUB_REF" = refs/heads/feature/novaos-sanctuary ] || [ "$GITHUB_REF" = refs/heads/feature/novaos-sanctuary-integration ]; then bash scripts/run_visual_checkpoint.sh SanctuaryDndUiTest sanctuary-dnd; fi
+            if [ "$GITHUB_REF" = refs/heads/feature/novaos-sanctuary ] || [ "$GITHUB_REF" = refs/heads/feature/novaos-sanctuary-integration ]; then bash scripts/run_visual_checkpoint.sh SanctuaryGuardianUiTest sanctuary-guardian; fi
+            if [ "$GITHUB_REF" = refs/heads/feature/novaos-sanctuary-integration ]; then bash scripts/run_visual_checkpoint.sh SanctuaryAccessibilityUiTest sanctuary-accessibility; fi
+            if [ "$GITHUB_REF" = refs/heads/feature/novaos-sanctuary-integration ]; then bash scripts/run_visual_checkpoint.sh SanctuaryBrowserGateTest sanctuary-browser uk.co.traynor.privategallery.core.browser.v2; fi
+            if { [ "$GITHUB_REF" != refs/heads/feature/novaos-visual-foundation ] && [ "$GITHUB_REF" != refs/heads/feature/novaos-sanctuary ] && [ "$GITHUB_REF" != refs/heads/feature/novaos-sanctuary-integration ]; } || [ "$NOVA_VISUAL_FULL" = true ]; then adb install -r app/build/outputs/apk/debug/app-debug.apk && adb install -r app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk && python3 scripts/run_backup_restart62.py && python3 scripts/run_backup_repair62.py --redesign && bash scripts/run_home2_runtime.sh; fi
       - name: Validate visual checkpoint report
         if: github.ref == 'refs/heads/feature/novaos-visual-foundation'
         run: |
           grep -Ex 'Android 17 visual checkpoint: [0-9]+/[0-9]+ PASS' app/build/home2-evidence/visual-checkpoint/result.txt
       - name: Validate actual Backup process restart evidence
-        if: (github.ref != 'refs/heads/feature/novaos-visual-foundation' && github.ref != 'refs/heads/feature/novaos-sanctuary') || contains(github.event.head_commit.message, '[visual-full]')
+        if: (github.ref != 'refs/heads/feature/novaos-visual-foundation' && (github.ref != 'refs/heads/feature/novaos-sanctuary' && github.ref != 'refs/heads/feature/novaos-sanctuary-integration')) || contains(github.event.head_commit.message, '[visual-full]')
         run: python3 scripts/verify_release1711_gate.py --restart-folder app/build/home2-evidence/backup-restart62 --source "$(git rev-parse HEAD)"
       - name: Validate every selected original Android report
-        if: (github.ref != 'refs/heads/feature/novaos-visual-foundation' && github.ref != 'refs/heads/feature/novaos-sanctuary') || contains(github.event.head_commit.message, '[visual-full]')
+        if: (github.ref != 'refs/heads/feature/novaos-visual-foundation' && (github.ref != 'refs/heads/feature/novaos-sanctuary' && github.ref != 'refs/heads/feature/novaos-sanctuary-integration')) || contains(github.event.head_commit.message, '[visual-full]')
         run: python3 scripts/verify_home2_runtime.py app/build/outputs/androidTest-results/connected/debug > app/build/home2-evidence/runtime.json
       - name: Preserve isolated Sanctuary build for physical Fold testing
-        if: github.ref == 'refs/heads/feature/novaos-sanctuary' && contains(github.event.head_commit.message, '[visual-full]')
+        if: (github.ref == 'refs/heads/feature/novaos-sanctuary' || github.ref == 'refs/heads/feature/novaos-sanctuary-integration') && contains(github.event.head_commit.message, '[visual-full]')
         uses: actions/upload-artifact@v4
         with:
           name: novaos-sanctuary-fold-test-only

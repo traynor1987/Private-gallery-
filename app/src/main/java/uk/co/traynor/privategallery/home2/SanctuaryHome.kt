@@ -43,6 +43,8 @@ import uk.co.traynor.privategallery.core.sanctuary.SanctuaryMode
 import uk.co.traynor.privategallery.core.sanctuary.SanctuaryPreset
 import uk.co.traynor.privategallery.core.sanctuary.SanctuarySession
 import uk.co.traynor.privategallery.core.sanctuary.SanctuaryStore
+import uk.co.traynor.privategallery.core.sanctuary.SanctuaryWhatsApp
+import uk.co.traynor.privategallery.core.sanctuary.sanctuaryEssentialNovaRoutes
 import java.text.DateFormat
 import java.util.Date
 import java.util.Locale
@@ -65,6 +67,8 @@ internal fun SanctuaryHome(
     onDndSettings: (() -> Unit)? = null,
     onExtended: (() -> Unit)? = null,
     onPhone: (() -> Unit)? = null,
+    novaAppUrls: Map<String, String> = emptyMap(),
+    onStartFoldTest: ((SanctuaryMode) -> Boolean)? = null,
 ) {
     val session by store.current.collectAsState()
     var selected by remember { mutableStateOf(SanctuaryMode.SELF_CARE) }
@@ -85,7 +89,9 @@ internal fun SanctuaryHome(
         viewHistory = false
     }
     edit?.let { mode ->
-        SanctuaryPresetEditor(mode, remember(mode) { store.preset(mode) }, androidApps, novaApps, { edit = null }) {
+        SanctuaryPresetEditor(
+            mode, remember(mode) { store.preset(mode) }, androidApps, novaApps, novaAppUrls, { edit = null },
+        ) {
             if (store.savePreset(mode, it)) {
                 presetRevision++
                 edit = null
@@ -132,8 +138,19 @@ internal fun SanctuaryHome(
                     modifier = Modifier.weight(1f).heightIn(min = 48.dp).testTag("sanctuary-start"),
                 ) { Text("Start ${selected.label}") }
             }
+            if (onStartFoldTest != null) {
+                SanctuaryMenuRow(
+                    "Start a 5-minute Fold test",
+                    "Uses this mode’s app choices with App Guardian enabled. Do Not Disturb and pinning stay off.",
+                    {
+                        message = if (onStartFoldTest(selected)) null
+                        else "Could not start the Fold test. Check App Guardian setup."
+                    },
+                    "sanctuary-fold-test",
+                )
+            }
         } else {
-            SanctuaryLauncher(current, androidApps, novaApps, onLaunchAndroid, onLaunchNova, wide)
+            SanctuaryLauncher(current, androidApps, novaApps, novaAppUrls, onLaunchAndroid, onLaunchNova, wide)
             if (current.offerPinning && pinningControls != null) {
                 SanctuaryTitle("Android screen pinning")
                 Text(
@@ -332,11 +349,16 @@ private fun SanctuaryIcon(icon: ImageVector) {
 @Composable
 private fun SanctuaryPresetEditor(
     mode: SanctuaryMode, initial: SanctuaryPreset, androidApps: Map<String, String>, novaApps: Map<String, String>,
-    onBack: () -> Unit, onSave: (SanctuaryPreset) -> Boolean,
+    novaAppUrls: Map<String, String>, onBack: () -> Unit, onSave: (SanctuaryPreset) -> Boolean,
 ) {
     var duration by remember(mode) { mutableStateOf(initial.minutes.toString()) }
     var android by remember(mode) { mutableStateOf(initial.androidApps) }
-    var nova by remember(mode) { mutableStateOf(initial.novaApps) }
+    var blockedNova by remember(mode) { mutableStateOf(initial.blockedNovaApps) }
+    var allowWhatsApp by remember(mode) { mutableStateOf(initial.allowWhatsApp) }
+    val configurableNova = novaApps.filterKeys { id ->
+        id !in sanctuaryEssentialNovaRoutes && !SanctuaryWhatsApp.isRelatedApp(id) &&
+            novaAppUrls[id]?.let(SanctuaryWhatsApp::isRelatedUrl) != true
+    }
     var dnd by remember(mode) { mutableStateOf(initial.enableDnd) }
     var pinning by remember(mode) { mutableStateOf(initial.offerPinning) }
     var guardian by remember(mode) { mutableStateOf(initial.enableGuardian) }
@@ -357,7 +379,8 @@ private fun SanctuaryPresetEditor(
                     error = !onSave(initial.copy(
                         minutes = it,
                         androidApps = android,
-                        novaApps = nova,
+                        blockedNovaApps = blockedNova,
+                        allowWhatsApp = allowWhatsApp,
                         enableDnd = dnd,
                         offerPinning = pinning,
                         enableGuardian = guardian,
@@ -379,7 +402,20 @@ private fun SanctuaryPresetEditor(
         SanctuaryModeSwitch("Allow approved Android apps", "Shows your selected Android apps in the launcher. Phone and recovery controls stay available.",
             externalApps, "sanctuary-option-external-apps") { externalApps = it }
         SanctuaryTitle("NovaOS apps")
-        SanctuaryChoices(novaApps, nova, "internal") { id, enabled -> nova = if (enabled) nova + id else nova - id }
+        Text(
+            "Installed NovaOS apps are approved by default. Untick an app to restrict it in this mode. " +
+                "Recovery controls stay available.",
+            style = MaterialTheme.typography.bodySmall,
+        )
+        SanctuaryModeSwitch(
+            "Allow WhatsApp inside NovaOS",
+            "Off by default. Turning this on permits WhatsApp destinations, including WhatsApp Web. " +
+                "Chat Lite and the Favourites filter do not isolate conversations.",
+            allowWhatsApp, "sanctuary-option-whatsapp",
+        ) { allowWhatsApp = it }
+        SanctuaryChoices(configurableNova, configurableNova.keys - blockedNova, "internal") { id, enabled ->
+            blockedNova = if (enabled) blockedNova - id else blockedNova + id
+        }
         SanctuaryTitle("Android apps")
         if (externalApps) {
             Text("Select installed apps. Essential device and recovery controls stay available.", style = MaterialTheme.typography.bodySmall)
@@ -429,10 +465,10 @@ private fun SanctuaryChoices(apps: Map<String, String>, selected: Set<String>, g
 @Composable
 private fun SanctuaryLauncher(
     session: SanctuarySession, androidApps: Map<String, String>, novaApps: Map<String, String>,
-    onAndroid: (String) -> Unit, onNova: (String) -> Unit, wide: Boolean,
+    novaAppUrls: Map<String, String>, onAndroid: (String) -> Unit, onNova: (String) -> Unit, wide: Boolean,
 ) {
     SanctuaryTitle("Approved apps")
-    val internal = novaApps.filterKeys { it in session.novaApps }
+    val internal = novaApps.filterKeys { session.allowsNovaApp(it, novaAppUrls[it]) }
     val external = androidApps.filterKeys { it in session.androidApps }
     if (!session.allowExternalApps) {
         SanctuaryLaunchGroup("Inside NovaOS", internal, "internal", onNova)

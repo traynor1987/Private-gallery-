@@ -137,6 +137,7 @@ import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.withLock
@@ -211,6 +212,10 @@ import uk.co.traynor.privategallery.core.browser.BrowserSearchEngine
 import uk.co.traynor.privategallery.core.vault.VaultImportCoordinator
 import uk.co.traynor.privategallery.core.vpn.BrowserVpnController
 import uk.co.traynor.privategallery.core.browser.v2.BrowserV2Session
+import uk.co.traynor.privategallery.core.privateapps.PrivateAppCatalog
+import uk.co.traynor.privategallery.core.sanctuary.SanctuarySession
+import uk.co.traynor.privategallery.core.sanctuary.SanctuaryStore
+import uk.co.traynor.privategallery.core.sanctuary.SanctuaryWhatsApp
 import uk.co.traynor.privategallery.core.browser.v2.BrowserV2FatalCrashCapture
 import uk.co.traynor.privategallery.core.browser.v2.BrowserVpnGate
 import uk.co.traynor.privategallery.core.browser.v2.NoopBrowserV2Listener
@@ -1040,6 +1045,17 @@ class MainActivity : FragmentActivity() {
     private var vpnProfileStatus by mutableStateOf("")
     private var vpnProfiles by mutableStateOf<List<VpnProfileSummary>>(emptyList())
     private var browserWebView: WebView? = null
+
+    private fun activeSanctuaryForBrowser(): SanctuarySession? {
+        val store = SanctuaryStore.get(applicationContext)
+        return store.current.value?.takeIf { store.remainingMillis(it) > 0L }
+    }
+
+    private fun sanctuaryBrowserDestinationRestricted(url: String): Boolean =
+        activeSanctuaryForBrowser()?.allowWhatsApp == false && SanctuaryWhatsApp.isRelatedUrl(url)
+
+    private fun sanctuaryBrowserAppRestricted(app: PrivateAppCatalog.App): Boolean =
+        activeSanctuaryForBrowser()?.allowsNovaApp("web:${app.id()}", app.startUrl()) == false
     /** V2 owns its tab WebViews independently of Compose and of the legacy single-view field. */
     private val browserV2Session by lazy {
         BrowserV2Session(
@@ -1053,6 +1069,8 @@ class MainActivity : FragmentActivity() {
             },
             listener = NoopBrowserV2Listener,
             onMetadataChanged = ::saveBrowserSessionMetadata,
+            destinationRestricted = ::sanctuaryBrowserDestinationRestricted,
+            privateAppRestricted = ::sanctuaryBrowserAppRestricted,
         )
     }
     private var browserBookmarks by mutableStateOf<List<BrowserBookmark>>(emptyList())
@@ -1260,6 +1278,16 @@ class MainActivity : FragmentActivity() {
         clearBrowserDataOnLock = appSettings.getBoolean("browser-clear-data-on-lock", false)
         browserSaveHistory = appSettings.getBoolean("browser-save-history", false)
         browserV2Session.contentBlocker.enabled = appSettings.getBoolean("browser-content-blocking", true)
+        lifecycleScope.launch {
+            val store = SanctuaryStore.get(applicationContext)
+            store.current.collectLatest { session ->
+                browserV2Session.enforceDestinationPolicy()
+                if (session != null) {
+                    delay(store.remainingMillis(session))
+                    browserV2Session.enforceDestinationPolicy()
+                }
+            }
+        }
         browserAutoConnectVpn = appSettings.getBoolean("browser-vpn-auto-connect", false)
         browserRequireVpn = appSettings.getBoolean("browser-vpn-required", false)
         wireGuardEngine.onStateChanged = { state ->
@@ -1908,6 +1936,12 @@ class MainActivity : FragmentActivity() {
     }
     private fun queueNovaPrivateApp(app:uk.co.traynor.privategallery.core.privateapps.PrivateAppCatalog.App,current:()->Boolean) {
         check(current())
+        if (sanctuaryBrowserAppRestricted(app)) {
+            cancelPendingNovaPrivateApp()
+            returnPrivateHome()
+            homeNotice("This app is restricted by Sanctuary.")
+            return
+        }
         novaPrivateAppLaunch=PendingNovaPrivateApp(app,pendingNovaAppAuthority(),true)
         retryPendingNovaPrivateApp()
     }
@@ -1915,6 +1949,12 @@ class MainActivity : FragmentActivity() {
         val pending=novaPrivateAppLaunch?:return
         if(!activityResumed)return // Android consent may own the foreground; never revive an operation here.
         if(!pending.current()) {cancelPendingNovaPrivateApp();returnPrivateHome();return}
+        if (sanctuaryBrowserAppRestricted(pending.app)) {
+            cancelPendingNovaPrivateApp()
+            returnPrivateHome()
+            homeNotice("This app is restricted by Sanctuary.")
+            return
+        }
         if(!pending.authenticated || !browserV2Session.mediaNetworkingAllowed())return
         if(!uk.co.traynor.privategallery.ui.BrowserBetaAcknowledgement(this).accepted())return
         val latest=runCatching {privateAppsController()?.load()?.apps?.singleOrNull {it.id()==pending.app.id()}}.getOrNull()
@@ -2278,8 +2318,12 @@ class MainActivity : FragmentActivity() {
             openBrowser()
         }
         return uk.co.traynor.privategallery.core.home2.NativeAppBridge(store,current,
-            {id->
+            launch@{id->
                 val intended=store.read().apps.single {it.id()==id}
+                if (sanctuaryBrowserAppRestricted(intended)) {
+                    homeNotice("This app is restricted by Sanctuary.")
+                    return@launch
+                }
                 enterBrowser()
                 val controller=privateAppsController()
                 if(controller!=null) {
@@ -2292,7 +2336,11 @@ class MainActivity : FragmentActivity() {
             },{id->
                 check(android.os.Looper.myLooper()===android.os.Looper.getMainLooper());check(current())
                 browserV2Session.removePrivateApp(id)
-            },{url->
+            }, openUrl@{url->
+                if (sanctuaryBrowserDestinationRestricted(url)) {
+                    homeNotice("This website is restricted by Sanctuary.")
+                    return@openUrl
+                }
                 enterBrowser()
                 if(browserV2Session.mediaNetworkingAllowed())browserV2Session.newTab(url)
                 else homeNotice("Connect Browser before opening this result.")

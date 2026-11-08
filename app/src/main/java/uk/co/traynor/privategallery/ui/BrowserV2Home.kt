@@ -550,6 +550,7 @@ internal fun BrowserV2Home(
             override fun onMessage(value: BrowserMessage) {
                 ui.message = when (value) {
                     BrowserMessage.VpnRequired -> null
+                    BrowserMessage.SanctuaryRestricted -> "This destination is restricted by Sanctuary."
                     BrowserMessage.UnsupportedScheme -> "This link type is not supported in NovaOS."
                     BrowserMessage.NetworkError -> "Page load failed. Check the connection and try again."
                     BrowserMessage.TlsRejected -> "TLS certificate error. This page was not opened."
@@ -812,6 +813,7 @@ internal fun BrowserV2Home(
 
     // Obtain the Android view after the listener is bound, but never let a provider failure abort
     // the surrounding Compose tree. The V2 chrome is the useful recovery surface.
+    val sanctuaryRestricted = session.activeDestinationRestricted()
     val activeWebView = if (pendingPrivateApp!=null || staticContentHost || connectionPresentation.blocked) null else session.activeWebViewOrNull()
     LaunchedEffect(session, staticContentHost) {
         if (!staticContentHost) session.recordAcceptanceUiEvent("REAL_MODE_ENTERED")
@@ -945,16 +947,21 @@ internal fun BrowserV2Home(
                             verticalArrangement = Arrangement.Center,
                             horizontalAlignment = Alignment.CenterHorizontally,
                         ) {
-                            Text("BROWSER UNAVAILABLE", style = MaterialTheme.typography.titleMedium)
-                            Text("The Android WebView provider could not start. Your tabs remain available.", color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            TextButton(onClick = { session.retryActiveWebView() }) { Text("Retry") }
+                            if (sanctuaryRestricted) {
+                                Text("Blocked by Sanctuary", style = MaterialTheme.typography.titleMedium)
+                                Text("This destination is outside your session policy.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            } else {
+                                Text("BROWSER UNAVAILABLE", style = MaterialTheme.typography.titleMedium)
+                                Text("The Android WebView provider could not start. Your tabs remain available.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                TextButton(onClick = { session.retryActiveWebView() }) { Text("Retry") }
+                            }
                         }
                     }
                 }
-                session.pageFailure(active.id)?.takeIf { pendingPrivateApp==null && !connectionPresentation.blocked }?.let { detail ->
+                session.pageFailure(active.id)?.takeIf { pendingPrivateApp==null && !connectionPresentation.blocked && !sanctuaryRestricted }?.let { detail ->
                     BrowserPageError(detail,{session.reloadActive()},::openSettings)
                 }
-                if(pendingPrivateApp==null && appStyle && active.loading && !connectionPresentation.blocked && session.pageFailure(active.id)==null)
+                if(pendingPrivateApp==null && appStyle && active.loading && !connectionPresentation.blocked && !sanctuaryRestricted && session.pageFailure(active.id)==null)
                     PrivateAppLoading(checkNotNull(activePrivateApp))
                 if (acceptanceProbeEnabled) AcceptanceProbeLabel("CONTENT_HOST", Color(0xFFFFD800))
             }
@@ -1213,7 +1220,12 @@ internal fun BrowserV2Home(
             val choice=when {plan.openIntent!=null->BrowserExternalChoice.APP;plan.httpsFallback!=null->BrowserExternalChoice.WEBSITE;else->BrowserExternalChoice.UNSUPPORTED}
             BrowserExternalNavigationDialog(choice,onAccept={
                 when(choice){
-                    BrowserExternalChoice.APP->plan.openIntent?.let {intent->runCatching{context.startActivity(intent)}}
+                    BrowserExternalChoice.APP->plan.openIntent?.let { intent ->
+                        if (session.interceptRestrictedDestination(value) ||
+                            intent.dataString?.let(session::interceptRestrictedDestination) == true
+                        ) ui.message = "This destination is restricted by Sanctuary."
+                        else runCatching { context.startActivity(intent) }
+                    }
                     BrowserExternalChoice.WEBSITE->plan.httpsFallback?.let(session::navigateActive)
                     BrowserExternalChoice.UNSUPPORTED->Unit
                 }

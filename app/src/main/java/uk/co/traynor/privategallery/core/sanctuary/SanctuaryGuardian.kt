@@ -3,6 +3,7 @@ package uk.co.traynor.privategallery.core.sanctuary
 import android.Manifest
 import android.app.ActivityManager
 import android.app.AppOpsManager
+import android.accessibilityservice.AccessibilityServiceInfo
 import android.app.ApplicationExitInfo
 import android.app.NotificationManager
 import android.content.BroadcastReceiver
@@ -16,12 +17,13 @@ import android.os.Process
 import android.os.SystemClock
 import android.provider.Settings
 import android.telecom.TelecomManager
+import android.view.accessibility.AccessibilityManager
 import uk.co.traynor.privategallery.MainActivity
 import uk.co.traynor.privategallery.core.home2.SpaceContext
 
 /** User-facing capability checks and explicit, allowlisted launch operations. */
 object SanctuaryGuardian {
-    internal enum class MonitorState { PAUSED, STARTING, WAITING, MONITORING, BLOCKING, FAILED }
+    internal enum class MonitorState { PAUSED, STARTING, WAITING, MONITORING, BLOCKING, NAVIGATING_HOME, HOLDING_HOME, COVER_ONLY, FAILED }
 
     @Volatile internal var monitorState = MonitorState.PAUSED
     internal val overlayNovaApps = mapOf("arcade" to "Nova Arcade", "mind" to "Nova Mind", "nova-calculator" to "Nova Calculator")
@@ -31,7 +33,7 @@ object SanctuaryGuardian {
 
     internal fun openApprovedNova(context: Context, route: String): Boolean {
         val session = SanctuaryStore.get(context).refresh() ?: return false
-        if (route !in overlayNovaApps || route !in session.novaApps) return false
+        if (route !in overlayNovaApps || !session.allowsNovaApp(route)) return false
         val request = NovaDestination(route, session.id, SystemClock.elapsedRealtime() + 60_000L)
         novaDestination = request
         return openNova(context).also { if (!it && novaDestination == request) novaDestination = null }
@@ -43,7 +45,7 @@ object SanctuaryGuardian {
         val session = SanctuaryStore.get(context).refresh() ?: return null
         return request.route.takeIf {
             request.session == session.id && SystemClock.elapsedRealtime() < request.deadline &&
-                it in overlayNovaApps && it in session.novaApps
+                it in overlayNovaApps && session.allowsNovaApp(it)
         }
     }
 
@@ -61,6 +63,32 @@ object SanctuaryGuardian {
             context.getSystemService(NotificationManager::class.java)
                 ?.getNotificationChannel(SanctuaryGuardianService.CHANNEL)?.importance != NotificationManager.IMPORTANCE_NONE
 
+    fun hasAccessibilityAccess(context: Context): Boolean =
+        context.getSystemService(AccessibilityManager::class.java)
+            ?.getEnabledAccessibilityServiceList(AccessibilityServiceInfo.FEEDBACK_ALL_MASK)
+            ?.any {
+                val service = it.resolveInfo.serviceInfo
+                service.packageName == context.packageName &&
+                    service.name == SanctuaryAccessibilityService::class.java.name
+            } == true
+
+    fun isAccessibilityConnected(): Boolean = SanctuaryAccessibility.connected
+
+    fun openAccessibilitySettings(context: Context): Boolean =
+        openSystem(context, Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
+
+    internal fun resolvedHomePackage(context: Context): String? {
+        val home = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME)
+        val flags = PackageManager.ResolveInfoFlags.of(PackageManager.MATCH_DEFAULT_ONLY.toLong())
+        val pm = context.packageManager
+        val activity = pm.resolveActivity(home, flags)?.activityInfo ?: return null
+        return activity.packageName.takeIf {
+            it != context.packageName && pm.queryIntentActivities(home, flags).any { match ->
+                match.activityInfo.packageName == activity.packageName && match.activityInfo.name == activity.name
+            }
+        }
+    }
+
     internal fun hasPermissions(context: Context): Boolean =
         hasUsageAccess(context) && hasOverlayAccess(context) && hasNotificationAccess(context)
 
@@ -75,7 +103,14 @@ object SanctuaryGuardian {
             MonitorState.STARTING -> "Starting App Guardian"
             MonitorState.WAITING -> "Monitoring · waiting for a foreground app"
             MonitorState.MONITORING -> "Monitoring Android apps"
-            MonitorState.BLOCKING -> "Sanctuary is covering an unapproved app"
+            MonitorState.BLOCKING -> if (hasAccessibilityAccess(context) && isAccessibilityConnected()) {
+                "Covering an unapproved app · Waiting to confirm its window"
+            } else {
+                "Covering an unapproved app · Home navigation unavailable"
+            }
+            MonitorState.NAVIGATING_HOME -> "Covering an unapproved app · Moving to Android Home"
+            MonitorState.HOLDING_HOME -> "Protection active · Android Home is behind Sanctuary"
+            MonitorState.COVER_ONLY -> "Covering an unapproved app · Android Home could not be confirmed"
             MonitorState.FAILED -> "Protection paused · Android monitoring unavailable"
         }
     }
@@ -143,6 +178,7 @@ object SanctuaryGuardian {
         for (intent in listOf(
             Intent(Settings.ACTION_SETTINGS),
             Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS),
+            Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS),
             Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION),
             Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS),
             Intent(Intent.ACTION_DIAL),

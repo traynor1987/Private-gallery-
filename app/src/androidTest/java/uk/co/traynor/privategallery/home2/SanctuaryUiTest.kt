@@ -128,6 +128,45 @@ class SanctuaryUiTest {
         }
     }
 
+    @Test fun internalAppDefaultsStayDynamicDuringTheFiveMinuteFoldTest() {
+        val persistence = object : SanctuaryPersistence {
+            private var state: SanctuarySnapshot? = null
+            override fun read() = state
+            override fun write(value: SanctuarySnapshot): Boolean {
+                state = value
+                return true
+            }
+        }
+        val store = SanctuaryStore(persistence) { SanctuaryTime(1_000_000_000L, 120_000L, 1) }
+        val apps = mutableStateOf(mapOf(
+            "photos" to "Gallery", "web:initial" to "YouTube Music", "web:renamed" to "A renamed app",
+            "chat" to "Nova Chat Lite",
+        ))
+        compose.setContent {
+            SanctuaryHome(store, emptyMap(), apps.value, "Guardian off", store::start, {}, {}, {}, {},
+                novaAppUrls = mapOf("web:renamed" to "https://web.whatsapp.com/"),
+                onStartFoldTest = store::startFoldTest)
+        }
+        compose.onNodeWithTag("sanctuary-mode-work").performScrollTo().performClick()
+        compose.onNodeWithTag("sanctuary-edit-preset").performScrollTo().performClick()
+        compose.onNodeWithTag("sanctuary-option-whatsapp").performScrollTo().assertIsOff()
+        compose.onNodeWithTag("sanctuary-allow-internal-photos").performScrollTo().assertIsOn().performClick()
+        compose.onNodeWithTag("sanctuary-allow-internal-web:initial").performScrollTo().assertIsOn()
+        compose.onNodeWithTag("sanctuary-save-preset").performScrollTo().performClick()
+        compose.onNodeWithTag("sanctuary-fold-test").performScrollTo().performClick()
+        compose.onNodeWithTag("sanctuary-launch-internal-web:initial").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithTag("sanctuary-launch-internal-photos").assertDoesNotExist()
+        compose.onNodeWithTag("sanctuary-launch-internal-web:renamed").assertDoesNotExist()
+        compose.onNodeWithTag("sanctuary-launch-internal-chat").assertDoesNotExist()
+        compose.runOnIdle {
+            val session = checkNotNull(store.current.value)
+            check(store.remainingMillis(session) == 300_000L)
+            check(store.preset(SanctuaryMode.WORK).minutes == SanctuaryMode.WORK.defaultMinutes)
+            apps.value = apps.value + ("web:newly-installed" to "New Store app")
+        }
+        compose.onNodeWithTag("sanctuary-launch-internal-web:newly-installed").performScrollTo().assertIsDisplayed()
+    }
+
     private fun openHomeSettings() {
         compose.onNodeWithTag("open-apps").performClick()
         compose.onNodeWithTag("drawer-search").performTextInput("Home settings")

@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="sanctuary_accessibility_label">Nova Sanctuary app guardian</string>
+    <string name="sanctuary_accessibility_description">During a Sanctuary session, use app identities from window transitions to move a covered, unapproved app to Android Home. NovaOS does not access messages, keystrokes, screenshots or window contents. Turn this service off in Android Accessibility settings.</string>
+</resources>

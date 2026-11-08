@@ -50,6 +50,20 @@ internal fun SanctuaryPermissionScreen(
     val usage = remember(context, permissionResult) { SanctuaryGuardian.hasUsageAccess(context) }
     val overlays = remember(context, permissionResult) { SanctuaryGuardian.hasOverlayAccess(context) }
     val notifications = remember(context, permissionResult) { SanctuaryGuardian.hasNotificationAccess(context) }
+    val accessibility = remember(context, permissionResult) {
+        SanctuaryGuardian.hasAccessibilityAccess(context)
+    }
+    val accessibilityConnected = remember(context, permissionResult) {
+        SanctuaryGuardian.isAccessibilityConnected()
+    }
+    val dndAccess = remember(context, permissionResult) {
+        context.getSystemService(android.app.NotificationManager::class.java)
+            ?.isNotificationPolicyAccessGranted == true
+    }
+    val managedPinning = remember(context, permissionResult) {
+        context.getSystemService(android.app.admin.DevicePolicyManager::class.java)
+            ?.isLockTaskPermitted(context.packageName)
+    }
     Column(Modifier.fillMaxSize().safeDrawingPadding().testTag("sanctuary-permissions")) {
         PreviewHeader("App Guardian setup", status, onBack)
         Column(
@@ -68,9 +82,37 @@ internal fun SanctuaryPermissionScreen(
                 ) SanctuaryGuardian.openNotificationSettings(context)
                 else requestNotifications.launch(Manifest.permission.POST_NOTIFICATIONS)
             }
+            Text("Optional Home navigation", style = MaterialTheme.typography.titleMedium)
+            Text(
+                when {
+                    accessibilityConnected && accessibility -> "Accessibility enabled and connected"
+                    accessibility -> "Accessibility enabled · waiting for Android to connect"
+                    else -> "Accessibility off · cover only"
+                },
+                modifier = Modifier.testTag("sanctuary-accessibility-status"),
+            )
+            Text(
+                "Android grants Accessibility services broad powers. Sanctuary uses the foreground package and window " +
+                    "transition only, and requests Home once when it confirms an unapproved app. It does not request " +
+                    "window content, read text, or record or send events. Enable or disable Nova Sanctuary in Android " +
+                    "Accessibility settings. Without this permission, the overlay can still cover a blocked app, " +
+                    "but expiry may uncover the app underneath.",
+                style = MaterialTheme.typography.bodyMedium,
+            )
+            OutlinedButton(
+                onClick = { SanctuaryGuardian.openAccessibilitySettings(context) },
+                modifier = Modifier.testTag("sanctuary-open-accessibility-settings"),
+            ) { Text("Open Android Accessibility settings") }
+            HorizontalDivider()
+            Text(if (dndAccess) "Do Not Disturb access granted" else "Do Not Disturb access off")
+            Text(when (managedPinning) {
+                true -> "Screen pinning unavailable under managed lock-task policy."
+                false -> "Optional screen pinning uses Android’s confirmation. See the pinning controls for its current state."
+                null -> "Screen pinning availability could not be checked."
+            })
             Text(
                 "Android can pause monitoring when permissions are removed, the app is stopped, or battery limits apply. " +
-                    "Phone and Android Settings remain available. Accessibility is unused.",
+                    "Phone and Android Settings remain available.",
                 style = MaterialTheme.typography.bodyMedium,
             )
             Button(onClick = onResume, enabled = activeSession && usage && overlays && notifications, modifier = Modifier.fillMaxWidth()) {

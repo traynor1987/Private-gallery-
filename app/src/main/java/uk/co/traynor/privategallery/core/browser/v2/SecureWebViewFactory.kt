@@ -90,7 +90,14 @@ class SecureWebViewFactory(
             }
 
             override fun shouldInterceptRequest(view: WebView, request: WebResourceRequest): WebResourceResponse? {
-                callbacks.onMediaRequestObserved(tabId, request.url.toString(), request.requestHeaders)
+                val url = request.url.toString()
+                if (callbacks.interceptRestrictedDestination(url)) {
+                    return WebResourceResponse(
+                        "text/plain", "UTF-8", 403, "Forbidden", mapOf("Cache-Control" to "no-store"),
+                        java.io.ByteArrayInputStream(ByteArray(0)),
+                    )
+                }
+                callbacks.onMediaRequestObserved(tabId, url, request.requestHeaders)
                 if (!contentBlocker.shouldBlock(pageUrl.get(), request.url.toString(), request.isForMainFrame)) return null
                 return WebResourceResponse("text/plain", "UTF-8", java.io.ByteArrayInputStream(ByteArray(0)))
             }
@@ -255,6 +262,8 @@ class SecureWebViewFactory(
 interface BrowserWebViewCallbacks {
     /** @return true when the navigation must be cancelled. */
     fun onNavigationRequest(tabId: String, url: String, mainFrame: Boolean, allowed: Boolean): Boolean
+    /** WebView invokes resource interception off the UI thread. */
+    fun interceptRestrictedDestination(url: String): Boolean = false
     fun onPageState(tabId: String, url: String, title: String, loading: Boolean, canGoBack: Boolean, canGoForward: Boolean)
     fun onPageCommitVisible(tabId: String) = Unit
     fun onStructuralEvent(tabId: String, event: String, details: Map<String, String>) = Unit

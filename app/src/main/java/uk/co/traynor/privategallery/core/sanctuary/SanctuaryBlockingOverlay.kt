@@ -22,6 +22,7 @@ import android.widget.ScrollView
 import android.widget.TextView
 import java.util.Locale
 import kotlin.math.roundToInt
+import uk.co.traynor.privategallery.core.sanctuary.SanctuaryHomeTransition.Display
 
 /** A touch-consuming app surface below Android's security and navigation windows. */
 internal class SanctuaryBlockingOverlay(
@@ -46,6 +47,11 @@ internal class SanctuaryBlockingOverlay(
         setTextColor(overlayTextColor)
         importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_YES
     }
+    private val status = TextView(context).apply {
+        gravity = Gravity.CENTER
+        textSize = 14f
+        setTextColor(accent)
+    }
     private val ring = CountdownRing(context)
     private val surface = buildSurface(service, session, onNova, onPhone, onSettings, onApp, onNovaApp)
 
@@ -65,10 +71,17 @@ internal class SanctuaryBlockingOverlay(
         })
     }
 
-    fun update(session: SanctuarySession, remaining: Long) {
+    fun update(session: SanctuarySession, remaining: Long, display: Display) {
         val seconds = (remaining + 999L) / 1_000L
         val text = String.format(Locale.ROOT, "%02d:%02d:%02d", seconds / 3_600, seconds / 60 % 60, seconds % 60)
         if (timer.text.toString() != text) timer.text = text
+        val message = when (display) {
+            Display.REDIRECTING -> "Protection active · Moving to Android Home"
+            Display.HELD_ON_HOME -> "Protection active · Android Home is behind Sanctuary"
+            Display.DEGRADED -> "Cover only · Android Home could not be confirmed"
+            else -> "Covering an app outside your approved list"
+        }
+        if (status.text.toString() != message) status.text = message
         ring.fraction = (remaining.toDouble() / (session.expiresAt - session.startedAt).coerceAtLeast(1L)).toFloat()
     }
 
@@ -85,7 +98,7 @@ internal class SanctuaryBlockingOverlay(
         session: SanctuarySession,
         onNova: () -> Unit,
         onPhone: () -> Unit,
-            onSettings: () -> Unit,
+        onSettings: () -> Unit,
         onApp: (String) -> Unit,
         onNovaApp: (String) -> Unit,
     ): ScrollView = ScrollView(context).apply {
@@ -107,15 +120,16 @@ internal class SanctuaryBlockingOverlay(
             setPadding(dp(24), dp(36), dp(24), dp(36))
         }
         column.label("NOVA SANCTUARY  /  ${session.mode.label.uppercase(Locale.ROOT)}", 13f, accent, 8)
-        column.label("Make room for what matters.", 29f, overlayTextColor, 16, heading = true)
+        column.label("Mindfulness", 32f, overlayTextColor, 16, heading = true)
         column.addView(FrameLayout(context).apply {
             addView(ring, FrameLayout.LayoutParams(dp(154), dp(154), Gravity.CENTER))
             addView(timer, FrameLayout.LayoutParams(dp(154), dp(154), Gravity.CENTER))
         }, LinearLayout.LayoutParams(dp(160), dp(160)).apply { bottomMargin = dp(14) })
-        column.label("This app is outside your approved list.", 16f, muted, 4)
+        column.addView(status, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT)
+            .apply { bottomMargin = dp(8) })
         column.label("Pause. Breathe out slowly. Choose where to spend your attention.", 14f, muted, 20)
         column.addAction("Return to NovaOS", prominent = true, onClick = onNova)
-        val novaApps = SanctuaryGuardian.overlayNovaApps.filterKeys { it in session.novaApps }
+        val novaApps = SanctuaryGuardian.overlayNovaApps.filterKeys { session.allowsNovaApp(it) }
         if (novaApps.isNotEmpty()) {
             column.label("Approved NovaOS apps", 16f, overlayTextColor, 8, heading = true, top = 12)
             novaApps.forEach { (route, label) -> column.addAction(label) { onNovaApp(route) } }

@@ -95,7 +95,12 @@ internal class VisualNavigator {
 }
 
 @Composable
-internal fun VisualFoundation(navigator: VisualNavigator, onClose: () -> Unit, onRealApp: (String) -> Unit) {
+internal fun VisualFoundation(
+    navigator: VisualNavigator,
+    onClose: () -> Unit,
+    onRealApp: (String) -> Unit,
+    canOpenModule: (String) -> Boolean = { true },
+) {
     val module = visualModules.firstOrNull { it.id == navigator.moduleId }
     val colors = MaterialTheme.colorScheme
     Surface(color = colors.background) {
@@ -124,7 +129,7 @@ internal fun VisualFoundation(navigator: VisualNavigator, onClose: () -> Unit, o
                 VisualDemoIndicator()
             }
             if (module == null) {
-                VisualCatalogue(onOpen = navigator::open, onRealApp = onRealApp)
+                VisualCatalogue(onOpen = { if (canOpenModule(it)) navigator.open(it) }, onRealApp = onRealApp)
             } else {
                 VisualModuleBody(module, navigator, onRealApp)
             }

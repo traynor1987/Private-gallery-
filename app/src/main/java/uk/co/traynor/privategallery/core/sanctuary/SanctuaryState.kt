@@ -51,6 +51,8 @@ data class SanctuaryPreset(
     val offerPinning: Boolean = false,
     val enableGuardian: Boolean = true,
     val allowExternalApps: Boolean = true,
+    val blockedNovaApps: Set<String> = emptySet(),
+    val allowWhatsApp: Boolean = false,
 )
 
 data class SanctuarySession(
@@ -67,7 +69,12 @@ data class SanctuarySession(
     val offerPinning: Boolean = false,
     val enableGuardian: Boolean = true,
     val allowExternalApps: Boolean = true,
-)
+    val blockedNovaApps: Set<String> = emptySet(),
+    val allowWhatsApp: Boolean = false,
+) {
+    fun allowsNovaApp(id: String, url: String? = null): Boolean =
+        sanctuaryAllowsInternalApp(blockedNovaApps, allowWhatsApp, id, url)
+}
 
 enum class SanctuaryOutcome { EXPIRED, ENDED }
 
@@ -110,25 +117,36 @@ class SanctuaryStore internal constructor(
     @Synchronized
     fun savePreset(mode: SanctuaryMode, preset: SanctuaryPreset): Boolean {
         if (!preset.isValid()) return false
-        val copy = preset.copy(androidApps = immutableSet(preset.androidApps), novaApps = immutableSet(preset.novaApps))
+        val copy = preset.copy(
+            androidApps = immutableSet(preset.androidApps),
+            novaApps = immutableSet(preset.novaApps),
+            blockedNovaApps = immutableSet(preset.blockedNovaApps),
+        )
         return commit(state.copy(presets = state.presets + (mode to copy)))
     }
 
     @Synchronized
-    fun start(mode: SanctuaryMode): Boolean {
+    fun start(mode: SanctuaryMode): Boolean = start(mode, foldTest = false)
+
+    @Synchronized
+    fun startFoldTest(mode: SanctuaryMode): Boolean = start(mode, foldTest = true)
+
+    private fun start(mode: SanctuaryMode, foldTest: Boolean): Boolean {
         if (refresh() != null) return false
         // If the expiry transition could not be persisted, do not discard its history.
         if (state.session != null) return false
         val time = clock()
         val preset = preset(mode)
-        val duration = preset.minutes * MINUTE_MS
+        val duration = (if (foldTest) 5 else preset.minutes) * MINUTE_MS
         val session = SanctuarySession(
             UUID.randomUUID().toString(), mode, time.wall, time.wall + duration,
             preset.androidApps, preset.novaApps, 0, time.elapsed + duration, time.boot,
-            enableDnd = preset.enableDnd,
-            offerPinning = preset.offerPinning,
-            enableGuardian = preset.enableGuardian,
+            enableDnd = !foldTest && preset.enableDnd,
+            offerPinning = !foldTest && preset.offerPinning,
+            enableGuardian = foldTest || preset.enableGuardian,
             allowExternalApps = preset.allowExternalApps,
+            blockedNovaApps = preset.blockedNovaApps,
+            allowWhatsApp = preset.allowWhatsApp,
         )
         return commit(state.copy(session = session))
     }
@@ -226,7 +244,8 @@ private val novaId = Regex("[A-Za-z0-9_.:-]+")
 private fun <T> immutableSet(values: Set<T>): Set<T> = Collections.unmodifiableSet(LinkedHashSet(values))
 
 private fun SanctuaryPreset.isValid(): Boolean =
-    minutes in 1..1440 && androidApps.validIds(packageId) && novaApps.validIds(novaId)
+    minutes in 1..1440 && androidApps.validIds(packageId) &&
+        novaApps.validIds(novaId) && blockedNovaApps.validIds(novaId)
 
 private fun Set<String>.validIds(pattern: Regex): Boolean =
     size <= MAX_IDS && all { it.length in 1..180 && pattern.matches(it) }
@@ -276,7 +295,8 @@ internal object SanctuaryCodec {
         .put("presets", JSONObject().apply {
             value.presets.forEach { (mode, preset) ->
                 put(mode.name, JSONObject().put("minutes", preset.minutes)
-                    .putApps(preset.androidApps, preset.novaApps)
+                    .putApps(preset.androidApps, preset.novaApps, preset.blockedNovaApps)
+                    .put("allowWhatsApp", preset.allowWhatsApp)
                     .put("enableDnd", preset.enableDnd).put("offerPinning", preset.offerPinning)
                     .put("enableGuardian", preset.enableGuardian).put("allowExternalApps", preset.allowExternalApps))
             }
@@ -284,7 +304,8 @@ internal object SanctuaryCodec {
         .put("session", value.session?.let {
             JSONObject().put("id", it.id).put("mode", it.mode.name)
                 .put("startedAt", it.startedAt).put("expiresAt", it.expiresAt)
-                .putApps(it.androidApps, it.novaApps).put("extensions", it.extensions)
+                .putApps(it.androidApps, it.novaApps, it.blockedNovaApps).put("extensions", it.extensions)
+                .put("allowWhatsApp", it.allowWhatsApp)
                 .put("elapsedExpiry", it.elapsedExpiry).put("bootCount", it.bootCount)
                 .put("enableDnd", it.enableDnd).put("offerPinning", it.offerPinning)
                 .put("enableGuardian", it.enableGuardian).put("allowExternalApps", it.allowExternalApps)
@@ -310,6 +331,8 @@ internal object SanctuaryCodec {
                     offerPinning = preset.optBoolean("offerPinning", false),
                     enableGuardian = preset.optBoolean("enableGuardian", true),
                     allowExternalApps = preset.optBoolean("allowExternalApps", true),
+                    blockedNovaApps = preset.blockedNovaApps(mode),
+                    allowWhatsApp = preset.optBoolean("allowWhatsApp", false),
                 ).also { require(it.isValid()) }
             },
             root.optJSONObject("session")?.let {
@@ -321,13 +344,16 @@ internal object SanctuaryCodec {
                 val extensions = it.getInt("extensions")
                 val boot = it.getInt("bootCount")
                 require(startedAt >= 0 && expiresAt > startedAt && elapsedExpiry > 0 && extensions >= 0 && boot >= -1)
+                val mode = SanctuaryMode.valueOf(it.getString("mode"))
                 SanctuarySession(
-                    id, SanctuaryMode.valueOf(it.getString("mode")), startedAt, expiresAt,
+                    id, mode, startedAt, expiresAt,
                     it.apps("androidApps", packageId), it.apps("novaApps", novaId), extensions, elapsedExpiry, boot,
                     enableDnd = it.optBoolean("enableDnd", false),
                     offerPinning = it.optBoolean("offerPinning", false),
                     enableGuardian = it.optBoolean("enableGuardian", true),
                     allowExternalApps = it.optBoolean("allowExternalApps", true),
+                    blockedNovaApps = it.blockedNovaApps(mode),
+                    allowWhatsApp = it.optBoolean("allowWhatsApp", false),
                 )
             },
             root.getJSONArray("history").let { history ->
@@ -343,8 +369,15 @@ internal object SanctuaryCodec {
         )
     }
 
-    private fun JSONObject.putApps(androidApps: Set<String>, novaApps: Set<String>): JSONObject =
-        put("androidApps", JSONArray(androidApps.sorted())).put("novaApps", JSONArray(novaApps.sorted()))
+    private fun JSONObject.putApps(
+        androidApps: Set<String>, novaApps: Set<String>, blockedNovaApps: Set<String>,
+    ): JSONObject = put("androidApps", JSONArray(androidApps.sorted()))
+        .put("novaApps", JSONArray(novaApps.sorted()))
+        .put("blockedNovaApps", JSONArray(blockedNovaApps.sorted()))
+
+    private fun JSONObject.blockedNovaApps(mode: SanctuaryMode): Set<String> =
+        if (has("blockedNovaApps")) apps("blockedNovaApps", novaId)
+        else immutableSet(mode.defaultPreset().novaApps - apps("novaApps", novaId))
 
     private fun JSONObject.apps(key: String, pattern: Regex): Set<String> {
         val entries = getJSONArray(key)
@@ -352,4 +385,33 @@ internal object SanctuaryCodec {
         return immutableSet((0 until entries.length()).map(entries::getString).toSet())
             .also { require(it.size == entries.length() && it.validIds(pattern)) }
     }
+}
+
+
+internal val sanctuaryEssentialNovaRoutes = setOf(
+    "home", "sanctuary", "sanctuary-settings", "sanctuary-permissions", "settings", "home-settings",
+    "native-settings", "shell-settings", "lock-settings", "lock-now", "panic", "close-browser",
+)
+
+internal fun sanctuaryAllowsInternalApp(
+    blocked: Set<String>,
+    allowWhatsApp: Boolean,
+    destination: String,
+    url: String? = null,
+): Boolean {
+    val route = destination.removePrefix("resume-internal:")
+    if (!allowWhatsApp && (SanctuaryWhatsApp.isRelatedApp(route) ||
+            url?.let(SanctuaryWhatsApp::isRelatedUrl) == true)
+    ) return false
+    if (route in sanctuaryEssentialNovaRoutes || route.startsWith("folder:")) return true
+    if (route in blocked) return false
+    val parent = when {
+        route.startsWith("mind:") || route == "calm" -> "mind"
+        route in setOf("arcade-2048", "arcade-sudoku", "arcade-snake") -> "arcade"
+        route.startsWith("store:") -> "store"
+        route.startsWith("widget:") -> "widgets"
+        else -> null
+    }
+    return (parent == null || parent !in blocked) &&
+        (!route.startsWith("store:") || route.removePrefix("store:") !in blocked)
 }

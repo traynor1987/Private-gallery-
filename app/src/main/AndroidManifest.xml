@@ -25,6 +25,7 @@
     <intent><action android:name="android.intent.action.DIAL" /></intent>
     <intent><action android:name="android.settings.SETTINGS" /></intent>
     <intent><action android:name="android.settings.USAGE_ACCESS_SETTINGS" /></intent>
+    <intent><action android:name="android.settings.ACCESSIBILITY_SETTINGS" /></intent>
     <intent><action android:name="android.settings.action.MANAGE_OVERLAY_PERMISSION" /></intent>
     <intent><action android:name="android.settings.APP_NOTIFICATION_SETTINGS" /></intent>
     <intent><action android:name="android.intent.action.OPEN_DOCUMENT" /><category android:name="android.intent.category.OPENABLE" /><data android:mimeType="*/*" /></intent>
@@ -46,6 +47,13 @@
         android:stopWithTask="false" android:foregroundServiceType="specialUse">
       <property android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
           android:value="User-started focus session with visible app-guardian monitoring" />
+    </service>
+    <service android:name=".core.sanctuary.SanctuaryAccessibilityService"
+        android:exported="true"
+        android:label="@string/sanctuary_accessibility_label"
+        android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
+      <intent-filter><action android:name="android.accessibilityservice.AccessibilityService" /></intent-filter>
+      <meta-data android:name="android.accessibilityservice" android:resource="@xml/sanctuary_accessibility_service" />
     </service>
     <receiver android:name=".core.sanctuary.SanctuaryDndCleanupReceiver" android:exported="false" />
     <receiver android:name=".core.sanctuary.SanctuaryBootReceiver" android:exported="false">

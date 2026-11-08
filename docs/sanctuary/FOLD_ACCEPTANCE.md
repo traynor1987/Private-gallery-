@@ -25,3 +25,14 @@ Physical sign-off must identify the tested APK and explicitly cover the real Wha
 - Repeat with Notification Policy Access denied, and again while revoking access during the session. The local timer and Guardian remain available according to their separate grants.
 - Change DND manually during a Sanctuary session and verify that ending Sanctuary leaves your deliberate Android changes in place. Verify Android Settings can disable DND after a Force stop, even if Android deferred or cancelled scheduled cleanup.
 - Confirm Work starts with the pinning offer off. In another mode with the offer enabled, tap the existing Android pinning request, inspect the system confirmation, unpin with the system gesture, and verify the same session and deadline continue. Check an approved external app with pinning off.
+
+## Five-minute Accessibility and Samsung Home acceptance
+
+1. Use the isolated test package first. Keep the production package and its data installed.
+2. In Sanctuary, open App Guardian setup. Grant Usage Access, Display over other apps, and Notifications. In Android Accessibility settings, explicitly enable Nova Sanctuary. Check the setup screen shows the service connected.
+3. Choose Work, review approved installed work apps, and tap the five-minute Fold test action. It leaves saved presets intact and keeps DND and pinning off.
+4. Open WhatsApp. Confirm the Mindfulness overlay remains visible and reports that Android Home is behind it. Try an approved work app through the launcher. Re-enter WhatsApp through Recents and confirm the overlay returns.
+5. Leave the overlay visible until expiry. Confirm Samsung Home is visible, WhatsApp stays in Recents, and it does not reopen. In a separate test, let the timer expire while using an approved app and confirm the app stays in front.
+6. Test folded, unfolded, and after a fold transition. Test with Accessibility disabled and again after revocation. Cover-only mode can uncover the app at expiry if Home navigation was unavailable. Verify Settings, Phone and lock-screen access remain usable.
+7. With an active session, check a saved WhatsApp shortcut, a direct WhatsApp Web URL and a retained WhatsApp tab. Check that ordinary installed NovaOS apps still open, including one installed after the session began. End the session and confirm the retained WhatsApp sign-in remains intact.
+8. Send the exact test APK version, source commit, and pass/fail notes. The production upgrade requires a separate original-key Code 65 → 66 data-preservation check.

@@ -120,23 +120,32 @@ private val lightColors=lightColorScheme(primary=Color(0xFF285F65),secondary=Col
    val scope=rememberCoroutineScope()
    val currentPage=pager.currentPage.coerceIn(0,profile.pages.lastIndex)
    LaunchedEffect(profile.pages.size){if(pager.currentPage>profile.pages.lastIndex)pager.scrollToPage(profile.pages.lastIndex)}
-   fun permitSanctuaryRoute(id: String): Boolean {
+   fun permitSanctuaryRoute(id: String, url: String? = null): Boolean {
     val active = sanctuaryStore?.refresh() ?: return true
-    val allowed = sanctuaryAllowsNovaRoute(active.novaApps, id)
+    val route = id.removePrefix("resume-internal:")
+    val destinationUrl = url ?: data.app(route)?.website?.url ?: if (route.startsWith("store:")) {
+     val key = route.removePrefix("store:")
+     profile.installed.firstOrNull { it.id == key }?.url ?: data.catalogue.firstOrNull { it.id == key }?.url
+    } else null
+    val allowed = sanctuaryAllowsNovaRoute(active, id, destinationUrl)
     if (!allowed) android.widget.Toast.makeText(application,
      "Outside the current Sanctuary allowlist", android.widget.Toast.LENGTH_SHORT).show()
     return allowed
    }
    val launch:(String)->Unit=launch@{id->
-    val destination = if (id.startsWith("recent-tab:")) {
-     pool.tabs.firstOrNull{it.id==id.removePrefix("recent-tab:")&&it.profile==state.current}?.app?.id
+    val recent = if (id.startsWith("recent-tab:")) {
+     pool.tabs.firstOrNull{it.id==id.removePrefix("recent-tab:")&&it.profile==state.current}?.app
       ?: return@launch
-    } else id
-    if (!permitSanctuaryRoute(destination)) return@launch
+    } else null
+    if (!permitSanctuaryRoute(recent?.id ?: id, recent?.url)) return@launch
     drawer=false;quick=false;editing=false;edgePanel=false
     when{
      id.startsWith("resume-internal:")->{val route=id.removePrefix("resume-internal:");if(data.shell.internalRecents.any{it.first==state.current&&it.second==route}){if(route in nativeHomeApps)onNative(route)else screen=route}}
      id.startsWith("recent-tab:")->{pool.tabs.firstOrNull{it.id==id.removePrefix("recent-tab:")&&it.profile==state.current}?.let{pool.select(it);screen="home"}}
+     id.startsWith("visual:") && state.current=="primary"->{
+      val moduleId=id.removePrefix("visual:")
+      if(visualModules.any{it.id==moduleId}){openVisual("home");visual.open(moduleId)}
+     }
      id.startsWith("mind:")->{mindPage=id.removePrefix("mind:");mindLaunch++;screen="mind"}
      id.startsWith("store:")->{screen="store";detailId=id.removePrefix("store:")}
      id.startsWith("widget:")->{val slot=widgets.slots(state.current).firstOrNull{it.id==id.removePrefix("widget:")};if(slot!=null){scope.launch{pager.scrollToPage(slot.page.coerceIn(0,profile.pages.lastIndex))};selectedWidget=slot.id};screen="home"}
@@ -188,7 +197,7 @@ private val lightColors=lightColorScheme(primary=Color(0xFF285F65),secondary=Col
    LaunchedEffect(screen,pool.activeId){if(screen=="browser"&&pool.active?.profile!=state.current)screen="home"}
    val openRecents:()->Unit={drawer=false;quick=false;if(screen!="recents"){recentsReturn=screen;screen="recents"}}
    LaunchedEffect(externalRecentsRequest){if(externalRecentsRequest>0){openRecents();onRecentsConsumed()}}
-   val resumeTab:(PreviewTab)->Unit={tab->if(permitSanctuaryRoute(tab.app.id)){pool.select(tab);screen="home";edgePanel=false}}
+   val resumeTab:(PreviewTab)->Unit={tab->if(permitSanctuaryRoute(tab.app.id, tab.app.url)){pool.select(tab);screen="home";edgePanel=false}}
    BackHandler((widgets.editingId!=null||screen!="home"||drawer||quick||editing||selected!=null||openFolder!=null||detailId!=null)){goBack()}
    run {
    Surface(Modifier.fillMaxSize(),color=MaterialTheme.colorScheme.background){
@@ -256,7 +265,15 @@ private val lightColors=lightColorScheme(primary=Color(0xFF285F65),secondary=Col
          } else {
           SanctuaryHome(
            store=sanctuaryStore,androidApps=remember(application){SanctuaryGuardian.installedApps(application)},
-           novaApps=data.allApps().filter{it.id!="sanctuary"&&it.id!="calm"&&!it.id.startsWith("arcade-")}.associate{it.id to it.name},
+           novaApps=data.allApps().filter{it.id!="sanctuary"&&it.id!="calm"&&!it.id.startsWith("arcade-")}.associate{it.id to it.name}+
+            visualModules.filter{it.id!="sanctuary"}.associate{"visual:${it.id}" to it.title},
+           novaAppUrls=profile.installed.associate{it.id to it.url},
+           onStartFoldTest={mode->sanctuaryStore.startFoldTest(mode).also{started->
+            if(started){
+             SanctuaryGuardian.start(application)
+             guardianStatus=SanctuaryGuardian.status(application)
+            }
+           }},
            protectionStatus=guardianStatus,
            onStart={mode->sanctuaryStore.start(mode).also{started->
             if(started){
@@ -292,8 +309,9 @@ private val lightColors=lightColorScheme(primary=Color(0xFF285F65),secondary=Col
          "recents"->NovaRecents(data,pool,onHome=goHome,onResume=resumeTab,onInternal={id->if(permitSanctuaryRoute(id)){if(id in nativeHomeApps)onNative(id)else screen=id}},onCloseInternal={id->if(id=="browser-v1")onNative("close-browser");data.shell.closeInternal(state.current,id);if(id=="mind")audio.pause();if(id=="video")video.close()})
          "visual-foundation"->if(state.current=="primary")VisualFoundation(
           visual,onClose={screen=visualReturn},onRealApp={id->visual.reset();screen="home";launch(id)},
+          canOpenModule={id->permitSanctuaryRoute("visual:$id")},
          )
-         "store"->StoreScreen(data,onBack=goHome,onDetail={detailId=it.id},onCustom={custom=true},
+         "store"->StoreScreen(data,onBack=goHome,onDetail={if(permitSanctuaryRoute("store:${it.id}",it.url))detailId=it.id},onCustom={custom=true},
           onVisualFoundation=if(state.current=="primary"){{openVisual("store")}}else null)
          "wallpaper"->LaunchedEffect(Unit){onPickImage();goHome()}
          "photos"->LaunchedEffect(Unit){onNative("photos")}
@@ -335,7 +353,7 @@ private val lightColors=lightColorScheme(primary=Color(0xFF285F65),secondary=Col
      if(state.current=="primary")VisualCatalogueEntry("drawer-visual-foundation"){openVisual("home")}
      val visualMatches=if(state.current=="primary"&&search.isNotBlank())visualModules.filter{it.title.contains(search.trim(),true)}else emptyList()
      AdaptiveAppGrid(data,data.drawerIds().filter{id->val f=profile.folders.firstOrNull{it.id==id};(f?.name?:data.app(id)?.name?:"").contains(search,true)},onLaunch=launch,onSelect={selected=it},modifier=Modifier.weight(1f),
-      visualMatches=visualMatches,onVisual={id->openVisual("home");visual.open(id)})
+      visualMatches=visualMatches,onVisual={id->launch("visual:$id")})
      TextButton(onClick={folderCreate=true}){Icon(Icons.Default.CreateNewFolder,null);Text("Create folder",Modifier.padding(start=8.dp))}
     }
    }
@@ -386,7 +404,7 @@ private val lightColors=lightColorScheme(primary=Color(0xFF285F65),secondary=Col
    if(rename!=null){var text by remember(rename){mutableStateOf(profile.folders.firstOrNull{it.id==rename}?.name?:data.app(rename!!)?.name?:"")};PanicHomeAlertDialog(onDismissRequest={rename=null},title={Text("Rename")},text={OutlinedTextField(text,{text=it.take(40)},label={Text("Name")})},confirmButton={TextButton(onClick={data.rename(rename!!,text);rename=null},enabled=text.isNotBlank()){Text("Save")}},dismissButton={TextButton(onClick={rename=null}){Text("Cancel")}})}
    if(reset)PanicHomeAlertDialog(onDismissRequest={reset=false},title={Text("Restore this Home?")},text={Text("Reset this Space’s layout, wallpaper, folders and Dock. Installed shortcuts remain in the drawer.")},confirmButton={TextButton(onClick={data.reset();reset=false}){Text("Restore")}},dismissButton={TextButton(onClick={reset=false}){Text("Cancel")}})
    val detail=detailId?.let{id->data.catalogue.firstOrNull{it.id==id}?:profile.installed.firstOrNull{it.id==id}}
-   if(detail!=null)AppDetails(data,detail,onDismiss={detailId=null},onOpen={if(permitSanctuaryRoute(it.id)){pool.open(it,data.state.current);detailId=null;screen="home"}},onUninstall={confirmUninstall=it},onAddHome={data.addHome(it,currentPage);detailId=null;screen="home"},onPin={data.pin(it)})
+   if(detail!=null)AppDetails(data,detail,onDismiss={detailId=null},onOpen={if(permitSanctuaryRoute(it.id,it.url)){pool.open(it,data.state.current);detailId=null;screen="home"}},onUninstall={confirmUninstall=it},onAddHome={data.addHome(it,currentPage);detailId=null;screen="home"},onPin={data.pin(it)})
    if(custom)CustomWebsiteDialog(onDismiss={custom=false},onInstall={entry->data.install(entry);custom=false;detailId=data.entryKey(entry)})
    if(confirmUninstall!=null)PanicHomeAlertDialog(onDismissRequest={confirmUninstall=null},title={Text("Uninstall this shortcut?")},text={Text("Remove it from this Space, its folders, Home and Dock. Browser cookies are shared and are not selectively removed. Website accounts and external browser data remain managed by their provider/browser.")},confirmButton={TextButton(onClick={pool.closeApp(data.state.current,confirmUninstall!!);data.uninstall(confirmUninstall!!);confirmUninstall=null;detailId=null}){Text("Uninstall")}},dismissButton={TextButton(onClick={confirmUninstall=null}){Text("Cancel")}})
    pool.error?.let{message->PanicHomeAlertDialog(onDismissRequest={pool.error=null},title={Text("Browsing unavailable")},text={Text(message)},confirmButton={TextButton(onClick={pool.error=null}){Text("OK")}})}

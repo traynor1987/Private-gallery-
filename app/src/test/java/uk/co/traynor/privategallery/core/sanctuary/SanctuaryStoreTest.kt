@@ -155,6 +155,50 @@ class SanctuaryStoreTest {
         assertEquals(original, SanctuaryCodec.decode(legacyJson.toString().encodeToByteArray()))
     }
 
+    @Test fun foldTestUsesFiveMinutesAndLeavesSavedModeAndItsRestrictionsIntact() {
+        val fixture = Fixture()
+        val store = fixture.open()
+        val preset = store.preset(SanctuaryMode.WORK).copy(
+            enableDnd = true,
+            offerPinning = true,
+            enableGuardian = false,
+            blockedNovaApps = setOf("web:distraction"),
+            allowWhatsApp = true,
+        )
+        assertTrue(store.savePreset(SanctuaryMode.WORK, preset))
+        assertTrue(store.startFoldTest(SanctuaryMode.WORK))
+        val session = checkNotNull(store.current.value)
+        assertEquals(300_000L, store.remainingMillis(session))
+        assertFalse(session.enableDnd)
+        assertFalse(session.offerPinning)
+        assertTrue(session.enableGuardian)
+        assertTrue(session.allowWhatsApp)
+        assertFalse(session.allowsNovaApp("web:distraction"))
+        assertTrue(session.allowsNovaApp("web:installed-after-start"))
+        assertEquals(preset, fixture.open().preset(SanctuaryMode.WORK))
+        fixture.advance(5)
+        assertNull(fixture.open().current.value)
+    }
+
+    @Test fun legacyExplicitRemovalsArePreservedWithoutDenyingOtherInternalApps() {
+        val fixture = Fixture()
+        val store = fixture.open()
+        val previous = store.preset(SanctuaryMode.WORK).copy(novaApps = emptySet())
+        assertTrue(store.savePreset(SanctuaryMode.WORK, previous))
+        assertTrue(store.start(SanctuaryMode.WORK))
+        val legacy = JSONObject(SanctuaryCodec.encode(checkNotNull(fixture.disk.snapshot)).decodeToString())
+        listOf(legacy.getJSONObject("presets").getJSONObject("WORK"), legacy.getJSONObject("session")).forEach {
+            it.remove("blockedNovaApps")
+            it.remove("allowWhatsApp")
+        }
+        val migrated = SanctuaryCodec.decode(legacy.toString().encodeToByteArray())
+        assertEquals(setOf("nova-calculator"), migrated.presets.getValue(SanctuaryMode.WORK).blockedNovaApps)
+        val session = checkNotNull(migrated.session)
+        assertFalse(session.allowsNovaApp("nova-calculator"))
+        assertTrue(session.allowsNovaApp("gallery"))
+        assertFalse(session.allowsNovaApp("chat"))
+    }
+
     @Test fun serializedStateIsBoundedAndCarriesOnlySessionMetadata() {
         val fixture = Fixture()
         val store = fixture.open()

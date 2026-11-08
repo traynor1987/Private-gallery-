@@ -24,6 +24,8 @@ class BrowserV2Session(
     private val webViewFactory: BrowserV2WebViewFactory = BrowserV2WebViewFactory { context, callbacks, tabId, desktopSite ->
         SecureWebViewFactory(callbacks, contentBlocker = contentBlocker).create(context, tabId, desktopSite)
     },
+    private val destinationRestricted: (String) -> Boolean = { false },
+    private val privateAppRestricted: (uk.co.traynor.privategallery.core.privateapps.PrivateAppCatalog.App) -> Boolean = { false },
 ) : BrowserWebViewCallbacks {
     interface Listener {
         /** Native window callbacks require a live interactive browser presentation. */
@@ -75,6 +77,42 @@ class BrowserV2Session(
 
     val tabs = BrowserSessionManager(maximumTabs)
     private val webViews = linkedMapOf<String, WebView>()
+    // A blocked main-frame callback is not published to browser history or persisted tab metadata.
+    private val restrictedDocuments = mutableMapOf<String, String>()
+    private val restrictedViews = mutableSetOf<WebView>()
+
+    private fun appRestricted(app: uk.co.traynor.privategallery.core.privateapps.PrivateAppCatalog.App): Boolean =
+        privateAppRestricted(app) || destinationRestricted(app.startUrl())
+
+    private fun tabRestricted(tabId: String): Boolean =
+        privateAppTabs[tabId]?.let(::appRestricted) == true ||
+            restrictedDocuments[tabId]?.let(destinationRestricted) == true ||
+            tabs.tabs.firstOrNull { it.id == tabId }?.url?.let(destinationRestricted) == true ||
+            webViews[tabId]?.url?.let(destinationRestricted) == true
+
+    fun activeDestinationRestricted(): Boolean = tabRestricted(tabs.activeTab.id)
+
+    /** Update presentation only; retained renderers, cookies and saved app identity stay intact. */
+    fun enforceDestinationPolicy() {
+        webViews.forEach { (id, view) -> setViewRestricted(id, view, tabRestricted(id)) }
+        listener.onSessionChanged()
+    }
+
+    private fun setViewRestricted(tabId: String, view: WebView, blocked: Boolean) {
+        if (blocked && restrictedViews.add(view)) {
+            view.visibility = View.INVISIBLE
+            view.stopLoading()
+            view.evaluateJavascript(BrowserVideoAssistant.PAUSE, null)
+            view.onPause()
+            if (scriptDialog?.tabId == tabId) cancelScriptDialog()
+            if (fullscreenOwner == tabId) exitFullscreen()
+        } else if (!blocked && restrictedViews.remove(view)) {
+            view.visibility = View.VISIBLE
+            if (foreground && vpnGate.permitsRemoteNetworking()) view.onResume()
+        }
+    }
+
+    private fun reportRestrictedDestination() = listener.onMessage(BrowserMessage.SanctuaryRestricted)
     // Presentation belongs to an existing tab, never to the selected URL or a second WebView.
     private val privateAppTabs = mutableMapOf<String, uk.co.traynor.privategallery.core.privateapps.PrivateAppCatalog.App>()
     fun privateApp(tabId: String) = privateAppTabs[tabId]
@@ -85,6 +123,7 @@ class BrowserV2Session(
         if(privateAppTabs.containsKey(tab.id))webViews[tab.id]?.let {tab.id to it} else null
     }
     fun openPrivateApp(app: uk.co.traynor.privategallery.core.privateapps.PrivateAppCatalog.App) {
+        if (appRestricted(app)) { reportRestrictedDestination(); return }
         privateAppTabs.entries.firstOrNull {it.value.id()==app.id() && tabs.tabs.any {tab->tab.id==it.key}}?.let {
             privateAppTabs[it.key]=app;select(it.key);return
         }
@@ -98,6 +137,7 @@ class BrowserV2Session(
      */
     fun openRetainedPrivateApp(app: uk.co.traynor.privategallery.core.privateapps.PrivateAppCatalog.App) {
         requireNovaForeground()
+        check(!appRestricted(app)) {"This app is restricted by Sanctuary."}
         privateAppTabs.entries.firstOrNull {it.value.id()==app.id() && tabs.tabs.any {tab->tab.id==it.key}}?.let {
             privateAppTabs[it.key]=app;selectFromNovaHome(it.key);return
         }
@@ -112,6 +152,7 @@ class BrowserV2Session(
         val app=checkNotNull(privateAppTabs[source.id]) {"A saved app must be selected"}
         val destination=source.url.ifBlank {app.startUrl()}
         check(BrowserSecurityPolicy.allowsNavigation(destination)) {"A web address is required"}
+        check(!tabRestricted(source.id) && !destinationRestricted(destination)) {"This destination is restricted by Sanctuary."}
         prepareNovaSwitch()
         return createTab(destination)
     }
@@ -156,7 +197,7 @@ class BrowserV2Session(
      * The Android view is therefore optional to Compose, while tab chrome remains available.
      */
     fun activeWebViewOrNull(): WebView? {
-        if(!rendererAllowed())return null
+        if(!rendererAllowed() || activeDestinationRestricted())return null
         if (tabs.activeTab.failure == BrowserTabFailure.WEBVIEW_UNAVAILABLE) return null
         return runCatching { activeWebView() }.getOrElse { failure ->
         tabs.webViewUnavailable(tabs.activeTab.id)
@@ -168,6 +209,7 @@ class BrowserV2Session(
     }
 
     fun retryActiveWebView(): WebView? {
+        if (activeDestinationRestricted()) return null
         val id = tabs.activeTab.id
         webViews.remove(id)?.let(::destroy)
         tabs.detachWebView(id)
@@ -254,7 +296,11 @@ class BrowserV2Session(
     fun resumeForeground() {
         foreground = true
         if (!vpnGate.permitsRemoteNetworking()) enforceNetworkPolicy()
-        else webViews.values.forEach { it.onResume() }
+        else webViews.forEach { (id, view) ->
+            val blocked = tabRestricted(id)
+            setViewRestricted(id, view, blocked)
+            if (!blocked) view.onResume()
+        }
     }
 
     /** Keep the existing WebView and its session; never try to resolve iframe/blob resources. */
@@ -532,6 +578,7 @@ class BrowserV2Session(
      * later. This prevents invisible WebViews from accumulating indefinitely.
      */
     fun newTab(url: String = ""): BrowserTab {
+        if (destinationRestricted(url)) { reportRestrictedDestination(); return tabs.activeTab }
         pauseOutgoingTab()
         exitFullscreen()
         return createTab(url)
@@ -552,6 +599,7 @@ class BrowserV2Session(
         val retainedIds = tabs.tabs.mapTo(hashSetOf()) { it.id }
         (idsBefore - retainedIds).forEach { evictedId ->
             privateAppTabs.remove(evictedId)
+            restrictedDocuments.remove(evictedId)
             webViews.remove(evictedId)?.let(::destroy)
             diagnostics.record("WEBVIEW_EVICTED", mapOf("reason" to "tab_limit"))
         }
@@ -571,6 +619,7 @@ class BrowserV2Session(
 
     fun select(tabId: String) {
         if (tabs.tabs.none { it.id == tabId }) return
+        if (tabRestricted(tabId)) { reportRestrictedDestination(); return }
         if (tabId != tabs.activeTab.id) { pauseOutgoingTab(); exitFullscreen() }
         tabs.select(tabId)
         activeWebViewOrNull()?.let { if (foreground) it.onResume() }
@@ -581,6 +630,7 @@ class BrowserV2Session(
     fun selectFromNovaHome(tabId: String) {
         requireNovaForeground()
         if(tabs.tabs.none {it.id==tabId})return
+        if (tabRestricted(tabId)) { reportRestrictedDestination(); return }
         if(tabId!=tabs.activeTab.id)prepareNovaSwitch()
         tabs.select(tabId)
         activeWebViewOrNull()?.let {if(foreground)it.onResume()}
@@ -590,6 +640,7 @@ class BrowserV2Session(
     fun close(tabId: String) {
         if (scriptDialog?.tabId == tabId) cancelScriptDialog()
         cancelNavigationTimeout(tabId); pageFailures.remove(tabId)
+        restrictedDocuments.remove(tabId)
         if (fullscreenOwner == tabId) exitFullscreen()
         webViews.remove(tabId)?.let(::destroy)
         tabs.close(tabId)
@@ -600,6 +651,7 @@ class BrowserV2Session(
 
     fun navigateActive(url: String) = navigate(tabs.activeTab.id, url)
     fun reloadActive() {
+        if (activeDestinationRestricted()) { reportRestrictedDestination(); return }
         requireNetworkOrReport() ?: return
         val active = tabs.activeTab
         pageFailures.remove(active.id); changed()
@@ -607,8 +659,20 @@ class BrowserV2Session(
         else activeWebViewOrNull()?.reload()
     }
     fun stopActive() = activeWebViewOrNull()?.stopLoading()
-    fun goBackActive() { activeWebViewOrNull()?.takeIf { it.canGoBack() }?.goBack() }
-    fun goForwardActive() { activeWebViewOrNull()?.takeIf { it.canGoForward() }?.goForward() }
+    fun goBackActive() = travelHistory(-1)
+    fun goForwardActive() = travelHistory(1)
+
+    private fun travelHistory(offset: Int) {
+        val view = activeWebViewOrNull() ?: return
+        if (!view.canGoBackOrForward(offset)) return
+        val history = view.copyBackForwardList()
+        val item = history.getItemAtIndex(history.currentIndex + offset) ?: return
+        if (destinationRestricted(item.url.orEmpty()) || destinationRestricted(item.originalUrl.orEmpty())) {
+            reportRestrictedDestination()
+            return
+        }
+        view.goBackOrForward(offset)
+    }
     fun findInActivePage(text: String) { activeWebViewOrNull()?.findAllAsync(text) }
     fun findNextInActivePage(forward: Boolean) { activeWebViewOrNull()?.findNext(forward) }
     fun clearFindInActivePage() { activeWebViewOrNull()?.clearMatches() }
@@ -623,13 +687,14 @@ class BrowserV2Session(
                 android.webkit.WebSettings.getDefaultUserAgent(appContext),
             )
             if (tab.url.isNotBlank()) {
-                if (requireNetworkOrReport() != null) view.reload()
+                if (!tabRestricted(tabId) && requireNetworkOrReport() != null) view.reload()
             }
         }
         changed()
     }
 
     fun recoverRenderer(tabId: String) {
+        if (tabRestricted(tabId)) { reportRestrictedDestination(); return }
         val url = tabs.tabs.first { it.id == tabId }.url
         webViews.remove(tabId)?.let(::destroy)
         tabs.detachWebView(tabId)
@@ -641,6 +706,7 @@ class BrowserV2Session(
     fun destroyAll() {
         cancelScriptDialog()
         navigationTimeouts.keys.toList().forEach(::cancelNavigationTimeout); pageFailures.clear()
+        restrictedDocuments.clear()
         documentRevision++
         observedMedia.clear()
         playingVideoTabs.clear()
@@ -708,6 +774,10 @@ class BrowserV2Session(
     }
 
     private fun navigate(tabId: String, url: String) {
+        if (destinationRestricted(url) || privateAppTabs[tabId]?.let(::appRestricted) == true) {
+            reportRestrictedDestination()
+            return
+        }
         recordAcceptanceUiEvent("NAVIGATION_SUBMITTED")
         webViews[tabId]?.let { presentationProbes[it]?.recordState("NAVIGATION_SUBMITTED") }
         coldRestoreIds.remove(tabId)
@@ -739,7 +809,7 @@ class BrowserV2Session(
     private fun loadColdRestoreIfNeeded(tabId: String, view: WebView) {
         if (tabId !in coldRestoreIds) return
         val url = tabs.tabs.firstOrNull { it.id == tabId }?.url.orEmpty()
-        if (!BrowserSecurityPolicy.allowsNavigation(url)) return
+        if (tabRestricted(tabId) || !BrowserSecurityPolicy.allowsNavigation(url)) return
         if (requireNetworkOrReport() == null) return
         coldRestoreIds.remove(tabId)
         diagnostics.startNavigation(mapOf("main_frame" to "true", "restore" to "true"), preserveEvents = true)
@@ -749,6 +819,7 @@ class BrowserV2Session(
     }
 
     private fun destroy(view: WebView) {
+        restrictedViews.remove(view)
         pendingWindowFocus.entries.removeAll {it.value===view}
         webViews.entries.firstOrNull { it.value === view }?.key?.let(::cancelNavigationTimeout)
         runtimeProbes.remove(view)?.dispose()
@@ -797,7 +868,13 @@ class BrowserV2Session(
         )
     }
 
+    override fun interceptRestrictedDestination(url: String): Boolean = destinationRestricted(url)
+
     override fun onNavigationRequest(tabId: String, url: String, mainFrame: Boolean, allowed: Boolean): Boolean {
+        if (destinationRestricted(url) || privateAppTabs[tabId]?.let(::appRestricted) == true) {
+            if (mainFrame) reportRestrictedDestination()
+            return true
+        }
         if (!allowed) {
             diagnostics.record("EXTERNAL_NAVIGATION_REQUEST", mapOf("main_frame" to mainFrame.toString(), "candidate" to BrowserExternalNavigationPolicy.isCandidate(url).toString()))
             if (mainFrame && BrowserExternalNavigationPolicy.isCandidate(url)) listener.onExternalNavigation(url)
@@ -814,10 +891,20 @@ class BrowserV2Session(
     override fun onPageState(tabId: String, url: String, title: String, loading: Boolean, canGoBack: Boolean, canGoForward: Boolean) {
         if (loading && scriptDialog?.tabId == tabId) cancelScriptDialog()
         if (tabs.tabs.none { it.id == tabId }) return
+        if (destinationRestricted(url) || privateAppTabs[tabId]?.let(::appRestricted) == true) {
+            val alreadyReported = restrictedDocuments.put(tabId, url) == url
+            cancelNavigationTimeout(tabId)
+            webViews[tabId]?.let { setViewRestricted(tabId, it, true) }
+            if (!alreadyReported) reportRestrictedDestination()
+            listener.onSessionChanged()
+            return
+        }
+        if (!loading) restrictedDocuments.remove(tabId)
         if (loading) watchNavigation(tabId) else cancelNavigationTimeout(tabId)
         if (loading) { documentRevision++; observedMedia.remove(tabId); playingVideoTabs.remove(tabId); mediaProbeResults.clear(); mediaProbing.clear(); if (fullscreenOwner == tabId) exitFullscreen() }
         if (loading) webViews[tabId]?.let { runtimeProbes[it]?.newDocument() }
         tabs.updateNavigation(tabId, url, title, loading, canGoBack, canGoForward)
+        if (!loading) webViews[tabId]?.let { setViewRestricted(tabId, it, tabRestricted(tabId)) }
         diagnostics.record(if (loading) "MAIN_PAGE_STARTED" else "MAIN_PAGE_FINISHED")
         recordPresentationTransition(tabId, if (loading) "PAGE_STARTED" else "PAGE_FINISHED")
         if (!loading && !privateAppTabs.containsKey(tabId) && BrowserSecurityPolicy.allowsNavigation(url)) listener.onHistoryVisit(title, url)
@@ -856,7 +943,7 @@ class BrowserV2Session(
     override fun onProgress(tabId: String, progress: Int) = Unit
     override fun onCreateWindow(parentTabId: String, isDialog: Boolean, isUserGesture: Boolean): WebView? {
         // A retained, paused, covered or destroyed page cannot allocate a renderer or take focus.
-        if (!windowInteractionAllowed(parentTabId)) return null
+        if (!windowInteractionAllowed(parentTabId) || tabRestricted(parentTabId)) return null
         val previousId = tabs.activeTab.id
         val parentApp=privateAppTabs[parentTabId]
         val child = if(parentApp==null)newTab() else {
@@ -935,6 +1022,7 @@ enum class BrowserFocusMode { CURRENT, EXPLICIT_WEBVIEW_FOCUS }
 
 sealed interface BrowserMessage {
     data object VpnRequired : BrowserMessage
+    data object SanctuaryRestricted : BrowserMessage
     data object UnsupportedScheme : BrowserMessage
     data object NetworkError : BrowserMessage
     data object TlsRejected : BrowserMessage
