@@ -114,6 +114,7 @@ class NovaLauncherPlatform70Test {
         try {
             assertTrue(sanctuary.savePreset(mode, preset.copy(androidApps = emptySet(), allowExternalApps = true)))
             assertTrue(sanctuary.startFoldTest(mode))
+            val session = checkNotNull(sanctuary.refresh())
             ActivityScenario.launch(NovaLauncherActivity::class.java).use {
                 val appTag = "launcher-app-${target.component}"
                 compose.waitUntil(15_000) { compose.onAllNodesWithTag(appTag).fetchSemanticsNodes().isNotEmpty() }
@@ -121,7 +122,7 @@ class NovaLauncherPlatform70Test {
                 compose.onNodeWithText("Sanctuary protection").assertIsDisplayed()
                 assertEquals(context.packageName, instrumentation.uiAutomation.rootInActiveWindow?.packageName?.toString())
                 compose.onNodeWithText("Back to Nova Launcher").performClick()
-                assertTrue(sanctuary.saveAndroidApprovals(mode, setOf(target.packageName)))
+                assertTrue(sanctuary.saveAndroidApprovals(session.id, mode, setOf(target.packageName)))
                 compose.onNodeWithTag(appTag).performTouchInput { click() }
                 await { instrumentation.uiAutomation.rootInActiveWindow?.packageName?.toString() == target.packageName }
                 shell("input keyevent ${KeyEvent.KEYCODE_BACK}")
