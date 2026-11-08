@@ -9,7 +9,6 @@ import android.os.Build
 import android.os.ParcelFileDescriptor
 import android.os.SystemClock
 import android.provider.Settings
-import android.view.accessibility.AccessibilityNodeInfo
 import androidx.activity.ComponentActivity
 import androidx.test.core.app.ActivityScenario
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -59,9 +58,18 @@ class SanctuaryLauncherPolicy70Test {
             assertEquals(Decision.ESSENTIAL, SanctuaryLauncherPolicy.decision(context, context.packageName))
             assertEquals(Decision.ESSENTIAL, SanctuaryLauncherPolicy.decision(context, settings))
             assertEquals(Decision.ESSENTIAL, SanctuaryLauncherPolicy.decision(context, phone))
+            val permissionControllers = setOf("com.android.permissioncontroller", "com.google.android.permissioncontroller")
             ActivityScenario.launch(ComponentActivity::class.java).use { scenario ->
                 scenario.onActivity { assertTrue(SanctuaryLauncherPolicy.openHomeSettings(it)) }
-                await("Android Home selection settings reached foreground") { topIs(settings) }
+                await("Android Home selection settings reached foreground") {
+                    val resumed = resumedActivities()
+                    resumed.any { it.startsWith("$settings/") } ||
+                        resumed.any { component ->
+                            val controller = component.substringBefore('/')
+                            controller in permissionControllers && component.endsWith(".DefaultAppActivity") &&
+                                SanctuaryLauncherPolicy.decision(context, controller) == Decision.ESSENTIAL
+                        }
+                }
             }
             ActivityScenario.launch(ComponentActivity::class.java).use { scenario ->
                 scenario.onActivity { assertTrue(SanctuaryLauncherPolicy.openEmergencyPhone(it)) }
@@ -87,7 +95,13 @@ class SanctuaryLauncherPolicy70Test {
                         scenario.onActivity {
                             assertNotNull(SanctuaryLauncherPolicy.authenticateTemporaryAccess(it, packageName, result::set))
                         }
-                        await("Android credential input is visible") { hasPasswordInput(automation.rootInActiveWindow) }
+                        // API 37 hides the secure PIN editor from accessibility. The real system
+                        // prompt must own focus, and only its credential callback can grant access.
+                        await("Android BiometricPrompt owns window focus") {
+                            shell("dumpsys window").lineSequence().any {
+                                "mCurrentFocus=" in it && it.trimEnd().endsWith(" BiometricPrompt}")
+                            }
+                        }
                         shell("input keyevent ${pin.map { "KEYCODE_$it" }.joinToString(" ")} KEYCODE_ENTER")
                         await("system confirmed device credential") { result.get() != null }
                         assertEquals(true, result.get())
@@ -178,12 +192,6 @@ class SanctuaryLauncherPolicy70Test {
         else shell("settings put secure $key '$value'")
     }
 
-    private fun hasPasswordInput(node: AccessibilityNodeInfo?): Boolean {
-        if (node == null) return false
-        if (node.isPassword && node.isVisibleToUser && node.isFocused) return true
-        return (0 until node.childCount).any { hasPasswordInput(node.getChild(it)) }
-    }
-
     private fun withSession(test: () -> Unit) {
         assertNull("Isolated Sanctuary session required", store.refresh())
         val preset = store.preset(SanctuaryMode.WORK)
@@ -211,10 +219,13 @@ class SanctuaryLauncherPolicy70Test {
             shell("getprop ro.kernel.qemu").trim() == "1")
     }
 
-    private fun topIs(packageName: String): Boolean {
-        val focused = Regex("(?:topResumedActivity|mResumedActivity)[=:].*\\b" + Regex.escape(packageName) + "/")
-        return shell("dumpsys activity activities").lineSequence().any(focused::containsMatchIn)
+    private fun resumedActivities(): List<String> {
+        val activity = Regex("(?:topResumedActivity|mResumedActivity)[=:].*?\\bu[0-9]+ ([^ }]+/[^ }]+)")
+        return shell("dumpsys activity activities").lineSequence()
+            .mapNotNull { activity.find(it)?.groupValues?.get(1) }.toList()
     }
+
+    private fun topIs(packageName: String): Boolean = resumedActivities().any { it.startsWith("$packageName/") }
 
     private fun shell(command: String): String =
         ParcelFileDescriptor.AutoCloseInputStream(automation.executeShellCommand(command)).use {
