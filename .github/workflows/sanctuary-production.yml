@@ -48,7 +48,7 @@ jobs:
               destination=control/name;destination.parent.mkdir(parents=True,exist_ok=True)
               shutil.copyfile(original,destination)
           marker=json.loads((control/'.sanctuary-production-candidate').read_bytes())
-          assert marker['source']=='0de573ccd4b5f2ef0ee557ca8c90ebf7d2aba1d3' and marker['test_run']==42496081269 and marker['test_artifact']==13624827130
+          assert marker['source']=='cc8aaed81b8d6ed27c71c9923edbf51334466cb2' and marker['test_run']==42518561588 and marker['test_artifact']==13633591995
           assert re.fullmatch('[a-f0-9]{64}',marker['fixture_sha256'])
           workflow=hashlib.sha256((control/'.github/workflows/sanctuary-production.yml').read_bytes()).hexdigest()
           assert marker.get('workflow_sha256')==workflow, 'Signing workflow changed after review'
@@ -63,7 +63,7 @@ jobs:
                         'PRIVATE_GALLERY_1711_UPGRADE_FIXTURE':control/'docs/release1711/UpgradeFixtureTest.kt',
                         'PRIVATE_GALLERY_1711_GATE_RECEIPT':inputs/'gate.json',
                         'PRIVATE_GALLERY_1711_COMPILED_DIR':Path(os.environ['RUNNER_TEMP'])/'upgrade1711-compiled',
-                        'PRIVATE_GALLERY_1711_BASELINE_APK':Path(os.environ['RUNNER_TEMP'])/'original1711code67.apk',
+                        'PRIVATE_GALLERY_1711_BASELINE_APK':Path(os.environ['RUNNER_TEMP'])/'original1711code68.apk',
                         'PRIVATE_GALLERY_1711_SIGNED_INSTRUMENTATION_APK':Path(os.environ['RUNNER_TEMP'])/'release1711-signed/instrumentation.apk'}
               for name,value in settings.items(): output.write(name+'='+str(value)+'\n')
           PY
@@ -92,18 +92,18 @@ jobs:
             const runtime=Buffer.from((await github.rest.actions.downloadArtifact({...context.repo,artifact_id:artifact.id,archive_format:'zip'})).data);
             if(hash(runtime)!==marker.runtime_archive_sha256)throw Error('Original runtime archive changed');
             fs.writeFileSync(path.join(root,'original-runtime.zip'),runtime);
-            const baselineRun=(await github.rest.actions.getWorkflowRun({...context.repo,run_id:42487245254})).data;
+            const baselineRun=(await github.rest.actions.getWorkflowRun({...context.repo,run_id:42499421968})).data;
             write('baseline-github-run.json',baselineRun);
-            if(baselineRun.event!=='push'||baselineRun.head_branch!=='feature/novaos-sanctuary-integration'||baselineRun.head_repository?.full_name!=='traynor1987/Private-gallery-'||baselineRun.status!=='completed'||baselineRun.conclusion!=='success'||baselineRun.head_sha!=='aef32a7d3db3c03649935eedbda3568609caa4e8'||baselineRun.path.split('@')[0]!=='.github/workflows/sanctuary-production.yml')throw Error('Pinned baseline run differs');
-            const baselineJob=(await github.rest.actions.getJobForWorkflowRun({...context.repo,job_id:128751688786})).data;
+            if(baselineRun.event!=='push'||baselineRun.head_branch!=='feature/novaos-sanctuary-integration'||baselineRun.head_repository?.full_name!=='traynor1987/Private-gallery-'||baselineRun.status!=='completed'||baselineRun.conclusion!=='success'||baselineRun.head_sha!=='ccd41da195dea80557bda67f328d522a49a733a4'||baselineRun.path.split('@')[0]!=='.github/workflows/sanctuary-production.yml')throw Error('Pinned baseline run differs');
+            const baselineJob=(await github.rest.actions.getJobForWorkflowRun({...context.repo,job_id:128788701943})).data;
             write('baseline-github-job.json',baselineJob);
-            if(baselineJob.id!==128751688786||baselineJob.run_id!==42487245254||baselineJob.name!=='sanctuary-production'||baselineJob.status!=='completed'||baselineJob.conclusion!=='success'||baselineJob.head_sha!=='aef32a7d3db3c03649935eedbda3568609caa4e8')throw Error('Pinned baseline job differs');
-            const baseline=(await github.rest.actions.getArtifact({...context.repo,artifact_id:13619529445})).data;
+            if(baselineJob.id!==128788701943||baselineJob.run_id!==42499421968||baselineJob.name!=='sanctuary-production'||baselineJob.status!=='completed'||baselineJob.conclusion!=='success'||baselineJob.head_sha!=='ccd41da195dea80557bda67f328d522a49a733a4')throw Error('Pinned baseline job differs');
+            const baseline=(await github.rest.actions.getArtifact({...context.repo,artifact_id:13624529570})).data;
             write('baseline-github-artifact.json',baseline);
-            if(baseline.expired||baseline.name!=='novaos-1.7.32-code67-owner-review'||baseline.size_in_bytes!==61466888||baseline.workflow_run?.id!==42487245254||baseline.workflow_run?.head_sha!=='aef32a7d3db3c03649935eedbda3568609caa4e8'||baseline.digest!=='sha256:d61b2765b0dd7791d3be85a65dacbe825bed2d76f969d964c740710248de0ea5')throw Error('Pinned baseline artifact differs');
+            if(baseline.expired||baseline.name!=='novaos-1.7.33-code68-owner-review'||baseline.size_in_bytes!==61583832||baseline.workflow_run?.id!==42499421968||baseline.workflow_run?.head_sha!=='ccd41da195dea80557bda67f328d522a49a733a4'||baseline.digest!=='sha256:e7c3dc077aad85f1943bf514a10812c100b6e5b57b3d9465f67bf2247dfec310')throw Error('Pinned baseline artifact differs');
             const bytes=Buffer.from((await github.rest.actions.downloadArtifact({...context.repo,artifact_id:baseline.id,archive_format:'zip'})).data);
-            if(bytes.length!==61466888||hash(bytes)!=='d61b2765b0dd7791d3be85a65dacbe825bed2d76f969d964c740710248de0ea5')throw Error('Original baseline archive changed');
-            fs.writeFileSync(path.join(root,'original-code67.zip'),bytes);
+            if(bytes.length!==61583832||hash(bytes)!=='e7c3dc077aad85f1943bf514a10812c100b6e5b57b3d9465f67bf2247dfec310')throw Error('Original baseline archive changed');
+            fs.writeFileSync(path.join(root,'original-code68.zip'),bytes);
       - name: Validate original runtime reports and independent production approval before signer access
         run: |
           controls="$RUNNER_TEMP/release1711-controls"
@@ -127,20 +127,20 @@ jobs:
             ~/.gradle/wrapper
           key: privacy1751-${{ runner.os }}-${{ hashFiles('**/*.gradle*', 'gradle/libs.versions.toml', 'gradle/wrapper/gradle-wrapper.properties') }}
           restore-keys: privacy1751-${{ runner.os }}-
-      - name: Install Android 17 tools and verify the original code67 APK
+      - name: Install Android 17 tools and verify the original code68 APK
         run: |
           sudo rm -rf /usr/share/dotnet /usr/share/swift /opt/ghc /usr/local/.ghcup /opt/hostedtoolcache/CodeQL
           "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --install "cmdline-tools;22.0"
           mv "$ANDROID_HOME/cmdline-tools/latest" "$RUNNER_TEMP/previous-android-command-tools1711"
           ln -s "$ANDROID_HOME/cmdline-tools/22.0" "$ANDROID_HOME/cmdline-tools/latest"
           "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-37.1" "build-tools;36.0.0" "emulator"
-          python3 "$RUNNER_TEMP/release1711-controls/scripts/verify_upgrade1711_baseline.py" "$RUNNER_TEMP/release1711-inputs/original-code67.zip" "$PRIVATE_GALLERY_1711_BASELINE_APK" | tee app/build/production-evidence/baseline-archive-validation.txt
+          python3 "$RUNNER_TEMP/release1711-controls/scripts/verify_upgrade1711_baseline.py" "$RUNNER_TEMP/release1711-inputs/original-code68.zip" "$PRIVATE_GALLERY_1711_BASELINE_APK" | tee app/build/production-evidence/baseline-archive-validation.txt
           "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose --print-certs "$PRIVATE_GALLERY_1711_BASELINE_APK" > app/build/production-evidence/baseline-signature.txt
           grep -Fxq 'Signer #1 certificate SHA-256 digest: 94f2bfc6567f26d067d29077111cfd0ce86d38263c642ad115e43365f05b0d17' app/build/production-evidence/baseline-signature.txt
           grep -Fxq 'Verified using v2 scheme (APK Signature Scheme v2): true' app/build/production-evidence/baseline-signature.txt
           grep -Fxq 'Number of signers: 1' app/build/production-evidence/baseline-signature.txt
           "$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging "$PRIVATE_GALLERY_1711_BASELINE_APK" > app/build/production-evidence/baseline-package.txt
-          grep -Fq "package: name='uk.co.traynor.privategallery' versionCode='67' versionName='1.7.32'" app/build/production-evidence/baseline-package.txt
+          grep -Fq "package: name='uk.co.traynor.privategallery' versionCode='68' versionName='1.7.33'" app/build/production-evidence/baseline-package.txt
           grep -Fxq "sdkVersion:'37'" app/build/production-evidence/baseline-package.txt
           grep -Fxq "targetSdkVersion:'37'" app/build/production-evidence/baseline-package.txt
           if grep -q 'application-debuggable' app/build/production-evidence/baseline-package.txt; then exit 1; fi
@@ -176,7 +176,7 @@ jobs:
           jarsigner -verify "$probe/probe.jar" > "$probe/verification.txt"
           grep -q 'jar verified' "$probe/verification.txt"
           printf 'PASS: existing permanent private key; original certificate SHA256 94f2bfc6567f26d067d29077111cfd0ce86d38263c642ad115e43365f05b0d17\n' > app/build/production-evidence/permanent-signer.txt
-      - name: Build the frozen original-key NovaOS 1.7.33 Code 68 release candidate
+      - name: Build the frozen original-key NovaOS 1.7.34 Code 69 release candidate
         env:
           ORG_GRADLE_PROJECT_PRIVATE_GALLERY_STORE_FILE: ${{ runner.temp }}/private-gallery-release.jks
           ORG_GRADLE_PROJECT_PRIVATE_GALLERY_STORE_PASSWORD: ${{ secrets.PRIVATE_GALLERY_SIGNING_STORE_PASSWORD }}
@@ -206,7 +206,7 @@ jobs:
           "$ANDROID_HOME/build-tools/36.0.0/zipalign" -c -P 16 -v 4 app/build/outputs/apk/release/app-release.apk > app/build/production-evidence/alignment.txt
       - name: Enable emulator acceleration
         run: sudo chmod 666 /dev/kvm
-      - name: Original-key code67 to code68 upgrade and restart without uninstall or clear
+      - name: Original-key code68 to code69 upgrade and restart without uninstall or clear
         uses: reactivecircus/android-emulator-runner@v2
         env:
           PRODUCTION_UPGRADE: '1'
@@ -214,7 +214,7 @@ jobs:
           api-level: '37.0'
           target: google_apis
           arch: x86_64
-          avd-name: novaos1711-original-key-from67
+          avd-name: novaos1711-original-key-from68
           force-avd-creation: true
           profile: pixel_2
           cores: 4
@@ -230,7 +230,7 @@ jobs:
           python3 - <<'PY'
           import hashlib,json,os,shutil,zipfile
           from pathlib import Path
-          root=Path.cwd();evidence=root/'app/build/production-evidence';upgrade=evidence/'from67'
+          root=Path.cwd();evidence=root/'app/build/production-evidence';upgrade=evidence/'from68'
           apk=root/'app/build/outputs/apk/release/app-release.apk';digest=hashlib.sha256(apk.read_bytes()).hexdigest()
           assert (upgrade/'upgrade-result.txt').read_text().startswith('PASS:')
           assert (upgrade/'upgrade-candidate-source-sha.txt').read_text().strip()==os.environ['FROZEN_SOURCE']
@@ -246,22 +246,22 @@ jobs:
           compiled_reports.mkdir()
           for name in ('compilation.json','baseline-build.gradle.kts','instrumentation-package.txt','instrumentation-manifest.txt','compile.log'):
               shutil.copyfile(compiled/name,compiled_reports/name)
-          summary=dict(source_sha=os.environ['FROZEN_SOURCE'],version='1.7.33',version_code=68,package='uk.co.traynor.privategallery',apk_sha256=digest,
-                       original_certificate_sha256='94f2bfc6567f26d067d29077111cfd0ce86d38263c642ad115e43365f05b0d17',original_key_code67_upgrade='PASS',restart='PASS',physical_owner_acceptance='PENDING')
+          summary=dict(source_sha=os.environ['FROZEN_SOURCE'],version='1.7.34',version_code=69,package='uk.co.traynor.privategallery',apk_sha256=digest,
+                       original_certificate_sha256='94f2bfc6567f26d067d29077111cfd0ce86d38263c642ad115e43365f05b0d17',original_key_code68_upgrade='PASS',restart='PASS',physical_owner_acceptance='PENDING')
           (evidence/'release-summary.json').write_text(json.dumps(summary,indent=2)+'\n')
-          destination=root/'app/build/NovaOS-1.7.33-code68-owner-review.apk';shutil.copyfile(apk,destination)
+          destination=root/'app/build/NovaOS-1.7.34-code69-owner-review.apk';shutil.copyfile(apk,destination)
           (evidence/'SHA256SUMS.txt').write_text(digest+'  '+destination.name+'\n')
           (evidence/'REVIEW-NOTES.md').write_text(
-              '# NovaOS 1.7.33 · production upgrade\n\n'
+              '# NovaOS 1.7.34 · production upgrade\n\n'
               f"Frozen application source `{summary['source_sha']}`.\n\n"
-              'Original production package and signing certificate. Android version code 68, API 37.\n\n'
-              'The pinned original-key Code 67 APK passed an in-place upgrade with retained-data checks, a force-stop '
+              'Original production package and signing certificate. Android version code 69, API 37.\n\n'
+              'The pinned original-key Code 68 APK passed an in-place upgrade with retained-data checks, a force-stop '
               'and repeat verification on an enforcing API 37 emulator. Physical Galaxy Z Fold validation of this update is pending.\n\n'
               'Install over the existing production installation. Do not uninstall NovaOS or clear its data.\n'
           )
           forbidden={'.apk','.apks','.aab','.jks','.keystore','.p12','.pem','.key','.zip'}
           assert not any(path.suffix.lower() in forbidden for path in evidence.rglob('*') if path.is_file()), 'Evidence contains an installable package, archive or signing material'
-          archive=shutil.make_archive(str(root/'app/build/NovaOS-1.7.33-code68-evidence'),'zip',evidence)
+          archive=shutil.make_archive(str(root/'app/build/NovaOS-1.7.34-code69-evidence'),'zip',evidence)
           with zipfile.ZipFile(archive) as zipped:
               assert not any(Path(name).suffix.lower() in forbidden for name in zipped.namelist()), 'Forbidden delivery payload'
           with open(os.environ['GITHUB_OUTPUT'],'a') as output:
@@ -270,10 +270,10 @@ jobs:
       - name: Preserve verified delivery and evidence
         uses: actions/upload-artifact@v4
         with:
-          name: novaos-1.7.33-code68-owner-review
+          name: novaos-1.7.34-code69-owner-review
           path: |
-            app/build/NovaOS-1.7.33-code68-owner-review.apk
-            app/build/NovaOS-1.7.33-code68-evidence.zip
+            app/build/NovaOS-1.7.34-code69-owner-review.apk
+            app/build/NovaOS-1.7.34-code69-evidence.zip
           if-no-files-found: error
           retention-days: 30
       - name: Remove original signing material on every outcome
@@ -294,7 +294,7 @@ jobs:
               original=evidence/name
               if original.is_file() and not original.is_symlink(): shutil.copyfile(original,destination/name)
           for name in ('upgrade-baseline-package.txt','upgrade-candidate-package.txt','upgrade-baseline-signature.txt','upgrade-candidate-signature.txt','upgrade-instrumentation-signature.txt','upgrade-compilation.json','upgrade-seed.txt','upgrade-verify.txt','upgrade-after-restart.txt','upgrade-result.txt'):
-              original=evidence/'from67'/name
+              original=evidence/'from68'/name
               if original.is_file() and not original.is_symlink(): shutil.copyfile(original,destination/name)
           for name in ('lint-results-release.html','lint-results-release.xml'):
               original=Path('app/build/reports')/name
