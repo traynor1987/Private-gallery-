@@ -1,16 +1,20 @@
 package uk.co.traynor.privategallery.ui
 
+import android.graphics.Point
+import android.os.ParcelFileDescriptor
 import android.webkit.WebView
 import androidx.activity.ComponentActivity
 import androidx.compose.runtime.*
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
-import androidx.compose.ui.unit.dp
+import androidx.test.platform.app.InstrumentationRegistry
+import org.json.JSONArray
 import org.junit.Assert.*
 import org.junit.Rule
 import org.junit.Test
 import java.util.UUID
+import java.util.concurrent.atomic.AtomicReference
 import uk.co.traynor.privategallery.core.browser.v2.*
 import uk.co.traynor.privategallery.core.privateapps.PrivateAppCatalog
 
@@ -35,13 +39,14 @@ class NovaWebScroll67Test {
                         override fun loadUrl(url: String) = Unit
                     }.apply {
                         layoutParams = android.view.ViewGroup.LayoutParams(-1, -1)
+                        settings.javaScriptEnabled = true
                     }
                 })
             show("first")
             first = checkNotNull(active)
             first.loadDataWithBaseURL("https://scroll-fixture.invalid/", """
                 <!doctype html><meta name="viewport" content="width=device-width,initial-scale=1">
-                <body style="margin:0"><input aria-label="Scroll fixture editor"
+                <body style="margin:0"><input id="editor" aria-label="Scroll fixture editor"
                     style="position:fixed;top:96px;left:8px;height:64px;font-size:18px;width:90%">
                 <main style="height:400vh;width:220vw;background:linear-gradient(#ddd,#246)"></main></body>
             """.trimIndent(), "text/html", "UTF-8", null)
@@ -73,13 +78,39 @@ class NovaWebScroll67Test {
             compose.waitUntil(5_000) {
                 compose.runOnIdle { first.hasWindowFocus() && first.isEnabled && first.isFocusableInTouchMode }
             }
-            // The fixed editor stays below the system-bar region even while the page scroll settles.
-            val editorY = with(compose.density) { 128.dp.toPx() }
-            host.performTouchInput { click(androidx.compose.ui.geometry.Offset(centerX, editorY)) }
-            val automation = androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().uiAutomation
+            val editor = AtomicReference<Point>()
+            compose.runOnIdle {
+                assertSame(first, active)
+                first.postVisualStateCallback(1, object : WebView.VisualStateCallback() {
+                    override fun onComplete(requestId: Long) {
+                        first.evaluateJavascript("""
+                            (() => {
+                                const rect = document.getElementById('editor').getBoundingClientRect();
+                                return [(rect.left + rect.width / 2) * devicePixelRatio,
+                                        (rect.top + rect.height / 2) * devicePixelRatio];
+                            })()
+                        """.trimIndent()) { result ->
+                            val bounds = JSONArray(result)
+                            val x = bounds.getDouble(0).toInt()
+                            val y = bounds.getDouble(1).toInt()
+                            assertTrue("The fixture editor must be inside the active WebView", x in 0 until first.width && y in 0 until first.height)
+                            val origin = IntArray(2)
+                            first.getLocationOnScreen(origin)
+                            editor.set(Point(origin[0] + x, origin[1] + y))
+                        }
+                    }
+                })
+            }
+            compose.waitUntil(5_000) { editor.get() != null }
+            val automation = InstrumentationRegistry.getInstrumentation().uiAutomation
+            fun sendInput(command: String) {
+                ParcelFileDescriptor.AutoCloseInputStream(automation.executeShellCommand(command)).use { it.readBytes() }
+            }
+            val point = checkNotNull(editor.get())
+            sendInput("input tap ${point.x} ${point.y}")
             val root = compose.activity.window.decorView
             compose.waitUntil(10_000) { compose.runOnIdle { root.rootWindowInsets?.isVisible(android.view.WindowInsets.Type.ime()) == true } }
-            android.os.ParcelFileDescriptor.AutoCloseInputStream(automation.executeShellCommand("input keyevent 4")).use { it.readBytes() }
+            sendInput("input keyevent 4")
             compose.waitUntil(10_000) { compose.runOnIdle { root.rootWindowInsets?.isVisible(android.view.WindowInsets.Type.ime()) == false } }
             val scrollBeforeSwipe = compose.runOnIdle { first.scrollY }
             host.performTouchInput { swipeUp() }
