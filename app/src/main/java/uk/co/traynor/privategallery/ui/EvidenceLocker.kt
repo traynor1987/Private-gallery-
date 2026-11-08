@@ -99,6 +99,24 @@ internal fun EvidenceLocker(controller:EvidenceController,onClose:()->Unit,onImp
     if(state.busy)LinearProgressIndicator(Modifier.fillMaxWidth())
     if(catalog==null){Text("Opening encrypted catalogue…");return@Column}
     val busy=state.busy
+    val zone=ZoneId.systemDefault()
+    val timelineRows=if(page=="Timeline"&&record==null&&incident==null)remember(catalog,state.chronology,state.captureTimes,query,from,through,newestFirst,zone) {
+     val screenshots=state.chronology?.screenshots.orEmpty().associateBy{it.evidenceId}
+     val records=catalog.evidence().associateBy{it.id()}
+     val captures=records.values.filter{it.mime().startsWith("image/") && (query.isBlank() ||
+      it.name().contains(query,true) || it.transcript().contains(query,true))}
+      .map{EvidenceTimelineItem.Screenshot(it,screenshots[it.id()]?.capture,state.captureTimes[it.id()],zone)}
+     val messages=state.chronology?.messages.orEmpty().filter{message->
+      message.locations.all{it.evidenceId in records} &&
+       (query.isBlank()||message.text.contains(query,true)||message.sender?.contains(query,true)==true)
+     }.map{EvidenceTimelineItem.Message(it,zone)}
+     val order=compareBy<EvidenceTimelineItem>({it.date},{it.clock},{it.key})
+     (captures+messages).filter{row->
+      val date=row.date
+      date==null||((from==null||!date.isBefore(from))&&(through==null||!date.isAfter(through)))
+     }.sortedWith(compareBy<EvidenceTimelineItem>{it.date==null}
+      .then(if(newestFirst)order.reversed() else order))
+    }else emptyList()
     LazyColumn(Modifier.weight(1f).fillMaxWidth().testTag("evidence-list"),verticalArrangement=Arrangement.spacedBy(10.dp)) {
      state.message?.let{item{Text(it,style=MaterialTheme.typography.bodySmall)}}
      if(record!=null) {
@@ -291,32 +309,14 @@ internal fun EvidenceLocker(controller:EvidenceController,onClose:()->Unit,onImp
        val range=runCatching{evidenceLocalDateRange(from,through,ZoneId.systemDefault())}.getOrNull()
        if(range==null)item{Text("Choose an end date on or after the start date.",color=MaterialTheme.colorScheme.error)}
        if(page=="Timeline"){
-        val zone=ZoneId.systemDefault()
-        val rows=remember(catalog,state.chronology,state.captureTimes,query,from,through,newestFirst,zone) {
-         val screenshots=state.chronology?.screenshots.orEmpty().associateBy{it.evidenceId}
-         val records=catalog.evidence().associateBy{it.id()}
-         val captures=records.values.filter{it.mime().startsWith("image/") && (query.isBlank() ||
-          it.name().contains(query,true) || it.transcript().contains(query,true))}
-          .map{EvidenceTimelineItem.Screenshot(it,screenshots[it.id()]?.capture,state.captureTimes[it.id()],zone)}
-         val messages=state.chronology?.messages.orEmpty().filter{message->
-          message.locations.all{it.evidenceId in records} &&
-           (query.isBlank()||message.text.contains(query,true)||message.sender?.contains(query,true)==true)
-         }.map{EvidenceTimelineItem.Message(it,zone)}
-         val order=compareBy<EvidenceTimelineItem>({it.date},{it.clock},{it.key})
-         (captures+messages).filter{row->
-          val date=row.date
-          date==null||((from==null||!date.isBefore(from))&&(through==null||!date.isAfter(through)))
-         }.sortedWith(compareBy<EvidenceTimelineItem>{it.date==null}
-          .then(if(newestFirst)order.reversed() else order))
-        }
         item {
          Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween,verticalAlignment=androidx.compose.ui.Alignment.CenterVertically) {
           Text("Evidence timeline",style=MaterialTheme.typography.titleMedium)
           TextButton(onClick={newestFirst=!newestFirst}){Text(if(newestFirst)"Newest first" else "Oldest first")}
          }
-         if(rows.isEmpty())Text("No screenshots or reconstructed messages match this view.")
+         if(timelineRows.isEmpty())Text("No screenshots or reconstructed messages match this view.")
         }
-        if(range!=null)items(rows,key={it.key}){row->
+        if(range!=null)items(timelineRows,key={it.key}){row->
          when(row){
           is EvidenceTimelineItem.Message->EvidenceMessageCard(row.message){evidenceId=it}
           is EvidenceTimelineItem.Screenshot->EvidenceScreenshotEvent(row,busy,{evidenceId=row.record.id()}){
