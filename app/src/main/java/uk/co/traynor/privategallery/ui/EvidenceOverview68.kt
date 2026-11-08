@@ -85,14 +85,15 @@ internal fun EvidenceConnectedSummary(
 internal fun EvidenceMessageCard(message: EvidenceChronology68.Message, onOpen: (String) -> Unit) {
     OutlinedCard(Modifier.fillMaxWidth()) {
         Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            message.sender?.let { Text(it, style = MaterialTheme.typography.titleSmall) }
+            message.sender?.let { Text("Possible sender · $it", style = MaterialTheme.typography.titleSmall) }
             Text(message.text)
             Text(message.timestamp.displayLabel(), style = MaterialTheme.typography.bodySmall)
             Text("Visible message time ${message.visibleClock} · ${message.timestamp.confidence.label()}",
                 style = MaterialTheme.typography.bodySmall)
-            val location = message.locations.first()
-            TextButton(onClick = { onOpen(location.evidenceId) }) {
-                Text("View screenshot · lines ${location.startLine}–${location.endLine}")
+            message.locations.forEachIndexed { index, location ->
+                TextButton(onClick = { onOpen(location.evidenceId) }) {
+                    Text("Screenshot ${index + 1} · lines ${location.startLine}–${location.endLine}")
+                }
             }
         }
     }
@@ -113,6 +114,7 @@ private fun EvidenceChronology68.Confidence.label(): String = when (this) {
 private fun EvidenceChronology68.ReviewReason.label(): String = when (this) {
     EvidenceChronology68.ReviewReason.AMBIGUOUS_DATE -> "Message date is unclear"
     EvidenceChronology68.ReviewReason.AMBIGUOUS_ZONE -> "Message time zone is unclear"
+    EvidenceChronology68.ReviewReason.INFERRED_DATE -> "Check inferred message date"
     EvidenceChronology68.ReviewReason.CONFLICTING_TIMESTAMPS -> "Timestamp claims disagree"
     EvidenceChronology68.ReviewReason.UNKNOWN_PARTICIPANT -> "Sender needs review"
     EvidenceChronology68.ReviewReason.AMBIGUOUS_OCR -> "Extracted text needs review"

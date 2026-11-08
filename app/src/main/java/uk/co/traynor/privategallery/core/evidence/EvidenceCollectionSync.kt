@@ -67,7 +67,7 @@ internal fun evidenceCollections(
             }
         }
     }
-    return EvidenceCollectionSnapshot(members, active.keys)
+    return EvidenceCollectionSnapshot(members, active.keys.filterTo(mutableSetOf(), payloadExists))
 }
 
 /** The connection stores only local identifiers; only the captured Vault can resolve them. */
@@ -96,6 +96,15 @@ internal class EvidenceCollectionSync(private val access: EvidenceAccess) {
 
     fun disconnect(id: String): List<EvidenceCollectionConnection> =
         settings.update { current -> current.filterNot { it.id == id } }
+
+    fun includesAny(sourceIds: Set<String>): Boolean {
+        if (sourceIds.isEmpty()) return false
+        val connected = settings.read().mapTo(mutableSetOf()) { it.id }
+        if (connected.isEmpty()) return false
+        return access.sources.collectionSnapshot(connected).members.values.any { members ->
+            members.any { it.item.id in sourceIds }
+        }
+    }
 
     /** The encrypted index emits only an invalidation, never names or data, and only while authorised. */
     fun changes(): Flow<Unit> = callbackFlow {

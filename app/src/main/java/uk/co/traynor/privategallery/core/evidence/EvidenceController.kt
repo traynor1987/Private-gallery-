@@ -34,6 +34,7 @@ internal class EvidenceController(context:Context,val access:EvidenceAccess):Aut
  private val reviewStore=lazy { EvidenceReview68(context.applicationContext,access) }
  private var collectionJob:Job?=null
  private var collectionPaused=false
+ private var collectionDirty=false
  private val reviewRevision=MutableStateFlow(0)
  private val mutable=MutableStateFlow(State())
  val state=mutable.asStateFlow()
@@ -90,7 +91,9 @@ internal class EvidenceController(context:Context,val access:EvidenceAccess):Aut
      // A prior item may have committed, or promotion may have preceded an fsync failure.
      // Reread instead of hiding committed records or blindly replaying the operation.
      val authoritative=withContext(Dispatchers.IO){runCatching{access.store.read()}.getOrNull()}
-     val message=if(failure is BulkRegistrationFailure){
+     val message=if(failure is ConnectedEvidenceRemoval)
+      "Disconnect the source collection before removing its evidence reference."
+     else if(failure is BulkRegistrationFailure){
       val committed=authoritative?.evidence()?.count{it.sourceId() in failure.sourceIds}
       if(committed==null)"Bulk registration stopped. Reopen to review which records committed. Originals were preserved."
       else "Bulk registration stopped: $committed of ${failure.sourceIds.size} selected originals are registered. Review the committed records before retrying. Originals were preserved."
@@ -102,7 +105,9 @@ internal class EvidenceController(context:Context,val access:EvidenceAccess):Aut
    }
   }
  }
- fun refresh() {perform("Evidence Locker ready") {
+ fun refresh() {
+  val initial=mutable.value.catalog==null
+  perform("Evidence Locker ready") {
   val catalog=access.store.read();val sources=access.sources.list();val byId=sources.associateBy{it.item.id}
   // One cheap live catalogue snapshot, never a substitute for authenticated full-byte verification.
   val integrity=catalog.evidence().associate{record ->
@@ -119,7 +124,7 @@ internal class EvidenceController(context:Context,val access:EvidenceAccess):Aut
     collections=collections,connections=connections)}}
   catalog
  }.invokeOnCompletion {
-  scope.launch { if(!collectionPaused && mutable.value.connections.isNotEmpty())syncCollections() }
+  scope.launch { if(initial && !collectionPaused && mutable.value.connections.isNotEmpty())syncCollections() }
  }}
  fun connectCollection(id:String) {
   perform("Collection connected") {
@@ -137,8 +142,10 @@ internal class EvidenceController(context:Context,val access:EvidenceAccess):Aut
  }
  fun syncCollections() = syncCollections(retryPending=true)
  private fun syncCollections(retryPending:Boolean) {
-  if(!current()||collectionJob?.isActive==true||mutable.value.connections.isEmpty())return
+  if(!current()||mutable.value.connections.isEmpty())return
+  if(collectionJob!=null){collectionDirty=true;return}
   collectionPaused=false
+  collectionDirty=false
   publish{it.copy(syncingCollections=true,collectionProgress=null)}
   val job=perform("Collection scan complete") {
    collectionSync.sync(progress={progress->
@@ -148,16 +155,21 @@ internal class EvidenceController(context:Context,val access:EvidenceAccess):Aut
   }
   collectionJob=job
   job.invokeOnCompletion {scope.launch {
-   if(collectionJob===job)publish{it.copy(syncingCollections=false,
-    message=if(collectionPaused)"Collection processing paused. Saved evidence was kept." else it.message)}
+   if(collectionJob!==job)return@launch
+   collectionJob=null
+   publish{it.copy(syncingCollections=false)}
+   if(collectionPaused)perform("Collection processing paused. Saved evidence was kept."){access.store.read()}
+   else if(collectionDirty)syncCollections(retryPending=false)
   }}
  }
  fun cancelCollectionSync() {collectionPaused=true;collectionJob?.cancel()}
  fun confirmMessageTime(location:EvidenceChronology68.MessageLocation,timestamp:Long) {
   perform("Message date confirmed") {
    val catalog=access.store.read()
-   check(EvidenceChronology68.analyse(catalog.evidence(),current={access.current()}).messages.any{location in it.locations})
-   reviewStore.value.confirm(location,timestamp)
+   val review=reviewStore.value
+   val message=EvidenceChronology68.analyse(catalog.evidence(),confirmed=review.confirmed(),current={access.current()})
+    .messages.single{location in it.locations}
+   review.confirm(message.locations,timestamp)
    withContext(Dispatchers.Main.immediate){reviewRevision.value++}
    catalog
   }
@@ -169,6 +181,15 @@ internal class EvidenceController(context:Context,val access:EvidenceAccess):Aut
    access.store.read()
   }
  }
+ fun removeEvidenceReferences(ids:List<String>) {
+  perform("Evidence references removed; originals retained") {
+   val catalogue=access.store.read()
+   val sourceIds=catalogue.evidence().filter{it.id() in ids}.mapTo(mutableSetOf()){it.sourceId()}
+   if(collectionSync.includesAny(sourceIds))throw ConnectedEvidenceRemoval()
+   access.store.update{current->ids.fold(current){state,id->state.removeEvidence(id,now())}}
+  }
+ }
+ private class ConnectedEvidenceRemoval:IllegalStateException()
  /** Transforms are trusted local UI operations, never model output or imported JSON. */
  fun mutate(label:String,transform:(EvidenceCatalog)->EvidenceCatalog)=perform(label){access.store.update(transform)}
  fun register(sourceId:String,extract:Boolean=true)=perform("Evidence added; original preserved") {registerRecord(sourceId,extract)}

@@ -22,12 +22,16 @@ internal class EvidenceReview68(context: Context, access: EvidenceAccess) : Auto
 
     fun skipped(): Set<String> = preferences.all.keys.filter { it.startsWith("skip-") }.toSet()
 
-    fun confirm(location: EvidenceChronology68.MessageLocation, timestamp: Long) {
-        require(timestamp > 0)
-        val row = JSONArray(listOf(location.evidenceId, location.transcriptVersion, location.startLine, location.endLine))
-        val key = "time-" + fingerprint(row.toString())
-        row.put(timestamp)
-        check(preferences.edit().putString(key, row.toString()).commit())
+    fun confirm(locations: List<EvidenceChronology68.MessageLocation>, timestamp: Long) {
+        require(locations.isNotEmpty() && timestamp > 0)
+        val update = preferences.edit()
+        for (location in locations) {
+            val row = JSONArray(listOf(location.evidenceId, location.transcriptVersion, location.startLine, location.endLine))
+            val key = "time-" + fingerprint(row.toString())
+            row.put(timestamp)
+            update.putString(key, row.toString())
+        }
+        check(update.commit())
     }
 
     fun skip(review: EvidenceChronology68.Review) {

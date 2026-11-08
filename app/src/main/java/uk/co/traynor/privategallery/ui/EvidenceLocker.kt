@@ -222,7 +222,7 @@ internal fun EvidenceLocker(controller:EvidenceController,onClose:()->Unit,onImp
        }
        item{Text("Saved encrypted AI reports*",style=MaterialTheme.typography.titleLarge);Text(EvidenceAiReport.DISCLAIMER)}
        val reports=catalog.analyses().filter{it.task()==EvidenceAi.Task.EVIDENCE_REPORT.name}.sortedByDescending{it.at()}
-       if(reports.isEmpty())item{Text("No saved reports. Select evidence or a connected collection, choose Behaviour report*, review the exact payload, then explicitly confirm any request.")}
+       if(reports.isEmpty())item{Text("No saved reports. Select records in Evidence, choose Behaviour report*, review the exact payload, then explicitly confirm any request.")}
        items(reports,key={it.id()}){analysis->ElevatedCard(Modifier.fillMaxWidth()){Column(Modifier.padding(12.dp)){
         Text("AI evidence report* · ${time(analysis.at())}")
         Text("${analysis.evidenceIds().size} selected evidence references · ${analysis.model()}",style=MaterialTheme.typography.bodySmall)
@@ -246,7 +246,7 @@ internal fun EvidenceLocker(controller:EvidenceController,onClose:()->Unit,onImp
          Text("Filters use the screenshot or import date.",style=MaterialTheme.typography.bodySmall)
          FilterChip(selected=archived,onClick={archived=!archived},label={Text("Include archived incidents")})
         }
-        FlowRow {TextButton(enabled=!busy,onClick={originalsSelected=emptySet();choice="Import"}){Text("Add evidence")};TextButton(enabled=!busy&&selected.isNotEmpty(),onClick={choice="Assign"}){Text("Add selected to incident")};TextButton(enabled=!busy&&selected.isNotEmpty(),onClick={choice="Move"}){Text("Move to incident")};TextButton(enabled=!busy,onClick={exportSelection=EvidenceExportSelection(emptyList(),selected.toList())}){Text("Export selection")};TextButton(enabled=!busy&&selected.isNotEmpty(),onClick={onAi(selected.toList())}){Text("AI analysis")};TextButton(enabled=!busy&&selected.isNotEmpty(),onClick={onAiReport(selected.toList())}){Text("Behaviour report*")};TextButton(enabled=!busy&&selected.isNotEmpty(),onClick={confirmation="Remove selected evidence records and annotations? Encrypted originals and Recently Deleted remain unchanged." to {val ids=selected.toList();change("Evidence references removed; originals retained"){c->ids.fold(c){a,id->a.removeEvidence(id,EvidenceController.now())}};selected=emptySet()}}){Text("Remove references")}}
+        FlowRow {TextButton(enabled=!busy,onClick={originalsSelected=emptySet();choice="Import"}){Text("Add evidence")};TextButton(enabled=!busy&&selected.isNotEmpty(),onClick={choice="Assign"}){Text("Add selected to incident")};TextButton(enabled=!busy&&selected.isNotEmpty(),onClick={choice="Move"}){Text("Move to incident")};TextButton(enabled=!busy,onClick={exportSelection=EvidenceExportSelection(emptyList(),selected.toList())}){Text("Export selection")};TextButton(enabled=!busy&&selected.isNotEmpty(),onClick={onAi(selected.toList())}){Text("AI analysis")};TextButton(enabled=!busy&&selected.isNotEmpty(),onClick={onAiReport(selected.toList())}){Text("Behaviour report*")};TextButton(enabled=!busy&&selected.isNotEmpty(),onClick={confirmation="Remove selected evidence records and annotations? Encrypted originals and Recently Deleted remain unchanged." to {val ids=selected.toList();controller.removeEvidenceReferences(ids);selected=emptySet()}}){Text("Remove references")}}
        }
        val dates=runCatching{evidenceLocalDateRange(from,through,ZoneId.systemDefault())}.getOrNull()
        if(dates==null)item{Text("Choose an end date on or after the start date.",color=MaterialTheme.colorScheme.error)}
@@ -265,7 +265,10 @@ internal fun EvidenceLocker(controller:EvidenceController,onClose:()->Unit,onImp
          val timestamp=message.timestamp.instant?.toEpochMilli()
          (query.isBlank()||message.text.contains(query,true)||message.sender?.contains(query,true)==true) &&
           (timestamp==null||range!=null&&(range.first==0L||timestamp>=range.first)&&(range.second==0L||timestamp<=range.second))
-        }.sortedBy{it.timestamp.instant?:Instant.MAX}
+        }.sortedWith(compareBy(
+         { it.timestamp.instant?.atZone(ZoneId.systemDefault())?.toLocalDate() ?: it.timestamp.date ?: LocalDate.MAX },
+         { it.timestamp.instant?.atZone(ZoneId.systemDefault())?.toLocalTime() ?: it.timestamp.clock ?: java.time.LocalTime.MAX },
+        ))
         if(messages.isNotEmpty())item{Text("Reconstructed messages",style=MaterialTheme.typography.titleMedium)}
         items(messages,key={message->
          val source=message.locations.first()
