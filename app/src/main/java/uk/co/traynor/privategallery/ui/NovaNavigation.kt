@@ -13,6 +13,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
+import uk.co.traynor.privategallery.core.home2.SpaceContext
 
 /** App-owned controls. The viewport owner preserves Android/IME insets exactly once. */
 @Composable
@@ -45,7 +46,8 @@ internal fun NovaNavigationRow(
 }
 
 private fun navigationPreferences(context: Context) =
- context.applicationContext.getSharedPreferences("nova-navigation", Context.MODE_PRIVATE)
+ (if (context is SpaceContext) context.baseContext else context)
+  .applicationContext.getSharedPreferences("nova-navigation", Context.MODE_PRIVATE)
 
 @Composable internal fun navigationHaptic(): () -> Unit {
  val view = LocalView.current
