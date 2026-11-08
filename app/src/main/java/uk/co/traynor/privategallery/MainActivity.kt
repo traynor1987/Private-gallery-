@@ -247,6 +247,11 @@ internal fun privateWorkspaceEntryIntent(context: android.content.Context): Inte
         Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
     )
 
+// Only the UI thread mutates this set. Weak ownership does not retain a destroyed workspace.
+private val workspaceActivities = java.util.Collections.newSetFromMap(
+    java.util.WeakHashMap<MainActivity, Boolean>()
+)
+
 class MainActivity : FragmentActivity() {
     private class ExternalTicket(val original:String,val hidden:uk.co.traynor.privategallery.core.hidden.HiddenSession?, val recoveryId:String=java.util.UUID.randomUUID().toString()) {
         var file by mutableStateOf<java.io.File?>(null)
@@ -1256,6 +1261,12 @@ class MainActivity : FragmentActivity() {
     private fun enterPrivateWorkspaceFromLauncher() {
         // The neutral launcher has no Vault authority. Consume the request once, including on recreation.
         setIntent(Intent(this, MainActivity::class.java))
+        // Android may open a new task instead of delivering onNewIntent to the old one.
+        for (owner in workspaceActivities.toList()) owner.retireWorkspaceForLauncherEntry()
+        if (route == Route.LOCK) requestNovaCredentials()
+    }
+
+    private fun retireWorkspaceForLauncherEntry() {
         if (session.isUnlocked || sessionKey != null || retained.hidden.session.isUnlocked || retained.hidden.selected) {
             panicCoverPending = true
             coverSensitiveContent()
@@ -1264,7 +1275,6 @@ class MainActivity : FragmentActivity() {
         }
         retained.route = if (keys.isConfigured) Route.LOCK else Route.SETUP
         route = retained.route
-        if (route == Route.LOCK) requestNovaCredentials()
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -1340,6 +1350,7 @@ class MainActivity : FragmentActivity() {
         if(savedInstanceState==null) automaticBiometricPromptAttempted = false
         if(retained.hidden.selected && !retained.hidden.session.isUnlocked)retained.hidden.leave()
         route = if ((session.isUnlocked && sessionKey != null) || (retained.hidden.selected && retained.hidden.session.isUnlocked)) retained.route else if (keys.isConfigured) Route.LOCK else Route.SETUP
+        workspaceActivities.add(this)
         if (intent.action == ACTION_OPEN_PRIVATE_WORKSPACE) enterPrivateWorkspaceFromLauncher()
         setContent {
             PrivateGalleryTheme(selectedNativeTheme()) {
@@ -1583,6 +1594,7 @@ class MainActivity : FragmentActivity() {
     }
 
     override fun onDestroy() {
+        workspaceActivities.remove(this)
         novaBlackScreenController?.close();novaBlackScreenController=null
         novaWallpaperRequest?.owner?.close();novaWallpaperRequest=null
         ownedPanicWindows.entries.toList().forEach {(window,binding)->if(window.callback===binding.callback)window.callback=binding.original}
