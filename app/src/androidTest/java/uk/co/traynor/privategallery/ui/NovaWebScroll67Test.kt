@@ -48,7 +48,7 @@ class NovaWebScroll67Test {
             first.loadDataWithBaseURL("https://scroll-fixture.invalid/", """
                 <!doctype html><meta name="viewport" content="width=device-width,initial-scale=1">
                 <body style="margin:0"><input id="editor" aria-label="Scroll fixture editor"
-                    style="position:fixed;top:96px;left:24px;height:64px;font-size:18px;width:160px">
+                    style="position:absolute;top:96px;left:24px;height:64px;font-size:18px;width:160px">
                 <main style="height:400vh;width:220vw;background:linear-gradient(#ddd,#246)"></main></body>
             """.trimIndent(), "text/html", "UTF-8", null)
         }
@@ -60,7 +60,16 @@ class NovaWebScroll67Test {
         try {
             val host = compose.onNodeWithTag("browser-v2-webview-host")
             compose.waitUntil(10_000) { compose.runOnIdle { first.canScrollVertically(1) } }
-            host.performTouchInput { swipeUp() }
+            host.performTouchInput {
+                down(center)
+                val destination = center.copy(y = centerY / 2)
+                for (step in 1..6) {
+                    moveTo(0, center.copy(y = centerY - (centerY - destination.y) * step / 6), delayMillis = 35)
+                }
+                // End at rest so a fling cannot move the editor after the app switch.
+                moveTo(0, destination, delayMillis = 250)
+                up()
+            }
             compose.waitUntil(5_000) { compose.runOnIdle { first.scrollY > 0 } }
             val parent = compose.runOnIdle { first.parent }
             compose.runOnIdle { show("second") }
@@ -74,7 +83,6 @@ class NovaWebScroll67Test {
                 session.selectFromNovaHome(firstId)
                 id = firstId
                 active = session.activeWebView()
-                first.scrollTo(0, 0)
             }
             compose.waitUntil(5_000) {
                 compose.runOnIdle {
@@ -89,8 +97,11 @@ class NovaWebScroll67Test {
                     override fun onComplete(requestId: Long) {
                         first.evaluateJavascript("""
                             (() => {
-                                const rect = document.getElementById('editor').getBoundingClientRect();
                                 const viewport = window.visualViewport;
+                                const editor = document.getElementById('editor');
+                                editor.style.left = (viewport.pageLeft + 24) + 'px';
+                                editor.style.top = (viewport.pageTop + 96) + 'px';
+                                const rect = editor.getBoundingClientRect();
                                 const scale = devicePixelRatio * viewport.scale;
                                 return [(rect.left - viewport.offsetLeft + rect.width / 2) * scale,
                                         (rect.top - viewport.offsetTop + rect.height / 2) * scale];
