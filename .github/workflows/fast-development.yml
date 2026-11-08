@@ -580,6 +580,9 @@ jobs:
           "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --version | tee app/build/home2-evidence/command-tools-version.txt
           grep -Fxq '22.0' app/build/home2-evidence/command-tools-version.txt
           "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-37.1" "build-tools;36.0.0" "emulator"
+      - name: Prepare checksum-verified Gradle wrapper distribution
+        if: github.ref == 'refs/heads/feature/novaos-sanctuary-integration'
+        run: bash scripts/prime_gradle95_ci.sh
       - name: Build isolated test identity and run JVM checks
         run: ./gradlew testDebugUnitTest assembleDebug assembleDebugAndroidTest -Pkotlin.incremental=false --no-daemon --console=plain
       - name: Verify reused Home policies and encrypted adapter
