@@ -24,7 +24,8 @@ internal class EvidenceController(context:Context,val access:EvidenceAccess):Aut
   val connections:List<EvidenceCollectionConnection> = emptyList(),
   val collectionProgress:EvidenceCollectionProgress? = null,
   val syncingCollections:Boolean=false,
-  val chronology:EvidenceChronology68.Result?=null)
+  val chronology:EvidenceChronology68.Result?=null,
+  val chronologyUnavailable:Boolean=false)
  private val importAcquisitions=java.util.concurrent.ConcurrentHashMap<String,EvidenceOriginal>()
  private val main=Handler(Looper.getMainLooper())
  private val scope=CoroutineScope(SupervisorJob()+Dispatchers.Main.immediate)
@@ -64,15 +65,16 @@ internal class EvidenceController(context:Context,val access:EvidenceAccess):Aut
      try {
       val analysis=withContext(Dispatchers.IO){
        ensureActive()
+       val operation=currentCoroutineContext()
        val reviewed=reviewStore.value
        val skipped=reviewed.skipped()
-       EvidenceChronology68.analyse(catalog.evidence(),confirmed=reviewed.confirmed(),current={access.current()}).let { result ->
+       EvidenceChronology68.analyse(catalog.evidence(),confirmed=reviewed.confirmed(),current={operation.isActive&&access.current()}).let { result ->
         result.copy(review=result.review.filterNot { EvidenceReview68.key(it) in skipped })
        }.also{access.checkCurrent();ensureActive()}
       }
-      publish{it.copy(chronology=analysis)}
+      publish{it.copy(chronology=analysis,chronologyUnavailable=false)}
      }catch(cancelled:CancellationException){throw cancelled}
-     catch(_:Exception){publish{it.copy(chronology=null)}}
+     catch(_:Exception){publish{it.copy(chronology=null,chronologyUnavailable=true)}}
     }
   }
  }

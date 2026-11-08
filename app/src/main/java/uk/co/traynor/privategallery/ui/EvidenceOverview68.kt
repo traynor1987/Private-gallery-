@@ -135,12 +135,15 @@ internal fun EvidenceReviewQueue68(controller: EvidenceController, onOpen: (Stri
     EvidenceWorkflowPage(onDismissRequest = onClose, title = { EvidenceDialogTitle("Review queue") },
         text = {
             LazyColumn(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                if (analysis == null) item { Text("Preparing local analysis…") }
+                if (state.chronologyUnavailable) item { Text("Local analysis could not be loaded. Reopen Evidence Locker to retry.") }
+                else if (analysis == null) item { Text("Preparing local analysis…") }
                 else if (analysis.review.isEmpty()) item { Text("Nothing needs review right now.") }
                 items(analysis?.review.orEmpty(), key = EvidenceReview68::key) { review ->
                     val message = messages[review.location]
                     val original = review.evidenceIds.firstOrNull()
                     val instant = message?.timestamp?.instant
+                    val dateReview = review.reason in setOf(EvidenceChronology68.ReviewReason.AMBIGUOUS_DATE,
+                        EvidenceChronology68.ReviewReason.AMBIGUOUS_ZONE, EvidenceChronology68.ReviewReason.INFERRED_DATE)
                     OutlinedCard(Modifier.fillMaxWidth()) {
                         Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -152,12 +155,12 @@ internal fun EvidenceReviewQueue68(controller: EvidenceController, onOpen: (Stri
                             }
                             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                 val location = review.location
-                                if (location != null && instant != null) {
+                                if (dateReview && location != null && instant != null) {
                                     TextButton(enabled = !state.busy, onClick = {
                                         controller.confirmMessageTime(location, instant.toEpochMilli())
                                     }) { Text("Confirm") }
                                 }
-                                if (location != null && message != null) {
+                                if (dateReview && location != null && message != null) {
                                     TextButton(enabled = !state.busy, onClick = { correcting = location }) { Text("Correct") }
                                 }
                                 if (original != null) TextButton(onClick = { onOpen(original) }) { Text("Open evidence") }
