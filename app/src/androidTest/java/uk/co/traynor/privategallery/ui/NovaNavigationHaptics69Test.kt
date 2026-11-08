@@ -3,6 +3,7 @@ package uk.co.traynor.privategallery.ui
 import android.content.Context
 import android.view.HapticFeedbackConstants
 import android.view.View
+import android.view.ViewGroup
 import androidx.activity.ComponentActivity
 import androidx.compose.foundation.layout.Column
 import androidx.compose.runtime.CompositionLocalProvider
@@ -51,6 +52,13 @@ class NovaNavigationHaptics69Test {
         view = compose.runOnIdle { RecordingView(compose.activity).apply { isHapticFeedbackEnabled = true } }
     }
 
+    private fun attachRecordingView() = compose.runOnIdle {
+        // Compose's real touch ripple resolves its container through LocalView's parent.
+        val root = compose.activity.findViewById<ViewGroup>(android.R.id.content)
+        root.addView(view, ViewGroup.LayoutParams(1, 1))
+        check(view.isAttachedToWindow)
+    }
+
     @After fun restore() {
         val edit = preferences.edit()
         if (previous == null) edit.remove("haptics") else edit.putBoolean("haptics", checkNotNull(previous))
@@ -73,6 +81,7 @@ class NovaNavigationHaptics69Test {
             }
         }
 
+        attachRecordingView()
         listOf("recents", "home", "back").forEach { action ->
             compose.onNodeWithTag("nova-$action").performTouchInput { click() }
         }
@@ -110,6 +119,7 @@ class NovaNavigationHaptics69Test {
             }
         }
 
+        attachRecordingView()
         compose.onNodeWithContentDescription("Nova Home").performTouchInput { click() }
         compose.onNodeWithContentDescription("Back").performTouchInput { click() }
         compose.onNodeWithContentDescription("Back to Home").performTouchInput { click() }
@@ -134,6 +144,7 @@ class NovaNavigationHaptics69Test {
             }
         }
 
+        attachRecordingView()
         val toggle = compose.onNodeWithTag("nova-navigation-haptics")
         val testAction = compose.onNodeWithTag("nova-navigation-haptics-test")
         toggle.assertIsOn()
