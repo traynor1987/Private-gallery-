@@ -22,6 +22,7 @@ internal sealed interface EvidenceTimelineItem {
         val capture: EvidenceChronology68.Timestamp?,
         val confirmed: Long?,
         val zone: ZoneId,
+        val captureClaims: List<EvidenceChronology68.Timestamp> = emptyList(),
     ) : EvidenceTimelineItem {
         override val key = "capture-${record.id()}"
         val epoch = confirmed ?: capture?.instant?.toEpochMilli()
@@ -52,8 +53,13 @@ internal fun EvidenceScreenshotEvent(
             Text(item.record.name(), style = MaterialTheme.typography.titleMedium)
             Text(when {
                 item.confirmed != null -> "Screenshot capture · ${evidenceLocalTime(item.confirmed)} · Owner confirmed"
-                item.epoch != null -> "Screenshot capture · ${evidenceLocalTime(item.epoch)}"
-                item.date != null -> "Screenshot capture · ${item.date} · Time zone needs review"
+                item.epoch != null -> {
+                    val source = if (item.capture?.provenance == EvidenceChronology68.Provenance.EXIF_WITH_OFFSET)
+                        "Image metadata (EXIF)" else "Vault metadata · Needs review"
+                    "Screenshot capture · ${evidenceLocalTime(item.epoch)} · $source"
+                }
+                item.date != null -> "Screenshot capture · ${item.date} · Image metadata (EXIF) · Time zone needs review"
+                item.captureClaims.count { it.instant != null } > 1 -> "Capture date needs review · Metadata sources disagree"
                 else -> "Capture date unknown"
             })
             Text("Registered ${evidenceLocalTime(item.record.importedAt())}", style = MaterialTheme.typography.bodySmall)

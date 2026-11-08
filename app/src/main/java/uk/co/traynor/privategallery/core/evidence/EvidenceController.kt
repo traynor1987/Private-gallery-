@@ -74,12 +74,14 @@ internal class EvidenceController(context:Context,val access:EvidenceAccess):Aut
        val reviewed=reviewStore.value
        val skipped=reviewed.skipped()
        val zone=reviewed.conversationZone()
-       EvidenceChronology68.analyse(catalog.evidence(),conversationZone=zone,confirmed=reviewed.confirmed(),current={operation.isActive&&access.current()}).let { result ->
+       val captureTimes=reviewed.captureTimes()
+       EvidenceChronology68.analyseWithCaptureTimes(catalog.evidence(),zone,reviewed.confirmed(),captureTimes,
+        current={operation.isActive&&access.current()}).let { result ->
         Triple(result.copy(review=result.review.filterNot {
          EvidenceReview68.key(it) in skipped ||
           (it.reason==EvidenceChronology68.ReviewReason.SUGGESTED_INCIDENT &&
            catalog.incidents().any { incident -> incident.evidenceIds().containsAll(it.evidenceIds) })
-        }),zone,reviewed.captureTimes())
+        }),zone,captureTimes)
        }.also{access.checkCurrent();ensureActive()}
       }
       publish{it.copy(chronology=analysis,chronologyUnavailable=false,analysingChronology=false,conversationZone=zone,captureTimes=captureTimes)}
@@ -194,7 +196,8 @@ internal class EvidenceController(context:Context,val access:EvidenceAccess):Aut
   perform("Message date confirmed") {
    val catalog=access.store.read()
    val review=reviewStore.value
-   val message=EvidenceChronology68.analyse(catalog.evidence(),conversationZone=review.conversationZone(),confirmed=review.confirmed(),current={access.current()})
+   val message=EvidenceChronology68.analyseWithCaptureTimes(catalog.evidence(),review.conversationZone(),review.confirmed(),
+    review.captureTimes(),current={access.current()})
     .messages.single{location in it.locations}
    review.confirm(message.locations,timestamp)
    withContext(Dispatchers.Main.immediate){reviewRevision.value++}
@@ -208,7 +211,10 @@ internal class EvidenceController(context:Context,val access:EvidenceAccess):Aut
    val review=reviewStore.value
    review.setCaptureTime(evidenceId,timestamp)
    val captureTimes=review.captureTimes()
-   withContext(Dispatchers.Main.immediate){publish{it.copy(captureTimes=captureTimes)}}
+   withContext(Dispatchers.Main.immediate){
+    publish{it.copy(captureTimes=captureTimes)}
+    reviewRevision.value++
+   }
    catalog
   }
  }

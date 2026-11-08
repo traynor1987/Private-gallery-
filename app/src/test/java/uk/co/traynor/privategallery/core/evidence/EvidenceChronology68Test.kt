@@ -284,6 +284,34 @@ class EvidenceChronology68Test {
         }
     }
 
+    @Test fun unrelatedChatsWithMatchingBubbleTextAndClocksKeepIndependentLocations() {
+        val date = "12 May 2025"
+        val left = "Please meet me at the entrance. 20:10"
+        val right = "I will arrive in five minutes. 20:11"
+        val words = fixtureWords(date, 410, 660, 140) +
+            fixtureWords(left, 60, 590, 220) + fixtureWords(right, 570, 1030, 290)
+        val records = listOf(
+            screenshot("$date\n$left\n$right", words = words, participants = listOf("Alex")),
+            screenshot("$date\n$left\n$right", id = 2, words = words, participants = listOf("Sam")),
+        )
+        val result = EvidenceChronology68.analyse(records, london)
+        assertEquals(4, result.messages.size)
+        assertTrue(result.messages.all { it.locations.size == 1 })
+        assertTrue(result.incidents.none { it.evidenceIds.size > 1 })
+    }
+
+    @Test fun ownerCaptureCorrectionReanchorsRelativeDatesWithoutChangingOriginalMetadata() {
+        val record = screenshot("Yesterday\nAlex: Call me after dinner 20:00", capture.toEpochMilli())
+        val fixed = Instant.parse("2025-05-13T21:18:00Z")
+        val result = EvidenceChronology68.analyseWithCaptureTimes(
+            listOf(record), london, emptyMap(), mapOf(record.id() to fixed.toEpochMilli()),
+        )
+        assertEquals(capture, result.screenshots.single().capture.instant)
+        assertEquals(capture.toEpochMilli(), record.metadata().captureAt())
+        assertEquals(Instant.parse("2025-05-12T19:00:00Z"), result.messages.single().timestamp.instant)
+        assertEquals(Confidence.NEEDS_REVIEW, result.messages.single().timestamp.confidence)
+    }
+
     private fun screenshot(
         text: String, captureAt: Long = 0, id: Int = 1, embedded: Map<String, String> = emptyMap(),
         words: List<EvidenceCatalog.Word> = emptyList(), participants: List<String> = emptyList(),

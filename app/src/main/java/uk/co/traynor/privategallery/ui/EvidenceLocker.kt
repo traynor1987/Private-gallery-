@@ -105,7 +105,8 @@ internal fun EvidenceLocker(controller:EvidenceController,onClose:()->Unit,onImp
      val records=catalog.evidence().associateBy{it.id()}
      val captures=records.values.filter{it.mime().startsWith("image/") && (query.isBlank() ||
       it.name().contains(query,true) || it.transcript().contains(query,true))}
-      .map{EvidenceTimelineItem.Screenshot(it,screenshots[it.id()]?.capture,state.captureTimes[it.id()],zone)}
+      .map{EvidenceTimelineItem.Screenshot(it,screenshots[it.id()]?.capture,state.captureTimes[it.id()],zone,
+       screenshots[it.id()]?.captureClaims.orEmpty())}
      val messages=state.chronology?.messages.orEmpty().filter{message->
       message.locations.all{it.evidenceId in records} &&
        (query.isBlank()||message.text.contains(query,true)||message.sender?.contains(query,true)==true)

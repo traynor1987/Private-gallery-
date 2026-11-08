@@ -101,6 +101,14 @@ internal object EvidenceChronology68 {
         conversationZone: ZoneId? = null,
         confirmed: Map<MessageLocation, Instant> = emptyMap(),
         current: () -> Boolean = { true },
+    ): Result = analyseWithCaptureTimes(records, conversationZone, confirmed, emptyMap(), current)
+
+    fun analyseWithCaptureTimes(
+        records: List<EvidenceCatalog.Evidence>,
+        conversationZone: ZoneId?,
+        confirmed: Map<MessageLocation, Instant>,
+        captureTimes: Map<String, Long>,
+        current: () -> Boolean = { true },
     ): Result {
         ensureCurrent(current)
         val screenshots = mutableListOf<Screenshot>()
@@ -113,14 +121,18 @@ internal object EvidenceChronology68 {
             if (!record.mime().startsWith("image/")) continue
             val (capture, claims) = captureClaims(record.metadata())
             val id = record.id()
-            if (capture.confidence == Confidence.NEEDS_REVIEW && claims.count { it.instant != null } > 1) {
+            val confirmedCapture = captureTimes[id]?.takeIf { it > 0 }?.let { at ->
+                Timestamp(instant = Instant.ofEpochMilli(at), provenance = Provenance.OWNER_CONFIRMED,
+                    confidence = Confidence.CONFIRMED)
+            }
+            if (confirmedCapture == null && capture.confidence == Confidence.NEEDS_REVIEW && claims.count { it.instant != null } > 1) {
                 review += Review(ReviewReason.CONFLICTING_TIMESTAMPS, listOf(id))
             }
             val start = messages.size
             val remaining = MAX_MESSAGES - start
             if (remaining > 0) {
                 val reviewed = reviewedByEvidence[id].orEmpty().associate { it.toPair() }
-                messages += parseMessages(record, capture, conversationZone, reviewed, review, remaining, current)
+                messages += parseMessages(record, confirmedCapture ?: capture, conversationZone, reviewed, review, remaining, current)
                 recordMessages[id] = start until messages.size
             } else if (record.ocr().isNotEmpty()) {
                 review += Review(ReviewReason.PROCESSING_LIMIT, listOf(id))
@@ -457,13 +469,15 @@ internal object EvidenceChronology68 {
         return Timestamp(accepted, date, clock, provenance, confidence, visible, zoneId, anchor?.text)
     }
 
-    private data class MessageKey(val sender: String, val content: String, val absolute: Instant?, val local: LocalDateTime?)
+    private data class MessageKey(
+        val participants: List<String>, val sender: String, val content: String,
+        val absolute: Instant?, val local: LocalDateTime?,
+    )
     private data class PairOccurrence(val evidenceId: String, val first: Int, val second: Int)
-    private fun key(message: Message): MessageKey? {
+    private fun key(message: Message, participants: List<String>): MessageKey? {
         if (message.kind != Kind.MESSAGE) return null
-        val sender = message.sender?.lowercase(Locale.ROOT)
-            ?: message.direction.takeUnless { it == Direction.UNKNOWN }?.let { "bubble:${it.name}" }
-            ?: return null
+        // Bubble alignment helps segment a screenshot but cannot establish identity across chats.
+        val sender = message.sender?.lowercase(Locale.ROOT) ?: return null
         val time = message.timestamp
         val instant = time.instant?.takeIf { time.confidence == Confidence.CONFIRMED || time.confidence == Confidence.HIGH_CONFIDENCE }
         // Matching a visible date and clock does not require inventing the conversation's timezone.
@@ -472,7 +486,7 @@ internal object EvidenceChronology68 {
         if (instant == null && local == null) return null
         val content = message.text.lowercase(Locale.ROOT).replace(whitespace, " ").trim()
         if (content.length < 8) return null
-        return MessageKey(sender, content, instant, local)
+        return MessageKey(participants, sender, content, instant, local)
     }
 
     private fun overlap(
@@ -483,9 +497,15 @@ internal object EvidenceChronology68 {
         review: MutableSet<Review>,
         current: () -> Boolean,
     ): Pair<List<Message>, List<IncidentSuggestion>> {
+        val ownerParticipants = records.associate { record ->
+            record.id() to record.participants().filterNot { it.equals("you", true) }
+        }
+        val participantKeys = ownerParticipants.mapValues { (_, names) ->
+            names.map { it.trim().lowercase(Locale.ROOT) }.distinct().sorted()
+        }
         val keys = messages.mapIndexed { index, message ->
             if (index % 16 == 0) ensureCurrent(current)
-            key(message)
+            key(message, participantKeys.getValue(message.locations.single().evidenceId))
         }
         val pairs = linkedMapOf<Pair<MessageKey, MessageKey>, MutableList<PairOccurrence>>()
         for ((id, range) in ranges) {
@@ -520,7 +540,7 @@ internal object EvidenceChronology68 {
             val title = if (known.isEmpty()) "Possible overlapping conversation"
                 else "Possible conversation with ${known.take(3).joinToString(", ")}"
             review += Review(ReviewReason.SUGGESTED_INCIDENT, ids)
-            IncidentSuggestion(title, ids, "At least two consecutive messages match text, visible timing and speaker or bubble position.")
+            IncidentSuggestion(title, ids, "At least two consecutive messages match text, visible timing and speaker labels.")
         }.toMutableList()
         for (indices in keys.indices.filter { keys[it] != null }.groupBy { keys[it] }.values) {
             if (indices.map(messageGroups::root).distinct().size <= 1) continue
@@ -528,9 +548,6 @@ internal object EvidenceChronology68 {
             if (ids.size > 1) review += Review(ReviewReason.POSSIBLE_DUPLICATE, ids)
         }
         val ambiguous = review.filter { it.reason == ReviewReason.POSSIBLE_DUPLICATE }.flatMap { it.evidenceIds }.toSet()
-        val ownerParticipants = records.associate { record ->
-            record.id() to record.participants().filterNot { it.equals("you", true) }
-        }
         val ungrouped = overlappingScreenshots.filter { it.size == 1 }.map { screenshots[it.single()] }
             .filter { it.evidenceId !in ambiguous }
         val recognizable = ungrouped.filter { screenshot ->
