@@ -1,6 +1,7 @@
 package uk.co.traynor.privategallery.ui
 
 import android.graphics.Point
+import android.graphics.Rect
 import android.os.ParcelFileDescriptor
 import android.webkit.WebView
 import androidx.activity.ComponentActivity
@@ -47,7 +48,7 @@ class NovaWebScroll67Test {
             first.loadDataWithBaseURL("https://scroll-fixture.invalid/", """
                 <!doctype html><meta name="viewport" content="width=device-width,initial-scale=1">
                 <body style="margin:0"><input id="editor" aria-label="Scroll fixture editor"
-                    style="position:fixed;top:96px;left:8px;height:64px;font-size:18px;width:90%">
+                    style="position:fixed;top:96px;left:24px;height:64px;font-size:18px;width:160px">
                 <main style="height:400vh;width:220vw;background:linear-gradient(#ddd,#246)"></main></body>
             """.trimIndent(), "text/html", "UTF-8", null)
         }
@@ -76,7 +77,10 @@ class NovaWebScroll67Test {
                 first.scrollTo(0, 0)
             }
             compose.waitUntil(5_000) {
-                compose.runOnIdle { first.hasWindowFocus() && first.isEnabled && first.isFocusableInTouchMode }
+                compose.runOnIdle {
+                    first.hasWindowFocus() && first.isEnabled && first.isFocusableInTouchMode &&
+                        first.getGlobalVisibleRect(Rect())
+                }
             }
             val editor = AtomicReference<Point>()
             compose.runOnIdle {
@@ -86,14 +90,17 @@ class NovaWebScroll67Test {
                         first.evaluateJavascript("""
                             (() => {
                                 const rect = document.getElementById('editor').getBoundingClientRect();
-                                return [(rect.left + rect.width / 2) * devicePixelRatio,
-                                        (rect.top + rect.height / 2) * devicePixelRatio];
+                                const viewport = window.visualViewport;
+                                const scale = devicePixelRatio * viewport.scale;
+                                return [(rect.left - viewport.offsetLeft + rect.width / 2) * scale,
+                                        (rect.top - viewport.offsetTop + rect.height / 2) * scale];
                             })()
                         """.trimIndent()) { result ->
                             val bounds = JSONArray(result)
                             val x = bounds.getDouble(0).toInt()
                             val y = bounds.getDouble(1).toInt()
-                            assertTrue("The fixture editor must be inside the active WebView", x in 0 until first.width && y in 0 until first.height)
+                            assertTrue("Editor ($x, $y) is outside the active WebView ${first.width}x${first.height}",
+                                x in 0 until first.width && y in 0 until first.height)
                             val origin = IntArray(2)
                             first.getLocationOnScreen(origin)
                             editor.set(Point(origin[0] + x, origin[1] + y))
