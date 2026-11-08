@@ -6,6 +6,8 @@ import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.security.MessageDigest
+import java.time.Instant
+import java.time.ZoneId
 import org.json.JSONObject
 import org.junit.Assert.*
 import org.junit.Test
@@ -16,8 +18,14 @@ import uk.co.traynor.privategallery.core.hidden.*
 import uk.co.traynor.privategallery.core.privateapps.*
 import uk.co.traynor.privategallery.core.camera.CameraOptions
 import uk.co.traynor.privategallery.core.camera.VaultCaptureAccess
+import uk.co.traynor.privategallery.core.evidence.EvidenceAccess
+import uk.co.traynor.privategallery.core.evidence.EvidenceChronology68
+import uk.co.traynor.privategallery.core.evidence.EvidenceCollectionConnection
+import uk.co.traynor.privategallery.core.evidence.EvidenceCollectionSync
+import uk.co.traynor.privategallery.core.evidence.EvidenceCredentials
+import uk.co.traynor.privategallery.core.evidence.EvidenceReview68
 
-/** Reviewed release-control instrumentation for original-key code64 -> code65 upgrade.
+/** Reviewed release-control instrumentation for original-key Code 68 to Code 69 upgrade.
  * Captured and hash-checked before frozen application checkout; never modifies baseline app.
  */
 class UpgradeFixtureTest {
@@ -28,7 +36,7 @@ class UpgradeFixtureTest {
     private val candidateCode get() = checkNotNull(arguments.getString("candidateCode")).toInt()
     private fun guard() {
         check(context.packageName == "uk.co.traynor.privategallery.hiddenprototype")
-        check(baselineCode == 67 && candidateCode == 68)
+        check(baselineCode == 68 && candidateCode == 69)
     }
     private fun hash(bytes: ByteArray) = MessageDigest.getInstance("SHA-256").digest(bytes).joinToString("") { "%02x".format(it) }
     private fun encryptedHashes(): JSONObject = JSONObject().also { result ->
@@ -301,7 +309,7 @@ class UpgradeFixtureTest {
         val storeType=evidenceType("EvidenceEncryptedStore")
         if(seed) {
             val folder=File(root,"evidence-state/evidence-179-${label.lowercase()}")
-            assertFalse("Fresh disposable code51 evidence fixture starts empty",folder.walkTopDown().any {it.isFile})
+            assertFalse("Fresh disposable Code 68 evidence fixture starts empty",folder.walkTopDown().any {it.isFile})
         }
         val store=storeType.getConstructor(File::class.java,ownerType,evidenceType("EvidenceEncryptedStore\$LeaseFactory"))
             .newInstance(File(root,"evidence-state"),owner,factory)
@@ -311,10 +319,10 @@ class UpgradeFixtureTest {
         val eventId=java.util.UUID.nameUUIDFromBytes("upgrade179:$label:event".toByteArray()).toString()
         val analysisId=java.util.UUID.nameUUIDFromBytes("upgrade179:$label:analysis".toByteArray()).toString()
         val raw="UPGRADE-EVIDENCE-$label synthetic OCR (unverified), visible time14:05"
-        val corrected="UPGRADE-EVIDENCE-$label owner-corrected transcript"
+        val corrected="2026-10-31\nAlice: UPGRADE-EVIDENCE-$label owner-corrected transcript 14:05"
         var catalog=evidenceCall(store,"read")
         if(seed) {
-            assertEquals("Fresh code51 fixture catalogue starts empty",0,(evidenceCall(catalog,"evidence") as List<*>).size)
+            assertEquals("Fresh Code 68 fixture catalogue starts empty",0,(evidenceCall(catalog,"evidence") as List<*>).size)
             val dimension = if (label == "PRIMARY") 64 else 32
             val metadata=evidenceRecord("Metadata",9,item.displayName,0L,0L,item.importedAtEpochMillis,0L,dimension,dimension,
                 mapOf("provenance" to "Synthetic upgrade fixture metadata; timestamps are not screenshot facts"),false)
@@ -377,6 +385,76 @@ class UpgradeFixtureTest {
         val encoded=evidenceCall(catalog,"encode") as ByteArray
         return try {hash(encoded)}finally{encoded.fill(0)}
     }
+    /** Seed with existing Code 68 production APIs. Reopen the exact same sidecars after upgrade and restart. */
+    private fun connectedEvidence68(before:JSONObject,seed:Boolean) {
+        val key=PinVaultKeyStore(context).unlock("738291".toCharArray())
+        val hidden=hiddenSession(false)
+        val identity=Any()
+        try {
+            EvidenceAccess.primary(context,identity,{identity},{true},{key.copyOf()},Any()).use {primary ->
+                EvidenceAccess.hidden(context,hidden){true}.use {secret ->
+                    val inputs=listOf(
+                        Triple(primary,before.getString("collection"),"Synthetic upgrade favourites"),
+                        Triple(secret,before.getString("hiddenCollection"),"Hidden upgrade favourites"),
+                    )
+                    for((access,collectionId,collectionName) in inputs) {
+                        val label=access.owner.name
+                        val sync=EvidenceCollectionSync(access)
+                        val expected=listOf(EvidenceCollectionConnection(collectionId,collectionName))
+                        val otherCollection=inputs.single {it.first!==access}.second
+                        assertTrue("Another owner's collection cannot be resolved",sync.available().none {it.id==otherCollection})
+                        if(seed) {
+                            assertTrue(sync.connections().isEmpty())
+                            assertEquals(expected,sync.connect(collectionId))
+                        }
+                        assertEquals("Preserve the originating owner's encrypted collection connection",expected,sync.connections())
+
+                        val zone=ZoneId.of("Europe/London")
+                        val catalog=access.store.read()
+                        val raw=EvidenceChronology68.analyse(catalog.evidence(),conversationZone=zone)
+                        val message=raw.messages.single {it.text.contains("UPGRADE-EVIDENCE-$label owner-corrected transcript")}
+                        val timestamp=Instant.parse(if(label=="PRIMARY")"2026-10-31T14:05:00Z" else "2026-10-31T14:06:00Z")
+                        EvidenceReview68(context,access).use {review ->
+                            if(seed) {
+                                review.setConversationZone(zone)
+                                review.confirm(message.locations,timestamp.toEpochMilli())
+                            }
+                            assertEquals("Preserve the owner's conversation time zone",zone,review.conversationZone())
+                            assertEquals("Preserve the manual chronology correction for the exact OCR revision",
+                                message.locations.associateWith {timestamp},review.confirmed())
+                            val reviewed=EvidenceChronology68.analyse(catalog.evidence(),conversationZone=zone,confirmed=review.confirmed())
+                                .messages.single {it.text==message.text}
+                            assertEquals(timestamp,reviewed.timestamp.instant)
+                            assertEquals(EvidenceChronology68.Confidence.CONFIRMED,reviewed.timestamp.confidence)
+                        }
+
+                        // Synthetic distinct credentials are never used for network I/O.
+                        val token="synthetic-evidence-upgrade-$label"
+                        val credentials=EvidenceCredentials(context,access)
+                        if(seed) {
+                            assertFalse(credentials.isConfigured())
+                            val temporary=token.toCharArray()
+                            try {credentials.setup(temporary)} finally {temporary.fill('\u0000')}
+                        }
+                        assertTrue(credentials.isConfigured())
+                        val expectedToken=token.toByteArray()
+                        val actualToken=checkNotNull(uk.co.traynor.privategallery.core.editor.AiCredentialStore(context)
+                            .read("evidence-openai-179-"+label.lowercase(java.util.Locale.ROOT)))
+                        try {
+                            assertTrue("Preserve the originating owner's Evidence AI credential",
+                                MessageDigest.isEqual(expectedToken,actualToken))
+                        } finally {expectedToken.fill(0);actualToken.fill(0)}
+                    }
+                    val hiddenSync=EvidenceCollectionSync(secret)
+                    hidden.lock()
+                    assertTrue("Hidden connections retire when the Hidden session locks",runCatching {hiddenSync.connections()}.isFailure)
+                    assertEquals(listOf(EvidenceCollectionConnection(before.getString("collection"),"Synthetic upgrade favourites")),
+                        EvidenceCollectionSync(primary).connections())
+                }
+            }
+        } finally {hidden.lock();key.fill(0)}
+    }
+
     private fun candidateEvidence(before:JSONObject,restarted:Boolean,baselineSeed:Boolean=false) {
         val authorities=evidenceType("EvidenceAuthorities")
         val key=PinVaultKeyStore(context).unlock("738291".toCharArray())
@@ -401,7 +479,7 @@ class UpgradeFixtureTest {
                 for(field in listOf("files","hiddenFiles")) {
                     val wanted=expected.getJSONObject(field);val actual=current.getJSONObject(field)
                     assertEquals(wanted.length(),actual.length())
-                    wanted.keys().forEach {path->assertEquals("Existing code51 owner-encrypted evidence survives upgrade/restart unchanged",wanted.getString(path),actual.getString(path))}
+                    wanted.keys().forEach {path->assertEquals("Existing Code 68 owner-encrypted evidence survives upgrade/restart unchanged",wanted.getString(path),actual.getString(path))}
                 }
             } else before.put("primaryEvidenceCatalogSha256",primaryHash).put("hiddenEvidenceCatalogSha256",hiddenHash).put("candidateEvidenceFiles",current)
             // Recheck every original encrypted file after additive writes, including the
@@ -654,8 +732,8 @@ class UpgradeFixtureTest {
             } finally {hidden.lock()}
             if(baselineCode>=36)repository.javaClass.getMethod("presentationSort",String::class.java).invoke(repository,"NAME")
             val seeded=JSONObject().put("primaryDeleted",primaryDeleted).put("hiddenDeleted",hiddenDeleted).put("primaryDates",dateSnapshot(repository)).put("hiddenDates",hiddenDates).put("hiddenMedia",hiddenMedia).put("hiddenCollection",hiddenCollection).put("hiddenFiles",hiddenHashes()).put("media",media).put("collection",collection.id).put("files",encryptedHashes())
-            // Code52 already has Evidence Locker and Home: seed before installing code65.
             candidateEvidence(seeded,false,baselineSeed=true)
+            connectedEvidence68(seeded,seed=true)
             homePreferences(seed=true)
             home2State(seeded,seed=true)
             portableApps62(seed=true) // NOVA62 addition
@@ -810,10 +888,14 @@ class UpgradeFixtureTest {
             val primary=presentationOnly(encryptedHashes());val secret=presentationOnly(hiddenHashes())
             assertEquals(1,primary.length());assertEquals(1,secret.length())
             before.put("candidatePresentationFiles",primary).put("candidateHiddenPresentationFiles",secret)
+            connectedEvidence68(before,seed=false)
             candidateEvidence(before,false)
             before.put("candidateHiddenAttemptsSha256",checkNotNull(verifiedHiddenAttemptsSha256))
             proof.writeText(before.toString())
         }
-        if(restarted)candidateEvidence(before,true)
+        if(restarted) {
+            connectedEvidence68(before,seed=false)
+            candidateEvidence(before,true)
+        }
     }
 }
