@@ -145,13 +145,155 @@ class EvidenceChronology68Test {
         assertEquals(2, result.screenshots.single().captureClaims.size)
     }
 
-    private fun screenshot(text: String, captureAt: Long = 0, id: Int = 1, embedded: Map<String, String> = emptyMap()): EvidenceCatalog.Evidence {
+    @Test fun conversationKeepsWrappedMessagesAndMissedCallWithSpacedClock() {
+        val evidence = screenshot("""
+            19:44
+            Alex
+            12 May 2025
+            Can you collect the parcel after your shift and
+            leave it at reception please?
+            21 : 46
+            Missed voice call
+            Tap to call back
+            21:49
+            I can after work. 21:51 ✓✓
+        """.trimIndent())
+        val result = EvidenceChronology68.analyse(listOf(evidence))
+        assertEquals(listOf(
+            "Can you collect the parcel after your shift and\nleave it at reception please?",
+            "Missed voice call",
+            "I can after work.",
+        ), result.messages.map { it.text })
+        assertEquals(listOf(LocalTime.of(21, 46), LocalTime.of(21, 49), LocalTime.of(21, 51)),
+            result.messages.map { it.timestamp.clock })
+        assertTrue(result.messages.all { it.timestamp.instant == null && it.sender == null })
+        assertEquals(listOf(evidence.id()), result.incidents.single().evidenceIds)
+        assertTrue(result.review.any { it.reason == ReviewReason.UNKNOWN_PARTICIPANT })
+        assertEquals(EvidenceChronology68.Kind.CALL, result.messages[1].kind)
+    }
+
+    @Test fun untimedTextSurvivesAsUncertainWithoutUsingImportTime() {
+        val evidence = screenshot("Could you look at the gate please?\nIt was open when I arrived.")
+        val result = EvidenceChronology68.analyse(listOf(evidence))
+        val fragment = result.messages.single()
+        assertEquals(evidence.transcript(), fragment.text)
+        assertNull(fragment.sender)
+        assertNull(fragment.timestamp.date)
+        assertNull(fragment.timestamp.instant)
+        assertEquals("", fragment.visibleClock)
+        assertTrue(fragment.sourceUncertain)
+        assertTrue(result.review.any { it.reason == ReviewReason.AMBIGUOUS_OCR })
+    }
+
+    @Test fun adjacentBubbleLayoutSeparatesUntimedReplyWithoutAssigningNames() {
+        val lines = listOf(
+            "12 May 2025",
+            "Bring the spare access card",
+            "if reception is closed.",
+            "I'll leave it on my desk. 21:46",
+        )
+        val geometry = listOf(
+            fixtureWords(lines[0], 410, 660, 140),
+            fixtureWords(lines[1], 60, 590, 220),
+            fixtureWords(lines[2], 60, 470, 243),
+            fixtureWords(lines[3], 570, 1030, 278),
+        ).flatten()
+        val record = screenshot(lines.joinToString("\n"), words = geometry)
+        val messages = EvidenceChronology68.analyse(listOf(record)).messages
+        assertEquals(listOf("Bring the spare access card\nif reception is closed.", "I'll leave it on my desk."), messages.map { it.text })
+        assertEquals(listOf(EvidenceChronology68.Direction.INCOMING, EvidenceChronology68.Direction.OUTGOING),
+            messages.map { it.direction })
+        assertTrue(messages.all { it.sender == null && it.senderConfidence == Confidence.UNKNOWN })
+        assertNull(messages[0].timestamp.clock)
+        assertEquals(LocalTime.of(21, 46), messages[1].timestamp.clock)
+        assertEquals(listOf(2 to 3, 4 to 4), messages.map { it.locations.single().startLine to it.locations.single().endLine })
+    }
+
+    @Test fun timeMentionedInsideMessageIsKeptAsContentWithoutGeometryEvidence() {
+        val record = screenshot("12 May 2025\nAlex: The next bus leaves at 21:46")
+        val result = EvidenceChronology68.analyse(listOf(record))
+        val message = result.messages.single()
+        assertEquals("The next bus leaves at 21:46", message.text)
+        assertEquals("Alex", message.sender)
+        assertEquals(Confidence.NEEDS_REVIEW, message.senderConfidence)
+        assertNull(message.timestamp.clock)
+        assertEquals(LocalDate.of(2025, 5, 12), message.timestamp.date)
+    }
+
+    @Test fun visibleDateWithoutYearAndNarrowSpaceClockRemainUncertain() {
+        val record = screenshot("Monday, 12 May\nAlex: I'll call after the delivery. 9:46\u202fPM")
+        val time = EvidenceChronology68.analyse(listOf(record), london).messages.single().timestamp
+        assertEquals("Monday, 12 May", time.visibleDate)
+        assertEquals(LocalTime.of(21, 46), time.clock)
+        assertNull(time.date)
+        assertNull(time.instant)
+        assertEquals(Confidence.NEEDS_REVIEW, time.confidence)
+    }
+
+    @Test fun visibleWeekdayConflictingWithCalendarDateIsNotSilentlyAccepted() {
+        val record = screenshot("Tuesday, 12 May 2025\nAlex: I'll call after the delivery. 21:46")
+        val time = EvidenceChronology68.analyse(listOf(record), london).messages.single().timestamp
+        assertEquals("Tuesday, 12 May 2025", time.visibleDate)
+        assertNull(time.date)
+        assertNull(time.instant)
+    }
+
+    @Test fun statusAndContactHeaderAreNotAttributedAsMessageWithoutDateSeparator() {
+        val lines = listOf("19:44", "Alex", "I have your parcel. 21:46")
+        val record = screenshot(lines.joinToString("\n"), words = listOf(
+            fixtureWords(lines[0], 60, 150, 40),
+            fixtureWords(lines[1], 140, 245, 108),
+            fixtureWords(lines[2], 60, 590, 370),
+        ).flatten())
+        val message = EvidenceChronology68.analyse(listOf(record)).messages.single()
+        assertEquals("I have your parcel.", message.text)
+        assertNull(message.sender)
+        assertEquals(LocalTime.of(21, 46), message.timestamp.clock)
+        assertNull(message.timestamp.date)
+    }
+
+    @Test fun sharedOwnerParticipantAndDateSuggestGroupingWithoutMergingDifferentMessages() {
+        val first = screenshot("12 May 2025\nAlex: The first receipt is ready. 21:46", participants = listOf("Alex"))
+        val second = screenshot("12 May 2025\nAlex: I found the other receipt. 21:47", id = 2, participants = listOf("Alex"))
+        val result = EvidenceChronology68.analyse(listOf(first, second))
+        assertEquals(2, result.messages.size)
+        assertEquals(setOf(first.id(), second.id()), result.incidents.single().evidenceIds.toSet())
+        assertTrue(result.messages.all { it.senderConfidence == Confidence.HIGH_CONFIDENCE })
+    }
+
+    @Test fun applyingLayoutDoesNotDetachPriorReviewedLineRange() {
+        val lines = listOf("12 May 2025", "Text without a visible clock.", "Existing reviewed line. 21:46")
+        val record = screenshot(lines.joinToString("\n"), words = listOf(
+            fixtureWords(lines[0], 410, 660, 140),
+            fixtureWords(lines[1], 60, 590, 220),
+            fixtureWords(lines[2], 570, 1030, 278),
+        ).flatten())
+        val legacyLocation = EvidenceChronology68.MessageLocation(record.id(), record.ocr().single().id(), 2, 3)
+        val time = Instant.parse("2025-05-12T20:46:00Z")
+        val reviewed = EvidenceChronology68.analyse(listOf(record), confirmed = mapOf(legacyLocation to time)).messages.single()
+        assertEquals(legacyLocation, reviewed.locations.single())
+        assertEquals(time, reviewed.timestamp.instant)
+        assertEquals(Confidence.CONFIRMED, reviewed.timestamp.confidence)
+    }
+
+    private fun fixtureWords(line: String, left: Int, right: Int, top: Int): List<EvidenceCatalog.Word> {
+        val parts = line.split(' ')
+        val width = (right - left) / parts.size
+        return parts.mapIndexed { index, part ->
+            EvidenceCatalog.Word(0, part, 95f, left + index * width, top, left + (index + 1) * width - 6, top + 18)
+        }
+    }
+
+    private fun screenshot(
+        text: String, captureAt: Long = 0, id: Int = 1, embedded: Map<String, String> = emptyMap(),
+        words: List<EvidenceCatalog.Word> = emptyList(), participants: List<String> = emptyList(),
+    ): EvidenceCatalog.Evidence {
         val ocr = EvidenceCatalog.Ocr(uuid(id + 20), 10, "fixture", 0, 1080, 2400, text, 92f,
-            emptyList(), emptyList(), 1, false)
+            words, emptyList(), 1, false)
         return EvidenceCatalog.Evidence(uuid(id), uuid(id + 10), "Screenshot.png", "image/png",
             id.toString().padStart(64, '0'), 100, 456,
             EvidenceCatalog.Metadata("Screenshot.png", 0, 123, 400, captureAt, 1080, 2400, embedded, false),
-            "", "", emptyList(), emptyList(), listOf(ocr), emptyList())
+            "", "", emptyList(), participants, listOf(ocr), emptyList())
     }
 
     private fun copyWithCorrection(value: EvidenceCatalog.Evidence, correction: EvidenceCatalog.Correction) =

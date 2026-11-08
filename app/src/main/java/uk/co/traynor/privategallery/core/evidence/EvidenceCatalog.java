@@ -155,6 +155,13 @@ public final class EvidenceCatalog {
   String current=old.ocr().stream().filter(o->o.id().equals(ocrId)).findFirst().orElseThrow().text();for(Correction correction:corrections)if(correction.ocrId().equals(ocrId))current=correction.text();if(current.equals(text))return this;
   corrections.add(new Correction(newId(),ocrId,now,text));return upsertEvidence(withText(old,old.ocr(),corrections),now,"REVISE_OCR");
  }
+ public EvidenceCatalog rejectOcrSuggestion(String evidenceId,String ocrId,String suggestionId,long now) {
+  Evidence record=requireEvidence(evidenceId);digest(suggestionId);
+  if(record.ocr().isEmpty()||!record.ocr().get(record.ocr().size()-1).id().equals(ocrId))throw invalid("OCR suggestion unavailable");
+  if(rejectedSuggestions.contains(suggestionId))return this;
+  List<String> rejected=new ArrayList<>(rejectedSuggestions);rejected.add(suggestionId);
+  return changed(evidence,incidents,analyses,rejected,now,"REJECT_OCR_SUGGESTION",List.of(evidenceId,ocrId),"Formatting suggestion rejected; original and owner corrections retained");
+ }
  public EvidenceCatalog saveAnalysis(Analysis value,long now) {
   Objects.requireNonNull(value);validateReferences(value.evidenceIds());List<SourceFingerprint> sources=new ArrayList<>();for(String id:value.evidenceIds())sources.add(fingerprint(requireEvidence(id)));int at=index(analyses,value.id(),Analysis::id);if(at>=0)sources.addAll(analyses.get(at).lineage());
   List<SourceReference> refs=at>=0?analyses.get(at).sourceReferences():value.evidenceIds().stream().map(id->new SourceReference(id,fingerprint(requireEvidence(id)))).toList();

@@ -383,7 +383,8 @@ fun PhotoEditor(
         Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically) {
             TextButton(onClick = leave) { Text("Cancel") }
             if (security != null) {
-                IconButton(onClick = { securityExit(security.home) }) { Icon(Icons.Default.Home, "Nova Home") }
+                val tap = navigationHaptic()
+                IconButton(onClick = { tap(); securityExit(security.home) }) { Icon(Icons.Default.Home, "Nova Home") }
                 IconButton(onClick = { securityExit(security.lock) }) { Icon(Icons.Default.Lock, "Lock Space") }
                 IconButton(onClick = { securityExit(security.panic) }) { Icon(Icons.Default.PowerSettingsNew, "Panic Exit", tint = MaterialTheme.colorScheme.primary) }
             }

@@ -182,7 +182,7 @@ class EvidenceSaf179Test {
   fun diagnostics():String = "foreground=${foreground.get()} accesses=${accesses.size} dismissals=${dismissals.get()} pickerLaunches=${picker.launches} reads=${provider.reads.get()} writes=${provider.writes.get()} closes=${provider.closes.get()} cancellations=${provider.cancellations.get()} providerPhase=${provider.phase.get()} exportRejected=${compose.onAllNodesWithText("Export could not complete.",substring=true).fetchSemanticsNodes().isNotEmpty()} archiveRejected=${compose.onAllNodesWithText("No report was published.",substring=true).fetchSemanticsNodes().isNotEmpty()} savingShown=${compose.onAllNodesWithText("Saving evidence export").fetchSemanticsNodes().isNotEmpty()}"
   fun show(){val registryOwner=object:ActivityResultRegistryOwner{override val activityResultRegistry=picker}
    compose.setContent{CompositionLocalProvider(LocalContext provides context,LocalActivityResultRegistryOwner provides registryOwner){PrivateGalleryTheme(AppTheme.DARK){EvidenceLockerHost(owner,true,preparePermission={Intent("synthetic.evidence179.PERMISSION")}){dismissals.incrementAndGet()}}}}
-   compose.waitUntil(20000){compose.onAllNodesWithText("Import Evidence").fetchSemanticsNodes().isNotEmpty()}
+   compose.waitUntil(20000){compose.onAllNodesWithText("Connect Vault collection").fetchSemanticsNodes().isNotEmpty()}
   }
   fun returnFromPicker(uri:Uri?,advance:Long=0){
    compose.activityRule.scenario.moveToState(Lifecycle.State.CREATED)
@@ -213,7 +213,10 @@ class EvidenceSaf179Test {
   override fun close(){provider.close();instrumentation.runOnMainSync{activity.lifecycle.removeObserver(lifecycleObserver);owner.close()};accesses.forEach{it.close()};hidden?.lock();key.fill(0);root.deleteRecursively()}
  }
  private fun field(label:String)=compose.onNode(hasSetTextAction() and hasText(label))
- private fun click(text:String){compose.evidenceNode(hasText(text),last=true).performClick()}
+ private fun click(text:String){
+  if(text=="Import Evidence"||text=="Open encrypted export")compose.evidenceNode(hasText("More actions")).performClick()
+  compose.evidenceNode(hasText(text),last=true).performClick()
+ }
  private fun assertEmptyArchivePassword(){compose.waitUntil(15000){compose.onAllNodesWithText("Archive password").fetchSemanticsNodes().isNotEmpty()};assertEquals("",field("Archive password").fetchSemanticsNode().config[androidx.compose.ui.semantics.SemanticsProperties.EditableText].text)}
  @Test fun importPickerRecreatesAuthorityOnlyAfterResumedOriginalAuthentication()=importFlow(false,false,0)
  @Test fun latePickerAfterReauthenticationCannotReadOrImportItsDocument()=importFlow(false,true,0)

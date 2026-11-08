@@ -49,25 +49,38 @@ private fun navigationPreferences(context: Context) =
  (if (context is SpaceContext) context.baseContext else context)
   .applicationContext.getSharedPreferences("nova-navigation", Context.MODE_PRIVATE)
 
-@Composable internal fun navigationHaptic(): () -> Unit {
+@Composable internal fun navigationHaptic(): () -> Boolean {
  val view = LocalView.current
- val settings = navigationPreferences(LocalContext.current)
+ val context = LocalContext.current
+ val settings = remember(context) { navigationPreferences(context) }
  return {
-  if (settings.getBoolean("haptics", true)) view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
+  // Android chooses the device's keypress effect and enforces the system touch policy.
+  settings.getBoolean("haptics", true) && view.isHapticFeedbackEnabled &&
+   view.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY, 0)
  }
 }
 
 @Composable internal fun NovaNavigationHapticsSetting() {
  val settings = navigationPreferences(LocalContext.current)
+ val tap = navigationHaptic()
  var enabled by remember(settings) { mutableStateOf(settings.getBoolean("haptics", true)) }
+ var testResult by remember { mutableStateOf<Boolean?>(null) }
  ListItem(
   headlineContent={Text("Navigation haptics")},
-  supportingContent={Text("Light feedback for NovaOS Home and Back, following Android’s touch feedback setting.")},
+  supportingContent={Text("Brief feedback for NovaOS Home and Back, following Android’s touch feedback setting.")},
   trailingContent={Switch(enabled,{ value ->
    enabled = value
+   testResult = null
    settings.edit().putBoolean("haptics",value).apply()
   },modifier=Modifier.testTag("nova-navigation-haptics"))},
  )
+ TextButton(
+  enabled=enabled,
+  onClick={testResult=tap()},
+  modifier=Modifier.testTag("nova-navigation-haptics-test"),
+ ) { Text("Test navigation haptics") }
+ if (testResult == false) Text("Feedback unavailable. Check Android’s touch vibration settings.",
+  style=MaterialTheme.typography.bodySmall)
 }
 
 /** Uses the same authenticated Home owner and the same Back dispatcher as system Back. */

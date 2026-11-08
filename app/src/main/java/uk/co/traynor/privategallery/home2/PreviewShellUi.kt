@@ -49,6 +49,7 @@ import java.util.Date
 @OptIn(ExperimentalFoundationApi::class)
 @Composable internal fun NovaRecents(data:PreviewData,pool:PreviewBrowserModel,onHome:()->Unit,onResume:(PreviewTab)->Unit,onInternal:(String)->Unit,onCloseInternal:(String)->Unit){
  val apps=pool.recents(data.state.current)
+ val tap=uk.co.traynor.privategallery.ui.navigationHaptic()
  val internal=data.shell.internalRecents.filter{it.first==data.state.current}.map{it.second}
  var closeAll by remember{mutableStateOf(false)}
  Column(Modifier.fillMaxSize().safeDrawingPadding().testTag("nova-recents-screen")){
@@ -56,7 +57,7 @@ import java.util.Date
   if(internal.isNotEmpty())Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal=20.dp),horizontalArrangement=Arrangement.spacedBy(12.dp)){
    internal.forEach{id->val app=data.app(id)?:return@forEach;var drag by remember(id){mutableFloatStateOf(0f)};Card(onClick={onInternal(id)},modifier=Modifier.width(200.dp).pointerInput(id){detectVerticalDragGestures(onDragEnd={if(drag < -100)onCloseInternal(id);drag=0f},onDragCancel={drag=0f}){change,amount->change.consume();drag+=amount}}){Column(Modifier.padding(16.dp)){Row(verticalAlignment=Alignment.CenterVertically){AppIcon(app,36.dp);Text(app.name,Modifier.weight(1f).padding(start=8.dp));IconButton(onClick={onCloseInternal(id)}){Icon(Icons.Default.Close,"Close ${app.name}")}};Text("Private preview · content hidden",style=MaterialTheme.typography.labelSmall);TextButton(onClick={onInternal(id)}){Text("Resume")}}}}
   }
-  if(apps.isEmpty())Box(Modifier.weight(1f).fillMaxWidth(),contentAlignment=Alignment.Center){Column(horizontalAlignment=Alignment.CenterHorizontally){Icon(Icons.Default.ViewWeek,null,Modifier.size(56.dp));Text(if(internal.isEmpty())"Your open apps appear here."else "Your web app cards appear here.",Modifier.padding(20.dp));Button(onClick=onHome){Text("Return Home")}}}
+  if(apps.isEmpty())Box(Modifier.weight(1f).fillMaxWidth(),contentAlignment=Alignment.Center){Column(horizontalAlignment=Alignment.CenterHorizontally){Icon(Icons.Default.ViewWeek,null,Modifier.size(56.dp));Text(if(internal.isEmpty())"Your open apps appear here."else "Your web app cards appear here.",Modifier.padding(20.dp));Button(onClick={tap();onHome()}){Text("Return Home")}}}
   else BoxWithConstraints(Modifier.weight(1f).fillMaxWidth()){
    val width=minOf(maxWidth*.82f,420.dp);val pager=rememberPagerState(pageCount={apps.size})
    LaunchedEffect(apps.size){if(pager.currentPage>=apps.size)pager.scrollToPage((apps.size-1).coerceAtLeast(0))}
@@ -129,7 +130,8 @@ import java.util.Date
 @Composable internal fun NovaEdgePanel(data:PreviewData,pool:PreviewBrowserModel,onDismiss:()->Unit,onLaunch:(String)->Unit,onHome:()->Unit,onSettings:()->Unit){
  PanicHomeModalBottomSheet(onDismissRequest=onDismiss){Column(Modifier.fillMaxWidth().heightIn(max=600.dp).verticalScroll(rememberScrollState()).padding(24.dp).testTag("nova-edge-panel")){
   Row(verticalAlignment=Alignment.CenterVertically){Text("Nova Edge",Modifier.weight(1f),style=MaterialTheme.typography.headlineSmall);IconButton(onClick=onDismiss){Icon(Icons.Default.Close,"Close Edge Panel")}}
-  Row(Modifier.horizontalScroll(rememberScrollState())){TextButton(onClick={onLaunch("calm")}){Text("Calm Now")};TextButton(onClick={onLaunch("mind")}){Text("Nova Mind")};TextButton(onClick={onLaunch("browser-v1")}){Text("Browser V1")};TextButton(onClick=onHome,modifier=Modifier.testTag("edge-home")){Text("Home")};TextButton(onClick={onLaunch("store")},modifier=Modifier.testTag("edge-store")){Text("Nova Store")};TextButton(onClick=onSettings){Text("Settings")}}
+  val tap=uk.co.traynor.privategallery.ui.navigationHaptic()
+  Row(Modifier.horizontalScroll(rememberScrollState())){TextButton(onClick={onLaunch("calm")}){Text("Calm Now")};TextButton(onClick={onLaunch("mind")}){Text("Nova Mind")};TextButton(onClick={onLaunch("browser-v1")}){Text("Browser V1")};TextButton(onClick={tap();onHome()},modifier=Modifier.testTag("edge-home")){Text("Home")};TextButton(onClick={onLaunch("store")},modifier=Modifier.testTag("edge-store")){Text("Nova Store")};TextButton(onClick=onSettings){Text("Settings")}}
   Text("Favourites",style=MaterialTheme.typography.titleMedium)
   val favourites=data.shell.favourites(data.state.current).mapNotNull{data.app(it)}
   if(favourites.isEmpty())Text("Choose favourite apps in Navigation settings.",Modifier.padding(vertical=16.dp))

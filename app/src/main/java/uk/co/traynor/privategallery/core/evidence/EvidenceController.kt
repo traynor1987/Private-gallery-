@@ -26,6 +26,9 @@ internal class EvidenceController(context:Context,val access:EvidenceAccess):Aut
   val syncingCollections:Boolean=false,
   val chronology:EvidenceChronology68.Result?=null,
   val chronologyUnavailable:Boolean=false,
+  val analysingChronology:Boolean=false,
+  val lastCollectionSync:Long=0L,
+  val captureTimes:Map<String,Long> = emptyMap(),
   val conversationZone:java.time.ZoneId?=null)
  private val importAcquisitions=java.util.concurrent.ConcurrentHashMap<String,EvidenceOriginal>()
  private val main=Handler(Looper.getMainLooper())
@@ -63,20 +66,25 @@ internal class EvidenceController(context:Context,val access:EvidenceAccess):Aut
    kotlinx.coroutines.flow.combine(mutable.map{it.catalog}.distinctUntilChanged(),reviewRevision){catalog,_->catalog}
     .collectLatest {catalog->
      if(catalog==null||!current())return@collectLatest
+     publish{it.copy(analysingChronology=true)}
      try {
-      val (analysis,zone)=withContext(Dispatchers.IO){
+      val (analysis,zone,captureTimes)=withContext(Dispatchers.IO){
        ensureActive()
        val operation=currentCoroutineContext()
        val reviewed=reviewStore.value
        val skipped=reviewed.skipped()
        val zone=reviewed.conversationZone()
        EvidenceChronology68.analyse(catalog.evidence(),conversationZone=zone,confirmed=reviewed.confirmed(),current={operation.isActive&&access.current()}).let { result ->
-        result.copy(review=result.review.filterNot { EvidenceReview68.key(it) in skipped }) to zone
+        Triple(result.copy(review=result.review.filterNot {
+         EvidenceReview68.key(it) in skipped ||
+          (it.reason==EvidenceChronology68.ReviewReason.SUGGESTED_INCIDENT &&
+           catalog.incidents().any { incident -> incident.evidenceIds().containsAll(it.evidenceIds) })
+        }),zone,reviewed.captureTimes())
        }.also{access.checkCurrent();ensureActive()}
       }
-      publish{it.copy(chronology=analysis,chronologyUnavailable=false,conversationZone=zone)}
+      publish{it.copy(chronology=analysis,chronologyUnavailable=false,analysingChronology=false,conversationZone=zone,captureTimes=captureTimes)}
      }catch(cancelled:CancellationException){throw cancelled}
-     catch(_:Exception){publish{it.copy(chronology=null,chronologyUnavailable=true)}}
+     catch(_:Exception){publish{it.copy(chronology=null,chronologyUnavailable=true,analysingChronology=false)}}
     }
   }
  }
@@ -124,8 +132,9 @@ internal class EvidenceController(context:Context,val access:EvidenceAccess):Aut
   }
   val collections=collectionSync.available()
   val connections=collectionSync.connections()
+  val lastSync=reviewStore.value.lastCollectionSync()
   withContext(Dispatchers.Main.immediate){publish{it.copy(catalog=catalog,originals=sources,integrity=integrity,
-    collections=collections,connections=connections)}}
+    collections=collections,connections=connections,lastCollectionSync=lastSync)}}
   catalog
  }.invokeOnCompletion {
   scope.launch { if(initial && !collectionPaused && mutable.value.connections.isNotEmpty())syncCollections() }
@@ -151,11 +160,25 @@ internal class EvidenceController(context:Context,val access:EvidenceAccess):Aut
   collectionPaused=false
   collectionDirty=false
   publish{it.copy(syncingCollections=true,collectionProgress=null)}
-  val job=perform("Collection scan complete") {
-   collectionSync.sync(progress={progress->
+  var latest:EvidenceCollectionProgress?=null
+  val job=perform("Collection check finished",success={
+   val progress=latest
+   if(progress!=null && (progress.failed>0 || progress.pendingExtraction>0 || progress.unavailableCollections>0))
+    "Some collection items need attention."
+   else "Collection check finished."
+  }) {
+   val next=collectionSync.sync(progress={progress->
+    latest=progress
     main.post {if(mutable.value.syncingCollections)publish{it.copy(collectionProgress=progress)}}
    },register={original->registerRecord(original.item.id,extract=true,acquired=original)},
    retryExtraction=if(retryPending)({record->extractRecord(record,0)})else null)
+   val progress=checkNotNull(latest)
+   if(progress.failed==0 && progress.pendingExtraction==0 && progress.unavailableCollections==0) {
+    val completed=now()
+    reviewStore.value.setLastCollectionSync(completed)
+    withContext(Dispatchers.Main.immediate){publish{it.copy(lastCollectionSync=completed)}}
+   }
+   next
   }
   collectionJob=job
   job.invokeOnCompletion {scope.launch {
@@ -175,6 +198,17 @@ internal class EvidenceController(context:Context,val access:EvidenceAccess):Aut
     .messages.single{location in it.locations}
    review.confirm(message.locations,timestamp)
    withContext(Dispatchers.Main.immediate){reviewRevision.value++}
+   catalog
+  }
+ }
+ fun confirmCaptureTime(evidenceId:String,timestamp:Long) {
+  perform(if(timestamp>0)"Screenshot date saved separately" else "Screenshot date correction removed") {
+   val catalog=access.store.read()
+   require(catalog.evidence().any{it.id()==evidenceId&&it.mime().startsWith("image/")})
+   val review=reviewStore.value
+   review.setCaptureTime(evidenceId,timestamp)
+   val captureTimes=review.captureTimes()
+   withContext(Dispatchers.Main.immediate){publish{it.copy(captureTimes=captureTimes)}}
    catalog
   }
  }

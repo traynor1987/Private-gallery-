@@ -34,6 +34,7 @@ internal fun EvidenceLocker(controller:EvidenceController,onClose:()->Unit,onImp
  var query by remember(controller){mutableStateOf("")}
  var from by remember(controller){mutableStateOf<LocalDate?>(null)};var through by remember(controller){mutableStateOf<LocalDate?>(null)}
  var dateFilters by remember(controller){mutableStateOf(false)}
+ var newestFirst by remember(controller){mutableStateOf(false)}
  var archived by remember(controller){mutableStateOf(false)}
  var selected by remember(controller){mutableStateOf<Set<String>>(emptySet())}
  var originalsSelected by remember(controller){mutableStateOf<Set<String>>(emptySet())}
@@ -60,7 +61,17 @@ internal fun EvidenceLocker(controller:EvidenceController,onClose:()->Unit,onImp
  if(retired||!controller.current())return
  val catalog=state.catalog
  val record=catalog?.evidence()?.firstOrNull{it.id()==evidenceId}
+ val incidentSuggestions=remember(state.chronology,catalog) {
+  val grouped=catalog?.incidents()?.flatMap{it.evidenceIds()}?.toSet().orEmpty()
+  val live=catalog?.evidence()?.map{it.id()}?.toSet().orEmpty()
+  val pending=state.chronology?.review.orEmpty()
+   .filter{it.reason==EvidenceChronology68.ReviewReason.SUGGESTED_INCIDENT}.map{it.evidenceIds.toSet()}.toSet()
+  state.chronology?.incidents.orEmpty().filter{suggestion->
+   suggestion.evidenceIds.all{it in live && it !in grouped} && suggestion.evidenceIds.toSet() in pending
+  }
+ }
  val incident=catalog?.incidents()?.firstOrNull{it.id()==incidentId}
+ val viewer=rememberEvidenceViewer69(evidenceId)
  var toolsExpanded by remember(page,evidenceId,incidentId){mutableStateOf(false)}
  fun change(label:String,action:(EvidenceCatalog)->EvidenceCatalog){if(controller.current())controller.mutate(label,action)}
  fun incidentForm(existing:EvidenceCatalog.Incident?=null){
@@ -91,37 +102,25 @@ internal fun EvidenceLocker(controller:EvidenceController,onClose:()->Unit,onImp
     LazyColumn(Modifier.weight(1f).fillMaxWidth().testTag("evidence-list"),verticalArrangement=Arrangement.spacedBy(10.dp)) {
      state.message?.let{item{Text(it,style=MaterialTheme.typography.bodySmall)}}
      if(record!=null) {
-      item {Text(record.name(),style=MaterialTheme.typography.titleLarge);Text("Original reference · ${record.mime()} · ${record.size()} bytes")
-       Text("Imported ${time(record.importedAt())}; vault added ${time(record.metadata().dateAddedAt())}; capture ${time(record.metadata().captureAt())}",style=MaterialTheme.typography.bodySmall)
-       FlowRow {
-        TextButton(enabled=!busy,onClick={viewOriginal=record.id()}){Text("View original")}
-        TextButton(enabled=!busy,onClick={controller.extract(record.id())}){Text("Extract text")}
-        TextButton(enabled=!busy,onClick={form=EvidenceForm("Edit evidence",listOf("Name","Description","Notes","Tags (comma separated)","Participants (owner identified)"),listOf(record.name(),record.description(),record.notes(),record.tags().joinToString(", "),record.participants().joinToString(", "))){v->require(v[0].isNotBlank()){ "Evidence name is required" };change("Evidence saved"){it.upsertEvidence(EvidenceController.annotated(record,v[0],v[1],v[2],tags(v[3]),tags(v[4])),EvidenceController.now(),"OWNER_EDIT_EVIDENCE")}}}){Text("Edit")}
-        TextButton(onClick={selected=setOf(record.id());choice="Assign"}){Text("Add to incident")}
-       }
-       if(record.description().isNotBlank())Text(record.description())
-       if(record.notes().isNotBlank())Text("Owner notes: ${record.notes()}")
-       TextButton(onClick={toolsExpanded=!toolsExpanded}){Text(if(toolsExpanded)"Hide original details" else "Original details")}
-       if(toolsExpanded){
-        Text("SHA-256 ${record.sha256()}",style=MaterialTheme.typography.bodySmall)
-        Text("${record.metadata().sourceName()} · ${record.metadata().width()} × ${record.metadata().height()}",style=MaterialTheme.typography.bodySmall)
-        state.integrity[record.id()]?.let{Text(it)}
-        record.metadata().embedded().forEach{(key,value)->Text("$key: $value",style=MaterialTheme.typography.bodySmall)}
-        FlowRow{
-        TextButton(enabled=!busy,onClick={controller.verify(record.id())}){Text("Verify integrity")}
-        TextButton(enabled=!busy,onClick={form=EvidenceForm("Rotate local extraction",listOf("Degrees: 0, 90, 180 or 270"),listOf("90")){v->val rotation=v[0].toInt();require(rotation in listOf(0,90,180,270));controller.extract(record.id(),rotation)}}){Text("Rotate extraction")}
+      evidenceViewer69(viewer,controller,record,state.chronology,busy,state.integrity[record.id()],catalog.rejectedSuggestions(),
+       onOpenOriginal={viewOriginal=record.id()},
+       onEdit={form=EvidenceForm("Edit evidence",listOf("Name","Description","Notes","Tags (comma separated)","Participants (owner identified)"),
+        listOf(record.name(),record.description(),record.notes(),record.tags().joinToString(", "),record.participants().joinToString(", "))){values->
+        require(values[0].isNotBlank()){"Evidence name is required"}
+        change("Evidence saved"){it.upsertEvidence(EvidenceController.annotated(record,values[0],values[1],values[2],tags(values[3]),tags(values[4])),EvidenceController.now(),"OWNER_EDIT_EVIDENCE")}
+       }},
+       onAssign={selected=setOf(record.id());choice="Assign"},
+       onRotate={form=EvidenceForm("Rotate local extraction",listOf("Degrees: 0, 90, 180 or 270"),listOf("90")){values->
+        val rotation=values[0].toInt()
+        require(rotation in listOf(0,90,180,270))
+        controller.extract(record.id(),rotation)
+       }},
+       onCorrect={extraction,initial->
+        form=EvidenceForm("Correct transcript — original extraction retained",listOf("Owner-corrected text"),listOf(initial)){values->
+         change("Correction saved separately"){it.reviseOcr(record.id(),extraction.id(),values[0],EvidenceController.now())}
         }
-       }
-      }
-      items(record.ocr(),key={it.id()}){extraction ->
-       ElevatedCard(Modifier.fillMaxWidth()){Column(Modifier.padding(12.dp)){
-        Text("Unverified extracted text · ${extraction.engine()}");Text("Engine score ${if(extraction.confidence()<0)"unavailable"else"${extraction.confidence()}/100 (not factual certainty)"} · ${extraction.pageCount()} pages${if(extraction.partial())" · PARTIAL"else""}",style=MaterialTheme.typography.bodySmall)
-        Text(extraction.text())
-        extraction.times().forEach{hint->Text("Page ${hint.pageIndex()+1}: ${hint.text()} · ${hint.provenance()}",style=MaterialTheme.typography.bodySmall)}
-        TextButton(enabled=!busy,onClick={form=EvidenceForm("Correct transcript — original extraction retained",listOf("Owner-corrected text"),listOf(record.corrections().lastOrNull{it.ocrId()==extraction.id()}?.text()?:extraction.text())){v->change("Correction saved separately"){it.reviseOcr(record.id(),extraction.id(),v[0],EvidenceController.now())}}}){Text("Review / correct")}
-        record.corrections().filter{it.ocrId()==extraction.id()}.forEach{Text("Owner correction (${time(it.createdAt())}): ${it.text()}")}
-       }}
-      }
+       },
+      )
      } else if(incident!=null) {
       item {Text(incident.title(),style=MaterialTheme.typography.titleLarge);Text(incident.description());Text("Owner notes: ${incident.notes()}")
        Text("Range ${time(incident.startAt())} — ${time(incident.endAt())}")
@@ -179,10 +178,10 @@ internal fun EvidenceLocker(controller:EvidenceController,onClose:()->Unit,onImp
          onQuery={query=it.take(1000)},onImport=onImport,
          onExisting={originalsSelected=emptySet();choice="Import"},onLibrary={page="Evidence"},onTimeline={page="Timeline"},
          onAi={query="";page="Nova AI"},onNewIncident={incidentForm()},onArchive=onOpenArchive,onRefresh={controller.refresh()},
-         onConnect={choice="Connect collections"},onPhotos=onImportPhotos)
+         onConnect={choice="Connect collections"},onPhotos=onImportPhotos,onReview={choice="Review queue"})
        }
        item {
-        EvidenceConnectedSummary(state,onReview={choice="Review queue"},onRetry=controller::syncCollections,
+        EvidenceConnectedSummary(state,suggestionCount=incidentSuggestions.size,onRetry=controller::syncCollections,
          onPause=controller::cancelCollectionSync)
        }
        if(query.isBlank()) {
@@ -290,28 +289,47 @@ internal fun EvidenceLocker(controller:EvidenceController,onClose:()->Unit,onImp
         }
         Text("Unknown dates remain visible and labelled uncertain.",style=MaterialTheme.typography.bodySmall)}
        val range=runCatching{evidenceLocalDateRange(from,through,ZoneId.systemDefault())}.getOrNull()
-       if(range==null)item{Text("Enter valid UTC dates, or leave blank.",color=MaterialTheme.colorScheme.error)}
+       if(range==null)item{Text("Choose an end date on or after the start date.",color=MaterialTheme.colorScheme.error)}
        if(page=="Timeline"){
-        val messages=state.chronology?.messages.orEmpty().filter{message->
-         val timestamp=message.timestamp.instant?.toEpochMilli()
-         (query.isBlank()||message.text.contains(query,true)||message.sender?.contains(query,true)==true) &&
-          (timestamp==null||range!=null&&(range.first==0L||timestamp>=range.first)&&(range.second==0L||timestamp<=range.second))
-        }.sortedWith(compareBy(
-         { it.timestamp.instant?.atZone(ZoneId.systemDefault())?.toLocalDate() ?: it.timestamp.date ?: LocalDate.MAX },
-         { it.timestamp.instant?.atZone(ZoneId.systemDefault())?.toLocalTime() ?: it.timestamp.clock ?: java.time.LocalTime.MAX },
-        ))
-        if(messages.isNotEmpty())item{Text("Reconstructed messages",style=MaterialTheme.typography.titleMedium)}
-        items(messages,key={message->
-         val source=message.locations.first()
-         "message-${source.evidenceId}-${source.transcriptVersion}-${source.startLine}-${source.endLine}"
-        }){message->EvidenceMessageCard(message){evidenceId=it}}
-        val grouped=catalog.incidents().flatMap{it.evidenceIds()}.toSet()
-        val pendingSuggestions=state.chronology?.review.orEmpty().filter{it.reason==EvidenceChronology68.ReviewReason.SUGGESTED_INCIDENT}
-         .map{it.evidenceIds.toSet()}.toSet()
-        val suggestions=state.chronology?.incidents.orEmpty().filter{suggestion->
-         suggestion.evidenceIds.none{it in grouped}&&suggestion.evidenceIds.toSet() in pendingSuggestions
+        val zone=ZoneId.systemDefault()
+        val rows=remember(catalog,state.chronology,state.captureTimes,query,from,through,newestFirst,zone) {
+         val screenshots=state.chronology?.screenshots.orEmpty().associateBy{it.evidenceId}
+         val records=catalog.evidence().associateBy{it.id()}
+         val captures=records.values.filter{it.mime().startsWith("image/") && (query.isBlank() ||
+          it.name().contains(query,true) || it.transcript().contains(query,true))}
+          .map{EvidenceTimelineItem.Screenshot(it,screenshots[it.id()]?.capture,state.captureTimes[it.id()],zone)}
+         val messages=state.chronology?.messages.orEmpty().filter{message->
+          message.locations.all{it.evidenceId in records} &&
+           (query.isBlank()||message.text.contains(query,true)||message.sender?.contains(query,true)==true)
+         }.map{EvidenceTimelineItem.Message(it,zone)}
+         val order=compareBy<EvidenceTimelineItem>({it.date},{it.clock},{it.key})
+         (captures+messages).filter{row->
+          val date=row.date
+          date==null||((from==null||!date.isBefore(from))&&(through==null||!date.isAfter(through)))
+         }.sortedWith(compareBy<EvidenceTimelineItem>{it.date==null}
+          .then(if(newestFirst)order.reversed() else order))
         }
-        items(suggestions,key={"overlap-${it.evidenceIds.joinToString()}"}){suggestion->
+        item {
+         Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween,verticalAlignment=androidx.compose.ui.Alignment.CenterVertically) {
+          Text("Evidence timeline",style=MaterialTheme.typography.titleMedium)
+          TextButton(onClick={newestFirst=!newestFirst}){Text(if(newestFirst)"Newest first" else "Oldest first")}
+         }
+         if(rows.isEmpty())Text("No screenshots or reconstructed messages match this view.")
+        }
+        if(range!=null)items(rows,key={it.key}){row->
+         when(row){
+          is EvidenceTimelineItem.Message->EvidenceMessageCard(row.message){evidenceId=it}
+          is EvidenceTimelineItem.Screenshot->EvidenceScreenshotEvent(row,busy,{evidenceId=row.record.id()}){
+           val id=row.record.id()
+           form=EvidenceForm("Correct screenshot capture date",listOf("Capture date and time (ISO)"),
+            listOf(row.epoch?.let{Instant.ofEpochMilli(it).toString()}.orEmpty())){values->
+            controller.confirmCaptureTime(id,epoch(values[0]))
+           }
+          }
+         }
+        }
+        if(incidentSuggestions.isNotEmpty())item{Text("Suggested conversations",style=MaterialTheme.typography.titleMedium)}
+        items(incidentSuggestions,key={"overlap-${it.evidenceIds.joinToString()}"}){suggestion->
          OutlinedCard(Modifier.fillMaxWidth()){Column(Modifier.padding(12.dp)){
           Text(suggestion.title,style=MaterialTheme.typography.titleMedium);Text(suggestion.reason)
           FlowRow {
@@ -327,7 +345,7 @@ internal fun EvidenceLocker(controller:EvidenceController,onClose:()->Unit,onImp
             }
            }){Text("Review and approve")}
            TextButton(enabled=!busy,onClick={controller.skipReview(EvidenceChronology68.Review(
-            EvidenceChronology68.ReviewReason.SUGGESTED_INCIDENT,suggestion.evidenceIds))}){Text("Dismiss suggestion")}
+            EvidenceChronology68.ReviewReason.SUGGESTED_INCIDENT,suggestion.evidenceIds))}){Text("Reject suggestion")}
           }
          }}
         }

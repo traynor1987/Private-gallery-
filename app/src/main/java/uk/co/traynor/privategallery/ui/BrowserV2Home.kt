@@ -1077,7 +1077,8 @@ internal fun BrowserV2Home(
             SheetAction("Browser settings", Icons.Default.Settings) { ui.overflow = false; openSettings() }
             if (BuildConfig.ACCEPTANCE_BROWSER_DIAGNOSTICS) SheetAction("Browser diagnostics", Icons.Default.BugReport) { ui.overflow = false; ui.diagnosticsOpen = true }
             (context as? uk.co.traynor.privategallery.MainActivity)?.let {activity ->
-                SheetAction("Nova Home",Icons.Default.Home){ui.overflow=false;activity.returnPrivateHome()}
+                val tap = navigationHaptic()
+                SheetAction("Nova Home",Icons.Default.Home){tap();ui.overflow=false;activity.returnPrivateHome()}
             }
         }
         if (ui.settingsOpen && browserSettings != null) BrowserPanel("Browser settings", "Search, privacy and connection", { ui.settingsOpen = false }) {

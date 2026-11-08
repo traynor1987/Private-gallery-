@@ -28,10 +28,11 @@ import uk.co.traynor.privategallery.core.home.HomeLayout
  title:String,space:String?=null,onHome:(()->Unit)?=null,onBack:(()->Unit)?=null,
  onLock:(()->Unit)?=null,onPanic:(()->Unit)?=null,actions:@Composable RowScope.()->Unit={},
 ) {
+ val tap=navigationHaptic()
  Surface(color=MaterialTheme.colorScheme.surface.copy(alpha=.96f),tonalElevation=0.dp) {
   Row(Modifier.fillMaxWidth().heightIn(min=60.dp).testTag("nova-app-header").padding(horizontal=8.dp),verticalAlignment=Alignment.CenterVertically) {
-   if(onBack!=null)IconButton(onClick=onBack){Icon(Icons.AutoMirrored.Filled.ArrowBack,"Back")}
-   if(onHome!=null)IconButton(onClick=onHome){Icon(Icons.Default.Home,"Nova Home")}
+   if(onBack!=null)IconButton(onClick={tap();onBack()}){Icon(Icons.AutoMirrored.Filled.ArrowBack,"Back")}
+   if(onHome!=null)IconButton(onClick={tap();onHome()}){Icon(Icons.Default.Home,"Nova Home")}
    Column(Modifier.weight(1f).padding(horizontal=8.dp,vertical=8.dp)) {
     Text(title,style=if(title.length>16)MaterialTheme.typography.titleMedium else MaterialTheme.typography.titleLarge,maxLines=2,overflow=TextOverflow.Ellipsis)
     if(space!=null)Text(space,style=MaterialTheme.typography.labelSmall,color=MaterialTheme.colorScheme.onSurfaceVariant,maxLines=1,overflow=TextOverflow.Ellipsis)
@@ -94,14 +95,15 @@ internal val LocalNovaSecurityActions=androidx.compose.runtime.staticComposition
  confirmButton:@Composable ()->Unit,dismissButton:@Composable ()->Unit={},
 ) {
  val security=novaSecurityActions()
+ val tap=navigationHaptic()
  androidx.activity.compose.BackHandler(onBack=onDismissRequest)
  Surface(Modifier.fillMaxSize(),color=MaterialTheme.colorScheme.background) {
   Column(Modifier.fillMaxSize().safeDrawingPadding().imePadding()) {
    Row(Modifier.fillMaxWidth().padding(horizontal=8.dp),verticalAlignment=Alignment.CenterVertically) {
-    IconButton(onClick=onDismissRequest){Icon(Icons.AutoMirrored.Filled.ArrowBack,"Back")}
+    IconButton(onClick={tap();onDismissRequest()}){Icon(Icons.AutoMirrored.Filled.ArrowBack,"Back")}
     Box(Modifier.weight(1f).padding(vertical=12.dp)){title()}
     if(security!=null) {
-     IconButton(onClick=security.home){Icon(Icons.Default.Home,"Nova Home")}
+     IconButton(onClick={tap();security.home()}){Icon(Icons.Default.Home,"Nova Home")}
      IconButton(onClick=security.lock){Icon(Icons.Default.Lock,"Lock Space")}
      IconButton(onClick=security.panic){Icon(Icons.Default.PowerSettingsNew,"Panic Exit",tint=MaterialTheme.colorScheme.primary)}
     }

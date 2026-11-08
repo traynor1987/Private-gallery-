@@ -54,29 +54,35 @@ internal fun EvidenceConnectCollections(controller: EvidenceController, onClose:
 @Composable
 internal fun EvidenceConnectedSummary(
     state: EvidenceController.State,
-    onReview: () -> Unit,
+    suggestionCount: Int,
     onRetry: () -> Unit,
     onPause: () -> Unit,
 ) {
-    val count = state.chronology?.review?.size ?: 0
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Text("Connected collections", style = MaterialTheme.typography.titleMedium)
         if (state.connections.isEmpty()) Text("Connect an Evidence Collection to organise new screenshots automatically.")
-        else state.connections.forEach { Text(it.name) }
-        state.collectionProgress?.let { progress ->
-            Text("${progress.processed} of ${progress.discovered} checked · ${progress.registered} added · ${progress.duplicates} duplicates",
-                style = MaterialTheme.typography.bodySmall)
-            if (progress.failed > 0 || progress.pendingExtraction > 0 || progress.unavailableCollections > 0) {
-                Text("${progress.failed} failed · ${progress.pendingExtraction} awaiting OCR · ${progress.unavailableCollections} unavailable collections",
-                    color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+        else {
+            state.connections.forEach { Text(it.name) }
+            val progress = state.collectionProgress
+            if (progress != null) {
+                Text("${progress.screenshots} images found · ${progress.registeredTotal} records registered · ${progress.duplicates} duplicates",
+                    style = MaterialTheme.typography.bodySmall)
+                if (state.syncingCollections) Text("Checking ${progress.processed} of ${progress.discovered} items")
+                if (progress.failed > 0 || progress.pendingExtraction > 0 || progress.unavailableCollections > 0) {
+                    Text("${progress.failed} failed · ${progress.pendingExtraction} awaiting OCR · ${progress.unavailableCollections} unavailable collections",
+                        color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+                }
             }
-        }
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            if (state.lastCollectionSync > 0L) {
+                Text("Last successful sync ${evidenceLocalTime(state.lastCollectionSync)}", style = MaterialTheme.typography.bodySmall)
+            }
             if (state.syncingCollections) TextButton(onClick = onPause) { Text("Pause processing") }
-            else if (state.connections.isNotEmpty()) TextButton(enabled = !state.busy, onClick = onRetry) { Text("Check for new evidence") }
-            TextButton(onClick = onReview, modifier = Modifier.testTag("evidence-review-queue")) {
-                Text(if (count == 0) "Review queue" else "Review queue · $count")
-            }
+            else TextButton(enabled = !state.busy, onClick = onRetry) { Text("Check for new evidence") }
+        }
+        when {
+            state.analysingChronology -> Text("Organising timeline and review items…")
+            state.chronologyUnavailable -> Text("Timeline analysis could not finish.", color = MaterialTheme.colorScheme.error)
+            state.chronology != null -> Text("${state.chronology.review.size} items to review · $suggestionCount suggested conversations")
         }
     }
 }
@@ -85,11 +91,19 @@ internal fun EvidenceConnectedSummary(
 internal fun EvidenceMessageCard(message: EvidenceChronology68.Message, onOpen: (String) -> Unit) {
     OutlinedCard(Modifier.fillMaxWidth()) {
         Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            message.sender?.let { Text("Possible sender · $it", style = MaterialTheme.typography.titleSmall) }
+            val label = when (message.kind) {
+                EvidenceChronology68.Kind.CALL -> "Call shown in screenshot"
+                EvidenceChronology68.Kind.UNRESOLVED -> "Unresolved text"
+                EvidenceChronology68.Kind.MESSAGE -> "Message"
+            }
+            Text(label, style = MaterialTheme.typography.titleSmall)
+            message.sender?.let { Text(if (message.senderConfidence == EvidenceChronology68.Confidence.CONFIRMED)
+                it else "Possible sender · $it", style = MaterialTheme.typography.bodySmall) }
             Text(message.text)
             Text(message.timestamp.displayLabel(), style = MaterialTheme.typography.bodySmall)
-            Text("Visible message time ${message.visibleClock} · ${message.timestamp.confidence.label()}",
-                style = MaterialTheme.typography.bodySmall)
+            val clock = message.visibleClock.takeIf { it.isNotBlank() }?.let { "Visible message time $it" }
+                ?: "Visible time unavailable"
+            Text("$clock · ${message.timestamp.confidence.label()}", style = MaterialTheme.typography.bodySmall)
             message.locations.forEachIndexed { index, location ->
                 TextButton(onClick = { onOpen(location.evidenceId) }) {
                     Text("Screenshot ${index + 1} · lines ${location.startLine}–${location.endLine}")

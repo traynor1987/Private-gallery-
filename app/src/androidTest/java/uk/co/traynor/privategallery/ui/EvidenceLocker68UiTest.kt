@@ -61,6 +61,7 @@ class EvidenceLocker68UiTest {
                         !state.syncingCollections && !state.busy &&
                             state.chronology?.messages?.any { it.visibleClock.contains("21:46") } == true
                     }
+                    assertTrue(controller.state.value.lastCollectionSync > 0)
                     val registered = fixture.access.store.read().evidence().single()
                     assertEquals(original.item.id, registered.sourceId())
                     assertEquals("Evidence Collection", registered.metadata().embedded()["sourceCollectionName"])

@@ -57,13 +57,14 @@ internal fun PrivateAppControls(
         return
     }
     var expanded by remember(app.id()) { mutableStateOf(false) }
+    val tap = navigationHaptic()
     Column(Modifier.fillMaxWidth().testTag("private-app-controls")) {
         val security=novaSecurityActions()
         NovaAppHeader(app.name(),mode,onHome=security?.home ?: onExitGallery,
             onLock=onLockVault ?: security?.lock,onPanic=onQuickLock ?: security?.panic,
             actions={IconButton(onClick={expanded=!expanded;onExpanded(expanded)}){Icon(Icons.Default.MoreVert,if(expanded)"Collapse app controls"else"Expand app controls")}})
         FlowRow(Modifier.fillMaxWidth().padding(horizontal=8.dp),verticalArrangement=Arrangement.spacedBy(0.dp)) {
-            IconButton(onClick=onBack,enabled=enabled){Icon(Icons.AutoMirrored.Filled.ArrowBack,if(canGoBack)"App back"else"Back to Private Apps library")}
+            IconButton(onClick={tap();onBack()},enabled=enabled){Icon(Icons.AutoMirrored.Filled.ArrowBack,if(canGoBack)"App back"else"Back to Private Apps library")}
             TextButton(onClick=onLibrary){Text("Exit App")}
             IconButton(onClick=onSwitch){Icon(Icons.Default.SwapHoriz,"Switch private app")}
             if(onScreenshot!=null)IconButton(onClick=onScreenshot,enabled=enabled){Icon(Icons.Default.Screenshot,"Screenshot to Vault")}
@@ -80,7 +81,7 @@ internal fun PrivateAppControls(
             FlowRow(Modifier.fillMaxWidth().padding(horizontal=4.dp)) {
                 IconButton(onClick=onForward,enabled=enabled && canGoForward){Icon(Icons.AutoMirrored.Filled.ArrowForward,"App forward")}
                 IconButton(onClick=onRefresh,enabled=enabled){Icon(if(loading)Icons.Default.Close else Icons.Default.Refresh,if(loading)"Stop app loading" else "Refresh app")}
-                IconButton(onClick=onHome,enabled=enabled){Icon(Icons.Default.Home,"App home")}
+                IconButton(onClick={tap();onHome()},enabled=enabled){Icon(Icons.Default.Home,"App home")}
                 IconButton(onClick=onSettings,enabled=enabled){Icon(Icons.Default.Settings,"Private app settings")}
                 if(onCloseApp!=null)TextButton(onClick=onCloseApp){Text("Close App")}
                 IconButton(onClick=onBrowserTools){Icon(Icons.Default.Build,"Browser tools")}
@@ -156,15 +157,19 @@ private fun PrivateAppOverflowControls(
                             IconButton(onClick={expanded=false}){Icon(Icons.Default.Close,"Close app menu")}
                         }
                         if(outside)Text(origin,Modifier.padding(horizontal=20.dp),style=MaterialTheme.typography.bodySmall,maxLines=1,overflow=TextOverflow.Ellipsis)
-                        @Composable fun action(label:String,icon:androidx.compose.ui.graphics.vector.ImageVector,available:Boolean=true,callback:(()->Unit)?) {
+                        val tap = navigationHaptic()
+                        @Composable fun action(label:String,icon:androidx.compose.ui.graphics.vector.ImageVector,available:Boolean=true,callback:(()->Unit)?,haptic:Boolean=false) {
                             val latestAvailable by rememberUpdatedState(available && callback!=null)
                             DropdownMenuItem(text={Text(label)},leadingIcon={Icon(icon,null)},modifier=if(label=="Nova Home")Modifier.testTag("web-return-home")else Modifier,enabled=available && callback!=null,
-                                onClick={if(expanded && sheetEpoch==menuEpoch && latestAvailable && callback!=null)act(callback)})
+                                onClick={if(expanded && sheetEpoch==menuEpoch && latestAvailable && callback!=null)act {
+                                    if(haptic)tap()
+                                    callback()
+                                }})
                         }
-                        action("Back",Icons.AutoMirrored.Filled.ArrowBack,enabled && canGoBack,onBack)
+                        action("Back",Icons.AutoMirrored.Filled.ArrowBack,enabled && canGoBack,onBack,haptic=true)
                         action("Forward",Icons.AutoMirrored.Filled.ArrowForward,enabled && canGoForward,onForward)
                         action(if(loading)"Stop loading"else"Refresh",if(loading)Icons.Default.Close else Icons.Default.Refresh,enabled,onRefresh)
-                        action("Nova Home",Icons.Default.Home,callback=onHome)
+                        action("Nova Home",Icons.Default.Home,callback=onHome,haptic=true)
                         action("Open in Browser",Icons.Default.OpenInNew,enabled,onOpenInBrowser)
                         action("App Settings",Icons.Default.Settings,callback=onSettings)
                         action("Exit App",Icons.Default.Close,callback=onExit)

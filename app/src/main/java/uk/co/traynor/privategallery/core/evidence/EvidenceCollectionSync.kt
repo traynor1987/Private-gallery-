@@ -29,8 +29,10 @@ internal data class EvidenceCollectionOption(val id: String, val name: String)
 internal data class EvidenceCollectionConnection(val id: String, val name: String)
 internal data class EvidenceCollectionProgress(
     val discovered: Int = 0,
+    val screenshots: Int = 0,
     val processed: Int = 0,
     val registered: Int = 0,
+    val registeredTotal: Int = 0,
     val duplicates: Int = 0,
     val failed: Int = 0,
     val pendingExtraction: Int = 0,
@@ -175,6 +177,7 @@ internal class EvidenceCollectionSync(private val access: EvidenceAccess) {
             .map { Fingerprint(it.sha256(), it.metadata().vaultOnly()) }.toMutableSet()
         var result = EvidenceCollectionProgress(
             discovered = candidates.size,
+            screenshots = candidates.count { it.item.mimeType.startsWith("image/") },
             unavailableCollections = connections.size - snapshot.members.size,
         )
         progress(result)
@@ -229,6 +232,7 @@ internal class EvidenceCollectionSync(private val access: EvidenceAccess) {
             result = result.copy(
                 processed = result.processed + 1,
                 registered = result.registered + registered,
+                registeredTotal = result.registeredTotal + if (sourceId in records) 1 else 0,
                 duplicates = result.duplicates + duplicate,
                 failed = result.failed + failed,
                 pendingExtraction = result.pendingExtraction + pending,

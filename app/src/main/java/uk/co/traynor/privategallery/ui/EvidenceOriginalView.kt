@@ -13,16 +13,31 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
-import androidx.compose.ui.window.SecureFlagPolicy
 import kotlinx.coroutines.*
 import uk.co.traynor.privategallery.core.evidence.EvidenceController
 import uk.co.traynor.privategallery.core.vault.VaultPdfPreview
 
 /** Temporary protected view; original is never cropped, recompressed or written to a file. */
-@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable internal fun EvidenceOriginalView(controller:EvidenceController,id:String,onClose:()->Unit) {
+ if(!controller.current())return
+ EvidencePage(onBack=onClose) {
+  Surface(Modifier.fillMaxSize().systemBarsPadding(),color=MaterialTheme.colorScheme.background) {
+   Column(Modifier.fillMaxSize().padding(16.dp)) {
+    Row(Modifier.fillMaxWidth()) {
+     Text("Original evidence",Modifier.weight(1f),style=MaterialTheme.typography.titleLarge)
+     EvidenceSecurityControls()
+     TextButton(onClick=onClose){Text("Close")}
+    }
+    EvidenceOriginalContent(controller,id,Modifier.weight(1f),inline=false)
+   }
+  }
+ }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable internal fun EvidenceOriginalContent(
+ controller:EvidenceController,id:String,modifier:Modifier=Modifier,inline:Boolean=true,
+) {
  val context=LocalContext.current.applicationContext
  var bitmap by remember(controller,id){mutableStateOf<Bitmap?>(null)}
  var text by remember(controller,id){mutableStateOf("")}
@@ -60,14 +75,23 @@ import uk.co.traynor.privategallery.core.vault.VaultPdfPreview
   finally{pending?.let(::clearEvidenceBitmap)}
  }
  if(!controller.current())return
- EvidencePage(onBack=onClose) {
-  Surface(Modifier.fillMaxSize().systemBarsPadding(),color=MaterialTheme.colorScheme.background){Column(Modifier.fillMaxSize().padding(16.dp)){
-   Row(Modifier.fillMaxWidth()){Text("Original evidence",Modifier.weight(1f),style=MaterialTheme.typography.titleLarge);EvidenceSecurityControls();TextButton(onClick=onClose){Text("Close")}}
-   Text(status,style=MaterialTheme.typography.bodySmall)
-   bitmap?.let{Image(it.asImageBitmap(),"Original evidence content",Modifier.weight(1f).fillMaxWidth(),contentScale=ContentScale.Fit)}
-   if(text.isNotEmpty())Text(text,Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()))
-   if(pages>1)FlowRow{TextButton(enabled=page>0,onClick={page--}){Text("Previous page")};Text("${page+1} / $pages");TextButton(enabled=page+1<pages,onClick={page++}){Text("Next page")}}
-  }}
+ Column(modifier.fillMaxWidth()) {
+  Text(status,style=MaterialTheme.typography.bodySmall)
+  bitmap?.let { original ->
+   if(inline) BoxWithConstraints(Modifier.fillMaxWidth()) {
+    val height = (maxWidth * (original.height.toFloat() / original.width)).coerceAtMost(460.dp)
+    Image(original.asImageBitmap(),"Original evidence content",Modifier.fillMaxWidth().height(height),contentScale=ContentScale.Fit)
+   } else Image(original.asImageBitmap(),"Original evidence content",Modifier.weight(1f).fillMaxWidth(),contentScale=ContentScale.Fit)
+  }
+  if(text.isNotEmpty()) {
+   if(inline) Text(text.take(4_000),Modifier.fillMaxWidth())
+   else Text(text,Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()))
+  }
+  if(pages>1)FlowRow {
+   TextButton(enabled=page>0,onClick={page--}){Text("Previous page")}
+   Text("${page+1} / $pages")
+   TextButton(enabled=page+1<pages,onClick={page++}){Text("Next page")}
+  }
  }
 }
 private fun clearEvidenceBitmap(bitmap:Bitmap){runCatching{if(bitmap.isMutable)bitmap.eraseColor(android.graphics.Color.TRANSPARENT)};runCatching{bitmap.recycle()}}

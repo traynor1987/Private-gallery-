@@ -1,6 +1,7 @@
 package uk.co.traynor.privategallery.core.evidence
 
 import java.time.Instant
+import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.LocalTime
@@ -16,6 +17,8 @@ import kotlin.math.abs
 /** Read-only interpretation of owner-scoped records. Original bytes, OCR and incidents stay in their existing stores. */
 internal object EvidenceChronology68 {
     enum class Confidence { CONFIRMED, HIGH_CONFIDENCE, NEEDS_REVIEW, UNKNOWN }
+    enum class Kind { MESSAGE, CALL, UNRESOLVED }
+    enum class Direction { INCOMING, OUTGOING, UNKNOWN }
     enum class Provenance { UNKNOWN, VAULT_CAPTURE, EXIF_WITH_OFFSET, EXIF_LOCAL_ONLY, OCR_VISIBLE, OCR_EXPLICIT_OFFSET, OCR_RELATIVE_DATE, OWNER_CONFIRMED }
     enum class ReviewReason {
         AMBIGUOUS_DATE, AMBIGUOUS_ZONE, INFERRED_DATE, CONFLICTING_TIMESTAMPS, UNKNOWN_PARTICIPANT,
@@ -30,6 +33,7 @@ internal object EvidenceChronology68 {
         val confidence: Confidence = Confidence.UNKNOWN,
         val sourceText: String? = null,
         val zone: String? = null,
+        val visibleDate: String? = null,
     )
 
     /** Transcript version makes a correction incapable of inheriting a timestamp from an older line. */
@@ -57,6 +61,9 @@ internal object EvidenceChronology68 {
         val timestamp: Timestamp,
         val locations: List<MessageLocation>,
         val sourceUncertain: Boolean = false,
+        val kind: Kind = Kind.MESSAGE,
+        val direction: Direction = Direction.UNKNOWN,
+        val senderConfidence: Confidence = Confidence.UNKNOWN,
     )
 
     data class IncidentSuggestion(val title: String, val evidenceIds: List<String>, val reason: String)
@@ -79,11 +86,15 @@ internal object EvidenceChronology68 {
         DateTimeFormatter.ofPattern("d MMMM uuuu", Locale.UK).withResolverStyle(ResolverStyle.STRICT),
     )
     private val numericDate = Regex("^(\\d{1,2})/(\\d{1,2})/(\\d{2}|\\d{4})$")
-    private val weekday = Regex("^(Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)$", RegexOption.IGNORE_CASE)
+    private val weekday = Regex("^(Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)(?:,? (.+))?$", RegexOption.IGNORE_CASE)
     private val namePrefix = Regex("^([\\p{L}][\\p{L}\\p{M} .’'-]{0,59}):\\s+(.+)$")
     private val offsetTimestamp = Regex("(?<!\\d)(\\d{4}-\\d{2}-\\d{2}[T ]\\d{2}:\\d{2}(?::\\d{2}(?:\\.\\d{1,9})?)?(?:Z|[+-]\\d{2}:\\d{2}))\\s*[✓✔]*$")
-    private val trailingClock = Regex("(?<![\\d:])([01]?\\d|2[0-3]):([0-5]\\d)(?:\\s*(am|pm))?\\s*[✓✔]*$", RegexOption.IGNORE_CASE)
-    private val whitespace = Regex("\\s+")
+    private val trailingClock = Regex("(?U)(?<![0-9:：])([01]?[0-9]|2[0-3])\\s*[:：]\\s*([0-5][0-9])(?:\\s*(am|pm))?\\s*[✓✔]*$", RegexOption.IGNORE_CASE)
+    private val callLabel = Regex("^(?:(?:missed|declined|unanswered) (?:voice |video )?call|(?:voice|video) call)$", RegexOption.IGNORE_CASE)
+    private val callDetail = Regex("^(?:tap to call back|call back|no answer|\\d+ (?:sec|min|hr)(?: \\d+ (?:sec|min))?)$", RegexOption.IGNORE_CASE)
+    private val timeInSentence = Regex("(?:^|\\s)(?:at|until|from|by|around|after|before)$", RegexOption.IGNORE_CASE)
+    private val chrome = setOf("message", "type a message", "online", "tap here for contact info")
+    private val whitespace = Regex("(?U)\\s+")
 
     fun analyse(
         records: List<EvidenceCatalog.Evidence>,
@@ -96,6 +107,7 @@ internal object EvidenceChronology68 {
         val messages = mutableListOf<Message>()
         val review = linkedSetOf<Review>()
         val recordMessages = linkedMapOf<String, IntRange>()
+        val reviewedByEvidence = confirmed.entries.groupBy { it.key.evidenceId }
         for (record in records) {
             ensureCurrent(current)
             if (!record.mime().startsWith("image/")) continue
@@ -107,7 +119,8 @@ internal object EvidenceChronology68 {
             val start = messages.size
             val remaining = MAX_MESSAGES - start
             if (remaining > 0) {
-                messages += parseMessages(record, capture, conversationZone, confirmed, review, remaining, current)
+                val reviewed = reviewedByEvidence[id].orEmpty().associate { it.toPair() }
+                messages += parseMessages(record, capture, conversationZone, reviewed, review, remaining, current)
                 recordMessages[id] = start until messages.size
             } else if (record.ocr().isNotEmpty()) {
                 review += Review(ReviewReason.PROCESSING_LIMIT, listOf(id))
@@ -121,7 +134,7 @@ internal object EvidenceChronology68 {
         screenshots.groupBy { it.sha256 }.values.filter { it.size > 1 }.forEach { matches ->
             review += Review(ReviewReason.POSSIBLE_DUPLICATE, matches.map { it.evidenceId })
         }
-        val (merged, incidents) = overlap(messages, recordMessages, screenshots, review, current)
+        val (merged, incidents) = overlap(messages, recordMessages, screenshots, records, review, current)
         ensureCurrent(current)
         return Result(screenshots, merged.sortedWith(compareBy<Message, Instant?>(nullsLast()) { it.timestamp.instant }),
             incidents, review.take(MAX_REVIEW))
@@ -156,8 +169,46 @@ internal object EvidenceChronology68 {
         return capture to claims
     }
 
-    private data class DateAnchor(val date: LocalDate?, val provenance: Provenance)
-    private data class PendingLine(val number: Int, val text: String)
+    private data class DateAnchor(val date: LocalDate?, val provenance: Provenance, val text: String)
+    private data class LineBounds(val left: Int, val top: Int, val right: Int, val bottom: Int) {
+        fun direction(width: Int): Direction = when {
+            width <= 0 -> Direction.UNKNOWN
+            left <= width * 0.22 && right <= width * 0.80 -> Direction.INCOMING
+            left >= width * 0.20 && right >= width * 0.78 -> Direction.OUTGOING
+            else -> Direction.UNKNOWN
+        }
+    }
+
+    private data class PendingLine(val number: Int, val text: String, val bounds: LineBounds?)
+
+    private fun wordBounds(words: List<EvidenceCatalog.Word>): LineBounds? {
+        if (words.isEmpty()) return null
+        // Do not treat Tesseract's joined paragraphs as a single visual row.
+        if (words.maxOf { it.top() } >= words.minOf { it.bottom() }) return null
+        return LineBounds(words.minOf { it.left() }, words.minOf { it.top() },
+            words.maxOf { it.right() }, words.maxOf { it.bottom() })
+    }
+
+    private fun mapWordsToLines(
+        lines: List<String>, words: List<EvidenceCatalog.Word>, current: () -> Boolean,
+    ): Map<Int, List<EvidenceCatalog.Word>> {
+        if (words.isEmpty()) return emptyMap()
+        var offset = 0
+        val mapped = mutableMapOf<Int, List<EvidenceCatalog.Word>>()
+        for ((index, line) in lines.withIndex()) {
+            if (index % 16 == 0) ensureCurrent(current)
+            if (offset >= words.size) break
+            if (line.isBlank()) continue
+            val tokens = line.split(whitespace)
+            // Associate coordinates only when the visible words match the unchanged transcript.
+            val start = (offset..minOf(offset + 12, words.size - tokens.size)).firstOrNull { first ->
+                tokens.indices.all { words[first + it].text().trim() == tokens[it] && words[first + it].pageIndex() == 0 }
+            } ?: continue
+            offset = start + tokens.size
+            mapped[index] = words.subList(start, offset)
+        }
+        return mapped
+    }
 
     private fun parseMessages(
         record: EvidenceCatalog.Evidence,
@@ -180,58 +231,52 @@ internal object EvidenceChronology68 {
         val body = mutableListOf<PendingLine>()
         var anchor: DateAnchor? = null
         var previousClock: LocalTime? = null
-        for ((index, raw) in record.transcript().lineSequence().withIndex()) {
-            if (index % 16 == 0) ensureCurrent(current)
-            if (index >= MAX_LINES_PER_RECORD || result.size >= remaining) {
-                review += Review(ReviewReason.PROCESSING_LIMIT, recordId)
-                break
-            }
-            val line = raw.trim()
-            if (line.isEmpty()) continue
-            val date = parseDate(line, capture, zone)
-            if (date != null) {
-                anchor = date
-                previousClock = null
-                body.clear()
-                if (date.date == null) review += Review(ReviewReason.AMBIGUOUS_DATE, recordId)
-                continue
-            }
-            val offsetEnd = offsetTimestamp.find(line)
-            val end = offsetEnd ?: trailingClock.find(line)
-            if (end == null) {
-                body += PendingLine(index + 1, line)
-                continue
-            }
-            val explicit = offsetEnd?.let { runCatching { OffsetDateTime.parse(it.groupValues[1].replace(' ', 'T')) }.getOrNull() }
-            if (offsetEnd != null && explicit == null) {
-                review += Review(ReviewReason.AMBIGUOUS_OCR, recordId)
-                continue
-            }
-            val clock = explicit?.toLocalTime() ?: clock(end) ?: continue
-            val sameLine = line.substring(0, end.range.first).trimEnd()
-            if (sameLine.isNotEmpty()) body += PendingLine(index + 1, sameLine)
-            if (body.isEmpty()) continue
-            val location = MessageLocation(record.id(), version, body.first().number, index + 1)
+
+        fun emit(endLine: Int, visible: String = "", clock: LocalTime? = null, explicit: OffsetDateTime? = null) {
+            if (body.isEmpty() || result.size >= remaining) return
+            val location = MessageLocation(record.id(), version, body.first().number, endLine)
             val prefix = namePrefix.matchEntire(body.first().text)
-            val knownName = record.participants().firstOrNull { it.equals(body.first().text, ignoreCase = true) }
-            val sender = prefix?.groupValues?.get(1) ?: knownName
+            val knownName = record.participants().firstOrNull {
+                it.equals(prefix?.groupValues?.get(1) ?: body.first().text, ignoreCase = true)
+            }
+            val isCall = prefix == null && callLabel.matches(body.first().text) &&
+                body.drop(1).all { callDetail.matches(it.text) }
+            val sender = if (isCall) null else knownName ?: prefix?.groupValues?.get(1)
             val content = when {
+                isCall -> listOf(body.first().text) + body.drop(1).map { it.text }.filterNot { it.startsWith("tap to", true) || it.equals("call back", true) }
                 prefix != null -> listOf(prefix.groupValues[2]) + body.drop(1).map { it.text }
                 knownName != null && body.size > 1 -> body.drop(1).map { it.text }
                 else -> body.map { it.text }
             }.joinToString("\n")
+            val alignments = body.mapNotNull { it.bounds?.direction(ocr.width()) }.filter { it != Direction.UNKNOWN }.distinct()
+            val direction = if (isCall) Direction.UNKNOWN else alignments.singleOrNull() ?: Direction.UNKNOWN
             body.clear()
-            if (content.isBlank()) continue
-            // An OCR sequence crossing midnight without a date separator cannot certify the next date.
-            if (previousClock?.hour?.let { it >= 20 } == true && clock.hour < 4) anchor = null
-            previousClock = clock
-            val sourceText = end.value.trimEnd(' ', '\t', '✓', '✔')
-            val visibleClock = explicit?.toLocalTime()?.toString() ?: sourceText
-            val timestamp = messageTime(anchor, clock, sourceText, capture, zone, confirmed[location], sourceUncertain, explicit)
-            if (sender == null) review += Review(ReviewReason.UNKNOWN_PARTICIPANT, recordId, location)
+            if (content.isBlank()) return
+
+            val ownerTime = confirmed[location]
+            val timestamp = if (clock == null) {
+                if (ownerTime != null) Timestamp(ownerTime, anchor?.date, provenance = Provenance.OWNER_CONFIRMED,
+                    confidence = Confidence.CONFIRMED, visibleDate = anchor?.text)
+                else Timestamp(date = anchor?.date, provenance = anchor?.provenance ?: Provenance.UNKNOWN,
+                    confidence = Confidence.NEEDS_REVIEW, visibleDate = anchor?.text)
+            } else {
+                // Crossing midnight without a date separator cannot certify the next date.
+                if (previousClock?.hour?.let { it >= 20 } == true && clock.hour < 4) anchor = null
+                previousClock = clock
+                messageTime(anchor, clock, visible, capture, zone, ownerTime, sourceUncertain, explicit)
+            }
+            val senderConfidence = when {
+                sender == null -> Confidence.UNKNOWN
+                knownName != null && prefix != null && !sourceUncertain -> Confidence.HIGH_CONFIDENCE
+                else -> Confidence.NEEDS_REVIEW
+            }
+            if (!isCall && senderConfidence != Confidence.HIGH_CONFIDENCE) {
+                review += Review(ReviewReason.UNKNOWN_PARTICIPANT, recordId, location)
+            }
+            if (clock == null) review += Review(ReviewReason.AMBIGUOUS_OCR, recordId, location)
             if (timestamp.confidence != Confidence.CONFIRMED) {
                 val reason = when {
-                    timestamp.date == null -> ReviewReason.AMBIGUOUS_DATE
+                    timestamp.date == null || clock == null -> ReviewReason.AMBIGUOUS_DATE
                     explicit == null && (zone == null || zone.rules.getValidOffsets(timestamp.date.atTime(clock)).size != 1) ->
                         ReviewReason.AMBIGUOUS_ZONE
                     timestamp.instant == null -> ReviewReason.CONFLICTING_TIMESTAMPS
@@ -240,28 +285,123 @@ internal object EvidenceChronology68 {
                 }
                 if (reason != null) review += Review(reason, recordId, location)
             }
-            result += Message(sender, content, visibleClock, timestamp, listOf(location), sourceUncertain)
+            val kind = when {
+                isCall -> Kind.CALL
+                clock == null -> Kind.UNRESOLVED
+                else -> Kind.MESSAGE
+            }
+            result += Message(sender, content, explicit?.toLocalTime()?.toString() ?: visible, timestamp,
+                listOf(location), sourceUncertain || clock == null, kind, direction, senderConfidence)
         }
+
+        val lines = record.transcript().lineSequence().map(String::trim).take(MAX_LINES_PER_RECORD + 1).toList()
+        // Owner-corrected text has its own line identity and no original word alignment.
+        val layout = if (correction == null) mapWordsToLines(lines, ocr.words(), current) else emptyMap()
+        val preserved = confirmed.keys.filter { it.transcriptVersion == version }
+        var sawStatusClock = false
+        for ((index, line) in lines.withIndex()) {
+            if (index % 16 == 0) ensureCurrent(current)
+            if (index >= MAX_LINES_PER_RECORD || result.size >= remaining) {
+                review += Review(ReviewReason.PROCESSING_LIMIT, recordId)
+                break
+            }
+            if (line.isEmpty()) continue
+            val date = parseDate(line, capture, zone)
+            if (date != null) {
+                // A leading chat header or status bar is not an untimed message.
+                if (anchor != null || result.isNotEmpty() || body.any { it.text.split(whitespace).size >= 4 }) {
+                    body.lastOrNull()?.let { emit(it.number) }
+                }
+                body.clear()
+                anchor = date
+                previousClock = null
+                if (date.date == null) review += Review(ReviewReason.AMBIGUOUS_DATE, recordId)
+                continue
+            }
+            val normalized = line.lowercase(Locale.ROOT)
+            if (normalized in chrome || normalized.startsWith("last seen ") ||
+                normalized.startsWith("messages and calls are end-to-end encrypted")) continue
+
+            val offsetEnd = offsetTimestamp.find(line)
+            val end = offsetEnd ?: trailingClock.find(line)
+            val explicit = offsetEnd?.let { runCatching { OffsetDateTime.parse(it.groupValues[1].replace(' ', 'T')) }.getOrNull() }
+            if (offsetEnd != null && explicit == null) {
+                review += Review(ReviewReason.AMBIGUOUS_OCR, recordId)
+            }
+            val possibleBody = end?.let { line.substring(0, it.range.first).trimEnd() } ?: line
+            val words = layout[index].orEmpty()
+            val rowBounds = wordBounds(words)
+            val textWordCount = possibleBody.takeIf { it.isNotEmpty() }?.split(whitespace)?.size ?: 0
+            val textWords = words.take(textWordCount)
+            val separatedClock = textWords.lastOrNull()?.let { last ->
+                words.getOrNull(textWordCount)?.let { time -> time.left() - last.right() >= last.bottom() - last.top() }
+            } ?: false
+            val visibleTime = when {
+                explicit != null -> explicit.toLocalTime()
+                end == null || offsetEnd != null -> null
+                timeInSentence.containsMatchIn(possibleBody) && !separatedClock -> null
+                else -> clock(end)
+            }
+            val content = if (visibleTime == null) line else possibleBody
+            if (index <= 3 && body.isEmpty() && result.isEmpty() && anchor == null && rowBounds != null) {
+                if (content.isEmpty() && rowBounds.bottom <= ocr.height() * 0.06) sawStatusClock = true
+                else if (sawStatusClock && visibleTime == null && rowBounds.bottom <= ocr.height() * 0.11) continue
+            }
+            if (content.isNotEmpty()) {
+                val bounds = rowBounds ?: wordBounds(textWords)
+                val previous = body.lastOrNull()
+                if (previous != null && preserved.none { body.first().number >= it.startLine && index + 1 <= it.endLine }) {
+                    val start = body.first()
+                    val startsCall = callLabel.matches(content)
+                    val afterCall = callLabel.matches(start.text) && !callDetail.matches(content)
+                    val callContinuation = callLabel.matches(start.text) && callDetail.matches(content)
+                    if (!callContinuation && (startsCall || afterCall || differentBubble(previous.bounds, bounds, ocr.width()))) {
+                        emit(previous.number)
+                    }
+                }
+                body += PendingLine(index + 1, content, bounds)
+            }
+            if (visibleTime != null && end != null) emit(index + 1, end.value.trimEnd(' ', '\t', '✓', '✔'),
+                visibleTime, explicit)
+        }
+        body.lastOrNull()?.let { emit(it.number) }
         if (result.isEmpty() && record.transcript().isNotBlank()) review += Review(ReviewReason.AMBIGUOUS_OCR, recordId)
         return result
+    }
+
+    private fun differentBubble(previous: LineBounds?, next: LineBounds?, width: Int): Boolean {
+        if (previous == null || next == null || next.top <= previous.top) return false
+        val previousDirection = previous.direction(width)
+        val nextDirection = next.direction(width)
+        val height = maxOf(previous.bottom - previous.top, next.bottom - next.top)
+        return (previousDirection != Direction.UNKNOWN && nextDirection != Direction.UNKNOWN && previousDirection != nextDirection) ||
+            next.top - previous.bottom > height * 1.4
     }
 
     private fun parseDate(line: String, capture: Timestamp, zone: ZoneId?): DateAnchor? {
         if (line.length > 40) return null
         val normalized = line.replace(whitespace, " ")
-        if (weekday.matches(normalized)) return DateAnchor(null, Provenance.OCR_RELATIVE_DATE)
-        val hints = EvidenceTextHints.scan(normalized)
-        val standalone = hints.firstOrNull { it.text().equals(normalized, ignoreCase = true) } ?: return null
+        val namedDay = weekday.matchEntire(normalized)
+        val dateText = namedDay?.groupValues?.get(2)?.takeIf { it.isNotBlank() } ?: normalized
+        if (namedDay != null && dateText == normalized) return DateAnchor(null, Provenance.OCR_RELATIVE_DATE, line)
+        val hints = EvidenceTextHints.scan(dateText)
+        val standalone = hints.firstOrNull { it.text().equals(dateText, ignoreCase = true) } ?: return null
         return when (standalone.kind()) {
-            "DATE" -> DateAnchor(parseExplicitDate(normalized), Provenance.OCR_VISIBLE)
+            "DATE" -> {
+                val parsed = parseExplicitDate(dateText)?.takeIf { date ->
+                    namedDay == null || date.dayOfWeek == DayOfWeek.valueOf(namedDay.groupValues[1].uppercase(Locale.ROOT))
+                }
+                DateAnchor(parsed, Provenance.OCR_VISIBLE, line)
+            }
             "RELATIVE_DATE" -> {
+                if (namedDay != null) return null
                 val localCapture = if (zone != null) capture.instant?.atZone(zone)?.toLocalDate() else null
                 val date = when (normalized.lowercase(Locale.ROOT)) {
                     "today" -> localCapture
                     "yesterday" -> localCapture?.minusDays(1)
                     else -> null
                 }
-                DateAnchor(date, Provenance.OCR_RELATIVE_DATE)
+                DateAnchor(date, Provenance.OCR_RELATIVE_DATE, line)
             }
             else -> null
         }
@@ -305,7 +445,7 @@ internal object EvidenceChronology68 {
         val date = explicit?.toLocalDate() ?: anchor?.date
         val zoneId = explicit?.offset?.id ?: zone?.id
         if (confirmed != null) return Timestamp(confirmed, date, clock, Provenance.OWNER_CONFIRMED,
-            Confidence.CONFIRMED, visible, zoneId)
+            Confidence.CONFIRMED, visible, zoneId, anchor?.text)
         val local = date?.atTime(clock)
         val offset = local?.let { zone?.rules?.getValidOffsets(it)?.singleOrNull() }
         val instant = explicit?.toInstant() ?: if (local != null && offset != null) local.toInstant(offset) else null
@@ -314,13 +454,16 @@ internal object EvidenceChronology68 {
         val confidence = if (accepted != null && !partial && (explicit != null || anchor?.provenance == Provenance.OCR_VISIBLE))
             Confidence.HIGH_CONFIDENCE else Confidence.NEEDS_REVIEW
         val provenance = if (explicit != null) Provenance.OCR_EXPLICIT_OFFSET else anchor?.provenance ?: Provenance.OCR_VISIBLE
-        return Timestamp(accepted, date, clock, provenance, confidence, visible, zoneId)
+        return Timestamp(accepted, date, clock, provenance, confidence, visible, zoneId, anchor?.text)
     }
 
     private data class MessageKey(val sender: String, val content: String, val absolute: Instant?, val local: LocalDateTime?)
     private data class PairOccurrence(val evidenceId: String, val first: Int, val second: Int)
     private fun key(message: Message): MessageKey? {
-        val sender = message.sender?.lowercase(Locale.ROOT) ?: return null
+        if (message.kind != Kind.MESSAGE) return null
+        val sender = message.sender?.lowercase(Locale.ROOT)
+            ?: message.direction.takeUnless { it == Direction.UNKNOWN }?.let { "bubble:${it.name}" }
+            ?: return null
         val time = message.timestamp
         val instant = time.instant?.takeIf { time.confidence == Confidence.CONFIRMED || time.confidence == Confidence.HIGH_CONFIDENCE }
         // Matching a visible date and clock does not require inventing the conversation's timezone.
@@ -336,6 +479,7 @@ internal object EvidenceChronology68 {
         messages: List<Message>,
         ranges: Map<String, IntRange>,
         screenshots: List<Screenshot>,
+        records: List<EvidenceCatalog.Evidence>,
         review: MutableSet<Review>,
         current: () -> Boolean,
     ): Pair<List<Message>, List<IncidentSuggestion>> {
@@ -369,17 +513,56 @@ internal object EvidenceChronology68 {
                 screenshotGroups.link(screenshotIndex.getValue(initial.evidenceId), screenshotIndex.getValue(other.evidenceId))
             }
         }
-        val incidents = screenshots.indices.groupBy(screenshotGroups::root).values.filter { it.size > 1 }.map { indices ->
+        val overlappingScreenshots = screenshots.indices.groupBy(screenshotGroups::root).values
+        val incidents = overlappingScreenshots.filter { it.size > 1 }.map { indices ->
             val ids = indices.map { screenshots[it].evidenceId }
             val known = indices.flatMap { screenshots[it].participants }.filterNot { it.equals("you", true) }.distinct()
-            val title = if (known.isEmpty()) "Overlapping conversation" else "Conversation with ${known.take(3).joinToString(", ")}"
+            val title = if (known.isEmpty()) "Possible overlapping conversation"
+                else "Possible conversation with ${known.take(3).joinToString(", ")}"
             review += Review(ReviewReason.SUGGESTED_INCIDENT, ids)
-            IncidentSuggestion(title, ids, "At least two consecutive messages match text, sender and date/time across screenshots.")
-        }
+            IncidentSuggestion(title, ids, "At least two consecutive messages match text, visible timing and speaker or bubble position.")
+        }.toMutableList()
         for (indices in keys.indices.filter { keys[it] != null }.groupBy { keys[it] }.values) {
             if (indices.map(messageGroups::root).distinct().size <= 1) continue
             val ids = indices.map { messages[it].locations.single().evidenceId }.distinct()
             if (ids.size > 1) review += Review(ReviewReason.POSSIBLE_DUPLICATE, ids)
+        }
+        val ambiguous = review.filter { it.reason == ReviewReason.POSSIBLE_DUPLICATE }.flatMap { it.evidenceIds }.toSet()
+        val ownerParticipants = records.associate { record ->
+            record.id() to record.participants().filterNot { it.equals("you", true) }
+        }
+        val ungrouped = overlappingScreenshots.filter { it.size == 1 }.map { screenshots[it.single()] }
+            .filter { it.evidenceId !in ambiguous }
+        val recognizable = ungrouped.filter { screenshot ->
+            ranges[screenshot.evidenceId].orEmpty().any { messages[it].kind != Kind.UNRESOLVED }
+        }
+        val related = recognizable.groupBy { screenshot ->
+            ensureCurrent(current)
+            val participant = ownerParticipants[screenshot.evidenceId]?.singleOrNull()?.lowercase(Locale.ROOT)
+            val date = ranges[screenshot.evidenceId].orEmpty().mapNotNull { index ->
+                val time = messages[index].timestamp
+                time.date.takeIf { time.provenance == Provenance.OCR_VISIBLE || time.provenance == Provenance.OCR_EXPLICIT_OFFSET }
+            }.distinct().singleOrNull()
+            if (participant != null && date != null) participant to date else null
+        }.filter { (match, entries) -> match != null && entries.size > 1 }
+        val relatedIds = mutableSetOf<String>()
+        for ((_, entries) in related) {
+            ensureCurrent(current)
+            val ids = entries.map { it.evidenceId }
+            relatedIds += ids
+            val person = ownerParticipants.getValue(ids.first()).single()
+            incidents += IncidentSuggestion("Possible conversation with $person", ids,
+                "These screenshots share an owner-identified participant and the same visible conversation date.")
+            review += Review(ReviewReason.SUGGESTED_INCIDENT, ids)
+        }
+        for (screenshot in recognizable) {
+            ensureCurrent(current)
+            if (screenshot.evidenceId in relatedIds) continue
+            val ids = listOf(screenshot.evidenceId)
+            val name = screenshot.participants.firstOrNull { !it.equals("you", true) }
+            val title = if (name == null) "Possible conversation" else "Possible conversation with $name"
+            incidents += IncidentSuggestion(title, ids, "Visible message or call markers were found in this screenshot.")
+            review += Review(ReviewReason.SUGGESTED_INCIDENT, ids)
         }
         val merged = messages.indices.groupBy(messageGroups::root).values.map { indices ->
             val candidates = indices.map(messages::get)
@@ -388,6 +571,8 @@ internal object EvidenceChronology68 {
         }
         return merged to incidents
     }
+
+    private fun IntRange?.orEmpty(): IntRange = this ?: IntRange.EMPTY
 
     private fun ensureCurrent(current: () -> Boolean) {
         if (!current()) throw CancellationException("Evidence analysis authority ended")

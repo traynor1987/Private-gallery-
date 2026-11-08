@@ -65,7 +65,7 @@ class EvidenceLocker179UiTest {
    androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().runOnMainSync{controller=EvidenceController(f.context,f.access)}
    compose.setContent{CompositionLocalProvider(LocalContext provides f.context){PrivateGalleryTheme(AppTheme.LIGHT){EvidenceLocker(controller,{},{},{},{},{})}}}
    waitReady(controller,0)
-   click("Add existing evidence");compose.evidenceNode(hasContentDescription("Register original alpha179.txt")).assertIsDisplayed().assertHeightIsAtLeast(48.dp).performClick().assertIsOn();approveImportReview();waitReady(controller,1)
+   click("More actions");click("Add existing evidence");compose.evidenceNode(hasContentDescription("Register original alpha179.txt")).assertIsDisplayed().assertHeightIsAtLeast(48.dp).performClick().assertIsOn();approveImportReview();waitReady(controller,1)
    compose.onNodeWithText("Evidence").performClick();compose.evidenceNode(hasText("alpha179.txt")).performClick();waitReady(controller,1)
    click("Review / correct");field("Owner-corrected text").performTextReplacement("unique179 owner corrected Alice timestamp uncertain")
    compose.onNodeWithText("Save").performClick()
@@ -158,7 +158,7 @@ class EvidenceLocker179UiTest {
   try {
    androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().runOnMainSync{controller=EvidenceController(f.context,f.access)}
    compose.setContent{CompositionLocalProvider(LocalContext provides f.context){PrivateGalleryTheme(AppTheme.LIGHT){EvidenceLocker(controller,{},{},{},{exported=it},{})}}}
-   waitReady(controller,0);click("Add existing evidence");compose.evidenceNode(hasContentDescription("Register original alpha179.txt")).assertIsDisplayed().assertHeightIsAtLeast(48.dp).performClick().assertIsOn();compose.evidenceNode(hasContentDescription("Register original beta179.txt")).assertIsDisplayed().assertHeightIsAtLeast(48.dp).performClick().assertIsOn()
+   waitReady(controller,0);click("More actions");click("Add existing evidence");compose.evidenceNode(hasContentDescription("Register original alpha179.txt")).assertIsDisplayed().assertHeightIsAtLeast(48.dp).performClick().assertIsOn();compose.evidenceNode(hasContentDescription("Register original beta179.txt")).assertIsDisplayed().assertHeightIsAtLeast(48.dp).performClick().assertIsOn()
    assertTrue(f.access.store.read().evidence().isEmpty())
    approveImportReview();waitReady(controller,2)
    assertEquals(2,f.access.sources.list().size)
@@ -201,7 +201,7 @@ class EvidenceLocker179UiTest {
   try {
    androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().runOnMainSync{controller=EvidenceController(f.context,f.access)}
    compose.setContent{CompositionLocalProvider(LocalContext provides f.context){PrivateGalleryTheme(AppTheme.DARK){EvidenceLocker(controller,{},{},{},{},{})}}}
-   waitReady(controller,0);click("New incident")
+   waitReady(controller,0);click("More actions");click("New incident")
    field("Title").performTextReplacement("Landscape179")
    compose.onNodeWithText("Save").assertIsDisplayed().assertHeightIsAtLeast(48.dp).performClick()
    compose.waitUntil(15000){controller.state.value.catalog?.incidents()?.singleOrNull()?.title()=="Landscape179"&&!controller.state.value.busy}

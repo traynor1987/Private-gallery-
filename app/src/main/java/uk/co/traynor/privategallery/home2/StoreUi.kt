@@ -17,9 +17,11 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import uk.co.traynor.privategallery.ui.navigationHaptic
 
 @Composable internal fun PreviewHeader(title:String,subtitle:String,onBack:()->Unit,actions:@Composable RowScope.()->Unit={}){
- Row(Modifier.fillMaxWidth().padding(start=4.dp,end=14.dp,top=8.dp,bottom=8.dp),verticalAlignment=Alignment.CenterVertically){IconButton(onClick=onBack){Icon(Icons.Default.ArrowBack,"Back to Home")};Column(Modifier.weight(1f)){Text(title,style=MaterialTheme.typography.headlineSmall);Text(subtitle,style=MaterialTheme.typography.labelMedium,color=MaterialTheme.colorScheme.onSurfaceVariant)};actions()}
+ val tap=navigationHaptic()
+ Row(Modifier.fillMaxWidth().padding(start=4.dp,end=14.dp,top=8.dp,bottom=8.dp),verticalAlignment=Alignment.CenterVertically){IconButton(onClick={tap();onBack()}){Icon(Icons.Default.ArrowBack,"Back to Home")};Column(Modifier.weight(1f)){Text(title,style=MaterialTheme.typography.headlineSmall);Text(subtitle,style=MaterialTheme.typography.labelMedium,color=MaterialTheme.colorScheme.onSurfaceVariant)};actions()}
 }
 @Composable internal fun StoreScreen(data:PreviewData,onBack:()->Unit,onDetail:(StoreEntry)->Unit,onCustom:()->Unit,onVisualFoundation:(()->Unit)?=null){
  var query by remember{mutableStateOf("")};var category by remember{mutableStateOf("All")};var mine by remember{mutableStateOf(false)}

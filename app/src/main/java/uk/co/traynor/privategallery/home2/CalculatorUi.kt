@@ -32,13 +32,21 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import uk.co.traynor.privategallery.MainActivity
 import uk.co.traynor.privategallery.core.calculator.*
 import uk.co.traynor.privategallery.core.home2.SpaceContext
+import uk.co.traynor.privategallery.ui.navigationHaptic
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable internal fun CalculatorScreen(active:Boolean=true,onHome:()->Unit) {
     val context=LocalContext.current as SpaceContext
     val loaded=remember(context){runCatching{CalculatorData(context)}}
     val model=loaded.getOrNull()
-    if(model==null){Column(Modifier.fillMaxSize().padding(24.dp)){Text("Calculator could not open. Existing encrypted data is preserved.");TextButton(onClick=onHome){Text("Home")}};return}
+    if(model==null){
+        val tap = navigationHaptic()
+        Column(Modifier.fillMaxSize().padding(24.dp)){
+            Text("Calculator could not open. Existing encrypted data is preserved.")
+            TextButton(onClick={tap();onHome()}){Text("Home")}
+        }
+        return
+    }
     val lifecycle=LocalLifecycleOwner.current
     val activeNow=rememberUpdatedState(active)
     var resumed by remember{mutableStateOf(lifecycle.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED))}
@@ -225,6 +233,7 @@ private val memoryCommands=listOf(
     onScientific:()->Unit,onAngle:()->Unit,onMemory:()->Unit,onHistory:()->Unit,
 ){
     val palette=MaterialTheme.colorScheme
+    val tap = navigationHaptic()
     Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically){
         Column(Modifier.weight(1f).padding(vertical=4.dp)){
             Text("Calculator",style=MaterialTheme.typography.titleLarge,fontWeight=FontWeight.SemiBold,color=palette.onBackground)
@@ -232,7 +241,7 @@ private val memoryCommands=listOf(
                 style=MaterialTheme.typography.labelMedium,color=palette.onSurfaceVariant)
         }
         TextButton(onClick=onHelp,contentPadding=PaddingValues(horizontal=8.dp),modifier=Modifier.heightIn(min=48.dp)){Text("Help")}
-        TextButton(onClick=onHome,contentPadding=PaddingValues(horizontal=8.dp),modifier=Modifier.heightIn(min=48.dp)){Text("Home")}
+        TextButton(onClick={tap();onHome()},contentPadding=PaddingValues(horizontal=8.dp),modifier=Modifier.heightIn(min=48.dp)){Text("Home")}
     }
     Surface(shape=RoundedCornerShape(26.dp),color=palette.surface,modifier=Modifier.fillMaxWidth()){
         Column(

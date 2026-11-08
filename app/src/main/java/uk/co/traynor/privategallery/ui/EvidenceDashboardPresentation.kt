@@ -4,7 +4,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
@@ -16,9 +16,10 @@ import androidx.compose.ui.unit.dp
  evidenceCount:Int,incidentCount:Int,busy:Boolean,query:String,onQuery:(String)->Unit,
  onImport:()->Unit,onExisting:()->Unit,onLibrary:()->Unit,onTimeline:()->Unit,onAi:()->Unit,
  onNewIncident:()->Unit,onArchive:()->Unit,onRefresh:()->Unit,
- onConnect:(()->Unit)?=null,onPhotos:(()->Unit)?=null,
+ onConnect:(()->Unit)?=null,onPhotos:(()->Unit)?=null,onReview:(()->Unit)?=null,
 ) {
- Column(verticalArrangement=Arrangement.spacedBy(16.dp)) {
+ var actionsExpanded by remember { mutableStateOf(false) }
+ Column(verticalArrangement=Arrangement.spacedBy(10.dp)) {
   Card(colors=CardDefaults.cardColors(containerColor=MaterialTheme.colorScheme.primaryContainer),modifier=Modifier.fillMaxWidth()) {
    Column(Modifier.padding(20.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
     Text("Your evidence, organised",style=MaterialTheme.typography.headlineSmall)
@@ -26,7 +27,7 @@ import androidx.compose.ui.unit.dp
      EvidenceDashboardCount(evidenceCount,"Evidence records")
      EvidenceDashboardCount(incidentCount,"Active incidents")
     }
-    Button(enabled=!busy,onClick=onConnect?:onImport,modifier=Modifier.fillMaxWidth().heightIn(min=48.dp)) {
+    Button(enabled=!busy,onClick=onConnect?:onImport,modifier=Modifier.heightIn(min=48.dp)) {
      Icon(Icons.Default.Add,contentDescription=null);Spacer(Modifier.width(8.dp));Text(if(onConnect==null)"Import Evidence" else "Connect Vault collection")
     }
    }
@@ -34,11 +35,12 @@ import androidx.compose.ui.unit.dp
   OutlinedTextField(value=query,onValueChange=onQuery,label={Text("Search evidence")},
    leadingIcon={Icon(Icons.Default.Search,null)},modifier=Modifier.fillMaxWidth().testTag("evidence-dashboard-search"))
   FlowRow(horizontalArrangement=Arrangement.spacedBy(8.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
-   EvidenceDashboardAction("Browse library",Icons.Default.Folder,onLibrary)
+   EvidenceDashboardAction("Review evidence",Icons.Default.Folder,onReview?:onLibrary)
    EvidenceDashboardAction("View timeline",Icons.Default.DateRange,onTimeline)
-   EvidenceDashboardAction("AI analysis",Icons.Default.AutoAwesome,onAi)
+   EvidenceDashboardAction("Ask Nova AI",Icons.Default.AutoAwesome,onAi)
   }
-  FlowRow(horizontalArrangement=Arrangement.spacedBy(8.dp),verticalArrangement=Arrangement.spacedBy(4.dp)) {
+  TextButton(onClick={actionsExpanded=!actionsExpanded}){Text(if(actionsExpanded)"Hide more actions" else "More actions")}
+  if(actionsExpanded)FlowRow(horizontalArrangement=Arrangement.spacedBy(8.dp),verticalArrangement=Arrangement.spacedBy(4.dp)) {
    if(onConnect!=null)TextButton(enabled=!busy,onClick=onImport){Text("Import Evidence")}
    onPhotos?.let{TextButton(enabled=!busy,onClick=it){Text("Pick screenshots")}}
    TextButton(enabled=!busy,onClick=onExisting){Text("Add existing evidence")}

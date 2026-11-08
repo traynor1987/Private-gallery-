@@ -27,6 +27,23 @@ internal class EvidenceReview68(context: Context, access: EvidenceAccess) : Auto
         check(preferences.edit().putString("conversation-zone", zone?.id).commit())
     }
 
+    fun lastCollectionSync(): Long = preferences.getLong("last-collection-sync", 0L)
+
+    fun setLastCollectionSync(at: Long) {
+        check(preferences.edit().putLong("last-collection-sync", at).commit())
+    }
+
+    fun captureTimes(): Map<String, Long> = preferences.all.mapNotNull { (key, value) ->
+        if (key.startsWith("capture-") && value is Long && value > 0) key.removePrefix("capture-") to value
+        else null
+    }.toMap()
+
+    fun setCaptureTime(evidenceId: String, at: Long) {
+        val editor = preferences.edit()
+        val key = "capture-$evidenceId"
+        check((if (at > 0) editor.putLong(key, at) else editor.remove(key)).commit())
+    }
+
     fun skipped(): Set<String> = preferences.all.keys.filter { it.startsWith("skip-") }.toSet()
 
     fun confirm(locations: List<EvidenceChronology68.MessageLocation>, timestamp: Long) {

@@ -42,7 +42,7 @@ class EvidenceDashboardPresentationTest {
   val actions=mutableListOf<String>();show{actions+=it}
   compose.onNodeWithTag("evidence-dashboard-search").performScrollTo().performTextInput("receipt")
   compose.onNodeWithTag("evidence-dashboard-search").assertTextContains("receipt")
-  compose.onNodeWithText("AI analysis").performScrollTo().performClick()
+  compose.onNodeWithText("Ask Nova AI").performScrollTo().performClick()
   assertEquals(listOf("ai"),actions)
   compose.onNodeWithText("View timeline").performScrollTo().performClick()
   assertEquals(listOf("ai","timeline"),actions)
@@ -50,6 +50,7 @@ class EvidenceDashboardPresentationTest {
  @Test fun busyImportCannotStartAnotherWorkflow() {
   show(busy=true)
   compose.onNodeWithText("Import Evidence").performScrollTo().assertIsNotEnabled()
+  compose.onNodeWithText("More actions").performScrollTo().performClick()
   compose.onNodeWithText("Add existing evidence").performScrollTo().assertIsNotEnabled()
  }
 }
