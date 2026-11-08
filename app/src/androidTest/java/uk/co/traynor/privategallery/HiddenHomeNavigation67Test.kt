@@ -41,6 +41,13 @@ class HiddenHomeNavigation67Test {
             compose.onNodeWithTag("preview-home").assertIsDisplayed()
             compose.activityRule.scenario.moveToState(Lifecycle.State.CREATED)
             compose.activityRule.scenario.moveToState(Lifecycle.State.RESUMED)
+            // RESUMED can arrive before the window regains focus and draws uncovered content.
+            compose.waitUntil(5_000) {
+                val foreground = compose.runOnIdle {
+                    compose.activity.window.decorView.hasWindowFocus() && !compose.activity.privacyCoverVisible()
+                }
+                foreground && compose.onNodeWithTag("preview-home").isDisplayed()
+            }
             compose.onNodeWithTag("preview-home").assertIsDisplayed()
             compose.runOnIdle {
                 assertTrue(owner.hidden.selected && owner.hidden.session.isUnlocked)

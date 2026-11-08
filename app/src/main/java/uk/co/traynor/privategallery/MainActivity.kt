@@ -641,6 +641,7 @@ class MainActivity : FragmentActivity() {
     }
 
     private var activityResumed by mutableStateOf(false)
+    private var activityResumeRevision by mutableIntStateOf(0)
     private var panicCoverPending by mutableStateOf(false)
     private var panicUncoverScheduled = false
     private var previousAccessibility: Int? = null
@@ -768,6 +769,7 @@ class MainActivity : FragmentActivity() {
     override fun onResume() {
         super.onResume()
         activityResumed = true
+        activityResumeRevision++
         retryPendingNovaPrivateApp()
         applyPendingHiddenDownloads()
         externalTicket?.let {resumeExternalPresentation(it)}
@@ -2241,9 +2243,10 @@ class MainActivity : FragmentActivity() {
     @Composable private fun HomeScopedPresentation(hidden:Boolean) {
         var admittedAccess by remember {mutableStateOf<uk.co.traynor.privategallery.core.evidence.EvidenceAccess?>(null)}
         DisposableEffect(Unit){onDispose{admittedAccess?.close();admittedAccess=null}}
-        // Hidden Vault disposes its presentation and revokes operation leases when Home
-        // replaces it. Reacquire after that disposal using the same authenticated Space.
-        LaunchedEffect(activityResumed, homeVisible, homeRequestRevision) {
+        // Hidden leases are revoked on Vault disposal and Activity stop. A quick stop
+        // and resume can be coalesced by Compose, so observe each resume explicitly.
+        val hiddenResumeRevision = if (hidden) activityResumeRevision else 0
+        LaunchedEffect(activityResumed, homeVisible, homeRequestRevision, hiddenResumeRevision) {
             if (activityResumed && homeVisible && admittedAccess?.current() != true) {
                 admittedAccess?.close()
                 admittedAccess = null
