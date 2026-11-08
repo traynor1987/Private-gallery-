@@ -3,7 +3,8 @@ set -euo pipefail
 
 prime_kotlin_compiler() (
     # Gradle can reuse a local Maven artifact after checking Maven Central's checksum.
-    local_repo="$HOME/.m2/repository/org/jetbrains/kotlin/kotlin-compiler-embeddable/2.3.10"
+    module=org/jetbrains/kotlin/kotlin-compiler-embeddable/2.3.10
+    local_repo="$HOME/.m2/repository/$module"
     jar=kotlin-compiler-embeddable-2.3.10.jar
     digest=ac6a182785345380b5db5085dbeea3f5f0e925e2e100e54ab059b5787d4f6e40
     mkdir -p "$local_repo"
@@ -13,11 +14,19 @@ prime_kotlin_compiler() (
     download=$(mktemp "$local_repo/kotlin-download.XXXXXXXX")
     trap 'rm -f -- "$download"' EXIT
     asset='https://api.github.com/repos/JetBrains/kotlin/releases/assets/598692328'
-    curl --fail --location --silent --show-error --connect-timeout 12 --max-time 120 \
-        -H 'Accept: application/octet-stream' -o "$download" "$asset?download=$(date +%s)"
-    printf '%s  %s\n' "$digest" "$download" | sha256sum --check
-    mv "$download" "$local_repo/$jar"
-    echo 'Verified pinned Kotlin 2.3.10 compiler JAR'
+    for uri in "$asset?download=$(date +%s)" \
+        "https://maven-central.storage-download.googleapis.com/maven2/$module/$jar" \
+        "https://repo.maven.apache.org/maven2/$module/$jar"; do
+        if curl --fail --location --silent --show-error --connect-timeout 12 --max-time 120 \
+            -H 'Accept: application/octet-stream' -o "$download" "$uri" &&
+            printf '%s  %s\n' "$digest" "$download" | sha256sum --check --status; then
+            mv "$download" "$local_repo/$jar"
+            echo 'Verified pinned Kotlin 2.3.10 compiler JAR'
+            exit 0
+        fi
+    done
+    echo 'Could not download the pinned Kotlin 2.3.10 compiler JAR' >&2
+    exit 1
 )
 
 prime_kotlin_compiler
