@@ -22,11 +22,15 @@ PYOUTPUT
 [[ ! -e "$output" ]]
 mkdir -p "$output"
 control_root=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
-baseline=a02cfcf6bb3bbae15f00935c2b2124ae7eb4e674
+baseline=de641d42df1ddae6ba6a59a23f0bc44af85ae1f9
 baseline_dir=$(mktemp -d "${RUNNER_TEMP:?}/upgrade1711-source.XXXXXX")
 trap 'rm -rf "$baseline_dir"' EXIT
 if ! git cat-file -e "$baseline^{commit}"; then git fetch --no-tags origin "$baseline"; fi
 git archive "$baseline" | tar -x -C "$baseline_dir"
+# Use the same verified Gradle 9.5.0 distribution for the baseline test fixture.
+cmp gradle/wrapper/gradle-wrapper.jar "$baseline_dir/gradle/wrapper/gradle-wrapper.jar"
+grep -Fq '/gradle-9.5.0-bin.zip' "$baseline_dir/gradle/wrapper/gradle-wrapper.properties"
+cp gradle/wrapper/gradle-wrapper.properties "$baseline_dir/gradle/wrapper/gradle-wrapper.properties"
 fixture_target="$baseline_dir/app/src/androidTest/java/uk/co/traynor/privategallery/upgrade/UpgradeFixtureTest.kt"
 mkdir -p "$(dirname "$fixture_target")"
 cp "$baseline_dir/app/build.gradle.kts" "$output/baseline-build.gradle.kts"

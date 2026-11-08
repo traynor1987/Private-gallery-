@@ -1,14 +1,14 @@
-# NovaOS 1.7.31 Sanctuary Code 66 signing review
+# NovaOS 1.7.32 Code 67 signing review
 
-Source: de641d42df1ddae6ba6a59a23f0bc44af85ae1f9
+Source: 5ee1a5458bb5d62daeae2369ee9dde05952a0faa
 Decision: APPROVED
 Production signing: APPROVED
-Upgrade fixture SHA-256: 538d4f9dfba111af2b4bc8b44434bbce74ee5021de8b96ab28f72c137520d742
-Upgrade controls SHA-256: 766796d22cfee866a7f0f77d40c76208b183ff60760d0a67f15dd45f8372ee1a
+Upgrade fixture SHA-256: 1fb15979880a1a0f4273866595a5dfb4d68f011bfb4e44efb69b648d79374c02
+Upgrade controls SHA-256: 18050878a2ef2480ab03a22603685fe02d5d52a9836cfb25f5564d58c6fba234
 Runtime matrix SHA-256: 789b0eef5c8a8383ffefa050bb69064f32a447201838e2e61e6a204ee2092694
-Runtime archive SHA-256: a6e17f996b4138ddfabdaa12fdebeceb49ccdc23a989d738673fa09b25c1496c
-Signing workflow SHA-256: 4ef06bbad6a80b27d54e03428c5919b282b334cd38905b3449f578f8baccf306
+Runtime archive SHA-256: 9472d566e349f926d74ee94f5e57d599b76dcdeca24b7014ad3916956bfc63ca
+Signing workflow SHA-256: 0184458138f4a723745f94644b2d5e255bf8efc6ac47bd844024a134edb6bc7c
 
-The owner reported testing the isolated Sanctuary APK and requested an original-key in-place update of the installed production application. This authorizes the frozen Code 66 source for direct owner delivery after the signed upgrade and restart tests. It records owner-reported testing without claiming individual device outcomes.
+The owner requested a production-signed in-place update after mandatory tests. Exact-source Android 17 verification run 42484407367 passed the runtime matrix, focused navigation and Sanctuary checks and original Backup restart evidence. Physical Galaxy Z Fold validation of Code 67 remains pending.
 
-Android 17 run 42430643629 passed the exact-source runtime, focused Sanctuary and visual tests, with original Backup restart evidence. The Code 65 archive is pinned to the successful signing and upgrade job 128517442213 from run 42410507182. Its later GitHub Releases publication job failed separately. Both original certificate checks and the production package identity remain required.
+The production package and original signing certificate are required. The distributed Code 66 archive is pinned to production job 128590919516 of run 42434691690. Delivery requires the signed Code 66 to 67 upgrade and after-restart data verification.
