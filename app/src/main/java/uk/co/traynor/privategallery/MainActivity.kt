@@ -2249,12 +2249,11 @@ class MainActivity : FragmentActivity() {
         LaunchedEffect(activityResumed, homeVisible, homeRequestRevision, hiddenResumeRevision) {
             if (activityResumed && homeVisible && admittedAccess?.current() != true) {
                 admittedAccess?.close()
-                admittedAccess = null
-                admittedAccess = homeAccess()
+                homeAccess()?.let { admittedAccess = it }
             }
         }
-        val access = admittedAccess?.takeIf { it.current() }
-        if (access == null) {
+        val access = admittedAccess
+        if (access?.current() != true) {
             if (homeVisible && activityResumed) {
                 androidx.compose.material3.Surface(Modifier.fillMaxSize()) {
                     Column(
@@ -2267,8 +2266,10 @@ class MainActivity : FragmentActivity() {
                     }
                 }
             }
-            return
         }
+        // Keep the host composed while its access is revoked. Backup and Wallpaper
+        // retain picker metadata there and reacquire their own authenticated access.
+        if (access == null) return
         val apps=remember(access){homeNativeApps(access)}
         uk.co.traynor.privategallery.home2.IntegratedHome(access,homeVisible&&activityResumed,
             {id->if(access.current())launchHome2App(id)},::lockNovaSpace,::panicExit,
