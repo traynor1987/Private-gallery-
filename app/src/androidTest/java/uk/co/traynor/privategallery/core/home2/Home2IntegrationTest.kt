@@ -261,6 +261,11 @@ class Home2IntegrationTest {
    compose.onNodeWithTag("preview-home").assertIsDisplayed()
    compose.onNodeWithTag("home-original-clock").assertIsDisplayed()
    openDrawer()
+   val drawer = compose.onNodeWithTag("drawer-sheet").fetchSemanticsNode().boundsInRoot
+   val root = compose.onAllNodes(isRoot()).fetchSemanticsNodes().maxOf { it.size.height }
+   assertTrue("Drawer should occupy the whole viewport", drawer.height >= root - 2)
+   compose.onNodeWithTag("drawer-search").performTextInput("Vault")
+   compose.onNode(hasTestTag("app-vault") and hasAnyAncestor(hasTestTag("drawer-sheet"))).assertIsDisplayed()
    compose.onNodeWithContentDescription("Close app drawer").performClick()
    compose.onNodeWithTag("drawer-sheet").assertDoesNotExist()
    compose.waitUntil(5_000){compose.runOnIdle {compose.activity.window.decorView.hasWindowFocus()}}

@@ -87,6 +87,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.zIndex
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.platform.LocalContext
@@ -542,6 +543,7 @@ internal fun BrowserV2Home(
                 ui.permissionTabId=tab;ui.permissionDocumentRevision=document;ui.revision++
             }
             override fun onUserScroll(deltaY: Int, atTop: Boolean) {
+                if (session.privateApp(session.tabs.activeTab.id)?.appStyle() == true) return
                 val accessibility = context.getSystemService(android.view.accessibility.AccessibilityManager::class.java)
                 if (controlsPinned || accessibility?.isTouchExplorationEnabled == true) {
                     latestScrollChrome.reveal(); ui.chromeVisible = true
@@ -1258,8 +1260,19 @@ internal fun RetainedPrivateAppWebViews(
         hosts.forEach { (id,view) -> androidx.compose.runtime.key(id,view) {
             val active=id==activeTabId && view===activeWebView
             val interactive=active&&!covered
-            val hiddenInput=if(interactive)Modifier else Modifier.clearAndSetSemantics{}.focusProperties {canFocus=false}.pointerInput(Unit) {
-                awaitPointerEventScope {while(true)awaitPointerEvent(androidx.compose.ui.input.pointer.PointerEventPass.Initial).changes.forEach {it.consume()}}
+            val hiddenInput = if (interactive) Modifier else Modifier.clearAndSetSemantics {}
+                .focusProperties { canFocus = false }
+            // Keep retained renderers attached at their normal viewport size for audio and
+            // website state. Offscreen placement keeps an inactive host out of hit testing.
+            val inactivePosition = if (active) Modifier else Modifier.layout { measurable, constraints ->
+                val child = measurable.measure(constraints)
+                layout(child.width, child.height) { child.place(-child.width, 0) }
+            }
+            val coverInput = if (!active || !covered) Modifier else Modifier.pointerInput(Unit) {
+                awaitPointerEventScope {
+                    while (true) awaitPointerEvent(androidx.compose.ui.input.pointer.PointerEventPass.Initial)
+                        .changes.forEach { it.consume() }
+                }
             }
             AndroidView(
                 factory={session.recordAcceptanceUiEvent("WEBVIEW_HOST_REQUESTED");session.onActiveWebViewHostCreated(view);view},
@@ -1268,10 +1281,10 @@ internal fun RetainedPrivateAppWebViews(
                     host.isEnabled=interactive;host.isFocusable=interactive;host.isFocusableInTouchMode=interactive
                     host.descendantFocusability=if(interactive)android.view.ViewGroup.FOCUS_AFTER_DESCENDANTS else android.view.ViewGroup.FOCUS_BLOCK_DESCENDANTS
                     if(!interactive)host.clearFocus()
-                    if(active)session.onActiveWebViewUpdated(host)
+                    if(interactive)session.onActiveWebViewUpdated(host)
                 },
                 modifier=Modifier.fillMaxSize().zIndex(if(active)1f else 0f).graphicsLayer(alpha=if(interactive)1f else 0f)
-                    .clipToBounds().then(hiddenInput).onGloballyPositioned {coordinates ->
+                    .clipToBounds().then(inactivePosition).then(hiddenInput).then(coverInput).onGloballyPositioned {coordinates ->
                         if(active) {
                             val origin=coordinates.positionInRoot()
                             session.recordAcceptanceUiEvent("WEBVIEW_HOST_MEASURED",mapOf("x" to origin.x.toInt().toString(),"y" to origin.y.toInt().toString(),"width" to coordinates.size.width.toString(),"height" to coordinates.size.height.toString()))

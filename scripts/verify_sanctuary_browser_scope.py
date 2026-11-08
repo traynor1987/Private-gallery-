@@ -17,8 +17,8 @@ for revision in (("HEAD",), ()):
     )
 build_file = "app/build.gradle.kts"
 original = subprocess.check_output(["git", "show", f"{BASE}:{build_file}"], cwd=ROOT, text=True)
-expected = original.replace("versionCode = 65", "versionCode = 66", 1).replace(
-    'versionName = "1.7.30-visual-foundation"', 'versionName = "1.7.31"', 1,
+expected = original.replace("versionCode = 65", "versionCode = 67", 1).replace(
+    'versionName = "1.7.30-visual-foundation"', 'versionName = "1.7.32"', 1,
 )
 assert (ROOT / build_file).read_text() == expected, "Unexpected production package or build configuration change"
 print("PASS: encrypted engines, Hidden browser boundaries and package configuration match Code 65")

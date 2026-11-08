@@ -345,9 +345,13 @@ private val lightColors=lightColorScheme(primary=Color(0xFF285F65),secondary=Col
    if(data.shell.dim>0)Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha=data.shell.dim)))
    if(notifications)NovaNotifications(data,onDismiss={notifications=false},onLaunch={id->notifications=false;launch(id)},media={NowPlaying(pool,audio,video,state.current,onResume=resumeTab,onVideo={if(permitSanctuaryRoute("video"))screen="video";notifications=false},onAudio={notifications=false;launch("mind:sounds")})})
    if(edgePanel)NovaEdgePanel(data,pool,onDismiss={edgePanel=false},onLaunch={id->edgePanel=false;launch(id)},onHome=goHome,onSettings={edgePanel=false;shellSettings=true})
-   if(drawer)PanicHomeModalBottomSheet(onDismissRequest={drawer=false},modifier=Modifier.testTag("drawer-sheet")){
+   if(drawer)PanicHomeDialog(
+    onDismissRequest={drawer=false},
+    properties=androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth=false,decorFitsSystemWindows=false),
+   ){
     var search by remember{mutableStateOf("")}
-    Column(Modifier.fillMaxWidth().fillMaxHeight(.9f).padding(horizontal=20.dp)){
+    Surface(Modifier.fillMaxSize().testTag("drawer-sheet"),color=MaterialTheme.colorScheme.background) {
+    Column(Modifier.fillMaxSize().safeDrawingPadding().imePadding().padding(horizontal=20.dp,vertical=8.dp)){
      Row(verticalAlignment=Alignment.CenterVertically){
       Text("Your apps",Modifier.weight(1f),style=MaterialTheme.typography.headlineMedium)
       var options by remember{mutableStateOf(false)}
@@ -366,6 +370,7 @@ private val lightColors=lightColorScheme(primary=Color(0xFF285F65),secondary=Col
      AdaptiveAppGrid(data,data.drawerIds().filter{id->val f=profile.folders.firstOrNull{it.id==id};(f?.name?:data.app(id)?.name?:"").contains(search,true)},onLaunch=launch,onSelect={selected=it},modifier=Modifier.weight(1f),
       visualMatches=visualMatches,onVisual={id->launch("visual:$id")})
      TextButton(onClick={folderCreate=true}){Icon(Icons.Default.CreateNewFolder,null);Text("Create folder",Modifier.padding(start=8.dp))}
+    }
     }
    }
    if(quick)NovaQuickPanel(data,pool,audio,video,widgets,filesDir,onDismiss={quick=false},onAction={id->

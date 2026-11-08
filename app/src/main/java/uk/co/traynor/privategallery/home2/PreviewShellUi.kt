@@ -31,10 +31,15 @@ import java.util.Date
 @Composable internal fun NovaNavigation(shell:PreviewShellData,onRecents:()->Unit,onHome:()->Unit,onBack:()->Unit){
  Surface(tonalElevation=4.dp){
   if(shell.gestures){
+   val tap = uk.co.traynor.privategallery.ui.navigationHaptic()
+   val home = { tap(); onHome() }
+   val back = { tap(); onBack() }
+   val latestHome by rememberUpdatedState(home)
+   val latestBack by rememberUpdatedState(back)
    var x by remember{mutableFloatStateOf(0f)};var y by remember{mutableFloatStateOf(0f)};var menu by remember{mutableStateOf(false)}
    Row(Modifier.fillMaxWidth().height(52.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.Center){
-    Box(Modifier.width(200.dp).fillMaxHeight().testTag("nova-gesture-strip").semantics{contentDescription="Nova navigation: swipe up Home, swipe sideways Back, hold Recents";customActions=listOf(CustomAccessibilityAction("Home"){onHome();true},CustomAccessibilityAction("Back"){onBack();true},CustomAccessibilityAction("Recents"){onRecents();true})}.combinedClickable(onClick=onHome,onLongClick=onRecents).pointerInput(Unit){detectDragGestures(onDragStart={x=0f;y=0f},onDragEnd={if(y < -24)onHome()else if(abs(x)>40)onBack()}){change,drag->change.consume();x+=drag.x;y+=drag.y}},contentAlignment=Alignment.Center){Surface(Modifier.size(96.dp,4.dp),shape=RoundedCornerShape(2.dp),color=MaterialTheme.colorScheme.onSurfaceVariant){}}
-    Box{IconButton(onClick={menu=true}){Icon(Icons.Default.MoreHoriz,"Navigation alternatives")};PanicHomeDropdownMenu(menu,{menu=false}){DropdownMenuItem(text={Text("Recents")},onClick={menu=false;onRecents()});DropdownMenuItem(text={Text("Home")},onClick={menu=false;onHome()});DropdownMenuItem(text={Text("Back")},onClick={menu=false;onBack()})}}
+    Box(Modifier.width(200.dp).fillMaxHeight().testTag("nova-gesture-strip").semantics{contentDescription="Nova navigation: swipe up Home, swipe sideways Back, hold Recents";customActions=listOf(CustomAccessibilityAction("Home"){home();true},CustomAccessibilityAction("Back"){back();true},CustomAccessibilityAction("Recents"){onRecents();true})}.combinedClickable(onClick=home,onLongClick=onRecents).pointerInput(Unit){detectDragGestures(onDragStart={x=0f;y=0f},onDragEnd={if(y < -24)latestHome()else if(abs(x)>40)latestBack()}){change,drag->change.consume();x+=drag.x;y+=drag.y}},contentAlignment=Alignment.Center){Surface(Modifier.size(96.dp,4.dp),shape=RoundedCornerShape(2.dp),color=MaterialTheme.colorScheme.onSurfaceVariant){}}
+    Box{IconButton(onClick={menu=true}){Icon(Icons.Default.MoreHoriz,"Navigation alternatives")};PanicHomeDropdownMenu(menu,{menu=false}){DropdownMenuItem(text={Text("Recents")},onClick={menu=false;onRecents()});DropdownMenuItem(text={Text("Home")},onClick={menu=false;home()});DropdownMenuItem(text={Text("Back")},onClick={menu=false;back()})}}
    }
   }else uk.co.traynor.privategallery.ui.NovaNavigationRow(onRecents,onHome,onBack,reverse=shell.reverse)
 
@@ -98,6 +103,7 @@ import java.util.Date
   Column(Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()).padding(24.dp)){
   Text("Navigation & multitasking",style=MaterialTheme.typography.headlineSmall)
   Text("Nova’s controls sit above Android’s system navigation.",Modifier.padding(vertical=12.dp))
+  uk.co.traynor.privategallery.ui.NovaNavigationHapticsSetting()
   ListItem(headlineContent={Text("Nova gesture strip")},supportingContent={Text("Swipe up: Home · sideways: Back · hold: Recents")},trailingContent={Switch(s.gestures,{s.configure(gestures=it)},modifier=Modifier.testTag("gesture-mode"))})
   ListItem(headlineContent={Text("Back on the left")},supportingContent={Text("Swap Back and Recents")},trailingContent={Switch(s.reverse,{s.configure(reverse=it)},modifier=Modifier.testTag("reverse-nav"))})
   ListItem(headlineContent={Text("Fold Edge Panel")},supportingContent={Text("Optional inset handle; does not replace Android gestures")},trailingContent={Switch(s.edge,{s.configure(edge=it)},modifier=Modifier.testTag("edge-enabled"))})

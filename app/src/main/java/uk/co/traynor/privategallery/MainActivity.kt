@@ -2241,8 +2241,31 @@ class MainActivity : FragmentActivity() {
     @Composable private fun HomeScopedPresentation(hidden:Boolean) {
         var admittedAccess by remember {mutableStateOf<uk.co.traynor.privategallery.core.evidence.EvidenceAccess?>(null)}
         DisposableEffect(Unit){onDispose{admittedAccess?.close();admittedAccess=null}}
-        LaunchedEffect(activityResumed){if(activityResumed&&admittedAccess?.current()!=true){admittedAccess?.close();admittedAccess=null;kotlinx.coroutines.yield();admittedAccess=homeAccess()}}
-        val access=admittedAccess ?: return
+        // Hidden Vault disposes its presentation and revokes operation leases when Home
+        // replaces it. Reacquire after that disposal using the same authenticated Space.
+        LaunchedEffect(activityResumed, homeVisible, homeRequestRevision) {
+            if (activityResumed && homeVisible && admittedAccess?.current() != true) {
+                admittedAccess?.close()
+                admittedAccess = null
+                admittedAccess = homeAccess()
+            }
+        }
+        val access = admittedAccess?.takeIf { it.current() }
+        if (access == null) {
+            if (homeVisible && activityResumed) {
+                androidx.compose.material3.Surface(Modifier.fillMaxSize()) {
+                    Column(
+                        Modifier.fillMaxSize().safeDrawingPadding().padding(24.dp),
+                        verticalArrangement = Arrangement.Center,
+                        horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally,
+                    ) {
+                        Text("Opening Nova Home")
+                        TextButton(onClick = ::lockNovaSpace) { Text("Lock Space") }
+                    }
+                }
+            }
+            return
+        }
         val apps=remember(access){homeNativeApps(access)}
         uk.co.traynor.privategallery.home2.IntegratedHome(access,homeVisible&&activityResumed,
             {id->if(access.current())launchHome2App(id)},::lockNovaSpace,::panicExit,

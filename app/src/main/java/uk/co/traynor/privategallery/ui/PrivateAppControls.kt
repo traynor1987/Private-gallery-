@@ -122,7 +122,8 @@ private fun PrivateAppOverflowControls(
     val navigation:@Composable (Boolean)->Unit = { sheet ->
         NovaNavigationRow(onRecents={act(onRecents ?: onHome)},onHome={act(onHome)},
             onBack={if(sheet)expanded=false else act(onNavigateBack ?: onBack)},
-            onOverflow={if(sheet)expanded=false else if(authorized()){menuEpoch++;expanded=true}})
+            onOverflow={if(sheet)expanded=false else if(authorized()){menuEpoch++;expanded=true}},
+            navigationEnabled=foreground && stillCurrent)
     }
     Column(Modifier.fillMaxWidth().testTag("private-app-immersive-controls")) {
         if(outside)Surface(color=MaterialTheme.colorScheme.errorContainer) {
