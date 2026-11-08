@@ -10,8 +10,9 @@ import android.os.SystemClock
 import android.view.KeyEvent
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
-import androidx.test.core.app.ActivityScenario
 import androidx.test.platform.app.InstrumentationRegistry
+import androidx.test.runner.lifecycle.ActivityLifecycleMonitorRegistry
+import androidx.test.runner.lifecycle.Stage
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
@@ -64,6 +65,7 @@ class NovaLauncherPlatform70Test {
             shell("cmd package set-home-activity --user current $original")
             await { shell(resolveCommand).lineSequence().last().trim() == original }
             shell("input keyevent ${KeyEvent.KEYCODE_HOME}")
+            finishLaunchers()
         }
     }
 
@@ -71,17 +73,18 @@ class NovaLauncherPlatform70Test {
         val intent = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME).setComponent(home)
             .setData(android.net.Uri.parse("content://foreign.invalid/evidence/forged"))
             .putExtra("workspace", "hidden").putExtra("unlock", true)
-        ActivityScenario.launch<NovaLauncherActivity>(intent).use { scenario ->
-            scenario.onActivity { activity ->
+        withLauncher(intent) { activity ->
+            instrumentation.runOnMainSync {
                 assertTrue(activity.isTaskRoot)
                 assertEquals(home, activity.componentName)
                 assertTrue(activity.intent.extras == null || activity.intent.extras!!.isEmpty)
                 assertEquals(null, activity.intent.data)
+                activity.recreate()
             }
-            scenario.recreate()
-            scenario.onActivity { activity ->
-                assertTrue(activity.isTaskRoot)
-                assertEquals(home, activity.componentName)
+            val recreated = resumedLauncher(excluding = activity)
+            instrumentation.runOnMainSync {
+                assertTrue(recreated.isTaskRoot)
+                assertEquals(home, recreated.componentName)
             }
         }
     }
@@ -91,8 +94,8 @@ class NovaLauncherPlatform70Test {
         val apps = directory.apps()
         assertFalse(apps.any { it.packageName == context.packageName })
         val settings = apps.first { it.packageName == "com.android.settings" }
-        ActivityScenario.launch(NovaLauncherActivity::class.java).use { scenario ->
-            scenario.onActivity { assertTrue(directory.start(settings)) }
+        withLauncher {
+            instrumentation.runOnMainSync { assertTrue(directory.start(settings)) }
             await { instrumentation.uiAutomation.rootInActiveWindow?.packageName == settings.packageName }
             shell("input keyevent ${KeyEvent.KEYCODE_BACK}")
         }
@@ -115,7 +118,7 @@ class NovaLauncherPlatform70Test {
             assertTrue(sanctuary.savePreset(mode, preset.copy(androidApps = emptySet(), allowExternalApps = true)))
             assertTrue(sanctuary.startFoldTest(mode))
             val session = checkNotNull(sanctuary.refresh())
-            ActivityScenario.launch(NovaLauncherActivity::class.java).use {
+            withLauncher {
                 val appTag = "launcher-app-${target.component}"
                 compose.waitUntil(15_000) { compose.onAllNodesWithTag(appTag).fetchSemanticsNodes().isNotEmpty() }
                 compose.onNodeWithTag(appTag).performTouchInput { click() }
@@ -140,8 +143,8 @@ class NovaLauncherPlatform70Test {
             .single { it.provider == ComponentName(instrumentation.context.packageName, LauncherWidgetFixture70::class.java.name) }
         val host = AppWidgetHost(context, NovaLauncherActivity.WIDGET_HOST_ID)
         val before = host.appWidgetIds.toSet()
-        ActivityScenario.launch(NovaLauncherActivity::class.java).use { scenario ->
-            scenario.onActivity { it.bindWidget(provider, wide = false) }
+        withLauncher { activity ->
+            instrumentation.runOnMainSync { activity.bindWidget(provider, wide = false) }
             await { host.appWidgetIds.toSet().minus(before).size == 1 }
             val allocated = host.appWidgetIds.toSet().minus(before).single()
             try {
@@ -153,6 +156,48 @@ class NovaLauncherPlatform70Test {
             } finally {
                 if (allocated in host.appWidgetIds) host.deleteAppWidgetId(allocated)
             }
+        }
+    }
+
+    private fun withLauncher(
+        intent: Intent = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME).setComponent(home),
+        block: (NovaLauncherActivity) -> Unit,
+    ) {
+        // ActivityScenario matches the original Intent; this exported Activity replaces it with
+        // a neutral HOME Intent. Observe actual instances and stages instead of matching Intent data.
+        finishLaunchers()
+        try {
+            context.startActivity(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+            block(resumedLauncher())
+        } finally {
+            finishLaunchers()
+        }
+    }
+
+    private fun resumedLauncher(excluding: NovaLauncherActivity? = null): NovaLauncherActivity {
+        var result: NovaLauncherActivity? = null
+        await {
+            instrumentation.runOnMainSync {
+                result = ActivityLifecycleMonitorRegistry.getInstance().getActivitiesInStage(Stage.RESUMED)
+                    .filterIsInstance<NovaLauncherActivity>().singleOrNull { it !== excluding }
+            }
+            result != null
+        }
+        return requireNotNull(result)
+    }
+
+    private fun finishLaunchers() {
+        var activities = emptyList<NovaLauncherActivity>()
+        instrumentation.runOnMainSync {
+            val monitor = ActivityLifecycleMonitorRegistry.getInstance()
+            activities = Stage.values().filter { it != Stage.DESTROYED }.flatMap(monitor::getActivitiesInStage)
+                .filterIsInstance<NovaLauncherActivity>().distinct()
+            activities.forEach { it.finish() }
+        }
+        if (activities.isNotEmpty()) await {
+            var destroyed = false
+            instrumentation.runOnMainSync { destroyed = activities.all { it.isDestroyed } }
+            destroyed
         }
     }
 
