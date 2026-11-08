@@ -45,11 +45,17 @@ class NovaWebScroll67Test {
                 })
             show("first")
             first = checkNotNull(active)
+            val editors = (1..15).joinToString("") { index ->
+                """<input aria-label="Scroll fixture editor $index" style="top:${index * 6}%">"""
+            }
             first.loadDataWithBaseURL("https://scroll-fixture.invalid/", """
                 <!doctype html><meta name="viewport" content="width=device-width,initial-scale=1">
-                <body style="margin:0"><input id="editor" aria-label="Scroll fixture editor"
-                    style="position:absolute;top:96px;left:24px;height:64px;font-size:18px;width:160px">
-                <main style="height:400vh;width:220vw;background:linear-gradient(#ddd,#246)"></main></body>
+                <style>
+                  body { margin:0; overflow-anchor:none }
+                  main { position:relative; height:400vh; width:220vw; background:linear-gradient(#ddd,#246) }
+                  input { position:absolute; left:24px; height:64px; width:160px; font-size:18px }
+                </style>
+                <main>$editors</main>
             """.trimIndent(), "text/html", "UTF-8", null)
         }
         val firstId = id
@@ -93,42 +99,38 @@ class NovaWebScroll67Test {
             val editor = AtomicReference<Point>()
             compose.runOnIdle {
                 assertSame(first, active)
-                first.evaluateJavascript("""
-                    (() => {
-                        const viewport = window.visualViewport;
-                        const editor = document.getElementById('editor');
-                        editor.style.left = (viewport.pageLeft + 24) + 'px';
-                        editor.style.top = (viewport.pageTop + 96) + 'px';
-                    })()
-                """.trimIndent()) {
-                    first.postVisualStateCallback(1, object : WebView.VisualStateCallback() {
-                        override fun onComplete(requestId: Long) {
-                            first.evaluateJavascript("""
-                                (() => {
-                                    const viewport = window.visualViewport;
-                                    const editor = document.getElementById('editor');
-                                    const rect = editor.getBoundingClientRect();
+                first.postVisualStateCallback(1, object : WebView.VisualStateCallback() {
+                    override fun onComplete(requestId: Long) {
+                        first.evaluateJavascript("""
+                            (() => {
+                                const viewport = window.visualViewport;
+                                const scale = devicePixelRatio * viewport.scale;
+                                for (const input of document.querySelectorAll('input')) {
+                                    const rect = input.getBoundingClientRect();
                                     const x = rect.left + rect.width / 2;
                                     const y = rect.top + rect.height / 2;
-                                    const scale = devicePixelRatio * viewport.scale;
-                                    return [(x - viewport.offsetLeft) * scale,
-                                            (y - viewport.offsetTop) * scale,
-                                            document.elementFromPoint(x, y) === editor];
-                                })()
-                            """.trimIndent()) { result ->
-                                val bounds = JSONArray(result)
-                                val x = bounds.getDouble(0).toInt()
-                                val y = bounds.getDouble(1).toInt()
-                                assertTrue("Editor ($x, $y) is outside the active WebView ${first.width}x${first.height}",
-                                    x in 0 until first.width && y in 0 until first.height)
-                                assertTrue("The rendered editor must be the DOM hit target: $result", bounds.getBoolean(2))
-                                val origin = IntArray(2)
-                                first.getLocationInWindow(origin)
-                                editor.set(Point(origin[0] + x, origin[1] + y))
-                            }
+                                    const visualX = x - viewport.offsetLeft;
+                                    const visualY = y - viewport.offsetTop;
+                                    if (visualX < 24 || visualX > viewport.width - 24 ||
+                                        visualY < 96 || visualY > viewport.height - 96) continue;
+                                    if (document.elementFromPoint(x, y) !== input) continue;
+                                    return [visualX * scale, visualY * scale];
+                                }
+                                return [null, null, viewport.pageTop, viewport.offsetTop, viewport.height];
+                            })()
+                        """.trimIndent()) { result ->
+                            val bounds = JSONArray(result)
+                            assertFalse("No visible DOM editor in the settled viewport: $result", bounds.isNull(0))
+                            val x = bounds.getDouble(0).toInt()
+                            val y = bounds.getDouble(1).toInt()
+                            assertTrue("Editor ($x, $y) is outside the active WebView ${first.width}x${first.height}",
+                                x in 0 until first.width && y in 0 until first.height)
+                            val origin = IntArray(2)
+                            first.getLocationInWindow(origin)
+                            editor.set(Point(origin[0] + x, origin[1] + y))
                         }
-                    })
-                }
+                    }
+                })
             }
             compose.waitUntil(5_000) { editor.get() != null }
             val point = checkNotNull(editor.get())
