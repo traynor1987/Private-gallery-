@@ -60,6 +60,9 @@ class NovaWebScroll67Test {
             compose.runOnIdle {
                 assertSame(parent, first.parent)
                 assertFalse(first.isEnabled)
+                val bounds = IntArray(2)
+                first.getLocationInWindow(bounds)
+                assertTrue("The inactive renderer must stay out of the page touch area", bounds[0] + first.width <= 0)
                 session.selectFromNovaHome(firstId)
                 id = firstId
                 active = session.activeWebView()
@@ -69,7 +72,7 @@ class NovaWebScroll67Test {
             val automation = androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().uiAutomation
             val root = compose.activity.window.decorView
             compose.waitUntil(10_000) { compose.runOnIdle { root.rootWindowInsets?.isVisible(android.view.WindowInsets.Type.ime()) == true } }
-            automation.executeShellCommand("input keyevent 4").close()
+            android.os.ParcelFileDescriptor.AutoCloseInputStream(automation.executeShellCommand("input keyevent 4")).use { it.readBytes() }
             compose.waitUntil(10_000) { compose.runOnIdle { root.rootWindowInsets?.isVisible(android.view.WindowInsets.Type.ime()) == false } }
             host.performTouchInput { swipeUp() }
             compose.waitUntil(5_000) { compose.runOnIdle { first.scrollY > 0 } }
