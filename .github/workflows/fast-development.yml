@@ -654,6 +654,7 @@ jobs:
             adb shell settings get secure show_ime_with_hard_keyboard > app/build/home2-evidence/ime-with-hardware-keyboard.txt
             adb install -r app/build/outputs/apk/debug/app-debug.apk
             adb install -r app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
+            if [ "$GITHUB_REF" = refs/heads/feature/novaos-sanctuary-integration ]; then bash scripts/run_visual_checkpoint.sh NovaWebScroll67Test navigation-web uk.co.traynor.privategallery.ui; fi
             if [ "$GITHUB_REF" = refs/heads/feature/novaos-visual-foundation ] || [ "$GITHUB_REF" = refs/heads/feature/novaos-sanctuary ] || [ "$GITHUB_REF" = refs/heads/feature/novaos-sanctuary-integration ]; then bash scripts/run_visual_checkpoint.sh; fi
             if [ "$GITHUB_REF" = refs/heads/feature/novaos-sanctuary ] || [ "$GITHUB_REF" = refs/heads/feature/novaos-sanctuary-integration ]; then bash scripts/run_visual_checkpoint.sh SanctuaryUiTest sanctuary-checkpoint; fi
             if [ "$GITHUB_REF" = refs/heads/feature/novaos-sanctuary ] || [ "$GITHUB_REF" = refs/heads/feature/novaos-sanctuary-integration ]; then bash scripts/run_visual_checkpoint.sh SanctuaryDndUiTest sanctuary-dnd; fi
@@ -661,7 +662,6 @@ jobs:
             if [ "$GITHUB_REF" = refs/heads/feature/novaos-sanctuary-integration ]; then bash scripts/run_visual_checkpoint.sh SanctuaryAccessibilityUiTest sanctuary-accessibility; fi
             if [ "$GITHUB_REF" = refs/heads/feature/novaos-sanctuary-integration ]; then bash scripts/run_visual_checkpoint.sh SanctuaryBrowserGateTest sanctuary-browser uk.co.traynor.privategallery.core.browser.v2; fi
             if [ "$GITHUB_REF" = refs/heads/feature/novaos-sanctuary-integration ]; then bash scripts/run_visual_checkpoint.sh HiddenHomeNavigation67Test navigation-hidden uk.co.traynor.privategallery; fi
-            if [ "$GITHUB_REF" = refs/heads/feature/novaos-sanctuary-integration ]; then bash scripts/run_visual_checkpoint.sh NovaWebScroll67Test navigation-web uk.co.traynor.privategallery.ui; fi
             if [ "$GITHUB_REF" = refs/heads/feature/novaos-sanctuary-integration ]; then bash scripts/run_visual_checkpoint.sh NovaNavigationHaptics67Test navigation-haptics uk.co.traynor.privategallery.ui; fi
             if { [ "$GITHUB_REF" != refs/heads/feature/novaos-visual-foundation ] && [ "$GITHUB_REF" != refs/heads/feature/novaos-sanctuary ] && [ "$GITHUB_REF" != refs/heads/feature/novaos-sanctuary-integration ]; } || [ "$NOVA_VISUAL_FULL" = true ]; then adb install -r app/build/outputs/apk/debug/app-debug.apk && adb install -r app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk && python3 scripts/run_backup_restart62.py && python3 scripts/run_backup_repair62.py --redesign && bash scripts/run_home2_runtime.sh; fi
       - name: Validate visual checkpoint report

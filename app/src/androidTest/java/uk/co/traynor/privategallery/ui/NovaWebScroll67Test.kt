@@ -93,39 +93,51 @@ class NovaWebScroll67Test {
             val editor = AtomicReference<Point>()
             compose.runOnIdle {
                 assertSame(first, active)
-                first.postVisualStateCallback(1, object : WebView.VisualStateCallback() {
-                    override fun onComplete(requestId: Long) {
-                        first.evaluateJavascript("""
-                            (() => {
-                                const viewport = window.visualViewport;
-                                const editor = document.getElementById('editor');
-                                editor.style.left = (viewport.pageLeft + 24) + 'px';
-                                editor.style.top = (viewport.pageTop + 96) + 'px';
-                                const rect = editor.getBoundingClientRect();
-                                const scale = devicePixelRatio * viewport.scale;
-                                return [(rect.left - viewport.offsetLeft + rect.width / 2) * scale,
-                                        (rect.top - viewport.offsetTop + rect.height / 2) * scale];
-                            })()
-                        """.trimIndent()) { result ->
-                            val bounds = JSONArray(result)
-                            val x = bounds.getDouble(0).toInt()
-                            val y = bounds.getDouble(1).toInt()
-                            assertTrue("Editor ($x, $y) is outside the active WebView ${first.width}x${first.height}",
-                                x in 0 until first.width && y in 0 until first.height)
-                            val origin = IntArray(2)
-                            first.getLocationOnScreen(origin)
-                            editor.set(Point(origin[0] + x, origin[1] + y))
+                first.evaluateJavascript("""
+                    (() => {
+                        const viewport = window.visualViewport;
+                        const editor = document.getElementById('editor');
+                        editor.style.left = (viewport.pageLeft + 24) + 'px';
+                        editor.style.top = (viewport.pageTop + 96) + 'px';
+                    })()
+                """.trimIndent()) {
+                    first.postVisualStateCallback(1, object : WebView.VisualStateCallback() {
+                        override fun onComplete(requestId: Long) {
+                            first.evaluateJavascript("""
+                                (() => {
+                                    const viewport = window.visualViewport;
+                                    const editor = document.getElementById('editor');
+                                    const rect = editor.getBoundingClientRect();
+                                    const x = rect.left + rect.width / 2;
+                                    const y = rect.top + rect.height / 2;
+                                    const scale = devicePixelRatio * viewport.scale;
+                                    return [(x - viewport.offsetLeft) * scale,
+                                            (y - viewport.offsetTop) * scale,
+                                            document.elementFromPoint(x, y) === editor];
+                                })()
+                            """.trimIndent()) { result ->
+                                val bounds = JSONArray(result)
+                                val x = bounds.getDouble(0).toInt()
+                                val y = bounds.getDouble(1).toInt()
+                                assertTrue("Editor ($x, $y) is outside the active WebView ${first.width}x${first.height}",
+                                    x in 0 until first.width && y in 0 until first.height)
+                                assertTrue("The rendered editor must be the DOM hit target: $result", bounds.getBoolean(2))
+                                val origin = IntArray(2)
+                                first.getLocationInWindow(origin)
+                                editor.set(Point(origin[0] + x, origin[1] + y))
+                            }
                         }
-                    }
-                })
+                    })
+                }
             }
             compose.waitUntil(5_000) { editor.get() != null }
+            val point = checkNotNull(editor.get())
+            val hostOrigin = host.fetchSemanticsNode().positionInWindow
+            host.performTouchInput { click(androidx.compose.ui.geometry.Offset(point.x.toFloat(), point.y.toFloat()) - hostOrigin) }
             val automation = InstrumentationRegistry.getInstrumentation().uiAutomation
             fun sendInput(command: String) {
                 ParcelFileDescriptor.AutoCloseInputStream(automation.executeShellCommand(command)).use { it.readBytes() }
             }
-            val point = checkNotNull(editor.get())
-            sendInput("input tap ${point.x} ${point.y}")
             val root = compose.activity.window.decorView
             compose.waitUntil(10_000) { compose.runOnIdle { root.rootWindowInsets?.isVisible(android.view.WindowInsets.Type.ime()) == true } }
             sendInput("input keyevent 4")
