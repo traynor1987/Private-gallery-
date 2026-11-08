@@ -6,6 +6,7 @@ import androidx.compose.runtime.*
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.unit.dp
 import org.junit.Assert.*
 import org.junit.Rule
 import org.junit.Test
@@ -39,8 +40,9 @@ class NovaWebScroll67Test {
             show("first")
             first = checkNotNull(active)
             first.loadDataWithBaseURL("https://scroll-fixture.invalid/", """
-                <meta name="viewport" content="width=device-width,initial-scale=1">
-                <body style="margin:0"><input style="height:48px;font-size:18px;width:90%">
+                <!doctype html><meta name="viewport" content="width=device-width,initial-scale=1">
+                <body style="margin:0"><input aria-label="Scroll fixture editor"
+                    style="position:fixed;top:96px;left:8px;height:64px;font-size:18px;width:90%">
                 <main style="height:400vh;width:220vw;background:linear-gradient(#ddd,#246)"></main></body>
             """.trimIndent(), "text/html", "UTF-8", null)
         }
@@ -68,14 +70,20 @@ class NovaWebScroll67Test {
                 active = session.activeWebView()
                 first.scrollTo(0, 0)
             }
-            host.performTouchInput { click(androidx.compose.ui.geometry.Offset(centerX, 24f)) }
+            compose.waitUntil(5_000) {
+                compose.runOnIdle { first.hasWindowFocus() && first.isEnabled && first.isFocusableInTouchMode }
+            }
+            // The fixed editor stays below the system-bar region even while the page scroll settles.
+            val editorY = with(compose.density) { 128.dp.toPx() }
+            host.performTouchInput { click(androidx.compose.ui.geometry.Offset(centerX, editorY)) }
             val automation = androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().uiAutomation
             val root = compose.activity.window.decorView
             compose.waitUntil(10_000) { compose.runOnIdle { root.rootWindowInsets?.isVisible(android.view.WindowInsets.Type.ime()) == true } }
             android.os.ParcelFileDescriptor.AutoCloseInputStream(automation.executeShellCommand("input keyevent 4")).use { it.readBytes() }
             compose.waitUntil(10_000) { compose.runOnIdle { root.rootWindowInsets?.isVisible(android.view.WindowInsets.Type.ime()) == false } }
+            val scrollBeforeSwipe = compose.runOnIdle { first.scrollY }
             host.performTouchInput { swipeUp() }
-            compose.waitUntil(5_000) { compose.runOnIdle { first.scrollY > 0 } }
+            compose.waitUntil(5_000) { compose.runOnIdle { first.scrollY > scrollBeforeSwipe } }
             host.performTouchInput { swipeLeft() }
             compose.waitUntil(5_000) { compose.runOnIdle { first.scrollX > 0 } }
         } finally {
