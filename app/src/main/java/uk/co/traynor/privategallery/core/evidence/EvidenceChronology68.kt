@@ -89,12 +89,12 @@ internal object EvidenceChronology68 {
     private val weekday = Regex("^(Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)(?:,? (.+))?$", RegexOption.IGNORE_CASE)
     private val namePrefix = Regex("^([\\p{L}][\\p{L}\\p{M} .’'-]{0,59}):\\s+(.+)$")
     private val offsetTimestamp = Regex("(?<!\\d)(\\d{4}-\\d{2}-\\d{2}[T ]\\d{2}:\\d{2}(?::\\d{2}(?:\\.\\d{1,9})?)?(?:Z|[+-]\\d{2}:\\d{2}))\\s*[✓✔]*$")
-    private val trailingClock = Regex("(?U)(?<![0-9:：])([01]?[0-9]|2[0-3])\\s*[:：]\\s*([0-5][0-9])(?:\\s*(am|pm))?\\s*[✓✔]*$", RegexOption.IGNORE_CASE)
+    private val trailingClock = Regex("(?<![0-9:：])([01]?[0-9]|2[0-3])[\\s\\p{Zs}]*[:：][\\s\\p{Zs}]*([0-5][0-9])(?:[\\s\\p{Zs}]*(am|pm))?[\\s\\p{Zs}]*[✓✔]*$", RegexOption.IGNORE_CASE)
     private val callLabel = Regex("^(?:(?:missed|declined|unanswered) (?:voice |video )?call|(?:voice|video) call)$", RegexOption.IGNORE_CASE)
     private val callDetail = Regex("^(?:tap to call back|call back|no answer|\\d+ (?:sec|min|hr)(?: \\d+ (?:sec|min))?)$", RegexOption.IGNORE_CASE)
     private val timeInSentence = Regex("(?:^|\\s)(?:at|until|from|by|around|after|before)$", RegexOption.IGNORE_CASE)
     private val chrome = setOf("message", "type a message", "online", "tap here for contact info")
-    private val whitespace = Regex("(?U)\\s+")
+    private val whitespace = Regex("[\\s\\p{Zs}]+")
 
     fun analyse(
         records: List<EvidenceCatalog.Evidence>,
