@@ -4,6 +4,7 @@ import android.graphics.Point
 import android.graphics.Rect
 import android.os.ParcelFileDescriptor
 import android.webkit.WebView
+import android.view.inputmethod.InputMethodManager
 import androidx.activity.ComponentActivity
 import androidx.compose.runtime.*
 import androidx.compose.foundation.layout.imePadding
@@ -136,6 +137,16 @@ class NovaWebScroll67Test {
             val point = checkNotNull(editor.get())
             val hostOrigin = host.fetchSemanticsNode().positionInWindow
             host.performTouchInput { click(androidx.compose.ui.geometry.Offset(point.x.toFloat(), point.y.toFloat()) - hostOrigin) }
+            val editorFocused = AtomicReference<String>()
+            compose.runOnIdle {
+                first.evaluateJavascript("document.activeElement instanceof HTMLInputElement", editorFocused::set)
+            }
+            compose.waitUntil(5_000) { editorFocused.get() != null }
+            assertEquals("Tap must focus the retained WebView editor", "true", editorFocused.get())
+            compose.runOnIdle {
+                val ime = first.context.getSystemService(InputMethodManager::class.java)
+                ime.showSoftInput(first, InputMethodManager.SHOW_IMPLICIT)
+            }
             val automation = InstrumentationRegistry.getInstrumentation().uiAutomation
             fun sendInput(command: String) {
                 ParcelFileDescriptor.AutoCloseInputStream(automation.executeShellCommand(command)).use { it.readBytes() }
