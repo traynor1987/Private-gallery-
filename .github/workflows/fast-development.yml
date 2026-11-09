@@ -1,5 +1,6 @@
 name: Private Gallery fast development
 'on':
+  workflow_dispatch:
   push:
     branches:
     - main
@@ -554,12 +555,23 @@ jobs:
             app/build/outputs/connected_android_test_additional_output
 
   home2-integration:
-    if: github.event_name == 'push' && (github.ref == 'refs/heads/integration/novaos-1.7-home2' || github.ref == 'refs/heads/feature/novaos-visual-foundation' || (github.ref == 'refs/heads/feature/novaos-sanctuary' || github.ref == 'refs/heads/feature/novaos-sanctuary-integration')) && contains(github.event.head_commit.message, '[home2-runtime]')
+    if: (github.event_name == 'push' && (github.ref == 'refs/heads/integration/novaos-1.7-home2' || github.ref == 'refs/heads/feature/novaos-visual-foundation' || (github.ref == 'refs/heads/feature/novaos-sanctuary' || github.ref == 'refs/heads/feature/novaos-sanctuary-integration')) && contains(github.event.head_commit.message, '[home2-runtime]')) || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/feature/novaos-sanctuary-integration')
     runs-on: ubuntu-24.04
     timeout-minutes: ${{ github.ref == 'refs/heads/feature/novaos-sanctuary-integration' && 75 || (github.ref == 'refs/heads/feature/novaos-visual-foundation' || github.ref == 'refs/heads/feature/novaos-sanctuary') && 60 || 45 }}
     permissions:
       contents: write
+    env:
+      NOVA_FOLD_SIGN: ${{ github.ref == 'refs/heads/feature/novaos-sanctuary-integration' && (github.event_name == 'workflow_dispatch' || (contains(github.event.head_commit.message, '[fold-test-sign]') && contains(github.event.head_commit.message, '[visual-full]'))) }}
     steps:
+      - name: Require dedicated Fold signing configuration
+        if: env.NOVA_FOLD_SIGN == 'true'
+        env:
+          CONFIGURED: ${{ secrets.NOVA_FOLD_TEST_KEYSTORE_BASE64 != '' && secrets.NOVA_FOLD_TEST_KEYSTORE_PASSWORD != '' && vars.NOVA_FOLD_TEST_CERT_SHA256 != '' }}
+        run: |
+          if [ "$CONFIGURED" != true ]; then
+            echo 'Provision the dedicated Fold test signing secrets and certificate pin before requesting signing.' >&2
+            exit 1
+          fi
       - uses: actions/checkout@v4
         with: { fetch-depth: 0 }
       - uses: actions/setup-java@v5
@@ -632,7 +644,7 @@ jobs:
         run: sudo chmod 666 /dev/kvm
       - name: Focused Android 17 integration and privacy tests
         env:
-          NOVA_VISUAL_FULL: ${{ contains(github.event.head_commit.message, '[visual-full]') }}
+          NOVA_VISUAL_FULL: ${{ (github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[visual-full]')) }}
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: '37.0'
@@ -670,10 +682,10 @@ jobs:
         run: |
           grep -Ex 'Android 17 visual checkpoint: [0-9]+/[0-9]+ PASS' app/build/home2-evidence/visual-checkpoint/result.txt
       - name: Validate actual Backup process restart evidence
-        if: (github.ref != 'refs/heads/feature/novaos-visual-foundation' && (github.ref != 'refs/heads/feature/novaos-sanctuary' && github.ref != 'refs/heads/feature/novaos-sanctuary-integration')) || contains(github.event.head_commit.message, '[visual-full]')
+        if: (github.ref != 'refs/heads/feature/novaos-visual-foundation' && (github.ref != 'refs/heads/feature/novaos-sanctuary' && github.ref != 'refs/heads/feature/novaos-sanctuary-integration')) || (github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[visual-full]'))
         run: python3 scripts/verify_release1711_gate.py --restart-folder app/build/home2-evidence/backup-restart62 --source "$(git rev-parse HEAD)"
       - name: Validate every selected original Android report
-        if: (github.ref != 'refs/heads/feature/novaos-visual-foundation' && (github.ref != 'refs/heads/feature/novaos-sanctuary' && github.ref != 'refs/heads/feature/novaos-sanctuary-integration')) || contains(github.event.head_commit.message, '[visual-full]')
+        if: (github.ref != 'refs/heads/feature/novaos-visual-foundation' && (github.ref != 'refs/heads/feature/novaos-sanctuary' && github.ref != 'refs/heads/feature/novaos-sanctuary-integration')) || (github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[visual-full]'))
         run: python3 scripts/verify_home2_runtime.py app/build/outputs/androidTest-results/connected/debug > app/build/home2-evidence/runtime.json
       - name: Record isolated Fold signer compatibility
         if: github.ref == 'refs/heads/feature/novaos-sanctuary-integration'
@@ -687,6 +699,40 @@ jobs:
           else
             echo 'signer=mismatch; in-place installation is incompatible' >> app/build/home2-evidence/fold-signing-compatibility.txt
           fi
+      - name: Sign the verified isolated Fold test APK
+        id: sign-fold-test
+        if: env.NOVA_FOLD_SIGN == 'true'
+        env:
+          NOVA_FOLD_TEST_KEYSTORE_BASE64: ${{ secrets.NOVA_FOLD_TEST_KEYSTORE_BASE64 }}
+          NOVA_FOLD_TEST_KEYSTORE_PASSWORD: ${{ secrets.NOVA_FOLD_TEST_KEYSTORE_PASSWORD }}
+          NOVA_FOLD_TEST_CERT_SHA256: ${{ vars.NOVA_FOLD_TEST_CERT_SHA256 }}
+        run: bash scripts/sign_fold_test71.sh
+      - name: Smoke test the signed Fold APK on Android 17
+        id: smoke-fold-test
+        if: steps.sign-fold-test.outcome == 'success'
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: '37.0'
+          target: google_apis
+          arch: x86_64
+          profile: pixel_2
+          cores: 4
+          ram-size: 4096M
+          disable-animations: true
+          emulator-options: -no-window -gpu software -no-snapshot -noaudio -no-boot-anim
+          script: |
+            test "$(adb shell getprop ro.build.version.sdk | tr -d '\r')" = 37
+            adb install app/build/fold-test-delivery/NovaOS-Fold-Test-code*.apk
+            adb shell pm path uk.co.traynor.privategallery.hiddenprototype
+            adb shell am start -W -n uk.co.traynor.privategallery.hiddenprototype/uk.co.traynor.privategallery.LauncherActivity | tee app/build/fold-test-delivery/fresh-install.txt
+            grep -q '^Status: ok' app/build/fold-test-delivery/fresh-install.txt
+      - name: Publish the verified isolated Fold test APK
+        if: steps.smoke-fold-test.outcome == 'success'
+        uses: actions/upload-artifact@v4
+        with:
+          name: novaos-fold-test-signed
+          path: app/build/fold-test-delivery
+          if-no-files-found: error
       - name: Preserve isolated Sanctuary build for physical Fold testing
         if: github.ref == 'refs/heads/feature/novaos-sanctuary' && contains(github.event.head_commit.message, '[visual-full]')
         uses: actions/upload-artifact@v4
