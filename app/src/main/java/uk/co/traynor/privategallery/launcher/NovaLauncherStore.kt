@@ -37,7 +37,11 @@ internal class NovaLauncherStore(context: Context) {
         }.getOrNull() ?: return@synchronized false
 
         val current = read()
-        save(decoded.copy(configured = current.configured, widgets = current.widgets, launchCounts = current.launchCounts))
+        val widgets = current.widgets.map { widget ->
+            val layout = if (widget.wide) decoded.inner else decoded.cover
+            widget.copy(page = widget.page.coerceIn(layout.pages.indices))
+        }
+        save(decoded.copy(configured = current.configured, widgets = widgets, launchCounts = current.launchCounts))
     }
 
     private companion object {
@@ -83,8 +87,10 @@ private object LauncherLayoutCodec {
             require(state.widgets.size <= MAX_LAUNCHER_WIDGETS && state.widgets.distinctBy(LauncherWidget::id).size == state.widgets.size)
             val widgets = JSONArray()
             for (widget in state.widgets) {
-                require(widget.id > 0 && isLauncherComponent(widget.provider))
-                widgets.put(JSONObject().put("id", widget.id).put("provider", widget.provider).put("wide", widget.wide))
+                val pageRange = if (widget.wide) state.inner.pages.indices else state.cover.pages.indices
+                require(widget.id > 0 && isLauncherComponent(widget.provider) && widget.page in pageRange)
+                widgets.put(JSONObject().put("id", widget.id).put("provider", widget.provider)
+                    .put("wide", widget.wide).put("page", widget.page))
             }
             require(state.launchCounts.size <= MAX_LAUNCH_COUNTS)
             val counts = JSONObject()
@@ -93,6 +99,8 @@ private object LauncherLayoutCodec {
                 counts.put(component, count)
             }
             root.put("configured", state.configured).put("widgets", widgets).put("launchCounts", counts)
+            state.coverCleanupUndo?.let { root.put("coverCleanupUndo", pages(it)) }
+            state.innerCleanupUndo?.let { root.put("innerCleanupUndo", pages(it)) }
         }
 
         return root.toString().also { require(it.encodeToByteArray().size <= MAX_LAUNCHER_BACKUP_BYTES) }
@@ -104,7 +112,8 @@ private object LauncherLayoutCodec {
         val reader = JSONTokener(raw)
         val root = reader.nextValue() as? JSONObject ?: error("Invalid launcher file")
         require(reader.nextClean() == '\u0000')
-        root.requireKeys(if (portable) layoutKeys else layoutKeys + localKeys)
+        val optionalLocalKeys = setOf("coverCleanupUndo", "innerCleanupUndo").filter(root::has)
+        root.requireKeys(if (portable) layoutKeys else layoutKeys + localKeys + optionalLocalKeys)
         require(root.string("type") == TYPE && root.number("schema") == SCHEMA)
 
         val appearance = root.getJSONObject("appearance")
@@ -112,12 +121,19 @@ private object LauncherLayoutCodec {
         val drawer = root.getJSONObject("drawer")
         drawer.requireKeys(setOf("orientation", "search", "sort", "folders", "frequent", "shortcutSearch"))
 
-        val widgets = if (portable) emptyList() else root.getJSONArray("widgets").read(0..MAX_LAUNCHER_WIDGETS) { widget ->
-            (widget as JSONObject).requireKeys(setOf("id", "provider", "wide"))
+        val cover = parseLayout(root.getJSONObject("cover"))
+        val inner = parseLayout(root.getJSONObject("inner"))
+        val widgets = if (portable) emptyList() else root.getJSONArray("widgets").read(0..MAX_LAUNCHER_WIDGETS) { entry ->
+            val widget = entry as JSONObject
+            val legacyKeys = setOf("id", "provider", "wide")
+            widget.requireKeys(if (widget.has("page")) legacyKeys + "page" else legacyKeys)
+            val wide = widget.boolean("wide")
+            val pageRange = if (wide) inner.pages.indices else cover.pages.indices
             LauncherWidget(
                 widget.number("id").also { require(it > 0) },
                 widget.string("provider").also { require(isLauncherComponent(it)) },
-                widget.boolean("wide"),
+                wide,
+                (if (widget.has("page")) widget.number("page") else 0).also { require(it in pageRange) },
             )
         }.also { require(it.distinctBy(LauncherWidget::id).size == it.size) }
 
@@ -132,8 +148,8 @@ private object LauncherLayoutCodec {
         return NovaLauncherState(
             configured = !portable && root.boolean("configured"),
             separateDisplays = root.boolean("separateDisplays"),
-            cover = parseLayout(root.getJSONObject("cover")),
-            inner = parseLayout(root.getJSONObject("inner")),
+            cover = cover,
+            inner = inner,
             appearance = LauncherAppearance(
                 wallpaper = LauncherWallpaper.valueOf(appearance.string("wallpaper")),
                 theme = LauncherTheme.valueOf(appearance.string("theme")),
@@ -156,21 +172,28 @@ private object LauncherLayoutCodec {
             hideBlocked = root.boolean("hideBlocked"),
             widgets = widgets,
             launchCounts = counts,
+            coverCleanupUndo = if (root.has("coverCleanupUndo")) parsePages(root.getJSONArray("coverCleanupUndo")) else null,
+            innerCleanupUndo = if (root.has("innerCleanupUndo")) parsePages(root.getJSONArray("innerCleanupUndo")) else null,
         )
     }
 
     private fun layout(value: LauncherLayout): JSONObject {
         require(value.pages.size in 1..MAX_LAUNCHER_PAGES && value.dock.size <= MAX_LAUNCHER_DOCK_ITEMS)
         require(value.favourites.size <= MAX_LAUNCHER_FAVOURITES && value.favourites.all(::isLauncherComponent))
+        return JSONObject()
+            .put("pages", pages(value.pages))
+            .put("dock", JSONArray(value.dock.map(::item)))
+            .put("favourites", JSONArray(value.favourites))
+    }
+
+    private fun pages(value: List<List<LauncherItem>>): JSONArray {
+        require(value.size in 1..MAX_LAUNCHER_PAGES)
         val pages = JSONArray()
-        for (page in value.pages) {
+        for (page in value) {
             require(page.size <= MAX_LAUNCHER_PAGE_ITEMS)
             pages.put(JSONArray(page.map(::item)))
         }
-        return JSONObject()
-            .put("pages", pages)
-            .put("dock", JSONArray(value.dock.map(::item)))
-            .put("favourites", JSONArray(value.favourites))
+        return pages
     }
 
     private fun item(value: LauncherItem): JSONObject = when (value) {
@@ -188,14 +211,16 @@ private object LauncherLayoutCodec {
     private fun parseLayout(value: JSONObject): LauncherLayout {
         value.requireKeys(setOf("pages", "dock", "favourites"))
         return LauncherLayout(
-            pages = value.getJSONArray("pages").read(1..MAX_LAUNCHER_PAGES) { page ->
-                (page as JSONArray).read(0..MAX_LAUNCHER_PAGE_ITEMS) { parseItem(it as JSONObject) }
-            },
+            pages = parsePages(value.getJSONArray("pages")),
             dock = value.getJSONArray("dock").read(0..MAX_LAUNCHER_DOCK_ITEMS) { parseItem(it as JSONObject) },
             favourites = value.getJSONArray("favourites").read(0..MAX_LAUNCHER_FAVOURITES) {
                 (it as String).also { component -> require(isLauncherComponent(component)) }
             }.toSet(),
         )
+    }
+
+    private fun parsePages(pages: JSONArray): List<List<LauncherItem>> = pages.read(1..MAX_LAUNCHER_PAGES) { page ->
+        (page as JSONArray).read(0..MAX_LAUNCHER_PAGE_ITEMS) { parseItem(it as JSONObject) }
     }
 
     private fun parseItem(value: JSONObject): LauncherItem = when (value.string("type")) {

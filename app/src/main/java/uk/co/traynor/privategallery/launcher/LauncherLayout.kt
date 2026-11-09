@@ -53,7 +53,9 @@ internal data class LauncherLayout(
     val favourites: Set<String> = emptySet(),
 )
 
-internal data class LauncherWidget(val id: Int, val provider: String, val wide: Boolean)
+internal data class LauncherWidget(val id: Int, val provider: String, val wide: Boolean, val page: Int = 0)
+
+internal data class LauncherShortcutPosition(val page: Int, val item: Int)
 
 internal data class NovaLauncherState(
     val configured: Boolean = false,
@@ -66,11 +68,55 @@ internal data class NovaLauncherState(
     val hideBlocked: Boolean = false,
     val widgets: List<LauncherWidget> = emptyList(),
     val launchCounts: Map<String, Int> = emptyMap(),
+    val coverCleanupUndo: List<List<LauncherItem>>? = null,
+    val innerCleanupUndo: List<List<LauncherItem>>? = null,
 ) {
     fun layout(wide: Boolean): LauncherLayout = if (wide && separateDisplays) inner else cover
 
     fun withLayout(wide: Boolean, layout: LauncherLayout): NovaLauncherState =
-        if (wide && separateDisplays) copy(inner = layout) else copy(cover = layout)
+        if (wide && separateDisplays) copy(
+            inner = layout, innerCleanupUndo = innerCleanupUndo.takeIf { inner.pages == layout.pages },
+        ) else copy(
+            cover = layout, coverCleanupUndo = coverCleanupUndo.takeIf { cover.pages == layout.pages },
+        )
+
+    fun withoutPage(wide: Boolean, page: Int): NovaLauncherState {
+        val current = layout(wide)
+        if (current.pages.size <= 1 || page !in current.pages.indices) return this
+        val usesInner = wide && separateDisplays
+        val next = withLayout(wide, current.copy(pages = current.pages.filterIndexed { index, _ -> index != page }))
+        return next.copy(widgets = widgets.map { widget ->
+            if (widget.wide != usesInner || widget.page < page) widget
+            else widget.copy(page = (widget.page - 1).coerceAtLeast(0))
+        })
+    }
+
+    fun shortcutCleanupUndo(wide: Boolean): List<List<LauncherItem>>? =
+        if (wide && separateDisplays) innerCleanupUndo else coverCleanupUndo
+
+    fun cleanUpShortcuts(wide: Boolean, selected: Set<LauncherShortcutPosition>): NovaLauncherState {
+        val current = layout(wide)
+        val cleaned = current.pages.mapIndexed { page, items ->
+            items.filterIndexed { index, item ->
+                item !is LauncherItem.App || LauncherShortcutPosition(page, index) !in selected
+            }
+        }
+        if (cleaned == current.pages) return this
+        val usesInner = wide && separateDisplays
+        val lastWidgetPage = widgets.filter { it.wide == usesInner }.maxOfOrNull(LauncherWidget::page) ?: 0
+        var pageCount = cleaned.size
+        while (pageCount > lastWidgetPage + 1 &&
+            cleaned[pageCount - 1].isEmpty() && current.pages[pageCount - 1].isNotEmpty()
+        ) pageCount--
+        val next = withLayout(wide, current.copy(pages = cleaned.take(pageCount)))
+        val before = shortcutCleanupUndo(wide) ?: current.pages
+        return if (usesInner) next.copy(innerCleanupUndo = before) else next.copy(coverCleanupUndo = before)
+    }
+
+    fun undoShortcutCleanup(wide: Boolean): NovaLauncherState {
+        val before = shortcutCleanupUndo(wide) ?: return this
+        return withLayout(wide, layout(wide).copy(pages = before))
+    }
 
     fun withSuccessfulLaunch(component: String): NovaLauncherState {
         if (!isLauncherComponent(component)) return this
@@ -79,6 +125,10 @@ internal data class NovaLauncherState(
         return copy(launchCounts = recent.associate { it.key to it.value } + (component to (count + 1).coerceAtMost(MAX_LAUNCH_COUNT)))
     }
 }
+
+internal fun <T> List<T>.movingLauncherItem(from: Int, to: Int): List<T> =
+    if (from == to || from !in indices || to !in indices) this
+    else toMutableList().apply { add(to, removeAt(from)) }
 
 internal const val MAX_LAUNCHER_PAGES = 12
 internal const val MAX_LAUNCHER_PAGE_ITEMS = 48
@@ -99,16 +149,20 @@ internal fun launcherInitialState(
     mode: LauncherStartingLayout,
     template: LauncherTemplate,
     components: List<String>,
+    selectedCopyComponents: List<String> = emptyList(),
 ): NovaLauncherState {
     val state = NovaLauncherState()
     if (mode == LauncherStartingLayout.START_FRESH) return state
     val apps = components.asSequence()
-        .filter(::isLauncherComponent).distinct().take(LauncherGrid.STANDARD.rows * 4 * MAX_LAUNCHER_PAGES)
-        .toList()
+        .filter(::isLauncherComponent).distinct().toList()
     if (mode == LauncherStartingLayout.COPY_CURRENT) {
+        val available = apps.toSet()
+        val items = selectedCopyComponents.asSequence().filter { it in available }.distinct()
+            .take(LauncherGrid.STANDARD.columns(false) * LauncherGrid.STANDARD.rows)
+            .map(LauncherItem::App).toList()
         return state.copy(
-            cover = populatedLayout(apps.map(LauncherItem::App), LauncherGrid.STANDARD, wide = false),
-            inner = populatedLayout(apps.map(LauncherItem::App), LauncherGrid.STANDARD, wide = true),
+            cover = populatedLayout(items, LauncherGrid.STANDARD, wide = false),
+            inner = populatedLayout(items, LauncherGrid.STANDARD, wide = true),
         )
     }
 
@@ -118,18 +172,23 @@ internal fun launcherInitialState(
         LauncherTemplate.PRODUCTIVITY -> LauncherAppearance(accent = LauncherAccent.TEAL, grid = LauncherGrid.COMPACT)
         LauncherTemplate.GAMING -> LauncherAppearance(wallpaper = LauncherWallpaper.MIDNIGHT, accent = LauncherAccent.LAVENDER)
     }
-    val dockApps = when (template) {
+    val matching = when (template) {
         LauncherTemplate.MINIMAL -> emptyList()
-        LauncherTemplate.CLASSIC -> apps.take(3)
-        LauncherTemplate.PRODUCTIVITY -> apps.filter { it.matchesCategory("phone", "calendar", "mail", "notes") }.take(3)
-        LauncherTemplate.GAMING -> apps.filter { it.matchesCategory("game", "steam", "xbox", "playstation") }.take(3)
+        LauncherTemplate.CLASSIC -> apps.filter { it.matchesCategory("dialer", "phone", "messaging", "camera") }
+        LauncherTemplate.PRODUCTIVITY -> apps.filter { it.matchesCategory("mail", "notes", "office", "calendar", "drive", "docs") }
+        LauncherTemplate.GAMING -> apps.filter { it.matchesCategory("game", "steam", "xbox", "playstation") }
     }
-    val remaining = apps.filterNot { it in dockApps }
-    val homeApps = when (template) {
-        LauncherTemplate.MINIMAL -> emptyList()
-        LauncherTemplate.CLASSIC -> remaining.map(LauncherItem::App)
-        LauncherTemplate.PRODUCTIVITY -> groupedApps(remaining, "Productivity", "mail", "notes", "office", "calendar", "drive", "docs")
-        LauncherTemplate.GAMING -> groupedApps(remaining, "Games", "game", "steam", "xbox", "playstation")
+    val dockApps = matching.take(3)
+    val grouped = matching.drop(dockApps.size).take(MAX_LAUNCHER_FOLDER_ITEMS)
+    val folderName = when (template) {
+        LauncherTemplate.PRODUCTIVITY -> "Productivity"
+        LauncherTemplate.GAMING -> "Games"
+        else -> null
+    }
+    val homeApps = if (folderName != null && grouped.size >= 2) {
+        listOf(LauncherItem.Folder(folderName, grouped))
+    } else {
+        emptyList()
     }
     return state.copy(
         cover = populatedLayout(homeApps, appearance.grid, wide = false, dockApps),
@@ -145,12 +204,6 @@ internal fun launcherInitialState(
 private fun String.matchesCategory(vararg parts: String): Boolean {
     val packageName = substringBefore('/')
     return parts.any { packageName.contains(it, ignoreCase = true) }
-}
-
-private fun groupedApps(apps: List<String>, label: String, vararg parts: String): List<LauncherItem> {
-    val matching = apps.filter { it.matchesCategory(*parts) }.take(MAX_LAUNCHER_FOLDER_ITEMS)
-    if (matching.size < 2) return apps.map(LauncherItem::App)
-    return listOf(LauncherItem.Folder(label, matching)) + apps.filterNot { it in matching }.map(LauncherItem::App)
 }
 
 private fun populatedLayout(

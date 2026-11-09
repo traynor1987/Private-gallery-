@@ -18,6 +18,9 @@ val builtinApps = listOf(
  LaunchApp("backup","Nova Backup","backup"),LaunchApp("nova-calculator","Nova Calculator","calculator"),LaunchApp("arcade","Nova Arcade","arcade"),LaunchApp("arcade-2048","2048 · Arcade","arcade"),LaunchApp("arcade-sudoku","Sudoku · Arcade","arcade"),LaunchApp("arcade-snake","Snake · Arcade","arcade"),LaunchApp("chat","Nova Chat Lite · Beta","chat"),LaunchApp("widgets","Widget Centre","widgets"),LaunchApp("search","Nova Search","search"),LaunchApp("mind","Nova Mind","mind"),LaunchApp("calm","Calm Now","mind"),LaunchApp("sanctuary","Nova Sanctuary","mind"),LaunchApp("store","Nova Store","store"),LaunchApp("wallpaper","Wallpapers","wallpaper"),LaunchApp("settings","Home settings","settings"))
 
 
+internal fun readBundledStoreCatalogue(assets: android.content.res.AssetManager): List<StoreEntry> =
+    PreviewData.parseCatalogue(assets.open("catalogue-v1.json").bufferedReader().use { it.readText() })
+
 class PreviewData(private val context:Context,private val apps:uk.co.traynor.privategallery.core.home2.NativeAppsBridge?,onSwitch:(()->Unit)?,private val legacyOrder:List<String>?,private val nativeThemeFallback:String?,private val onThemeCommitted:((String)->Unit)?) {
  constructor(context:Context,apps:uk.co.traynor.privategallery.core.home2.NativeAppsBridge?,onSwitch:(()->Unit)?=null,legacyOrder:List<String>?=null):this(context,apps,onSwitch,legacyOrder,null,null)
  private val owner=(context as uk.co.traynor.privategallery.core.home2.SpaceContext).spaceId
@@ -26,7 +29,7 @@ class PreviewData(private val context:Context,private val apps:uk.co.traynor.pri
  val shell=PreviewShellData(context)
  private val prefs=context.getSharedPreferences("nova_preview_v1",Context.MODE_PRIVATE)
  private val wallpapers=uk.co.traynor.privategallery.core.home2.WallpaperStore(context as uk.co.traynor.privategallery.core.home2.SpaceContext)
- val catalogue:List<StoreEntry> = parseCatalogue(context.assets.open("catalogue-v1.json").bufferedReader().use{it.readText()})
+ val catalogue:List<StoreEntry> = readBundledStoreCatalogue(context.assets)
  var state by mutableStateOf(load());private set
  var error by mutableStateOf<String?>(null);private set
  private var pending:PreviewState?=null

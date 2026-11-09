@@ -24,32 +24,69 @@ import uk.co.traynor.privategallery.ui.navigationHaptic
  Row(Modifier.fillMaxWidth().padding(start=4.dp,end=14.dp,top=8.dp,bottom=8.dp),verticalAlignment=Alignment.CenterVertically){IconButton(onClick={tap();onBack()}){Icon(Icons.Default.ArrowBack,"Back to Home")};Column(Modifier.weight(1f)){Text(title,style=MaterialTheme.typography.headlineSmall);Text(subtitle,style=MaterialTheme.typography.labelMedium,color=MaterialTheme.colorScheme.onSurfaceVariant)};actions()}
 }
 @Composable internal fun StoreScreen(data:PreviewData,onBack:()->Unit,onDetail:(StoreEntry)->Unit,onCustom:()->Unit,onVisualFoundation:(()->Unit)?=null){
+ StoreCatalogueScreen(data.catalogue,data.profileLabel,onBack,onDetail,data.profile.installed,
+  isInstalled={data.installed(it)!=null},onCustom=onCustom,onVisualFoundation=onVisualFoundation)
+}
+
+@Composable
+internal fun PublicStoreScreen(onBack: () -> Unit, onOpenWorkspace: () -> Unit) {
+ val assets = androidx.compose.ui.platform.LocalContext.current.assets
+ val catalogue = remember(assets) { readBundledStoreCatalogue(assets) }
+ var selected by remember { mutableStateOf<StoreEntry?>(null) }
+ StoreCatalogueScreen(catalogue, "Public catalogue", onBack, { selected = it })
+ selected?.let { entry ->
+  AlertDialog(
+   onDismissRequest = { selected = null },
+   title = { Text(entry.name) },
+   text = { Text(entry.description) },
+   confirmButton = {
+    TextButton(onClick = { selected = null; onOpenWorkspace() }) { Text("Open NovaOS to install") }
+   },
+   dismissButton = { TextButton(onClick = { selected = null }) { Text("Close") } },
+  )
+ }
+}
+
+@Composable
+private fun StoreCatalogueScreen(
+ catalogue: List<StoreEntry>,
+ profileLabel: String,
+ onBack: () -> Unit,
+ onDetail: (StoreEntry) -> Unit,
+ installedApps: List<StoreEntry>? = null,
+ isInstalled: (StoreEntry) -> Boolean = { false },
+ onCustom: (() -> Unit)? = null,
+ onVisualFoundation: (() -> Unit)? = null,
+) {
  var query by remember{mutableStateOf("")};var category by remember{mutableStateOf("All")};var mine by remember{mutableStateOf(false)}
- val entries=(if(mine)data.profile.installed else data.catalogue).filter{(category=="All"||it.category==category)&&(it.name.contains(query,true)||it.description.contains(query,true)||it.publisher.contains(query,true))}
+ val entries=(if(mine)installedApps.orEmpty() else catalogue).filter{(category=="All"||it.category==category)&&(it.name.contains(query,true)||it.description.contains(query,true)||it.publisher.contains(query,true))}
  Column(Modifier.fillMaxSize().safeDrawingPadding().testTag("nova-store")){
-  PreviewHeader("Nova Store",data.profileLabel,onBack){IconButton(onClick=onCustom){Icon(Icons.Default.Add,"Install custom website")}}
+  PreviewHeader("Nova Store",profileLabel,onBack){
+   if(onCustom!=null)IconButton(onClick=onCustom){Icon(Icons.Default.Add,"Install custom website")}
+  }
   LazyColumn(Modifier.fillMaxSize(),contentPadding=PaddingValues(horizontal=20.dp,vertical=8.dp),verticalArrangement=Arrangement.spacedBy(14.dp)){
    if(onVisualFoundation!=null)item{VisualCatalogueEntry("store-visual-foundation",onVisualFoundation)}
    item{Surface(shape=RoundedCornerShape(30.dp),color=Color(0xFF303F65),contentColor=Color.White){Column(Modifier.fillMaxWidth().background(Brush.linearGradient(listOf(Color(0xFF303F65),Color(0xFF455568),Color(0xFF4B3B70)))).padding(24.dp)){
     Text("YOUR WEB. YOUR SPACE.",style=MaterialTheme.typography.labelSmall)
     Text("A little more\npossibility.",style=MaterialTheme.typography.headlineLarge,fontWeight=FontWeight.Light,modifier=Modifier.padding(vertical=12.dp))
-    Text("${data.catalogue.size} official destinations. Add your favourites to Nova Home.",style=MaterialTheme.typography.bodyMedium)
-    TextButton(onClick={onDetail(data.catalogue.first{it.id=="photopea"})}){Text("Discover Photopea  →",color=Color(0xFFB9F6E3))}
+    Text(if(installedApps==null) "${catalogue.size} official destinations to explore."
+         else "${catalogue.size} official destinations. Add your favourites to Nova Home.",style=MaterialTheme.typography.bodyMedium)
+    TextButton(onClick={onDetail(catalogue.first{it.id=="photopea"})}){Text("Discover Photopea  →",color=Color(0xFFB9F6E3))}
    }}}
-   item{Row(horizontalArrangement=Arrangement.spacedBy(10.dp)){FilterChip(selected=!mine,onClick={mine=false;category="All"},label={Text("Explore")},modifier=Modifier.testTag("store-explore"));FilterChip(selected=mine,onClick={mine=true;category="All"},label={Text("My Apps (${data.profile.installed.size})")},modifier=Modifier.testTag("store-my-apps"))}}
+   if(installedApps!=null)item{Row(horizontalArrangement=Arrangement.spacedBy(10.dp)){FilterChip(selected=!mine,onClick={mine=false;category="All"},label={Text("Explore")},modifier=Modifier.testTag("store-explore"));FilterChip(selected=mine,onClick={mine=true;category="All"},label={Text("My Apps (${installedApps.size})")},modifier=Modifier.testTag("store-my-apps"))}}
    item{OutlinedTextField(query,{query=it},Modifier.fillMaxWidth().testTag("store-search"),placeholder={Text(if(mine)"Search installed apps"else "Find something useful")},leadingIcon={Icon(Icons.Default.Search,null)},singleLine=true,shape=RoundedCornerShape(22.dp))}
-   item{Row(Modifier.horizontalScroll(rememberScrollState()),horizontalArrangement=Arrangement.spacedBy(8.dp)){(listOf("All")+data.catalogue.map{it.category}.distinct().sorted()).forEach{value->FilterChip(selected=category==value,onClick={category=value},label={Text(value)})}}}
+   item{Row(Modifier.horizontalScroll(rememberScrollState()),horizontalArrangement=Arrangement.spacedBy(8.dp)){(listOf("All")+catalogue.map{it.category}.distinct().sorted()).forEach{value->FilterChip(selected=category==value,onClick={category=value},label={Text(value)})}}}
    item{Row(verticalAlignment=Alignment.CenterVertically){Text(if(mine)"Your installed apps"else if(query.isBlank()&&category=="All")"Curated for you"else "Results",Modifier.weight(1f),style=MaterialTheme.typography.titleLarge);Text("${entries.size}",color=MaterialTheme.colorScheme.onSurfaceVariant)}}
    if(entries.isEmpty())item{Column(Modifier.fillMaxWidth().padding(vertical=28.dp),horizontalAlignment=Alignment.CenterHorizontally){Icon(Icons.Default.SearchOff,null,Modifier.size(40.dp));Text(if(mine)"No installed apps match this search."else "No destinations match this search.",Modifier.padding(top=12.dp));TextButton(onClick={query="";category="All";mine=false}){Text("Explore the catalogue")}}}
    items(entries,key={it.id}){entry->
     Surface(onClick={onDetail(entry)},shape=RoundedCornerShape(22.dp),color=MaterialTheme.colorScheme.surfaceContainer){Row(Modifier.fillMaxWidth().padding(14.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(14.dp)){
      AppIcon(LaunchApp(entry.id,entry.name,"website",entry),54.dp)
      Column(Modifier.weight(1f)){Text(entry.name,style=MaterialTheme.typography.titleMedium,maxLines=1,overflow=TextOverflow.Ellipsis);Text(entry.category,style=MaterialTheme.typography.labelSmall,color=MaterialTheme.colorScheme.primary);Text(entry.description,style=MaterialTheme.typography.bodySmall,maxLines=2,overflow=TextOverflow.Ellipsis)}
-     Icon(if(data.installed(entry)!=null)Icons.Default.CheckCircle else Icons.Default.AddCircleOutline,if(data.installed(entry)!=null)"Installed"else "View app details",tint=MaterialTheme.colorScheme.primary)
+     Icon(if(isInstalled(entry))Icons.Default.CheckCircle else Icons.Default.AddCircleOutline,if(isInstalled(entry))"Installed"else "View app details",tint=MaterialTheme.colorScheme.primary)
     }}
    }
    item{Surface(shape=RoundedCornerShape(18.dp),color=MaterialTheme.colorScheme.secondaryContainer.copy(alpha=.5f)){Text("Installations use the existing encrypted Private Apps catalogue. Websites open in the existing Primary browser container and keep its network and login policies. Catalogue classifications do not promise PWA or login compatibility.",Modifier.padding(16.dp),style=MaterialTheme.typography.bodySmall)}}
-   item{TextButton(onClick=onCustom,modifier=Modifier.fillMaxWidth()){Icon(Icons.Default.Add,null);Text("Add your own HTTPS website",Modifier.padding(start=8.dp))}}
+   if(onCustom!=null)item{TextButton(onClick=onCustom,modifier=Modifier.fillMaxWidth()){Icon(Icons.Default.Add,null);Text("Add your own HTTPS website",Modifier.padding(start=8.dp))}}
   }
  }
 }

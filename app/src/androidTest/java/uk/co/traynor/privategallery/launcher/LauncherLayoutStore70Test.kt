@@ -68,4 +68,36 @@ class LauncherLayoutStore70Test {
             assertTrue(store.save(before))
         }
     }
+
+    @Test fun cleanupUndoAndWidgetPlacementSurviveRestartWithLegacyWidgetCompatibility() {
+        val store = NovaLauncherStore(context)
+        val before = store.read()
+        try {
+            val original = NovaLauncherState(
+                configured = true,
+                inner = LauncherLayout(pages = listOf(
+                    listOf(LauncherItem.App(browser)), listOf(LauncherItem.App(other)),
+                )),
+                widgets = listOf(widget.copy(page = 1)),
+            )
+            val cleaned = original.cleanUpShortcuts(true, setOf(LauncherShortcutPosition(0, 0)))
+            assertTrue(store.save(cleaned))
+            val reopened = NovaLauncherStore(context).read()
+            assertEquals(cleaned, reopened)
+            assertEquals(original, reopened.undoShortcutCleanup(true))
+            val portable = JSONObject(String(store.exportLayout(), Charsets.UTF_8))
+            assertFalse(portable.has("innerCleanupUndo"))
+
+            val prefs = context.getSharedPreferences("nova_android_home_v1", android.content.Context.MODE_PRIVATE)
+            val legacy = JSONObject(checkNotNull(prefs.getString("state", null)))
+            legacy.remove("innerCleanupUndo")
+            legacy.getJSONArray("widgets").getJSONObject(0).remove("page")
+            assertTrue(prefs.edit().putString("state", legacy.toString()).commit())
+            val legacyRead = NovaLauncherStore(context).read()
+            assertEquals(cleaned.inner, legacyRead.inner)
+            assertEquals(listOf(widget), legacyRead.widgets)
+        } finally {
+            assertTrue(store.save(before))
+        }
+    }
 }

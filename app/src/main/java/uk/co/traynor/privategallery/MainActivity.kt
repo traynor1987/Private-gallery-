@@ -242,10 +242,13 @@ private class ByteArrayMediaDataSource(private val bytes: ByteArray) : MediaData
 
 internal const val ACTION_OPEN_PRIVATE_WORKSPACE = "uk.co.traynor.privategallery.action.OPEN_PRIVATE_WORKSPACE"
 
-internal fun privateWorkspaceEntryIntent(context: android.content.Context): Intent =
-    Intent(context, MainActivity::class.java).setAction(ACTION_OPEN_PRIVATE_WORKSPACE).addFlags(
-        Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
-    )
+internal const val ACTION_OPEN_PRIMARY_GALLERY = "uk.co.traynor.privategallery.action.OPEN_PRIMARY_GALLERY"
+private const val STATE_LAUNCHER_ENTRY = "launcher.workspace.entry"
+
+internal fun privateWorkspaceEntryIntent(context: android.content.Context, primaryGallery: Boolean = false): Intent =
+    Intent(context, MainActivity::class.java)
+        .setAction(if (primaryGallery) ACTION_OPEN_PRIMARY_GALLERY else ACTION_OPEN_PRIVATE_WORKSPACE)
+        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
 
 // Only the UI thread mutates this set. Weak ownership does not retain a destroyed workspace.
 private val workspaceActivities = java.util.Collections.newSetFromMap(
@@ -1123,7 +1126,13 @@ class MainActivity : FragmentActivity() {
         automaticBiometricPromptAttempted=false
         triggerAutomaticBiometricPromptIfNeeded()
     }
-    internal fun closeNovaCredentials(){novaCredentialsRequested=false}
+    internal fun closeNovaCredentials() {
+        novaCredentialsRequested = false
+        if (launcherEntry == ACTION_OPEN_PRIMARY_GALLERY && !session.isUnlocked) {
+            lock()
+            finish()
+        }
+    }
     private var activeBiometricPrompt: BiometricPrompt? = null
         set(value) {
             val completed=field!=null && value==null
@@ -1149,7 +1158,7 @@ class MainActivity : FragmentActivity() {
                             sessionKey = unwrapped
                             session.unlock()
                             reconcileAfterUnlock()
-                            route = if (prepareRecoveryKeyIfNeeded()) Route.RECOVERY_KEY_SETUP else retained.afterAuthentication
+                            finishPrimaryAuthenticationRoute()
                         }
                         BiometricPurpose.ENROLL -> {
                             val key = checkNotNull(sessionKey)
@@ -1162,9 +1171,11 @@ class MainActivity : FragmentActivity() {
 
             override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
                 if (!biometricAttempts.isCurrent(attempt)) return
-                if(purpose==BiometricPurpose.UNLOCK && errorCode!=BiometricPrompt.ERROR_NEGATIVE_BUTTON)novaCredentialsRequested=false
                 biometricAttempts.cancel(attempt)
                 activeBiometricPrompt = null
+                if (purpose == BiometricPurpose.UNLOCK && errorCode != BiometricPrompt.ERROR_NEGATIVE_BUTTON) {
+                    closeNovaCredentials()
+                }
             }
         }).also { activeBiometricPrompt = it }
     }
@@ -1253,16 +1264,33 @@ class MainActivity : FragmentActivity() {
         }
     }
 
+    private var launcherEntry by mutableStateOf<String?>(null)
+
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
-        if (intent.action == ACTION_OPEN_PRIVATE_WORKSPACE) enterPrivateWorkspaceFromLauncher()
+        enterPrivateWorkspaceFromLauncher(intent)
     }
 
-    private fun enterPrivateWorkspaceFromLauncher() {
-        // The neutral launcher has no Vault authority. Consume the request once, including on recreation.
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        outState.putString(STATE_LAUNCHER_ENTRY, launcherEntry)
+    }
+
+    private fun enterPrivateWorkspaceFromLauncher(request: Intent) {
+        val action = request.action
+        if (action != ACTION_OPEN_PRIVATE_WORKSPACE && action != ACTION_OPEN_PRIMARY_GALLERY) return
+        // Consume the one-shot request. Only the caller's explicit destination is supported.
         setIntent(Intent(this, MainActivity::class.java))
-        // Android may open a new task instead of delivering onNewIntent to the old one.
+        if (request.data != null || request.extras?.isEmpty == false || request.clipData != null ||
+            request.selector != null || !request.categories.isNullOrEmpty()
+        ) {
+            retireWorkspaceForLauncherEntry()
+            finish()
+            return
+        }
+        // A new Android task must not reuse authentication from any existing workspace owner.
         for (owner in workspaceActivities.toList()) owner.retireWorkspaceForLauncherEntry()
+        launcherEntry = action
         if (route == Route.LOCK) requestNovaCredentials()
     }
 
@@ -1351,14 +1379,16 @@ class MainActivity : FragmentActivity() {
         if(retained.hidden.selected && !retained.hidden.session.isUnlocked)retained.hidden.leave()
         route = if ((session.isUnlocked && sessionKey != null) || (retained.hidden.selected && retained.hidden.session.isUnlocked)) retained.route else if (keys.isConfigured) Route.LOCK else Route.SETUP
         workspaceActivities.add(this)
-        if (intent.action == ACTION_OPEN_PRIVATE_WORKSPACE) enterPrivateWorkspaceFromLauncher()
+        launcherEntry = savedInstanceState?.getString(STATE_LAUNCHER_ENTRY)
+            ?.takeIf { it == ACTION_OPEN_PRIVATE_WORKSPACE || it == ACTION_OPEN_PRIMARY_GALLERY }
+        enterPrivateWorkspaceFromLauncher(intent)
         setContent {
             PrivateGalleryTheme(selectedNativeTheme()) {
                 val browserUnderHome=primaryBrowserCoveredByNovaHome()
                 val retainedBrowserCover=if(browserUnderHome) Modifier.graphicsLayer(alpha=0f).focusProperties {canFocus=false}.pointerInput(Unit) {
                     awaitPointerEventScope {while(true)awaitPointerEvent(androidx.compose.ui.input.pointer.PointerEventPass.Initial).changes.forEach {it.consume()}}
                 } else Modifier
-                if(!displayPrivateHome() || browserUnderHome) Box(Modifier.fillMaxSize().then(if(browserUnderHome || evidenceOwner!=null || vaultCamera!=null)Modifier.clearAndSetSemantics{}else Modifier).then(retainedBrowserCover)) {PrivateGalleryApp(route, ::createPin, ::unlock, ::changePin, ::recoverWithOfflineKey, ::finishRecoveryKeySetup, { route = Route.RECOVER }, { route = Route.LOCK }, ::lock, ::importSelected, ::moveSelected, ::loadItems, ::loadCollections, ::loadFavouriteCollection, ::createCollection, ::addItemsToCollection, ::removeItemsFromCollection, ::renameCollection, ::deleteCollection, ::loadCollectionItems, ::readForViewing, ::loadPreview, ::loadImageEdit, ::applyImageCrop, ::undoImageCrop, ::resetImageCrop, ::restore, ::delete, biometricEnabled, ::unlockWithBiometrics, ::enrollBiometrics, ::finishSetup, autoLockTimeout, selectedNativeTheme(), if(retained.hidden.selected) hiddenAllowScreenshots else allowScreenshots, updateStatus, updateLastChecked, availableUpdate != null, mediaAccessAvailable, ::requestDeviceMediaAccess, ::deviceMediaPages, { deviceGallery.albums() }, ::loadDeviceThumbnail, ::openSettings, { openNonBrowser(Route.GALLERY); mediaAccessAvailable = hasDeviceMediaAccess() }, { openNonBrowser(Route.VAULT) }, { openNonBrowser(Route.FAVOURITE) }, ::openBrowser, ::applyAutoLockTimeout, ::applyTheme, ::applyAllowScreenshots, ::applyBrowserSearchEngine, ::applyClearBrowserDataOnLock, ::clearBrowserData, browserSearchEngine, clearBrowserDataOnLock, browserSaveHistory, ::applyBrowserSaveHistory, browserWebView, { view -> browserWebView = view }, { exit -> browserFullscreenExit = exit }, ::checkForUpdates, ::downloadUpdate, recoveryKeys.isConfigured, pendingRecoveryKey?.concatToString(), ::importBrowserSource, browserRequireVpn, browserVpnState == VpnConnectionState.CONNECTED, ::importWireGuardProfile, vpnProfileStatus, browserVpnState, browserAutoConnectVpn, ::applyBrowserAutoConnectVpn, ::applyBrowserRequireVpn, ::setFavouriteCollection, vpnProfiles, ::selectVpnProfile, ::removeVpnProfile, browserBookmarks, ::addBrowserBookmark, ::removeBrowserBookmark, browserV2Session, ::loadBrowserHistory, ::clearBrowserHistory, ::recordBrowserHistory, browserVpnPreparing, browserVpnPermissionRequired, ::requestBrowserVpnPermissionOrConnect, { item, bytes, cancelled, completed -> saveEditedCopy(item, bytes, cancelled, completed) }, ::readForEditing, { item, bytes, cancelled, completed -> saveEditedCopy(item, bytes, cancelled, completed, true) }, onReadVideoForViewing = ::readVideoForViewing, onOpenVideoSession = ::openVideoSession, onSaveAiCopy = { item, bytes, provenance, cancelled, completed -> saveEditedCopy(item, bytes, cancelled, completed, aiProvenance = provenance) }, onPrepareBrowserUpload = ::prepareBrowserUpload, onClearBrowserUpload = ::clearBrowserUploadCopies, hideContent = hideContent, secretDiscovered = secretDiscovered, onHideContentChanged = ::applyHideContent, onSecretDiscoveryChanged = ::applySecretDiscovery, onAuthenticateSensitive = ::authenticateSensitive, onCancelSensitiveAuthentication = ::cancelSensitiveAuthentication, onVerifySecretPin = ::verifySecretPin, onGenerateImage = ::generateVaultImage, onChooseBackupExport = { backupExportLauncher.launch("private-gallery-vault.pgvault") }, backupExportUri = backupExportUri, onCancelBackupExport = { backupExportUri = null }, onExportBackup = ::exportEncryptedBackup, backupStatus = backupStatus, onChooseBackupRestore = { backupRestoreLauncher.launch(arrayOf("application/octet-stream", "application/zip", "*/*")) }, backupRestoreUri = backupRestoreUri, onCancelBackupRestore = { backupRestoreUri = null }, onRestoreBackup = ::restoreEncryptedBackup, onLoadRecentlyDeleted = ::loadRecentlyDeleted, onMoveItemsToRecentlyDeleted = ::moveItemsToRecentlyDeleted, onChangeRecentlyDeleted = ::changeRecentlyDeleted, onRestoreSelectedVaultCopies = ::restoreSelectedVaultCopies, onLeaveHidden = ::leaveHiddenToDestination, hiddenState = retained.hidden, primaryAuthority = {session.isUnlocked && sessionKey != null}, onReturnToPrimary = ::returnToPrimaryVault, createPrimaryCopy = ::createPrimaryCopy, primaryGallerySelected = retained.primaryGallery, onGallerySourceSelected = ::selectGallerySource, onTransferToHidden = ::transferPrimaryToHidden, phoneMoveStatus = phoneMoveStatus, onCancelGalleryAuthentication = ::cancelGalleryAuthentication, onCapturePrimaryEditorAuthority = ::capturePrimaryEditorAuthority, onInvalidatePrimaryPresentation = ::invalidatePrimaryBrowserPresentation, onDirectHiddenUnlock = ::unlockHiddenDirect)}
+                if(!displayPrivateHome() || browserUnderHome) Box(Modifier.fillMaxSize().then(if(browserUnderHome || evidenceOwner!=null || vaultCamera!=null)Modifier.clearAndSetSemantics{}else Modifier).then(retainedBrowserCover)) {PrivateGalleryApp(route, ::createPin, ::unlock, ::changePin, ::recoverWithOfflineKey, ::finishRecoveryKeySetup, { route = Route.RECOVER }, { route = Route.LOCK }, ::lock, ::importSelected, ::moveSelected, ::loadItems, ::loadCollections, ::loadFavouriteCollection, ::createCollection, ::addItemsToCollection, ::removeItemsFromCollection, ::renameCollection, ::deleteCollection, ::loadCollectionItems, ::readForViewing, ::loadPreview, ::loadImageEdit, ::applyImageCrop, ::undoImageCrop, ::resetImageCrop, ::restore, ::delete, biometricEnabled, ::unlockWithBiometrics, ::enrollBiometrics, ::finishSetup, autoLockTimeout, selectedNativeTheme(), if(retained.hidden.selected) hiddenAllowScreenshots else allowScreenshots, updateStatus, updateLastChecked, availableUpdate != null, mediaAccessAvailable, ::requestDeviceMediaAccess, ::deviceMediaPages, { deviceGallery.albums() }, ::loadDeviceThumbnail, ::openSettings, { openNonBrowser(Route.GALLERY); mediaAccessAvailable = hasDeviceMediaAccess() }, { openNonBrowser(Route.VAULT) }, { openNonBrowser(Route.FAVOURITE) }, ::openBrowser, ::applyAutoLockTimeout, ::applyTheme, ::applyAllowScreenshots, ::applyBrowserSearchEngine, ::applyClearBrowserDataOnLock, ::clearBrowserData, browserSearchEngine, clearBrowserDataOnLock, browserSaveHistory, ::applyBrowserSaveHistory, browserWebView, { view -> browserWebView = view }, { exit -> browserFullscreenExit = exit }, ::checkForUpdates, ::downloadUpdate, recoveryKeys.isConfigured, pendingRecoveryKey?.concatToString(), ::importBrowserSource, browserRequireVpn, browserVpnState == VpnConnectionState.CONNECTED, ::importWireGuardProfile, vpnProfileStatus, browserVpnState, browserAutoConnectVpn, ::applyBrowserAutoConnectVpn, ::applyBrowserRequireVpn, ::setFavouriteCollection, vpnProfiles, ::selectVpnProfile, ::removeVpnProfile, browserBookmarks, ::addBrowserBookmark, ::removeBrowserBookmark, browserV2Session, ::loadBrowserHistory, ::clearBrowserHistory, ::recordBrowserHistory, browserVpnPreparing, browserVpnPermissionRequired, ::requestBrowserVpnPermissionOrConnect, { item, bytes, cancelled, completed -> saveEditedCopy(item, bytes, cancelled, completed) }, ::readForEditing, { item, bytes, cancelled, completed -> saveEditedCopy(item, bytes, cancelled, completed, true) }, onReadVideoForViewing = ::readVideoForViewing, onOpenVideoSession = ::openVideoSession, onSaveAiCopy = { item, bytes, provenance, cancelled, completed -> saveEditedCopy(item, bytes, cancelled, completed, aiProvenance = provenance) }, onPrepareBrowserUpload = ::prepareBrowserUpload, onClearBrowserUpload = ::clearBrowserUploadCopies, hideContent = hideContent, secretDiscovered = secretDiscovered, onHideContentChanged = ::applyHideContent, onSecretDiscoveryChanged = ::applySecretDiscovery, onAuthenticateSensitive = ::authenticateSensitive, onCancelSensitiveAuthentication = ::cancelSensitiveAuthentication, onVerifySecretPin = ::verifySecretPin, onGenerateImage = ::generateVaultImage, onChooseBackupExport = { backupExportLauncher.launch("private-gallery-vault.pgvault") }, backupExportUri = backupExportUri, onCancelBackupExport = { backupExportUri = null }, onExportBackup = ::exportEncryptedBackup, backupStatus = backupStatus, onChooseBackupRestore = { backupRestoreLauncher.launch(arrayOf("application/octet-stream", "application/zip", "*/*")) }, backupRestoreUri = backupRestoreUri, onCancelBackupRestore = { backupRestoreUri = null }, onRestoreBackup = ::restoreEncryptedBackup, onLoadRecentlyDeleted = ::loadRecentlyDeleted, onMoveItemsToRecentlyDeleted = ::moveItemsToRecentlyDeleted, onChangeRecentlyDeleted = ::changeRecentlyDeleted, onRestoreSelectedVaultCopies = ::restoreSelectedVaultCopies, onLeaveHidden = ::leaveHiddenToDestination, hiddenState = retained.hidden, primaryAuthority = {session.isUnlocked && sessionKey != null}, onReturnToPrimary = ::returnToPrimaryVault, createPrimaryCopy = ::createPrimaryCopy, primaryGallerySelected = retained.primaryGallery, onGallerySourceSelected = ::selectGallerySource, onTransferToHidden = ::transferPrimaryToHidden, phoneMoveStatus = phoneMoveStatus, onCancelGalleryAuthentication = ::cancelGalleryAuthentication, onCapturePrimaryEditorAuthority = ::capturePrimaryEditorAuthority, onInvalidatePrimaryPresentation = ::invalidatePrimaryBrowserPresentation, onDirectHiddenUnlock = if (launcherEntry == null) ::unlockHiddenDirect else null)}
                 privateAppAuthentication?.let { uk.co.traynor.privategallery.ui.PrivateAppAuthentication(it) }
                 HomePresentation()
                 novaBackupOwner?.let { owner -> androidx.compose.runtime.key(owner) {uk.co.traynor.privategallery.home2.BackupHost(owner,activityResumed,onClose={if(novaBackupOwner===owner)novaBackupOwner=null},onSettingsRestored=::lockNovaSpace)} }
@@ -1578,8 +1608,13 @@ class MainActivity : FragmentActivity() {
         }
         if (!session.isUnlocked && keys.isConfigured && !retained.hidden.session.isUnlocked) {
             if (wasUnlocked) automaticBiometricPromptAttempted = false
-            lockPrimary(revokeHidden = false)
-            triggerAutomaticBiometricPromptIfNeeded()
+            if (launcherEntry != null && route == Route.LOCK && sessionKey == null) {
+                if (!novaCredentialsRequested) requestNovaCredentials()
+                else triggerAutomaticBiometricPromptIfNeeded()
+            } else {
+                lockPrimary(revokeHidden = false)
+                triggerAutomaticBiometricPromptIfNeeded()
+            }
         } else if (route == Route.BROWSER && !retained.hidden.selected) {
             // Returning to the still-visible Browser is a Browser re-entry: retain a valid owned
             // tunnel during the grace period and cancel the pending teardown.
@@ -1696,12 +1731,23 @@ class MainActivity : FragmentActivity() {
         sessionKey = key
         session.unlock()
         reconcileAfterUnlock()
+        finishPrimaryAuthenticationRoute()
+    }
+
+    private fun finishPrimaryAuthenticationRoute() {
+        if (launcherEntry == ACTION_OPEN_PRIMARY_GALLERY) {
+            retained.hidden.leave()
+            retained.primaryGallery = false
+            retained.afterAuthentication = Route.VAULT
+            homePrimaryAuthentication = session.captureAuthenticationEpoch()
+            homeVisible = false
+        }
         route = if (prepareRecoveryKeyIfNeeded()) Route.RECOVERY_KEY_SETUP else retained.afterAuthentication
     }
 
     /** Explicit discreet entry checks only Hidden's independent credential; never provisions it. */
     private fun unlockHiddenDirect(pin: CharArray): Result<Unit> = runCatching {
-        check(BuildConfig.HIDDEN_ENABLED && route == Route.LOCK)
+        check(BuildConfig.HIDDEN_ENABLED && route == Route.LOCK && launcherEntry == null)
         val hidden = retained.hidden
         val store = uk.co.traynor.privategallery.core.hidden.HiddenCredentialStore(applicationContext)
         check(store.isConfigured)

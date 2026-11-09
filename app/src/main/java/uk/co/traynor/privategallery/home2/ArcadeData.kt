@@ -1,14 +1,24 @@
 package uk.co.traynor.privategallery.home2
 
 import android.content.Context
+import android.content.SharedPreferences
 import androidx.compose.runtime.*
 import uk.co.traynor.privategallery.core.arcade.*
 import uk.co.traynor.privategallery.core.home2.SpaceContext
 
 /** Saves, records and settings never leave this captured Space capability. */
-internal class ArcadeData(private val context:SpaceContext) {
- private val prefs=context.getSharedPreferences(ArcadePreferences.NAME,Context.MODE_PRIVATE)
- private val initial=prefs.all.also { ArcadePreferences.validate(it) }
+internal class ArcadeData private constructor(
+    private val prefs: SharedPreferences?,
+    private val authority: () -> Boolean,
+) {
+    constructor(context: SpaceContext) :
+        this(context.getSharedPreferences(ArcadePreferences.NAME, Context.MODE_PRIVATE), context::current)
+
+    companion object {
+        fun launcherSession(): ArcadeData = ArcadeData(null) { true }
+    }
+
+ private val initial=prefs?.all.orEmpty().also { ArcadePreferences.validate(it) }
  var tiles by mutableStateOf((initial["save:2048"] as? String)?.let(Game2048::decode));private set
  var sudoku by mutableStateOf((initial["save:sudoku"] as? String)?.let(SudokuGame::decode)?.pause(true));private set
  var snake by mutableStateOf((initial["save:snake"] as? String)?.let(SnakeGame::decode)?.pause(true));private set
@@ -21,9 +31,10 @@ internal class ArcadeData(private val context:SpaceContext) {
  var recent by mutableStateOf((initial["recent"] as? String).orEmpty().split(',').filter{it in ArcadePreferences.GAMES});private set
  var achievements by mutableStateOf((initial["achievements"] as? Set<*>)?.filterIsInstance<String>()?.toSet()?:emptySet());private set
  var error by mutableStateOf<String?>(null);private set
- fun current()=context.current()
+ fun current() = authority()
  private fun write(action:android.content.SharedPreferences.Editor.()->Unit):Boolean {
   if(!current())return false
+  val prefs = prefs ?: return true // Launcher sessions keep state in memory.
   return runCatching{check(prefs.edit().apply(action).commit());true}.getOrElse{error="Game could not be saved. Your last saved progress is preserved. Return to Arcade and try again.";false}
  }
  fun settings(sound:Boolean=this.sound,haptics:Boolean=this.haptics,speed:Int=this.speed){require(speed in 1..5);if(write{putBoolean("sound",sound);putBoolean("haptics",haptics);putInt("speed",speed)}){this.sound=sound;this.haptics=haptics;this.speed=speed;error=null}}

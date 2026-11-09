@@ -609,7 +609,7 @@ jobs:
           apk=app/build/outputs/apk/debug/app-debug.apk
           "$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging "$apk" > app/build/home2-evidence/package.txt
           if [[ "$GITHUB_REF" == refs/heads/feature/novaos-sanctuary-integration ]]; then
-            grep -F "package: name='uk.co.traynor.privategallery.hiddenprototype' versionCode='70' versionName='1.7.35-TEST-ONLY'" app/build/home2-evidence/package.txt
+            grep -F "package: name='uk.co.traynor.privategallery.hiddenprototype' versionCode='71' versionName='1.7.35-TEST-ONLY'" app/build/home2-evidence/package.txt
           elif [[ "$GITHUB_REF" == refs/heads/feature/novaos-sanctuary ]]; then
             grep -F "package: name='uk.co.traynor.privategallery.hiddenprototype' versionCode='66' versionName='1.7.31-TEST-ONLY'" app/build/home2-evidence/package.txt
           elif [[ "$GITHUB_REF" == refs/heads/feature/novaos-visual-foundation ]]; then
@@ -675,8 +675,20 @@ jobs:
       - name: Validate every selected original Android report
         if: (github.ref != 'refs/heads/feature/novaos-visual-foundation' && (github.ref != 'refs/heads/feature/novaos-sanctuary' && github.ref != 'refs/heads/feature/novaos-sanctuary-integration')) || contains(github.event.head_commit.message, '[visual-full]')
         run: python3 scripts/verify_home2_runtime.py app/build/outputs/androidTest-results/connected/debug > app/build/home2-evidence/runtime.json
+      - name: Record isolated Fold signer compatibility
+        if: github.ref == 'refs/heads/feature/novaos-sanctuary-integration'
+        run: |
+          baseline=8ddfe8b413812577c86d001d951219f6e3f79263f8771b856eba4bb633cab352
+          actual="$(sed -n 's/^Signer #1 certificate SHA-256 digest: //p' app/build/home2-evidence/signature.txt)"
+          test "${#actual}" -eq 64
+          printf 'baseline=%s\ncandidate=%s\n' "$baseline" "$actual" > app/build/home2-evidence/fold-signing-compatibility.txt
+          if [ "$actual" = "$baseline" ]; then
+            echo 'signer=matches; upgrade must still be verified' >> app/build/home2-evidence/fold-signing-compatibility.txt
+          else
+            echo 'signer=mismatch; in-place installation is incompatible' >> app/build/home2-evidence/fold-signing-compatibility.txt
+          fi
       - name: Preserve isolated Sanctuary build for physical Fold testing
-        if: (github.ref == 'refs/heads/feature/novaos-sanctuary' || github.ref == 'refs/heads/feature/novaos-sanctuary-integration') && contains(github.event.head_commit.message, '[visual-full]')
+        if: github.ref == 'refs/heads/feature/novaos-sanctuary' && contains(github.event.head_commit.message, '[visual-full]')
         uses: actions/upload-artifact@v4
         with:
           name: novaos-sanctuary-fold-test-only

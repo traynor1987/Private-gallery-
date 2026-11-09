@@ -1,15 +1,25 @@
 package uk.co.traynor.privategallery.home2
 
 import android.content.Context
+import android.content.SharedPreferences
 import androidx.compose.runtime.*
 import java.math.BigDecimal
 import uk.co.traynor.privategallery.core.calculator.*
 import uk.co.traynor.privategallery.core.home2.SpaceContext
 
 /** Calculation state belongs only to the captured Space. Transient input is never restored from intents. */
-internal class CalculatorData(private val context:SpaceContext) {
-    private val prefs=context.getSharedPreferences(CalculatorPreferences.NAME,Context.MODE_PRIVATE)
-    private val initial=prefs.all.also{CalculatorPreferences.validate(it)}
+internal class CalculatorData private constructor(
+    private val prefs: SharedPreferences?,
+    private val authority: () -> Boolean,
+) {
+    constructor(context: SpaceContext) :
+        this(context.getSharedPreferences(CalculatorPreferences.NAME, Context.MODE_PRIVATE), context::current)
+
+    companion object {
+        fun launcherSession(): CalculatorData = CalculatorData(null) { true }
+    }
+
+    private val initial=prefs?.all.orEmpty().also{CalculatorPreferences.validate(it)}
     var radians by mutableStateOf(initial["angle"]=="RAD");private set
     var scientific by mutableStateOf(initial["scientific"] as? Boolean?:false);private set
     var historyEnabled by mutableStateOf(initial["history-enabled"] as? Boolean?:true);private set
@@ -19,9 +29,10 @@ internal class CalculatorData(private val context:SpaceContext) {
     var result by mutableStateOf<BigDecimal?>(null);private set
     var error by mutableStateOf<String?>(null);private set
     private var evaluated=false
-    fun current()=context.current()
+    fun current() = authority()
     private fun write(action:android.content.SharedPreferences.Editor.()->Unit):Boolean {
         if(!current())return false
+        val prefs = prefs ?: return true // Launcher sessions keep state in memory.
         return runCatching{check(prefs.edit().apply(action).commit());true}.getOrElse{error="Calculator data could not be saved. Existing saved data is preserved.";false}
     }
     fun input(value:String){if(!current())return;if(value.length>CalculatorEngine.MAX_EXPRESSION){error="Expression limit is 512 characters";return};expression=value;result=null;evaluated=false;error=null}

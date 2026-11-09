@@ -4,8 +4,10 @@ import androidx.activity.ComponentActivity
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.unit.dp
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -88,18 +90,81 @@ class NovaLauncher70UiTest {
         compose.runOnIdle { assertEquals(music.component, requested) }
     }
 
-    @Test fun copyWizardExplainsSamsungLayoutLimitBeforePreview() {
+    @Test fun approvedOnlyDrawerHidesBlockedSearchResultsWhileProtectionIsActive() {
+        var protectionActive by mutableStateOf(true)
         compose.setContent {
-            NovaLauncherScreen(NovaLauncherState(), apps, emptyList(), emptyMap(), false, true, actions())
+            NovaLauncherScreen(
+                NovaLauncherState(configured = true, hideBlocked = true), apps, emptyList(),
+                mapOf(phone.packageName to SanctuaryLauncherPolicy.Decision.ESSENTIAL,
+                    music.packageName to SanctuaryLauncherPolicy.Decision.UNAPPROVED),
+                true, true, actions(), launcherProtected = protectionActive,
+            )
         }
-        compose.onNodeWithText("Copy current Home").performClick()
+        compose.onNodeWithTag("launcher-open-drawer").performClick()
+        compose.onNodeWithTag("launcher-drawer-search").performTextInput("Music")
+        compose.onNodeWithTag("launcher-app-${music.component}").assertDoesNotExist()
+        compose.onNodeWithText("No apps match your search").assertIsDisplayed()
+        compose.runOnIdle { protectionActive = false }
+        compose.onNodeWithTag("launcher-app-${music.component}").assertIsDisplayed()
+    }
+
+    @Test fun copyWizardExplainsSamsungLayoutLimitBeforePreview() {
+        var state by mutableStateOf(NovaLauncherState())
+        compose.setContent {
+            NovaLauncherScreen(state, apps, emptyList(), emptyMap(), false, true, actions(
+                save = { state = it; true },
+            ))
+        }
+        compose.onNodeWithText("Copy current Home").performScrollTo().performClick()
         compose.onNodeWithText("Samsung One UI", substring = true).assertExists()
         compose.onNodeWithText("exact", substring = true).assertExists()
+        compose.onNodeWithTag("launcher-copy-${phone.component}").performScrollTo().assertIsOff()
+        compose.onNodeWithTag("launcher-copy-${music.component}").performScrollTo().assertIsOff()
+            .performClick().assertIsOn()
+        repeat(5) { next() }
+        compose.onNodeWithText("Continue using Samsung Home").performScrollTo().performClick()
+        compose.runOnIdle {
+            assertEquals(listOf(LauncherItem.App(music.component)), state.cover.pages.single())
+            assertEquals(listOf(LauncherItem.App(music.component)), state.inner.pages.single())
+            assertEquals(listOf(LauncherItem.Workspace), state.cover.dock)
+        }
     }
 
     @Test fun coverShowsAndEditsItsOwnPageWithoutChangingInnerLayout() = exerciseDisplay(wide = false)
 
     @Test fun innerShowsAndEditsItsOwnPageWithoutChangingCoverLayout() = exerciseDisplay(wide = true)
+
+    @Test fun coverDragReordersShortcutsAndReviewedCleanupCanBeUndone() {
+        val phoneItem = LauncherItem.App(phone.component)
+        val musicItem = LauncherItem.App(music.component)
+        val original = LauncherLayout(pages = listOf(listOf(phoneItem, musicItem)))
+        var state by mutableStateOf(NovaLauncherState(configured = true, cover = original))
+        compose.setContent {
+            NovaLauncherScreen(state, apps, emptyList(), emptyMap(), true, false, actions(
+                save = { state = it; true },
+            ))
+        }
+        compose.onNodeWithContentDescription("Launcher menu").performClick()
+        compose.onNodeWithText("Edit Home").performClick()
+        val editor = compose.onNodeWithTag("launcher-layout-editor")
+        editor.performScrollToNode(hasTestTag("launcher-drag-page-0"))
+        compose.onNodeWithTag("launcher-drag-page-0").performTouchInput {
+            down(center)
+            advanceEventTime(800L)
+            moveBy(Offset(0f, 110.dp.toPx()))
+            up()
+        }
+        compose.runOnIdle { assertEquals(listOf(musicItem, phoneItem), state.cover.pages.single()) }
+
+        editor.performScrollToNode(hasText("Review shortcuts"))
+        compose.onNodeWithText("Review shortcuts").performClick()
+        compose.onNodeWithTag("launcher-cleanup-0-0").assertIsOff().performClick().assertIsOn()
+        compose.onNodeWithText("Remove 1 shortcut").performClick()
+        compose.runOnIdle { assertEquals(listOf(phoneItem), state.cover.pages.single()) }
+        editor.performScrollToNode(hasText("Undo cleanup"))
+        compose.onNodeWithText("Undo cleanup").performClick()
+        compose.runOnIdle { assertEquals(listOf(musicItem, phoneItem), state.cover.pages.single()) }
+    }
 
     private fun exerciseDisplay(wide: Boolean) {
         val cover = LauncherLayout(pages = listOf(listOf(LauncherItem.App(phone.component))))

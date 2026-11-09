@@ -60,6 +60,13 @@ android {
   }
 }
 
+// The isolated Fold preview advances independently of the production release.
+androidComponents {
+  onVariants(selector().withBuildType("debug")) { variant ->
+    variant.outputs.forEach { it.versionCode.set(71) }
+  }
+}
+
 dependencies {
   implementation("cz.adaptech.tesseract4android:tesseract4android:4.9.0")
   implementation("androidx.camera:camera-camera2:1.5.3")

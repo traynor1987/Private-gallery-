@@ -56,11 +56,13 @@ internal fun LauncherSetup(
     launcherProtected: Boolean,
 ) {
     var step by rememberSaveable { mutableIntStateOf(0) }
-    var starting by rememberSaveable { mutableStateOf(LauncherStartingLayout.TEMPLATE) }
+    var starting by rememberSaveable { mutableStateOf(LauncherStartingLayout.START_FRESH) }
     var template by rememberSaveable { mutableStateOf(LauncherTemplate.CLASSIC) }
     var separate by rememberSaveable { mutableStateOf(previous.separateDisplays) }
-    val initial = remember(starting, template, apps) {
-        launcherInitialState(starting, template, apps.map { it.component })
+    var selectedCopyComponents by rememberSaveable { mutableStateOf(arrayListOf<String>()) }
+    var copySearch by rememberSaveable { mutableStateOf("") }
+    val initial = remember(starting, template, apps, selectedCopyComponents) {
+        launcherInitialState(starting, template, apps.map { it.component }, selectedCopyComponents)
     }
     var appearance by rememberSaveable(starting, template, stateSaver = appearanceSaver) { mutableStateOf(initial.appearance) }
     var drawer by rememberSaveable(starting, template, stateSaver = drawerSaver) { mutableStateOf(initial.drawer) }
@@ -89,12 +91,42 @@ internal fun LauncherSetup(
                 when (step) {
                     0 -> {
                         Text("Choose how your everyday Android Home starts. The private NovaOS workspace opens separately.")
-                        LauncherChoice("Copy current Home", "Start from visible Android app shortcuts", starting == LauncherStartingLayout.COPY_CURRENT) {
+                        LauncherChoice("Copy current Home", "Choose which existing apps to place on Home", starting == LauncherStartingLayout.COPY_CURRENT) {
                             starting = LauncherStartingLayout.COPY_CURRENT
                         }
                         if (starting == LauncherStartingLayout.COPY_CURRENT) {
-                            Text("Samsung One UI provides no general public API for copying its full Home layout. Nova Launcher can arrange visible app shortcuts; exact positions, folders, and widgets require manual setup.",
+                            Text("Samsung One UI keeps its exact positions, folders and widgets private. Pick the apps you want to recreate on Nova Home. Apps you leave unchecked stay in the drawer.",
                                 style = MaterialTheme.typography.bodySmall)
+                            OutlinedTextField(
+                                value = copySearch,
+                                onValueChange = { copySearch = it.take(128) },
+                                label = { Text("Find apps to copy") },
+                                singleLine = true,
+                                modifier = Modifier.fillMaxWidth(),
+                            )
+                            val limit = LauncherGrid.STANDARD.columns(false) * LauncherGrid.STANDARD.rows
+                            Text("${selectedCopyComponents.size} of $limit shortcuts selected",
+                                style = MaterialTheme.typography.labelMedium)
+                            apps.asSequence()
+                                .filter { it.label.contains(copySearch.trim(), ignoreCase = true) }
+                                .take(12)
+                                .forEach { app ->
+                                    val selected = app.component in selectedCopyComponents
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Checkbox(
+                                            checked = selected,
+                                            enabled = selected || selectedCopyComponents.size < limit,
+                                            modifier = Modifier.testTag("launcher-copy-${app.component}"),
+                                            onCheckedChange = { checked ->
+                                                selectedCopyComponents = ArrayList(
+                                                    if (checked) selectedCopyComponents + app.component
+                                                    else selectedCopyComponents - app.component,
+                                                )
+                                            },
+                                        )
+                                        Text(app.label)
+                                    }
+                                }
                         }
                         LauncherChoice("Start Fresh", "A clean Home with a shortcut to NovaOS", starting == LauncherStartingLayout.START_FRESH) {
                             starting = LauncherStartingLayout.START_FRESH

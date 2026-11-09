@@ -49,9 +49,12 @@ internal val ArcadeLevels = listOf("Easy", "Medium", "Hard", "Expert")
 private val ArcadeShape = RoundedCornerShape(24.dp)
 
 @Composable
-internal fun ArcadeScreen(home: PreviewData, initialGame: String? = null, active: Boolean = true, onHome: () -> Unit) {
-    val context = LocalContext.current as SpaceContext
-    val model = remember(context) { runCatching { ArcadeData(context) } }.getOrNull()
+internal fun ArcadeScreen(home: PreviewData?, initialGame: String? = null, active: Boolean = true, onHome: () -> Unit) {
+    val context = LocalContext.current as? SpaceContext
+    val launcherSession = home == null
+    val model = remember(context, launcherSession) {
+        runCatching { if (launcherSession) ArcadeData.launcherSession() else ArcadeData(checkNotNull(context)) }
+    }.getOrNull()
     if (model == null) {
         Column(Modifier.fillMaxSize().safeDrawingPadding().padding(24.dp)) {
             PreviewHeader("Nova Arcade", "Saved data could not be read", onHome)
@@ -150,7 +153,7 @@ internal fun ArcadeScreen(home: PreviewData, initialGame: String? = null, active
                 "achievements" -> "Achievements"
                 else -> title?.label ?: "Nova Arcade"
             }
-            PreviewHeader(heading, "Offline · saved in this Space", ::back) {
+            PreviewHeader(heading, if (launcherSession) "Offline · this session only" else "Offline · saved in this Space", ::back) {
                 when {
                     section != null -> Unit
                     title == null -> {
@@ -265,7 +268,7 @@ private fun ArcadeData.hasSave(game: ArcadeTitle): Boolean = when (game) {
 }
 
 @Composable
-private fun ArcadeCatalogue(home: PreviewData, model: ArcadeData, onOpen: (ArcadeTitle) -> Unit, onNew: (ArcadeTitle) -> Unit) {
+private fun ArcadeCatalogue(home: PreviewData?, model: ArcadeData, onOpen: (ArcadeTitle) -> Unit, onNew: (ArcadeTitle) -> Unit) {
     BoxWithConstraints(Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
         val expanded = maxWidth >= 660.dp
         Column(
@@ -298,7 +301,7 @@ private fun ArcadeCatalogue(home: PreviewData, model: ArcadeData, onOpen: (Arcad
 @Composable
 private fun ArcadeGameTile(
     game: ArcadeTitle,
-    home: PreviewData,
+    home: PreviewData?,
     model: ArcadeData,
     onOpen: (ArcadeTitle) -> Unit,
     onNew: (ArcadeTitle) -> Unit,
@@ -306,7 +309,7 @@ private fun ArcadeGameTile(
 ) {
     val saved = model.hasSave(game)
     val shortcut = "arcade-${game.id}"
-    val added = home.profile.pages.any { shortcut in it }
+    val added = home?.profile?.pages?.any { shortcut in it } == true
     val progress = when (game) {
         ArcadeTitle.TILES -> "Best ${model.bestTiles}"
         ArcadeTitle.SUDOKU -> model.sudoku?.let { "${ArcadeLevels[it.level]} · ${(0..80).count { index -> it.cell(index) != 0 }}/81 filled" }
@@ -332,8 +335,10 @@ private fun ArcadeGameTile(
                 if (saved) {
                     IconButton(onClick = { onNew(game) }) { Icon(Icons.Default.Refresh, "New ${game.label} game") }
                 }
-                IconButton(onClick = { home.addHome(shortcut) }, modifier = Modifier.testTag("shortcut-${game.id}")) {
-                    Icon(if (added) Icons.Default.Check else Icons.Default.Add, if (added) "${game.label} on Home" else "Add ${game.label} to Home")
+                if (home != null) {
+                    IconButton(onClick = { home.addHome(shortcut) }, modifier = Modifier.testTag("shortcut-${game.id}")) {
+                        Icon(if (added) Icons.Default.Check else Icons.Default.Add, if (added) "${game.label} on Home" else "Add ${game.label} to Home")
+                    }
                 }
             }
         }

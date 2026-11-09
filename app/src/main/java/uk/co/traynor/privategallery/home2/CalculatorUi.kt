@@ -35,9 +35,12 @@ import uk.co.traynor.privategallery.core.home2.SpaceContext
 import uk.co.traynor.privategallery.ui.navigationHaptic
 
 @OptIn(ExperimentalFoundationApi::class)
-@Composable internal fun CalculatorScreen(active:Boolean=true,onHome:()->Unit) {
-    val context=LocalContext.current as SpaceContext
-    val loaded=remember(context){runCatching{CalculatorData(context)}}
+@Composable internal fun CalculatorScreen(active: Boolean = true, launcherSession: Boolean = false, onHome: () -> Unit) {
+    val hostContext = LocalContext.current
+    val context = if (launcherSession) null else hostContext as? SpaceContext
+    val loaded = remember(context, launcherSession) {
+        runCatching { if (launcherSession) CalculatorData.launcherSession() else CalculatorData(checkNotNull(context)) }
+    }
     val model=loaded.getOrNull()
     if(model==null){
         val tap = navigationHaptic()
@@ -79,15 +82,17 @@ import uk.co.traynor.privategallery.ui.navigationHaptic
             else->model.append(label)
         }
     }}
-    val hold:()->Unit={
-        if(current()&&gesture.hold()){
-            val host=context.baseContext as? MainActivity
-            if(host!=null)host.openHiddenFromCalculator(context,gesture,current) else gesture.reset()
+    val hold: (() -> Unit)? = context?.let { space ->
+        {
+            if (current() && gesture.hold()) {
+                val host = space.baseContext as? MainActivity
+                if (host != null) host.openHiddenFromCalculator(space, gesture, current) else gesture.reset()
+            }
         }
     }
     val copyResult: () -> Unit = {act {
         model.result?.let { result ->
-            val clipboard=context.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+            val clipboard=hostContext.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
             val clip=android.content.ClipData.newPlainText("Calculator result",CalculatorEngine.canonical(result))
             clip.description.extras=android.os.PersistableBundle().apply{putBoolean(android.content.ClipDescription.EXTRA_IS_SENSITIVE,true)}
             if(current()){clipboard.setPrimaryClip(clip);copied=true}
@@ -149,7 +154,11 @@ import uk.co.traynor.privategallery.ui.navigationHaptic
     }
     if(current())when(panel){
         CalculatorPanel.Memory -> CalculatorPanelDialog("Memory",onClose={panel=null}){
-            Text(if(model.memory==null)"Memory is empty" else "One value saved in this Space",
+            Text(when {
+                model.memory == null -> "Memory is empty"
+                launcherSession -> "One value in this session"
+                else -> "One value saved in this Space"
+            },
                 style=MaterialTheme.typography.bodyMedium,color=MaterialTheme.colorScheme.onSurfaceVariant)
             memoryCommands.forEach { (action,description) ->
                 OutlinedButton(
@@ -165,7 +174,8 @@ import uk.co.traynor.privategallery.ui.navigationHaptic
                 Switch(model.historyEnabled,{value->act{model.settings(historyEnabled=value)}},
                     Modifier.semantics{contentDescription="Save calculation history"})
             }
-            Text("History is private to this Space. Turning it off clears saved entries.",
+            Text(if (launcherSession) "History lasts for this session. Turning it off clears its entries."
+                else "History is private to this Space. Turning it off clears saved entries.",
                 style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
             if(model.history.isEmpty()){
                 Text("No saved calculations",Modifier.padding(vertical=12.dp),style=MaterialTheme.typography.titleMedium)
@@ -193,7 +203,9 @@ import uk.co.traynor.privategallery.ui.navigationHaptic
         Text("Parentheses first; factorial/percent, powers, sign, multiply/divide, then add/subtract. Powers associate right: 2^3^2 = 512; −2^2 = −4. Use explicit multiplication.")
         Text("Decimal arithmetic uses 34 significant digits; division rounds half-even. Scientific trig/log/constants and fractional powers are approximate. DEG and RAD select angle units. E enters a number exponent, for example 1E6.")
         Text("Expressions: 512 characters, 256 tokens and 32 nested levels. Powers: −1000 to 1000. Factorial: whole numbers 0 to 1000. Magnitudes: 10⁻¹⁰⁰⁰⁰ to 10¹⁰⁰⁰⁰. Trig angles up to 10⁹ radians. Undefined or out-of-range operations show an error.")
-        Text("MS stores, MR recalls, M+ adds, M− subtracts and MC clears memory. Copy places only the result on the system clipboard. Panic does not erase a value already copied there. History keeps the latest 50 completed calculations in this Space.")
+        Text("MS stores, MR recalls, M+ adds, M− subtracts and MC clears memory. Copy places only the result on the system clipboard. Panic does not erase a value already copied there.")
+        Text(if (launcherSession) "Memory and history last for this launcher session. Open NovaOS for private saved calculations."
+            else "History keeps the latest 50 completed calculations in this Space.")
     }},confirmButton={TextButton(onClick={showHelp=false}){Text("Done")}})
 }
 
@@ -300,7 +312,7 @@ private val parentheses=listOf("(",")")
 private val scientificRows=listOf(listOf("sin(","cos(","tan("),listOf("log(","ln(","sqrt("),listOf("^","!","pi"),listOf("e","E"))
 
 @Composable private fun CalculatorStandardKeys(
-    onKey:(String)->Unit,onHold:()->Unit,height:Dp,sideParentheses:Boolean,modifier:Modifier=Modifier,
+    onKey:(String)->Unit,onHold:(()->Unit)?,height:Dp,sideParentheses:Boolean,modifier:Modifier=Modifier,
 ){
     if(sideParentheses){
         Row(modifier,horizontalArrangement=Arrangement.spacedBy(6.dp)){
@@ -315,13 +327,13 @@ private val scientificRows=listOf(listOf("sin(","cos(","tan("),listOf("log(","ln
         modifier=modifier.fillMaxWidth(),shape=RoundedCornerShape(24.dp),
         color=MaterialTheme.colorScheme.surfaceContainer,
     ){
-        CalculatorKeys(scientificRows,onKey,{},height,Modifier.padding(6.dp),scientific=true)
+        CalculatorKeys(scientificRows,onKey,null,height,Modifier.padding(6.dp),scientific=true)
     }
 }
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable private fun CalculatorKeys(
-    rows:List<List<String>>,onKey:(String)->Unit,onHold:()->Unit,height:Dp,modifier:Modifier=Modifier,
+    rows:List<List<String>>,onKey:(String)->Unit,onHold:(()->Unit)?,height:Dp,modifier:Modifier=Modifier,
     scientific:Boolean=false,
 ){
     val palette=MaterialTheme.colorScheme
@@ -364,10 +376,10 @@ private val scientificRows=listOf(listOf("sin(","cos(","tan("),listOf("log(","ln
                                 contentDescription=description
                                 // Capture this composition's authority so retained actions expire.
                                 onClick {onKey(label);true}
-                                if(label=="=")onLongClick("Hold equals"){onHold();true}
+                                if(label=="=" && onHold != null)onLongClick("Hold equals"){onHold();true}
                             }
                             .combinedClickable(role=Role.Button,onClick={onKey(label)},
-                                onLongClick=if(label=="=")onHold else null,onLongClickLabel=if(label=="=")"Hold equals"else null),
+                                onLongClick=if(label=="=")onHold else null,onLongClickLabel=if(label=="=" && onHold != null)"Hold equals"else null),
                         shape=RoundedCornerShape(percent=48),color=color,contentColor=ink,
                     ){
                         Box(Modifier.padding(horizontal=3.dp,vertical=5.dp),contentAlignment=Alignment.Center){

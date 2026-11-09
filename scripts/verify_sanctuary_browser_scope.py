@@ -31,6 +31,15 @@ build_file = "app/build.gradle.kts"
 expected = original(build_file).replace("versionCode = 69", "versionCode = 70", 1).replace(
     'versionName = "1.7.34"', 'versionName = "1.7.35"', 1,
 )
+debug_version = """
+// The isolated Fold preview advances independently of the production release.
+androidComponents {
+  onVariants(selector().withBuildType("debug")) { variant ->
+    variant.outputs.forEach { it.versionCode.set(71) }
+  }
+}
+"""
+expected = expected.replace("\ndependencies {", debug_version + "\ndependencies {", 1)
 assert (ROOT / build_file).read_text() == expected, "Unexpected production package or build configuration change"
 
 before = ET.fromstring(original(MANIFEST))

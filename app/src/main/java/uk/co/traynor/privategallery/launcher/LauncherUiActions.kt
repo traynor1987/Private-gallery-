@@ -20,4 +20,5 @@ internal data class LauncherUiActions(
     val exportLayout: () -> Unit,
     val importLayout: () -> Unit,
     val renderWidget: @Composable (LauncherWidget, Modifier) -> Unit,
+    val openSanctuary: () -> Unit = reviewSanctuary,
 )

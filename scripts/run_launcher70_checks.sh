@@ -10,3 +10,6 @@ bash scripts/run_visual_checkpoint.sh LauncherWorkspace70Test launcher-workspace
 bash scripts/run_visual_checkpoint.sh NovaLauncherPlatform70Test launcher-platform-70 uk.co.traynor.privategallery.launcher
 bash scripts/run_visual_checkpoint.sh LauncherLayoutStore70Test launcher-storage-70 uk.co.traynor.privategallery.launcher
 bash scripts/run_visual_checkpoint.sh NovaLauncher70UiTest launcher-ui-70 uk.co.traynor.privategallery.launcher
+
+bash scripts/run_visual_checkpoint.sh LauncherSanctuaryControls70Test launcher-sanctuary-controls-70 uk.co.traynor.privategallery.launcher
+bash scripts/run_visual_checkpoint.sh LauncherUtility70Test launcher-utility-70 uk.co.traynor.privategallery.launcher

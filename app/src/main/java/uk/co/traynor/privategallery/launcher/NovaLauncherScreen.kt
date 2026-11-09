@@ -67,6 +67,7 @@ internal fun NovaLauncherScreen(
     actions: LauncherUiActions,
     homeGeneration: Int = 0,
     launcherProtected: Boolean = false,
+    sanctuaryStatus: LauncherSanctuaryStatus? = null,
 ) {
     val theme = when (state.appearance.theme) {
         LauncherTheme.SYSTEM -> AppTheme.SYSTEM
@@ -78,7 +79,7 @@ internal fun NovaLauncherScreen(
             LauncherSetup(state, apps, decisions, actions, isDefaultHome, outsideProtection, launcherProtected)
         } else {
             LauncherRuntime(state, apps, shortcuts, decisions, actions, isDefaultHome, outsideProtection,
-                launcherProtected, homeGeneration)
+                launcherProtected, homeGeneration, sanctuaryStatus)
         }
     }
 }
@@ -96,6 +97,7 @@ private fun LauncherRuntime(
     outsideProtection: Boolean,
     launcherProtected: Boolean,
     homeGeneration: Int,
+    sanctuaryStatus: LauncherSanctuaryStatus?,
 ) {
     var surface by rememberSaveable(homeGeneration) { mutableStateOf(LauncherSurface.HOME) }
     var query by rememberSaveable(homeGeneration) { mutableStateOf("") }
@@ -107,7 +109,9 @@ private fun LauncherRuntime(
     val appsByComponent = remember(apps) { apps.associateBy { it.component } }
     fun canDisplay(component: String): Boolean {
         val app = appsByComponent[component] ?: return false
-        return !state.hideBlocked || decisions[app.packageName]?.canLaunch != false
+        if (!launcherProtected || !state.hideBlocked) return true
+        val decision = decisions[app.packageName]
+        return decision == Decision.APPROVED || decision == Decision.ESSENTIAL
     }
     fun openDrawer(search: Boolean = false) {
         query = ""
@@ -145,6 +149,7 @@ private fun LauncherRuntime(
                         if (item is LauncherItem.App) editingApp = appsByComponent[item.component]
                         else surface = LauncherSurface.EDIT
                     },
+                    sanctuaryStatus = sanctuaryStatus,
                 )
             }
             LauncherSurface.DRAWER -> LauncherDrawer(
@@ -174,7 +179,9 @@ private fun LauncherRuntime(
                 title = { Text(selected.name) },
                 text = {
                     Column(Modifier.heightIn(max = 340.dp).verticalScroll(rememberScrollState())) {
-                        val members = selected.apps.filter(::canDisplay).mapNotNull(appsByComponent::get)
+                        val members = selected.apps
+                            .filter { surface != LauncherSurface.DRAWER || canDisplay(it) }
+                            .mapNotNull(appsByComponent::get)
                         if (members.isEmpty()) Text("No available apps in this folder.")
                         members.forEach { app ->
                             TextButton(onClick = {
@@ -239,6 +246,7 @@ internal fun LauncherHome(
     onEdit: () -> Unit,
     onItem: (LauncherItem) -> Unit,
     onItemOptions: (LauncherItem) -> Unit,
+    sanctuaryStatus: LauncherSanctuaryStatus? = null,
 ) {
     val pages = layout.pages.ifEmpty { listOf(listOf(LauncherItem.Workspace)) }
     val pager = rememberPagerState(initialPage = currentPage.coerceIn(0, pages.lastIndex)) { pages.size }
@@ -252,9 +260,7 @@ internal fun LauncherHome(
     val openDrawer by rememberUpdatedState(onDrawer)
     val editLayout by rememberUpdatedState(onEdit)
     fun visible(item: LauncherItem): Boolean = when (item) {
-        is LauncherItem.App -> apps[item.component]?.let { app ->
-            !state.hideBlocked || decisions[app.packageName]?.canLaunch != false
-        } == true
+        is LauncherItem.App -> item.component in apps
         is LauncherItem.Folder -> item.apps.any { visible(LauncherItem.App(it)) }
         LauncherItem.Workspace -> true
     }
@@ -274,6 +280,7 @@ internal fun LauncherHome(
         CompositionLocalProvider(LocalContentColor provides Color.White) {
             Column(Modifier.fillMaxSize().safeDrawingPadding().padding(horizontal = if (wide) 26.dp else 14.dp)) {
                 LauncherHeader(protectedBySanctuary, actions, { onDrawer(true) }, onSettings, onEdit)
+                LauncherSanctuaryStatusCard(sanctuaryStatus, expanded = wide && !compact, onOpen = actions.openSanctuary)
                 if (state.drawer.search != LauncherSearchPlacement.DRAWER) {
                     OutlinedButton(
                         onClick = { onDrawer(true) },
@@ -287,11 +294,11 @@ internal fun LauncherHome(
                 }
                 HorizontalPager(pager, Modifier.weight(1f).fillMaxWidth().testTag("launcher-home-pages")) { index ->
                     val items = pages[index].filter(::visible)
-                    val widgets = state.widgets.filter { it.wide == (wide && state.separateDisplays) }
+                    val widgets = state.widgets.filter { it.wide == (wide && state.separateDisplays) && it.page == index }
                     val showClock = index == 0
                     val content: @Composable (Modifier) -> Unit = { modifier ->
                         Column(modifier.fillMaxWidth().verticalScroll(rememberScrollState())) {
-                            if (index == 0) widgets.forEach { widget ->
+                            widgets.forEach { widget ->
                                 key(widget.id) { actions.renderWidget(widget, Modifier.fillMaxWidth().heightIn(min = 104.dp).padding(bottom = 8.dp)) }
                             }
                             LauncherHomeGrid(items, appearance.grid.columns(wide), appearance, apps, decisions, onItem, onItemOptions)
@@ -402,6 +409,7 @@ private fun LauncherHeader(
             DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
                 val entries = listOf(
                     "Edit Home" to onEdit,
+                    "Open Sanctuary" to actions.openSanctuary,
                     "Sanctuary rules" to actions.reviewSanctuary,
                     "Pause Sanctuary" to actions.pauseSanctuary,
                     "Phone and emergency access" to actions.emergencyPhone,

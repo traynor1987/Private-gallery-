@@ -10,7 +10,20 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class LauncherWorkspace70Test {
-    @Test fun openWorkspaceIntentRevokesRetainedPrimaryAndHiddenAuthority() {
+    @Test fun openWorkspaceIntentRevokesRetainedPrimaryAndHiddenAuthority() = verifyFreshHandoff(false)
+
+    @Test fun primaryGalleryIntentRevokesRetainedPrimaryAndHiddenAuthority() = verifyFreshHandoff(true)
+
+    @Test fun primaryGalleryHasNoExportedWorkspaceActivity() {
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        val entry = privateWorkspaceEntryIntent(context, primaryGallery = true)
+        val info = context.packageManager.getActivityInfo(requireNotNull(entry.component), 0)
+        assertFalse(info.exported)
+        assertNull(entry.data)
+        assertNull(entry.extras)
+    }
+
+    private fun verifyFreshHandoff(primaryGallery: Boolean) {
         val instrumentation = InstrumentationRegistry.getInstrumentation()
         val context = instrumentation.targetContext
         val monitor = ActivityLifecycleMonitorRegistry.getInstance()
@@ -33,7 +46,7 @@ class LauncherWorkspace70Test {
             }
 
             // Use the same explicit Android task handoff as the launcher.
-            context.startActivity(privateWorkspaceEntryIntent(context))
+            context.startActivity(privateWorkspaceEntryIntent(context, primaryGallery))
             val deadline = SystemClock.elapsedRealtime() + 10_000
             while (destination == null && SystemClock.elapsedRealtime() < deadline) {
                 instrumentation.runOnMainSync {
@@ -51,7 +64,7 @@ class LauncherWorkspace70Test {
                 assertNull(oldState.key)
                 assertTrue("The detached Primary key must be wiped", primaryKey.all { it == 0.toByte() })
                 val foreground = requireNotNull(destination) { "Private workspace never resumed after launcher entry" }
-                assertNotEquals(ACTION_OPEN_PRIVATE_WORKSPACE, foreground.intent.action)
+                assertNull("A launcher navigation request must be consumed", foreground.intent.action)
                 val state = ViewModelProvider(foreground)[ProtectedSessionState::class.java]
                 assertFalse(state.session.isUnlocked)
                 assertFalse(state.hidden.session.isUnlocked)

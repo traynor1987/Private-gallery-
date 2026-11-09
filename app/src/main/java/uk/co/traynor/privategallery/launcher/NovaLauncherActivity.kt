@@ -58,8 +58,11 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import uk.co.traynor.privategallery.core.sanctuary.SanctuaryDnd
+import uk.co.traynor.privategallery.core.sanctuary.SanctuaryGuardian
 import uk.co.traynor.privategallery.core.sanctuary.SanctuaryLauncherPolicy
 import uk.co.traynor.privategallery.core.sanctuary.SanctuaryMode
+import uk.co.traynor.privategallery.core.sanctuary.SanctuarySession
 import uk.co.traynor.privategallery.core.sanctuary.SanctuaryStore
 import uk.co.traynor.privategallery.core.ui.AppTheme
 import uk.co.traynor.privategallery.privateWorkspaceEntryIntent
@@ -73,6 +76,7 @@ class NovaLauncherActivity : ComponentActivity() {
     private val widgetManager by lazy { AppWidgetManager.getInstance(this) }
     private val widgetHost by lazy { AppWidgetHost(this, WIDGET_HOST_ID) }
     private var model by mutableStateOf(NovaLauncherState())
+    private var activeUtility by mutableStateOf<LauncherBuiltIn?>(null)
     private var apps by mutableStateOf(emptyList<LauncherApp>())
     private var shortcuts by mutableStateOf(emptyList<LauncherShortcut>())
     private var decisions by mutableStateOf(emptyMap<String, SanctuaryLauncherPolicy.Decision>())
@@ -82,7 +86,8 @@ class NovaLauncherActivity : ComponentActivity() {
     private var homeGeneration by mutableIntStateOf(0)
     private var blocked by mutableStateOf<LauncherApp?>(null)
     private var review by mutableStateOf(false)
-    private var sessionMode by mutableStateOf<SanctuaryMode?>(null)
+    private var sanctuaryOpen by mutableStateOf(false)
+    private var sanctuaryStatus by mutableStateOf<LauncherSanctuaryStatus?>(null)
     private var picker by mutableStateOf<WidgetPicker?>(null)
     private var pendingWidget: PendingWidget? = null
     private var credentials: CancellationSignal? = null
@@ -150,6 +155,7 @@ class NovaLauncherActivity : ComponentActivity() {
         enableEdgeToEdge()
         model = store.read()
         launcherProtected = SanctuaryLauncherPolicy.launcherProtectionActive(this)
+        sanctuaryStatus = sanctuary.refresh()?.let(::sanctuarySnapshot)
         outsideProtection = SanctuaryLauncherPolicy.outsideProtectionEnabled(this)
         pendingWidget = savedInstanceState?.let { saved ->
             val id = saved.getInt(WIDGET_ID, AppWidgetManager.INVALID_APPWIDGET_ID)
@@ -165,19 +171,22 @@ class NovaLauncherActivity : ComponentActivity() {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 combine(sanctuary.current, SanctuaryLauncherPolicy.state(this@NovaLauncherActivity)) { session, _ -> session }
                     .collectLatest { session ->
-                        sessionMode = session?.mode
                         refreshProtection()
                         outsideProtection = SanctuaryLauncherPolicy.outsideProtectionEnabled(this@NovaLauncherActivity)
                         refreshCatalogue()
-                        if (session != null) {
-                            delay(sanctuary.remainingMillis(session).coerceAtLeast(1L))
-                            sanctuary.refresh()
+                        sanctuaryStatus = session?.let(::sanctuarySnapshot)
+                        while (session != null && sanctuaryStatus != null) {
+                            val remaining = checkNotNull(sanctuaryStatus).remainingMillis
+                            val nextTick = remaining % 1000L
+                            delay(if (nextTick == 0L) 1000L else nextTick)
+                            sanctuaryStatus = sanctuarySnapshot(session)
+                            if (sanctuaryStatus == null) sanctuary.refresh()
                         }
                     }
             }
         }
         val actions = LauncherUiActions(
-            save = { next -> save(next.copy(widgets = model.widgets, launchCounts = model.launchCounts)) },
+            save = { next -> save(next.copy(launchCounts = model.launchCounts)) },
             launchApp = ::launchApp,
             launchShortcut = ::launchShortcut,
             openWorkspace = ::openWorkspace,
@@ -197,16 +206,28 @@ class NovaLauncherActivity : ComponentActivity() {
             exportLayout = { layoutExport.launch("Nova-Launcher-layout.json") },
             importLayout = { layoutImport.launch(arrayOf("application/json", "application/octet-stream", "text/plain")) },
             renderWidget = { widget, modifier -> WidgetView(widget, modifier) },
+            openSanctuary = ::openSanctuary,
         )
         setContent {
-            NovaLauncherScreen(model, apps, if (launcherProtected) emptyList() else shortcuts, decisions,
-                defaultHome, outsideProtection, actions, homeGeneration, launcherProtected)
+            val utility = activeUtility
+            val utilityAllowed = utility != null && decisions[utility.app(packageName).packageName]?.canLaunch == true
+            if (!utilityAllowed) {
+                NovaLauncherScreen(model, apps, if (launcherProtected) emptyList() else shortcuts, decisions,
+                    defaultHome, outsideProtection, actions, homeGeneration, launcherProtected, sanctuaryStatus)
+            }
             val theme = when (model.appearance.theme) {
                 LauncherTheme.SYSTEM -> AppTheme.SYSTEM
                 LauncherTheme.LIGHT -> AppTheme.LIGHT
                 LauncherTheme.DARK -> AppTheme.DARK
             }
             PrivateGalleryTheme(theme) {
+                if (utilityAllowed && utility != null) {
+                    LauncherUtilityScreen(
+                        checkNotNull(utility.utility),
+                        onBack = { activeUtility = null },
+                        onOpenWorkspace = { activeUtility = null; openWorkspace() },
+                    )
+                }
                 SanctuaryDialogs()
                 WidgetPickerDialog()
             }
@@ -217,8 +238,10 @@ class NovaLauncherActivity : ComponentActivity() {
         super.onNewIntent(intent)
         setIntent(neutralHomeIntent())
         if (intent.action == Intent.ACTION_MAIN && intent.hasCategory(Intent.CATEGORY_HOME)) {
+            activeUtility = null
             blocked = null
             review = false
+            sanctuaryOpen = false
             picker = null
             homeGeneration++
         }
@@ -291,17 +314,25 @@ class NovaLauncherActivity : ComponentActivity() {
         catalogueJob = lifecycleScope.launch {
             val result = withContext(Dispatchers.IO) {
                 runCatching {
-                    val installed = runCatching { directory.apps() }.getOrDefault(previous)
-                    val policy = SanctuaryLauncherPolicy.decisions(applicationContext, installed.map { it.packageName })
+                    val installed = runCatching { directory.apps() }.getOrElse {
+                        previous.filter { LauncherBuiltIn.find(packageName, it.component) == null }
+                    }
+                    val builtIns = LauncherBuiltIn.entries.map { it.app(packageName) }
+                    val session = sanctuary.refresh()
+                    val policy = SanctuaryLauncherPolicy.decisions(applicationContext, installed.map { it.packageName }) +
+                        LauncherBuiltIn.entries.associate { it.app(packageName).packageName to it.decision(session) }
                     val availableShortcuts = if (SanctuaryLauncherPolicy.launcherProtectionActive(applicationContext)) emptyList()
                         else directory.shortcuts(installed)
-                    Triple(installed, policy, availableShortcuts)
+                    Triple(installed + builtIns, policy, availableShortcuts)
                 }.getOrNull()
             }
             if (result != null) {
                 val (entries, policy, availableShortcuts) = result
                 apps = entries
                 decisions = policy
+                if (activeUtility?.let { policy[it.app(packageName).packageName]?.canLaunch != true } == true) {
+                    activeUtility = null
+                }
                 shortcuts = availableShortcuts
             } else {
                 shortcuts = emptyList()
@@ -332,7 +363,11 @@ class NovaLauncherActivity : ComponentActivity() {
 
     private fun launchApp(component: String) {
         val target = apps.firstOrNull { it.component == component } ?: return
-        val allowed = runCatching { SanctuaryLauncherPolicy.decision(this, target.packageName).canLaunch }.getOrNull()
+        val builtIn = LauncherBuiltIn.find(packageName, component)
+        val allowed = runCatching {
+            builtIn?.decision(sanctuary.refresh())?.canLaunch
+                ?: SanctuaryLauncherPolicy.decision(this, target.packageName).canLaunch
+        }.getOrNull()
         if (allowed == null) {
             message("Sanctuary could not verify this app. Use Android Settings for recovery.")
             return
@@ -341,7 +376,14 @@ class NovaLauncherActivity : ComponentActivity() {
             blocked = target
             return
         }
-        if (directory.start(target)) save(model.withSuccessfulLaunch(component))
+        if (builtIn != null) {
+            when (builtIn) {
+                LauncherBuiltIn.SANCTUARY -> openSanctuary()
+                LauncherBuiltIn.PRIMARY_GALLERY -> startActivity(privateWorkspaceEntryIntent(this, primaryGallery = true))
+                else -> activeUtility = builtIn
+            }
+            save(model.withSuccessfulLaunch(component))
+        } else if (directory.start(target)) save(model.withSuccessfulLaunch(component))
         else {
             message("This app is no longer available.")
             refreshCatalogue()
@@ -375,6 +417,29 @@ class NovaLauncherActivity : ComponentActivity() {
         if (!SanctuaryLauncherPolicy.openEmergencyPhone(this)) message("Use Android's lock-screen Emergency call option.")
     }
 
+    private fun sanctuarySnapshot(session: SanctuarySession): LauncherSanctuaryStatus? {
+        val remaining = sanctuary.remainingMillis(session)
+        if (remaining <= 0L) return null
+        return LauncherSanctuaryStatus(session.mode, remaining, SanctuaryLauncherPolicy.isPaused(session))
+    }
+
+    private fun openSanctuary() {
+        review = false
+        blocked = null
+        sanctuaryOpen = true
+    }
+
+    private fun startSanctuary(mode: SanctuaryMode) {
+        if (!lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) return
+        if (!sanctuary.start(mode)) {
+            message("A Sanctuary session could not be started.")
+            return
+        }
+        SanctuaryGuardian.start(applicationContext)
+        SanctuaryDnd.start(applicationContext)
+        SanctuaryLauncherPolicy.signalPolicyChange()
+    }
+
     private fun chooseDeviceWallpaper() {
         if (SanctuaryLauncherPolicy.launcherProtectionActive(this)) {
             message("Device wallpaper selection is available outside Sanctuary. Launcher colours are still editable.")
@@ -385,6 +450,11 @@ class NovaLauncherActivity : ComponentActivity() {
 
     private fun authenticate(target: LauncherApp?) {
         if (credentials != null) return
+        if (target != null && LauncherBuiltIn.find(packageName, target.component) != null) {
+            blocked = null
+            openSanctuary()
+            return
+        }
         credentials = SanctuaryLauncherPolicy.authenticateTemporaryAccess(this, target?.packageName) { allowed ->
             credentials = null
             if (!allowed || isDestroyed || isFinishing) return@authenticateTemporaryAccess
@@ -399,17 +469,38 @@ class NovaLauncherActivity : ComponentActivity() {
 
     @Composable
     private fun SanctuaryDialogs() {
+        if (sanctuaryOpen) {
+            LauncherSanctuaryDialog(
+                status = sanctuaryStatus,
+                modeMinutes = SanctuaryMode.entries.associateWith { sanctuary.preset(it).minutes },
+                guardianStatus = SanctuaryGuardian.status(this),
+                onStart = ::startSanctuary,
+                onReview = { sanctuaryOpen = false; review = true },
+                onPause = { sanctuaryOpen = false; authenticate(null) },
+                onPhone = { sanctuaryOpen = false; openEmergencyPhone() },
+                onManage = { sanctuaryOpen = false; openWorkspace() },
+                onDismiss = { sanctuaryOpen = false },
+            )
+        }
         blocked?.let { target ->
+            val isBuiltIn = LauncherBuiltIn.find(packageName, target.component) != null
             AlertDialog(
                 onDismissRequest = { blocked = null },
                 title = { Text("Sanctuary protection") },
-                text = { Text("${target.label} is blocked by the active Sanctuary rules. You can allow it for five minutes with your Android screen lock.") },
-                confirmButton = { TextButton(onClick = { authenticate(target) }) { Text("Request temporary access") } },
+                text = {
+                    Text(if (isBuiltIn) "${target.label} is blocked by the active Sanctuary rules."
+                        else "${target.label} is blocked by the active Sanctuary rules. You can allow it for five minutes with your Android screen lock.")
+                },
+                confirmButton = {
+                    TextButton(onClick = { authenticate(target) }) {
+                        Text(if (isBuiltIn) "Open Sanctuary" else "Request temporary access")
+                    }
+                },
                 dismissButton = { TextButton(onClick = { blocked = null }) { Text("Back to Nova Launcher") } },
             )
         }
         if (review) {
-            val mode = sessionMode
+            val mode = sanctuaryStatus?.mode
             val labels = apps.associate { it.packageName to it.label }
             val current = sanctuary.current.value
             val modes = if (mode != null) listOf(mode) else SanctuaryMode.entries
