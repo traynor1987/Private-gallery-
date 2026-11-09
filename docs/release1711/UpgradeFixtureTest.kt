@@ -40,7 +40,7 @@ import uk.co.traynor.privategallery.core.sanctuary.SanctuaryMode
 import uk.co.traynor.privategallery.core.sanctuary.SanctuaryPreset
 import uk.co.traynor.privategallery.core.sanctuary.SanctuaryStore
 
-/** Reviewed release-control instrumentation for original-key Code 72 to Code 73 upgrade.
+/** Reviewed release-control instrumentation for original-key Code 73 to Code 74 upgrade.
  * Captured and hash-checked before frozen application checkout; never modifies baseline app.
  */
 class UpgradeFixtureTest {
@@ -51,7 +51,7 @@ class UpgradeFixtureTest {
     private val candidateCode get() = checkNotNull(arguments.getString("candidateCode")).toInt()
     private fun guard() {
         check(context.packageName == "uk.co.traynor.privategallery.hiddenprototype")
-        check(baselineCode == 72 && candidateCode == 73)
+        check(baselineCode == 73 && candidateCode == 74)
     }
     private fun hash(bytes: ByteArray) = MessageDigest.getInstance("SHA-256").digest(bytes).joinToString("") { "%02x".format(it) }
     private fun encryptedHashes(): JSONObject = JSONObject().also { result ->
@@ -324,7 +324,7 @@ class UpgradeFixtureTest {
         val storeType=evidenceType("EvidenceEncryptedStore")
         if(seed) {
             val folder=File(root,"evidence-state/evidence-179-${label.lowercase()}")
-            assertFalse("Fresh disposable Code 72 evidence fixture starts empty",folder.walkTopDown().any {it.isFile})
+            assertFalse("Fresh disposable Code 73 evidence fixture starts empty",folder.walkTopDown().any {it.isFile})
         }
         val store=storeType.getConstructor(File::class.java,ownerType,evidenceType("EvidenceEncryptedStore\$LeaseFactory"))
             .newInstance(File(root,"evidence-state"),owner,factory)
@@ -337,7 +337,7 @@ class UpgradeFixtureTest {
         val corrected="2026-10-31\nAlice: UPGRADE-EVIDENCE-$label owner-corrected transcript 14:05"
         var catalog=evidenceCall(store,"read")
         if(seed) {
-            assertEquals("Fresh Code 72 fixture catalogue starts empty",0,(evidenceCall(catalog,"evidence") as List<*>).size)
+            assertEquals("Fresh Code 73 fixture catalogue starts empty",0,(evidenceCall(catalog,"evidence") as List<*>).size)
             val dimension = if (label == "PRIMARY") 64 else 32
             val metadata=evidenceRecord("Metadata",9,item.displayName,0L,0L,item.importedAtEpochMillis,0L,dimension,dimension,
                 mapOf("provenance" to "Synthetic upgrade fixture metadata; timestamps are not screenshot facts"),false)
@@ -494,7 +494,7 @@ class UpgradeFixtureTest {
                 for(field in listOf("files","hiddenFiles")) {
                     val wanted=expected.getJSONObject(field);val actual=current.getJSONObject(field)
                     assertEquals(wanted.length(),actual.length())
-                    wanted.keys().forEach {path->assertEquals("Existing Code 72 owner-encrypted evidence survives upgrade/restart unchanged",wanted.getString(path),actual.getString(path))}
+                    wanted.keys().forEach {path->assertEquals("Existing Code 73 owner-encrypted evidence survives upgrade/restart unchanged",wanted.getString(path),actual.getString(path))}
                 }
             } else before.put("primaryEvidenceCatalogSha256",primaryHash).put("hiddenEvidenceCatalogSha256",hiddenHash).put("candidateEvidenceFiles",current)
             // Recheck every original encrypted file after additive writes, including the

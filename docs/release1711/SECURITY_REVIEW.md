@@ -1,14 +1,14 @@
-# NovaOS 1.7.38 Code 73 signing review
+# NovaOS 1.7.38.1 Code 73 repair signing review
 
-Source: c0db80efc8d1342896984bd937abb01dc786a0f4
+Source: 90e84e9e477a551c9f8985daca230bbf543059a0
 Decision: APPROVED
 Production signing: APPROVED
-Upgrade fixture SHA-256: a2ccc12bb32a7075079bdadf6a364ba320401aa267cb3873a31c18459c0d0735
-Upgrade controls SHA-256: e6fe0bd7fb34ce9eba43863962d366be12268c6d0e1da3788fe99c584e6c87bd
+Upgrade fixture SHA-256: 49ecd50568d978793ec22f9c41c94cc5219744965ba0c85338c00f4edf0c875b
+Upgrade controls SHA-256: c042b4333b294b15e2ef696d7f33ba9df1f0d0bd35c0508b065e16a8cf85bfaa
 Runtime matrix SHA-256: 789b0eef5c8a8383ffefa050bb69064f32a447201838e2e61e6a204ee2092694
-Runtime archive SHA-256: 6965db59287132caff55d7f771d1e638ba884a80f95c1c8ba1d94b73edc20267
-Signing workflow SHA-256: 40536cf6ea8c24c9f5bbfc66c1e2c3dacc7c58c31703012643ace3dac92f635b
+Runtime archive SHA-256: e4ba7478a6105feff06498135a1005d94ea59835b9b7dd60c0bd145577620e3d
+Signing workflow SHA-256: 944912a2099dbfe5cb0e420502a1742ac9084ca523086839f220fd43ec1020e0
 
-Run 42658049110 must pass the legacy Android 17 regression matrix, the launcher gesture, App Library, smart folder, tracking, default Home, profile safety and Sanctuary cases, eight observed Backup restarts and one observed Launcher process restart before signer access.
+Run 42673353877 must pass the legacy Android 17 regression matrix, the launcher gesture, native Library pager, smart folder presentation, default Home entry, profile safety and Sanctuary cases, eight observed Backup restarts and one observed Launcher process restart before signer access.
 
-Production uses the pinned original-key Code 72 artifact 13687062546 from run 42641862359. Delivery requires an Android 17 in-place Code 72 to Code 73 upgrade and repeat verification after a force-stop. The production fixture checks retained encrypted Vault, Evidence Locker and Backup records, both launcher layouts, Sanctuary policy and the Android Home default. Physical Galaxy Z Fold acceptance is pending.
+Production uses the pinned original-key Code 73 artifact 13698305559 from run 42666431368. Delivery requires an Android 17 in-place Code 73 to Android version code 74 upgrade and repeat verification after a force-stop. The production fixture checks retained encrypted Vault, Evidence Locker and Backup records, both launcher layouts, Sanctuary policy and the Android Home default. Physical Galaxy Z Fold acceptance is pending.
