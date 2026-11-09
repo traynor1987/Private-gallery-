@@ -78,7 +78,7 @@ internal fun LauncherLayout.withSmartFolderTemplate(
 ): LauncherLayout {
     val page = 1
     val items = pages.getOrNull(page).orEmpty()
-    if (onlyIfEmpty && (items.isNotEmpty() || stockSmartFolders in pages)) return this
+    if (stockSmartFolders in pages || onlyIfEmpty && items.isNotEmpty()) return this
     val room = capacity.coerceIn(0, MAX_LAUNCHER_PAGE_ITEMS) - items.size
     if (room <= 0) return this
     val existing = items.filterIsInstance<LauncherItem.SmartFolder>().map { it.category }.toSet()

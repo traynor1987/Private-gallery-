@@ -129,7 +129,8 @@ class LauncherHomeLibraryPager73UiTest {
         pager.performTouchInput { swipeLeft() }
         library.assertIsDisplayed()
         compose.onNodeWithTag("launcher-library-search").performTextInput(apps.last().label)
-        val tile = homeApp(3)
+        val tile = compose.onNode(hasTestTag("launcher-app-${apps[3].component}") and
+            hasAnyAncestor(hasTestTag("launcher-app-library")))
         val source = tile.fetchSemanticsNode().boundsInRoot.center
         tile.performTouchInput {
             down(center)
@@ -184,8 +185,9 @@ class LauncherHomeLibraryPager73UiTest {
         var launched: String? = null
         showLauncher(actions.copy(launchApp = { launched = it }))
         homeApp(0).performTouchInput { longClick() }
+        compose.onNodeWithTag("launcher-icon-menu").assertIsDisplayed()
         compose.onNodeWithText("Move to dock").assertDoesNotExist()
-        compose.runOnIdle { compose.activity.onBackPressedDispatcher.onBackPressed() }
+        compose.onNodeWithText("Open app").performClick()
         homeApp(3).performClick()
         compose.runOnIdle {
             assertEquals(apps[3].component, launched)
@@ -223,6 +225,7 @@ class LauncherHomeLibraryPager73UiTest {
             assertEquals(friends.component, launched)
             protectionActive = false
         }
+        library.performTouchInput { swipeRight() }
         assertEquals(initial, dockSlot.fetchSemanticsNode().boundsInRoot)
         compose.onNode(hasTestTag("launcher-app-${main.component}") and
             hasAnyAncestor(hasTestTag("launcher-dock-slot-0"))).assertIsDisplayed()
@@ -233,5 +236,6 @@ class LauncherHomeLibraryPager73UiTest {
         NovaLauncherScreen(state, apps, emptyList(), emptyMap(), true, false, uiActions)
     }
 
-    private fun homeApp(index: Int) = compose.onNodeWithTag("launcher-app-${apps[index].component}")
+    private fun homeApp(index: Int) = compose.onNode(hasTestTag("launcher-app-${apps[index].component}") and
+        !hasAnyAncestor(hasTestTag("launcher-app-library")))
 }
