@@ -11,10 +11,19 @@ class LauncherProcess70Test {
         configured = true,
         separateDisplays = true,
         cover = LauncherLayout(
-            pages = listOf(listOf(LauncherItem.Workspace), emptyList()),
+            pages = listOf(
+                listOf(LauncherItem.Workspace),
+                listOf(LauncherItem.App("example.owner/.Main")),
+            ),
             dock = listOf(LauncherItem.Workspace),
         ),
-        inner = LauncherLayout(pages = listOf(emptyList()), dock = emptyList()),
+        inner = LauncherLayout(
+            pages = listOf(
+                emptyList(),
+                listOf(LauncherItem.SmartFolder(LauncherCategory.RECENTLY_USED, "My recents")),
+            ),
+            dock = emptyList(),
+        ),
         appearance = LauncherAppearance(wallpaper = LauncherWallpaper.MIDNIGHT, grid = LauncherGrid.COMPACT),
     )
 
