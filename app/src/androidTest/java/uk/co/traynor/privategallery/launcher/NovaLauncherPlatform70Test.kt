@@ -22,6 +22,7 @@ import org.junit.Rule
 import org.junit.Test
 import uk.co.traynor.privategallery.LauncherActivity
 import uk.co.traynor.privategallery.MainActivity
+import uk.co.traynor.privategallery.core.sanctuary.SanctuaryAppVisibility
 import uk.co.traynor.privategallery.core.sanctuary.SanctuaryLauncherPolicy
 import uk.co.traynor.privategallery.core.sanctuary.SanctuaryMode
 import uk.co.traynor.privategallery.core.sanctuary.SanctuaryStore
@@ -114,6 +115,7 @@ class NovaLauncherPlatform70Test {
         val mode = SanctuaryMode.LEARNING
         assertEquals(null, sanctuary.refresh())
         val preset = sanctuary.preset(mode)
+        val originalVisibility = sanctuary.launcherSettings().visibility
         val launchStore = NovaLauncherStore(context)
         val original = launchStore.read()
         val entries = LauncherAppDirectory(context).apps()
@@ -123,6 +125,9 @@ class NovaLauncherPlatform70Test {
         val layout = LauncherLayout(pages = listOf(listOf(LauncherItem.App(target.component))))
         assertTrue(launchStore.save(NovaLauncherState(configured = true, cover = layout, inner = layout)))
         try {
+            assertTrue(sanctuary.saveLauncherVisibility(SanctuaryAppVisibility(
+                hideBlockedApps = false, hideFromSearch = false, hideFromSuggestions = false, hideFromRecentlyUsed = false,
+            )))
             assertTrue(sanctuary.savePreset(mode, preset.copy(androidApps = emptySet(), allowExternalApps = true)))
             assertTrue(sanctuary.startFoldTest(mode))
             val session = checkNotNull(sanctuary.refresh())
@@ -143,6 +148,7 @@ class NovaLauncherPlatform70Test {
         } finally {
             if (sanctuary.refresh() != null) assertTrue(sanctuary.end(SanctuaryStore.END_PHRASE))
             assertTrue(sanctuary.savePreset(mode, preset))
+            assertTrue(sanctuary.saveLauncherVisibility(originalVisibility))
             assertTrue(launchStore.save(original))
         }
     }
