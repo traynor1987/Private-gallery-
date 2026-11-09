@@ -1,0 +1,163 @@
+package uk.co.traynor.privategallery.launcher
+
+import androidx.activity.ComponentActivity
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.width
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.toPixelMap
+import androidx.compose.ui.test.*
+import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.unit.dp
+import org.junit.Assert.assertEquals
+import org.junit.Rule
+import org.junit.Test
+import org.junit.rules.RuleChain
+import org.junit.rules.TestRule
+import uk.co.traynor.privategallery.ui.BrowserViewportRule
+
+class LauncherHomeLibraryPager73UiTest {
+    private val compose = createAndroidComposeRule<ComponentActivity>()
+    private val viewport = BrowserViewportRule { method ->
+        if (method.startsWith("fold")) 820 to 920 else 375 to 850
+    }
+    @get:Rule val rules: TestRule = RuleChain.outerRule(viewport).around(compose)
+
+    private val apps = (1..4).map { index ->
+        LauncherApp("example.app$index/.Main", "example.app$index", "Sample app $index")
+    }
+    private val items = apps.map { LauncherItem.App(it.component) }
+    private var state by mutableStateOf(NovaLauncherState(
+        configured = true,
+        cover = LauncherLayout(pages = listOf(listOf(items[0]), listOf(items[1]), listOf(items[2]))),
+        inner = LauncherLayout(pages = listOf(listOf(items[1]), listOf(items[2]))),
+        separateDisplays = true,
+    ))
+    private val actions = LauncherUiActions(
+        save = { state = it; true }, launchApp = {}, launchShortcut = {}, openWorkspace = {},
+        selectHome = {}, continueWithCurrentHome = {}, emergencyPhone = {}, reviewSanctuary = {},
+        setOutsideProtection = {}, chooseWallpaper = {}, addWidget = {}, removeWidget = {},
+        exportLayout = {}, importLayout = {}, renderWidget = { _, _ -> },
+    )
+    private val pager get() = compose.onNodeWithTag("launcher-home-pages")
+    private val library get() = compose.onNodeWithTag("launcher-app-library")
+
+    @Test fun coverSwipesAcrossEveryHomePageBeforeLibraryAndBack() {
+        showLauncher()
+        homeApp(0).assertIsDisplayed()
+        pager.performTouchInput { swipeLeft() }
+        homeApp(1).assertIsDisplayed()
+        library.assertIsNotDisplayed()
+        pager.performTouchInput { swipeLeft() }
+        homeApp(2).assertIsDisplayed()
+        library.assertIsNotDisplayed()
+        val cover = compose.onNodeWithTag("nova-launcher-cover")
+        val homeWallpaper = cover.captureToImage().toPixelMap().let { it[2, it.height / 2] }
+
+        pager.performTouchInput { swipeLeft() }
+        library.assertIsDisplayed()
+        assertEquals(homeWallpaper, cover.captureToImage().toPixelMap().let { it[2, it.height / 2] })
+        compose.onNodeWithTag("launcher-open-drawer").assertIsNotDisplayed()
+
+        library.performTouchInput { swipeRight() }
+        homeApp(2).assertIsDisplayed()
+        pager.performTouchInput { swipeRight() }
+        homeApp(1).assertIsDisplayed()
+    }
+
+    @Test fun foldSwipesBetweenItsLastHomePageAndLibrary() {
+        var width by mutableStateOf(375.dp)
+        compose.setContent {
+            Box(Modifier.width(width).fillMaxHeight()) {
+                NovaLauncherScreen(state, apps, emptyList(), emptyMap(), true, false, actions)
+            }
+        }
+        compose.onNodeWithTag("nova-launcher-cover").assertIsDisplayed()
+        repeat(3) { pager.performTouchInput { swipeLeft() } }
+        library.assertIsDisplayed()
+
+        compose.runOnIdle { width = 820.dp }
+        compose.onNodeWithTag("nova-launcher-inner").assertIsDisplayed()
+        homeApp(1).assertIsDisplayed()
+        pager.performTouchInput { swipeLeft() }
+        homeApp(2).assertIsDisplayed()
+        pager.performTouchInput { swipeLeft() }
+        library.assertIsDisplayed()
+        library.performTouchInput { swipeRight() }
+        homeApp(2).assertIsDisplayed()
+
+        compose.runOnIdle { width = 375.dp }
+        library.assertIsDisplayed()
+        library.performTouchInput { swipeRight() }
+        homeApp(2).assertIsDisplayed()
+    }
+
+    @Test fun coverBackLeavesLibraryForLastHomePageAndDrawerStillOpens() {
+        showLauncher()
+        repeat(3) { pager.performTouchInput { swipeLeft() } }
+        library.assertIsDisplayed()
+        compose.runOnIdle { compose.activity.onBackPressedDispatcher.onBackPressed() }
+        homeApp(2).assertIsDisplayed()
+        compose.onNodeWithTag("launcher-open-drawer").performClick()
+        compose.onNodeWithTag("launcher-drawer-search").assertIsDisplayed()
+    }
+
+    @Test fun coverDrawerShortcutOpensPagerLibraryAndBackReturnsToDrawer() {
+        showLauncher()
+        compose.onNodeWithTag("launcher-open-drawer").performClick()
+        compose.onNodeWithTag("launcher-open-library").performClick()
+        library.assertIsDisplayed()
+        pager.assertIsDisplayed()
+        compose.runOnIdle { compose.activity.onBackPressedDispatcher.onBackPressed() }
+        compose.onNodeWithTag("launcher-drawer-search").assertIsDisplayed()
+        compose.runOnIdle { compose.activity.onBackPressedDispatcher.onBackPressed() }
+        homeApp(0).assertIsDisplayed()
+    }
+
+    @Test fun coverDragsFromTrailingLibraryOntoLastHomePage() {
+        showLauncher()
+        repeat(2) { pager.performTouchInput { swipeLeft() } }
+        val destination = pager.fetchSemanticsNode().boundsInRoot.let {
+            Offset(it.center.x, it.top + it.height * .64f)
+        }
+        pager.performTouchInput { swipeLeft() }
+        library.assertIsDisplayed()
+        compose.onNodeWithTag("launcher-library-search").performTextInput(apps.last().label)
+        val tile = homeApp(3)
+        val source = tile.fetchSemanticsNode().boundsInRoot.center
+        tile.performTouchInput {
+            down(center)
+            advanceEventTime(800)
+            moveBy(destination - source)
+        }
+        compose.onNodeWithTag("launcher-drag-preview").assertIsDisplayed()
+        pager.performTouchInput { up() }
+        compose.runOnIdle {
+            assertEquals(listOf(listOf(items[0]), listOf(items[1]), listOf(items[2], items[3])), state.cover.pages)
+        }
+    }
+
+    @Test fun coverHomeVerticalGesturesStillOpenDrawerAndWorkspace() {
+        state = state.copy(cover = LauncherLayout(), workspaceGesture = LauncherGesture.SWIPE_DOWN)
+        var workspaceOpens = 0
+        showLauncher(actions.copy(openWorkspace = { workspaceOpens++ }))
+        val gestures = compose.onNodeWithTag("launcher-home-gestures")
+        gestures.performTouchInput { swipeUp(startY = height * .85f, endY = height * .15f) }
+        compose.onNodeWithTag("launcher-drawer-search").assertIsDisplayed()
+
+        compose.runOnIdle { compose.activity.onBackPressedDispatcher.onBackPressed() }
+        gestures.performTouchInput { swipeDown(startY = height * .15f, endY = height * .85f) }
+        compose.runOnIdle { assertEquals(1, workspaceOpens) }
+        library.assertIsNotDisplayed()
+    }
+
+    private fun showLauncher(uiActions: LauncherUiActions = actions) = compose.setContent {
+        NovaLauncherScreen(state, apps, emptyList(), emptyMap(), true, false, uiActions)
+    }
+
+    private fun homeApp(index: Int) = compose.onNodeWithTag("launcher-app-${apps[index].component}")
+}

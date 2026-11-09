@@ -37,9 +37,11 @@ class LauncherLibrary73UiTest {
         var category by mutableStateOf<LauncherCategory?>(null)
         var query by mutableStateOf("")
         var drawer = false
+        val social = LauncherApp("example.social/.Main", "example.social", "Social App",
+            category = ApplicationInfo.CATEGORY_SOCIAL)
         compose.setContent {
             LauncherLibrary(
-                LauncherAppearance(), launcherLibraryGroups(apps), category, query,
+                LauncherAppearance(), launcherLibraryGroups(apps + social), category, query,
                 onQuery = { query = it }, onCategory = { category = it }, onBack = { category = null },
                 onDrawer = { drawer = true }, onApp = { launched = it },
                 decisions = mapOf(apps.first().packageName to Decision.UNAPPROVED),
@@ -47,12 +49,13 @@ class LauncherLibrary73UiTest {
             )
         }
 
-        val first = categoryBounds(LauncherCategory.SUGGESTIONS)
-        val second = categoryBounds(LauncherCategory.RECENTLY_USED)
-        val third = categoryBounds(LauncherCategory.RECENTLY_ADDED)
+        val first = categoryBounds(LauncherCategory.SOCIAL)
+        val second = categoryBounds(LauncherCategory.GAMES)
         assertEquals(first.top, second.top, 0.01f)
         assertTrue(second.left > first.left)
-        assertTrue(third.top > first.top)
+        assertTrue(first.height < second.height)
+        compose.onNodeWithTag("launcher-library-category-SUGGESTIONS").assertDoesNotExist()
+        compose.onNodeWithTag("launcher-library-category-RECENTLY_USED").assertDoesNotExist()
         saveCheckpoint("cover")
         compose.onNodeWithTag("launcher-app-${apps.first().component}")
             .assert(hasContentDescription("Game 1, blocked by Sanctuary")).performClick()
@@ -94,7 +97,7 @@ class LauncherLibrary73UiTest {
         }
         val first = categoryBounds(LauncherCategory.SUGGESTIONS)
         val second = categoryBounds(LauncherCategory.RECENTLY_USED)
-        val third = categoryBounds(LauncherCategory.RECENTLY_ADDED)
+        val third = categoryBounds(LauncherCategory.NOVA_OS)
         assertEquals(first.top, third.top, 0.01f)
         assertTrue(second.left > first.left)
         assertTrue(third.left > second.left)

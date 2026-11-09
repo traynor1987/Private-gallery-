@@ -1,7 +1,6 @@
 package uk.co.traynor.privategallery.launcher
 
 import android.app.KeyguardManager
-import android.app.role.RoleManager
 import android.appwidget.AppWidgetHost
 import android.appwidget.AppWidgetManager
 import android.appwidget.AppWidgetProviderInfo
@@ -80,6 +79,7 @@ class NovaLauncherActivity : ComponentActivity() {
     private val store by lazy { NovaLauncherStore(this) }
     private val tracking by lazy { LauncherSmartTracking(applicationContext) }
     private val identitySettings by lazy { LauncherIdentitySettings(applicationContext) }
+    private var smartFolderPresentation by mutableStateOf(LauncherSmartFolderPresentation.AUTOMATIC)
     private var renaming by mutableStateOf<LauncherApp?>(null)
     private var rawApps = emptyList<LauncherApp>()
     private var pendingUsageRefresh = false
@@ -185,6 +185,7 @@ class NovaLauncherActivity : ComponentActivity() {
         setIntent(neutralHomeIntent())
         enableEdgeToEdge()
         model = store.read()
+        smartFolderPresentation = identitySettings.smartFolderPresentation()
         offerSmartTemplate()
         askDefaultHome = store.askForDefaultHome()
         defaultHomeOpening = LauncherDefaultHomePromptSession(savedInstanceState?.getBoolean(DEFAULT_HOME_OFFERED) == true)
@@ -250,6 +251,10 @@ class NovaLauncherActivity : ComponentActivity() {
             setAskForDefaultHome = ::setAskForDefaultHome,
             claimDefaultHomePrompt = ::claimDefaultHomePrompt,
             requestDefaultHome = ::requestDefaultHome,
+            setSmartFolderPresentation = { mode ->
+                if (identitySettings.setSmartFolderPresentation(mode)) smartFolderPresentation = mode
+                else message("The smart folder presentation could not be saved.")
+            },
         )
         setContent {
             val smart by tracking.state.collectAsState()
@@ -264,7 +269,7 @@ class NovaLauncherActivity : ComponentActivity() {
                     defaultHome == true, outsideProtection, actions, homeGeneration, launcherProtected, sanctuaryStatus,
                     defaultHomeUi = LauncherDefaultHomeUi(defaultHome, askDefaultHome,
                         canShowDefaultHomePrompt(), homeWindowFocused, defaultHomeOpening),
-                    smartState = smart, smartSettings = { eligible ->
+                    smartState = smart, smartFolderPresentation = smartFolderPresentation, smartSettings = { eligible ->
                         LauncherSmartSettings(tracking, eligible, onClearLegacyHistory = {
                             save(model.copy(launchCounts = emptyMap()))
                         }, onRequestUsageAccess = ::openUsageAccess)
@@ -328,6 +333,7 @@ class NovaLauncherActivity : ComponentActivity() {
     override fun onResume() {
         super.onResume()
         refreshProtection()
+        askDefaultHome = store.askForDefaultHome()
         pendingUsageRefresh = true
         val homeRoleChanged = updateDefaultHome()
         if (homeRoleChanged || rawApps.isEmpty()) refreshCatalogue()
@@ -358,7 +364,10 @@ class NovaLauncherActivity : ComponentActivity() {
     override fun onWindowFocusChanged(hasFocus: Boolean) {
         super.onWindowFocusChanged(hasFocus)
         homeWindowFocused = hasFocus
-        if (hasFocus && updateDefaultHome()) refreshCatalogue()
+        if (hasFocus) {
+            askDefaultHome = store.askForDefaultHome()
+            if (updateDefaultHome()) refreshCatalogue()
+        }
     }
 
     override fun onStop() {
@@ -396,17 +405,7 @@ class NovaLauncherActivity : ComponentActivity() {
 
     private fun updateDefaultHome(): Boolean {
         val previous = defaultHome
-        defaultHome = runCatching {
-            getSystemService(RoleManager::class.java)
-                ?.takeIf { it.isRoleAvailable(RoleManager.ROLE_HOME) }
-                ?.isRoleHeld(RoleManager.ROLE_HOME)
-        }.getOrNull() ?: runCatching {
-            val homeIntent = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME)
-            val flags = PackageManager.ResolveInfoFlags.of(PackageManager.MATCH_DEFAULT_ONLY.toLong())
-            packageManager.resolveActivity(homeIntent, flags)?.activityInfo?.packageName
-                ?.takeUnless { it == "android" }
-                ?.let { it == packageName }
-        }.getOrNull()
+        defaultHome = readDefaultHome(this)
         return previous != defaultHome
     }
 
@@ -427,6 +426,7 @@ class NovaLauncherActivity : ComponentActivity() {
         val safeHome = canShowDefaultHomePrompt() && hasWindowFocus() && !isFinishing &&
             !runCatching { SanctuaryLauncherPolicy.launcherProtectionActive(this) }.getOrDefault(true)
         if (!safeHome) return false
+        askDefaultHome = store.askForDefaultHome()
         if (updateDefaultHome()) refreshCatalogue()
         return defaultHomeOpening.claim(defaultHome, askDefaultHome, safeHome)
     }
@@ -437,11 +437,7 @@ class NovaLauncherActivity : ComponentActivity() {
         ) return
         if (updateDefaultHome()) refreshCatalogue()
         if (defaultHome == true) return
-        val requested = runCatching {
-            val roles = checkNotNull(getSystemService(RoleManager::class.java))
-            check(roles.isRoleAvailable(RoleManager.ROLE_HOME))
-            defaultHomeRequest.launch(roles.createRequestRoleIntent(RoleManager.ROLE_HOME))
-        }.isSuccess
+        val requested = requestDefaultHomeRole(this) { defaultHomeRequest.launch(it) }
         if (!requested) openHomeSettings()
     }
 

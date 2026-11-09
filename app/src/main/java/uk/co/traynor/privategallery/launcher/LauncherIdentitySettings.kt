@@ -19,6 +19,22 @@ internal class LauncherIdentitySettings(context: Context) {
         return update.commit()
     }
 
+    fun smartFolderPresentation(): LauncherSmartFolderPresentation =
+        LauncherSmartFolderPresentation.entries.firstOrNull {
+            it.name == prefs.getString("smart-folder-presentation", null)
+        } ?: LauncherSmartFolderPresentation.AUTOMATIC
+
+    fun setSmartFolderPresentation(mode: LauncherSmartFolderPresentation): Boolean =
+        prefs.edit().putString("smart-folder-presentation", mode.name).commit()
+
+    fun libraryPins(): Set<LauncherCategory> {
+        val names = prefs.getStringSet("library-category-pins", emptySet()).orEmpty()
+        return LauncherCategory.entries.filterTo(mutableSetOf()) { it.name in names }
+    }
+
+    fun setLibraryPins(categories: Set<LauncherCategory>): Boolean = prefs.edit()
+        .putStringSet("library-category-pins", categories.mapTo(mutableSetOf()) { it.name }).commit()
+
     fun templateHandled(inner: Boolean): Boolean = prefs.getBoolean("smart-home-template-handled:$inner", false)
 
     fun markTemplateHandled(inner: Boolean) {

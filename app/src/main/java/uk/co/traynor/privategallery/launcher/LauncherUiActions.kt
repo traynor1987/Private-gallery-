@@ -27,4 +27,5 @@ internal data class LauncherUiActions(
     val setAskForDefaultHome: (Boolean) -> Unit = {},
     val claimDefaultHomePrompt: () -> Boolean = { false },
     val requestDefaultHome: () -> Unit = selectHome,
+    val setSmartFolderPresentation: ((LauncherSmartFolderPresentation) -> Unit)? = null,
 )

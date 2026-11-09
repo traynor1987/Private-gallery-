@@ -2,8 +2,11 @@
 set -euo pipefail
 
 bash scripts/run_visual_checkpoint.sh LauncherLibrary73UiTest launcher-library-73 uk.co.traynor.privategallery.launcher
+bash scripts/run_visual_checkpoint.sh LauncherHomeLibraryPager73UiTest launcher-library-pager-73 uk.co.traynor.privategallery.launcher
+bash scripts/run_visual_checkpoint.sh LauncherDefaultHomeEntry73Test launcher-default-entry-73 uk.co.traynor.privategallery.launcher
 bash scripts/run_visual_checkpoint.sh LauncherSmartFolderStore73Test launcher-smart-folders-73 uk.co.traynor.privategallery.launcher
 bash scripts/run_visual_checkpoint.sh LauncherSmartFolderEditor73Test launcher-smart-editor-73 uk.co.traynor.privategallery.launcher
+bash scripts/run_visual_checkpoint.sh LauncherSmartFolderPresentation73UiTest launcher-smart-presentation-73 uk.co.traynor.privategallery.launcher
 bash scripts/run_visual_checkpoint.sh LauncherDefaultHomeStore73Test launcher-default-home-73 uk.co.traynor.privategallery.launcher
 bash scripts/run_visual_checkpoint.sh LauncherSmartTrackingStore73Test launcher-smart-tracking-73 uk.co.traynor.privategallery.launcher
 bash scripts/run_visual_checkpoint.sh NovaLauncher72GesturesTest launcher-gestures-72 uk.co.traynor.privategallery.launcher

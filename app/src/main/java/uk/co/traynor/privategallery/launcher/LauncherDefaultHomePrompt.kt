@@ -38,23 +38,36 @@ internal fun LauncherDefaultHomePrompt(
     }
     if (!showing) return
 
+    LauncherDefaultHomeDialog(
+        onDismiss = { showing = false },
+        onSetDefault = {
+            showing = false
+            actions.requestDefaultHome()
+        },
+        onOptOut = {
+            showing = false
+            actions.setAskForDefaultHome(false)
+        },
+    )
+}
+
+@Composable
+internal fun LauncherDefaultHomeDialog(
+    onDismiss: () -> Unit,
+    onSetDefault: () -> Unit,
+    onOptOut: () -> Unit,
+) {
     AlertDialog(
-        onDismissRequest = { showing = false },
+        onDismissRequest = onDismiss,
         title = { Text("Make NovaOS your default Home?") },
         text = { Text("NovaOS isn’t currently your default launcher. Set it as your Home app for the complete NovaOS experience.") },
         confirmButton = {
-            TextButton(onClick = {
-                showing = false
-                actions.requestDefaultHome()
-            }) { Text("Set as Default") }
+            TextButton(onClick = onSetDefault) { Text("Set as Default") }
         },
         dismissButton = {
             Row {
-                TextButton(onClick = {
-                    showing = false
-                    actions.setAskForDefaultHome(false)
-                }) { Text("Don’t Ask Again") }
-                TextButton(onClick = { showing = false }) { Text("Not Now") }
+                TextButton(onClick = onOptOut) { Text("Don’t Ask Again") }
+                TextButton(onClick = onDismiss) { Text("Not Now") }
             }
         },
     )

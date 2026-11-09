@@ -22,6 +22,17 @@ internal enum class LauncherCategory(val label: String) {
 
 internal data class LauncherLibraryGroup(val category: LauncherCategory, val apps: List<LauncherApp>)
 
+internal fun launcherLibraryVisibleGroups(
+    groups: List<LauncherLibraryGroup>,
+    pinnedCategories: Set<LauncherCategory>,
+    pinnedApps: List<LauncherApp>,
+): List<LauncherLibraryGroup> = groups.mapNotNull { group ->
+    val members = if (group.category == LauncherCategory.RECENTLY_USED && pinnedApps.isNotEmpty()) {
+        (pinnedApps + group.apps).distinctBy(LauncherApp::component)
+    } else group.apps
+    if (members.isNotEmpty() || group.category in pinnedCategories) group.copy(apps = members) else null
+}
+
 private const val RECENT_INSTALL_AGE = 14 * 86_400_000L
 
 /** Receives the same visible catalogue as Drawer. History sources can only reorder eligible entries. */

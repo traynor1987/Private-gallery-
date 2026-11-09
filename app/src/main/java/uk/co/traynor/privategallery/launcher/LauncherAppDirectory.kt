@@ -14,18 +14,33 @@ import android.os.UserHandle
 import android.os.UserManager
 import android.util.LruCache
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Apps
+import androidx.compose.material.icons.filled.Calculate
+import androidx.compose.material.icons.filled.PhotoLibrary
+import androidx.compose.material.icons.filled.Shield
+import androidx.compose.material.icons.filled.SportsEsports
+import androidx.compose.material.icons.filled.Storefront
 import androidx.compose.material3.Icon
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.text.Collator
@@ -199,7 +214,7 @@ private object LauncherIcons {
                 check(entry.user == profile.user && entry.componentName == component)
                 entry.getBadgedIcon(context.resources.displayMetrics.densityDpi)
             }.mutate()
-            val size = (context.resources.displayMetrics.density * 64).toInt().coerceIn(64, 192)
+            val size = (context.resources.displayMetrics.density * 88).toInt().coerceIn(88, 256)
             val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
             icon.setBounds(0, 0, size, size)
             icon.draw(Canvas(bitmap))
@@ -211,12 +226,38 @@ private object LauncherIcons {
 @Composable
 internal fun LauncherAppIcon(app: LauncherApp, modifier: Modifier = Modifier) {
     val context = LocalContext.current.applicationContext
-    val image by produceState<ImageBitmap?>(null, app) {
+    val builtIn = if (app.packageName.startsWith("nova:")) LauncherBuiltIn.find(context.packageName, app.component) else null
+    if (builtIn != null) {
+        val (glyph, color) = when (builtIn) {
+            LauncherBuiltIn.SANCTUARY -> Icons.Default.Shield to Color(0xFF3260CC)
+            LauncherBuiltIn.CALCULATOR -> Icons.Default.Calculate to Color(0xFF7952BE)
+            LauncherBuiltIn.ARCADE -> Icons.Default.SportsEsports to Color(0xFF9A387E)
+            LauncherBuiltIn.STORE -> Icons.Default.Storefront to Color(0xFF147E7F)
+            LauncherBuiltIn.PRIMARY_GALLERY -> Icons.Default.PhotoLibrary to Color(0xFFAD533C)
+        }
+        Box(
+            modifier.clip(RoundedCornerShape(24)).background(Brush.linearGradient(listOf(color, Color(0xFF192440)))),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(glyph, null, Modifier.fillMaxSize(.59f), tint = Color.White)
+        }
+        return
+    }
+    val image by produceState<ImageBitmap?>(null, app.component, app.iconRevision) {
         value = withContext(Dispatchers.IO) { LauncherIcons.get(context, app) }
     }
-    Box(modifier, contentAlignment = Alignment.Center) {
+    BoxWithConstraints(modifier, contentAlignment = Alignment.Center) {
         val icon = image
-        if (icon == null) Icon(Icons.Default.Apps, null)
-        else Image(icon, null, Modifier.matchParentSize())
+        if (icon == null) {
+            val initial = app.label.firstOrNull(Char::isLetterOrDigit)?.uppercaseChar()?.toString() ?: "•"
+            val size = minOf(maxWidth, maxHeight).value * .48f
+            Box(
+                Modifier.matchParentSize().clip(RoundedCornerShape(24)).background(Color(0xFF3A5272)),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(initial, Modifier.clearAndSetSemantics {}, color = Color.White, fontSize = size.sp,
+                    fontWeight = FontWeight.SemiBold, maxLines = 1)
+            }
+        } else Image(icon, null, Modifier.matchParentSize())
     }
 }

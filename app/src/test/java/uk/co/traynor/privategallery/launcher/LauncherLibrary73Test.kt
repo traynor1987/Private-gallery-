@@ -54,6 +54,28 @@ class LauncherLibrary73Test {
         assertEquals(listOf(personal, work), launcherLibraryMatches(listOf(personal, personal, work), "Chat"))
     }
 
+    @Test fun cardGridOmitsEmptyCategoriesExceptExplicitPins() {
+        val game = app("example.game", "Game", ApplicationInfo.CATEGORY_GAME)
+        val groups = launcherLibraryGroups(listOf(game))
+
+        assertEquals(
+            listOf(LauncherLibraryGroup(LauncherCategory.GAMES, listOf(game)),
+                LauncherLibraryGroup(LauncherCategory.FINANCE, emptyList())),
+            launcherLibraryVisibleGroups(groups, setOf(LauncherCategory.FINANCE), emptyList()),
+        )
+    }
+
+    @Test fun pinnedRecentAppsKeepTheCardVisibleAndDoNotDuplicateHistory() {
+        val game = app("example.game", "Game", ApplicationInfo.CATEGORY_GAME)
+        val groups = launcherLibraryGroups(listOf(game))
+        val recents = LauncherLibraryGroup(LauncherCategory.RECENTLY_USED, listOf(game))
+
+        assertEquals(recents, launcherLibraryVisibleGroups(groups, emptySet(), listOf(game)).first())
+        assertEquals(recents, launcherLibraryVisibleGroups(
+            launcherLibraryGroups(listOf(game), recentlyUsed = listOf(game)), emptySet(), listOf(game),
+        ).first())
+    }
+
     private fun app(packageName: String, label: String, category: Int? = null, install: Long? = null) =
         LauncherApp("$packageName/.Main", packageName, label, category = category, firstInstallTime = install)
 }

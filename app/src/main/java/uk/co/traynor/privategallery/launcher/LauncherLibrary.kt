@@ -9,7 +9,9 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -33,8 +35,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
@@ -52,6 +56,41 @@ import uk.co.traynor.privategallery.home2.WallpaperSurface
 private data class LibraryView(val category: LauncherCategory?, val searching: Boolean)
 
 @Composable
+internal fun LauncherLibraryPinSettings(
+    pinnedCategories: Set<LauncherCategory>,
+    onChange: (Set<LauncherCategory>) -> Unit,
+) {
+    var open by remember { mutableStateOf(false) }
+    OutlinedButton(onClick = { open = true }) { Text("Pin categories") }
+    if (open) AlertDialog(
+        onDismissRequest = { open = false },
+        title = { Text("Pin categories") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("Keep selected categories visible in App Library even when they’re empty.")
+                LazyColumn(Modifier.heightIn(max = 360.dp)) {
+                    items(LauncherCategory.entries.size) { index ->
+                        val category = LauncherCategory.entries[index]
+                        val pinned = category in pinnedCategories
+                        Row(
+                            Modifier.fillMaxWidth().heightIn(min = 48.dp).toggleable(pinned, role = Role.Checkbox) {
+                                onChange(if (it) pinnedCategories + category else pinnedCategories - category)
+                            },
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        ) {
+                            Checkbox(checked = pinned, onCheckedChange = null)
+                            Text(category.label)
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = { TextButton(onClick = { open = false }) { Text("Done") } },
+    )
+}
+
+@Composable
 internal fun LauncherLibrary(
     appearance: LauncherAppearance,
     groups: List<LauncherLibraryGroup>,
@@ -67,13 +106,16 @@ internal fun LauncherLibrary(
     recentHistoryEnabled: Boolean = true,
     categoryTitle: String? = null,
     pinnedApps: List<LauncherApp> = emptyList(),
+    pinnedCategories: Set<LauncherCategory> = emptySet(),
+    embedded: Boolean = false,
 ) {
     val focus = LocalFocusManager.current
+    val haptic = LocalHapticFeedback.current
     val appsByComponent = remember(groups, pinnedApps) {
         (groups.flatMap { it.apps } + pinnedApps).associateBy(LauncherApp::component)
     }
-    val visibleGroups = remember(groups) {
-        groups.filter { it.apps.isNotEmpty() || it.category in LauncherCategory.SUGGESTIONS..LauncherCategory.NOVA_OS }
+    val visibleGroups = remember(groups, pinnedCategories, pinnedApps) {
+        launcherLibraryVisibleGroups(groups, pinnedCategories, pinnedApps)
     }
     val categoryGrid = rememberLazyGridState()
     val term = query.trim()
@@ -87,13 +129,15 @@ internal fun LauncherLibrary(
     BoxWithConstraints(Modifier.fillMaxSize().testTag("launcher-app-library")) {
         val wide = maxWidth >= LauncherExpandedWidth.dp
         val columns = if (wide) (maxWidth.value / 194f).toInt().coerceAtLeast(3) else 2
-        if (wallpaper == null) Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = .54f)))
-        else WallpaperSurface(Wallpaper(builtin = wallpaper, dim = .24f),
-            LocalContext.current.filesDir, Modifier.fillMaxSize())
+        if (!embedded) {
+            if (wallpaper == null) Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = .54f)))
+            else WallpaperSurface(Wallpaper(builtin = wallpaper, dim = .24f),
+                LocalContext.current.filesDir, Modifier.fillMaxSize())
+        }
 
         CompositionLocalProvider(LocalContentColor provides Color.White) {
             Column(
-                Modifier.fillMaxSize().safeDrawingPadding().imePadding()
+                Modifier.fillMaxSize().then(if (embedded) Modifier else Modifier.safeDrawingPadding()).imePadding()
                     .padding(horizontal = if (wide) 24.dp else 14.dp),
             ) {
                 Row(
@@ -123,7 +167,8 @@ internal fun LauncherLibrary(
 
                 TextField(
                     query, { onQuery(it.take(128)) },
-                    modifier = Modifier.fillMaxWidth().testTag("launcher-library-search"),
+                    modifier = Modifier.fillMaxWidth().testTag("launcher-library-search")
+                        .border(1.dp, Color.White.copy(alpha = .25f), RoundedCornerShape(28.dp)),
                     placeholder = { Text("Search apps", color = Color.White.copy(alpha = .8f)) },
                     leadingIcon = { Icon(Icons.Default.Search, null, tint = Color.White) },
                     trailingIcon = {
@@ -137,8 +182,8 @@ internal fun LauncherLibrary(
                     keyboardActions = KeyboardActions(onSearch = { focus.clearFocus() }),
                     colors = TextFieldDefaults.colors(
                         focusedTextColor = Color.White, unfocusedTextColor = Color.White,
-                        focusedContainerColor = Color.Black.copy(alpha = .28f),
-                        unfocusedContainerColor = Color.Black.copy(alpha = .22f),
+                        focusedContainerColor = Color.White.copy(alpha = .20f),
+                        unfocusedContainerColor = Color.White.copy(alpha = .13f),
                         focusedIndicatorColor = Color.Transparent, unfocusedIndicatorColor = Color.Transparent,
                         cursorColor = Color.White,
                     ),
@@ -148,7 +193,7 @@ internal fun LauncherLibrary(
                     LauncherTile(
                         LauncherItem.App(app.component), appearance, appsByComponent, decisions,
                         onClick = { onApp(app) }, gestures = gestures,
-                        modifier = modifier, showLabel = showLabel,
+                        modifier = modifier, showLabel = showLabel, fullTileIcon = !showLabel,
                     )
                 }
 
@@ -168,9 +213,13 @@ internal fun LauncherLibrary(
                             horizontalArrangement = Arrangement.spacedBy(12.dp),
                             verticalArrangement = Arrangement.spacedBy(14.dp),
                         ) {
+                            if (visibleGroups.isEmpty()) item(span = { GridItemSpan(maxLineSpan) }) {
+                                Text("No available apps", Modifier.padding(16.dp), textAlign = TextAlign.Center)
+                            }
                             items(visibleGroups, key = { it.category.name }) { group ->
                                 LibraryCategoryCard(group, decisions, renderApp) {
                                     focus.clearFocus()
+                                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                                     onCategory(group.category)
                                 }
                             }
@@ -255,37 +304,49 @@ private fun LibraryCategoryCard(
     renderApp: @Composable (LauncherApp, Modifier, Boolean) -> Unit,
     onOpen: () -> Unit,
 ) {
-    val shape = RoundedCornerShape(26.dp)
-    val gaps = Arrangement.spacedBy(4.dp)
+    val shape = RoundedCornerShape(24.dp)
+    val gap = 8.dp
+    val count = group.apps.size
+    val appCount = if (count == 1) "1 app" else "$count apps"
     Column(
         Modifier.fillMaxWidth().testTag("launcher-library-category-${group.category.name}"),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Column(
-            Modifier.fillMaxWidth().aspectRatio(1f).clip(shape)
-                .background(Brush.verticalGradient(listOf(Color.White.copy(alpha = .18f), Color.White.copy(alpha = .09f))))
-                .border(1.dp, Color.White.copy(alpha = .19f), shape).padding(9.dp),
-            verticalArrangement = gaps,
+        BoxWithConstraints(
+            Modifier.fillMaxWidth().clip(shape)
+                .background(Brush.linearGradient(listOf(Color(0x59CFF8FF), Color(0x24D9E9FF), Color(0x33E8F1FF))))
+                .border(1.dp, Brush.linearGradient(listOf(Color(0x99EDFCFF), Color(0x2EE1F1FF), Color(0x73E1F1FF))), shape)
+                .semantics { contentDescription = "Open ${group.category.label}, $appCount" }
+                .clickable(role = Role.Button, onClick = onOpen)
+                .padding(11.dp),
+            contentAlignment = Alignment.Center,
         ) {
-            Row(Modifier.fillMaxWidth().weight(1f), horizontalArrangement = gaps) {
-                repeat(2) { index ->
-                    LibraryCategoryPosition(group.apps.getOrNull(index), Modifier.weight(1f), renderApp)
-                }
-            }
-            Row(Modifier.fillMaxWidth().weight(1f), horizontalArrangement = gaps) {
-                LibraryCategoryPosition(group.apps.getOrNull(2), Modifier.weight(1f), renderApp)
-                val appCount = if (group.apps.size == 1) "1 app" else "${group.apps.size} apps"
-                Box(
-                    Modifier.weight(1f).fillMaxHeight().clip(RoundedCornerShape(17.dp))
-                        .semantics { contentDescription = "Open ${group.category.label}, $appCount" }
-                        .clickable(role = Role.Button, onClick = onOpen)
-                        .padding(8.dp),
-                    contentAlignment = Alignment.Center,
+            val tileSize = ((maxWidth - gap) / 2).coerceAtMost(82.dp)
+            Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(gap)) {
+                Row(
+                    Modifier.fillMaxWidth().height(tileSize),
+                    horizontalArrangement = Arrangement.spacedBy(gap, Alignment.CenterHorizontally),
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    LauncherFolderPreview(
-                        group.apps.drop(3), Modifier.fillMaxSize(), decisions,
-                        showCategoryGlyph = true,
-                    )
+                    group.apps.take(2).forEach { app -> renderApp(app, Modifier.size(tileSize), false) }
+                    if (count == 0) Icon(Icons.Default.Folder, null, Modifier.size(30.dp), tint = Color.White.copy(alpha = .80f))
+                }
+                if (count > 2) {
+                    Row(
+                        Modifier.fillMaxWidth().padding(horizontal = 4.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text("+${count - 2}", color = Color.White.copy(alpha = .84f),
+                            style = MaterialTheme.typography.labelMedium)
+                        val previewShape = RoundedCornerShape(13.dp)
+                        LauncherFolderPreview(
+                            group.apps.drop(2),
+                            Modifier.size(tileSize * .76f).clip(previewShape)
+                                .background(Color.Black.copy(alpha = .16f)).padding(5.dp),
+                            decisions,
+                        )
+                    }
                 }
             }
         }
@@ -297,52 +358,36 @@ private fun LibraryCategoryCard(
     }
 }
 
-@Composable
-private fun LibraryCategoryPosition(
-    app: LauncherApp?,
-    modifier: Modifier,
-    renderApp: @Composable (LauncherApp, Modifier, Boolean) -> Unit,
-) {
-    Box(modifier.fillMaxHeight(), contentAlignment = Alignment.Center) {
-        if (app != null) renderApp(app, Modifier.fillMaxHeight().wrapContentHeight(), false)
-    }
-}
-
 /** Decorative preview. The enclosing tile owns click and accessibility actions. */
 @Composable
 internal fun LauncherFolderPreview(
     apps: List<LauncherApp>,
     modifier: Modifier = Modifier,
     decisions: Map<String, Decision> = emptyMap(),
-    showCategoryGlyph: Boolean = false,
 ) {
     BoxWithConstraints(modifier, contentAlignment = Alignment.Center) {
         val size = minOf(maxWidth, maxHeight)
         if (apps.isEmpty()) {
             Icon(
-                if (showCategoryGlyph) Icons.Default.Apps else Icons.Default.Folder, null,
+                Icons.Default.Folder, null,
                 Modifier.size(size * .64f), tint = Color.White.copy(alpha = .82f),
             )
         } else {
-            val spacing = size * .06f
+            val spacing = size * .08f
             val cell = (size - spacing) / 2
-            Column(Modifier.size(size), verticalArrangement = Arrangement.spacedBy(spacing)) {
-                repeat(2) { row ->
-                    Row(horizontalArrangement = Arrangement.spacedBy(spacing)) {
-                        repeat(2) { column ->
+            Column(Modifier.size(size), verticalArrangement = Arrangement.spacedBy(spacing, Alignment.CenterVertically)) {
+                apps.take(4).chunked(2).forEach { row ->
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(spacing, Alignment.CenterHorizontally)) {
+                        row.forEach { app ->
                             Box(
                                 Modifier.size(cell).clip(RoundedCornerShape(cell * .26f)),
                                 contentAlignment = Alignment.Center,
                             ) {
-                                val app = apps.getOrNull(row * 2 + column)
-                                if (app != null) {
-                                    Box(Modifier.fillMaxSize().background(Color.White.copy(alpha = .14f)))
-                                    LauncherAppIcon(app, Modifier.fillMaxSize(.90f))
-                                    if (decisions[app.packageName]?.canLaunch == false) {
-                                        Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = .55f)))
-                                        Icon(Icons.Default.Lock, null, Modifier.size(cell * .54f)
-                                            .background(Color.Black.copy(alpha = .4f), CircleShape))
-                                    }
+                                LauncherAppIcon(app, Modifier.fillMaxSize())
+                                if (decisions[app.packageName]?.canLaunch == false) {
+                                    Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = .55f)))
+                                    Icon(Icons.Default.Lock, null, Modifier.size(cell * .54f)
+                                        .background(Color.Black.copy(alpha = .4f), CircleShape))
                                 }
                             }
                         }
