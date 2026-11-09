@@ -58,7 +58,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import java.text.Normalizer
-import kotlinx.coroutines.launch
 import uk.co.traynor.privategallery.core.sanctuary.SanctuaryLauncherPolicy.Decision
 import uk.co.traynor.privategallery.home2.Wallpaper
 import uk.co.traynor.privategallery.home2.WallpaperSurface
@@ -131,7 +130,7 @@ internal fun LauncherLibrary(
     val focus = LocalFocusManager.current
     val keyboard = LocalSoftwareKeyboardController.current
     val haptic = LocalHapticFeedback.current
-    var searchFocused by remember { mutableStateOf(false) }
+    var alphabeticalOpen by remember { mutableStateOf(false) }
     val appsByComponent = remember(groups, pinnedApps) {
         (groups.flatMap { it.apps } + pinnedApps).associateBy(LauncherApp::component)
     }
@@ -143,11 +142,13 @@ internal fun LauncherLibrary(
     }
     val categoryGrid = rememberLazyGridState()
     val term = query.trim()
-    val browsingAlphabetically = searchFocused || term.isNotEmpty()
-    BackHandler(enabled = browsingAlphabetically) {
+    val browsingAlphabetically = alphabeticalOpen || term.isNotEmpty()
+    fun closeAlphabeticalList() {
+        alphabeticalOpen = false
         focus.clearFocus()
         onQuery("")
     }
+    BackHandler(enabled = browsingAlphabetically, onBack = ::closeAlphabeticalList)
     val wallpaper = when (appearance.wallpaper) {
         LauncherWallpaper.OCEAN -> "Aurora"
         LauncherWallpaper.MIDNIGHT -> "Midnight"
@@ -175,8 +176,10 @@ internal fun LauncherLibrary(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     IconButton(onClick = {
-                        focus.clearFocus()
-                        if (browsingAlphabetically) onQuery("") else onBack()
+                        if (browsingAlphabetically) closeAlphabeticalList() else {
+                            focus.clearFocus()
+                            onBack()
+                        }
                     }) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back") }
                     Text(
                         categoryTitle ?: selectedCategory?.label ?: "App Library",
@@ -185,7 +188,7 @@ internal fun LauncherLibrary(
                         maxLines = 2, overflow = TextOverflow.Ellipsis,
                     )
                     TextButton(
-                        onClick = { focus.clearFocus(); onDrawer() },
+                        onClick = { closeAlphabeticalList(); onDrawer() },
                         colors = ButtonDefaults.textButtonColors(contentColor = Color.White),
                         modifier = Modifier.testTag("launcher-library-drawer"),
                     ) {
@@ -198,7 +201,7 @@ internal fun LauncherLibrary(
                 TextField(
                     query, { onQuery(it.take(128)) },
                     modifier = Modifier.fillMaxWidth().testTag("launcher-library-search")
-                        .onFocusChanged { searchFocused = it.isFocused }
+                        .onFocusChanged { if (it.isFocused) alphabeticalOpen = true }
                         .border(1.dp, Color.White.copy(alpha = .25f), RoundedCornerShape(28.dp)),
                     placeholder = { Text("Search apps", color = Color.White.copy(alpha = .8f)) },
                     leadingIcon = { Icon(Icons.Default.Search, null, tint = Color.White) },
@@ -324,7 +327,7 @@ private fun LibraryAlphabeticalList(
     onApp: (LauncherApp) -> Unit,
 ) {
     val list = rememberLazyListState()
-    val scope = rememberCoroutineScope()
+    val keyboard = LocalSoftwareKeyboardController.current
     val sections = remember(apps) {
         apps.groupBy { app ->
             val initial = Normalizer.normalize(app.label.trimStart(), Normalizer.Form.NFD).firstOrNull()
@@ -375,7 +378,8 @@ private fun LibraryAlphabeticalList(
                     Box(
                         Modifier.fillMaxWidth().height(28.dp)
                             .clickable(role = Role.Button) {
-                                scope.launch { list.scrollToItem(index.getValue(letter)) }
+                                keyboard?.hide()
+                                list.requestScrollToItem(index.getValue(letter))
                             }
                             .semantics { contentDescription = "Jump to $letter" },
                         contentAlignment = Alignment.Center,

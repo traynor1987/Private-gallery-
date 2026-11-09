@@ -170,7 +170,7 @@ class LauncherLibrary73UiTest {
         compose.onNodeWithTag("launcher-library-search").performClick()
         compose.onNodeWithTag("launcher-library-alphabetical-list").assertIsDisplayed()
         compose.onNodeWithContentDescription("Jump to Z").performClick()
-        compose.onNodeWithTag("launcher-app-${zed.component}").assertIsDisplayed()
+        compose.waitUntil(5_000) { compose.onNodeWithTag("launcher-app-${zed.component}").isDisplayed() }
         compose.onNodeWithTag("launcher-library-search").performTextInput("Zed")
         compose.onNodeWithTag("launcher-app-${apps.first().component}").assertDoesNotExist()
         compose.onNodeWithTag("launcher-app-${zed.component}").assertIsDisplayed()
