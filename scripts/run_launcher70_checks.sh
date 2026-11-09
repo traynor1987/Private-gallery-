@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+python3 scripts/run_backup_repair62.py --calculator-copy
 bash scripts/run_launcher70_restart.sh
 bash scripts/run_visual_checkpoint.sh SanctuaryLauncherPolicy70Test sanctuary-launcher-policy-70 uk.co.traynor.privategallery.core.sanctuary
 bash scripts/run_visual_checkpoint.sh LauncherWorkspace70Test launcher-workspace-70 uk.co.traynor.privategallery

@@ -39,10 +39,23 @@ class CalculatorUiTest {
   compose.onNodeWithTag("open-apps").performClick();compose.onNodeWithTag("drawer-search").performTextInput("Nova Calculator");compose.onNodeWithTag("app-nova-calculator").performClick()
   compose.onNodeWithTag("calculator").assertIsDisplayed();compose.onNodeWithTag("calculator-expression").performTextInput("0.1+0.2")
   compose.onNodeWithTag("calculator-key-=").performScrollTo().performClick();compose.onNodeWithTag("calculator-result").performScrollTo().assertTextEquals("0.3")
+  androidx.test.espresso.Espresso.closeSoftKeyboard()
+  compose.waitUntil(10_000) {
+   compose.runOnIdle {
+    val decor = compose.activity.window.decorView
+    decor.hasWindowFocus() && decor.rootWindowInsets?.isVisible(android.view.WindowInsets.Type.ime()) == false
+   }
+  }
   compose.onNodeWithText("Memory").performScrollTo().performClick()
   compose.onNodeWithContentDescription("Store in memory").performScrollTo().performClick()
+  compose.runOnIdle { assertEquals("Encrypted calculator memory", "0.3", CalculatorData(space).memory?.toPlainString()) }
   compose.onNodeWithText("Copy").performScrollTo().performClick()
-  compose.runOnIdle{assertEquals("0.3",CalculatorData(space).memory!!.toPlainString());assertEquals("0.3",(compose.activity.getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager).primaryClip!!.getItemAt(0).text.toString())}
+  compose.onNodeWithText("Copied").assertIsDisplayed()
+  compose.runOnIdle {
+   val clipboard = compose.activity.getSystemService(android.content.ClipboardManager::class.java)
+   assertTrue("Clipboard access requires the foreground window", compose.activity.hasWindowFocus())
+   assertEquals("Android clipboard contents", "0.3", clipboard?.primaryClip?.getItemAt(0)?.text?.toString())
+  }
   compose.onNodeWithText("History").performScrollTo().performClick();compose.onNodeWithTag("calculator-history-0").performScrollTo().assertExists()
   compose.onNodeWithContentDescription("Save calculation history").performScrollTo().performClick();compose.runOnIdle{assertTrue(CalculatorData(space).history.isEmpty())};space.close()
  }
