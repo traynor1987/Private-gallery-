@@ -2,6 +2,7 @@ package uk.co.traynor.privategallery.launcher
 
 import android.content.pm.ApplicationInfo
 import android.graphics.Bitmap
+import android.os.Process
 import androidx.activity.ComponentActivity
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -39,9 +40,17 @@ class LauncherLibrary73UiTest {
         var drawer = false
         val social = LauncherApp("example.social/.Main", "example.social", "Social App",
             category = ApplicationInfo.CATEGORY_SOCIAL)
+        val productivity = (1..2).map { index ->
+            LauncherApp("example.productivity$index/.Main", "example.productivity$index", "Productivity $index",
+                category = ApplicationInfo.CATEGORY_PRODUCTIVITY)
+        }
+        val utilities = (1..4).map { index ->
+            LauncherApp("example.utility$index/.Main", "example.utility$index", "Utility $index",
+                category = ApplicationInfo.CATEGORY_MAPS)
+        }
         compose.setContent {
             LauncherLibrary(
-                LauncherAppearance(), launcherLibraryGroups(apps + social), category, query,
+                LauncherAppearance(), launcherLibraryGroups(apps + social + productivity + utilities), category, query,
                 onQuery = { query = it }, onCategory = { category = it }, onBack = { category = null },
                 onDrawer = { drawer = true }, onApp = { launched = it },
                 decisions = mapOf(apps.first().packageName to Decision.UNAPPROVED),
@@ -50,17 +59,23 @@ class LauncherLibrary73UiTest {
         }
 
         val first = categoryBounds(LauncherCategory.SOCIAL)
-        val second = categoryBounds(LauncherCategory.GAMES)
+        val second = categoryBounds(LauncherCategory.PRODUCTIVITY)
         assertEquals(first.top, second.top, 0.01f)
         assertTrue(second.left > first.left)
-        assertTrue(first.height < second.height)
+        listOf(second, categoryBounds(LauncherCategory.GAMES), categoryBounds(LauncherCategory.UTILITIES)).forEach {
+            assertEquals(first.height, it.height, 0.01f)
+            assertEquals(first.width, it.width, 0.01f)
+        }
+        val loneAppBounds = compose.onNodeWithTag("launcher-app-${social.component}").fetchSemanticsNode().boundsInRoot
+        val groupedAppBounds = compose.onNodeWithTag("launcher-app-${apps.first().component}").fetchSemanticsNode().boundsInRoot
+        assertTrue(loneAppBounds.width > groupedAppBounds.width)
         compose.onNodeWithTag("launcher-library-category-SUGGESTIONS").assertDoesNotExist()
         compose.onNodeWithTag("launcher-library-category-RECENTLY_USED").assertDoesNotExist()
         saveCheckpoint("cover")
         compose.onNodeWithTag("launcher-app-${apps.first().component}")
             .assert(hasContentDescription("Game 1, blocked by Sanctuary")).performClick()
         compose.runOnIdle { assertEquals(apps.first(), launched) }
-        compose.onNodeWithContentDescription("Open Games, 5 apps").performClick()
+        compose.onNodeWithContentDescription("See all Games apps").performClick()
         compose.onNodeWithText("Games").assertIsDisplayed()
         compose.onNodeWithTag("launcher-app-${apps.last().component}").performClick()
         compose.runOnIdle { assertEquals(apps.last(), launched) }
@@ -132,6 +147,53 @@ class LauncherLibrary73UiTest {
         compose.runOnIdle {
             assertEquals(listOf(LauncherItem.App(apps.first().component)), state.cover.pages.single())
         }
+    }
+
+    @Test fun coverFocusedSearchShowsAlphabeticalListAndJumpsByLetter() {
+        val zed = LauncherApp("example.zed/.Main", "example.zed", "Zed")
+        val clone = zed.copy(
+            component = "${zed.component}#42",
+            profile = LauncherProfile(Process.myUserHandle(), 42, "Dual Messenger"),
+        )
+        val apps = (1..45).map { index ->
+            LauncherApp("example.app$index/.Main", "example.app$index", "Alpha $index")
+        } + listOf(zed, clone)
+        var query by mutableStateOf("")
+        var launched: LauncherApp? = null
+        compose.setContent {
+            LauncherLibrary(
+                LauncherAppearance(), launcherLibraryGroups(apps), null, query,
+                { query = it }, {}, {}, {}, { launched = it }, emptyMap(), LauncherIconGestures(false) { null },
+            )
+        }
+
+        compose.onNodeWithTag("launcher-library-search").performClick()
+        compose.onNodeWithTag("launcher-library-alphabetical-list").assertIsDisplayed()
+        compose.onNodeWithContentDescription("Jump to Z").performClick()
+        compose.onNodeWithTag("launcher-app-${zed.component}").assertIsDisplayed()
+        compose.onNodeWithTag("launcher-library-search").performTextInput("Zed")
+        compose.onNodeWithTag("launcher-app-${apps.first().component}").assertDoesNotExist()
+        compose.onNodeWithTag("launcher-app-${zed.component}").assertIsDisplayed()
+        compose.onNodeWithTag("launcher-app-${clone.component}")
+            .assert(hasContentDescription("Zed, Dual Messenger")).performClick()
+        compose.runOnIdle { assertEquals(clone, launched) }
+    }
+
+    @Test fun coverExpandedOtherCategoryRendersLargeCollectionLazily() {
+        val apps = (1..150).map { index ->
+            LauncherApp("example.app$index/.Main", "example.app$index", "Unknown $index")
+        }
+        compose.setContent {
+            LauncherLibrary(
+                LauncherAppearance(), launcherLibraryGroups(apps), LauncherCategory.OTHER, "",
+                {}, {}, {}, {}, {}, emptyMap(), LauncherIconGestures(false) { null },
+            )
+        }
+
+        val last = launcherLibraryMatches(apps, "").last()
+        compose.onNodeWithTag("launcher-app-${last.component}").assertDoesNotExist()
+        compose.onNodeWithTag("launcher-library-category-apps").performScrollToIndex(apps.lastIndex)
+        compose.onNodeWithTag("launcher-app-${last.component}").assertIsDisplayed()
     }
 
     private fun categoryBounds(category: LauncherCategory) =

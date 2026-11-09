@@ -100,4 +100,88 @@ class LauncherLayoutStore70Test {
             assertTrue(store.save(before))
         }
     }
+
+    @Test fun legacyStockDuplicateIsRemovedWithoutRecreatingOwnerDockOrWidgets() {
+        val store = NovaLauncherStore(context)
+        val before = store.read()
+        val prefs = context.getSharedPreferences("nova_android_home_v1", android.content.Context.MODE_PRIVATE)
+        val stock = LauncherLayout().withSmartFolderTemplate(onlyIfEmpty = true).pages[1]
+        val cover = LauncherLayout(
+            pages = listOf(listOf(LauncherItem.App(browser)), stock, stock, listOf(LauncherItem.App(other))),
+            dock = listOf(LauncherItem.Workspace, LauncherItem.App(browser)),
+        )
+        val coverWidget = widget.copy(wide = false, page = 3)
+        val original = NovaLauncherState(configured = true, cover = cover, widgets = listOf(coverWidget))
+        try {
+            assertTrue(store.save(original))
+            assertEquals(original, store.read())
+            val legacy = JSONObject(checkNotNull(prefs.getString("state", null)))
+            legacy.remove("dockOptions")
+            legacy.remove("newAppPlacement")
+            assertTrue(prefs.edit().putString("state", legacy.toString()).commit())
+
+            val migrated = NovaLauncherStore(context).read()
+            assertEquals(original.cover.pages.filterIndexed { index, _ -> index != 2 }, migrated.cover.pages)
+            assertEquals(original.cover.dock, migrated.cover.dock)
+            assertEquals(listOf(coverWidget.copy(page = 2)), migrated.widgets)
+            assertTrue(migrated.dockOptions.locked)
+            assertTrue(migrated.dockOptions.showInLibrary)
+            assertFalse(migrated.dockOptions.labels)
+
+            val configured = migrated.copy(
+                dockOptions = LauncherDockOptions(locked = false, showInLibrary = false, labels = true),
+                appearance = migrated.appearance.copy(dock = LauncherDock.TRANSPARENT),
+                newAppPlacement = LauncherNewAppPlacement.HOME,
+            )
+            assertTrue(store.save(configured))
+            assertEquals(configured, NovaLauncherStore(context).read())
+        } finally {
+            assertTrue(store.save(before))
+        }
+    }
+
+    @Test fun newlyInstalledAppsArePlacedAfterOptInAcrossStoreReopens() {
+        val store = NovaLauncherStore(context)
+        val before = store.read()
+        try {
+            assertTrue(store.save(NovaLauncherState(configured = true)))
+            val start = System.currentTimeMillis()
+            val browserApp = LauncherApp(browser, "com.example.browser", "Browser", firstInstallTime = start - 100)
+            assertEquals(null, store.observeInstalledApps(listOf(browserApp), start))
+            val enabled = store.read().copy(newAppPlacement = LauncherNewAppPlacement.HOME)
+            assertTrue(store.save(enabled))
+
+            val reopened = NovaLauncherStore(context)
+            val scan = System.currentTimeMillis()
+            val installed = LauncherApp(other, "com.example.other", "New app", firstInstallTime = scan + 1)
+            val placed = checkNotNull(reopened.observeInstalledApps(listOf(browserApp, installed), scan + 2))
+            assertEquals(listOf(LauncherItem.App(other)), placed.cover.pages.single())
+            assertEquals(listOf(LauncherItem.App(other)), placed.inner.pages.single())
+            assertEquals(placed, store.read())
+            assertEquals(null, reopened.observeInstalledApps(listOf(browserApp, installed), scan + 3))
+        } finally {
+            assertTrue(store.save(before))
+        }
+    }
+
+    @Test fun categoryOverridesRetainAppProfileIdentityAcrossStoreReopens() {
+        val main = "com.whatsapp/.Main"
+        val friends = "$main#99"
+        val settings = LauncherIdentitySettings(context)
+        val before = settings.categoryOverrides()
+        try {
+            assertTrue(settings.saveCategoryOverride(main, LauncherCategory.SOCIAL))
+            assertTrue(settings.saveCategoryOverride(friends, LauncherCategory.PRODUCTIVITY))
+            assertFalse(settings.saveCategoryOverride(friends, LauncherCategory.SUGGESTIONS))
+            val reopened = LauncherIdentitySettings(context)
+            assertEquals(LauncherCategory.SOCIAL, reopened.categoryOverrides()[main])
+            assertEquals(LauncherCategory.PRODUCTIVITY, reopened.categoryOverrides()[friends])
+            assertTrue(reopened.saveCategoryOverride(friends, null))
+            assertEquals(null, settings.categoryOverrides()[friends])
+            assertEquals(LauncherCategory.SOCIAL, settings.categoryOverrides()[main])
+        } finally {
+            assertTrue(settings.saveCategoryOverride(main, before[main]))
+            assertTrue(settings.saveCategoryOverride(friends, before[friends]))
+        }
+    }
 }

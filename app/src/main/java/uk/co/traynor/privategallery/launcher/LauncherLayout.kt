@@ -5,7 +5,8 @@ internal enum class LauncherTheme { SYSTEM, LIGHT, DARK }
 internal enum class LauncherAccent { SKY, TEAL, LAVENDER, AMBER }
 internal enum class LauncherIconShape { ROUNDED, CIRCLE, SQUIRCLE }
 internal enum class LauncherIconSize { SMALL, MEDIUM, LARGE }
-internal enum class LauncherDock { GLASS, SOLID, HIDDEN }
+internal enum class LauncherDock { GLASS, SOLID, TRANSPARENT, HIDDEN }
+internal enum class LauncherNewAppPlacement { LIBRARY_ONLY, HOME }
 internal enum class LauncherDrawerOrientation { VERTICAL, HORIZONTAL }
 internal enum class LauncherSearchPlacement { HOME, DRAWER, BOTH }
 internal enum class LauncherSort { NAME, FAVOURITES, FREQUENT }
@@ -41,6 +42,12 @@ internal data class LauncherDrawerOptions(
     val shortcutSearch: Boolean = false,
 )
 
+internal data class LauncherDockOptions(
+    val locked: Boolean = true,
+    val showInLibrary: Boolean = true,
+    val labels: Boolean = false,
+)
+
 internal sealed interface LauncherItem {
     data class App(val component: String) : LauncherItem
     data class Folder(val name: String, val apps: List<String>) : LauncherItem
@@ -60,20 +67,22 @@ internal data class LauncherLayout(
     val favourites: Set<String> = emptySet(),
 )
 
+private val stockSmartFolders = listOf(
+    LauncherCategory.SUGGESTIONS, LauncherCategory.RECENTLY_USED,
+    LauncherCategory.RECENTLY_ADDED, LauncherCategory.NOVA_OS,
+).map { LauncherItem.SmartFolder(it) }
+
 internal fun LauncherLayout.withSmartFolderTemplate(
     onlyIfEmpty: Boolean,
     capacity: Int = MAX_LAUNCHER_PAGE_ITEMS,
 ): LauncherLayout {
     val page = 1
     val items = pages.getOrNull(page).orEmpty()
-    if (onlyIfEmpty && items.isNotEmpty()) return this
+    if (onlyIfEmpty && (items.isNotEmpty() || stockSmartFolders in pages)) return this
     val room = capacity.coerceIn(0, MAX_LAUNCHER_PAGE_ITEMS) - items.size
     if (room <= 0) return this
     val existing = items.filterIsInstance<LauncherItem.SmartFolder>().map { it.category }.toSet()
-    val additions = listOf(
-        LauncherCategory.SUGGESTIONS, LauncherCategory.RECENTLY_USED,
-        LauncherCategory.RECENTLY_ADDED, LauncherCategory.NOVA_OS,
-    ).filterNot { it in existing }.take(room).map { LauncherItem.SmartFolder(it) }
+    val additions = stockSmartFolders.filterNot { it.category in existing }.take(room)
     if (additions.isEmpty()) return this
 
     val nextPages = List(maxOf(pages.size, page + 1)) { index ->
@@ -99,6 +108,8 @@ internal data class NovaLauncherState(
     val launchCounts: Map<String, Int> = emptyMap(),
     val coverCleanupUndo: List<List<LauncherItem>>? = null,
     val innerCleanupUndo: List<List<LauncherItem>>? = null,
+    val dockOptions: LauncherDockOptions = LauncherDockOptions(),
+    val newAppPlacement: LauncherNewAppPlacement = LauncherNewAppPlacement.LIBRARY_ONLY,
 ) {
     fun layout(wide: Boolean): LauncherLayout = if (wide && separateDisplays) inner else cover
 
@@ -153,6 +164,65 @@ internal data class NovaLauncherState(
         val recent = launchCounts.entries.filter { it.key != component }.takeLast(MAX_LAUNCH_COUNTS - 1)
         return copy(launchCounts = recent.associate { it.key to it.value } + (component to (count + 1).coerceAtMost(MAX_LAUNCH_COUNT)))
     }
+
+    fun withoutRedundantSmartFolderPages(): NovaLauncherState {
+        fun duplicates(layout: LauncherLayout, wide: Boolean, hasUndo: Boolean): Set<Int> {
+            // Legacy layouts do not track template provenance. Only collapse exact copies
+            // after the canonical stock page, preserving customized pages and undo snapshots.
+            if (hasUndo || layout.pages.getOrNull(1) != stockSmartFolders) return emptySet()
+            val widgetPages = widgets.filter { it.wide == wide }.mapTo(mutableSetOf(), LauncherWidget::page)
+            return layout.pages.indices.filterTo(mutableSetOf()) { index ->
+                index > 1 && index !in widgetPages && layout.pages[index] == stockSmartFolders
+            }
+        }
+
+        val removedCover = duplicates(cover, wide = false, hasUndo = coverCleanupUndo != null)
+        val removedInner = duplicates(inner, wide = true, hasUndo = innerCleanupUndo != null)
+        if (removedCover.isEmpty() && removedInner.isEmpty()) return this
+        return copy(
+            cover = cover.copy(pages = cover.pages.filterIndexed { index, _ -> index !in removedCover }),
+            inner = inner.copy(pages = inner.pages.filterIndexed { index, _ -> index !in removedInner }),
+            widgets = widgets.map { widget ->
+                val removed = if (widget.wide) removedInner else removedCover
+                widget.copy(page = widget.page - removed.count { it < widget.page })
+            },
+        )
+    }
+
+    fun withNewlyInstalledApps(components: Collection<String>): NovaLauncherState {
+        if (!configured || newAppPlacement != LauncherNewAppPlacement.HOME || components.isEmpty()) return this
+        val valid = components.filter(LauncherAppIdentity::isValidKey).distinct()
+        var next = this
+        for (wide in if (separateDisplays) listOf(false, true) else listOf(false)) {
+            val layout = next.layout(wide)
+            val capacity = appearance.grid.columns(wide) * appearance.grid.rows
+            val placed = layout.withNewlyInstalledApps(valid, capacity)
+            if (placed != layout) next = next.withLayout(wide, placed)
+        }
+        return next
+    }
+}
+
+private fun LauncherLayout.withNewlyInstalledApps(components: List<String>, capacity: Int): LauncherLayout {
+    val existing = buildSet {
+        for (item in pages.flatten() + dock) when (item) {
+            is LauncherItem.App -> add(item.component)
+            is LauncherItem.Folder -> addAll(item.apps)
+            else -> Unit
+        }
+    }
+    val updated = pages.toMutableList()
+    for (component in components) {
+        if (component in existing) continue
+        val index = updated.indexOfFirst { page ->
+            page.size < capacity && (page.isEmpty() || page.any { it !is LauncherItem.SmartFolder })
+        }
+        val item = LauncherItem.App(component)
+        if (index >= 0) updated[index] = updated[index] + item
+        else if (updated.size < MAX_LAUNCHER_PAGES) updated.add(listOf(item))
+        else break
+    }
+    return if (updated == pages) this else copy(pages = updated)
 }
 
 internal fun <T> List<T>.movingLauncherItem(from: Int, to: Int): List<T> =

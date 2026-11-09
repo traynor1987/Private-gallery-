@@ -28,6 +28,7 @@ import androidx.compose.runtime.saveable.listSaver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
@@ -58,6 +59,7 @@ import java.util.Date
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import uk.co.traynor.privategallery.R
+import uk.co.traynor.privategallery.core.sanctuary.SanctuaryAppVisibility
 import uk.co.traynor.privategallery.core.sanctuary.SanctuaryLauncherPolicy.Decision
 import uk.co.traynor.privategallery.core.ui.AppTheme
 import uk.co.traynor.privategallery.home2.Wallpaper
@@ -83,6 +85,8 @@ internal fun NovaLauncherScreen(
     smartSettings: (@Composable (List<LauncherApp>) -> Unit)? = null,
     defaultHomeUi: LauncherDefaultHomeUi? = null,
     smartFolderPresentation: LauncherSmartFolderPresentation = LauncherSmartFolderPresentation.AUTOMATIC,
+    appVisibility: SanctuaryAppVisibility = SanctuaryAppVisibility(hideBlockedApps = state.hideBlocked,
+        hideFromSearch = state.hideBlocked, hideFromSuggestions = state.hideBlocked, hideFromRecentlyUsed = state.hideBlocked),
 ) {
     val theme = when (state.appearance.theme) {
         LauncherTheme.SYSTEM -> AppTheme.SYSTEM
@@ -91,10 +95,12 @@ internal fun NovaLauncherScreen(
     }
     PrivateGalleryTheme(theme) {
         if (!state.configured) {
-            LauncherSetup(state, apps, decisions, actions, isDefaultHome, outsideProtection, launcherProtected)
+            val eligible = if (launcherProtected && appVisibility.hideBlockedApps)
+                apps.filter { decisions.forLauncherApp(it)?.canLaunch == true } else apps
+            LauncherSetup(state, eligible, decisions, actions, isDefaultHome, outsideProtection, launcherProtected)
         } else {
             LauncherRuntime(state, apps, shortcuts, decisions, actions, isDefaultHome, outsideProtection,
-                launcherProtected, homeGeneration, sanctuaryStatus, smartState, smartSettings, defaultHomeUi, smartFolderPresentation)
+                launcherProtected, homeGeneration, sanctuaryStatus, smartState, smartSettings, defaultHomeUi, smartFolderPresentation, appVisibility)
         }
     }
 }
@@ -125,6 +131,7 @@ private fun LauncherRuntime(
     smartSettings: (@Composable (List<LauncherApp>) -> Unit)?,
     defaultHomeUi: LauncherDefaultHomeUi?,
     smartFolderPresentation: LauncherSmartFolderPresentation,
+    appVisibility: SanctuaryAppVisibility,
 ) {
     var surface by rememberSaveable(homeGeneration) { mutableStateOf(LauncherSurface.HOME) }
     var query by rememberSaveable(homeGeneration) { mutableStateOf("") }
@@ -139,12 +146,10 @@ private fun LauncherRuntime(
     var searchRequested by rememberSaveable(homeGeneration) { mutableStateOf(false) }
     var folder by remember(homeGeneration) { mutableStateOf<LauncherItem.Folder?>(null) }
     val appsByComponent = remember(apps) { apps.associateBy { it.component } }
-    fun canDisplay(component: String): Boolean {
-        val app = appsByComponent[component] ?: return false
-        if (!launcherProtected || !state.hideBlocked) return true
-        val decision = decisions[app.packageName]
-        return decision == Decision.APPROVED || decision == Decision.ESSENTIAL
-    }
+    fun approved(app: LauncherApp) = decisions.forLauncherApp(app)?.canLaunch == true
+    fun canDisplay(component: String, hide: Boolean = appVisibility.hideBlockedApps): Boolean =
+        appsByComponent[component]?.let { !launcherProtected || !hide || approved(it) } == true
+
     var category by rememberSaveable(homeGeneration) { mutableStateOf<LauncherCategory?>(null) }
     var homeFolder by rememberSaveable(homeGeneration, stateSaver = openSmartFolderSaver) {
         mutableStateOf<LauncherItem.SmartFolder?>(null)
@@ -152,28 +157,39 @@ private fun LauncherRuntime(
     var editingFolder by remember(homeGeneration) {
         mutableStateOf<Pair<LauncherSlot, LauncherItem.SmartFolder>?>(null)
     }
-    val visibleApps = remember(apps, launcherProtected, state.hideBlocked, decisions) {
+    val visibleApps = remember(apps, launcherProtected, appVisibility, decisions) {
         apps.filter { canDisplay(it.component) }
     }
-    val smartApps = remember(visibleApps, launcherProtected, decisions) {
-        visibleApps.filter { !launcherProtected || decisions[it.packageName]?.canLaunch == true }
+    val searchApps = remember(apps, launcherProtected, appVisibility, decisions) {
+        apps.filter { canDisplay(it.component, appVisibility.hideFromSearch) }
+    }
+    val smartApps = remember(apps, launcherProtected, decisions) {
+        apps.filter { !launcherProtected || approved(it) }
     }
     val context = LocalContext.current
     val identitySettings = remember(context) { LauncherIdentitySettings(context) }
     var libraryPins by remember(identitySettings) { mutableStateOf(identitySettings.libraryPins()) }
-    val visibleLibraryPins = libraryPins.takeUnless { launcherProtected }.orEmpty()
-    val groups = remember(visibleApps, smartApps, smartState, launcherProtected) {
+    var categoryOverrides by remember(identitySettings) { mutableStateOf(identitySettings.categoryOverrides()) }
+    var categoryEditor by remember(homeGeneration) { mutableStateOf<LauncherApp?>(null) }
+    val groups = remember(visibleApps, smartApps, smartState, launcherProtected, categoryOverrides,
+        appVisibility, apps, decisions, state.launchCounts) {
+        val suggestions = apps.filter { canDisplay(it.component, appVisibility.hideFromSuggestions) }
+        val recents = apps.filter { canDisplay(it.component, appVisibility.hideFromRecentlyUsed) }
         launcherLibraryGroups(
             visibleApps,
-            if (launcherProtected || smartState?.showSuggestions != true) emptyList()
-            else smartState.suggestedApps(smartApps),
-            if (launcherProtected) emptyList() else smartState?.recentApps(smartApps).orEmpty(),
+            if (smartState?.showSuggestions == true) smartState.suggestedApps(suggestions) else emptyList(),
+            smartState?.recentApps(recents).orEmpty(),
+            categoryOverrides = categoryOverrides,
+            suggestionCatalog = suggestions,
+            recentCatalog = recents,
+            launchCounts = if (smartState?.mode == LauncherTrackingMode.OFF) emptyMap()
+                else state.launchCounts - smartState?.excluded.orEmpty(),
         )
     }
     fun members(folder: LauncherItem.SmartFolder): List<LauncherApp> {
         val allowed = smartApps.associateBy { it.component }
         val automatic = groups.firstOrNull { it.category == folder.category }?.apps.orEmpty()
-        val pinned = if (folder.category == LauncherCategory.RECENTLY_USED && !launcherProtected)
+        val pinned = if (folder.category == LauncherCategory.RECENTLY_USED)
             smartState?.pinnedApps(smartApps).orEmpty()
         else emptyList()
         return (automatic.filter { it.component in allowed } + pinned + folder.included.mapNotNull(allowed::get))
@@ -245,7 +261,9 @@ private fun LauncherRuntime(
             }
             else -> false
         }
-        fun edit(next: LauncherLayout) { actions.save(state.withLayout(wide, next)) }
+        fun edit(next: LauncherLayout) {
+            if (!state.dockOptions.locked || next.dock == layout.dock) actions.save(state.withLayout(wide, next))
+        }
 
         val screenWidth = constraints.maxWidth
         val rightToLeft = LocalLayoutDirection.current == LayoutDirection.Rtl
@@ -259,6 +277,17 @@ private fun LauncherRuntime(
         }
         val rowTolerance = with(LocalDensity.current) { 8.dp.toPx() }
         val edgeWidth = with(LocalDensity.current) { 34.dp.toPx() }
+        LaunchedEffect(launcherProtected) {
+            if (launcherProtected) {
+                gestures.cancelDrag()
+                gestures.dismissMenu()
+                categoryEditor = null
+                editingFolder = null
+                query = ""
+                coverLibraryQuery = ""
+                innerLibraryQuery = ""
+            }
+        }
         val activeDrag = gestures.drag
         LauncherDefaultHomePrompt(
             defaultHomeUi,
@@ -291,7 +320,8 @@ private fun LauncherRuntime(
             findSource = { position ->
                 if (folder != null || gestures.menu != null) null
                 else when (surface) {
-                    LauncherSurface.HOME -> gestures.sourceAt(position, currentPage, drawer = librarySelected)
+                    LauncherSurface.HOME -> gestures.sourceAt(position, currentPage, drawer = librarySelected,
+                        includeDock = librarySelected && !state.dockOptions.locked)
                     LauncherSurface.DRAWER, LauncherSurface.LIBRARY -> gestures.sourceAt(position, currentPage, drawer = true)
                     else -> null
                 }
@@ -343,8 +373,9 @@ private fun LauncherRuntime(
                                 },
                                 onApp = { actions.launchApp(it.component) }, decisions = decisions, gestures = gestures,
                                 recentHistoryEnabled = smartState?.mode != LauncherTrackingMode.OFF,
-                                pinnedApps = if (launcherProtected) emptyList() else smartState?.pinnedApps(smartApps).orEmpty(),
-                                pinnedCategories = visibleLibraryPins,
+                                pinnedApps = smartState?.pinnedApps(smartApps).orEmpty(),
+                                pinnedCategories = libraryPins,
+                                searchApps = searchApps,
                                 embedded = true,
                             )
                         },
@@ -353,13 +384,14 @@ private fun LauncherRuntime(
                         smartMembers = ::members,
                         smartFolderPresentation = smartFolderPresentation,
                         sanctuaryStatus = sanctuaryStatus,
+                        isAppVisible = { canDisplay(it) },
                     )
                 }
                 LauncherSurface.DRAWER -> LauncherDrawer(
                     state.copy(launchCounts = if (smartState?.mode == LauncherTrackingMode.OFF) emptyMap()
                         else state.launchCounts - smartState?.excluded.orEmpty()),
                     layout, wide, query, { query = it }, searchRequested,
-                    apps.filter { canDisplay(it.component) }, shortcuts, decisions,
+                    visibleApps, shortcuts, decisions,
                     onBack = { surface = LauncherSurface.HOME },
                     onApp = { actions.launchApp(it.component) },
                     onShortcut = actions.launchShortcut,
@@ -370,6 +402,7 @@ private fun LauncherRuntime(
                         selectLibrary(LauncherLibraryEntry.DRAWER)
                         surface = LauncherSurface.HOME
                     },
+                    searchApps = searchApps,
                 )
                 LauncherSurface.LIBRARY -> {
                     val opened = homeFolder
@@ -382,8 +415,8 @@ private fun LauncherRuntime(
                         onApp = { actions.launchApp(it.component) }, decisions = decisions, gestures = gestures,
                         recentHistoryEnabled = smartState?.mode != LauncherTrackingMode.OFF,
                         categoryTitle = opened?.name,
-                        pinnedApps = if (launcherProtected) emptyList() else smartState?.pinnedApps(smartApps).orEmpty(),
-                        pinnedCategories = visibleLibraryPins,
+                        pinnedApps = smartState?.pinnedApps(smartApps).orEmpty(),
+                        pinnedCategories = libraryPins,
                     )
                 }
                 LauncherSurface.LIBRARY_SETTINGS -> LauncherPanel("App Library", { surface = LauncherSurface.SETTINGS }) {
@@ -405,16 +438,18 @@ private fun LauncherRuntime(
                     }
                 }
                 LauncherSurface.SETTINGS -> LauncherSettings(
-                    state, decisions, apps, actions, isDefaultHome, outsideProtection, launcherProtected,
+                    state, decisions, visibleApps, actions, isDefaultHome, outsideProtection, launcherProtected,
                     onBack = { surface = LauncherSurface.HOME },
                     onEdit = { surface = LauncherSurface.EDIT },
                     onLibrarySettings = { surface = LauncherSurface.LIBRARY_SETTINGS },
                     defaultHomeUi = defaultHomeUi,
+                    wide = wide,
                 )
                 LauncherSurface.EDIT -> LauncherLayoutEditor(
                     state, layout, wide, currentPage, apps.filter { canDisplay(it.component) }, decisions,
                     onEdit = ::edit, onPage = updatePage, actions = actions,
                     onBack = { surface = LauncherSurface.HOME },
+                    protectedBySanctuary = launcherProtected,
                 )
             }
 
@@ -425,7 +460,7 @@ private fun LauncherRuntime(
                     text = {
                         Column(Modifier.heightIn(max = 340.dp).verticalScroll(rememberScrollState())) {
                             val members = selected.apps
-                                .filter { surface != LauncherSurface.DRAWER || canDisplay(it) }
+                                .filter { canDisplay(it) }
                                 .mapNotNull(appsByComponent::get)
                             if (members.isEmpty()) Text("No available apps in this folder.")
                             members.forEach { app ->
@@ -453,7 +488,8 @@ private fun LauncherRuntime(
             gestures.menu?.let { anchor ->
                 val component = (anchor.origin.item as? LauncherItem.App)?.component
                 val app = component?.let(appsByComponent::get)
-                if (component == null || app != null && (surface != LauncherSurface.DRAWER || canDisplay(component))) {
+                if (component == null || app != null && (canDisplay(component) ||
+                    ((libraryQuery.isNotBlank() || query.isNotBlank()) && canDisplay(component, appVisibility.hideFromSearch)))) {
                     LauncherIconMenu(
                         anchor, app, layout, currentPage, state.appearance.dock != LauncherDock.HIDDEN,
                         launcherProtected, actions,
@@ -463,17 +499,29 @@ private fun LauncherRuntime(
                         save = ::edit,
                         onEditSmartFolder = { slot, item -> editingFolder = slot to item },
                         recentPinned = component != null && component in smartState?.pinned.orEmpty(),
+                        dockLocked = state.dockOptions.locked,
+                        onEditCategory = { categoryEditor = it },
                     )
                 } else {
                     LaunchedEffect(anchor) { gestures.dismissMenu() }
                 }
             }
-            if (surface == LauncherSurface.HOME && activeDrag != null) {
+            categoryEditor?.takeUnless { launcherProtected }?.let { app ->
+                LauncherCategoryEditor(app, categoryOverrides[app.component], onSelect = { selected ->
+                    if (identitySettings.saveCategoryOverride(app.component, selected)) {
+                        categoryOverrides = identitySettings.categoryOverrides()
+                        categoryEditor = null
+                    }
+                }, onDismiss = { categoryEditor = null })
+            }
+            if (surface == LauncherSurface.HOME && activeDrag != null &&
+                (activeDrag.origin.item as? LauncherItem.App)?.let { canDisplay(it.component) } != false
+            ) {
                 val app = (activeDrag.origin.item as? LauncherItem.App)?.let { appsByComponent[it.component] }
                 val preview = gestures.targetAt(layout, pageForDrop(), activeDrag.position, rowTolerance)
                     ?.takeIf { layout.dropLauncherItem(activeDrag.origin.item, activeDrag.origin.slot, it.drop) != layout }
                 LauncherDragOverlay(activeDrag, preview, app, launcherAccent(state.appearance.accent),
-                    app?.let { decisions[it.packageName]?.canLaunch == false } == true)
+                    app?.let { decisions.forLauncherApp(it)?.canLaunch == false } == true)
             }
         }
     }
@@ -506,6 +554,7 @@ internal fun LauncherHome(
     smartMembers: (LauncherItem.SmartFolder) -> List<LauncherApp> = { emptyList() },
     smartFolderPresentation: LauncherSmartFolderPresentation = LauncherSmartFolderPresentation.AUTOMATIC,
     sanctuaryStatus: LauncherSanctuaryStatus? = null,
+    isAppVisible: (String) -> Boolean = apps::containsKey,
 ) {
     DisposableEffect(gestures) { onDispose { gestures.clearHome() } }
     val pages = layout.pages.ifEmpty { listOf(listOf(LauncherItem.Workspace)) }
@@ -540,7 +589,7 @@ internal fun LauncherHome(
     val openDrawer by rememberUpdatedState(onDrawer)
     val editLayout by rememberUpdatedState(onEdit)
     fun visible(item: LauncherItem): Boolean = when (item) {
-        is LauncherItem.App -> item.component in apps
+        is LauncherItem.App -> isAppVisible(item.component)
         is LauncherItem.Folder -> item.apps.any { visible(LauncherItem.App(it)) }
         is LauncherItem.SmartFolder -> when (item.category) {
             LauncherCategory.RECENTLY_USED -> showHomeRecents
@@ -565,148 +614,138 @@ internal fun LauncherHome(
         else WallpaperSurface(Wallpaper(builtin = builtin), context.filesDir, Modifier.fillMaxSize())
 
         CompositionLocalProvider(LocalContentColor provides Color.White) {
-            HorizontalPager(
-                pager,
-                Modifier.fillMaxSize().safeDrawingPadding().testTag("launcher-home-pages"),
-                key = { if (it == pages.size) "app-library" else "home-$it" },
-                userScrollEnabled = gestures.drag == null,
-            ) { index ->
-                if (index == pages.size) {
-                    Column(Modifier.fillMaxSize()) {
-                        Box(Modifier.fillMaxWidth().weight(1f)) { libraryPage?.invoke(goBackFromLibrary) }
-                        LauncherDots(pager.pageCount, pager.currentPage, accent, libraryLast = true) {
-                            scope.launch { pager.animateScrollToPage(it) }
-                        }
+            Column(Modifier.fillMaxSize().safeDrawingPadding()) {
+                HorizontalPager(
+                    pager,
+                    Modifier.fillMaxWidth().weight(1f).testTag("launcher-home-pages"),
+                    key = { if (it == pages.size) "app-library" else "home-$it" },
+                    userScrollEnabled = gestures.drag == null,
+                ) { index ->
+                    if (index == pages.size) {
+                        Box(Modifier.fillMaxSize()) { libraryPage?.invoke(goBackFromLibrary) }
+                        return@HorizontalPager
                     }
-                    return@HorizontalPager
-                }
-                val activePage = pager.settledPage == index
-                Column(Modifier.fillMaxSize().padding(horizontal = if (wide) 26.dp else 14.dp)) {
-                    LauncherHeader(protectedBySanctuary, actions, { onDrawer(true) }, onSettings, onEdit)
-                    LauncherSanctuaryStatusCard(sanctuaryStatus, expanded = wide && !compact, onOpen = actions.openSanctuary)
-                    if (state.drawer.search != LauncherSearchPlacement.DRAWER) {
-                        OutlinedButton(
-                            onClick = { onDrawer(true) },
-                            border = BorderStroke(1.dp, Color.White.copy(alpha = .5f)),
-                            colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White),
-                        ) {
-                            Icon(Icons.Default.Search, null, Modifier.size(17.dp))
-                            Spacer(Modifier.width(8.dp))
-                            Text("Search apps")
+                    val activePage = pager.settledPage == index
+                    Column(Modifier.fillMaxSize().padding(horizontal = if (wide) 26.dp else 14.dp)) {
+                        LauncherHeader(protectedBySanctuary, actions, { onDrawer(true) }, onSettings, onEdit)
+                        LauncherSanctuaryStatusCard(sanctuaryStatus, expanded = wide && !compact, onOpen = actions.openSanctuary)
+                        if (state.drawer.search != LauncherSearchPlacement.DRAWER) {
+                            OutlinedButton(
+                                onClick = { onDrawer(true) },
+                                border = BorderStroke(1.dp, Color.White.copy(alpha = .5f)),
+                                colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White),
+                            ) {
+                                Icon(Icons.Default.Search, null, Modifier.size(17.dp))
+                                Spacer(Modifier.width(8.dp))
+                                Text("Search apps")
+                            }
                         }
-                    }
-                    Box(Modifier.weight(1f).fillMaxWidth()) {
-                        if (activePage) {
-                            DisposableEffect(gestures, index) { onDispose { gestures.clearPageContent(index) } }
-                        }
-                        val pageModifier = Modifier.fillMaxSize().then(
-                            if (activePage) Modifier.onGloballyPositioned {
-                                gestures.setPage(it)
-                                gestures.setPageContent(index, it)
-                            } else Modifier,
-                        )
-                        val indexedItems = pages[index].withIndex().filter { visible(it.value) }
-                        val items = indexedItems.map { it.value }
-                        val widgets = state.widgets.filter { it.wide == (wide && state.separateDisplays) && it.page == index }
-                        val showClock = index == 0
-                        val content: @Composable (Modifier) -> Unit = { modifier ->
-                            Column(modifier.fillMaxWidth().verticalScroll(rememberScrollState())) {
-                                widgets.forEach { widget ->
-                                    key(widget.id) { actions.renderWidget(widget, Modifier.fillMaxWidth().heightIn(min = 104.dp).padding(bottom = 8.dp)) }
-                                }
-                                LauncherHomeGrid(
-                                    items, appearance.grid.columns(wide), appearance, apps, decisions, onItem,
-                                    gestures = gestures, slots = indexedItems.map { LauncherSlot(index, it.index) },
-                                    smartMembers = smartMembers,
-                                    expandedSmartFolders = smartFolderPresentation.expands(
-                                        homeWidth, homeHeight, items,
-                                    ),
-                                )
-                                Box(
-                                    Modifier.fillMaxWidth().heightIn(min = if (items.isEmpty()) 144.dp else 72.dp)
-                                        .testTag("launcher-home-gestures")
-                                        .pointerInput(Unit) {
-                                            detectTapGestures(
-                                                onDoubleTap = { if (activeGesture == LauncherGesture.DOUBLE_TAP) openWorkspace() },
-                                                onLongPress = { editLayout() },
-                                            )
+                        Box(Modifier.weight(1f).fillMaxWidth()) {
+                            if (activePage) {
+                                DisposableEffect(gestures, index) { onDispose { gestures.clearPageContent(index) } }
+                            }
+                            val pageModifier = Modifier.fillMaxSize().then(
+                                if (activePage) Modifier.onGloballyPositioned {
+                                    gestures.setPage(it)
+                                    gestures.setPageContent(index, it)
+                                } else Modifier,
+                            )
+                            val items = pages[index]
+                            val widgets = state.widgets.filter { widget ->
+                                widget.wide == (wide && state.separateDisplays) && widget.page == index
+                            }
+                            val showClock = index == 0
+                            val content: @Composable (Modifier) -> Unit = { modifier ->
+                                Column(modifier.fillMaxWidth().verticalScroll(rememberScrollState())) {
+                                    widgets.forEach { widget ->
+                                        key(widget.id) {
+                                            val permitted = !protectedBySanctuary || apps.values.any { app ->
+                                                app.profileSerial == null && app.packageName == widget.provider.substringBefore('/') &&
+                                                    decisions.forLauncherApp(app)?.canLaunch == true
+                                            }
+                                            if (permitted) actions.renderWidget(widget,
+                                                Modifier.fillMaxWidth().heightIn(min = 104.dp).padding(bottom = 8.dp))
+                                            else Spacer(Modifier.height(104.dp))
                                         }
-                                        .pointerInput(Unit) {
-                                            var distance = 0f
-                                            detectVerticalDragGestures(
-                                                onDragStart = { distance = 0f },
-                                                onVerticalDrag = { _, delta -> distance += delta },
-                                                onDragEnd = {
-                                                    val threshold = 60.dp.toPx()
-                                                    if (distance < -threshold) openDrawer(false)
-                                                    if (distance > threshold && activeGesture == LauncherGesture.SWIPE_DOWN) openWorkspace()
-                                                },
-                                            )
-                                        },
-                                    contentAlignment = Alignment.Center,
-                                ) {
-                                    if (items.isEmpty() && widgets.isEmpty()) {
-                                        TextButton(onClick = onEdit, colors = ButtonDefaults.textButtonColors(contentColor = Color.White)) {
-                                            Text("Edit this Home page")
+                                    }
+                                    LauncherHomeGrid(
+                                        items, appearance.grid.columns(wide), appearance, apps, decisions, onItem,
+                                        gestures = gestures, slots = items.indices.map { LauncherSlot(index, it) },
+                                        smartMembers = smartMembers, visible = ::visible,
+                                        expandedSmartFolders = smartFolderPresentation.expands(
+                                            homeWidth, homeHeight, items,
+                                        ),
+                                    )
+                                    Box(
+                                        Modifier.fillMaxWidth().heightIn(min = if (items.isEmpty()) 144.dp else 72.dp)
+                                            .testTag("launcher-home-gestures")
+                                            .pointerInput(Unit) {
+                                                detectTapGestures(
+                                                    onDoubleTap = { if (activeGesture == LauncherGesture.DOUBLE_TAP) openWorkspace() },
+                                                    onLongPress = { editLayout() },
+                                                )
+                                            }
+                                            .pointerInput(Unit) {
+                                                var distance = 0f
+                                                detectVerticalDragGestures(
+                                                    onDragStart = { distance = 0f },
+                                                    onVerticalDrag = { _, delta -> distance += delta },
+                                                    onDragEnd = {
+                                                        val threshold = 60.dp.toPx()
+                                                        if (distance < -threshold) openDrawer(false)
+                                                        if (distance > threshold && activeGesture == LauncherGesture.SWIPE_DOWN) openWorkspace()
+                                                    },
+                                                )
+                                            },
+                                        contentAlignment = Alignment.Center,
+                                    ) {
+                                        if (items.isEmpty() && widgets.isEmpty()) {
+                                            TextButton(onClick = onEdit, colors = ButtonDefaults.textButtonColors(contentColor = Color.White)) {
+                                                Text("Edit this Home page")
+                                            }
                                         }
                                     }
                                 }
                             }
-                        }
-                        if (largeLandscape && showClock) {
-                            Row(pageModifier) {
-                                LauncherClock(true, Modifier.widthIn(min = 180.dp).padding(top = 14.dp, end = 20.dp))
-                                content(Modifier.weight(1f).fillMaxHeight())
+                            if (largeLandscape && showClock) {
+                                Row(pageModifier) {
+                                    LauncherClock(true, Modifier.widthIn(min = 180.dp).padding(top = 14.dp, end = 20.dp))
+                                    content(Modifier.weight(1f).fillMaxHeight())
+                                }
+                            } else {
+                                Column(pageModifier) {
+                                    if (showClock) LauncherClock(compact, Modifier.padding(top = if (compact) 6.dp else 18.dp,
+                                        bottom = if (compact) 10.dp else 24.dp))
+                                    content(Modifier.weight(1f))
+                                }
                             }
-                        } else {
-                            Column(pageModifier) {
-                                if (showClock) LauncherClock(compact, Modifier.padding(top = if (compact) 6.dp else 18.dp,
-                                    bottom = if (compact) 10.dp else 24.dp))
-                                content(Modifier.weight(1f))
-                            }
                         }
-                    }
 
+                    }
+                }
+                Column(Modifier.fillMaxWidth().padding(horizontal = if (wide) 26.dp else 14.dp)) {
                     LauncherDots(pager.pageCount, pager.currentPage, accent, libraryLast = libraryPage != null) {
                         scope.launch { pager.animateScrollToPage(it) }
                     }
-                    val dock = layout.dock.withIndex().filter { visible(it.value) }
-                    if (appearance.dock != LauncherDock.HIDDEN && (dock.isNotEmpty() || gestures.drag != null)) {
-                        if (activePage) {
-                            DisposableEffect(gestures) { onDispose { gestures.clearDock() } }
-                        }
-                        Surface(
-                            Modifier.fillMaxWidth().padding(top = 1.dp).then(
-                                if (activePage) Modifier.onGloballyPositioned(gestures::setDock) else Modifier,
-                            ),
-                            color = if (appearance.dock == LauncherDock.GLASS) Color.White.copy(alpha = .14f) else Color(0xFF273550),
-                            contentColor = Color.White,
-                            shape = RoundedCornerShape(27.dp),
-                        ) {
-                            BoxWithConstraints(Modifier.fillMaxWidth()) {
-                                val scrollDock = maxWidth < (dock.size * 48 + 12).dp
-                                val scroll = if (scrollDock) Modifier.horizontalScroll(rememberScrollState()) else Modifier
-                                Row(scroll.heightIn(min = 48.dp).padding(horizontal = 6.dp, vertical = if (compact) 4.dp else 10.dp)) {
-                                    dock.forEach { (index, item) ->
-                                        val cell = if (scrollDock) Modifier.width(52.dp) else Modifier.weight(1f)
-                                        Box(cell, contentAlignment = Alignment.Center) {
-                                            LauncherTile(item, appearance, apps, decisions, { onItem(item) }, compact = true,
-                                                gestures = gestures.takeIf { activePage },
-                                                origin = LauncherIconOrigin(item, LauncherSlot(null, index)), smartMembers = smartMembers)
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    TextButton(
-                        onClick = { onDrawer(false) },
-                        modifier = Modifier.align(Alignment.CenterHorizontally).heightIn(min = 46.dp).testTag("launcher-open-drawer"),
-                        colors = ButtonDefaults.textButtonColors(contentColor = Color.White),
+                    if (appearance.dock != LauncherDock.HIDDEN && (layout.dock.isNotEmpty() ||
+                            (gestures.drag != null && !state.dockOptions.locked)) &&
+                        (state.dockOptions.showInLibrary || !atLibrary)
                     ) {
-                        Icon(Icons.Default.KeyboardArrowUp, null, Modifier.size(18.dp))
-                        Spacer(Modifier.width(6.dp))
-                        Text("Apps")
+                        LauncherSharedDock(
+                            layout.dock, appearance, state.dockOptions, apps, decisions, compact, gestures,
+                            onItem, ::visible, smartMembers,
+                        )
+                    }
+                    Box(Modifier.fillMaxWidth().height(46.dp), contentAlignment = Alignment.Center) {
+                        if (!atLibrary) TextButton(
+                            onClick = { onDrawer(false) },
+                            modifier = Modifier.heightIn(min = 46.dp).testTag("launcher-open-drawer"),
+                            colors = ButtonDefaults.textButtonColors(contentColor = Color.White),
+                        ) {
+                            Icon(Icons.Default.KeyboardArrowUp, null, Modifier.size(18.dp))
+                            Spacer(Modifier.width(6.dp))
+                            Text("Apps")
+                        }
                     }
                 }
             }
@@ -811,6 +850,7 @@ internal fun LauncherHomeGrid(
     slots: List<LauncherSlot> = emptyList(),
     smartMembers: (LauncherItem.SmartFolder) -> List<LauncherApp> = { emptyList() },
     expandedSmartFolders: Boolean = false,
+    visible: (LauncherItem) -> Boolean = { true },
 ) {
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(14.dp)) {
         smartFolderRows(items, columns, expandedSmartFolders).forEach { row ->
@@ -819,9 +859,18 @@ internal fun LauncherHomeGrid(
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(if (expandedRow) 12.dp else 0.dp)) {
                 row.forEach { (index, item) ->
                     Box(Modifier.weight(1f), contentAlignment = Alignment.TopCenter) {
-                        LauncherTile(item, appearance, apps, decisions, { onItem(item) }, interactive = interactive,
-                            gestures = gestures, origin = LauncherIconOrigin(item, slots.getOrNull(index)),
-                            smartMembers = smartMembers, expandedSmartFolder = expandedRow)
+                        if (visible(item)) {
+                            LauncherTile(item, appearance, apps, decisions, { onItem(item) }, interactive = interactive,
+                                gestures = gestures, origin = LauncherIconOrigin(item, slots.getOrNull(index)),
+                                smartMembers = smartMembers, expandedSmartFolder = expandedRow)
+                        } else {
+                            val size = when (appearance.iconSize) {
+                                LauncherIconSize.SMALL -> 44.dp
+                                LauncherIconSize.MEDIUM -> 56.dp
+                                LauncherIconSize.LARGE -> 68.dp
+                            }
+                            Spacer(Modifier.height(size + if (appearance.labels) 24.dp else 8.dp))
+                        }
                     }
                 }
                 repeat(rowColumns - row.size) { Spacer(Modifier.weight(1f)) }
@@ -849,7 +898,7 @@ internal fun LauncherTile(
     fullTileIcon: Boolean = false,
 ) {
     val app = (item as? LauncherItem.App)?.let { apps[it.component] }
-    val blocked = app?.let { decisions[it.packageName]?.canLaunch == false } == true
+    val blocked = app?.let { decisions.forLauncherApp(it)?.canLaunch == false } == true
     val label = when (item) {
         is LauncherItem.App -> app?.label ?: return
         is LauncherItem.Folder -> item.name
@@ -944,11 +993,14 @@ private fun LauncherDrawer(
     onFolder: (LauncherItem.Folder) -> Unit,
     gestures: LauncherIconGestures,
     onLibrary: () -> Unit,
+    searchApps: List<LauncherApp> = apps,
 ) {
-    val appsByComponent = remember(apps) { apps.associateBy { it.component } }
+    var searchFocused by remember { mutableStateOf(false) }
     val queryText = query.trim()
-    val matchingApps = remember(apps, queryText, state.drawer.sort, state.launchCounts, layout.favourites) {
-        val filtered = apps.filter { it.label.contains(queryText, ignoreCase = true) }
+    val catalog = if (searchFocused || searchRequested || queryText.isNotEmpty()) searchApps else apps
+    val appsByComponent = remember(catalog) { catalog.associateBy { it.component } }
+    val matchingApps = remember(catalog, queryText, state.drawer.sort, state.launchCounts, layout.favourites) {
+        val filtered = catalog.filter { it.label.contains(queryText, ignoreCase = true) }
         val name = compareBy<LauncherApp, String>(String.CASE_INSENSITIVE_ORDER) { it.label }
         filtered.sortedWith(when (state.drawer.sort) {
             LauncherSort.NAME -> name
@@ -962,12 +1014,12 @@ private fun LauncherDrawer(
             .filter { it.name.contains(queryText, ignoreCase = true) && it.apps.any(appsByComponent::containsKey) }
     }
     val matches = matchingApps.map { LauncherItem.App(it.component) } + folders
-    val eligiblePackages = remember(apps) { apps.mapTo(mutableSetOf()) { it.packageName } }
+    val eligiblePackages = remember(catalog) { catalog.mapTo(mutableSetOf()) { it.packageName } }
     val shortcutMatches = if (state.drawer.shortcutSearch && queryText.isNotEmpty())
         shortcuts.filter { it.packageName in eligiblePackages && it.label.contains(queryText, ignoreCase = true) }.take(8)
     else emptyList()
     val frequent = if (state.drawer.frequent && queryText.isEmpty())
-        apps.filter { (state.launchCounts[it.component] ?: 0) > 0 }
+        catalog.filter { (state.launchCounts[it.component] ?: 0) > 0 }
             .sortedByDescending { state.launchCounts[it.component] }.take(4)
     else emptyList()
     val accent = launcherAccent(state.appearance.accent)
@@ -983,7 +1035,8 @@ private fun LauncherDrawer(
                 label = { Text("Search apps") },
                 leadingIcon = { Icon(Icons.Default.Search, null) },
                 singleLine = true,
-                modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp).testTag("launcher-drawer-search"),
+                modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)
+                    .onFocusChanged { searchFocused = it.hasFocus }.testTag("launcher-drawer-search"),
             )
         } else {
             Text("Search is available from Home.", style = MaterialTheme.typography.labelMedium)

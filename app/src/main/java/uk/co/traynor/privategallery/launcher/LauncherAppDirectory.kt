@@ -29,6 +29,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.produceState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -58,7 +59,12 @@ internal data class LauncherApp(
     val profileLabel: String? get() = profile?.label
 }
 
-internal data class LauncherProfile(val user: UserHandle, val serial: Long, val label: String)
+internal data class LauncherProfile(
+    val user: UserHandle,
+    val serial: Long,
+    val label: String,
+    val isClone: Boolean = false,
+)
 
 private fun LauncherApp.launchComponent(): ComponentName {
     val serial = profileSerial
@@ -126,7 +132,10 @@ internal class LauncherAppDirectory(private val context: Context) {
             UserManager.USER_TYPE_PROFILE_MANAGED -> "Work profile"
             else -> "Other profile"
         }
-        LauncherProfile(handle, info.userSerialNumber.toLong(), label)
+        LauncherProfile(
+            handle, info.userSerialNumber.toLong(), label,
+            isClone = info.userType == UserManager.USER_TYPE_PROFILE_CLONE,
+        )
     }.getOrNull()
 
     private fun profileApps(profile: LauncherProfile): List<LauncherApp> =
@@ -243,8 +252,10 @@ internal fun LauncherAppIcon(app: LauncherApp, modifier: Modifier = Modifier) {
         }
         return
     }
-    val image by produceState<ImageBitmap?>(null, app.component, app.iconRevision) {
-        value = withContext(Dispatchers.IO) { LauncherIcons.get(context, app) }
+    val image by key(app.component, app.iconRevision) {
+        produceState<ImageBitmap?>(null) {
+            value = withContext(Dispatchers.IO) { LauncherIcons.get(context, app) }
+        }
     }
     BoxWithConstraints(modifier, contentAlignment = Alignment.Center) {
         val icon = image

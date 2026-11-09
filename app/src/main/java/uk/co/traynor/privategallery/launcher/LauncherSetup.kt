@@ -260,10 +260,10 @@ internal fun LauncherPolicySummary(
     protection: Boolean,
     outsideProtection: Boolean,
 ) {
-    val packages = apps.distinctBy { it.packageName }
-    val approved = packages.count { decisions[it.packageName] == Decision.APPROVED }
-    val blocked = packages.count { decisions[it.packageName] == Decision.UNAPPROVED }
-    val essential = packages.count { decisions[it.packageName] == Decision.ESSENTIAL }
+    val packages = apps.distinctBy { it.component }
+    val approved = packages.count { decisions.forLauncherApp(it) == Decision.APPROVED }
+    val blocked = packages.count { decisions.forLauncherApp(it) == Decision.UNAPPROVED }
+    val essential = packages.count { decisions.forLauncherApp(it) == Decision.ESSENTIAL }
     Card(Modifier.fillMaxWidth()) {
         Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
             Text(if (protection) "Sanctuary is active" else "Sanctuary is ready", style = MaterialTheme.typography.titleSmall)
@@ -282,6 +282,7 @@ internal fun LauncherAppearanceOptions(
     value: LauncherAppearance,
     change: (LauncherAppearance) -> Unit,
     chooseWallpaper: () -> Unit,
+    showDock: Boolean = true,
 ) {
     LauncherOptions("Wallpaper", LauncherWallpaper.entries, value.wallpaper, { change(value.copy(wallpaper = it)) })
     TextButton(onClick = chooseWallpaper) { Text("Android wallpaper settings") }
@@ -291,7 +292,7 @@ internal fun LauncherAppearanceOptions(
     LauncherOptions("Icon size", LauncherIconSize.entries, value.iconSize, { change(value.copy(iconSize = it)) })
     LauncherToggle("App labels", value.labels) { change(value.copy(labels = it)) }
     LauncherOptions("Grid density", LauncherGrid.entries, value.grid, { change(value.copy(grid = it)) })
-    LauncherOptions("Dock", LauncherDock.entries, value.dock, { change(value.copy(dock = it)) })
+    if (showDock) LauncherOptions("Dock", LauncherDock.entries, value.dock, { change(value.copy(dock = it)) })
 }
 
 @Composable

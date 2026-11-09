@@ -87,9 +87,9 @@ internal class LauncherIconGestures(
 
     fun removeTile(key: Any) { tiles.remove(key) }
 
-    fun sourceAt(point: Offset, page: Int, drawer: Boolean): Pair<LauncherIconOrigin, Rect>? =
+    fun sourceAt(point: Offset, page: Int, drawer: Boolean, includeDock: Boolean = false): Pair<LauncherIconOrigin, Rect>? =
         tiles.values.firstOrNull { (origin, bounds) ->
-            point in bounds && if (drawer) origin.slot == null else origin.slot?.let {
+            point in bounds && if (drawer) origin.slot == null || includeDock && origin.slot.page == null else origin.slot?.let {
                 it.page == page || it.page == null
             } == true
         }

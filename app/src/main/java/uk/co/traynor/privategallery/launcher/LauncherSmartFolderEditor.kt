@@ -79,7 +79,7 @@ internal fun LauncherSmartFolderEditor(
                         val label = buildString {
                             append(app.label)
                             app.profileLabel?.let { append(" · ").append(it) }
-                            if (decisions[app.packageName]?.canLaunch == false) append(" · Blocked")
+                            if (decisions.forLauncherApp(app)?.canLaunch == false) append(" · Blocked")
                         }
                         LauncherToggle(label, app.component in included) { checked ->
                             if (!checked) included = included - app.component

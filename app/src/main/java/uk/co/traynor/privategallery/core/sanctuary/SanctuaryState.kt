@@ -15,6 +15,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import org.json.JSONArray
 import org.json.JSONObject
 import uk.co.traynor.privategallery.core.home2.SpaceContext
+import uk.co.traynor.privategallery.launcher.LauncherAppIdentity
 
 enum class SanctuaryMode(val label: String, val defaultMinutes: Int) {
     GAMING("Gaming Mode", 120),
@@ -99,6 +100,7 @@ internal data class SanctuarySnapshot(
     val session: SanctuarySession? = null,
     val history: List<SanctuaryHistoryEntry> = emptyList(),
     val approvals: List<SanctuaryApprovalChange> = emptyList(),
+    val launcherSettings: SanctuaryLauncherSettings = SanctuaryLauncherSettings(),
 )
 
 internal interface SanctuaryPersistence {
@@ -150,6 +152,42 @@ class SanctuaryStore internal constructor(
             presets = state.presets + (mode to previous.copy(androidApps = selected)),
             approvals = approvalChanges(mode, live.androidApps, selected),
         ))
+    }
+
+    @Synchronized
+    internal fun launcherSettings(): SanctuaryLauncherSettings = state.launcherSettings
+
+    @Synchronized
+    internal fun enrolFriendsWhatsApp(component: String): Boolean {
+        val previous = state.launcherSettings
+        if (!previous.autoEnrolFriends || !isSanctuaryFriendsWhatsApp(component)) return false
+        previous.friendsWhatsApp?.let { return it == component }
+        return commit(state.copy(launcherSettings = previous.copy(friendsWhatsApp = component)))
+    }
+
+    @Synchronized
+    internal fun selectFriendsWhatsApp(component: String): Boolean {
+        if (!isSanctuaryFriendsWhatsApp(component)) return false
+        val previous = state.launcherSettings
+        if (previous.friendsWhatsApp == component) return true
+        return commit(state.copy(launcherSettings = previous.copy(friendsWhatsApp = component)))
+    }
+
+    @Synchronized
+    internal fun saveLauncherAppRule(component: String, approved: Boolean): Boolean {
+        if (!LauncherAppIdentity.isValidKey(component)) return false
+        val previous = state.launcherSettings
+        if (previous.appRules[component] == approved) return true
+        val rules = previous.appRules + (component to approved)
+        if (rules.size > MAX_IDS) return false
+        return commit(state.copy(launcherSettings = previous.copy(appRules = Collections.unmodifiableMap(rules))))
+    }
+
+    @Synchronized
+    internal fun saveLauncherVisibility(visibility: SanctuaryAppVisibility): Boolean {
+        val previous = state.launcherSettings
+        if (previous.visibility == visibility) return true
+        return commit(state.copy(launcherSettings = previous.copy(visibility = visibility)))
     }
 
     @Synchronized
@@ -355,6 +393,9 @@ internal object SanctuaryCodec {
                 .put("endedAt", it.endedAt).put("extensions", it.extensions).put("outcome", it.outcome.name)
         }))
         .apply {
+            if (value.launcherSettings != SanctuaryLauncherSettings()) {
+                put("launcherSettings", value.launcherSettings.toJson())
+            }
             if (value.approvals.isNotEmpty()) put("approvals", JSONArray(value.approvals.map {
                 JSONObject().put("mode", it.mode.name).put("at", it.at)
                     .put("package", it.packageName).put("approved", it.approved)
@@ -422,6 +463,43 @@ internal object SanctuaryCodec {
                     ).also { require(it.at >= 0 && it.packageName.length in 1..180 && packageId.matches(it.packageName)) }
                 }
             }.orEmpty(),
+            if (root.has("launcherSettings")) {
+                runCatching { root.getJSONObject("launcherSettings").readLauncherSettings() }
+                    .getOrElse { SanctuaryLauncherSettings(autoEnrolFriends = false) }
+            } else SanctuaryLauncherSettings(),
+        )
+    }
+
+    private fun SanctuaryLauncherSettings.toJson(): JSONObject = JSONObject()
+        .put("friendsWhatsApp", friendsWhatsApp ?: JSONObject.NULL)
+        .put("autoEnrolFriends", autoEnrolFriends)
+        .put("appRules", JSONObject().apply { appRules.toSortedMap().forEach { (key, allowed) -> put(key, allowed) } })
+        .put("visibility", JSONObject()
+            .put("hideBlockedApps", visibility.hideBlockedApps)
+            .put("hideFromSearch", visibility.hideFromSearch)
+            .put("hideFromSuggestions", visibility.hideFromSuggestions)
+            .put("hideFromRecentlyUsed", visibility.hideFromRecentlyUsed))
+
+    private fun JSONObject.readLauncherSettings(): SanctuaryLauncherSettings {
+        val friends = if (isNull("friendsWhatsApp")) null else getString("friendsWhatsApp")
+        require(friends == null || isSanctuaryFriendsWhatsApp(friends))
+        val rules = getJSONObject("appRules")
+        require(rules.length() <= MAX_IDS)
+        val appRules = rules.keys().asSequence().associateWith { key ->
+            require(LauncherAppIdentity.isValidKey(key))
+            rules.getBoolean(key)
+        }
+        val visibility = getJSONObject("visibility")
+        return SanctuaryLauncherSettings(
+            friendsWhatsApp = friends,
+            autoEnrolFriends = optBoolean("autoEnrolFriends", true),
+            appRules = Collections.unmodifiableMap(appRules),
+            visibility = SanctuaryAppVisibility(
+                hideBlockedApps = visibility.getBoolean("hideBlockedApps"),
+                hideFromSearch = visibility.getBoolean("hideFromSearch"),
+                hideFromSuggestions = visibility.getBoolean("hideFromSuggestions"),
+                hideFromRecentlyUsed = visibility.getBoolean("hideFromRecentlyUsed"),
+            ),
         )
     }
 

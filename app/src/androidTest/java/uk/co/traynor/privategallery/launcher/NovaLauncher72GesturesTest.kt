@@ -36,6 +36,7 @@ class NovaLauncher72GesturesTest {
     private val musicItem = LauncherItem.App(music.component)
     private var state by mutableStateOf(NovaLauncherState(
         configured = true,
+        dockOptions = LauncherDockOptions(locked = false),
         cover = LauncherLayout(pages = listOf(listOf(phoneItem, musicItem))),
     ))
     private val actions = LauncherUiActions(

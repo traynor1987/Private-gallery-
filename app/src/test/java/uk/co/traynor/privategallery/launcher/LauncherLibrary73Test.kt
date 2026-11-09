@@ -76,6 +76,52 @@ class LauncherLibrary73Test {
         ).first())
     }
 
+    @Test fun frequentAppsLeadPrimaryCategoriesAndOverridesAreProfileSpecific() {
+        val personal = app("com.whatsapp", "WhatsApp")
+        val friends = personal.copy(component = "${personal.component}#42")
+        val chat = app("example.chat", "Alpha Chat", ApplicationInfo.CATEGORY_SOCIAL)
+        val forum = app("example.forum", "Beta Forum", ApplicationInfo.CATEGORY_SOCIAL)
+        val groups = launcherLibraryGroups(
+            listOf(personal, friends, chat, forum),
+            recentlyUsed = listOf(forum),
+            categoryOverrides = mapOf(friends.component to LauncherCategory.UTILITIES),
+            launchCounts = mapOf(personal.component to 15),
+        ).associate { it.category to it.apps }
+
+        assertEquals(listOf(personal, forum, chat), groups[LauncherCategory.SOCIAL])
+        assertEquals(listOf(friends), groups[LauncherCategory.UTILITIES])
+        assertEquals(listOf(forum), groups[LauncherCategory.RECENTLY_USED])
+        assertEquals(listOf(personal, friends), launcherLibraryMatches(groups.values.flatten(), "whatsapp"))
+    }
+
+    @Test fun suggestionsAndRecentlyAddedLeadCategoryOrder() {
+        val now = 30 * 86_400_000L
+        val recent = app("example.recent", "Recently Installed", install = now - 500)
+        val suggestion = app("example.suggested", "Suggested")
+        val groups = launcherLibraryGroups(listOf(recent, suggestion), listOf(suggestion), listOf(recent), now)
+
+        assertEquals(
+            listOf(LauncherCategory.SUGGESTIONS, LauncherCategory.RECENTLY_ADDED, LauncherCategory.RECENTLY_USED),
+            launcherLibraryVisibleGroups(groups, emptySet(), emptyList()).take(3).map { it.category },
+        )
+    }
+
+    @Test fun independentlyVisibleHistoryDoesNotPopulatePrimaryCategories() {
+        val friends = app("com.whatsapp", "Friends WhatsApp").let { it.copy(component = "${it.component}#42") }
+        val personal = app("com.whatsapp", "WhatsApp")
+        val groups = launcherLibraryGroups(
+            apps = listOf(friends),
+            suggestedApps = listOf(personal, friends),
+            recentlyUsed = listOf(personal, friends),
+            suggestionCatalog = listOf(personal, friends),
+            recentCatalog = listOf(friends),
+        ).associate { it.category to it.apps }
+
+        assertEquals(listOf(friends), groups[LauncherCategory.SOCIAL])
+        assertEquals(listOf(personal, friends), groups[LauncherCategory.SUGGESTIONS])
+        assertEquals(listOf(friends), groups[LauncherCategory.RECENTLY_USED])
+    }
+
     private fun app(packageName: String, label: String, category: Int? = null, install: Long? = null) =
         LauncherApp("$packageName/.Main", packageName, label, category = category, firstInstallTime = install)
 }

@@ -28,6 +28,7 @@ import uk.co.traynor.privategallery.core.sanctuary.SanctuaryHomeTransition.Displ
 internal class SanctuaryBlockingOverlay(
     service: Context,
     session: SanctuarySession,
+    approvedAndroidApps: Set<String>,
     onNova: () -> Unit,
     onPhone: () -> Unit,
     onSettings: () -> Unit,
@@ -53,7 +54,7 @@ internal class SanctuaryBlockingOverlay(
         setTextColor(accent)
     }
     private val ring = CountdownRing(context)
-    private val surface = buildSurface(service, session, onNova, onPhone, onSettings, onApp, onNovaApp)
+    private val surface = buildSurface(service, session, approvedAndroidApps, onNova, onPhone, onSettings, onApp, onNovaApp)
 
     init {
         windows.addView(surface, WindowManager.LayoutParams(
@@ -96,6 +97,7 @@ internal class SanctuaryBlockingOverlay(
     private fun buildSurface(
         service: Context,
         session: SanctuarySession,
+        approvedAndroidApps: Set<String>,
         onNova: () -> Unit,
         onPhone: () -> Unit,
         onSettings: () -> Unit,
@@ -136,7 +138,7 @@ internal class SanctuaryBlockingOverlay(
         }
         column.label("Approved Android apps", 16f, overlayTextColor, 8, heading = true, top = 12)
         SanctuaryGuardian.installedApps(service)
-            .filterKeys { session.allowExternalApps && it in session.androidApps }
+            .filterKeys { it in approvedAndroidApps }
             .forEach { (pkg, label) ->
                 column.addAction(label) { onApp(pkg) }
             }

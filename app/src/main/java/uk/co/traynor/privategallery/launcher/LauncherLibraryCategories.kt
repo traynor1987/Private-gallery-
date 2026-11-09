@@ -5,8 +5,8 @@ import java.text.Collator
 
 internal enum class LauncherCategory(val label: String) {
     SUGGESTIONS("Suggestions"),
-    RECENTLY_USED("Recently Used"),
     RECENTLY_ADDED("Recently Added"),
+    RECENTLY_USED("Recently Used"),
     NOVA_OS("NovaOS Apps"),
     SOCIAL("Social"),
     PRODUCTIVITY("Productivity"),
@@ -17,7 +17,10 @@ internal enum class LauncherCategory(val label: String) {
     FINANCE("Finance"),
     SHOPPING("Shopping"),
     HEALTH_FITNESS("Health & Fitness"),
-    OTHER("Other"),
+    OTHER("Other");
+
+    val isAssignable: Boolean
+        get() = this != SUGGESTIONS && this != RECENTLY_ADDED && this != RECENTLY_USED
 }
 
 internal data class LauncherLibraryGroup(val category: LauncherCategory, val apps: List<LauncherApp>)
@@ -35,27 +38,44 @@ internal fun launcherLibraryVisibleGroups(
 
 private const val RECENT_INSTALL_AGE = 14 * 86_400_000L
 
-/** Receives the same visible catalogue as Drawer. History sources can only reorder eligible entries. */
+/** Each history group can only use entries from its explicitly visible catalogue. */
 internal fun launcherLibraryGroups(
     apps: List<LauncherApp>,
     suggestedApps: List<LauncherApp> = emptyList(),
     recentlyUsed: List<LauncherApp> = emptyList(),
     nowMillis: Long = System.currentTimeMillis(),
+    categoryOverrides: Map<String, LauncherCategory> = emptyMap(),
+    launchCounts: Map<String, Int> = emptyMap(),
+    suggestionCatalog: List<LauncherApp> = apps,
+    recentCatalog: List<LauncherApp> = apps,
 ): List<LauncherLibraryGroup> {
     val byComponent = apps.associateBy(LauncherApp::component)
-    val byName = byComponent.values.sortedWith(launcherLibraryAppOrder())
-    val byCategory = byName.groupBy(::launcherPrimaryCategory)
-    fun eligible(history: List<LauncherApp>) =
-        history.distinctBy(LauncherApp::component).mapNotNull { byComponent[it.component] }
+    val nameOrder = launcherLibraryAppOrder()
+    fun eligible(history: List<LauncherApp>, catalog: List<LauncherApp>): List<LauncherApp> {
+        if (history.isEmpty()) return emptyList()
+        val allowed = if (catalog === apps) byComponent else catalog.associateBy(LauncherApp::component)
+        return history.distinctBy(LauncherApp::component).mapNotNull { allowed[it.component] }
+    }
+    val suggestions = eligible(suggestedApps, suggestionCatalog)
+    val recent = eligible(recentlyUsed, recentCatalog)
+    val suggestionRank = suggestions.mapIndexed { index, app -> app.component to index }.toMap()
+    val recentRank = recent.mapIndexed { index, app -> app.component to index }.toMap()
+    val usageOrder = compareByDescending<LauncherApp> { launchCounts[it.component] ?: 0 }
+        .thenBy { suggestionRank[it.component] ?: Int.MAX_VALUE }
+        .thenBy { recentRank[it.component] ?: Int.MAX_VALUE }
+        .then(nameOrder)
+    val byCategory = byComponent.values.sortedWith(usageOrder).groupBy { app ->
+        categoryOverrides[app.component]?.takeIf(LauncherCategory::isAssignable) ?: launcherPrimaryCategory(app)
+    }
 
     return LauncherCategory.entries.map { category ->
         val members = when (category) {
-            LauncherCategory.SUGGESTIONS -> eligible(suggestedApps)
-            LauncherCategory.RECENTLY_USED -> eligible(recentlyUsed)
-            LauncherCategory.RECENTLY_ADDED -> byName.filter { app ->
+            LauncherCategory.SUGGESTIONS -> suggestions
+            LauncherCategory.RECENTLY_USED -> recent
+            LauncherCategory.RECENTLY_ADDED -> byComponent.values.filter { app ->
                 val installed = app.firstInstallTime
                 installed != null && installed in 1..nowMillis && nowMillis - installed <= RECENT_INSTALL_AGE
-            }.sortedByDescending(LauncherApp::firstInstallTime)
+            }.sortedWith(compareByDescending(LauncherApp::firstInstallTime).then(nameOrder))
             else -> byCategory[category].orEmpty()
         }
         LauncherLibraryGroup(category, members)
@@ -65,9 +85,12 @@ internal fun launcherLibraryGroups(
 internal fun launcherLibraryMatches(apps: List<LauncherApp>, query: String): List<LauncherApp> {
     val term = query.trim()
     return apps.distinctBy(LauncherApp::component)
-        .filter { it.label.contains(term, ignoreCase = true) || it.profileLabel?.contains(term, ignoreCase = true) == true }
+        .filter { it.matchesLibraryTerm(term) }
         .sortedWith(launcherLibraryAppOrder())
 }
+
+internal fun LauncherApp.matchesLibraryTerm(term: String): Boolean =
+    label.contains(term, ignoreCase = true) || profileLabel?.contains(term, ignoreCase = true) == true
 
 private fun launcherLibraryAppOrder(): Comparator<LauncherApp> {
     val collator = Collator.getInstance()

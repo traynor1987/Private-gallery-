@@ -157,7 +157,7 @@ class SanctuaryGuardianService : Service() {
                 continue
             }
             val persistentShield = SanctuaryLauncherPolicy.outsideProtectionEnabled(this)
-            val approved = approvedAndroidApps(latest)
+            val approved = approvedAndroidApps(latest, store.launcherSettings())
             // A recent approved or recovery window takes priority over a lagging Usage Access sample.
             // Our own overlay can emit a window event and is not evidence of an underlay change.
             val safeTransition = observation?.packageName?.takeIf {
@@ -201,7 +201,7 @@ class SanctuaryGuardianService : Service() {
                     SanctuaryGuardian.hasLauncherEntry(this, current) &&
                     power?.isInteractive == true && keyguard?.isKeyguardLocked == false &&
                     store.refresh()?.takeIf { it.id == sessionId }?.let {
-                        !SanctuaryLauncherPolicy.isPaused(it) && current !in approvedAndroidApps(it)
+                        !SanctuaryLauncherPolicy.isPaused(it) && current !in approvedAndroidApps(it, store.launcherSettings())
                     } == true && !SanctuaryLauncherPolicy.launcherVisible() &&
                     !SanctuaryLauncherPolicy.outsideProtectionEnabled(this) &&
                     SanctuaryGuardian.isActivated(this, sessionId) && homeTransition.beginHome(current, now)
@@ -224,11 +224,12 @@ class SanctuaryGuardianService : Service() {
 
     private fun showOverlay(session: SanctuarySession, remaining: Long, display: Display): Boolean {
         return try {
-            val approved = approvedAndroidApps(session)
+            val approved = approvedAndroidApps(session, SanctuaryStore.get(this).launcherSettings())
             if (overlay != null && approved != overlayApprovedApps) hideOverlay()
             val view = overlay ?: SanctuaryBlockingOverlay(
                 this,
                 session,
+                approved,
                 onNova = { launchApproved { SanctuaryGuardian.openNova(this) } },
                 onPhone = { launchApproved { SanctuaryGuardian.openPhone(this) } },
                 onSettings = { launchApproved { SanctuaryGuardian.openSystemSettings(this) } },

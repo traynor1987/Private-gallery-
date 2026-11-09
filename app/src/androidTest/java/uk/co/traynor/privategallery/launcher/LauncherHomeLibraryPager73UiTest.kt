@@ -19,6 +19,8 @@ import org.junit.Test
 import org.junit.rules.RuleChain
 import org.junit.rules.TestRule
 import uk.co.traynor.privategallery.ui.BrowserViewportRule
+import uk.co.traynor.privategallery.core.sanctuary.SanctuaryAppVisibility
+import uk.co.traynor.privategallery.core.sanctuary.SanctuaryLauncherPolicy.Decision
 
 class LauncherHomeLibraryPager73UiTest {
     private val compose = createAndroidComposeRule<ComponentActivity>()
@@ -153,6 +155,78 @@ class LauncherHomeLibraryPager73UiTest {
         gestures.performTouchInput { swipeDown(startY = height * .15f, endY = height * .85f) }
         compose.runOnIdle { assertEquals(1, workspaceOpens) }
         library.assertIsNotDisplayed()
+    }
+
+    @Test fun coverDockRemainsStationaryDuringAndAfterSwipeAndLibraryScroll() {
+        state = state.copy(cover = state.cover.copy(dock = listOf(items[3])))
+        var launched: String? = null
+        showLauncher(actions.copy(launchApp = { launched = it }))
+        val dock = compose.onNodeWithTag("launcher-shared-dock")
+        val initial = dock.fetchSemanticsNode().boundsInRoot
+        repeat(2) { pager.performTouchInput { swipeLeft() } }
+        pager.performTouchInput {
+            down(center)
+            moveTo(center - Offset(width * .4f, 0f), 60)
+        }
+        assertEquals(initial, dock.fetchSemanticsNode().boundsInRoot)
+        pager.performTouchInput { moveBy(Offset(-width * .3f, 0f), 80); up() }
+        library.assertIsDisplayed()
+        assertEquals(initial, dock.fetchSemanticsNode().boundsInRoot)
+        library.performTouchInput { swipeUp() }
+        assertEquals(initial, dock.fetchSemanticsNode().boundsInRoot)
+        compose.onNode(hasTestTag("launcher-app-${apps[3].component}") and
+            hasAnyAncestor(hasTestTag("launcher-dock-slot-0"))).performClick()
+        compose.runOnIdle { assertEquals(apps[3].component, launched) }
+    }
+
+    @Test fun coverDockLockKeepsNormalLaunchAndBlocksLayoutEdits() {
+        state = state.copy(cover = state.cover.copy(dock = listOf(items[3])))
+        var launched: String? = null
+        showLauncher(actions.copy(launchApp = { launched = it }))
+        homeApp(0).performTouchInput { longClick() }
+        compose.onNodeWithText("Move to dock").assertDoesNotExist()
+        compose.runOnIdle { compose.activity.onBackPressedDispatcher.onBackPressed() }
+        homeApp(3).performClick()
+        compose.runOnIdle {
+            assertEquals(apps[3].component, launched)
+            assertEquals(listOf(items[3]), state.cover.dock)
+        }
+    }
+
+    @Test fun coverSanctuaryHidesOnlyRestrictedProfileAndRestoresItsSlots() {
+        val main = LauncherApp("com.whatsapp/.Main", "com.whatsapp", "WhatsApp Main")
+        val friends = LauncherApp("com.whatsapp/.Main#25", "com.whatsapp", "WhatsApp Friends")
+        val restricted = LauncherItem.App(main.component)
+        val allowed = LauncherItem.App(friends.component)
+        state = state.copy(cover = LauncherLayout(pages = listOf(listOf(restricted, allowed)),
+            dock = listOf(restricted, allowed)))
+        var protectionActive by mutableStateOf(false)
+        var launched: String? = null
+        compose.setContent {
+            NovaLauncherScreen(state, listOf(main, friends), emptyList(),
+                mapOf(main.component to Decision.UNAPPROVED, friends.component to Decision.APPROVED),
+                true, false, actions.copy(launchApp = { launched = it }), launcherProtected = protectionActive,
+                appVisibility = SanctuaryAppVisibility())
+        }
+        val dockSlot = compose.onNodeWithTag("launcher-dock-slot-0")
+        val initial = dockSlot.fetchSemanticsNode().boundsInRoot
+        compose.runOnIdle { protectionActive = true }
+        compose.onAllNodesWithContentDescription(main.label, substring = true).assertCountEquals(0)
+        assertEquals(initial, dockSlot.fetchSemanticsNode().boundsInRoot)
+        pager.performTouchInput { swipeLeft() }
+        library.assertIsDisplayed()
+        compose.onAllNodesWithContentDescription(main.label, substring = true).assertCountEquals(0)
+        compose.onNodeWithTag("launcher-library-search").performTextInput("WhatsApp")
+        compose.onAllNodesWithText(main.label, substring = true).assertCountEquals(0)
+        compose.onNodeWithText(friends.label).performClick()
+        compose.runOnIdle {
+            assertEquals(friends.component, launched)
+            protectionActive = false
+        }
+        assertEquals(initial, dockSlot.fetchSemanticsNode().boundsInRoot)
+        compose.onNode(hasTestTag("launcher-app-${main.component}") and
+            hasAnyAncestor(hasTestTag("launcher-dock-slot-0"))).assertIsDisplayed()
+        compose.runOnIdle { assertEquals(listOf(restricted, allowed), state.cover.dock) }
     }
 
     private fun showLauncher(uiActions: LauncherUiActions = actions) = compose.setContent {

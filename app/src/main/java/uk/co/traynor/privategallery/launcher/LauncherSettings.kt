@@ -44,7 +44,9 @@ internal fun LauncherSettings(
     onEdit: () -> Unit,
     onLibrarySettings: () -> Unit = {},
     defaultHomeUi: LauncherDefaultHomeUi? = null,
+    wide: Boolean = false,
 ) {
+    var confirmDockReset by remember { mutableStateOf(false) }
     LauncherPanel("Launcher settings", onBack) {
         LazyColumn(Modifier.fillMaxWidth().weight(1f), contentPadding = PaddingValues(bottom = 18.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -72,7 +74,34 @@ internal fun LauncherSettings(
             item {
                 HorizontalDivider()
                 Text("Appearance", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 10.dp))
-                LauncherAppearanceOptions(state.appearance, { actions.save(state.copy(appearance = it)) }, actions.chooseWallpaper)
+                LauncherAppearanceOptions(state.appearance, { actions.save(state.copy(appearance = it)) }, actions.chooseWallpaper, showDock = false)
+            }
+            item {
+                HorizontalDivider()
+                Text("Dock", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 10.dp))
+                LauncherToggle("Lock Dock Layout", state.dockOptions.locked) {
+                    actions.save(state.copy(dockOptions = state.dockOptions.copy(locked = it)))
+                }
+                LauncherToggle("Show Dock on App Library", state.dockOptions.showInLibrary) {
+                    actions.save(state.copy(dockOptions = state.dockOptions.copy(showInLibrary = it)))
+                }
+                LauncherOptions("Dock Background", LauncherDock.entries.filter { it != LauncherDock.HIDDEN },
+                    state.appearance.dock, { actions.save(state.copy(appearance = state.appearance.copy(dock = it))) })
+                LauncherToggle("Dock Icon Labels", state.dockOptions.labels) {
+                    actions.save(state.copy(dockOptions = state.dockOptions.copy(labels = it)))
+                }
+                OutlinedButton(onClick = { confirmDockReset = true }, enabled = !protectedBySanctuary) {
+                    Text("Reset Dock Layout")
+                }
+            }
+            item {
+                HorizontalDivider()
+                Text("New Apps", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 10.dp))
+                LauncherToggle("Add to Home automatically", state.newAppPlacement == LauncherNewAppPlacement.HOME) {
+                    actions.save(state.copy(newAppPlacement = if (it) LauncherNewAppPlacement.HOME
+                        else LauncherNewAppPlacement.LIBRARY_ONLY))
+                }
+                Text("When off, add new apps to App Library only.", style = MaterialTheme.typography.bodySmall)
             }
             item {
                 HorizontalDivider()
@@ -84,25 +113,6 @@ internal fun LauncherSettings(
                 HorizontalDivider()
                 Text("Sanctuary", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 10.dp))
                 LauncherPolicySummary(apps, decisions, protectedBySanctuary, outsideProtection)
-                Text("App Drawer While Protected", style = MaterialTheme.typography.titleSmall)
-                Column(Modifier.selectableGroup()) {
-                    listOf("Show All Apps With Locks", "Show Approved Apps Only").forEachIndexed { index, label ->
-                        val hideBlocked = index == 1
-                        val selected = state.hideBlocked == hideBlocked
-                        Row(
-                            Modifier.fillMaxWidth().heightIn(min = 48.dp).selectable(
-                                selected = selected,
-                                role = Role.RadioButton,
-                                onClick = { actions.save(state.copy(hideBlocked = hideBlocked)) },
-                            ),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(12.dp),
-                        ) {
-                            RadioButton(selected = selected, onClick = null)
-                            Text(label)
-                        }
-                    }
-                }
                 LauncherToggle("Protect outside approved apps", outsideProtection, actions.setOutsideProtection)
                 Text("Keep the Sanctuary shield over blocked apps opened outside Nova Launcher when Android permits. Standard App Guardian remains available while this is off.",
                     style = MaterialTheme.typography.bodySmall)
@@ -121,6 +131,20 @@ internal fun LauncherSettings(
                 }
             }
         }
+    }
+    if (confirmDockReset && !protectedBySanctuary) {
+        AlertDialog(
+            onDismissRequest = { confirmDockReset = false },
+            title = { Text("Reset this dock?") },
+            text = { Text("Restore the default shortcuts for this display’s dock.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    actions.save(state.withLayout(wide, state.layout(wide).copy(dock = LauncherLayout().dock)))
+                    confirmDockReset = false
+                }) { Text("Reset") }
+            },
+            dismissButton = { TextButton(onClick = { confirmDockReset = false }) { Text("Cancel") } },
+        )
     }
 }
 
@@ -142,6 +166,7 @@ internal fun LauncherLayoutEditor(
     onPage: (Int) -> Unit,
     actions: LauncherUiActions,
     onBack: () -> Unit,
+    protectedBySanctuary: Boolean = false,
 ) {
     val byComponent = remember(apps) { apps.associateBy { it.component } }
     val current = layout.pages[page]
@@ -159,7 +184,8 @@ internal fun LauncherLayoutEditor(
     }
     fun label(item: LauncherItem): String = when (item) {
         LauncherItem.Workspace -> "Open NovaOS"
-        is LauncherItem.App -> byComponent[item.component]?.label ?: item.component.substringBefore('/') + " (unavailable)"
+        is LauncherItem.App -> byComponent[item.component]?.label ?: if (protectedBySanctuary) "Unavailable shortcut"
+            else item.component.substringBefore('/') + " (unavailable)"
         is LauncherItem.Folder -> item.name
         is LauncherItem.SmartFolder -> item.name
     }
@@ -240,13 +266,14 @@ internal fun LauncherLayoutEditor(
             item {
                 HorizontalDivider()
                 Text("Dock", style = MaterialTheme.typography.titleMedium)
-                Text("Long-press an app in the drawer or Home to add it to the dock.")
-                if (LauncherItem.Workspace !in layout.dock) TextButton(
+                Text(if (state.dockOptions.locked) "Unlock the dock in Launcher settings to change shortcuts."
+                    else "Long-press an app in the drawer or Home to add it to the dock.")
+                if (!state.dockOptions.locked && LauncherItem.Workspace !in layout.dock) TextButton(
                     enabled = layout.dock.size < MAX_LAUNCHER_DOCK_ITEMS,
                     onClick = { onEdit(layout.copy(dock = layout.dock + LauncherItem.Workspace)) },
                 ) { Text("Add NovaOS to dock") }
             }
-            items(layout.dock.size, key = { LauncherEditSection.DOCK.itemKey(it) }) { index ->
+            items(if (state.dockOptions.locked) 0 else layout.dock.size, key = { LauncherEditSection.DOCK.itemKey(it) }) { index ->
                 val section = LauncherEditSection.DOCK
                 val move: (Int) -> Unit = { to -> onEdit(layout.copy(dock = layout.dock.movingLauncherItem(index, to))) }
                 LauncherItemEditRow(label(layout.dock[index]), index, layout.dock.size,
@@ -268,7 +295,7 @@ internal fun LauncherLayoutEditor(
             }
             items(state.widgets.filter { it.wide == (wide && state.separateDisplays) }, key = { it.id }) { widget ->
                 val packageName = widget.provider.substringBefore('/')
-                val widgetLabel = apps.firstOrNull { it.packageName == packageName }?.label ?: packageName
+                val widgetLabel = apps.firstOrNull { it.packageName == packageName }?.label ?: if (protectedBySanctuary) "Unavailable widget" else packageName
                 ListItem(
                     headlineContent = { Text(widgetLabel) },
                     supportingContent = {
@@ -428,7 +455,7 @@ private fun LauncherAppPicker(
                 LazyColumn(Modifier.heightIn(max = 270.dp)) {
                     items(apps.filter { it.label.contains(query, ignoreCase = true) }, key = { it.component }) { app ->
                         TextButton(onClick = { onSelect(app) }) {
-                            Text(if (decisions[app.packageName]?.canLaunch == false) "${app.label} · Blocked" else app.label)
+                            Text(if (decisions.forLauncherApp(app)?.canLaunch == false) "${app.label} · Blocked" else app.label)
                         }
                     }
                 }

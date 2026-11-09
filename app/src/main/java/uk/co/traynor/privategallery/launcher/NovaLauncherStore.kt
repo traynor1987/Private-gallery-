@@ -25,7 +25,41 @@ internal class NovaLauncherStore(context: Context) {
     fun save(state: NovaLauncherState): Boolean = synchronized(lock) {
         val encoded = runCatching { LauncherLayoutCodec.encode(state, portable = false) }.getOrNull()
             ?: return@synchronized false
-        prefs.edit().putString("state", encoded).commit()
+        val update = prefs.edit().putString("state", encoded)
+        if (state.newAppPlacement == LauncherNewAppPlacement.HOME) {
+            if (!prefs.contains(NEW_APPS_OBSERVED_AT)) {
+                update.putLong(NEW_APPS_OBSERVED_AT, System.currentTimeMillis())
+            }
+        } else {
+            update.remove(NEW_APPS_OBSERVED_AT)
+        }
+        update.commit()
+    }
+
+    /** Use install timestamps from the current profile or exact LauncherApps package-added events. */
+    fun observeInstalledApps(
+        installed: List<LauncherApp>,
+        observedAt: Long,
+        addedComponents: Set<String> = emptySet(),
+    ): NovaLauncherState? = synchronized(lock) {
+        val current = read()
+        if (!current.configured || current.newAppPlacement != LauncherNewAppPlacement.HOME) {
+            return@synchronized null
+        }
+        val previous = prefs.getLong(NEW_APPS_OBSERVED_AT, 0L)
+        val newApps = installed.filter { app ->
+            val time = app.firstInstallTime
+            app.component in addedComponents ||
+                (previous > 0 && time != null && time > previous && time <= observedAt)
+        }.distinctBy { it.packageName to it.profileSerial }.map(LauncherApp::component)
+        val updated = current.withNewlyInstalledApps(newApps)
+        val update = prefs.edit().putLong(NEW_APPS_OBSERVED_AT, maxOf(previous, observedAt))
+        if (current != updated) {
+            val encoded = runCatching { LauncherLayoutCodec.encode(updated, portable = false) }.getOrNull()
+                ?: return@synchronized null
+            update.putString("state", encoded)
+        }
+        if (update.commit() && current != updated) updated else null
     }
 
     fun exportLayout(): ByteArray = LauncherLayoutCodec.encode(read(), portable = true).encodeToByteArray()
@@ -50,6 +84,7 @@ internal class NovaLauncherStore(context: Context) {
 
     private companion object {
         val lock = Any()
+        const val NEW_APPS_OBSERVED_AT = "new_apps_observed_at"
     }
 }
 
@@ -57,6 +92,7 @@ private object LauncherLayoutCodec {
     private const val SCHEMA = 1
     private const val TYPE = "nova-launcher-layout"
     private val layoutKeys = setOf("type", "schema", "separateDisplays", "cover", "inner", "appearance", "drawer", "gesture", "hideBlocked")
+    private val optionalLayoutKeys = setOf("dockOptions", "newAppPlacement")
     private val localKeys = setOf("configured", "widgets", "launchCounts")
 
     fun encode(state: NovaLauncherState, portable: Boolean): String {
@@ -86,6 +122,11 @@ private object LauncherLayoutCodec {
                 .put("shortcutSearch", drawer.shortcutSearch))
             .put("gesture", state.workspaceGesture.name)
             .put("hideBlocked", state.hideBlocked)
+            .put("dockOptions", JSONObject()
+                .put("locked", state.dockOptions.locked)
+                .put("showInLibrary", state.dockOptions.showInLibrary)
+                .put("labels", state.dockOptions.labels))
+            .put("newAppPlacement", state.newAppPlacement.name)
 
         if (!portable) {
             require(state.widgets.size <= MAX_LAUNCHER_WIDGETS && state.widgets.distinctBy(LauncherWidget::id).size == state.widgets.size)
@@ -117,7 +158,8 @@ private object LauncherLayoutCodec {
         val root = reader.nextValue() as? JSONObject ?: error("Invalid launcher file")
         require(reader.nextClean() == '\u0000')
         val optionalLocalKeys = setOf("coverCleanupUndo", "innerCleanupUndo").filter(root::has)
-        root.requireKeys(if (portable) layoutKeys else layoutKeys + localKeys + optionalLocalKeys)
+        val knownLayoutKeys = layoutKeys + optionalLayoutKeys.filter(root::has)
+        root.requireKeys(if (portable) knownLayoutKeys else knownLayoutKeys + localKeys + optionalLocalKeys)
         require(root.string("type") == TYPE && root.number("schema") == SCHEMA)
 
         val appearance = root.getJSONObject("appearance")
@@ -149,7 +191,7 @@ private object LauncherLayoutCodec {
             }
         }
 
-        return NovaLauncherState(
+        val state = NovaLauncherState(
             configured = !portable && root.boolean("configured"),
             separateDisplays = root.boolean("separateDisplays"),
             cover = cover,
@@ -178,7 +220,17 @@ private object LauncherLayoutCodec {
             launchCounts = counts,
             coverCleanupUndo = if (root.has("coverCleanupUndo")) parsePages(root.getJSONArray("coverCleanupUndo")) else null,
             innerCleanupUndo = if (root.has("innerCleanupUndo")) parsePages(root.getJSONArray("innerCleanupUndo")) else null,
+            dockOptions = if (root.has("dockOptions")) root.getJSONObject("dockOptions").let { dock ->
+                dock.requireKeys(setOf("locked", "showInLibrary", "labels"))
+                LauncherDockOptions(dock.boolean("locked"), dock.boolean("showInLibrary"), dock.boolean("labels"))
+            } else LauncherDockOptions(),
+            newAppPlacement = if (root.has("newAppPlacement")) {
+                LauncherNewAppPlacement.valueOf(root.string("newAppPlacement"))
+            } else LauncherNewAppPlacement.LIBRARY_ONLY,
         )
+        // Local Code 73 state predates the dock options. Preserve intentional duplicates in
+        // portable imports and in layouts saved after this upgrade.
+        return if (!portable && !root.has("dockOptions")) state.withoutRedundantSmartFolderPages() else state
     }
 
     private fun layout(value: LauncherLayout): JSONObject {

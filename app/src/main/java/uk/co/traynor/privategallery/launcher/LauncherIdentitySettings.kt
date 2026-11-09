@@ -35,6 +35,22 @@ internal class LauncherIdentitySettings(context: Context) {
     fun setLibraryPins(categories: Set<LauncherCategory>): Boolean = prefs.edit()
         .putStringSet("library-category-pins", categories.mapTo(mutableSetOf()) { it.name }).commit()
 
+    fun categoryOverrides(): Map<String, LauncherCategory> = prefs.all.entries.mapNotNull { (key, value) ->
+        if (!key.startsWith(CATEGORY_PREFIX) || value !is String) return@mapNotNull null
+        val component = key.removePrefix(CATEGORY_PREFIX)
+        if (!LauncherAppIdentity.isValidKey(component)) return@mapNotNull null
+        LauncherCategory.entries.firstOrNull { it.name == value && it.isAssignable }
+            ?.let { component to it }
+    }.toMap()
+
+    fun saveCategoryOverride(component: String, category: LauncherCategory?): Boolean {
+        if (!LauncherAppIdentity.isValidKey(component) || category?.isAssignable == false) return false
+        val key = CATEGORY_PREFIX + component
+        val update = prefs.edit()
+        if (category == null) update.remove(key) else update.putString(key, category.name)
+        return update.commit()
+    }
+
     fun templateHandled(inner: Boolean): Boolean = prefs.getBoolean("smart-home-template-handled:$inner", false)
 
     fun markTemplateHandled(inner: Boolean) {
@@ -43,5 +59,6 @@ internal class LauncherIdentitySettings(context: Context) {
 
     companion object {
         const val MAX_LABEL = 48
+        private const val CATEGORY_PREFIX = "category:"
     }
 }

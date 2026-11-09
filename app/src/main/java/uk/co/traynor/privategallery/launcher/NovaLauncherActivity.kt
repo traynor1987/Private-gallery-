@@ -64,6 +64,7 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import uk.co.traynor.privategallery.core.sanctuary.SanctuaryAppVisibility
 import uk.co.traynor.privategallery.core.sanctuary.SanctuaryDnd
 import uk.co.traynor.privategallery.core.sanctuary.SanctuaryGuardian
 import uk.co.traynor.privategallery.core.sanctuary.SanctuaryLauncherPolicy
@@ -125,10 +126,16 @@ class NovaLauncherActivity : ComponentActivity() {
     private data class WidgetPicker(val wide: Boolean, val providers: List<AppWidgetProviderInfo>)
     private data class PendingWidget(val id: Int, val provider: ComponentName, val wide: Boolean)
 
+    private var appVisibility by mutableStateOf(SanctuaryAppVisibility())
+    private val pendingAddedPackages = mutableSetOf<Pair<String, UserHandle>>()
+
     private val packageChanges = object : LauncherApps.Callback() {
         private fun changed() = refreshCatalogue()
         override fun onPackageRemoved(packageName: String, user: UserHandle) = changed()
-        override fun onPackageAdded(packageName: String, user: UserHandle) = changed()
+        override fun onPackageAdded(packageName: String, user: UserHandle) {
+            if (model.newAppPlacement == LauncherNewAppPlacement.HOME) pendingAddedPackages += packageName to user
+            changed()
+        }
         override fun onPackageChanged(packageName: String, user: UserHandle) = changed()
         override fun onPackagesAvailable(packageNames: Array<out String>, user: UserHandle, replacing: Boolean) = changed()
         override fun onPackagesUnavailable(packageNames: Array<out String>, user: UserHandle, replacing: Boolean) = changed()
@@ -190,6 +197,7 @@ class NovaLauncherActivity : ComponentActivity() {
         askDefaultHome = store.askForDefaultHome()
         defaultHomeOpening = LauncherDefaultHomePromptSession(savedInstanceState?.getBoolean(DEFAULT_HOME_OFFERED) == true)
         launcherProtected = SanctuaryLauncherPolicy.launcherProtectionActive(this)
+        appVisibility = SanctuaryLauncherPolicy.visibility(this)
         sanctuaryStatus = sanctuary.refresh()?.let(::sanctuarySnapshot)
         outsideProtection = SanctuaryLauncherPolicy.outsideProtectionEnabled(this)
         pendingWidget = savedInstanceState?.let { saved ->
@@ -206,7 +214,7 @@ class NovaLauncherActivity : ComponentActivity() {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 combine(sanctuary.current, SanctuaryLauncherPolicy.state()) { session, _ -> session }
                     .collectLatest { session ->
-                        refreshProtection()
+                        refreshProtection(invalidatePolicy = true)
                         outsideProtection = SanctuaryLauncherPolicy.outsideProtectionEnabled(this@NovaLauncherActivity)
                         refreshCatalogue()
                         sanctuaryStatus = session?.let(::sanctuarySnapshot)
@@ -263,13 +271,14 @@ class NovaLauncherActivity : ComponentActivity() {
                 if (counts != model.launchCounts) save(model.copy(launchCounts = counts))
             }
             val utility = activeUtility
-            val utilityAllowed = utility != null && decisions[utility.app(packageName).packageName]?.canLaunch == true
+            val utilityAllowed = utility != null && decisions[utility.app(packageName).component]?.canLaunch == true
             if (!utilityAllowed) {
                 NovaLauncherScreen(model, apps, if (launcherProtected) emptyList() else shortcuts, decisions,
                     defaultHome == true, outsideProtection, actions, homeGeneration, launcherProtected, sanctuaryStatus,
                     defaultHomeUi = LauncherDefaultHomeUi(defaultHome, askDefaultHome,
                         canShowDefaultHomePrompt(), homeWindowFocused, defaultHomeOpening),
-                    smartState = smart, smartFolderPresentation = smartFolderPresentation, smartSettings = { eligible ->
+                    smartState = smart, smartFolderPresentation = smartFolderPresentation, appVisibility = appVisibility,
+                    smartSettings = { eligible ->
                         LauncherSmartSettings(tracking, eligible, onClearLegacyHistory = {
                             save(model.copy(launchCounts = emptyMap()))
                         }, onRequestUsageAccess = ::openUsageAccess)
@@ -345,9 +354,16 @@ class NovaLauncherActivity : ComponentActivity() {
         super.onPause()
     }
 
-    private fun refreshProtection() {
-        launcherProtected = SanctuaryLauncherPolicy.launcherProtectionActive(this)
-        if (launcherProtected) {
+    private fun refreshProtection(invalidatePolicy: Boolean = false) {
+        val active = SanctuaryLauncherPolicy.launcherProtectionActive(this)
+        if (active && (invalidatePolicy || !launcherProtected)) {
+            decisions = emptyMap()
+            blocked = null
+            review = false
+        }
+        launcherProtected = active
+        appVisibility = SanctuaryLauncherPolicy.visibility(this)
+        if (active) {
             tracking.suspendExtended()
             picker = null
             widgetFrames.forEach(GuardedWidgetFrame::disableContent)
@@ -444,28 +460,40 @@ class NovaLauncherActivity : ComponentActivity() {
     private fun refreshCatalogue() {
         catalogueJob?.cancel()
         val previous = rawApps
+        val added = pendingAddedPackages.toSet()
+        val observedAt = System.currentTimeMillis()
         catalogueJob = lifecycleScope.launch {
             val result = withContext(Dispatchers.IO) {
                 runCatching {
-                    val installed = runCatching { directory.apps() }.getOrElse {
+                    val discovery = runCatching { directory.apps() }
+                    val installed = discovery.getOrElse {
                         previous.filter { LauncherBuiltIn.find(packageName, it.component) == null }
                     }
                     val builtIns = LauncherBuiltIn.entries.map { it.app(packageName) }
                     val session = sanctuary.refresh()
-                    val policy = SanctuaryLauncherPolicy.decisions(applicationContext, installed.map { it.packageName }) +
-                        LauncherBuiltIn.entries.associate { it.app(packageName).packageName to it.decision(session) }
+                    val policy = SanctuaryLauncherPolicy.appDecisions(applicationContext, installed, allowEnrollment = discovery.isSuccess) +
+                        LauncherBuiltIn.entries.associate { it.app(packageName).component to it.decision(session) }
                     val availableShortcuts = if (SanctuaryLauncherPolicy.launcherProtectionActive(applicationContext)) emptyList()
                         else directory.shortcuts(installed)
-                    Triple(installed + builtIns, policy, availableShortcuts)
+                    Triple(installed + builtIns, policy, availableShortcuts) to discovery.isSuccess
                 }.getOrNull()
             }
             if (result != null) {
-                val (entries, policy, availableShortcuts) = result
+                val (catalogue, complete) = result
+                val (entries, policy, availableShortcuts) = catalogue
+                if (complete) {
+                    val installed = entries.filter { LauncherBuiltIn.find(packageName, it.component) == null }
+                    val addedKeys = installed.filter { app ->
+                        (app.packageName to (app.profile?.user ?: android.os.Process.myUserHandle())) in added
+                    }.mapTo(mutableSetOf(), LauncherApp::component)
+                    store.observeInstalledApps(installed, observedAt, addedKeys)?.let { model = it }
+                    pendingAddedPackages.removeAll(added)
+                }
                 rawApps = entries
                 apps = entries.map(identitySettings::label)
                 decisions = policy
                 refreshUsageIfEligible()
-                if (activeUtility?.let { policy[it.app(packageName).packageName]?.canLaunch != true } == true) {
+                if (activeUtility?.let { policy[it.app(packageName).component]?.canLaunch != true } == true) {
                     activeUtility = null
                 }
                 shortcuts = availableShortcuts
@@ -501,7 +529,7 @@ class NovaLauncherActivity : ComponentActivity() {
         val builtIn = LauncherBuiltIn.find(packageName, component)
         val allowed = runCatching {
             builtIn?.decision(sanctuary.refresh())?.canLaunch
-                ?: SanctuaryLauncherPolicy.decision(this, target.packageName).canLaunch
+                ?: SanctuaryLauncherPolicy.appDecision(this, target).canLaunch
         }.getOrNull()
         if (allowed == null) {
             message("Sanctuary could not verify this app. Use Android Settings for recovery.")
@@ -554,7 +582,11 @@ class NovaLauncherActivity : ComponentActivity() {
     }
 
     private fun recordLauncherSuccess(app: LauncherApp) {
-        if (isTrackingSafe()) {
+        val allowedFriendsLaunch = app.packageName == "com.whatsapp" && app.profileSerial != null &&
+            trackingDeviceUnlocked() && runCatching {
+                SanctuaryLauncherPolicy.appDecision(this, app) == SanctuaryLauncherPolicy.Decision.APPROVED
+            }.getOrDefault(false)
+        if (isTrackingSafe() || allowedFriendsLaunch) {
             tracking.recordLaunch(app)
             val smart = tracking.state.value
             if (smart.mode != LauncherTrackingMode.OFF && app.component !in smart.excluded) {
@@ -563,9 +595,11 @@ class NovaLauncherActivity : ComponentActivity() {
         }
     }
 
+    private fun trackingDeviceUnlocked(): Boolean =
+        getSystemService(KeyguardManager::class.java)?.let { !it.isDeviceLocked && !it.isKeyguardLocked } == true
+
     private fun isTrackingSafe(): Boolean =
-        getSystemService(KeyguardManager::class.java)?.let { !it.isDeviceLocked && !it.isKeyguardLocked } == true &&
-            runCatching { sanctuary.refresh() == null }.getOrDefault(false)
+        trackingDeviceUnlocked() && runCatching { sanctuary.refresh() == null }.getOrDefault(false)
 
     private fun refreshUsageIfEligible() {
         if (!pendingUsageRefresh || !lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) return
@@ -693,7 +727,10 @@ class NovaLauncherActivity : ComponentActivity() {
             AlertDialog(
                 onDismissRequest = { blocked = null },
                 title = { Text("Sanctuary protection") },
-                text = { Text("${target.label} is blocked by the active Sanctuary rules.") },
+                text = { Text(if (appVisibility.hideBlockedApps || appVisibility.hideFromSearch ||
+                    appVisibility.hideFromSuggestions || appVisibility.hideFromRecentlyUsed)
+                    "This app is blocked by the active Sanctuary rules."
+                    else "${target.label} is blocked by the active Sanctuary rules.") },
                 confirmButton = {
                     TextButton(onClick = { blocked = null }) { Text("Back to Nova Launcher") }
                 },
@@ -701,7 +738,7 @@ class NovaLauncherActivity : ComponentActivity() {
         }
         if (review) {
             val mode = sanctuaryStatus?.mode
-            val labels = apps.associate { it.packageName to it.label }
+            val labels = apps.filter { it.profile == null }.associate { it.packageName to it.label }
             val current = sanctuary.current.value
             val modes = if (mode != null) listOf(mode) else SanctuaryMode.entries
             AlertDialog(
@@ -710,7 +747,10 @@ class NovaLauncherActivity : ComponentActivity() {
                 text = {
                     LazyColumn(Modifier.heightIn(max = 360.dp), contentPadding = PaddingValues(bottom = 8.dp)) {
                         item { Text("Nova Launcher uses the same app rules as Sanctuary. Emergency and Android recovery access remain available.") }
-                        modes.forEach { preset ->
+                        if (launcherProtected) {
+                            item { Text("Open Sanctuary in NovaOS to review the authenticated app rules.") }
+                        }
+                        modes.filter { !launcherProtected }.forEach { preset ->
                             item { Text(preset.label, style = MaterialTheme.typography.titleSmall) }
                             val packages = if (current?.mode == preset) {
                                 if (current.allowExternalApps) current.androidApps else emptySet()

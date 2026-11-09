@@ -59,6 +59,8 @@ internal fun LauncherIconMenu(
     save: (LauncherLayout) -> Unit,
     onEditSmartFolder: ((LauncherSlot, LauncherItem.SmartFolder) -> Unit)? = null,
     recentPinned: Boolean = false,
+    dockLocked: Boolean = false,
+    onEditCategory: ((LauncherApp) -> Unit)? = null,
 ) {
     val (item, source) = anchor.origin
     if (item is LauncherItem.App && app == null) return
@@ -77,7 +79,7 @@ internal fun LauncherIconMenu(
             } else Icons.Default.OpenInNew,
             open,
         ))
-        if (source != null && item != LauncherItem.Workspace) {
+        if (source != null && item != LauncherItem.Workspace && (!dockLocked || source.page != null)) {
             val original = layout.itemsAt(source.page)
             if (original?.getOrNull(source.index) == item) {
                 if (item is LauncherItem.SmartFolder && onEditSmartFolder != null) {
@@ -89,7 +91,7 @@ internal fun LauncherIconMenu(
             }
         }
         if (item is LauncherItem.App || source != null) {
-            if (source == null || source.page == null) {
+            if (source == null || source.page == null && !dockLocked) {
                 val pageItems = layout.itemsAt(currentPage).orEmpty()
                 val added = layout.dropLauncherItem(item, source, LauncherDrop(LauncherSlot(currentPage, pageItems.size)))
                 if (added != layout) add(LauncherMenuAction(
@@ -97,7 +99,7 @@ internal fun LauncherIconMenu(
                     if (source == null) Icons.Default.Add else Icons.Default.Home,
                 ) { save(added) })
             }
-            if (dockVisible && (source == null || source.page != null)) {
+            if (!dockLocked && dockVisible && (source == null || source.page != null)) {
                 val docked = layout.dropLauncherItem(item, source, LauncherDrop(LauncherSlot(null, layout.dock.size)))
                 if (docked != layout) add(LauncherMenuAction(
                     if (source == null) "Add to dock" else "Move to dock", Icons.Default.Apps,
@@ -123,6 +125,9 @@ internal fun LauncherIconMenu(
             val renameApp = actions.renameApp
             if (!protectedBySanctuary && renameApp != null && builtIn == null) {
                 add(LauncherMenuAction("Rename app", Icons.Default.Edit) { renameApp(item.component) })
+            }
+            if (!protectedBySanctuary && onEditCategory != null && app != null && builtIn == null) {
+                add(LauncherMenuAction("App Library category", Icons.Default.FolderOpen) { onEditCategory(app) })
             }
             val toggleRecentPin = actions.toggleRecentPin
             if (toggleRecentPin != null) {

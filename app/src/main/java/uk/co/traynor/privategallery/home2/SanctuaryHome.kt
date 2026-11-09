@@ -40,7 +40,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import kotlinx.coroutines.delay
+import uk.co.traynor.privategallery.core.sanctuary.SANCTUARY_NATIVE_WHATSAPP
 import uk.co.traynor.privategallery.core.sanctuary.SanctuaryLauncherPolicy
 import uk.co.traynor.privategallery.core.sanctuary.SanctuaryMode
 import uk.co.traynor.privategallery.core.sanctuary.SanctuaryPreset
@@ -48,12 +52,15 @@ import uk.co.traynor.privategallery.core.sanctuary.SanctuarySession
 import uk.co.traynor.privategallery.core.sanctuary.SanctuaryStore
 import uk.co.traynor.privategallery.core.sanctuary.SanctuaryWhatsApp
 import uk.co.traynor.privategallery.core.sanctuary.SanctuaryWorkspacePause
+import uk.co.traynor.privategallery.core.sanctuary.approvedAndroidApps
 import uk.co.traynor.privategallery.core.sanctuary.sanctuaryEssentialNovaRoutes
 import java.text.DateFormat
 import java.util.Date
 import java.util.Locale
 
 private val SanctuaryShape = RoundedCornerShape(24.dp)
+
+private enum class SanctuaryAppEditor { ALLOWED, VISIBILITY, MODE_APPROVALS }
 
 @Composable
 internal fun SanctuaryHome(
@@ -75,9 +82,13 @@ internal fun SanctuaryHome(
     onStartFoldTest: ((SanctuaryMode) -> Boolean)? = null,
 ) {
     val session by store.current.collectAsState()
+    val policyRevision by SanctuaryLauncherPolicy.state().collectAsState()
     var selected by remember { mutableStateOf(SanctuaryMode.SELF_CARE) }
     var edit by remember { mutableStateOf<SanctuaryMode?>(null) }
-    var editAndroid by remember(session?.id) { mutableStateOf(false) }
+    val activity = LocalActivity.current
+    val lifecycle = LocalLifecycleOwner.current.lifecycle
+    var appEditor by remember(session?.id) { mutableStateOf<SanctuaryAppEditor?>(null) }
+    val appAuthentication = remember(session?.id) { mutableStateOf<CancellationSignal?>(null) }
     var presetRevision by remember { mutableIntStateOf(0) }
     var message by remember { mutableStateOf<String?>(null) }
     var viewHistory by remember { mutableStateOf(false) }
@@ -89,19 +100,51 @@ internal fun SanctuaryHome(
             delay(500)
         }
     }
-    BackHandler(edit != null || editAndroid || viewHistory) {
+    DisposableEffect(lifecycle, appAuthentication) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_STOP) appEditor = null
+        }
+        lifecycle.addObserver(observer)
+        onDispose {
+            lifecycle.removeObserver(observer)
+            appAuthentication.value?.cancel()
+        }
+    }
+    fun openAppEditor(editor: SanctuaryAppEditor) {
+        if (appAuthentication.value != null) return
+        appAuthentication.value = activity?.let { host ->
+            authenticateSanctuaryAppManagement(host) { authorised ->
+                appAuthentication.value = null
+                if (authorised) {
+                    message = null
+                    appEditor = editor
+                }
+            }
+        }
+        if (appAuthentication.value == null) message = "Set an Android screen lock to manage Sanctuary app rules."
+    }
+    BackHandler(edit != null || appEditor != null || viewHistory) {
         edit = null
-        editAndroid = false
+        appEditor = null
         viewHistory = false
     }
-    if (editAndroid && session != null) {
+    if (appEditor == SanctuaryAppEditor.ALLOWED) {
+        SanctuaryAllowedAppInstances(store, session?.mode ?: selected, session) { appEditor = null }
+        return
+    }
+    if (appEditor == SanctuaryAppEditor.VISIBILITY) {
+        SanctuaryAppVisibilitySettings(store) { appEditor = null }
+        return
+    }
+    val modeAndroidApps = remember(androidApps) { androidApps - SANCTUARY_NATIVE_WHATSAPP }
+    if (appEditor == SanctuaryAppEditor.MODE_APPROVALS && session != null) {
         val active = checkNotNull(session)
-        SanctuaryLiveAndroidApprovals(active, androidApps, { editAndroid = false }) { packages ->
+        SanctuaryLiveAndroidApprovals(active, modeAndroidApps, { appEditor = null }) { packages ->
             store.saveAndroidApprovals(active.id, active.mode, packages).also { saved ->
                 if (saved) {
                     SanctuaryLauncherPolicy.signalPolicyChange()
                     presetRevision++
-                    editAndroid = false
+                    appEditor = null
                 }
             }
         }
@@ -109,7 +152,7 @@ internal fun SanctuaryHome(
     }
     edit?.let { mode ->
         SanctuaryPresetEditor(
-            mode, remember(mode) { store.preset(mode) }, androidApps, novaApps, novaAppUrls, { edit = null },
+            mode, remember(mode) { store.preset(mode) }, modeAndroidApps, novaApps, novaAppUrls, { edit = null },
         ) {
             if (store.savePreset(mode, it)) {
                 presetRevision++
@@ -127,6 +170,9 @@ internal fun SanctuaryHome(
     }
     val presets = remember(store, presetRevision) { SanctuaryMode.entries.associateWith(store::preset) }
     val current = session
+    val guardianApprovals = remember(current, store, policyRevision) {
+        current?.let { approvedAndroidApps(it, store.launcherSettings()) }.orEmpty()
+    }
     SanctuaryScaffold("Nova Sanctuary", "Focus with room to breathe", onBack, "nova-sanctuary") { wide ->
         SanctuaryHero(current, remaining, protectionStatus)
         message?.let { Text(it, color = MaterialTheme.colorScheme.error, modifier = Modifier.testTag("sanctuary-feedback")) }
@@ -169,10 +215,10 @@ internal fun SanctuaryHome(
                 )
             }
         } else {
-            SanctuaryLauncher(current, androidApps, novaApps, novaAppUrls, onLaunchAndroid, onLaunchNova, wide)
+            SanctuaryLauncher(current, androidApps.filterKeys { it in guardianApprovals }, novaApps, novaAppUrls, onLaunchAndroid, onLaunchNova, wide)
             SanctuaryMenuRow(
                 "Review approved Android apps", "Changes apply to Nova Launcher and App Guardian",
-                { editAndroid = true }, "sanctuary-review-android-approvals",
+                { openAppEditor(SanctuaryAppEditor.MODE_APPROVALS) }, "sanctuary-review-android-approvals",
             )
             if (current.offerPinning && pinningControls != null) {
                 SanctuaryTitle("Android screen pinning")
@@ -198,6 +244,14 @@ internal fun SanctuaryHome(
             dndStatus?.let { Text(it, modifier = Modifier.testTag("sanctuary-dnd-status"), style = MaterialTheme.typography.bodySmall) }
             onDndSettings?.let { SanctuaryMenuRow("Do Not Disturb access", "Android controls notification filtering and exceptions", it, "sanctuary-dnd-settings") }
         }
+        SanctuaryMenuRow(
+            "Allowed Apps", "Review app instances and their Sanctuary rules",
+            { openAppEditor(SanctuaryAppEditor.ALLOWED) }, "sanctuary-allowed-apps",
+        )
+        SanctuaryMenuRow(
+            "App Visibility", "Choose which blocked shortcuts are hidden",
+            { openAppEditor(SanctuaryAppEditor.VISIBILITY) }, "sanctuary-app-visibility",
+        )
         SanctuaryMenuRow("App Guardian setup", "Permissions and protection status", onPermissions, "sanctuary-permissions")
         SanctuaryMenuRow("Session history", "Recent sessions on this device", { viewHistory = true }, "sanctuary-history")
         if (onPhone != null) SanctuaryMenuRow(
@@ -287,7 +341,7 @@ internal fun SanctuarySettings(store: SanctuaryStore, onEnded: () -> Unit, onBac
 }
 
 @Composable
-private fun SanctuaryScaffold(
+internal fun SanctuaryScaffold(
     title: String,
     subtitle: String,
     onBack: () -> Unit,
@@ -480,7 +534,7 @@ private fun SanctuaryPresetEditor(
 }
 
 @Composable
-private fun SanctuaryModeSwitch(title: String, description: String, enabled: Boolean, tag: String, onChange: (Boolean) -> Unit) {
+internal fun SanctuaryModeSwitch(title: String, description: String, enabled: Boolean, tag: String, onChange: (Boolean) -> Unit) {
     Surface(shape = RoundedCornerShape(16.dp), color = MaterialTheme.colorScheme.surfaceContainer) {
         Row(
             Modifier.fillMaxWidth().heightIn(min = 56.dp).toggleable(enabled, role = Role.Switch, onValueChange = onChange)
@@ -522,7 +576,7 @@ private fun SanctuaryLauncher(
 ) {
     SanctuaryTitle("Approved apps")
     val internal = novaApps.filterKeys { session.allowsNovaApp(it, novaAppUrls[it]) }
-    val external = androidApps.filterKeys { it in session.androidApps }
+    val external = androidApps
     if (!session.allowExternalApps) {
         SanctuaryLaunchGroup("Inside NovaOS", internal, "internal", onNova)
         Text("Approved Android app shortcuts are off for this mode.", style = MaterialTheme.typography.bodySmall)
