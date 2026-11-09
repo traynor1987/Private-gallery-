@@ -629,7 +629,8 @@ jobs:
           else
             grep -F "package: name='uk.co.traynor.privategallery.hiddenprototype' versionCode='63' versionName='1.7.11.7-TEST-ONLY'" app/build/home2-evidence/package.txt
           fi
-          grep -F "sdkVersion:'37'" app/build/home2-evidence/package.txt
+          grep -Fx "sdkVersion:'37'" app/build/home2-evidence/package.txt
+          grep -Fx "targetSdkVersion:'37'" app/build/home2-evidence/package.txt
           "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --print-certs "$apk" > app/build/home2-evidence/signature.txt
           sha256sum "$apk" > app/build/home2-evidence/SHA256SUMS.txt
       - name: Verify visual-only platform boundary
