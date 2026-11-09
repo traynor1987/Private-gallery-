@@ -81,7 +81,8 @@ class EvidenceLocker179UiTest {
      compose.activity.window.decorView.rootWindowInsets?.isVisible(android.view.WindowInsets.Type.ime()) == true
     }
    }
-   field("Title").performTextReplacement(incidentTitle).assertTextContains(incidentTitle)
+   field("Title").performTextReplacement(incidentTitle)
+   field("Title").assertTextContains(incidentTitle)
    androidx.test.espresso.Espresso.closeSoftKeyboard()
    compose.waitUntil(10000) {
     compose.runOnIdle {
