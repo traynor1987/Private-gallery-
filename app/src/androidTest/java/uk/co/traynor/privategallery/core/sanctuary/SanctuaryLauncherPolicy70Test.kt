@@ -97,10 +97,14 @@ class SanctuaryLauncherPolicy70Test {
                         }
                         // API 37 hides the secure PIN editor from accessibility. The real system
                         // prompt must own focus, and only its credential callback can grant access.
-                        await("Android BiometricPrompt owns window focus") {
-                            shell("dumpsys window").lineSequence().any {
+                        var focusedSince: Long? = null
+                        await("Android BiometricPrompt owns stable window focus") {
+                            val focused = shell("dumpsys window").lineSequence().any {
                                 "mCurrentFocus=" in it && it.trimEnd().endsWith(" BiometricPrompt}")
                             }
+                            val now = SystemClock.elapsedRealtime()
+                            focusedSince = if (focused) focusedSince ?: now else null
+                            focusedSince?.let { now - it >= 1_000L } == true
                         }
                         shell("input keyevent ${pin.map { "KEYCODE_$it" }.joinToString(" ")} KEYCODE_ENTER")
                         await("system confirmed device credential") { result.get() != null }
