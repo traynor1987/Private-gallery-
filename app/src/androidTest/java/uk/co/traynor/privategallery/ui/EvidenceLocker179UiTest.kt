@@ -74,8 +74,32 @@ class EvidenceLocker179UiTest {
    compose.runOnIdle{compose.activity.onBackPressedDispatcher.onBackPressed()}
    click("Add evidence");compose.evidenceNode(hasContentDescription("Register original beta179.txt")).assertIsDisplayed().assertHeightIsAtLeast(48.dp).performClick().assertIsOn();approveImportReview();waitReady(controller,2)
    compose.onNodeWithText("Timeline").performClick();click("New incident")
-   field("Title").performTextReplacement("Synthetic incident179");compose.onNodeWithText("Save").performClick()
-   compose.waitUntil(15000){controller.state.value.catalog?.incidents()?.size==1&&!controller.state.value.busy}
+   val incidentTitle = "Synthetic incident179"
+   field("Title").performTouchInput { click() }
+   compose.waitUntil(10000) {
+    compose.runOnIdle {
+     compose.activity.window.decorView.rootWindowInsets?.isVisible(android.view.WindowInsets.Type.ime()) == true
+    }
+   }
+   field("Title").performTextReplacement(incidentTitle).assertTextContains(incidentTitle)
+   androidx.test.espresso.Espresso.closeSoftKeyboard()
+   compose.waitUntil(10000) {
+    compose.runOnIdle {
+     val decor = compose.activity.window.decorView
+     decor.hasWindowFocus() && decor.rootWindowInsets?.isVisible(android.view.WindowInsets.Type.ime()) == false
+    }
+   }
+   field("Title").assertTextContains(incidentTitle)
+   compose.onNode(hasText("Save") and hasClickAction()).assertIsDisplayed().performTouchInput { click() }
+   try {
+    compose.waitUntil(15000) {
+     val state = controller.state.value
+     !state.busy && state.catalog?.incidents()?.singleOrNull()?.title() == incidentTitle
+    }
+   } catch (failure: ComposeTimeoutException) {
+    val state = controller.state.value
+    throw AssertionError("Incident did not save. Count=${state.catalog?.incidents()?.size} busy=${state.busy} status=${state.message}", failure)
+   }
    compose.runOnIdle{compose.activity.onBackPressedDispatcher.onBackPressed()}
    compose.onNodeWithText("Evidence").performClick();compose.evidenceNode(hasContentDescription("Select evidence alpha179.txt")).performClick()
    click("Evidence tools");click("Add selected to incident");click("Synthetic incident179")

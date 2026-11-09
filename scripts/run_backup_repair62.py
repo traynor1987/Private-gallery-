@@ -22,6 +22,7 @@ if __name__=='__main__':
  selection_group.add_argument('--wallpaper',action='store_true',help='Run only the Primary Vault wallpaper regression')
  selection_group.add_argument('--redesign',action='store_true',help='Run the Backup, Arcade and Calculator presentation tests')
  selection_group.add_argument('--calculator-copy',action='store_true',help='Run the native Calculator memory and system clipboard regression')
+ selection_group.add_argument('--evidence-incident',action='store_true',help='Run the Evidence Locker incident creation and persistence regression')
  args=parser.parse_args()
  directory='focused-repair62'
  if args.single:
@@ -36,6 +37,9 @@ if __name__=='__main__':
  if args.calculator_copy:
   expected={(PREFIX+'home2.CalculatorUiTest','drawerLaunchArithmeticMemoryHistoryAndCopyUseNativeCalculator')}
   directory='calculator-copy70'
+ if args.evidence_incident:
+  expected={(PREFIX+'ui.EvidenceLocker179UiTest','primaryActualImportExtractCorrectIncidentSearchRemoveAndReopenPreservesOriginal')}
+  directory='evidence-incident70'
  if args.redesign:
   matrix=json.loads((ROOT/'docs/release1711/RUNTIME_CASES.json').read_text())
   classes={PREFIX+name for name in ('core.backup.BackupUiTest','core.backup.BackupUi62Test','home2.ArcadeUiTest','home2.CalculatorUiTest','CalculatorMainSecurity62Test')}
