@@ -1,7 +1,15 @@
 package uk.co.traynor.privategallery.upgrade
 
+import android.app.role.RoleManager
+import android.content.ComponentName
+import android.content.Intent
+import android.content.pm.PackageManager
 import android.graphics.Bitmap
+import android.net.Uri
+import android.os.SystemClock
 import androidx.test.platform.app.InstrumentationRegistry
+import androidx.test.runner.lifecycle.ActivityLifecycleMonitorRegistry
+import androidx.test.runner.lifecycle.Stage
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.io.File
@@ -24,8 +32,11 @@ import uk.co.traynor.privategallery.core.evidence.EvidenceCollectionConnection
 import uk.co.traynor.privategallery.core.evidence.EvidenceCollectionSync
 import uk.co.traynor.privategallery.core.evidence.EvidenceCredentials
 import uk.co.traynor.privategallery.core.evidence.EvidenceReview68
+import uk.co.traynor.privategallery.core.sanctuary.SanctuaryMode
+import uk.co.traynor.privategallery.core.sanctuary.SanctuaryPreset
+import uk.co.traynor.privategallery.core.sanctuary.SanctuaryStore
 
-/** Reviewed release-control instrumentation for original-key Code 68 to Code 69 upgrade.
+/** Reviewed release-control instrumentation for original-key Code 69 to Code 71 upgrade.
  * Captured and hash-checked before frozen application checkout; never modifies baseline app.
  */
 class UpgradeFixtureTest {
@@ -36,7 +47,7 @@ class UpgradeFixtureTest {
     private val candidateCode get() = checkNotNull(arguments.getString("candidateCode")).toInt()
     private fun guard() {
         check(context.packageName == "uk.co.traynor.privategallery.hiddenprototype")
-        check(baselineCode == 68 && candidateCode == 69)
+        check(baselineCode == 69 && candidateCode == 71)
     }
     private fun hash(bytes: ByteArray) = MessageDigest.getInstance("SHA-256").digest(bytes).joinToString("") { "%02x".format(it) }
     private fun encryptedHashes(): JSONObject = JSONObject().also { result ->
@@ -309,7 +320,7 @@ class UpgradeFixtureTest {
         val storeType=evidenceType("EvidenceEncryptedStore")
         if(seed) {
             val folder=File(root,"evidence-state/evidence-179-${label.lowercase()}")
-            assertFalse("Fresh disposable Code 68 evidence fixture starts empty",folder.walkTopDown().any {it.isFile})
+            assertFalse("Fresh disposable Code 69 evidence fixture starts empty",folder.walkTopDown().any {it.isFile})
         }
         val store=storeType.getConstructor(File::class.java,ownerType,evidenceType("EvidenceEncryptedStore\$LeaseFactory"))
             .newInstance(File(root,"evidence-state"),owner,factory)
@@ -322,7 +333,7 @@ class UpgradeFixtureTest {
         val corrected="2026-10-31\nAlice: UPGRADE-EVIDENCE-$label owner-corrected transcript 14:05"
         var catalog=evidenceCall(store,"read")
         if(seed) {
-            assertEquals("Fresh Code 68 fixture catalogue starts empty",0,(evidenceCall(catalog,"evidence") as List<*>).size)
+            assertEquals("Fresh Code 69 fixture catalogue starts empty",0,(evidenceCall(catalog,"evidence") as List<*>).size)
             val dimension = if (label == "PRIMARY") 64 else 32
             val metadata=evidenceRecord("Metadata",9,item.displayName,0L,0L,item.importedAtEpochMillis,0L,dimension,dimension,
                 mapOf("provenance" to "Synthetic upgrade fixture metadata; timestamps are not screenshot facts"),false)
@@ -479,7 +490,7 @@ class UpgradeFixtureTest {
                 for(field in listOf("files","hiddenFiles")) {
                     val wanted=expected.getJSONObject(field);val actual=current.getJSONObject(field)
                     assertEquals(wanted.length(),actual.length())
-                    wanted.keys().forEach {path->assertEquals("Existing Code 68 owner-encrypted evidence survives upgrade/restart unchanged",wanted.getString(path),actual.getString(path))}
+                    wanted.keys().forEach {path->assertEquals("Existing Code 69 owner-encrypted evidence survives upgrade/restart unchanged",wanted.getString(path),actual.getString(path))}
                 }
             } else before.put("primaryEvidenceCatalogSha256",primaryHash).put("hiddenEvidenceCatalogSha256",hiddenHash).put("candidateEvidenceFiles",current)
             // Recheck every original encrypted file after additive writes, including the
@@ -654,9 +665,114 @@ class UpgradeFixtureTest {
     }
     // END NOVA62 PORTABLE APP FIXTURE
 
+    /** The original package remains a regular app and Android keeps its previous Home selection. */
+    private fun launcherRegistration(seed: Boolean): String {
+        val packageManager = context.packageManager
+        val application = context.packageName
+        val all = PackageManager.ResolveInfoFlags.of(0)
+        val defaultOnly = PackageManager.ResolveInfoFlags.of(PackageManager.MATCH_DEFAULT_ONLY.toLong())
+        val roles = checkNotNull(context.getSystemService(RoleManager::class.java))
+        assertTrue("The Android 17 device offers the Home role", roles.isRoleAvailable(RoleManager.ROLE_HOME))
+        assertFalse("Installing or upgrading NovaOS must not acquire the Home role", roles.isRoleHeld(RoleManager.ROLE_HOME))
+
+        val appEntry = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER).setPackage(application)
+        val existingEntry = packageManager.queryIntentActivities(appEntry, all)
+            .single { it.activityInfo.name == "$application.LauncherActivity" }.activityInfo
+        assertTrue("Keep the existing exported private workspace entry point", existingEntry.exported)
+
+        val systemHome = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME)
+        val resolvedHome = checkNotNull(packageManager.resolveActivity(systemHome, defaultOnly)).activityInfo
+        assertNotEquals("Android Home still resolves outside NovaOS until the owner opts in", application, resolvedHome.packageName)
+        val registered = packageManager.queryIntentActivities(Intent(systemHome).setPackage(application), defaultOnly)
+        if (seed) {
+            assertTrue("Original Code 69 did not register a Home activity", registered.isEmpty())
+        } else {
+            val launcher = registered.single().activityInfo
+            assertEquals("$application.launcher.NovaLauncherActivity", launcher.name)
+            assertTrue("Android can launch the Home activity", launcher.exported)
+            assertFalse("The Home activity is separate from the existing app entry", packageManager.queryIntentActivities(appEntry, all)
+                .any { it.activityInfo.name == launcher.name })
+            assertNotNull("Launcher has a dedicated task affinity", launcher.taskAffinity)
+            assertNotEquals("Launcher task affinity is separate from the existing workspace entry", existingEntry.taskAffinity, launcher.taskAffinity)
+        }
+        return ComponentName(resolvedHome.packageName, resolvedHome.name).flattenToString()
+    }
+
+    /** Exercise the delivered production HOME Activity before using any Vault credentials. */
+    private fun verifyProductionLauncher(previousHome: String) {
+        val instrumentation = InstrumentationRegistry.getInstrumentation()
+        val launcher = ComponentName(context.packageName, "${context.packageName}.launcher.NovaLauncherActivity")
+        val workspace = ComponentName(context.packageName, "${context.packageName}.MainActivity")
+        assertFalse("The private workspace is not an exported Android entry point",
+            context.packageManager.getActivityInfo(workspace, 0).exported)
+
+        val hostile = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME).setComponent(launcher)
+            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            .setData(Uri.parse("content://foreign.invalid/evidence/forged"))
+            .putExtra("workspace", "hidden").putExtra("unlock", true)
+        val lifecycle = ActivityLifecycleMonitorRegistry.getInstance()
+        var started: android.app.Activity? = null
+        try {
+            context.startActivity(hostile)
+            val deadline = SystemClock.uptimeMillis() + 15_000L
+            var verified = false
+            while (!verified && SystemClock.uptimeMillis() < deadline) {
+                instrumentation.runOnMainSync {
+                    val resumed = lifecycle.getActivitiesInStage(Stage.RESUMED)
+                    val home = resumed.singleOrNull { it.componentName == launcher }
+                    if (home != null) {
+                        started = home
+                        if (home.hasWindowFocus()) {
+                            assertTrue("Optional Home runs in its own root task", home.isTaskRoot)
+                            assertEquals(Intent.ACTION_MAIN, home.intent.action)
+                            assertEquals(setOf(Intent.CATEGORY_HOME), home.intent.categories)
+                            assertNull("Home discards untrusted URI data", home.intent.data)
+                            assertTrue("Home discards forged workspace and unlock extras",
+                                home.intent.extras?.isEmpty != false)
+                            assertFalse("Opening optional Home does not open the private workspace",
+                                resumed.any { it.componentName == workspace })
+                            verified = true
+                        }
+                    }
+                }
+                if (!verified) SystemClock.sleep(50)
+            }
+            assertTrue("Production HOME activity resumed with window focus", verified)
+            assertEquals("Opening optional Home preserves Android's previous default",
+                previousHome, launcherRegistration(seed = false))
+        } finally {
+            instrumentation.runOnMainSync {
+                (started ?: lifecycle.getActivitiesInStage(Stage.RESUMED)
+                    .singleOrNull { it.componentName == launcher })?.finishAndRemoveTask()
+            }
+            instrumentation.waitForIdleSync()
+        }
+    }
+
+    /** Seed one authentic existing policy without starting the Guardian or granting any permissions. */
+    private fun sanctuaryPolicy(seed: Boolean) {
+        val store = SanctuaryStore.get(context)
+        val preset = SanctuaryPreset(
+            minutes = 37,
+            androidApps = setOf("com.android.settings", "uk.co.synthetic.reader"),
+            novaApps = setOf("mind", "arcade"),
+            enableDnd = true,
+            offerPinning = true,
+            enableGuardian = true,
+            allowExternalApps = false,
+            blockedNovaApps = setOf("browser-v1"),
+            allowWhatsApp = true,
+        )
+        if (seed) assertTrue("Seed original Sanctuary approved-app policy", store.savePreset(SanctuaryMode.LEARNING, preset))
+        assertEquals("Preserve the original Sanctuary policy", preset, store.preset(SanctuaryMode.LEARNING))
+        assertNull("Upgrade must not start a Sanctuary session", store.refresh())
+    }
+
     @Test fun seed() {
         guard(); check(!proof.exists())
         assertEquals(baselineCode, context.packageManager.getPackageInfo(context.packageName, 0).versionCode)
+        val previousHome = launcherRegistration(seed = true)
+        sanctuaryPolicy(seed = true)
         val key = PinVaultKeyStore(context).create("738291".toCharArray())
         try {
             val repository = AndroidVaultRepository(context, key)
@@ -737,7 +853,7 @@ class UpgradeFixtureTest {
             homePreferences(seed=true)
             home2State(seeded,seed=true)
             portableApps62(seed=true) // NOVA62 addition
-            seeded.put("files",encryptedHashes()).put("hiddenFiles",hiddenHashes())
+            seeded.put("files",encryptedHashes()).put("hiddenFiles",hiddenHashes()).put("previousHome",previousHome)
             proof.writeText(seeded.toString())
         } finally { key.fill(0) }
     }
@@ -808,6 +924,11 @@ class UpgradeFixtureTest {
         guard()
         assertEquals(candidateCode, context.packageManager.getPackageInfo(context.packageName,0).versionCode)
         val before = JSONObject(proof.readText())
+        val previousHome = before.getString("previousHome")
+        assertEquals("Keep Android's previous Home activity after update and restart", previousHome,
+            launcherRegistration(seed = false))
+        verifyProductionLauncher(previousHome)
+        sanctuaryPolicy(seed = false)
         val restarted=arguments.getString("restartCheck")=="true"
         val files = before.getJSONObject("files")
         files.keys().forEach { path -> assertEquals("Preserve encrypted file $path", expectedCiphertext(before,"files",path,restarted), hash(File(context.filesDir,path).readBytes())) }

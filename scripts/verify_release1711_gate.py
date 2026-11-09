@@ -15,7 +15,7 @@ import zipfile
 
 ROOT=Path(__file__).resolve().parents[1]
 BRANCH='feature/novaos-sanctuary-integration'
-BASELINE='0de573ccd4b5f2ef0ee557ca8c90ebf7d2aba1d3'
+BASELINE='cc8aaed81b8d6ed27c71c9923edbf51334466cb2'
 CONTROLS=('compile_upgrade1711_fixture.sh','verify_compiled_upgrade1711.py',
           'verify_upgrade1711_baseline.py','verify_production_candidate1711.sh',
           'verify_synthetic_upgrade1711.sh','verify_signed_upgrade1711.py',
@@ -77,6 +77,78 @@ def runtime_cases(archive,matrix,source):
                 'evidence-locker-68':2,'evidence-sanctuary-68':2,
                 'evidence-legacy-locker':7,'evidence-legacy-ai':1,'evidence-legacy-reports':2}
         exact = {
+            'launcher-platform-70': [
+                ('uk.co.traynor.privategallery.launcher.NovaLauncherPlatform70Test',
+                 'activeSanctuaryBlocksLauncherTouchUntilTheSharedApprovalChanges'),
+                ('uk.co.traynor.privategallery.launcher.NovaLauncherPlatform70Test',
+                 'appDiscoveryAndLaunchUseAnInstalledPersonalProfileEntry'),
+                ('uk.co.traynor.privategallery.launcher.NovaLauncherPlatform70Test',
+                 'defaultHomeCanBeSelectedAndPreviousLauncherRestored'),
+                ('uk.co.traynor.privategallery.launcher.NovaLauncherPlatform70Test',
+                 'deniedNativeWidgetBindingRemovesUnownedHostId'),
+                ('uk.co.traynor.privategallery.launcher.NovaLauncherPlatform70Test',
+                 'homeRegistrationAndExistingWorkspaceEntryAreSeparate'),
+                ('uk.co.traynor.privategallery.launcher.NovaLauncherPlatform70Test',
+                 'launcherIgnoresForeignIntentDataAndRecreatesInItsOwnTask'),
+            ],
+            'launcher-sanctuary-controls-70': [
+                ('uk.co.traynor.privategallery.launcher.LauncherSanctuaryControls70Test',
+                 'coverActiveControlsOfferPauseAndKeepRecoveryAvailableWhilePaused'),
+                ('uk.co.traynor.privategallery.launcher.LauncherSanctuaryControls70Test',
+                 'coverCanStartASelectedModeThroughTheExistingPolicyCallback'),
+                ('uk.co.traynor.privategallery.launcher.LauncherSanctuaryControls70Test',
+                 'innerShowsCountdownAndPauseStateWithoutReplacingTheMode'),
+            ],
+            'launcher-storage-70': [
+                ('uk.co.traynor.privategallery.launcher.LauncherLayoutStore70Test',
+                 'cleanupUndoAndWidgetPlacementSurviveRestartWithLegacyWidgetCompatibility'),
+                ('uk.co.traynor.privategallery.launcher.LauncherLayoutStore70Test',
+                 'layoutAndAppearanceSurviveAStoreReopen'),
+                ('uk.co.traynor.privategallery.launcher.LauncherLayoutStore70Test',
+                 'portableBackupPreservesLocalBindingsAndRejectsMalformedLayouts'),
+            ],
+            'launcher-ui-70': [
+                ('uk.co.traynor.privategallery.launcher.NovaLauncher70UiTest',
+                 'approvedOnlyDrawerHidesBlockedSearchResultsWhileProtectionIsActive'),
+                ('uk.co.traynor.privategallery.launcher.NovaLauncher70UiTest',
+                 'copyWizardExplainsSamsungLayoutLimitBeforePreview'),
+                ('uk.co.traynor.privategallery.launcher.NovaLauncher70UiTest',
+                 'coverDragReordersShortcutsAndReviewedCleanupCanBeUndone'),
+                ('uk.co.traynor.privategallery.launcher.NovaLauncher70UiTest',
+                 'coverShowsAndEditsItsOwnPageWithoutChangingInnerLayout'),
+                ('uk.co.traynor.privategallery.launcher.NovaLauncher70UiTest',
+                 'drawerSearchExposesBlockedAppForPlatformDecisionAndWorkspaceShortcut'),
+                ('uk.co.traynor.privategallery.launcher.NovaLauncher70UiTest',
+                 'innerShowsAndEditsItsOwnPageWithoutChangingCoverLayout'),
+                ('uk.co.traynor.privategallery.launcher.NovaLauncher70UiTest',
+                 'wizardPreviewsTemplateBeforeExplicitDefaultHomeSelection'),
+            ],
+            'launcher-utility-70': [
+                ('uk.co.traynor.privategallery.launcher.LauncherUtility70Test',
+                 'arcadeCanStartAGameWithoutPrivateHomeShortcuts'),
+                ('uk.co.traynor.privategallery.launcher.LauncherUtility70Test',
+                 'calculatorUsesOrdinaryLauncherWithoutDiscreetAction'),
+                ('uk.co.traynor.privategallery.launcher.LauncherUtility70Test',
+                 'storeUsesBundledCatalogueWithoutPrivateAppsOrInstallControls'),
+            ],
+            'launcher-workspace-70': [
+                ('uk.co.traynor.privategallery.LauncherWorkspace70Test',
+                 'openWorkspaceIntentRevokesRetainedPrimaryAndHiddenAuthority'),
+                ('uk.co.traynor.privategallery.LauncherWorkspace70Test',
+                 'primaryGalleryHasNoExportedWorkspaceActivity'),
+                ('uk.co.traynor.privategallery.LauncherWorkspace70Test',
+                 'primaryGalleryIntentRevokesRetainedPrimaryAndHiddenAuthority'),
+            ],
+            'sanctuary-launcher-policy-70': [
+                ('uk.co.traynor.privategallery.core.sanctuary.SanctuaryLauncherPolicy70Test',
+                 'androidSettingsAndPhoneStayExemptDuringProtection'),
+                ('uk.co.traynor.privategallery.core.sanctuary.SanctuaryLauncherPolicy70Test',
+                 'approvalAndRevocationChangeLauncherAndGuardianTogether'),
+                ('uk.co.traynor.privategallery.core.sanctuary.SanctuaryLauncherPolicy70Test',
+                 'deviceCredentialAuthorisesScopedTemporaryAccessAndPause'),
+                ('uk.co.traynor.privategallery.core.sanctuary.SanctuaryLauncherPolicy70Test',
+                 'persistentShieldBlocksExternalAppAndClearsOnNovaLauncherHome'),
+            ],
             'evidence-dashboard-69': [
                 ('uk.co.traynor.privategallery.ui.EvidenceDashboardPresentationTest',
                  'busyImportCannotStartAnotherWorkflow'),
@@ -117,6 +189,18 @@ def runtime_cases(archive,matrix,source):
                         'Focused test identities changed for '+group)
             require(all(not any(c.find(tag) is not None for tag in ('failure','error','skipped')) for c in cases),
                     'Focused test failed, errored or skipped for '+group)
+        prefix = 'home2-evidence/launcher-process-70/'
+        required = {prefix+name for name in ('receipt.txt','seed.txt','verify.txt')}
+        require(required <= set(names),'Missing original launcher process restart evidence')
+        receipt = zipped.read(prefix+'receipt.txt').decode()
+        observed = re.fullmatch(r'source='+re.escape(source)+r'\napi=37\nold_pid=([1-9][0-9]*)\nnew_pid=([1-9][0-9]*)\nresult=PASS\n',receipt)
+        require(observed is not None and observed.group(1)!=observed.group(2),
+                'Wrong launcher process restart source, API, result or PID')
+        for name in ('seed.txt','verify.txt'):
+            output = zipped.read(prefix+name).decode()
+            require(len(re.findall(r'^OK \(1 test\)\s*$',output,re.M))==1
+                    and not any(error in output for error in ('FAILURES!!!','INSTRUMENTATION_FAILED','Process crashed','FAILURE:')),
+                    'Original launcher process instrumentation failed: '+name)
         for name in names:
             if 'outputs/androidTest-results/' not in name or not name.endswith('.xml'): continue
             for case in ET.fromstring(zipped.read(name)).iter('testcase'):
@@ -129,7 +213,7 @@ def runtime_cases(archive,matrix,source):
 
 def validate(marker,review,run,jobs,artifact,archive,matrix_raw,current_controls,fixture):
     source=marker.get('source');require(source_ok(source),'Unfrozen candidate source')
-    require(marker.get('baseline_source')==BASELINE and marker.get('baseline_code')==68 and marker.get('candidate_code')==69,'Wrong upgrade identity')
+    require(marker.get('baseline_source')==BASELINE and marker.get('baseline_code')==69 and marker.get('candidate_code')==71,'Wrong upgrade identity')
     require(marker.get('controls_sha256')==current_controls,'Release controls changed after review')
     require(marker.get('review_sha256')==sha(review),'Independent review changed')
     require(marker.get('fixture_sha256')==sha(fixture),'Upgrade fixture changed')
@@ -155,16 +239,17 @@ def validate(marker,review,run,jobs,artifact,archive,matrix_raw,current_controls
     require(REQUIRED_STEPS<=passed,'Required runtime/build/identity step did not run')
     count=runtime_cases(archive,json.loads(matrix_raw),source)
     return dict(schema=1,decision='READY_FOR_GATED_SIGNER',source=source,baseline_source=BASELINE,
-                baseline_code=68,candidate_code=69,test_run=marker['test_run'],test_artifact=marker['test_artifact'],review_sha256=sha(review),
+                baseline_code=69,candidate_code=71,test_run=marker['test_run'],test_artifact=marker['test_artifact'],review_sha256=sha(review),
                 fixture_sha256=sha(fixture),controls_sha256=current_controls,matrix_sha256=sha(matrix_raw),
-                runtime_archive_sha256=marker['runtime_archive_sha256'],validated_case_count=count,validated_restart_count=8)
+                runtime_archive_sha256=marker['runtime_archive_sha256'],validated_case_count=count,validated_restart_count=8,validated_launcher_restart_count=1)
 
 def check_receipt(proof,source,current_controls,fixture):
     require(source_ok(source) and proof.get('schema')==1 and proof.get('decision')=='READY_FOR_GATED_SIGNER','Missing reviewed signer gate')
-    require(proof.get('source')==source and proof.get('baseline_source')==BASELINE and proof.get('baseline_code')==68 and proof.get('candidate_code')==69,'Signer gate source/identity differs')
+    require(proof.get('source')==source and proof.get('baseline_source')==BASELINE and proof.get('baseline_code')==69 and proof.get('candidate_code')==71,'Signer gate source/identity differs')
     require(proof.get('controls_sha256')==current_controls and proof.get('fixture_sha256')==sha(fixture),'Signer gate controls/fixture differ')
     require(type(proof.get('test_run')) is int and proof['test_run']>0 and type(proof.get('validated_case_count')) is int and proof['validated_case_count']>0,'Missing original runtime accounting')
     require(proof.get('validated_restart_count')==8,'Missing actual restart phase accounting')
+    require(proof.get('validated_launcher_restart_count')==1,'Missing launcher process restart accounting')
     require(type(proof.get('test_artifact')) is int and proof['test_artifact']>0,'Missing original runtime artifact')
     for field in ('review_sha256','matrix_sha256','runtime_archive_sha256'): require(digest_ok(proof.get(field)),'Missing signer evidence '+field)
 
