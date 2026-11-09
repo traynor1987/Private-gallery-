@@ -157,7 +157,7 @@ class SanctuaryGuardianService : Service() {
                 continue
             }
             val persistentShield = SanctuaryLauncherPolicy.outsideProtectionEnabled(this)
-            val approved = approvedAndroidApps(latest) + SanctuaryLauncherPolicy.temporaryPackages(latest)
+            val approved = approvedAndroidApps(latest)
             // A recent approved or recovery window takes priority over a lagging Usage Access sample.
             // Our own overlay can emit a window event and is not evidence of an underlay change.
             val safeTransition = observation?.packageName?.takeIf {
@@ -201,8 +201,7 @@ class SanctuaryGuardianService : Service() {
                     SanctuaryGuardian.hasLauncherEntry(this, current) &&
                     power?.isInteractive == true && keyguard?.isKeyguardLocked == false &&
                     store.refresh()?.takeIf { it.id == sessionId }?.let {
-                        !SanctuaryLauncherPolicy.isPaused(it) && current !in approvedAndroidApps(it) &&
-                            current !in SanctuaryLauncherPolicy.temporaryPackages(it)
+                        !SanctuaryLauncherPolicy.isPaused(it) && current !in approvedAndroidApps(it)
                     } == true && !SanctuaryLauncherPolicy.launcherVisible() &&
                     !SanctuaryLauncherPolicy.outsideProtectionEnabled(this) &&
                     SanctuaryGuardian.isActivated(this, sessionId) && homeTransition.beginHome(current, now)

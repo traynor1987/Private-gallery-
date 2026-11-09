@@ -101,7 +101,6 @@ internal fun LauncherSettings(
                     style = MaterialTheme.typography.bodySmall)
                 Button(onClick = actions.openSanctuary) { Text("Open Sanctuary") }
                 OutlinedButton(onClick = actions.reviewSanctuary) { Text("Review Sanctuary approved apps") }
-                if (protectedBySanctuary) TextButton(onClick = actions.pauseSanctuary) { Text("Pause Sanctuary") }
                 TextButton(onClick = actions.emergencyPhone) { Text("Phone and emergency access") }
             }
             item {

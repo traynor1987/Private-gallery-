@@ -10,18 +10,25 @@ import android.os.ParcelFileDescriptor
 import android.os.SystemClock
 import android.provider.Settings
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
+import androidx.compose.ui.test.junit4.createEmptyComposeRule
+import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import androidx.test.core.app.ActivityScenario
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import org.junit.Assert.*
+import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import uk.co.traynor.privategallery.BuildConfig
 import uk.co.traynor.privategallery.core.sanctuary.SanctuaryLauncherPolicy.Decision
-import java.util.concurrent.atomic.AtomicReference
+import uk.co.traynor.privategallery.home2.SanctuarySettings
 
 @RunWith(AndroidJUnit4::class)
 class SanctuaryLauncherPolicy70Test {
+    @get:Rule val compose = createEmptyComposeRule()
     private val instrumentation = InstrumentationRegistry.getInstrumentation()
     private val context = instrumentation.targetContext
     private val automation get() = instrumentation.getUiAutomation(UiAutomation.FLAG_DONT_SUPPRESS_ACCESSIBILITY_SERVICES)
@@ -78,7 +85,7 @@ class SanctuaryLauncherPolicy70Test {
         }
     }
 
-    @Test fun deviceCredentialAuthorisesScopedTemporaryAccessAndPause() {
+    @Test fun deviceCredentialAuthorisesOnlyTheWorkspacePause() {
         disposableEmulator()
         val (first, second) = nonessentialApps().take(2)
         val keyguard = requireNotNull(context.getSystemService(KeyguardManager::class.java))
@@ -90,34 +97,28 @@ class SanctuaryLauncherPolicy70Test {
             await("screen lock configured") { keyguard.isDeviceSecure }
             withSession {
                 ActivityScenario.launch(ComponentActivity::class.java).use { scenario ->
-                    fun authorise(packageName: String?) {
-                        val result = AtomicReference<Boolean?>()
-                        scenario.onActivity {
-                            assertNotNull(SanctuaryLauncherPolicy.authenticateTemporaryAccess(it, packageName, result::set))
+                    scenario.onActivity { host -> host.setContent { SanctuarySettings(store, {}, {}) } }
+                    compose.onNodeWithTag("sanctuary-pause-android-protection").performScrollTo().performClick()
+                    // API 37 hides the secure PIN editor from accessibility. Wait for the
+                    // real system prompt before sending the disposable emulator's PIN.
+                    var focusedSince: Long? = null
+                    await("Android BiometricPrompt owns stable window focus") {
+                        val focused = shell("dumpsys window").lineSequence().any {
+                            "mCurrentFocus=" in it && it.trimEnd().endsWith(" BiometricPrompt}")
                         }
-                        // API 37 hides the secure PIN editor from accessibility. The real system
-                        // prompt must own focus, and only its credential callback can grant access.
-                        var focusedSince: Long? = null
-                        await("Android BiometricPrompt owns stable window focus") {
-                            val focused = shell("dumpsys window").lineSequence().any {
-                                "mCurrentFocus=" in it && it.trimEnd().endsWith(" BiometricPrompt}")
-                            }
-                            val now = SystemClock.elapsedRealtime()
-                            focusedSince = if (focused) focusedSince ?: now else null
-                            focusedSince?.let { now - it >= 1_000L } == true
-                        }
-                        shell("input keyevent ${pin.map { "KEYCODE_$it" }.joinToString(" ")} KEYCODE_ENTER")
-                        await("system confirmed device credential") { result.get() != null }
-                        assertEquals(true, result.get())
+                        val now = SystemClock.elapsedRealtime()
+                        focusedSince = if (focused) focusedSince ?: now else null
+                        focusedSince?.let { now - it >= 1_000L } == true
                     }
-
-                    authorise(first)
-                    assertEquals(Decision.TEMPORARILY_PERMITTED, SanctuaryLauncherPolicy.decision(context, first))
+                    assertEquals(Decision.UNAPPROVED, SanctuaryLauncherPolicy.decision(context, first))
                     assertEquals(Decision.UNAPPROVED, SanctuaryLauncherPolicy.decision(context, second))
+                    shell("input keyevent ${pin.map { "KEYCODE_$it" }.joinToString(" ")} KEYCODE_ENTER")
+                    await("device credential paused Android app protection") {
+                        !SanctuaryLauncherPolicy.launcherProtectionActive(context)
+                    }
+                    assertTrue(SanctuaryLauncherPolicy.decision(context, first).canLaunch)
+                    assertTrue(SanctuaryLauncherPolicy.decision(context, second).canLaunch)
                     assertTrue(store.refresh()?.androidApps.orEmpty().isEmpty())
-                    authorise(null)
-                    assertEquals(Decision.TEMPORARILY_PERMITTED, SanctuaryLauncherPolicy.decision(context, second))
-                    assertFalse(SanctuaryLauncherPolicy.launcherProtectionActive(context))
                 }
             }
             withSession {

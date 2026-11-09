@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+bash scripts/run_visual_checkpoint.sh NovaLauncher72GesturesTest launcher-gestures-72 uk.co.traynor.privategallery.launcher
+
 python3 scripts/run_backup_repair62.py --evidence-incident
 
 bash scripts/run_visual_checkpoint.sh SanctuaryLauncherPolicy70Test sanctuary-launcher-policy-70 uk.co.traynor.privategallery.core.sanctuary

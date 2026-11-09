@@ -29,7 +29,7 @@ class LauncherSanctuaryControls70Test {
                 modeMinutes = mapOf(SanctuaryMode.GAMING to 35),
                 guardianStatus = "Guardian off",
                 onStart = { requested = it },
-                onReview = {}, onPause = {}, onPhone = {}, onManage = {}, onDismiss = {},
+                onReview = {}, onPhone = {}, onManage = {}, onDismiss = {},
             )
         }
         compose.onNodeWithTag("launcher-sanctuary-mode-gaming").performClick()
@@ -54,23 +54,23 @@ class LauncherSanctuaryControls70Test {
         compose.onNodeWithText("Launcher protection paused", useUnmergedTree = true).assertIsDisplayed()
     }
 
-    @Test fun coverActiveControlsOfferPauseAndKeepRecoveryAvailableWhilePaused() {
-        var status by mutableStateOf(LauncherSanctuaryStatus(SanctuaryMode.PANIC, 60_000L, paused = false))
-        var pauses = 0
+    @Test fun coverActiveControlsSendManagementToNovaOsAndKeepEmergencyAvailable() {
+        val status = LauncherSanctuaryStatus(SanctuaryMode.PANIC, 60_000L, paused = false)
+        var managed = 0
         var phone = 0
         compose.setContent {
             LauncherSanctuaryDialog(
                 status, emptyMap(), "Guardian available", onStart = {},
-                onReview = {}, onPause = { pauses++ }, onPhone = { phone++ }, onManage = {}, onDismiss = {},
+                onReview = {}, onPhone = { phone++ }, onManage = { managed++ }, onDismiss = {},
             )
         }
-        compose.onNodeWithText("Pause protection for five minutes").performClick()
-        compose.runOnIdle {
-            assertEquals(1, pauses)
-            status = status.copy(paused = true)
-        }
-        compose.onNodeWithText("Pause protection for five minutes").assertDoesNotExist()
+        compose.onNodeWithText("Pause", substring = true).assertDoesNotExist()
+        compose.onNodeWithText("End session").assertDoesNotExist()
+        compose.onNodeWithText("Manage in NovaOS").performScrollTo().performClick()
         compose.onNodeWithText("Phone and emergency access").performScrollTo().performClick()
-        compose.runOnIdle { assertEquals(1, phone) }
+        compose.runOnIdle {
+            assertEquals(1, managed)
+            assertEquals(1, phone)
+        }
     }
 }

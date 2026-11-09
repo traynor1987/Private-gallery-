@@ -173,7 +173,7 @@ object SanctuaryGuardian {
     fun launch(context: Context, packageName: String): Boolean {
         val session = SanctuaryStore.get(context).refresh() ?: return false
         if (packageName !in approvedAndroidApps(session) && packageName !in essentialPackages(context) &&
-            packageName !in SanctuaryLauncherPolicy.temporaryPackages(session) && !SanctuaryLauncherPolicy.isPaused(session)
+            !SanctuaryLauncherPolicy.isPaused(session)
         ) return false
         val intent = context.packageManager.getLaunchIntentForPackage(packageName) ?: return false
         return open(context, intent)

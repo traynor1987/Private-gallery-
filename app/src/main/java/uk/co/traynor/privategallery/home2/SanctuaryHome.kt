@@ -1,6 +1,8 @@
 package uk.co.traynor.privategallery.home2
 
+import android.os.CancellationSignal
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.LocalActivity
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -45,6 +47,7 @@ import uk.co.traynor.privategallery.core.sanctuary.SanctuaryPreset
 import uk.co.traynor.privategallery.core.sanctuary.SanctuarySession
 import uk.co.traynor.privategallery.core.sanctuary.SanctuaryStore
 import uk.co.traynor.privategallery.core.sanctuary.SanctuaryWhatsApp
+import uk.co.traynor.privategallery.core.sanctuary.SanctuaryWorkspacePause
 import uk.co.traynor.privategallery.core.sanctuary.sanctuaryEssentialNovaRoutes
 import java.text.DateFormat
 import java.util.Date
@@ -208,6 +211,15 @@ internal fun SanctuaryHome(
 @Composable
 internal fun SanctuarySettings(store: SanctuaryStore, onEnded: () -> Unit, onBack: () -> Unit) {
     val session by store.current.collectAsState()
+    val activity = LocalActivity.current
+    val sessionId = session?.id
+    val pauseRequest = remember(sessionId) { mutableStateOf<CancellationSignal?>(null) }
+    var pauseUnavailable by remember(sessionId) { mutableStateOf(false) }
+    val policyRevision by SanctuaryLauncherPolicy.state().collectAsState()
+    val paused = remember(sessionId, policyRevision) { sessionId?.let(SanctuaryWorkspacePause::isPaused) == true }
+    DisposableEffect(pauseRequest) {
+        onDispose { pauseRequest.value?.cancel() }
+    }
     var phrase by remember(session?.id) { mutableStateOf("") }
     var confirming by remember(session?.id) { mutableStateOf(false) }
     var failure by remember(session?.id) { mutableStateOf(false) }
@@ -234,6 +246,27 @@ internal fun SanctuarySettings(store: SanctuaryStore, onEnded: () -> Unit, onBac
                 modifier = Modifier.heightIn(min = 48.dp).testTag("sanctuary-end-review"),
             ) { Text("Review end session") }
             if (failure) Text("The session could not be ended.", color = MaterialTheme.colorScheme.error)
+        }
+        if (sessionId != null && activity != null) {
+            SanctuaryTitle("Pause Android app protection")
+            if (paused) {
+                Text("Android app protection is paused. It resumes automatically after five minutes.")
+            } else {
+                Text("Temporarily pause Nova Launcher’s Android app rules and App Guardian. Your Sanctuary session keeps running.")
+                OutlinedButton(
+                    onClick = {
+                        if (pauseRequest.value == null) {
+                            pauseRequest.value = SanctuaryWorkspacePause.authenticate(activity, store, sessionId) {
+                                pauseRequest.value = null
+                            }
+                            pauseUnavailable = pauseRequest.value == null
+                        }
+                    },
+                    enabled = pauseRequest.value == null,
+                    modifier = Modifier.heightIn(min = 48.dp).testTag("sanctuary-pause-android-protection"),
+                ) { Text("Pause for five minutes") }
+                if (pauseUnavailable) Text("Could not start authentication. Check your Android screen lock.", color = MaterialTheme.colorScheme.error)
+            }
         }
         SanctuaryRecoveryNote()
     }

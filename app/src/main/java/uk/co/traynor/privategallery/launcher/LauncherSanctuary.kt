@@ -89,7 +89,6 @@ internal fun LauncherSanctuaryDialog(
     guardianStatus: String,
     onStart: (SanctuaryMode) -> Unit,
     onReview: () -> Unit,
-    onPause: () -> Unit,
     onPhone: () -> Unit,
     onManage: () -> Unit,
     onDismiss: () -> Unit,
@@ -136,9 +135,6 @@ internal fun LauncherSanctuaryDialog(
                         }
                         Text(if (status.paused) "Launcher protection paused" else "Launcher rules active")
                         Text(guardianStatus, style = MaterialTheme.typography.bodySmall)
-                    }
-                    if (!status.paused) item {
-                        TextButton(onClick = onPause) { Text("Pause protection for five minutes") }
                     }
                 }
                 item { TextButton(onClick = onReview) { Text("Review approved apps") } }

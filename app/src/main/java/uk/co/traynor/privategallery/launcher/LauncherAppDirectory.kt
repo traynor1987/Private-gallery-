@@ -86,6 +86,12 @@ internal class LauncherAppDirectory(private val context: Context) {
         launcherApps.startMainActivity(component, user, null, null)
     }.isSuccess
 
+    fun openAppInfo(app: LauncherApp): Boolean = runCatching {
+        val component = checkNotNull(ComponentName.unflattenFromString(app.component))
+        check(component.packageName == app.packageName && app.packageName != context.packageName)
+        launcherApps.startAppDetailsActivity(component, user, null, null)
+    }.isSuccess
+
     fun start(shortcut: LauncherShortcut): Boolean = runCatching {
         check(shortcut.packageName != context.packageName && launcherApps.hasShortcutHostPermission())
         launcherApps.startShortcut(shortcut.packageName, shortcut.id, null, null, user)

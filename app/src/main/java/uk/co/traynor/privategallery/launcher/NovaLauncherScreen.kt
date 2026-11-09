@@ -6,7 +6,7 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.horizontalScroll
@@ -30,15 +30,22 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.LayoutCoordinates
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.onLongClick
+import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import java.time.ZonedDateTime
@@ -105,7 +112,6 @@ private fun LauncherRuntime(
     var innerPage by rememberSaveable(homeGeneration) { mutableIntStateOf(0) }
     var searchRequested by rememberSaveable(homeGeneration) { mutableStateOf(false) }
     var folder by remember(homeGeneration) { mutableStateOf<LauncherItem.Folder?>(null) }
-    var editingApp by remember(homeGeneration) { mutableStateOf<LauncherApp?>(null) }
     val appsByComponent = remember(apps) { apps.associateBy { it.component } }
     fun canDisplay(component: String): Boolean {
         val app = appsByComponent[component] ?: return false
@@ -137,94 +143,140 @@ private fun LauncherRuntime(
         val updatePage: (Int) -> Unit = { if (isInner) innerPage = it else coverPage = it }
         fun edit(next: LauncherLayout) { actions.save(state.withLayout(wide, next)) }
 
-        when (surface) {
-            LauncherSurface.HOME -> key(isInner, homeGeneration) {
-                LauncherHome(
-                    state, layout, wide, currentPage, appsByComponent, decisions, actions, launcherProtected,
-                    onPage = updatePage, onDrawer = ::openDrawer,
-                    onSettings = { surface = LauncherSurface.SETTINGS },
-                    onEdit = { surface = LauncherSurface.EDIT },
-                    onItem = ::open,
-                    onItemOptions = { item ->
-                        if (item is LauncherItem.App) editingApp = appsByComponent[item.component]
-                        else surface = LauncherSurface.EDIT
-                    },
-                    sanctuaryStatus = sanctuaryStatus,
-                )
+        val screenWidth = constraints.maxWidth
+        val rightToLeft = LocalLayoutDirection.current == LayoutDirection.Rtl
+        var rootCoordinates by remember { mutableStateOf<LayoutCoordinates?>(null) }
+        val gestures = remember(screenWidth, isInner, homeGeneration, rightToLeft) {
+            LauncherIconGestures(rightToLeft) { rootCoordinates }
+        }
+        var dragPageRequest by remember(gestures) { mutableStateOf<Int?>(null) }
+        fun pageForDrop(): Int? = currentPage.takeIf { dragPageRequest == null || dragPageRequest == it }
+        val rowTolerance = with(LocalDensity.current) { 8.dp.toPx() }
+        val edgeWidth = with(LocalDensity.current) { 34.dp.toPx() }
+        val activeDrag = gestures.drag
+        LaunchedEffect(activeDrag == null) {
+            if (activeDrag == null) dragPageRequest = null
+        }
+        val edge = activeDrag?.position?.let { position ->
+            if (surface != LauncherSurface.HOME || position.y !in gestures.pageBounds.top..gestures.pageBounds.bottom) 0
+            else when {
+                position.x in 0f..edgeWidth -> if (rightToLeft) 1 else -1
+                position.x in (screenWidth - edgeWidth)..screenWidth.toFloat() -> if (rightToLeft) -1 else 1
+                else -> 0
             }
-            LauncherSurface.DRAWER -> LauncherDrawer(
-                state, layout, wide, query, { query = it }, searchRequested,
-                apps.filter { canDisplay(it.component) }, shortcuts, decisions,
-                onBack = { surface = LauncherSurface.HOME },
-                onApp = { actions.launchApp(it.component) },
-                onShortcut = actions.launchShortcut,
-                onOptions = { editingApp = it },
-                onFolder = { folder = it },
-            )
-            LauncherSurface.SETTINGS -> LauncherSettings(
-                state, decisions, apps, actions, isDefaultHome, outsideProtection, launcherProtected,
-                onBack = { surface = LauncherSurface.HOME },
-                onEdit = { surface = LauncherSurface.EDIT },
-            )
-            LauncherSurface.EDIT -> LauncherLayoutEditor(
-                state, layout, wide, currentPage, apps.filter { canDisplay(it.component) }, decisions,
-                onEdit = ::edit, onPage = updatePage, actions = actions,
-                onBack = { surface = LauncherSurface.HOME },
-            )
+        } ?: 0
+        LaunchedEffect(edge, currentPage, gestures) {
+            val next = currentPage + edge
+            if (edge != 0 && next in layout.pages.indices) {
+                delay(550)
+                dragPageRequest = next
+            }
         }
 
-        folder?.let { selected ->
-            AlertDialog(
-                onDismissRequest = { folder = null },
-                title = { Text(selected.name) },
-                text = {
-                    Column(Modifier.heightIn(max = 340.dp).verticalScroll(rememberScrollState())) {
-                        val members = selected.apps
-                            .filter { surface != LauncherSurface.DRAWER || canDisplay(it) }
-                            .mapNotNull(appsByComponent::get)
-                        if (members.isEmpty()) Text("No available apps in this folder.")
-                        members.forEach { app ->
-                            TextButton(onClick = {
-                                folder = null
-                                actions.launchApp(app.component)
-                            }) { Text(app.label) }
+        Box(Modifier.fillMaxSize().onGloballyPositioned { rootCoordinates = it }.launcherIconPointer(
+            gestures,
+            findSource = { position ->
+                if (folder != null || gestures.menu != null) null
+                else when (surface) {
+                    LauncherSurface.HOME -> gestures.sourceAt(position, currentPage, drawer = false)
+                    LauncherSurface.DRAWER -> gestures.sourceAt(position, currentPage, drawer = true)
+                    else -> null
+                }
+            },
+            startDrag = {
+                if (surface == LauncherSurface.DRAWER) {
+                    surface = LauncherSurface.HOME
+                    query = ""
+                }
+            },
+            drop = { position ->
+                val origin = gestures.drag?.origin
+                if (origin != null && surface == LauncherSurface.HOME) {
+                    gestures.targetAt(layout, pageForDrop(), position, rowTolerance)?.let { target ->
+                        val next = layout.dropLauncherItem(origin.item, origin.slot, target.drop)
+                        if (next != layout) edit(next)
+                    }
+                }
+            },
+        )) {
+            when (surface) {
+                LauncherSurface.HOME -> key(isInner, homeGeneration) {
+                    LauncherHome(
+                        state, layout, wide, currentPage, appsByComponent, decisions, actions, launcherProtected,
+                        onPage = updatePage, onDrawer = ::openDrawer,
+                        onSettings = { surface = LauncherSurface.SETTINGS },
+                        onEdit = { surface = LauncherSurface.EDIT },
+                        onItem = ::open,
+                        gestures = gestures,
+                        dragPageRequest = dragPageRequest.takeIf { activeDrag != null },
+                        sanctuaryStatus = sanctuaryStatus,
+                    )
+                }
+                LauncherSurface.DRAWER -> LauncherDrawer(
+                    state, layout, wide, query, { query = it }, searchRequested,
+                    apps.filter { canDisplay(it.component) }, shortcuts, decisions,
+                    onBack = { surface = LauncherSurface.HOME },
+                    onApp = { actions.launchApp(it.component) },
+                    onShortcut = actions.launchShortcut,
+                    onFolder = { folder = it },
+                    gestures = gestures,
+                )
+                LauncherSurface.SETTINGS -> LauncherSettings(
+                    state, decisions, apps, actions, isDefaultHome, outsideProtection, launcherProtected,
+                    onBack = { surface = LauncherSurface.HOME },
+                    onEdit = { surface = LauncherSurface.EDIT },
+                )
+                LauncherSurface.EDIT -> LauncherLayoutEditor(
+                    state, layout, wide, currentPage, apps.filter { canDisplay(it.component) }, decisions,
+                    onEdit = ::edit, onPage = updatePage, actions = actions,
+                    onBack = { surface = LauncherSurface.HOME },
+                )
+            }
+
+            folder?.let { selected ->
+                AlertDialog(
+                    onDismissRequest = { folder = null },
+                    title = { Text(selected.name) },
+                    text = {
+                        Column(Modifier.heightIn(max = 340.dp).verticalScroll(rememberScrollState())) {
+                            val members = selected.apps
+                                .filter { surface != LauncherSurface.DRAWER || canDisplay(it) }
+                                .mapNotNull(appsByComponent::get)
+                            if (members.isEmpty()) Text("No available apps in this folder.")
+                            members.forEach { app ->
+                                TextButton(onClick = {
+                                    folder = null
+                                    actions.launchApp(app.component)
+                                }) { Text(app.label) }
+                            }
                         }
-                    }
-                },
-                confirmButton = { TextButton(onClick = { folder = null }) { Text("Close") } },
-            )
-        }
-        editingApp?.let { app ->
-            val item = LauncherItem.App(app.component)
-            val currentItems = layout.pages.getOrElse(currentPage) { emptyList() }
-            AlertDialog(
-                onDismissRequest = { editingApp = null },
-                title = { Text(app.label) },
-                text = {
-                    Column {
-                        TextButton(onClick = { editingApp = null; actions.launchApp(app.component) }) { Text("Open app") }
-                        TextButton(enabled = item in currentItems || currentItems.size < MAX_LAUNCHER_PAGE_ITEMS, onClick = {
-                            val pages = layout.pages.toMutableList()
-                            pages[currentPage] = if (item in currentItems) currentItems - item else currentItems + item
-                            edit(layout.copy(pages = pages))
-                            editingApp = null
-                        }) { Text(if (item in currentItems) "Remove from this page" else "Add to this page") }
-                        TextButton(
-                            enabled = item in layout.dock || layout.dock.size < MAX_LAUNCHER_DOCK_ITEMS,
-                            onClick = {
-                                edit(layout.copy(dock = if (item in layout.dock) layout.dock - item else layout.dock + item))
-                                editingApp = null
-                            },
-                        ) { Text(if (item in layout.dock) "Remove from dock" else "Add to dock") }
-                        TextButton(enabled = app.component in layout.favourites || layout.favourites.size < MAX_LAUNCHER_FAVOURITES, onClick = {
-                            val favourites = layout.favourites
-                            edit(layout.copy(favourites = if (app.component in favourites) favourites - app.component else favourites + app.component))
-                            editingApp = null
-                        }) { Text(if (app.component in layout.favourites) "Remove favourite" else "Add favourite") }
-                    }
-                },
-                confirmButton = { TextButton(onClick = { editingApp = null }) { Text("Close") } },
-            )
+                    },
+                    confirmButton = { TextButton(onClick = { folder = null }) { Text("Close") } },
+                )
+            }
+            gestures.menu?.let { anchor ->
+                val component = (anchor.origin.item as? LauncherItem.App)?.component
+                val app = component?.let(appsByComponent::get)
+                if (component == null || app != null && (surface != LauncherSurface.DRAWER || canDisplay(component))) {
+                    LauncherIconMenu(
+                        anchor, app, layout, currentPage, state.appearance.dock != LauncherDock.HIDDEN,
+                        launcherProtected, actions,
+                        dismiss = gestures::dismissMenu,
+                        open = { open(anchor.origin.item) },
+                        editHome = { surface = LauncherSurface.EDIT },
+                        save = ::edit,
+                    )
+                } else {
+                    LaunchedEffect(anchor) { gestures.dismissMenu() }
+                }
+            }
+            if (surface == LauncherSurface.HOME && activeDrag != null) {
+                val app = (activeDrag.origin.item as? LauncherItem.App)?.let { appsByComponent[it.component] }
+                val preview = gestures.targetAt(layout, pageForDrop(), activeDrag.position, rowTolerance)
+                    ?.takeIf { layout.dropLauncherItem(activeDrag.origin.item, activeDrag.origin.slot, it.drop) != layout }
+                LauncherDragOverlay(activeDrag, preview, app, launcherAccent(state.appearance.accent),
+                    app?.let { decisions[it.packageName]?.canLaunch == false } == true)
+            }
         }
     }
 }
@@ -245,13 +297,18 @@ internal fun LauncherHome(
     onSettings: () -> Unit,
     onEdit: () -> Unit,
     onItem: (LauncherItem) -> Unit,
-    onItemOptions: (LauncherItem) -> Unit,
+    gestures: LauncherIconGestures,
+    dragPageRequest: Int?,
     sanctuaryStatus: LauncherSanctuaryStatus? = null,
 ) {
+    DisposableEffect(gestures) { onDispose { gestures.clearHome() } }
     val pages = layout.pages.ifEmpty { listOf(listOf(LauncherItem.Workspace)) }
     val pager = rememberPagerState(initialPage = currentPage.coerceIn(0, pages.lastIndex)) { pages.size }
     val scope = rememberCoroutineScope()
-    LaunchedEffect(pager.currentPage) { onPage(pager.currentPage) }
+    LaunchedEffect(dragPageRequest) {
+        if (dragPageRequest != null && dragPageRequest in pages.indices) pager.scrollToPage(dragPageRequest)
+    }
+    LaunchedEffect(pager.settledPage) { onPage(pager.settledPage) }
     val appearance = state.appearance
     val accent = launcherAccent(appearance.accent)
     val context = LocalContext.current
@@ -292,8 +349,15 @@ internal fun LauncherHome(
                         Text("Search apps")
                     }
                 }
-                HorizontalPager(pager, Modifier.weight(1f).fillMaxWidth().testTag("launcher-home-pages")) { index ->
-                    val items = pages[index].filter(::visible)
+                HorizontalPager(
+                    pager, Modifier.weight(1f).fillMaxWidth().testTag("launcher-home-pages")
+                        .onGloballyPositioned(gestures::setPage),
+                    userScrollEnabled = gestures.drag == null,
+                ) { index ->
+                    DisposableEffect(gestures, index) { onDispose { gestures.clearPageContent(index) } }
+                    val pageModifier = Modifier.fillMaxSize().onGloballyPositioned { gestures.setPageContent(index, it) }
+                    val indexedItems = pages[index].withIndex().filter { visible(it.value) }
+                    val items = indexedItems.map { it.value }
                     val widgets = state.widgets.filter { it.wide == (wide && state.separateDisplays) && it.page == index }
                     val showClock = index == 0
                     val content: @Composable (Modifier) -> Unit = { modifier ->
@@ -301,7 +365,10 @@ internal fun LauncherHome(
                             widgets.forEach { widget ->
                                 key(widget.id) { actions.renderWidget(widget, Modifier.fillMaxWidth().heightIn(min = 104.dp).padding(bottom = 8.dp)) }
                             }
-                            LauncherHomeGrid(items, appearance.grid.columns(wide), appearance, apps, decisions, onItem, onItemOptions)
+                            LauncherHomeGrid(
+                                items, appearance.grid.columns(wide), appearance, apps, decisions, onItem,
+                                gestures = gestures, slots = indexedItems.map { LauncherSlot(index, it.index) },
+                            )
                             Box(
                                 Modifier.fillMaxWidth().heightIn(min = if (items.isEmpty()) 144.dp else 72.dp)
                                     .pointerInput(Unit) {
@@ -333,12 +400,12 @@ internal fun LauncherHome(
                         }
                     }
                     if (largeLandscape && showClock) {
-                        Row(Modifier.fillMaxSize()) {
+                        Row(pageModifier) {
                             LauncherClock(true, Modifier.widthIn(min = 180.dp).padding(top = 14.dp, end = 20.dp))
                             content(Modifier.weight(1f).fillMaxHeight())
                         }
                     } else {
-                        Column(Modifier.fillMaxSize()) {
+                        Column(pageModifier) {
                             if (showClock) LauncherClock(compact, Modifier.padding(top = if (compact) 6.dp else 18.dp,
                                 bottom = if (compact) 10.dp else 24.dp))
                             content(Modifier.weight(1f))
@@ -347,10 +414,11 @@ internal fun LauncherHome(
                 }
 
                 LauncherDots(pages.size, pager.currentPage, accent) { scope.launch { pager.animateScrollToPage(it) } }
-                val dock = layout.dock.filter(::visible)
-                if (appearance.dock != LauncherDock.HIDDEN && dock.isNotEmpty()) {
+                val dock = layout.dock.withIndex().filter { visible(it.value) }
+                if (appearance.dock != LauncherDock.HIDDEN && (dock.isNotEmpty() || gestures.drag != null)) {
+                    DisposableEffect(gestures) { onDispose { gestures.clearDock() } }
                     Surface(
-                        Modifier.fillMaxWidth().padding(top = 1.dp),
+                        Modifier.fillMaxWidth().padding(top = 1.dp).onGloballyPositioned(gestures::setDock),
                         color = if (appearance.dock == LauncherDock.GLASS) Color.White.copy(alpha = .14f) else Color(0xFF273550),
                         contentColor = Color.White,
                         shape = RoundedCornerShape(27.dp),
@@ -358,11 +426,12 @@ internal fun LauncherHome(
                         BoxWithConstraints(Modifier.fillMaxWidth()) {
                             val scrollDock = maxWidth < (dock.size * 48 + 12).dp
                             val scroll = if (scrollDock) Modifier.horizontalScroll(rememberScrollState()) else Modifier
-                            Row(scroll.padding(horizontal = 6.dp, vertical = if (compact) 4.dp else 10.dp)) {
-                                dock.forEach { item ->
+                            Row(scroll.heightIn(min = 48.dp).padding(horizontal = 6.dp, vertical = if (compact) 4.dp else 10.dp)) {
+                                dock.forEach { (index, item) ->
                                     val cell = if (scrollDock) Modifier.width(52.dp) else Modifier.weight(1f)
                                     Box(cell, contentAlignment = Alignment.Center) {
-                                        LauncherTile(item, appearance, apps, decisions, { onItem(item) }, { onItemOptions(item) }, compact = true)
+                                        LauncherTile(item, appearance, apps, decisions, { onItem(item) }, compact = true,
+                                            gestures = gestures, origin = LauncherIconOrigin(item, LauncherSlot(null, index)))
                                     }
                                 }
                             }
@@ -411,7 +480,6 @@ private fun LauncherHeader(
                     "Edit Home" to onEdit,
                     "Open Sanctuary" to actions.openSanctuary,
                     "Sanctuary rules" to actions.reviewSanctuary,
-                    "Pause Sanctuary" to actions.pauseSanctuary,
                     "Phone and emergency access" to actions.emergencyPhone,
                     "Android Home app settings" to actions.selectHome,
                 )
@@ -449,7 +517,10 @@ private fun LauncherClock(compact: Boolean, modifier: Modifier = Modifier) {
 private fun LauncherDots(count: Int, selected: Int, accent: Color, onPage: (Int) -> Unit) {
     Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.Center) {
         repeat(count) { index ->
-            IconButton(onClick = { onPage(index) }, modifier = Modifier.width(36.dp).height(42.dp)) {
+            IconButton(
+                onClick = { onPage(index) },
+                modifier = Modifier.width(36.dp).height(42.dp).semantics { this.selected = index == selected },
+            ) {
                 Icon(if (index == selected) Icons.Default.Circle else Icons.Default.RadioButtonUnchecked,
                     "Home page ${index + 1}", Modifier.size(7.dp),
                     tint = if (index == selected) accent else LocalContentColor.current.copy(alpha = .75f))
@@ -466,15 +537,17 @@ internal fun LauncherHomeGrid(
     apps: Map<String, LauncherApp>,
     decisions: Map<String, Decision>,
     onItem: (LauncherItem) -> Unit,
-    onOptions: (LauncherItem) -> Unit,
     interactive: Boolean = true,
+    gestures: LauncherIconGestures? = null,
+    slots: List<LauncherSlot> = emptyList(),
 ) {
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-        items.chunked(columns).forEach { row ->
+        items.withIndex().chunked(columns).forEach { row ->
             Row(Modifier.fillMaxWidth()) {
-                row.forEach { item ->
+                row.forEach { (index, item) ->
                     Box(Modifier.weight(1f), contentAlignment = Alignment.TopCenter) {
-                        LauncherTile(item, appearance, apps, decisions, { onItem(item) }, { onOptions(item) }, interactive = interactive)
+                        LauncherTile(item, appearance, apps, decisions, { onItem(item) }, interactive = interactive,
+                            gestures = gestures, origin = LauncherIconOrigin(item, slots.getOrNull(index)))
                     }
                 }
                 repeat(columns - row.size) { Spacer(Modifier.weight(1f)) }
@@ -491,9 +564,10 @@ private fun LauncherTile(
     apps: Map<String, LauncherApp>,
     decisions: Map<String, Decision>,
     onClick: () -> Unit,
-    onOptions: () -> Unit,
     compact: Boolean = false,
     interactive: Boolean = true,
+    gestures: LauncherIconGestures? = null,
+    origin: LauncherIconOrigin = LauncherIconOrigin(item),
 ) {
     val app = (item as? LauncherItem.App)?.let { apps[it.component] }
     val blocked = app?.let { decisions[it.packageName]?.canLaunch == false } == true
@@ -502,11 +576,21 @@ private fun LauncherTile(
         is LauncherItem.Folder -> item.name
         LauncherItem.Workspace -> "Open NovaOS"
     }
+    val registration = remember(origin) { Any() }
+    val bounds = if (interactive && gestures != null) {
+        Modifier.launcherIconBounds(gestures, origin, registration)
+    } else Modifier
     Column(
         Modifier.fillMaxWidth().heightIn(min = 48.dp)
+            .then(bounds)
             .then(if (app != null) Modifier.testTag("launcher-app-${app.component}") else Modifier)
-            .semantics { contentDescription = if (blocked) "$label, blocked by Sanctuary" else label }
-            .then(if (interactive) Modifier.combinedClickable(role = Role.Button, onClick = onClick, onLongClick = onOptions) else Modifier)
+            .semantics {
+                contentDescription = if (blocked) "$label, blocked by Sanctuary" else label
+                if (interactive && gestures != null) {
+                    onLongClick(label = "Options for $label") { gestures.showMenu(registration); true }
+                }
+            }
+            .then(if (interactive) Modifier.clickable(role = Role.Button, onClick = onClick) else Modifier)
             .padding(horizontal = 2.dp, vertical = 2.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
@@ -563,8 +647,8 @@ private fun LauncherDrawer(
     onBack: () -> Unit,
     onApp: (LauncherApp) -> Unit,
     onShortcut: (LauncherShortcut) -> Unit,
-    onOptions: (LauncherApp) -> Unit,
     onFolder: (LauncherItem.Folder) -> Unit,
+    gestures: LauncherIconGestures,
 ) {
     val appsByComponent = remember(apps) { apps.associateBy { it.component } }
     val queryText = query.trim()
@@ -638,13 +722,7 @@ private fun LauncherDrawer(
                         LauncherItem.Workspace -> Unit
                     }
                 },
-                onOptions = {
-                    when (item) {
-                        is LauncherItem.App -> appsByComponent[item.component]?.let(onOptions)
-                        is LauncherItem.Folder -> onFolder(item)
-                        LauncherItem.Workspace -> Unit
-                    }
-                },
+                gestures = gestures,
             )
         }
         if (state.drawer.orientation == LauncherDrawerOrientation.VERTICAL) {

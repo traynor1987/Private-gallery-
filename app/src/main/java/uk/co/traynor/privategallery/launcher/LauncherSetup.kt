@@ -233,7 +233,7 @@ private fun LauncherLookPreview(
             val count = state.appearance.grid.columns(wide)
             val items = layout.pages.firstOrNull().orEmpty().take(if (compact) count else count * 2)
             if (items.isNotEmpty()) CompositionLocalProvider(LocalContentColor provides Color.White) {
-                LauncherHomeGrid(items, count, state.appearance, byComponent, decisions, {}, {}, interactive = false)
+                LauncherHomeGrid(items, count, state.appearance, byComponent, decisions, {}, interactive = false)
             }
             if (state.appearance.dock != LauncherDock.HIDDEN) {
                 Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp))
@@ -263,7 +263,6 @@ internal fun LauncherPolicySummary(
     val approved = packages.count { decisions[it.packageName] == Decision.APPROVED }
     val blocked = packages.count { decisions[it.packageName] == Decision.UNAPPROVED }
     val essential = packages.count { decisions[it.packageName] == Decision.ESSENTIAL }
-    val temporary = packages.count { decisions[it.packageName] == Decision.TEMPORARILY_PERMITTED }
     Card(Modifier.fillMaxWidth()) {
         Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
             Text(if (protection) "Sanctuary is active" else "Sanctuary is ready", style = MaterialTheme.typography.titleSmall)
@@ -271,7 +270,7 @@ internal fun LauncherPolicySummary(
             Text("Apply Sanctuary rules to launcher: Enabled", style = MaterialTheme.typography.bodyMedium)
             Text("Guardian background overlay: Enabled during protected sessions", style = MaterialTheme.typography.bodyMedium)
             Text("Persistent shield: ${if (outsideProtection) "Enabled" else "Off"}", style = MaterialTheme.typography.bodyMedium)
-            if (protection) Text("$approved approved · $blocked blocked · $essential essential · $temporary temporary",
+            if (protection) Text("$approved approved · $blocked blocked · $essential essential",
                 style = MaterialTheme.typography.bodySmall)
         }
     }

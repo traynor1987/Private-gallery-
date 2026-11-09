@@ -199,7 +199,7 @@ class NovaLauncher70UiTest {
         openWorkspace: () -> Unit = {},
     ) = LauncherUiActions(
         save = save, launchApp = launchApp, launchShortcut = {}, openWorkspace = openWorkspace,
-        selectHome = selectHome, emergencyPhone = {}, reviewSanctuary = {}, pauseSanctuary = {},
+        selectHome = selectHome, emergencyPhone = {}, reviewSanctuary = {},
         setOutsideProtection = {}, chooseWallpaper = {}, addWidget = {}, removeWidget = {},
         exportLayout = {}, importLayout = {}, renderWidget = { _, _ -> }, continueWithCurrentHome = {},
     )

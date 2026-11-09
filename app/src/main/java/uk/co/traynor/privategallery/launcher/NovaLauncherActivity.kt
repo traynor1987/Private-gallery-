@@ -11,7 +11,6 @@ import android.content.pm.PackageManager
 import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
 import android.os.Bundle
-import android.os.CancellationSignal
 import android.os.Process
 import android.os.UserHandle
 import android.util.SizeF
@@ -90,7 +89,6 @@ class NovaLauncherActivity : ComponentActivity() {
     private var sanctuaryStatus by mutableStateOf<LauncherSanctuaryStatus?>(null)
     private var picker by mutableStateOf<WidgetPicker?>(null)
     private var pendingWidget: PendingWidget? = null
-    private var credentials: CancellationSignal? = null
     private var catalogueJob: Job? = null
     private var callbacksRegistered = false
     private val widgetFrames = mutableSetOf<GuardedWidgetFrame>()
@@ -169,7 +167,7 @@ class NovaLauncherActivity : ComponentActivity() {
         updateDefaultHome()
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
-                combine(sanctuary.current, SanctuaryLauncherPolicy.state(this@NovaLauncherActivity)) { session, _ -> session }
+                combine(sanctuary.current, SanctuaryLauncherPolicy.state()) { session, _ -> session }
                     .collectLatest { session ->
                         refreshProtection()
                         outsideProtection = SanctuaryLauncherPolicy.outsideProtectionEnabled(this@NovaLauncherActivity)
@@ -194,7 +192,6 @@ class NovaLauncherActivity : ComponentActivity() {
             continueWithCurrentHome = { if (defaultHome) openHomeSettings() else finish() },
             emergencyPhone = ::openEmergencyPhone,
             reviewSanctuary = { review = true },
-            pauseSanctuary = { authenticate(null) },
             setOutsideProtection = { enabled ->
                 if (!SanctuaryLauncherPolicy.setOutsideProtectionEnabled(this, enabled)) {
                     message("The protection setting could not be saved.")
@@ -207,6 +204,7 @@ class NovaLauncherActivity : ComponentActivity() {
             importLayout = { layoutImport.launch(arrayOf("application/json", "application/octet-stream", "text/plain")) },
             renderWidget = { widget, modifier -> WidgetView(widget, modifier) },
             openSanctuary = ::openSanctuary,
+            openAppInfo = ::openAppInfo,
         )
         setContent {
             val utility = activeUtility
@@ -287,7 +285,6 @@ class NovaLauncherActivity : ComponentActivity() {
     }
 
     override fun onDestroy() {
-        credentials?.cancel()
         if (isFinishing) releasePendingWidget()
         super.onDestroy()
     }
@@ -448,23 +445,14 @@ class NovaLauncherActivity : ComponentActivity() {
         }
     }
 
-    private fun authenticate(target: LauncherApp?) {
-        if (credentials != null) return
-        if (target != null && LauncherBuiltIn.find(packageName, target.component) != null) {
-            blocked = null
-            openSanctuary()
+    private fun openAppInfo(component: String) {
+        if (LauncherBuiltIn.find(packageName, component) != null) return
+        val target = apps.firstOrNull { it.component == component } ?: return
+        if (runCatching { SanctuaryLauncherPolicy.launcherProtectionActive(this) }.getOrDefault(true)) {
+            message("App info is available outside Sanctuary protection.")
             return
         }
-        credentials = SanctuaryLauncherPolicy.authenticateTemporaryAccess(this, target?.packageName) { allowed ->
-            credentials = null
-            if (!allowed || isDestroyed || isFinishing) return@authenticateTemporaryAccess
-            blocked = null
-            if (target != null) launchApp(target.component)
-            else message("Sanctuary paused for five minutes.")
-        }
-        if (credentials == null) {
-            message("Temporary access requires an active Sanctuary session and an Android screen lock.")
-        }
+        if (!directory.openAppInfo(target)) message("App info is no longer available.")
     }
 
     @Composable
@@ -476,27 +464,19 @@ class NovaLauncherActivity : ComponentActivity() {
                 guardianStatus = SanctuaryGuardian.status(this),
                 onStart = ::startSanctuary,
                 onReview = { sanctuaryOpen = false; review = true },
-                onPause = { sanctuaryOpen = false; authenticate(null) },
                 onPhone = { sanctuaryOpen = false; openEmergencyPhone() },
                 onManage = { sanctuaryOpen = false; openWorkspace() },
                 onDismiss = { sanctuaryOpen = false },
             )
         }
         blocked?.let { target ->
-            val isBuiltIn = LauncherBuiltIn.find(packageName, target.component) != null
             AlertDialog(
                 onDismissRequest = { blocked = null },
                 title = { Text("Sanctuary protection") },
-                text = {
-                    Text(if (isBuiltIn) "${target.label} is blocked by the active Sanctuary rules."
-                        else "${target.label} is blocked by the active Sanctuary rules. You can allow it for five minutes with your Android screen lock.")
-                },
+                text = { Text("${target.label} is blocked by the active Sanctuary rules.") },
                 confirmButton = {
-                    TextButton(onClick = { authenticate(target) }) {
-                        Text(if (isBuiltIn) "Open Sanctuary" else "Request temporary access")
-                    }
+                    TextButton(onClick = { blocked = null }) { Text("Back to Nova Launcher") }
                 },
-                dismissButton = { TextButton(onClick = { blocked = null }) { Text("Back to Nova Launcher") } },
             )
         }
         if (review) {

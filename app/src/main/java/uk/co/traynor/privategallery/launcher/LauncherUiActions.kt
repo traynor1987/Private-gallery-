@@ -12,7 +12,6 @@ internal data class LauncherUiActions(
     val continueWithCurrentHome: () -> Unit,
     val emergencyPhone: () -> Unit,
     val reviewSanctuary: () -> Unit,
-    val pauseSanctuary: () -> Unit,
     val setOutsideProtection: (Boolean) -> Unit,
     val chooseWallpaper: () -> Unit,
     val addWidget: (Boolean) -> Unit,
@@ -21,4 +20,5 @@ internal data class LauncherUiActions(
     val importLayout: () -> Unit,
     val renderWidget: @Composable (LauncherWidget, Modifier) -> Unit,
     val openSanctuary: () -> Unit = reviewSanctuary,
+    val openAppInfo: ((String) -> Unit)? = null,
 )

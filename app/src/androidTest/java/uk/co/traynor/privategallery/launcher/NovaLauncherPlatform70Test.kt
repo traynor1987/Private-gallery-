@@ -123,6 +123,8 @@ class NovaLauncherPlatform70Test {
                 compose.waitUntil(15_000) { compose.onAllNodesWithTag(appTag).fetchSemanticsNodes().isNotEmpty() }
                 compose.onNodeWithTag(appTag).performTouchInput { click() }
                 compose.onNodeWithText("Sanctuary protection").assertIsDisplayed()
+                compose.onNodeWithText("${target.label} is blocked by the active Sanctuary rules.").assertIsDisplayed()
+                compose.onAllNodes(hasClickAction() and hasAnyAncestor(isDialog())).assertCountEquals(1)
                 assertEquals(context.packageName, instrumentation.uiAutomation.rootInActiveWindow?.packageName?.toString())
                 compose.onNodeWithText("Back to Nova Launcher").performClick()
                 assertTrue(sanctuary.saveAndroidApprovals(session.id, mode, setOf(target.packageName)))
