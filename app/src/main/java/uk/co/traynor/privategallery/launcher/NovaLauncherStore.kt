@@ -13,6 +13,10 @@ internal const val MAX_LAUNCHER_BACKUP_BYTES = 768 * 1024
 internal class NovaLauncherStore(context: Context) {
     private val prefs = context.applicationContext.getSharedPreferences("nova_android_home_v1", Context.MODE_PRIVATE)
 
+    fun askForDefaultHome(): Boolean = prefs.getBoolean("ask_default_home", true)
+
+    fun setAskForDefaultHome(ask: Boolean): Boolean = prefs.edit().putBoolean("ask_default_home", ask).commit()
+
     fun read(): NovaLauncherState = synchronized(lock) {
         val raw = prefs.getString("state", null) ?: return@synchronized NovaLauncherState()
         runCatching { LauncherLayoutCodec.decode(raw, portable = false) }.getOrDefault(NovaLauncherState())
@@ -95,7 +99,7 @@ private object LauncherLayoutCodec {
             require(state.launchCounts.size <= MAX_LAUNCH_COUNTS)
             val counts = JSONObject()
             for ((component, count) in state.launchCounts) {
-                require(isLauncherComponent(component) && count in 1..MAX_LAUNCH_COUNT)
+                require(LauncherAppIdentity.isValidKey(component) && count in 1..MAX_LAUNCH_COUNT)
                 counts.put(component, count)
             }
             root.put("configured", state.configured).put("widgets", widgets).put("launchCounts", counts)
@@ -140,7 +144,7 @@ private object LauncherLayoutCodec {
         val counts = if (portable) emptyMap() else root.getJSONObject("launchCounts").let { values ->
             require(values.length() <= MAX_LAUNCH_COUNTS)
             values.keys().asSequence().associateWith { key ->
-                require(isLauncherComponent(key))
+                require(LauncherAppIdentity.isValidKey(key))
                 values.number(key).also { require(it in 1..MAX_LAUNCH_COUNT) }
             }
         }
@@ -179,7 +183,7 @@ private object LauncherLayoutCodec {
 
     private fun layout(value: LauncherLayout): JSONObject {
         require(value.pages.size in 1..MAX_LAUNCHER_PAGES && value.dock.size <= MAX_LAUNCHER_DOCK_ITEMS)
-        require(value.favourites.size <= MAX_LAUNCHER_FAVOURITES && value.favourites.all(::isLauncherComponent))
+        require(value.favourites.size <= MAX_LAUNCHER_FAVOURITES && value.favourites.all(LauncherAppIdentity::isValidKey))
         return JSONObject()
             .put("pages", pages(value.pages))
             .put("dock", JSONArray(value.dock.map(::item)))
@@ -198,12 +202,20 @@ private object LauncherLayoutCodec {
 
     private fun item(value: LauncherItem): JSONObject = when (value) {
         is LauncherItem.App -> {
-            require(isLauncherComponent(value.component))
+            require(LauncherAppIdentity.isValidKey(value.component))
             JSONObject().put("type", "app").put("component", value.component)
         }
         is LauncherItem.Folder -> {
-            require(validFolder(value.name, value.apps))
+            require(validFolderName(value.name) && validFolderApps(value.apps, minimum = 1))
             JSONObject().put("type", "folder").put("name", value.name).put("apps", JSONArray(value.apps))
+        }
+        is LauncherItem.SmartFolder -> {
+            require(value.customName == null || validFolderName(value.customName))
+            require(validFolderApps(value.included, minimum = 0))
+            JSONObject().put("type", "smart-folder")
+                .put("category", value.category.name)
+                .put("included", JSONArray(value.included))
+                .apply { value.customName?.let { put("name", it) } }
         }
         LauncherItem.Workspace -> JSONObject().put("type", "workspace")
     }
@@ -214,7 +226,7 @@ private object LauncherLayoutCodec {
             pages = parsePages(value.getJSONArray("pages")),
             dock = value.getJSONArray("dock").read(0..MAX_LAUNCHER_DOCK_ITEMS) { parseItem(it as JSONObject) },
             favourites = value.getJSONArray("favourites").read(0..MAX_LAUNCHER_FAVOURITES) {
-                (it as String).also { component -> require(isLauncherComponent(component)) }
+                (it as String).also { component -> require(LauncherAppIdentity.isValidKey(component)) }
             }.toSet(),
         )
     }
@@ -226,14 +238,23 @@ private object LauncherLayoutCodec {
     private fun parseItem(value: JSONObject): LauncherItem = when (value.string("type")) {
         "app" -> {
             value.requireKeys(setOf("type", "component"))
-            LauncherItem.App(value.string("component").also { require(isLauncherComponent(it)) })
+            LauncherItem.App(value.string("component").also { require(LauncherAppIdentity.isValidKey(it)) })
         }
         "folder" -> {
             value.requireKeys(setOf("type", "name", "apps"))
             val name = value.string("name")
             val apps = value.getJSONArray("apps").read(1..MAX_LAUNCHER_FOLDER_ITEMS) { it as String }
-            require(validFolder(name, apps))
+            require(validFolderName(name) && validFolderApps(apps, minimum = 1))
             LauncherItem.Folder(name, apps)
+        }
+        "smart-folder" -> {
+            val keys = setOf("type", "category", "included")
+            val hasName = value.has("name")
+            value.requireKeys(if (hasName) keys + "name" else keys)
+            val name = if (hasName) value.string("name").also { require(validFolderName(it)) } else null
+            val included = value.getJSONArray("included").read(0..MAX_LAUNCHER_FOLDER_ITEMS) { it as String }
+            require(validFolderApps(included, minimum = 0))
+            LauncherItem.SmartFolder(LauncherCategory.valueOf(value.string("category")), name, included)
         }
         "workspace" -> {
             value.requireKeys(setOf("type"))
@@ -242,9 +263,12 @@ private object LauncherLayoutCodec {
         else -> error("Invalid launcher item")
     }
 
-    private fun validFolder(name: String, apps: List<String>): Boolean =
-        name.length <= 64 && name.isNotBlank() && name.none(Char::isISOControl) &&
-            apps.size in 1..MAX_LAUNCHER_FOLDER_ITEMS && apps.distinct().size == apps.size && apps.all(::isLauncherComponent)
+    private fun validFolderName(name: String): Boolean =
+        name.length <= 64 && name.isNotBlank() && name.none(Char::isISOControl)
+
+    private fun validFolderApps(apps: List<String>, minimum: Int): Boolean =
+        apps.size in minimum..MAX_LAUNCHER_FOLDER_ITEMS &&
+            apps.distinct().size == apps.size && apps.all(LauncherAppIdentity::isValidKey)
 
     private inline fun <T> JSONArray.read(lengths: IntRange, convert: (Any) -> T): List<T> {
         require(length() in lengths)

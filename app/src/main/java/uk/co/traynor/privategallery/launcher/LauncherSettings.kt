@@ -42,14 +42,20 @@ internal fun LauncherSettings(
     protectedBySanctuary: Boolean,
     onBack: () -> Unit,
     onEdit: () -> Unit,
+    onLibrarySettings: () -> Unit = {},
+    defaultHomeUi: LauncherDefaultHomeUi? = null,
 ) {
     LauncherPanel("Launcher settings", onBack) {
         LazyColumn(Modifier.fillMaxWidth().weight(1f), contentPadding = PaddingValues(bottom = 18.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp)) {
             item {
                 Text("Home app", style = MaterialTheme.typography.titleMedium)
-                Text(if (defaultHome) "Nova Launcher is Android’s current Home app." else "Android is using another Home app.")
-                Button(onClick = actions.selectHome) { Text("Android Home app settings") }
+                Text(launcherDefaultHomeStatus(if (defaultHomeUi == null) defaultHome else defaultHomeUi.isDefault))
+                if (defaultHomeUi != null) {
+                    LauncherToggle("Ask to make NovaOS default", defaultHomeUi.ask, actions.setAskForDefaultHome)
+                    OutlinedButton(onClick = actions.checkDefaultHome) { Text("Check Default Launcher") }
+                }
+                Button(onClick = actions.selectHome) { Text("Change Default Launcher") }
                 Text("To recover if the launcher cannot open, pull down Android Quick Settings, open Settings, then choose Apps → Default apps → Home app → One UI Home.",
                     style = MaterialTheme.typography.bodySmall)
             }
@@ -72,6 +78,7 @@ internal fun LauncherSettings(
                 HorizontalDivider()
                 Text("App drawer and search", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 10.dp))
                 LauncherDrawerSettings(state.drawer) { actions.save(state.copy(drawer = it)) }
+                OutlinedButton(onClick = onLibrarySettings) { Text("App Library") }
             }
             item {
                 HorizontalDivider()
@@ -154,6 +161,7 @@ internal fun LauncherLayoutEditor(
         LauncherItem.Workspace -> "Open NovaOS"
         is LauncherItem.App -> byComponent[item.component]?.label ?: item.component.substringBefore('/') + " (unavailable)"
         is LauncherItem.Folder -> item.name
+        is LauncherItem.SmartFolder -> item.name
     }
     fun dragHandle(section: LauncherEditSection, index: Int, count: Int, onMove: (Int) -> Unit): Modifier =
         Modifier.pointerInput(section, index, page, wide, current, layout.dock) {

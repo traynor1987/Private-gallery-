@@ -1,6 +1,11 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+bash scripts/run_visual_checkpoint.sh LauncherLibrary73UiTest launcher-library-73 uk.co.traynor.privategallery.launcher
+bash scripts/run_visual_checkpoint.sh LauncherSmartFolderStore73Test launcher-smart-folders-73 uk.co.traynor.privategallery.launcher
+bash scripts/run_visual_checkpoint.sh LauncherSmartFolderEditor73Test launcher-smart-editor-73 uk.co.traynor.privategallery.launcher
+bash scripts/run_visual_checkpoint.sh LauncherDefaultHomeStore73Test launcher-default-home-73 uk.co.traynor.privategallery.launcher
+bash scripts/run_visual_checkpoint.sh LauncherSmartTrackingStore73Test launcher-smart-tracking-73 uk.co.traynor.privategallery.launcher
 bash scripts/run_visual_checkpoint.sh NovaLauncher72GesturesTest launcher-gestures-72 uk.co.traynor.privategallery.launcher
 
 python3 scripts/run_backup_repair62.py --evidence-incident

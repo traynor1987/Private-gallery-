@@ -291,7 +291,8 @@ internal fun BoxScope.LauncherDragOverlay(
     ) {
         when (drag.origin.item) {
             is LauncherItem.App -> if (app != null) LauncherAppIcon(app, Modifier.size(35.dp))
-            is LauncherItem.Folder -> Icon(Icons.Default.Folder, null, tint = Color(0xFF17233B))
+            is LauncherItem.Folder, is LauncherItem.SmartFolder ->
+                Icon(Icons.Default.Folder, null, tint = Color(0xFF17233B))
             LauncherItem.Workspace -> Image(painterResource(R.drawable.nova_identity), null, Modifier.size(35.dp))
         }
         if (blocked) {

@@ -44,6 +44,13 @@ internal data class LauncherDrawerOptions(
 internal sealed interface LauncherItem {
     data class App(val component: String) : LauncherItem
     data class Folder(val name: String, val apps: List<String>) : LauncherItem
+    data class SmartFolder(
+        val category: LauncherCategory,
+        val customName: String? = null,
+        val included: List<String> = emptyList(),
+    ) : LauncherItem {
+        val name: String get() = customName ?: category.label
+    }
     data object Workspace : LauncherItem
 }
 
@@ -52,6 +59,28 @@ internal data class LauncherLayout(
     val dock: List<LauncherItem> = listOf(LauncherItem.Workspace),
     val favourites: Set<String> = emptySet(),
 )
+
+internal fun LauncherLayout.withSmartFolderTemplate(
+    onlyIfEmpty: Boolean,
+    capacity: Int = MAX_LAUNCHER_PAGE_ITEMS,
+): LauncherLayout {
+    val page = 1
+    val items = pages.getOrNull(page).orEmpty()
+    if (onlyIfEmpty && items.isNotEmpty()) return this
+    val room = capacity.coerceIn(0, MAX_LAUNCHER_PAGE_ITEMS) - items.size
+    if (room <= 0) return this
+    val existing = items.filterIsInstance<LauncherItem.SmartFolder>().map { it.category }.toSet()
+    val additions = listOf(
+        LauncherCategory.SUGGESTIONS, LauncherCategory.RECENTLY_USED,
+        LauncherCategory.RECENTLY_ADDED, LauncherCategory.NOVA_OS,
+    ).filterNot { it in existing }.take(room).map { LauncherItem.SmartFolder(it) }
+    if (additions.isEmpty()) return this
+
+    val nextPages = List(maxOf(pages.size, page + 1)) { index ->
+        if (index == page) items + additions else pages.getOrNull(index).orEmpty()
+    }
+    return copy(pages = nextPages)
+}
 
 internal data class LauncherWidget(val id: Int, val provider: String, val wide: Boolean, val page: Int = 0)
 
@@ -119,7 +148,7 @@ internal data class NovaLauncherState(
     }
 
     fun withSuccessfulLaunch(component: String): NovaLauncherState {
-        if (!isLauncherComponent(component)) return this
+        if (!LauncherAppIdentity.isValidKey(component)) return this
         val count = launchCounts[component] ?: 0
         val recent = launchCounts.entries.filter { it.key != component }.takeLast(MAX_LAUNCH_COUNTS - 1)
         return copy(launchCounts = recent.associate { it.key to it.value } + (component to (count + 1).coerceAtMost(MAX_LAUNCH_COUNT)))
@@ -139,11 +168,9 @@ internal const val MAX_LAUNCHER_WIDGETS = 24
 internal const val MAX_LAUNCH_COUNTS = 256
 internal const val MAX_LAUNCH_COUNT = 10_000
 
-private val componentPattern = Regex("[A-Za-z][A-Za-z0-9_]*(?:\\.[A-Za-z][A-Za-z0-9_]*)*/\\.?[A-Za-z_$][A-Za-z0-9_$]*(?:\\.[A-Za-z_$][A-Za-z0-9_$]*)*")
-
-/** Layout files contain Android component names, never Intents, URI strings or extras. */
+/** Plain Android component names, including widget providers. */
 internal fun isLauncherComponent(value: String): Boolean =
-    value.length in 3..512 && componentPattern.matches(value)
+    LauncherAppIdentity.forComponent(value, profileSerial = null) != null
 
 internal fun launcherInitialState(
     mode: LauncherStartingLayout,
@@ -154,7 +181,7 @@ internal fun launcherInitialState(
     val state = NovaLauncherState()
     if (mode == LauncherStartingLayout.START_FRESH) return state
     val apps = components.asSequence()
-        .filter(::isLauncherComponent).distinct().toList()
+        .filter(LauncherAppIdentity::isValidKey).distinct().toList()
     if (mode == LauncherStartingLayout.COPY_CURRENT) {
         val available = apps.toSet()
         val items = selectedCopyComponents.asSequence().filter { it in available }.distinct()

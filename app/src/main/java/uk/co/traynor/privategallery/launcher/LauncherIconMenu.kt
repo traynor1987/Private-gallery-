@@ -16,6 +16,7 @@ import androidx.compose.material.icons.filled.FolderOpen
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.OpenInNew
+import androidx.compose.material.icons.filled.PushPin
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.StarBorder
 import androidx.compose.material3.DropdownMenuItem
@@ -56,24 +57,32 @@ internal fun LauncherIconMenu(
     open: () -> Unit,
     editHome: () -> Unit,
     save: (LauncherLayout) -> Unit,
+    onEditSmartFolder: ((LauncherSlot, LauncherItem.SmartFolder) -> Unit)? = null,
+    recentPinned: Boolean = false,
 ) {
     val (item, source) = anchor.origin
     if (item is LauncherItem.App && app == null) return
     val label = when (item) {
         is LauncherItem.App -> checkNotNull(app).label
         is LauncherItem.Folder -> item.name
+        is LauncherItem.SmartFolder -> item.name
         LauncherItem.Workspace -> "NovaOS workspace"
     }
     val applicationId = LocalContext.current.packageName
     val items = buildList {
         add(LauncherMenuAction(
             if (item is LauncherItem.App) "Open app" else "Open",
-            if (item is LauncherItem.Folder) Icons.Default.FolderOpen else Icons.Default.OpenInNew,
+            if (item is LauncherItem.Folder || item is LauncherItem.SmartFolder) {
+                Icons.Default.FolderOpen
+            } else Icons.Default.OpenInNew,
             open,
         ))
         if (source != null && item != LauncherItem.Workspace) {
             val original = layout.itemsAt(source.page)
             if (original?.getOrNull(source.index) == item) {
+                if (item is LauncherItem.SmartFolder && onEditSmartFolder != null) {
+                    add(LauncherMenuAction("Edit smart folder", Icons.Default.Edit) { onEditSmartFolder(source, item) })
+                }
                 add(LauncherMenuAction(if (source.page == null) "Remove from dock" else "Remove from this page", Icons.Default.Close) {
                     save(layout.withItemsAt(source.page, original.filterIndexed { index, _ -> index != source.index }))
                 })
@@ -96,6 +105,7 @@ internal fun LauncherIconMenu(
             }
         }
         if (item is LauncherItem.App) {
+            val builtIn = LauncherBuiltIn.find(applicationId, item.component)
             val favourite = item.component in layout.favourites
             if (favourite || layout.favourites.size < MAX_LAUNCHER_FAVOURITES) {
                 add(LauncherMenuAction(
@@ -107,8 +117,18 @@ internal fun LauncherIconMenu(
                 })
             }
             val appInfo = actions.openAppInfo
-            if (!protectedBySanctuary && appInfo != null && LauncherBuiltIn.find(applicationId, item.component) == null) {
+            if (!protectedBySanctuary && appInfo != null && builtIn == null) {
                 add(LauncherMenuAction("App info", Icons.Default.Info) { appInfo(item.component) })
+            }
+            val renameApp = actions.renameApp
+            if (!protectedBySanctuary && renameApp != null && builtIn == null) {
+                add(LauncherMenuAction("Rename app", Icons.Default.Edit) { renameApp(item.component) })
+            }
+            val toggleRecentPin = actions.toggleRecentPin
+            if (toggleRecentPin != null) {
+                add(LauncherMenuAction(
+                    if (recentPinned) "Unpin from Recents" else "Pin to Recents", Icons.Default.PushPin,
+                ) { toggleRecentPin(item.component) })
             }
         } else {
             add(LauncherMenuAction("Edit Home", Icons.Default.Edit, editHome))

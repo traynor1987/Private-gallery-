@@ -21,4 +21,10 @@ internal data class LauncherUiActions(
     val renderWidget: @Composable (LauncherWidget, Modifier) -> Unit,
     val openSanctuary: () -> Unit = reviewSanctuary,
     val openAppInfo: ((String) -> Unit)? = null,
+    val renameApp: ((String) -> Unit)? = null,
+    val toggleRecentPin: ((String) -> Unit)? = null,
+    val checkDefaultHome: () -> Unit = {},
+    val setAskForDefaultHome: (Boolean) -> Unit = {},
+    val claimDefaultHomePrompt: () -> Boolean = { false },
+    val requestDefaultHome: () -> Unit = selectHome,
 )

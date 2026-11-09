@@ -101,6 +101,14 @@ class NovaLauncherPlatform70Test {
         }
     }
 
+    @Test fun unresolvedProfileKeyDoesNotOpenThePersonalCopy() {
+        val directory = LauncherAppDirectory(context)
+        val personal = directory.apps().first { it.packageName == "com.android.settings" && it.profile == null }
+        val unavailable = personal.copy(component = "${personal.component}#42")
+        assertFalse(directory.start(unavailable))
+        assertFalse(directory.openAppInfo(unavailable))
+    }
+
     @Test fun activeSanctuaryBlocksLauncherTouchUntilTheSharedApprovalChanges() {
         val sanctuary = SanctuaryStore.get(context)
         val mode = SanctuaryMode.LEARNING

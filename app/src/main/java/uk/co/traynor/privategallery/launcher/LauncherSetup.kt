@@ -244,6 +244,7 @@ private fun LauncherLookPreview(
                             LauncherItem.Workspace -> Icon(Icons.Default.Lock, "Open NovaOS", Modifier.size(21.dp), tint = Color.White)
                             is LauncherItem.App -> byComponent[item.component]?.let { LauncherAppIcon(it, Modifier.size(21.dp)) }
                             is LauncherItem.Folder -> Icon(Icons.Default.Folder, item.name, Modifier.size(21.dp), tint = Color.White)
+                            is LauncherItem.SmartFolder -> Icon(Icons.Default.Folder, item.name, Modifier.size(21.dp), tint = Color.White)
                         }
                     }
                 }

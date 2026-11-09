@@ -1,11 +1,15 @@
 package uk.co.traynor.privategallery.launcher
 
+import android.app.KeyguardManager
 import android.app.role.RoleManager
 import android.appwidget.AppWidgetHost
 import android.appwidget.AppWidgetManager
 import android.appwidget.AppWidgetProviderInfo
+import android.content.BroadcastReceiver
 import android.content.ComponentName
+import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.content.pm.LauncherApps
 import android.content.pm.PackageManager
 import android.graphics.Color
@@ -33,9 +37,12 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -50,6 +57,7 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
+import androidx.lifecycle.withResumed
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -70,6 +78,23 @@ import uk.co.traynor.privategallery.ui.PrivateGalleryTheme
 /** The Android Home task reads only public app metadata, launcher storage and Sanctuary policy. */
 class NovaLauncherActivity : ComponentActivity() {
     private val store by lazy { NovaLauncherStore(this) }
+    private val tracking by lazy { LauncherSmartTracking(applicationContext) }
+    private val identitySettings by lazy { LauncherIdentitySettings(applicationContext) }
+    private var renaming by mutableStateOf<LauncherApp?>(null)
+    private var rawApps = emptyList<LauncherApp>()
+    private var pendingUsageRefresh = false
+    private var usageRefresh: Job? = null
+    private var profileReceiverRegistered = false
+
+    private val profileChanges = object : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) = refreshCatalogue()
+    }
+
+    private val usageAccess = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
+        tracking.finishExtendedConsent()
+        pendingUsageRefresh = true
+        refreshUsageIfEligible()
+    }
     private val directory by lazy { LauncherAppDirectory(applicationContext) }
     private val sanctuary by lazy { SanctuaryStore.get(applicationContext) }
     private val widgetManager by lazy { AppWidgetManager.getInstance(this) }
@@ -80,7 +105,11 @@ class NovaLauncherActivity : ComponentActivity() {
     private var shortcuts by mutableStateOf(emptyList<LauncherShortcut>())
     private var decisions by mutableStateOf(emptyMap<String, SanctuaryLauncherPolicy.Decision>())
     private var launcherProtected by mutableStateOf(false)
-    private var defaultHome by mutableStateOf(false)
+    private var defaultHome by mutableStateOf<Boolean?>(null)
+    private var askDefaultHome by mutableStateOf(true)
+    private var defaultHomeOpening by mutableStateOf(LauncherDefaultHomePromptSession())
+    private var homeTopResumed by mutableStateOf(false)
+    private var homeWindowFocused by mutableStateOf(false)
     private var outsideProtection by mutableStateOf(true)
     private var homeGeneration by mutableIntStateOf(0)
     private var blocked by mutableStateOf<LauncherApp?>(null)
@@ -97,16 +126,20 @@ class NovaLauncherActivity : ComponentActivity() {
     private data class PendingWidget(val id: Int, val provider: ComponentName, val wide: Boolean)
 
     private val packageChanges = object : LauncherApps.Callback() {
-        private fun changed(user: UserHandle) {
-            if (user == directory.user) refreshCatalogue()
-        }
-        override fun onPackageRemoved(packageName: String, user: UserHandle) = changed(user)
-        override fun onPackageAdded(packageName: String, user: UserHandle) = changed(user)
-        override fun onPackageChanged(packageName: String, user: UserHandle) = changed(user)
-        override fun onPackagesAvailable(packageNames: Array<out String>, user: UserHandle, replacing: Boolean) = changed(user)
-        override fun onPackagesUnavailable(packageNames: Array<out String>, user: UserHandle, replacing: Boolean) = changed(user)
+        private fun changed() = refreshCatalogue()
+        override fun onPackageRemoved(packageName: String, user: UserHandle) = changed()
+        override fun onPackageAdded(packageName: String, user: UserHandle) = changed()
+        override fun onPackageChanged(packageName: String, user: UserHandle) = changed()
+        override fun onPackagesAvailable(packageNames: Array<out String>, user: UserHandle, replacing: Boolean) = changed()
+        override fun onPackagesUnavailable(packageNames: Array<out String>, user: UserHandle, replacing: Boolean) = changed()
+        override fun onPackagesSuspended(packageNames: Array<out String>, user: UserHandle) = changed()
+        override fun onPackagesUnsuspended(packageNames: Array<out String>, user: UserHandle) = changed()
         override fun onShortcutsChanged(packageName: String, shortcuts: List<android.content.pm.ShortcutInfo>, user: UserHandle) =
-            changed(user)
+            changed()
+    }
+
+    private val defaultHomeRequest = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
+        if (updateDefaultHome()) refreshCatalogue()
     }
 
     private val widgetBind = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
@@ -152,6 +185,9 @@ class NovaLauncherActivity : ComponentActivity() {
         setIntent(neutralHomeIntent())
         enableEdgeToEdge()
         model = store.read()
+        offerSmartTemplate()
+        askDefaultHome = store.askForDefaultHome()
+        defaultHomeOpening = LauncherDefaultHomePromptSession(savedInstanceState?.getBoolean(DEFAULT_HOME_OFFERED) == true)
         launcherProtected = SanctuaryLauncherPolicy.launcherProtectionActive(this)
         sanctuaryStatus = sanctuary.refresh()?.let(::sanctuarySnapshot)
         outsideProtection = SanctuaryLauncherPolicy.outsideProtectionEnabled(this)
@@ -184,12 +220,14 @@ class NovaLauncherActivity : ComponentActivity() {
             }
         }
         val actions = LauncherUiActions(
-            save = { next -> save(next.copy(launchCounts = model.launchCounts)) },
+            save = { next ->
+                save(next.copy(launchCounts = model.launchCounts)).also { if (it) offerSmartTemplate() }
+            },
             launchApp = ::launchApp,
             launchShortcut = ::launchShortcut,
             openWorkspace = ::openWorkspace,
             selectHome = ::openHomeSettings,
-            continueWithCurrentHome = { if (defaultHome) openHomeSettings() else finish() },
+            continueWithCurrentHome = { if (defaultHome == true) openHomeSettings() else finish() },
             emergencyPhone = ::openEmergencyPhone,
             reviewSanctuary = { review = true },
             setOutsideProtection = { enabled ->
@@ -205,13 +243,32 @@ class NovaLauncherActivity : ComponentActivity() {
             renderWidget = { widget, modifier -> WidgetView(widget, modifier) },
             openSanctuary = ::openSanctuary,
             openAppInfo = ::openAppInfo,
+            renameApp = { key -> rawApps.firstOrNull { it.component == key && it.packageName != packageName }
+                ?.let { renaming = it } },
+            toggleRecentPin = { tracking.togglePin(it) },
+            checkDefaultHome = ::checkDefaultHome,
+            setAskForDefaultHome = ::setAskForDefaultHome,
+            claimDefaultHomePrompt = ::claimDefaultHomePrompt,
+            requestDefaultHome = ::requestDefaultHome,
         )
         setContent {
+            val smart by tracking.state.collectAsState()
+            LaunchedEffect(smart.excluded) {
+                val counts = model.launchCounts - smart.excluded
+                if (counts != model.launchCounts) save(model.copy(launchCounts = counts))
+            }
             val utility = activeUtility
             val utilityAllowed = utility != null && decisions[utility.app(packageName).packageName]?.canLaunch == true
             if (!utilityAllowed) {
                 NovaLauncherScreen(model, apps, if (launcherProtected) emptyList() else shortcuts, decisions,
-                    defaultHome, outsideProtection, actions, homeGeneration, launcherProtected, sanctuaryStatus)
+                    defaultHome == true, outsideProtection, actions, homeGeneration, launcherProtected, sanctuaryStatus,
+                    defaultHomeUi = LauncherDefaultHomeUi(defaultHome, askDefaultHome,
+                        canShowDefaultHomePrompt(), homeWindowFocused, defaultHomeOpening),
+                    smartState = smart, smartSettings = { eligible ->
+                        LauncherSmartSettings(tracking, eligible, onClearLegacyHistory = {
+                            save(model.copy(launchCounts = emptyMap()))
+                        }, onRequestUsageAccess = ::openUsageAccess)
+                    })
             }
             val theme = when (model.appearance.theme) {
                 LauncherTheme.SYSTEM -> AppTheme.SYSTEM
@@ -228,6 +285,7 @@ class NovaLauncherActivity : ComponentActivity() {
                 }
                 SanctuaryDialogs()
                 WidgetPickerDialog()
+                RenameLauncherAppDialog()
             }
         }
     }
@@ -235,6 +293,7 @@ class NovaLauncherActivity : ComponentActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(neutralHomeIntent())
+        // Reopening the same task keeps its existing reminder decision.
         if (intent.action == Intent.ACTION_MAIN && intent.hasCategory(Intent.CATEGORY_HOME)) {
             activeUtility = null
             blocked = null
@@ -249,20 +308,41 @@ class NovaLauncherActivity : ComponentActivity() {
         super.onStart()
         runCatching { widgetHost.startListening() }
         callbacksRegistered = runCatching { directory.launcherApps.registerCallback(packageChanges) }.isSuccess
+        profileReceiverRegistered = runCatching {
+            registerReceiver(profileChanges, IntentFilter().apply {
+                addAction(Intent.ACTION_MANAGED_PROFILE_ADDED)
+                addAction(Intent.ACTION_MANAGED_PROFILE_REMOVED)
+                addAction(Intent.ACTION_MANAGED_PROFILE_AVAILABLE)
+                addAction(Intent.ACTION_MANAGED_PROFILE_UNAVAILABLE)
+                addAction(Intent.ACTION_PROFILE_ADDED)
+                addAction(Intent.ACTION_PROFILE_REMOVED)
+                addAction(Intent.ACTION_PROFILE_AVAILABLE)
+                addAction(Intent.ACTION_PROFILE_UNAVAILABLE)
+                addAction(Intent.ACTION_PROFILE_ACCESSIBLE)
+                addAction(Intent.ACTION_PROFILE_INACCESSIBLE)
+            }, Context.RECEIVER_NOT_EXPORTED)
+        }.isSuccess
         refreshCatalogue()
     }
 
     override fun onResume() {
         super.onResume()
         refreshProtection()
-        val previousDefault = defaultHome
-        updateDefaultHome()
-        if (defaultHome != previousDefault) refreshCatalogue()
+        pendingUsageRefresh = true
+        val homeRoleChanged = updateDefaultHome()
+        if (homeRoleChanged || rawApps.isEmpty()) refreshCatalogue()
+        else lifecycleScope.launch { lifecycle.withResumed { refreshUsageIfEligible() } }
+    }
+
+    override fun onPause() {
+        usageRefresh?.cancel()
+        super.onPause()
     }
 
     private fun refreshProtection() {
         launcherProtected = SanctuaryLauncherPolicy.launcherProtectionActive(this)
         if (launcherProtected) {
+            tracking.suspendExtended()
             picker = null
             widgetFrames.forEach(GuardedWidgetFrame::disableContent)
         }
@@ -270,8 +350,15 @@ class NovaLauncherActivity : ComponentActivity() {
 
     override fun onTopResumedActivityChanged(isTopResumedActivity: Boolean) {
         super.onTopResumedActivityChanged(isTopResumedActivity)
+        homeTopResumed = isTopResumedActivity
         if (isTopResumedActivity) SanctuaryLauncherPolicy.launcherResumed(this)
         else SanctuaryLauncherPolicy.launcherPaused()
+    }
+
+    override fun onWindowFocusChanged(hasFocus: Boolean) {
+        super.onWindowFocusChanged(hasFocus)
+        homeWindowFocused = hasFocus
+        if (hasFocus && updateDefaultHome()) refreshCatalogue()
     }
 
     override fun onStop() {
@@ -279,7 +366,12 @@ class NovaLauncherActivity : ComponentActivity() {
             directory.launcherApps.unregisterCallback(packageChanges)
             callbacksRegistered = false
         }
+        if (profileReceiverRegistered) {
+            unregisterReceiver(profileChanges)
+            profileReceiverRegistered = false
+        }
         catalogueJob?.cancel()
+        usageRefresh?.cancel()
         runCatching { widgetHost.stopListening() }
         super.onStop()
     }
@@ -291,6 +383,7 @@ class NovaLauncherActivity : ComponentActivity() {
 
     override fun onSaveInstanceState(outState: Bundle) {
         super.onSaveInstanceState(outState)
+        outState.putBoolean(DEFAULT_HOME_OFFERED, defaultHomeOpening.offered)
         pendingWidget?.let {
             outState.putInt(WIDGET_ID, it.id)
             outState.putString(WIDGET_PROVIDER, it.provider.flattenToString())
@@ -301,13 +394,60 @@ class NovaLauncherActivity : ComponentActivity() {
     private fun neutralHomeIntent() = Intent(Intent.ACTION_MAIN)
         .addCategory(Intent.CATEGORY_HOME).setComponent(componentName)
 
-    private fun updateDefaultHome() {
-        defaultHome = getSystemService(RoleManager::class.java)?.isRoleHeld(RoleManager.ROLE_HOME) == true
+    private fun updateDefaultHome(): Boolean {
+        val previous = defaultHome
+        defaultHome = runCatching {
+            getSystemService(RoleManager::class.java)
+                ?.takeIf { it.isRoleAvailable(RoleManager.ROLE_HOME) }
+                ?.isRoleHeld(RoleManager.ROLE_HOME)
+        }.getOrNull() ?: runCatching {
+            val homeIntent = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME)
+            val flags = PackageManager.ResolveInfoFlags.of(PackageManager.MATCH_DEFAULT_ONLY.toLong())
+            packageManager.resolveActivity(homeIntent, flags)?.activityInfo?.packageName
+                ?.takeUnless { it == "android" }
+                ?.let { it == packageName }
+        }.getOrNull()
+        return previous != defaultHome
+    }
+
+    private fun checkDefaultHome() {
+        if (updateDefaultHome()) refreshCatalogue()
+        message(launcherDefaultHomeStatus(defaultHome))
+    }
+
+    private fun setAskForDefaultHome(ask: Boolean) {
+        if (store.setAskForDefaultHome(ask)) askDefaultHome = ask
+        else message("The default launcher reminder setting could not be saved.")
+    }
+
+    private fun canShowDefaultHomePrompt(): Boolean = homeTopResumed && !launcherProtected &&
+        activeUtility == null && blocked == null && !review && !sanctuaryOpen && picker == null && renaming == null
+
+    private fun claimDefaultHomePrompt(): Boolean {
+        val safeHome = canShowDefaultHomePrompt() && hasWindowFocus() && !isFinishing &&
+            !runCatching { SanctuaryLauncherPolicy.launcherProtectionActive(this) }.getOrDefault(true)
+        if (!safeHome) return false
+        if (updateDefaultHome()) refreshCatalogue()
+        return defaultHomeOpening.claim(defaultHome, askDefaultHome, safeHome)
+    }
+
+    private fun requestDefaultHome() {
+        if (!canShowDefaultHomePrompt() || isFinishing ||
+            runCatching { SanctuaryLauncherPolicy.launcherProtectionActive(this) }.getOrDefault(true)
+        ) return
+        if (updateDefaultHome()) refreshCatalogue()
+        if (defaultHome == true) return
+        val requested = runCatching {
+            val roles = checkNotNull(getSystemService(RoleManager::class.java))
+            check(roles.isRoleAvailable(RoleManager.ROLE_HOME))
+            defaultHomeRequest.launch(roles.createRequestRoleIntent(RoleManager.ROLE_HOME))
+        }.isSuccess
+        if (!requested) openHomeSettings()
     }
 
     private fun refreshCatalogue() {
         catalogueJob?.cancel()
-        val previous = apps
+        val previous = rawApps
         catalogueJob = lifecycleScope.launch {
             val result = withContext(Dispatchers.IO) {
                 runCatching {
@@ -325,8 +465,10 @@ class NovaLauncherActivity : ComponentActivity() {
             }
             if (result != null) {
                 val (entries, policy, availableShortcuts) = result
-                apps = entries
+                rawApps = entries
+                apps = entries.map(identitySettings::label)
                 decisions = policy
+                refreshUsageIfEligible()
                 if (activeUtility?.let { policy[it.app(packageName).packageName]?.canLaunch != true } == true) {
                     activeUtility = null
                 }
@@ -379,8 +521,7 @@ class NovaLauncherActivity : ComponentActivity() {
                 LauncherBuiltIn.PRIMARY_GALLERY -> startActivity(privateWorkspaceEntryIntent(this, primaryGallery = true))
                 else -> activeUtility = builtIn
             }
-            save(model.withSuccessfulLaunch(component))
-        } else if (directory.start(target)) save(model.withSuccessfulLaunch(component))
+        } else if (directory.start(target)) recordLauncherSuccess(target)
         else {
             message("This app is no longer available.")
             refreshCatalogue()
@@ -396,8 +537,91 @@ class NovaLauncherActivity : ComponentActivity() {
             message("This shortcut is unavailable during Sanctuary protection.")
             return
         }
-        if (directory.start(shortcut)) shortcut.activityComponent?.let { save(model.withSuccessfulLaunch(it)) }
-        else message("This app shortcut is no longer available.")
+        if (directory.start(shortcut)) {
+            apps.firstOrNull { it.component == shortcut.activityComponent }?.let(::recordLauncherSuccess)
+        } else message("This app shortcut is no longer available.")
+    }
+
+    private fun openUsageAccess(intent: Intent) {
+        if (!isTrackingSafe()) {
+            tracking.cancelExtendedConsent()
+            message("Usage Access settings are available outside Sanctuary protection.")
+            return
+        }
+        val systemActivity = packageManager.resolveActivity(intent, PackageManager.MATCH_SYSTEM_ONLY)?.activityInfo
+        if (systemActivity != null && runCatching {
+                usageAccess.launch(intent.setComponent(ComponentName(systemActivity.packageName, systemActivity.name)))
+            }.isSuccess) return
+
+        tracking.cancelExtendedConsent()
+        message("Android Usage Access settings are unavailable.")
+    }
+
+    private fun recordLauncherSuccess(app: LauncherApp) {
+        if (isTrackingSafe()) {
+            tracking.recordLaunch(app)
+            val smart = tracking.state.value
+            if (smart.mode != LauncherTrackingMode.OFF && app.component !in smart.excluded) {
+                save(model.withSuccessfulLaunch(app.component))
+            }
+        }
+    }
+
+    private fun isTrackingSafe(): Boolean =
+        getSystemService(KeyguardManager::class.java)?.let { !it.isDeviceLocked && !it.isKeyguardLocked } == true &&
+            runCatching { sanctuary.refresh() == null }.getOrDefault(false)
+
+    private fun refreshUsageIfEligible() {
+        if (!pendingUsageRefresh || !lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) return
+        pendingUsageRefresh = false
+        if (!isTrackingSafe()) {
+            tracking.suspendExtended()
+            return
+        }
+        val installed = rawApps.filter { it.packageName != packageName }
+        usageRefresh?.cancel()
+        usageRefresh = lifecycleScope.launch { tracking.refreshExtended(installed) }
+    }
+
+    private fun offerSmartTemplate() {
+        if (!model.configured) return
+        val displays = if (model.separateDisplays) listOf(false, true) else listOf(false)
+        for (inner in displays) {
+            if (identitySettings.templateHandled(inner)) continue
+            val layout = model.layout(inner)
+            val next = if (model.widgets.any { it.wide == inner && it.page == 1 }) layout else
+                layout.withSmartFolderTemplate(onlyIfEmpty = true,
+                    capacity = model.appearance.grid.columns(inner) * model.appearance.grid.rows)
+            if (next == layout || save(model.withLayout(inner, next))) identitySettings.markTemplateHandled(inner)
+        }
+    }
+
+    @Composable
+    private fun RenameLauncherAppDialog() {
+        val target = renaming ?: return
+        var label by remember(target) {
+            mutableStateOf(identitySettings.label(target).label.takeUnless { it == target.label }.orEmpty())
+        }
+        AlertDialog(
+            onDismissRequest = { renaming = null },
+            title = { Text("Rename launcher shortcut") },
+            text = {
+                OutlinedTextField(
+                    value = label, onValueChange = { label = it.take(LauncherIdentitySettings.MAX_LABEL) },
+                    label = { Text(target.label) }, singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    if (identitySettings.saveLabel(target.component, label)) {
+                        apps = rawApps.map(identitySettings::label)
+                        renaming = null
+                    } else message("The shortcut name could not be saved.")
+                }) { Text("Save") }
+            },
+            dismissButton = { TextButton(onClick = { renaming = null }) { Text("Cancel") } },
+        )
     }
 
     private fun openWorkspace() {
@@ -712,6 +936,7 @@ class NovaLauncherActivity : ComponentActivity() {
     companion object {
         internal const val WIDGET_HOST_ID = 70_001
         private const val CONFIGURE_WIDGET = 7_101
+        private const val DEFAULT_HOME_OFFERED = "nova-launcher-default-home-offered"
         private const val WIDGET_ID = "nova-launcher-pending-widget"
         private const val WIDGET_PROVIDER = "nova-launcher-pending-provider"
         private const val WIDGET_WIDE = "nova-launcher-pending-wide"
