@@ -266,7 +266,7 @@ internal fun BoxScope.LauncherDragOverlay(
     blocked: Boolean,
 ) {
     if (preview != null) {
-        Canvas(Modifier.fillMaxSize()) {
+        Canvas(Modifier.fillMaxSize().testTag("launcher-drop-target")) {
             val bounds = preview.bounds
             if (preview.drop.group || !preview.hasTile) {
                 drawRoundRect(

@@ -5,7 +5,6 @@ import android.os.SystemClock
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
 import androidx.lifecycle.ViewModelProvider
-import androidx.test.core.app.ActivityScenario
 import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.runner.lifecycle.ActivityLifecycleMonitorRegistry
 import androidx.test.runner.lifecycle.Stage
@@ -32,12 +31,14 @@ class LauncherWorkspace70Test {
     }
 
     @Test fun directPrimaryVaultHidesOnlyInternalNavigationUntilReturningHome() {
-        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        val instrumentation = InstrumentationRegistry.getInstrumentation()
+        val context = instrumentation.targetContext
         check(context.packageName.endsWith(".hiddenprototype"))
         val keys = PinVaultKeyStore(context)
         val recovery = RecoveryVaultKeyStore(context)
         check(!keys.isConfigured && !recovery.isConfigured) { "Fixture requires an unused isolated vault" }
         val pin = "481625"
+        var destination: MainActivity? = null
         try {
             val key = keys.create(pin.toCharArray())
             try {
@@ -45,32 +46,44 @@ class LauncherWorkspace70Test {
             } finally {
                 key.fill(0)
             }
-            ActivityScenario.launch<MainActivity>(privateWorkspaceEntryIntent(context, primaryGallery = true)).use { scenario ->
-                compose.onNodeWithTag("passcode-indicator").assertIsDisplayed()
-                compose.onNodeWithTag("nova-app-header").assertDoesNotExist()
-                pin.forEach { compose.onNodeWithText(it.toString()).performClick() }
-                compose.onNodeWithText("Unlock").performClick()
-                compose.waitUntil(15_000) {
-                    compose.onAllNodesWithTag("nova-app-header").fetchSemanticsNodes().isNotEmpty()
+            // Main consumes the one-shot action during onCreate, so ActivityScenario's
+            // original-intent filter would miss its real lifecycle transitions.
+            context.startActivity(privateWorkspaceEntryIntent(context, primaryGallery = true))
+            val monitor = ActivityLifecycleMonitorRegistry.getInstance()
+            compose.waitUntil(15_000) {
+                instrumentation.runOnMainSync {
+                    destination = monitor.getActivitiesInStage(Stage.RESUMED)
+                        .filterIsInstance<MainActivity>().singleOrNull { it.novaCredentialsRequested }
                 }
-                compose.onNodeWithTag("nova-navigation").assertDoesNotExist()
-                compose.onNodeWithContentDescription("Nova Home").assertIsDisplayed()
-                compose.onNodeWithContentDescription("Lock Space").assertIsDisplayed()
-                compose.onNodeWithContentDescription("Panic Exit").assertIsDisplayed()
-
-                scenario.onActivity { it.onBackPressedDispatcher.onBackPressed() }
-                compose.onNodeWithTag("preview-home").assertIsDisplayed()
-                compose.onNodeWithTag("app-vault").performClick()
-                compose.onNodeWithTag("nova-navigation").assertIsDisplayed()
-                compose.onNodeWithContentDescription("Lock Space").performClick()
-                scenario.onActivity { activity ->
-                    val state = ViewModelProvider(activity)[ProtectedSessionState::class.java]
-                    assertFalse(state.session.isUnlocked)
-                    assertFalse(state.hidden.session.isUnlocked)
-                }
-                compose.onNodeWithTag("nova-navigation").assertDoesNotExist()
+                destination != null
             }
+            val activity = checkNotNull(destination)
+            compose.onNodeWithTag("passcode-indicator").assertIsDisplayed()
+            compose.onNodeWithTag("nova-app-header").assertDoesNotExist()
+            pin.forEach { compose.onNodeWithText(it.toString()).performClick() }
+            compose.onNodeWithText("Unlock").performClick()
+            compose.waitUntil(15_000) {
+                compose.onAllNodesWithTag("nova-app-header").fetchSemanticsNodes().isNotEmpty()
+            }
+            compose.onNodeWithTag("nova-navigation").assertDoesNotExist()
+            compose.onNodeWithContentDescription("Nova Home").assertIsDisplayed()
+            compose.onNodeWithContentDescription("Lock Space").assertIsDisplayed()
+            compose.onNodeWithContentDescription("Panic Exit").assertIsDisplayed()
+
+            compose.runOnIdle { activity.onBackPressedDispatcher.onBackPressed() }
+            compose.onNodeWithTag("preview-home").assertIsDisplayed()
+            compose.onNodeWithTag("app-vault").performClick()
+            compose.onNodeWithTag("nova-navigation").assertIsDisplayed()
+            compose.onNodeWithContentDescription("Lock Space").performClick()
+            compose.runOnIdle {
+                val state = ViewModelProvider(activity)[ProtectedSessionState::class.java]
+                assertFalse(state.session.isUnlocked)
+                assertFalse(state.hidden.session.isUnlocked)
+            }
+            compose.onNodeWithTag("nova-navigation").assertDoesNotExist()
         } finally {
+            instrumentation.runOnMainSync { destination?.finish() }
+            instrumentation.waitForIdleSync()
             recovery.clearFailedRestore()
             keys.clearFailedRestore()
         }

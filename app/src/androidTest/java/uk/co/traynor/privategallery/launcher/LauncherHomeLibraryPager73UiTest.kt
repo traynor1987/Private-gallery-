@@ -124,21 +124,26 @@ class LauncherHomeLibraryPager73UiTest {
     @Test fun coverDragsFromTrailingLibraryOntoLastHomePage() {
         showLauncher()
         repeat(2) { pager.performTouchInput { swipeLeft() } }
-        val destination = pager.fetchSemanticsNode().boundsInRoot.let {
-            Offset(it.center.x, it.top + it.height * .64f)
-        }
+        val homeBounds = pager.fetchSemanticsNode().boundsInRoot
         pager.performTouchInput { swipeLeft() }
         library.assertIsDisplayed()
         compose.onNodeWithTag("launcher-library-search").performTextInput(apps.last().label)
         val tile = compose.onNode(hasTestTag("launcher-app-${apps[3].component}") and
             hasAnyAncestor(hasTestTag("launcher-app-library")))
         val source = tile.fetchSemanticsNode().boundsInRoot.center
+        val startDrag = Offset(0f, 52f)
         tile.performTouchInput {
             down(center)
             advanceEventTime(800)
-            moveBy(destination - source)
+            moveBy(startDrag)
         }
         compose.onNodeWithTag("launcher-drag-preview").assertIsDisplayed()
+        compose.waitUntil(5_000) {
+            homeApp(2).isDisplayed() && pager.fetchSemanticsNode().boundsInRoot == homeBounds
+        }
+        val destination = Offset(homeBounds.center.x, homeBounds.top + homeBounds.height * .64f)
+        pager.performTouchInput { moveBy(destination - source - startDrag) }
+        compose.onNodeWithTag("launcher-drop-target").assertIsDisplayed()
         pager.performTouchInput { up() }
         compose.runOnIdle {
             assertEquals(listOf(listOf(items[0]), listOf(items[1]), listOf(items[2], items[3])), state.cover.pages)

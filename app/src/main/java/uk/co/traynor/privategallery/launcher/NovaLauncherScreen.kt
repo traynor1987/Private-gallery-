@@ -182,6 +182,7 @@ private fun LauncherRuntime(
         apps.filter { !launcherProtected || approved(it) }
     }
     val context = LocalContext.current
+    val focusManager = LocalFocusManager.current
     val identitySettings = remember(context) { LauncherIdentitySettings(context) }
     var libraryPins by remember(identitySettings) { mutableStateOf(identitySettings.libraryPins()) }
     var categoryOverrides by remember(identitySettings) { mutableStateOf(identitySettings.categoryOverrides()) }
@@ -345,6 +346,9 @@ private fun LauncherRuntime(
                 }
             },
             startDrag = {
+                if (librarySelected || surface == LauncherSurface.DRAWER || surface == LauncherSurface.LIBRARY) {
+                    focusManager.clearFocus(force = true)
+                }
                 if (librarySelected) {
                     selectLibrary(null)
                     dragPageRequest = currentPage
