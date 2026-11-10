@@ -213,7 +213,7 @@ internal fun NotificationCompatibilityScreen(
                         foldAccepted = GuardianNotificationListener.confirmFoldDismissal(context)
                     }) { Text("I saw the fixture disappear from Samsung’s panel") }
                 }
-                Text("Real WhatsApp dismissal is off during capture recovery.")
+                Text("Real WhatsApp dismissal is off. Samsung notification previews follow your system settings, even while a message is held in Guardian.")
                 externalError?.let { Text(it, color = MaterialTheme.colorScheme.error) }
             }
             HorizontalDivider()

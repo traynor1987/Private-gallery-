@@ -192,7 +192,7 @@ internal fun GuardianHome(
                             else -> "Nova Brain compares messages with your approved examples. You control review and holds."
                         }, color = GuardianMuted, style = MaterialTheme.typography.bodyMedium)
                         HorizontalDivider(Modifier.padding(vertical = 4.dp), color = GuardianBorder)
-                        GuardianLine(Icons.Outlined.Lock, "Message previews are hidden", GuardianBlue)
+                        GuardianLine(Icons.Outlined.Lock, "Guardian previews are hidden. Samsung notification previews are separate.", GuardianBlue)
                     }
 
                     if (options.health) {
