@@ -36,6 +36,7 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import uk.co.traynor.privategallery.core.guardian.GuardianCallSource
 import uk.co.traynor.privategallery.core.guardian.GuardianCapture
 import uk.co.traynor.privategallery.core.guardian.GuardianCaptureStore
 import uk.co.traynor.privategallery.core.guardian.GuardianNotificationListener
@@ -150,6 +151,13 @@ internal fun NotificationCompatibilityScreen(
                         style = MaterialTheme.typography.bodySmall)
                 }
                 Text("Quiet-channel ranking ${result.quietChannel} · Grouped ${result.grouped} · While locked ${result.whileLocked}")
+            }
+            Text("Call notification observations", style = MaterialTheme.typography.titleMedium)
+            Text("Only Android call and missed-call notification events visible to the probe are counted.")
+            GuardianCallSource.entries.forEach { source ->
+                val observed = status.calls[source]
+                Text(if (observed == null) "${source.label} · Not observed"
+                    else "${source.label} · Events ${observed.events} · Missed ${observed.missed} · Under DND ${observed.underDnd}")
             }
             OutlinedButton(onClick = GuardianNotificationListener::clearProbe) { Text("Clear probe results") }
             HorizontalDivider()

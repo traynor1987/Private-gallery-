@@ -34,6 +34,9 @@ class GuardianNotificationCompatibility77Test {
                 GuardianNotificationListener.hasAccess(context) && GuardianNotificationListener.state.value.connected
             }
             assertFalse("Permission alone must not start a probe", GuardianNotificationListener.state.value.running)
+            assertFalse("Permission alone must not enable encrypted capture", GuardianCapture.isEnabled(context))
+            GuardianCapture.setEnabled(context, true)
+            await("Separate capture consent enabled the local archive") { GuardianCapture.isEnabled(context) }
             instrumentation.runOnMainSync { GuardianNotificationListener.startProbe(context) }
             assertTrue(GuardianNotificationListener.state.value.running)
             assertTrue(GuardianNotificationListener.state.value.results.isEmpty())
@@ -72,14 +75,14 @@ class GuardianNotificationCompatibility77Test {
         }
         await("Android revoked listener access and cleared the probe") {
             !GuardianNotificationListener.hasAccess(context) &&
-                GuardianNotificationListener.state.value == ListenerProbeStatus()
+                GuardianNotificationListener.state.value == ListenerProbeStatus() && !GuardianCapture.isEnabled(context)
         }
         try {
             setAccess("allow_listener")
             await("Reauthorising the listener must reconnect without restarting capture") {
                 GuardianNotificationListener.hasAccess(context) &&
                     GuardianNotificationListener.state.value.connected &&
-                    !GuardianNotificationListener.state.value.running
+                    !GuardianNotificationListener.state.value.running && !GuardianCapture.isEnabled(context)
             }
         } finally {
             setAccess("disallow_listener")

@@ -14,6 +14,7 @@ import android.os.SystemClock
 import android.os.UserManager
 import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
+import android.telecom.TelecomManager
 import java.util.UUID
 import javax.crypto.Cipher
 import javax.crypto.KeyGenerator
@@ -47,11 +48,15 @@ internal class GuardianNotificationListener : NotificationListenerService() {
             receiveSynthetic(sbn, rankingMap)
             return
         }
-        if (sbn.packageName != GUARDIAN_WHATSAPP || !hasAccess(this)) return
+        if (probe == null && sbn.packageName != GUARDIAN_WHATSAPP) return
+        if (!hasAccess(this)) return
         if (probe != null && SystemClock.elapsedRealtime() >= deadline) stopProbe()
         val session = probe
         val captureEnabled = GuardianCapture.isEnabled(this)
         if (session == null && !captureEnabled) return
+        val notification = sbn.notification
+        val call = notification.category == Notification.CATEGORY_CALL || notification.category == Notification.CATEGORY_MISSED_CALL
+        if (sbn.packageName != GUARDIAN_WHATSAPP && !call) return
         val keyguard = getSystemService(KeyguardManager::class.java)
         val locked = keyguard?.let { it.isDeviceLocked || it.isKeyguardLocked } ?: true
 
@@ -60,14 +65,28 @@ internal class GuardianNotificationListener : NotificationListenerService() {
             runCatching { users.getSerialNumberForUser(user) }.getOrDefault(-1)
         } ?: -1
 
-        val account = probeAccount(user == Process.myUserHandle(), serial, probeFriendsSerial)
-        val notification = sbn.notification
+        val personal = user == Process.myUserHandle()
+        val account = probeAccount(personal, serial, probeFriendsSerial)
         val summary = notification.flags and Notification.FLAG_GROUP_SUMMARY != 0
+        if (call) {
+            if (session != null && !summary) {
+                val dialer = getSystemService(TelecomManager::class.java)?.defaultDialerPackage
+                val source = guardianCallSource(sbn.packageName, dialer, personal, account) ?: return
+                val filter = currentInterruptionFilter
+                val previous = status.value.calls[source] ?: GuardianCallObservations()
+                status.value = status.value.copy(filter = filter, calls = status.value.calls + (source to previous.copy(
+                    events = previous.events + 1,
+                    missed = previous.missed + if (notification.category == Notification.CATEGORY_MISSED_CALL) 1 else 0,
+                    underDnd = previous.underDnd + if (filter in DND_FILTERS) 1 else 0,
+                )))
+            }
+            return
+        }
+        if (sbn.packageName != GUARDIAN_WHATSAPP) return
         val personalUid = if (captureEnabled && account == ProbeAccount.MAIN) runCatching {
             packageManager.getApplicationInfo(GUARDIAN_WHATSAPP, 0).uid
         }.getOrNull() else null
-        val call = notification.category == Notification.CATEGORY_CALL || notification.category == Notification.CATEGORY_MISSED_CALL
-        val capture = canCaptureGuardianNotification(captureEnabled, sbn.packageName, account, summary, call) &&
+        val capture = canCaptureGuardianNotification(captureEnabled, sbn.packageName, account, summary) &&
             personalUid != null && sbn.uid == personalUid && sbn.opPkg == GUARDIAN_WHATSAPP
         if (session == null && !capture) return
         val entries = runCatching {
@@ -219,7 +238,7 @@ internal class GuardianNotificationListener : NotificationListenerService() {
                 ?.let(LauncherAppIdentity::parse)?.takeIf { it.flattenedComponent.substringBefore('/') == GUARDIAN_WHATSAPP }
                 ?.profileSerial
             deadline = SystemClock.elapsedRealtime() + PROBE_MILLIS
-            status.value = status.value.copy(running = true, results = emptyMap())
+            status.value = status.value.copy(running = true, results = emptyMap(), calls = emptyMap())
             handler.postDelayed(timeout, PROBE_MILLIS)
         }
 
@@ -232,12 +251,13 @@ internal class GuardianNotificationListener : NotificationListenerService() {
 
         fun clearProbe() {
             stopProbe()
-            status.value = status.value.copy(results = emptyMap())
+            status.value = status.value.copy(results = emptyMap(), calls = emptyMap())
         }
 
         private fun disconnect(context: Context) {
             if (synthetic != null) finishSynthetic(SyntheticResult.DISCONNECTED)
             if (!hasAccess(context)) {
+                if (GuardianCapture.isEnabled(context)) GuardianCapture.setEnabled(context, false)
                 handler.removeCallbacks(timeout)
                 probe = null
                 probeFriendsSerial = null
@@ -256,7 +276,10 @@ internal data class ListenerProbeStatus(
     val results: Map<ProbeAccount, ProbeResult> = emptyMap(),
     val synthetic: SyntheticResult = SyntheticResult.NOT_TESTED,
     val syntheticDndMatch: Boolean? = null,
+    val calls: Map<GuardianCallSource, GuardianCallObservations> = emptyMap(),
 )
+
+internal data class GuardianCallObservations(val events: Int = 0, val missed: Int = 0, val underDnd: Int = 0)
 
 internal enum class SyntheticResult(val label: String) {
     NOT_TESTED("Not tested"),

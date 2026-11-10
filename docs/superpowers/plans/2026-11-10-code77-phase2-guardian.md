@@ -26,3 +26,9 @@ The owner observed two Android events per WhatsApp profile under Samsung Priorit
 - [ ] Full Android 17 regression and original-key upgrade only after the security and device gates pass.
 
 Code 77 continues on the existing branch. The isolated diagnostic package can verify individual checkpoints without updating the production installation.
+
+## Capture checkpoint test
+
+After running the Phase 1 checks, use **Encrypted Main WhatsApp capture** in the test app's diagnostics. Enable it explicitly, then send one harmless message to each account. Verify that only supported Main data increments the retained total. Repeat after leaving the app and reopening it, then revoke notification access and confirm capture turns off. Use **Clear encrypted capture** to delete the test archive.
+
+The five-minute probe also counts visible call and missed-call notification events for the Android default dialer and WhatsApp profiles. Test each source on the Fold with your preferred DND settings. Missing events may mean Android or the app did not expose a listener-visible notification. These counts do not verify Telecom call visibility or provide any call-control capability.
