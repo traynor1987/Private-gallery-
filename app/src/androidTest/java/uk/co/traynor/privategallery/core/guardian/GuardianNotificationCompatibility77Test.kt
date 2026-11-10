@@ -1,13 +1,18 @@
 package uk.co.traynor.privategallery.core.guardian
 
+import android.Manifest
+import android.app.NotificationManager
 import android.content.ComponentName
 import android.os.ParcelFileDescriptor
 import android.os.SystemClock
+import androidx.lifecycle.Lifecycle
+import androidx.test.core.app.ActivityScenario
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import org.junit.Assert.*
 import org.junit.Test
 import org.junit.runner.RunWith
+import uk.co.traynor.privategallery.LauncherActivity
 
 @RunWith(AndroidJUnit4::class)
 class GuardianNotificationCompatibility77Test {
@@ -31,6 +36,31 @@ class GuardianNotificationCompatibility77Test {
             instrumentation.runOnMainSync { GuardianNotificationListener.startProbe(context) }
             assertTrue(GuardianNotificationListener.state.value.running)
             assertTrue(GuardianNotificationListener.state.value.results.isEmpty())
+            if (context.packageName.endsWith(".guardianprobe")) {
+                ActivityScenario.launch(LauncherActivity::class.java).use { screen ->
+                    screen.moveToState(Lifecycle.State.CREATED)
+                    assertTrue(GuardianNotificationListener.state.value.running)
+                    screen.moveToState(Lifecycle.State.RESUMED)
+                }
+                assertTrue("Leaving diagnostics must not clear the service-owned probe",
+                    GuardianNotificationListener.state.value.running)
+            }
+
+            instrumentation.uiAutomation.grantRuntimePermission(context.packageName, Manifest.permission.POST_NOTIFICATIONS)
+            instrumentation.runOnMainSync { GuardianNotificationListener.postSynthetic(context, dismiss = false) }
+            await("The harmless test reached the listener and was securely captured") {
+                GuardianNotificationListener.state.value.synthetic == SyntheticResult.PRESENTED
+            }
+            val manager = checkNotNull(context.getSystemService(NotificationManager::class.java))
+            val presented = manager.activeNotifications.single { it.notification.channelId == "guardian-compatibility-test" }
+            instrumentation.runOnMainSync { GuardianNotificationListener.postSynthetic(context, dismiss = true) }
+            await("Android confirmed only the requested synthetic notification was removed") {
+                GuardianNotificationListener.state.value.synthetic == SyntheticResult.DISMISSED
+            }
+            assertTrue(manager.activeNotifications.any { it.key == presented.key })
+            assertTrue("Synthetic test callbacks must not become WhatsApp events",
+                GuardianNotificationListener.state.value.results.isEmpty())
+            manager.cancel(presented.tag, presented.id)
         } finally {
             setAccess("disallow_listener")
         }

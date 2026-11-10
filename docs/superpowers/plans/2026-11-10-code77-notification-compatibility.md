@@ -30,3 +30,13 @@ From the compatibility screen, grant Android notification access to the test app
 - [ ] Verify independent message and Panic timers, explicit acknowledgement, Pending Review, Evening Protection, and authenticated recovery.
 - [ ] Integrate status bar and three themes without modifying stored layouts or Vault security.
 - [ ] Verify original-key upgrade and exact-source Android 17 regression before delivering a production APK.
+
+## Phase 1 compatibility report
+
+The owner observed two additional Android notification events for Main and two for Friends while Samsung DND reported Priority Only. Text was available on all observed events and neither account produced unresolved identities. These are event observations from the earlier Fold APK. Notification updates can account for repeated events.
+
+The updated probe keeps counters in the listener process across app switches, lock and DND changes. It distinguishes posts, updates, group summaries and estimated distinct messages. Estimates require usable conversation, sender and timestamp metadata. Counters are in memory and expire as an active test after five minutes. Force-stop or process death ends the test. The screen shows aggregate results only.
+
+On the Fold, repeat the controlled Main and Friends checks with DND off and on. Lock the device during a harmless send and check the lock screen without revealing personal message text. Reopen the diagnostics and compare the counters. Run both NovaOS test buttons with DND off and on. Compare the banner, Android ranking and actual shade behaviour, then confirm that the dismissal check removes only its own synthetic notification. Repeat on the cover and inner displays. Revoke the test app's access when finished.
+
+Profile-specific dismissal and ongoing content storage require further verification. This phase provides no automatic cancellation or content retention. Guardian Home presents real Sanctuary state and reports encrypted inbox, classification and automated Panic functions as unavailable.

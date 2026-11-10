@@ -21,6 +21,7 @@ import org.junit.rules.RuleChain
 import org.junit.rules.TestRule
 import uk.co.traynor.privategallery.ui.BrowserViewportRule
 import uk.co.traynor.privategallery.core.sanctuary.SanctuaryAppVisibility
+import uk.co.traynor.privategallery.core.sanctuary.SanctuaryMode
 import uk.co.traynor.privategallery.core.sanctuary.SanctuaryLauncherPolicy.Decision
 
 class LauncherHomeLibraryPager73UiTest {
@@ -48,6 +49,51 @@ class LauncherHomeLibraryPager73UiTest {
     )
     private val pager get() = compose.onNodeWithTag("launcher-home-pages")
     private val library get() = compose.onNodeWithTag("launcher-app-library")
+
+    @Test fun coverGuardianIsLeftOfHomeAndDoesNotExposeAnInboxOrDock() {
+        state = state.copy(cover = state.cover.copy(dock = listOf(items[3])))
+        val before = state
+        showLauncher()
+        val dock = compose.onNodeWithTag("launcher-dock-slot-0")
+        homeApp(0).assertIsDisplayed()
+        dock.assertIsDisplayed()
+        pager.performTouchInput { swipeRight() }
+        compose.onNodeWithTag("launcher-guardian-home").assertIsDisplayed()
+        dock.assertIsNotDisplayed()
+        compose.onNodeWithText("Analysis unavailable").assertIsDisplayed()
+        compose.onNodeWithText("Ready to Read · Unavailable").assertExists()
+        pager.performTouchInput { swipeLeft() }
+        homeApp(0).assertIsDisplayed()
+        dock.assertIsDisplayed()
+        pager.performTouchInput { swipeLeft() }
+        homeApp(1).assertIsDisplayed()
+        compose.runOnIdle { assertEquals(before, state) }
+    }
+
+    @Test fun foldGuardianDisplaysTheRealPanicSnapshotAndCanBeDisabled() {
+        var status by mutableStateOf<LauncherSanctuaryStatus?>(LauncherSanctuaryStatus(SanctuaryMode.PANIC, 3_660_000, false))
+        compose.setContent {
+            NovaLauncherScreen(state, apps, emptyList(), emptyMap(), true, false, actions, sanctuaryStatus = status)
+        }
+        try {
+            homeApp(1).assertIsDisplayed()
+            pager.performTouchInput { swipeRight() }
+            compose.onNodeWithText("Panic Protection").assertIsDisplayed()
+            compose.onNodeWithText("1:01:00 remaining").assertIsDisplayed()
+            compose.runOnIdle { status = null }
+            compose.onNodeWithText("Inactive").assertIsDisplayed()
+            compose.onNodeWithText("Settings").performClick()
+            compose.onNodeWithTag("guardian-show-page").performClick()
+            assertTrue(!GuardianHomeOptions.read(compose.activity).showPage)
+            compose.runOnIdle { compose.activity.onBackPressedDispatcher.onBackPressed() }
+            compose.runOnIdle { compose.activity.onBackPressedDispatcher.onBackPressed() }
+            homeApp(1).assertIsDisplayed()
+            pager.performTouchInput { swipeRight() }
+            compose.onNodeWithTag("launcher-guardian-home").assertDoesNotExist()
+        } finally {
+            GuardianHomeOptions().save(compose.activity)
+        }
+    }
 
     @Test fun coverSwipesAcrossEveryHomePageBeforeLibraryAndBack() {
         showLauncher()

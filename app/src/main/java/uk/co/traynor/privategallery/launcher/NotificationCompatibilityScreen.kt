@@ -1,5 +1,6 @@
 package uk.co.traynor.privategallery.launcher
 
+import android.Manifest
 import android.app.NotificationManager
 import android.content.ComponentName
 import android.content.Intent
@@ -20,6 +21,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
+import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
@@ -28,6 +30,7 @@ import kotlinx.coroutines.withContext
 import uk.co.traynor.privategallery.core.guardian.GuardianNotificationListener
 import uk.co.traynor.privategallery.core.guardian.ProbeAccount
 import uk.co.traynor.privategallery.core.guardian.ProbeResult
+import uk.co.traynor.privategallery.core.guardian.SyntheticResult
 
 @Composable
 internal fun NotificationCompatibilityScreen(foldProbe: Boolean = false, onBack: () -> Unit) {
@@ -48,7 +51,9 @@ internal fun NotificationCompatibilityScreen(foldProbe: Boolean = false, onBack:
         access = GuardianNotificationListener.hasAccess(context)
     }
     LaunchedEffect(status.connected) { access = GuardianNotificationListener.hasAccess(context) }
-    DisposableEffect(Unit) { onDispose { GuardianNotificationListener.clearProbe() } }
+    var canPost by remember { mutableStateOf(context.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) ==
+        PackageManager.PERMISSION_GRANTED) }
+    val posting = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { canPost = it }
     BackHandler(onBack = onBack)
 
     LauncherPanel("Notification compatibility", onBack) {
@@ -87,7 +92,7 @@ internal fun NotificationCompatibilityScreen(foldProbe: Boolean = false, onBack:
             })
             HorizontalDivider()
             Text(
-                "Use harmless test messages from both accounts while the device is unlocked. " +
+                "The five-minute test continues while you switch apps or lock the device. Use harmless messages from both accounts. " +
                     "Try one at a time with Samsung Do Not Disturb off and on. Compare which profile counter changes. " +
                     if (foldProbe) "The test app checks for one Android-reported WhatsApp clone."
                     else "Use Sanctuary’s existing Friends enrollment to identify the Dual Messenger profile.",
@@ -107,10 +112,33 @@ internal fun NotificationCompatibilityScreen(foldProbe: Boolean = false, onBack:
             ProbeAccount.entries.forEach { account ->
                 val result = status.results[account] ?: ProbeResult()
                 Text(account.label, style = MaterialTheme.typography.titleMedium)
-                Text("Posts ${result.posts} · Text available ${result.withText} · Under DND ${result.underDnd}")
-                Text("Quiet-channel ranking ${result.quietChannel} · Grouped ${result.grouped} · Updates ${result.updates}")
+                Text("Notification events ${result.posts} · Text available ${result.withText} · Under DND ${result.underDnd}")
+                val estimated = if (result.unestimatedEvents > 0 && result.estimatedMessages == 0) "Unavailable"
+                    else result.estimatedMessages.toString()
+                Text("Estimated unique messages $estimated · Updates ${result.updates} · Group summaries ${result.summaries}")
+                Text("Quiet-channel ranking ${result.quietChannel} · Grouped ${result.grouped} · While locked ${result.whileLocked}")
             }
-            Text("System dismissal, NovaOS presentation and lock-screen behaviour still need device verification.")
+            OutlinedButton(onClick = GuardianNotificationListener::clearProbe) { Text("Clear probe results") }
+            HorizontalDivider()
+            Text("NovaOS test notification", style = MaterialTheme.typography.titleMedium)
+            Text("These checks use a notification created by this app. They never dismiss WhatsApp or system alerts.")
+            if (!canPost) OutlinedButton(onClick = { posting.launch(Manifest.permission.POST_NOTIFICATIONS) }) {
+                Text("Allow NovaOS test notifications")
+            }
+            val canTest = canPost && access && status.connected &&
+                status.synthetic !in setOf(SyntheticResult.WAITING, SyntheticResult.DISMISSING)
+            Button(onClick = { GuardianNotificationListener.postSynthetic(context, dismiss = false) }, enabled = canTest) {
+                Text("Test notification presentation")
+            }
+            OutlinedButton(onClick = { GuardianNotificationListener.postSynthetic(context, dismiss = true) }, enabled = canTest) {
+                Text("Test dismissal of NovaOS notification")
+            }
+            Surface(color = MaterialTheme.colorScheme.surfaceContainerHigh) {
+                Text(status.synthetic.label, Modifier.fillMaxWidth().padding(12.dp))
+            }
+            status.syntheticDndMatch?.let { Text(if (it) "Notification matched the current interruption filter."
+                else "Android ranking marks the test notification as suppressed by the interruption filter.") }
+            Text("Check the Samsung shade and lock screen to confirm visible behaviour on your Fold.")
         }
     }
 }

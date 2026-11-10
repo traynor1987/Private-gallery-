@@ -43,6 +43,7 @@ internal fun LauncherSettings(
     onBack: () -> Unit,
     onEdit: () -> Unit,
     onLibrarySettings: () -> Unit = {},
+    onGuardianSettings: () -> Unit = {},
     defaultHomeUi: LauncherDefaultHomeUi? = null,
     wide: Boolean = false,
 ) {
@@ -86,6 +87,7 @@ internal fun LauncherSettings(
                 HorizontalDivider()
                 Text("Appearance", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 10.dp))
                 LauncherAppearanceOptions(state.appearance, { actions.save(state.copy(appearance = it)) }, actions.chooseWallpaper, showDock = false)
+                OutlinedButton(onClick = onGuardianSettings) { Text("Guardian Home") }
                 LauncherToggle("Show Dock Icon Labels", state.dockOptions.labels) {
                     actions.save(state.copy(dockOptions = state.dockOptions.copy(labels = it)))
                 }

@@ -112,7 +112,7 @@ internal fun NovaLauncherScreen(
     }
 }
 
-private enum class LauncherSurface { HOME, DRAWER, LIBRARY, SETTINGS, LIBRARY_SETTINGS, EDIT }
+private enum class LauncherSurface { HOME, DRAWER, LIBRARY, SETTINGS, GUARDIAN_SETTINGS, LIBRARY_SETTINGS, EDIT }
 private enum class LauncherLibraryEntry { PAGER, DRAWER }
 
 private val openSmartFolderSaver = listSaver<LauncherItem.SmartFolder?, String>(
@@ -140,6 +140,10 @@ private fun LauncherRuntime(
     smartFolderPresentation: LauncherSmartFolderPresentation,
     appVisibility: SanctuaryAppVisibility,
 ) {
+    val guardianContext = LocalContext.current
+    var guardianOptions by remember(guardianContext) { mutableStateOf(GuardianHomeOptions.read(guardianContext)) }
+    var coverGuardian by rememberSaveable(homeGeneration) { mutableStateOf(false) }
+    var innerGuardian by rememberSaveable(homeGeneration) { mutableStateOf(false) }
     var surface by rememberSaveable(homeGeneration) { mutableStateOf(LauncherSurface.HOME) }
     var animateDockOnReturn by remember(homeGeneration) { mutableStateOf(false) }
     fun showHome(animateDock: Boolean = false) {
@@ -247,7 +251,7 @@ private fun LauncherRuntime(
     BackHandler(surface != LauncherSurface.HOME) {
         when (surface) {
             LauncherSurface.LIBRARY -> closeLibrary()
-            LauncherSurface.LIBRARY_SETTINGS -> surface = LauncherSurface.SETTINGS
+            LauncherSurface.LIBRARY_SETTINGS, LauncherSurface.GUARDIAN_SETTINGS -> surface = LauncherSurface.SETTINGS
             else -> { showHome(animateDock = surface == LauncherSurface.DRAWER); query = "" }
         }
     }
@@ -255,6 +259,10 @@ private fun LauncherRuntime(
         val wide = maxWidth >= LauncherExpandedWidth.dp
         val layout = state.layout(wide)
         val isInner = wide && state.separateDisplays
+        val guardianSelected = guardianOptions.showPage && if (isInner) innerGuardian else coverGuardian
+        fun selectGuardian(selected: Boolean) {
+            if (isInner) innerGuardian = selected else coverGuardian = selected
+        }
         val currentPage = (if (isInner) innerPage else coverPage).coerceIn(0, layout.pages.lastIndex.coerceAtLeast(0))
         val updatePage: (Int) -> Unit = { if (isInner) innerPage = it else coverPage = it }
         val libraryEntry = if (isInner) innerLibrary else coverLibrary
@@ -294,7 +302,7 @@ private fun LauncherRuntime(
         }
         var dragPageRequest by remember(gestures) { mutableStateOf<Int?>(null) }
         fun pageForDrop(): Int? = currentPage.takeIf {
-            !librarySelected && (dragPageRequest == null || dragPageRequest == it)
+            !librarySelected && !guardianSelected && (dragPageRequest == null || dragPageRequest == it)
         }
         val rowTolerance = with(LocalDensity.current) { 8.dp.toPx() }
         val edgeWidth = with(LocalDensity.current) { 34.dp.toPx() }
@@ -312,7 +320,7 @@ private fun LauncherRuntime(
         val activeDrag = gestures.drag
         LauncherDefaultHomePrompt(
             defaultHomeUi,
-            safeSurface = surface == LauncherSurface.HOME && !librarySelected && folder == null && editingFolder == null &&
+            safeSurface = surface == LauncherSurface.HOME && !librarySelected && !guardianSelected && folder == null && editingFolder == null &&
                 gestures.menu == null && activeDrag == null,
             actions = actions,
         )
@@ -339,7 +347,7 @@ private fun LauncherRuntime(
         Box(Modifier.fillMaxSize().onGloballyPositioned { rootCoordinates = it }.launcherIconPointer(
             gestures,
             findSource = { position ->
-                if (folder != null || gestures.menu != null) null
+                if (folder != null || gestures.menu != null || (surface == LauncherSurface.HOME && guardianSelected)) null
                 else when (surface) {
                     LauncherSurface.HOME -> gestures.sourceAt(position, currentPage, drawer = librarySelected,
                         includeDock = librarySelected && state.dockOptions.showInLibrary && !state.dockOptions.locked)
@@ -374,7 +382,7 @@ private fun LauncherRuntime(
             },
         )) {
             when (surface) {
-                LauncherSurface.HOME -> key(isInner, homeGeneration) {
+                LauncherSurface.HOME -> key(isInner, homeGeneration, guardianOptions.showPage) {
                     LauncherHome(
                         state, layout, wide, currentPage, appsByComponent, decisions, actions, launcherProtected,
                         onPage = updatePage, onDrawer = ::openDrawer,
@@ -411,6 +419,15 @@ private fun LauncherRuntime(
                         sanctuaryStatus = sanctuaryStatus,
                         isAppVisible = { canDisplay(it) },
                         animateDockEntrance = animateDockOnReturn,
+                        guardianSelected = guardianSelected,
+                        onGuardianSelected = ::selectGuardian,
+                        guardianPage = if (guardianOptions.showPage) {
+                            {
+                                GuardianHome(guardianOptions, sanctuaryStatus, apps, decisions,
+                                    onSettings = { surface = LauncherSurface.GUARDIAN_SETTINGS },
+                                    onSanctuary = actions.openSanctuary)
+                            }
+                        } else null,
                     )
                 }
                 LauncherSurface.DRAWER -> LauncherDrawer(
@@ -463,11 +480,21 @@ private fun LauncherRuntime(
                         }
                     }
                 }
+                LauncherSurface.GUARDIAN_SETTINGS -> GuardianHomeSettings(
+                    guardianOptions,
+                    onChange = {
+                        if (!it.showPage) { coverGuardian = false; innerGuardian = false }
+                        guardianOptions = it
+                        it.save(guardianContext)
+                    },
+                    onBack = { surface = LauncherSurface.SETTINGS },
+                )
                 LauncherSurface.SETTINGS -> LauncherSettings(
                     state, decisions, visibleApps, actions, isDefaultHome, outsideProtection, launcherProtected,
                     onBack = { showHome() },
                     onEdit = { surface = LauncherSurface.EDIT },
                     onLibrarySettings = { surface = LauncherSurface.LIBRARY_SETTINGS },
+                    onGuardianSettings = { surface = LauncherSurface.GUARDIAN_SETTINGS },
                     defaultHomeUi = defaultHomeUi,
                     wide = wide,
                 )
@@ -588,35 +615,47 @@ internal fun LauncherHome(
     sanctuaryStatus: LauncherSanctuaryStatus? = null,
     isAppVisible: (String) -> Boolean = apps::containsKey,
     animateDockEntrance: Boolean = false,
+    guardianSelected: Boolean = false,
+    onGuardianSelected: (Boolean) -> Unit = {},
+    guardianPage: (@Composable () -> Unit)? = null,
 ) {
     DisposableEffect(gestures) { onDispose { gestures.clearHome() } }
     val pages = layout.pages.ifEmpty { listOf(listOf(LauncherItem.Workspace)) }
-    val initialPage = if (librarySelected && libraryPage != null) pages.size else currentPage.coerceIn(0, pages.lastIndex)
-    val pager = rememberPagerState(initialPage = initialPage) { pages.size + if (libraryPage == null) 0 else 1 }
+    val firstHome = if (guardianPage == null) 0 else 1
+    val libraryIndex = firstHome + pages.size
+    val initialPage = when {
+        guardianSelected && firstHome == 1 -> 0
+        librarySelected && libraryPage != null -> libraryIndex
+        else -> firstHome + currentPage.coerceIn(0, pages.lastIndex)
+    }
+    val pager = rememberPagerState(initialPage = initialPage) { libraryIndex + if (libraryPage == null) 0 else 1 }
     val scope = rememberCoroutineScope()
     val footerEntrance = remember { Animatable(if (animateDockEntrance) 0f else 1f) }
     LaunchedEffect(footerEntrance) {
         if (footerEntrance.value == 0f) footerEntrance.animateTo(1f, tween(durationMillis = 210))
     }
     val focus = LocalFocusManager.current
-    val atLibrary = libraryPage != null && pager.settledPage == pages.size
+    val atLibrary = libraryPage != null && pager.settledPage == libraryIndex
+    val atGuardian = firstHome == 1 && pager.settledPage == 0
     val goBackFromLibrary: () -> Unit = {
         focus.clearFocus()
-        if (!onLibraryBack()) scope.launch { pager.animateScrollToPage(pages.lastIndex) }
+        if (!onLibraryBack()) scope.launch { pager.animateScrollToPage(libraryIndex - 1) }
     }
     BackHandler(enabled = atLibrary, onBack = goBackFromLibrary)
+    BackHandler(enabled = atGuardian) { scope.launch { pager.animateScrollToPage(firstHome) } }
     LaunchedEffect(dragPageRequest) {
         if (dragPageRequest != null && dragPageRequest in pages.indices) {
             // A search focus change can scroll the pager while the footer is being remeasured.
             // Request the drop page in that measurement and cancel any competing scroll.
-            pager.requestScrollToPage(dragPageRequest)
+            pager.requestScrollToPage(firstHome + dragPageRequest)
         }
     }
-    LaunchedEffect(pager.settledPage, atLibrary) {
-        if (!atLibrary) {
+    LaunchedEffect(pager.settledPage, atLibrary, atGuardian) {
+        if (!atLibrary && !atGuardian) {
             if (librarySelected) focus.clearFocus()
-            onPage(pager.settledPage.coerceIn(0, pages.lastIndex))
+            onPage((pager.settledPage - firstHome).coerceIn(0, pages.lastIndex))
         }
+        onGuardianSelected(atGuardian)
         onLibrarySelected(atLibrary)
     }
     val appearance = state.appearance
@@ -656,14 +695,25 @@ internal fun LauncherHome(
                 HorizontalPager(
                     pager,
                     Modifier.fillMaxWidth().weight(1f).testTag("launcher-home-pages"),
-                    key = { if (it == pages.size) "app-library" else "home-$it" },
+                    key = {
+                        when {
+                            it < firstHome -> "guardian"
+                            it == libraryIndex -> "app-library"
+                            else -> "home-${it - firstHome}"
+                        }
+                    },
                     userScrollEnabled = gestures.drag == null,
-                ) { index ->
-                    if (index == pages.size) {
+                ) { page ->
+                    if (page < firstHome) {
+                        guardianPage?.invoke()
+                        return@HorizontalPager
+                    }
+                    if (page == libraryIndex) {
                         Box(Modifier.fillMaxSize()) { libraryPage?.invoke(goBackFromLibrary) }
                         return@HorizontalPager
                     }
-                    val activePage = pager.settledPage == index
+                    val index = page - firstHome
+                    val activePage = pager.settledPage == page
                     Column(Modifier.fillMaxSize().padding(horizontal = if (wide) 26.dp else 14.dp)) {
                         LauncherHeader(protectedBySanctuary, actions, { onDrawer(true) }, onSettings, onEdit)
                         LauncherSanctuaryStatusCard(sanctuaryStatus, expanded = wide && !compact, onOpen = actions.openSanctuary)
@@ -764,9 +814,11 @@ internal fun LauncherHome(
                 Column(
                     Modifier.fillMaxWidth().clipToBounds().layout { measurable, constraints ->
                         val footer = measurable.measure(constraints.copy(minHeight = 0))
-                        val homeFraction = if (libraryPage == null || state.dockOptions.showInLibrary) 1f else {
-                            (pages.size - pager.currentPage - pager.currentPageOffsetFraction).coerceIn(0f, 1f)
-                        }
+                        val position = pager.currentPage + pager.currentPageOffsetFraction
+                        val left = if (firstHome == 0) 1f else position.coerceIn(0f, 1f)
+                        val right = if (libraryPage == null || state.dockOptions.showInLibrary) 1f
+                            else (libraryIndex - position).coerceIn(0f, 1f)
+                        val homeFraction = minOf(left, right)
                         val height = (footer.height * homeFraction).roundToInt()
                         layout(footer.width, height) {
                             if (height > 0) {
@@ -776,7 +828,8 @@ internal fun LauncherHome(
                         }
                     }.padding(horizontal = if (wide) 26.dp else 14.dp),
                 ) {
-                    LauncherDots(pager.pageCount, pager.currentPage, accent, libraryLast = libraryPage != null) {
+                    LauncherDots(pager.pageCount, pager.currentPage, accent, libraryLast = libraryPage != null,
+                        guardianFirst = firstHome == 1) {
                         scope.launch { pager.animateScrollToPage(it) }
                     }
                     if (appearance.dock != LauncherDock.HIDDEN &&
@@ -784,11 +837,11 @@ internal fun LauncherHome(
                     ) {
                         LauncherSharedDock(
                             layout.dock, appearance, state.dockOptions, apps, decisions, compact, gestures,
-                            onItem, ::visible, smartMembers, active = !atLibrary || state.dockOptions.showInLibrary,
+                            onItem, ::visible, smartMembers, active = !atGuardian && (!atLibrary || state.dockOptions.showInLibrary),
                         )
                     }
                     Box(Modifier.fillMaxWidth().height(46.dp), contentAlignment = Alignment.Center) {
-                        if (!atLibrary) TextButton(
+                        if (!atLibrary && !atGuardian) TextButton(
                             onClick = { onDrawer(false) },
                             modifier = Modifier.heightIn(min = 46.dp).testTag("launcher-open-drawer"),
                             colors = ButtonDefaults.textButtonColors(contentColor = Color.White),
@@ -871,6 +924,7 @@ private fun LauncherDots(
     selected: Int,
     accent: Color,
     libraryLast: Boolean = false,
+    guardianFirst: Boolean = false,
     onPage: (Int) -> Unit,
 ) {
     Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.Center) {
@@ -880,7 +934,11 @@ private fun LauncherDots(
                 modifier = Modifier.width(36.dp).height(42.dp).semantics { this.selected = index == selected },
             ) {
                 Icon(if (index == selected) Icons.Default.Circle else Icons.Default.RadioButtonUnchecked,
-                    if (libraryLast && index == count - 1) "App Library page" else "Home page ${index + 1}",
+                    when {
+                        guardianFirst && index == 0 -> "Guardian page"
+                        libraryLast && index == count - 1 -> "App Library page"
+                        else -> "Home page ${index + if (guardianFirst) 0 else 1}"
+                    },
                     Modifier.size(7.dp),
                     tint = if (index == selected) accent else LocalContentColor.current.copy(alpha = .75f))
             }
