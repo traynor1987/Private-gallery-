@@ -33,7 +33,9 @@ import uk.co.traynor.privategallery.core.guardian.ProbeResult
 import uk.co.traynor.privategallery.core.guardian.SyntheticResult
 
 @Composable
-internal fun NotificationCompatibilityScreen(foldProbe: Boolean = false, onBack: () -> Unit) {
+internal fun NotificationCompatibilityScreen(
+    foldProbe: Boolean = false, onOpenLauncher: (() -> Unit)? = null, onBack: () -> Unit,
+) {
     val context = LocalContext.current
     val status by GuardianNotificationListener.state.collectAsState()
     var access by remember { mutableStateOf(GuardianNotificationListener.hasAccess(context)) }
@@ -139,6 +141,9 @@ internal fun NotificationCompatibilityScreen(foldProbe: Boolean = false, onBack:
             status.syntheticDndMatch?.let { Text(if (it) "Notification matched the current interruption filter."
                 else "Android ranking marks the test notification as suppressed by the interruption filter.") }
             Text("Check the Samsung shade and lock screen to confirm visible behaviour on your Fold.")
+            onOpenLauncher?.let { open ->
+                OutlinedButton(onClick = open) { Text("Open Guardian Home test launcher") }
+            }
         }
     }
 }

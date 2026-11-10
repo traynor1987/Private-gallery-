@@ -64,6 +64,7 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import uk.co.traynor.privategallery.BuildConfig
 import uk.co.traynor.privategallery.core.sanctuary.SanctuaryAppVisibility
 import uk.co.traynor.privategallery.core.sanctuary.SanctuaryDnd
 import uk.co.traynor.privategallery.core.sanctuary.SanctuaryGuardian
@@ -203,9 +204,11 @@ class NovaLauncherActivity : ComponentActivity() {
         )
         setIntent(neutralHomeIntent())
         enableEdgeToEdge()
-        model = store.read()
+        val guardianProbeBuild = BuildConfig.DEBUG && packageName.endsWith(".guardianprobe")
+        model = store.read().let { if (guardianProbeBuild) it.copy(configured = true) else it }
         smartFolderPresentation = identitySettings.smartFolderPresentation()
         offerSmartTemplate()
+        if (guardianProbeBuild) store.setAskForDefaultHome(false)
         askDefaultHome = store.askForDefaultHome()
         defaultHomeOpening = LauncherDefaultHomePromptSession(savedInstanceState?.getBoolean(DEFAULT_HOME_OFFERED) == true)
         launcherProtected = SanctuaryLauncherPolicy.launcherProtectionActive(this)

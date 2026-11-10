@@ -19,6 +19,7 @@ import uk.co.traynor.privategallery.core.sanctuary.SanctuaryDnd
 import uk.co.traynor.privategallery.core.sanctuary.SanctuaryLauncherPolicy
 import uk.co.traynor.privategallery.core.sanctuary.SanctuaryStore
 import uk.co.traynor.privategallery.launcher.LauncherDefaultHomeDialog
+import uk.co.traynor.privategallery.launcher.NovaLauncherActivity
 import uk.co.traynor.privategallery.launcher.NovaLauncherStore
 import uk.co.traynor.privategallery.launcher.NotificationCompatibilityScreen
 import uk.co.traynor.privategallery.launcher.readDefaultHome
@@ -38,7 +39,11 @@ class LauncherActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         if (BuildConfig.DEBUG && packageName.endsWith(".guardianprobe")) {
             setContent {
-                PrivateGalleryTheme { NotificationCompatibilityScreen(foldProbe = true, onBack = ::finish) }
+                PrivateGalleryTheme {
+                    NotificationCompatibilityScreen(foldProbe = true, onBack = ::finish, onOpenLauncher = {
+                        startActivity(Intent(this, NovaLauncherActivity::class.java))
+                    })
+                }
             }
             return
         }

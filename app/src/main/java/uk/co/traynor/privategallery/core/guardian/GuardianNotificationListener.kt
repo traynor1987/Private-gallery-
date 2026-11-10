@@ -77,7 +77,7 @@ internal class GuardianNotificationListener : NotificationListenerService() {
         val estimates = entries.map { entry ->
             val sender = entry.senderPerson
             ProbeMessage(entry.timestamp, sender?.key ?: sender?.uri ?: sender?.name?.toString().orEmpty(),
-                entry.text.orEmpty())
+                entry.text ?: "")
         }
         val filter = currentInterruptionFilter
         val conversation = notification.shortcutId?.takeIf { it.isNotBlank() }?.let { "shortcut:$it" }
