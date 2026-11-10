@@ -7,6 +7,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -41,7 +42,7 @@ internal fun EvidenceGuardianLearning(
             }
             if (candidates.isEmpty()) item { Text("Run or review OCR on a selected record first.") }
             if (record == null) items(candidates, key = { it.id() }) { candidate ->
-                OutlinedButton(enabled = !busy, onClick = {
+                OutlinedButton(modifier = Modifier.testTag("guardian-training-source-${candidate.id()}"), enabled = !busy, onClick = {
                     record = candidate
                     excerpt = candidate.transcript().trim().take(2048)
                 }) { Text(candidate.name()) }

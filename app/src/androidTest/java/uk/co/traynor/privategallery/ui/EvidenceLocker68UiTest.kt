@@ -81,7 +81,7 @@ class EvidenceLocker68UiTest {
                         compose.evidenceNode(hasContentDescription("Select evidence ${registered.name()}")).performClick()
                         compose.onNodeWithText("More", substring = false).performClick()
                         compose.onNodeWithText("Teach Guardian").performClick()
-                        compose.evidenceNode(hasText(registered.name()) and hasClickAction()).performClick()
+                        compose.evidenceNode(hasTestTag("guardian-training-source-${registered.id()}") and hasClickAction()).performClick()
                         compose.evidenceNode(hasText("Potentially Upsetting") and hasClickAction()).performClick()
                         compose.onNodeWithText("Save local example").performClick()
                         compose.waitUntil(10_000) { learning.learningCount() == 1 }
