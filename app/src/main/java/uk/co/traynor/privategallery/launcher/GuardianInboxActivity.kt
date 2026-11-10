@@ -248,11 +248,12 @@ class GuardianInboxActivity : ComponentActivity() {
     }
 
     private fun reveal(row: GuardianInboxRow) {
-        loadArchive({ store, days, now -> store.revealInboxMessage(row.id, days, now) }) { text ->
-            if (text == null) failure = "This message is no longer available to review."
-            else {
-                detail = row
-                revealed = text
+        loadArchive({ store, days, now -> store.prepareInboxReview(row.id, days, now) }) { reviewed ->
+            if (reviewed == null) {
+                refresh()
+            } else {
+                detail = reviewed.first
+                revealed = reviewed.second
             }
         }
     }
@@ -473,8 +474,6 @@ class GuardianInboxActivity : ComponentActivity() {
         val cooling = row.section == GuardianInboxSection.COOLING
         val caption = when {
             redacted -> "Preview redacted"
-            cooling && row.assessment == GuardianAssessment.UPSETTING -> "Potentially upsetting content is cooling down."
-            cooling -> "Message preview is cooling down."
             row.assessment == null -> "Awaiting analysis · preview hidden"
             row.assessment == GuardianAssessment.UNCERTAIN -> "Uncertain · preview hidden until reviewed"
             else -> "Content hidden until reviewed"
@@ -486,19 +485,17 @@ class GuardianInboxActivity : ComponentActivity() {
                 Icon(Icons.Outlined.Lock, null, tint = if (cooling) GuardianAmber else GuardianBlue, modifier = Modifier.size(20.dp))
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     val sender = if (showSenders && !redacted) row.senderName else null
-                    Text(when {
-                        cooling -> "Message protected"
-                        redacted -> "Sender redacted"
-                        showSenders -> sender ?: "Sender unavailable"
-                        else -> "Protected message"
-                    }, style = MaterialTheme.typography.titleMedium, color = GuardianPrimary)
-                    Text(caption, color = GuardianMuted, style = MaterialTheme.typography.bodyMedium)
-                    if (cooling && !redacted) {
-                        row.availableAfter?.let { deadline ->
-                            Text("Preview available after ${DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT).format(Date(deadline))}",
-                                color = GuardianPrimary, style = MaterialTheme.typography.labelLarge)
-                        }
+                    if (cooling) {
+                        GuardianCooldownCopy(if (redacted) null else row.availableAfter,
+                            potentiallyUpsetting = row.assessment == GuardianAssessment.UPSETTING)
                         sender?.let { Text(it, color = GuardianMuted, style = MaterialTheme.typography.bodySmall) }
+                    } else {
+                        Text(when {
+                            redacted -> "Sender redacted"
+                            showSenders -> sender ?: "Sender unavailable"
+                            else -> "Protected message"
+                        }, style = MaterialTheme.typography.titleMedium, color = GuardianPrimary)
+                        Text(caption, color = GuardianMuted, style = MaterialTheme.typography.bodyMedium)
                     }
                     Text(if (redacted) "App and profile redacted" else (if (inConversation) "Incoming · " else "") + appLabel(row.conversation),
                         color = GuardianMuted, style = MaterialTheme.typography.bodySmall)
@@ -620,6 +617,21 @@ class GuardianInboxActivity : ComponentActivity() {
 
         internal fun open(activity: Activity, section: GuardianInboxSection) {
             activity.startActivity(Intent(activity, GuardianInboxActivity::class.java).putExtra(SECTION, section.name))
+        }
+    }
+}
+
+
+/** The held-card copy accepts only protection metadata. */
+@Composable
+internal fun GuardianCooldownCopy(availableAfter: Long?, potentiallyUpsetting: Boolean) {
+    Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
+        Text("Message protected", style = MaterialTheme.typography.titleMedium, color = GuardianPrimary)
+        Text(if (potentiallyUpsetting) "Potentially upsetting content is cooling down."
+            else "Message preview is cooling down.", color = GuardianMuted, style = MaterialTheme.typography.bodyMedium)
+        if (availableAfter != null) {
+            val deadline = DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT).format(Date(availableAfter))
+            Text("Preview available after $deadline", color = GuardianPrimary, style = MaterialTheme.typography.labelLarge)
         }
     }
 }

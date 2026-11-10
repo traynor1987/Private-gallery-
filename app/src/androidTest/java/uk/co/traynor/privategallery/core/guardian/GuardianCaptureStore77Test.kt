@@ -116,6 +116,29 @@ class GuardianCaptureStore77Test {
         }
     }
 
+    @Test fun voluntaryReviewAnalysesPendingContentBeforeAnyPreview() {
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        val now = guardianInboxClock(context)
+        val store = GuardianCaptureStore(context)
+        val text = "you have to come here right now"
+        store.clear()
+        store.resetLearning()
+        try {
+            val event = GuardianCaptureEvent(0, "shortcut:example", now.wall,
+                listOf(GuardianCaptureEntry(now.wall, "sender", text)))
+            store.append(event, 7, now.wall, assess = false)
+            val id = store.inboxRows(7, now).single().id
+            assertTrue(store.searchInbox("right now", 7, now).isEmpty())
+            assertTrue(store.teach(text, GuardianAssessment.UPSETTING))
+            assertNull(store.prepareInboxReview(id, 7, now))
+            assertEquals(GuardianInboxSection.COOLING, store.inboxRows(7, now).single().section)
+            assertNull(store.eligibleEvidenceMessage(id, 7, now))
+        } finally {
+            store.clear()
+            store.resetLearning()
+        }
+    }
+
     @Test fun contactConsentIsEncryptedAppAndProfileScopedAndRemovable() {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         val store = GuardianCaptureStore(context)

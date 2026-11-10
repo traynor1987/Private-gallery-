@@ -4,6 +4,7 @@ import android.app.KeyguardManager
 import android.app.Notification
 import android.app.NotificationManager
 import android.app.NotificationChannel
+import android.app.Person
 import android.content.ComponentName
 import android.content.Context
 import android.os.Bundle
@@ -61,8 +62,8 @@ internal class GuardianNotificationListener : NotificationListenerService() {
         if (session == null && !captureEnabled && !discovering) return
         val notification = sbn.notification
         val call = notification.category == Notification.CATEGORY_CALL || notification.category == Notification.CATEGORY_MISSED_CALL
-        val isSms = !isWhatsApp && !call && (captureEnabled || discovering) &&
-            notification.visibility != Notification.VISIBILITY_SECRET &&
+        val isSms = !isWhatsApp && notification.category == Notification.CATEGORY_MESSAGE &&
+            (captureEnabled || discovering) && notification.visibility != Notification.VISIBILITY_SECRET &&
             runCatching { Telephony.Sms.getDefaultSmsPackage(this) == sbn.packageName }.getOrDefault(false)
         if (!isWhatsApp && !isSms && !call) return
         val keyguard = getSystemService(KeyguardManager::class.java)
@@ -149,9 +150,14 @@ internal class GuardianNotificationListener : NotificationListenerService() {
     }
 
     private fun captureEntries(notification: Notification): List<GuardianCaptureEntry> = runCatching {
-        notification.extras.getParcelableArray(Notification.EXTRA_MESSAGES, Bundle::class.java)
+        val extras = notification.extras
+        val self = extras.getParcelable(Notification.EXTRA_MESSAGING_PERSON, Person::class.java)
+        extras.getParcelableArray(Notification.EXTRA_MESSAGES, Bundle::class.java)
             ?.let(Notification.MessagingStyle.Message::getMessagesFromBundleArray).orEmpty().mapNotNull { entry ->
                 val sender = entry.senderPerson ?: return@mapNotNull null
+                if ((self?.key != null && self.key == sender.key) || (self?.uri != null && self.uri == sender.uri)) {
+                    return@mapNotNull null
+                }
                 GuardianCaptureEntry(entry.timestamp, sender.key ?: sender.uri ?: sender.name?.toString().orEmpty(),
                     entry.text?.toString().orEmpty(), sender.name?.toString())
             }

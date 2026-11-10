@@ -40,7 +40,7 @@ internal fun EvidenceGuardianMessageLink(
         access.publishIfCurrent { rows = result.getOrDefault(emptyList()); failure = result.isFailure }
     }
     GuardianTheme {
-        EvidenceWorkflowPage(onDismissRequest = onClose, title = { EvidenceDialogTitle("Add Guardian message") }, text = {
+        EvidenceWorkflowPage(onDismissRequest = onClose, sensitive = true, title = { EvidenceDialogTitle("Add Guardian message") }, text = {
             LazyColumn(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 item {
                     Text("Select a classified incoming notification to copy into this encrypted incident. Messages on hold are excluded.")

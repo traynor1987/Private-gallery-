@@ -69,7 +69,7 @@ internal fun EvidenceGuardianLearning(
     }
 
     GuardianTheme {
-        EvidenceWorkflowPage(onDismissRequest = onClose, title = { EvidenceDialogTitle("Teach Guardian") }, text = {
+        EvidenceWorkflowPage(onDismissRequest = onClose, sensitive = true, title = { EvidenceDialogTitle("Teach Guardian") }, text = {
             LazyColumn(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 item {
                     Text("Choose a screenshot or incident record. Keep the conversation lines in order, review the OCR excerpt and choose its label.")

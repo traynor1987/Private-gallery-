@@ -26,8 +26,9 @@ import androidx.compose.ui.unit.dp
 }
 
 @Composable internal fun EvidenceWorkflowPage(onDismissRequest:()->Unit,title:@Composable ()->Unit,
- text:@Composable ()->Unit,confirmButton:@Composable ()->Unit,dismissButton:@Composable ()->Unit) {
- EvidencePage(onDismissRequest) {
+ text:@Composable ()->Unit,confirmButton:@Composable ()->Unit,dismissButton:@Composable ()->Unit,
+ sensitive:Boolean=false) {
+ EvidencePage(onDismissRequest,sensitive=sensitive) {
   Column(
    Modifier.fillMaxSize().safeDrawingPadding().imePadding().padding(horizontal = 16.dp, vertical = 8.dp),
    verticalArrangement = Arrangement.spacedBy(8.dp),

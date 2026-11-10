@@ -88,7 +88,8 @@ internal class GuardianCaptureStore private constructor(private val context: Con
 
     fun searchInbox(query: String, days: Int, now: GuardianInboxClock): Set<String> = synchronized(lock) {
         retainedRows(days, now.wall).asSequence().filterNot { it.optBoolean("deleted") }.filter { row ->
-            inboxRow(row, now).section != GuardianInboxSection.COOLING &&
+            val metadata = inboxRow(row, now)
+            metadata.section != GuardianInboxSection.COOLING && metadata.assessment != null &&
                 row.getString("text").contains(query, ignoreCase = true)
         }.map { it.getString("id") }.toSet()
     }
@@ -224,6 +225,20 @@ internal class GuardianCaptureStore private constructor(private val context: Con
     fun revealInboxMessage(id: String, days: Int, now: GuardianInboxClock): String? = synchronized(lock) {
         val row = retainedRows(days, now.wall).firstOrNull { it.getString("id") == id && !it.optBoolean("deleted") } ?: return@synchronized null
         if (inboxRow(row, now).section == GuardianInboxSection.COOLING) null else row.getString("text")
+    }
+
+    fun prepareInboxReview(id: String, days: Int, now: GuardianInboxClock): Pair<GuardianInboxRow, String>? = synchronized(lock) {
+        val rows = retainedRows(days, now.wall)
+        val stored = rows.firstOrNull { it.getString("id") == id && !it.optBoolean("deleted") } ?: return@synchronized null
+        val initial = inboxRow(stored, now)
+        if (initial.section == GuardianInboxSection.COOLING) return@synchronized null
+        if (initial.assessment == null) {
+            val assessment = classifyGuardian(stored.getString("text"), examples(), contextFor(stored, rows), rowSensitivity(stored))
+            applyAssessment(stored, assessment, now)
+            write(rows)
+        }
+        val revised = inboxRow(stored, now)
+        if (revised.section == GuardianInboxSection.COOLING) null else revised to stored.getString("text")
     }
 
     fun eligibleEvidenceMessage(id: String, days: Int, now: GuardianInboxClock): String? = synchronized(lock) {

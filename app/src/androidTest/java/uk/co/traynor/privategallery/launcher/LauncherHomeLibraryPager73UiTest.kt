@@ -4,6 +4,13 @@ import android.graphics.Bitmap
 import androidx.activity.ComponentActivity
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Surface
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.unit.Density
 import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -396,6 +403,41 @@ class LauncherHomeLibraryPager73UiTest {
         compose.onNode(hasTestTag("launcher-app-${main.component}") and
             hasAnyAncestor(hasTestTag("launcher-dock-slot-0"))).assertIsDisplayed()
         compose.runOnIdle { assertEquals(listOf(restricted, allowed), state.cover.dock) }
+    }
+
+    @Test fun coverProtectedCardAtLargeTextShowsDeadlineWithoutPreview() = captureProtectedCard("cover")
+
+    @Test fun foldProtectedCardAtLargeTextShowsDeadlineWithoutPreview() = captureProtectedCard("unfolded")
+
+    private fun captureProtectedCard(display: String) {
+        compose.setContent {
+            val density = LocalDensity.current
+            CompositionLocalProvider(LocalDensity provides Density(density.density, 1.6f)) {
+                GuardianTheme {
+                    Surface(Modifier.fillMaxWidth().testTag("guardian-held-fixture"),
+                        color = GuardianGlass, contentColor = GuardianPrimary) {
+                        Box(Modifier.padding(16.dp)) {
+                            GuardianCooldownCopy(1_800_000_000_000L, potentiallyUpsetting = true)
+                        }
+                    }
+                }
+            }
+        }
+        compose.onNodeWithText("Message protected").assertIsDisplayed()
+        compose.onNodeWithText("Potentially upsetting content is cooling down.").assertIsDisplayed()
+        compose.onNodeWithText("Preview available after", substring = true).assertIsDisplayed()
+        val capture = compose.onNodeWithTag("guardian-held-fixture").captureToImage()
+        assertEquals(GuardianGlass, capture.toPixelMap()[2, 2])
+        val output = InstrumentationRegistry.getArguments().getString("additionalTestOutputDir") ?: return
+        val folder = File(output, "guardian-held-77").apply { mkdirs() }
+        val bitmap = capture.asAndroidBitmap()
+        try {
+            File(folder, "$display.png").outputStream().use { stream ->
+                check(bitmap.compress(Bitmap.CompressFormat.PNG, 100, stream))
+            }
+        } finally {
+            bitmap.recycle()
+        }
     }
 
     private fun saveGuardianCheckpoint(display: String) {
