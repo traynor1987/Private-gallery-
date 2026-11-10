@@ -216,7 +216,8 @@ internal class GuardianNotificationListener : NotificationListenerService() {
             val target = active.filter {
                 it.packageName == context.packageName && it.user == Process.myUserHandle() &&
                     it.id == TEST_ID && it.tag?.startsWith(OWN_TEST_PREFIX) == true &&
-                    it.notification.channelId == TEST_CHANNEL
+                    it.notification.channelId == TEST_CHANNEL &&
+                    it.notification.flags and Notification.FLAG_GROUP_SUMMARY == 0
             }.maxByOrNull { it.postTime }
             if (target == null) {
                 dismissalFailed("No active NovaOS presentation test found. Post one first.")

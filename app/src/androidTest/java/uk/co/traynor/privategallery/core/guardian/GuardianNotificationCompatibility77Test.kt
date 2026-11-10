@@ -68,8 +68,13 @@ class GuardianNotificationCompatibility77Test {
                 }
             }
             val channel = "guardian-compatibility-test"
+            fun presentations() = manager.activeNotifications.filter {
+                it.notification.channelId == channel &&
+                    it.tag?.startsWith("nova-guardian-presentation-") == true &&
+                    it.notification.flags and Notification.FLAG_GROUP_SUMMARY == 0
+            }
             postPresentation()
-            val presented = manager.activeNotifications.single { it.notification.channelId == channel }
+            val presented = presentations().single()
             assertEquals(Notification.VISIBILITY_SECRET, presented.notification.visibility)
             assertNull(presented.notification.publicVersion)
             assertNotNull(GuardianNotificationListener.state.value.syntheticDndMatch)
@@ -77,9 +82,9 @@ class GuardianNotificationCompatibility77Test {
             assertTrue(manager.activeNotifications.none { it.tag == presented.tag && it.id == presented.id })
 
             postPresentation()
-            val first = manager.activeNotifications.single { it.notification.channelId == channel }
+            val first = presentations().single()
             postPresentation()
-            val second = manager.activeNotifications.single { it.notification.channelId == channel && it.tag != first.tag }
+            val second = presentations().single { it.tag != first.tag }
             assertEquals(first.id, second.id)
             val group = Notification.Builder(context, channel).setSmallIcon(android.R.drawable.ic_dialog_info)
                 .setContentTitle("Unrelated group fixture").setGroup("unrelated").setGroupSummary(true).build()
