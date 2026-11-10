@@ -33,10 +33,8 @@ import uk.co.traynor.privategallery.core.guardian.GuardianCapture
 import uk.co.traynor.privategallery.core.guardian.GuardianNotificationListener
 import uk.co.traynor.privategallery.core.guardian.ProbeAccount
 import uk.co.traynor.privategallery.core.guardian.SyntheticResult
-import uk.co.traynor.privategallery.core.ui.AppTheme
 import uk.co.traynor.privategallery.core.sanctuary.SanctuaryLauncherPolicy.Decision
 import uk.co.traynor.privategallery.core.sanctuary.SanctuaryMode
-import uk.co.traynor.privategallery.ui.PrivateGalleryTheme
 
 internal data class GuardianHomeOptions(
     val showPage: Boolean = true,
@@ -89,14 +87,6 @@ internal fun GuardianHomeSettings(
     }
 }
 
-internal val GuardianNavy = Color(0xFF0D1727)
-internal val GuardianGlass = Color(0xFF172F44)
-internal val GuardianBorder = Color(0xFF2B455D)
-internal val GuardianMuted = Color(0xFFB6C9DF)
-internal val GuardianBlue = Color(0xFF9BCBFF)
-private val GuardianMint = Color(0xFF9DE3CE)
-private val GuardianAmber = Color(0xFFF0C79B)
-
 @Composable
 internal fun GuardianHome(
     options: GuardianHomeOptions,
@@ -131,8 +121,8 @@ internal fun GuardianHome(
         return if (rule.canLaunch) "Allowed" else "Restricted"
     }
 
-    PrivateGalleryTheme(AppTheme.DARK) {
-        Surface(Modifier.fillMaxSize().testTag("launcher-guardian-home"), color = GuardianNavy) {
+    GuardianTheme {
+        Surface(Modifier.fillMaxSize().testTag("launcher-guardian-home"), color = GuardianNavy, contentColor = GuardianPrimary) {
             BoxWithConstraints(Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
                 val spacing = if (maxWidth < 360.dp) 12.dp else 16.dp
                 Column(
@@ -271,7 +261,7 @@ internal fun GuardianCard(
 ) {
     Card(
         Modifier.fillMaxWidth(), shape = RoundedCornerShape(22.dp),
-        colors = CardDefaults.cardColors(containerColor = GuardianGlass),
+        colors = guardianCardColors(),
         border = BorderStroke(1.dp, GuardianBorder.copy(alpha = .45f)),
     ) {
         Column(Modifier.padding(horizontal = 16.dp, vertical = 14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -295,7 +285,7 @@ private fun GuardianMessageTile(
 ) {
     Card(
         onClick = onOpen, modifier = modifier.heightIn(min = 104.dp), shape = RoundedCornerShape(22.dp),
-        colors = CardDefaults.cardColors(containerColor = GuardianGlass),
+        colors = guardianCardColors(),
         border = BorderStroke(1.dp, GuardianBorder.copy(alpha = .45f)),
     ) {
         Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {

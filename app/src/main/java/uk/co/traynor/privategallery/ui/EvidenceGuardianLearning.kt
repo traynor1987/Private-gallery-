@@ -17,6 +17,7 @@ import uk.co.traynor.privategallery.core.evidence.EvidenceController
 import uk.co.traynor.privategallery.core.guardian.GuardianAssessment
 import uk.co.traynor.privategallery.core.guardian.GuardianCapture
 import uk.co.traynor.privategallery.core.guardian.GuardianCaptureStore
+import uk.co.traynor.privategallery.launcher.GuardianTheme
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -32,12 +33,46 @@ internal fun EvidenceGuardianLearning(
     var excerpt by remember { mutableStateOf("") }
     var label by remember { mutableStateOf<GuardianAssessment?>(null) }
     var busy by remember { mutableStateOf(false) }
-    var failed by remember { mutableStateOf(false) }
+    var feedback by remember { mutableStateOf<String?>(null) }
 
-    EvidenceWorkflowPage(onDismissRequest = onClose, title = { EvidenceDialogTitle("Teach Guardian") }, text = {
+    fun updateLearning(assessment: GuardianAssessment?) {
+        val source = record ?: return
+        val approved = excerpt.trim()
+        if (busy || approved.isBlank()) return
+        busy = true
+        feedback = null
+        scope.launch {
+            val saved = withContext(Dispatchers.IO) {
+                runCatching {
+                    var committed = false
+                    access.withRetirementBoundary {
+                        access.checkCurrent()
+                        val current = access.store.read().evidence().single { it.id() == source.id() }
+                        check(current.ocr().isNotEmpty() && approved in current.transcript())
+                        val store = GuardianCaptureStore(context)
+                        committed = if (assessment == null) store.forgetExample(approved) else store.teach(approved, assessment)
+                    }
+                    committed
+                }.getOrDefault(false)
+            }
+            val published = access.publishIfCurrent {
+                busy = false
+                feedback = when {
+                    !saved && assessment == null -> "No saved example matches this OCR passage."
+                    !saved -> "Could not save this example. Use at least four words from the current OCR transcript."
+                    assessment == null -> "Example removed from future local estimates."
+                    else -> "Local example saved as ${assessment.label}. Similar passages can affect future estimates."
+                }
+            }
+            if (saved && published) GuardianCapture.refresh(context)
+        }
+    }
+
+    GuardianTheme {
+        EvidenceWorkflowPage(onDismissRequest = onClose, title = { EvidenceDialogTitle("Teach Guardian") }, text = {
         LazyColumn(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             item {
-                Text("Choose one selected Primary Evidence Locker record. Review an excerpt and explicitly label it.")
+                Text("Choose a screenshot or incident record. Keep the conversation lines in order, review the OCR excerpt and choose its label.")
                 Text("Nova Brain stores encrypted phrase features on this device.")
             }
             if (candidates.isEmpty()) item { Text("Run or review OCR on a selected record first.") }
@@ -63,38 +98,17 @@ internal fun EvidenceGuardianLearning(
                     TextButton(enabled = !busy, onClick = { record = null; excerpt = ""; label = null }) {
                         Text("Choose another record")
                     }
-                    if (failed) Text("Could not save this example. Use at least four words from the current OCR transcript.",
-                        color = MaterialTheme.colorScheme.error)
+                    TextButton(enabled = !busy && excerpt.isNotBlank(), onClick = { updateLearning(null) }) {
+                        Text("Remove matching local example")
+                    }
+                    feedback?.let { Text(it) }
                 }
             }
         }
     }, confirmButton = {
         Button(enabled = !busy && record != null && label != null && excerpt.isNotBlank(), onClick = {
-            val source = record ?: return@Button
-            val assessment = label ?: return@Button
-            val approved = excerpt.trim()
-            busy = true
-            failed = false
-            scope.launch {
-                val saved = withContext(Dispatchers.IO) {
-                    runCatching {
-                        check(access.owner == EvidenceCatalog.Owner.PRIMARY)
-                        val current = access.store.read().evidence().single { it.id() == source.id() }
-                        check(current.ocr().isNotEmpty() && approved in current.transcript())
-                        var committed = false
-                        access.withRetirementBoundary {
-                            access.checkCurrent()
-                            committed = GuardianCaptureStore(context).teach(approved, assessment)
-                        }
-                        committed
-                    }.getOrDefault(false)
-                }
-                val published = access.publishIfCurrent {
-                    busy = false
-                    if (saved) onClose() else failed = true
-                }
-                if (saved && published) GuardianCapture.refresh(context)
-            }
+            label?.let(::updateLearning)
         }) { Text("Save local example") }
-    }, dismissButton = { TextButton(onClick = onClose) { Text("Cancel") } })
+    }, dismissButton = { TextButton(onClick = onClose) { Text("Close") } })
+    }
 }

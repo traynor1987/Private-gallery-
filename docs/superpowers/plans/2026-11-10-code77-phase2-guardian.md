@@ -58,3 +58,17 @@ The owner reproduced a visible failure in Samsung's notification panel. The old 
 The corrected flow posts a tagged NovaOS test notification, then cancels the newest still-active matching test notification by its exact tag and ID. It checks Android's active notifications after the request. Other notifications with the same integer ID are left alone. A separate Android test exercises listener cancellation of a harmless shell fixture by its exact key, with callback and active-list verification. No automatic external dismissal is enabled.
 
 On the Fold, post the test notification, note it in the shade, then tap Test dismissal of NovaOS notification. Check both the diagnostic result and the actual Samsung panel. Repeat with DND off and on, locked where possible, and on both displays. A prior test result does not close the physical acceptance gate.
+
+## Fold acceptance for external cancellation
+
+The owner confirmed the previous NovaOS-owned notification test on the physical Fold. External cancellation is a separate check. This test uses a harmless Android shell fixture and leaves personal notifications out of the test.
+
+1. Connect the Fold to an authorised ADB host with Notification Compatibility open in the isolated Guardian build.
+2. Run `adb shell cmd notification post -t Nova-Guardian-fixture nova-guardian-fold-dismissal Harmless-Nova-Guardian-test`.
+3. Open Samsung’s notification panel and confirm the fixture is visible. Back in Notification Compatibility, tap **Dismiss harmless external fixture**. Check the exact-key removal result and open Samsung’s panel again to confirm the fixture has disappeared.
+4. Record the panel result in the app only after observing it. This unlocks a separate, initially off Main WhatsApp consent control. It does not enable automatic Panic.
+5. For real acceptance after deliberate opt-in, have one consenting person send a harmless message to each WhatsApp profile. Verify Main appears in the encrypted Inbox and disappears from the panel, while Friends remains in the panel. Check a grouped message and an updated notification. If the profile, message metadata or revision is ambiguous, Guardian leaves the notification in place.
+
+Guardian only requests Main dismissal for clearable personal MessagingStyle notifications with a confirmed archive write covering every entry and at least one new entry. It excludes group summaries, calls and locked-device events. Android can repost a notification after cancellation. App-side status reports the active-list check, while the Samsung panel remains the device acceptance check.
+
+Open **Guardian Inbox → Inbox settings → Share safe diagnostic view** to preview and share the current section using the real Inbox layout. Export includes section counts and redacted card styling. Sender names, dates, message text and archive identifiers are omitted. The normal secure window stays active.

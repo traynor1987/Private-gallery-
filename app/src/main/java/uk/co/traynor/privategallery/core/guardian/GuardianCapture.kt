@@ -1,6 +1,8 @@
 package uk.co.traynor.privategallery.core.guardian
 
 import android.content.Context
+import android.os.Handler
+import android.os.Looper
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
@@ -34,6 +36,7 @@ internal object GuardianCapture {
         manage(context) { app, _ ->
             check(!enabled || GuardianNotificationListener.hasAccess(app))
             check(prefs(app).edit().putBoolean("enabled", enabled).commit())
+            if (!enabled) GuardianNotificationListener.setAutomaticDismissal(app, false)
         }
     }
 
@@ -47,7 +50,7 @@ internal object GuardianCapture {
         manage(context) { _, store -> store.clear() }
     }
 
-    fun record(context: Context, event: GuardianCaptureEvent) {
+    fun record(context: Context, event: GuardianCaptureEvent, onDurable: (() -> Unit)? = null) {
         val app = context.applicationContext
         val expected = generation.get()
         if (pendingEvents.incrementAndGet() > 16) {
@@ -64,7 +67,7 @@ internal object GuardianCapture {
                 val result = runCatching {
                     val store = GuardianCaptureStore(app)
                     val now = guardianInboxClock(app)
-                    store.append(event, days, now.wall) to store.inboxCounts(days, now)
+                    store.append(event, days, now.wall, assess = onDurable == null) to store.inboxCounts(days, now)
                 }
                 val (captured, counts) = result.getOrNull() ?: (null to null)
                 status.value = GuardianCaptureHealth(
@@ -73,9 +76,29 @@ internal object GuardianCapture {
                     inbox = counts,
                     learningCount = runCatching { GuardianCaptureStore(app).learningCount() }.getOrNull(),
                 )
+                if (captured != null && onDurable != null) {
+                    Handler(Looper.getMainLooper()).post {
+                        if (generation.get() == expected && isEnabled(app) && GuardianNotificationListener.hasAccess(app)) {
+                            if (captured.allDurable) onDurable()
+                            manage(app) { _, store ->
+                                if (generation.get() == expected && isEnabled(app)) {
+                                    store.assessCaptured(event, days, guardianInboxClock(app))
+                                }
+                            }
+                        }
+                    }
+                }
             } finally {
                 pendingEvents.decrementAndGet()
             }
+        }
+    }
+
+    fun verifyFixture(context: Context, done: (Boolean) -> Unit) {
+        val app = context.applicationContext
+        worker.execute {
+            val secured = runCatching { GuardianCaptureStore(app).verifyFixture() }.getOrDefault(false)
+            Handler(Looper.getMainLooper()).post { done(secured) }
         }
     }
 

@@ -108,8 +108,14 @@ internal class GuardianNotificationListener : NotificationListenerService() {
         val conversation = notification.shortcutId?.takeIf { it.isNotBlank() }?.let { "shortcut:$it" }
             ?: "notification:${sbn.key}"
         if (capture) {
-            GuardianCapture.record(this, GuardianCaptureEvent(serial, conversation, System.currentTimeMillis(),
-                estimates.map { GuardianCaptureEntry(it.time, it.sender, it.text.toString()) }))
+            val event = GuardianCaptureEvent(serial, conversation, System.currentTimeMillis(), captureEntries(notification))
+            val canDismiss = guardianMayDismissMessage(
+                automaticDismissalEnabled(this), sbn.packageName, account, summary, call,
+                true, sbn.isClearable, notification.category,
+            ) && !locked
+            GuardianCapture.record(this, event, if (canDismiss) {
+                { dismissCaptured(sbn, event.entries) }
+            } else null)
         }
         if (session != null) {
             val ranking = Ranking()
@@ -120,6 +126,42 @@ internal class GuardianNotificationListener : NotificationListenerService() {
                 summary, conversation, estimates, locked)
             status.value = status.value.copy(filter = filter, results = session.results)
         }
+    }
+
+    private fun captureEntries(notification: Notification): List<GuardianCaptureEntry> = runCatching {
+        notification.extras.getParcelableArray(Notification.EXTRA_MESSAGES, Bundle::class.java)
+            ?.let(Notification.MessagingStyle.Message::getMessagesFromBundleArray).orEmpty().map { entry ->
+                val sender = entry.senderPerson
+                GuardianCaptureEntry(entry.timestamp, sender?.key ?: sender?.uri ?: sender?.name?.toString().orEmpty(),
+                    entry.text?.toString().orEmpty(), sender?.name?.toString())
+            }
+    }.getOrDefault(emptyList())
+
+    private fun dismissCaptured(original: StatusBarNotification, captured: List<GuardianCaptureEntry>) {
+        if (connectedListener !== this || !automaticDismissalEnabled(this) || !hasAccess(this) ||
+            !GuardianCapture.isEnabled(this) || captured.isEmpty()) return
+        val keyguard = getSystemService(KeyguardManager::class.java) ?: return
+        if (keyguard.isDeviceLocked || keyguard.isKeyguardLocked) return
+        val exact = runCatching { getActiveNotifications(arrayOf(original.key)).singleOrNull() }.getOrNull()
+            ?: return
+        if (exact.key != original.key || exact.postTime != original.postTime || exact.uid != original.uid ||
+            exact.user != Process.myUserHandle() || exact.packageName != GUARDIAN_WHATSAPP ||
+            exact.opPkg != GUARDIAN_WHATSAPP || !exact.isClearable || exact.notification.category != Notification.CATEGORY_MESSAGE ||
+            exact.notification.flags and (Notification.FLAG_GROUP_SUMMARY or Notification.FLAG_ONGOING_EVENT) != 0 ||
+            captured != captureEntries(exact.notification)) return
+
+        val requested = runCatching { cancelNotification(exact.key) }.isSuccess
+        status.value = status.value.copy(mainDismissal = if (requested) "Requested · checking Android"
+            else "Android rejected the request")
+        if (requested) handler.postDelayed({
+            if (connectedListener !== this || !hasAccess(this)) return@postDelayed
+            val active = runCatching { getActiveNotifications(arrayOf(exact.key)).any { it.key == exact.key } }.getOrNull()
+            status.value = status.value.copy(mainDismissal = when (active) {
+                true -> "Still active or reposted"
+                false -> "Exact key absent from Android"
+                null -> "Removal could not be checked"
+            })
+        }, 1_000)
     }
 
     private fun receiveSynthetic(sbn: StatusBarNotification, rankingMap: RankingMap) {
@@ -235,9 +277,32 @@ internal class GuardianNotificationListener : NotificationListenerService() {
             )
         }
 
-        /** Instrumented external fixture only. The production UI cannot select external notifications. */
+        const val FOLD_FIXTURE_TAG = "nova-guardian-fold-dismissal"
+        private const val FOLD_FIXTURE_TEXT = "Harmless-Nova-Guardian-test"
+        private const val FOLD_FIXTURE_TITLE = "Nova-Guardian-fixture"
+        private var foldFixtureVerified = false
+
+        private fun dismissalPrefs(context: Context) = context.getSharedPreferences("guardian_main_dismissal", Context.MODE_PRIVATE)
+
+        fun foldDismissalAccepted(context: Context): Boolean = dismissalPrefs(context).getBoolean("fold_accepted", false)
+
+        fun automaticDismissalEnabled(context: Context): Boolean =
+            foldDismissalAccepted(context) && dismissalPrefs(context).getBoolean("main_enabled", false)
+
+        fun confirmFoldDismissal(context: Context): Boolean =
+            foldFixtureVerified && hasAccess(context) && status.value.connected &&
+                dismissalPrefs(context).edit().putBoolean("fold_accepted", true).commit()
+
+        fun setAutomaticDismissal(context: Context, enabled: Boolean): Boolean {
+            if (enabled && (!foldDismissalAccepted(context) || !GuardianCapture.isEnabled(context) ||
+                    !hasAccess(context) || !status.value.connected)) return false
+            return dismissalPrefs(context).edit().putBoolean("main_enabled", enabled).commit()
+        }
+
+        /** Only the identified, harmless shell fixture is eligible from the compatibility screen. */
         internal fun dismissExternalTestFixture(context: Context, tag: String): Boolean {
-            if (!BuildConfig.DEBUG || !tag.startsWith(EXTERNAL_FIXTURE_PREFIX) || !hasAccess(context) ||
+            val fold = tag == FOLD_FIXTURE_TAG
+            if ((!fold && (!BuildConfig.DEBUG || !tag.startsWith(EXTERNAL_FIXTURE_PREFIX))) || !hasAccess(context) ||
                 !status.value.connected || synthetic != null || status.value.synthetic == SyntheticResult.DISMISSING
             ) return false
             val listener = connectedListener ?: return false
@@ -245,26 +310,51 @@ internal class GuardianNotificationListener : NotificationListenerService() {
                 listener.activeNotifications.singleOrNull {
                     it.packageName == "com.android.shell" && it.tag == tag &&
                         it.user == Process.myUserHandle() &&
-                        it.notification.flags and Notification.FLAG_GROUP_SUMMARY == 0
+                        it.notification.flags and Notification.FLAG_GROUP_SUMMARY == 0 &&
+                        (!fold || (it.notification.extras.getCharSequence(Notification.EXTRA_TITLE)?.toString() == FOLD_FIXTURE_TITLE &&
+                            it.notification.extras.getCharSequence(Notification.EXTRA_TEXT)?.toString() == FOLD_FIXTURE_TEXT))
                 }
             }.getOrNull() ?: return false
             if (!target.isClearable) return false
             val attempt = ExternalAttempt(target.key)
+            if (fold) foldFixtureVerified = false
             externalAttempt = attempt
             status.value = status.value.copy(synthetic = SyntheticResult.DISMISSING,
-                dismissal = DismissalDiagnostic(true, true, true, "NotificationListenerService · exact key", true))
-            if (runCatching { listener.cancelNotification(target.key) }.isFailure) {
-                dismissalFailed("Android rejected the listener cancellation request.")
-                return false
+                foldFixtureVerified = if (fold) false else status.value.foldFixtureVerified,
+                dismissal = DismissalDiagnostic(true, true, false, "NotificationListenerService · exact key", true))
+            GuardianCapture.verifyFixture(context) { secured ->
+                if (externalAttempt !== attempt) return@verifyFixture
+                val active = runCatching { listener.getActiveNotifications(arrayOf(target.key)).singleOrNull() }.getOrNull()
+                if (!secured || connectedListener !== listener || !hasAccess(context) || active == null ||
+                    active.key != target.key || active.postTime != target.postTime || active.user != target.user ||
+                    active.packageName != target.packageName || !active.isClearable ||
+                    active.notification.flags and Notification.FLAG_GROUP_SUMMARY != 0 ||
+                    active.notification.extras.getCharSequence(Notification.EXTRA_TEXT)?.toString() !=
+                        target.notification.extras.getCharSequence(Notification.EXTRA_TEXT)?.toString()) {
+                    dismissalFailed(if (!secured) "The encrypted fixture receipt could not be verified."
+                        else "The external fixture changed or the listener disconnected.")
+                    return@verifyFixture
+                }
+                status.value = status.value.copy(dismissal = status.value.dismissal.copy(requested = true))
+                if (runCatching { listener.cancelNotification(target.key) }.isFailure) {
+                    dismissalFailed("Android rejected the listener cancellation request.")
+                    return@verifyFixture
+                }
+                verifyDismissal(
+                    active = { listener.getActiveNotifications(arrayOf(target.key)).any { it.key == target.key } },
+                    removed = { attempt.removedByListener },
+                    onRemoved = {
+                        if (fold) {
+                            foldFixtureVerified = true
+                            status.value = status.value.copy(foldFixtureVerified = true)
+                        }
+                    },
+                )
             }
-            verifyDismissal(
-                active = { listener.getActiveNotifications(arrayOf(target.key)).any { it.key == target.key } },
-                removed = { attempt.removedByListener },
-            )
             return true
         }
 
-        private fun verifyDismissal(active: () -> Boolean, removed: () -> Boolean) {
+        private fun verifyDismissal(active: () -> Boolean, removed: () -> Boolean, onRemoved: () -> Unit = {}) {
             val deadline = SystemClock.elapsedRealtime() + 5_000L
             fun checkActive() {
                 if (status.value.synthetic != SyntheticResult.DISMISSING) return
@@ -273,6 +363,7 @@ internal class GuardianNotificationListener : NotificationListenerService() {
                 if (present == false && removed()) {
                     externalAttempt = null
                     finishSynthetic(SyntheticResult.DISMISSED)
+                    onRemoved()
                 } else if (SystemClock.elapsedRealtime() >= deadline) {
                     dismissalFailed(if (present == true) "The exact notification remains active."
                         else "Removal could not be confirmed by Android.")
@@ -338,6 +429,8 @@ internal class GuardianNotificationListener : NotificationListenerService() {
             if (externalAttempt != null) dismissalFailed("Notification listener disconnected.")
             if (synthetic != null) finishSynthetic(SyntheticResult.DISCONNECTED)
             if (!hasAccess(context)) {
+                foldFixtureVerified = false
+                setAutomaticDismissal(context, false)
                 if (GuardianCapture.isEnabled(context)) GuardianCapture.setEnabled(context, false)
                 handler.removeCallbacks(timeout)
                 probe = null
@@ -359,6 +452,8 @@ internal data class ListenerProbeStatus(
     val syntheticDndMatch: Boolean? = null,
     val calls: Map<GuardianCallSource, GuardianCallObservations> = emptyMap(),
     val dismissal: DismissalDiagnostic = DismissalDiagnostic(),
+    val foldFixtureVerified: Boolean = false,
+    val mainDismissal: String? = null,
 )
 
 internal data class DismissalDiagnostic(

@@ -17,7 +17,7 @@ import javax.crypto.KeyGenerator
 import javax.crypto.SecretKey
 import javax.crypto.spec.GCMParameterSpec
 
-internal data class GuardianCaptureEntry(val time: Long, val sender: String, val text: String)
+internal data class GuardianCaptureEntry(val time: Long, val sender: String, val text: String, val displayName: String? = null)
 
 internal data class GuardianCaptureEvent(
     val profileSerial: Long,
@@ -26,11 +26,12 @@ internal data class GuardianCaptureEvent(
     val entries: List<GuardianCaptureEntry>,
 )
 
-internal data class GuardianCaptureResult(val added: Int, val retained: Int, val partial: Boolean)
+internal data class GuardianCaptureResult(val added: Int, val retained: Int, val partial: Boolean, val allDurable: Boolean = false)
 
 internal data class GuardianInboxRow(
     val id: String, val time: Long, val section: GuardianInboxSection, val remainingMillis: Long,
     val assessment: GuardianAssessment? = null,
+    val senderName: String? = null,
 )
 
 internal enum class GuardianInboxAction { READY, HOLD, ARCHIVE, DELETE }
@@ -41,13 +42,32 @@ internal fun guardianInboxClock(context: Context) = GuardianInboxClock(
 )
 
 /** Private, bounded archive. The capture phase exposes aggregate counts only. */
-internal class GuardianCaptureStore private constructor(private val context: Context, private val training: Boolean) {
+internal class GuardianCaptureStore private constructor(private val context: Context, private val training: Boolean, private val fixture: Boolean = false) {
     constructor(context: Context) : this(context.applicationContext, false)
 
-    private val destination = File(context.noBackupFilesDir, if (training) "guardian-learning-v1.enc" else ARCHIVE_NAME)
-    private val alias = if (training) "nova-guardian-learning-v1" else KEY_ALIAS
-    private val aad = if (training) "NovaOS Guardian learning v1".toByteArray(Charsets.UTF_8) else AAD
+    private val destination = File(context.noBackupFilesDir, when { fixture -> "guardian-fixture-v1.enc"; training -> "guardian-learning-v1.enc"; else -> ARCHIVE_NAME })
+    private val alias = when { fixture -> "nova-guardian-fixture-v1"; training -> "nova-guardian-learning-v1"; else -> KEY_ALIAS }
+    private val aad = when {
+        fixture -> "NovaOS Guardian fixture v1".toByteArray(Charsets.UTF_8)
+        training -> "NovaOS Guardian learning v1".toByteArray(Charsets.UTF_8)
+        else -> AAD
+    }
     private val atomic = AtomicFile(destination)
+
+    fun verifyFixture(): Boolean = synchronized(lock) {
+        val receipt = GuardianCaptureStore(context, training = false, fixture = true)
+        val now = System.currentTimeMillis()
+        val text = "Harmless Nova Guardian diagnostic"
+        val event = GuardianCaptureEvent(0L, "diagnostic", now,
+            listOf(GuardianCaptureEntry(now, "fixture", text)))
+        try {
+            receipt.clear()
+            val stored = receipt.append(event, 7, now, assess = false)
+            stored.allDurable && receipt.read().singleOrNull()?.optString("text") == text
+        } finally {
+            receipt.clear()
+        }
+    }
 
     fun teach(text: String, assessment: GuardianAssessment): Boolean = synchronized(lock) {
         val features = guardianFeatures(text)
@@ -93,7 +113,7 @@ internal class GuardianCaptureStore private constructor(private val context: Con
         assessment
     }
 
-    fun append(event: GuardianCaptureEvent, days: Int, now: Long): GuardianCaptureResult = synchronized(lock) {
+    fun append(event: GuardianCaptureEvent, days: Int, now: Long, assess: Boolean = true): GuardianCaptureResult = synchronized(lock) {
         require(event.profileSerial >= 0 && event.conversation.length in 1..512 && event.observedAt <= now)
         val cutoff = cutoff(days, now)
         val stored = read()
@@ -110,7 +130,8 @@ internal class GuardianCaptureStore private constructor(private val context: Con
             val row = JSONObject().put("id", id).put("profile", event.profileSerial)
                 .put("conversation", event.conversation).put("sender", entry.sender)
                 .put("messageAt", entry.time).put("capturedAt", event.observedAt).put("text", entry.text)
-            if (id !in existing && id !in incoming && examples.isNotEmpty()) {
+            guardianSenderDisplayName(entry.displayName)?.let { row.put("displayName", it) }
+            if (assess && id !in existing && id !in incoming && examples.isNotEmpty()) {
                 val assessment = classifyGuardian(entry.text, examples, contextFor(row, live + incoming.values))
                 row.put("assessment", assessment.name).put("assessmentVersion", 1)
             }
@@ -121,7 +142,26 @@ internal class GuardianCaptureStore private constructor(private val context: Con
         val ids = retained.mapTo(HashSet()) { it.getString("id") }
         val added = incoming.keys.count { it in ids && it !in existing }
         if (added > 0 || stored.size != live.size) write(retained)
-        GuardianCaptureResult(added, retained.count { !it.optBoolean("deleted") }, candidates.size != event.entries.size)
+        val readable = retained.filterNot { it.optBoolean("deleted") }.mapTo(HashSet()) { it.getString("id") }
+        val partial = candidates.size != event.entries.size
+        GuardianCaptureResult(added, readable.size, partial,
+            added > 0 && !partial && incoming.keys.all { it in readable })
+    }
+
+    fun assessCaptured(event: GuardianCaptureEvent, days: Int, now: GuardianInboxClock) = synchronized(lock) {
+        val learned = examples()
+        if (learned.isEmpty()) return@synchronized
+        val ids = event.entries.mapTo(HashSet()) { identity(event, it) }
+        val rows = retainedRows(days, now.wall)
+        var changed = false
+        for (row in rows) {
+            if (row.getString("id") !in ids || row.optBoolean("deleted") || row.has("assessment") ||
+                inboxRow(row, now).section == GuardianInboxSection.COOLING) continue
+            val assessment = classifyGuardian(row.getString("text"), learned, contextFor(row, rows))
+            row.put("assessment", assessment.name).put("assessmentVersion", 1)
+            changed = true
+        }
+        if (changed) write(rows)
     }
 
     fun summary(days: Int, now: Long): Int = synchronized(lock) { retainedRows(days, now).count { !it.optBoolean("deleted") } }
@@ -201,7 +241,8 @@ internal class GuardianCaptureStore private constructor(private val context: Con
         return GuardianInboxRow(row.getString("id"), row.getLong("messageAt"),
             guardianInboxSection(hold, review == "ready", now, review == "archived"), hold?.remaining(now) ?: 0L,
             if (row.optInt("assessmentVersion") == 1)
-                GuardianAssessment.entries.firstOrNull { it.name == row.optString("assessment") } else null)
+                GuardianAssessment.entries.firstOrNull { it.name == row.optString("assessment") } else null,
+            guardianSenderDisplayName(row.optString("displayName")))
     }
 
     fun clear() = synchronized(lock) {

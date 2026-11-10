@@ -147,6 +147,8 @@ internal fun EvidenceLocker(controller:EvidenceController,onClose:()->Unit,onImp
         TextButton(enabled=!busy,onClick={incidentForm(incident)}){Text("Edit")}
         TextButton(enabled=!busy,onClick={change(if(incident.archived())"Restored"else"Archived"){it.archive(incident.id(),!incident.archived(),EvidenceController.now())}}){Text(if(incident.archived())"Restore"else"Archive")}
         TextButton(enabled=!busy&&incident.evidenceIds().isNotEmpty(),onClick={onAi(incident.evidenceIds())}){Text("AI analysis")};TextButton(enabled=!busy&&incident.evidenceIds().isNotEmpty(),onClick={onAiReport(incident.evidenceIds())}){Text("Behaviour report*")}
+        if(controller.access.owner==EvidenceCatalog.Owner.PRIMARY)
+         TextButton(enabled=!busy&&incident.evidenceIds().isNotEmpty(),onClick={choice="Teach Guardian incident"}){Text("Teach Guardian")}
         TextButton(onClick={toolsExpanded=!toolsExpanded}){Text(if(toolsExpanded)"Hide incident tools" else "Incident tools")}
         if(toolsExpanded){
          TextButton(enabled=!busy,onClick={exportSelection=EvidenceExportSelection(listOf(incident.id()),emptyList())}){Text("Export")}
@@ -365,6 +367,10 @@ internal fun EvidenceLocker(controller:EvidenceController,onClose:()->Unit,onImp
  if(choice=="Sanctuary learning")EvidenceSanctuaryLearning68(controller,catalog?.evidence().orEmpty().filter{it.id() in selected}){choice=null}
  if(choice=="Teach Guardian"&&controller.access.owner==EvidenceCatalog.Owner.PRIMARY)
   EvidenceGuardianLearning(controller,catalog?.evidence().orEmpty().filter{it.id() in selected}){choice=null}
+ if(choice=="Teach Guardian incident"&&controller.access.owner==EvidenceCatalog.Owner.PRIMARY) {
+  val records=catalog?.evidence().orEmpty().associateBy{it.id()}
+  EvidenceGuardianLearning(controller,incident?.evidenceIds().orEmpty().mapNotNull(records::get)){choice=null}
+ }
  if(more)GalleryAlertDialog(onDismissRequest={more=false},title={EvidenceDialogTitle("Evidence tools")},text={
   Column {
    TextButton(enabled=selected.isNotEmpty()&&selected.size<=128,onClick={more=false;choice="Sanctuary learning"}){Text("Prepare Sanctuary learning")}
@@ -376,7 +382,7 @@ internal fun EvidenceLocker(controller:EvidenceController,onClose:()->Unit,onImp
  },confirmButton={TextButton(onClick={more=false}){Text("Done")}},
  properties=DialogProperties(securePolicy=SecureFlagPolicy.SecureOn))
  exportSelection?.let{initial->if(catalog!=null)EvidenceExportSelectionDialog(catalog,initial,onClose={exportSelection=null},onContinue={selection->exportSelection=null;onExport(selection)})}
- choice?.takeIf{it !in setOf("Import","Connect collections","Review queue","Sanctuary learning","Teach Guardian")}?.let{kind->
+ choice?.takeIf{it !in setOf("Import","Connect collections","Review queue","Sanctuary learning","Teach Guardian","Teach Guardian incident")}?.let{kind->
   val options=catalog?.incidents()?.filter{!it.archived()&&(kind !in listOf("Merge","Move")||it.id()!=incidentId)}?.map{it.id() to it.title()}.orEmpty()
   GalleryAlertDialog(onDismissRequest={choice=null},title={EvidenceDialogTitle(when(kind){"Merge"->"Merge this incident into…";else->"Choose incident"})},text={LazyColumn(Modifier.heightIn(max=400.dp)){items(options,key={it.first}){(id,name)->TextButton(onClick={
    choice=null;when(kind){"Merge"->{val source=incidentId;confirmation="Merge this incident into $name? Source incident will be archived and source lineage retained." to {if(source!=null)change("Incidents merged"){it.merge(id,listOf(source),EvidenceController.now())};incidentId=id}};"Edit suggestion target"->{val suggestion=suggestionEdit;suggestionEdit=null;if(suggestion!=null)confirmation="Apply the edited suggestion to $name? Only evidence references will be linked." to {change("Owner-edited suggestion applied"){it.rejectSuggestion(suggestion.id(),EvidenceController.now()).assign(suggestion.evidenceIds(),id,false,EvidenceController.now())}}};else->{val ids=selected.toList();change("Evidence assigned"){it.assign(ids,id,kind=="Move",EvidenceController.now())};selected=emptySet()}}

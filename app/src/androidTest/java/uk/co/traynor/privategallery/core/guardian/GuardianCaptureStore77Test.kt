@@ -40,6 +40,36 @@ class GuardianCaptureStore77Test {
         }
     }
 
+    @Test fun verifiedPersistenceRequiresEveryEntryAndNewContent() {
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        val now = guardianInboxClock(context)
+        val store = GuardianCaptureStore(context)
+        store.clear()
+        store.resetLearning()
+        try {
+            val text = "you need to arrive here right now"
+            val first = GuardianCaptureEntry(now.wall - 2, "private-key", text, "Synthetic sender")
+            val event = GuardianCaptureEvent(0, "test", now.wall, listOf(first))
+            assertTrue(store.teach(text, GuardianAssessment.UPSETTING))
+            assertTrue(store.append(event, 7, now.wall, assess = false).allDurable)
+            val reopened = GuardianCaptureStore(context)
+            assertEquals("Synthetic sender", reopened.inboxRows(7, now).single().senderName)
+            assertNull(reopened.inboxRows(7, now).single().assessment)
+            assertFalse(reopened.append(event, 7, now.wall, assess = false).allDurable)
+            val next = first.copy(time = now.wall - 1, text = "a new private message")
+            val partial = event.copy(entries = listOf(first, next, next.copy(sender = "")))
+            assertFalse(reopened.append(partial, 7, now.wall, assess = false).allDurable)
+            reopened.assessCaptured(event, 7, now)
+            assertEquals(GuardianAssessment.UPSETTING,
+                reopened.inboxRows(7, now).single { it.time == first.time }.assessment)
+            val bytes = File(context.noBackupFilesDir, GuardianCaptureStore.ARCHIVE_NAME).readBytes()
+            assertFalse(bytes.toString(Charsets.UTF_8).contains("Synthetic sender"))
+        } finally {
+            store.clear()
+            store.resetLearning()
+        }
+    }
+
     @Test fun inboxCountsAndHoldsSurviveReopeningWithoutEarlyReveal() {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         val now = guardianInboxClock(context)

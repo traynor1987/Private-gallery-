@@ -22,4 +22,28 @@ class GuardianCapturePolicyTest {
         assertFalse(canCaptureGuardianNotification(true, "com.whatsapp", ProbeAccount.MAIN, false, call = true))
         assertFalse(canCaptureGuardianNotification(true, "com.android.phone", ProbeAccount.MAIN, false))
     }
+
+    @Test fun dismissalRequiresAnEnabledClearablePersonalMessageWithVerifiedIdentity() {
+        fun allowed(enabled: Boolean = true, account: ProbeAccount = ProbeAccount.MAIN,
+            summary: Boolean = false, call: Boolean = false, identity: Boolean = true,
+            clearable: Boolean = true, category: String? = "msg", packageName: String = GUARDIAN_WHATSAPP,
+        ) = guardianMayDismissMessage(enabled, packageName, account, summary, call, identity, clearable, category)
+        assertTrue(allowed())
+        assertFalse(allowed(enabled = false))
+        assertFalse(allowed(account = ProbeAccount.FRIENDS))
+        assertFalse(allowed(account = ProbeAccount.UNRESOLVED))
+        assertFalse(allowed(summary = true))
+        assertFalse(allowed(call = true))
+        assertFalse(allowed(identity = false))
+        assertFalse(allowed(clearable = false))
+        assertFalse(allowed(category = null))
+        assertFalse(allowed(category = "alarm"))
+        assertFalse(allowed(packageName = "android"))
+    }
+
+    @Test fun senderDisplayNamesRejectEmptyAndFormattingOnlyValues() {
+        assertNull(guardianSenderDisplayName(null))
+        assertNull(guardianSenderDisplayName("\u202E\n  "))
+        assertEquals("Alice", guardianSenderDisplayName(" Alice\u202E "))
+    }
 }

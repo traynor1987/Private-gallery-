@@ -27,3 +27,8 @@ internal data class GuardianInboxCounts(
     val pending: Int, val ready: Int, val cooling: Int, val protected: Int, val history: Int,
     val refreshAfterMillis: Long?,
 )
+
+/** Only Android's explicit MessagingStyle Person name may enter this field. */
+internal fun guardianSenderDisplayName(name: String?): String? = name
+    ?.filterNot { it.isISOControl() || Character.getType(it) == Character.FORMAT.toInt() }
+    ?.trim()?.take(100)?.takeIf(String::isNotBlank)

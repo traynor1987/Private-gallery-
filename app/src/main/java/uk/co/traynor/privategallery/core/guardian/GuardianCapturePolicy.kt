@@ -28,3 +28,9 @@ internal fun guardianCallSource(
     personal && packageName == defaultDialer -> GuardianCallSource.PHONE
     else -> null
 }
+
+internal fun guardianMayDismissMessage(
+    enabled: Boolean, packageName: String, account: ProbeAccount, summary: Boolean,
+    call: Boolean, personalUidMatches: Boolean, clearable: Boolean, category: String?,
+): Boolean = canCaptureGuardianNotification(enabled, packageName, account, summary, call) &&
+    personalUidMatches && clearable && category == "msg"

@@ -2,6 +2,7 @@ package uk.co.traynor.privategallery.launcher
 
 import android.app.Activity
 import android.app.KeyguardManager
+import android.content.ClipData
 import android.content.ComponentName
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -27,6 +28,11 @@ import androidx.compose.material.icons.outlined.Tune
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.graphics.asAndroidBitmap
+import androidx.compose.ui.graphics.layer.drawLayer
+import androidx.compose.ui.graphics.rememberGraphicsLayer
+import androidx.core.content.FileProvider
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.window.DialogProperties
@@ -40,8 +46,8 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import uk.co.traynor.privategallery.core.guardian.*
-import uk.co.traynor.privategallery.ui.PrivateGalleryTheme
-import uk.co.traynor.privategallery.core.ui.AppTheme
+import java.io.File
+import java.util.UUID
 import java.text.DateFormat
 import java.util.Date
 
@@ -56,6 +62,9 @@ class GuardianInboxActivity : ComponentActivity() {
     private var busy by mutableStateOf(false)
     private var confirmDelete by mutableStateOf(false)
     private var settingsOpen by mutableStateOf(false)
+    private val privacy by lazy { getSharedPreferences("guardian_inbox_privacy", MODE_PRIVATE) }
+    private var showSenders by mutableStateOf(true)
+    private var diagnostic by mutableStateOf(false)
     private var conversationContext by mutableStateOf(true)
     private var authenticationPending by mutableStateOf(false)
     private var operation: Job? = null
@@ -78,17 +87,22 @@ class GuardianInboxActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        showSenders = privacy.getBoolean("authenticated_sender_names", true)
         window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
         selected = GuardianInboxSection.entries.firstOrNull { it.name == intent.getStringExtra(SECTION) }
             ?: GuardianInboxSection.PENDING
         setContent {
-            PrivateGalleryTheme(AppTheme.DARK) {
-                Surface(Modifier.fillMaxSize(), color = GuardianNavy) {
+            GuardianTheme {
+                Surface(Modifier.fillMaxSize(), color = GuardianNavy, contentColor = GuardianPrimary) {
                     Box(Modifier.fillMaxSize().safeDrawingPadding(), contentAlignment = Alignment.TopCenter) {
-                        Column(Modifier.widthIn(max = 720.dp).fillMaxSize().padding(horizontal = 16.dp)) {
+                        val layer = rememberGraphicsLayer()
+                        Column(Modifier.widthIn(max = 720.dp).fillMaxSize().then(if (diagnostic) Modifier.drawWithContent {
+                            layer.record { this@drawWithContent.drawContent() }
+                            drawLayer(layer)
+                        } else Modifier).padding(horizontal = 16.dp)) {
                             Row(Modifier.fillMaxWidth().padding(vertical = 12.dp),
                                 verticalAlignment = Alignment.CenterVertically) {
-                                IconButton(onClick = ::finish) {
+                                IconButton(onClick = { if (diagnostic) diagnostic = false else finish() }) {
                                     Icon(Icons.AutoMirrored.Outlined.ArrowBack, "Back", tint = GuardianBlue)
                                 }
                                 Column(Modifier.weight(1f)) {
@@ -97,7 +111,7 @@ class GuardianInboxActivity : ComponentActivity() {
                                     Text("Protected by Nova Guardian", color = GuardianMuted,
                                         style = MaterialTheme.typography.bodyMedium)
                                 }
-                                if (authenticated && !deviceLocked()) IconButton(onClick = {
+                                if (authenticated && !deviceLocked() && !diagnostic) IconButton(onClick = {
                                     loadArchive({ store, _, _ -> store.usesConversationContext() }) {
                                         conversationContext = it
                                         settingsOpen = true
@@ -106,7 +120,36 @@ class GuardianInboxActivity : ComponentActivity() {
                                     Icon(Icons.Outlined.Tune, "Inbox settings", tint = GuardianBlue)
                                 }
                             }
-                            if (authenticated && !deviceLocked()) InboxContent()
+                            if (authenticated && !deviceLocked()) {
+                                if (diagnostic) {
+                                    Text("Safe diagnostic preview · names, dates and messages omitted", color = GuardianMuted)
+                                    TextButton(enabled = !busy, onClick = {
+                                        if (canReview() && !busy) {
+                                            busy = true
+                                            operation = lifecycleScope.launch {
+                                                val result = runCatching {
+                                                    val bitmap = layer.toImageBitmap().asAndroidBitmap()
+                                                    withContext(Dispatchers.IO) { diagnosticImage(bitmap) }
+                                                }
+                                                if (!canReview() || !diagnostic) return@launch
+                                                busy = false
+                                                result.onSuccess { file ->
+                                                    val uri = FileProvider.getUriForFile(this@GuardianInboxActivity,
+                                                        "$packageName.fileprovider", file)
+                                                    val send = Intent(Intent.ACTION_SEND).setType("image/png")
+                                                        .putExtra(Intent.EXTRA_STREAM, uri)
+                                                        .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                                    send.clipData = ClipData.newUri(contentResolver, "Guardian diagnostic", uri)
+                                                    if (runCatching { startActivity(Intent.createChooser(send, "Share safe diagnostic view")) }.isFailure) {
+                                                        failure = "Android could not open the share menu."
+                                                    }
+                                                }.onFailure { failure = "The safe diagnostic image could not be created." }
+                                            }
+                                        }
+                                    }) { Text("Share redacted image") }
+                                }
+                                InboxContent(redacted = diagnostic)
+                            }
                             else Column(Modifier.weight(1f).verticalScroll(rememberScrollState())) {
                                 GuardianCard("Inbox locked") {
                                     Text("Unlock with your device credential to review captured messages.", color = GuardianMuted)
@@ -161,6 +204,7 @@ class GuardianInboxActivity : ComponentActivity() {
         failure = null
         confirmDelete = false
         settingsOpen = false
+        diagnostic = false
     }
 
     private fun canReview() = authenticated && !deviceLocked() &&
@@ -233,10 +277,27 @@ class GuardianInboxActivity : ComponentActivity() {
         }
     }
 
+    private fun diagnosticImage(bitmap: android.graphics.Bitmap): File {
+        val directory = File(cacheDir, "share-copies").apply { mkdirs() }
+        directory.listFiles()?.filter { System.currentTimeMillis() - it.lastModified() >= 15 * 60 * 1000L }
+            ?.forEach { it.delete() }
+        val output = File(directory, "${UUID.randomUUID()}.png")
+        try {
+            output.outputStream().use { check(bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it)) }
+        } catch (failure: Exception) {
+            output.delete()
+            throw failure
+        }
+        return output
+    }
+
     @OptIn(ExperimentalLayoutApi::class)
     @Composable
-    private fun ColumnScope.InboxContent() {
-        val listed = rows.filter { it.section == selected }
+    private fun ColumnScope.InboxContent(redacted: Boolean) {
+        val displayed = if (redacted) rows.mapIndexed { index, row ->
+            GuardianInboxRow("preview-$index", 0, row.section, 0)
+        } else rows
+        val listed = displayed.filter { it.section == selected }
         LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(10.dp),
             contentPadding = PaddingValues(bottom = 18.dp)) {
             item {
@@ -245,11 +306,11 @@ class GuardianInboxActivity : ComponentActivity() {
                         GuardianInboxSection.COOLING to "Cooling")
                     overview.forEach { (section, label) ->
                         Card(onClick = { selected = section }, modifier = Modifier.weight(1f).fillMaxHeight(),
-                            shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = GuardianGlass),
+                            shape = RoundedCornerShape(18.dp), colors = guardianCardColors(),
                             border = BorderStroke(1.dp, if (section == selected) GuardianBlue else GuardianBorder)) {
                             Column(Modifier.fillMaxWidth().padding(horizontal = 5.dp, vertical = 12.dp),
                                 horizontalAlignment = Alignment.CenterHorizontally) {
-                                Text(if (busy && rows.isEmpty()) "…" else rows.count { it.section == section }.toString(),
+                                Text(if (busy && rows.isEmpty()) "…" else displayed.count { it.section == section }.toString(),
                                     style = MaterialTheme.typography.headlineSmall)
                                 Text(label, color = GuardianMuted, style = MaterialTheme.typography.bodySmall)
                             }
@@ -274,24 +335,26 @@ class GuardianInboxActivity : ComponentActivity() {
             }
             items(listed, key = { it.id }) { row ->
                 val cooling = row.section == GuardianInboxSection.COOLING
-                val caption = if (cooling) "Preview held · about ${(row.remainingMillis + 59_999L) / 60_000L} min remaining"
+                val caption = if (redacted) "Preview redacted" else if (cooling) "Preview held · about ${(row.remainingMillis + 59_999L) / 60_000L} min remaining"
                     else "Content hidden until reviewed"
-                Card(onClick = { reveal(row) }, enabled = !busy && !cooling, modifier = Modifier.fillMaxWidth(),
+                Card(onClick = { if (!redacted) reveal(row) }, enabled = !busy && !cooling, modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(18.dp),
-                    colors = CardDefaults.cardColors(containerColor = GuardianGlass, disabledContainerColor = GuardianGlass,
-                        disabledContentColor = MaterialTheme.colorScheme.onSurface)) {
+                    colors = guardianCardColors()) {
                     Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                         Icon(Icons.Outlined.Lock, null, tint = GuardianBlue, modifier = Modifier.size(20.dp))
                         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                            Text("Protected message", style = MaterialTheme.typography.titleMedium)
+                            Text(if (redacted) "Sender redacted" else if (showSenders) row.senderName ?: "Sender unavailable"
+                                else "Protected message", style = MaterialTheme.typography.titleMedium)
+                            Text(if (redacted) "App and profile redacted" else "WhatsApp · Main",
+                                color = GuardianMuted, style = MaterialTheme.typography.bodySmall)
                             Text(caption, color = GuardianMuted, style = MaterialTheme.typography.bodySmall)
                             row.assessment?.let { Text("Local estimate · ${it.label}", color = GuardianMuted,
                                 style = MaterialTheme.typography.bodySmall) }
-                            Text(DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT).format(Date(row.time)),
+                            Text(if (redacted) "Arrival time redacted" else DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT).format(Date(row.time)),
                                 color = GuardianMuted, style = MaterialTheme.typography.bodySmall)
                         }
-                        if (!cooling) Icon(Icons.Outlined.ChevronRight, "Reveal message", tint = GuardianBlue)
+                        if (!cooling) Icon(Icons.Outlined.ChevronRight, if (redacted) null else "Reveal message", tint = GuardianBlue)
                     }
                 }
             }
@@ -304,9 +367,18 @@ class GuardianInboxActivity : ComponentActivity() {
         }
         if (settingsOpen) AlertDialog(
             onDismissRequest = { settingsOpen = false },
-            title = { Text("Nova Brain · Local Only") },
+            title = { Text("Inbox privacy") },
             text = {
-                Column {
+                Column(Modifier.heightIn(max = 400.dp).verticalScroll(rememberScrollState())) {
+                    LauncherToggle("Show sender names after authentication", showSenders) { enabled ->
+                        privacy.edit().putBoolean("authenticated_sender_names", enabled).apply()
+                        showSenders = enabled
+                    }
+                    Text("Guardian Home and pop-ups keep sender names hidden.")
+                    Text("Message details require authentication. Active holds always hide message text.")
+                    TextButton(onClick = { settingsOpen = false; diagnostic = true }) {
+                        Text("Share safe diagnostic view")
+                    }
                     Text("Cloud analysis is unavailable. Reset removes saved learning examples for future assessments.")
                     LauncherToggle("Use recent local conversation context", conversationContext) { enabled ->
                         loadArchive({ store, _, _ -> store.setConversationContext(enabled) }) { conversationContext = enabled }
@@ -326,7 +398,7 @@ class GuardianInboxActivity : ComponentActivity() {
         detail?.let { row ->
             AlertDialog(
                 onDismissRequest = { detail = null; revealed = null; confirmDelete = false },
-                title = { Text(if (confirmDelete) "Delete captured message?" else "Captured message") },
+                title = { Text(if (confirmDelete) "Delete captured message?" else if (showSenders) row.senderName ?: "Captured message" else "Captured message") },
                 text = {
                     if (confirmDelete) Text("Delete this copy from the Guardian archive.")
                     else Column(Modifier.heightIn(max = 360.dp).verticalScroll(rememberScrollState())) {

@@ -103,8 +103,8 @@ class GuardianNotificationCompatibility77Test {
                 manager.cancel("unrelated-group", first.id)
             }
 
-            val fixtureTag = "nova-guardian-shell-fixture-" + java.util.UUID.randomUUID()
-            val postedFixture = shell("cmd notification post -t Guardian-fixture $fixtureTag Harmless-external-test")
+            val fixtureTag = GuardianNotificationListener.FOLD_FIXTURE_TAG
+            val postedFixture = shell("cmd notification post -t Nova-Guardian-fixture $fixtureTag Harmless-Nova-Guardian-test")
             var externalRequested = false
             await("The authorised listener found the shell fixture by exact identity. Shell result: $postedFixture") {
                 if (!externalRequested) instrumentation.runOnMainSync {
@@ -116,8 +116,12 @@ class GuardianNotificationCompatibility77Test {
                 val status = GuardianNotificationListener.state.value
                 status.synthetic == SyntheticResult.DISMISSED &&
                     status.dismissal.mechanism == "NotificationListenerService · exact key" &&
-                    status.dismissal.stillActive == false
+                    status.dismissal.stillActive == false && status.foldFixtureVerified
             }
+            assertFalse("An emulator cancellation does not grant owner acceptance",
+                GuardianNotificationListener.foldDismissalAccepted(context))
+            assertFalse("Main WhatsApp dismissal must still be gated",
+                GuardianNotificationListener.setAutomaticDismissal(context, true))
             assertTrue("Synthetic test callbacks must not become WhatsApp events",
                 GuardianNotificationListener.state.value.results.isEmpty())
             assertEquals("The compatibility test must not change DND", originalDnd, manager.currentInterruptionFilter)

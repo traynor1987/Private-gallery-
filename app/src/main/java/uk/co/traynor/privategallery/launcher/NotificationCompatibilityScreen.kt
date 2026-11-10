@@ -24,10 +24,12 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.lifecycle.Lifecycle
@@ -196,6 +198,42 @@ internal fun NotificationCompatibilityScreen(
             status.syntheticDndMatch?.let { Text(if (it) "Notification matched the current interruption filter."
                 else "Android ranking marks the test notification as suppressed by the interruption filter.") }
             Text("Check the Samsung shade and lock screen to confirm visible behaviour on your Fold.")
+            if (allowPermissionChanges) {
+                var foldAccepted by remember { mutableStateOf(GuardianNotificationListener.foldDismissalAccepted(context)) }
+                var automatic by remember { mutableStateOf(GuardianNotificationListener.automaticDismissalEnabled(context)) }
+                var externalError by remember { mutableStateOf<String?>(null) }
+                val capture by GuardianCapture.state.collectAsState()
+                HorizontalDivider()
+                Text("External notification dismissal", style = MaterialTheme.typography.titleMedium)
+                Text("Use the harmless ADB fixture on your Fold. This test only targets that exact shell notification.")
+                OutlinedButton(enabled = access && status.connected && status.synthetic != SyntheticResult.DISMISSING,
+                    onClick = {
+                        externalError = if (GuardianNotificationListener.dismissExternalTestFixture(context,
+                                GuardianNotificationListener.FOLD_FIXTURE_TAG)) null
+                            else "No matching dismissible test fixture was found."
+                    }) { Text("Dismiss harmless external fixture") }
+                if (status.foldFixtureVerified && !foldAccepted) {
+                    OutlinedButton(onClick = {
+                        foldAccepted = GuardianNotificationListener.confirmFoldDismissal(context)
+                    }) { Text("I saw the fixture disappear from Samsung’s panel") }
+                }
+                if (foldAccepted) {
+                    Text("Main only. Android may still show grouped, unsupported or reposted notifications. Friends notifications are left alone.")
+                    Switch(checked = automatic && capture.enabled && access,
+                        enabled = automatic || (capture.enabled && access && status.connected),
+                        onCheckedChange = {
+                            if (GuardianNotificationListener.setAutomaticDismissal(context, it)) automatic = it
+                            else externalError = "Main WhatsApp dismissal could not be enabled."
+                        },
+                        modifier = Modifier.semantics { contentDescription = "Dismiss Main WhatsApp after encrypted capture" })
+                    Text("Dismiss Main WhatsApp after encrypted capture")
+                }
+                status.mainDismissal?.let { Text("Last Main WhatsApp dismissal · $it") }
+                externalError?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+                LaunchedEffect(access, capture.enabled) {
+                    automatic = GuardianNotificationListener.automaticDismissalEnabled(context)
+                }
+            }
             HorizontalDivider()
             GuardianCaptureControls(allowChanges = allowPermissionChanges, listenerReady = access && status.connected)
             onOpenLauncher?.let { open ->
@@ -215,7 +253,7 @@ private fun GuardianCaptureControls(allowChanges: Boolean, listenerReady: Boolea
 
     Text("Encrypted Main WhatsApp capture", style = MaterialTheme.typography.titleMedium)
     Text("Capture is optional. NovaOS stores supported Main WhatsApp message data on this device. " +
-        "Friends WhatsApp is excluded. Samsung notifications remain visible according to your existing settings.")
+        "Friends WhatsApp is excluded. Dismissal is separately controlled in notification compatibility.")
     Text(when {
         health.busy -> "Checking encrypted archive"
         health.limited -> "Limited Protection · encrypted capture or storage could not be fully verified"
