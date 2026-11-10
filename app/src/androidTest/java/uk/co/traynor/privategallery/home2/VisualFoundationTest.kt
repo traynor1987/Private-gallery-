@@ -114,6 +114,10 @@ class VisualFoundationTest {
         for (targetWidth in listOf(360, 840)) {
             compose.runOnIdle { width = targetWidth }
             for (id in ids) {
+                compose.runOnIdle { assertTrue("Module navigation returned to the catalogue", navigator.moduleId == null) }
+                compose.waitUntil(timeoutMillis = 5_000L) {
+                    compose.onAllNodesWithTag("visual-catalogue-list").fetchSemanticsNodes().size == 1
+                }
                 compose.onNodeWithTag("visual-catalogue-list").performScrollToNode(hasTestTag("visual-module-$id"))
                 compose.onNodeWithTag("visual-module-$id").assertIsDisplayed().assertHeightIsAtLeast(48.dp).performClick()
                 compose.onNodeWithTag("visual-demo-indicator").assertIsDisplayed()
