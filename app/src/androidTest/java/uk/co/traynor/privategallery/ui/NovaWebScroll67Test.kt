@@ -16,6 +16,7 @@ import org.junit.Assert.*
 import org.junit.Rule
 import org.junit.Test
 import java.util.UUID
+import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
 import uk.co.traynor.privategallery.core.browser.v2.*
 import uk.co.traynor.privategallery.core.privateapps.PrivateAppCatalog
@@ -140,12 +141,23 @@ class NovaWebScroll67Test {
                 ParcelFileDescriptor.AutoCloseInputStream(automation.executeShellCommand(command)).use { it.readBytes() }
             }
             sendInput("input tap ${point.x} ${point.y}")
-            val editorFocused = AtomicReference<String>()
-            compose.runOnIdle {
-                first.evaluateJavascript("document.activeElement instanceof HTMLInputElement", editorFocused::set)
+            val editorFocused = AtomicBoolean()
+            val focusProbePending = AtomicBoolean()
+            try {
+                compose.waitUntil(5_000) {
+                    if (!editorFocused.get() && focusProbePending.compareAndSet(false, true)) {
+                        compose.runOnIdle {
+                            first.evaluateJavascript("document.activeElement instanceof HTMLInputElement") { result ->
+                                editorFocused.set(result == "true")
+                                focusProbePending.set(false)
+                            }
+                        }
+                    }
+                    editorFocused.get()
+                }
+            } catch (failure: ComposeTimeoutException) {
+                throw AssertionError("Tap at screen position $point did not focus the retained WebView editor", failure)
             }
-            compose.waitUntil(5_000) { editorFocused.get() != null }
-            assertEquals("Tap must focus the retained WebView editor", "true", editorFocused.get())
             compose.runOnIdle {
                 val ime = first.context.getSystemService(InputMethodManager::class.java)
                 ime.showSoftInput(first, InputMethodManager.SHOW_IMPLICIT)
