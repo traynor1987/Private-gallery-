@@ -251,9 +251,9 @@ private fun GuardianCaptureControls(allowChanges: Boolean, listenerReady: Boolea
     var confirmClear by remember { mutableStateOf(false) }
     LaunchedEffect(context) { GuardianCapture.refresh(context) }
 
-    Text("Encrypted Main WhatsApp capture", style = MaterialTheme.typography.titleMedium)
-    Text("Capture is optional. NovaOS stores supported Main WhatsApp message data on this device. " +
-        "Friends WhatsApp is excluded. Dismissal is separately controlled in notification compatibility.")
+    Text("Encrypted monitored contact capture", style = MaterialTheme.typography.titleMedium)
+    Text("Capture is optional. Select conversations under Monitored Contacts in the authenticated Guardian Inbox. " +
+        "Supported Main WhatsApp and SMS/MMS messages stay on this device. Friends WhatsApp is excluded.")
     Text(when {
         health.busy -> "Checking encrypted archive"
         health.limited -> "Limited Protection · encrypted capture or storage could not be fully verified"
@@ -279,8 +279,8 @@ private fun GuardianCaptureControls(allowChanges: Boolean, listenerReady: Boolea
     }
     if (consent && allowChanges) AlertDialog(
         onDismissRequest = { consent = false },
-        title = { Text("Capture Main WhatsApp notifications?") },
-        text = { Text("NovaOS can store supported Main WhatsApp message text while you use other apps or lock the device. " +
+        title = { Text("Capture notifications from monitored contacts?") },
+        text = { Text("NovaOS can store supported incoming notification text from conversations you select while you use other apps or lock the device. " +
             "The archive is encrypted locally. You can stop capture or delete the archive here.") },
         confirmButton = { TextButton(enabled = listenerReady, onClick = {
             consent = false

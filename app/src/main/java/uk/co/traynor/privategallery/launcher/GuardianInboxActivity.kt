@@ -12,6 +12,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.rememberScrollState
@@ -65,6 +66,12 @@ class GuardianInboxActivity : ComponentActivity() {
     private val privacy by lazy { getSharedPreferences("guardian_inbox_privacy", MODE_PRIVATE) }
     private var showSenders by mutableStateOf(true)
     private var diagnostic by mutableStateOf(false)
+    private var conversationsOpen by mutableStateOf(false)
+    private var conversation by mutableStateOf<GuardianConversationKey?>(null)
+    private var contactsOpen by mutableStateOf(false)
+    private var contacts by mutableStateOf<List<GuardianContact>>(emptyList())
+    private var query by mutableStateOf("")
+    private var matches by mutableStateOf<Set<String>?>(null)
     private var conversationContext by mutableStateOf(true)
     private var authenticationPending by mutableStateOf(false)
     private var operation: Job? = null
@@ -99,10 +106,18 @@ class GuardianInboxActivity : ComponentActivity() {
                         Column(Modifier.widthIn(max = 720.dp).fillMaxSize().then(if (diagnostic) Modifier.drawWithContent {
                             layer.record { this@drawWithContent.drawContent() }
                             drawLayer(layer)
-                        } else Modifier).padding(horizontal = 16.dp)) {
+                        } else Modifier).background(GuardianNavy).padding(horizontal = 16.dp)) {
                             Row(Modifier.fillMaxWidth().padding(vertical = 12.dp),
                                 verticalAlignment = Alignment.CenterVertically) {
-                                IconButton(onClick = { if (diagnostic) diagnostic = false else finish() }) {
+                                IconButton(onClick = {
+                                    when {
+                                        diagnostic -> diagnostic = false
+                                        contactsOpen -> { contactsOpen = false; GuardianCapture.stopContactDiscovery() }
+                                        conversation != null -> { conversation = null; query = ""; matches = null }
+                                        conversationsOpen -> conversationsOpen = false
+                                        else -> finish()
+                                    }
+                                }) {
                                     Icon(Icons.AutoMirrored.Outlined.ArrowBack, "Back", tint = GuardianBlue)
                                 }
                                 Column(Modifier.weight(1f)) {
@@ -148,7 +163,9 @@ class GuardianInboxActivity : ComponentActivity() {
                                         }
                                     }) { Text("Share redacted image") }
                                 }
-                                InboxContent(redacted = diagnostic)
+                                if (contactsOpen && !diagnostic) MonitoredContacts()
+                                else if (conversationsOpen && !diagnostic) Conversations()
+                                else InboxContent(redacted = diagnostic)
                             }
                             else Column(Modifier.weight(1f).verticalScroll(rememberScrollState())) {
                                 GuardianCard("Inbox locked") {
@@ -205,6 +222,13 @@ class GuardianInboxActivity : ComponentActivity() {
         confirmDelete = false
         settingsOpen = false
         diagnostic = false
+        conversationsOpen = false
+        conversation = null
+        contactsOpen = false
+        contacts = emptyList()
+        query = ""
+        matches = null
+        GuardianCapture.stopContactDiscovery()
     }
 
     private fun canReview() = authenticated && !deviceLocked() &&
@@ -212,6 +236,8 @@ class GuardianInboxActivity : ComponentActivity() {
 
     private fun refresh(): Unit = loadArchive({ store, days, now -> store.inboxRows(days, now) }) { loaded ->
         rows = loaded
+        matches = null
+        query = ""
         countdown?.cancel()
         loaded.map { it.remainingMillis }.filter { it > 0L }.minOrNull()?.let { remaining ->
             countdown = lifecycleScope.launch {
@@ -294,9 +320,7 @@ class GuardianInboxActivity : ComponentActivity() {
     @OptIn(ExperimentalLayoutApi::class)
     @Composable
     private fun ColumnScope.InboxContent(redacted: Boolean) {
-        val displayed = if (redacted) rows.mapIndexed { index, row ->
-            GuardianInboxRow("preview-$index", 0, row.section, 0)
-        } else rows
+        val displayed = if (redacted) guardianDiagnosticRows(rows) else rows
         val listed = displayed.filter { it.section == selected }
         LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(10.dp),
             contentPadding = PaddingValues(bottom = 18.dp)) {
@@ -320,6 +344,7 @@ class GuardianInboxActivity : ComponentActivity() {
             }
             item {
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    if (!redacted) TextButton(onClick = { conversationsOpen = true }) { Text("Conversations") }
                     GuardianInboxSection.entries.forEach { section ->
                         FilterChip(selected = selected == section, onClick = { selected = section },
                             label = { Text(section.label) })
@@ -333,31 +358,7 @@ class GuardianInboxActivity : ComponentActivity() {
                     failure?.let { Text(it, color = MaterialTheme.colorScheme.error) }
                 }
             }
-            items(listed, key = { it.id }) { row ->
-                val cooling = row.section == GuardianInboxSection.COOLING
-                val caption = if (redacted) "Preview redacted" else if (cooling) "Preview held · about ${(row.remainingMillis + 59_999L) / 60_000L} min remaining"
-                    else "Content hidden until reviewed"
-                Card(onClick = { if (!redacted) reveal(row) }, enabled = !busy && !cooling, modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(18.dp),
-                    colors = guardianCardColors()) {
-                    Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        Icon(Icons.Outlined.Lock, null, tint = GuardianBlue, modifier = Modifier.size(20.dp))
-                        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                            Text(if (redacted) "Sender redacted" else if (showSenders) row.senderName ?: "Sender unavailable"
-                                else "Protected message", style = MaterialTheme.typography.titleMedium)
-                            Text(if (redacted) "App and profile redacted" else "WhatsApp · Main",
-                                color = GuardianMuted, style = MaterialTheme.typography.bodySmall)
-                            Text(caption, color = GuardianMuted, style = MaterialTheme.typography.bodySmall)
-                            row.assessment?.let { Text("Local estimate · ${it.label}", color = GuardianMuted,
-                                style = MaterialTheme.typography.bodySmall) }
-                            Text(if (redacted) "Arrival time redacted" else DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT).format(Date(row.time)),
-                                color = GuardianMuted, style = MaterialTheme.typography.bodySmall)
-                        }
-                        if (!cooling) Icon(Icons.Outlined.ChevronRight, if (redacted) null else "Reveal message", tint = GuardianBlue)
-                    }
-                }
-            }
+            items(listed, key = { it.id }) { row -> MessageCard(row, redacted) }
             item {
                 Row(Modifier.padding(vertical = 6.dp), horizontalArrangement = Arrangement.spacedBy(9.dp)) {
                     Icon(Icons.Outlined.Shield, null, tint = GuardianBlue)
@@ -365,6 +366,11 @@ class GuardianInboxActivity : ComponentActivity() {
                 }
             }
         }
+        InboxDialogs()
+    }
+
+    @Composable
+    private fun InboxDialogs() {
         if (settingsOpen) AlertDialog(
             onDismissRequest = { settingsOpen = false },
             title = { Text("Inbox privacy") },
@@ -376,6 +382,13 @@ class GuardianInboxActivity : ComponentActivity() {
                     }
                     Text("Guardian Home and pop-ups keep sender names hidden.")
                     Text("Message details require authentication. Active holds always hide message text.")
+                    TextButton(onClick = {
+                        loadArchive({ store, _, _ -> store.monitoredContacts() }) {
+                            contacts = it
+                            settingsOpen = false
+                            contactsOpen = true
+                        }
+                    }) { Text("Monitored Contacts") }
                     TextButton(onClick = { settingsOpen = false; diagnostic = true }) {
                         Text("Share safe diagnostic view")
                     }
@@ -405,7 +418,11 @@ class GuardianInboxActivity : ComponentActivity() {
                         Text(revealed.orEmpty())
                         TextButton(enabled = !busy, onClick = {
                             loadArchive({ store, days, now -> store.assessInboxMessage(row.id, days, now) }) { result ->
-                                if (result != null) detail = row.copy(assessment = result)
+                                if (result == GuardianAssessment.UPSETTING) {
+                                    detail = null
+                                    revealed = null
+                                    refresh()
+                                } else if (result != null) detail = row.copy(assessment = result)
                             }
                         }) { Text("Analyse on this device") }
                         row.assessment?.let { Text("Local estimate · ${it.label}", color = GuardianMuted) }
@@ -444,6 +461,157 @@ class GuardianInboxActivity : ComponentActivity() {
                 } else null,
                 properties = DialogProperties(securePolicy = SecureFlagPolicy.SecureOn),
             )
+        }
+    }
+
+    private fun appLabel(key: GuardianConversationKey?): String =
+        if (key == null || key.app == GUARDIAN_WHATSAPP) "WhatsApp · Main"
+        else "SMS/MMS · ${key.app}"
+
+    @Composable
+    private fun MessageCard(row: GuardianInboxRow, redacted: Boolean, inConversation: Boolean = false) {
+        val cooling = row.section == GuardianInboxSection.COOLING
+        val caption = when {
+            redacted -> "Preview redacted"
+            cooling && row.assessment == GuardianAssessment.UPSETTING -> "Potentially upsetting content is cooling down."
+            cooling -> "Message preview is cooling down."
+            row.assessment == null -> "Awaiting analysis · preview hidden"
+            row.assessment == GuardianAssessment.UNCERTAIN -> "Uncertain · preview hidden until reviewed"
+            else -> "Content hidden until reviewed"
+        }
+        Card(onClick = { if (!redacted) reveal(row) }, enabled = !busy && !cooling, modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(18.dp), colors = guardianCardColors()) {
+            Row(Modifier.padding(14.dp), verticalAlignment = Alignment.Top,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                Icon(Icons.Outlined.Lock, null, tint = if (cooling) GuardianAmber else GuardianBlue, modifier = Modifier.size(20.dp))
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    val sender = if (showSenders && !redacted) row.senderName else null
+                    Text(when {
+                        cooling -> "Message protected"
+                        redacted -> "Sender redacted"
+                        showSenders -> sender ?: "Sender unavailable"
+                        else -> "Protected message"
+                    }, style = MaterialTheme.typography.titleMedium, color = GuardianPrimary)
+                    Text(caption, color = GuardianMuted, style = MaterialTheme.typography.bodyMedium)
+                    if (cooling && !redacted) {
+                        row.availableAfter?.let { deadline ->
+                            Text("Preview available after ${DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT).format(Date(deadline))}",
+                                color = GuardianPrimary, style = MaterialTheme.typography.labelLarge)
+                        }
+                        sender?.let { Text(it, color = GuardianMuted, style = MaterialTheme.typography.bodySmall) }
+                    }
+                    Text(if (redacted) "App and profile redacted" else (if (inConversation) "Incoming · " else "") + appLabel(row.conversation),
+                        color = GuardianMuted, style = MaterialTheme.typography.bodySmall)
+                    row.assessment?.let { Text("Local estimate · ${it.label}", color = GuardianMuted,
+                        style = MaterialTheme.typography.bodySmall) }
+                    Text(if (redacted) "Arrival time redacted"
+                        else DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT).format(Date(row.arrivedAt)),
+                        color = GuardianMuted, style = MaterialTheme.typography.bodySmall)
+                }
+                if (!cooling) Icon(Icons.Outlined.ChevronRight, if (redacted) null else "Reveal message", tint = GuardianBlue)
+            }
+        }
+    }
+
+    @Composable
+    private fun ColumnScope.Conversations() {
+        val grouped = rows.filter { it.conversation != null }.groupBy { checkNotNull(it.conversation) }
+        val current = conversation
+        LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp),
+            contentPadding = PaddingValues(bottom = 18.dp)) {
+            item {
+                GuardianCard(if (current == null) "Conversations" else appLabel(current)) {
+                    Text("Incoming Android notifications only. Some messages or outgoing replies may be missing.", color = GuardianMuted)
+                    if (current == null) TextButton(onClick = {
+                        loadArchive({ store, _, _ -> store.monitoredContacts() }) { contacts = it; contactsOpen = true }
+                    }) { Text("Monitored Contacts") }
+                    else {
+                        OutlinedTextField(query, { query = it.take(100); matches = null }, modifier = Modifier.fillMaxWidth(),
+                            singleLine = true, label = { Text("Search eligible message text") })
+                        TextButton(enabled = query.isNotBlank() && !busy, onClick = {
+                            val requested = query.trim()
+                            loadArchive({ store, days, now -> store.searchInbox(requested, days, now) }) {
+                                if (query.trim() == requested) matches = it
+                            }
+                        }) { Text("Search") }
+                    }
+                    failure?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+                }
+            }
+            if (current == null) {
+                items(grouped.entries.toList()) { (key, messages) ->
+                    val newest = messages.maxBy { it.arrivedAt }
+                    Card(onClick = { conversation = key }, colors = guardianCardColors(), modifier = Modifier.fillMaxWidth()) {
+                        Column(Modifier.padding(14.dp)) {
+                            Text(if (showSenders) newest.senderName ?: "Conversation" else "Conversation",
+                                style = MaterialTheme.typography.titleMedium)
+                            Text("${appLabel(key)} · ${messages.size} captured", color = GuardianMuted)
+                        }
+                    }
+                }
+            } else {
+                val ordered = grouped[current].orEmpty().filter { matches?.contains(it.id) ?: true }.sortedBy { it.arrivedAt }
+                val dates = ordered.groupBy { DateFormat.getDateInstance(DateFormat.FULL).format(Date(it.arrivedAt)) }
+                dates.forEach { (date, messages) ->
+                    item { Text(date, color = GuardianMuted, style = MaterialTheme.typography.labelLarge) }
+                    items(messages, key = { it.id }) { MessageCard(it, redacted = false, inConversation = true) }
+                }
+                if (ordered.isEmpty()) item { Text("No eligible messages found.", color = GuardianMuted) }
+            }
+        }
+        InboxDialogs()
+    }
+
+    private fun saveContact(key: GuardianConversationKey, contact: GuardianContact?) {
+        if (busy || !canReview()) return
+        GuardianCapture.invalidatePending()
+        loadArchive({ store, _, _ -> store.saveContact(key, contact); store.monitoredContacts() }) { contacts = it }
+    }
+
+    @Composable
+    private fun ColumnScope.MonitoredContacts() {
+        val discovered by GuardianCapture.contactCandidates.collectAsState()
+        val existing = if (showSenders) rows.mapNotNull { row ->
+            val key = row.conversation ?: return@mapNotNull null
+            val name = row.senderName ?: return@mapNotNull null
+            if (key.conversation.startsWith("notification:")) null else GuardianContact(key, name)
+        } else emptyList()
+        val available = (discovered + existing).distinctBy { it.key }.filterNot { entry -> contacts.any { it.key == entry.key } }
+        LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp),
+            contentPadding = PaddingValues(bottom = 18.dp)) {
+            item {
+                GuardianCard("Monitored Contacts") {
+                    Text("Choose individual conversations to capture. Keep this screen open and ask the contact to send a message. Detection runs for 90 seconds and shows matching contact names without retaining message text.", color = GuardianMuted)
+                    TextButton(onClick = { GuardianCapture.startContactDiscovery() }) { Text("Detect incoming contacts for 90 seconds") }
+                    failure?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+                }
+            }
+            items(available, key = { it.key.toString() }) { candidate ->
+                GuardianCard(if (showSenders) candidate.name else "Detected conversation") {
+                    Text(appLabel(candidate.key), color = GuardianMuted)
+                    TextButton(enabled = !busy, onClick = { saveContact(candidate.key, candidate) }) { Text("Monitor this conversation") }
+                }
+            }
+            items(contacts, key = { it.key.toString() }) { entry ->
+                GuardianCard(if (showSenders) entry.name else "Monitored conversation") {
+                    Text(appLabel(entry.key), color = GuardianMuted)
+                    LauncherToggle("Monitoring enabled", entry.enabled) {
+                        saveContact(entry.key, entry.copy(enabled = it))
+                    }
+                    LauncherToggle("Retain captured messages", entry.retain) {
+                        saveContact(entry.key, entry.copy(retain = it))
+                    }
+                    LauncherToggle("Hold uncertain messages for four hours", entry.holdUncertain) {
+                        saveContact(entry.key, entry.copy(holdUncertain = it))
+                    }
+                    Text("Sensitivity · ${entry.sensitivity.label}", color = GuardianMuted)
+                    TextButton(enabled = !busy, onClick = {
+                        val levels = GuardianSensitivity.entries
+                        saveContact(entry.key, entry.copy(sensitivity = levels[(entry.sensitivity.ordinal + 1) % levels.size]))
+                    }) { Text("Change sensitivity") }
+                    TextButton(enabled = !busy, onClick = { saveContact(entry.key, null) }) { Text("Remove monitoring") }
+                }
+            }
         }
     }
 

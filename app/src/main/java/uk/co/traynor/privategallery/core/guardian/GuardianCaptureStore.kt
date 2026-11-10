@@ -24,6 +24,9 @@ internal data class GuardianCaptureEvent(
     val conversation: String,
     val observedAt: Long,
     val entries: List<GuardianCaptureEntry>,
+    val app: String = GUARDIAN_WHATSAPP,
+    val sensitivity: GuardianSensitivity = GuardianSensitivity.STANDARD,
+    val holdUncertain: Boolean = false,
 )
 
 internal data class GuardianCaptureResult(val added: Int, val retained: Int, val partial: Boolean, val allDurable: Boolean = false)
@@ -32,7 +35,14 @@ internal data class GuardianInboxRow(
     val id: String, val time: Long, val section: GuardianInboxSection, val remainingMillis: Long,
     val assessment: GuardianAssessment? = null,
     val senderName: String? = null,
+    val arrivedAt: Long = time,
+    val conversation: GuardianConversationKey? = null,
+    val availableAfter: Long? = null,
 )
+
+/** The export only needs section membership and layout-local list keys. */
+internal fun guardianDiagnosticRows(rows: List<GuardianInboxRow>): List<GuardianInboxRow> =
+    rows.mapIndexed { index, row -> GuardianInboxRow("preview-$index", 0, row.section, 0) }
 
 internal enum class GuardianInboxAction { READY, HOLD, ARCHIVE, DELETE }
 
@@ -42,17 +52,46 @@ internal fun guardianInboxClock(context: Context) = GuardianInboxClock(
 )
 
 /** Private, bounded archive. The capture phase exposes aggregate counts only. */
-internal class GuardianCaptureStore private constructor(private val context: Context, private val training: Boolean, private val fixture: Boolean = false) {
+internal class GuardianCaptureStore private constructor(private val context: Context, private val training: Boolean, private val fixture: Boolean = false, private val contacts: Boolean = false) {
     constructor(context: Context) : this(context.applicationContext, false)
 
-    private val destination = File(context.noBackupFilesDir, when { fixture -> "guardian-fixture-v1.enc"; training -> "guardian-learning-v1.enc"; else -> ARCHIVE_NAME })
-    private val alias = when { fixture -> "nova-guardian-fixture-v1"; training -> "nova-guardian-learning-v1"; else -> KEY_ALIAS }
+    private val destination = File(context.noBackupFilesDir, when { contacts -> "guardian-contacts-v1.enc"; fixture -> "guardian-fixture-v1.enc"; training -> "guardian-learning-v1.enc"; else -> ARCHIVE_NAME })
+    private val alias = when { contacts -> "nova-guardian-contacts-v1"; fixture -> "nova-guardian-fixture-v1"; training -> "nova-guardian-learning-v1"; else -> KEY_ALIAS }
     private val aad = when {
+        contacts -> "NovaOS Guardian contact rules v1".toByteArray(Charsets.UTF_8)
         fixture -> "NovaOS Guardian fixture v1".toByteArray(Charsets.UTF_8)
         training -> "NovaOS Guardian learning v1".toByteArray(Charsets.UTF_8)
         else -> AAD
     }
     private val atomic = AtomicFile(destination)
+
+    private fun contactArchive() = GuardianCaptureStore(context, training = false, contacts = true)
+
+    fun monitoredContacts(): List<GuardianContact> = synchronized(lock) {
+        contactArchive().read().map {
+            GuardianContact(GuardianConversationKey(it.getString("app"), it.getLong("profile"), it.getString("conversation")),
+                it.getString("name"), it.getBoolean("enabled"), it.getBoolean("retain"),
+                GuardianSensitivity.valueOf(it.getString("sensitivity")), it.optBoolean("holdUncertain"))
+        }
+    }
+
+    fun saveContact(key: GuardianConversationKey, contact: GuardianContact?) = synchronized(lock) {
+        require(contact == null || contact.key == key && key.profile >= 0 && key.conversation.length in 1..512 &&
+            key.app.length in 1..200 && contact.name.length in 1..100)
+        val retained = monitoredContacts().filterNot { it.key == key } + listOfNotNull(contact)
+        require(retained.size <= 100)
+        contactArchive().write(retained.map {
+            JSONObject().put("app", it.key.app).put("profile", it.key.profile).put("conversation", it.key.conversation)
+                .put("name", it.name).put("enabled", it.enabled).put("retain", it.retain).put("sensitivity", it.sensitivity.name).put("holdUncertain", it.holdUncertain)
+        })
+    }
+
+    fun searchInbox(query: String, days: Int, now: GuardianInboxClock): Set<String> = synchronized(lock) {
+        retainedRows(days, now.wall).asSequence().filterNot { it.optBoolean("deleted") }.filter { row ->
+            inboxRow(row, now).section != GuardianInboxSection.COOLING &&
+                row.getString("text").contains(query, ignoreCase = true)
+        }.map { it.getString("id") }.toSet()
+    }
 
     fun verifyFixture(): Boolean = synchronized(lock) {
         val receipt = GuardianCaptureStore(context, training = false, fixture = true)
@@ -107,13 +146,13 @@ internal class GuardianCaptureStore private constructor(private val context: Con
         val row = rows.firstOrNull { it.getString("id") == id && !it.optBoolean("deleted") }
             ?: return@synchronized null
         if (inboxRow(row, now).section == GuardianInboxSection.COOLING) return@synchronized null
-        val assessment = classifyGuardian(row.getString("text"), examples(), contextFor(row, rows))
-        row.put("assessment", assessment.name).put("assessmentVersion", 1)
+        val assessment = classifyGuardian(row.getString("text"), examples(), contextFor(row, rows), rowSensitivity(row))
+        applyAssessment(row, assessment, now)
         write(rows)
         assessment
     }
 
-    fun append(event: GuardianCaptureEvent, days: Int, now: Long, assess: Boolean = true): GuardianCaptureResult = synchronized(lock) {
+    fun append(event: GuardianCaptureEvent, days: Int, now: Long, assess: Boolean = true, clock: GuardianInboxClock = GuardianInboxClock(now, 0L, -1)): GuardianCaptureResult = synchronized(lock) {
         require(event.profileSerial >= 0 && event.conversation.length in 1..512 && event.observedAt <= now)
         val cutoff = cutoff(days, now)
         val stored = read()
@@ -129,11 +168,12 @@ internal class GuardianCaptureStore private constructor(private val context: Con
             val id = identity(event, entry)
             val row = JSONObject().put("id", id).put("profile", event.profileSerial)
                 .put("conversation", event.conversation).put("sender", entry.sender)
+                .put("app", event.app).put("sensitivity", event.sensitivity.name).put("holdUncertain", event.holdUncertain)
                 .put("messageAt", entry.time).put("capturedAt", event.observedAt).put("text", entry.text)
             guardianSenderDisplayName(entry.displayName)?.let { row.put("displayName", it) }
             if (assess && id !in existing && id !in incoming && examples.isNotEmpty()) {
-                val assessment = classifyGuardian(entry.text, examples, contextFor(row, live + incoming.values))
-                row.put("assessment", assessment.name).put("assessmentVersion", 1)
+                val assessment = classifyGuardian(entry.text, examples, contextFor(row, live + incoming.values), event.sensitivity)
+                applyAssessment(row, assessment, clock)
             }
             incoming.putIfAbsent(id, row)
         }
@@ -157,8 +197,8 @@ internal class GuardianCaptureStore private constructor(private val context: Con
         for (row in rows) {
             if (row.getString("id") !in ids || row.optBoolean("deleted") || row.has("assessment") ||
                 inboxRow(row, now).section == GuardianInboxSection.COOLING) continue
-            val assessment = classifyGuardian(row.getString("text"), learned, contextFor(row, rows))
-            row.put("assessment", assessment.name).put("assessmentVersion", 1)
+            val assessment = classifyGuardian(row.getString("text"), learned, contextFor(row, rows), rowSensitivity(row))
+            applyAssessment(row, assessment, now)
             changed = true
         }
         if (changed) write(rows)
@@ -186,17 +226,22 @@ internal class GuardianCaptureStore private constructor(private val context: Con
         if (inboxRow(row, now).section == GuardianInboxSection.COOLING) null else row.getString("text")
     }
 
+    fun eligibleEvidenceMessage(id: String, days: Int, now: GuardianInboxClock): String? = synchronized(lock) {
+        val row = retainedRows(days, now.wall).firstOrNull { it.getString("id") == id && !it.optBoolean("deleted") }
+            ?: return@synchronized null
+        val metadata = inboxRow(row, now)
+        if (metadata.section == GuardianInboxSection.COOLING || metadata.assessment == null) null else row.getString("text")
+    }
+
     fun reviewInboxMessage(id: String, action: GuardianInboxAction, days: Int, now: GuardianInboxClock): Boolean =
         synchronized(lock) {
             val rows = retainedRows(days, now.wall)
             val row = rows.firstOrNull { it.getString("id") == id && !it.optBoolean("deleted") } ?: return@synchronized false
             if (inboxRow(row, now).section == GuardianInboxSection.COOLING) return@synchronized false
             when (action) {
-                GuardianInboxAction.READY -> row.remove("hold").also { row.put("review", "ready") }
-                GuardianInboxAction.HOLD -> row.put("hold", JSONObject()
-                    .put("wall", now.wall + GUARDIAN_HOLD_MILLIS)
-                    .put("elapsed", now.elapsed + GUARDIAN_HOLD_MILLIS).put("boot", now.boot))
-                GuardianInboxAction.ARCHIVE -> row.remove("hold").also { row.put("review", "archived") }
+                GuardianInboxAction.READY -> row.remove("hold").also { row.put("review", "ready").put("holdReviewed", true) }
+                GuardianInboxAction.HOLD -> startHold(row, now)
+                GuardianInboxAction.ARCHIVE -> row.remove("hold").also { row.put("review", "archived").put("holdReviewed", true) }
                 GuardianInboxAction.DELETE -> {
                     val keep = setOf("id", "capturedAt", "messageAt")
                     row.keys().asSequence().filterNot { it in keep }.toList().forEach { row.remove(it) }
@@ -215,11 +260,26 @@ internal class GuardianCaptureStore private constructor(private val context: Con
             .edit().putBoolean("use_local_context", enabled).commit())
     }
 
+    private fun applyAssessment(row: JSONObject, assessment: GuardianAssessment, now: GuardianInboxClock) {
+        row.put("assessment", assessment.name).put("assessmentVersion", 1)
+        if (!row.has("hold") && (assessment == GuardianAssessment.UPSETTING ||
+                assessment == GuardianAssessment.UNCERTAIN && row.optBoolean("holdUncertain"))) startHold(row, now)
+    }
+
+    private fun startHold(row: JSONObject, now: GuardianInboxClock) {
+        row.put("hold", JSONObject().put("wall", now.wall + GUARDIAN_HOLD_MILLIS)
+            .put("elapsed", now.elapsed + GUARDIAN_HOLD_MILLIS).put("boot", now.boot))
+    }
+
+    private fun rowSensitivity(row: JSONObject): GuardianSensitivity =
+        GuardianSensitivity.entries.firstOrNull { it.name == row.optString("sensitivity") } ?: GuardianSensitivity.STANDARD
+
     private fun contextFor(row: JSONObject, rows: Collection<JSONObject>): List<String> {
         if (!usesConversationContext()) return emptyList()
         val time = row.getLong("messageAt")
         return rows.asSequence().filter {
             !it.optBoolean("deleted") && it.getLong("profile") == row.getLong("profile") &&
+                it.optString("app", GUARDIAN_WHATSAPP) == row.optString("app", GUARDIAN_WHATSAPP) &&
                 it.getString("conversation") == row.getString("conversation") &&
                 it.getString("sender") == row.getString("sender") && it.getLong("messageAt") in time - 1_800_000L until time
         }.sortedByDescending { it.getLong("messageAt") }.take(3).map { it.getString("text") }.toList().asReversed()
@@ -234,15 +294,23 @@ internal class GuardianCaptureStore private constructor(private val context: Con
     }
 
     private fun inboxRow(row: JSONObject, now: GuardianInboxClock): GuardianInboxRow {
+        val assessment = if (row.optInt("assessmentVersion") == 1)
+            GuardianAssessment.entries.firstOrNull { it.name == row.optString("assessment") } else null
+        val review = row.optString("review")
         val hold = row.optJSONObject("hold")?.let {
             GuardianInboxHold(it.getLong("wall"), it.getLong("elapsed"), it.getInt("boot"))
-        }
-        val review = row.optString("review")
+        } ?: if (assessment == GuardianAssessment.UPSETTING && !row.optBoolean("holdReviewed")) {
+            GuardianInboxHold(row.getLong("capturedAt") + GUARDIAN_HOLD_MILLIS, 0L, -1)
+        } else null
+        val remaining = hold?.remaining(now) ?: 0L
+        val section = guardianInboxSection(hold, review == "ready" || assessment == GuardianAssessment.LOW_RISK,
+            now, review == "archived")
         return GuardianInboxRow(row.getString("id"), row.getLong("messageAt"),
-            guardianInboxSection(hold, review == "ready", now, review == "archived"), hold?.remaining(now) ?: 0L,
-            if (row.optInt("assessmentVersion") == 1)
-                GuardianAssessment.entries.firstOrNull { it.name == row.optString("assessment") } else null,
-            guardianSenderDisplayName(row.optString("displayName")))
+            if (section == GuardianInboxSection.PENDING && assessment == GuardianAssessment.UNCERTAIN)
+                GuardianInboxSection.PROTECTED else section, remaining, assessment,
+            guardianSenderDisplayName(row.optString("displayName")), row.getLong("capturedAt"),
+            GuardianConversationKey(row.optString("app", GUARDIAN_WHATSAPP), row.getLong("profile"), row.getString("conversation")),
+            if (remaining > 0) now.wall + remaining else null)
     }
 
     fun clear() = synchronized(lock) {
@@ -260,8 +328,9 @@ internal class GuardianCaptureStore private constructor(private val context: Con
         row.getLong("capturedAt") >= cutoff && row.getLong("messageAt") >= cutoff
 
     private fun identity(event: GuardianCaptureEvent, entry: GuardianCaptureEntry): String {
-        val fields = JSONArray().put(event.profileSerial).put(event.conversation)
-            .put(entry.time).put(entry.sender).put(entry.text).toString().toByteArray(Charsets.UTF_8)
+        val values = JSONArray().put(event.profileSerial).put(event.conversation).put(entry.time).put(entry.sender).put(entry.text)
+        if (event.app != GUARDIAN_WHATSAPP) values.put(event.app)
+        val fields = values.toString().toByteArray(Charsets.UTF_8)
         return fingerprint(fields)
     }
 

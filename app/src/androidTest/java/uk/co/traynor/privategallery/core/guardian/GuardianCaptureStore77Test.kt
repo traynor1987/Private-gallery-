@@ -25,9 +25,11 @@ class GuardianCaptureStore77Test {
             assertEquals(GuardianAssessment.UPSETTING, first.assessment)
             assertTrue(reopened.teach(text, GuardianAssessment.LOW_RISK))
             assertEquals(1, reopened.learningCount())
-            assertEquals(GuardianAssessment.LOW_RISK, reopened.assessInboxMessage(first.id, 7, now))
-            assertTrue(reopened.reviewInboxMessage(first.id, GuardianInboxAction.DELETE, 7, now))
-            assertNull(reopened.revealInboxMessage(first.id, 7, now))
+            assertNull(reopened.assessInboxMessage(first.id, 7, now))
+            val expired = now.copy(wall = now.wall + GUARDIAN_HOLD_MILLIS, elapsed = now.elapsed + GUARDIAN_HOLD_MILLIS)
+            assertEquals(GuardianAssessment.LOW_RISK, reopened.assessInboxMessage(first.id, 7, expired))
+            assertTrue(reopened.reviewInboxMessage(first.id, GuardianInboxAction.DELETE, 7, expired))
+            assertNull(reopened.revealInboxMessage(first.id, 7, expired))
             assertEquals(0, reopened.append(event, 7, now.wall).added)
             assertTrue(reopened.inboxRows(7, now).isEmpty())
             val encrypted = File(context.noBackupFilesDir, "guardian-learning-v1.enc").readBytes()
@@ -68,6 +70,69 @@ class GuardianCaptureStore77Test {
             store.clear()
             store.resetLearning()
         }
+    }
+
+    @Test fun diagnosticRowsContainOnlySectionAndSyntheticLayoutIdentity() {
+        val record = GuardianInboxRow("encrypted-record-id", 1L, GuardianInboxSection.COOLING, 12_345L,
+            GuardianAssessment.UPSETTING, "Private sender", arrivedAt = 2L)
+        val diagnostic = guardianDiagnosticRows(listOf(record)).single()
+        assertEquals(GuardianInboxRow("preview-0", 0L, GuardianInboxSection.COOLING, 0L), diagnostic)
+    }
+
+    @Test fun mixedConversationNeverSearchesOrExportsIndependentlyHeldMessages() {
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        val now = guardianInboxClock(context)
+        val store = GuardianCaptureStore(context)
+        val upsetting = "you have to come here right now"
+        val harmless = "I will be there tomorrow afternoon"
+        val conversation = "shortcut:synthetic"
+        val second = now.copy(wall = now.wall + 60_000, elapsed = now.elapsed + 60_000)
+        store.clear()
+        store.resetLearning()
+        try {
+            assertTrue(store.teach(upsetting, GuardianAssessment.UPSETTING))
+            assertTrue(store.teach(harmless, GuardianAssessment.LOW_RISK))
+            store.append(GuardianCaptureEvent(0, conversation, now.wall, listOf(
+                GuardianCaptureEntry(now.wall - 10, "sender", harmless),
+                GuardianCaptureEntry(now.wall - 5, "sender", upsetting))), 7, now.wall, clock = now)
+            store.append(GuardianCaptureEvent(0, conversation, second.wall, listOf(
+                GuardianCaptureEntry(second.wall, "sender", upsetting))), 7, second.wall, clock = second)
+            val reopened = GuardianCaptureStore(context)
+            val rows = reopened.inboxRows(7, second).sortedBy { it.time }
+            assertEquals(1, rows.map { it.conversation }.distinct().size)
+            assertEquals(listOf(GuardianInboxSection.READY, GuardianInboxSection.COOLING, GuardianInboxSection.COOLING),
+                rows.map { it.section })
+            assertEquals(harmless, reopened.revealInboxMessage(rows.first().id, 7, second))
+            assertTrue(reopened.searchInbox("right now", 7, second).isEmpty())
+            assertNull(reopened.eligibleEvidenceMessage(rows[1].id, 7, second))
+            val firstExpiry = now.copy(wall = now.wall + GUARDIAN_HOLD_MILLIS, elapsed = now.elapsed + GUARDIAN_HOLD_MILLIS)
+            assertEquals(upsetting, reopened.revealInboxMessage(rows[1].id, 7, firstExpiry))
+            assertNull(reopened.revealInboxMessage(rows[2].id, 7, firstExpiry))
+            assertEquals(setOf(rows[1].id), reopened.searchInbox("right now", 7, firstExpiry))
+            assertNull(reopened.eligibleEvidenceMessage(rows[2].id, 7, firstExpiry))
+        } finally {
+            store.clear()
+            store.resetLearning()
+        }
+    }
+
+    @Test fun contactConsentIsEncryptedAppAndProfileScopedAndRemovable() {
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        val store = GuardianCaptureStore(context)
+        val key = GuardianConversationKey(GUARDIAN_WHATSAPP, 0, "shortcut:synthetic")
+        val contact = GuardianContact(key, "Synthetic private contact", holdUncertain = true)
+        try {
+            store.saveContact(key, contact)
+            val reopened = GuardianCaptureStore(context)
+            assertEquals(contact, reopened.monitoredContacts().single { it.key == key })
+            assertFalse(reopened.monitoredContacts().any { it.key == key.copy(profile = 9) })
+            assertFalse(reopened.monitoredContacts().any { it.key == key.copy(app = "another.app") })
+            val bytes = File(context.noBackupFilesDir, "guardian-contacts-v1.enc").readBytes()
+            assertFalse(bytes.toString(Charsets.UTF_8).contains(contact.name))
+        } finally {
+            store.saveContact(key, null)
+        }
+        assertFalse(GuardianCaptureStore(context).monitoredContacts().any { it.key == key })
     }
 
     @Test fun inboxCountsAndHoldsSurviveReopeningWithoutEarlyReveal() {

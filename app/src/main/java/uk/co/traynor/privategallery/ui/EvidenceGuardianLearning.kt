@@ -70,45 +70,45 @@ internal fun EvidenceGuardianLearning(
 
     GuardianTheme {
         EvidenceWorkflowPage(onDismissRequest = onClose, title = { EvidenceDialogTitle("Teach Guardian") }, text = {
-        LazyColumn(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            item {
-                Text("Choose a screenshot or incident record. Keep the conversation lines in order, review the OCR excerpt and choose its label.")
-                Text("Nova Brain stores encrypted phrase features on this device.")
-            }
-            if (candidates.isEmpty()) item { Text("Run or review OCR on a selected record first.") }
-            if (record == null) items(candidates, key = { it.id() }) { candidate ->
-                OutlinedButton(modifier = Modifier.testTag("guardian-training-source-${candidate.id()}"), enabled = !busy, onClick = {
-                    record = candidate
-                    excerpt = candidate.transcript().trim().take(2048)
-                }) { Text(candidate.name()) }
-            }
-            record?.let { current ->
+            LazyColumn(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 item {
-                    Text(current.name(), style = MaterialTheme.typography.titleMedium)
-                    OutlinedTextField(excerpt, { excerpt = it.take(2048) }, enabled = !busy,
-                        modifier = Modifier.fillMaxWidth(), maxLines = 8,
-                        label = { Text("Excerpt from reviewed OCR") },
-                        supportingText = { Text("Trim to the passage you want Nova Brain to learn.") })
-                    FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        GuardianAssessment.entries.forEach { assessment ->
-                            FilterChip(selected = label == assessment, enabled = !busy,
-                                onClick = { label = assessment }, label = { Text(assessment.label) })
+                    Text("Choose a screenshot or incident record. Keep the conversation lines in order, review the OCR excerpt and choose its label.")
+                    Text("Nova Brain stores encrypted phrase features on this device.")
+                }
+                if (candidates.isEmpty()) item { Text("Run or review OCR on a selected record first.") }
+                if (record == null) items(candidates, key = { it.id() }) { candidate ->
+                    OutlinedButton(modifier = Modifier.testTag("guardian-training-source-${candidate.id()}"), enabled = !busy, onClick = {
+                        record = candidate
+                        excerpt = candidate.transcript().trim().take(2048)
+                    }) { Text(candidate.name()) }
+                }
+                record?.let { current ->
+                    item {
+                        Text(current.name(), style = MaterialTheme.typography.titleMedium)
+                        OutlinedTextField(excerpt, { excerpt = it.take(2048) }, enabled = !busy,
+                            modifier = Modifier.fillMaxWidth(), maxLines = 8,
+                            label = { Text("Excerpt from reviewed OCR") },
+                            supportingText = { Text("Trim to the passage you want Nova Brain to learn.") })
+                        FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            GuardianAssessment.entries.forEach { assessment ->
+                                FilterChip(selected = label == assessment, enabled = !busy,
+                                    onClick = { label = assessment }, label = { Text(assessment.label) })
+                            }
                         }
+                        TextButton(enabled = !busy, onClick = { record = null; excerpt = ""; label = null }) {
+                            Text("Choose another record")
+                        }
+                        TextButton(enabled = !busy && excerpt.isNotBlank(), onClick = { updateLearning(null) }) {
+                            Text("Remove matching local example")
+                        }
+                        feedback?.let { Text(it) }
                     }
-                    TextButton(enabled = !busy, onClick = { record = null; excerpt = ""; label = null }) {
-                        Text("Choose another record")
-                    }
-                    TextButton(enabled = !busy && excerpt.isNotBlank(), onClick = { updateLearning(null) }) {
-                        Text("Remove matching local example")
-                    }
-                    feedback?.let { Text(it) }
                 }
             }
-        }
-    }, confirmButton = {
-        Button(enabled = !busy && record != null && label != null && excerpt.isNotBlank(), onClick = {
-            label?.let(::updateLearning)
-        }) { Text("Save local example") }
-    }, dismissButton = { TextButton(onClick = onClose) { Text("Close") } })
+        }, confirmButton = {
+            Button(enabled = !busy && record != null && label != null && excerpt.isNotBlank(), onClick = {
+                label?.let(::updateLearning)
+            }) { Text("Save local example") }
+        }, dismissButton = { TextButton(onClick = onClose) { Text("Close") } })
     }
 }

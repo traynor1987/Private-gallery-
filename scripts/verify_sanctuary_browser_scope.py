@@ -127,6 +127,13 @@ settings_query = ET.fromstring(f"""
 listener_settings, = [intent for intent in queries.findall("intent")
                       if structure(intent) == structure(settings_query)]
 queries.remove(listener_settings)
+sms_query = ET.fromstring(f"""
+    <intent xmlns:android="{ANDROID[1:-1]}">
+      <action android:name="android.provider.Telephony.SMS_DELIVER" />
+    </intent>
+""")
+sms_visibility, = [intent for intent in queries.findall("intent") if structure(intent) == structure(sms_query)]
+queries.remove(sms_visibility)
 
 assert structure(before) == structure(after), "The existing manifest or permission set changed"
 print("PASS: Code 69 protected engines, original package and permission set preserved; Android Home is additive")

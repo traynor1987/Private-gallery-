@@ -46,4 +46,13 @@ class GuardianCapturePolicyTest {
         assertNull(guardianSenderDisplayName("\u202E\n  "))
         assertEquals("Alice", guardianSenderDisplayName(" Alice\u202E "))
     }
+    @Test fun conversationSelectionRequiresStableIdentityAndSmsRejectsLikelyCodes() {
+        assertEquals("shortcut:123", guardianConversationId("123", "person", null, true))
+        assertEquals("person-key:abc", guardianConversationId(null, "abc", null, false))
+        assertNull(guardianConversationId(null, "abc", null, true))
+        assertNull(guardianConversationId(null, null, null, false))
+        assertTrue(guardianMayKeepSms("See you at the shop this evening"))
+        assertFalse(guardianMayKeepSms("Your verification code is 351 249"))
+        assertFalse(guardianMayKeepSms("Use 482731 to continue"))
+    }
 }

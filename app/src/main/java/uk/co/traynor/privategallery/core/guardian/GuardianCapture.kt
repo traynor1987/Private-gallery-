@@ -3,6 +3,7 @@ package uk.co.traynor.privategallery.core.guardian
 import android.content.Context
 import android.os.Handler
 import android.os.Looper
+import android.os.SystemClock
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
@@ -27,6 +28,32 @@ internal object GuardianCapture {
     private val status = MutableStateFlow(GuardianCaptureHealth())
     val state = status.asStateFlow()
 
+    private val found = MutableStateFlow<List<GuardianContact>>(emptyList())
+    val contactCandidates = found.asStateFlow()
+    private var discoveryUntil = 0L
+    private val main = Handler(Looper.getMainLooper())
+    private val endDiscovery = Runnable { stopContactDiscovery() }
+
+    fun startContactDiscovery() {
+        stopContactDiscovery()
+        discoveryUntil = SystemClock.elapsedRealtime() + 90_000L
+        main.postDelayed(endDiscovery, 90_000L)
+    }
+
+    fun stopContactDiscovery() {
+        discoveryUntil = 0L
+        found.value = emptyList()
+        main.removeCallbacks(endDiscovery)
+    }
+
+    fun isDiscoveringContacts() = SystemClock.elapsedRealtime() < discoveryUntil
+
+    fun offerContact(contact: GuardianContact) {
+        if (isDiscoveringContacts()) found.update { (listOf(contact) + it.filterNot { row -> row.key == contact.key }).take(20) }
+    }
+
+    fun invalidatePending() { generation.incrementAndGet() }
+
     fun isEnabled(context: Context) = prefs(context).getBoolean("enabled", false)
 
     fun refresh(context: Context) = manage(context) { _, _ -> }
@@ -40,9 +67,10 @@ internal object GuardianCapture {
         }
     }
 
-    fun setRetention(context: Context, days: Int) = manage(context) { app, _ ->
+    fun setRetention(context: Context, days: Int) {
         require(days in GuardianCaptureStore.RETENTION_DAYS)
-        check(prefs(app).edit().putInt("retention", days).commit())
+        generation.incrementAndGet()
+        manage(context) { app, _ -> check(prefs(app).edit().putInt("retention", days).commit()) }
     }
 
     fun clear(context: Context) {
@@ -50,7 +78,7 @@ internal object GuardianCapture {
         manage(context) { _, store -> store.clear() }
     }
 
-    fun record(context: Context, event: GuardianCaptureEvent, onDurable: (() -> Unit)? = null) {
+    fun record(context: Context, event: GuardianCaptureEvent, monitored: GuardianConversationKey, onDurable: (() -> Unit)? = null) {
         val app = context.applicationContext
         val expected = generation.get()
         if (pendingEvents.incrementAndGet() > 16) {
@@ -67,7 +95,9 @@ internal object GuardianCapture {
                 val result = runCatching {
                     val store = GuardianCaptureStore(app)
                     val now = guardianInboxClock(app)
-                    store.append(event, days, now.wall, assess = onDurable == null) to store.inboxCounts(days, now)
+                    val contact = store.monitoredContacts().singleOrNull { it.key == monitored && it.enabled && it.retain }
+                        ?: return@execute
+                    store.append(event.copy(sensitivity = contact.sensitivity, holdUncertain = contact.holdUncertain), days, now.wall, assess = onDurable == null, clock = now) to store.inboxCounts(days, now)
                 }
                 val (captured, counts) = result.getOrNull() ?: (null to null)
                 status.value = GuardianCaptureHealth(

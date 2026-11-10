@@ -149,6 +149,8 @@ internal fun EvidenceLocker(controller:EvidenceController,onClose:()->Unit,onImp
         TextButton(enabled=!busy&&incident.evidenceIds().isNotEmpty(),onClick={onAi(incident.evidenceIds())}){Text("AI analysis")};TextButton(enabled=!busy&&incident.evidenceIds().isNotEmpty(),onClick={onAiReport(incident.evidenceIds())}){Text("Behaviour report*")}
         if(controller.access.owner==EvidenceCatalog.Owner.PRIMARY)
          TextButton(enabled=!busy&&incident.evidenceIds().isNotEmpty(),onClick={choice="Teach Guardian incident"}){Text("Teach Guardian")}
+        if(controller.access.owner==EvidenceCatalog.Owner.PRIMARY)
+         TextButton(enabled=!busy,onClick={choice="Link Guardian message"}){Text("Add Guardian message")}
         TextButton(onClick={toolsExpanded=!toolsExpanded}){Text(if(toolsExpanded)"Hide incident tools" else "Incident tools")}
         if(toolsExpanded){
          TextButton(enabled=!busy,onClick={exportSelection=EvidenceExportSelection(listOf(incident.id()),emptyList())}){Text("Export")}
@@ -371,6 +373,8 @@ internal fun EvidenceLocker(controller:EvidenceController,onClose:()->Unit,onImp
   val records=catalog?.evidence().orEmpty().associateBy{it.id()}
   EvidenceGuardianLearning(controller,incident?.evidenceIds().orEmpty().mapNotNull(records::get)){choice=null}
  }
+ if(choice=="Link Guardian message"&&controller.access.owner==EvidenceCatalog.Owner.PRIMARY)
+  incident?.let{target->EvidenceGuardianMessageLink(controller,target){choice=null}}
  if(more)GalleryAlertDialog(onDismissRequest={more=false},title={EvidenceDialogTitle("Evidence tools")},text={
   Column {
    TextButton(enabled=selected.isNotEmpty()&&selected.size<=128,onClick={more=false;choice="Sanctuary learning"}){Text("Prepare Sanctuary learning")}
@@ -382,7 +386,7 @@ internal fun EvidenceLocker(controller:EvidenceController,onClose:()->Unit,onImp
  },confirmButton={TextButton(onClick={more=false}){Text("Done")}},
  properties=DialogProperties(securePolicy=SecureFlagPolicy.SecureOn))
  exportSelection?.let{initial->if(catalog!=null)EvidenceExportSelectionDialog(catalog,initial,onClose={exportSelection=null},onContinue={selection->exportSelection=null;onExport(selection)})}
- choice?.takeIf{it !in setOf("Import","Connect collections","Review queue","Sanctuary learning","Teach Guardian","Teach Guardian incident")}?.let{kind->
+ choice?.takeIf{it !in setOf("Import","Connect collections","Review queue","Sanctuary learning","Teach Guardian","Teach Guardian incident","Link Guardian message")}?.let{kind->
   val options=catalog?.incidents()?.filter{!it.archived()&&(kind !in listOf("Merge","Move")||it.id()!=incidentId)}?.map{it.id() to it.title()}.orEmpty()
   GalleryAlertDialog(onDismissRequest={choice=null},title={EvidenceDialogTitle(when(kind){"Merge"->"Merge this incident into…";else->"Choose incident"})},text={LazyColumn(Modifier.heightIn(max=400.dp)){items(options,key={it.first}){(id,name)->TextButton(onClick={
    choice=null;when(kind){"Merge"->{val source=incidentId;confirmation="Merge this incident into $name? Source incident will be archived and source lineage retained." to {if(source!=null)change("Incidents merged"){it.merge(id,listOf(source),EvidenceController.now())};incidentId=id}};"Edit suggestion target"->{val suggestion=suggestionEdit;suggestionEdit=null;if(suggestion!=null)confirmation="Apply the edited suggestion to $name? Only evidence references will be linked." to {change("Owner-edited suggestion applied"){it.rejectSuggestion(suggestion.id(),EvidenceController.now()).assign(suggestion.evidenceIds(),id,false,EvidenceController.now())}}};else->{val ids=selected.toList();change("Evidence assigned"){it.assign(ids,id,kind=="Move",EvidenceController.now())};selected=emptySet()}}
@@ -441,7 +445,7 @@ private class EvidenceForm(val title:String,val labels:List<String>,val initial:
 private fun tags(value:String)=value.split(',').map{it.trim()}.filter{it.isNotEmpty()}.distinct()
 private fun epoch(value:String)=if(value.isBlank())0L else Instant.parse(value.trim()).toEpochMilli().also{require(it>=0)}
 private fun time(value:Long)=evidenceLocalTime(value)
-private fun withEvents(i:EvidenceCatalog.Incident,events:List<EvidenceCatalog.Event>)=EvidenceCatalog.Incident(i.id(),i.title(),i.startAt(),i.endAt(),i.description(),i.notes(),i.tags(),i.evidenceIds(),events,i.manualOrder(),i.archived(),i.lineage())
+internal fun withEvents(i:EvidenceCatalog.Incident,events:List<EvidenceCatalog.Event>)=EvidenceCatalog.Incident(i.id(),i.title(),i.startAt(),i.endAt(),i.description(),i.notes(),i.tags(),i.evidenceIds(),events,i.manualOrder(),i.archived(),i.lineage())
 
 /** Selection contains only explicitly chosen IDs; incident attachments are resolved by the export plan. */
 internal data class EvidenceExportSelection(val incidentIds:List<String>,val evidenceIds:List<String>)

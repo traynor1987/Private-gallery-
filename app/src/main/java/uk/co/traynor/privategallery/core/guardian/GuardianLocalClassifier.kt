@@ -27,6 +27,7 @@ internal fun guardianFeatures(text: String): Set<String> {
 /** Version 1 is a nearest-example phrase model. Unmatched, short and ambiguous text abstains. */
 internal fun classifyGuardian(
     text: String, examples: List<GuardianExample>, recent: List<String> = emptyList(),
+    sensitivity: GuardianSensitivity = GuardianSensitivity.STANDARD,
 ): GuardianAssessment {
     val features = guardianFeatures(text)
     if (features.isEmpty()) return GuardianAssessment.UNCERTAIN
@@ -39,8 +40,8 @@ internal fun classifyGuardian(
     val best = ranked.firstOrNull() ?: return GuardianAssessment.UNCERTAIN
     val second = ranked.getOrNull(1)?.value ?: 0.0
     if (best.value - second < .20) return GuardianAssessment.UNCERTAIN
-    if (best.value >= .62) return best.key
-    val supporting = best.key != GuardianAssessment.UNCERTAIN && best.value >= .50 &&
+    if (best.value >= sensitivity.threshold) return best.key
+    val supporting = best.key != GuardianAssessment.UNCERTAIN && best.value >= sensitivity.threshold - .12 &&
         recent.takeLast(3).count { classifyGuardian(it, examples) == best.key } >= 2
     return if (supporting) best.key else GuardianAssessment.UNCERTAIN
 }
