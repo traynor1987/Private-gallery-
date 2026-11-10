@@ -1,6 +1,8 @@
 package uk.co.traynor.privategallery.core.guardian
 
 import android.content.Context
+import android.os.SystemClock
+import android.provider.Settings
 import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
 import android.util.AtomicFile
@@ -25,6 +27,17 @@ internal data class GuardianCaptureEvent(
 )
 
 internal data class GuardianCaptureResult(val added: Int, val retained: Int, val partial: Boolean)
+
+internal data class GuardianInboxRow(
+    val id: String, val time: Long, val section: GuardianInboxSection, val remainingMillis: Long,
+)
+
+internal enum class GuardianInboxAction { READY, HOLD, ARCHIVE }
+
+internal fun guardianInboxClock(context: Context) = GuardianInboxClock(
+    System.currentTimeMillis(), SystemClock.elapsedRealtime(),
+    runCatching { Settings.Global.getInt(context.contentResolver, Settings.Global.BOOT_COUNT, -1) }.getOrDefault(-1),
+)
 
 /** Private, bounded archive. The capture phase exposes aggregate counts only. */
 internal class GuardianCaptureStore(context: Context) {
@@ -55,12 +68,59 @@ internal class GuardianCaptureStore(context: Context) {
         GuardianCaptureResult(added, retained.size, candidates.size != event.entries.size)
     }
 
-    fun summary(days: Int, now: Long): Int = synchronized(lock) {
+    fun summary(days: Int, now: Long): Int = synchronized(lock) { retainedRows(days, now).size }
+
+    fun inboxCounts(days: Int, now: GuardianInboxClock): GuardianInboxCounts = synchronized(lock) {
+        val rows = retainedRows(days, now.wall).map { inboxRow(it, now) }
+        val sections = rows.groupingBy { it.section }.eachCount()
+        GuardianInboxCounts(
+            sections[GuardianInboxSection.PENDING] ?: 0, sections[GuardianInboxSection.READY] ?: 0,
+            sections[GuardianInboxSection.COOLING] ?: 0, sections[GuardianInboxSection.PROTECTED] ?: 0,
+            sections[GuardianInboxSection.HISTORY] ?: 0,
+            rows.asSequence().map { it.remainingMillis }.filter { it > 0 }.minOrNull(),
+        )
+    }
+
+    fun inboxRows(days: Int, now: GuardianInboxClock): List<GuardianInboxRow> = synchronized(lock) {
+        retainedRows(days, now.wall).map { inboxRow(it, now) }
+    }
+
+    fun revealInboxMessage(id: String, days: Int, now: GuardianInboxClock): String? = synchronized(lock) {
+        val row = retainedRows(days, now.wall).firstOrNull { it.getString("id") == id } ?: return@synchronized null
+        if (inboxRow(row, now).section == GuardianInboxSection.COOLING) null else row.getString("text")
+    }
+
+    fun reviewInboxMessage(id: String, action: GuardianInboxAction, days: Int, now: GuardianInboxClock): Boolean =
+        synchronized(lock) {
+            val rows = retainedRows(days, now.wall)
+            val row = rows.firstOrNull { it.getString("id") == id } ?: return@synchronized false
+            if (inboxRow(row, now).section == GuardianInboxSection.COOLING) return@synchronized false
+            when (action) {
+                GuardianInboxAction.READY -> row.remove("hold").also { row.put("review", "ready") }
+                GuardianInboxAction.HOLD -> row.put("hold", JSONObject()
+                    .put("wall", now.wall + GUARDIAN_HOLD_MILLIS)
+                    .put("elapsed", now.elapsed + GUARDIAN_HOLD_MILLIS).put("boot", now.boot))
+                GuardianInboxAction.ARCHIVE -> row.remove("hold").also { row.put("review", "archived") }
+            }
+            write(rows)
+            true
+        }
+
+    private fun retainedRows(days: Int, now: Long): List<JSONObject> {
         val stored = read()
         val cutoff = cutoff(days, now)
         val live = stored.filter { isRetained(it, cutoff) }
         if (stored.size != live.size) write(live)
-        live.size
+        return live
+    }
+
+    private fun inboxRow(row: JSONObject, now: GuardianInboxClock): GuardianInboxRow {
+        val hold = row.optJSONObject("hold")?.let {
+            GuardianInboxHold(it.getLong("wall"), it.getLong("elapsed"), it.getInt("boot"))
+        }
+        val review = row.optString("review")
+        return GuardianInboxRow(row.getString("id"), row.getLong("messageAt"),
+            guardianInboxSection(hold, review == "ready", now, review == "archived"), hold?.remaining(now) ?: 0L)
     }
 
     fun clear() = synchronized(lock) {

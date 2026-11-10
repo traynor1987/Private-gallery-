@@ -23,6 +23,7 @@ ALLOWED_GUARDIAN = {
     f"{CORE}/guardian/GuardianCapture.kt",
     f"{CORE}/guardian/GuardianCapturePolicy.kt",
     f"{CORE}/guardian/GuardianCaptureStore.kt",
+    f"{CORE}/guardian/GuardianInboxPolicy.kt",
 }
 
 
@@ -110,6 +111,13 @@ expected_listener = ET.fromstring(f"""
 """)
 assert structure(listener) == structure(expected_listener)
 application.remove(listener)
+inbox, = [activity for activity in application.findall("activity")
+          if activity.get(ANDROID + "name") == ".launcher.GuardianInboxActivity"]
+assert structure(inbox) == structure(ET.fromstring(f"""
+    <activity xmlns:android="{ANDROID[1:-1]}" android:name=".launcher.GuardianInboxActivity"
+        android:exported="false" android:excludeFromRecents="true" />
+"""))
+application.remove(inbox)
 settings_query = ET.fromstring(f"""
     <intent xmlns:android="{ANDROID[1:-1]}">
       <action android:name="android.settings.ACTION_NOTIFICATION_LISTENER_SETTINGS" />

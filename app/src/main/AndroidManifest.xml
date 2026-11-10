@@ -46,6 +46,8 @@
       android:roundIcon="@mipmap/ic_launcher_round"
       android:supportsRtl="true"
       android:theme="@style/Theme.PrivateGallery">
+    <activity android:name=".launcher.GuardianInboxActivity"
+        android:exported="false" android:excludeFromRecents="true" />
     <service android:name=".core.guardian.GuardianNotificationListener"
         android:exported="false"
         android:label="@string/guardian_listener_label"

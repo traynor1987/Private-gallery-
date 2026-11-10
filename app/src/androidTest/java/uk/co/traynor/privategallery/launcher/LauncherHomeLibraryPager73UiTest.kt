@@ -72,16 +72,14 @@ class LauncherHomeLibraryPager73UiTest {
         compose.onNodeWithText("Analysis unavailable").assertIsDisplayed()
         val ready = compose.onNodeWithTag("guardian-ready-tile").assertIsDisplayed()
         val cooling = compose.onNodeWithTag("guardian-cooling-tile").assertIsDisplayed()
-        ready.assertTextContains("Unavailable")
-        cooling.assertTextContains("Unavailable")
+        compose.waitUntil(5_000) {
+            runCatching { ready.assertTextContains("0"); cooling.assertTextContains("0") }.isSuccess
+        }
         val readyBounds = ready.fetchSemanticsNode().boundsInRoot
         val coolingBounds = cooling.fetchSemanticsNode().boundsInRoot
         assertTrue(kotlin.math.abs(readyBounds.width - coolingBounds.width) <= 1f)
         assertEquals(readyBounds.height, coolingBounds.height)
         saveGuardianCheckpoint("cover")
-        ready.performClick()
-        compose.onNodeWithText("Encrypted inbox unavailable in this build.").assertIsDisplayed()
-        compose.onNodeWithText("Close").performClick()
         compose.onNodeWithText("View Diagnostics").performScrollTo().performClick()
         compose.onNodeWithText("Notification compatibility").assertIsDisplayed()
         compose.runOnIdle { compose.activity.onBackPressedDispatcher.onBackPressed() }

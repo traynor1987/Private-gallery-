@@ -13,6 +13,7 @@ internal data class GuardianCaptureHealth(
     val retained: Int? = null,
     val limited: Boolean = false,
     val busy: Boolean = false,
+    val inbox: GuardianInboxCounts? = null,
 )
 
 /** Serialises settings, archive writes and deletion without blocking Android's listener callbacks. */
@@ -59,11 +60,16 @@ internal object GuardianCapture {
                     return@execute
                 }
                 val days = retention(app)
-                val result = runCatching { GuardianCaptureStore(app).append(event, days, System.currentTimeMillis()) }
-                val captured = result.getOrNull()
+                val result = runCatching {
+                    val store = GuardianCaptureStore(app)
+                    val now = guardianInboxClock(app)
+                    store.append(event, days, now.wall) to store.inboxCounts(days, now)
+                }
+                val (captured, counts) = result.getOrNull() ?: (null to null)
                 status.value = GuardianCaptureHealth(
                     enabled = true, retentionDays = days, retained = captured?.retained,
                     limited = captured == null || captured.partial || captured.retained == 0,
+                    inbox = counts,
                 )
             } finally {
                 pendingEvents.decrementAndGet()
@@ -76,15 +82,17 @@ internal object GuardianCapture {
         status.update { it.copy(busy = true) }
         worker.execute {
             val store = GuardianCaptureStore(app)
-            val retained = runCatching {
+            val result = runCatching {
                 change(app, store)
-                store.summary(retention(app), System.currentTimeMillis())
+                store.inboxCounts(retention(app), guardianInboxClock(app))
             }
-            status.value = GuardianCaptureHealth(isEnabled(app), retention(app), retained.getOrNull(), retained.isFailure)
+            val counts = result.getOrNull()
+            val retained = counts?.let { it.pending + it.ready + it.cooling + it.protected + it.history }
+            status.value = GuardianCaptureHealth(isEnabled(app), retention(app), retained, result.isFailure, inbox = counts)
         }
     }
 
-    private fun retention(context: Context) = prefs(context).getInt("retention", 7)
+    fun retention(context: Context) = prefs(context).getInt("retention", 7)
 
     private fun prefs(context: Context) = context.getSharedPreferences("nova_guardian_capture", Context.MODE_PRIVATE)
 }

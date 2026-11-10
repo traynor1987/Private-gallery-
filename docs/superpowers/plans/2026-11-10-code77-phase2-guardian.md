@@ -32,3 +32,9 @@ Code 77 continues on the existing branch. The isolated diagnostic package can ve
 After running the Phase 1 checks, use **Encrypted Main WhatsApp capture** in the test app's diagnostics. Enable it explicitly, then send one harmless message to each account. Verify that only supported Main data increments the retained total. Repeat after leaving the app and reopening it, then revoke notification access and confirm capture turns off. Use **Clear encrypted capture** to delete the test archive.
 
 The five-minute probe also counts visible call and missed-call notification events for the Android default dialer and WhatsApp profiles. Test each source on the Fold with your preferred DND settings. Missing events may mean Android or the app did not expose a listener-visible notification. These counts do not verify Telecom call visibility or provide any call-control capability.
+
+## Inbox and count checkpoint
+
+Guardian Home reads counts from the encrypted archive. New captures remain Awaiting analysis. Ready to Read counts records the owner explicitly marked ready. Cooling Down counts active manual four-hour holds. Expired holds move to Protected for deliberate review. History contains records the owner filed. Opening the inbox requires the Android device credential and shows dates and sections first. Opening a message requires a separate reveal action. The screen locks on backgrounding or after two minutes and uses Android's secure window flag.
+
+The owner confirmed encrypted capture and the harmless NovaOS dismissal test on the Fold. DND-off profile delivery, lock-screen presentation, and reauthorisation on the Fold still require confirmation. The isolated APK contains manual holds and review actions. Automated classification, Evidence Locker learning, real WhatsApp dismissal, and automatic Panic remain separate work.

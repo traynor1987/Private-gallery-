@@ -9,6 +9,35 @@ import java.io.File
 
 @RunWith(AndroidJUnit4::class)
 class GuardianCaptureStore77Test {
+    @Test fun inboxCountsAndHoldsSurviveReopeningWithoutEarlyReveal() {
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        val now = guardianInboxClock(context)
+        val store = GuardianCaptureStore(context)
+        store.clear()
+        try {
+            val entry = GuardianCaptureEntry(now.wall - 1, "synthetic sender", "synthetic held message")
+            val event = GuardianCaptureEvent(0, "conversation", now.wall, listOf(entry))
+            store.append(event, 7, now.wall)
+            assertEquals(1, store.inboxCounts(7, now).pending)
+            val id = store.inboxRows(7, now).single().id
+            assertTrue(store.reviewInboxMessage(id, GuardianInboxAction.READY, 7, now))
+            assertEquals(1, store.inboxCounts(7, now).ready)
+            assertTrue(store.reviewInboxMessage(id, GuardianInboxAction.HOLD, 7, now))
+            val reopened = GuardianCaptureStore(context)
+            assertEquals(1, reopened.inboxCounts(7, now).cooling)
+            assertEquals(0, reopened.append(event, 7, now.wall).added)
+            assertNull(reopened.revealInboxMessage(id, 7, now))
+            assertFalse(reopened.reviewInboxMessage(id, GuardianInboxAction.READY, 7, now))
+            val after = now.copy(wall = now.wall + GUARDIAN_HOLD_MILLIS, elapsed = now.elapsed + GUARDIAN_HOLD_MILLIS)
+            assertEquals(1, reopened.inboxCounts(7, after).protected)
+            assertEquals(entry.text, reopened.revealInboxMessage(id, 7, after))
+            assertTrue(reopened.reviewInboxMessage(id, GuardianInboxAction.ARCHIVE, 7, after))
+            assertEquals(1, reopened.inboxCounts(7, after).history)
+        } finally {
+            store.clear()
+        }
+    }
+
     @Test fun encryptedArchiveDeduplicatesUpdatesAcrossStoreReopens() {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         val now = System.currentTimeMillis()

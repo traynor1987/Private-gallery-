@@ -26,6 +26,9 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
+import androidx.activity.compose.LocalActivity
+import kotlinx.coroutines.delay
+import uk.co.traynor.privategallery.core.guardian.GuardianInboxSection
 import uk.co.traynor.privategallery.core.guardian.GuardianCapture
 import uk.co.traynor.privategallery.core.guardian.GuardianNotificationListener
 import uk.co.traynor.privategallery.core.guardian.ProbeAccount
@@ -94,10 +97,6 @@ private val GuardianBlue = Color(0xFF9BCBFF)
 private val GuardianMint = Color(0xFF9DE3CE)
 private val GuardianAmber = Color(0xFFF0C79B)
 
-private enum class GuardianInboxSection(val label: String) {
-    READY("Ready"), COOLING("Cooling Down"), PROTECTED("Protected"), HISTORY("History"),
-}
-
 @Composable
 internal fun GuardianHome(
     options: GuardianHomeOptions,
@@ -109,12 +108,21 @@ internal fun GuardianHome(
     onDiagnostics: () -> Unit,
 ) {
     val context = LocalContext.current
+    val activity = LocalActivity.current
     val listener by GuardianNotificationListener.state.collectAsState()
     val capture by GuardianCapture.state.collectAsState()
     LaunchedEffect(context) { GuardianCapture.refresh(context) }
     val access = GuardianNotificationListener.hasAccess(context)
     val dnd = context.getSystemService(NotificationManager::class.java)?.isNotificationPolicyAccessGranted == true
-    var inbox by remember { mutableStateOf<GuardianInboxSection?>(null) }
+    val counts = capture.inbox
+    LaunchedEffect(counts) {
+        val remaining = counts?.refreshAfterMillis ?: return@LaunchedEffect
+        delay(remaining)
+        GuardianCapture.refresh(context)
+    }
+    fun openInbox(section: GuardianInboxSection) {
+        activity?.let { GuardianInboxActivity.open(it, section) }
+    }
     val main = apps.filter { it.packageName == "com.whatsapp" && it.profileSerial == null }
     val friends = apps.filter { it.packageName == "com.whatsapp" && it.profile?.isClone == true }
     fun rule(entries: List<LauncherApp>): String {
@@ -174,18 +182,19 @@ internal fun GuardianHome(
                             Modifier.fillMaxWidth().height(IntrinsicSize.Min),
                             horizontalArrangement = Arrangement.spacedBy(spacing),
                         ) {
-                            if (options.ready) GuardianMessageTile("Ready to Read", Icons.Outlined.Inbox, GuardianMint,
+                            if (options.ready) GuardianMessageTile("Ready to Read", counts?.ready, Icons.Outlined.Inbox, GuardianMint,
                                 Modifier.weight(1f).fillMaxHeight().testTag("guardian-ready-tile")) {
-                                inbox = GuardianInboxSection.READY
+                                openInbox(GuardianInboxSection.READY)
                             }
-                            if (options.cooling) GuardianMessageTile("Cooling Down", Icons.Outlined.Lock, GuardianAmber,
+                            if (options.cooling) GuardianMessageTile("Cooling Down", counts?.cooling, Icons.Outlined.Lock, GuardianAmber,
                                 Modifier.weight(1f).fillMaxHeight().testTag("guardian-cooling-tile")) {
-                                inbox = GuardianInboxSection.COOLING
+                                openInbox(GuardianInboxSection.COOLING)
                             }
                         }
                     }
 
                     GuardianCard("Guardian assessment", badge = "Analysis unavailable") {
+                        if (counts != null) Text("${counts.pending} awaiting analysis", style = MaterialTheme.typography.titleMedium)
                         Text("Guardian analysis is not yet available in this build.",
                             color = GuardianMuted, style = MaterialTheme.typography.bodyMedium)
                         HorizontalDivider(Modifier.padding(vertical = 4.dp), color = GuardianBorder)
@@ -230,7 +239,7 @@ internal fun GuardianHome(
                         }
                     }
 
-                    OutlinedButton(onClick = { inbox = GuardianInboxSection.READY }, modifier = Modifier.fillMaxWidth()) {
+                    OutlinedButton(onClick = { openInbox(GuardianInboxSection.PENDING) }, modifier = Modifier.fillMaxWidth()) {
                         Icon(Icons.Outlined.Inbox, null, Modifier.size(18.dp))
                         Spacer(Modifier.width(8.dp))
                         Text("Guardian Inbox")
@@ -238,23 +247,7 @@ internal fun GuardianHome(
                 }
             }
         }
-        inbox?.let { section ->
-            AlertDialog(
-                onDismissRequest = { inbox = null },
-                title = { Text("Guardian Inbox") },
-                text = {
-                    Column(Modifier.verticalScroll(rememberScrollState())) {
-                        Text("Encrypted inbox unavailable in this build.")
-                        GuardianInboxSection.entries.forEach { entry ->
-                            TextButton(onClick = { inbox = entry }) {
-                                Text(entry.label, color = if (entry == section) GuardianBlue else GuardianMuted)
-                            }
-                        }
-                    }
-                },
-                confirmButton = { TextButton(onClick = { inbox = null }) { Text("Close") } },
-            )
-        }
+
     }
 }
 
@@ -288,7 +281,7 @@ private fun GuardianCard(
 
 @Composable
 private fun GuardianMessageTile(
-    title: String, icon: ImageVector, accent: Color, modifier: Modifier, onOpen: () -> Unit,
+    title: String, count: Int?, icon: ImageVector, accent: Color, modifier: Modifier, onOpen: () -> Unit,
 ) {
     Card(
         onClick = onOpen, modifier = modifier.heightIn(min = 104.dp), shape = RoundedCornerShape(22.dp),
@@ -297,7 +290,8 @@ private fun GuardianMessageTile(
     ) {
         Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
             Icon(icon, null, Modifier.size(22.dp), tint = accent)
-            Text("Unavailable", style = MaterialTheme.typography.titleMedium)
+            Text(count?.toString() ?: "Unavailable",
+                style = if (count == null) MaterialTheme.typography.titleMedium else MaterialTheme.typography.headlineSmall)
             Text(title, style = MaterialTheme.typography.bodyMedium, color = GuardianMuted)
         }
     }
