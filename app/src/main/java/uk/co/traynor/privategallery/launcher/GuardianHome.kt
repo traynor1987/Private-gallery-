@@ -236,7 +236,7 @@ internal fun GuardianHome(
                             }, (learning ?: 0) > 0)
                             GuardianHealthLine("Cloud analysis", "Unavailable")
                             GuardianHealthLine("NovaOS test dismissal", when (listener.synthetic) {
-                                SyntheticResult.DISMISSED -> "Verified on this device"
+                                SyntheticResult.DISMISSED -> "Android confirmed removal"
                                 SyntheticResult.WAITING, SyntheticResult.DISMISSING -> "Testing"
                                 SyntheticResult.DISMISS_FAILED, SyntheticResult.CAPTURE_FAILED,
                                 SyntheticResult.NOT_RECEIVED, SyntheticResult.DISCONNECTED -> "Check diagnostics"

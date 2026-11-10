@@ -21,10 +21,11 @@ class GuardianNotificationCompatibility77Test {
         val instrumentation = InstrumentationRegistry.getInstrumentation()
         val context = instrumentation.targetContext
         val component = ComponentName(context, GuardianNotificationListener::class.java).flattenToString()
-        fun setAccess(command: String) {
-            val result = instrumentation.uiAutomation.executeShellCommand("cmd notification $command $component")
-            ParcelFileDescriptor.AutoCloseInputStream(result).bufferedReader().use { it.readText() }
+        fun shell(command: String): String {
+            val result = instrumentation.uiAutomation.executeShellCommand(command)
+            return ParcelFileDescriptor.AutoCloseInputStream(result).bufferedReader().use { it.readText() }
         }
+        fun setAccess(command: String) { shell("cmd notification $command $component") }
         assertFalse(GuardianNotificationListener.hasAccess(context))
         try {
             instrumentation.runOnMainSync { GuardianNotificationListener.startProbe(context) }
@@ -53,29 +54,80 @@ class GuardianNotificationCompatibility77Test {
             val manager = checkNotNull(context.getSystemService(NotificationManager::class.java))
             val originalDnd = manager.currentInterruptionFilter
             instrumentation.uiAutomation.grantRuntimePermission(context.packageName, Manifest.permission.POST_NOTIFICATIONS)
-            instrumentation.runOnMainSync { GuardianNotificationListener.postSynthetic(context, dismiss = false) }
-            await("The harmless test reached the listener and was securely captured") {
-                GuardianNotificationListener.state.value.synthetic == SyntheticResult.PRESENTED
+            fun postPresentation() {
+                instrumentation.runOnMainSync { GuardianNotificationListener.postSynthetic(context) }
+                await("The harmless test reached the listener and was securely captured") {
+                    GuardianNotificationListener.state.value.synthetic == SyntheticResult.PRESENTED
+                }
             }
-            val presented = manager.activeNotifications.single { it.notification.channelId == "guardian-compatibility-test" }
+            fun dismissPresentation() {
+                instrumentation.runOnMainSync { GuardianNotificationListener.dismissPresentedTest(context) }
+                await("Android removed the matching presentation notification") {
+                    val status = GuardianNotificationListener.state.value
+                    status.synthetic == SyntheticResult.DISMISSED && status.dismissal.stillActive == false
+                }
+            }
+            val channel = "guardian-compatibility-test"
+            postPresentation()
+            val presented = manager.activeNotifications.single { it.notification.channelId == channel }
             assertEquals(Notification.VISIBILITY_SECRET, presented.notification.visibility)
             assertNull(presented.notification.publicVersion)
             assertNotNull(GuardianNotificationListener.state.value.syntheticDndMatch)
-            instrumentation.runOnMainSync { GuardianNotificationListener.postSynthetic(context, dismiss = true) }
-            await("Android confirmed only the requested synthetic notification was removed") {
-                GuardianNotificationListener.state.value.synthetic == SyntheticResult.DISMISSED
+            dismissPresentation()
+            assertTrue(manager.activeNotifications.none { it.tag == presented.tag && it.id == presented.id })
+
+            postPresentation()
+            val first = manager.activeNotifications.single { it.notification.channelId == channel }
+            postPresentation()
+            val second = manager.activeNotifications.single { it.notification.channelId == channel && it.tag != first.tag }
+            assertEquals(first.id, second.id)
+            val group = Notification.Builder(context, channel).setSmallIcon(android.R.drawable.ic_dialog_info)
+                .setContentTitle("Unrelated group fixture").setGroup("unrelated").setGroupSummary(true).build()
+            manager.notify("unrelated-group", first.id, group)
+            try {
+                await("The unrelated group fixture is active") {
+                    manager.activeNotifications.any { it.tag == "unrelated-group" && it.id == first.id }
+                }
+                dismissPresentation()
+                assertTrue(manager.activeNotifications.none { it.tag == second.tag && it.id == second.id })
+                assertTrue(manager.activeNotifications.any { it.tag == first.tag && it.id == first.id })
+                assertTrue(manager.activeNotifications.any { it.tag == "unrelated-group" && it.id == first.id })
+                dismissPresentation()
+                assertTrue(manager.activeNotifications.none { it.tag == first.tag && it.id == first.id })
+            } finally {
+                manager.cancel("unrelated-group", first.id)
             }
-            assertTrue(manager.activeNotifications.any { it.key == presented.key })
+
+            val fixtureTag = "nova-guardian-shell-fixture-" + java.util.UUID.randomUUID()
+            val postedFixture = shell("cmd notification post -t Guardian-fixture $fixtureTag Harmless-external-test")
+            var externalRequested = false
+            await("The authorised listener found the shell fixture by exact identity. Shell result: $postedFixture") {
+                if (!externalRequested) instrumentation.runOnMainSync {
+                    externalRequested = GuardianNotificationListener.dismissExternalTestFixture(context, fixtureTag)
+                }
+                externalRequested
+            }
+            await("Android acknowledged external listener cancellation and removed the exact key") {
+                val status = GuardianNotificationListener.state.value
+                status.synthetic == SyntheticResult.DISMISSED &&
+                    status.dismissal.mechanism == "NotificationListenerService · exact key" &&
+                    status.dismissal.stillActive == false
+            }
             assertTrue("Synthetic test callbacks must not become WhatsApp events",
                 GuardianNotificationListener.state.value.results.isEmpty())
             assertEquals("The compatibility test must not change DND", originalDnd, manager.currentInterruptionFilter)
-            manager.cancel(presented.tag, presented.id)
+            postPresentation()
         } finally {
             setAccess("disallow_listener")
         }
         await("Android revoked listener access and cleared the probe") {
             !GuardianNotificationListener.hasAccess(context) &&
                 GuardianNotificationListener.state.value == ListenerProbeStatus() && !GuardianCapture.isEnabled(context)
+        }
+        instrumentation.runOnMainSync { GuardianNotificationListener.dismissPresentedTest(context) }
+        await("Owned dismissal still works after listener revocation clears its session") {
+            val status = GuardianNotificationListener.state.value
+            status.synthetic == SyntheticResult.DISMISSED && status.dismissal.stillActive == false
         }
         try {
             setAccess("allow_listener")

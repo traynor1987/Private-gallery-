@@ -169,10 +169,11 @@ internal fun NotificationCompatibilityScreen(
             }
             val canTest = canPost && access && status.connected &&
                 status.synthetic !in setOf(SyntheticResult.WAITING, SyntheticResult.DISMISSING)
-            Button(onClick = { GuardianNotificationListener.postSynthetic(context, dismiss = false) }, enabled = canTest) {
+            Button(onClick = { GuardianNotificationListener.postSynthetic(context) }, enabled = canTest) {
                 Text("Test notification presentation")
             }
-            OutlinedButton(onClick = { GuardianNotificationListener.postSynthetic(context, dismiss = true) }, enabled = canTest) {
+            OutlinedButton(onClick = { GuardianNotificationListener.dismissPresentedTest(context) },
+                enabled = status.synthetic !in setOf(SyntheticResult.WAITING, SyntheticResult.DISMISSING)) {
                 Text("Test dismissal of NovaOS notification")
             }
             Surface(
@@ -186,6 +187,12 @@ internal fun NotificationCompatibilityScreen(
                     Text(status.synthetic.label, style = MaterialTheme.typography.bodyMedium)
                 }
             }
+            val dismissal = status.dismissal
+            if (dismissal.posted) Text("Test notification posted")
+            if (dismissal.matched) Text("Test notification identity matched")
+            if (dismissal.requested) Text("Cancellation requested · ${dismissal.mechanism}")
+            dismissal.stillActive?.let { Text(if (it) "Exact notification still active" else "Exact notification removed") }
+            dismissal.failure?.let { Text(it, color = MaterialTheme.colorScheme.error) }
             status.syntheticDndMatch?.let { Text(if (it) "Notification matched the current interruption filter."
                 else "Android ranking marks the test notification as suppressed by the interruption filter.") }
             Text("Check the Samsung shade and lock screen to confirm visible behaviour on your Fold.")
