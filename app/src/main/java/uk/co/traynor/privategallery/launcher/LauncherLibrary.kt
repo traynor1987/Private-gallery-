@@ -247,7 +247,7 @@ internal fun LauncherLibrary(
                         val matches = remember(alphabetical, term) {
                             if (term.isEmpty()) alphabetical else alphabetical.filter { it.matchesLibraryTerm(term) }
                         }
-                        LibraryAlphabeticalList(matches, term, decisions, gestures, onApp)
+                        LibraryAlphabeticalList(matches, term, appearance, decisions, gestures, onApp)
                     } else if (view.category == null) {
                         LazyVerticalGrid(
                             columns = LibraryGridCells(columns), state = categoryGrid, modifier = Modifier.fillMaxSize(),
@@ -259,7 +259,7 @@ internal fun LauncherLibrary(
                                 Text("No available apps", Modifier.padding(16.dp), textAlign = TextAlign.Center)
                             }
                             items(visibleGroups, key = { it.category.name }) { group ->
-                                LibraryCategoryCard(group, decisions, renderApp) {
+                                LibraryCategoryCard(group, appearance, decisions, renderApp) {
                                     focus.clearFocus()
                                     haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                                     onCategory(group.category)
@@ -322,6 +322,7 @@ private fun LibraryCategoryApps(
 private fun LibraryAlphabeticalList(
     apps: List<LauncherApp>,
     term: String,
+    appearance: LauncherAppearance,
     decisions: Map<String, Decision>,
     gestures: LauncherIconGestures,
     onApp: (LauncherApp) -> Unit,
@@ -365,7 +366,7 @@ private fun LibraryAlphabeticalList(
                     )
                 }
                 items(entries, key = LauncherApp::component) { app ->
-                    LibraryAppRow(app, decisions, gestures) { onApp(app) }
+                    LibraryAppRow(app, appearance, decisions, gestures) { onApp(app) }
                 }
             }
         }
@@ -395,6 +396,7 @@ private fun LibraryAlphabeticalList(
 @Composable
 private fun LibraryAppRow(
     app: LauncherApp,
+    appearance: LauncherAppearance,
     decisions: Map<String, Decision>,
     gestures: LauncherIconGestures,
     onClick: () -> Unit,
@@ -416,7 +418,12 @@ private fun LibraryAppRow(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        LauncherAppIcon(app, Modifier.size(40.dp).clip(RoundedCornerShape(10.dp)))
+        val size = when (appearance.iconSize) {
+            LauncherIconSize.SMALL -> 34.dp
+            LauncherIconSize.MEDIUM -> 40.dp
+            LauncherIconSize.LARGE -> 48.dp
+        }
+        LauncherArtworkIcon(app, appearance, Modifier.size(size))
         Column(Modifier.weight(1f)) {
             Text(app.label, style = MaterialTheme.typography.bodyLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
             app.profileLabel?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = Color.White.copy(alpha = .75f)) }
@@ -436,6 +443,7 @@ private fun LibrarySectionHeading(title: String) {
 @Composable
 private fun LibraryCategoryCard(
     group: LauncherLibraryGroup,
+    appearance: LauncherAppearance,
     decisions: Map<String, Decision>,
     renderApp: @Composable (LauncherApp, Modifier, Boolean) -> Unit,
     onOpen: () -> Unit,
@@ -460,17 +468,23 @@ private fun LibraryCategoryCard(
             contentAlignment = Alignment.Center,
         ) {
             val tileSize = ((minOf(maxWidth, maxHeight) - gap) / 2).coerceIn(0.dp, 82.dp)
+            val artworkSize = tileSize * appearance.iconSize.previewScale
+            val appCell: @Composable (LauncherApp) -> Unit = { app ->
+                Box(Modifier.size(tileSize), contentAlignment = Alignment.Center) {
+                    renderApp(app, Modifier.size(artworkSize), false)
+                }
+            }
             when (count) {
                 0 -> Text("No apps", color = Color.White.copy(alpha = .8f), style = MaterialTheme.typography.labelMedium)
-                1 -> renderApp(group.apps[0], Modifier.size((tileSize * 1.28f).coerceAtMost(maxHeight)), false)
+                1 -> renderApp(group.apps[0], Modifier.size((artworkSize * 1.28f).coerceAtMost(maxHeight)), false)
                 else -> Column(verticalArrangement = Arrangement.spacedBy(gap)) {
                     Row(horizontalArrangement = Arrangement.spacedBy(gap)) {
-                        renderApp(group.apps[0], Modifier.size(tileSize), false)
-                        renderApp(group.apps[1], Modifier.size(tileSize), false)
+                        appCell(group.apps[0])
+                        appCell(group.apps[1])
                     }
                     if (count >= 3) {
                         Row(horizontalArrangement = Arrangement.spacedBy(gap)) {
-                            renderApp(group.apps[2], Modifier.size(tileSize), false)
+                            appCell(group.apps[2])
                             if (count > 3) {
                                 LauncherFolderPreview(
                                     group.apps.subList(3, minOf(count, 7)),
@@ -479,7 +493,7 @@ private fun LibraryCategoryCard(
                                         .clickable(role = Role.Button, onClick = onOpen)
                                         .semantics { contentDescription = "See all ${group.category.label} apps" }
                                         .padding(tileSize * .12f),
-                                    decisions,
+                                    decisions, appearance,
                                 )
                             }
                         }
@@ -502,6 +516,7 @@ internal fun LauncherFolderPreview(
     apps: List<LauncherApp>,
     modifier: Modifier = Modifier,
     decisions: Map<String, Decision> = emptyMap(),
+    appearance: LauncherAppearance = LauncherAppearance(),
 ) {
     BoxWithConstraints(modifier, contentAlignment = Alignment.Center) {
         val size = minOf(maxWidth, maxHeight)
@@ -513,18 +528,20 @@ internal fun LauncherFolderPreview(
         } else {
             val spacing = size * .08f
             val cell = (size - spacing) / 2
+            val artwork = cell * appearance.iconSize.previewScale
             Column(Modifier.size(size), verticalArrangement = Arrangement.spacedBy(spacing, Alignment.CenterVertically)) {
                 apps.take(4).chunked(2).forEach { row ->
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(spacing, Alignment.CenterHorizontally)) {
                         row.forEach { app ->
                             key(app.component) {
                                 Box(
-                                    Modifier.size(cell).clip(RoundedCornerShape(cell * .26f)),
+                                    Modifier.size(cell),
                                     contentAlignment = Alignment.Center,
                                 ) {
-                                    LauncherAppIcon(app, Modifier.fillMaxSize())
+                                    LauncherArtworkIcon(app, appearance, Modifier.size(artwork))
                                     if (decisions.forLauncherApp(app)?.canLaunch == false) {
-                                        Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = .55f)))
+                                        Box(Modifier.size(artwork).background(Color.Black.copy(alpha = .55f),
+                                            RoundedCornerShape(26)))
                                         Icon(Icons.Default.Lock, null, Modifier.size(cell * .54f)
                                             .background(Color.Black.copy(alpha = .4f), CircleShape))
                                     }

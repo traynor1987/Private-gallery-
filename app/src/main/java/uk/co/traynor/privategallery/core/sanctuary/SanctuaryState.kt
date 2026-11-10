@@ -31,7 +31,7 @@ enum class SanctuaryMode(val label: String, val defaultMinutes: Int) {
             GAMING, SELF_CARE -> media
             LEARNING -> setOf("com.android.chrome", "com.google.android.youtube")
             WORK -> work
-            PANIC -> media + work
+            PANIC -> panicSanctuaryPersonalApps
         }
         val novaApps = when (this) {
             GAMING -> setOf("arcade")
@@ -73,8 +73,10 @@ data class SanctuarySession(
     val blockedNovaApps: Set<String> = emptySet(),
     val allowWhatsApp: Boolean = false,
 ) {
+    internal val allowsWhatsAppDestinations: Boolean get() = allowWhatsApp && mode != SanctuaryMode.PANIC
+
     fun allowsNovaApp(id: String, url: String? = null): Boolean =
-        sanctuaryAllowsInternalApp(blockedNovaApps, allowWhatsApp, id, url)
+        sanctuaryAllowsInternalApp(blockedNovaApps, allowsWhatsAppDestinations, id, url)
 }
 
 enum class SanctuaryOutcome { EXPIRED, ENDED }
@@ -188,6 +190,13 @@ class SanctuaryStore internal constructor(
         val previous = state.launcherSettings
         if (previous.visibility == visibility) return true
         return commit(state.copy(launcherSettings = previous.copy(visibility = visibility)))
+    }
+
+    @Synchronized
+    internal fun savePanicLauncherVisibility(visibility: PanicLauncherVisibility): Boolean {
+        val previous = state.launcherSettings
+        if (previous.panicVisibility == visibility) return true
+        return commit(state.copy(launcherSettings = previous.copy(panicVisibility = visibility)))
     }
 
     @Synchronized
@@ -473,6 +482,7 @@ internal object SanctuaryCodec {
     private fun SanctuaryLauncherSettings.toJson(): JSONObject = JSONObject()
         .put("friendsWhatsApp", friendsWhatsApp ?: JSONObject.NULL)
         .put("autoEnrolFriends", autoEnrolFriends)
+        .put("panicVisibility", panicVisibility.name)
         .put("appRules", JSONObject().apply { appRules.toSortedMap().forEach { (key, allowed) -> put(key, allowed) } })
         .put("visibility", JSONObject()
             .put("hideBlockedApps", visibility.hideBlockedApps)
@@ -494,6 +504,8 @@ internal object SanctuaryCodec {
             friendsWhatsApp = friends,
             autoEnrolFriends = optBoolean("autoEnrolFriends", true),
             appRules = Collections.unmodifiableMap(appRules),
+            panicVisibility = PanicLauncherVisibility.entries.firstOrNull { it.name == optString("panicVisibility") }
+                ?: PanicLauncherVisibility.APPROVED_ONLY,
             visibility = SanctuaryAppVisibility(
                 hideBlockedApps = visibility.getBoolean("hideBlockedApps"),
                 hideFromSearch = visibility.getBoolean("hideFromSearch"),

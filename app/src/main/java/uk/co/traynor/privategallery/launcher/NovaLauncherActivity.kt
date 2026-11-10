@@ -71,11 +71,12 @@ import uk.co.traynor.privategallery.core.sanctuary.SanctuaryLauncherPolicy
 import uk.co.traynor.privategallery.core.sanctuary.SanctuaryMode
 import uk.co.traynor.privategallery.core.sanctuary.SanctuarySession
 import uk.co.traynor.privategallery.core.sanctuary.SanctuaryStore
+import uk.co.traynor.privategallery.core.sanctuary.panicSanctuaryPersonalApps
 import uk.co.traynor.privategallery.core.ui.AppTheme
 import uk.co.traynor.privategallery.privateWorkspaceEntryIntent
 import uk.co.traynor.privategallery.ui.PrivateGalleryTheme
 
-/** The Android Home task reads only public app metadata, launcher storage and Sanctuary policy. */
+/** Android Home task. Protected launcher changes verify the Primary PIN without starting a vault session. */
 class NovaLauncherActivity : ComponentActivity() {
     private val store by lazy { NovaLauncherStore(this) }
     private val tracking by lazy { LauncherSmartTracking(applicationContext) }
@@ -111,6 +112,7 @@ class NovaLauncherActivity : ComponentActivity() {
     private var defaultHomeOpening by mutableStateOf(LauncherDefaultHomePromptSession())
     private var homeTopResumed by mutableStateOf(false)
     private var homeWindowFocused by mutableStateOf(false)
+    private lateinit var launcherExit: LauncherExitProtection
     private var outsideProtection by mutableStateOf(true)
     private var homeGeneration by mutableIntStateOf(0)
     private var blocked by mutableStateOf<LauncherApp?>(null)
@@ -189,6 +191,16 @@ class NovaLauncherActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        launcherExit = LauncherExitProtection(
+            this,
+            sessionId = { sanctuary.refresh()?.id },
+            foreground = {
+                homeTopResumed && lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED) &&
+                    !isFinishing && !isDestroyed &&
+                    getSystemService(KeyguardManager::class.java)?.isKeyguardLocked == false
+            },
+            openAndroidHomeSettings = ::openAndroidHomeSettings,
+        )
         setIntent(neutralHomeIntent())
         enableEdgeToEdge()
         model = store.read()
@@ -214,6 +226,7 @@ class NovaLauncherActivity : ComponentActivity() {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 combine(sanctuary.current, SanctuaryLauncherPolicy.state()) { session, _ -> session }
                     .collectLatest { session ->
+                        launcherExit.onSessionChanged(session?.id)
                         refreshProtection(invalidatePolicy = true)
                         outsideProtection = SanctuaryLauncherPolicy.outsideProtectionEnabled(this@NovaLauncherActivity)
                         refreshCatalogue()
@@ -232,6 +245,7 @@ class NovaLauncherActivity : ComponentActivity() {
             save = { next ->
                 save(next.copy(launchCounts = model.launchCounts)).also { if (it) offerSmartTemplate() }
             },
+            reloadWorkspaceLayout = ::reloadWorkspaceLayout,
             launchApp = ::launchApp,
             launchShortcut = ::launchShortcut,
             openWorkspace = ::openWorkspace,
@@ -259,6 +273,7 @@ class NovaLauncherActivity : ComponentActivity() {
             setAskForDefaultHome = ::setAskForDefaultHome,
             claimDefaultHomePrompt = ::claimDefaultHomePrompt,
             requestDefaultHome = ::requestDefaultHome,
+            configureExitProtection = launcherExit::requestConfiguration,
             setSmartFolderPresentation = { mode ->
                 if (identitySettings.setSmartFolderPresentation(mode)) smartFolderPresentation = mode
                 else message("The smart folder presentation could not be saved.")
@@ -298,6 +313,7 @@ class NovaLauncherActivity : ComponentActivity() {
                     )
                 }
                 SanctuaryDialogs()
+                LauncherExitProtectionDialogs(launcherExit)
                 WidgetPickerDialog()
                 RenameLauncherAppDialog()
             }
@@ -309,6 +325,7 @@ class NovaLauncherActivity : ComponentActivity() {
         setIntent(neutralHomeIntent())
         // Reopening the same task keeps its existing reminder decision.
         if (intent.action == Intent.ACTION_MAIN && intent.hasCategory(Intent.CATEGORY_HOME)) {
+            launcherExit.cancel()
             activeUtility = null
             blocked = null
             review = false
@@ -341,6 +358,7 @@ class NovaLauncherActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
+        reloadWorkspaceLayout()
         refreshProtection()
         askDefaultHome = store.askForDefaultHome()
         pendingUsageRefresh = true
@@ -351,6 +369,7 @@ class NovaLauncherActivity : ComponentActivity() {
 
     override fun onPause() {
         usageRefresh?.cancel()
+        launcherExit.cancel()
         super.onPause()
     }
 
@@ -374,7 +393,10 @@ class NovaLauncherActivity : ComponentActivity() {
         super.onTopResumedActivityChanged(isTopResumedActivity)
         homeTopResumed = isTopResumedActivity
         if (isTopResumedActivity) SanctuaryLauncherPolicy.launcherResumed(this)
-        else SanctuaryLauncherPolicy.launcherPaused()
+        else {
+            launcherExit.cancel()
+            SanctuaryLauncherPolicy.launcherPaused()
+        }
     }
 
     override fun onWindowFocusChanged(hasFocus: Boolean) {
@@ -435,12 +457,12 @@ class NovaLauncherActivity : ComponentActivity() {
         else message("The default launcher reminder setting could not be saved.")
     }
 
-    private fun canShowDefaultHomePrompt(): Boolean = homeTopResumed && !launcherProtected &&
+    private fun canShowDefaultHomePrompt(): Boolean = homeTopResumed && !launcherProtected && sanctuaryStatus == null &&
         activeUtility == null && blocked == null && !review && !sanctuaryOpen && picker == null && renaming == null
 
     private fun claimDefaultHomePrompt(): Boolean {
         val safeHome = canShowDefaultHomePrompt() && hasWindowFocus() && !isFinishing &&
-            !runCatching { SanctuaryLauncherPolicy.launcherProtectionActive(this) }.getOrDefault(true)
+            runCatching { sanctuary.refresh() == null }.getOrDefault(false)
         if (!safeHome) return false
         askDefaultHome = store.askForDefaultHome()
         if (updateDefaultHome()) refreshCatalogue()
@@ -449,7 +471,7 @@ class NovaLauncherActivity : ComponentActivity() {
 
     private fun requestDefaultHome() {
         if (!canShowDefaultHomePrompt() || isFinishing ||
-            runCatching { SanctuaryLauncherPolicy.launcherProtectionActive(this) }.getOrDefault(true)
+            !runCatching { sanctuary.refresh() == null }.getOrDefault(false)
         ) return
         if (updateDefaultHome()) refreshCatalogue()
         if (defaultHome == true) return
@@ -501,6 +523,14 @@ class NovaLauncherActivity : ComponentActivity() {
                 shortcuts = emptyList()
                 message("Some installed apps could not be refreshed.")
             }
+        }
+    }
+
+    private fun reloadWorkspaceLayout() {
+        val persisted = store.read()
+        if (persisted != model) {
+            model = persisted
+            updateWallpaper()
         }
     }
 
@@ -658,7 +688,9 @@ class NovaLauncherActivity : ComponentActivity() {
         startActivity(privateWorkspaceEntryIntent(this))
     }
 
-    private fun openHomeSettings() {
+    private fun openHomeSettings() = launcherExit.request()
+
+    private fun openAndroidHomeSettings() {
         if (!SanctuaryLauncherPolicy.openHomeSettings(this)) {
             message("Open Settings from Android Quick Settings, then Apps and Default apps to change your Home app.")
         }
@@ -752,9 +784,13 @@ class NovaLauncherActivity : ComponentActivity() {
                         }
                         modes.filter { !launcherProtected }.forEach { preset ->
                             item { Text(preset.label, style = MaterialTheme.typography.titleSmall) }
-                            val packages = if (current?.mode == preset) {
-                                if (current.allowExternalApps) current.androidApps else emptySet()
-                            } else sanctuary.preset(preset).let { if (it.allowExternalApps) it.androidApps else emptySet() }
+                            val settings = sanctuary.preset(preset)
+                            val active = current?.takeIf { it.mode == preset }
+                            val packages = when {
+                                !(active?.allowExternalApps ?: settings.allowExternalApps) -> emptySet()
+                                preset == SanctuaryMode.PANIC -> panicSanctuaryPersonalApps
+                                else -> active?.androidApps ?: settings.androidApps
+                            }
                             if (packages.isEmpty()) item { Text("No additional apps approved") }
                             items(packages.sorted()) { Text(labels[it] ?: it) }
                         }

@@ -2,14 +2,22 @@ package uk.co.traynor.privategallery
 
 import android.content.Intent
 import android.os.SystemClock
+import androidx.compose.ui.test.*
+import androidx.compose.ui.test.junit4.createEmptyComposeRule
 import androidx.lifecycle.ViewModelProvider
+import androidx.test.core.app.ActivityScenario
 import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.runner.lifecycle.ActivityLifecycleMonitorRegistry
 import androidx.test.runner.lifecycle.Stage
 import org.junit.Assert.*
+import org.junit.Rule
 import org.junit.Test
+import uk.co.traynor.privategallery.core.security.PinVaultKeyStore
+import uk.co.traynor.privategallery.core.security.RecoveryVaultKeyStore
 
 class LauncherWorkspace70Test {
+    @get:Rule val compose = createEmptyComposeRule()
+
     @Test fun openWorkspaceIntentRevokesRetainedPrimaryAndHiddenAuthority() = verifyFreshHandoff(false)
 
     @Test fun primaryGalleryIntentRevokesRetainedPrimaryAndHiddenAuthority() = verifyFreshHandoff(true)
@@ -21,6 +29,51 @@ class LauncherWorkspace70Test {
         assertFalse(info.exported)
         assertNull(entry.data)
         assertNull(entry.extras)
+    }
+
+    @Test fun directPrimaryVaultHidesOnlyInternalNavigationUntilReturningHome() {
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        check(context.packageName.endsWith(".hiddenprototype"))
+        val keys = PinVaultKeyStore(context)
+        val recovery = RecoveryVaultKeyStore(context)
+        check(!keys.isConfigured && !recovery.isConfigured) { "Fixture requires an unused isolated vault" }
+        val pin = "481625"
+        try {
+            val key = keys.create(pin.toCharArray())
+            try {
+                recovery.create(key).fill('\u0000')
+            } finally {
+                key.fill(0)
+            }
+            ActivityScenario.launch<MainActivity>(privateWorkspaceEntryIntent(context, primaryGallery = true)).use { scenario ->
+                compose.onNodeWithTag("passcode-indicator").assertIsDisplayed()
+                compose.onNodeWithTag("nova-app-header").assertDoesNotExist()
+                pin.forEach { compose.onNodeWithText(it.toString()).performClick() }
+                compose.onNodeWithText("Unlock").performClick()
+                compose.waitUntil(15_000) {
+                    compose.onAllNodesWithTag("nova-app-header").fetchSemanticsNodes().isNotEmpty()
+                }
+                compose.onNodeWithTag("nova-navigation").assertDoesNotExist()
+                compose.onNodeWithContentDescription("Nova Home").assertIsDisplayed()
+                compose.onNodeWithContentDescription("Lock Space").assertIsDisplayed()
+                compose.onNodeWithContentDescription("Panic Exit").assertIsDisplayed()
+
+                scenario.onActivity { it.onBackPressedDispatcher.onBackPressed() }
+                compose.onNodeWithTag("preview-home").assertIsDisplayed()
+                compose.onNodeWithTag("app-vault").performClick()
+                compose.onNodeWithTag("nova-navigation").assertIsDisplayed()
+                compose.onNodeWithContentDescription("Lock Space").performClick()
+                scenario.onActivity { activity ->
+                    val state = ViewModelProvider(activity)[ProtectedSessionState::class.java]
+                    assertFalse(state.session.isUnlocked)
+                    assertFalse(state.hidden.session.isUnlocked)
+                }
+                compose.onNodeWithTag("nova-navigation").assertDoesNotExist()
+            }
+        } finally {
+            recovery.clearFailedRestore()
+            keys.clearFailedRestore()
+        }
     }
 
     private fun verifyFreshHandoff(primaryGallery: Boolean) {

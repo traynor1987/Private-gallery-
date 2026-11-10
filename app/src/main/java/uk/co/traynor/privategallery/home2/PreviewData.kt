@@ -48,6 +48,43 @@ class PreviewData(private val context:Context,private val apps:uk.co.traynor.pri
   catalogue.firstOrNull{StoreUrl.key(it.url)==StoreUrl.key(app.startUrl())}?.copy(id="web:"+app.id(),name=prefs.getString("label:"+app.id(),app.name())?:app.name(),url=app.startUrl())
    ?:StoreEntry("web:"+app.id(),prefs.getString("label:"+app.id(),app.name())?:app.name(),app.startUrl(),"Custom website","Custom","Existing Private App")
  }
+ internal fun materializeWorkspaceCopy(id:String,projected:Profile):Boolean {
+  if(owner!="primary")return false
+  return runCatching {
+   if(prefs.getString(WORKSPACE_COPY_ID,null)==id)return@runCatching true
+   val previous=profileJson(profile).also{it.remove("installed")}
+   val next=state.copy(primary=projected)
+   val editor=prefs.edit().putString("state",encode(next).toString())
+    .putString(WORKSPACE_COPY_ID,id).putString(WORKSPACE_PREVIOUS,previous.toString())
+   if(profile.wallpaper!=projected.wallpaper)editor.putString(
+    uk.co.traynor.privategallery.core.home2.WallpaperStore.KEY,
+    uk.co.traynor.privategallery.core.home2.WallpaperStore.encode(projected.wallpaper).toString())
+   if(!editor.commit())return@runCatching false
+   state=next;pending=null;error=null
+   true
+  }.getOrDefault(false)
+ }
+ internal fun hasPreviousWorkspaceLayout():Boolean =
+  owner=="primary" && runCatching{prefs.contains(WORKSPACE_PREVIOUS)}.getOrDefault(false)
+ internal fun restorePreviousWorkspaceLayout(lastWidgetPage:Int):Boolean {
+  if(owner!="primary")return false
+  return runCatching {
+   val raw=prefs.getString(WORKSPACE_PREVIOUS,null)?:return@runCatching false
+   val json=JSONObject(raw).put("installed",JSONArray().apply{profile.installed.forEach{put(entryJson(it))}})
+   val stored=readProfile(json)
+   val pageCount=maxOf(stored.pages.size,lastWidgetPage+1).coerceIn(1,8)
+   val previousWallpaper=if(stored.wallpaper.image==null && profile.wallpaper.image==null)stored.wallpaper else profile.wallpaper
+   val restored=stored.copy(pages=stored.pages+List(pageCount-stored.pages.size){emptyList()},wallpaper=previousWallpaper)
+   val next=state.copy(primary=restored)
+   val editor=prefs.edit().putString("state",encode(next).toString()).remove(WORKSPACE_PREVIOUS)
+   if(profile.wallpaper!=previousWallpaper)editor.putString(
+    uk.co.traynor.privategallery.core.home2.WallpaperStore.KEY,
+    uk.co.traynor.privategallery.core.home2.WallpaperStore.encode(previousWallpaper).toString())
+   if(!editor.commit())return@runCatching false
+   state=next;pending=null;error=null
+   true
+  }.getOrDefault(false)
+ }
  fun retrySave(){pending?.let{save(it)}}
  val profile get()=if(state.current=="hidden")state.hidden else state.primary
  val profileLabel get()=if(owner=="hidden")"Hidden Space" else "Primary Space"
@@ -161,6 +198,8 @@ class PreviewData(private val context:Context,private val apps:uk.co.traynor.pri
   return migrated
  }
  companion object {
+  private const val WORKSPACE_COPY_ID="workspace-layout-copy-id"
+  private const val WORKSPACE_PREVIOUS="workspace-layout-previous"
   fun parseCatalogue(text:String):List<StoreEntry>{
    val root=JSONObject(text);require(root.getInt("schemaVersion")==1);val entries=root.getJSONArray("entries");require(entries.length() in 1..150)
    val result=(0 until entries.length()).map{i->entry(entries.getJSONObject(i),false)}

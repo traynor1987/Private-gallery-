@@ -67,6 +67,13 @@ widget_bind, = [intent for intent in queries.findall("intent") if
                 ["android.appwidget.action.APPWIDGET_BIND"]]
 assert len(widget_bind) == 1 and not widget_bind.attrib, "Widget visibility must be scoped to the binding action"
 queries.remove(widget_bind)
+recognition, = [intent for intent in queries.findall("intent") if
+                 [node.get(ANDROID + "name") for node in intent.findall("action")] ==
+                 ["android.speech.RecognitionService"]]
+assert not recognition.attrib and len(recognition) == 1 and len(recognition[0].attrib) == 1, (
+    "Speech recognition discovery must be scoped to its service action"
+)
+queries.remove(recognition)
 
 
 def structure(node):

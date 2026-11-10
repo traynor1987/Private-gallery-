@@ -35,6 +35,37 @@ class LauncherLayoutStore70Test {
         }
     }
 
+    @Test fun iconStyleMigratesAndSurvivesStoreReopenWithoutChangingLayouts() {
+        val store = NovaLauncherStore(context)
+        val before = store.read()
+        val prefs = context.getSharedPreferences("nova_android_home_v1", android.content.Context.MODE_PRIVATE)
+        val cover = LauncherLayout(pages = listOf(listOf(LauncherItem.App(browser))))
+        val inner = LauncherLayout(dock = listOf(LauncherItem.App(other)))
+        try {
+            assertEquals(LauncherIconStyle.FULL_ICONS, LauncherAppearance().iconStyle)
+            val owner = NovaLauncherState(
+                configured = true, cover = cover, inner = inner,
+                appearance = LauncherAppearance(labels = false, iconSize = LauncherIconSize.LARGE),
+                dockOptions = LauncherDockOptions(locked = true, labels = true),
+            )
+            assertTrue(store.save(owner))
+            val legacy = JSONObject(checkNotNull(prefs.getString("state", null)))
+            legacy.getJSONObject("appearance").remove("iconStyle")
+            assertTrue(prefs.edit().putString("state", legacy.toString()).commit())
+            assertEquals(owner, NovaLauncherStore(context).read())
+
+            for (style in LauncherIconStyle.entries) {
+                for (size in LauncherIconSize.entries) {
+                    val expected = owner.copy(appearance = owner.appearance.copy(iconStyle = style, iconSize = size))
+                    assertTrue(store.save(expected))
+                    assertEquals(expected, NovaLauncherStore(context).read())
+                }
+            }
+        } finally {
+            assertTrue(store.save(before))
+        }
+    }
+
     @Test fun portableBackupPreservesLocalBindingsAndRejectsMalformedLayouts() {
         val store = NovaLauncherStore(context)
         val before = store.read()
@@ -125,7 +156,7 @@ class LauncherLayoutStore70Test {
             assertEquals(original.cover.dock, migrated.cover.dock)
             assertEquals(listOf(coverWidget.copy(page = 2)), migrated.widgets)
             assertTrue(migrated.dockOptions.locked)
-            assertTrue(migrated.dockOptions.showInLibrary)
+            assertFalse(migrated.dockOptions.showInLibrary)
             assertFalse(migrated.dockOptions.labels)
 
             val configured = migrated.copy(

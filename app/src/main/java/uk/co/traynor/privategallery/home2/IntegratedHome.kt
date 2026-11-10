@@ -57,10 +57,19 @@ import uk.co.traynor.privategallery.core.home2.SpaceContext
   return
  }
  CompositionLocalProvider(LocalContext provides context){
-  NovaPreview(value.data,pool,value.mind,audio,value.widgets,value.history,video,
+  val renderHome: @Composable (Profile?) -> Unit = { sharedLayout ->
+   NovaPreview(value.data,pool,value.mind,audio,value.widgets,value.history,video,
    onBackup={if(context.current())backupOwner=if(wallpaperOwnerFactory!=null)wallpaperOwnerFactory.invoke()else uk.co.traynor.privategallery.core.home2.WallpaperOwner(access.owner,{context.current()},{access},false)},
    onPickImage={if(context.current())wallpaperOwner=if(wallpaperOwnerFactory!=null)wallpaperOwnerFactory.invoke()else uk.co.traynor.privategallery.core.home2.WallpaperOwner(access.owner,{context.current()},{access},false)},
-   onOpen={},filesDir=context.filesDir,onNative={id->if(context.current()){value.data.shell.touchInternal(context.spaceId,id);onLaunch(id)}},onLock=onLock,onPanic=onPanic,externalRecentsRequest=externalRecentsRequest,onRecentsConsumed=onRecentsConsumed)
+   onOpen={},filesDir=context.filesDir,onNative={id->if(context.current()){value.data.shell.touchInternal(context.spaceId,id);onLaunch(id)}},onLock=onLock,onPanic=onPanic,externalRecentsRequest=externalRecentsRequest,onRecentsConsumed=onRecentsConsumed,workspaceProjection=sharedLayout)
+  }
+  if(access.owner==uk.co.traynor.privategallery.core.evidence.EvidenceCatalog.Owner.PRIMARY){
+   BoxWithConstraints(Modifier.fillMaxSize()) {
+    val sharedLayout=primaryWorkspaceLayout(base,access,visible,value.data,value.widgets,
+     maxWidth >= uk.co.traynor.privategallery.launcher.LauncherExpandedWidth.dp)
+    renderHome(sharedLayout)
+   }
+  }else renderHome(null)
   message?.let{PanicHomeAlertDialog(onDismissRequest={message=null},title={Text("NovaOS")},text={Text(it)},confirmButton={TextButton(onClick={message=null}){Text("OK")}})}
  }
 }

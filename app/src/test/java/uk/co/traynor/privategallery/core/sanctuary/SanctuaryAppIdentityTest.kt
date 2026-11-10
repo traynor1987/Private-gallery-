@@ -25,7 +25,7 @@ class SanctuaryAppIdentityTest {
             friendsWhatsApp = friends,
             appRules = mapOf(main to true, friends to false),
         )
-        assertTrue(settings.allows(main, "com.whatsapp", null, legacy))
+        assertFalse(settings.allows(main, "com.whatsapp", null, legacy))
         assertFalse(settings.allows(friends, "com.whatsapp", 95, legacy))
         val reader = "com.example.reader/.Reader"
         assertTrue(settings.allows(reader, "com.example.reader", null, legacy))
@@ -36,7 +36,7 @@ class SanctuaryAppIdentityTest {
         val session = SanctuarySession("session", SanctuaryMode.SELF_CARE, 1, 2, legacy, emptySet(), 0)
         val settings = SanctuaryLauncherSettings(friendsWhatsApp = friends, appRules = mapOf(friends to true))
         assertEquals(setOf("com.example.reader"), approvedAndroidApps(session, settings))
-        assertEquals(legacy, approvedAndroidApps(session, settings.copy(appRules = mapOf(main to true))))
+        assertEquals(setOf("com.example.reader"), approvedAndroidApps(session, settings.copy(appRules = mapOf(main to true))))
         assertEquals(emptySet<String>(), approvedAndroidApps(session.copy(allowExternalApps = false), settings))
     }
 

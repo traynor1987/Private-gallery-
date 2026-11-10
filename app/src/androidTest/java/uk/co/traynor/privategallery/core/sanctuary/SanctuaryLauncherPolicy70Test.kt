@@ -54,6 +54,39 @@ class SanctuaryLauncherPolicy70Test {
         }
     }
 
+    @Test fun panicAppliesItsAllowlistAndVisibilityWithoutReplacingSavedPolicy() {
+        disposableEmulator()
+        val mode = SanctuaryMode.PANIC
+        val preset = store.preset(mode)
+        val visibility = store.launcherSettings().panicVisibility
+        val unrelated = nonessentialApps().first { it !in panicSanctuaryPersonalApps }
+        assertNull(store.refresh())
+        try {
+            val legacy = preset.copy(minutes = 720, androidApps = setOf(unrelated, SANCTUARY_NATIVE_WHATSAPP),
+                allowExternalApps = true, allowWhatsApp = true)
+            assertTrue(store.savePreset(mode, legacy))
+            assertTrue(store.savePanicLauncherVisibility(PanicLauncherVisibility.APPROVED_ONLY))
+            assertTrue(store.start(mode))
+            val active = checkNotNull(store.refresh())
+            assertEquals(720 * 60_000L, active.expiresAt - active.startedAt)
+            assertEquals(Decision.UNAPPROVED, SanctuaryLauncherPolicy.decision(context, unrelated))
+            assertEquals(Decision.UNAPPROVED, SanctuaryLauncherPolicy.decision(context, SANCTUARY_NATIVE_WHATSAPP))
+            assertEquals(Decision.ESSENTIAL, SanctuaryLauncherPolicy.decision(context, context.packageName))
+            assertEquals(panicSanctuaryPersonalApps, approvedAndroidApps(active, store.launcherSettings()))
+            assertEquals(SanctuaryAppVisibility(), SanctuaryLauncherPolicy.visibility(context))
+            assertTrue(store.savePanicLauncherVisibility(PanicLauncherVisibility.SHOW_ALL_WITH_LOCKS))
+            assertEquals(SanctuaryAppVisibility(false, false, false, false), SanctuaryLauncherPolicy.visibility(context))
+            assertEquals(Decision.UNAPPROVED, SanctuaryLauncherPolicy.decision(context, unrelated))
+            assertEquals(legacy, store.preset(mode))
+            assertTrue(store.end(SanctuaryStore.END_PHRASE))
+            assertEquals(Decision.UNRESTRICTED, SanctuaryLauncherPolicy.decision(context, unrelated))
+        } finally {
+            store.end(SanctuaryStore.END_PHRASE)
+            store.savePanicLauncherVisibility(visibility)
+            store.savePreset(mode, preset)
+        }
+    }
+
     @Test fun androidSettingsAndPhoneStayExemptDuringProtection() {
         disposableEmulator()
         withSession {

@@ -103,7 +103,7 @@ class LauncherActivity : ComponentActivity() {
             !sanctuaryProtectionActive() && readDefaultHome(this) == false
 
     private fun sanctuaryProtectionActive() =
-        runCatching { SanctuaryLauncherPolicy.launcherProtectionActive(this) }.getOrDefault(true)
+        runCatching { SanctuaryStore.get(applicationContext).refresh() != null }.getOrDefault(true)
 
     private fun chooseHome() {
         if (isFinishing || selection != null || !topResumed) return

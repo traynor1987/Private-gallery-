@@ -29,13 +29,15 @@ internal fun LauncherSharedDock(
     open: (LauncherItem) -> Unit,
     visible: (LauncherItem) -> Boolean,
     smartMembers: (LauncherItem.SmartFolder) -> List<LauncherApp>,
+    active: Boolean,
 ) {
-    if (!options.locked) {
+    val canEdit = active && !options.locked
+    if (canEdit) {
         DisposableEffect(gestures) { onDispose { gestures.clearDock() } }
     }
     Surface(
         Modifier.fillMaxWidth().padding(top = 1.dp).testTag("launcher-shared-dock")
-            .then(if (options.locked) Modifier else Modifier.onGloballyPositioned(gestures::setDock)),
+            .then(if (canEdit) Modifier.onGloballyPositioned(gestures::setDock) else Modifier),
         color = when (appearance.dock) {
             LauncherDock.GLASS -> Color.White.copy(alpha = .14f)
             LauncherDock.SOLID -> Color(0xFF273550)
@@ -52,7 +54,7 @@ internal fun LauncherSharedDock(
                 LauncherIconSize.LARGE -> 58.dp
             }
             val labelStyle = MaterialTheme.typography.labelMedium
-            val labelHeight = if (options.labels || LauncherItem.Workspace in items && appearance.labels) {
+            val labelHeight = if (options.labels) {
                 with(LocalDensity.current) { labelStyle.lineHeight.toDp() * 2 } + 4.dp
             } else 0.dp
             val verticalPadding = if (compact) 4.dp else 10.dp
@@ -67,10 +69,14 @@ internal fun LauncherSharedDock(
                     Box(cell.fillMaxHeight().testTag("launcher-dock-slot-$index"), contentAlignment = Alignment.Center) {
                         if (visible(item)) LauncherTile(
                             item, appearance, apps, decisions, { open(item) }, compact = true,
-                            gestures = gestures.takeUnless { options.locked },
+                            interactive = active,
+                            gestures = gestures.takeIf { canEdit },
                             origin = LauncherIconOrigin(item, LauncherSlot(null, index)),
-                            showLabel = options.labels || item == LauncherItem.Workspace && appearance.labels,
+                            showLabel = options.labels,
                             smartMembers = smartMembers,
+                            folderMembers = { folder ->
+                                folder.apps.filter { visible(LauncherItem.App(it)) }.mapNotNull(apps::get)
+                            },
                         )
                     }
                 }

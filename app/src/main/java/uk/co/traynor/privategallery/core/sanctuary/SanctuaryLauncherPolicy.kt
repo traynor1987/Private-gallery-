@@ -34,10 +34,13 @@ internal object SanctuaryLauncherPolicy {
         val paused = session?.let(::isPaused) == true
         return packageNames.associateWith { name ->
             when {
+                session != null && !paused && name == SANCTUARY_NATIVE_WHATSAPP -> Decision.UNAPPROVED
                 name in essential -> Decision.ESSENTIAL
                 session == null || paused -> Decision.UNRESTRICTED
                 !session.allowExternalApps -> Decision.UNAPPROVED
-                name == SANCTUARY_NATIVE_WHATSAPP || name in settings.explicitPersonalPackages -> {
+                session.mode == SanctuaryMode.PANIC ->
+                    if (name in panicSanctuaryPersonalApps) Decision.APPROVED else Decision.UNAPPROVED
+                name in settings.explicitPersonalPackages -> {
                     val personalComponent = context.packageManager.getLaunchIntentForPackage(name)
                         ?.component?.flattenToString()
                     if (personalComponent != null && settings.allows(personalComponent, name, null, session.androidApps)) {
@@ -88,14 +91,20 @@ internal object SanctuaryLauncherPolicy {
         paused: Boolean,
     ): Decision = when {
         !validSanctuaryAppIdentity(app.component, app.packageName, app.profileSerial) -> Decision.UNAPPROVED
+        session != null && !paused && app.profileSerial == null &&
+            app.packageName == SANCTUARY_NATIVE_WHATSAPP -> Decision.UNAPPROVED
         app.profileSerial == null && app.packageName in essential -> Decision.ESSENTIAL
         session == null || paused -> Decision.UNRESTRICTED
-        session.allowExternalApps && settings.allows(app.component, app.packageName, app.profileSerial, session.androidApps) ->
-            Decision.APPROVED
+        session.allowExternalApps && settings.allows(
+            app.component, app.packageName, app.profileSerial, session.androidApps, session.mode,
+        ) -> Decision.APPROVED
         else -> Decision.UNAPPROVED
     }
 
-    fun visibility(context: Context): SanctuaryAppVisibility = SanctuaryStore.get(context).launcherSettings().visibility
+    fun visibility(context: Context): SanctuaryAppVisibility {
+        val store = SanctuaryStore.get(context)
+        return store.launcherSettings().visibilityFor(store.refresh()?.mode)
+    }
 
     fun launcherProtectionActive(context: Context): Boolean =
         SanctuaryStore.get(context).refresh()?.let { !isPaused(it) } == true
@@ -139,12 +148,32 @@ internal object SanctuaryLauncherPolicy {
 
 /** Usage Access is scoped to the current Android user. Never project a clone rule into it. */
 internal fun approvedAndroidApps(session: SanctuarySession, settings: SanctuaryLauncherSettings): Set<String> =
-    if (session.allowExternalApps) {
-        (session.androidApps - SANCTUARY_NATIVE_WHATSAPP - settings.explicitPersonalPackages) +
-            settings.guardianApprovedPersonalPackages
-    } else emptySet()
+    when {
+        !session.allowExternalApps -> emptySet()
+        session.mode == SanctuaryMode.PANIC -> panicSanctuaryPersonalApps
+        else -> ((session.androidApps - settings.explicitPersonalPackages) +
+            settings.guardianApprovedPersonalPackages) - SANCTUARY_NATIVE_WHATSAPP
+    }
 
 internal const val SANCTUARY_NATIVE_WHATSAPP = "com.whatsapp"
+
+internal val panicSanctuaryPersonalApps = setOf(
+    "com.google.android.apps.youtube.music",
+    "com.google.android.youtube",
+    "com.openai.chatgpt",
+    "com.sec.android.app.sbrowser",
+)
+
+internal enum class PanicLauncherVisibility(val label: String, val description: String) {
+    APPROVED_ONLY("Approved Only", "Show only approved and essential apps during Panic Sanctuary."),
+    SHOW_ALL_WITH_LOCKS("Show All With Locks", "Keep restricted apps visible with locks. They remain blocked."),
+    ;
+
+    fun appVisibility(): SanctuaryAppVisibility {
+        val hideBlocked = this == APPROVED_ONLY
+        return SanctuaryAppVisibility(hideBlocked, hideBlocked, hideBlocked, hideBlocked)
+    }
+}
 
 internal data class SanctuaryAppVisibility(
     val hideBlockedApps: Boolean = true,
@@ -158,6 +187,7 @@ internal data class SanctuaryLauncherSettings(
     val autoEnrolFriends: Boolean = true,
     val appRules: Map<String, Boolean> = emptyMap(),
     val visibility: SanctuaryAppVisibility = SanctuaryAppVisibility(),
+    val panicVisibility: PanicLauncherVisibility = PanicLauncherVisibility.APPROVED_ONLY,
 ) {
     private val personalRules = appRules.entries.mapNotNull { (key, allowed) ->
         LauncherAppIdentity.parse(key)?.takeIf { it.profileSerial == null }?.let {
@@ -167,10 +197,24 @@ internal data class SanctuaryLauncherSettings(
     val explicitPersonalPackages: Set<String> = personalRules.keys
     val guardianApprovedPersonalPackages: Set<String> = personalRules.filterValues { rules -> rules.all { it } }.keys
 
-    fun allows(component: String, packageName: String, profileSerial: Long?, legacy: Set<String>): Boolean {
+    fun visibilityFor(mode: SanctuaryMode?): SanctuaryAppVisibility =
+        if (mode == SanctuaryMode.PANIC) panicVisibility.appVisibility() else visibility
+
+    fun allows(
+        component: String,
+        packageName: String,
+        profileSerial: Long?,
+        legacy: Set<String>,
+        mode: SanctuaryMode? = null,
+    ): Boolean {
         if (!validSanctuaryAppIdentity(component, packageName, profileSerial)) return false
+        if (packageName == SANCTUARY_NATIVE_WHATSAPP && profileSerial == null) return false
+        if (mode == SanctuaryMode.PANIC) {
+            return if (packageName == SANCTUARY_NATIVE_WHATSAPP) component == friendsWhatsApp
+            else profileSerial == null && packageName in panicSanctuaryPersonalApps
+        }
         appRules[component]?.let { return it }
-        if (packageName == SANCTUARY_NATIVE_WHATSAPP) return profileSerial != null && component == friendsWhatsApp
+        if (packageName == SANCTUARY_NATIVE_WHATSAPP) return component == friendsWhatsApp
         return profileSerial == null && packageName in legacy
     }
 }

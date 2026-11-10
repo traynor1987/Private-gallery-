@@ -14,6 +14,7 @@ import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.unit.dp
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.RuleChain
@@ -164,20 +165,86 @@ class LauncherHomeLibraryPager73UiTest {
         showLauncher(actions.copy(launchApp = { launched = it }))
         val dock = compose.onNodeWithTag("launcher-shared-dock")
         val initial = dock.fetchSemanticsNode().boundsInRoot
-        repeat(2) { pager.performTouchInput { swipeLeft() } }
         pager.performTouchInput {
             down(center)
             moveTo(center - Offset(width * .4f, 0f), 60)
         }
         assertEquals(initial, dock.fetchSemanticsNode().boundsInRoot)
         pager.performTouchInput { moveBy(Offset(-width * .3f, 0f), 80); up() }
-        library.assertIsDisplayed()
         assertEquals(initial, dock.fetchSemanticsNode().boundsInRoot)
+        pager.performTouchInput { swipeLeft() }
+        assertEquals(initial, dock.fetchSemanticsNode().boundsInRoot)
+
+        pager.performTouchInput { swipeLeft() }
+        library.assertIsDisplayed()
+        dock.assertIsNotDisplayed()
         library.performTouchInput { swipeUp() }
+        dock.assertIsNotDisplayed()
+        compose.onNodeWithContentDescription("See all Other apps").performClick()
+        dock.assertIsNotDisplayed()
+        compose.onNodeWithContentDescription("Back").performClick()
+
+        library.performTouchInput { swipeRight() }
+        assertEquals(initial, dock.fetchSemanticsNode().boundsInRoot)
+        compose.onNodeWithTag("launcher-open-drawer").performClick()
+        compose.onNodeWithTag("launcher-drawer-search").assertIsDisplayed()
+        dock.assertIsNotDisplayed()
+        compose.runOnIdle { compose.activity.onBackPressedDispatcher.onBackPressed() }
         assertEquals(initial, dock.fetchSemanticsNode().boundsInRoot)
         compose.onNode(hasTestTag("launcher-app-${apps[3].component}") and
             hasAnyAncestor(hasTestTag("launcher-dock-slot-0"))).performClick()
         compose.runOnIdle { assertEquals(apps[3].component, launched) }
+    }
+
+    @Test fun coverDrawerReturnRevealsDockOverMultipleFrames() {
+        state = state.copy(cover = state.cover.copy(dock = listOf(items[3])))
+        showLauncher()
+        val dock = compose.onNodeWithTag("launcher-shared-dock")
+        val homeBounds = dock.fetchSemanticsNode().boundsInRoot
+        compose.onNodeWithTag("launcher-open-drawer").performClick()
+        dock.assertIsNotDisplayed()
+
+        compose.mainClock.autoAdvance = false
+        try {
+            compose.runOnIdle { compose.activity.onBackPressedDispatcher.onBackPressed() }
+            compose.mainClock.advanceTimeBy(96)
+            val movingBounds = dock.fetchSemanticsNode().boundsInRoot
+            assertTrue("Dock should still be entering Home", movingBounds.top > homeBounds.top)
+            compose.mainClock.advanceTimeBy(240)
+            assertEquals(homeBounds, dock.fetchSemanticsNode().boundsInRoot)
+        } finally {
+            compose.mainClock.autoAdvance = true
+        }
+    }
+
+    @Test fun coverLibraryHonorsSavedDockVisibilityWithoutShowingItInDrawer() {
+        state = state.copy(dockOptions = LauncherDockOptions(showInLibrary = true))
+        showLauncher()
+        val dock = compose.onNodeWithTag("launcher-shared-dock")
+        val homeBounds = dock.fetchSemanticsNode().boundsInRoot
+        repeat(3) { pager.performTouchInput { swipeLeft() } }
+        library.assertIsDisplayed()
+        assertEquals(homeBounds, dock.fetchSemanticsNode().boundsInRoot)
+        compose.onNodeWithTag("launcher-library-drawer").performClick()
+        dock.assertIsNotDisplayed()
+    }
+
+    @Test fun foldNativeArtworkScalesAcrossAllSizesAndKeepsAppLaunchWorking() {
+        var launched: String? = null
+        showLauncher(actions.copy(launchApp = { launched = it }))
+        val active = items[1] as LauncherItem.App
+        val artwork = compose.onNodeWithTag("launcher-app-artwork-${active.component}", useUnmergedTree = true)
+        val full = LauncherIconSize.entries.map { size ->
+            compose.runOnIdle { state = state.copy(appearance = state.appearance.copy(iconSize = size)) }
+            artwork.fetchSemanticsNode().boundsInRoot.width
+        }
+        assertTrue(full.zipWithNext().all { (smaller, larger) -> smaller < larger })
+        compose.runOnIdle {
+            state = state.copy(appearance = state.appearance.copy(iconStyle = LauncherIconStyle.NOVA_TILES))
+        }
+        assertTrue(artwork.fetchSemanticsNode().boundsInRoot.width < full.last())
+        homeApp(1).performClick()
+        compose.runOnIdle { assertEquals(active.component, launched) }
     }
 
     @Test fun coverDockLockKeepsNormalLaunchAndBlocksLayoutEdits() {

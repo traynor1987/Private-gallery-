@@ -15,6 +15,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -24,6 +26,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -40,6 +43,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import uk.co.traynor.privategallery.core.sanctuary.PanicLauncherVisibility
 import uk.co.traynor.privategallery.core.sanctuary.SANCTUARY_NATIVE_WHATSAPP
 import uk.co.traynor.privategallery.core.sanctuary.SanctuaryAppVisibility
 import uk.co.traynor.privategallery.core.sanctuary.SanctuaryGuardian
@@ -107,6 +111,7 @@ internal fun SanctuaryAllowedAppInstances(
     val ordered = installed.sortedBy { it.packageName != SANCTUARY_NATIVE_WHATSAPP }
     val preset = store.preset(mode)
     val legacy = session?.androidApps ?: preset.androidApps
+    val externalAppsAllowed = session?.allowExternalApps ?: preset.allowExternalApps
     Column(Modifier.fillMaxSize().safeDrawingPadding().padding(horizontal = 16.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back") }
@@ -115,19 +120,26 @@ internal fun SanctuaryAllowedAppInstances(
         LazyColumn(Modifier.fillMaxSize().testTag("sanctuary-allowed-app-instances"), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             item {
                 Text(
-                    "These choices apply to exact app instances in Nova Launcher. They take priority over a mode’s package choices. " +
-                        "Android’s screen lock and emergency controls remain available.",
+                    if (mode == SanctuaryMode.PANIC) {
+                        "Panic Sanctuary uses its own approved app list and the selected Friends WhatsApp profile."
+                    } else {
+                        "These choices apply to exact app instances in Nova Launcher. Main WhatsApp stays blocked. " +
+                            "Android’s screen lock and emergency controls remain available."
+                    },
                     style = MaterialTheme.typography.bodyMedium,
                 )
             }
-            if (session?.allowExternalApps == false || session == null && !preset.allowExternalApps) {
+            if (!externalAppsAllowed) {
                 item { Text("This mode turns off external apps. Your rules still apply in modes that allow them.") }
             }
             if (apps == null) item { Text("Finding available app instances…") }
             if (apps != null && ordered.isEmpty()) item { Text("No additional app instances are available.") }
             if (failed) item { Text("Could not save the change.", color = MaterialTheme.colorScheme.error) }
             items(ordered, key = LauncherApp::component) { app ->
-                val allowed = settings.allows(app.component, app.packageName, app.profileSerial, legacy)
+                val configured = settings.allows(app.component, app.packageName, app.profileSerial, legacy, mode)
+                val allowed = externalAppsAllowed && configured
+                val fixed = mode == SanctuaryMode.PANIC ||
+                    app.packageName == SANCTUARY_NATIVE_WHATSAPP && app.profileSerial == null
                 val label = when {
                     app.packageName != SANCTUARY_NATIVE_WHATSAPP -> app.label
                     app.profileSerial == null -> "WhatsApp — Main"
@@ -136,7 +148,8 @@ internal fun SanctuaryAllowedAppInstances(
                 }
                 val details = listOfNotNull(app.profileLabel, if (allowed) "Allowed" else "Blocked").joinToString(" · ")
                 Row(
-                    Modifier.fillMaxWidth().heightIn(min = 52.dp).toggleable(allowed, role = Role.Checkbox) { approved ->
+                    Modifier.fillMaxWidth().heightIn(min = 52.dp)
+                        .toggleable(configured, enabled = !fixed, role = Role.Checkbox) { approved ->
                         failed = !store.saveLauncherAppRule(app.component, approved)
                         if (!failed) {
                             settings = store.launcherSettings()
@@ -146,7 +159,7 @@ internal fun SanctuaryAllowedAppInstances(
                     horizontalArrangement = Arrangement.spacedBy(10.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Checkbox(allowed, onCheckedChange = null)
+                    Checkbox(configured, onCheckedChange = null, enabled = !fixed)
                     Column(Modifier.weight(1f)) {
                         Text(label)
                         Text(details, style = MaterialTheme.typography.bodySmall)
@@ -184,6 +197,7 @@ internal fun SanctuaryAllowedAppInstances(
 @Composable
 internal fun SanctuaryAppVisibilitySettings(store: SanctuaryStore, onBack: () -> Unit) {
     var settings by remember(store) { mutableStateOf(store.launcherSettings().visibility) }
+    var panicVisibility by remember(store) { mutableStateOf(store.launcherSettings().panicVisibility) }
     var failed by remember { mutableStateOf(false) }
     fun save(next: SanctuaryAppVisibility) {
         failed = !store.saveLauncherVisibility(next)
@@ -193,6 +207,30 @@ internal fun SanctuaryAppVisibilitySettings(store: SanctuaryStore, onBack: () ->
         }
     }
     SanctuaryScaffold("App Visibility", "While Sanctuary protection is active", onBack, "sanctuary-app-visibility-settings") {
+        Text("Panic Sanctuary", style = MaterialTheme.typography.titleSmall)
+        Column(Modifier.selectableGroup()) {
+            PanicLauncherVisibility.entries.forEach { option ->
+                val selected = option == panicVisibility
+                Row(
+                    Modifier.fillMaxWidth().heightIn(min = 52.dp).selectable(selected, role = Role.RadioButton) {
+                        failed = !store.savePanicLauncherVisibility(option)
+                        if (!failed) {
+                            panicVisibility = option
+                            SanctuaryLauncherPolicy.signalPolicyChange()
+                        }
+                    }.testTag("sanctuary-panic-visibility-${option.name}"),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    RadioButton(selected, onClick = null)
+                    Column(Modifier.weight(1f)) {
+                        Text(option.label)
+                        Text(option.description, style = MaterialTheme.typography.bodySmall)
+                    }
+                }
+            }
+        }
+        Text("Other Sanctuary modes", style = MaterialTheme.typography.titleSmall)
         SanctuaryModeSwitch("Hide Blocked Apps", "Hide blocked shortcuts from Home, dock, Drawer, App Library and folders.",
             settings.hideBlockedApps, "sanctuary-hide-blocked-apps") { save(settings.copy(hideBlockedApps = it)) }
         SanctuaryModeSwitch("Hide Blocked Apps from Search", "Keep blocked apps out of search and the alphabetical list.",

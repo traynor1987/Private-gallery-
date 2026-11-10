@@ -9,6 +9,7 @@ import android.content.pm.LauncherApps.ShortcutQuery
 import android.content.pm.PackageInfo
 import android.graphics.Bitmap
 import android.graphics.Canvas
+import android.graphics.drawable.Drawable
 import android.os.Process
 import android.os.UserHandle
 import android.os.UserManager
@@ -18,9 +19,13 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Badge
 import androidx.compose.material.icons.filled.Calculate
+import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.PhotoLibrary
 import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material.icons.filled.SportsEsports
@@ -38,13 +43,16 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.text.Collator
+import kotlin.math.roundToInt
 
 internal data class LauncherApp(
     val component: String,
@@ -207,10 +215,10 @@ internal class LauncherAppDirectory(private val context: Context) {
 }
 
 private object LauncherIcons {
-    private val cache = LruCache<Pair<String, Long>, ImageBitmap>(96)
+    private val cache = LruCache<Triple<String, Long, Int>, ImageBitmap>(96)
 
-    fun get(context: Context, app: LauncherApp): ImageBitmap? {
-        val key = app.component to app.iconRevision
+    fun get(context: Context, app: LauncherApp, densityDpi: Int): ImageBitmap? {
+        val key = Triple(app.component, app.iconRevision, densityDpi)
         return cache.get(key) ?: runCatching {
             val component = app.launchComponent()
             val profile = app.profile
@@ -218,17 +226,49 @@ private object LauncherIcons {
                 context.packageManager.getActivityIcon(component)
             } else {
                 val launcherApps = checkNotNull(context.getSystemService(LauncherApps::class.java))
+                check(launcherApps.getLauncherUserInfo(profile.user)?.userSerialNumber?.toLong() == profile.serial)
                 val intent = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER).setComponent(component)
                 val entry = checkNotNull(launcherApps.resolveActivity(intent, profile.user))
                 check(entry.user == profile.user && entry.componentName == component)
-                entry.getBadgedIcon(context.resources.displayMetrics.densityDpi)
+                entry.getIcon(densityDpi)
             }.mutate()
-            val size = (context.resources.displayMetrics.density * 88).toInt().coerceIn(88, 256)
-            val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
-            icon.setBounds(0, 0, size, size)
-            icon.draw(Canvas(bitmap))
-            bitmap.asImageBitmap().also { cache.put(key, it) }
+            val size = (densityDpi * .55f).roundToInt().coerceIn(88, 256)
+            renderLauncherArtwork(icon, size).asImageBitmap().also { cache.put(key, it) }
         }.getOrNull()
+    }
+}
+
+/** Adaptive drawables apply Android's mask. Legacy drawables keep their intrinsic proportions. */
+internal fun renderLauncherArtwork(icon: Drawable, size: Int): Bitmap {
+    val sourceWidth = icon.intrinsicWidth
+    val sourceHeight = icon.intrinsicHeight
+    val scale = if (sourceWidth > 0 && sourceHeight > 0) size.toFloat() / maxOf(sourceWidth, sourceHeight) else 0f
+    val width = if (scale > 0f) (sourceWidth * scale).roundToInt().coerceIn(1, size) else size
+    val height = if (scale > 0f) (sourceHeight * scale).roundToInt().coerceIn(1, size) else size
+    val left = (size - width) / 2
+    val top = (size - height) / 2
+    return Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888).also { bitmap ->
+        icon.setBounds(left, top, left + width, top + height)
+        icon.draw(Canvas(bitmap))
+    }
+}
+
+@Composable
+internal fun LauncherArtworkIcon(app: LauncherApp, appearance: LauncherAppearance, modifier: Modifier = Modifier) {
+    if (appearance.iconStyle == LauncherIconStyle.FULL_ICONS) {
+        LauncherAppIcon(app, modifier)
+        return
+    }
+    val shape = when (appearance.iconShape) {
+        LauncherIconShape.ROUNDED -> RoundedCornerShape(30)
+        LauncherIconShape.CIRCLE -> CircleShape
+        LauncherIconShape.SQUIRCLE -> RoundedCornerShape(41)
+    }
+    Box(
+        modifier.clip(shape).background(launcherAccent(appearance.accent).copy(alpha = .29f)),
+        contentAlignment = Alignment.Center,
+    ) {
+        LauncherAppIcon(app, Modifier.fillMaxSize(.69f))
     }
 }
 
@@ -252,23 +292,40 @@ internal fun LauncherAppIcon(app: LauncherApp, modifier: Modifier = Modifier) {
         }
         return
     }
-    val image by key(app.component, app.iconRevision) {
+    val densityDpi = LocalConfiguration.current.densityDpi
+    val image by key(app.component, app.iconRevision, densityDpi) {
         produceState<ImageBitmap?>(null) {
-            value = withContext(Dispatchers.IO) { LauncherIcons.get(context, app) }
+            value = withContext(Dispatchers.IO) { LauncherIcons.get(context, app, densityDpi) }
         }
     }
     BoxWithConstraints(modifier, contentAlignment = Alignment.Center) {
+        val artworkSize = minOf(maxWidth, maxHeight)
         val icon = image
         if (icon == null) {
             val initial = app.label.firstOrNull(Char::isLetterOrDigit)?.uppercaseChar()?.toString() ?: "•"
-            val size = minOf(maxWidth, maxHeight).value * .48f
+            val size = artworkSize.value * .48f
             Box(
-                Modifier.matchParentSize().clip(RoundedCornerShape(24)).background(Color(0xFF3A5272)),
+                Modifier.size(artworkSize).clip(RoundedCornerShape(24)).background(Color(0xFF3A5272)),
                 contentAlignment = Alignment.Center,
             ) {
                 Text(initial, Modifier.clearAndSetSemantics {}, color = Color.White, fontSize = size.sp,
                     fontWeight = FontWeight.SemiBold, maxLines = 1)
             }
-        } else Image(icon, null, Modifier.matchParentSize())
+        } else Image(icon, null, Modifier.size(artworkSize))
+        // Some Android clone profiles return an unbadged icon. Mark every secondary profile,
+        // including the fallback artwork, from the exact profile identity in the catalogue.
+        app.profile?.let { profile ->
+            Box(
+                Modifier.align(Alignment.BottomEnd).size(artworkSize * .32f)
+                    .background(Color(0xFF17273C), CircleShape)
+                    .testTag("launcher-profile-badge-${app.component}"),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    if (profile.isClone) Icons.Default.ContentCopy else Icons.Default.Badge,
+                    null, Modifier.fillMaxSize(.65f), tint = Color.White,
+                )
+            }
+        }
     }
 }

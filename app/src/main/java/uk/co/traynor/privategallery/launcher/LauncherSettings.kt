@@ -58,6 +58,9 @@ internal fun LauncherSettings(
                     OutlinedButton(onClick = actions.checkDefaultHome) { Text("Check Default Launcher") }
                 }
                 Button(onClick = actions.selectHome) { Text("Change Default Launcher") }
+                actions.configureExitProtection?.let { configure ->
+                    OutlinedButton(onClick = configure) { Text("Launcher exit protection") }
+                }
                 Text("To recover if the launcher cannot open, pull down Android Quick Settings, open Settings, then choose Apps → Default apps → Home app → One UI Home.",
                     style = MaterialTheme.typography.bodySmall)
             }
@@ -66,6 +69,9 @@ internal fun LauncherSettings(
                 Text("Layout", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 10.dp))
                 LauncherToggle("Separate Fold layouts", state.separateDisplays) { actions.save(state.copy(separateDisplays = it)) }
                 OutlinedButton(onClick = onEdit) { Text("Edit Home pages, dock and widgets") }
+                if (!protectedBySanctuary) actions.reloadWorkspaceLayout?.let { reload ->
+                    WorkspaceLayoutOptions(actions.openWorkspace, reload)
+                }
                 LauncherOptions("Open NovaOS gesture", LauncherGesture.entries, state.workspaceGesture, {
                     actions.save(state.copy(workspaceGesture = it))
                 })
@@ -75,6 +81,9 @@ internal fun LauncherSettings(
                 HorizontalDivider()
                 Text("Appearance", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 10.dp))
                 LauncherAppearanceOptions(state.appearance, { actions.save(state.copy(appearance = it)) }, actions.chooseWallpaper, showDock = false)
+                LauncherToggle("Show Dock Icon Labels", state.dockOptions.labels) {
+                    actions.save(state.copy(dockOptions = state.dockOptions.copy(labels = it)))
+                }
             }
             item {
                 HorizontalDivider()
@@ -87,9 +96,6 @@ internal fun LauncherSettings(
                 }
                 LauncherOptions("Dock Background", LauncherDock.entries.filter { it != LauncherDock.HIDDEN },
                     state.appearance.dock, { actions.save(state.copy(appearance = state.appearance.copy(dock = it))) })
-                LauncherToggle("Dock Icon Labels", state.dockOptions.labels) {
-                    actions.save(state.copy(dockOptions = state.dockOptions.copy(labels = it)))
-                }
                 OutlinedButton(onClick = { confirmDockReset = true }, enabled = !protectedBySanctuary) {
                     Text("Reset Dock Layout")
                 }

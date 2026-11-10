@@ -26,13 +26,14 @@ import uk.co.traynor.privategallery.home2.Wallpaper
 import uk.co.traynor.privategallery.home2.WallpaperSurface
 
 private val appearanceSaver = listSaver<LauncherAppearance, Any>(
-    save = { listOf(it.wallpaper.name, it.theme.name, it.accent.name, it.iconShape.name, it.iconSize.name, it.labels, it.grid.name, it.dock.name) },
+    save = { listOf(it.wallpaper.name, it.theme.name, it.accent.name, it.iconShape.name, it.iconSize.name, it.labels, it.grid.name, it.dock.name, it.iconStyle.name) },
     restore = {
         LauncherAppearance(
             LauncherWallpaper.valueOf(it[0] as String), LauncherTheme.valueOf(it[1] as String),
             LauncherAccent.valueOf(it[2] as String), LauncherIconShape.valueOf(it[3] as String),
             LauncherIconSize.valueOf(it[4] as String), it[5] as Boolean, LauncherGrid.valueOf(it[6] as String),
             LauncherDock.valueOf(it[7] as String),
+            (it.getOrNull(8) as? String)?.let { style -> LauncherIconStyle.valueOf(style) } ?: LauncherIconStyle.FULL_ICONS,
         )
     },
 )
@@ -288,9 +289,12 @@ internal fun LauncherAppearanceOptions(
     TextButton(onClick = chooseWallpaper) { Text("Android wallpaper settings") }
     LauncherOptions("Theme", LauncherTheme.entries, value.theme, { change(value.copy(theme = it)) })
     LauncherOptions("Accent colour", LauncherAccent.entries, value.accent, { change(value.copy(accent = it)) })
-    LauncherOptions("Icon shape", LauncherIconShape.entries, value.iconShape, { change(value.copy(iconShape = it)) })
-    LauncherOptions("Icon size", LauncherIconSize.entries, value.iconSize, { change(value.copy(iconSize = it)) })
-    LauncherToggle("App labels", value.labels) { change(value.copy(labels = it)) }
+    LauncherOptions("App Icons", LauncherIconStyle.entries, value.iconStyle, { change(value.copy(iconStyle = it)) })
+    if (value.iconStyle == LauncherIconStyle.NOVA_TILES) {
+        LauncherOptions("Icon shape", LauncherIconShape.entries, value.iconShape, { change(value.copy(iconShape = it)) })
+    }
+    LauncherOptions("Icon Size", LauncherIconSize.entries, value.iconSize, { change(value.copy(iconSize = it)) })
+    LauncherToggle("Show Home Icon Labels", value.labels) { change(value.copy(labels = it)) }
     LauncherOptions("Grid density", LauncherGrid.entries, value.grid, { change(value.copy(grid = it)) })
     if (showDock) LauncherOptions("Dock", LauncherDock.entries, value.dock, { change(value.copy(dock = it)) })
 }
@@ -320,7 +324,10 @@ internal fun <T : Enum<T>> LauncherOptions(
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             choices.forEach { choice ->
                 FilterChip(selected == choice, onClick = { change(choice) },
-                    label = { Text(choice.name.lowercase().replace('_', ' ').replaceFirstChar { it.uppercase() }) })
+                    label = {
+                        Text(if (choice is LauncherIconStyle) choice.label
+                            else choice.name.lowercase().replace('_', ' ').replaceFirstChar { it.uppercase() })
+                    })
             }
         }
     }

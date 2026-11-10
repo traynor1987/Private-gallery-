@@ -33,6 +33,25 @@ class LauncherLibrary73UiTest {
             category = ApplicationInfo.CATEGORY_GAME)
     }
 
+    @Test fun iconArtworkPreservesIntrinsicAspectAndNativeAdaptiveMask() {
+        val legacy = object : android.graphics.drawable.ColorDrawable(android.graphics.Color.GREEN) {
+            override fun getIntrinsicWidth(): Int = 96
+            override fun getIntrinsicHeight(): Int = 48
+        }
+        val legacyImage = renderLauncherArtwork(legacy, 96)
+        assertEquals(android.graphics.Color.TRANSPARENT, legacyImage.getPixel(48, 12))
+        assertEquals(android.graphics.Color.GREEN, legacyImage.getPixel(48, 48))
+        assertEquals(android.graphics.Color.TRANSPARENT, legacyImage.getPixel(48, 84))
+        val adaptive = android.graphics.drawable.AdaptiveIconDrawable(
+            android.graphics.drawable.ColorDrawable(android.graphics.Color.GREEN),
+            android.graphics.drawable.ColorDrawable(android.graphics.Color.BLUE),
+        )
+        val adaptiveImage = renderLauncherArtwork(adaptive, 96)
+        assertEquals(android.graphics.Color.BLUE, adaptiveImage.getPixel(48, 48))
+        assertTrue("Android's adaptive mask must clip the source layers",
+            android.graphics.Color.alpha(adaptiveImage.getPixel(0, 0)) < 255)
+    }
+
     @Test fun coverLaunchesTopIconAndOpensGroupForRemainingApps() {
         var launched: LauncherApp? = null
         var category by mutableStateOf<LauncherCategory?>(null)
@@ -174,6 +193,7 @@ class LauncherLibrary73UiTest {
         compose.onNodeWithTag("launcher-library-search").performTextInput("Zed")
         compose.onNodeWithTag("launcher-app-${apps.first().component}").assertDoesNotExist()
         compose.onNodeWithTag("launcher-app-${zed.component}").assertIsDisplayed()
+        compose.onNodeWithTag("launcher-profile-badge-${clone.component}", useUnmergedTree = true).assertIsDisplayed()
         compose.onNodeWithTag("launcher-app-${clone.component}")
             .assert(hasContentDescription("Zed, Dual Messenger")).performClick()
         compose.runOnIdle { assertEquals(clone, launched) }

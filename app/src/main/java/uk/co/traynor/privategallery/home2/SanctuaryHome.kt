@@ -53,6 +53,7 @@ import uk.co.traynor.privategallery.core.sanctuary.SanctuaryStore
 import uk.co.traynor.privategallery.core.sanctuary.SanctuaryWhatsApp
 import uk.co.traynor.privategallery.core.sanctuary.SanctuaryWorkspacePause
 import uk.co.traynor.privategallery.core.sanctuary.approvedAndroidApps
+import uk.co.traynor.privategallery.core.sanctuary.panicSanctuaryPersonalApps
 import uk.co.traynor.privategallery.core.sanctuary.sanctuaryEssentialNovaRoutes
 import java.text.DateFormat
 import java.util.Date
@@ -217,8 +218,13 @@ internal fun SanctuaryHome(
         } else {
             SanctuaryLauncher(current, androidApps.filterKeys { it in guardianApprovals }, novaApps, novaAppUrls, onLaunchAndroid, onLaunchNova, wide)
             SanctuaryMenuRow(
-                "Review approved Android apps", "Changes apply to Nova Launcher and App Guardian",
-                { openAppEditor(SanctuaryAppEditor.MODE_APPROVALS) }, "sanctuary-review-android-approvals",
+                "Review approved Android apps",
+                if (current.mode == SanctuaryMode.PANIC) "See the Panic allowlist and select Friends WhatsApp"
+                else "Changes apply to Nova Launcher and App Guardian",
+                {
+                    openAppEditor(if (current.mode == SanctuaryMode.PANIC) SanctuaryAppEditor.ALLOWED
+                        else SanctuaryAppEditor.MODE_APPROVALS)
+                }, "sanctuary-review-android-approvals",
             )
             if (current.offerPinning && pinningControls != null) {
                 SanctuaryTitle("Android screen pinning")
@@ -514,17 +520,26 @@ private fun SanctuaryPresetEditor(
                 "Recovery controls stay available.",
             style = MaterialTheme.typography.bodySmall,
         )
-        SanctuaryModeSwitch(
-            "Allow WhatsApp inside NovaOS",
-            "Off by default. Turning this on permits WhatsApp destinations, including WhatsApp Web. " +
-                "Chat Lite and the Favourites filter do not isolate conversations.",
-            allowWhatsApp, "sanctuary-option-whatsapp",
-        ) { allowWhatsApp = it }
+        if (mode == SanctuaryMode.PANIC) {
+            Text("During Panic, WhatsApp is available only through the selected Friends profile in Nova Launcher.",
+                style = MaterialTheme.typography.bodySmall)
+        } else {
+            SanctuaryModeSwitch(
+                "Allow WhatsApp inside NovaOS",
+                "Off by default. Turning this on permits WhatsApp destinations, including WhatsApp Web. " +
+                    "Chat Lite and the Favourites filter do not isolate conversations.",
+                allowWhatsApp, "sanctuary-option-whatsapp",
+            ) { allowWhatsApp = it }
+        }
         SanctuaryChoices(configurableNova, configurableNova.keys - blockedNova, "internal") { id, enabled ->
             blockedNova = if (enabled) blockedNova - id else blockedNova + id
         }
         SanctuaryTitle("Android apps")
-        if (externalApps) {
+        if (externalApps && mode == SanctuaryMode.PANIC) {
+            Text("Panic approves YouTube Music, YouTube, ChatGPT, Samsung Internet and the selected Friends WhatsApp profile.",
+                style = MaterialTheme.typography.bodySmall)
+            androidApps.filterKeys { it in panicSanctuaryPersonalApps }.values.forEach { label -> Text(label) }
+        } else if (externalApps) {
             Text("Select installed apps. Essential device and recovery controls stay available.", style = MaterialTheme.typography.bodySmall)
             SanctuaryChoices(androidApps, android, "android") { id, enabled -> android = if (enabled) android + id else android - id }
         } else {

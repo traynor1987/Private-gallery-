@@ -7,25 +7,27 @@ import org.json.JSONTokener
 import java.nio.ByteBuffer
 import java.nio.charset.CodingErrorAction
 
+internal const val LAUNCHER_LAYOUT_PREFS = "nova_android_home_v1"
+internal const val LAUNCHER_STATE_KEY = "state"
 internal const val MAX_LAUNCHER_BACKUP_BYTES = 768 * 1024
 
 /** Owner-controlled Android Home settings, independent of NovaOS workspace stores and keys. */
 internal class NovaLauncherStore(context: Context) {
-    private val prefs = context.applicationContext.getSharedPreferences("nova_android_home_v1", Context.MODE_PRIVATE)
+    private val prefs = context.applicationContext.getSharedPreferences(LAUNCHER_LAYOUT_PREFS, Context.MODE_PRIVATE)
 
     fun askForDefaultHome(): Boolean = prefs.getBoolean("ask_default_home", true)
 
     fun setAskForDefaultHome(ask: Boolean): Boolean = prefs.edit().putBoolean("ask_default_home", ask).commit()
 
     fun read(): NovaLauncherState = synchronized(lock) {
-        val raw = prefs.getString("state", null) ?: return@synchronized NovaLauncherState()
+        val raw = prefs.getString(LAUNCHER_STATE_KEY, null) ?: return@synchronized NovaLauncherState()
         runCatching { LauncherLayoutCodec.decode(raw, portable = false) }.getOrDefault(NovaLauncherState())
     }
 
     fun save(state: NovaLauncherState): Boolean = synchronized(lock) {
         val encoded = runCatching { LauncherLayoutCodec.encode(state, portable = false) }.getOrNull()
             ?: return@synchronized false
-        val update = prefs.edit().putString("state", encoded)
+        val update = prefs.edit().putString(LAUNCHER_STATE_KEY, encoded)
         if (state.newAppPlacement == LauncherNewAppPlacement.HOME) {
             if (!prefs.contains(NEW_APPS_OBSERVED_AT)) {
                 update.putLong(NEW_APPS_OBSERVED_AT, System.currentTimeMillis())
@@ -57,7 +59,7 @@ internal class NovaLauncherStore(context: Context) {
         if (current != updated) {
             val encoded = runCatching { LauncherLayoutCodec.encode(updated, portable = false) }.getOrNull()
                 ?: return@synchronized null
-            update.putString("state", encoded)
+            update.putString(LAUNCHER_STATE_KEY, encoded)
         }
         if (update.commit() && current != updated) updated else null
     }
@@ -82,13 +84,13 @@ internal class NovaLauncherStore(context: Context) {
         save(decoded.copy(configured = current.configured, widgets = widgets, launchCounts = current.launchCounts))
     }
 
-    private companion object {
+    internal companion object {
         val lock = Any()
-        const val NEW_APPS_OBSERVED_AT = "new_apps_observed_at"
+        private const val NEW_APPS_OBSERVED_AT = "new_apps_observed_at"
     }
 }
 
-private object LauncherLayoutCodec {
+internal object LauncherLayoutCodec {
     private const val SCHEMA = 1
     private const val TYPE = "nova-launcher-layout"
     private val layoutKeys = setOf("type", "schema", "separateDisplays", "cover", "inner", "appearance", "drawer", "gesture", "hideBlocked")
@@ -110,6 +112,7 @@ private object LauncherLayoutCodec {
                 .put("accent", appearance.accent.name)
                 .put("iconShape", appearance.iconShape.name)
                 .put("iconSize", appearance.iconSize.name)
+                .put("iconStyle", appearance.iconStyle.name)
                 .put("labels", appearance.labels)
                 .put("grid", appearance.grid.name)
                 .put("dock", appearance.dock.name))
@@ -163,7 +166,8 @@ private object LauncherLayoutCodec {
         require(root.string("type") == TYPE && root.number("schema") == SCHEMA)
 
         val appearance = root.getJSONObject("appearance")
-        appearance.requireKeys(setOf("wallpaper", "theme", "accent", "iconShape", "iconSize", "labels", "grid", "dock"))
+        val appearanceKeys = setOf("wallpaper", "theme", "accent", "iconShape", "iconSize", "labels", "grid", "dock")
+        appearance.requireKeys(if (appearance.has("iconStyle")) appearanceKeys + "iconStyle" else appearanceKeys)
         val drawer = root.getJSONObject("drawer")
         drawer.requireKeys(setOf("orientation", "search", "sort", "folders", "frequent", "shortcutSearch"))
 
@@ -205,6 +209,8 @@ private object LauncherLayoutCodec {
                 labels = appearance.boolean("labels"),
                 grid = LauncherGrid.valueOf(appearance.string("grid")),
                 dock = LauncherDock.valueOf(appearance.string("dock")),
+                iconStyle = if (appearance.has("iconStyle")) LauncherIconStyle.valueOf(appearance.string("iconStyle"))
+                    else LauncherIconStyle.FULL_ICONS,
             ),
             drawer = LauncherDrawerOptions(
                 orientation = LauncherDrawerOrientation.valueOf(drawer.string("orientation")),

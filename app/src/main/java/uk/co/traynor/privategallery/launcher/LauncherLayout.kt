@@ -4,7 +4,8 @@ internal enum class LauncherWallpaper { OCEAN, MIDNIGHT, PLUM, DEVICE }
 internal enum class LauncherTheme { SYSTEM, LIGHT, DARK }
 internal enum class LauncherAccent { SKY, TEAL, LAVENDER, AMBER }
 internal enum class LauncherIconShape { ROUNDED, CIRCLE, SQUIRCLE }
-internal enum class LauncherIconSize { SMALL, MEDIUM, LARGE }
+internal enum class LauncherIconSize(val previewScale: Float) { SMALL(.82f), MEDIUM(.93f), LARGE(1f) }
+internal enum class LauncherIconStyle(val label: String) { FULL_ICONS("Full Icons"), NOVA_TILES("Nova Tiles") }
 internal enum class LauncherDock { GLASS, SOLID, TRANSPARENT, HIDDEN }
 internal enum class LauncherNewAppPlacement { LIBRARY_ONLY, HOME }
 internal enum class LauncherDrawerOrientation { VERTICAL, HORIZONTAL }
@@ -31,6 +32,7 @@ internal data class LauncherAppearance(
     val labels: Boolean = true,
     val grid: LauncherGrid = LauncherGrid.STANDARD,
     val dock: LauncherDock = LauncherDock.GLASS,
+    val iconStyle: LauncherIconStyle = LauncherIconStyle.FULL_ICONS,
 )
 
 internal data class LauncherDrawerOptions(
@@ -44,7 +46,7 @@ internal data class LauncherDrawerOptions(
 
 internal data class LauncherDockOptions(
     val locked: Boolean = true,
-    val showInLibrary: Boolean = true,
+    val showInLibrary: Boolean = false,
     val labels: Boolean = false,
 )
 

@@ -2,6 +2,8 @@ package uk.co.traynor.privategallery.launcher
 
 import android.text.format.DateFormat
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
@@ -30,10 +32,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.LayoutCoordinates
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -56,10 +60,12 @@ import androidx.compose.ui.unit.sp
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
 import java.util.Date
+import kotlin.math.roundToInt
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import uk.co.traynor.privategallery.R
 import uk.co.traynor.privategallery.core.sanctuary.SanctuaryAppVisibility
+import uk.co.traynor.privategallery.core.sanctuary.SanctuaryMode
 import uk.co.traynor.privategallery.core.sanctuary.SanctuaryLauncherPolicy.Decision
 import uk.co.traynor.privategallery.core.ui.AppTheme
 import uk.co.traynor.privategallery.home2.Wallpaper
@@ -120,7 +126,7 @@ private fun LauncherRuntime(
     state: NovaLauncherState,
     apps: List<LauncherApp>,
     shortcuts: List<LauncherShortcut>,
-    decisions: Map<String, Decision>,
+    policy: Map<String, Decision>,
     actions: LauncherUiActions,
     isDefaultHome: Boolean,
     outsideProtection: Boolean,
@@ -134,6 +140,11 @@ private fun LauncherRuntime(
     appVisibility: SanctuaryAppVisibility,
 ) {
     var surface by rememberSaveable(homeGeneration) { mutableStateOf(LauncherSurface.HOME) }
+    var animateDockOnReturn by remember(homeGeneration) { mutableStateOf(false) }
+    fun showHome(animateDock: Boolean = false) {
+        animateDockOnReturn = animateDock
+        surface = LauncherSurface.HOME
+    }
     var query by rememberSaveable(homeGeneration) { mutableStateOf("") }
     var coverPage by rememberSaveable(homeGeneration) { mutableIntStateOf(0) }
     var innerPage by rememberSaveable(homeGeneration) { mutableIntStateOf(0) }
@@ -146,6 +157,10 @@ private fun LauncherRuntime(
     var searchRequested by rememberSaveable(homeGeneration) { mutableStateOf(false) }
     var folder by remember(homeGeneration) { mutableStateOf<LauncherItem.Folder?>(null) }
     val appsByComponent = remember(apps) { apps.associateBy { it.component } }
+    val decisions = remember(apps, policy, launcherProtected) {
+        if (!launcherProtected) policy else policy + apps.filter { policy.forLauncherApp(it) == null }
+            .associate { it.component to Decision.UNAPPROVED }
+    }
     fun approved(app: LauncherApp) = decisions.forLauncherApp(app)?.canLaunch == true
     fun canDisplay(component: String, hide: Boolean = appVisibility.hideBlockedApps): Boolean =
         appsByComponent[component]?.let { !launcherProtected || !hide || approved(it) } == true
@@ -187,10 +202,13 @@ private fun LauncherRuntime(
         )
     }
     fun members(folder: LauncherItem.SmartFolder): List<LauncherApp> {
-        val allowed = smartApps.associateBy { it.component }
+        val showPanicLocks = launcherProtected && sanctuaryStatus?.mode == SanctuaryMode.PANIC &&
+            !appVisibility.hideBlockedApps
+        val candidates = if (showPanicLocks) visibleApps else smartApps
+        val allowed = candidates.associateBy { it.component }
         val automatic = groups.firstOrNull { it.category == folder.category }?.apps.orEmpty()
         val pinned = if (folder.category == LauncherCategory.RECENTLY_USED)
-            smartState?.pinnedApps(smartApps).orEmpty()
+            smartState?.pinnedApps(candidates).orEmpty()
         else emptyList()
         return (automatic.filter { it.component in allowed } + pinned + folder.included.mapNotNull(allowed::get))
             .distinctBy(LauncherApp::component)
@@ -205,7 +223,7 @@ private fun LauncherRuntime(
     fun closeLibrary() {
         query = ""
         when {
-            homeFolder != null -> { homeFolder = null; category = null; surface = LauncherSurface.HOME }
+            homeFolder != null -> { homeFolder = null; category = null; showHome() }
             category != null -> category = null
             else -> openDrawer()
         }
@@ -227,7 +245,7 @@ private fun LauncherRuntime(
         when (surface) {
             LauncherSurface.LIBRARY -> closeLibrary()
             LauncherSurface.LIBRARY_SETTINGS -> surface = LauncherSurface.SETTINGS
-            else -> { surface = LauncherSurface.HOME; query = "" }
+            else -> { showHome(animateDock = surface == LauncherSurface.DRAWER); query = "" }
         }
     }
     BoxWithConstraints(Modifier.fillMaxSize()) {
@@ -321,7 +339,7 @@ private fun LauncherRuntime(
                 if (folder != null || gestures.menu != null) null
                 else when (surface) {
                     LauncherSurface.HOME -> gestures.sourceAt(position, currentPage, drawer = librarySelected,
-                        includeDock = librarySelected && !state.dockOptions.locked)
+                        includeDock = librarySelected && state.dockOptions.showInLibrary && !state.dockOptions.locked)
                     LauncherSurface.DRAWER, LauncherSurface.LIBRARY -> gestures.sourceAt(position, currentPage, drawer = true)
                     else -> null
                 }
@@ -334,7 +352,7 @@ private fun LauncherRuntime(
                 if (surface == LauncherSurface.DRAWER || surface == LauncherSurface.LIBRARY) {
                     homeFolder = null
                     category = null
-                    surface = LauncherSurface.HOME
+                    showHome()
                     query = ""
                 }
             },
@@ -385,6 +403,7 @@ private fun LauncherRuntime(
                         smartFolderPresentation = smartFolderPresentation,
                         sanctuaryStatus = sanctuaryStatus,
                         isAppVisible = { canDisplay(it) },
+                        animateDockEntrance = animateDockOnReturn,
                     )
                 }
                 LauncherSurface.DRAWER -> LauncherDrawer(
@@ -392,7 +411,7 @@ private fun LauncherRuntime(
                         else state.launchCounts - smartState?.excluded.orEmpty()),
                     layout, wide, query, { query = it }, searchRequested,
                     visibleApps, shortcuts, decisions,
-                    onBack = { surface = LauncherSurface.HOME },
+                    onBack = { showHome(animateDock = true) },
                     onApp = { actions.launchApp(it.component) },
                     onShortcut = actions.launchShortcut,
                     onFolder = { folder = it },
@@ -400,7 +419,7 @@ private fun LauncherRuntime(
                     onLibrary = {
                         query = ""
                         selectLibrary(LauncherLibraryEntry.DRAWER)
-                        surface = LauncherSurface.HOME
+                        showHome()
                     },
                     searchApps = searchApps,
                 )
@@ -439,7 +458,7 @@ private fun LauncherRuntime(
                 }
                 LauncherSurface.SETTINGS -> LauncherSettings(
                     state, decisions, visibleApps, actions, isDefaultHome, outsideProtection, launcherProtected,
-                    onBack = { surface = LauncherSurface.HOME },
+                    onBack = { showHome() },
                     onEdit = { surface = LauncherSurface.EDIT },
                     onLibrarySettings = { surface = LauncherSurface.LIBRARY_SETTINGS },
                     defaultHomeUi = defaultHomeUi,
@@ -448,7 +467,7 @@ private fun LauncherRuntime(
                 LauncherSurface.EDIT -> LauncherLayoutEditor(
                     state, layout, wide, currentPage, apps.filter { canDisplay(it.component) }, decisions,
                     onEdit = ::edit, onPage = updatePage, actions = actions,
-                    onBack = { surface = LauncherSurface.HOME },
+                    onBack = { showHome() },
                     protectedBySanctuary = launcherProtected,
                 )
             }
@@ -467,7 +486,13 @@ private fun LauncherRuntime(
                                 TextButton(onClick = {
                                     folder = null
                                     actions.launchApp(app.component)
-                                }) { Text(app.label) }
+                                }) {
+                                    LauncherArtworkIcon(app, state.appearance, Modifier.size(38.dp))
+                                    Spacer(Modifier.width(10.dp))
+                                    val label = app.profileLabel?.let { "${app.label} · $it" } ?: app.label
+                                    Text(if (decisions.forLauncherApp(app)?.canLaunch == false)
+                                        "$label · Locked by Sanctuary" else label)
+                                }
                             }
                         }
                     },
@@ -555,12 +580,17 @@ internal fun LauncherHome(
     smartFolderPresentation: LauncherSmartFolderPresentation = LauncherSmartFolderPresentation.AUTOMATIC,
     sanctuaryStatus: LauncherSanctuaryStatus? = null,
     isAppVisible: (String) -> Boolean = apps::containsKey,
+    animateDockEntrance: Boolean = false,
 ) {
     DisposableEffect(gestures) { onDispose { gestures.clearHome() } }
     val pages = layout.pages.ifEmpty { listOf(listOf(LauncherItem.Workspace)) }
     val initialPage = if (librarySelected && libraryPage != null) pages.size else currentPage.coerceIn(0, pages.lastIndex)
     val pager = rememberPagerState(initialPage = initialPage) { pages.size + if (libraryPage == null) 0 else 1 }
     val scope = rememberCoroutineScope()
+    val footerEntrance = remember { Animatable(if (animateDockEntrance) 0f else 1f) }
+    LaunchedEffect(footerEntrance) {
+        if (footerEntrance.value == 0f) footerEntrance.animateTo(1f, tween(durationMillis = 210))
+    }
     val focus = LocalFocusManager.current
     val atLibrary = libraryPage != null && pager.settledPage == pages.size
     val goBackFromLibrary: () -> Unit = {
@@ -723,17 +753,30 @@ internal fun LauncherHome(
 
                     }
                 }
-                Column(Modifier.fillMaxWidth().padding(horizontal = if (wide) 26.dp else 14.dp)) {
+                Column(
+                    Modifier.fillMaxWidth().clipToBounds().layout { measurable, constraints ->
+                        val footer = measurable.measure(constraints.copy(minHeight = 0))
+                        val homeFraction = if (libraryPage == null || state.dockOptions.showInLibrary) 1f else {
+                            (pages.size - pager.currentPage - pager.currentPageOffsetFraction).coerceIn(0f, 1f)
+                        }
+                        val height = (footer.height * homeFraction).roundToInt()
+                        layout(footer.width, height) {
+                            if (height > 0) {
+                                val entranceOffset = (height * (1f - footerEntrance.value)).roundToInt()
+                                footer.placeRelative(0, entranceOffset)
+                            }
+                        }
+                    }.padding(horizontal = if (wide) 26.dp else 14.dp),
+                ) {
                     LauncherDots(pager.pageCount, pager.currentPage, accent, libraryLast = libraryPage != null) {
                         scope.launch { pager.animateScrollToPage(it) }
                     }
-                    if (appearance.dock != LauncherDock.HIDDEN && (layout.dock.isNotEmpty() ||
-                            (gestures.drag != null && !state.dockOptions.locked)) &&
-                        (state.dockOptions.showInLibrary || !atLibrary)
+                    if (appearance.dock != LauncherDock.HIDDEN &&
+                        (layout.dock.isNotEmpty() || gestures.drag != null && !state.dockOptions.locked)
                     ) {
                         LauncherSharedDock(
                             layout.dock, appearance, state.dockOptions, apps, decisions, compact, gestures,
-                            onItem, ::visible, smartMembers,
+                            onItem, ::visible, smartMembers, active = !atLibrary || state.dockOptions.showInLibrary,
                         )
                     }
                     Box(Modifier.fillMaxWidth().height(46.dp), contentAlignment = Alignment.Center) {
@@ -862,7 +905,10 @@ internal fun LauncherHomeGrid(
                         if (visible(item)) {
                             LauncherTile(item, appearance, apps, decisions, { onItem(item) }, interactive = interactive,
                                 gestures = gestures, origin = LauncherIconOrigin(item, slots.getOrNull(index)),
-                                smartMembers = smartMembers, expandedSmartFolder = expandedRow)
+                                smartMembers = smartMembers, expandedSmartFolder = expandedRow,
+                                folderMembers = { folder ->
+                                    folder.apps.filter { visible(LauncherItem.App(it)) }.mapNotNull(apps::get)
+                                })
                         } else {
                             val size = when (appearance.iconSize) {
                                 LauncherIconSize.SMALL -> 44.dp
@@ -896,6 +942,7 @@ internal fun LauncherTile(
     smartMembers: (LauncherItem.SmartFolder) -> List<LauncherApp> = { emptyList() },
     expandedSmartFolder: Boolean = false,
     fullTileIcon: Boolean = false,
+    folderMembers: (LauncherItem.Folder) -> List<LauncherApp> = { folder -> folder.apps.mapNotNull(apps::get) },
 ) {
     val app = (item as? LauncherItem.App)?.let { apps[it.component] }
     val blocked = app?.let { decisions.forLauncherApp(it)?.canLaunch == false } == true
@@ -929,7 +976,7 @@ internal fun LauncherTile(
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         if (expandedSmartFolder && item is LauncherItem.SmartFolder) {
-            LauncherExpandedSmartFolder(item, smartMembers(item))
+            LauncherExpandedSmartFolder(item, smartMembers(item), appearance, decisions)
             return@Column
         }
         BoxWithConstraints(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
@@ -945,23 +992,33 @@ internal fun LauncherTile(
                 LauncherIconShape.CIRCLE -> CircleShape
                 LauncherIconShape.SQUIRCLE -> RoundedCornerShape(size * .41f)
             }
-            val background = if (fullTileIcon) Color.White.copy(alpha = .08f)
-                else launcherAccent(appearance.accent).copy(alpha = if (blocked) .19f else .29f)
+            val nativeArtwork = app != null && appearance.iconStyle == LauncherIconStyle.FULL_ICONS
+            val background = launcherAccent(appearance.accent).copy(alpha = if (blocked) .19f else .29f)
             Box(
-                Modifier.size(size).clip(shape)
-                    .background(background),
+                Modifier.size(size).then(if (nativeArtwork) Modifier else Modifier.clip(shape).background(background)),
                 contentAlignment = Alignment.Center,
             ) {
                 when (item) {
-                    is LauncherItem.App -> LauncherAppIcon(checkNotNull(app), Modifier.size(if (fullTileIcon) size else size * .69f))
-                    is LauncherItem.Folder -> Icon(Icons.Default.Folder, null, Modifier.size(size * .53f), tint = Color.White)
-                    is LauncherItem.SmartFolder -> LauncherFolderPreview(smartMembers(item), Modifier.size(size * .8f))
+                    is LauncherItem.App -> LauncherAppIcon(
+                        checkNotNull(app),
+                        Modifier.size(if (nativeArtwork) size else size * .69f)
+                            .testTag("launcher-app-artwork-${item.component}"),
+                    )
+                    is LauncherItem.Folder -> {
+                        val members = folderMembers(item)
+                        if (members.isEmpty() || appearance.iconStyle == LauncherIconStyle.NOVA_TILES) {
+                            Icon(Icons.Default.Folder, null, Modifier.size(size * .53f), tint = Color.White)
+                        } else LauncherFolderPreview(members, Modifier.size(size * .88f), decisions, appearance = appearance)
+                    }
+                    is LauncherItem.SmartFolder -> LauncherFolderPreview(
+                        smartMembers(item), Modifier.size(size * .8f), decisions, appearance,
+                    )
                     LauncherItem.Workspace -> Image(painterResource(R.drawable.nova_identity), null, Modifier.size(size * .69f))
                 }
                 if (blocked) {
-                    Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = .4f)))
+                    Box(Modifier.fillMaxSize().clip(shape).background(Color.Black.copy(alpha = .4f)))
                     Surface(
-                        Modifier.align(Alignment.BottomEnd).padding(2.dp), shape = CircleShape,
+                        Modifier.align(Alignment.BottomStart).padding(2.dp), shape = CircleShape,
                         color = Color(0xFF273550), contentColor = Color.White,
                     ) { Icon(Icons.Default.Lock, null, Modifier.padding(3.dp).size(13.dp)) }
                 }
@@ -1075,6 +1132,7 @@ private fun LauncherDrawer(
                     }
                 },
                 gestures = gestures,
+                showLabel = true,
             )
         }
         if (state.drawer.orientation == LauncherDrawerOrientation.VERTICAL) {

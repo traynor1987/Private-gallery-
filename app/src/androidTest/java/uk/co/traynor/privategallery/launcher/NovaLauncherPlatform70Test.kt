@@ -3,10 +3,12 @@ package uk.co.traynor.privategallery.launcher
 import android.appwidget.AppWidgetHost
 import android.appwidget.AppWidgetManager
 import android.content.ComponentName
+import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.ParcelFileDescriptor
 import android.os.SystemClock
+import android.provider.Settings
 import android.view.KeyEvent
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
@@ -26,6 +28,7 @@ import uk.co.traynor.privategallery.core.sanctuary.SanctuaryAppVisibility
 import uk.co.traynor.privategallery.core.sanctuary.SanctuaryLauncherPolicy
 import uk.co.traynor.privategallery.core.sanctuary.SanctuaryMode
 import uk.co.traynor.privategallery.core.sanctuary.SanctuaryStore
+import uk.co.traynor.privategallery.core.security.PinVaultKeyStore
 
 class NovaLauncherPlatform70Test {
     @get:Rule val compose = createEmptyComposeRule()
@@ -150,6 +153,63 @@ class NovaLauncherPlatform70Test {
             assertTrue(sanctuary.savePreset(mode, preset))
             assertTrue(sanctuary.saveLauncherVisibility(originalVisibility))
             assertTrue(launchStore.save(original))
+        }
+    }
+
+    @Test fun sanctuaryHomeSettingsRequiresPinPhraseAndUninterruptedHold() {
+        val sanctuary = SanctuaryStore.get(context)
+        val launchStore = NovaLauncherStore(context)
+        val original = launchStore.read()
+        val keys = PinVaultKeyStore(context)
+        val exitPreferences = context.getSharedPreferences("nova-launcher-exit", Context.MODE_PRIVATE)
+        val settingsPackage = checkNotNull(
+            context.packageManager.resolveActivity(Intent(Settings.ACTION_SETTINGS), 0)?.activityInfo?.packageName,
+        )
+        assertEquals(null, sanctuary.refresh())
+        assertFalse("The isolated launcher test requires a clean Primary PIN fixture", keys.isConfigured)
+        assertTrue("The isolated launcher test requires clean exit protection preferences", exitPreferences.all.isEmpty())
+        try {
+            keys.create("219438".toCharArray()).fill(0)
+            assertTrue(exitPreferences.edit().putBoolean("typed", true).commit())
+            assertTrue(launchStore.save(NovaLauncherState(configured = true)))
+            assertTrue(sanctuary.startFoldTest(SanctuaryMode.LEARNING))
+            withLauncher {
+                await { shell("dumpsys activity activities").lineSequence().any {
+                    "topResumedActivity" in it && home.className in it
+                } }
+                compose.onNodeWithContentDescription("Launcher settings").performClick()
+                compose.onNodeWithText("Change Default Launcher").performClick()
+                compose.onNodeWithTag("launcher-exit-pin").performTextInput("219438")
+                compose.onNodeWithText("Verify").performClick()
+                compose.waitUntil(10_000) {
+                    compose.onAllNodesWithTag("launcher-exit-phrase").fetchSemanticsNodes().isNotEmpty()
+                }
+                compose.onNodeWithTag("launcher-exit-hold").assertDoesNotExist()
+                assertEquals(context.packageName, instrumentation.uiAutomation.rootInActiveWindow?.packageName?.toString())
+
+                compose.onNodeWithTag("launcher-exit-phrase").performTextInput(LauncherExitSettings().phrase)
+                compose.onNodeWithText("Verify").performClick()
+                val hold = compose.onNodeWithTag("launcher-exit-hold")
+                hold.performTouchInput { click() }
+                compose.onNodeWithText("Hold continuously for five seconds before releasing.").assertIsDisplayed()
+                assertEquals(context.packageName, instrumentation.uiAutomation.rootInActiveWindow?.packageName?.toString())
+                hold.performTouchInput { down(center) }
+                compose.waitUntil(8_000) {
+                    compose.onAllNodesWithText("Release to continue").fetchSemanticsNodes().isNotEmpty()
+                }
+                hold.performTouchInput { up() }
+                try {
+                    await { instrumentation.uiAutomation.rootInActiveWindow?.packageName?.toString() == settingsPackage }
+                } finally {
+                    shell("input keyevent ${KeyEvent.KEYCODE_BACK}")
+                }
+                assertNotNull("Changing Home settings leaves Sanctuary running", sanctuary.refresh())
+            }
+        } finally {
+            if (sanctuary.refresh() != null) assertTrue(sanctuary.end(SanctuaryStore.END_PHRASE))
+            assertTrue(launchStore.save(original))
+            keys.clearFailedRestore()
+            assertTrue(exitPreferences.edit().clear().commit())
         }
     }
 

@@ -244,6 +244,7 @@ internal const val ACTION_OPEN_PRIVATE_WORKSPACE = "uk.co.traynor.privategallery
 
 internal const val ACTION_OPEN_PRIMARY_GALLERY = "uk.co.traynor.privategallery.action.OPEN_PRIMARY_GALLERY"
 private const val STATE_LAUNCHER_ENTRY = "launcher.workspace.entry"
+private const val STATE_STANDALONE_VAULT_CHROME = "launcher.workspace.standaloneVaultChrome"
 
 internal fun privateWorkspaceEntryIntent(context: android.content.Context, primaryGallery: Boolean = false): Intent =
     Intent(context, MainActivity::class.java)
@@ -1069,7 +1070,7 @@ class MainActivity : FragmentActivity() {
     }
 
     private fun sanctuaryBrowserDestinationRestricted(url: String): Boolean =
-        activeSanctuaryForBrowser()?.allowWhatsApp == false && SanctuaryWhatsApp.isRelatedUrl(url)
+        activeSanctuaryForBrowser()?.allowsWhatsAppDestinations == false && SanctuaryWhatsApp.isRelatedUrl(url)
 
     private fun sanctuaryBrowserAppRestricted(app: PrivateAppCatalog.App): Boolean =
         activeSanctuaryForBrowser()?.allowsNovaApp("web:${app.id()}", app.startUrl()) == false
@@ -1265,6 +1266,7 @@ class MainActivity : FragmentActivity() {
     }
 
     private var launcherEntry by mutableStateOf<String?>(null)
+    private var standalonePrimaryVaultChrome by mutableStateOf(false)
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
@@ -1274,6 +1276,7 @@ class MainActivity : FragmentActivity() {
     override fun onSaveInstanceState(outState: Bundle) {
         super.onSaveInstanceState(outState)
         outState.putString(STATE_LAUNCHER_ENTRY, launcherEntry)
+        outState.putBoolean(STATE_STANDALONE_VAULT_CHROME, standalonePrimaryVaultChrome)
     }
 
     private fun enterPrivateWorkspaceFromLauncher(request: Intent) {
@@ -1291,10 +1294,12 @@ class MainActivity : FragmentActivity() {
         // A new Android task must not reuse authentication from any existing workspace owner.
         for (owner in workspaceActivities.toList()) owner.retireWorkspaceForLauncherEntry()
         launcherEntry = action
+        standalonePrimaryVaultChrome = action == ACTION_OPEN_PRIMARY_GALLERY
         if (route == Route.LOCK) requestNovaCredentials()
     }
 
     private fun retireWorkspaceForLauncherEntry() {
+        standalonePrimaryVaultChrome = false
         if (session.isUnlocked || sessionKey != null || retained.hidden.session.isUnlocked || retained.hidden.selected) {
             panicCoverPending = true
             coverSensitiveContent()
@@ -1381,6 +1386,8 @@ class MainActivity : FragmentActivity() {
         workspaceActivities.add(this)
         launcherEntry = savedInstanceState?.getString(STATE_LAUNCHER_ENTRY)
             ?.takeIf { it == ACTION_OPEN_PRIVATE_WORKSPACE || it == ACTION_OPEN_PRIMARY_GALLERY }
+        standalonePrimaryVaultChrome = launcherEntry == ACTION_OPEN_PRIMARY_GALLERY &&
+            savedInstanceState?.getBoolean(STATE_STANDALONE_VAULT_CHROME) == true
         enterPrivateWorkspaceFromLauncher(intent)
         setContent {
             PrivateGalleryTheme(selectedNativeTheme()) {
@@ -2066,6 +2073,7 @@ class MainActivity : FragmentActivity() {
         cancelPendingNovaPrivateApp()
         val hidden=retained.hidden.selected
         if(if(hidden)!retained.hidden.session.isUnlocked else !session.isUnlocked||sessionKey==null)return
+        standalonePrimaryVaultChrome = false
         if(uk.co.traynor.privategallery.core.home.NovaNavigation.rootDestination(hideContent)=="GALLERY") {
             closeEvidenceLocker();closeVaultCamera();retained.clearNovaNavigation();retained.homeFeatureRoot=null;homeVisible=false
             if(route==Route.GALLERY)moveTaskToBack(true)else openNonBrowser(Route.GALLERY)
@@ -2140,6 +2148,7 @@ class MainActivity : FragmentActivity() {
     private fun launchHomeShortcut(item:uk.co.traynor.privategallery.core.home.HomeLayout.Shortcut) {
         val hidden=retained.hidden.selected
         if(!uk.co.traynor.privategallery.core.home.NovaNavigation.available(item,hidden)||hideContent||!activityResumed||(if(hidden)!retained.hidden.session.isUnlocked else !session.isUnlocked||sessionKey==null))return
+        standalonePrimaryVaultChrome = false
         if(hidden && item in setOf(uk.co.traynor.privategallery.core.home.HomeLayout.Shortcut.BROWSER,
                 uk.co.traynor.privategallery.core.home.HomeLayout.Shortcut.TOR_BROWSER,
                 uk.co.traynor.privategallery.core.home.HomeLayout.Shortcut.PRIVATE_APPS)) {
@@ -2250,6 +2259,10 @@ class MainActivity : FragmentActivity() {
         if(retained.hidden.selected)retained.hidden.lock()else lock()
     }
     internal fun novaConcealed():Boolean=hideContent
+    internal fun showsStandalonePrimaryVaultChrome(selected: Route): Boolean =
+        standalonePrimaryVaultChrome && selected == Route.VAULT && !hideContent && !homeVisible &&
+            !retained.hidden.selected && session.isUnlocked && sessionKey != null
+
     internal fun openNovaSettings() {
         if(!activityResumed)return
         if(if(retained.hidden.selected)!retained.hidden.session.isUnlocked else !session.isUnlocked||sessionKey==null)return
@@ -4436,7 +4449,8 @@ internal fun ProtectedAppShell(
             }
         },
         bottomBar = {
-            if(!hideNavigation && security!=null)uk.co.traynor.privategallery.ui.NovaNavigationRow(
+            if(!hideNavigation && activity?.showsStandalonePrimaryVaultChrome(selected)!=true &&
+                security!=null)uk.co.traynor.privategallery.ui.NovaNavigationRow(
                 onRecents={activity?.openNovaRecents() ?: security.home()},onHome=security.home,
                 onBack={activity?.onBackPressedDispatcher?.onBackPressed()},
                 modifier=Modifier.navigationBarsPadding().imePadding(),

@@ -8,6 +8,8 @@ import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.FolderOpen
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
@@ -22,6 +24,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import uk.co.traynor.privategallery.core.sanctuary.SanctuaryLauncherPolicy.Decision
 
 internal enum class LauncherSmartFolderPresentation(val label: String, val detail: String) {
     COMPACT("Compact", "Small folders in the regular Home grid"),
@@ -81,9 +84,15 @@ internal fun LauncherSmartFolderModeSetting(
 }
 
 @Composable
-internal fun LauncherExpandedSmartFolder(folder: LauncherItem.SmartFolder, apps: List<LauncherApp>) {
+internal fun LauncherExpandedSmartFolder(
+    folder: LauncherItem.SmartFolder,
+    apps: List<LauncherApp>,
+    appearance: LauncherAppearance = LauncherAppearance(),
+    decisions: Map<String, Decision> = emptyMap(),
+) {
     val shape = RoundedCornerShape(20.dp)
     val preview = apps.take(4)
+    val iconScale = appearance.iconSize.previewScale
     Column(
         Modifier.fillMaxWidth().testTag("launcher-expanded-smart-folder")
             .clip(shape)
@@ -101,15 +110,38 @@ internal fun LauncherExpandedSmartFolder(folder: LauncherItem.SmartFolder, apps:
                 Icon(Icons.Default.FolderOpen, null, Modifier.size(28.dp), tint = Color.White.copy(alpha = .78f))
                 Text("No apps yet", color = Color.White.copy(alpha = .86f), style = MaterialTheme.typography.labelSmall)
             } else {
-                preview.take(2).forEach { app -> LauncherAppIcon(app, Modifier.weight(1f).size(44.dp).testTag("launcher-expanded-preview-${app.component}")) }
+                preview.take(2).forEach { app ->
+                    Box(Modifier.weight(1f), contentAlignment = Alignment.Center) {
+                        SmartFolderArtwork(app, appearance, decisions, 44.dp * iconScale)
+                    }
+                }
                 if (preview.size > 2) {
                     Column(Modifier.weight(.7f), horizontalAlignment = Alignment.CenterHorizontally) {
-                        preview.drop(2).forEach { app -> LauncherAppIcon(app, Modifier.size(24.dp).testTag("launcher-expanded-preview-${app.component}")) }
+                        preview.drop(2).forEach { app ->
+                            SmartFolderArtwork(app, appearance, decisions, 24.dp * iconScale)
+                        }
                     }
                 }
             }
         }
         Text(folder.name, color = Color.White, style = MaterialTheme.typography.titleSmall,
             maxLines = 2, overflow = TextOverflow.Ellipsis)
+    }
+}
+
+@Composable
+private fun SmartFolderArtwork(
+    app: LauncherApp,
+    appearance: LauncherAppearance,
+    decisions: Map<String, Decision>,
+    size: androidx.compose.ui.unit.Dp,
+) {
+    Box(Modifier.size(size).testTag("launcher-expanded-preview-${app.component}")) {
+        LauncherArtworkIcon(app, appearance, Modifier.fillMaxSize())
+        if (decisions.forLauncherApp(app)?.canLaunch == false) {
+            Icon(Icons.Default.Lock, "Locked by Sanctuary",
+                Modifier.align(Alignment.BottomStart).size(size * .4f).background(Color.Black, CircleShape),
+                tint = Color.White)
+        }
     }
 }
