@@ -15,7 +15,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -34,6 +36,8 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import uk.co.traynor.privategallery.core.guardian.GuardianCapture
+import uk.co.traynor.privategallery.core.guardian.GuardianCaptureStore
 import uk.co.traynor.privategallery.core.guardian.GuardianNotificationListener
 import uk.co.traynor.privategallery.core.guardian.ProbeAccount
 import uk.co.traynor.privategallery.core.guardian.ProbeResult
@@ -177,9 +181,68 @@ internal fun NotificationCompatibilityScreen(
             status.syntheticDndMatch?.let { Text(if (it) "Notification matched the current interruption filter."
                 else "Android ranking marks the test notification as suppressed by the interruption filter.") }
             Text("Check the Samsung shade and lock screen to confirm visible behaviour on your Fold.")
+            HorizontalDivider()
+            GuardianCaptureControls(allowChanges = allowPermissionChanges, listenerReady = access && status.connected)
             onOpenLauncher?.let { open ->
                 OutlinedButton(onClick = open) { Text("Open Guardian Home test launcher") }
             }
         }
     }
+}
+
+@Composable
+private fun GuardianCaptureControls(allowChanges: Boolean, listenerReady: Boolean) {
+    val context = LocalContext.current
+    val health by GuardianCapture.state.collectAsState()
+    var consent by remember { mutableStateOf(false) }
+    var confirmClear by remember { mutableStateOf(false) }
+    LaunchedEffect(context) { GuardianCapture.refresh(context) }
+
+    Text("Encrypted Main WhatsApp capture", style = MaterialTheme.typography.titleMedium)
+    Text("Capture is optional. NovaOS stores supported Main WhatsApp message data on this device. " +
+        "Friends WhatsApp is excluded. Samsung notifications remain visible according to your existing settings.")
+    Text(when {
+        health.busy -> "Checking encrypted archive"
+        health.limited -> "Limited Protection · encrypted capture or storage could not be fully verified"
+        health.enabled && !listenerReady -> "Limited Protection · notification access or listener connection required"
+        health.enabled -> "Capture enabled · ${health.retained ?: 0} retained"
+        else -> "Capture off · ${health.retained ?: 0} retained"
+    })
+    OutlinedButton(
+        enabled = allowChanges && !health.busy && (health.enabled || listenerReady),
+        onClick = {
+            if (health.enabled) GuardianCapture.setEnabled(context, false) else consent = true
+        },
+    ) { Text(if (health.enabled) "Stop encrypted capture" else "Enable encrypted capture") }
+    Text("Retention · ${health.retentionDays} days")
+    GuardianCaptureStore.RETENTION_DAYS.forEach { days ->
+        OutlinedButton(
+            enabled = allowChanges && !health.busy && days != health.retentionDays,
+            onClick = { GuardianCapture.setRetention(context, days) },
+        ) { Text("Keep for $days days") }
+    }
+    OutlinedButton(enabled = allowChanges && !health.busy, onClick = { confirmClear = true }) {
+        Text("Clear encrypted capture")
+    }
+    if (consent && allowChanges) AlertDialog(
+        onDismissRequest = { consent = false },
+        title = { Text("Capture Main WhatsApp notifications?") },
+        text = { Text("NovaOS can store supported Main WhatsApp message text while you use other apps or lock the device. " +
+            "The archive is encrypted locally. You can stop capture or delete the archive here.") },
+        confirmButton = { TextButton(enabled = listenerReady, onClick = {
+            consent = false
+            GuardianCapture.setEnabled(context, true)
+        }) { Text("Enable capture") } },
+        dismissButton = { TextButton(onClick = { consent = false }) { Text("Cancel") } },
+    )
+    if (confirmClear && allowChanges) AlertDialog(
+        onDismissRequest = { confirmClear = false },
+        title = { Text("Clear encrypted capture?") },
+        text = { Text("This deletes the saved notification archive and its encryption key.") },
+        confirmButton = { TextButton(onClick = {
+            confirmClear = false
+            GuardianCapture.clear(context)
+        }) { Text("Clear") } },
+        dismissButton = { TextButton(onClick = { confirmClear = false }) { Text("Cancel") } },
+    )
 }

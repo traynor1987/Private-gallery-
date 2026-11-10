@@ -1,0 +1,164 @@
+package uk.co.traynor.privategallery.core.guardian
+
+import android.content.Context
+import android.security.keystore.KeyGenParameterSpec
+import android.security.keystore.KeyProperties
+import android.util.AtomicFile
+import org.json.JSONArray
+import org.json.JSONObject
+import java.io.File
+import java.io.FileNotFoundException
+import java.security.KeyStore
+import java.security.MessageDigest
+import javax.crypto.Cipher
+import javax.crypto.KeyGenerator
+import javax.crypto.SecretKey
+import javax.crypto.spec.GCMParameterSpec
+
+internal data class GuardianCaptureEntry(val time: Long, val sender: String, val text: String)
+
+internal data class GuardianCaptureEvent(
+    val profileSerial: Long,
+    val conversation: String,
+    val observedAt: Long,
+    val entries: List<GuardianCaptureEntry>,
+)
+
+internal data class GuardianCaptureResult(val added: Int, val retained: Int, val partial: Boolean)
+
+/** Private, bounded archive. The capture phase exposes aggregate counts only. */
+internal class GuardianCaptureStore(context: Context) {
+    private val destination = File(context.noBackupFilesDir, ARCHIVE_NAME)
+    private val atomic = AtomicFile(destination)
+
+    fun append(event: GuardianCaptureEvent, days: Int, now: Long): GuardianCaptureResult = synchronized(lock) {
+        require(event.profileSerial >= 0 && event.conversation.length in 1..512 && event.observedAt <= now)
+        val cutoff = cutoff(days, now)
+        val stored = read()
+        val live = stored.filter { isRetained(it, cutoff) }
+        val existing = live.associateBy { it.getString("id") }
+        val candidates = event.entries.filter {
+            it.time in cutoff..event.observedAt && it.sender.length in 1..512 &&
+                it.sender.isNotBlank() && it.text.length in 1..2048 && it.text.isNotBlank()
+        }
+        val incoming = candidates.associate { entry ->
+            val id = identity(event, entry)
+            id to JSONObject().put("id", id).put("profile", event.profileSerial)
+                .put("conversation", event.conversation).put("sender", entry.sender)
+                .put("messageAt", entry.time).put("capturedAt", event.observedAt).put("text", entry.text)
+        }
+        val retained = (existing + incoming.filterKeys { it !in existing }).values
+            .sortedByDescending { it.getLong("messageAt") }.take(MAX_RECORDS)
+        val ids = retained.mapTo(HashSet()) { it.getString("id") }
+        val added = incoming.keys.count { it in ids && it !in existing }
+        if (added > 0 || stored.size != live.size) write(retained)
+        GuardianCaptureResult(added, retained.size, candidates.size != event.entries.size)
+    }
+
+    fun summary(days: Int, now: Long): Int = synchronized(lock) {
+        val stored = read()
+        val cutoff = cutoff(days, now)
+        val live = stored.filter { isRetained(it, cutoff) }
+        if (stored.size != live.size) write(live)
+        live.size
+    }
+
+    fun clear() = synchronized(lock) {
+        keyStore().deleteEntry(KEY_ALIAS)
+        atomic.delete()
+        check(!destination.exists())
+    }
+
+    private fun cutoff(days: Int, now: Long): Long {
+        require(days in RETENTION_DAYS)
+        return now - days * 86_400_000L
+    }
+
+    private fun isRetained(row: JSONObject, cutoff: Long) =
+        row.getLong("capturedAt") >= cutoff && row.getLong("messageAt") >= cutoff
+
+    private fun identity(event: GuardianCaptureEvent, entry: GuardianCaptureEntry): String {
+        val fields = JSONArray().put(event.profileSerial).put(event.conversation)
+            .put(entry.time).put(entry.sender).put(entry.text).toString().toByteArray(Charsets.UTF_8)
+        return try {
+            java.util.HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(fields))
+        } finally {
+            fields.fill(0)
+        }
+    }
+
+    private fun read(): List<JSONObject> {
+        val blob = readBlob() ?: return emptyList()
+        require(blob.size >= 1 + IV_BYTES + TAG_BYTES && blob[0] == VERSION)
+        val cipher = Cipher.getInstance("AES/GCM/NoPadding")
+        cipher.init(Cipher.DECRYPT_MODE, key(create = false), GCMParameterSpec(128, blob, 1, IV_BYTES))
+        cipher.updateAAD(AAD)
+        val plain = cipher.doFinal(blob, 1 + IV_BYTES, blob.size - 1 - IV_BYTES)
+        return try {
+            val rows = JSONArray(plain.toString(Charsets.UTF_8))
+            require(rows.length() <= MAX_RECORDS)
+            List(rows.length(), rows::getJSONObject)
+        } finally {
+            plain.fill(0)
+        }
+    }
+
+    private fun write(rows: List<JSONObject>) {
+        val plain = JSONArray(rows).toString().toByteArray(Charsets.UTF_8)
+        val blob = try {
+            val cipher = Cipher.getInstance("AES/GCM/NoPadding")
+            cipher.init(Cipher.ENCRYPT_MODE, key(create = true))
+            check(cipher.iv.size == IV_BYTES)
+            cipher.updateAAD(AAD)
+            byteArrayOf(VERSION) + cipher.iv + cipher.doFinal(plain)
+        } finally {
+            plain.fill(0)
+        }
+        require(blob.size <= MAX_BYTES)
+        val output = atomic.startWrite()
+        try {
+            output.write(blob)
+            atomic.finishWrite(output)
+        } catch (error: Exception) {
+            atomic.failWrite(output)
+            throw error
+        }
+        check(readBlob()?.contentEquals(blob) == true)
+    }
+
+    private fun readBlob(): ByteArray? = try {
+        atomic.openRead().use { it.readNBytes(MAX_BYTES + 1).also { bytes -> require(bytes.size <= MAX_BYTES) } }
+    } catch (missing: FileNotFoundException) {
+        if (destination.exists() || File(destination.path + ".bak").exists()) throw missing
+        null
+    }
+
+    private fun key(create: Boolean): SecretKey {
+        val store = keyStore()
+        if (store.containsAlias(KEY_ALIAS)) return store.getKey(KEY_ALIAS, null) as SecretKey
+        check(create && !destination.exists())
+        return KeyGenerator.getInstance(KeyProperties.KEY_ALGORITHM_AES, "AndroidKeyStore").run {
+            init(KeyGenParameterSpec.Builder(KEY_ALIAS, KeyProperties.PURPOSE_ENCRYPT or KeyProperties.PURPOSE_DECRYPT)
+                .setBlockModes(KeyProperties.BLOCK_MODE_GCM)
+                .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_NONE)
+                .setKeySize(256)
+                .build())
+            generateKey()
+        }
+    }
+
+    private fun keyStore() = KeyStore.getInstance("AndroidKeyStore").apply { load(null) }
+
+    companion object {
+        const val ARCHIVE_NAME = "guardian-notifications-v1.enc"
+        val RETENTION_DAYS = setOf(1, 7, 30)
+        private const val KEY_ALIAS = "nova-guardian-capture-v1"
+        private const val VERSION: Byte = 1
+        private const val IV_BYTES = 12
+        private const val TAG_BYTES = 16
+        private const val MAX_RECORDS = 256
+        private const val MAX_BYTES = 6 * 1024 * 1024
+        private val AAD = "NovaOS Guardian capture v1".toByteArray(Charsets.UTF_8)
+        private val lock = Any()
+    }
+}

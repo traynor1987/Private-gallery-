@@ -26,6 +26,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
+import uk.co.traynor.privategallery.core.guardian.GuardianCapture
 import uk.co.traynor.privategallery.core.guardian.GuardianNotificationListener
 import uk.co.traynor.privategallery.core.guardian.ProbeAccount
 import uk.co.traynor.privategallery.core.guardian.SyntheticResult
@@ -109,6 +110,8 @@ internal fun GuardianHome(
 ) {
     val context = LocalContext.current
     val listener by GuardianNotificationListener.state.collectAsState()
+    val capture by GuardianCapture.state.collectAsState()
+    LaunchedEffect(context) { GuardianCapture.refresh(context) }
     val access = GuardianNotificationListener.hasAccess(context)
     val dnd = context.getSystemService(NotificationManager::class.java)?.isNotificationPolicyAccessGranted == true
     var inbox by remember { mutableStateOf<GuardianInboxSection?>(null) }
@@ -205,6 +208,13 @@ internal fun GuardianHome(
                             GuardianHealthLine("Notification access", if (access) "Granted" else "Off", access)
                             GuardianHealthLine("DND integration", if (dnd) "Policy access granted" else "Policy access off", dnd)
                             GuardianHealthLine("WhatsApp profiles", profileStatus, profileStatus == "Both observed")
+                            GuardianHealthLine("Encrypted capture", when {
+                                capture.limited -> "Check diagnostics"
+                                capture.busy -> "Checking"
+                                capture.enabled && !connected -> "Listener required"
+                                capture.enabled -> "${capture.retained ?: 0} retained · awaiting classification"
+                                else -> "Off"
+                            })
                             GuardianHealthLine("Guardian AI", "Unavailable")
                             GuardianHealthLine("NovaOS test dismissal", when (listener.synthetic) {
                                 SyntheticResult.DISMISSED -> "Verified on this device"

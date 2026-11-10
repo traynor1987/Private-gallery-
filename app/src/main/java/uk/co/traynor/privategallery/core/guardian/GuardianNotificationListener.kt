@@ -23,11 +23,12 @@ import kotlinx.coroutines.flow.asStateFlow
 import uk.co.traynor.privategallery.core.sanctuary.SanctuaryStore
 import uk.co.traynor.privategallery.launcher.LauncherAppIdentity
 
-/** Phase-one diagnostics. Reads WhatsApp text availability only during an owner-started test. */
+/** Owner-started diagnostics and separately authorised Main WhatsApp capture. */
 internal class GuardianNotificationListener : NotificationListenerService() {
     override fun onListenerConnected() {
         if (SystemClock.elapsedRealtime() >= deadline && probe != null) stopProbe()
         status.value = status.value.copy(connected = true, filter = currentInterruptionFilter)
+        if (GuardianCapture.isEnabled(this)) GuardianCapture.refresh(this)
     }
 
     override fun onListenerDisconnected() = disconnect(this)
@@ -46,12 +47,11 @@ internal class GuardianNotificationListener : NotificationListenerService() {
             receiveSynthetic(sbn, rankingMap)
             return
         }
-        val session = probe ?: return
-        if (SystemClock.elapsedRealtime() >= deadline) {
-            stopProbe()
-            return
-        }
-        if (sbn.packageName != WHATSAPP || !hasAccess(this)) return
+        if (sbn.packageName != GUARDIAN_WHATSAPP || !hasAccess(this)) return
+        if (probe != null && SystemClock.elapsedRealtime() >= deadline) stopProbe()
+        val session = probe
+        val captureEnabled = GuardianCapture.isEnabled(this)
+        if (session == null && !captureEnabled) return
         val keyguard = getSystemService(KeyguardManager::class.java)
         val locked = keyguard?.let { it.isDeviceLocked || it.isKeyguardLocked } ?: true
 
@@ -61,10 +61,15 @@ internal class GuardianNotificationListener : NotificationListenerService() {
         } ?: -1
 
         val account = probeAccount(user == Process.myUserHandle(), serial, probeFriendsSerial)
-        val ranking = Ranking()
-        val quiet = rankingMap.getRanking(sbn.key, ranking) && ranking.importance in
-            NotificationManager.IMPORTANCE_MIN..NotificationManager.IMPORTANCE_LOW
         val notification = sbn.notification
+        val summary = notification.flags and Notification.FLAG_GROUP_SUMMARY != 0
+        val personalUid = if (captureEnabled && account == ProbeAccount.MAIN) runCatching {
+            packageManager.getApplicationInfo(GUARDIAN_WHATSAPP, 0).uid
+        }.getOrNull() else null
+        val call = notification.category == Notification.CATEGORY_CALL || notification.category == Notification.CATEGORY_MISSED_CALL
+        val capture = canCaptureGuardianNotification(captureEnabled, sbn.packageName, account, summary, call) &&
+            personalUid != null && sbn.uid == personalUid && sbn.opPkg == GUARDIAN_WHATSAPP
+        if (session == null && !capture) return
         val entries = runCatching {
             notification.extras.getParcelableArray(Notification.EXTRA_MESSAGES, Bundle::class.java)
                 ?.let(Notification.MessagingStyle.Message::getMessagesFromBundleArray).orEmpty()
@@ -79,12 +84,21 @@ internal class GuardianNotificationListener : NotificationListenerService() {
             ProbeMessage(entry.timestamp, sender?.key ?: sender?.uri ?: sender?.name?.toString().orEmpty(),
                 entry.text ?: "")
         }
-        val filter = currentInterruptionFilter
         val conversation = notification.shortcutId?.takeIf { it.isNotBlank() }?.let { "shortcut:$it" }
             ?: "notification:${sbn.key}"
-        session.record(account, sbn.key, hasText, filter in DND_FILTERS, quiet, sbn.isGroup,
-            notification.flags and Notification.FLAG_GROUP_SUMMARY != 0, conversation, estimates, locked)
-        status.value = status.value.copy(filter = filter, results = session.results)
+        if (capture) {
+            GuardianCapture.record(this, GuardianCaptureEvent(serial, conversation, System.currentTimeMillis(),
+                estimates.map { GuardianCaptureEntry(it.time, it.sender, it.text.toString()) }))
+        }
+        if (session != null) {
+            val ranking = Ranking()
+            val quiet = rankingMap.getRanking(sbn.key, ranking) && ranking.importance in
+                NotificationManager.IMPORTANCE_MIN..NotificationManager.IMPORTANCE_LOW
+            val filter = currentInterruptionFilter
+            session.record(account, sbn.key, hasText, filter in DND_FILTERS, quiet, sbn.isGroup,
+                summary, conversation, estimates, locked)
+            status.value = status.value.copy(filter = filter, results = session.results)
+        }
     }
 
     private fun receiveSynthetic(sbn: StatusBarNotification, rankingMap: RankingMap) {
@@ -180,7 +194,6 @@ internal class GuardianNotificationListener : NotificationListenerService() {
             status.value = status.value.copy(synthetic = result)
         }
 
-        private const val WHATSAPP = "com.whatsapp"
         private const val PROBE_MILLIS = 5 * 60 * 1000L
         private val DND_FILTERS = setOf(
             NotificationManager.INTERRUPTION_FILTER_PRIORITY,
@@ -203,7 +216,7 @@ internal class GuardianNotificationListener : NotificationListenerService() {
             handler.removeCallbacks(timeout)
             probe = NotificationProbe()
             probeFriendsSerial = discoveredCloneSerial ?: SanctuaryStore.get(context).launcherSettings().friendsWhatsApp
-                ?.let(LauncherAppIdentity::parse)?.takeIf { it.flattenedComponent.substringBefore('/') == WHATSAPP }
+                ?.let(LauncherAppIdentity::parse)?.takeIf { it.flattenedComponent.substringBefore('/') == GUARDIAN_WHATSAPP }
                 ?.profileSerial
             deadline = SystemClock.elapsedRealtime() + PROBE_MILLIS
             status.value = status.value.copy(running = true, results = emptyMap())

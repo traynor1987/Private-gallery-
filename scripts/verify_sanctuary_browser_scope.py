@@ -20,6 +20,9 @@ ALLOWED_SANCTUARY = {
 ALLOWED_GUARDIAN = {
     f"{CORE}/guardian/GuardianNotificationListener.kt",
     f"{CORE}/guardian/NotificationProbe.kt",
+    f"{CORE}/guardian/GuardianCapture.kt",
+    f"{CORE}/guardian/GuardianCapturePolicy.kt",
+    f"{CORE}/guardian/GuardianCaptureStore.kt",
 }
 
 
