@@ -125,7 +125,7 @@ class GuardianInboxActivity : ComponentActivity() {
     private fun canReview() = authenticated && !deviceLocked() &&
         lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)
 
-    private fun refresh() = loadArchive({ store, days, now -> store.inboxRows(days, now) }) { loaded ->
+    private fun refresh(): Unit = loadArchive({ store, days, now -> store.inboxRows(days, now) }) { loaded ->
         rows = loaded
         countdown?.cancel()
         loaded.map { it.remainingMillis }.filter { it > 0L }.minOrNull()?.let { remaining ->
