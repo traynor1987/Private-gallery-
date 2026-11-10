@@ -740,6 +740,11 @@ jobs:
           cp app/build/outputs/apk/debug/app-debug.apk app/build/guardian-probe/NovaOS-Guardian-Fold-Diagnostics-TEST-ONLY.apk
           (cd app/build/guardian-probe && sha256sum NovaOS-Guardian-Fold-Diagnostics-TEST-ONLY.apk > SHA256SUMS.txt)
           cp docs/superpowers/plans/2026-11-10-code77-notification-compatibility.md app/build/guardian-probe/FOLD-CHECK.md
+          for display in cover unfolded; do
+            screenshot="$(find app/build/outputs/connected_android_test_additional_output -type f -path "*/guardian-home-77/$display.png" -print -quit)"
+            test -n "$screenshot"
+            cp "$screenshot" "app/build/guardian-probe/Guardian-Home-$display.png"
+          done
       - name: Publish the isolated notification diagnostics
         if: env.NOVA_NOTIFICATION_COMPAT == 'true'
         uses: actions/upload-artifact@v4
