@@ -14,6 +14,7 @@ internal data class GuardianCaptureHealth(
     val limited: Boolean = false,
     val busy: Boolean = false,
     val inbox: GuardianInboxCounts? = null,
+    val learningCount: Int? = null,
 )
 
 /** Serialises settings, archive writes and deletion without blocking Android's listener callbacks. */
@@ -70,6 +71,7 @@ internal object GuardianCapture {
                     enabled = true, retentionDays = days, retained = captured?.retained,
                     limited = captured == null || captured.partial || captured.retained == 0,
                     inbox = counts,
+                    learningCount = runCatching { GuardianCaptureStore(app).learningCount() }.getOrNull(),
                 )
             } finally {
                 pendingEvents.decrementAndGet()
@@ -88,7 +90,8 @@ internal object GuardianCapture {
             }
             val counts = result.getOrNull()
             val retained = counts?.let { it.pending + it.ready + it.cooling + it.protected + it.history }
-            status.value = GuardianCaptureHealth(isEnabled(app), retention(app), retained, result.isFailure, inbox = counts)
+            status.value = GuardianCaptureHealth(isEnabled(app), retention(app), retained, result.isFailure, inbox = counts,
+                learningCount = runCatching { store.learningCount() }.getOrNull())
         }
     }
 

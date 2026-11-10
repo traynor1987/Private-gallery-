@@ -9,6 +9,37 @@ import java.io.File
 
 @RunWith(AndroidJUnit4::class)
 class GuardianCaptureStore77Test {
+    @Test fun encryptedExamplesChangeFutureEstimatesAndDeletedRowsStayHidden() {
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        val now = guardianInboxClock(context)
+        val store = GuardianCaptureStore(context)
+        val text = "you have to come here right now"
+        store.clear()
+        store.resetLearning()
+        try {
+            val event = GuardianCaptureEvent(0, "test", now.wall, listOf(GuardianCaptureEntry(now.wall - 2, "sender", text)))
+            assertTrue(store.teach(text, GuardianAssessment.UPSETTING))
+            store.append(event, 7, now.wall)
+            val reopened = GuardianCaptureStore(context)
+            val first = reopened.inboxRows(7, now).single()
+            assertEquals(GuardianAssessment.UPSETTING, first.assessment)
+            assertTrue(reopened.teach(text, GuardianAssessment.LOW_RISK))
+            assertEquals(1, reopened.learningCount())
+            assertEquals(GuardianAssessment.LOW_RISK, reopened.assessInboxMessage(first.id, 7, now))
+            assertTrue(reopened.reviewInboxMessage(first.id, GuardianInboxAction.DELETE, 7, now))
+            assertNull(reopened.revealInboxMessage(first.id, 7, now))
+            assertEquals(0, reopened.append(event, 7, now.wall).added)
+            assertTrue(reopened.inboxRows(7, now).isEmpty())
+            val encrypted = File(context.noBackupFilesDir, "guardian-learning-v1.enc").readBytes()
+            assertFalse(encrypted.toString(Charsets.UTF_8).contains(text))
+            assertTrue(reopened.forgetExample(text))
+            assertEquals(0, reopened.learningCount())
+        } finally {
+            store.clear()
+            store.resetLearning()
+        }
+    }
+
     @Test fun inboxCountsAndHoldsSurviveReopeningWithoutEarlyReveal() {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         val now = guardianInboxClock(context)

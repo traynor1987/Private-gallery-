@@ -24,6 +24,7 @@ ALLOWED_GUARDIAN = {
     f"{CORE}/guardian/GuardianCapturePolicy.kt",
     f"{CORE}/guardian/GuardianCaptureStore.kt",
     f"{CORE}/guardian/GuardianInboxPolicy.kt",
+    f"{CORE}/guardian/GuardianLocalClassifier.kt",
 }
 
 

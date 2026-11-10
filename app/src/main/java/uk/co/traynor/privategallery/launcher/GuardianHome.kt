@@ -89,11 +89,11 @@ internal fun GuardianHomeSettings(
     }
 }
 
-private val GuardianNavy = Color(0xFF0D1727)
-private val GuardianGlass = Color(0xFF172F44)
-private val GuardianBorder = Color(0xFF2B455D)
-private val GuardianMuted = Color(0xFFB6C9DF)
-private val GuardianBlue = Color(0xFF9BCBFF)
+internal val GuardianNavy = Color(0xFF0D1727)
+internal val GuardianGlass = Color(0xFF172F44)
+internal val GuardianBorder = Color(0xFF2B455D)
+internal val GuardianMuted = Color(0xFFB6C9DF)
+internal val GuardianBlue = Color(0xFF9BCBFF)
 private val GuardianMint = Color(0xFF9DE3CE)
 private val GuardianAmber = Color(0xFFF0C79B)
 
@@ -193,10 +193,14 @@ internal fun GuardianHome(
                         }
                     }
 
-                    GuardianCard("Guardian assessment", badge = "Analysis unavailable") {
-                        if (counts != null) Text("${counts.pending} awaiting analysis", style = MaterialTheme.typography.titleMedium)
-                        Text("Guardian analysis is not yet available in this build.",
-                            color = GuardianMuted, style = MaterialTheme.typography.bodyMedium)
+                    val learning = capture.learningCount
+                    GuardianCard("Guardian assessment", badge = if ((learning ?: 0) > 0) "Local estimates" else "Analysis pending") {
+                        if (counts != null) Text("${counts.pending} awaiting review", style = MaterialTheme.typography.titleMedium)
+                        Text(when {
+                            learning == null -> "Nova Brain could not verify the local example store."
+                            learning == 0 -> "Teach Nova Brain a few examples to personalise local estimates."
+                            else -> "Nova Brain compares messages with your approved examples. You control review and holds."
+                        }, color = GuardianMuted, style = MaterialTheme.typography.bodyMedium)
                         HorizontalDivider(Modifier.padding(vertical = 4.dp), color = GuardianBorder)
                         GuardianLine(Icons.Outlined.Lock, "Message previews are hidden", GuardianBlue)
                     }
@@ -224,7 +228,13 @@ internal fun GuardianHome(
                                 capture.enabled -> "${capture.retained ?: 0} retained · awaiting classification"
                                 else -> "Off"
                             })
-                            GuardianHealthLine("Guardian AI", "Unavailable")
+                            GuardianHealthLine("Nova Brain", when {
+                                capture.busy -> "Checking"
+                                learning == null -> "Local learning unavailable"
+                                learning == 0 -> "Local Only · awaiting examples"
+                                else -> "Local Only · $learning examples"
+                            }, (learning ?: 0) > 0)
+                            GuardianHealthLine("Cloud analysis", "Unavailable")
                             GuardianHealthLine("NovaOS test dismissal", when (listener.synthetic) {
                                 SyntheticResult.DISMISSED -> "Verified on this device"
                                 SyntheticResult.WAITING, SyntheticResult.DISMISSING -> "Testing"
@@ -253,7 +263,7 @@ internal fun GuardianHome(
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun GuardianCard(
+internal fun GuardianCard(
     title: String,
     badge: String? = null,
     badgeColor: Color = GuardianMuted,

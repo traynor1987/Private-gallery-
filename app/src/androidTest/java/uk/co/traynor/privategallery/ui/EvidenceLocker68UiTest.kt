@@ -21,6 +21,7 @@ import org.junit.rules.RuleChain
 import org.junit.rules.TestRule
 import uk.co.traynor.privategallery.core.backup.BackupFixture62
 import uk.co.traynor.privategallery.core.evidence.EvidenceController
+import uk.co.traynor.privategallery.core.guardian.GuardianCaptureStore
 import uk.co.traynor.privategallery.core.ui.AppTheme
 import uk.co.traynor.privategallery.core.vault.ImportResult
 import uk.co.traynor.privategallery.core.vault.VaultImportSource
@@ -47,6 +48,7 @@ class EvidenceLocker68UiTest {
                 val collection = fixture.primary.createCollection("Evidence Collection")
                 fixture.primary.addItemsToCollection(collection.id, listOf(original.item.id))
                 val controller = compose.runOnIdle { EvidenceController(fixture.context, fixture.access) }
+                val learning = GuardianCaptureStore(fixture.context)
                 try {
                     compose.setContent {
                         CompositionLocalProvider(LocalContext provides fixture.context) {
@@ -73,7 +75,19 @@ class EvidenceLocker68UiTest {
                     compose.onNodeWithText("Timeline").performClick()
                     compose.evidenceNode(hasText("Visible message time 21:46", substring = true)).assertIsDisplayed()
                     saveScreenshot("$layout-timeline")
+                    if (layout == "folded") {
+                        learning.resetLearning()
+                        compose.onNodeWithText("Evidence").performClick()
+                        compose.evidenceNode(hasContentDescription("Select evidence ${registered.name()}")).performClick()
+                        compose.onNodeWithText("More", substring = false).performClick()
+                        compose.onNodeWithText("Teach Guardian").performClick()
+                        compose.evidenceNode(hasText(registered.name()) and hasClickAction()).performClick()
+                        compose.evidenceNode(hasText("Potentially Upsetting") and hasClickAction()).performClick()
+                        compose.onNodeWithText("Save local example").performClick()
+                        compose.waitUntil(10_000) { learning.learningCount() == 1 }
+                    }
                 } finally {
+                    if (layout == "folded") learning.resetLearning()
                     compose.runOnIdle { controller.close() }
                 }
             }
