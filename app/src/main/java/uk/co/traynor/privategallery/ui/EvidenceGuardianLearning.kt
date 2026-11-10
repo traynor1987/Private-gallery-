@@ -55,13 +55,15 @@ internal fun EvidenceGuardianLearning(
                     committed
                 }.getOrDefault(false)
             }
-            val published = access.publishIfCurrent {
-                busy = false
-                feedback = when {
-                    !saved && assessment == null -> "No saved example matches this OCR passage."
-                    !saved -> "Could not save this example. Use at least four words from the current OCR transcript."
-                    assessment == null -> "Example removed from future local estimates."
-                    else -> "Local example saved as ${assessment.label}. Similar passages can affect future estimates."
+            val published = withContext(Dispatchers.Main.immediate) {
+                access.publishIfCurrent {
+                    busy = false
+                    feedback = when {
+                        !saved && assessment == null -> "No saved example matches this OCR passage."
+                        !saved -> "Could not save this example. Use at least four words from the current OCR transcript."
+                        assessment == null -> "Example removed from future local estimates."
+                        else -> "Local example saved as ${assessment.label}. Similar passages can affect future estimates."
+                    }
                 }
             }
             if (saved && published) GuardianCapture.refresh(context)

@@ -37,7 +37,9 @@ internal fun EvidenceGuardianMessageLink(
                     .filter { it.assessment != null && it.section != GuardianInboxSection.COOLING }
             }
         }
-        access.publishIfCurrent { rows = result.getOrDefault(emptyList()); failure = result.isFailure }
+        withContext(Dispatchers.Main.immediate) {
+            access.publishIfCurrent { rows = result.getOrDefault(emptyList()); failure = result.isFailure }
+        }
     }
     GuardianTheme {
         EvidenceWorkflowPage(onDismissRequest = onClose, sensitive = true, title = { EvidenceDialogTitle("Add Guardian message") }, text = {
@@ -68,7 +70,10 @@ internal fun EvidenceGuardianMessageLink(
                     else catalog.upsertIncident(withEvents(current, current.events() + event),
                         EvidenceController.now(), "OWNER_LINK_GUARDIAN_NOTIFICATION")
                 }
-                scope.launch { job.join(); access.publishIfCurrent(onClose) }
+                scope.launch {
+                    job.join()
+                    withContext(Dispatchers.Main.immediate) { access.publishIfCurrent(onClose) }
+                }
             }) { Text("Copy selected message") }
         }, dismissButton = { TextButton(onClick = onClose) { Text("Cancel") } })
     }
