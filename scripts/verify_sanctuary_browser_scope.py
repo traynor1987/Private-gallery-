@@ -17,6 +17,12 @@ ALLOWED_SANCTUARY = {
 }
 
 
+ALLOWED_GUARDIAN = {
+    f"{CORE}/guardian/GuardianNotificationListener.kt",
+    f"{CORE}/guardian/NotificationProbe.kt",
+}
+
+
 def original(path):
     return subprocess.check_output(["git", "show", f"{BASE}:{path}"], cwd=ROOT, text=True)
 
@@ -25,7 +31,7 @@ for revision in (("HEAD",), ()):
     raw = subprocess.check_output(
         ["git", "diff", "--name-only", BASE, *revision, "--", CORE], cwd=ROOT, text=True,
     )
-    unexpected = set(raw.splitlines()) - ALLOWED_SANCTUARY
+    unexpected = set(raw.splitlines()) - ALLOWED_SANCTUARY - ALLOWED_GUARDIAN
     assert not unexpected, f"Unexpected protected-core changes: {sorted(unexpected)}"
 
 build_file = "app/build.gradle.kts"
@@ -79,6 +85,26 @@ queries.remove(recognition)
 def structure(node):
     return (node.tag, sorted(node.attrib.items()), (node.text or "").strip(), tuple(map(structure, node)))
 
+
+listener, = [service for service in application.findall("service")
+             if service.get(ANDROID + "name") == ".core.guardian.GuardianNotificationListener"]
+expected_listener = ET.fromstring(f"""
+    <service xmlns:android="{ANDROID[1:-1]}" android:name=".core.guardian.GuardianNotificationListener"
+        android:exported="false" android:label="@string/guardian_listener_label"
+        android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE">
+      <intent-filter><action android:name="android.service.notification.NotificationListenerService" /></intent-filter>
+    </service>
+""")
+assert structure(listener) == structure(expected_listener)
+application.remove(listener)
+settings_query = ET.fromstring(f"""
+    <intent xmlns:android="{ANDROID[1:-1]}">
+      <action android:name="android.settings.ACTION_NOTIFICATION_LISTENER_SETTINGS" />
+    </intent>
+""")
+listener_settings, = [intent for intent in queries.findall("intent")
+                      if structure(intent) == structure(settings_query)]
+queries.remove(listener_settings)
 
 assert structure(before) == structure(after), "The existing manifest or permission set changed"
 print("PASS: Code 69 protected engines, original package and permission set preserved; Android Home is additive")

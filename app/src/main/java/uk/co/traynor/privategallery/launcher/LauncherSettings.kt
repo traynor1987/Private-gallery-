@@ -47,6 +47,11 @@ internal fun LauncherSettings(
     wide: Boolean = false,
 ) {
     var confirmDockReset by remember { mutableStateOf(false) }
+    var notificationCompatibility by remember { mutableStateOf(false) }
+    if (notificationCompatibility && !protectedBySanctuary) {
+        NotificationCompatibilityScreen { notificationCompatibility = false }
+        return
+    }
     LauncherPanel("Launcher settings", onBack) {
         LazyColumn(Modifier.fillMaxWidth().weight(1f), contentPadding = PaddingValues(bottom = 18.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -98,6 +103,13 @@ internal fun LauncherSettings(
                     state.appearance.dock, { actions.save(state.copy(appearance = state.appearance.copy(dock = it))) })
                 OutlinedButton(onClick = { confirmDockReset = true }, enabled = !protectedBySanctuary) {
                     Text("Reset Dock Layout")
+                }
+            }
+            if (!protectedBySanctuary) item {
+                HorizontalDivider()
+                Text("Notifications", style = MaterialTheme.typography.titleMedium)
+                OutlinedButton(onClick = { notificationCompatibility = true }) {
+                    Text("Notification compatibility")
                 }
             }
             item {
