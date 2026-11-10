@@ -40,3 +40,18 @@ The updated probe keeps counters in the listener process across app switches, lo
 On the Fold, repeat the controlled Main and Friends checks with DND off and on. Lock the device during a harmless send and check the lock screen without revealing personal message text. Reopen the diagnostics and compare the counters. Run both NovaOS test buttons with DND off and on. Compare the banner, Android ranking and actual shade behaviour, then confirm that the dismissal check removes only its own synthetic notification. Repeat on the cover and inner displays. Use Open Guardian Home test launcher and swipe right from Home 1 to inspect the dashboard without changing Android’s default Home. Revoke the test app's access when finished.
 
 Profile-specific dismissal and ongoing content storage require further verification. This phase provides no automatic cancellation or content retention. Guardian Home presents real Sanctuary state and reports encrypted inbox, classification and automated Panic functions as unavailable.
+
+## Premium Guardian Home checkpoint
+
+The dashboard follows the approved NovaOS Original navy concept. Guardian Home has its own dark palette, two equal message tiles and a compact health summary. The diagnostics route reuses the existing screen. Permission changes remain unavailable from that route while Sanctuary protection is active.
+
+| Check | Evidence |
+| --- | --- |
+| Main and Friends capture with Samsung DND on | Owner observed two Android events per profile on the Fold, with text available for all events and zero unresolved identities. Priority Only was correctly reported. |
+| Unique-message estimates | Android conversation and sender metadata can be incomplete. Summary posts never contribute to message estimates. Events without enough evidence are reported separately. |
+| Listener lifecycle | Previous Android 17 CI passed explicit grant, leaving the screen, and revocation. Repeat and reauthorisation are covered by the updated instrumented test. Force-stop or process death ends the memory-only probe. |
+| Safe dismissal | Previous Android 17 CI removed one generated NovaOS notification while leaving another in place. Repeat on the Fold to verify Samsung behaviour. |
+| Android presentation and lock screen | The synthetic notification uses secret visibility with no public version. Android ranking exposes filter matching. Visible shade behaviour, lock-screen behaviour, and DND exceptions need owner verification on the Fold. |
+| Guardian Home | Ready and Cooling Down show unavailable until encrypted storage exists. The design does not imply classification, Pending Review, or automatic Panic is operating. |
+
+No automatic WhatsApp dismissal or original-key release is enabled at this checkpoint. Phase 1 acceptance remains open until the outstanding Fold checks pass or the owner accepts documented limits.

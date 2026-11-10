@@ -2,17 +2,34 @@ package uk.co.traynor.privategallery.launcher
 
 import android.app.NotificationManager
 import android.content.Context
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.AccessTime
+import androidx.compose.material.icons.outlined.CheckCircle
+import androidx.compose.material.icons.outlined.Inbox
+import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material.icons.outlined.Lock
+import androidx.compose.material.icons.outlined.Shield
+import androidx.compose.material.icons.outlined.Tune
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import uk.co.traynor.privategallery.core.guardian.GuardianNotificationListener
 import uk.co.traynor.privategallery.core.guardian.ProbeAccount
+import uk.co.traynor.privategallery.core.guardian.SyntheticResult
+import uk.co.traynor.privategallery.core.ui.AppTheme
 import uk.co.traynor.privategallery.core.sanctuary.SanctuaryLauncherPolicy.Decision
 import uk.co.traynor.privategallery.core.sanctuary.SanctuaryMode
 import uk.co.traynor.privategallery.ui.PrivateGalleryTheme
@@ -63,9 +80,21 @@ internal fun GuardianHomeSettings(
             LauncherToggle("Hide Sender Names", options.hideSenders) { onChange(options.copy(hideSenders = it)) }
             LauncherToggle("Hide Message Previews", options.hidePreviews) { onChange(options.copy(hidePreviews = it)) }
             Text("Sender and preview preferences will apply when the encrypted inbox is available.")
-            Text("Guardian Page Theme · Follow System Theme")
+            Text("Guardian Page Theme · NovaOS Original")
         }
     }
+}
+
+private val GuardianNavy = Color(0xFF0D1727)
+private val GuardianGlass = Color(0xFF172F44)
+private val GuardianBorder = Color(0xFF2B455D)
+private val GuardianMuted = Color(0xFFB6C9DF)
+private val GuardianBlue = Color(0xFF9BCBFF)
+private val GuardianMint = Color(0xFF9DE3CE)
+private val GuardianAmber = Color(0xFFF0C79B)
+
+private enum class GuardianInboxSection(val label: String) {
+    READY("Ready"), COOLING("Cooling Down"), PROTECTED("Protected"), HISTORY("History"),
 }
 
 @Composable
@@ -76,99 +105,207 @@ internal fun GuardianHome(
     decisions: Map<String, Decision>,
     onSettings: () -> Unit,
     onSanctuary: () -> Unit,
+    onDiagnostics: () -> Unit,
 ) {
     val context = LocalContext.current
     val listener by GuardianNotificationListener.state.collectAsState()
     val access = GuardianNotificationListener.hasAccess(context)
     val dnd = context.getSystemService(NotificationManager::class.java)?.isNotificationPolicyAccessGranted == true
-    var inbox by remember { mutableStateOf(false) }
+    var inbox by remember { mutableStateOf<GuardianInboxSection?>(null) }
     val main = apps.filter { it.packageName == "com.whatsapp" && it.profileSerial == null }
     val friends = apps.filter { it.packageName == "com.whatsapp" && it.profile?.isClone == true }
     fun rule(entries: List<LauncherApp>): String {
-        val rules = entries.mapNotNull { decisions[it.component] }.distinct()
-        return when {
-            entries.isEmpty() || rules.size != 1 -> "Unavailable"
-            sanctuary == null || sanctuary.paused -> "Protection inactive"
-            rules.single().canLaunch -> "Allowed"
-            else -> "Blocked"
-        }
+        val rules = entries.map { decisions.forLauncherApp(it) }.distinct()
+        val rule = rules.singleOrNull() ?: return "Unavailable"
+        return if (rule.canLaunch) "Allowed" else "Restricted"
     }
-    PrivateGalleryTheme {
-        Surface(Modifier.fillMaxSize().testTag("launcher-guardian-home"), color = MaterialTheme.colorScheme.surface.copy(alpha = .96f)) {
-            Box(Modifier.fillMaxSize(), contentAlignment = androidx.compose.ui.Alignment.TopCenter) {
-                Column(Modifier.widthIn(max = 680.dp).fillMaxWidth().verticalScroll(rememberScrollState()).padding(20.dp),
-                    verticalArrangement = Arrangement.spacedBy(14.dp)) {
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        Column(Modifier.weight(1f)) {
-                            Text("Nova Guardian", style = MaterialTheme.typography.headlineSmall)
-                            Text("Powered by Sanctuary", style = MaterialTheme.typography.bodyMedium)
+
+    PrivateGalleryTheme(AppTheme.DARK) {
+        Surface(Modifier.fillMaxSize().testTag("launcher-guardian-home"), color = GuardianNavy) {
+            BoxWithConstraints(Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
+                val spacing = if (maxWidth < 360.dp) 12.dp else 16.dp
+                Column(
+                    Modifier.widthIn(max = 680.dp).fillMaxWidth()
+                        .verticalScroll(rememberScrollState()).padding(spacing),
+                    verticalArrangement = Arrangement.spacedBy(spacing),
+                ) {
+                    Row(
+                        Modifier.fillMaxWidth().padding(vertical = 3.dp),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Icon(Icons.Outlined.Shield, null, Modifier.size(28.dp), tint = GuardianBlue)
+                        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                            Text("Nova Guardian", Modifier.semantics { heading() },
+                                style = MaterialTheme.typography.headlineSmall)
+                            Text("Powered by Sanctuary", color = GuardianMuted, style = MaterialTheme.typography.bodyMedium)
                         }
-                        TextButton(onClick = onSettings) { Text("Settings") }
+                        IconButton(onClick = onSettings) { Icon(Icons.Outlined.Tune, "Settings", tint = GuardianMuted) }
                     }
-                    GuardianCard("Sanctuary") {
-                        Text(when {
-                            sanctuary == null -> "Inactive"
-                            sanctuary.paused -> "Launcher protection paused"
-                            sanctuary.mode == SanctuaryMode.PANIC -> "Panic Protection"
-                            else -> "Active"
-                        })
-                        if (sanctuary != null) {
-                            Text(sanctuary.mode.label)
-                            if (options.countdown) {
-                                val seconds = sanctuary.remainingMillis.coerceAtLeast(0L) / 1000L
-                                Text(java.util.Locale.getDefault().let { locale ->
-                                    String.format(locale, "%d:%02d:%02d remaining", seconds / 3600, seconds / 60 % 60, seconds % 60)
-                                })
+
+                    val protection = when {
+                        sanctuary == null -> "Protection inactive"
+                        sanctuary.paused -> "Launcher protection paused"
+                        sanctuary.mode == SanctuaryMode.PANIC -> "Panic Protection"
+                        else -> "Active"
+                    }
+                    val active = sanctuary != null && !sanctuary.paused
+                    GuardianCard("Sanctuary", badge = protection, badgeColor = if (active) GuardianMint else GuardianMuted) {
+                        if (sanctuary != null && options.countdown) {
+                            val seconds = sanctuary.remainingMillis.coerceAtLeast(0L) / 1000L
+                            val duration = String.format(java.util.Locale.getDefault(), "%d:%02d:%02d remaining",
+                                seconds / 3600, seconds / 60 % 60, seconds % 60)
+                            GuardianLine(Icons.Outlined.AccessTime, duration, GuardianBlue)
+                        }
+                        if (active) {
+                            Text("Main WhatsApp · ${rule(main)}   •   Friends · ${rule(friends)}",
+                                color = GuardianMuted, style = MaterialTheme.typography.bodyMedium)
+                        }
+                        TextButton(onClick = onSanctuary, contentPadding = PaddingValues(horizontal = 0.dp)) {
+                            Text("Open Sanctuary")
+                        }
+                    }
+
+                    if (options.ready || options.cooling) {
+                        Row(
+                            Modifier.fillMaxWidth().height(IntrinsicSize.Min),
+                            horizontalArrangement = Arrangement.spacedBy(spacing),
+                        ) {
+                            if (options.ready) GuardianMessageTile("Ready to Read", Icons.Outlined.Inbox, GuardianMint,
+                                Modifier.weight(1f).fillMaxHeight().testTag("guardian-ready-tile")) {
+                                inbox = GuardianInboxSection.READY
                             }
-                            if (!sanctuary.paused) {
-                                Text("Approved launcher apps · " +
-                                    apps.count { decisions[it.component] == Decision.APPROVED })
-                                Text("Main WhatsApp · ${rule(main)}")
-                                Text("Friends WhatsApp · ${rule(friends)}")
+                            if (options.cooling) GuardianMessageTile("Cooling Down", Icons.Outlined.Lock, GuardianAmber,
+                                Modifier.weight(1f).fillMaxHeight().testTag("guardian-cooling-tile")) {
+                                inbox = GuardianInboxSection.COOLING
                             }
                         }
-                        TextButton(onClick = onSanctuary) { Text("Open Sanctuary") }
                     }
-                    GuardianCard("Analysis unavailable") {
-                        Text("Message classification and encrypted notification storage are unavailable in this build.")
+
+                    GuardianCard("Guardian assessment", badge = "Analysis unavailable") {
+                        Text("Guardian analysis is not yet available in this build.",
+                            color = GuardianMuted, style = MaterialTheme.typography.bodyMedium)
+                        HorizontalDivider(Modifier.padding(vertical = 4.dp), color = GuardianBorder)
+                        GuardianLine(Icons.Outlined.Lock, "Message previews are hidden", GuardianBlue)
                     }
-                    if (options.ready || options.cooling) GuardianCard("Message summary") {
-                        if (options.ready) Text("Ready to Read · Unavailable")
-                        if (options.cooling) Text("Cooling Down · Unavailable")
+
+                    if (options.health) {
+                        val profileStatus = when {
+                            listener.results.containsKey(ProbeAccount.UNRESOLVED) -> "Unresolved events observed"
+                            listener.results.keys.containsAll(listOf(ProbeAccount.MAIN, ProbeAccount.FRIENDS)) -> "Both observed"
+                            else -> "Awaiting verification"
+                        }
+                        GuardianCard("Guardian health", badge = when {
+                            !access -> "Permission required"
+                            !listener.connected -> "Listener disconnected"
+                            else -> "Diagnostics only"
+                        }) {
+                            val connected = access && listener.connected
+                            GuardianHealthLine("Notification listener", if (connected) "Connected" else "Disconnected", connected)
+                            GuardianHealthLine("Notification access", if (access) "Granted" else "Off", access)
+                            GuardianHealthLine("DND integration", if (dnd) "Policy access granted" else "Policy access off", dnd)
+                            GuardianHealthLine("WhatsApp profiles", profileStatus, profileStatus == "Both observed")
+                            GuardianHealthLine("Guardian AI", "Unavailable")
+                            GuardianHealthLine("NovaOS test dismissal", when (listener.synthetic) {
+                                SyntheticResult.DISMISSED -> "Verified on this device"
+                                SyntheticResult.WAITING, SyntheticResult.DISMISSING -> "Testing"
+                                SyntheticResult.DISMISS_FAILED, SyntheticResult.CAPTURE_FAILED,
+                                SyntheticResult.NOT_RECEIVED, SyntheticResult.DISCONNECTED -> "Check diagnostics"
+                                SyntheticResult.UNSUPPORTED -> "Unavailable"
+                                else -> "Not verified"
+                            }, listener.synthetic == SyntheticResult.DISMISSED)
+                            TextButton(onClick = onDiagnostics, contentPadding = PaddingValues(horizontal = 0.dp)) {
+                                Text("View Diagnostics")
+                            }
+                        }
                     }
-                    OutlinedButton(onClick = { inbox = true }) { Text("Guardian Inbox") }
-                    if (options.health) GuardianCard("Guardian Health") {
-                        Text(when {
-                            !access -> "Permission Required"
-                            !listener.connected -> "Compatibility Issue"
-                            else -> "Limited Protection · capture diagnostics only"
-                        })
-                        Text("Notification access · ${if (access) "Granted" else "Off"}")
-                        Text("Listener · ${if (listener.connected && access) "Connected" else "Disconnected"}")
-                        Text("DND policy access · ${if (dnd) "Granted" else "Off"}")
-                        Text("Main WhatsApp · ${if (listener.results.containsKey(ProbeAccount.MAIN)) "Observed in this probe" else "Awaiting observation"}")
-                        Text("Friends WhatsApp · ${if (listener.results.containsKey(ProbeAccount.FRIENDS)) "Observed in this probe" else "Awaiting observation"}")
-                        Text("AI classification · Unavailable")
-                        Text("NovaOS test dismissal · ${listener.synthetic.label}")
+
+                    OutlinedButton(onClick = { inbox = GuardianInboxSection.READY }, modifier = Modifier.fillMaxWidth()) {
+                        Icon(Icons.Outlined.Inbox, null, Modifier.size(18.dp))
+                        Spacer(Modifier.width(8.dp))
+                        Text("Guardian Inbox")
                     }
                 }
             }
         }
-        if (inbox) AlertDialog(
-            onDismissRequest = { inbox = false },
-            title = { Text("Guardian Inbox") },
-            text = { Text("Ready, Cooling Down, Protected and History will be available after encrypted notification storage is enabled.") },
-            confirmButton = { TextButton(onClick = { inbox = false }) { Text("Close") } },
-        )
+        inbox?.let { section ->
+            AlertDialog(
+                onDismissRequest = { inbox = null },
+                title = { Text("Guardian Inbox") },
+                text = {
+                    Column(Modifier.verticalScroll(rememberScrollState())) {
+                        Text("Encrypted inbox unavailable in this build.")
+                        GuardianInboxSection.entries.forEach { entry ->
+                            TextButton(onClick = { inbox = entry }) {
+                                Text(entry.label, color = if (entry == section) GuardianBlue else GuardianMuted)
+                            }
+                        }
+                    }
+                },
+                confirmButton = { TextButton(onClick = { inbox = null }) { Text("Close") } },
+            )
+        }
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun GuardianCard(
+    title: String,
+    badge: String? = null,
+    badgeColor: Color = GuardianMuted,
+    body: @Composable ColumnScope.() -> Unit,
+) {
+    Card(
+        Modifier.fillMaxWidth(), shape = RoundedCornerShape(22.dp),
+        colors = CardDefaults.cardColors(containerColor = GuardianGlass),
+        border = BorderStroke(1.dp, GuardianBorder.copy(alpha = .45f)),
+    ) {
+        Column(Modifier.padding(horizontal = 16.dp, vertical = 14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            FlowRow(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween,
+                verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text(title, Modifier.semantics { heading() }, style = MaterialTheme.typography.titleMedium)
+                if (badge != null) {
+                    Surface(shape = RoundedCornerShape(20.dp), color = badgeColor.copy(alpha = .12f), contentColor = badgeColor) {
+                        Text(badge, Modifier.padding(horizontal = 9.dp, vertical = 3.dp), style = MaterialTheme.typography.labelMedium)
+                    }
+                }
+            }
+            body()
+        }
     }
 }
 
 @Composable
-private fun GuardianCard(title: String, body: @Composable ColumnScope.() -> Unit) {
-    Card(Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh)) {
-        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            Text(title, style = MaterialTheme.typography.titleMedium)
-            body()
+private fun GuardianMessageTile(
+    title: String, icon: ImageVector, accent: Color, modifier: Modifier, onOpen: () -> Unit,
+) {
+    Card(
+        onClick = onOpen, modifier = modifier.heightIn(min = 104.dp), shape = RoundedCornerShape(22.dp),
+        colors = CardDefaults.cardColors(containerColor = GuardianGlass),
+        border = BorderStroke(1.dp, GuardianBorder.copy(alpha = .45f)),
+    ) {
+        Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+            Icon(icon, null, Modifier.size(22.dp), tint = accent)
+            Text("Unavailable", style = MaterialTheme.typography.titleMedium)
+            Text(title, style = MaterialTheme.typography.bodyMedium, color = GuardianMuted)
         }
+    }
+}
+
+@Composable
+private fun GuardianHealthLine(label: String, value: String, verified: Boolean = false) {
+    GuardianLine(
+        if (verified) Icons.Outlined.CheckCircle else Icons.Outlined.Info,
+        "$label · $value",
+        if (verified) GuardianMint else GuardianMuted,
+    )
+}
+
+@Composable
+private fun GuardianLine(icon: ImageVector, label: String, tint: Color) {
+    Row(horizontalArrangement = Arrangement.spacedBy(9.dp), verticalAlignment = Alignment.CenterVertically) {
+        Icon(icon, null, Modifier.size(18.dp), tint = tint)
+        Text(label, Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
     }
 }

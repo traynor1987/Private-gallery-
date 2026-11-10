@@ -5,6 +5,10 @@ output=app/build/home2-evidence/${2:-visual-checkpoint}
 test_package=${3:-uk.co.traynor.privategallery.home2}
 export test_class test_package
 mkdir -p "$output"
+test_app=uk.co.traynor.privategallery.hiddenprototype
+if [[ ${ORG_GRADLE_PROJECT_novaGuardianProbe:-false} == true ]]; then
+  test_app=uk.co.traynor.privategallery.guardianprobe
+fi
 capture() {
   local status=$?
   trap - EXIT
@@ -16,7 +20,7 @@ trap capture EXIT
 ./gradlew connectedDebugAndroidTest \
   -Pandroid.testInstrumentationRunnerArguments.class="$test_package.$test_class" \
   -Pandroid.enableAdditionalTestOutput=true \
-  -Pandroid.testInstrumentationRunnerArguments.additionalTestOutputDir=/sdcard/Android/media/uk.co.traynor.privategallery.hiddenprototype/additional_test_output \
+  -Pandroid.testInstrumentationRunnerArguments.additionalTestOutputDir="/sdcard/Android/media/$test_app/additional_test_output" \
   -Pkotlin.incremental=false --no-daemon --console=plain
 python3 - <<'PY' | tee "$output/result.txt"
 from pathlib import Path

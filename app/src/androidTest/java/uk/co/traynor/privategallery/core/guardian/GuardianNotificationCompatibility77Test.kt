@@ -1,6 +1,7 @@
 package uk.co.traynor.privategallery.core.guardian
 
 import android.Manifest
+import android.app.Notification
 import android.app.NotificationManager
 import android.content.ComponentName
 import android.os.ParcelFileDescriptor
@@ -46,13 +47,17 @@ class GuardianNotificationCompatibility77Test {
                     GuardianNotificationListener.state.value.running)
             }
 
+            val manager = checkNotNull(context.getSystemService(NotificationManager::class.java))
+            val originalDnd = manager.currentInterruptionFilter
             instrumentation.uiAutomation.grantRuntimePermission(context.packageName, Manifest.permission.POST_NOTIFICATIONS)
             instrumentation.runOnMainSync { GuardianNotificationListener.postSynthetic(context, dismiss = false) }
             await("The harmless test reached the listener and was securely captured") {
                 GuardianNotificationListener.state.value.synthetic == SyntheticResult.PRESENTED
             }
-            val manager = checkNotNull(context.getSystemService(NotificationManager::class.java))
             val presented = manager.activeNotifications.single { it.notification.channelId == "guardian-compatibility-test" }
+            assertEquals(Notification.VISIBILITY_SECRET, presented.notification.visibility)
+            assertNull(presented.notification.publicVersion)
+            assertNotNull(GuardianNotificationListener.state.value.syntheticDndMatch)
             instrumentation.runOnMainSync { GuardianNotificationListener.postSynthetic(context, dismiss = true) }
             await("Android confirmed only the requested synthetic notification was removed") {
                 GuardianNotificationListener.state.value.synthetic == SyntheticResult.DISMISSED
@@ -60,6 +65,7 @@ class GuardianNotificationCompatibility77Test {
             assertTrue(manager.activeNotifications.any { it.key == presented.key })
             assertTrue("Synthetic test callbacks must not become WhatsApp events",
                 GuardianNotificationListener.state.value.results.isEmpty())
+            assertEquals("The compatibility test must not change DND", originalDnd, manager.currentInterruptionFilter)
             manager.cancel(presented.tag, presented.id)
         } finally {
             setAccess("disallow_listener")
@@ -67,6 +73,16 @@ class GuardianNotificationCompatibility77Test {
         await("Android revoked listener access and cleared the probe") {
             !GuardianNotificationListener.hasAccess(context) &&
                 GuardianNotificationListener.state.value == ListenerProbeStatus()
+        }
+        try {
+            setAccess("allow_listener")
+            await("Reauthorising the listener must reconnect without restarting capture") {
+                GuardianNotificationListener.hasAccess(context) &&
+                    GuardianNotificationListener.state.value.connected &&
+                    !GuardianNotificationListener.state.value.running
+            }
+        } finally {
+            setAccess("disallow_listener")
         }
     }
 

@@ -112,7 +112,7 @@ internal fun NovaLauncherScreen(
     }
 }
 
-private enum class LauncherSurface { HOME, DRAWER, LIBRARY, SETTINGS, GUARDIAN_SETTINGS, LIBRARY_SETTINGS, EDIT }
+private enum class LauncherSurface { HOME, DRAWER, LIBRARY, SETTINGS, GUARDIAN_SETTINGS, GUARDIAN_DIAGNOSTICS, LIBRARY_SETTINGS, EDIT }
 private enum class LauncherLibraryEntry { PAGER, DRAWER }
 
 private val openSmartFolderSaver = listSaver<LauncherItem.SmartFolder?, String>(
@@ -252,6 +252,7 @@ private fun LauncherRuntime(
         when (surface) {
             LauncherSurface.LIBRARY -> closeLibrary()
             LauncherSurface.LIBRARY_SETTINGS, LauncherSurface.GUARDIAN_SETTINGS -> surface = LauncherSurface.SETTINGS
+            LauncherSurface.GUARDIAN_DIAGNOSTICS -> showHome()
             else -> { showHome(animateDock = surface == LauncherSurface.DRAWER); query = "" }
         }
     }
@@ -425,7 +426,8 @@ private fun LauncherRuntime(
                             {
                                 GuardianHome(guardianOptions, sanctuaryStatus, apps, decisions,
                                     onSettings = { surface = LauncherSurface.GUARDIAN_SETTINGS },
-                                    onSanctuary = actions.openSanctuary)
+                                    onSanctuary = actions.openSanctuary,
+                                    onDiagnostics = { surface = LauncherSurface.GUARDIAN_DIAGNOSTICS })
                             }
                         } else null,
                     )
@@ -480,6 +482,9 @@ private fun LauncherRuntime(
                         }
                     }
                 }
+                LauncherSurface.GUARDIAN_DIAGNOSTICS -> NotificationCompatibilityScreen(
+                    allowPermissionChanges = !launcherProtected, onBack = { showHome() },
+                )
                 LauncherSurface.GUARDIAN_SETTINGS -> GuardianHomeSettings(
                     guardianOptions,
                     onChange = {

@@ -1,5 +1,6 @@
 package uk.co.traynor.privategallery.launcher
 
+import android.graphics.Bitmap
 import androidx.activity.ComponentActivity
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -9,10 +10,14 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.graphics.toPixelMap
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.unit.dp
+import androidx.test.platform.app.InstrumentationRegistry
+import java.io.File
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -27,7 +32,11 @@ import uk.co.traynor.privategallery.core.sanctuary.SanctuaryLauncherPolicy.Decis
 class LauncherHomeLibraryPager73UiTest {
     private val compose = createAndroidComposeRule<ComponentActivity>()
     private val viewport = BrowserViewportRule { method ->
-        if (method.startsWith("fold")) 820 to 920 else 375 to 850
+        when {
+            method.startsWith("landscape") -> 760 to 440
+            method.startsWith("fold") -> 820 to 920
+            else -> 375 to 850
+        }
     }
     @get:Rule val rules: TestRule = RuleChain.outerRule(viewport).around(compose)
 
@@ -61,7 +70,22 @@ class LauncherHomeLibraryPager73UiTest {
         compose.onNodeWithTag("launcher-guardian-home").assertIsDisplayed()
         dock.assertIsNotDisplayed()
         compose.onNodeWithText("Analysis unavailable").assertIsDisplayed()
-        compose.onNodeWithText("Ready to Read · Unavailable").assertExists()
+        val ready = compose.onNodeWithTag("guardian-ready-tile").assertIsDisplayed()
+        val cooling = compose.onNodeWithTag("guardian-cooling-tile").assertIsDisplayed()
+        ready.assertTextContains("Unavailable")
+        cooling.assertTextContains("Unavailable")
+        val readyBounds = ready.fetchSemanticsNode().boundsInRoot
+        val coolingBounds = cooling.fetchSemanticsNode().boundsInRoot
+        assertTrue(kotlin.math.abs(readyBounds.width - coolingBounds.width) <= 1f)
+        assertEquals(readyBounds.height, coolingBounds.height)
+        saveGuardianCheckpoint("cover")
+        ready.performClick()
+        compose.onNodeWithText("Encrypted inbox unavailable in this build.").assertIsDisplayed()
+        compose.onNodeWithText("Close").performClick()
+        compose.onNodeWithText("View Diagnostics").performScrollTo().performClick()
+        compose.onNodeWithText("Notification compatibility").assertIsDisplayed()
+        compose.runOnIdle { compose.activity.onBackPressedDispatcher.onBackPressed() }
+        compose.onNodeWithTag("launcher-guardian-home").assertIsDisplayed()
         pager.performTouchInput { swipeLeft() }
         homeApp(0).assertIsDisplayed()
         dock.assertIsDisplayed()
@@ -80,9 +104,10 @@ class LauncherHomeLibraryPager73UiTest {
             pager.performTouchInput { swipeRight() }
             compose.onNodeWithText("Panic Protection").assertIsDisplayed()
             compose.onNodeWithText("1:01:00 remaining").assertIsDisplayed()
+            saveGuardianCheckpoint("unfolded")
             compose.runOnIdle { status = null }
-            compose.onNodeWithText("Inactive").assertIsDisplayed()
-            compose.onNodeWithText("Settings").performClick()
+            compose.onNodeWithText("Protection inactive").assertIsDisplayed()
+            compose.onNodeWithContentDescription("Settings").performClick()
             compose.onNodeWithTag("guardian-show-page").performClick()
             assertTrue(!GuardianHomeOptions.read(compose.activity).showPage)
             compose.runOnIdle { compose.activity.onBackPressedDispatcher.onBackPressed() }
@@ -93,6 +118,25 @@ class LauncherHomeLibraryPager73UiTest {
         } finally {
             GuardianHomeOptions().save(compose.activity)
         }
+    }
+
+    @Test fun landscapeGuardianRemainsReachableWithLargeText() {
+        compose.setContent {
+            val density = androidx.compose.ui.platform.LocalDensity.current
+            androidx.compose.runtime.CompositionLocalProvider(
+                androidx.compose.ui.platform.LocalDensity provides androidx.compose.ui.unit.Density(density.density, 2f),
+            ) {
+                GuardianHome(GuardianHomeOptions(), null, emptyList(), emptyMap(), {}, {}, {})
+            }
+        }
+        compose.onNodeWithText("Nova Guardian").assertIsDisplayed()
+        val ready = compose.onNodeWithTag("guardian-ready-tile").performScrollTo()
+        val cooling = compose.onNodeWithTag("guardian-cooling-tile")
+        ready.assertIsDisplayed()
+        cooling.assertIsDisplayed()
+        assertTrue(kotlin.math.abs(ready.fetchSemanticsNode().boundsInRoot.width -
+            cooling.fetchSemanticsNode().boundsInRoot.width) <= 1f)
+        compose.onNodeWithText("View Diagnostics").performScrollTo().assertIsDisplayed()
     }
 
     @Test fun coverSwipesAcrossEveryHomePageBeforeLibraryAndBack() {
@@ -354,6 +398,22 @@ class LauncherHomeLibraryPager73UiTest {
         compose.onNode(hasTestTag("launcher-app-${main.component}") and
             hasAnyAncestor(hasTestTag("launcher-dock-slot-0"))).assertIsDisplayed()
         compose.runOnIdle { assertEquals(listOf(restricted, allowed), state.cover.dock) }
+    }
+
+    private fun saveGuardianCheckpoint(display: String) {
+        val dashboard = compose.onNodeWithTag("launcher-guardian-home")
+        val capture = dashboard.captureToImage()
+        assertEquals(Color(0xFF0D1727), capture.toPixelMap()[2, 2])
+        val output = InstrumentationRegistry.getArguments().getString("additionalTestOutputDir") ?: return
+        val folder = File(output, "guardian-home-77").apply { mkdirs() }
+        val bitmap = capture.asAndroidBitmap()
+        try {
+            File(folder, "$display.png").outputStream().use { stream ->
+                check(bitmap.compress(Bitmap.CompressFormat.PNG, 100, stream))
+            }
+        } finally {
+            bitmap.recycle()
+        }
     }
 
     private fun showLauncher(uiActions: LauncherUiActions = actions) = compose.setContent {
