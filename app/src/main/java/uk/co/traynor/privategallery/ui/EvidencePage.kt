@@ -27,7 +27,20 @@ import androidx.compose.ui.unit.dp
 
 @Composable internal fun EvidenceWorkflowPage(onDismissRequest:()->Unit,title:@Composable ()->Unit,
  text:@Composable ()->Unit,confirmButton:@Composable ()->Unit,dismissButton:@Composable ()->Unit) {
- EvidencePage(onDismissRequest){Column(Modifier.fillMaxSize().safeDrawingPadding().imePadding().padding(16.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){
-  title();Box(Modifier.weight(1f).fillMaxWidth()){text()};Row(horizontalArrangement=Arrangement.spacedBy(12.dp)){dismissButton();confirmButton()}
- }}
+ EvidencePage(onDismissRequest) {
+  Column(
+   Modifier.fillMaxSize().safeDrawingPadding().imePadding().padding(horizontal = 16.dp, vertical = 8.dp),
+   verticalArrangement = Arrangement.spacedBy(8.dp),
+  ) {
+   // Measure the action row before the heading and form when the keyboard reduces the viewport.
+   Column(Modifier.weight(1f).fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    title()
+    Box(Modifier.weight(1f).fillMaxWidth()) { text() }
+   }
+   Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+    dismissButton()
+    confirmButton()
+   }
+  }
+ }
 }
