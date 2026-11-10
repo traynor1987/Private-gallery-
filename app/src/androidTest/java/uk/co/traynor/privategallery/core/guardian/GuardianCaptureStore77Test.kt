@@ -215,4 +215,38 @@ class GuardianCaptureStore77Test {
         assertEquals(0, GuardianCaptureStore(context).summary(days = 7, now = now))
         assertFalse(File(context.noBackupFilesDir, GuardianCaptureStore.ARCHIVE_NAME).exists())
     }
+    @Test fun conversationLabelsPersistLearnAndClearWithoutBypassingHolds() {
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        val now = guardianInboxClock(context)
+        val store = GuardianCaptureStore(context)
+        val phrase = "the appointment starts early tomorrow morning"
+        store.clear()
+        store.resetLearning()
+        try {
+            val event = GuardianCaptureEvent(0, "shortcut:label-fixture", now.wall,
+                listOf(GuardianCaptureEntry(now.wall - 1, "sender", phrase)))
+            store.append(event, 7, now.wall, assess = false)
+            val pending = store.inboxRows(7, now).single()
+            assertFalse(store.labelConversationMessage(pending.id, GuardianAssessment.LOW_RISK, 7, now))
+            assertNotNull(store.prepareInboxReview(pending.id, 7, now))
+            assertTrue(store.labelConversationMessage(pending.id, GuardianAssessment.LOW_RISK, 7, now))
+            val reopened = GuardianCaptureStore(context)
+            assertEquals(GuardianAssessment.LOW_RISK, reopened.inboxRows(7, now).single().ownerLabel)
+            assertEquals(1, reopened.learningCount())
+            val next = event.copy(entries = listOf(GuardianCaptureEntry(now.wall, "sender", phrase)))
+            reopened.append(next, 7, now.wall, clock = now)
+            assertEquals(GuardianAssessment.LOW_RISK, reopened.inboxRows(7, now).first().assessment)
+            assertTrue(reopened.reviewInboxMessage(pending.id, GuardianInboxAction.HOLD, 7, now))
+            assertNull(reopened.prepareInboxReview(pending.id, 7, now))
+            assertFalse(reopened.labelConversationMessage(pending.id, GuardianAssessment.UPSETTING, 7, now))
+            assertFalse(reopened.labelConversationMessage(pending.id, null, 7, now))
+            val later = now.copy(wall = now.wall + GUARDIAN_HOLD_MILLIS, elapsed = now.elapsed + GUARDIAN_HOLD_MILLIS)
+            assertTrue(reopened.labelConversationMessage(pending.id, null, 7, later))
+            assertNull(GuardianCaptureStore(context).inboxRows(7, later).single { it.id == pending.id }.ownerLabel)
+            assertEquals(0, reopened.learningCount())
+        } finally {
+            store.clear()
+            store.resetLearning()
+        }
+    }
 }

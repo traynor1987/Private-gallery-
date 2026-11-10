@@ -38,6 +38,7 @@ internal data class GuardianInboxRow(
     val arrivedAt: Long = time,
     val conversation: GuardianConversationKey? = null,
     val availableAfter: Long? = null,
+    val ownerLabel: GuardianAssessment? = null,
 )
 
 /** The export only needs section membership and layout-local list keys. */
@@ -120,9 +121,13 @@ internal class GuardianCaptureStore private constructor(private val context: Con
         true
     }
 
-    fun resetLearning() = GuardianCaptureStore(context, true).clear()
+    fun resetLearning() = synchronized(lock) {
+        val rows = read()
+        if (rows.count { it.remove("ownerLabel") != null } > 0) write(rows)
+        GuardianCaptureStore(context, true).clear()
+    }
 
-    fun learningCount(): Int = synchronized(lock) { examples().size }
+    fun learningCount(): Int = synchronized(lock) { examples(read()).size }
 
     fun forgetExample(text: String): Boolean = synchronized(lock) {
         val features = guardianFeatures(text)
@@ -136,18 +141,44 @@ internal class GuardianCaptureStore private constructor(private val context: Con
         true
     }
 
-    private fun examples(): List<GuardianExample> = GuardianCaptureStore(context, true).read().map { row ->
-        val features = row.getJSONArray("features")
-        GuardianExample(List(features.length(), features::getString).toSet(),
-            GuardianAssessment.valueOf(row.getString("label")))
+    private fun ownerLabel(row: JSONObject): GuardianAssessment? = when (row.optString("ownerLabel")) {
+        GuardianAssessment.LOW_RISK.name -> GuardianAssessment.LOW_RISK
+        GuardianAssessment.UPSETTING.name -> GuardianAssessment.UPSETTING
+        else -> null
     }
+
+    private fun examples(rows: List<JSONObject>): List<GuardianExample> {
+        val evidence = GuardianCaptureStore(context, true).read().map { row ->
+            val features = row.getJSONArray("features")
+            GuardianExample(List(features.length(), features::getString).toSet(),
+                GuardianAssessment.valueOf(row.getString("label")))
+        }
+        val conversation = rows.asSequence().filterNot { it.optBoolean("deleted") }.mapNotNull { row ->
+            val label = ownerLabel(row) ?: return@mapNotNull null
+            val features = guardianFeatures(row.getString("text"))
+            if (features.isEmpty()) null else GuardianExample(features, label)
+        }.take(MAX_EXAMPLES).toList()
+        return (evidence + conversation).distinct()
+    }
+
+    fun labelConversationMessage(id: String, label: GuardianAssessment?, days: Int, now: GuardianInboxClock): Boolean =
+        synchronized(lock) {
+            require(label == null || label == GuardianAssessment.LOW_RISK || label == GuardianAssessment.UPSETTING)
+            val rows = retainedRows(days, now.wall)
+            val row = rows.firstOrNull { it.getString("id") == id && !it.optBoolean("deleted") } ?: return@synchronized false
+            val state = inboxRow(row, now)
+            if (state.assessment == null || state.section == GuardianInboxSection.COOLING) return@synchronized false
+            if (label == null) row.remove("ownerLabel") else row.put("ownerLabel", label.name)
+            write(rows)
+            true
+        }
 
     fun assessInboxMessage(id: String, days: Int, now: GuardianInboxClock): GuardianAssessment? = synchronized(lock) {
         val rows = retainedRows(days, now.wall)
         val row = rows.firstOrNull { it.getString("id") == id && !it.optBoolean("deleted") }
             ?: return@synchronized null
         if (inboxRow(row, now).section == GuardianInboxSection.COOLING) return@synchronized null
-        val assessment = classifyGuardian(row.getString("text"), examples(), contextFor(row, rows), rowSensitivity(row))
+        val assessment = classifyGuardian(row.getString("text"), examples(rows), contextFor(row, rows), rowSensitivity(row))
         applyAssessment(row, assessment, now)
         write(rows)
         assessment
@@ -163,7 +194,7 @@ internal class GuardianCaptureStore private constructor(private val context: Con
             it.time in cutoff..event.observedAt && it.sender.length in 1..512 &&
                 it.sender.isNotBlank() && it.text.length in 1..2048 && it.text.isNotBlank()
         }
-        val examples by lazy { runCatching { examples() }.getOrDefault(emptyList()) }
+        val examples by lazy { runCatching { examples(live) }.getOrDefault(emptyList()) }
         val incoming = LinkedHashMap<String, JSONObject>()
         for (entry in candidates.sortedBy { it.time }) {
             val id = identity(event, entry)
@@ -190,10 +221,10 @@ internal class GuardianCaptureStore private constructor(private val context: Con
     }
 
     fun assessCaptured(event: GuardianCaptureEvent, days: Int, now: GuardianInboxClock) = synchronized(lock) {
-        val learned = examples()
+        val rows = retainedRows(days, now.wall)
+        val learned = examples(rows)
         if (learned.isEmpty()) return@synchronized
         val ids = event.entries.mapTo(HashSet()) { identity(event, it) }
-        val rows = retainedRows(days, now.wall)
         var changed = false
         for (row in rows) {
             if (row.getString("id") !in ids || row.optBoolean("deleted") || row.has("assessment") ||
@@ -233,7 +264,7 @@ internal class GuardianCaptureStore private constructor(private val context: Con
         val initial = inboxRow(stored, now)
         if (initial.section == GuardianInboxSection.COOLING) return@synchronized null
         if (initial.assessment == null) {
-            val assessment = classifyGuardian(stored.getString("text"), examples(), contextFor(stored, rows), rowSensitivity(stored))
+            val assessment = classifyGuardian(stored.getString("text"), examples(rows), contextFor(stored, rows), rowSensitivity(stored))
             applyAssessment(stored, assessment, now)
             write(rows)
         }
@@ -325,7 +356,7 @@ internal class GuardianCaptureStore private constructor(private val context: Con
                 GuardianInboxSection.PROTECTED else section, remaining, assessment,
             guardianSenderDisplayName(row.optString("displayName")), row.getLong("capturedAt"),
             GuardianConversationKey(row.optString("app", GUARDIAN_WHATSAPP), row.getLong("profile"), row.getString("conversation")),
-            if (remaining > 0) now.wall + remaining else null)
+            if (remaining > 0) now.wall + remaining else null, ownerLabel(row))
     }
 
     fun clear() = synchronized(lock) {

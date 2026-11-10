@@ -32,6 +32,9 @@ import org.junit.Test
 import org.junit.rules.RuleChain
 import org.junit.rules.TestRule
 import uk.co.traynor.privategallery.ui.BrowserViewportRule
+import uk.co.traynor.privategallery.core.guardian.GuardianAssessment
+import uk.co.traynor.privategallery.core.guardian.GuardianInboxRow
+import uk.co.traynor.privategallery.core.guardian.GuardianInboxSection
 import uk.co.traynor.privategallery.core.sanctuary.SanctuaryAppVisibility
 import uk.co.traynor.privategallery.core.sanctuary.SanctuaryMode
 import uk.co.traynor.privategallery.core.sanctuary.SanctuaryLauncherPolicy.Decision
@@ -438,6 +441,32 @@ class LauncherHomeLibraryPager73UiTest {
         } finally {
             bitmap.recycle()
         }
+    }
+
+    @Test fun conversationTrainingCardRequiresReviewAndConcealsHeldText() {
+        var row by mutableStateOf(GuardianInboxRow("fixture", 1_800_000_000_000L, GuardianInboxSection.PROTECTED, 0))
+        var preview by mutableStateOf<String?>(null)
+        var label: GuardianAssessment? = null
+        val message = "Synthetic authorised preview"
+        compose.setContent {
+            GuardianTheme {
+                GuardianConversationCard(row, preview, busy = false,
+                    onReview = { preview = message }, onLabel = { label = it })
+            }
+        }
+        compose.onNodeWithText(message).assertDoesNotExist()
+        compose.onNodeWithText("Upsetting").assertDoesNotExist()
+        compose.onNodeWithText("Review message").performClick()
+        compose.onNodeWithText(message).assertIsDisplayed()
+        compose.onNodeWithText("Not Upsetting").performClick()
+        compose.runOnIdle {
+            assertEquals(GuardianAssessment.LOW_RISK, label)
+            row = row.copy(section = GuardianInboxSection.COOLING, remainingMillis = 60_000L)
+        }
+        compose.onNodeWithText("Message protected").assertIsDisplayed()
+        compose.onNodeWithText(message).assertDoesNotExist()
+        compose.onNodeWithText("Not Upsetting").assertDoesNotExist()
+        compose.onNodeWithText("Review message").assertDoesNotExist()
     }
 
     private fun saveGuardianCheckpoint(display: String) {
