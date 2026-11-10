@@ -16,6 +16,12 @@
 - [ ] On the Fold, send harmless notifications to Main and Friends separately with Samsung DND off and on. Verify distinct callback buckets, text availability, quiet and grouped posts, updates, disconnect and lock-screen privacy.
 - [ ] Preserve the measured compatibility results. Keep dismissal and automation disabled if profile identity is ambiguous.
 
+## Fold test
+
+Install the test-only APK alongside production NovaOS. Leave the current default Home app selected. Open NovaOS Guardian TEST ONLY. It opens diagnostics directly and checks whether Android exposes a unique WhatsApp clone. The test app has its own app data.
+
+From the compatibility screen, grant Android notification access to the test app and start the five-minute test. Use harmless messages from a known sender. Send to Main and Friends separately with DND off, then repeat with Samsung DND on. Note which counters change for each event. Report counters and any visible shade or lock-screen behaviour without sharing message text. Revoke notification access from the test app after the check.
+
 ## Later phases
 
 - [ ] Add encrypted capture and bounded retention before testing notification dismissal. Use synthetic dismissal tests first, then verify profile-safe behaviour on the Fold.

@@ -20,6 +20,7 @@ import uk.co.traynor.privategallery.core.sanctuary.SanctuaryLauncherPolicy
 import uk.co.traynor.privategallery.core.sanctuary.SanctuaryStore
 import uk.co.traynor.privategallery.launcher.LauncherDefaultHomeDialog
 import uk.co.traynor.privategallery.launcher.NovaLauncherStore
+import uk.co.traynor.privategallery.launcher.NotificationCompatibilityScreen
 import uk.co.traynor.privategallery.launcher.readDefaultHome
 import uk.co.traynor.privategallery.launcher.requestDefaultHomeRole
 import uk.co.traynor.privategallery.ui.PrivateGalleryTheme
@@ -35,6 +36,12 @@ class LauncherActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        if (BuildConfig.DEBUG && packageName.endsWith(".guardianprobe")) {
+            setContent {
+                PrivateGalleryTheme { NotificationCompatibilityScreen(foldProbe = true, onBack = ::finish) }
+            }
+            return
+        }
         // Reconcile expired Sanctuary DND before continuing to the workspace.
         SanctuaryDnd.reconcile(applicationContext)
         selection = savedInstanceState?.getString(STATE_SELECTION)?.let(HomeSelection::valueOf)

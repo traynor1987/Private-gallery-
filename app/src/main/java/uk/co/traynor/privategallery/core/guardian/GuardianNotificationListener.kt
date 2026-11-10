@@ -49,10 +49,8 @@ internal class GuardianNotificationListener : NotificationListenerService() {
         val serial = getSystemService(UserManager::class.java)?.let { users ->
             runCatching { users.getSerialNumberForUser(user) }.getOrDefault(-1)
         } ?: -1
-        val friendsSerial = SanctuaryStore.get(this).launcherSettings().friendsWhatsApp
-            ?.let(LauncherAppIdentity::parse)?.takeIf { it.flattenedComponent.substringBefore('/') == WHATSAPP }
-            ?.profileSerial
-        val account = probeAccount(user == Process.myUserHandle(), serial, friendsSerial)
+
+        val account = probeAccount(user == Process.myUserHandle(), serial, probeFriendsSerial)
         val ranking = Ranking()
         val quiet = rankingMap.getRanking(sbn.key, ranking) && ranking.importance in
             NotificationManager.IMPORTANCE_MIN..NotificationManager.IMPORTANCE_LOW
@@ -82,15 +80,19 @@ internal class GuardianNotificationListener : NotificationListenerService() {
         val state = status.asStateFlow()
         private var probe: NotificationProbe? = null
         private var deadline = 0L
+        private var probeFriendsSerial: Long? = null
         private val timeout = Runnable { stopProbe() }
 
         fun hasAccess(context: Context): Boolean = context.getSystemService(NotificationManager::class.java)
             ?.isNotificationListenerAccessGranted(ComponentName(context, GuardianNotificationListener::class.java)) == true
 
-        fun startProbe(context: Context) {
+        fun startProbe(context: Context, discoveredCloneSerial: Long? = null) {
             if (!hasAccess(context) || !status.value.connected) return
             handler.removeCallbacks(timeout)
             probe = NotificationProbe()
+            probeFriendsSerial = discoveredCloneSerial ?: SanctuaryStore.get(context).launcherSettings().friendsWhatsApp
+                ?.let(LauncherAppIdentity::parse)?.takeIf { it.flattenedComponent.substringBefore('/') == WHATSAPP }
+                ?.profileSerial
             deadline = SystemClock.elapsedRealtime() + PROBE_MILLIS
             status.value = status.value.copy(running = true, results = emptyMap())
             handler.postDelayed(timeout, PROBE_MILLIS)
@@ -99,6 +101,7 @@ internal class GuardianNotificationListener : NotificationListenerService() {
         fun stopProbe() {
             handler.removeCallbacks(timeout)
             probe = null
+            probeFriendsSerial = null
             status.value = status.value.copy(running = false)
         }
 
@@ -110,6 +113,7 @@ internal class GuardianNotificationListener : NotificationListenerService() {
         private fun disconnect() {
             handler.removeCallbacks(timeout)
             probe = null
+            probeFriendsSerial = null
             status.value = ListenerProbeStatus()
         }
     }

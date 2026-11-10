@@ -23,16 +23,27 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import uk.co.traynor.privategallery.core.guardian.GuardianNotificationListener
 import uk.co.traynor.privategallery.core.guardian.ProbeAccount
 import uk.co.traynor.privategallery.core.guardian.ProbeResult
 
 @Composable
-internal fun NotificationCompatibilityScreen(onBack: () -> Unit) {
+internal fun NotificationCompatibilityScreen(foldProbe: Boolean = false, onBack: () -> Unit) {
     val context = LocalContext.current
     val status by GuardianNotificationListener.state.collectAsState()
     var access by remember { mutableStateOf(GuardianNotificationListener.hasAccess(context)) }
     var settingsUnavailable by remember { mutableStateOf(false) }
+    val cloneSerial by produceState<Long?>(null, context, foldProbe) {
+        if (foldProbe) value = withContext(Dispatchers.IO) {
+            runCatching {
+                LauncherAppDirectory(context).apps()
+                    .filter { it.packageName == "com.whatsapp" && it.profile?.isClone == true }
+                    .mapNotNull { it.profileSerial }.distinct().singleOrNull()
+            }.getOrNull()
+        }
+    }
     val settings = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) {
         access = GuardianNotificationListener.hasAccess(context)
     }
@@ -78,12 +89,17 @@ internal fun NotificationCompatibilityScreen(onBack: () -> Unit) {
             Text(
                 "Use harmless test messages from both accounts while the device is unlocked. " +
                     "Try one at a time with Samsung Do Not Disturb off and on. Compare which profile counter changes. " +
-                    "Use Sanctuary’s existing Friends enrollment to identify the Dual Messenger profile.",
+                    if (foldProbe) "The test app checks for one Android-reported WhatsApp clone."
+                    else "Use Sanctuary’s existing Friends enrollment to identify the Dual Messenger profile.",
             )
+            if (foldProbe) {
+                Text(if (cloneSerial != null) "Android reports one WhatsApp clone."
+                    else "A unique WhatsApp clone is unavailable to this test app.")
+            }
             Button(
                 onClick = {
                     if (status.running) GuardianNotificationListener.stopProbe()
-                    else GuardianNotificationListener.startProbe(context)
+                    else GuardianNotificationListener.startProbe(context, cloneSerial)
                 },
                 enabled = access && status.connected,
             ) { Text(if (status.running) "Stop test" else "Start five-minute test") }
