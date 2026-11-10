@@ -18,6 +18,7 @@ internal data class GuardianCaptureHealth(
     val busy: Boolean = false,
     val inbox: GuardianInboxCounts? = null,
     val learningCount: Int? = null,
+    val includesMain: Boolean = false,
 )
 
 /** Serialises settings, archive writes and deletion without blocking Android's listener callbacks. */
@@ -27,6 +28,10 @@ internal object GuardianCapture {
     private val generation = AtomicInteger()
     private val status = MutableStateFlow(GuardianCaptureHealth())
     val state = status.asStateFlow()
+    private val stage = MutableStateFlow<GuardianCaptureStage?>(null)
+    val mainCaptureStage = stage.asStateFlow()
+
+    fun noteMainCapture(result: GuardianCaptureStage) { stage.value = result }
 
     private val found = MutableStateFlow<List<GuardianContact>>(emptyList())
     val contactCandidates = found.asStateFlow()
@@ -58,11 +63,13 @@ internal object GuardianCapture {
 
     fun refresh(context: Context) = manage(context) { _, _ -> }
 
-    fun setEnabled(context: Context, enabled: Boolean) {
+    private fun includesMain(context: Context) = prefs(context).getBoolean("include_main_whatsapp", false)
+
+    fun setEnabled(context: Context, enabled: Boolean, includeMain: Boolean = false) {
         generation.incrementAndGet()
         manage(context) { app, _ ->
             check(!enabled || GuardianNotificationListener.hasAccess(app))
-            check(prefs(app).edit().putBoolean("enabled", enabled).commit())
+            check(prefs(app).edit().putBoolean("enabled", enabled).putBoolean("include_main_whatsapp", enabled && includeMain).commit())
             if (!enabled) GuardianNotificationListener.setAutomaticDismissal(app, false)
         }
     }
@@ -78,12 +85,13 @@ internal object GuardianCapture {
         manage(context) { _, store -> store.clear() }
     }
 
-    fun record(context: Context, event: GuardianCaptureEvent, monitored: GuardianConversationKey, onDurable: (() -> Unit)? = null) {
+    fun record(context: Context, event: GuardianCaptureEvent, monitored: GuardianConversationKey) {
         val app = context.applicationContext
         val expected = generation.get()
         if (pendingEvents.incrementAndGet() > 16) {
             pendingEvents.decrementAndGet()
             status.update { it.copy(limited = true) }
+            if (event.app == GUARDIAN_WHATSAPP) noteMainCapture(GuardianCaptureStage.QUEUE)
             return
         }
         worker.execute {
@@ -92,32 +100,44 @@ internal object GuardianCapture {
                     return@execute
                 }
                 val days = retention(app)
+                val mainMessage = event.app == GUARDIAN_WHATSAPP
+                val includeMain = includesMain(app)
+                val store = GuardianCaptureStore(app)
+                val now = guardianInboxClock(app)
                 val result = runCatching {
-                    val store = GuardianCaptureStore(app)
-                    val now = guardianInboxClock(app)
-                    val contact = store.monitoredContacts().singleOrNull { it.key == monitored && it.enabled && it.retain }
-                        ?: return@execute
-                    store.append(event.copy(sensitivity = contact.sensitivity, holdUncertain = contact.holdUncertain), days, now.wall, assess = onDurable == null, clock = now) to store.inboxCounts(days, now)
+                    val contacts = store.monitoredContacts()
+                    val contact = contacts.singleOrNull { it.key == monitored }
+                    // A transient notification key cannot prove it is outside a contact's explicit exclusion.
+                    val hasExclusion = mainMessage && monitored.conversation.startsWith("notification:") &&
+                        contacts.any { it.key.app == monitored.app && it.key.profile == monitored.profile &&
+                            (!it.enabled || !it.retain) }
+                    if (hasExclusion || !guardianCaptureAllowed(includeMain, monitored, contact)) {
+                        if (mainMessage) noteMainCapture(GuardianCaptureStage.CONSENT)
+                        return@execute
+                    }
+                    val selected = if (contact == null) event else event.copy(
+                        sensitivity = contact.sensitivity, holdUncertain = contact.holdUncertain)
+                    store.append(selected, days, now.wall, assess = false, clock = now)
                 }
-                val (captured, counts) = result.getOrNull() ?: (null to null)
+                val captured = result.getOrNull()
+                if (captured != null && captured.added > 0) {
+                    // Classification may fail independently. A durable row remains Awaiting Analysis.
+                    runCatching { store.assessCaptured(event, days, now) }
+                }
+                val counts = runCatching { store.inboxCounts(days, now) }.getOrNull()
+                if (mainMessage) noteMainCapture(when {
+                    captured == null || counts == null -> GuardianCaptureStage.STORAGE
+                    captured.partial -> GuardianCaptureStage.PARTIAL
+                    captured.added == 0 -> GuardianCaptureStage.DUPLICATE
+                    else -> GuardianCaptureStage.STORED
+                })
                 status.value = GuardianCaptureHealth(
                     enabled = true, retentionDays = days, retained = captured?.retained,
-                    limited = captured == null || captured.partial || captured.retained == 0,
+                    limited = captured == null || captured.partial || counts == null,
                     inbox = counts,
-                    learningCount = runCatching { GuardianCaptureStore(app).learningCount() }.getOrNull(),
+                    learningCount = runCatching { store.learningCount() }.getOrNull(),
+                    includesMain = includeMain,
                 )
-                if (captured != null && onDurable != null) {
-                    Handler(Looper.getMainLooper()).post {
-                        if (generation.get() == expected && isEnabled(app) && GuardianNotificationListener.hasAccess(app)) {
-                            if (captured.allDurable) onDurable()
-                            manage(app) { _, store ->
-                                if (generation.get() == expected && isEnabled(app)) {
-                                    store.assessCaptured(event, days, guardianInboxClock(app))
-                                }
-                            }
-                        }
-                    }
-                }
             } finally {
                 pendingEvents.decrementAndGet()
             }
@@ -144,7 +164,7 @@ internal object GuardianCapture {
             val counts = result.getOrNull()
             val retained = counts?.let { it.pending + it.ready + it.cooling + it.protected + it.history }
             status.value = GuardianCaptureHealth(isEnabled(app), retention(app), retained, result.isFailure, inbox = counts,
-                learningCount = runCatching { store.learningCount() }.getOrNull())
+                learningCount = runCatching { store.learningCount() }.getOrNull(), includesMain = includesMain(app))
         }
     }
 

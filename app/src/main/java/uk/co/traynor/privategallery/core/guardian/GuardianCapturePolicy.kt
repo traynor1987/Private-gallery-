@@ -60,3 +60,19 @@ internal fun guardianConversationId(shortcut: String?, senderKey: String?, sende
 
 private val possibleSmsCode = Regex("""(?i)\b(?:otp|passcode|verification|security code|authentication|sign.in code)\b|(?<!\d)\d{4,8}(?!\d)""")
 internal fun guardianMayKeepSms(text: String) = text.isNotBlank() && !possibleSmsCode.containsMatchIn(text)
+
+internal fun guardianCaptureAllowed(includeMain: Boolean, key: GuardianConversationKey, rule: GuardianContact?): Boolean =
+    if (rule != null) rule.key == key && rule.enabled && rule.retain
+    else includeMain && key.app == GUARDIAN_WHATSAPP
+
+internal enum class GuardianCaptureStage(val label: String) {
+    OFF("Main notification observed · capture off"),
+    SOURCE("Main notification skipped · sender app or notification type could not be verified"),
+    NO_MESSAGE("Main notification skipped · Android did not supply supported incoming message text"),
+    CONSENT("Main notification skipped · capture scope or contact rule excluded it"),
+    DUPLICATE("Main notification already retained, removed or outside the retention window"),
+    PARTIAL("Main notification had unsupported or out-of-window message entries"),
+    STORED("Main notification retained in the encrypted Inbox"),
+    STORAGE("Encrypted archive write or read could not be verified"),
+    QUEUE("Capture queue full"),
+}

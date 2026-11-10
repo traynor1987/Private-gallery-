@@ -59,7 +59,7 @@ internal class GuardianNotificationListener : NotificationListenerService() {
         if (probe != null && SystemClock.elapsedRealtime() >= deadline) stopProbe()
         val session = probe
         val captureEnabled = GuardianCapture.isEnabled(this)
-        if (session == null && !captureEnabled && !discovering) return
+        if (session == null && !captureEnabled && !discovering && !isWhatsApp) return
         val notification = sbn.notification
         val call = notification.category == Notification.CATEGORY_CALL || notification.category == Notification.CATEGORY_MISSED_CALL
         val isSms = !isWhatsApp && notification.category == Notification.CATEGORY_MESSAGE &&
@@ -91,12 +91,27 @@ internal class GuardianNotificationListener : NotificationListenerService() {
             }
             return
         }
-        val personalUid = if ((captureEnabled || discovering) && personal && account == ProbeAccount.MAIN) runCatching {
+        val personalUid = if ((isWhatsApp || captureEnabled || discovering) && personal && account == ProbeAccount.MAIN) runCatching {
             packageManager.getApplicationInfo(sbn.packageName, 0).uid
         }.getOrNull() else null
         val trustedPersonalMessage = personalUid != null && sbn.uid == personalUid && sbn.opPkg == sbn.packageName &&
-            !summary && notification.category == Notification.CATEGORY_MESSAGE
-        if ((!isWhatsApp || session == null) && !trustedPersonalMessage) return
+            !summary && (notification.category == Notification.CATEGORY_MESSAGE || isWhatsApp && notification.category == null)
+        if (isWhatsApp) {
+            val observed = when {
+                account == ProbeAccount.MAIN && trustedPersonalMessage -> ProbeAccount.MAIN
+                account == ProbeAccount.FRIENDS && sbn.opPkg == GUARDIAN_WHATSAPP -> ProbeAccount.FRIENDS
+                else -> null
+            }
+            if (observed != null) status.value = status.value.copy(observedProfiles = status.value.observedProfiles + observed)
+        }
+        if ((!isWhatsApp || session == null) && !trustedPersonalMessage) {
+            if (isWhatsApp && personal && captureEnabled && !summary) GuardianCapture.noteMainCapture(GuardianCaptureStage.SOURCE)
+            return
+        }
+        if (session == null && !captureEnabled && !discovering) {
+            if (trustedPersonalMessage && isWhatsApp) GuardianCapture.noteMainCapture(GuardianCaptureStage.OFF)
+            return
+        }
         val entries = runCatching {
             notification.extras.getParcelableArray(Notification.EXTRA_MESSAGES, Bundle::class.java)
                 ?.let(Notification.MessagingStyle.Message::getMessagesFromBundleArray).orEmpty()
@@ -118,25 +133,24 @@ internal class GuardianNotificationListener : NotificationListenerService() {
             val people = entries.mapNotNull { it.senderPerson }.distinctBy { it.key ?: it.uri ?: it.name?.toString() }
             val person = people.singleOrNull()
             val identity = guardianConversationId(notification.shortcutId, person?.key, person?.uri, group || people.size > 1)
-            if (identity != null) {
-                val key = GuardianConversationKey(sbn.packageName, serial, identity)
+            if (identity != null && discovering) {
                 val name = guardianSenderDisplayName(if (group || people.size > 1)
                     notification.extras.getCharSequence(Notification.EXTRA_CONVERSATION_TITLE)?.toString()
                     else person?.name?.toString())
-                if (discovering) GuardianCapture.offerContact(GuardianContact(key, name ?: "Unnamed conversation"))
-                val received = captureEntries(notification)
-                val filtered = if (isSms) received.filter { guardianMayKeepSms(it.text) } else received
-                if (captureEnabled && filtered.isNotEmpty()) {
-                    val event = GuardianCaptureEvent(serial, identity, System.currentTimeMillis(), filtered, sbn.packageName)
-                    val canDismiss = guardianMayDismissMessage(
-                        automaticDismissalEnabled(this), sbn.packageName, account, summary, call,
-                        true, sbn.isClearable, notification.category,
-                    ) && !locked
-                    GuardianCapture.record(this, event, key, if (canDismiss) {
-                        { dismissCaptured(sbn, event.entries) }
-                    } else null)
-                }
+                GuardianCapture.offerContact(GuardianContact(GuardianConversationKey(sbn.packageName, serial, identity),
+                    name ?: "Unnamed conversation"))
             }
+            if (captureEnabled) {
+                val received = if (isWhatsApp) guardianMainNotificationEvent(notification, account, sbn.packageName,
+                    personalUid != null && sbn.uid == personalUid && sbn.opPkg == sbn.packageName,
+                    serial, sbn.key, System.currentTimeMillis())
+                else if (identity == null) null
+                else GuardianCaptureEvent(serial, identity, System.currentTimeMillis(),
+                    guardianCaptureEntries(notification).filter { guardianMayKeepSms(it.text) }, sbn.packageName)
+                if (received != null && received.entries.isNotEmpty()) {
+                    GuardianCapture.record(this, received, GuardianConversationKey(received.app, serial, received.conversation))
+                } else if (isWhatsApp) GuardianCapture.noteMainCapture(GuardianCaptureStage.NO_MESSAGE)
+            } else if (isWhatsApp) GuardianCapture.noteMainCapture(GuardianCaptureStage.OFF)
         }
         if (session != null && isWhatsApp) {
             val ranking = Ranking()
@@ -147,47 +161,6 @@ internal class GuardianNotificationListener : NotificationListenerService() {
                 summary, conversation, estimates, locked)
             status.value = status.value.copy(filter = filter, results = session.results)
         }
-    }
-
-    private fun captureEntries(notification: Notification): List<GuardianCaptureEntry> = runCatching {
-        val extras = notification.extras
-        val self = extras.getParcelable(Notification.EXTRA_MESSAGING_PERSON, Person::class.java)
-        extras.getParcelableArray(Notification.EXTRA_MESSAGES, Bundle::class.java)
-            ?.let(Notification.MessagingStyle.Message::getMessagesFromBundleArray).orEmpty().mapNotNull { entry ->
-                val sender = entry.senderPerson ?: return@mapNotNull null
-                if ((self?.key != null && self.key == sender.key) || (self?.uri != null && self.uri == sender.uri)) {
-                    return@mapNotNull null
-                }
-                GuardianCaptureEntry(entry.timestamp, sender.key ?: sender.uri ?: sender.name?.toString().orEmpty(),
-                    entry.text?.toString().orEmpty(), sender.name?.toString())
-            }
-    }.getOrDefault(emptyList())
-
-    private fun dismissCaptured(original: StatusBarNotification, captured: List<GuardianCaptureEntry>) {
-        if (connectedListener !== this || !automaticDismissalEnabled(this) || !hasAccess(this) ||
-            !GuardianCapture.isEnabled(this) || captured.isEmpty()) return
-        val keyguard = getSystemService(KeyguardManager::class.java) ?: return
-        if (keyguard.isDeviceLocked || keyguard.isKeyguardLocked) return
-        val exact = runCatching { getActiveNotifications(arrayOf(original.key)).singleOrNull() }.getOrNull()
-            ?: return
-        if (exact.key != original.key || exact.postTime != original.postTime || exact.uid != original.uid ||
-            exact.user != Process.myUserHandle() || exact.packageName != GUARDIAN_WHATSAPP ||
-            exact.opPkg != GUARDIAN_WHATSAPP || !exact.isClearable || exact.notification.category != Notification.CATEGORY_MESSAGE ||
-            exact.notification.flags and (Notification.FLAG_GROUP_SUMMARY or Notification.FLAG_ONGOING_EVENT) != 0 ||
-            captured != captureEntries(exact.notification)) return
-
-        val requested = runCatching { cancelNotification(exact.key) }.isSuccess
-        status.value = status.value.copy(mainDismissal = if (requested) "Requested · checking Android"
-            else "Android rejected the request")
-        if (requested) handler.postDelayed({
-            if (connectedListener !== this || !hasAccess(this)) return@postDelayed
-            val active = runCatching { getActiveNotifications(arrayOf(exact.key)).any { it.key == exact.key } }.getOrNull()
-            status.value = status.value.copy(mainDismissal = when (active) {
-                true -> "Still active or reposted"
-                false -> "Exact key absent from Android"
-                null -> "Removal could not be checked"
-            })
-        }, 1_000)
     }
 
     private fun receiveSynthetic(sbn: StatusBarNotification, rankingMap: RankingMap) {
@@ -312,18 +285,12 @@ internal class GuardianNotificationListener : NotificationListenerService() {
 
         fun foldDismissalAccepted(context: Context): Boolean = dismissalPrefs(context).getBoolean("fold_accepted", false)
 
-        fun automaticDismissalEnabled(context: Context): Boolean =
-            foldDismissalAccepted(context) && dismissalPrefs(context).getBoolean("main_enabled", false)
-
         fun confirmFoldDismissal(context: Context): Boolean =
             foldFixtureVerified && hasAccess(context) && status.value.connected &&
                 dismissalPrefs(context).edit().putBoolean("fold_accepted", true).commit()
 
-        fun setAutomaticDismissal(context: Context, enabled: Boolean): Boolean {
-            if (enabled && (!foldDismissalAccepted(context) || !GuardianCapture.isEnabled(context) ||
-                    !hasAccess(context) || !status.value.connected)) return false
-            return dismissalPrefs(context).edit().putBoolean("main_enabled", enabled).commit()
-        }
+        fun setAutomaticDismissal(context: Context, enabled: Boolean): Boolean =
+            !enabled && dismissalPrefs(context).edit().putBoolean("main_enabled", false).commit()
 
         /** Only the identified, harmless shell fixture is eligible from the compatibility screen. */
         internal fun dismissExternalTestFixture(context: Context, tag: String): Boolean {
@@ -447,7 +414,7 @@ internal class GuardianNotificationListener : NotificationListenerService() {
 
         fun clearProbe() {
             stopProbe()
-            status.value = status.value.copy(results = emptyMap(), calls = emptyMap())
+            status.value = status.value.copy(results = emptyMap(), calls = emptyMap(), observedProfiles = emptySet())
         }
 
         private fun disconnect(context: Context) {
@@ -479,7 +446,7 @@ internal data class ListenerProbeStatus(
     val calls: Map<GuardianCallSource, GuardianCallObservations> = emptyMap(),
     val dismissal: DismissalDiagnostic = DismissalDiagnostic(),
     val foldFixtureVerified: Boolean = false,
-    val mainDismissal: String? = null,
+    val observedProfiles: Set<ProbeAccount> = emptySet(),
 )
 
 internal data class DismissalDiagnostic(
@@ -506,3 +473,45 @@ internal enum class SyntheticResult(val label: String) {
     PERMISSION_REQUIRED("Notification posting permission required"),
     DISCONNECTED("Listener disconnected during the test"),
 }
+
+
+/** Convert only Android-provided incoming MessagingStyle messages from the verified personal WhatsApp UID. */
+internal fun guardianMainNotificationEvent(
+    notification: Notification, account: ProbeAccount, packageName: String, uidMatches: Boolean,
+    profileSerial: Long, notificationKey: String, now: Long,
+): GuardianCaptureEvent? {
+    val summary = notification.flags and Notification.FLAG_GROUP_SUMMARY != 0
+    if (!canCaptureGuardianNotification(uidMatches, packageName, account, summary) || profileSerial < 0 ||
+        (notification.category != null && notification.category != Notification.CATEGORY_MESSAGE)) return null
+    val messages = guardianCaptureEntries(notification)
+    if (messages.isEmpty()) return null
+    val conversation = notification.shortcutId?.takeIf { it.isNotBlank() && it.length <= 480 }?.let { "shortcut:$it" }
+        ?: guardianDirectMessageIdentity(notification)
+        ?: "notification:$notificationKey".takeIf { notificationKey.isNotBlank() && it.length <= 512 }
+        ?: return null
+    return GuardianCaptureEvent(profileSerial, conversation, now, messages)
+}
+
+private fun guardianDirectMessageIdentity(notification: Notification): String? = runCatching {
+    val extras = notification.extras
+    val people = extras.getParcelableArray(Notification.EXTRA_MESSAGES, Bundle::class.java)
+        ?.let(Notification.MessagingStyle.Message::getMessagesFromBundleArray).orEmpty().mapNotNull { it.senderPerson }
+        .distinctBy { it.key ?: it.uri ?: it.name?.toString() }
+    val person = people.singleOrNull()
+    guardianConversationId(null, person?.key, person?.uri,
+        extras.getBoolean(Notification.EXTRA_IS_GROUP_CONVERSATION) || people.size > 1)
+}.getOrNull()
+
+private fun guardianCaptureEntries(notification: Notification): List<GuardianCaptureEntry> = runCatching {
+        val extras = notification.extras
+        val self = extras.getParcelable(Notification.EXTRA_MESSAGING_PERSON, Person::class.java)
+        extras.getParcelableArray(Notification.EXTRA_MESSAGES, Bundle::class.java)
+            ?.let(Notification.MessagingStyle.Message::getMessagesFromBundleArray).orEmpty().mapNotNull { entry ->
+                val sender = entry.senderPerson ?: return@mapNotNull null
+                if ((self?.key != null && self.key == sender.key) || (self?.uri != null && self.uri == sender.uri)) {
+                    return@mapNotNull null
+                }
+                GuardianCaptureEntry(entry.timestamp, sender.key ?: sender.uri ?: sender.name?.toString().orEmpty(),
+                    entry.text?.toString().orEmpty(), sender.name?.toString())
+            }
+    }.getOrDefault(emptyList())

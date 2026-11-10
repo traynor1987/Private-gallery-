@@ -198,7 +198,9 @@ internal fun GuardianHome(
                     if (options.health) {
                         val profileStatus = when {
                             listener.results.containsKey(ProbeAccount.UNRESOLVED) -> "Unresolved events observed"
-                            listener.results.keys.containsAll(listOf(ProbeAccount.MAIN, ProbeAccount.FRIENDS)) -> "Both observed"
+                            listener.observedProfiles.containsAll(listOf(ProbeAccount.MAIN, ProbeAccount.FRIENDS)) -> "Both observed"
+                            ProbeAccount.MAIN in listener.observedProfiles -> "Main observed · Friends awaiting verification"
+                            ProbeAccount.FRIENDS in listener.observedProfiles -> "Friends observed · Main awaiting verification"
                             else -> "Awaiting verification"
                         }
                         GuardianCard("Guardian health", badge = when {
@@ -215,7 +217,7 @@ internal fun GuardianHome(
                                 capture.limited -> "Check diagnostics"
                                 capture.busy -> "Checking"
                                 capture.enabled && !connected -> "Listener required"
-                                capture.enabled -> "${capture.retained ?: 0} retained · awaiting classification"
+                                capture.enabled -> "${capture.retained ?: 0} retained · ${if (capture.includesMain) "Main WhatsApp" else "Selected conversations only"}"
                                 else -> "Off"
                             })
                             GuardianHealthLine("Nova Brain", when {

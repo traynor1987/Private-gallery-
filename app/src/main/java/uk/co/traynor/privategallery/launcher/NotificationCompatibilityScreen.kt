@@ -24,12 +24,10 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Switch
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.LiveRegionMode
-import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.lifecycle.Lifecycle
@@ -200,9 +198,7 @@ internal fun NotificationCompatibilityScreen(
             Text("Check the Samsung shade and lock screen to confirm visible behaviour on your Fold.")
             if (allowPermissionChanges) {
                 var foldAccepted by remember { mutableStateOf(GuardianNotificationListener.foldDismissalAccepted(context)) }
-                var automatic by remember { mutableStateOf(GuardianNotificationListener.automaticDismissalEnabled(context)) }
                 var externalError by remember { mutableStateOf<String?>(null) }
-                val capture by GuardianCapture.state.collectAsState()
                 HorizontalDivider()
                 Text("External notification dismissal", style = MaterialTheme.typography.titleMedium)
                 Text("Use the harmless ADB fixture on your Fold. This test only targets that exact shell notification.")
@@ -217,22 +213,8 @@ internal fun NotificationCompatibilityScreen(
                         foldAccepted = GuardianNotificationListener.confirmFoldDismissal(context)
                     }) { Text("I saw the fixture disappear from Samsung’s panel") }
                 }
-                if (foldAccepted) {
-                    Text("Main only. Android may still show grouped, unsupported or reposted notifications. Friends notifications are left alone.")
-                    Switch(checked = automatic && capture.enabled && access,
-                        enabled = automatic || (capture.enabled && access && status.connected),
-                        onCheckedChange = {
-                            if (GuardianNotificationListener.setAutomaticDismissal(context, it)) automatic = it
-                            else externalError = "Main WhatsApp dismissal could not be enabled."
-                        },
-                        modifier = Modifier.semantics { contentDescription = "Dismiss Main WhatsApp after encrypted capture" })
-                    Text("Dismiss Main WhatsApp after encrypted capture")
-                }
-                status.mainDismissal?.let { Text("Last Main WhatsApp dismissal · $it") }
+                Text("Real WhatsApp dismissal is off during capture recovery.")
                 externalError?.let { Text(it, color = MaterialTheme.colorScheme.error) }
-                LaunchedEffect(access, capture.enabled) {
-                    automatic = GuardianNotificationListener.automaticDismissalEnabled(context)
-                }
             }
             HorizontalDivider()
             GuardianCaptureControls(allowChanges = allowPermissionChanges, listenerReady = access && status.connected)
@@ -247,13 +229,14 @@ internal fun NotificationCompatibilityScreen(
 private fun GuardianCaptureControls(allowChanges: Boolean, listenerReady: Boolean) {
     val context = LocalContext.current
     val health by GuardianCapture.state.collectAsState()
+    val captureStage by GuardianCapture.mainCaptureStage.collectAsState()
     var consent by remember { mutableStateOf(false) }
     var confirmClear by remember { mutableStateOf(false) }
     LaunchedEffect(context) { GuardianCapture.refresh(context) }
 
-    Text("Encrypted monitored contact capture", style = MaterialTheme.typography.titleMedium)
-    Text("Capture is optional. Select conversations under Monitored Contacts in the authenticated Guardian Inbox. " +
-        "Supported Main WhatsApp and SMS/MMS messages stay on this device. Friends WhatsApp is excluded.")
+    Text("Encrypted notification capture", style = MaterialTheme.typography.titleMedium)
+    Text("Choose to capture Main WhatsApp, or only conversations selected in Monitored Contacts. " +
+        "SMS/MMS always requires a selected conversation. Friends WhatsApp is excluded.")
     Text(when {
         health.busy -> "Checking encrypted archive"
         health.limited -> "Limited Protection · encrypted capture or storage could not be fully verified"
@@ -261,12 +244,17 @@ private fun GuardianCaptureControls(allowChanges: Boolean, listenerReady: Boolea
         health.enabled -> "Capture enabled · ${health.retained ?: 0} retained"
         else -> "Capture off · ${health.retained ?: 0} retained"
     })
+    if (health.enabled) Text(if (health.includesMain) "Scope · Main WhatsApp and selected SMS/MMS" else "Scope · Selected conversations only")
+    captureStage?.let { Text(it.label) }
     OutlinedButton(
         enabled = allowChanges && !health.busy && (health.enabled || listenerReady),
         onClick = {
             if (health.enabled) GuardianCapture.setEnabled(context, false) else consent = true
         },
     ) { Text(if (health.enabled) "Stop encrypted capture" else "Enable encrypted capture") }
+    if (health.enabled && allowChanges) {
+        TextButton(enabled = listenerReady && !health.busy, onClick = { consent = true }) { Text("Change capture scope") }
+    }
     Text("Retention · ${health.retentionDays} days")
     GuardianCaptureStore.RETENTION_DAYS.forEach { days ->
         OutlinedButton(
@@ -279,13 +267,21 @@ private fun GuardianCaptureControls(allowChanges: Boolean, listenerReady: Boolea
     }
     if (consent && allowChanges) AlertDialog(
         onDismissRequest = { consent = false },
-        title = { Text("Capture notifications from monitored contacts?") },
-        text = { Text("NovaOS can store supported incoming notification text from conversations you select while you use other apps or lock the device. " +
-            "The archive is encrypted locally. You can stop capture or delete the archive here.") },
+        title = { Text("Choose encrypted capture scope") },
+        text = {
+            Column {
+                Text("Main WhatsApp captures supported incoming messages even before you select contacts. " +
+                    "Explicit contact exclusions still apply. Friends WhatsApp is excluded from both options.")
+                TextButton(enabled = listenerReady, onClick = {
+                    consent = false
+                    GuardianCapture.setEnabled(context, true, includeMain = true)
+                }) { Text("Capture Main WhatsApp") }
+            }
+        },
         confirmButton = { TextButton(enabled = listenerReady, onClick = {
             consent = false
             GuardianCapture.setEnabled(context, true)
-        }) { Text("Enable capture") } },
+        }) { Text("Selected conversations only") } },
         dismissButton = { TextButton(onClick = { consent = false }) { Text("Cancel") } },
     )
     if (confirmClear && allowChanges) AlertDialog(

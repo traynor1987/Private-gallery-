@@ -55,11 +55,11 @@ expected = expected.replace("\ndependencies {", debug_version + "\ndependencies 
 expected = expected.replace(
     '      applicationIdSuffix = ".hiddenprototype"',
     '      val guardianProbe = providers.gradleProperty("novaGuardianProbe").orNull == "true"\n'
-    '      applicationIdSuffix = if (guardianProbe) ".guardianprobe" else ".hiddenprototype"',
+    '      applicationIdSuffix = if (guardianProbe) ".capture77.guardianprobe" else ".hiddenprototype"',
     1,
 ).replace(
     '      resValue("string", "app_name", "NovaOS TEST ONLY")',
-    '      resValue("string", "app_name", if (guardianProbe) "NovaOS Guardian TEST ONLY" else "NovaOS TEST ONLY")',
+    '      resValue("string", "app_name", if (guardianProbe) "NovaOS Capture Recovery TEST ONLY" else "NovaOS TEST ONLY")',
     1,
 )
 assert (ROOT / build_file).read_text() == expected, "Unexpected production package or build configuration change"

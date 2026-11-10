@@ -3,6 +3,7 @@ package uk.co.traynor.privategallery.core.guardian
 import android.Manifest
 import android.app.Notification
 import android.app.NotificationManager
+import android.app.Person
 import android.content.ComponentName
 import android.os.ParcelFileDescriptor
 import android.os.SystemClock
@@ -147,6 +148,83 @@ class GuardianNotificationCompatibility77Test {
             }
         } finally {
             setAccess("disallow_listener")
+        }
+    }
+
+    @Test fun mainMessagingFixturesReachEncryptedAwaitingAnalysisWithDndOffAndOn() {
+        val instrumentation = InstrumentationRegistry.getInstrumentation()
+        val context = instrumentation.targetContext
+        val manager = checkNotNull(context.getSystemService(NotificationManager::class.java))
+        val component = ComponentName(context, GuardianNotificationListener::class.java).flattenToString()
+        fun shell(command: String): String =
+            ParcelFileDescriptor.AutoCloseInputStream(instrumentation.uiAutomation.executeShellCommand(command))
+                .bufferedReader().use { it.readText() }
+
+        val oldDnd = when (manager.currentInterruptionFilter) {
+            NotificationManager.INTERRUPTION_FILTER_PRIORITY -> "priority"
+            NotificationManager.INTERRUPTION_FILTER_ALARMS -> "alarms"
+            NotificationManager.INTERRUPTION_FILTER_NONE -> "none"
+            else -> "all"
+        }
+        val store = GuardianCaptureStore(context)
+        store.clear()
+        store.resetLearning()
+        try {
+            shell("cmd notification allow_listener $component")
+            await("Android connected the listener") { GuardianNotificationListener.state.value.connected }
+            GuardianCapture.setEnabled(context, true, includeMain = true)
+            await("Main WhatsApp was explicitly selected") { GuardianCapture.state.value.includesMain }
+            assertTrue("The new fixture sender has no contact rule", store.monitoredContacts().isEmpty())
+            assertEquals(0, store.learningCount())
+            val local = Person.Builder().setName("Phone owner").setKey("self").build()
+            val sender = Person.Builder().setName("Test sender").build()
+            val filters = listOf("all" to NotificationManager.INTERRUPTION_FILTER_ALL,
+                "priority" to NotificationManager.INTERRUPTION_FILTER_PRIORITY)
+            filters.forEachIndexed { index, (mode, filter) ->
+                val command = shell("cmd notification set_dnd $mode")
+                await("Android applied $mode DND mode. $command") {
+                    manager.currentInterruptionFilter == filter && GuardianNotificationListener.state.value.filter == filter
+                }
+                val now = System.currentTimeMillis()
+                val style = Notification.MessagingStyle(local)
+                    .addMessage("A harmless incoming fixture $index", now - 2, sender)
+                    .addMessage("An outgoing fixture", now - 1, local)
+                // Some delivered MessagingStyle notifications omit both category and a stable conversation ID.
+                val builder = Notification.Builder(context, "fixture").setStyle(style)
+                if (index > 0) builder.setCategory(Notification.CATEGORY_MESSAGE).setShortcutId("enrolled-by-app")
+                val notification = builder.build()
+                val key = "0|com.whatsapp|17|personal|10123"
+                val main = probeAccount(personal = true, serial = 0, friendsSerial = 95)
+                val friends = probeAccount(personal = false, serial = 95, friendsSerial = 95)
+                val unresolved = probeAccount(personal = false, serial = 96, friendsSerial = 95)
+                assertEquals(ProbeAccount.FRIENDS, friends)
+                assertNull(guardianMainNotificationEvent(notification, friends, GUARDIAN_WHATSAPP, true, 95, key, now))
+                assertNull(guardianMainNotificationEvent(notification, unresolved, GUARDIAN_WHATSAPP, true, 96, key, now))
+                assertNull(guardianMainNotificationEvent(notification, main, GUARDIAN_WHATSAPP, false, 0, key, now))
+                val event = checkNotNull(guardianMainNotificationEvent(notification, main, GUARDIAN_WHATSAPP, true, 0, key, now))
+                assertEquals(if (index == 0) "notification:$key" else "shortcut:enrolled-by-app", event.conversation)
+                assertEquals("A harmless incoming fixture $index", event.entries.single().text)
+                val conversation = GuardianConversationKey(event.app, event.profileSerial, event.conversation)
+                GuardianCapture.record(context, event, conversation)
+                await("The durable Inbox and Home counts show the unclassified fixture under $mode DND") {
+                    val capture = GuardianCapture.state.value
+                    capture.retained == index + 1 && capture.inbox?.pending == index + 1
+                }
+                val rows = GuardianCaptureStore(context).inboxRows(7, guardianInboxClock(context))
+                assertEquals(index + 1, rows.size)
+                assertTrue(rows.all { it.assessment == null && it.section == GuardianInboxSection.PENDING })
+                GuardianCapture.record(context, event, conversation)
+                await("A repeated delivery is recognised without adding another Inbox row") {
+                    GuardianCapture.mainCaptureStage.value == GuardianCaptureStage.DUPLICATE
+                }
+                assertEquals(index + 1, GuardianCapture.state.value.inbox?.pending)
+                assertEquals(filter, manager.currentInterruptionFilter)
+            }
+        } finally {
+            shell("cmd notification set_dnd $oldDnd")
+            shell("cmd notification disallow_listener $component")
+            await("The test listener stopped") { !GuardianCapture.isEnabled(context) }
+            store.clear()
         }
     }
 

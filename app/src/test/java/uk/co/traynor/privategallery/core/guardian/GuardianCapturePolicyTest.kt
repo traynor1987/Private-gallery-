@@ -55,4 +55,15 @@ class GuardianCapturePolicyTest {
         assertFalse(guardianMayKeepSms("Your verification code is 351 249"))
         assertFalse(guardianMayKeepSms("Use 482731 to continue"))
     }
+    @Test fun mainCaptureRecoversWithoutSilentlyExpandingConsent() {
+        val main = GuardianConversationKey(GUARDIAN_WHATSAPP, 0, "shortcut:incoming")
+        val rule = GuardianContact(main, "Sample sender")
+        assertFalse(guardianCaptureAllowed(false, main, null))
+        assertTrue(guardianCaptureAllowed(true, main, null))
+        assertTrue(guardianCaptureAllowed(false, main, rule))
+        assertFalse(guardianCaptureAllowed(true, main, rule.copy(enabled = false)))
+        assertFalse(guardianCaptureAllowed(true, main, rule.copy(retain = false)))
+        assertFalse(guardianCaptureAllowed(true, main.copy(app = "example.sms"), null))
+        assertFalse(guardianCaptureAllowed(true, main, rule.copy(key = main.copy(profile = 10))))
+    }
 }

@@ -7,7 +7,7 @@ export test_class test_package
 mkdir -p "$output"
 test_app=uk.co.traynor.privategallery.hiddenprototype
 if [[ ${ORG_GRADLE_PROJECT_novaGuardianProbe:-false} == true ]]; then
-  test_app=uk.co.traynor.privategallery.guardianprobe
+  test_app=uk.co.traynor.privategallery.capture77.guardianprobe
 fi
 capture() {
   local status=$?

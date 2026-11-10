@@ -80,3 +80,33 @@ Open **Guardian Inbox → Inbox settings → Share safe diagnostic view** to pre
 - SMS/MMS support applies to the Android default messaging app, where the listener receives permitted, individually identified MessagingStyle text. Guardian skips secret notifications and likely verification codes. It never requests SMS data or Contacts permission.
 - The timeline is notification-derived and incoming only. A held card shows the actual time it becomes eligible for deliberate authenticated review. Search and Primary Evidence Locker copying recheck the stored hold. An incident can receive an explicitly selected, classified, eligible notification as an encrypted incoming event.
 - For the real Main WhatsApp test, select the harmless sender in Monitored Contacts first. The main switch still requires explicit external fixture acceptance and separate consent. Automatic Panic, Pending Review, and the incident-driven additional hour are not implemented by this checkpoint.
+
+## Main WhatsApp capture recovery
+
+The last owner-reported working baseline is the corrected dismissal build from
+`d6fa57815775e604b23db0a9a2570b6dbe84c545`, GitHub Actions run 42886804287,
+artifact 13797727219. The owner-reported failing conversation build is
+`ed33983584e451498f20c7a566ce55365ecf8588`, run 42895039151, artifact 13800917188.
+Both are test builds; the owner did not supply a device-side APK fingerprint.
+
+The monitored-conversations change made a saved conversation rule mandatory.
+It also removed the previous notification-key fallback and rejected Main
+MessagingStyle posts without an explicit message category. Those gates run
+before deduplication, persistence or classification. Home's profile status
+previously depended on the optional compatibility probe, separately from archive capture.
+
+On the Fold, install **NovaOS Capture Recovery TEST ONLY** beside earlier installs.
+Its package is `uk.co.traynor.privategallery.capture77.guardianprobe`, so earlier
+archives remain in their own apps. Grant notification access to the new app.
+In Notification Compatibility choose **Enable encrypted capture → Capture Main WhatsApp**.
+This is an explicit Main-app scope; existing selected-only consent is never expanded
+automatically. An explicit contact exclusion takes precedence, and ambiguous
+fallback events are skipped if an exclusion could apply. Real WhatsApp dismissal
+is off. NovaOS's own test notification dismissal still uses its own package and key.
+
+Send a fresh incoming test message to Main with Samsung DND off, then a second one
+with DND on. Check the Main capture status in diagnostics, the retained count, and
+**Guardian Inbox → Awaiting analysis**. Repeat from another account into Friends
+and confirm the Main archive count does not increase. Android 17 CI uses
+MessagingStyle fixtures and the encrypted worker under both Android interruption
+filters. Real WhatsApp and Samsung listener delivery require the physical Fold check.

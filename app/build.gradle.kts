@@ -39,9 +39,9 @@ android {
     }
     getByName("debug") {
       val guardianProbe = providers.gradleProperty("novaGuardianProbe").orNull == "true"
-      applicationIdSuffix = if (guardianProbe) ".guardianprobe" else ".hiddenprototype"
+      applicationIdSuffix = if (guardianProbe) ".capture77.guardianprobe" else ".hiddenprototype"
       versionNameSuffix = "-TEST-ONLY"
-      resValue("string", "app_name", if (guardianProbe) "NovaOS Guardian TEST ONLY" else "NovaOS TEST ONLY")
+      resValue("string", "app_name", if (guardianProbe) "NovaOS Capture Recovery TEST ONLY" else "NovaOS TEST ONLY")
       buildConfigField("boolean", "HIDDEN_PROTOTYPE", "true")
       buildConfigField("boolean", "ACCEPTANCE_BROWSER_DIAGNOSTICS", "false")
     }
