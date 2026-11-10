@@ -124,7 +124,6 @@ class LauncherHomeLibraryPager73UiTest {
     @Test fun coverDragsFromTrailingLibraryOntoLastHomePage() {
         showLauncher()
         repeat(2) { pager.performTouchInput { swipeLeft() } }
-        val homeBounds = pager.fetchSemanticsNode().boundsInRoot
         pager.performTouchInput { swipeLeft() }
         library.assertIsDisplayed()
         compose.onNodeWithTag("launcher-library-search").performTextInput(apps.last().label)
@@ -138,9 +137,8 @@ class LauncherHomeLibraryPager73UiTest {
             moveBy(startDrag)
         }
         compose.onNodeWithTag("launcher-drag-preview").assertIsDisplayed()
-        compose.waitUntil(5_000) {
-            homeApp(2).isDisplayed() && pager.fetchSemanticsNode().boundsInRoot == homeBounds
-        }
+        compose.waitUntil(5_000) { homeApp(2).isDisplayed() }
+        val homeBounds = pager.fetchSemanticsNode().boundsInRoot
         val destination = Offset(homeBounds.center.x, homeBounds.top + homeBounds.height * .64f)
         pager.performTouchInput { moveBy(destination - source - startDrag) }
         compose.onNodeWithTag("launcher-drop-target").assertIsDisplayed()

@@ -42,6 +42,7 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.testTag
@@ -183,6 +184,7 @@ private fun LauncherRuntime(
     }
     val context = LocalContext.current
     val focusManager = LocalFocusManager.current
+    val keyboard = LocalSoftwareKeyboardController.current
     val identitySettings = remember(context) { LauncherIdentitySettings(context) }
     var libraryPins by remember(identitySettings) { mutableStateOf(identitySettings.libraryPins()) }
     var categoryOverrides by remember(identitySettings) { mutableStateOf(identitySettings.categoryOverrides()) }
@@ -347,6 +349,7 @@ private fun LauncherRuntime(
             },
             startDrag = {
                 if (librarySelected || surface == LauncherSurface.DRAWER || surface == LauncherSurface.LIBRARY) {
+                    keyboard?.hide()
                     focusManager.clearFocus(force = true)
                 }
                 if (librarySelected) {

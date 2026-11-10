@@ -127,7 +127,7 @@ class NovaWebScroll67Test {
                             assertTrue("Editor ($x, $y) is outside the active WebView ${first.width}x${first.height}",
                                 x in 0 until first.width && y in 0 until first.height)
                             val origin = IntArray(2)
-                            first.getLocationInWindow(origin)
+                            first.getLocationOnScreen(origin)
                             editor.set(Point(origin[0] + x, origin[1] + y))
                         }
                     }
@@ -135,8 +135,11 @@ class NovaWebScroll67Test {
             }
             compose.waitUntil(5_000) { editor.get() != null }
             val point = checkNotNull(editor.get())
-            val hostOrigin = host.fetchSemanticsNode().positionInWindow
-            host.performTouchInput { click(androidx.compose.ui.geometry.Offset(point.x.toFloat(), point.y.toFloat()) - hostOrigin) }
+            val automation = InstrumentationRegistry.getInstrumentation().uiAutomation
+            fun sendInput(command: String) {
+                ParcelFileDescriptor.AutoCloseInputStream(automation.executeShellCommand(command)).use { it.readBytes() }
+            }
+            sendInput("input tap ${point.x} ${point.y}")
             val editorFocused = AtomicReference<String>()
             compose.runOnIdle {
                 first.evaluateJavascript("document.activeElement instanceof HTMLInputElement", editorFocused::set)
@@ -146,10 +149,6 @@ class NovaWebScroll67Test {
             compose.runOnIdle {
                 val ime = first.context.getSystemService(InputMethodManager::class.java)
                 ime.showSoftInput(first, InputMethodManager.SHOW_IMPLICIT)
-            }
-            val automation = InstrumentationRegistry.getInstrumentation().uiAutomation
-            fun sendInput(command: String) {
-                ParcelFileDescriptor.AutoCloseInputStream(automation.executeShellCommand(command)).use { it.readBytes() }
             }
             val root = compose.activity.window.decorView
             compose.waitUntil(10_000) { compose.runOnIdle { root.rootWindowInsets?.isVisible(android.view.WindowInsets.Type.ime()) == true } }
