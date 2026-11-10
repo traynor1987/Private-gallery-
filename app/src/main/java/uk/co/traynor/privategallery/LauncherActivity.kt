@@ -59,7 +59,7 @@ class LauncherActivity : ComponentActivity() {
         }
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.RESUMED) {
-                showReminderWhenFocused()
+                showReminderWhenTopResumed()
                 combine(SanctuaryStore.get(applicationContext).current, SanctuaryLauncherPolicy.state()) { _, _ ->
                     sanctuaryProtectionActive()
                 }.collect { protected ->
@@ -78,13 +78,8 @@ class LauncherActivity : ComponentActivity() {
     override fun onTopResumedActivityChanged(isTopResumedActivity: Boolean) {
         super.onTopResumedActivityChanged(isTopResumedActivity)
         topResumed = isTopResumedActivity
-        if (isTopResumedActivity) showReminderWhenFocused()
+        if (isTopResumedActivity) showReminderWhenTopResumed()
         else showReminder = false
-    }
-
-    override fun onWindowFocusChanged(hasFocus: Boolean) {
-        super.onWindowFocusChanged(hasFocus)
-        if (hasFocus) showReminderWhenFocused()
     }
 
     override fun onSaveInstanceState(outState: Bundle) {
@@ -92,8 +87,10 @@ class LauncherActivity : ComponentActivity() {
         outState.putString(STATE_SELECTION, selection?.name)
     }
 
-    private fun showReminderWhenFocused() {
-        if (isFinishing || selection != null || !topResumed || !hasWindowFocus() ||
+    private fun showReminderWhenTopResumed() {
+        // The modal owns its own window. Top-resumed state identifies the foreground
+        // activity independently of focus transfers between the host and the modal.
+        if (isFinishing || selection != null || !topResumed ||
             !lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)
         ) return
         if (shouldOfferReminder()) showReminder = true
