@@ -607,8 +607,9 @@ internal fun LauncherHome(
     BackHandler(enabled = atLibrary, onBack = goBackFromLibrary)
     LaunchedEffect(dragPageRequest) {
         if (dragPageRequest != null && dragPageRequest in pages.indices) {
-            if (atLibrary) focus.clearFocus()
-            pager.scrollToPage(dragPageRequest)
+            // A search focus change can scroll the pager while the footer is being remeasured.
+            // Request the drop page in that measurement and cancel any competing scroll.
+            pager.requestScrollToPage(dragPageRequest)
         }
     }
     LaunchedEffect(pager.settledPage, atLibrary) {
