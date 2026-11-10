@@ -19,6 +19,7 @@ import java.time.ZoneId
 import org.json.JSONObject
 import org.junit.Assert.*
 import org.junit.Test
+import uk.co.traynor.privategallery.launcher.LauncherCategory
 import uk.co.traynor.privategallery.launcher.LauncherItem
 import uk.co.traynor.privategallery.launcher.LauncherLayout
 import uk.co.traynor.privategallery.launcher.NovaLauncherState
@@ -40,7 +41,7 @@ import uk.co.traynor.privategallery.core.sanctuary.SanctuaryMode
 import uk.co.traynor.privategallery.core.sanctuary.SanctuaryPreset
 import uk.co.traynor.privategallery.core.sanctuary.SanctuaryStore
 
-/** Reviewed release-control instrumentation for original-key Code 73 to Code 74 upgrade.
+/** Reviewed release-control instrumentation for original-key Code 74 to Code 75 upgrade.
  * Captured and hash-checked before frozen application checkout; never modifies baseline app.
  */
 class UpgradeFixtureTest {
@@ -51,7 +52,7 @@ class UpgradeFixtureTest {
     private val candidateCode get() = checkNotNull(arguments.getString("candidateCode")).toInt()
     private fun guard() {
         check(context.packageName == "uk.co.traynor.privategallery.hiddenprototype")
-        check(baselineCode == 73 && candidateCode == 74)
+        check(baselineCode == 74 && candidateCode == 75)
     }
     private fun hash(bytes: ByteArray) = MessageDigest.getInstance("SHA-256").digest(bytes).joinToString("") { "%02x".format(it) }
     private fun encryptedHashes(): JSONObject = JSONObject().also { result ->
@@ -324,7 +325,7 @@ class UpgradeFixtureTest {
         val storeType=evidenceType("EvidenceEncryptedStore")
         if(seed) {
             val folder=File(root,"evidence-state/evidence-179-${label.lowercase()}")
-            assertFalse("Fresh disposable Code 73 evidence fixture starts empty",folder.walkTopDown().any {it.isFile})
+            assertFalse("Fresh disposable Code 74 evidence fixture starts empty",folder.walkTopDown().any {it.isFile})
         }
         val store=storeType.getConstructor(File::class.java,ownerType,evidenceType("EvidenceEncryptedStore\$LeaseFactory"))
             .newInstance(File(root,"evidence-state"),owner,factory)
@@ -337,7 +338,7 @@ class UpgradeFixtureTest {
         val corrected="2026-10-31\nAlice: UPGRADE-EVIDENCE-$label owner-corrected transcript 14:05"
         var catalog=evidenceCall(store,"read")
         if(seed) {
-            assertEquals("Fresh Code 73 fixture catalogue starts empty",0,(evidenceCall(catalog,"evidence") as List<*>).size)
+            assertEquals("Fresh Code 74 fixture catalogue starts empty",0,(evidenceCall(catalog,"evidence") as List<*>).size)
             val dimension = if (label == "PRIMARY") 64 else 32
             val metadata=evidenceRecord("Metadata",9,item.displayName,0L,0L,item.importedAtEpochMillis,0L,dimension,dimension,
                 mapOf("provenance" to "Synthetic upgrade fixture metadata; timestamps are not screenshot facts"),false)
@@ -494,7 +495,7 @@ class UpgradeFixtureTest {
                 for(field in listOf("files","hiddenFiles")) {
                     val wanted=expected.getJSONObject(field);val actual=current.getJSONObject(field)
                     assertEquals(wanted.length(),actual.length())
-                    wanted.keys().forEach {path->assertEquals("Existing Code 73 owner-encrypted evidence survives upgrade/restart unchanged",wanted.getString(path),actual.getString(path))}
+                    wanted.keys().forEach {path->assertEquals("Existing Code 74 owner-encrypted evidence survives upgrade/restart unchanged",wanted.getString(path),actual.getString(path))}
                 }
             } else before.put("primaryEvidenceCatalogSha256",primaryHash).put("hiddenEvidenceCatalogSha256",hiddenHash).put("candidateEvidenceFiles",current)
             // Recheck every original encrypted file after additive writes, including the
@@ -753,28 +754,33 @@ class UpgradeFixtureTest {
         val store = NovaLauncherStore(context)
         val settings = LauncherItem.App("com.android.settings/.Settings")
         val browser = LauncherItem.App("com.android.chrome/.Main")
-        val saved = NovaLauncherState(
-            configured = true,
-            separateDisplays = true,
-            cover = LauncherLayout(
-                pages = listOf(listOf(settings), listOf(LauncherItem.Folder("Cover folder", listOf(settings.component, browser.component)))),
-                dock = listOf(LauncherItem.Workspace, browser),
-                favourites = setOf(settings.component),
-            ),
-            inner = LauncherLayout(
-                pages = listOf(listOf(browser, settings), listOf(browser)),
-                dock = listOf(settings, LauncherItem.Workspace),
-                favourites = setOf(browser.component),
-            ),
+        val cover = LauncherLayout(
+            pages = listOf(listOf(settings), listOf(LauncherItem.Folder("Cover folder", listOf(settings.component, browser.component)))),
+            dock = listOf(LauncherItem.Workspace, browser),
+            favourites = setOf(settings.component),
         )
+        val template = listOf(LauncherCategory.SUGGESTIONS, LauncherCategory.RECENTLY_USED,
+            LauncherCategory.RECENTLY_ADDED, LauncherCategory.NOVA_OS).map { LauncherItem.SmartFolder(it) }
+        val inner = LauncherLayout(
+            pages = listOf(listOf(browser, settings), template, listOf(browser)),
+            dock = listOf(settings, LauncherItem.Workspace),
+            favourites = setOf(browser.component),
+        )
+        val legacyInner = inner.copy(pages = inner.pages.take(2) + listOf(template) + inner.pages.drop(2))
         val homePrefs = context.getSharedPreferences("nova_android_home_v1", android.content.Context.MODE_PRIVATE)
         if (seed) {
-            assertTrue("Seed both original launcher layouts", store.save(saved))
+            val legacy = NovaLauncherState(configured = true, separateDisplays = true, cover = cover, inner = legacyInner)
+            assertTrue("Seed both original launcher layouts", store.save(legacy))
             assertTrue("Suppress optional Home reminders during the upgrade fixture",
                 homePrefs.edit().putBoolean("ask_default_home", false).commit())
         }
         assertFalse("Preserve the launcher reminder opt-out", homePrefs.getBoolean("ask_default_home", true))
-        assertEquals("Retain the original cover and unfolded launcher positions and preferences", saved, store.read())
+        val actual = store.read()
+        assertTrue(actual.configured)
+        assertTrue(actual.separateDisplays)
+        assertEquals("Preserve the original cover pages, dock and favourites", cover, actual.cover)
+        assertEquals("Preserve unfolded layout and collapse only the duplicate stock page on upgrade",
+            if (seed) legacyInner else inner, actual.inner)
     }
 
     /** Seed one authentic existing policy without starting the Guardian or granting any permissions. */
