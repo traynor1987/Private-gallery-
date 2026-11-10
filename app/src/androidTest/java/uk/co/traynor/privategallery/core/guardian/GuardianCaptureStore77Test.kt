@@ -249,4 +249,28 @@ class GuardianCaptureStore77Test {
             store.resetLearning()
         }
     }
+    @Test fun reassessingLowRiskAsUncertainEnforcesTheContactsHoldPolicy() {
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        val store = GuardianCaptureStore(context)
+        val now = guardianInboxClock(context)
+        val text = "I will arrive at the shop tomorrow"
+        store.clear()
+        store.resetLearning()
+        try {
+            assertTrue(store.teach(text, GuardianAssessment.LOW_RISK))
+            store.append(GuardianCaptureEvent(0, "shortcut:hold-regression", now.wall,
+                listOf(GuardianCaptureEntry(now.wall, "sender", text)), holdUncertain = true), 7, now.wall, clock = now)
+            val id = store.inboxRows(7, now).single().id
+            assertNotNull(store.prepareInboxReview(id, 7, now))
+            store.resetLearning()
+            assertEquals(GuardianAssessment.UNCERTAIN, store.assessInboxMessage(id, 7, now))
+            assertEquals(GuardianInboxSection.COOLING, store.inboxRows(7, now).single().section)
+            assertNull(store.prepareInboxReview(id, 7, now))
+            assertNull(store.revealInboxMessage(id, 7, now))
+            assertTrue(store.searchInbox("shop", 7, now).isEmpty())
+        } finally {
+            store.clear()
+            store.resetLearning()
+        }
+    }
 }

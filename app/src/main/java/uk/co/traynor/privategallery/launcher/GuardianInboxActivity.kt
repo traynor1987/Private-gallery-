@@ -437,12 +437,11 @@ class GuardianInboxActivity : ComponentActivity() {
                     else Column(Modifier.heightIn(max = 360.dp).verticalScroll(rememberScrollState())) {
                         Text(revealed.orEmpty())
                         TextButton(enabled = !busy, onClick = {
-                            loadArchive({ store, days, now -> store.assessInboxMessage(row.id, days, now) }) { result ->
-                                if (result == GuardianAssessment.UPSETTING) {
-                                    detail = null
-                                    revealed = null
-                                    refresh()
-                                } else if (result != null) detail = row.copy(assessment = result)
+                            loadArchive({ store, days, now -> store.assessInboxMessage(row.id, days, now) }) {
+                                detail = null
+                                revealed = null
+                                GuardianCapture.refresh(applicationContext)
+                                refresh()
                             }
                         }) { Text("Analyse on this device") }
                         row.assessment?.let { Text("Local estimate · ${it.label}", color = GuardianMuted) }
