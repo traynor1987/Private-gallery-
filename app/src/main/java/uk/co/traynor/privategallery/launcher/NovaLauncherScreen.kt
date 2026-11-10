@@ -353,8 +353,8 @@ private fun LauncherRuntime(
                     focusManager.clearFocus(force = true)
                 }
                 if (librarySelected) {
-                    selectLibrary(null)
-                    dragPageRequest = currentPage
+                    // Keep Library selection and search results until the pager actually reaches Home.
+                    dragPageRequest = if (libraryEntry == LauncherLibraryEntry.PAGER) layout.pages.lastIndex else currentPage
                 }
                 if (surface == LauncherSurface.DRAWER || surface == LauncherSurface.LIBRARY) {
                     homeFolder = null
