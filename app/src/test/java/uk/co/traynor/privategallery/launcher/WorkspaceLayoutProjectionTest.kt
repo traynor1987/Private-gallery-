@@ -56,6 +56,29 @@ class WorkspaceLayoutProjectionTest {
         assertEquals(listOf("evidence", "store"), profile.pages.single())
     }
 
+    @Test fun repeatedCopiesReplaceGeneratedFoldersAndKeepOwnerFolders() {
+        val owner = AppFolder("folder:owner", "Owner tools", listOf("store", "arcade"))
+        val original = Profile(pages = listOf(listOf(owner.id)), folders = listOf(owner))
+        val publicFolder = LauncherItem.Folder("Shared tools", listOf(store, arcade))
+        val state = NovaLauncherState(cover = LauncherLayout(pages = listOf(listOf(publicFolder))))
+        val first = original.withLauncherProjection(state, applicationId, wide = false)
+        val second = first.withLauncherProjection(state, applicationId, wide = false)
+        assertEquals(first, second)
+        assertEquals(2, second.folders.size)
+        assertTrue(owner.id in second.pages.single())
+
+        val generated = second.folders.single { it.id != owner.id }
+        val customized = generated.copy(name = "My renamed tools")
+        val edited = second.copy(folders = listOf(owner, customized))
+        val afterEdit = edited.withLauncherProjection(state, applicationId, wide = false)
+        assertTrue(customized in afterEdit.folders)
+        assertTrue(customized.id in afterEdit.pages.single())
+
+        val cleared = second.withLauncherProjection(NovaLauncherState(), applicationId, wide = false)
+        assertEquals(listOf(owner), cleared.folders)
+        assertEquals(listOf(owner.id), cleared.pages.single())
+    }
+
     @Test fun primarySourceKeepsLauncherOnlyAppsAndProfileIdentities() {
         val android = LauncherItem.App("com.whatsapp/.Main#155")
         val smart = LauncherItem.SmartFolder(LauncherCategory.SUGGESTIONS)

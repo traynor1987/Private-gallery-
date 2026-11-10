@@ -158,10 +158,20 @@ private val lightColors=lightColorScheme(primary=Color(0xFF285F65),secondary=Col
      }
      id.startsWith("mind:")->{mindPage=id.removePrefix("mind:");mindLaunch++;screen="mind"}
      id.startsWith("store:")->{screen="store";detailId=id.removePrefix("store:")}
-     id.startsWith("widget:")->{val slot=widgets.slots(state.current).firstOrNull{it.id==id.removePrefix("widget:")};if(slot!=null){scope.launch{pager.scrollToPage(slot.page.coerceIn(0,profile.pages.lastIndex))};selectedWidget=slot.id};screen="home"}
+     id.startsWith("widget:")->{
+      val slot=widgets.slots(state.current).firstOrNull{it.id==id.removePrefix("widget:")}
+      if(slot!=null){
+       scope.launch{homePager.scrollToPage(slot.page.coerceIn(0,displayProfile.pages.lastIndex))}
+       selectedWidget=slot.id
+      }
+      screen="home"
+     }
      else->when(id){
      "chat"->{screen="chat"}
-     "widgets"->{widgetPage=currentPage;screen="widgets"}
+     "widgets"->{
+      widgetPage=homePager.currentPage.coerceIn(0,minOf(displayProfile.pages.lastIndex,profile.pages.lastIndex))
+      screen="widgets"
+     }
      "search"->{screen=id}
      "video"->{onNative("photos")}
      "backup"->{screen="backup"}
@@ -497,7 +507,7 @@ private val lightColors=lightColorScheme(primary=Color(0xFF285F65),secondary=Col
       BoxWithConstraints(modifier){
        val pageHeight=maxHeight;val scroll=rememberScrollState()
        Column(Modifier.fillMaxSize().verticalScroll(scroll).heightIn(min=pageHeight).combinedClickable(onClick={},onLongClick=onEdit).padding(horizontal=20.dp)){
-        HomeWidgets(data,widgets,pool,audio,video,page,if(compactHeight)160.dp else 340.dp,onLaunch,onResume,onWidgetEdit,onPage={destination->scope.launch{pager.scrollToPage(destination)}})
+        HomeWidgets(data,widgets,pool,audio,video,page,if(compactHeight)160.dp else 340.dp,onLaunch,onResume,onWidgetEdit,onPage={destination->scope.launch{pager.scrollToPage(destination.coerceIn(0,profile.pages.lastIndex))}})
         if(profile.pages[page].isNotEmpty())AdaptiveAppGrid(data,profile.pages[page],onLaunch,onSelect,Modifier.fillMaxWidth(),onHome=true,displayProfile=profile)
         Box(Modifier.weight(1f).heightIn(min=64.dp).fillMaxWidth().testTag("home-empty-gesture").emptyHomeSwipe({!scroll.canScrollBackward&&!scroll.canScrollForward},onQuick,onDrawer).combinedClickable(onClick={},onLongClick=onEdit),contentAlignment=Alignment.Center){if(profile.pages[page].isEmpty())Text("Room for your next idea\nLong-press to edit Home",textAlign=TextAlign.Center,color=Color.White.copy(alpha=.65f))}
        }

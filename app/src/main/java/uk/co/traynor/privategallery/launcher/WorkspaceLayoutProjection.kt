@@ -1,5 +1,8 @@
 package uk.co.traynor.privategallery.launcher
 
+import java.security.MessageDigest
+import java.util.HexFormat
+
 import uk.co.traynor.privategallery.home2.AppFolder
 import uk.co.traynor.privategallery.home2.Profile
 
@@ -103,10 +106,11 @@ internal fun Profile.withLauncherProjection(
 ): Profile {
     val public = routeByComponent(applicationId)
     val layout = state.layout(wide)
-    val originalFolders = folders.associateBy(AppFolder::id)
+    val generatedIds = folders.filter(AppFolder::isLauncherProjection).mapTo(mutableSetOf(), AppFolder::id)
+    val ownedFolders = folders.filterNot { it.id in generatedIds }
+    val ownedFolderIds = ownedFolders.mapTo(mutableSetOf(), AppFolder::id)
     val projectedFolders = mutableListOf<AppFolder>()
-    fun shared(id: String): Boolean = id in routes ||
-        originalFolders[id]?.apps?.let { it.isNotEmpty() && it.all(routes::containsKey) } == true
+    fun shared(id: String): Boolean = id in routes || id in generatedIds
     val pageCount = maxOf(pages.size, layout.pages.size, lastWidgetPage + 1).coerceIn(1, 8)
     val mergedPages = List(pageCount) { page ->
         val projected = layout.pages.getOrElse(page) { emptyList() }.mapIndexedNotNull { index, item ->
@@ -115,10 +119,12 @@ internal fun Profile.withLauncherProjection(
                 is LauncherItem.Folder -> {
                     val members = item.apps.mapNotNull(public::get).distinct()
                     if (members.size < 2 || members.size != item.apps.size ||
-                        folders.size + projectedFolders.size >= 64) null else {
-                        val key = "folder:shared-launcher-${page + 1}-${index + 1}"
-                        val id = generateSequence(key) { "$it-" }.first { !originalFolders.containsKey(it) }
-                        projectedFolders.add(AppFolder(id, item.name.take(32), members))
+                        ownedFolders.size + projectedFolders.size >= 64) null else {
+                        val name = item.name.take(32)
+                        val key = "folder:shared-launcher-${page + 1}-${index + 1}-${folderFingerprint(name, members)}"
+                        val id = if (key !in ownedFolderIds) key else generateSequence(1) { it + 1 }
+                            .map { "$key-$it" }.first { it !in ownedFolderIds }
+                        projectedFolders.add(AppFolder(id, name, members))
                         id
                     }
                 }
@@ -138,10 +144,13 @@ internal fun Profile.withLauncherProjection(
         LauncherWallpaper.PLUM -> "Dusk"
         LauncherWallpaper.DEVICE -> wallpaper.builtin
     }
+    val keptProjections = projectedFolders.filter { folder -> mergedPages.any { folder.id in it } }
+    val newIds = keptProjections.mapTo(mutableSetOf(), AppFolder::id)
     return copy(
         pages = mergedPages,
         dock = mergedDock,
-        folders = folders + projectedFolders.filter { folder -> mergedPages.any { folder.id in it } },
+        folders = ownedFolders + keptProjections,
+        drawerOrder = drawerOrder.filter { it !in generatedIds || it in newIds },
         wallpaper = if (wallpaper.image == null) wallpaper.copy(builtin = builtin) else wallpaper,
         columns = state.appearance.grid.columns(wide).coerceIn(3, 6),
         iconSize = when (state.appearance.iconSize) {
@@ -150,6 +159,19 @@ internal fun Profile.withLauncherProjection(
             LauncherIconSize.LARGE -> 72
         },
     )
+}
+
+private val projectionFolderId = Regex("folder:shared-launcher-[1-9][0-9]*-[1-9][0-9]*-([a-f0-9]{16})(?:-[1-9][0-9]*)?")
+
+/** A Primary rename or membership edit gives the folder local ownership. */
+private fun AppFolder.isLauncherProjection(): Boolean {
+    val recorded = projectionFolderId.matchEntire(id)?.groupValues?.get(1) ?: return false
+    return recorded == folderFingerprint(name, apps)
+}
+
+private fun folderFingerprint(name: String, members: List<String>): String {
+    val digest = MessageDigest.getInstance("SHA-256").digest((listOf(name) + members).joinToString("\u0000").encodeToByteArray())
+    return HexFormat.of().formatHex(digest, 0, 8)
 }
 
 /** Shared items take available positions. Workspace-only items keep their order and capacity. */

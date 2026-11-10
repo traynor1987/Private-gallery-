@@ -1,6 +1,12 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# Collect all focused results in one run, but still fail if any case failed.
+focused_status=0
+if [[ ${1:-} == --focused ]]; then
+    trap 'focused_status=1' ERR
+    set +e
+fi
 bash scripts/run_visual_checkpoint.sh LauncherDefaultHomeEntry73Test launcher-default-entry-73 uk.co.traynor.privategallery.launcher
 bash scripts/run_visual_checkpoint.sh NovaLauncherPlatform70Test launcher-platform-70 uk.co.traynor.privategallery.launcher
 bash scripts/run_visual_checkpoint.sh SanctuaryLauncherPolicy70Test sanctuary-launcher-policy-70 uk.co.traynor.privategallery.core.sanctuary
@@ -10,7 +16,7 @@ bash scripts/run_visual_checkpoint.sh LauncherLayoutStore70Test launcher-storage
 bash scripts/run_visual_checkpoint.sh LauncherWorkspace70Test launcher-workspace-70 uk.co.traynor.privategallery
 bash scripts/run_visual_checkpoint.sh WorkspaceLayoutStore74Test launcher-workspace-layout-74 uk.co.traynor.privategallery.launcher
 bash scripts/run_visual_checkpoint.sh NovaWebScroll67Test navigation-web uk.co.traynor.privategallery.ui
-if [[ ${1:-} == --focused ]]; then exit 0; fi
+if [[ ${1:-} == --focused ]]; then exit "$focused_status"; fi
 
 bash scripts/run_visual_checkpoint.sh LauncherSmartFolderStore73Test launcher-smart-folders-73 uk.co.traynor.privategallery.launcher
 bash scripts/run_visual_checkpoint.sh LauncherSmartFolderEditor73Test launcher-smart-editor-73 uk.co.traynor.privategallery.launcher

@@ -162,9 +162,14 @@ class NovaLauncherPlatform70Test {
         val original = launchStore.read()
         val keys = PinVaultKeyStore(context)
         val exitPreferences = context.getSharedPreferences("nova-launcher-exit", Context.MODE_PRIVATE)
-        val settingsPackage = checkNotNull(
-            context.packageManager.resolveActivity(Intent(Settings.ACTION_SETTINGS), 0)?.activityInfo?.packageName,
-        )
+        // Android can route Home settings through its permission controller.
+        val systemFlags = PackageManager.MATCH_DEFAULT_ONLY or PackageManager.MATCH_SYSTEM_ONLY
+        val settingsDestinations = listOf(Settings.ACTION_HOME_SETTINGS, Settings.ACTION_SETTINGS)
+            .mapNotNull { action ->
+                val resolved = shell("cmd package resolve-activity --brief --user current --query-flags $systemFlags -a $action")
+                ComponentName.unflattenFromString(resolved.lineSequence().last().trim())
+            }.toSet()
+        assertTrue("Android must provide a system Home settings destination", settingsDestinations.isNotEmpty())
         assertEquals(null, sanctuary.refresh())
         assertFalse("The isolated launcher test requires a clean Primary PIN fixture", keys.isConfigured)
         assertTrue("The isolated launcher test requires clean exit protection preferences", exitPreferences.all.isEmpty())
@@ -199,7 +204,13 @@ class NovaLauncherPlatform70Test {
                 }
                 hold.performTouchInput { up() }
                 try {
-                    await { instrumentation.uiAutomation.rootInActiveWindow?.packageName?.toString() == settingsPackage }
+                    await {
+                        shell("dumpsys activity activities").lineSequence()
+                            .filter { "topResumedActivity" in it }
+                            .flatMap { it.splitToSequence(' ') }
+                            .mapNotNull(ComponentName::unflattenFromString)
+                            .any { it in settingsDestinations }
+                    }
                 } finally {
                     shell("input keyevent ${KeyEvent.KEYCODE_BACK}")
                 }

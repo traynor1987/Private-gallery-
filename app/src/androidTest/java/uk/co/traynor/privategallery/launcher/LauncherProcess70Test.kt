@@ -27,13 +27,29 @@ class LauncherProcess70Test {
         appearance = LauncherAppearance(wallpaper = LauncherWallpaper.MIDNIGHT, grid = LauncherGrid.COMPACT),
     )
 
+    private val savedSeparate = expected.copy(
+        cover = expected.cover.copy(pages = expected.cover.pages.reversed()),
+        inner = expected.inner.copy(pages = expected.inner.pages.reversed()),
+        appearance = expected.appearance.copy(wallpaper = LauncherWallpaper.PLUM),
+    )
+
     @Test fun seedConfiguredLauncher() {
         val store = NovaLauncherStore(context)
+        val workspace = WorkspaceLayoutStore(context)
+        assertEquals(WorkspaceLayoutMode.SEPARATE, workspace.read().mode)
+        assertTrue(store.save(savedSeparate))
+        assertTrue(workspace.useLauncher())
         assertTrue(store.save(expected))
         assertEquals(expected, store.read())
     }
 
     @Test fun verifyConfiguredLauncherAfterProcessDeath() {
-        assertEquals(expected, NovaLauncherStore(context).read())
+        val store = NovaLauncherStore(context)
+        val workspace = WorkspaceLayoutStore(context)
+        assertEquals(expected, store.read())
+        assertEquals(WorkspaceLayoutMode.MIRROR, workspace.read().mode)
+        assertTrue(workspace.restorePrevious())
+        assertEquals(savedSeparate, store.read())
+        assertEquals(WorkspaceLayoutMode.SEPARATE, workspace.read().mode)
     }
 }
