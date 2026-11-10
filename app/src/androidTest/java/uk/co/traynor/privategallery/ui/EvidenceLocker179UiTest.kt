@@ -1,12 +1,15 @@
 package uk.co.traynor.privategallery.ui
 
+import android.accessibilityservice.AccessibilityServiceInfo
 import android.content.Context
 import android.content.ContextWrapper
+import android.view.accessibility.AccessibilityWindowInfo
 import androidx.activity.ComponentActivity
 import androidx.compose.runtime.*
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.test.*
 import androidx.compose.ui.unit.dp
+import androidx.test.platform.app.InstrumentationRegistry
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import kotlinx.coroutines.*
 import org.junit.Assert.*
@@ -75,20 +78,25 @@ class EvidenceLocker179UiTest {
    click("Add evidence");compose.evidenceNode(hasContentDescription("Register original beta179.txt")).assertIsDisplayed().assertHeightIsAtLeast(48.dp).performClick().assertIsOn();approveImportReview();waitReady(controller,2)
    compose.onNodeWithText("Timeline").performClick();click("New incident")
    val incidentTitle = "Synthetic incident179"
-   field("Title").performTouchInput { click() }
-   compose.waitUntil(10000) {
-    compose.runOnIdle {
-     compose.activity.window.decorView.rootWindowInsets?.isVisible(android.view.WindowInsets.Type.ime()) == true
-    }
+   val automation = InstrumentationRegistry.getInstrumentation().uiAutomation
+   val previousFlags = automation.serviceInfo.flags
+   automation.serviceInfo = automation.serviceInfo.apply {
+    flags = previousFlags or AccessibilityServiceInfo.FLAG_RETRIEVE_INTERACTIVE_WINDOWS
    }
-   field("Title").performTextReplacement(incidentTitle)
-   field("Title").assertTextContains(incidentTitle)
-   androidx.test.espresso.Espresso.closeSoftKeyboard()
-   compose.waitUntil(10000) {
-    compose.runOnIdle {
-     val decor = compose.activity.window.decorView
-     decor.hasWindowFocus() && decor.rootWindowInsets?.isVisible(android.view.WindowInsets.Type.ime()) == false
+   try {
+    field("Title").performTouchInput { click() }.assertIsFocused()
+    compose.waitUntil(10000) {
+     automation.windows.any { it.type == AccessibilityWindowInfo.TYPE_INPUT_METHOD }
     }
+    field("Title").performTextReplacement(incidentTitle)
+    field("Title").assertTextContains(incidentTitle)
+    androidx.test.espresso.Espresso.closeSoftKeyboard()
+    compose.waitUntil(10000) {
+     automation.windows.none { it.type == AccessibilityWindowInfo.TYPE_INPUT_METHOD } &&
+      compose.runOnIdle { compose.activity.window.decorView.hasWindowFocus() }
+    }
+   } finally {
+    automation.serviceInfo = automation.serviceInfo.apply { flags = previousFlags }
    }
    field("Title").assertTextContains(incidentTitle)
    compose.onNode(hasText("Save") and hasClickAction()).assertIsDisplayed().performTouchInput { click() }
