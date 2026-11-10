@@ -15,7 +15,7 @@ import zipfile
 
 ROOT=Path(__file__).resolve().parents[1]
 BRANCH='feature/novaos-sanctuary-integration'
-BASELINE='90e84e9e477a551c9f8985daca230bbf543059a0'
+BASELINE='dc4f0b19be8391b899364fb62d890ad322350e2e'
 CONTROLS=('compile_upgrade1711_fixture.sh','verify_compiled_upgrade1711.py',
           'verify_upgrade1711_baseline.py','verify_production_candidate1711.sh',
           'verify_synthetic_upgrade1711.sh','verify_signed_upgrade1711.py',
@@ -77,6 +77,12 @@ def runtime_cases(archive,matrix,source):
                 'evidence-locker-68':2,'evidence-sanctuary-68':2,
                 'evidence-legacy-locker':7,'evidence-legacy-ai':1,'evidence-legacy-reports':2}
         exact = {
+            'launcher-workspace-layout-74': [
+                ('uk.co.traynor.privategallery.launcher.WorkspaceLayoutStore74Test',
+                 'primaryProjectionRequiresCurrentRequestAndCopyIsDurable'),
+                ('uk.co.traynor.privategallery.launcher.WorkspaceLayoutStore74Test',
+                 'reopeningKeepsMirrorSnapshotAndRestoresBothLauncherDisplays'),
+            ],
             'launcher-smart-presentation-73': [
                 ('uk.co.traynor.privategallery.launcher.LauncherSmartFolderPresentation73UiTest',
                  'expandedFoldersUseTwoColumnsAndUpdateLiveWithoutChangingSlots'),
@@ -97,13 +103,19 @@ def runtime_cases(archive,matrix,source):
                 ('uk.co.traynor.privategallery.launcher.LauncherHomeLibraryPager73UiTest',
                  'coverDragsFromTrailingLibraryOntoLastHomePage'),
                 ('uk.co.traynor.privategallery.launcher.LauncherHomeLibraryPager73UiTest',
+                 'coverDrawerReturnRevealsDockOverMultipleFrames'),
+                ('uk.co.traynor.privategallery.launcher.LauncherHomeLibraryPager73UiTest',
                  'coverDrawerShortcutOpensPagerLibraryAndBackReturnsToDrawer'),
                 ('uk.co.traynor.privategallery.launcher.LauncherHomeLibraryPager73UiTest',
                  'coverHomeVerticalGesturesStillOpenDrawerAndWorkspace'),
                 ('uk.co.traynor.privategallery.launcher.LauncherHomeLibraryPager73UiTest',
+                 'coverLibraryHonorsSavedDockVisibilityWithoutShowingItInDrawer'),
+                ('uk.co.traynor.privategallery.launcher.LauncherHomeLibraryPager73UiTest',
                  'coverSanctuaryHidesOnlyRestrictedProfileAndRestoresItsSlots'),
                 ('uk.co.traynor.privategallery.launcher.LauncherHomeLibraryPager73UiTest',
                  'coverSwipesAcrossEveryHomePageBeforeLibraryAndBack'),
+                ('uk.co.traynor.privategallery.launcher.LauncherHomeLibraryPager73UiTest',
+                 'foldNativeArtworkScalesAcrossAllSizesAndKeepsAppLaunchWorking'),
                 ('uk.co.traynor.privategallery.launcher.LauncherHomeLibraryPager73UiTest',
                  'foldSwipesBetweenItsLastHomePageAndLibrary'),
             ],
@@ -141,6 +153,8 @@ def runtime_cases(archive,matrix,source):
                 ('uk.co.traynor.privategallery.launcher.LauncherLibrary73UiTest',
                  'coverShowsPinsAndTrackingStatusWhenRecentsAreOff'),
                 ('uk.co.traynor.privategallery.launcher.LauncherLibrary73UiTest',
+                 'iconArtworkPreservesIntrinsicAspectAndNativeAdaptiveMask'),
+                ('uk.co.traynor.privategallery.launcher.LauncherLibrary73UiTest',
                  'innerUsesAtLeastThreeColumns'),
             ],
             'launcher-gestures-72': [
@@ -177,6 +191,8 @@ def runtime_cases(archive,matrix,source):
                 ('uk.co.traynor.privategallery.launcher.NovaLauncherPlatform70Test',
                  'launcherIgnoresForeignIntentDataAndRecreatesInItsOwnTask'),
                 ('uk.co.traynor.privategallery.launcher.NovaLauncherPlatform70Test',
+                 'sanctuaryHomeSettingsRequiresPinPhraseAndUninterruptedHold'),
+                ('uk.co.traynor.privategallery.launcher.NovaLauncherPlatform70Test',
                  'unresolvedProfileKeyDoesNotOpenThePersonalCopy'),
             ],
             'launcher-sanctuary-controls-70': [
@@ -192,6 +208,8 @@ def runtime_cases(archive,matrix,source):
                  'categoryOverridesRetainAppProfileIdentityAcrossStoreReopens'),
                 ('uk.co.traynor.privategallery.launcher.LauncherLayoutStore70Test',
                  'cleanupUndoAndWidgetPlacementSurviveRestartWithLegacyWidgetCompatibility'),
+                ('uk.co.traynor.privategallery.launcher.LauncherLayoutStore70Test',
+                 'iconStyleMigratesAndSurvivesStoreReopenWithoutChangingLayouts'),
                 ('uk.co.traynor.privategallery.launcher.LauncherLayoutStore70Test',
                  'layoutAndAppearanceSurviveAStoreReopen'),
                 ('uk.co.traynor.privategallery.launcher.LauncherLayoutStore70Test',
@@ -227,6 +245,8 @@ def runtime_cases(archive,matrix,source):
             ],
             'launcher-workspace-70': [
                 ('uk.co.traynor.privategallery.LauncherWorkspace70Test',
+                 'directPrimaryVaultHidesOnlyInternalNavigationUntilReturningHome'),
+                ('uk.co.traynor.privategallery.LauncherWorkspace70Test',
                  'openWorkspaceIntentRevokesRetainedPrimaryAndHiddenAuthority'),
                 ('uk.co.traynor.privategallery.LauncherWorkspace70Test',
                  'primaryGalleryHasNoExportedWorkspaceActivity'),
@@ -240,6 +260,8 @@ def runtime_cases(archive,matrix,source):
                  'approvalAndRevocationChangeLauncherAndGuardianTogether'),
                 ('uk.co.traynor.privategallery.core.sanctuary.SanctuaryLauncherPolicy70Test',
                  'deviceCredentialAuthorisesOnlyTheWorkspacePause'),
+                ('uk.co.traynor.privategallery.core.sanctuary.SanctuaryLauncherPolicy70Test',
+                 'panicAppliesItsAllowlistAndVisibilityWithoutReplacingSavedPolicy'),
                 ('uk.co.traynor.privategallery.core.sanctuary.SanctuaryLauncherPolicy70Test',
                  'persistentShieldBlocksExternalAppAndClearsOnNovaLauncherHome'),
             ],
@@ -307,7 +329,7 @@ def runtime_cases(archive,matrix,source):
 
 def validate(marker,review,run,jobs,artifact,archive,matrix_raw,current_controls,fixture):
     source=marker.get('source');require(source_ok(source),'Unfrozen candidate source')
-    require(marker.get('baseline_source')==BASELINE and marker.get('baseline_code')==74 and marker.get('candidate_code')==75,'Wrong upgrade identity')
+    require(marker.get('baseline_source')==BASELINE and marker.get('baseline_code')==75 and marker.get('candidate_code')==76,'Wrong upgrade identity')
     require(marker.get('controls_sha256')==current_controls,'Release controls changed after review')
     require(marker.get('review_sha256')==sha(review),'Independent review changed')
     require(marker.get('fixture_sha256')==sha(fixture),'Upgrade fixture changed')
@@ -333,13 +355,13 @@ def validate(marker,review,run,jobs,artifact,archive,matrix_raw,current_controls
     require(REQUIRED_STEPS<=passed,'Required runtime/build/identity step did not run')
     count=runtime_cases(archive,json.loads(matrix_raw),source)
     return dict(schema=1,decision='READY_FOR_GATED_SIGNER',source=source,baseline_source=BASELINE,
-                baseline_code=74,candidate_code=75,test_run=marker['test_run'],test_artifact=marker['test_artifact'],review_sha256=sha(review),
+                baseline_code=75,candidate_code=76,test_run=marker['test_run'],test_artifact=marker['test_artifact'],review_sha256=sha(review),
                 fixture_sha256=sha(fixture),controls_sha256=current_controls,matrix_sha256=sha(matrix_raw),
                 runtime_archive_sha256=marker['runtime_archive_sha256'],validated_case_count=count,validated_restart_count=8,validated_launcher_restart_count=1)
 
 def check_receipt(proof,source,current_controls,fixture):
     require(source_ok(source) and proof.get('schema')==1 and proof.get('decision')=='READY_FOR_GATED_SIGNER','Missing reviewed signer gate')
-    require(proof.get('source')==source and proof.get('baseline_source')==BASELINE and proof.get('baseline_code')==74 and proof.get('candidate_code')==75,'Signer gate source/identity differs')
+    require(proof.get('source')==source and proof.get('baseline_source')==BASELINE and proof.get('baseline_code')==75 and proof.get('candidate_code')==76,'Signer gate source/identity differs')
     require(proof.get('controls_sha256')==current_controls and proof.get('fixture_sha256')==sha(fixture),'Signer gate controls/fixture differ')
     require(type(proof.get('test_run')) is int and proof['test_run']>0 and type(proof.get('validated_case_count')) is int and proof['validated_case_count']>0,'Missing original runtime accounting')
     require(proof.get('validated_restart_count')==8,'Missing actual restart phase accounting')

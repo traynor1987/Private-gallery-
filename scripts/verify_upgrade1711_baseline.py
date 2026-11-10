@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Extract pinned distributed 1.7.38.1 Code 74; never rebuild/substitute an application baseline."""
+"""Extract pinned distributed 1.7.38.2 Code 75; never rebuild/substitute an application baseline."""
 import hashlib
 import io
 import json
@@ -7,19 +7,19 @@ from pathlib import Path
 import sys
 import zipfile
 
-ARCHIVE_SHA256 = '74263fde9ea16a4534ae3812416ccc806930ee75a04770fff4c6bba04f76fae3'
-ARCHIVE_BYTES = 62050324
-APK_SHA256 = '790da979638cb3fe2bfc7fa0e7c5864eba719ef1a7f97387b154098c876428c4'
-APK_BYTES = 148599328
-ARTIFACT_ID = 13703329743
-RUN_ID = 42681892764
-JOB_ID = 129378324094
-ACTIVATION_SHA = '6e65172ee448eb2299c58c2d90f6e7178eb65f6b'
-APK_NAME = 'NovaOS-1.7.38.1-code74-owner-review.apk'
-SOURCE_SHA = '90e84e9e477a551c9f8985daca230bbf543059a0'
-EVIDENCE_NAME = 'NovaOS-1.7.38.1-code74-evidence.zip'
-EVIDENCE_BYTES = 104960
-EVIDENCE_SHA256 = 'd0e6f3d03bf750f779eb1e5425aafd1da320e033c8af20b67c42ba7a4f207e84'
+ARCHIVE_SHA256 = 'de0e60171b37fe7376dd17aa8a97766e37419214486cf663e6dadcea4b341d85'
+ARCHIVE_BYTES = 62111887
+APK_SHA256 = '46ac04ff785c4c64a47b7e0c0456d3346598c36b9e093f33fa135ef4d5c70744'
+APK_BYTES = 148746784
+ARTIFACT_ID = 13724654625
+RUN_ID = 42731111514
+JOB_ID = 129549066650
+ACTIVATION_SHA = '7ae6265fc458222abe00706f2489a9e1859e6f66'
+APK_NAME = 'NovaOS-1.7.38.2-code75-owner-review.apk'
+SOURCE_SHA = 'dc4f0b19be8391b899364fb62d890ad322350e2e'
+EVIDENCE_NAME = 'NovaOS-1.7.38.2-code75-evidence.zip'
+EVIDENCE_BYTES = 104948
+EVIDENCE_SHA256 = 'baf9884ac96dbdbf8b5df899eb5f14b3d7dd568b04f21a3edfb5424d2c61f292'
 CERTIFICATE_SHA256 = '94f2bfc6567f26d067d29077111cfd0ce86d38263c642ad115e43365f05b0d17'
 
 
@@ -47,10 +47,10 @@ def validated_apk(archive):
         require(len(names) == len(set(names)), 'Duplicate evidence members')
         require('release-summary.json' in names, 'Missing original release-summary receipt')
         summary = json.loads(zipped.read('release-summary.json'))
-        expected = dict(source_sha=SOURCE_SHA, version='1.7.38.1', version_code=74,
+        expected = dict(source_sha=SOURCE_SHA, version='1.7.38.2', version_code=75,
                         package='uk.co.traynor.privategallery', apk_sha256=APK_SHA256,
                         original_certificate_sha256=CERTIFICATE_SHA256,
-                        original_key_code73_upgrade='PASS', restart='PASS')
+                        original_key_code74_upgrade='PASS', restart='PASS')
         require(all(summary.get(key) == value for key, value in expected.items()), 'Historical application source/version/certificate provenance differs')
     return apk
 
@@ -60,4 +60,4 @@ if __name__ == '__main__':
     destination = Path(sys.argv[2])
     with destination.open('xb') as output:
         output.write(apk)
-    print('PASS: exact archived original signed 1.7.38.1 Code 74 APK and nested original release-summary provenance')
+    print('PASS: exact archived original signed 1.7.38.2 Code 75 APK and nested original release-summary provenance')

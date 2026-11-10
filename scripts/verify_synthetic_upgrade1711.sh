@@ -5,10 +5,10 @@ set -euo pipefail
 control_root=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 cd "${PRIVATE_GALLERY_1711_ROOT:-$control_root/..}"
 source "$control_root/release_configuration1711.sh"
-[[ "$baseline_code" == 74 && "$release_code" == 75 && "$baseline_sha" == 90e84e9e477a551c9f8985daca230bbf543059a0 ]]
-archived_baseline="${PRIVATE_GALLERY_1711_BASELINE_APK:?Exact archived signed 1.7.38.1 Code 74 APK required}"
+[[ "$baseline_code" == 75 && "$release_code" == 76 && "$baseline_sha" == dc4f0b19be8391b899364fb62d890ad322350e2e ]]
+archived_baseline="${PRIVATE_GALLERY_1711_BASELINE_APK:?Exact archived signed 1.7.38.2 Code 75 APK required}"
 [[ -f "$archived_baseline" && -s "$archived_baseline" ]] || { echo 'Archived baseline APK unavailable' >&2; exit 1; }
-[[ "$(sha256sum "$archived_baseline" | cut -d ' ' -f 1)" == 790da979638cb3fe2bfc7fa0e7c5864eba719ef1a7f97387b154098c876428c4 ]] || { echo 'Archived baseline APK hash mismatch' >&2; exit 1; }
+[[ "$(sha256sum "$archived_baseline" | cut -d ' ' -f 1)" == 46ac04ff785c4c64a47b7e0c0456d3346598c36b9e093f33fa135ef4d5c70744 ]] || { echo 'Archived baseline APK hash mismatch' >&2; exit 1; }
 readonly archived_baseline
 [[ "$(git rev-parse HEAD)" == "${FROZEN_SOURCE:?Exact tested source required}" ]]
 python3 "$control_root/verify_release1711_gate.py" --receipt "${PRIVATE_GALLERY_1711_GATE_RECEIPT:?Exact-source reviewed pre-signer gate required}" --source "$FROZEN_SOURCE"
@@ -25,7 +25,7 @@ if grep -Fxq "package:$fixture_package" <<< "$installed_packages"; then
   exit 1
 fi
 project_root=$(pwd)
-artifact_dir="${PRIVATE_GALLERY_1711_EVIDENCE_DIR:-$project_root/app/build/production-evidence/from74}"
+artifact_dir="${PRIVATE_GALLERY_1711_EVIDENCE_DIR:-$project_root/app/build/production-evidence/from75}"
 [[ ! -e "$artifact_dir" ]] || { echo "Fresh upgrade evidence directory required" >&2; exit 1; }
 mkdir -p "$artifact_dir"
 sdk="$ANDROID_HOME/build-tools/36.0.0"
@@ -89,4 +89,4 @@ adb install -r "$candidate_apk"
 run_fixture verify verify
 adb shell am force-stop "$fixture_package"
 run_fixture verify after-restart
-printf '%s\n' 'PASS: original signed code74 -> code75 in-place upgrade/restart; legacy encrypted data, owner-encrypted evidence, connected collections, chronology corrections, evidence AI credentials, Sanctuary policy, both launcher layouts and Android Home default preserved' > "$artifact_dir/upgrade-result.txt"
+printf '%s\n' 'PASS: original signed code75 -> code76 in-place upgrade/restart; legacy encrypted data, owner-encrypted evidence, connected collections, chronology corrections, evidence AI credentials, Sanctuary policy, both launcher layouts and Android Home default preserved' > "$artifact_dir/upgrade-result.txt"
