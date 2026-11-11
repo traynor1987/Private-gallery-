@@ -55,12 +55,13 @@ internal fun guardianInboxClock(context: Context) = GuardianInboxClock(
 )
 
 /** Private, bounded archive. The capture phase exposes aggregate counts only. */
-internal class GuardianCaptureStore private constructor(private val context: Context, private val training: Boolean, private val fixture: Boolean = false, private val contacts: Boolean = false, private val validation: Boolean = false) {
+internal class GuardianCaptureStore private constructor(private val context: Context, private val training: Boolean, private val fixture: Boolean = false, private val contacts: Boolean = false, private val validation: Boolean = false, private val phoneShield: Boolean = false) {
     constructor(context: Context) : this(context.applicationContext, false)
 
-    private val destination = File(context.noBackupFilesDir, when { validation -> "nova-brain-validation-v1.enc"; contacts -> "guardian-contacts-v1.enc"; fixture -> "guardian-fixture-v1.enc"; training -> "guardian-learning-v1.enc"; else -> ARCHIVE_NAME })
-    private val alias = when { validation -> "nova-brain-validation-v1"; contacts -> "nova-guardian-contacts-v1"; fixture -> "nova-guardian-fixture-v1"; training -> "nova-guardian-learning-v1"; else -> KEY_ALIAS }
+    private val destination = File(context.noBackupFilesDir, when { phoneShield -> "guardian-phone-shield-v1.enc"; validation -> "nova-brain-validation-v1.enc"; contacts -> "guardian-contacts-v1.enc"; fixture -> "guardian-fixture-v1.enc"; training -> "guardian-learning-v1.enc"; else -> ARCHIVE_NAME })
+    private val alias = when { phoneShield -> "nova-guardian-phone-shield-v1"; validation -> "nova-brain-validation-v1"; contacts -> "nova-guardian-contacts-v1"; fixture -> "nova-guardian-fixture-v1"; training -> "nova-guardian-learning-v1"; else -> KEY_ALIAS }
     private val aad = when {
+        phoneShield -> "NovaOS Guardian phone shield v1".toByteArray(Charsets.UTF_8)
         validation -> "NovaOS Nova Brain validation v1".toByteArray(Charsets.UTF_8)
         contacts -> "NovaOS Guardian contact rules v1".toByteArray(Charsets.UTF_8)
         fixture -> "NovaOS Guardian fixture v1".toByteArray(Charsets.UTF_8)
@@ -68,6 +69,24 @@ internal class GuardianCaptureStore private constructor(private val context: Con
         else -> AAD
     }
     private val atomic = AtomicFile(destination)
+
+    private fun phoneShieldArchive() = GuardianCaptureStore(context, training = false, phoneShield = true)
+
+    fun phoneShieldSettings(): Pair<Boolean, List<GuardianPhoneRule>> = synchronized(lock) {
+        val records = phoneShieldArchive().read()
+        val enabled = records.firstOrNull()?.getBoolean("enabled") ?: false
+        enabled to records.drop(1).map {
+            GuardianPhoneRule(it.getString("number"), GuardianCallMode.valueOf(it.getString("mode")))
+        }
+    }
+
+    fun savePhoneShieldSettings(enabled: Boolean, rules: List<GuardianPhoneRule>) = synchronized(lock) {
+        require(rules.size <= 100 && rules.distinctBy { it.number }.size == rules.size)
+        require(rules.all { guardianPhoneNumber(it.number) == it.number })
+        phoneShieldArchive().write(listOf(JSONObject().put("enabled", enabled)) + rules.map {
+            JSONObject().put("number", it.number).put("mode", it.mode.name)
+        })
+    }
 
     private fun validationArchive() = GuardianCaptureStore(context, training = false, validation = true)
 
@@ -412,7 +431,7 @@ internal class GuardianCaptureStore private constructor(private val context: Con
         keyStore().deleteEntry(alias)
         atomic.delete()
         check(!destination.exists())
-        if (!fixture && !contacts) knowledgeRevision.value += 1
+        if (!fixture && !contacts && !phoneShield) knowledgeRevision.value += 1
     }
 
     private fun cutoff(days: Int, now: Long): Long {
@@ -473,7 +492,7 @@ internal class GuardianCaptureStore private constructor(private val context: Con
             throw error
         }
         check(readBlob()?.contentEquals(blob) == true)
-        if (!fixture && !contacts) knowledgeRevision.value += 1
+        if (!fixture && !contacts && !phoneShield) knowledgeRevision.value += 1
     }
 
     private fun readBlob(): ByteArray? = try {

@@ -64,6 +64,7 @@ class GuardianInboxActivity : ComponentActivity() {
     private var busy by mutableStateOf(false)
     private var confirmDelete by mutableStateOf(false)
     private var settingsOpen by mutableStateOf(false)
+    private var callShieldOpen by mutableStateOf(false)
     private val privacy by lazy { getSharedPreferences("guardian_inbox_privacy", MODE_PRIVATE) }
     private var showSenders by mutableStateOf(true)
     private var diagnostic by mutableStateOf(false)
@@ -222,6 +223,7 @@ class GuardianInboxActivity : ComponentActivity() {
         failure = null
         confirmDelete = false
         settingsOpen = false
+        callShieldOpen = false
         diagnostic = false
         conversationsOpen = false
         conversation = null
@@ -389,6 +391,7 @@ class GuardianInboxActivity : ComponentActivity() {
 
     @Composable
     private fun InboxDialogs() {
+        if (callShieldOpen) GuardianCallShieldScreen { callShieldOpen = false }
         if (settingsOpen) GuardianAlertDialog(
             onDismissRequest = { settingsOpen = false },
             title = { Text("Inbox privacy") },
@@ -407,6 +410,7 @@ class GuardianInboxActivity : ComponentActivity() {
                             contactsOpen = true
                         }
                     }) { Text("Monitored Contacts") }
+                    TextButton(onClick = { settingsOpen = false; callShieldOpen = true }) { Text("Call Shield") }
                     TextButton(onClick = { settingsOpen = false; diagnostic = true }) {
                         Text("Share safe diagnostic view")
                     }
@@ -484,6 +488,7 @@ class GuardianInboxActivity : ComponentActivity() {
                     TextButton(onClick = {
                         loadArchive({ store, _, _ -> store.monitoredContacts() }) { contacts = it; contactsOpen = true }
                     }) { Text("Monitored Contacts") }
+                    TextButton(onClick = { settingsOpen = false; callShieldOpen = true }) { Text("Call Shield") }
                     failure?.let { Text(it, color = MaterialTheme.colorScheme.error) }
                 }
             }
