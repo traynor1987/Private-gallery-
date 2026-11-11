@@ -153,7 +153,9 @@ internal fun GuardianCallShieldScreen(onClose: () -> Unit) {
                     if (rows.isEmpty()) Text("No saved call protection requests.")
                     rows.forEach { row ->
                         val time = java.text.DateFormat.getDateTimeInstance().format(java.util.Date(row.time))
-                        Text("${row.number} · ${row.platform.label} · $time · ${row.mode.label} requested")
+                        val action = if (row.platform == GuardianCallSource.PHONE) "${row.mode.label} requested"
+                            else "Notification dismissal requested · ${row.mode.label} rule"
+                        Text("${row.number} · ${row.platform.label} · $time · $action")
                     }
                     TextButton(onClick = {
                         scope.launch {

@@ -68,16 +68,21 @@ internal class GuardianNotificationListener : NotificationListenerService() {
         }
     }
 
-    private fun screenWhatsAppCall(sbn: StatusBarNotification, personal: Boolean, serial: Long) {
+    private fun incomingWhatsAppCaller(sbn: StatusBarNotification): String? {
         val notification = sbn.notification
-        if (sbn.opPkg != GUARDIAN_WHATSAPP || !sbn.isClearable ||
+        if (sbn.packageName != GUARDIAN_WHATSAPP || sbn.opPkg != GUARDIAN_WHATSAPP || !sbn.isClearable ||
             notification.category != Notification.CATEGORY_CALL ||
-            notification.visibility == Notification.VISIBILITY_SECRET) return
-        val caller = runCatching {
+            notification.visibility == Notification.VISIBILITY_SECRET ||
+            notification.flags and Notification.FLAG_GROUP_SUMMARY != 0) return null
+        return runCatching {
             val extras = notification.extras
             if (extras.getInt(androidx.core.app.NotificationCompat.EXTRA_CALL_TYPE) != Notification.CallStyle.CALL_TYPE_INCOMING) null
             else extras.getParcelable(androidx.core.app.NotificationCompat.EXTRA_CALL_PERSON, Person::class.java)?.uri
-        }.getOrNull() ?: return
+        }.getOrNull()
+    }
+
+    private fun screenWhatsAppCall(sbn: StatusBarNotification, personal: Boolean, serial: Long) {
+        val caller = incomingWhatsAppCaller(sbn) ?: return
         if (personal && runCatching { packageManager.getApplicationInfo(GUARDIAN_WHATSAPP, 0).uid }
                 .getOrNull() != sbn.uid) return
         callWorker.execute {
@@ -90,7 +95,8 @@ internal class GuardianNotificationListener : NotificationListenerService() {
                 if (mode != GuardianCallMode.ALLOW &&
                     connectedListener === this && hasAccess(this)) {
                     val current = getActiveNotifications(arrayOf(sbn.key)).singleOrNull()
-                    if (current?.postTime == sbn.postTime && current.isClearable) {
+                    if (current != null && current.postTime == sbn.postTime && current.uid == sbn.uid &&
+                        current.user == sbn.user && incomingWhatsAppCaller(current) == caller) {
                         cancelNotification(sbn.key)
                         val number = guardianPhoneNumber(caller.removePrefix("tel:")) ?: return@runCatching
                         val source = guardianCallSource(GUARDIAN_WHATSAPP, null, personal, account) ?: return@runCatching
