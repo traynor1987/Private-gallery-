@@ -95,7 +95,19 @@ class WallpaperUiTest {
    val grid=compose.onAllNodesWithTag("wallpaper-vault-grid").fetchSemanticsNodes().isNotEmpty()
    val readyTiles=compose.onAllNodes(tile).fetchSemanticsNodes().size
    val loadError=compose.onAllNodesWithText("Image unavailable. Choose another image.").fetchSemanticsNodes().isNotEmpty()
-   throw AssertionError("Vault selection did not reach the zoom editor. grid=$grid readyTiles=$readyTiles loadError=$loadError\n${modalCaptureState1762(activity).description}",timeout)
+   val focus = runCatching {
+    val automation = androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().uiAutomation
+    android.os.ParcelFileDescriptor.AutoCloseInputStream(
+     automation.executeShellCommand("dumpsys window displays")
+    ).bufferedReader().useLines { lines ->
+     lines.filter { line ->
+      listOf("mCurrentFocus=", "mFocusedApp=", "mTopFocusedDisplayId=", "mInputMethodTarget=",
+       "mInputMethodInputTarget=", "mInputMethodLayeringTarget=", "mObscuringWindow=",
+       "mShowingLockscreen=", "mDreamingLockscreen=").any { it in line }
+     }.take(30).joinToString("\n")
+    }
+   }.getOrElse { "Window manager diagnostics unavailable: ${it.javaClass.simpleName}" }
+   throw AssertionError("Vault selection did not reach the zoom editor. grid=$grid readyTiles=$readyTiles loadError=$loadError\n${modalCaptureState1762(activity).description}\n$focus",timeout)
   }
  }
  private fun home(hidden:Boolean) {
