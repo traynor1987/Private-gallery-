@@ -9,6 +9,31 @@ import java.io.File
 
 @RunWith(AndroidJUnit4::class)
 class GuardianCaptureStore77Test {
+    @Test fun callActivityIsOptInEncryptedAndDeletable() {
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        val store = GuardianCaptureStore(context)
+        val activity = GuardianCallActivity("+447700900781", GuardianCallSource.FRIENDS,
+            System.currentTimeMillis(), GuardianCallMode.SILENCE)
+        val file = File(context.noBackupFilesDir, "guardian-call-history-v1.enc")
+        check(!file.exists()) { "This test requires an empty call archive" }
+        val wasEnabled = store.callHistoryEnabled()
+        try {
+            store.setCallHistoryEnabled(false)
+            store.recordCallAttempt(activity)
+            assertFalse(file.exists())
+            store.setCallHistoryEnabled(true)
+            store.recordCallAttempt(activity)
+            assertEquals(listOf(activity), GuardianCaptureStore(context).callHistory())
+            assertFalse(file.readBytes().toString(Charsets.UTF_8).contains(activity.number))
+            store.clearCallHistory()
+            assertTrue(store.callHistory().isEmpty())
+            assertFalse(file.exists())
+        } finally {
+            store.clearCallHistory()
+            store.setCallHistoryEnabled(wasEnabled)
+        }
+    }
+
     @Test fun encryptedExamplesChangeFutureEstimatesAndDeletedRowsStayHidden() {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         val now = guardianInboxClock(context)

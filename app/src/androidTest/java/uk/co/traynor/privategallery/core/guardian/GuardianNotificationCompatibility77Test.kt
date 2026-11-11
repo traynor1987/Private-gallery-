@@ -15,6 +15,8 @@ import org.junit.Assert.*
 import org.junit.Test
 import org.junit.runner.RunWith
 import uk.co.traynor.privategallery.LauncherActivity
+import uk.co.traynor.privategallery.core.sanctuary.SanctuaryMode
+import uk.co.traynor.privategallery.core.sanctuary.SanctuaryStore
 
 @RunWith(AndroidJUnit4::class)
 class GuardianNotificationCompatibility77Test {
@@ -74,7 +76,18 @@ class GuardianNotificationCompatibility77Test {
                     it.tag?.startsWith("nova-guardian-presentation-") == true &&
                     it.notification.flags and Notification.FLAG_GROUP_SUMMARY == 0
             }
-            postPresentation()
+            val sanctuary = SanctuaryStore.get(context)
+            assertTrue(sanctuary.startFoldTest(SanctuaryMode.PANIC))
+            try {
+                val panic = checkNotNull(sanctuary.refresh())
+                assertFalse(panic.allowsWhatsAppDestinations)
+                postPresentation()
+                assertTrue("Panic must leave the notification listener bound",
+                    GuardianNotificationListener.state.value.connected)
+                assertEquals(SanctuaryMode.PANIC, sanctuary.refresh()?.mode)
+            } finally {
+                assertTrue(sanctuary.end(SanctuaryStore.END_PHRASE))
+            }
             val presented = presentations().single()
             assertEquals(Notification.VISIBILITY_SECRET, presented.notification.visibility)
             assertNull(presented.notification.publicVersion)
