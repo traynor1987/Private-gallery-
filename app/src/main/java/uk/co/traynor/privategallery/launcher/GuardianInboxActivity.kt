@@ -734,6 +734,10 @@ internal fun GuardianConversationCard(
                 OutlinedButton(onClick = onReview, enabled = !busy) { Text("Review message") }
             } else {
                 Text(preview, color = GuardianPrimary, style = MaterialTheme.typography.bodyLarge)
+                val patterns = remember(preview) { recogniseNovaBrainPatterns(preview) }
+                if (patterns.isNotEmpty()) {
+                    Text("Possible patterns · " + patterns.joinToString { it.label }, color = GuardianMuted)
+                }
                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                 val view = androidx.compose.ui.platform.LocalView.current
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
