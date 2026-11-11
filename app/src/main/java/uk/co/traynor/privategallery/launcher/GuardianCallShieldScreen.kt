@@ -39,12 +39,15 @@ internal fun GuardianCallShieldScreen(onClose: () -> Unit) {
     val scope = rememberCoroutineScope()
     var configuration by remember { mutableStateOf<Pair<Boolean, List<GuardianPhoneRule>>?>(null) }
     var sanctuaryModes by remember { mutableStateOf<Set<String>?>(null) }
+    var historyEnabled by remember { mutableStateOf(false) }
+    var history by remember { mutableStateOf<List<GuardianCallActivity>?>(null) }
     var busy by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
     var number by remember { mutableStateOf("") }
     LaunchedEffect(store) {
         configuration = withContext(Dispatchers.IO) { runCatching { store.phoneShieldSettings() }.getOrNull() }
         sanctuaryModes = withContext(Dispatchers.IO) { runCatching { store.phoneShieldSanctuaryModes() }.getOrNull() }
+        historyEnabled = withContext(Dispatchers.IO) { runCatching { store.callHistoryEnabled() }.getOrDefault(false) }
         if (configuration == null || sanctuaryModes == null) error = "Call Shield settings could not be opened."
     }
     fun save(enabled: Boolean, rules: List<GuardianPhoneRule>) {
@@ -130,6 +133,34 @@ internal fun GuardianCallShieldScreen(onClose: () -> Unit) {
                             saveSanctuaryModes(if (mode.name in modes) modes - mode.name else modes + mode.name)
                         }, label = { Text(mode.label) })
                     }
+                }
+                HorizontalDivider()
+                Text("Private activity", style = MaterialTheme.typography.titleMedium)
+                Text("Keeps up to 100 action requests for seven days. Call outcomes are unconfirmed.")
+                LauncherToggle("Record call protection requests", historyEnabled) { enabled ->
+                    scope.launch {
+                        val saved = withContext(Dispatchers.IO) { runCatching { store.setCallHistoryEnabled(enabled) }.isSuccess }
+                        if (saved) historyEnabled = enabled else error = "Could not change call history settings."
+                    }
+                }
+                TextButton(onClick = {
+                    scope.launch {
+                        val result = withContext(Dispatchers.IO) { runCatching { store.callHistory() } }
+                        result.onSuccess { history = it }.onFailure { error = "Could not read private call activity." }
+                    }
+                }) { Text("Review private activity") }
+                history?.let { rows ->
+                    if (rows.isEmpty()) Text("No saved call protection requests.")
+                    rows.forEach { row ->
+                        val time = java.text.DateFormat.getDateTimeInstance().format(java.util.Date(row.time))
+                        Text("${row.number} · ${row.platform.label} · $time · ${row.mode.label} requested")
+                    }
+                    TextButton(onClick = {
+                        scope.launch {
+                            val cleared = withContext(Dispatchers.IO) { runCatching { store.clearCallHistory() }.isSuccess }
+                            if (cleared) history = emptyList() else error = "Could not delete call activity."
+                        }
+                    }) { Text("Delete call activity") }
                 }
                 error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
             }

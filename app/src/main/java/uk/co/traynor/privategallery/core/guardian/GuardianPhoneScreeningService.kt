@@ -16,7 +16,7 @@ class GuardianPhoneScreeningService : CallScreeningService() {
     override fun onScreenCall(details: Call.Details) {
         if (details.callDirection != Call.Details.DIRECTION_INCOMING) return
         var answered = false
-        fun respond(mode: GuardianCallMode) {
+        fun respond(mode: GuardianCallMode, number: String? = null) {
             if (answered) return
             answered = true
             val response = CallResponse.Builder().apply {
@@ -30,14 +30,21 @@ class GuardianPhoneScreeningService : CallScreeningService() {
                     }
                 }
             }.build()
-            respondToCall(details, response)
+            val requested = runCatching { respondToCall(details, response) }.isSuccess
+            if (requested && number != null && mode != GuardianCallMode.ALLOW) {
+                worker.execute {
+                    runCatching { GuardianCaptureStore(this).recordCallAttempt(
+                        GuardianCallActivity(number, GuardianCallSource.PHONE, System.currentTimeMillis(), mode)) }
+                }
+            }
         }
 
         val fallback = Runnable { respond(GuardianCallMode.ALLOW) }
         main.postDelayed(fallback, 2_000L)
         worker.execute {
+            val number = details.handle?.takeIf { it.scheme == "tel" }?.schemeSpecificPart
+                ?.let(::guardianPhoneNumber)
             val mode = runCatching {
-                val number = details.handle?.takeIf { it.scheme == "tel" }?.schemeSpecificPart
                 val emergency = number == null ||
                     getSystemService(TelephonyManager::class.java)?.isEmergencyNumber(number) != false
                 val roleHeld = getSystemService(RoleManager::class.java)
@@ -55,7 +62,7 @@ class GuardianPhoneScreeningService : CallScreeningService() {
             }.getOrDefault(GuardianCallMode.ALLOW)
             main.post {
                 main.removeCallbacks(fallback)
-                respond(mode)
+                respond(mode, number)
             }
         }
     }

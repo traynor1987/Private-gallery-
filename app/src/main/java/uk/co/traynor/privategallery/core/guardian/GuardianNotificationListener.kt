@@ -84,11 +84,18 @@ internal class GuardianNotificationListener : NotificationListenerService() {
             runCatching {
                 val account = probeAccount(personal, serial, configuredFriendsSerial())
                 if (!personal && !trustedFriendsWhatsApp(sbn, personal, serial)) return@runCatching
-                val (enabled, rules) = GuardianCaptureStore(this).phoneShieldSettings()
-                if (guardianWhatsAppCallAction(enabled, account, true, caller, rules) != GuardianCallMode.ALLOW &&
+                val archive = GuardianCaptureStore(this)
+                val (enabled, rules) = archive.phoneShieldSettings()
+                val mode = guardianWhatsAppCallAction(enabled, account, true, caller, rules)
+                if (mode != GuardianCallMode.ALLOW &&
                     connectedListener === this && hasAccess(this)) {
                     val current = getActiveNotifications(arrayOf(sbn.key)).singleOrNull()
-                    if (current?.postTime == sbn.postTime && current.isClearable) cancelNotification(sbn.key)
+                    if (current?.postTime == sbn.postTime && current.isClearable) {
+                        cancelNotification(sbn.key)
+                        val number = guardianPhoneNumber(caller.removePrefix("tel:")) ?: return@runCatching
+                        val source = guardianCallSource(GUARDIAN_WHATSAPP, null, personal, account) ?: return@runCatching
+                        archive.recordCallAttempt(GuardianCallActivity(number, source, System.currentTimeMillis(), mode))
+                    }
                 }
             }
         }

@@ -55,3 +55,10 @@ internal fun strengthenGuardianCallMode(
     selectedModes: Set<String>,
 ): GuardianCallMode = if (saved != GuardianCallMode.ALLOW && activeMode in selectedModes)
     GuardianCallMode.BLOCK else saved
+
+internal data class GuardianCallActivity(
+    val number: String,
+    val platform: GuardianCallSource,
+    val time: Long,
+    val mode: GuardianCallMode,
+)

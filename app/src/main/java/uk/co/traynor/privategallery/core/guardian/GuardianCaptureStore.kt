@@ -56,12 +56,13 @@ internal fun guardianInboxClock(context: Context) = GuardianInboxClock(
 )
 
 /** Private, bounded archive. The capture phase exposes aggregate counts only. */
-internal class GuardianCaptureStore private constructor(private val context: Context, private val training: Boolean, private val fixture: Boolean = false, private val contacts: Boolean = false, private val validation: Boolean = false, private val phoneShield: Boolean = false) {
+internal class GuardianCaptureStore private constructor(private val context: Context, private val training: Boolean, private val fixture: Boolean = false, private val contacts: Boolean = false, private val validation: Boolean = false, private val phoneShield: Boolean = false, private val callHistory: Boolean = false) {
     constructor(context: Context) : this(context.applicationContext, false)
 
-    private val destination = File(context.noBackupFilesDir, when { phoneShield -> "guardian-phone-shield-v1.enc"; validation -> "nova-brain-validation-v1.enc"; contacts -> "guardian-contacts-v1.enc"; fixture -> "guardian-fixture-v1.enc"; training -> "guardian-learning-v1.enc"; else -> ARCHIVE_NAME })
-    private val alias = when { phoneShield -> "nova-guardian-phone-shield-v1"; validation -> "nova-brain-validation-v1"; contacts -> "nova-guardian-contacts-v1"; fixture -> "nova-guardian-fixture-v1"; training -> "nova-guardian-learning-v1"; else -> KEY_ALIAS }
+    private val destination = File(context.noBackupFilesDir, when { callHistory -> "guardian-call-history-v1.enc"; phoneShield -> "guardian-phone-shield-v1.enc"; validation -> "nova-brain-validation-v1.enc"; contacts -> "guardian-contacts-v1.enc"; fixture -> "guardian-fixture-v1.enc"; training -> "guardian-learning-v1.enc"; else -> ARCHIVE_NAME })
+    private val alias = when { callHistory -> "nova-guardian-call-history-v1"; phoneShield -> "nova-guardian-phone-shield-v1"; validation -> "nova-brain-validation-v1"; contacts -> "nova-guardian-contacts-v1"; fixture -> "nova-guardian-fixture-v1"; training -> "nova-guardian-learning-v1"; else -> KEY_ALIAS }
     private val aad = when {
+        callHistory -> "NovaOS Guardian call history v1".toByteArray(Charsets.UTF_8)
         phoneShield -> "NovaOS Guardian phone shield v1".toByteArray(Charsets.UTF_8)
         validation -> "NovaOS Nova Brain validation v1".toByteArray(Charsets.UTF_8)
         contacts -> "NovaOS Guardian contact rules v1".toByteArray(Charsets.UTF_8)
@@ -72,6 +73,44 @@ internal class GuardianCaptureStore private constructor(private val context: Con
     private val atomic = AtomicFile(destination)
 
     private fun phoneShieldArchive() = GuardianCaptureStore(context, training = false, phoneShield = true)
+
+    private fun callHistoryArchive() = GuardianCaptureStore(context, training = false, callHistory = true)
+
+    fun callHistoryEnabled(): Boolean = synchronized(lock) {
+        phoneShieldArchive().read().firstOrNull()?.optBoolean("recordCalls") == true
+    }
+
+    fun setCallHistoryEnabled(enabled: Boolean) = synchronized(lock) {
+        val archive = phoneShieldArchive()
+        val rows = archive.read()
+        val settings = rows.firstOrNull() ?: JSONObject().put("enabled", false)
+        archive.write(listOf(settings.put("recordCalls", enabled)) + rows.drop(1))
+    }
+
+    fun recordCallAttempt(activity: GuardianCallActivity) = synchronized(lock) {
+        if (!callHistoryEnabled()) return@synchronized
+        val archive = callHistoryArchive()
+        val rows = archive.retainedCallRows(activity.time)
+        val row = JSONObject().put("number", activity.number).put("platform", activity.platform.name)
+            .put("time", activity.time).put("mode", activity.mode.name)
+        archive.write((listOf(row) + rows).take(100))
+    }
+
+    private fun retainedCallRows(now: Long): List<JSONObject> {
+        val rows = read()
+        val retained = rows.filter { it.getLong("time") in (now - 7L * 86_400_000)..now }
+        if (rows.size != retained.size) write(retained)
+        return retained
+    }
+
+    fun callHistory(): List<GuardianCallActivity> = synchronized(lock) {
+        callHistoryArchive().retainedCallRows(System.currentTimeMillis()).map {
+            GuardianCallActivity(it.getString("number"), GuardianCallSource.valueOf(it.getString("platform")),
+                it.getLong("time"), GuardianCallMode.valueOf(it.getString("mode")))
+        }
+    }
+
+    fun clearCallHistory() = callHistoryArchive().clear()
 
     fun phoneShieldSettings(): Pair<Boolean, List<GuardianPhoneRule>> = synchronized(lock) {
         val records = phoneShieldArchive().read()
@@ -453,7 +492,7 @@ internal class GuardianCaptureStore private constructor(private val context: Con
         keyStore().deleteEntry(alias)
         atomic.delete()
         check(!destination.exists())
-        if (!fixture && !contacts && !phoneShield) knowledgeRevision.value += 1
+        if (!fixture && !contacts && !phoneShield && !callHistory) knowledgeRevision.value += 1
     }
 
     private fun cutoff(days: Int, now: Long): Long {
@@ -514,7 +553,7 @@ internal class GuardianCaptureStore private constructor(private val context: Con
             throw error
         }
         check(readBlob()?.contentEquals(blob) == true)
-        if (!fixture && !contacts && !phoneShield) knowledgeRevision.value += 1
+        if (!fixture && !contacts && !phoneShield && !callHistory) knowledgeRevision.value += 1
     }
 
     private fun readBlob(): ByteArray? = try {
