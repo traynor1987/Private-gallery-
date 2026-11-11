@@ -6,9 +6,9 @@ import json
 from pathlib import Path
 import re
 
-BASELINE = 'c818c670baa4b980708dc2effb1ab2ab0331ade1'
+BASELINE = '15cdfd9e612ffc68960d1374420fe05e425a9877'
 TARGET = b'uk.co.traynor.privategallery.hiddenprototype'
-BUILD_TARGET = b'      applicationIdSuffix = ".hiddenprototype"'
+BUILD_TARGET = b'      applicationIdSuffix = if (guardianProbe) ".capture77.guardianprobe" else ".hiddenprototype"'
 
 def sha(raw): return hashlib.sha256(raw).hexdigest()
 def require(condition, message):

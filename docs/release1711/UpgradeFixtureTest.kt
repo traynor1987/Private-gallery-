@@ -1,5 +1,10 @@
 package uk.co.traynor.privategallery.upgrade
 
+import uk.co.traynor.privategallery.core.guardian.GuardianAssessment
+import uk.co.traynor.privategallery.core.guardian.GuardianCaptureEntry
+import uk.co.traynor.privategallery.core.guardian.GuardianCaptureEvent
+import uk.co.traynor.privategallery.core.guardian.GuardianCaptureStore
+import uk.co.traynor.privategallery.core.guardian.guardianInboxClock
 import android.app.role.RoleManager
 import android.content.ComponentName
 import android.content.Intent
@@ -42,7 +47,7 @@ import uk.co.traynor.privategallery.core.sanctuary.SanctuaryMode
 import uk.co.traynor.privategallery.core.sanctuary.SanctuaryPreset
 import uk.co.traynor.privategallery.core.sanctuary.SanctuaryStore
 
-/** Reviewed release-control instrumentation for original-key Code 76 to Code 77 upgrade.
+/** Reviewed release-control instrumentation for original-key Code 77 to Code 78 upgrade.
  * Captured and hash-checked before frozen application checkout; never modifies baseline app.
  */
 class UpgradeFixtureTest {
@@ -53,7 +58,7 @@ class UpgradeFixtureTest {
     private val candidateCode get() = checkNotNull(arguments.getString("candidateCode")).toInt()
     private fun guard() {
         check(context.packageName == "uk.co.traynor.privategallery.hiddenprototype")
-        check(baselineCode == 76 && candidateCode == 77)
+        check(baselineCode == 77 && candidateCode == 78)
     }
     private fun hash(bytes: ByteArray) = MessageDigest.getInstance("SHA-256").digest(bytes).joinToString("") { "%02x".format(it) }
     private fun encryptedHashes(): JSONObject = JSONObject().also { result ->
@@ -326,7 +331,7 @@ class UpgradeFixtureTest {
         val storeType=evidenceType("EvidenceEncryptedStore")
         if(seed) {
             val folder=File(root,"evidence-state/evidence-179-${label.lowercase()}")
-            assertFalse("Fresh disposable Code 76 evidence fixture starts empty",folder.walkTopDown().any {it.isFile})
+            assertFalse("Fresh disposable Code 77 evidence fixture starts empty",folder.walkTopDown().any {it.isFile})
         }
         val store=storeType.getConstructor(File::class.java,ownerType,evidenceType("EvidenceEncryptedStore\$LeaseFactory"))
             .newInstance(File(root,"evidence-state"),owner,factory)
@@ -339,7 +344,7 @@ class UpgradeFixtureTest {
         val corrected="2026-10-31\nAlice: UPGRADE-EVIDENCE-$label owner-corrected transcript 14:05"
         var catalog=evidenceCall(store,"read")
         if(seed) {
-            assertEquals("Fresh Code 76 fixture catalogue starts empty",0,(evidenceCall(catalog,"evidence") as List<*>).size)
+            assertEquals("Fresh Code 77 fixture catalogue starts empty",0,(evidenceCall(catalog,"evidence") as List<*>).size)
             val dimension = if (label == "PRIMARY") 64 else 32
             val metadata=evidenceRecord("Metadata",9,item.displayName,0L,0L,item.importedAtEpochMillis,0L,dimension,dimension,
                 mapOf("provenance" to "Synthetic upgrade fixture metadata; timestamps are not screenshot facts"),false)
@@ -496,7 +501,7 @@ class UpgradeFixtureTest {
                 for(field in listOf("files","hiddenFiles")) {
                     val wanted=expected.getJSONObject(field);val actual=current.getJSONObject(field)
                     assertEquals(wanted.length(),actual.length())
-                    wanted.keys().forEach {path->assertEquals("Existing Code 76 owner-encrypted evidence survives upgrade/restart unchanged",wanted.getString(path),actual.getString(path))}
+                    wanted.keys().forEach {path->assertEquals("Existing Code 77 owner-encrypted evidence survives upgrade/restart unchanged",wanted.getString(path),actual.getString(path))}
                 }
             } else before.put("primaryEvidenceCatalogSha256",primaryHash).put("hiddenEvidenceCatalogSha256",hiddenHash).put("candidateEvidenceFiles",current)
             // Recheck every original encrypted file after additive writes, including the
@@ -803,6 +808,38 @@ class UpgradeFixtureTest {
         assertNull("Upgrade must not start a Sanctuary session", store.refresh())
     }
 
+    private val guardianFixtureText = "Synthetic owner-reviewed Nova Brain upgrade example"
+
+    private fun guardianArchiveHash(): String =
+        hash(File(context.noBackupFilesDir, GuardianCaptureStore.ARCHIVE_NAME).readBytes())
+
+    private fun seedGuardianArchive(): JSONObject {
+        val store = GuardianCaptureStore(context)
+        val now = guardianInboxClock(context)
+        val event = GuardianCaptureEvent(
+            0L, "upgrade-fixture-conversation", now.wall,
+            listOf(GuardianCaptureEntry(now.wall, "upgrade-fixture-sender", guardianFixtureText)),
+        )
+        val result = store.append(event, 7, now.wall, assess = false, clock = now)
+        assertTrue("Guardian fixture must be durably encrypted", result.allDurable)
+        val row = store.inboxRows(7, now).single()
+        assertEquals(guardianFixtureText, store.prepareInboxReview(row.id, 7, now)?.second)
+        assertTrue(store.labelConversationMessage(row.id, GuardianAssessment.LOW_RISK, 7, now))
+        assertEquals(GuardianAssessment.LOW_RISK, store.inboxRows(7, now).single().ownerLabel)
+        return JSONObject().put("id", row.id).put("ciphertext", guardianArchiveHash())
+    }
+
+    private fun verifyGuardianArchive(expected: JSONObject) {
+        val store = GuardianCaptureStore(context)
+        val now = guardianInboxClock(context)
+        val id = expected.getString("id")
+        val row = store.inboxRows(7, now).single()
+        assertEquals(id, row.id)
+        assertEquals(GuardianAssessment.LOW_RISK, row.ownerLabel)
+        assertEquals(guardianFixtureText, store.revealInboxMessage(id, 7, now))
+        assertEquals(expected.getString("ciphertext"), guardianArchiveHash())
+    }
+
     @Test fun seed() {
         guard(); check(!proof.exists())
         assertEquals(baselineCode, context.packageManager.getPackageInfo(context.packageName, 0).versionCode)
@@ -890,6 +927,7 @@ class UpgradeFixtureTest {
             home2State(seeded,seed=true)
             portableApps62(seed=true) // NOVA62 addition
             seeded.put("files",encryptedHashes()).put("hiddenFiles",hiddenHashes()).put("previousHome",previousHome)
+            seeded.put("guardian", seedGuardianArchive())
             proof.writeText(seeded.toString())
         } finally { key.fill(0) }
     }
@@ -961,8 +999,8 @@ class UpgradeFixtureTest {
         assertEquals(candidateCode, context.packageManager.getPackageInfo(context.packageName,0).versionCode)
         assertFalse("Upgrade must not consent to Guardian capture",context.getSharedPreferences("nova_guardian_capture",0).getBoolean("enabled",false))
         assertFalse("Upgrade must not enable Main WhatsApp dismissal",context.getSharedPreferences("guardian_main_dismissal",0).getBoolean("main_enabled",false))
-        assertFalse("Upgrade alone must not create notification records",File(context.noBackupFilesDir,"guardian-notifications-v1.enc").exists())
         val before = JSONObject(proof.readText())
+        verifyGuardianArchive(before.getJSONObject("guardian"))
         val previousHome = before.getString("previousHome")
         assertEquals("Keep Android's previous Home activity after update and restart", previousHome,
             launcherRegistration())
