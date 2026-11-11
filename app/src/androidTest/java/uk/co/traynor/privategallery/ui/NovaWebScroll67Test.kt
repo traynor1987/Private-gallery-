@@ -27,6 +27,7 @@ class NovaWebScroll67Test {
     @Test fun webViewScrollsAfterSwitchingRetainedAppsAndDismissingKeyboard() {
         lateinit var session: BrowserV2Session
         lateinit var first: WebView
+        val touchTrace = ArrayDeque<String>()
         var id by mutableStateOf("")
         var active by mutableStateOf<WebView?>(null)
         fun show(name: String) {
@@ -40,6 +41,12 @@ class NovaWebScroll67Test {
                 webViewFactory = BrowserV2WebViewFactory { context, _, _, _ ->
                     object : WebView(context) {
                         override fun loadUrl(url: String) = Unit
+                        override fun onTouchEvent(event: android.view.MotionEvent): Boolean {
+                            val handled = super.onTouchEvent(event)
+                            if (touchTrace.size == 48) touchTrace.removeFirst()
+                            touchTrace.addLast("renderer=${System.identityHashCode(this)} action=${event.actionMasked} x=${event.x.toInt()} y=${event.y.toInt()} scroll=$scrollX,$scrollY viewport=${width}x$height handled=$handled")
+                            return handled
+                        }
                     }.apply {
                         layoutParams = android.view.ViewGroup.LayoutParams(-1, -1)
                         settings.javaScriptEnabled = true
@@ -166,9 +173,21 @@ class NovaWebScroll67Test {
             compose.waitUntil(10_000) { compose.runOnIdle { root.rootWindowInsets?.isVisible(android.view.WindowInsets.Type.ime()) == true } }
             sendInput("input keyevent 4")
             compose.waitUntil(10_000) { compose.runOnIdle { root.rootWindowInsets?.isVisible(android.view.WindowInsets.Type.ime()) == false } }
+            fun viewportDiagnostic() = compose.runOnIdle {
+                "scroll=${first.scrollX},${first.scrollY} viewport=${first.width}x${first.height} contentHeight=${first.contentHeight} " +
+                    "canScrollDown=${first.canScrollVertically(1)} focused=${first.hasFocus()} windowFocus=${first.hasWindowFocus()} " +
+                    "enabled=${first.isEnabled} ime=${root.rootWindowInsets?.isVisible(android.view.WindowInsets.Type.ime())} " +
+                    "touches=${touchTrace.joinToString("; ")}"
+            }
+            val beforeSwipe = viewportDiagnostic()
             val scrollBeforeSwipe = compose.runOnIdle { first.scrollY }
             host.performTouchInput { swipeUp() }
-            compose.waitUntil(5_000) { compose.runOnIdle { first.scrollY > scrollBeforeSwipe } }
+            try {
+                compose.waitUntil(5_000) { compose.runOnIdle { first.scrollY > scrollBeforeSwipe } }
+            } catch (failure: ComposeTimeoutException) {
+                throw AssertionError("Retained WebView did not scroll after IME dismissal. Before: $beforeSwipe After: ${viewportDiagnostic()}", failure)
+            }
+            println("Retained WebView scroll diagnostic: before=$beforeSwipe after=${viewportDiagnostic()}")
             host.performTouchInput { swipeLeft() }
             compose.waitUntil(5_000) { compose.runOnIdle { first.scrollX > 0 } }
         } finally {
