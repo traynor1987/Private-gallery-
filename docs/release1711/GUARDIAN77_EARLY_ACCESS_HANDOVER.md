@@ -1,52 +1,37 @@
-# Guardian Code 77 production release checkpoint
+# Guardian Code 77 production release — blocked checkpoint 2026-11-11
 
-Frozen application source `80e9d765e291d14c6cf7bc2f7633a086daf79a25`.
-Android version 1.7.38.4, versionCode 77, production package uk.co.traynor.privategallery.
-Exact-source full Android 17 run https://github.com/traynor1987/Private-gallery-/actions/runs/42918431295 was still executing when the workspace environment became unavailable. Recheck its final result and immutable artifact before any signing.
+Application/test source: `6dabbda337363477d4516d9108aef61189ca1755`.
+Version 1.7.38.4, versionCode77, production package uk.co.traynor.privategallery.
+No Code77 production signer activation, original-key candidate build or retained-data upgrade has run.
 
-## Physical owner acceptance
+## Latest exact results
 
-Main WhatsApp capture and encrypted Inbox visibility were physically confirmed in the recovery build.
-The five-minute probe separately observed Main and Friends text with zero unresolved events.
-The owner confirmed Main retained count 3 before and 3 after an observed Friends notification.
-This closes the stated physical archive-isolation gate for that test.
+- Run42918431295 / source80e9d765e291d14c6cf7bc2f7633a086daf79a25: 262/263 broad cases passed. Failure WallpaperUiTest.gallery_apply_refreshes_retained_home_on_return_and_stale_save_preserves_it: immediate Home visibility assertion before asynchronous IO apply/close completed.
+- Source2ac3ff8b63f1982e6107373d7839b131d7bb7214 added bounded observation of the actual completion callback/editor dismissal, preserving all original assertions. Independently reviewed.
+- Run42928029177: Wallpaper12/12, Guardian compatibility2/2, encrypted store10/10, Inbox2/2, Evidence learning2/2 PASS. Then NovaWebScroll67Test line171 failed: following genuine keyboard show and dismissal, swipeUp did not increase scrollY within5000ms. Root cause unconfirmed. Artifact13815658193 SHA256604abd94f1a4e25f94c742fd1aa39bb9cec239e0253a01c15e8c4703207bf486.
+- Source6dabbda337363477d4516d9108aef61189ca1755 adds bounded synthetic touch/viewport diagnostics to that test, delegating touch unchanged to super; no production change, weakened assertion, retry or increased timeout. Workflow runs wallpaper then browser before broader checks. Independently reviewed.
+- Latest run42931202049 / job130230089203 FAILED earlier: WallpaperUiTest.primary_home_vault_picker_cancel_apply_and_reopen and hidden_home_vault_picker_cancel_apply_and_reopen. selectVaultWallpaper timed out at line82 with grid=true, readyTiles=1, loadError=false. Both actual application DecorViews reported focused=false; dialog visible type2. Browser diagnostic did NOT execute. Root cause unconfirmed. Artifact13817391283 SHA256f377b1fdf1c40d0582a72d8a6640b8284090de36fbcfbdfa6f0b960ce1191b9d.
 
-## Implemented source and review
+Do not mark the full regression gate passed or use earlier partial results as complete evidence. Do not launch unchanged full reruns to seek green. Next investigation must capture actual foreground window/input-dispatch state at the focus timeout and reproduce the post-keyboard swipe with diagnostics. Distinguish test scheduling from a real product failure before changing app code.
 
-The approved contact list is retained. Conversations use a full-screen page with chronological notification-derived records and inline Not Upsetting / Upsetting / Clear label controls.
-Labels are encrypted and feed the same local example classifier as approved Evidence Locker examples.
-Authentication, FLAG_SECURE and per-message holds apply. Training and search cannot reveal held content.
-Re-analysis always closes the old preview before refreshing, including Uncertain classifications that start a hold.
-Evidence publication uses Dispatchers.Main.immediate with the original publishIfCurrent guard intact.
-The last test-only correction adds a navigation-state assertion and bounded catalogue semantics wait. Every existing Visual Foundation assertion remains.
-Independent reviewers conditionally approved these changes, pending exact-source full CI evidence.
+## Physical owner acceptance — retained
 
-Automatic real WhatsApp dismissal, cloud Guardian analysis and automatic Panic remain disabled.
-Protect All Main/evening scheduling was deferred to keep this release small.
-Samsung notification previews remain governed by system settings.
+Main WhatsApp capture/encrypted Inbox physically confirmed. Main/Friends probe identified both with text, zero unresolved events. Main retained count3 before and3 after an observed Friends notification. This closes archive isolation for that physical test; do not ask owner to repeat it.
 
-## Production baseline and signing controls
+## Preserved application scope
 
-Original Code 76 application source c818c670baa4b980708dc2effb1ab2ab0331ade1.
-Original signed artifact 13767667010 from run 42819991907.
-Archive SHA-256 7529b9dd3ef07db0b959e29d657c046bde0efc11b3b79a27f9be19ab3aa98757.
-APK SHA-256 7fd1e4211e6277a8a8bfeaa20ef8ee180a89a57b38e435bb30b5a69fbcada171.
-Original certificate SHA-256 94f2bfc6567f26d067d29077111cfd0ce86d38263c642ad115e43365f05b0d17.
+Approved contact cards unchanged. Conversation detail full-screen, chronological incoming-only notification-derived history, per-message Not Upsetting/Upsetting/Clear labels stored encrypted and fed to local examples. Authentication, FLAG_SECURE and independent holds remain required. Re-analysis closes old previews before refreshing, including cautious Uncertain holds. Evidence result publication uses Main.immediate with existing authority guard.
+Automatic real WhatsApp dismissal, cloud analysis and automatic Panic disabled. Protect All/evening schedule deferred. Samsung notification previews remain a separate system exposure.
 
-A separate local release-control worktree was prepared at
-/workspace/scratch/bdd7369164b7/guardian77-release-controls.
-Its last local draft commit is f159f397, with prior draft commits 5bb55384 and d7556f4b.
-It adapts the pinned baseline verifier, fixture compilation, signed upgrade runner, production workflow and exact runtime gate to Code 76 -> 77.
-Three new host release-control rejection tests passed. The original Code 76 archive and fixture transform were validated.
-The draft review deliberately says PENDING and its marker is still historical. It is not signer authorization.
-These local control commits were not pushed before the workspace became unavailable. Recover the worktree if available, otherwise recreate its adaptations from the existing reviewed release controls and the identities above.
+## Original baseline and controls
 
-## Resume without restarting development
+Original76 sourcec818c670baa4b980708dc2effb1ab2ab0331ade1, signed run42819991907/job129842766718/artifact13767667010.
+Archive SHA2567529b9dd3ef07db0b959e29d657c046bde0efc11b3b79a27f9be19ab3aa98757, bytes62192742.
+APK SHA2567fd1e4211e6277a8a8bfeaa20ef8ee180a89a57b38e435bb30b5a69fbcada171, bytes148976200.
+Certificate SHA25694f2bfc6567f26d067d29077111cfd0ce86d38263c642ad115e43365f05b0d17.
+The archive and nested provenance were validated locally; apksigner independently verified one original signer, v2 true. Actual production package/version76/min-target37 verified. SDK tools matched official repository checksum/size.
 
-1. Verify the frozen source and final run 42918431295. Inspect all focused Guardian/Evidence/launcher reports, all 263 broad cases and all process restart evidence.
-2. Recover the draft control worktree. It pins the frozen source and run above and requires explicit physical Fold Main/Friends PASS lines before signer access.
-3. Bind the successful immutable runtime artifact ID/digest and reviewed workflow, fixture, controls and matrix hashes into a new independent signing review and marker. Never reuse the Code 76 approval.
-4. Run the existing permanent-key certificate probe, production build/signature checks, and original-key Code 76 -> 77 retained-data upgrade/restart.
-5. Publish only the successfully verified production artifact. Preserve owner data and production installation.
+Pending release-control patch is saved beside this file as GUARDIAN77_PENDING_CONTROLS.patch. Apply only to an isolated controls worktree; do not activate its marker. Local worktree /workspace/scratch/bdd7369164b7/guardian77-release-controls has controls retargeted6dabbda/current failedrun, reviewPENDING, historical marker intentionally incompatible. Independent review found no control bypass. Four current host rejection tests pass. Fixture transform validated against actual c818 build config. New archive assertion correctly uses noBackupFilesDir.
+Historical test_upgrade1711_controls.py asserts oldCode64/65; it fails10/errors2 unchanged on historical and adapted controls. Do not present it as passing current verification.
 
-No Code 77 production APK has been signed or delivered at this checkpoint.
+Only after exact-source complete runtime passes: bind real artifactID/digest, fixture/workflow/control/matrix hashes and independent approval in a fresh marker/review. Then original-key signing, original76->77 seeded encrypted-data upgrade/restart, signature/package/checksum verification and established production artifact delivery. Never reuse historical Code76 approval.

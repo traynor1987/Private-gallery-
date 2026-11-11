@@ -1,5 +1,5 @@
 diff --git a/.github/workflows/sanctuary-production.yml b/.github/workflows/sanctuary-production.yml
-index 84893260..0605dbad 100644
+index 84893260..d228d425 100644
 --- a/.github/workflows/sanctuary-production.yml
 +++ b/.github/workflows/sanctuary-production.yml
 @@ -48,7 +48,7 @@ jobs:
@@ -7,7 +7,7 @@ index 84893260..0605dbad 100644
                shutil.copyfile(original,destination)
            marker=json.loads((control/'.sanctuary-production-candidate').read_bytes())
 -          assert marker['source']=='c818c670baa4b980708dc2effb1ab2ab0331ade1' and marker['test_run']==42813658935 and marker['test_artifact']==13765989402
-+          assert marker['source']=='2ac3ff8b63f1982e6107373d7839b131d7bb7214' and marker['test_run']==42928029177 and type(marker['test_artifact']) is int and marker['test_artifact']>0
++          assert marker['source']=='6dabbda337363477d4516d9108aef61189ca1755' and marker['test_run']==42931202049 and type(marker['test_artifact']) is int and marker['test_artifact']>0
            assert re.fullmatch('[a-f0-9]{64}',marker['fixture_sha256'])
            workflow=hashlib.sha256((control/'.github/workflows/sanctuary-production.yml').read_bytes()).hexdigest()
            assert marker.get('workflow_sha256')==workflow, 'Signing workflow changed after review'
@@ -161,7 +161,7 @@ index 84893260..0605dbad 100644
            for name in ('lint-results-release.html','lint-results-release.xml'):
                original=Path('app/build/reports')/name
 diff --git a/docs/release1711/SECURITY_REVIEW.md b/docs/release1711/SECURITY_REVIEW.md
-index f494a6fa..841d16aa 100644
+index f494a6fa..5f97dc0f 100644
 --- a/docs/release1711/SECURITY_REVIEW.md
 +++ b/docs/release1711/SECURITY_REVIEW.md
 @@ -1,12 +1,9 @@
@@ -176,7 +176,7 @@ index f494a6fa..841d16aa 100644
 -Runtime matrix SHA-256: 789b0eef5c8a8383ffefa050bb69064f32a447201838e2e61e6a204ee2092694
 -Runtime archive SHA-256: c11882b098122621e21e3f4380fe1dda2e7629d9528342a18c4c14203e8a5ef0
 -Signing workflow SHA-256: f675cd90a0ccf3eb34b4a3b254c1ab975f6c757bd4e5259eb394a7a0399674b4
-+Source: 2ac3ff8b63f1982e6107373d7839b131d7bb7214
++Source: 6dabbda337363477d4516d9108aef61189ca1755
 +Decision: PENDING
 +Production signing: PENDING
 +Physical Fold Main encrypted capture: PASS
@@ -185,7 +185,7 @@ index f494a6fa..841d16aa 100644
 -Run 42813658935 passed the Android 17 runtime gate. The production upgrade uses the original signed Code 75 APK, checks retained data and layouts after the in-place Code 76 upgrade, and repeats the checks after a force-stop. Physical Fold acceptance remains pending.
 +Runtime and release-control review remain pending. The historical marker is intentionally incompatible. This document does not authorise signer access.
 diff --git a/docs/release1711/UPGRADE_CONTROLS.md b/docs/release1711/UPGRADE_CONTROLS.md
-index fe7343db..77d5ce24 100644
+index fe7343db..fb465cbb 100644
 --- a/docs/release1711/UPGRADE_CONTROLS.md
 +++ b/docs/release1711/UPGRADE_CONTROLS.md
 @@ -1,3 +1,17 @@
@@ -203,8 +203,8 @@ index fe7343db..77d5ce24 100644
 +The existing contact cards are retained; conversation detail is full screen. Authentication, independent per-message holds, protected placeholders and secure-window protection remain mandatory. Source includes the re-analysis preview-close correction and Main-dispatch Evidence publication correction.
 +Automatic real WhatsApp dismissal, cloud analysis and automatic Panic remain disabled. Protect All/evening schedule deferred. Samsung notification previews remain governed separately by Samsung settings.
 +
-+Source: 2ac3ff8b63f1982e6107373d7839b131d7bb7214
-+Required runtime: https://github.com/traynor1987/Private-gallery-/actions/runs/42928029177
++Source: 6dabbda337363477d4516d9108aef61189ca1755
++Required runtime: https://github.com/traynor1987/Private-gallery-/actions/runs/42931202049
 +No signer access until exact-source successful runtime evidence and independent review are bound by hash.
 +
 +Host verification notes: four current Code77 fail-closed checks pass. The historical scripts/tests/test_upgrade1711_controls.py still asserts Code64/65 identities and fixture hashes; it reports 10 failures and 2 errors both before and after these adaptations. It is not presented as a passing Code77 gate. Historical fixture-transformation and shell-debug-candidate tests are retained unchanged. The original Code76 archive checksum, byte size, nested provenance and exact fixture transform against c818 build configuration have been validated independently.
@@ -363,7 +363,7 @@ index b44592d4..3e6163d7 100755
  BUILD_TARGET = b'      applicationIdSuffix = ".hiddenprototype"'
  
 diff --git a/scripts/verify_release1711_gate.py b/scripts/verify_release1711_gate.py
-index 2d6f37b7..ea70b512 100644
+index 2d6f37b7..ba8f2309 100644
 --- a/scripts/verify_release1711_gate.py
 +++ b/scripts/verify_release1711_gate.py
 @@ -15,7 +15,7 @@ import zipfile
@@ -380,7 +380,7 @@ index 2d6f37b7..ea70b512 100644
          prefix=restart_prefixes[0]
          restart_cases({name[len(prefix):]:zipped.read(name) for name in names if name.startswith(prefix) and not name.endswith('/')},source)
 -        groups={'visual-checkpoint':9,'sanctuary-checkpoint':4,'sanctuary-dnd':1,
-+        groups={'wallpaper-return-regression-77':12,'guardian-notification-compatibility-77':2,'guardian-capture-store-77':10,'guardian-inbox-77':2,'guardian-evidence-learning-77':2,'visual-checkpoint':9,'sanctuary-checkpoint':4,'sanctuary-dnd':1,
++        groups={'web-scroll-regression-77':1,'wallpaper-return-regression-77':12,'guardian-notification-compatibility-77':2,'guardian-capture-store-77':10,'guardian-inbox-77':2,'guardian-evidence-learning-77':2,'visual-checkpoint':9,'sanctuary-checkpoint':4,'sanctuary-dnd':1,
                  'sanctuary-guardian':1,'sanctuary-accessibility':1,'sanctuary-browser':2,
                  'redesign621':18,'navigation-hidden':1,'navigation-web':1,'navigation-haptics':1,
                  'evidence-collections-68':4,'evidence-ai-68':4,'evidence-dates-68':1,
