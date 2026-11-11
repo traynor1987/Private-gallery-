@@ -459,6 +459,8 @@ class LauncherHomeLibraryPager73UiTest {
         compose.onNodeWithText("Review message").performClick()
         compose.onNodeWithText(message).assertIsDisplayed()
         compose.onNodeWithText("Not Upsetting").performClick()
+        compose.runOnIdle { assertEquals(null, label) }
+        compose.onNodeWithText("Save learning example").performClick()
         compose.runOnIdle {
             assertEquals(GuardianAssessment.LOW_RISK, label)
             row = row.copy(section = GuardianInboxSection.COOLING, remainingMillis = 60_000L)
