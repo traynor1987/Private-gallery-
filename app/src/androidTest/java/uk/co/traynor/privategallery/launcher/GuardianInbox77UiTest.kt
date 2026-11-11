@@ -79,6 +79,7 @@ class GuardianInbox77UiTest {
             compose.waitUntil(10_000) { compose.onAllNodesWithText("Guardian Conversation").fetchSemanticsNodes().isNotEmpty() }
             compose.onNodeWithText(message).assertIsDisplayed()
             compose.onNodeWithText("Not Upsetting").performClick()
+            compose.onNodeWithText("Save learning example").performClick()
             compose.waitUntil(10_000) { compose.onAllNodesWithText("Clear").fetchSemanticsNodes().isNotEmpty() }
             val saved = store.inboxRows(7, uk.co.traynor.privategallery.core.guardian.GuardianInboxClock(
                 System.currentTimeMillis(), android.os.SystemClock.elapsedRealtime(), -1)).single()

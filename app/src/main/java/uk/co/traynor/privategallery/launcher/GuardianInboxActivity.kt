@@ -769,28 +769,40 @@ internal fun GuardianConversationCard(
                     Text("Possible patterns · " + patterns.joinToString { it.label }, color = GuardianMuted)
                 }
                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                var proposedLabel by remember(row.id, preview, row.ownerLabel) {
+                    mutableStateOf<GuardianAssessment?>(null)
+                }
                 val view = androidx.compose.ui.platform.LocalView.current
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    FilterChip(selected = row.ownerLabel == GuardianAssessment.LOW_RISK, enabled = !busy,
+                    FilterChip(selected = (proposedLabel ?: row.ownerLabel) == GuardianAssessment.LOW_RISK, enabled = !busy,
                         onClick = {
                             view.performHapticFeedback(android.view.HapticFeedbackConstants.CLOCK_TICK)
-                            onLabel(GuardianAssessment.LOW_RISK)
+                            proposedLabel = GuardianAssessment.LOW_RISK
                         }, label = { Text("Not Upsetting") },
                         colors = FilterChipDefaults.filterChipColors(
                             selectedContainerColor = androidx.compose.ui.graphics.Color(0xFF136345),
                             selectedLabelColor = GuardianPrimary,
                         ))
-                    FilterChip(selected = row.ownerLabel == GuardianAssessment.UPSETTING, enabled = !busy,
+                    FilterChip(selected = (proposedLabel ?: row.ownerLabel) == GuardianAssessment.UPSETTING, enabled = !busy,
                         onClick = {
                             view.performHapticFeedback(android.view.HapticFeedbackConstants.CLOCK_TICK)
-                            onLabel(GuardianAssessment.UPSETTING)
+                            proposedLabel = GuardianAssessment.UPSETTING
                         }, label = { Text("Upsetting") },
                         colors = FilterChipDefaults.filterChipColors(
                             selectedContainerColor = androidx.compose.ui.graphics.Color(0xFF962C42),
                             selectedLabelColor = GuardianPrimary,
                         ))
                 }
-                TextButton(onClick = { if (row.ownerLabel != null) onLabel(null) else onSkip() }, enabled = !busy) { Text(if (row.ownerLabel == null) "Skip" else "Clear") }
+                proposedLabel?.let { label ->
+                    Text("Save this label as an encrypted local learning example.")
+                    Button(onClick = { onLabel(label); proposedLabel = null }, enabled = !busy) {
+                        Text("Save learning example")
+                    }
+                    TextButton(onClick = { proposedLabel = null }, enabled = !busy) { Text("Cancel label") }
+                }
+                TextButton(onClick = { if (row.ownerLabel != null) onLabel(null) else onSkip() }, enabled = !busy) {
+                    Text(if (row.ownerLabel == null) "Skip" else "Remove learning example")
+                }
             }
         }
     }
