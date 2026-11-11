@@ -85,7 +85,7 @@ internal object GuardianCapture {
         manage(context) { _, store -> store.clear() }
     }
 
-    fun record(context: Context, event: GuardianCaptureEvent, monitored: GuardianConversationKey, onDurable: (() -> Unit)? = null) {
+    fun record(context: Context, event: GuardianCaptureEvent, monitored: GuardianConversationKey, onDurable: ((Boolean) -> Unit)? = null) {
         val app = context.applicationContext
         val expected = generation.get()
         if (pendingEvents.incrementAndGet() > 16) {
@@ -104,6 +104,7 @@ internal object GuardianCapture {
                 val includeMain = includesMain(app)
                 val store = GuardianCaptureStore(app)
                 val now = guardianInboxClock(app)
+                var quietCollection = false
                 val result = runCatching {
                     val contacts = store.monitoredContacts()
                     val contact = contacts.singleOrNull { it.key == monitored }
@@ -115,6 +116,7 @@ internal object GuardianCapture {
                         if (mainMessage) noteMainCapture(GuardianCaptureStage.CONSENT)
                         return@execute
                     }
+                    quietCollection = contact?.quietCollection == true
                     val selected = if (contact == null) event else event.copy(
                         sensitivity = contact.sensitivity, holdUncertain = contact.holdUncertain)
                     store.append(selected, days, now.wall, assess = false, clock = now)
@@ -122,7 +124,7 @@ internal object GuardianCapture {
                 val captured = result.getOrNull()
                 if (captured?.allDurable == true && onDurable != null && generation.get() == expected) {
                     Handler(Looper.getMainLooper()).post {
-                        if (generation.get() == expected && isEnabled(app)) onDurable()
+                        if (generation.get() == expected && isEnabled(app)) onDurable(quietCollection)
                     }
                 }
                 if (captured != null && captured.added > 0) {

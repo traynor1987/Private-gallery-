@@ -194,7 +194,7 @@ internal class GuardianCaptureStore private constructor(private val context: Con
         contactArchive().read().map {
             GuardianContact(GuardianConversationKey(it.getString("app"), it.getLong("profile"), it.getString("conversation")),
                 it.getString("name"), it.getBoolean("enabled"), it.getBoolean("retain"),
-                GuardianSensitivity.valueOf(it.getString("sensitivity")), it.optBoolean("holdUncertain"))
+                GuardianSensitivity.valueOf(it.getString("sensitivity")), it.optBoolean("holdUncertain"), it.optBoolean("quietCollection"))
         }
     }
 
@@ -206,6 +206,7 @@ internal class GuardianCaptureStore private constructor(private val context: Con
         contactArchive().write(retained.map {
             JSONObject().put("app", it.key.app).put("profile", it.key.profile).put("conversation", it.key.conversation)
                 .put("name", it.name).put("enabled", it.enabled).put("retain", it.retain).put("sensitivity", it.sensitivity.name).put("holdUncertain", it.holdUncertain)
+                .put("quietCollection", it.quietCollection)
         })
     }
 

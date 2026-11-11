@@ -229,10 +229,8 @@ internal class GuardianNotificationListener : NotificationListenerService() {
                     val armed = currentMainTest(this)?.takeIf { test ->
                         received.entries.singleOrNull()?.text == test.message
                     }
-                    val auto = isWhatsApp && automaticDismissalEnabled(this)
-                    val onDurable: (() -> Unit)? = if (isWhatsApp && account == ProbeAccount.MAIN &&
-                        (auto || armed != null)) {
-                        { dismissStoredMain(sbn, received, armed) }
+                    val onDurable: ((Boolean) -> Unit)? = if (isWhatsApp && account == ProbeAccount.MAIN) {
+                        { quietCollection -> dismissStoredMain(sbn, received, armed, quietCollection) }
                     } else null
                     GuardianCapture.record(this, received, GuardianConversationKey(received.app, serial, received.conversation), onDurable)
                 } else if (isWhatsApp) GuardianCapture.noteMainCapture(GuardianCaptureStage.NO_MESSAGE)
@@ -253,13 +251,14 @@ internal class GuardianNotificationListener : NotificationListenerService() {
         original: StatusBarNotification,
         captured: GuardianCaptureEvent,
         armed: MainDismissalTest?,
+        quietCollection: Boolean,
     ) {
         if (connectedListener !== this || !hasAccess(this) || mainAttempt != null ||
             !GuardianCapture.isEnabled(this)) return
         val test = armed != null
         if (test) {
             if (currentMainTest(this) !== armed || captured.entries.singleOrNull()?.text != armed?.message) return
-        } else if (!automaticDismissalEnabled(this)) return
+        } else if (!quietCollection && !automaticDismissalEnabled(this)) return
         val current = runCatching { activeNotifications.singleOrNull { it.key == original.key } }.getOrNull()
             ?: return
         val uid = runCatching { packageManager.getApplicationInfo(GUARDIAN_WHATSAPP, 0).uid }.getOrNull()

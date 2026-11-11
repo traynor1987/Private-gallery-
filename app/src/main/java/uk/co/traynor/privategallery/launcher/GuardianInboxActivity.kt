@@ -689,6 +689,12 @@ class GuardianInboxActivity : ComponentActivity() {
                     LauncherToggle("Retain captured messages", entry.retain) {
                         saveContact(entry.key, entry.copy(retain = it))
                     }
+                    if (entry.key.app == GUARDIAN_WHATSAPP && entry.key.profile == getSystemService(android.os.UserManager::class.java)
+                            ?.getSerialNumberForUser(android.os.Process.myUserHandle())) {
+                        LauncherToggle("Dismiss supported alerts after encrypted capture", entry.quietCollection) {
+                            saveContact(entry.key, entry.copy(quietCollection = it))
+                        }
+                    }
                     LauncherToggle("Hold uncertain messages for four hours", entry.holdUncertain) {
                         saveContact(entry.key, entry.copy(holdUncertain = it))
                     }

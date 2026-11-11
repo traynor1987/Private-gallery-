@@ -40,6 +40,7 @@ internal data class GuardianContact(
     val key: GuardianConversationKey, val name: String,
     val enabled: Boolean = true, val retain: Boolean = true, val sensitivity: GuardianSensitivity = GuardianSensitivity.STANDARD,
     val holdUncertain: Boolean = false,
+    val quietCollection: Boolean = false,
 )
 internal enum class GuardianSensitivity(val label: String, val threshold: Double) {
     CAUTIOUS("Fewer flags", .75), STANDARD("Standard", .62), SENSITIVE("More flags", .58),
