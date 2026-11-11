@@ -25,4 +25,8 @@ class NovaBrainPatternTest {
             assertEquals(emptySet<NovaBrainPattern>(), recogniseNovaBrainPatterns(it))
         }
     }
+    @Test fun checksCapturedTextBeyondTheFirstTwoThousandCharacters() {
+        val text = "Neutral context. ".repeat(160) + "If you leave me, you will regret it."
+        assertEquals(setOf(NovaBrainPattern.EMOTIONAL_PRESSURE), recogniseNovaBrainPatterns(text))
+    }
 }

@@ -57,7 +57,7 @@ class GuardianInbox77UiTest {
             compose.waitUntil(5_000) { keyguard.isDeviceSecure }
             store.clear()
             val now = System.currentTimeMillis()
-            val message = "A synthetic historical inbox message"
+            val message = "After everything I have done for you. Synthetic fixture."
             store.append(GuardianCaptureEvent(0, "conversation", now,
                 listOf(GuardianCaptureEntry(now - 1, "sender-key", message, "Fixture contact"))), 7, now)
             compose.onNodeWithText("Unlock Guardian Inbox").performClick()
@@ -77,6 +77,9 @@ class GuardianInbox77UiTest {
             compose.waitUntil(15_000) { compose.onAllNodesWithText("Fixture contact").fetchSemanticsNodes().isNotEmpty() }
             compose.onNodeWithText("Fixture contact").performClick()
             compose.waitUntil(10_000) { compose.onAllNodesWithText("Guardian Conversation").fetchSemanticsNodes().isNotEmpty() }
+            compose.onNodeWithText(message).assertDoesNotExist()
+            compose.onNodeWithText("Possible patterns · Guilt-tripping").assertIsDisplayed()
+            compose.onNodeWithText("Review message").performClick()
             compose.onNodeWithText(message).assertIsDisplayed()
             compose.onNodeWithText("Not Upsetting").performClick()
             compose.onNodeWithText("Save learning example").performClick()

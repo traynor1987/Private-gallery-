@@ -42,6 +42,7 @@ internal data class GuardianInboxRow(
     val conversation: GuardianConversationKey? = null,
     val availableAfter: Long? = null,
     val ownerLabel: GuardianAssessment? = null,
+    val patterns: Set<NovaBrainPattern>? = null,
 )
 
 /** The export only needs section membership and layout-local list keys. */
@@ -437,6 +438,8 @@ internal class GuardianCaptureStore private constructor(private val context: Con
     }
 
     private fun applyAssessment(row: JSONObject, assessment: GuardianAssessment, now: GuardianInboxClock) {
+        val patterns = recogniseNovaBrainPatterns(row.getString("text"))
+        row.put("patterns", JSONArray(patterns.map { it.name }))
         row.put("assessment", assessment.name).put("assessmentVersion", 1)
         if (!row.has("hold") && (assessment == GuardianAssessment.UPSETTING ||
                 assessment == GuardianAssessment.UNCERTAIN && row.optBoolean("holdUncertain"))) startHold(row, now)
@@ -486,7 +489,12 @@ internal class GuardianCaptureStore private constructor(private val context: Con
                 GuardianInboxSection.PROTECTED else section, remaining, assessment,
             guardianSenderDisplayName(row.optString("displayName")), row.getLong("capturedAt"),
             GuardianConversationKey(row.optString("app", GUARDIAN_WHATSAPP), row.getLong("profile"), row.getString("conversation")),
-            if (remaining > 0) now.wall + remaining else null, ownerLabel(row))
+            if (remaining > 0) now.wall + remaining else null, ownerLabel(row),
+            row.optJSONArray("patterns")?.let { stored ->
+                (0 until stored.length()).mapNotNull { index ->
+                    NovaBrainPattern.entries.firstOrNull { it.name == stored.optString(index) }
+                }.toSet()
+            })
     }
 
     fun clear() = synchronized(lock) {

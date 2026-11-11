@@ -3,7 +3,7 @@ package uk.co.traynor.privategallery.core.guardian
 internal enum class NovaBrainPattern(val label: String, expression: String) {
     GUILT("Guilt-tripping", "after everything i(?:'ve| have) done for you"),
     GASLIGHTING("Gaslighting indicator", "you(?:'re| are) imagining things"),
-    EMOTIONAL_PRESSURE("Emotional pressure", "if you really (?:loved|cared about) me"),
+    EMOTIONAL_PRESSURE("Emotional pressure", "if you really (?:loved|cared about) me|if you leave me,? (?:it will be your fault|you will regret it)"),
     REPEATED_DEMAND("Repeated demand", "how many times do i have to tell you"),
     BLAME_SHIFTING("Blame-shifting", "you made me do it"),
     PASSIVE_AGGRESSION("Passive aggression", "fine,? whatever you say"),
@@ -18,6 +18,6 @@ internal enum class NovaBrainPattern(val label: String, expression: String) {
 }
 
 internal fun recogniseNovaBrainPatterns(text: String): Set<NovaBrainPattern> {
-    val normalised = text.take(2048).trim().replace('’', '\'')
+    val normalised = text.trim().replace('’', '\'')
     return NovaBrainPattern.entries.filterTo(linkedSetOf()) { it.matches(normalised) }
 }

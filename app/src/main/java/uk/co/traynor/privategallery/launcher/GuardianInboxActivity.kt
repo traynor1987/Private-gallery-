@@ -288,8 +288,6 @@ class GuardianInboxActivity : ComponentActivity() {
         detail = row
         conversation = row.conversation
         conversationPreview = null
-        if (row.section == GuardianInboxSection.COOLING) return
-        reviewConversationMessage(row.conversation, row)
     }
 
     private fun review(row: GuardianInboxRow, action: GuardianInboxAction) {
@@ -752,7 +750,7 @@ internal fun GuardianConversationCard(
 ) {
     Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(20.dp), colors = guardianCardColors()) {
         Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
-            val timestamp = DateFormat.getTimeInstance(DateFormat.SHORT).format(Date(row.arrivedAt))
+            val timestamp = DateFormat.getDateTimeInstance().format(Date(row.arrivedAt))
             FlowRow(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                 Text("Incoming message", color = GuardianMuted, style = MaterialTheme.typography.labelLarge)
                 Text(timestamp, color = GuardianMuted, style = MaterialTheme.typography.labelLarge)
@@ -765,6 +763,16 @@ internal fun GuardianConversationCard(
                 return@Column
             }
             if (preview == null) {
+                val patterns = row.patterns
+                Text(row.assessment?.let { "Local estimate · ${it.label}" } ?: "Assessment pending", color = GuardianMuted)
+                when {
+                    patterns == null -> Text("Pre-read pattern assessment is unavailable for this capture.")
+                    patterns.isEmpty() -> Text("No supported pattern cues detected. Context may change the interpretation.")
+                    else -> {
+                        Text("Possible patterns · " + patterns.joinToString { it.label }, color = GuardianAmber)
+                        Text("Local wording cues suggest these patterns. Context may change the interpretation.")
+                    }
+                }
                 Text("Preview hidden until you review it.", color = GuardianMuted)
                 OutlinedButton(onClick = onReview, enabled = !busy) { Text("Review message") }
             } else {
@@ -798,6 +806,9 @@ internal fun GuardianConversationCard(
                             selectedLabelColor = GuardianPrimary,
                         ))
                 }
+                if (row.ownerLabel != null) {
+                    TextButton(onClick = onSkip, enabled = !busy) { Text("Conceal") }
+                }
                 proposedLabel?.let { label ->
                     Text("Save this label as an encrypted local learning example.")
                     Button(onClick = { onLabel(label); proposedLabel = null }, enabled = !busy) {
@@ -806,7 +817,7 @@ internal fun GuardianConversationCard(
                     TextButton(onClick = { proposedLabel = null }, enabled = !busy) { Text("Cancel label") }
                 }
                 TextButton(onClick = { if (row.ownerLabel != null) onLabel(null) else onSkip() }, enabled = !busy) {
-                    Text(if (row.ownerLabel == null) "Skip" else "Remove learning example")
+                    Text(if (row.ownerLabel == null) "Conceal" else "Remove learning example")
                 }
             }
         }
