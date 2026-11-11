@@ -3,6 +3,11 @@ package uk.co.traynor.privategallery.launcher
 import android.view.WindowManager
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.performClick
+import androidx.test.platform.app.InstrumentationRegistry
+import android.os.ParcelFileDescriptor
+import android.app.KeyguardManager
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import org.junit.Assert.assertTrue
@@ -36,6 +41,44 @@ class GuardianInbox77UiTest {
             store.clear()
         }
     }
+    @Test fun inboxNotificationOpensFullScreenConversationAfterDeviceAuthentication() {
+        check(android.os.Build.FINGERPRINT.contains("generic") || android.os.Build.MODEL.contains("sdk_gphone"))
+        val activity = compose.activity
+        val store = GuardianCaptureStore(activity)
+        val keyguard = checkNotNull(activity.getSystemService(KeyguardManager::class.java))
+        check(!keyguard.isDeviceSecure)
+        val pin = "436890"
+        val automation = InstrumentationRegistry.getInstrumentation().uiAutomation
+        fun shell(command: String) = ParcelFileDescriptor.AutoCloseInputStream(
+            automation.executeShellCommand(command),
+        ).bufferedReader().use { it.readText() }
+        try {
+            assertTrue(shell("locksettings set-pin $pin").contains("Pin set", ignoreCase = true))
+            compose.waitUntil(5_000) { keyguard.isDeviceSecure }
+            store.clear()
+            val now = System.currentTimeMillis()
+            val message = "A synthetic historical inbox message"
+            store.append(GuardianCaptureEvent(0, "conversation", now,
+                listOf(GuardianCaptureEntry(now - 1, "sender-key", message, "Fixture contact"))), 7, now)
+            compose.onNodeWithText("Unlock Guardian Inbox").performClick()
+            compose.waitUntil(15_000) {
+                shell("dumpsys window").lineSequence().any {
+                    "mCurrentFocus=" in it && ("ConfirmLock" in it || "BiometricPrompt" in it)
+                }
+            }
+            shell("input keyevent ${pin.map { "KEYCODE_$it" }.joinToString(" ")} KEYCODE_ENTER")
+            compose.waitUntil(15_000) { compose.onAllNodesWithText("Fixture contact").fetchSemanticsNodes().isNotEmpty() }
+            compose.onNodeWithText("Fixture contact").performClick()
+            compose.waitUntil(10_000) { compose.onAllNodesWithText("Guardian Conversation").fetchSemanticsNodes().isNotEmpty() }
+            compose.onNodeWithText(message).assertIsDisplayed()
+            compose.onNodeWithText("Not Upsetting").performClick()
+            compose.waitUntil(10_000) { compose.onAllNodesWithText("Clear").fetchSemanticsNodes().isNotEmpty() }
+        } finally {
+            store.clear()
+            shell("locksettings clear --old $pin")
+        }
+    }
+
     @Test fun primarySecondaryAndAccentTextMeetNormalTextContrast() {
         for (foreground in listOf(GuardianPrimary, GuardianMuted, GuardianBlue, GuardianAmber, GuardianMint)) {
             for (background in listOf(GuardianNavy, GuardianGlass)) {

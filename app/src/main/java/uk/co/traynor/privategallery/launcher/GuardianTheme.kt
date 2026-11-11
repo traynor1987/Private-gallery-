@@ -3,6 +3,7 @@ package uk.co.traynor.privategallery.launcher
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.graphics.Color
 import uk.co.traynor.privategallery.core.ui.AppTheme
 import uk.co.traynor.privategallery.ui.PrivateGalleryTheme
@@ -43,3 +44,32 @@ internal fun guardianCardColors() = CardDefaults.cardColors(
     containerColor = GuardianGlass, contentColor = GuardianPrimary,
     disabledContainerColor = GuardianGlass, disabledContentColor = GuardianDisabled,
 )
+
+@Composable
+internal fun GuardianAlertDialog(
+    onDismissRequest: () -> Unit,
+    confirmButton: @Composable () -> Unit,
+    modifier: androidx.compose.ui.Modifier = androidx.compose.ui.Modifier,
+    dismissButton: (@Composable () -> Unit)? = null,
+    icon: (@Composable () -> Unit)? = null,
+    title: (@Composable () -> Unit)? = null,
+    text: (@Composable () -> Unit)? = null,
+    properties: androidx.compose.ui.window.DialogProperties = androidx.compose.ui.window.DialogProperties(),
+) {
+    GuardianTheme {
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = onDismissRequest,
+            confirmButton = confirmButton,
+            modifier = modifier,
+            dismissButton = dismissButton,
+            icon = icon,
+            title = title,
+            text = text,
+            properties = properties,
+            shape = androidx.compose.foundation.shape.RoundedCornerShape(24.dp),
+            containerColor = GuardianGlass,
+            titleContentColor = GuardianPrimary,
+            textContentColor = GuardianMuted,
+        )
+    }
+}

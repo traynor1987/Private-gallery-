@@ -13,7 +13,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
@@ -95,7 +94,7 @@ internal fun LauncherSmartSettings(
     }
 
     when (dialog) {
-        SmartSettingsDialog.USAGE_ACCESS -> AlertDialog(
+        SmartSettingsDialog.USAGE_ACCESS -> GuardianAlertDialog(
             onDismissRequest = { dialog = null },
             title = { Text("Enable Extended tracking?") },
             text = {
@@ -111,7 +110,7 @@ internal fun LauncherSmartSettings(
             },
             dismissButton = { TextButton(onClick = { dialog = null }) { Text("Cancel") } },
         )
-        SmartSettingsDialog.CLEAR_HISTORY -> AlertDialog(
+        SmartSettingsDialog.CLEAR_HISTORY -> GuardianAlertDialog(
             onDismissRequest = { dialog = null },
             title = { Text("Clear app history?") },
             text = { Text("This removes your remembered app launches. Your pins and exclusions stay saved.") },
@@ -124,7 +123,7 @@ internal fun LauncherSmartSettings(
             },
             dismissButton = { TextButton(onClick = { dialog = null }) { Text("Cancel") } },
         )
-        SmartSettingsDialog.RESET_SUGGESTIONS -> AlertDialog(
+        SmartSettingsDialog.RESET_SUGGESTIONS -> GuardianAlertDialog(
             onDismissRequest = { dialog = null },
             title = { Text("Reset suggestions?") },
             text = { Text("Automatic suggestions will start fresh. Your recent history, pins and exclusions stay saved.") },
@@ -173,7 +172,7 @@ private fun SmartTrackingAppPicker(
 ) {
     var query by rememberSaveable { mutableStateOf("") }
     val matching = apps.filter { it.label.contains(query.trim(), ignoreCase = true) }
-    AlertDialog(
+    GuardianAlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(title) },
         text = {

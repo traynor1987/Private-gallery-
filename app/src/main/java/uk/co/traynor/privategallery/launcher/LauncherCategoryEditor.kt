@@ -4,7 +4,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -22,7 +21,7 @@ internal fun LauncherCategoryEditor(
     onSelect: (LauncherCategory?) -> Unit,
     onDismiss: () -> Unit,
 ) {
-    AlertDialog(
+    GuardianAlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Category for ${app.label}") },
         text = {

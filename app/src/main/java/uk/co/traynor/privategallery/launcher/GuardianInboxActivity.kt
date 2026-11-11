@@ -20,6 +20,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
@@ -58,7 +59,6 @@ class GuardianInboxActivity : ComponentActivity() {
     private var authenticated by mutableStateOf(false)
     private var rows by mutableStateOf<List<GuardianInboxRow>>(emptyList())
     private var selected by mutableStateOf(GuardianInboxSection.PENDING)
-    private var revealed by mutableStateOf<String?>(null)
     private var detail by mutableStateOf<GuardianInboxRow?>(null)
     private var failure by mutableStateOf<String?>(null)
     private var busy by mutableStateOf(false)
@@ -110,19 +110,19 @@ class GuardianInboxActivity : ComponentActivity() {
                             drawLayer(layer)
                         } else Modifier).background(GuardianNavy).padding(horizontal = 16.dp)) {
                             val thread = conversation.takeIf { authenticated && !deviceLocked() && !diagnostic && !contactsOpen }
-                            BackHandler(enabled = diagnostic || contactsOpen || conversationsOpen) { navigateBack() }
+                            BackHandler(enabled = diagnostic || contactsOpen || conversationsOpen || detail != null) { navigateBack() }
                             Row(Modifier.fillMaxWidth().padding(vertical = 12.dp),
                                 verticalAlignment = Alignment.CenterVertically) {
                                 IconButton(onClick = ::navigateBack) {
                                     Icon(Icons.AutoMirrored.Outlined.ArrowBack, "Back", tint = GuardianBlue)
                                 }
                                 Column(Modifier.weight(1f)) {
-                                    Text(if (thread == null) "Guardian Inbox" else "Guardian Conversation",
+                                    Text(if (thread == null && detail == null) "Guardian Inbox" else "Guardian Conversation",
                                         Modifier.semantics { heading() }, style = MaterialTheme.typography.headlineSmall)
-                                    Text(if (thread == null) "Protected by Nova Guardian" else conversationSubtitle(thread),
+                                    Text(if (thread != null) conversationSubtitle(thread) else detail?.let { row -> listOfNotNull(row.senderName.takeIf { showSenders }, appLabel(row.conversation)).joinToString(" · ") } ?: "Protected by Nova Guardian",
                                         color = GuardianMuted, style = MaterialTheme.typography.bodyMedium)
                                 }
-                                if (thread != null) {
+                                if (thread != null || detail != null) {
                                     Icon(Icons.Outlined.Shield, null, tint = GuardianMint)
                                 } else if (authenticated && !deviceLocked() && !diagnostic) IconButton(onClick = {
                                     loadArchive({ store, _, _ -> store.usesConversationContext() }) {
@@ -162,7 +162,7 @@ class GuardianInboxActivity : ComponentActivity() {
                                     }) { Text("Share redacted image") }
                                 }
                                 if (contactsOpen && !diagnostic) MonitoredContacts()
-                                else if (thread != null) ConversationDetail(thread)
+                                else if (thread != null || detail != null) ConversationDetail(thread)
                                 else if (conversationsOpen && !diagnostic) Conversations()
                                 else InboxContent(redacted = diagnostic)
                             }
@@ -214,7 +214,6 @@ class GuardianInboxActivity : ComponentActivity() {
         expiry?.cancel()
         countdown?.cancel()
         rows = emptyList()
-        revealed = null
         detail = null
         busy = false
         failure = null
@@ -235,7 +234,9 @@ class GuardianInboxActivity : ComponentActivity() {
         when {
             diagnostic -> diagnostic = false
             contactsOpen -> { contactsOpen = false; GuardianCapture.stopContactDiscovery() }
-            conversation != null -> {
+            conversation != null || detail != null -> {
+                detail = null
+                confirmDelete = false
                 conversation = null
                 conversationPreview = null
                 query = ""
@@ -272,14 +273,15 @@ class GuardianInboxActivity : ComponentActivity() {
                 refresh()
             } else {
                 detail = reviewed.first
-                revealed = reviewed.second
+                conversation = reviewed.first.conversation
+                conversationPreview = reviewed.first.id to reviewed.second
+                rows = rows.map { if (it.id == reviewed.first.id) reviewed.first else it }
             }
         }
     }
 
     private fun review(row: GuardianInboxRow, action: GuardianInboxAction) {
-        detail = null
-        revealed = null
+        conversationPreview = null
         confirmDelete = false
         loadArchive({ store, days, now -> store.reviewInboxMessage(row.id, action, days, now) }) { saved ->
             if (saved) {
@@ -306,20 +308,6 @@ class GuardianInboxActivity : ComponentActivity() {
             if (!canReview()) return@launch
             busy = false
             result.onSuccess(publish).onFailure { failure = "The encrypted Guardian archive could not be read." }
-        }
-    }
-
-    private fun teach(row: GuardianInboxRow, assessment: GuardianAssessment) {
-        loadArchive({ store, days, now ->
-            val text = store.revealInboxMessage(row.id, days, now) ?: return@loadArchive false
-            store.teach(text, assessment) && store.assessInboxMessage(row.id, days, now) != null
-        }) { saved ->
-            if (saved) {
-                detail = null
-                revealed = null
-                GuardianCapture.refresh(applicationContext)
-                refresh()
-            } else failure = "This message does not contain enough text to teach Nova Brain."
         }
     }
 
@@ -391,7 +379,7 @@ class GuardianInboxActivity : ComponentActivity() {
 
     @Composable
     private fun InboxDialogs() {
-        if (settingsOpen) AlertDialog(
+        if (settingsOpen) GuardianAlertDialog(
             onDismissRequest = { settingsOpen = false },
             title = { Text("Inbox privacy") },
             text = {
@@ -428,59 +416,6 @@ class GuardianInboxActivity : ComponentActivity() {
             dismissButton = { TextButton(onClick = { settingsOpen = false }) { Text("Cancel") } },
             properties = DialogProperties(securePolicy = SecureFlagPolicy.SecureOn),
         )
-        detail?.let { row ->
-            AlertDialog(
-                onDismissRequest = { detail = null; revealed = null; confirmDelete = false },
-                title = { Text(if (confirmDelete) "Delete captured message?" else if (showSenders) row.senderName ?: "Captured message" else "Captured message") },
-                text = {
-                    if (confirmDelete) Text("Delete this copy from the Guardian archive.")
-                    else Column(Modifier.heightIn(max = 360.dp).verticalScroll(rememberScrollState())) {
-                        Text(revealed.orEmpty())
-                        TextButton(enabled = !busy, onClick = {
-                            loadArchive({ store, days, now -> store.assessInboxMessage(row.id, days, now) }) {
-                                detail = null
-                                revealed = null
-                                GuardianCapture.refresh(applicationContext)
-                                refresh()
-                            }
-                        }) { Text("Analyse on this device") }
-                        row.assessment?.let { Text("Local estimate · ${it.label}", color = GuardianMuted) }
-                        GuardianAssessment.entries.forEach { assessment ->
-                            TextButton(onClick = { teach(row, assessment) }, enabled = !busy) {
-                                Text("Teach Nova Brain · ${assessment.label}")
-                            }
-                        }
-                        TextButton(enabled = !busy, onClick = {
-                            loadArchive({ store, days, now ->
-                                store.revealInboxMessage(row.id, days, now)?.let(store::forgetExample) == true
-                            }) { removed ->
-                                if (removed) {
-                                    GuardianCapture.refresh(applicationContext)
-                                    detail = null
-                                    revealed = null
-                                    refresh()
-                                } else failure = "No saved example matched this message."
-                            }
-                        }) { Text("Forget this training example") }
-                        TextButton(onClick = { review(row, GuardianInboxAction.READY) }) { Text("Mark ready") }
-                        TextButton(onClick = { review(row, GuardianInboxAction.HOLD) }) { Text("Hold for four hours") }
-                        TextButton(onClick = { review(row, GuardianInboxAction.ARCHIVE) }) { Text("Move to history") }
-                        TextButton(onClick = { confirmDelete = true }) { Text("Delete message") }
-                        failure?.let { Text(it, color = MaterialTheme.colorScheme.error) }
-                    }
-                },
-                confirmButton = {
-                    TextButton(onClick = {
-                        if (confirmDelete) review(row, GuardianInboxAction.DELETE)
-                        else { detail = null; revealed = null }
-                    }) { Text(if (confirmDelete) "Delete" else "Close") }
-                },
-                dismissButton = if (confirmDelete) {
-                    { TextButton(onClick = { confirmDelete = false }) { Text("Cancel") } }
-                } else null,
-                properties = DialogProperties(securePolicy = SecureFlagPolicy.SecureOn),
-            )
-        }
     }
 
     private fun appLabel(key: GuardianConversationKey?): String =
@@ -563,10 +498,24 @@ class GuardianInboxActivity : ComponentActivity() {
     }
 
     @Composable
-    private fun ColumnScope.ConversationDetail(thread: GuardianConversationKey) {
-        val ordered = rows.filter { it.conversation == thread && (matches?.contains(it.id) ?: true) }.sortedBy { it.arrivedAt }
+    private fun ColumnScope.ConversationDetail(thread: GuardianConversationKey?) {
+        val ordered = rows.filter { (if (thread == null) it.id == detail?.id else it.conversation == thread) && (matches?.contains(it.id) ?: true) }.sortedBy { it.arrivedAt }
         val dates = ordered.groupBy { DateFormat.getDateInstance(DateFormat.FULL).format(Date(it.arrivedAt)) }
-        LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(12.dp),
+        val scroll = rememberLazyListState()
+        val openedId = detail?.id
+        LaunchedEffect(openedId) {
+            if (openedId == null) return@LaunchedEffect
+            var index = 1 // The introduction precedes the date groups.
+            for (messages in dates.values) {
+                val offset = messages.indexOfFirst { it.id == openedId }
+                if (offset >= 0) {
+                    scroll.scrollToItem(index + 1 + offset)
+                    break
+                }
+                index += 1 + messages.size
+            }
+        }
+        LazyColumn(Modifier.weight(1f), state = scroll, verticalArrangement = Arrangement.spacedBy(12.dp),
             contentPadding = PaddingValues(bottom = 22.dp)) {
             item {
                 GuardianCard("Notification-derived history") {
@@ -595,17 +544,72 @@ class GuardianInboxActivity : ComponentActivity() {
                 items(messages, key = { it.id }) { row ->
                     GuardianConversationCard(row, conversationPreview?.takeIf { it.first == row.id }?.second,
                         busy = busy, onReview = { reviewConversationMessage(thread, row) },
-                        onLabel = { label -> labelConversationMessage(thread, row, label) })
+                        onLabel = { label -> labelConversationMessage(thread, row, label) },
+                        onSkip = { conversationPreview = null; confirmDelete = false })
+                    if (conversationPreview?.first == row.id && row.section != GuardianInboxSection.COOLING) {
+                        MessageActions(row)
+                    }
                 }
             }
             if (ordered.isEmpty()) item { Text("No eligible messages found.", color = GuardianMuted) }
         }
     }
 
-    private fun reviewConversationMessage(thread: GuardianConversationKey, row: GuardianInboxRow) {
+    @OptIn(ExperimentalLayoutApi::class)
+    @Composable
+    private fun MessageActions(row: GuardianInboxRow) {
+        GuardianCard("Message actions") {
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                TextButton(enabled = !busy, onClick = {
+                    conversationPreview = null
+                    loadArchive({ store, days, now -> store.assessInboxMessage(row.id, days, now) }) {
+                        GuardianCapture.refresh(applicationContext)
+                        refresh()
+                    }
+                }) { Text("Analyse on this device") }
+                TextButton(enabled = !busy, onClick = {
+                    conversationPreview = null
+                    loadArchive({ store, days, now ->
+                        val text = store.revealInboxMessage(row.id, days, now) ?: return@loadArchive false
+                        store.teach(text, GuardianAssessment.UNCERTAIN) &&
+                            store.assessInboxMessage(row.id, days, now) != null
+                    }) { saved ->
+                        if (saved) {
+                            GuardianCapture.refresh(applicationContext)
+                            refresh()
+                        } else failure = "This message could not be saved as an uncertain example."
+                    }
+                }) { Text("Teach as uncertain") }
+                TextButton(enabled = !busy, onClick = {
+                    conversationPreview = null
+                    loadArchive({ store, days, now ->
+                        store.revealInboxMessage(row.id, days, now)?.let(store::forgetExample) == true
+                    }) { removed ->
+                        if (removed) {
+                            GuardianCapture.refresh(applicationContext)
+                            refresh()
+                        } else failure = "No saved example matched this message."
+                    }
+                }) { Text("Forget saved training example") }
+                TextButton(enabled = !busy, onClick = { review(row, GuardianInboxAction.READY) }) { Text("Mark ready") }
+                TextButton(enabled = !busy, onClick = { review(row, GuardianInboxAction.HOLD) }) { Text("Hold for four hours") }
+                TextButton(enabled = !busy, onClick = { review(row, GuardianInboxAction.ARCHIVE) }) { Text("Move to history") }
+                TextButton(enabled = !busy, onClick = { confirmDelete = true }) { Text("Delete message") }
+            }
+            if (confirmDelete) {
+                Text("Delete this copy from the encrypted Guardian archive?")
+                TextButton(enabled = !busy, onClick = { review(row, GuardianInboxAction.DELETE) }) { Text("Delete copy") }
+                TextButton(onClick = { confirmDelete = false }) { Text("Cancel") }
+            }
+        }
+    }
+
+    private fun reviewConversationMessage(thread: GuardianConversationKey?, row: GuardianInboxRow) {
+        val openedDetail = detail
+        confirmDelete = false
         conversationPreview = null
         loadArchive({ store, days, now -> store.prepareInboxReview(row.id, days, now) }) { reviewed ->
-            if (conversation != thread) return@loadArchive
+            if (conversation != thread || (thread == null && detail != openedDetail)) return@loadArchive
             if (reviewed == null) {
                 GuardianCapture.refresh(applicationContext)
                 refresh()
@@ -616,10 +620,11 @@ class GuardianInboxActivity : ComponentActivity() {
         }
     }
 
-    private fun labelConversationMessage(thread: GuardianConversationKey, row: GuardianInboxRow, label: GuardianAssessment?) {
+    private fun labelConversationMessage(thread: GuardianConversationKey?, row: GuardianInboxRow, label: GuardianAssessment?) {
         if (conversationPreview?.first != row.id) return
+        val openedDetail = detail
         loadArchive({ store, days, now -> store.labelConversationMessage(row.id, label, days, now) }) { saved ->
-            if (conversation != thread) return@loadArchive
+            if (conversation != thread || (thread == null && detail != openedDetail)) return@loadArchive
             if (saved) {
                 rows = rows.map { if (it.id == row.id) it.copy(ownerLabel = label) else it }
                 GuardianCapture.refresh(applicationContext)
@@ -712,7 +717,7 @@ internal fun GuardianCooldownCopy(availableAfter: Long?, potentiallyUpsetting: B
 @Composable
 internal fun GuardianConversationCard(
     row: GuardianInboxRow, preview: String?, busy: Boolean,
-    onReview: () -> Unit, onLabel: (GuardianAssessment?) -> Unit,
+    onReview: () -> Unit, onLabel: (GuardianAssessment?) -> Unit, onSkip: () -> Unit = {},
 ) {
     Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(20.dp), colors = guardianCardColors()) {
         Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
@@ -734,13 +739,28 @@ internal fun GuardianConversationCard(
             } else {
                 Text(preview, color = GuardianPrimary, style = MaterialTheme.typography.bodyLarge)
                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                val view = androidx.compose.ui.platform.LocalView.current
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     FilterChip(selected = row.ownerLabel == GuardianAssessment.LOW_RISK, enabled = !busy,
-                        onClick = { onLabel(GuardianAssessment.LOW_RISK) }, label = { Text("Not Upsetting") })
+                        onClick = {
+                            view.performHapticFeedback(android.view.HapticFeedbackConstants.CLOCK_TICK)
+                            onLabel(GuardianAssessment.LOW_RISK)
+                        }, label = { Text("Not Upsetting") },
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = androidx.compose.ui.graphics.Color(0xFF136345),
+                            selectedLabelColor = GuardianPrimary,
+                        ))
                     FilterChip(selected = row.ownerLabel == GuardianAssessment.UPSETTING, enabled = !busy,
-                        onClick = { onLabel(GuardianAssessment.UPSETTING) }, label = { Text("Upsetting") })
+                        onClick = {
+                            view.performHapticFeedback(android.view.HapticFeedbackConstants.CLOCK_TICK)
+                            onLabel(GuardianAssessment.UPSETTING)
+                        }, label = { Text("Upsetting") },
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = androidx.compose.ui.graphics.Color(0xFF962C42),
+                            selectedLabelColor = GuardianPrimary,
+                        ))
                 }
-                TextButton(onClick = { onLabel(null) }, enabled = !busy && row.ownerLabel != null) { Text("Clear label") }
+                TextButton(onClick = { if (row.ownerLabel != null) onLabel(null) else onSkip() }, enabled = !busy) { Text(if (row.ownerLabel == null) "Skip" else "Clear") }
             }
         }
     }

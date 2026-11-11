@@ -7,6 +7,22 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class LauncherExitChallengeTest {
+    @Test fun alwaysRequiresAllStepsOutsideSanctuary() {
+        assertFalse(LauncherExitSettings().mode.requiresProtection(null))
+        assertTrue(LauncherExitMode.SANCTUARY.requiresProtection("active"))
+        assertFalse(LauncherExitMode.DISABLED.requiresProtection("active"))
+        assertTrue(LauncherExitMode.ALWAYS.requiresProtection(null))
+        assertTrue(LauncherExitMode.ALWAYS.requiresProtection("active"))
+        val start = LauncherExitChallenge(null)
+        assertFalse(start.finishHold(6_000, null))
+        val phrase = checkNotNull(start.verifyPin(true))
+        val hold = checkNotNull(phrase.verifyPhrase("Change my Home app", "Change my Home app"))
+        val pressed = checkNotNull(hold.beginHold(100))
+        assertFalse(pressed.finishHold(5_099, null))
+        assertFalse(pressed.finishHold(5_100, "active"))
+        assertTrue(pressed.finishHold(5_100, null))
+    }
+
     @Test fun pinAloneAndWrongPhraseNeverAuthorizeTheExit() {
         val start = LauncherExitChallenge("session")
         assertNull(start.verifyPin(false))

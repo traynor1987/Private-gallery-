@@ -79,7 +79,7 @@ internal fun LauncherLibraryPinSettings(
 ) {
     var open by remember { mutableStateOf(false) }
     OutlinedButton(onClick = { open = true }) { Text("Pin categories") }
-    if (open) AlertDialog(
+    if (open) GuardianAlertDialog(
         onDismissRequest = { open = false },
         title = { Text("Pin categories") },
         text = {

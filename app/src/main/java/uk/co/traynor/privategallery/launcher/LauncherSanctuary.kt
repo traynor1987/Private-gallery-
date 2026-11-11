@@ -13,7 +13,6 @@ import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Shield
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -94,7 +93,7 @@ internal fun LauncherSanctuaryDialog(
     onDismiss: () -> Unit,
 ) {
     var selected by remember { mutableStateOf(SanctuaryMode.SELF_CARE) }
-    AlertDialog(
+    GuardianAlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Nova Sanctuary") },
         text = {

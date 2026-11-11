@@ -464,45 +464,53 @@ private fun LauncherRuntime(
                         pinnedCategories = libraryPins,
                     )
                 }
-                LauncherSurface.LIBRARY_SETTINGS -> LauncherPanel("App Library", { surface = LauncherSurface.SETTINGS }) {
-                    Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(bottom = 16.dp)) {
-                        smartSettings?.invoke(smartApps)
-                        if (!launcherProtected) LauncherLibraryPinSettings(libraryPins) { pins ->
-                            if (identitySettings.setLibraryPins(pins)) libraryPins = pins
-                        }
-                        actions.setSmartFolderPresentation?.let { selectMode ->
-                            LauncherSmartFolderModeSetting(smartFolderPresentation, selectMode)
-                        }
-                        val next = layout.withSmartFolderTemplate(
-                            onlyIfEmpty = false,
-                            capacity = state.appearance.grid.columns(wide) * state.appearance.grid.rows,
-                        )
-                        OutlinedButton(enabled = next != layout, onClick = { edit(next) }) {
-                            Text("Add or restore smart folders on Home page two")
+                LauncherSurface.LIBRARY_SETTINGS -> GuardianTheme {
+                    LauncherPanel("App Library", { surface = LauncherSurface.SETTINGS }) {
+                        Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(bottom = 16.dp)) {
+                            smartSettings?.invoke(smartApps)
+                            if (!launcherProtected) LauncherLibraryPinSettings(libraryPins) { pins ->
+                                if (identitySettings.setLibraryPins(pins)) libraryPins = pins
+                            }
+                            actions.setSmartFolderPresentation?.let { selectMode ->
+                                LauncherSmartFolderModeSetting(smartFolderPresentation, selectMode)
+                            }
+                            val next = layout.withSmartFolderTemplate(
+                                onlyIfEmpty = false,
+                                capacity = state.appearance.grid.columns(wide) * state.appearance.grid.rows,
+                            )
+                            OutlinedButton(enabled = next != layout, onClick = { edit(next) }) {
+                                Text("Add or restore smart folders on Home page two")
+                            }
                         }
                     }
                 }
-                LauncherSurface.GUARDIAN_DIAGNOSTICS -> NotificationCompatibilityScreen(
-                    allowPermissionChanges = !launcherProtected, onBack = { showHome() },
-                )
-                LauncherSurface.GUARDIAN_SETTINGS -> GuardianHomeSettings(
-                    guardianOptions,
-                    onChange = {
-                        if (!it.showPage) { coverGuardian = false; innerGuardian = false }
-                        guardianOptions = it
-                        it.save(guardianContext)
-                    },
-                    onBack = { surface = LauncherSurface.SETTINGS },
-                )
-                LauncherSurface.SETTINGS -> LauncherSettings(
-                    state, decisions, visibleApps, actions, isDefaultHome, outsideProtection, launcherProtected,
-                    onBack = { showHome() },
-                    onEdit = { surface = LauncherSurface.EDIT },
-                    onLibrarySettings = { surface = LauncherSurface.LIBRARY_SETTINGS },
-                    onGuardianSettings = { surface = LauncherSurface.GUARDIAN_SETTINGS },
-                    defaultHomeUi = defaultHomeUi,
-                    wide = wide,
-                )
+                LauncherSurface.GUARDIAN_DIAGNOSTICS -> GuardianTheme {
+                    NotificationCompatibilityScreen(
+                        allowPermissionChanges = !launcherProtected, onBack = { showHome() },
+                    )
+                }
+                LauncherSurface.GUARDIAN_SETTINGS -> GuardianTheme {
+                    GuardianHomeSettings(
+                        guardianOptions,
+                        onChange = {
+                            if (!it.showPage) { coverGuardian = false; innerGuardian = false }
+                            guardianOptions = it
+                            it.save(guardianContext)
+                        },
+                        onBack = { surface = LauncherSurface.SETTINGS },
+                    )
+                }
+                LauncherSurface.SETTINGS -> GuardianTheme {
+                    LauncherSettings(
+                        state, decisions, visibleApps, actions, isDefaultHome, outsideProtection, launcherProtected,
+                        onBack = { showHome() },
+                        onEdit = { surface = LauncherSurface.EDIT },
+                        onLibrarySettings = { surface = LauncherSurface.LIBRARY_SETTINGS },
+                        onGuardianSettings = { surface = LauncherSurface.GUARDIAN_SETTINGS },
+                        defaultHomeUi = defaultHomeUi,
+                        wide = wide,
+                    )
+                }
                 LauncherSurface.EDIT -> LauncherLayoutEditor(
                     state, layout, wide, currentPage, apps.filter { canDisplay(it.component) }, decisions,
                     onEdit = ::edit, onPage = updatePage, actions = actions,
@@ -512,7 +520,7 @@ private fun LauncherRuntime(
             }
 
             folder?.let { selected ->
-                AlertDialog(
+                GuardianAlertDialog(
                     onDismissRequest = { folder = null },
                     title = { Text(selected.name) },
                     text = {

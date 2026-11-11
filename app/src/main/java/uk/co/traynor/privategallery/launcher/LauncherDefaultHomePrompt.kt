@@ -1,7 +1,6 @@
 package uk.co.traynor.privategallery.launcher
 
 import androidx.compose.foundation.layout.Row
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -57,7 +56,7 @@ internal fun LauncherDefaultHomeDialog(
     onSetDefault: () -> Unit,
     onOptOut: () -> Unit,
 ) {
-    AlertDialog(
+    GuardianAlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Make NovaOS your default Home?") },
         text = { Text("NovaOS isn’t currently your default launcher. Set it as your Home app for the complete NovaOS experience.") },

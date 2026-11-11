@@ -85,7 +85,7 @@ internal object GuardianCapture {
         manage(context) { _, store -> store.clear() }
     }
 
-    fun record(context: Context, event: GuardianCaptureEvent, monitored: GuardianConversationKey) {
+    fun record(context: Context, event: GuardianCaptureEvent, monitored: GuardianConversationKey, onDurable: (() -> Unit)? = null) {
         val app = context.applicationContext
         val expected = generation.get()
         if (pendingEvents.incrementAndGet() > 16) {
@@ -120,6 +120,11 @@ internal object GuardianCapture {
                     store.append(selected, days, now.wall, assess = false, clock = now)
                 }
                 val captured = result.getOrNull()
+                if (captured?.allDurable == true && onDurable != null && generation.get() == expected) {
+                    Handler(Looper.getMainLooper()).post {
+                        if (generation.get() == expected && isEnabled(app)) onDurable()
+                    }
+                }
                 if (captured != null && captured.added > 0) {
                     // Classification may fail independently. A durable row remains Awaiting Analysis.
                     runCatching { store.assessCaptured(event, days, now) }

@@ -2,7 +2,6 @@ package uk.co.traynor.privategallery.launcher
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
@@ -66,7 +65,7 @@ internal fun WorkspaceLayoutOptions(openWorkspace: () -> Unit, reloadLauncher: (
         TextButton(onClick = { restoring = true }) { Text("Restore earlier Nova Launcher layout") }
     }
     if (restoring) {
-        AlertDialog(
+        GuardianAlertDialog(
             onDismissRequest = { restoring = false },
             title = { Text("Restore earlier launcher layout?") },
             text = { Text("Restore the saved cover and unfolded launcher layouts. Primary NovaOS keeps its current layout.") },
@@ -79,7 +78,7 @@ internal fun WorkspaceLayoutOptions(openWorkspace: () -> Unit, reloadLauncher: (
     if (failed) Text("The workspace layout change could not be saved.", color = MaterialTheme.colorScheme.error)
     if (choosing) {
         val mirroring = status.mode == WorkspaceLayoutMode.MIRROR
-        AlertDialog(
+        GuardianAlertDialog(
             onDismissRequest = { choosing = false },
             title = { Text(if (mirroring) "Separate Layouts" else "Mirror Layouts") },
             text = {

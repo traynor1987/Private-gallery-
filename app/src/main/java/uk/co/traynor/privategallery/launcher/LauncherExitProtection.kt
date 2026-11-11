@@ -26,10 +26,21 @@ import uk.co.traynor.privategallery.core.security.PinVaultKeyStore
 
 internal enum class LauncherExitCooldown(val minutes: Int) { ONE(1), FIVE(5), FIFTEEN(15) }
 
+internal enum class LauncherExitMode(private val title: String) {
+    SANCTUARY("Only during Sanctuary"),
+    ALWAYS("Always require protection"),
+    DISABLED("Disabled");
+
+    fun requiresProtection(session: String?) = this == ALWAYS || this == SANCTUARY && session != null
+
+    override fun toString() = title
+}
+
 internal data class LauncherExitSettings(
     val phrase: String = "I choose to change my Home app",
     val cooldown: LauncherExitCooldown = LauncherExitCooldown.FIVE,
     val allowTypedPhrase: Boolean = false,
+    val mode: LauncherExitMode = LauncherExitMode.SANCTUARY,
 )
 
 private class LauncherExitStore(context: Context) {
@@ -43,11 +54,12 @@ private class LauncherExitStore(context: Context) {
             cooldown = LauncherExitCooldown.entries.firstOrNull { it.name == prefs.getString("cooldown", null) }
                 ?: defaults.cooldown,
             allowTypedPhrase = prefs.getBoolean("typed", false),
+            mode = LauncherExitMode.entries.firstOrNull { it.name == prefs.getString("mode", null) } ?: defaults.mode,
         )
     }
 
     fun saveSettings(value: LauncherExitSettings): Boolean = prefs.edit().putString("phrase", value.phrase)
-        .putString("cooldown", value.cooldown.name).putBoolean("typed", value.allowTypedPhrase).commit()
+        .putString("cooldown", value.cooldown.name).putBoolean("typed", value.allowTypedPhrase).putString("mode", value.mode.name).commit()
 
     fun remaining(): Long = readAttempts().remaining(now(), duration())
 
@@ -101,6 +113,9 @@ internal class LauncherExitProtection(
         private set
     var listening by mutableStateOf(false)
         private set
+    val canTypePhrase: Boolean
+        get() = settings.mode != LauncherExitMode.ALWAYS && settings.allowTypedPhrase
+    private var pendingAction: (() -> Unit)? = null
     private var pinJob: Job? = null
     private var speechTimeout: Job? = null
     private var speech: SpeechRecognizer? = null
@@ -114,15 +129,19 @@ internal class LauncherExitProtection(
         }
     }
 
-    fun request() {
+    fun request(action: () -> Unit = openAndroidHomeSettings) {
         cancel()
         if (!foreground()) return
         val active = runCatching(sessionId).getOrElse {
             status = "NovaOS could not check Sanctuary protection."
             return
         }
-        if (active == null) {
-            openAndroidHomeSettings()
+        settings = runCatching(store::settings).getOrElse {
+            status = "Launcher protection settings are temporarily unavailable."
+            return
+        }
+        if (!settings.mode.requiresProtection(active)) {
+            action()
             return
         }
         val remaining = runCatching(store::remaining).getOrElse {
@@ -134,7 +153,7 @@ internal class LauncherExitProtection(
         } else if (!keys.isConfigured) {
             status = "Set up your Primary NovaOS PIN before using protected launcher switching."
         } else {
-            settings = store.settings()
+            pendingAction = action
             challenge = LauncherExitChallenge(active)
         }
     }
@@ -147,7 +166,8 @@ internal class LauncherExitProtection(
             return
         }
         settings = store.settings()
-        configure = true
+        if (settings.mode == LauncherExitMode.ALWAYS) request { configure = true }
+        else configure = true
     }
 
     fun saveConfiguration(value: LauncherExitSettings) {
@@ -200,7 +220,7 @@ internal class LauncherExitProtection(
 
     fun verifyTypedPhrase(value: String) {
         val current = challenge ?: return
-        if (current.step != LauncherExitStep.PHRASE || !settings.allowTypedPhrase ||
+        if (current.step != LauncherExitStep.PHRASE || !canTypePhrase ||
             listening || microphoneRequest != null || !isCurrent(current)
         ) return
         verifyPhrase(current, value)
@@ -277,7 +297,7 @@ internal class LauncherExitProtection(
         if (current.holdStartedMillis == null) return
         challenge = current.cancelHold()
         if (!complete || !foreground()) return
-        val active = runCatching(sessionId).getOrNull()
+        val active = runCatching(sessionId).getOrElse { cancel(); return }
         if (active != current.sessionId) {
             cancel()
             status = "Sanctuary changed. Open Home settings again."
@@ -288,8 +308,9 @@ internal class LauncherExitProtection(
             return
         }
         // Consume this challenge before dispatching any Android intent.
+        val action = pendingAction
         cancel()
-        if (runCatching(store::clearFailures).getOrDefault(false)) openAndroidHomeSettings()
+        if (runCatching(store::clearFailures).getOrDefault(false)) action?.invoke()
         else status = "Launcher protection settings could not be saved."
     }
 
@@ -299,6 +320,7 @@ internal class LauncherExitProtection(
     }
 
     fun cancel() {
+        pendingAction = null
         challenge = null
         configure = false
         status = null
@@ -319,7 +341,7 @@ internal class LauncherExitProtection(
     }
 
     private fun isCurrent(expected: LauncherExitChallenge): Boolean =
-        challenge === expected && foreground() && runCatching(sessionId).getOrNull() == expected.sessionId
+        challenge === expected && foreground() && runCatching { sessionId() == expected.sessionId }.getOrDefault(false)
 
     private fun fail(current: LauncherExitChallenge, error: String) {
         val remaining = runCatching(store::fail).getOrNull()

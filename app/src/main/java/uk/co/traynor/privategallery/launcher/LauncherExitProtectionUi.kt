@@ -15,7 +15,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
@@ -54,7 +53,7 @@ internal fun LauncherExitProtectionDialogs(protection: LauncherExitProtection) {
     when {
         protection.configure -> LauncherExitConfiguration(protection)
         challenge != null -> LauncherExitConfirmation(protection, challenge)
-        protection.status != null -> AlertDialog(
+        protection.status != null -> GuardianAlertDialog(
             onDismissRequest = protection::cancel,
             title = { Text("Launcher protection") },
             text = { Text("${protection.status}\n\n$HOME_RECOVERY") },
@@ -66,12 +65,14 @@ internal fun LauncherExitProtectionDialogs(protection: LauncherExitProtection) {
 @Composable
 private fun LauncherExitConfiguration(protection: LauncherExitProtection) {
     var value by remember(protection.settings) { mutableStateOf(protection.settings) }
-    AlertDialog(
+    GuardianAlertDialog(
         onDismissRequest = protection::cancel,
         title = { Text("Launcher exit protection") },
         text = {
             Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                Text("During Sanctuary, changing the default launcher from NovaOS requires your Primary PIN, the confirmation phrase, and a five-second hold.")
+                Text("Protected launcher changes require your Primary PIN, spoken phrase and a five-second hold.")
+                LauncherOptions("Exit protection", LauncherExitMode.entries, value.mode, { value = value.copy(mode = it) })
+                Text("Android system Settings and device administration can change Home independently. Emergency calling and Android recovery remain available.")
                 OutlinedTextField(
                     value.phrase, { value = value.copy(phrase = it.take(96)) },
                     label = { Text("Confirmation phrase") }, modifier = Modifier.fillMaxWidth(), singleLine = true,
@@ -94,7 +95,7 @@ private fun LauncherExitConfiguration(protection: LauncherExitProtection) {
 private fun LauncherExitConfirmation(protection: LauncherExitProtection, challenge: LauncherExitChallenge) {
     var input by remember(challenge.sessionId, challenge.step) { mutableStateOf("") }
     val pinStep = challenge.step == LauncherExitStep.PIN
-    AlertDialog(
+    GuardianAlertDialog(
         onDismissRequest = protection::cancel,
         title = { Text("Change default launcher") },
         properties = DialogProperties(securePolicy = SecureFlagPolicy.SecureOn),
@@ -119,7 +120,7 @@ private fun LauncherExitConfirmation(protection: LauncherExitProtection, challen
                         }
                         Text("If Android asks for microphone permission, reopen Change Default Launcher after granting it.",
                             style = MaterialTheme.typography.bodySmall)
-                        if (protection.settings.allowTypedPhrase) {
+                        if (protection.canTypePhrase) {
                             OutlinedTextField(
                                 input, { input = it.take(120) }, label = { Text("Type the same phrase") },
                                 modifier = Modifier.fillMaxWidth().testTag("launcher-exit-phrase"),
@@ -141,7 +142,7 @@ private fun LauncherExitConfirmation(protection: LauncherExitProtection, challen
             }
         },
         confirmButton = {
-            if (pinStep || (challenge.step == LauncherExitStep.PHRASE && protection.settings.allowTypedPhrase)) {
+            if (pinStep || (challenge.step == LauncherExitStep.PHRASE && protection.canTypePhrase)) {
                 TextButton(
                     onClick = {
                         val submitted = input

@@ -18,6 +18,8 @@ import kotlinx.coroutines.launch
 import uk.co.traynor.privategallery.core.sanctuary.SanctuaryDnd
 import uk.co.traynor.privategallery.core.sanctuary.SanctuaryLauncherPolicy
 import uk.co.traynor.privategallery.core.sanctuary.SanctuaryStore
+import uk.co.traynor.privategallery.launcher.LauncherExitProtection
+import uk.co.traynor.privategallery.launcher.LauncherExitProtectionDialogs
 import uk.co.traynor.privategallery.launcher.LauncherDefaultHomeDialog
 import uk.co.traynor.privategallery.launcher.NovaLauncherActivity
 import uk.co.traynor.privategallery.launcher.NovaLauncherStore
@@ -28,6 +30,7 @@ import uk.co.traynor.privategallery.ui.PrivateGalleryTheme
 
 class LauncherActivity : ComponentActivity() {
     private val launcherStore by lazy { NovaLauncherStore(applicationContext) }
+    private lateinit var launcherExit: LauncherExitProtection
     private var showReminder by mutableStateOf(false)
     private var topResumed = false
     private var selection: HomeSelection? = null
@@ -37,6 +40,14 @@ class LauncherActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        launcherExit = LauncherExitProtection(this,
+            sessionId = { SanctuaryStore.get(applicationContext).refresh()?.id },
+            foreground = {
+                topResumed && !isFinishing && lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED) &&
+                    getSystemService(KeyguardManager::class.java)?.isKeyguardLocked == false
+            },
+            openAndroidHomeSettings = ::dispatchHomeChoice,
+        )
         if (BuildConfig.DEBUG && packageName.endsWith(".guardianprobe")) {
             setContent {
                 PrivateGalleryTheme {
@@ -57,7 +68,7 @@ class LauncherActivity : ComponentActivity() {
 
         setContent {
             PrivateGalleryTheme {
-                if (showReminder) LauncherDefaultHomeDialog(
+                if (showReminder && launcherExit.challenge == null && launcherExit.status == null) LauncherDefaultHomeDialog(
                     onDismiss = ::openWorkspace,
                     onSetDefault = ::chooseHome,
                     onOptOut = {
@@ -67,6 +78,7 @@ class LauncherActivity : ComponentActivity() {
                         openWorkspace()
                     },
                 )
+                LauncherExitProtectionDialogs(launcherExit)
             }
         }
         lifecycleScope.launch {
@@ -91,7 +103,10 @@ class LauncherActivity : ComponentActivity() {
         super.onTopResumedActivityChanged(isTopResumedActivity)
         topResumed = isTopResumedActivity
         if (isTopResumedActivity) showReminderWhenTopResumed()
-        else showReminder = false
+        else {
+            showReminder = false
+            launcherExit.cancel()
+        }
     }
 
     override fun onSaveInstanceState(outState: Bundle) {
@@ -123,6 +138,10 @@ class LauncherActivity : ComponentActivity() {
             openWorkspace()
             return
         }
+        launcherExit.request()
+    }
+
+    private fun dispatchHomeChoice() {
         showReminder = false
         selection = HomeSelection.ROLE
         if (requestDefaultHomeRole(this) { selectHome.launch(it) }) return

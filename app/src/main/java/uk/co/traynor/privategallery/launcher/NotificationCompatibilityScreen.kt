@@ -15,7 +15,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.HorizontalDivider
@@ -213,7 +212,27 @@ internal fun NotificationCompatibilityScreen(
                         foldAccepted = GuardianNotificationListener.confirmFoldDismissal(context)
                     }) { Text("I saw the fixture disappear from Samsung’s panel") }
                 }
-                Text("Real WhatsApp dismissal is off. Samsung notification previews follow your system settings, even while a message is held in Guardian.")
+                var mainAccepted by remember { mutableStateOf(GuardianNotificationListener.mainDismissalAccepted(context)) }
+                var automatic by remember { mutableStateOf(GuardianNotificationListener.automaticDismissalEnabled(context)) }
+                if (foldAccepted && !mainAccepted) {
+                    Text("Send a harmless message to Main WhatsApp after arming this one-message test. It expires after 60 seconds.")
+                    OutlinedButton(enabled = status.connected, onClick = {
+                        externalError = if (GuardianNotificationListener.armMainDismissalTest(context)) null
+                            else "Connect the listener and enable encrypted capture before testing."
+                    }) { Text("Arm one Main WhatsApp dismissal test") }
+                }
+                if (status.mainTestRemoved && !mainAccepted) {
+                    OutlinedButton(onClick = { mainAccepted = GuardianNotificationListener.confirmMainDismissal(context) }) {
+                        Text("I saw the Main WhatsApp test disappear on my Fold")
+                    }
+                }
+                LauncherToggle("Automatically dismiss eligible Main WhatsApp messages", automatic) { enabled ->
+                    if (GuardianNotificationListener.setAutomaticDismissal(context, enabled)) automatic = enabled
+                    else externalError = "Verify the Main WhatsApp test on your Fold before enabling automatic dismissal."
+                }
+                status.mainDismissal?.let { Text(it) }
+                Text("Samsung may briefly show a notification before Guardian can dismiss it. Friends notifications remain available.")
+
                 externalError?.let { Text(it, color = MaterialTheme.colorScheme.error) }
             }
             HorizontalDivider()
@@ -265,7 +284,7 @@ private fun GuardianCaptureControls(allowChanges: Boolean, listenerReady: Boolea
     OutlinedButton(enabled = allowChanges && !health.busy, onClick = { confirmClear = true }) {
         Text("Clear encrypted capture")
     }
-    if (consent && allowChanges) AlertDialog(
+    if (consent && allowChanges) GuardianAlertDialog(
         onDismissRequest = { consent = false },
         title = { Text("Choose encrypted capture scope") },
         text = {
@@ -284,7 +303,7 @@ private fun GuardianCaptureControls(allowChanges: Boolean, listenerReady: Boolea
         }) { Text("Selected conversations only") } },
         dismissButton = { TextButton(onClick = { consent = false }) { Text("Cancel") } },
     )
-    if (confirmClear && allowChanges) AlertDialog(
+    if (confirmClear && allowChanges) GuardianAlertDialog(
         onDismissRequest = { confirmClear = false },
         title = { Text("Clear encrypted capture?") },
         text = { Text("This deletes the saved notification archive and its encryption key.") },

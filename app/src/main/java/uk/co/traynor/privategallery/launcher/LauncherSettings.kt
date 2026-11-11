@@ -153,7 +153,7 @@ internal fun LauncherSettings(
         }
     }
     if (confirmDockReset && !protectedBySanctuary) {
-        AlertDialog(
+        GuardianAlertDialog(
             onDismissRequest = { confirmDockReset = false },
             title = { Text("Reset this dock?") },
             text = { Text("Restore the default shortcuts for this display’s dock.") },
@@ -350,7 +350,7 @@ internal fun LauncherLayoutEditor(
             }
         }
     }
-    if (confirmRemoval) AlertDialog(
+    if (confirmRemoval) GuardianAlertDialog(
         onDismissRequest = { confirmRemoval = false },
         title = { Text("Remove this Home page?") },
         text = { Text("Its shortcuts will be removed. Installed apps stay in the drawer. Widgets move to the nearest remaining page.") },
@@ -427,7 +427,7 @@ private fun LauncherShortcutCleanup(
         }
     }
     var selected by remember(candidates) { mutableStateOf(emptySet<LauncherShortcutPosition>()) }
-    AlertDialog(
+    GuardianAlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Review Home shortcuts") },
         text = {
@@ -466,7 +466,7 @@ private fun LauncherAppPicker(
     onSelect: (LauncherApp) -> Unit,
 ) {
     var query by remember { mutableStateOf("") }
-    AlertDialog(
+    GuardianAlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Add app shortcut") },
         text = {
@@ -495,7 +495,7 @@ private fun LauncherFolderEditor(
     var name by remember(existing) { mutableStateOf(existing?.name.orEmpty()) }
     var query by remember(existing) { mutableStateOf("") }
     var selection by remember(existing) { mutableStateOf(existing?.apps.orEmpty().toSet()) }
-    AlertDialog(
+    GuardianAlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(if (existing == null) "New folder" else "Edit folder") },
         text = {

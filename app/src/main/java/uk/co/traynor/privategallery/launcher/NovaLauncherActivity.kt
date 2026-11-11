@@ -34,7 +34,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -478,8 +477,10 @@ class NovaLauncherActivity : ComponentActivity() {
         ) return
         if (updateDefaultHome()) refreshCatalogue()
         if (defaultHome == true) return
-        val requested = requestDefaultHomeRole(this) { defaultHomeRequest.launch(it) }
-        if (!requested) openHomeSettings()
+        launcherExit.request {
+            val requested = requestDefaultHomeRole(this) { defaultHomeRequest.launch(it) }
+            if (!requested) openAndroidHomeSettings()
+        }
     }
 
     private fun refreshCatalogue() {
@@ -665,7 +666,7 @@ class NovaLauncherActivity : ComponentActivity() {
         var label by remember(target) {
             mutableStateOf(identitySettings.label(target).label.takeUnless { it == target.label }.orEmpty())
         }
-        AlertDialog(
+        GuardianAlertDialog(
             onDismissRequest = { renaming = null },
             title = { Text("Rename launcher shortcut") },
             text = {
@@ -759,7 +760,7 @@ class NovaLauncherActivity : ComponentActivity() {
             )
         }
         blocked?.let { target ->
-            AlertDialog(
+            GuardianAlertDialog(
                 onDismissRequest = { blocked = null },
                 title = { Text("Sanctuary protection") },
                 text = { Text(if (appVisibility.hideBlockedApps || appVisibility.hideFromSearch ||
@@ -776,7 +777,7 @@ class NovaLauncherActivity : ComponentActivity() {
             val labels = apps.filter { it.profile == null }.associate { it.packageName to it.label }
             val current = sanctuary.current.value
             val modes = if (mode != null) listOf(mode) else SanctuaryMode.entries
-            AlertDialog(
+            GuardianAlertDialog(
                 onDismissRequest = { review = false },
                 title = { Text("Sanctuary approved apps") },
                 text = {
@@ -832,7 +833,7 @@ class NovaLauncherActivity : ComponentActivity() {
     @Composable
     private fun WidgetPickerDialog() {
         val request = picker ?: return
-        AlertDialog(
+        GuardianAlertDialog(
             onDismissRequest = { picker = null },
             title = { Text("Add an Android widget") },
             text = {

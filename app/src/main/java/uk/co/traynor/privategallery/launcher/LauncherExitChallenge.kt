@@ -7,11 +7,11 @@ internal const val LAUNCHER_EXIT_HOLD_MILLIS = 5_000L
 internal enum class LauncherExitStep { PIN, PHRASE, HOLD }
 
 internal class LauncherExitChallenge private constructor(
-    val sessionId: String,
+    val sessionId: String?,
     val step: LauncherExitStep,
     val holdStartedMillis: Long? = null,
 ) {
-    constructor(sessionId: String) : this(sessionId, LauncherExitStep.PIN)
+    constructor(sessionId: String?) : this(sessionId, LauncherExitStep.PIN)
 
     fun verifyPin(matches: Boolean): LauncherExitChallenge? =
         if (step == LauncherExitStep.PIN && matches) LauncherExitChallenge(sessionId, LauncherExitStep.PHRASE) else null

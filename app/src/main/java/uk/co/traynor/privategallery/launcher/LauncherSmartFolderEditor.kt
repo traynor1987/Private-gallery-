@@ -6,7 +6,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -42,7 +41,7 @@ internal fun LauncherSmartFolderEditor(
     val unavailable = included.filterNot(appsByKey::containsKey)
     val matching = remember(apps, query) { launcherLibraryMatches(apps, query) }
 
-    AlertDialog(
+    GuardianAlertDialog(
         onDismissRequest = onDismiss,
         modifier = Modifier.testTag("launcher-smart-folder-editor"),
         title = { Text("Edit smart folder") },

@@ -325,8 +325,11 @@ internal fun <T : Enum<T>> LauncherOptions(
             choices.forEach { choice ->
                 FilterChip(selected == choice, onClick = { change(choice) },
                     label = {
-                        Text(if (choice is LauncherIconStyle) choice.label
-                            else choice.name.lowercase().replace('_', ' ').replaceFirstChar { it.uppercase() })
+                        Text(when (choice) {
+                            is LauncherIconStyle -> choice.label
+                            is LauncherExitMode -> choice.toString()
+                            else -> choice.name.lowercase().replace('_', ' ').replaceFirstChar { it.uppercase() }
+                        })
                     })
             }
         }
