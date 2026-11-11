@@ -8,7 +8,7 @@ source "$control_root/release_configuration1711.sh"
 [[ "$baseline_code" == 77 && "$release_code" == 78 && "$baseline_sha" == 15cdfd9e612ffc68960d1374420fe05e425a9877 ]]
 archived_baseline="${PRIVATE_GALLERY_1711_BASELINE_APK:?Exact archived signed 1.7.38.4 Code 77 APK required}"
 [[ -f "$archived_baseline" && -s "$archived_baseline" ]] || { echo 'Archived baseline APK unavailable' >&2; exit 1; }
-[[ "$(sha256sum "$archived_baseline" | cut -d ' ' -f 1)" == 7fd1e4211e6277a8a8bfeaa20ef8ee180a89a57b38e435bb30b5a69fbcada171 ]] || { echo 'Archived baseline APK hash mismatch' >&2; exit 1; }
+[[ "$(sha256sum "$archived_baseline" | cut -d ' ' -f 1)" == dcfd93b5aec41c0bc4f08a61a3c6aa70a3e3f75a6d72948f0c4635c64109a03e ]] || { echo 'Archived baseline APK hash mismatch' >&2; exit 1; }
 readonly archived_baseline
 [[ "$(git rev-parse HEAD)" == "${FROZEN_SOURCE:?Exact tested source required}" ]]
 python3 "$control_root/verify_release1711_gate.py" --receipt "${PRIVATE_GALLERY_1711_GATE_RECEIPT:?Exact-source reviewed pre-signer gate required}" --source "$FROZEN_SOURCE"

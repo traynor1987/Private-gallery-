@@ -5,7 +5,7 @@ Authorization: authenticated owner push
 Physical Fold Main encrypted capture: PASS
 Physical Fold Friends separation: PASS
 Upgrade fixture SHA-256: feac998045bdf02081cf07b53a322e083907849280a11faa0497f2d01ea936ff
-Upgrade controls SHA-256: 7f9a713fbb48907ee0b3ef76d5578b95f57d7ce3c7f97e157b907bcb59ac13f1
+Upgrade controls SHA-256: baee1622007f64f93ad17fcfdb9aa0749038b9089a85e4627af016706705a53b
 Runtime matrix SHA-256: 789b0eef5c8a8383ffefa050bb69064f32a447201838e2e61e6a204ee2092694
 Runtime archive SHA-256: 0e93f6c2de0175ba5235bb120d87d6aefc891e806d1fb1712204f62071982bfd
 Signing workflow SHA-256: 452ba2d99cb6e29a557183f288625bec61b74f59568ed47a4be9a035142060db
