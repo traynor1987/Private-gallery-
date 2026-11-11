@@ -54,17 +54,14 @@ class NovaWebScroll67Test {
                 })
             show("first")
             first = checkNotNull(active)
-            val editors = (1..15).joinToString("") { index ->
-                """<input aria-label="Scroll fixture editor $index" style="top:${index * 6}%">"""
-            }
             first.loadDataWithBaseURL("https://scroll-fixture.invalid/", """
                 <!doctype html><meta name="viewport" content="width=device-width,initial-scale=1">
                 <style>
                   body { margin:0; overflow-anchor:none }
                   main { position:relative; height:400vh; width:220vw; background:linear-gradient(#ddd,#246) }
-                  input { position:absolute; left:24px; height:64px; width:160px; font-size:18px }
+                  input { position:fixed; left:24px; top:25vh; height:64px; width:160px; font-size:18px }
                 </style>
-                <main>$editors</main>
+                <main><input aria-label="Scroll fixture editor"></main>
             """.trimIndent(), "text/html", "UTF-8", null)
         }
         val firstId = id
@@ -147,6 +144,7 @@ class NovaWebScroll67Test {
             fun sendInput(command: String) {
                 ParcelFileDescriptor.AutoCloseInputStream(automation.executeShellCommand(command)).use { it.readBytes() }
             }
+            val viewportBeforeIme = compose.runOnIdle { Point(first.width, first.height) }
             sendInput("input tap ${point.x} ${point.y}")
             val editorFocused = AtomicBoolean()
             val focusProbePending = AtomicBoolean()
@@ -163,7 +161,8 @@ class NovaWebScroll67Test {
                     editorFocused.get()
                 }
             } catch (failure: ComposeTimeoutException) {
-                throw AssertionError("Tap at screen position $point did not focus the retained WebView editor", failure)
+                val observed = compose.runOnIdle { touchTrace.joinToString("; ") }
+                throw AssertionError("Tap at screen position $point did not focus the retained WebView editor. $observed", failure)
             }
             compose.runOnIdle {
                 val ime = first.context.getSystemService(InputMethodManager::class.java)
@@ -173,6 +172,16 @@ class NovaWebScroll67Test {
             compose.waitUntil(10_000) { compose.runOnIdle { root.rootWindowInsets?.isVisible(android.view.WindowInsets.Type.ime()) == true } }
             sendInput("input keyevent 4")
             compose.waitUntil(10_000) { compose.runOnIdle { root.rootWindowInsets?.isVisible(android.view.WindowInsets.Type.ime()) == false } }
+            compose.waitUntil(10_000) {
+                compose.runOnIdle { first.width == viewportBeforeIme.x && first.height == viewportBeforeIme.y }
+            }
+            val resizedFrame = AtomicBoolean(false)
+            compose.runOnIdle {
+                first.postVisualStateCallback(2, object : WebView.VisualStateCallback() {
+                    override fun onComplete(requestId: Long) { resizedFrame.set(true) }
+                })
+            }
+            compose.waitUntil(5_000) { resizedFrame.get() }
             fun viewportDiagnostic() = compose.runOnIdle {
                 "scroll=${first.scrollX},${first.scrollY} viewport=${first.width}x${first.height} contentHeight=${first.contentHeight} " +
                     "canScrollDown=${first.canScrollVertically(1)} focused=${first.hasFocus()} windowFocus=${first.hasWindowFocus()} " +
