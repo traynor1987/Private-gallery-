@@ -144,6 +144,8 @@ internal fun GuardianHome(
                         IconButton(onClick = onSettings) { Icon(Icons.Outlined.Tune, "Settings", tint = GuardianMuted) }
                     }
 
+                    NovaBrainKnowledgeCard()
+
                     val protection = when {
                         sanctuary == null -> "Protection inactive"
                         sanctuary.paused -> "Launcher protection paused"

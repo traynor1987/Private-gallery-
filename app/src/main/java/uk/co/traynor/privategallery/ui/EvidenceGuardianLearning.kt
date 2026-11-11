@@ -18,6 +18,7 @@ import uk.co.traynor.privategallery.core.guardian.GuardianAssessment
 import uk.co.traynor.privategallery.core.guardian.GuardianCapture
 import uk.co.traynor.privategallery.core.guardian.GuardianCaptureStore
 import uk.co.traynor.privategallery.launcher.GuardianTheme
+import uk.co.traynor.privategallery.launcher.NovaBrainKnowledgeCard
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -73,6 +74,7 @@ internal fun EvidenceGuardianLearning(
     GuardianTheme {
         EvidenceWorkflowPage(onDismissRequest = onClose, sensitive = true, title = { EvidenceDialogTitle("Teach Guardian") }, text = {
             LazyColumn(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                item { NovaBrainKnowledgeCard() }
                 item {
                     Text("Choose a screenshot or incident record. Keep the conversation lines in order, review the OCR excerpt and choose its label.")
                     Text("Nova Brain stores encrypted phrase features on this device.")
