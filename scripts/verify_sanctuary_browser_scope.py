@@ -25,6 +25,12 @@ ALLOWED_GUARDIAN = {
     f"{CORE}/guardian/GuardianCaptureStore.kt",
     f"{CORE}/guardian/GuardianInboxPolicy.kt",
     f"{CORE}/guardian/GuardianLocalClassifier.kt",
+    f"{CORE}/guardian/GuardianCallShield.kt",
+    f"{CORE}/guardian/GuardianEvidenceReference.kt",
+    f"{CORE}/guardian/GuardianPhoneScreeningService.kt",
+    f"{CORE}/guardian/NovaBrainEvaluator.kt",
+    f"{CORE}/guardian/NovaBrainKnowledge.kt",
+    f"{CORE}/guardian/NovaBrainPatterns.kt",
 }
 
 
@@ -135,5 +141,19 @@ sms_query = ET.fromstring(f"""
 sms_visibility, = [intent for intent in queries.findall("intent") if structure(intent) == structure(sms_query)]
 queries.remove(sms_visibility)
 
+screening, = [service for service in application.findall("service")
+              if service.get(ANDROID + "name") == ".core.guardian.GuardianPhoneScreeningService"]
+assert structure(screening) == structure(ET.fromstring(f"""
+    <service xmlns:android="{ANDROID[1:-1]}" android:name=".core.guardian.GuardianPhoneScreeningService"
+        android:exported="true" android:permission="android.permission.BIND_SCREENING_SERVICE">
+      <intent-filter><action android:name="android.telecom.CallScreeningService" /></intent-filter>
+    </service>
+""")), "Only Android Telecom may bind to the call screening service"
+application.remove(screening)
+contacts, = [permission for permission in after.findall("uses-permission")
+             if permission.get(ANDROID + "name") == "android.permission.READ_CONTACTS"]
+assert contacts.attrib == {ANDROID + "name": "android.permission.READ_CONTACTS"} and len(contacts) == 0
+after.remove(contacts)
+
 assert structure(before) == structure(after), "The existing manifest or permission set changed"
-print("PASS: Code 69 protected engines, original package and permission set preserved; Android Home is additive")
+print("PASS: Code 69 protected engines, original package and other permissions preserved; Home and call screening are additive")
