@@ -1,0 +1,532 @@
+diff --git a/.github/workflows/sanctuary-production.yml b/.github/workflows/sanctuary-production.yml
+index 84893260..0605dbad 100644
+--- a/.github/workflows/sanctuary-production.yml
++++ b/.github/workflows/sanctuary-production.yml
+@@ -48,7 +48,7 @@ jobs:
+               destination=control/name;destination.parent.mkdir(parents=True,exist_ok=True)
+               shutil.copyfile(original,destination)
+           marker=json.loads((control/'.sanctuary-production-candidate').read_bytes())
+-          assert marker['source']=='c818c670baa4b980708dc2effb1ab2ab0331ade1' and marker['test_run']==42813658935 and marker['test_artifact']==13765989402
++          assert marker['source']=='2ac3ff8b63f1982e6107373d7839b131d7bb7214' and marker['test_run']==42928029177 and type(marker['test_artifact']) is int and marker['test_artifact']>0
+           assert re.fullmatch('[a-f0-9]{64}',marker['fixture_sha256'])
+           workflow=hashlib.sha256((control/'.github/workflows/sanctuary-production.yml').read_bytes()).hexdigest()
+           assert marker.get('workflow_sha256')==workflow, 'Signing workflow changed after review'
+@@ -63,7 +63,7 @@ jobs:
+                         'PRIVATE_GALLERY_1711_UPGRADE_FIXTURE':control/'docs/release1711/UpgradeFixtureTest.kt',
+                         'PRIVATE_GALLERY_1711_GATE_RECEIPT':inputs/'gate.json',
+                         'PRIVATE_GALLERY_1711_COMPILED_DIR':Path(os.environ['RUNNER_TEMP'])/'upgrade1711-compiled',
+-                        'PRIVATE_GALLERY_1711_BASELINE_APK':Path(os.environ['RUNNER_TEMP'])/'original1711code75.apk',
++                        'PRIVATE_GALLERY_1711_BASELINE_APK':Path(os.environ['RUNNER_TEMP'])/'original1711code76.apk',
+                         'PRIVATE_GALLERY_1711_SIGNED_INSTRUMENTATION_APK':Path(os.environ['RUNNER_TEMP'])/'release1711-signed/instrumentation.apk'}
+               for name,value in settings.items(): output.write(name+'='+str(value)+'\n')
+           PY
+@@ -92,18 +92,18 @@ jobs:
+             const runtime=Buffer.from((await github.rest.actions.downloadArtifact({...context.repo,artifact_id:artifact.id,archive_format:'zip'})).data);
+             if(hash(runtime)!==marker.runtime_archive_sha256)throw Error('Original runtime archive changed');
+             fs.writeFileSync(path.join(root,'original-runtime.zip'),runtime);
+-            const baselineRun=(await github.rest.actions.getWorkflowRun({...context.repo,run_id:42731111514})).data;
++            const baselineRun=(await github.rest.actions.getWorkflowRun({...context.repo,run_id:42819991907})).data;
+             write('baseline-github-run.json',baselineRun);
+-            if(baselineRun.event!=='push'||baselineRun.head_branch!=='feature/novaos-sanctuary-integration'||baselineRun.head_repository?.full_name!=='traynor1987/Private-gallery-'||baselineRun.status!=='completed'||baselineRun.conclusion!=='success'||baselineRun.head_sha!=='7ae6265fc458222abe00706f2489a9e1859e6f66'||baselineRun.path.split('@')[0]!=='.github/workflows/sanctuary-production.yml')throw Error('Pinned baseline run differs');
+-            const baselineJob=(await github.rest.actions.getJobForWorkflowRun({...context.repo,job_id:129549066650})).data;
++            if(baselineRun.event!=='push'||baselineRun.head_branch!=='feature/novaos-sanctuary-integration'||baselineRun.head_repository?.full_name!=='traynor1987/Private-gallery-'||baselineRun.status!=='completed'||baselineRun.conclusion!=='success'||baselineRun.head_sha!=='03933aba35a8649753e9441039cfbc6563ee5c36'||baselineRun.path.split('@')[0]!=='.github/workflows/sanctuary-production.yml')throw Error('Pinned baseline run differs');
++            const baselineJob=(await github.rest.actions.getJobForWorkflowRun({...context.repo,job_id:129842766718})).data;
+             write('baseline-github-job.json',baselineJob);
+-            if(baselineJob.id!==129549066650||baselineJob.run_id!==42731111514||baselineJob.name!=='sanctuary-production'||baselineJob.status!=='completed'||baselineJob.conclusion!=='success'||baselineJob.head_sha!=='7ae6265fc458222abe00706f2489a9e1859e6f66')throw Error('Pinned baseline job differs');
+-            const baseline=(await github.rest.actions.getArtifact({...context.repo,artifact_id:13724654625})).data;
++            if(baselineJob.id!==129842766718||baselineJob.run_id!==42819991907||baselineJob.name!=='sanctuary-production'||baselineJob.status!=='completed'||baselineJob.conclusion!=='success'||baselineJob.head_sha!=='03933aba35a8649753e9441039cfbc6563ee5c36')throw Error('Pinned baseline job differs');
++            const baseline=(await github.rest.actions.getArtifact({...context.repo,artifact_id:13767667010})).data;
+             write('baseline-github-artifact.json',baseline);
+-            if(baseline.expired||baseline.name!=='novaos-1.7.38.2-code75-owner-review'||baseline.size_in_bytes!==62111887||baseline.workflow_run?.id!==42731111514||baseline.workflow_run?.head_sha!=='7ae6265fc458222abe00706f2489a9e1859e6f66'||baseline.digest!=='sha256:de0e60171b37fe7376dd17aa8a97766e37419214486cf663e6dadcea4b341d85')throw Error('Pinned baseline artifact differs');
++            if(baseline.expired||baseline.name!=='novaos-1.7.38.3-code76-owner-review'||baseline.size_in_bytes!==62192742||baseline.workflow_run?.id!==42819991907||baseline.workflow_run?.head_sha!=='03933aba35a8649753e9441039cfbc6563ee5c36'||baseline.digest!=='sha256:7529b9dd3ef07db0b959e29d657c046bde0efc11b3b79a27f9be19ab3aa98757')throw Error('Pinned baseline artifact differs');
+             const bytes=Buffer.from((await github.rest.actions.downloadArtifact({...context.repo,artifact_id:baseline.id,archive_format:'zip'})).data);
+-            if(bytes.length!==62111887||hash(bytes)!=='de0e60171b37fe7376dd17aa8a97766e37419214486cf663e6dadcea4b341d85')throw Error('Original baseline archive changed');
+-            fs.writeFileSync(path.join(root,'original-code75.zip'),bytes);
++            if(bytes.length!==62192742||hash(bytes)!=='7529b9dd3ef07db0b959e29d657c046bde0efc11b3b79a27f9be19ab3aa98757')throw Error('Original baseline archive changed');
++            fs.writeFileSync(path.join(root,'original-code76.zip'),bytes);
+       - name: Validate original runtime reports and independent production approval before signer access
+         run: |
+           controls="$RUNNER_TEMP/release1711-controls"
+@@ -127,20 +127,20 @@ jobs:
+             ~/.gradle/wrapper
+           key: privacy1751-${{ runner.os }}-${{ hashFiles('**/*.gradle*', 'gradle/libs.versions.toml', 'gradle/wrapper/gradle-wrapper.properties') }}
+           restore-keys: privacy1751-${{ runner.os }}-
+-      - name: Install Android 17 tools and verify the original code75 APK
++      - name: Install Android 17 tools and verify the original code76 APK
+         run: |
+           sudo rm -rf /usr/share/dotnet /usr/share/swift /opt/ghc /usr/local/.ghcup /opt/hostedtoolcache/CodeQL
+           "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --install "cmdline-tools;22.0"
+           mv "$ANDROID_HOME/cmdline-tools/latest" "$RUNNER_TEMP/previous-android-command-tools1711"
+           ln -s "$ANDROID_HOME/cmdline-tools/22.0" "$ANDROID_HOME/cmdline-tools/latest"
+           "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-37.1" "build-tools;36.0.0" "emulator"
+-          python3 "$RUNNER_TEMP/release1711-controls/scripts/verify_upgrade1711_baseline.py" "$RUNNER_TEMP/release1711-inputs/original-code75.zip" "$PRIVATE_GALLERY_1711_BASELINE_APK" | tee app/build/production-evidence/baseline-archive-validation.txt
++          python3 "$RUNNER_TEMP/release1711-controls/scripts/verify_upgrade1711_baseline.py" "$RUNNER_TEMP/release1711-inputs/original-code76.zip" "$PRIVATE_GALLERY_1711_BASELINE_APK" | tee app/build/production-evidence/baseline-archive-validation.txt
+           "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose --print-certs "$PRIVATE_GALLERY_1711_BASELINE_APK" > app/build/production-evidence/baseline-signature.txt
+           grep -Fxq 'Signer #1 certificate SHA-256 digest: 94f2bfc6567f26d067d29077111cfd0ce86d38263c642ad115e43365f05b0d17' app/build/production-evidence/baseline-signature.txt
+           grep -Fxq 'Verified using v2 scheme (APK Signature Scheme v2): true' app/build/production-evidence/baseline-signature.txt
+           grep -Fxq 'Number of signers: 1' app/build/production-evidence/baseline-signature.txt
+           "$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging "$PRIVATE_GALLERY_1711_BASELINE_APK" > app/build/production-evidence/baseline-package.txt
+-          grep -Fq "package: name='uk.co.traynor.privategallery' versionCode='75' versionName='1.7.38.2'" app/build/production-evidence/baseline-package.txt
++          grep -Fq "package: name='uk.co.traynor.privategallery' versionCode='76' versionName='1.7.38.3'" app/build/production-evidence/baseline-package.txt
+           grep -Fxq "sdkVersion:'37'" app/build/production-evidence/baseline-package.txt
+           grep -Fxq "targetSdkVersion:'37'" app/build/production-evidence/baseline-package.txt
+           if grep -q 'application-debuggable' app/build/production-evidence/baseline-package.txt; then exit 1; fi
+@@ -176,7 +176,7 @@ jobs:
+           jarsigner -verify "$probe/probe.jar" > "$probe/verification.txt"
+           grep -q 'jar verified' "$probe/verification.txt"
+           printf 'PASS: existing permanent private key; original certificate SHA256 94f2bfc6567f26d067d29077111cfd0ce86d38263c642ad115e43365f05b0d17\n' > app/build/production-evidence/permanent-signer.txt
+-      - name: Build the frozen original-key NovaOS 1.7.38.3 launcher and Sanctuary candidate
++      - name: Build the frozen original-key NovaOS 1.7.38.4 launcher and Sanctuary candidate
+         env:
+           ORG_GRADLE_PROJECT_PRIVATE_GALLERY_STORE_FILE: ${{ runner.temp }}/private-gallery-release.jks
+           ORG_GRADLE_PROJECT_PRIVATE_GALLERY_STORE_PASSWORD: ${{ secrets.PRIVATE_GALLERY_SIGNING_STORE_PASSWORD }}
+@@ -206,7 +206,7 @@ jobs:
+           "$ANDROID_HOME/build-tools/36.0.0/zipalign" -c -P 16 -v 4 app/build/outputs/apk/release/app-release.apk > app/build/production-evidence/alignment.txt
+       - name: Enable emulator acceleration
+         run: sudo chmod 666 /dev/kvm
+-      - name: Original-key code75 to code76 upgrade and restart without uninstall or clear
++      - name: Original-key code76 to code77 upgrade and restart without uninstall or clear
+         uses: reactivecircus/android-emulator-runner@v2
+         env:
+           PRODUCTION_UPGRADE: '1'
+@@ -214,7 +214,7 @@ jobs:
+           api-level: '37.0'
+           target: google_apis
+           arch: x86_64
+-          avd-name: novaos1711-original-key-from75
++          avd-name: novaos1711-original-key-from76
+           force-avd-creation: true
+           profile: pixel_2
+           cores: 4
+@@ -230,7 +230,7 @@ jobs:
+           python3 - <<'PY'
+           import hashlib,json,os,shutil,zipfile
+           from pathlib import Path
+-          root=Path.cwd();evidence=root/'app/build/production-evidence';upgrade=evidence/'from75'
++          root=Path.cwd();evidence=root/'app/build/production-evidence';upgrade=evidence/'from76'
+           apk=root/'app/build/outputs/apk/release/app-release.apk';digest=hashlib.sha256(apk.read_bytes()).hexdigest()
+           assert (upgrade/'upgrade-result.txt').read_text().startswith('PASS:')
+           assert (upgrade/'upgrade-candidate-source-sha.txt').read_text().strip()==os.environ['FROZEN_SOURCE']
+@@ -246,22 +246,22 @@ jobs:
+           compiled_reports.mkdir()
+           for name in ('compilation.json','baseline-build.gradle.kts','instrumentation-package.txt','instrumentation-manifest.txt','compile.log'):
+               shutil.copyfile(compiled/name,compiled_reports/name)
+-          summary=dict(source_sha=os.environ['FROZEN_SOURCE'],version='1.7.38.3',version_code=76,package='uk.co.traynor.privategallery',apk_sha256=digest,
+-                       original_certificate_sha256='94f2bfc6567f26d067d29077111cfd0ce86d38263c642ad115e43365f05b0d17',original_key_code75_upgrade='PASS',restart='PASS',android_home_default_preserved='PASS',launcher_process_restart='PASS',physical_owner_acceptance='PENDING')
++          summary=dict(source_sha=os.environ['FROZEN_SOURCE'],version='1.7.38.4',version_code=77,package='uk.co.traynor.privategallery',apk_sha256=digest,
++                       original_certificate_sha256='94f2bfc6567f26d067d29077111cfd0ce86d38263c642ad115e43365f05b0d17',original_key_code76_upgrade='PASS',restart='PASS',android_home_default_preserved='PASS',launcher_process_restart='PASS',physical_owner_acceptance='PENDING')
+           (evidence/'release-summary.json').write_text(json.dumps(summary,indent=2)+'\n')
+-          destination=root/'app/build/NovaOS-1.7.38.3-code76-owner-review.apk';shutil.copyfile(apk,destination)
++          destination=root/'app/build/NovaOS-1.7.38.4-code77-owner-review.apk';shutil.copyfile(apk,destination)
+           (evidence/'SHA256SUMS.txt').write_text(digest+'  '+destination.name+'\n')
+           (evidence/'REVIEW-NOTES.md').write_text(
+-              '# NovaOS 1.7.38.3 · production upgrade\n\n'
++              '# NovaOS 1.7.38.4 · production upgrade\n\n'
+               f"Frozen application source `{summary['source_sha']}`.\n\n"
+-              'Original production package and signing certificate. Android version code 76, API 37.\n\n'
+-              'The pinned original-key Code 75 APK passed an in-place upgrade with retained-data checks, a force-stop '
++              'Original production package and signing certificate. Android version code 77, API 37.\n\n'
++              'The pinned original-key Code 76 APK passed an in-place upgrade with retained-data checks, a force-stop '
+               'and repeat verification on an enforcing API 37 emulator. Physical Galaxy Z Fold validation of this update is pending.\n\n'
+               'Install over the existing production installation. Do not uninstall NovaOS or clear its data.\n'
+           )
+           forbidden={'.apk','.apks','.aab','.jks','.keystore','.p12','.pem','.key','.zip'}
+           assert not any(path.suffix.lower() in forbidden for path in evidence.rglob('*') if path.is_file()), 'Evidence contains an installable package, archive or signing material'
+-          archive=shutil.make_archive(str(root/'app/build/NovaOS-1.7.38.3-code76-evidence'),'zip',evidence)
++          archive=shutil.make_archive(str(root/'app/build/NovaOS-1.7.38.4-code77-evidence'),'zip',evidence)
+           with zipfile.ZipFile(archive) as zipped:
+               assert not any(Path(name).suffix.lower() in forbidden for name in zipped.namelist()), 'Forbidden delivery payload'
+           with open(os.environ['GITHUB_OUTPUT'],'a') as output:
+@@ -270,10 +270,10 @@ jobs:
+       - name: Preserve verified delivery and evidence
+         uses: actions/upload-artifact@v4
+         with:
+-          name: novaos-1.7.38.3-code76-owner-review
++          name: novaos-1.7.38.4-code77-owner-review
+           path: |
+-            app/build/NovaOS-1.7.38.3-code76-owner-review.apk
+-            app/build/NovaOS-1.7.38.3-code76-evidence.zip
++            app/build/NovaOS-1.7.38.4-code77-owner-review.apk
++            app/build/NovaOS-1.7.38.4-code77-evidence.zip
+           if-no-files-found: error
+           retention-days: 30
+       - name: Remove original signing material on every outcome
+@@ -294,7 +294,7 @@ jobs:
+               original=evidence/name
+               if original.is_file() and not original.is_symlink(): shutil.copyfile(original,destination/name)
+           for name in ('upgrade-baseline-package.txt','upgrade-candidate-package.txt','upgrade-baseline-signature.txt','upgrade-candidate-signature.txt','upgrade-instrumentation-signature.txt','upgrade-compilation.json','upgrade-seed.txt','upgrade-verify.txt','upgrade-after-restart.txt','upgrade-result.txt'):
+-              original=evidence/'from75'/name
++              original=evidence/'from76'/name
+               if original.is_file() and not original.is_symlink(): shutil.copyfile(original,destination/name)
+           for name in ('lint-results-release.html','lint-results-release.xml'):
+               original=Path('app/build/reports')/name
+diff --git a/docs/release1711/SECURITY_REVIEW.md b/docs/release1711/SECURITY_REVIEW.md
+index f494a6fa..841d16aa 100644
+--- a/docs/release1711/SECURITY_REVIEW.md
++++ b/docs/release1711/SECURITY_REVIEW.md
+@@ -1,12 +1,9 @@
+-# NovaOS 1.7.38.3 signing review
++# Guardian Code 77 signing review — PENDING
+ 
+-Source: c818c670baa4b980708dc2effb1ab2ab0331ade1
+-Decision: APPROVED
+-Production signing: APPROVED
+-Upgrade fixture SHA-256: d36e071d3eebcede57af2aa95ae2974e82ad1b99b3643b281a1bc5479e09d3a2
+-Upgrade controls SHA-256: 50e6e6f657c05417625d5f51443eed6a886a3d86e46a197302104868de8283da
+-Runtime matrix SHA-256: 789b0eef5c8a8383ffefa050bb69064f32a447201838e2e61e6a204ee2092694
+-Runtime archive SHA-256: c11882b098122621e21e3f4380fe1dda2e7629d9528342a18c4c14203e8a5ef0
+-Signing workflow SHA-256: f675cd90a0ccf3eb34b4a3b254c1ab975f6c757bd4e5259eb394a7a0399674b4
++Source: 2ac3ff8b63f1982e6107373d7839b131d7bb7214
++Decision: PENDING
++Production signing: PENDING
++Physical Fold Main encrypted capture: PASS
++Physical Fold Friends separation: PASS
+ 
+-Run 42813658935 passed the Android 17 runtime gate. The production upgrade uses the original signed Code 75 APK, checks retained data and layouts after the in-place Code 76 upgrade, and repeats the checks after a force-stop. Physical Fold acceptance remains pending.
++Runtime and release-control review remain pending. The historical marker is intentionally incompatible. This document does not authorise signer access.
+diff --git a/docs/release1711/UPGRADE_CONTROLS.md b/docs/release1711/UPGRADE_CONTROLS.md
+index fe7343db..65e1afad 100644
+--- a/docs/release1711/UPGRADE_CONTROLS.md
++++ b/docs/release1711/UPGRADE_CONTROLS.md
+@@ -1,3 +1,15 @@
+-# NovaOS 1.7.38.3 production upgrade
++# NovaOS 1.7.38.4 Code 77 production upgrade
+ 
+-The Android 17 fixture uses the original distributed 1.7.38.2 APK and the original certificate. It installs the candidate in place and checks retained encrypted records, both launcher layouts and dock preferences, then repeats the checks after force-stop.
++Original production package uk.co.traynor.privategallery, Android 17 only.
++The fixture uses the exact distributed Code 76 APK, original production certificate and candidate Code 77. It never rebuilds the installed baseline.
++It installs the candidate in place on a fresh disposable emulator, checks retained encrypted Primary and Hidden records, Evidence Locker, browser sessions, Sanctuary, both launcher layouts and dock preferences, then force-stops and repeats checks. No uninstall or data clear.
++The fixture additionally checks that upgrading does not consent to Guardian capture or Main dismissal and does not spontaneously create Guardian records.
++
++Physical owner evidence: Main notification capture and encrypted Inbox visibility confirmed. Profile probe independently observed Main and Friends with text and zero unresolved events. Main retained count was 3 before and 3 after an observed Friends notification. This closes archive-isolation acceptance for that test.
++
++The existing contact cards are retained; conversation detail is full screen. Authentication, independent per-message holds, protected placeholders and secure-window protection remain mandatory. Source includes the re-analysis preview-close correction and Main-dispatch Evidence publication correction.
++Automatic real WhatsApp dismissal, cloud analysis and automatic Panic remain disabled. Protect All/evening schedule deferred. Samsung notification previews remain governed separately by Samsung settings.
++
++Source: 2ac3ff8b63f1982e6107373d7839b131d7bb7214
++Required runtime: https://github.com/traynor1987/Private-gallery-/actions/runs/42928029177
++No signer access until exact-source successful runtime evidence and independent review are bound by hash.
+diff --git a/docs/release1711/UpgradeFixtureTest.kt b/docs/release1711/UpgradeFixtureTest.kt
+index 50c1c35a..b827653c 100644
+--- a/docs/release1711/UpgradeFixtureTest.kt
++++ b/docs/release1711/UpgradeFixtureTest.kt
+@@ -42,7 +42,7 @@ import uk.co.traynor.privategallery.core.sanctuary.SanctuaryMode
+ import uk.co.traynor.privategallery.core.sanctuary.SanctuaryPreset
+ import uk.co.traynor.privategallery.core.sanctuary.SanctuaryStore
+ 
+-/** Reviewed release-control instrumentation for original-key Code 75 to Code 76 upgrade.
++/** Reviewed release-control instrumentation for original-key Code 76 to Code 77 upgrade.
+  * Captured and hash-checked before frozen application checkout; never modifies baseline app.
+  */
+ class UpgradeFixtureTest {
+@@ -53,7 +53,7 @@ class UpgradeFixtureTest {
+     private val candidateCode get() = checkNotNull(arguments.getString("candidateCode")).toInt()
+     private fun guard() {
+         check(context.packageName == "uk.co.traynor.privategallery.hiddenprototype")
+-        check(baselineCode == 75 && candidateCode == 76)
++        check(baselineCode == 76 && candidateCode == 77)
+     }
+     private fun hash(bytes: ByteArray) = MessageDigest.getInstance("SHA-256").digest(bytes).joinToString("") { "%02x".format(it) }
+     private fun encryptedHashes(): JSONObject = JSONObject().also { result ->
+@@ -326,7 +326,7 @@ class UpgradeFixtureTest {
+         val storeType=evidenceType("EvidenceEncryptedStore")
+         if(seed) {
+             val folder=File(root,"evidence-state/evidence-179-${label.lowercase()}")
+-            assertFalse("Fresh disposable Code 75 evidence fixture starts empty",folder.walkTopDown().any {it.isFile})
++            assertFalse("Fresh disposable Code 76 evidence fixture starts empty",folder.walkTopDown().any {it.isFile})
+         }
+         val store=storeType.getConstructor(File::class.java,ownerType,evidenceType("EvidenceEncryptedStore\$LeaseFactory"))
+             .newInstance(File(root,"evidence-state"),owner,factory)
+@@ -339,7 +339,7 @@ class UpgradeFixtureTest {
+         val corrected="2026-10-31\nAlice: UPGRADE-EVIDENCE-$label owner-corrected transcript 14:05"
+         var catalog=evidenceCall(store,"read")
+         if(seed) {
+-            assertEquals("Fresh Code 75 fixture catalogue starts empty",0,(evidenceCall(catalog,"evidence") as List<*>).size)
++            assertEquals("Fresh Code 76 fixture catalogue starts empty",0,(evidenceCall(catalog,"evidence") as List<*>).size)
+             val dimension = if (label == "PRIMARY") 64 else 32
+             val metadata=evidenceRecord("Metadata",9,item.displayName,0L,0L,item.importedAtEpochMillis,0L,dimension,dimension,
+                 mapOf("provenance" to "Synthetic upgrade fixture metadata; timestamps are not screenshot facts"),false)
+@@ -496,7 +496,7 @@ class UpgradeFixtureTest {
+                 for(field in listOf("files","hiddenFiles")) {
+                     val wanted=expected.getJSONObject(field);val actual=current.getJSONObject(field)
+                     assertEquals(wanted.length(),actual.length())
+-                    wanted.keys().forEach {path->assertEquals("Existing Code 75 owner-encrypted evidence survives upgrade/restart unchanged",wanted.getString(path),actual.getString(path))}
++                    wanted.keys().forEach {path->assertEquals("Existing Code 76 owner-encrypted evidence survives upgrade/restart unchanged",wanted.getString(path),actual.getString(path))}
+                 }
+             } else before.put("primaryEvidenceCatalogSha256",primaryHash).put("hiddenEvidenceCatalogSha256",hiddenHash).put("candidateEvidenceFiles",current)
+             // Recheck every original encrypted file after additive writes, including the
+@@ -959,6 +959,9 @@ class UpgradeFixtureTest {
+     @Test fun verify() {
+         guard()
+         assertEquals(candidateCode, context.packageManager.getPackageInfo(context.packageName,0).versionCode)
++        assertFalse("Upgrade must not consent to Guardian capture",context.getSharedPreferences("nova_guardian_capture",0).getBoolean("enabled",false))
++        assertFalse("Upgrade must not enable Main WhatsApp dismissal",context.getSharedPreferences("guardian_main_dismissal",0).getBoolean("main_enabled",false))
++        assertFalse("Upgrade alone must not create notification records",File(context.filesDir,"guardian-notifications-v1.enc").exists())
+         val before = JSONObject(proof.readText())
+         val previousHome = before.getString("previousHome")
+         assertEquals("Keep Android's previous Home activity after update and restart", previousHome,
+diff --git a/scripts/compile_upgrade1711_fixture.sh b/scripts/compile_upgrade1711_fixture.sh
+index a9d36a98..c4159aa8 100755
+--- a/scripts/compile_upgrade1711_fixture.sh
++++ b/scripts/compile_upgrade1711_fixture.sh
+@@ -22,7 +22,7 @@ PYOUTPUT
+ [[ ! -e "$output" ]]
+ mkdir -p "$output"
+ control_root=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+-baseline=dc4f0b19be8391b899364fb62d890ad322350e2e
++baseline=c818c670baa4b980708dc2effb1ab2ab0331ade1
+ baseline_dir=$(mktemp -d "${RUNNER_TEMP:?}/upgrade1711-source.XXXXXX")
+ trap 'rm -rf "$baseline_dir"' EXIT
+ if ! git cat-file -e "$baseline^{commit}"; then git fetch --no-tags origin "$baseline"; fi
+diff --git a/scripts/release_configuration1711.sh b/scripts/release_configuration1711.sh
+index 95bb01cb..9bafe784 100644
+--- a/scripts/release_configuration1711.sh
++++ b/scripts/release_configuration1711.sh
+@@ -2,9 +2,9 @@
+ # Prepared production identity only; this file does not authorize signing or publishing.
+ [[ "${GITHUB_REF:-}" == refs/heads/feature/novaos-sanctuary-integration ]] || { echo 'Unsupported NovaOS Sanctuary integration branch' >&2; exit 1; }
+ release_min_sdk=37
+-release_version=1.7.38.3
+-release_code=76
+-baseline_version=1.7.38.2
+-baseline_code=75
+-baseline_sha=dc4f0b19be8391b899364fb62d890ad322350e2e
+-[[ "${PRIVATE_GALLERY_UPGRADE_BASELINE:-75}" == 75 ]] || { echo 'Unsupported NovaOS upgrade baseline' >&2; exit 1; }
++release_version=1.7.38.4
++release_code=77
++baseline_version=1.7.38.3
++baseline_code=76
++baseline_sha=c818c670baa4b980708dc2effb1ab2ab0331ade1
++[[ "${PRIVATE_GALLERY_UPGRADE_BASELINE:-76}" == 76 ]] || { echo 'Unsupported NovaOS upgrade baseline' >&2; exit 1; }
+diff --git a/scripts/tests/test_guardian77_release_controls.py b/scripts/tests/test_guardian77_release_controls.py
+new file mode 100644
+index 00000000..9b29cee0
+--- /dev/null
++++ b/scripts/tests/test_guardian77_release_controls.py
+@@ -0,0 +1,28 @@
++"""Fail-closed release-control checks; these do not manufacture Android evidence."""
++import hashlib, importlib.util, json, os, subprocess, tempfile, unittest
++from pathlib import Path
++ROOT=Path(__file__).resolve().parents[2]
++spec=importlib.util.spec_from_file_location('gate77',ROOT/'scripts/verify_release1711_gate.py')
++gate=importlib.util.module_from_spec(spec);spec.loader.exec_module(gate)
++class Guardian77Controls(unittest.TestCase):
++ def test_only_original76_baseline_is_accepted(self):
++  for baseline,ok in [('76',True),('75',False),('77',False)]:
++   env=dict(os.environ,GITHUB_REF='refs/heads/'+gate.BRANCH,PRIVATE_GALLERY_UPGRADE_BASELINE=baseline)
++   result=subprocess.run(['bash','-ec','source scripts/release_configuration1711.sh; test "$release_code" = 77; test "$baseline_code" = 76'],cwd=ROOT,env=env,capture_output=True)
++   self.assertEqual(ok,result.returncode==0)
++ def test_historical_release_marker_is_rejected(self):
++  marker=json.loads((ROOT/'.sanctuary-production-candidate').read_bytes())
++  with self.assertRaisesRegex(ValueError,'Wrong upgrade identity'):
++   gate.validate(marker,b'',{},{},{},'/nonexistent',b'{}',gate.controls(),b'')
++ def test_missing_physical_acceptance_prevents_signer_gate(self):
++  with tempfile.TemporaryDirectory() as folder:
++   archive=Path(folder)/'untrusted.zip';archive.write_bytes(b'not runtime evidence')
++   fixture=b'synthetic fixture';matrix=b'{}';source='1'*40;controls=gate.controls()
++   lines=['Source: '+source,'Decision: APPROVED','Production signing: APPROVED','Upgrade fixture SHA-256: '+gate.sha(fixture),'Upgrade controls SHA-256: '+gate.controls_digest(controls),'Runtime matrix SHA-256: '+gate.sha(matrix),'Runtime archive SHA-256: '+gate.sha(archive.read_bytes())]
++   marker=dict(source=source,baseline_source=gate.BASELINE,baseline_code=76,candidate_code=77,controls_sha256=controls,fixture_sha256=gate.sha(fixture),matrix_sha256=gate.sha(matrix),runtime_archive_sha256=gate.sha(archive.read_bytes()))
++   for absent in ['Physical Fold Main encrypted capture: PASS','Physical Fold Friends separation: PASS']:
++    review=('\n'.join(lines+[line for line in ['Physical Fold Main encrypted capture: PASS','Physical Fold Friends separation: PASS'] if line!=absent])+'\n').encode()
++    marker['review_sha256']=gate.sha(review)
++    with self.assertRaisesRegex(ValueError,'Missing exact independent approval line: '+absent):
++     gate.validate(marker,review,{},{},{},archive,matrix,controls,fixture)
++if __name__=='__main__':unittest.main()
+diff --git a/scripts/verify_compiled_upgrade1711.py b/scripts/verify_compiled_upgrade1711.py
+index b44592d4..3e6163d7 100755
+--- a/scripts/verify_compiled_upgrade1711.py
++++ b/scripts/verify_compiled_upgrade1711.py
+@@ -6,7 +6,7 @@ import json
+ from pathlib import Path
+ import re
+ 
+-BASELINE = 'dc4f0b19be8391b899364fb62d890ad322350e2e'
++BASELINE = 'c818c670baa4b980708dc2effb1ab2ab0331ade1'
+ TARGET = b'uk.co.traynor.privategallery.hiddenprototype'
+ BUILD_TARGET = b'      applicationIdSuffix = ".hiddenprototype"'
+ 
+diff --git a/scripts/verify_release1711_gate.py b/scripts/verify_release1711_gate.py
+index 2d6f37b7..ea70b512 100644
+--- a/scripts/verify_release1711_gate.py
++++ b/scripts/verify_release1711_gate.py
+@@ -15,7 +15,7 @@ import zipfile
+ 
+ ROOT=Path(__file__).resolve().parents[1]
+ BRANCH='feature/novaos-sanctuary-integration'
+-BASELINE='dc4f0b19be8391b899364fb62d890ad322350e2e'
++BASELINE='c818c670baa4b980708dc2effb1ab2ab0331ade1'
+ CONTROLS=('compile_upgrade1711_fixture.sh','verify_compiled_upgrade1711.py',
+           'verify_upgrade1711_baseline.py','verify_production_candidate1711.sh',
+           'verify_synthetic_upgrade1711.sh','verify_signed_upgrade1711.py',
+@@ -70,7 +70,7 @@ def runtime_cases(archive,matrix,source):
+         require(len(restart_prefixes)==1,'Missing original process restart evidence')
+         prefix=restart_prefixes[0]
+         restart_cases({name[len(prefix):]:zipped.read(name) for name in names if name.startswith(prefix) and not name.endswith('/')},source)
+-        groups={'visual-checkpoint':9,'sanctuary-checkpoint':4,'sanctuary-dnd':1,
++        groups={'wallpaper-return-regression-77':12,'guardian-notification-compatibility-77':2,'guardian-capture-store-77':10,'guardian-inbox-77':2,'guardian-evidence-learning-77':2,'visual-checkpoint':9,'sanctuary-checkpoint':4,'sanctuary-dnd':1,
+                 'sanctuary-guardian':1,'sanctuary-accessibility':1,'sanctuary-browser':2,
+                 'redesign621':18,'navigation-hidden':1,'navigation-web':1,'navigation-haptics':1,
+                 'evidence-collections-68':4,'evidence-ai-68':4,'evidence-dates-68':1,
+@@ -93,32 +93,7 @@ def runtime_cases(archive,matrix,source):
+                 ('uk.co.traynor.privategallery.launcher.LauncherDefaultHomeEntry73Test',
+                  'appIconSkipsTheReminderDuringSanctuaryProtection'),
+             ],
+-            'launcher-library-pager-73': [
+-                ('uk.co.traynor.privategallery.launcher.LauncherHomeLibraryPager73UiTest',
+-                 'coverBackLeavesLibraryForLastHomePageAndDrawerStillOpens'),
+-                ('uk.co.traynor.privategallery.launcher.LauncherHomeLibraryPager73UiTest',
+-                 'coverDockLockKeepsNormalLaunchAndBlocksLayoutEdits'),
+-                ('uk.co.traynor.privategallery.launcher.LauncherHomeLibraryPager73UiTest',
+-                 'coverDockRemainsStationaryDuringAndAfterSwipeAndLibraryScroll'),
+-                ('uk.co.traynor.privategallery.launcher.LauncherHomeLibraryPager73UiTest',
+-                 'coverDragsFromTrailingLibraryOntoLastHomePage'),
+-                ('uk.co.traynor.privategallery.launcher.LauncherHomeLibraryPager73UiTest',
+-                 'coverDrawerReturnRevealsDockOverMultipleFrames'),
+-                ('uk.co.traynor.privategallery.launcher.LauncherHomeLibraryPager73UiTest',
+-                 'coverDrawerShortcutOpensPagerLibraryAndBackReturnsToDrawer'),
+-                ('uk.co.traynor.privategallery.launcher.LauncherHomeLibraryPager73UiTest',
+-                 'coverHomeVerticalGesturesStillOpenDrawerAndWorkspace'),
+-                ('uk.co.traynor.privategallery.launcher.LauncherHomeLibraryPager73UiTest',
+-                 'coverLibraryHonorsSavedDockVisibilityWithoutShowingItInDrawer'),
+-                ('uk.co.traynor.privategallery.launcher.LauncherHomeLibraryPager73UiTest',
+-                 'coverSanctuaryHidesOnlyRestrictedProfileAndRestoresItsSlots'),
+-                ('uk.co.traynor.privategallery.launcher.LauncherHomeLibraryPager73UiTest',
+-                 'coverSwipesAcrossEveryHomePageBeforeLibraryAndBack'),
+-                ('uk.co.traynor.privategallery.launcher.LauncherHomeLibraryPager73UiTest',
+-                 'foldNativeArtworkScalesAcrossAllSizesAndKeepsAppLaunchWorking'),
+-                ('uk.co.traynor.privategallery.launcher.LauncherHomeLibraryPager73UiTest',
+-                 'foldSwipesBetweenItsLastHomePageAndLibrary'),
+-            ],
++            'launcher-library-pager-73': [('uk.co.traynor.privategallery.launcher.LauncherHomeLibraryPager73UiTest', 'coverGuardianIsLeftOfHomeAndDoesNotExposeAnInboxOrDock'), ('uk.co.traynor.privategallery.launcher.LauncherHomeLibraryPager73UiTest', 'foldGuardianDisplaysTheRealPanicSnapshotAndCanBeDisabled'), ('uk.co.traynor.privategallery.launcher.LauncherHomeLibraryPager73UiTest', 'landscapeGuardianRemainsReachableWithLargeText'), ('uk.co.traynor.privategallery.launcher.LauncherHomeLibraryPager73UiTest', 'coverSwipesAcrossEveryHomePageBeforeLibraryAndBack'), ('uk.co.traynor.privategallery.launcher.LauncherHomeLibraryPager73UiTest', 'foldSwipesBetweenItsLastHomePageAndLibrary'), ('uk.co.traynor.privategallery.launcher.LauncherHomeLibraryPager73UiTest', 'coverBackLeavesLibraryForLastHomePageAndDrawerStillOpens'), ('uk.co.traynor.privategallery.launcher.LauncherHomeLibraryPager73UiTest', 'coverDrawerShortcutOpensPagerLibraryAndBackReturnsToDrawer'), ('uk.co.traynor.privategallery.launcher.LauncherHomeLibraryPager73UiTest', 'coverDragsFromTrailingLibraryOntoLastHomePage'), ('uk.co.traynor.privategallery.launcher.LauncherHomeLibraryPager73UiTest', 'coverHomeVerticalGesturesStillOpenDrawerAndWorkspace'), ('uk.co.traynor.privategallery.launcher.LauncherHomeLibraryPager73UiTest', 'coverDockRemainsStationaryDuringAndAfterSwipeAndLibraryScroll'), ('uk.co.traynor.privategallery.launcher.LauncherHomeLibraryPager73UiTest', 'coverDrawerReturnRevealsDockOverMultipleFrames'), ('uk.co.traynor.privategallery.launcher.LauncherHomeLibraryPager73UiTest', 'coverLibraryHonorsSavedDockVisibilityWithoutShowingItInDrawer'), ('uk.co.traynor.privategallery.launcher.LauncherHomeLibraryPager73UiTest', 'foldNativeArtworkScalesAcrossAllSizesAndKeepsAppLaunchWorking'), ('uk.co.traynor.privategallery.launcher.LauncherHomeLibraryPager73UiTest', 'coverDockLockKeepsNormalLaunchAndBlocksLayoutEdits'), ('uk.co.traynor.privategallery.launcher.LauncherHomeLibraryPager73UiTest', 'coverSanctuaryHidesOnlyRestrictedProfileAndRestoresItsSlots'), ('uk.co.traynor.privategallery.launcher.LauncherHomeLibraryPager73UiTest', 'coverProtectedCardAtLargeTextShowsDeadlineWithoutPreview'), ('uk.co.traynor.privategallery.launcher.LauncherHomeLibraryPager73UiTest', 'foldProtectedCardAtLargeTextShowsDeadlineWithoutPreview'), ('uk.co.traynor.privategallery.launcher.LauncherHomeLibraryPager73UiTest', 'conversationTrainingCardRequiresReviewAndConcealsHeldText')],
+             'launcher-smart-tracking-73': [
+                 ('uk.co.traynor.privategallery.launcher.LauncherSmartTrackingStore73Test',
+                  'denyingUsageAccessKeepsThePreviousMode'),
+@@ -329,7 +304,7 @@ def runtime_cases(archive,matrix,source):
+ 
+ def validate(marker,review,run,jobs,artifact,archive,matrix_raw,current_controls,fixture):
+     source=marker.get('source');require(source_ok(source),'Unfrozen candidate source')
+-    require(marker.get('baseline_source')==BASELINE and marker.get('baseline_code')==75 and marker.get('candidate_code')==76,'Wrong upgrade identity')
++    require(marker.get('baseline_source')==BASELINE and marker.get('baseline_code')==76 and marker.get('candidate_code')==77,'Wrong upgrade identity')
+     require(marker.get('controls_sha256')==current_controls,'Release controls changed after review')
+     require(marker.get('review_sha256')==sha(review),'Independent review changed')
+     require(marker.get('fixture_sha256')==sha(fixture),'Upgrade fixture changed')
+@@ -337,6 +312,7 @@ def validate(marker,review,run,jobs,artifact,archive,matrix_raw,current_controls
+     require(marker.get('matrix_sha256')==sha(matrix_raw),'Reviewed runtime matrix changed')
+     text=review.decode()
+     for line in ('Source: '+source,'Decision: APPROVED','Production signing: APPROVED',
++                 'Physical Fold Main encrypted capture: PASS','Physical Fold Friends separation: PASS',
+                  'Upgrade fixture SHA-256: '+sha(fixture),'Upgrade controls SHA-256: '+controls_digest(current_controls),
+                  'Runtime matrix SHA-256: '+sha(matrix_raw),'Runtime archive SHA-256: '+marker['runtime_archive_sha256']):
+         require(line in text.splitlines(),'Missing exact independent approval line: '+line)
+@@ -355,13 +331,13 @@ def validate(marker,review,run,jobs,artifact,archive,matrix_raw,current_controls
+     require(REQUIRED_STEPS<=passed,'Required runtime/build/identity step did not run')
+     count=runtime_cases(archive,json.loads(matrix_raw),source)
+     return dict(schema=1,decision='READY_FOR_GATED_SIGNER',source=source,baseline_source=BASELINE,
+-                baseline_code=75,candidate_code=76,test_run=marker['test_run'],test_artifact=marker['test_artifact'],review_sha256=sha(review),
++                baseline_code=76,candidate_code=77,test_run=marker['test_run'],test_artifact=marker['test_artifact'],review_sha256=sha(review),
+                 fixture_sha256=sha(fixture),controls_sha256=current_controls,matrix_sha256=sha(matrix_raw),
+                 runtime_archive_sha256=marker['runtime_archive_sha256'],validated_case_count=count,validated_restart_count=8,validated_launcher_restart_count=1)
+ 
+ def check_receipt(proof,source,current_controls,fixture):
+     require(source_ok(source) and proof.get('schema')==1 and proof.get('decision')=='READY_FOR_GATED_SIGNER','Missing reviewed signer gate')
+-    require(proof.get('source')==source and proof.get('baseline_source')==BASELINE and proof.get('baseline_code')==75 and proof.get('candidate_code')==76,'Signer gate source/identity differs')
++    require(proof.get('source')==source and proof.get('baseline_source')==BASELINE and proof.get('baseline_code')==76 and proof.get('candidate_code')==77,'Signer gate source/identity differs')
+     require(proof.get('controls_sha256')==current_controls and proof.get('fixture_sha256')==sha(fixture),'Signer gate controls/fixture differ')
+     require(type(proof.get('test_run')) is int and proof['test_run']>0 and type(proof.get('validated_case_count')) is int and proof['validated_case_count']>0,'Missing original runtime accounting')
+     require(proof.get('validated_restart_count')==8,'Missing actual restart phase accounting')
+diff --git a/scripts/verify_synthetic_upgrade1711.sh b/scripts/verify_synthetic_upgrade1711.sh
+index ada49bca..9f646463 100755
+--- a/scripts/verify_synthetic_upgrade1711.sh
++++ b/scripts/verify_synthetic_upgrade1711.sh
+@@ -5,10 +5,10 @@ set -euo pipefail
+ control_root=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+ cd "${PRIVATE_GALLERY_1711_ROOT:-$control_root/..}"
+ source "$control_root/release_configuration1711.sh"
+-[[ "$baseline_code" == 75 && "$release_code" == 76 && "$baseline_sha" == dc4f0b19be8391b899364fb62d890ad322350e2e ]]
+-archived_baseline="${PRIVATE_GALLERY_1711_BASELINE_APK:?Exact archived signed 1.7.38.2 Code 75 APK required}"
++[[ "$baseline_code" == 76 && "$release_code" == 77 && "$baseline_sha" == c818c670baa4b980708dc2effb1ab2ab0331ade1 ]]
++archived_baseline="${PRIVATE_GALLERY_1711_BASELINE_APK:?Exact archived signed 1.7.38.3 Code 76 APK required}"
+ [[ -f "$archived_baseline" && -s "$archived_baseline" ]] || { echo 'Archived baseline APK unavailable' >&2; exit 1; }
+-[[ "$(sha256sum "$archived_baseline" | cut -d ' ' -f 1)" == 46ac04ff785c4c64a47b7e0c0456d3346598c36b9e093f33fa135ef4d5c70744 ]] || { echo 'Archived baseline APK hash mismatch' >&2; exit 1; }
++[[ "$(sha256sum "$archived_baseline" | cut -d ' ' -f 1)" == 7fd1e4211e6277a8a8bfeaa20ef8ee180a89a57b38e435bb30b5a69fbcada171 ]] || { echo 'Archived baseline APK hash mismatch' >&2; exit 1; }
+ readonly archived_baseline
+ [[ "$(git rev-parse HEAD)" == "${FROZEN_SOURCE:?Exact tested source required}" ]]
+ python3 "$control_root/verify_release1711_gate.py" --receipt "${PRIVATE_GALLERY_1711_GATE_RECEIPT:?Exact-source reviewed pre-signer gate required}" --source "$FROZEN_SOURCE"
+@@ -25,7 +25,7 @@ if grep -Fxq "package:$fixture_package" <<< "$installed_packages"; then
+   exit 1
+ fi
+ project_root=$(pwd)
+-artifact_dir="${PRIVATE_GALLERY_1711_EVIDENCE_DIR:-$project_root/app/build/production-evidence/from75}"
++artifact_dir="${PRIVATE_GALLERY_1711_EVIDENCE_DIR:-$project_root/app/build/production-evidence/from76}"
+ [[ ! -e "$artifact_dir" ]] || { echo "Fresh upgrade evidence directory required" >&2; exit 1; }
+ mkdir -p "$artifact_dir"
+ sdk="$ANDROID_HOME/build-tools/36.0.0"
+@@ -89,4 +89,4 @@ adb install -r "$candidate_apk"
+ run_fixture verify verify
+ adb shell am force-stop "$fixture_package"
+ run_fixture verify after-restart
+-printf '%s\n' 'PASS: original signed code75 -> code76 in-place upgrade/restart; legacy encrypted data, owner-encrypted evidence, connected collections, chronology corrections, evidence AI credentials, Sanctuary policy, both launcher layouts and Android Home default preserved' > "$artifact_dir/upgrade-result.txt"
++printf '%s\n' 'PASS: original signed code76 -> code77 in-place upgrade/restart; legacy encrypted data, owner-encrypted evidence, connected collections, chronology corrections, evidence AI credentials, Sanctuary policy, both launcher layouts and Android Home default preserved' > "$artifact_dir/upgrade-result.txt"
+diff --git a/scripts/verify_upgrade1711_baseline.py b/scripts/verify_upgrade1711_baseline.py
+index d3c9532b..440ad779 100755
+--- a/scripts/verify_upgrade1711_baseline.py
++++ b/scripts/verify_upgrade1711_baseline.py
+@@ -1,5 +1,5 @@
+ #!/usr/bin/env python3
+-"""Extract pinned distributed 1.7.38.2 Code 75; never rebuild/substitute an application baseline."""
++"""Extract pinned distributed 1.7.38.3 Code 76; never rebuild/substitute an application baseline."""
+ import hashlib
+ import io
+ import json
+@@ -7,19 +7,19 @@ from pathlib import Path
+ import sys
+ import zipfile
+ 
+-ARCHIVE_SHA256 = 'de0e60171b37fe7376dd17aa8a97766e37419214486cf663e6dadcea4b341d85'
+-ARCHIVE_BYTES = 62111887
+-APK_SHA256 = '46ac04ff785c4c64a47b7e0c0456d3346598c36b9e093f33fa135ef4d5c70744'
+-APK_BYTES = 148746784
+-ARTIFACT_ID = 13724654625
+-RUN_ID = 42731111514
+-JOB_ID = 129549066650
+-ACTIVATION_SHA = '7ae6265fc458222abe00706f2489a9e1859e6f66'
+-APK_NAME = 'NovaOS-1.7.38.2-code75-owner-review.apk'
+-SOURCE_SHA = 'dc4f0b19be8391b899364fb62d890ad322350e2e'
+-EVIDENCE_NAME = 'NovaOS-1.7.38.2-code75-evidence.zip'
+-EVIDENCE_BYTES = 104948
+-EVIDENCE_SHA256 = 'baf9884ac96dbdbf8b5df899eb5f14b3d7dd568b04f21a3edfb5424d2c61f292'
++ARCHIVE_SHA256 = '7529b9dd3ef07db0b959e29d657c046bde0efc11b3b79a27f9be19ab3aa98757'
++ARCHIVE_BYTES = 62192742
++APK_SHA256 = '7fd1e4211e6277a8a8bfeaa20ef8ee180a89a57b38e435bb30b5a69fbcada171'
++APK_BYTES = 148976200
++ARTIFACT_ID = 13767667010
++RUN_ID = 42819991907
++JOB_ID = 129842766718
++ACTIVATION_SHA = '03933aba35a8649753e9441039cfbc6563ee5c36'
++APK_NAME = 'NovaOS-1.7.38.3-code76-owner-review.apk'
++SOURCE_SHA = 'c818c670baa4b980708dc2effb1ab2ab0331ade1'
++EVIDENCE_NAME = 'NovaOS-1.7.38.3-code76-evidence.zip'
++EVIDENCE_BYTES = 105266
++EVIDENCE_SHA256 = 'af94332116f608ae6651200eac2c3d6cee4cb0ce00eee17e4e1e4ad3747d9d28'
+ CERTIFICATE_SHA256 = '94f2bfc6567f26d067d29077111cfd0ce86d38263c642ad115e43365f05b0d17'
+ 
+ 
+@@ -47,10 +47,10 @@ def validated_apk(archive):
+         require(len(names) == len(set(names)), 'Duplicate evidence members')
+         require('release-summary.json' in names, 'Missing original release-summary receipt')
+         summary = json.loads(zipped.read('release-summary.json'))
+-        expected = dict(source_sha=SOURCE_SHA, version='1.7.38.2', version_code=75,
++        expected = dict(source_sha=SOURCE_SHA, version='1.7.38.3', version_code=76,
+                         package='uk.co.traynor.privategallery', apk_sha256=APK_SHA256,
+                         original_certificate_sha256=CERTIFICATE_SHA256,
+-                        original_key_code74_upgrade='PASS', restart='PASS')
++                        original_key_code75_upgrade='PASS', restart='PASS')
+         require(all(summary.get(key) == value for key, value in expected.items()), 'Historical application source/version/certificate provenance differs')
+     return apk
+ 
+@@ -60,4 +60,4 @@ if __name__ == '__main__':
+     destination = Path(sys.argv[2])
+     with destination.open('xb') as output:
+         output.write(apk)
+-    print('PASS: exact archived original signed 1.7.38.2 Code 75 APK and nested original release-summary provenance')
++    print('PASS: exact archived original signed 1.7.38.3 Code 76 APK and nested original release-summary provenance')
