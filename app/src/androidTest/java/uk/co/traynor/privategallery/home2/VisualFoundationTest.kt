@@ -118,13 +118,13 @@ class VisualFoundationTest {
                 compose.waitUntil(timeoutMillis = 5_000L) {
                     compose.onAllNodesWithTag("visual-catalogue-list").fetchSemanticsNodes().size == 1
                 }
-                compose.onNodeWithTag("visual-catalogue-list").performScrollToNode(hasTestTag("visual-module-$id"))
+                compose.onNodeWithTag("visual-catalogue-list").performScrollToKey(id)
                 compose.onNodeWithTag("visual-module-$id").assertIsDisplayed().assertHeightIsAtLeast(48.dp).performClick()
                 compose.onNodeWithTag("visual-demo-indicator").assertIsDisplayed()
                 compose.onNodeWithTag("visual-screen-$id").assertIsDisplayed()
                 val module = visualModules.single { it.id == id }
                 module.sections.indices.forEach { index ->
-                    compose.onNodeWithTag("visual-sections").performScrollToNode(hasTestTag("visual-section-$index"))
+                    compose.onNodeWithTag("visual-sections").performScrollToKey(index)
                     compose.onNodeWithTag("visual-section-$index").assertIsDisplayed().assertHeightIsAtLeast(48.dp).performClick().assertIsSelected()
                     compose.onNodeWithTag("visual-demo-indicator").assertIsDisplayed()
                     val section = module.sections[index]
@@ -144,7 +144,7 @@ class VisualFoundationTest {
                     }
                 }
                 compose.runOnIdle { navigator.openSection(0) }
-                compose.onNodeWithTag("visual-sections").performScrollToNode(hasTestTag("visual-section-0"))
+                compose.onNodeWithTag("visual-sections").performScrollToKey(0)
                 ReleaseScreenshots62.capture(compose.onNodeWithTag("visual-screen-$id"), "visual-$id-$targetWidth")
                 when (id) {
                     "notes" -> verifyNotesEditor(targetWidth)
