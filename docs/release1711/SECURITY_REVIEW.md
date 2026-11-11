@@ -1,12 +1,16 @@
-# NovaOS 1.7.38.3 signing review
+# Guardian Code 77 signing review
 
-Source: c818c670baa4b980708dc2effb1ab2ab0331ade1
+Source: 15cdfd9e612ffc68960d1374420fe05e425a9877
 Decision: APPROVED
 Production signing: APPROVED
-Upgrade fixture SHA-256: d36e071d3eebcede57af2aa95ae2974e82ad1b99b3643b281a1bc5479e09d3a2
-Upgrade controls SHA-256: 50e6e6f657c05417625d5f51443eed6a886a3d86e46a197302104868de8283da
+Physical Fold Main encrypted capture: PASS
+Physical Fold Friends separation: PASS
+Upgrade fixture SHA-256: 0d3de15014a7ce826200b7575c30ca82bc9158d2419263c26ca1760bd12be558
+Upgrade controls SHA-256: 19681641ded37eaedc08ed29f112762a3c44e7ff3b9a0322d6d3f40cf5e613b1
 Runtime matrix SHA-256: 789b0eef5c8a8383ffefa050bb69064f32a447201838e2e61e6a204ee2092694
-Runtime archive SHA-256: c11882b098122621e21e3f4380fe1dda2e7629d9528342a18c4c14203e8a5ef0
-Signing workflow SHA-256: f675cd90a0ccf3eb34b4a3b254c1ab975f6c757bd4e5259eb394a7a0399674b4
+Runtime archive SHA-256: 875c72d09635800849a293634dd3b942d0f16d56703f840fdd5ac4c21051fd43
+Signing workflow SHA-256: 1dfeac41e813a98726e3fc5d8587e33d03b958394dd0fb0e03e82fc8d2c37cfd
 
-Run 42813658935 passed the Android 17 runtime gate. The production upgrade uses the original signed Code 75 APK, checks retained data and layouts after the in-place Code 76 upgrade, and repeats the checks after a force-stop. Physical Fold acceptance remains pending.
+Runtime run 42973393230, artifact 13836453396. Exact-source 263-case archive validation passed.
+
+Independent release review approved these exact inputs for the original-key build and seeded upgrade under the workflow gates.
