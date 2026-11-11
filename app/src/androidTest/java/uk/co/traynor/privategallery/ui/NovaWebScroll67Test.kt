@@ -104,6 +104,20 @@ class NovaWebScroll67Test {
             }
             // Keyboard geometry must be independent of the preceding gesture's fling and
             // the retained visual viewport's offset. Prepare the fixture without focusing it.
+            fun awaitScrollAtRest() {
+                var lastScroll = Point(Int.MIN_VALUE, Int.MIN_VALUE)
+                var lastChange = android.os.SystemClock.uptimeMillis()
+                compose.waitUntil(5_000) {
+                    val scroll = compose.runOnIdle { Point(first.scrollX, first.scrollY) }
+                    val now = android.os.SystemClock.uptimeMillis()
+                    if (scroll != lastScroll) {
+                        lastScroll = scroll
+                        lastChange = now
+                    }
+                    now - lastChange >= 300
+                }
+            }
+            awaitScrollAtRest()
             val positioned = AtomicBoolean(false)
             compose.runOnIdle {
                 assertSame(first, active)
@@ -113,6 +127,7 @@ class NovaWebScroll67Test {
                 ) { positioned.set(true) }
             }
             compose.waitUntil(5_000) { positioned.get() }
+            awaitScrollAtRest()
             val editor = AtomicReference<Point>()
             compose.runOnIdle {
                 assertSame(first, active)
