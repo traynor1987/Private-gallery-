@@ -173,6 +173,9 @@ class WallpaperUiTest {
   }}}
   compose.waitUntil(10_000){compose.onAllNodesWithTag("wallpaper-zoom").fetchSemanticsNodes().isNotEmpty()}
   compose.onNodeWithTag("apply-wallpaper").performScrollTo().performClick()
+  // Apply persists on Dispatchers.IO: Compose idleness does not await that work.
+  // Observe the real completion callback and dialog removal before checking Home.
+  compose.waitUntil(10_000){owner==null&&homeVisible&&compose.onAllNodesWithTag("wallpaper-editor").fetchSemanticsNodes().isEmpty()}
   compose.onNodeWithTag("preview-home").assertIsDisplayed()
   compose.runOnIdle{val applied=f.wallpaper();assertNotNull(applied.image);assertEquals(applied,connected?.profile?.wallpaper);connected!!.change{it.copy(columns=5)};assertEquals(applied,f.wallpaper())}
   compose.runOnIdle{access.close()}
