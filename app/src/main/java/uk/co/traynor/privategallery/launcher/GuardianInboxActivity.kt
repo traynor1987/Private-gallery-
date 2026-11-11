@@ -573,6 +573,11 @@ class GuardianInboxActivity : ComponentActivity() {
     @OptIn(ExperimentalLayoutApi::class)
     @Composable
     private fun MessageActions(row: GuardianInboxRow) {
+        val preview = conversationPreview?.takeIf { it.first == row.id }?.second ?: return
+        GuardianMessageCopyActions(row, preview, appLabel(row.conversation), !busy && canReview()) {
+            canReview() && !busy && conversationPreview == (row.id to preview) &&
+                rows.any { it.id == row.id && it.section != GuardianInboxSection.COOLING }
+        }
         GuardianCard("Message actions") {
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 TextButton(enabled = !busy, onClick = {
