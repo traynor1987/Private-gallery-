@@ -152,13 +152,19 @@ internal class GuardianCaptureStore private constructor(private val context: Con
         }
     }
 
-    fun teach(text: String, assessment: GuardianAssessment): Boolean = synchronized(lock) {
+    fun teach(text: String, assessment: GuardianAssessment, evidenceId: String? = null): Boolean = synchronized(lock) {
+        require(evidenceId == null || evidenceId.isNotBlank())
         val features = guardianFeatures(text)
         if (features.isEmpty()) return@synchronized false
         val examples = GuardianCaptureStore(context, true)
         val id = fingerprint(JSONArray(features.sorted()).toString().toByteArray(Charsets.UTF_8))
-        val saved = examples.read().filterNot { it.getString("id") == id }
+        val rows = examples.read()
+        val previous = rows.firstOrNull { it.getString("id") == id }?.optJSONArray("evidenceSources")
+        val sources = if (previous == null) emptyList() else List(previous.length(), previous::getString)
+        val updatedSources = (listOfNotNull(evidenceId) + sources).distinct().take(MAX_EXAMPLES)
+        val saved = rows.filterNot { it.getString("id") == id }
         val row = JSONObject().put("id", id).put("features", JSONArray(features.sorted())).put("label", assessment.name)
+        if (updatedSources.isNotEmpty()) row.put("evidenceSources", JSONArray(updatedSources))
         examples.write((listOf(row) + saved).take(MAX_EXAMPLES))
         true
     }

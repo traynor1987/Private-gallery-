@@ -52,7 +52,8 @@ internal fun EvidenceGuardianLearning(
                         val current = access.store.read().evidence().single { it.id() == source.id() }
                         check(current.ocr().isNotEmpty() && approved in current.transcript())
                         val store = GuardianCaptureStore(context)
-                        committed = if (assessment == null) store.forgetExample(approved) else store.teach(approved, assessment)
+                        committed = if (assessment == null) store.forgetExample(approved)
+                        else store.teach(approved, assessment, evidenceId = current.id())
                     }
                     committed
                 }.getOrDefault(false)
