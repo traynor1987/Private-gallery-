@@ -80,7 +80,7 @@ class GuardianInbox77UiTest {
             compose.onNodeWithText(message).assertIsDisplayed()
             compose.onNodeWithText("Not Upsetting").performClick()
             compose.onNodeWithText("Save learning example").performClick()
-            compose.waitUntil(10_000) { compose.onAllNodesWithText("Clear").fetchSemanticsNodes().isNotEmpty() }
+            compose.waitUntil(10_000) { compose.onAllNodesWithText("Remove learning example").fetchSemanticsNodes().isNotEmpty() }
             val saved = store.inboxRows(7, uk.co.traynor.privategallery.core.guardian.GuardianInboxClock(
                 System.currentTimeMillis(), android.os.SystemClock.elapsedRealtime(), -1)).single()
             assertTrue(saved.ownerLabel == uk.co.traynor.privategallery.core.guardian.GuardianAssessment.LOW_RISK)
