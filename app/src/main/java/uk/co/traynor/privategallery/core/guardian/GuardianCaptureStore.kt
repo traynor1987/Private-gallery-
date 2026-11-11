@@ -29,6 +29,7 @@ internal data class GuardianCaptureEvent(
     val app: String = GUARDIAN_WHATSAPP,
     val sensitivity: GuardianSensitivity = GuardianSensitivity.STANDARD,
     val holdUncertain: Boolean = false,
+    val requiresContactConsent: Boolean = false,
 )
 
 internal data class GuardianCaptureResult(val added: Int, val retained: Int, val partial: Boolean, val allDurable: Boolean = false)

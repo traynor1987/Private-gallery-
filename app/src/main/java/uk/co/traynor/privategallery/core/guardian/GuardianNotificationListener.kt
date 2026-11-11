@@ -7,6 +7,7 @@ import android.app.NotificationChannel
 import android.app.Person
 import android.content.ComponentName
 import android.content.Context
+import android.content.pm.LauncherApps
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -36,6 +37,37 @@ internal class GuardianNotificationListener : NotificationListenerService() {
     private val callWorker = ThreadPoolExecutor(1, 1, 0L, TimeUnit.MILLISECONDS,
         ArrayBlockingQueue(16), ThreadPoolExecutor.DiscardPolicy())
 
+    private fun configuredFriendsSerial(): Long? = SanctuaryStore.get(this).launcherSettings().friendsWhatsApp
+        ?.let(LauncherAppIdentity::parse)
+        ?.takeIf { it.flattenedComponent.substringBefore('/') == GUARDIAN_WHATSAPP }
+        ?.profileSerial
+
+    private fun trustedFriendsWhatsApp(sbn: StatusBarNotification, personal: Boolean, serial: Long): Boolean =
+        probeAccount(personal, serial, configuredFriendsSerial()) == ProbeAccount.FRIENDS &&
+            sbn.packageName == GUARDIAN_WHATSAPP && sbn.opPkg == GUARDIAN_WHATSAPP &&
+            runCatching {
+                getSystemService(LauncherApps::class.java)
+                    ?.getApplicationInfo(GUARDIAN_WHATSAPP, 0, sbn.user)?.uid == sbn.uid
+            }.getOrDefault(false)
+
+    private fun captureFriendsMessage(sbn: StatusBarNotification, serial: Long, enabled: Boolean, discovering: Boolean) {
+        val notification = sbn.notification
+        if (notification.category != null && notification.category != Notification.CATEGORY_MESSAGE) return
+        val identity = notification.shortcutId?.takeIf { it.isNotBlank() && it.length <= 480 }?.let { "shortcut:$it" }
+            ?: guardianDirectMessageIdentity(notification) ?: return
+        val entries = guardianCaptureEntries(notification)
+        if (entries.isEmpty()) return
+        val key = GuardianConversationKey(GUARDIAN_WHATSAPP, serial, identity)
+        if (discovering) {
+            val name = guardianSenderDisplayName(entries.mapNotNull { it.displayName }.distinct().singleOrNull())
+            GuardianCapture.offerContact(GuardianContact(key, name ?: "Dual Messenger conversation"))
+        }
+        if (enabled) {
+            GuardianCapture.record(this, GuardianCaptureEvent(serial, identity, System.currentTimeMillis(),
+                entries, requiresContactConsent = true), key)
+        }
+    }
+
     private fun screenWhatsAppCall(sbn: StatusBarNotification, personal: Boolean, serial: Long) {
         val notification = sbn.notification
         if (sbn.opPkg != GUARDIAN_WHATSAPP || !sbn.isClearable ||
@@ -50,11 +82,8 @@ internal class GuardianNotificationListener : NotificationListenerService() {
                 .getOrNull() != sbn.uid) return
         callWorker.execute {
             runCatching {
-                val friendsSerial = SanctuaryStore.get(this).launcherSettings().friendsWhatsApp
-                    ?.let(LauncherAppIdentity::parse)
-                    ?.takeIf { it.flattenedComponent.substringBefore('/') == GUARDIAN_WHATSAPP }
-                    ?.profileSerial
-                val account = probeAccount(personal, serial, friendsSerial)
+                val account = probeAccount(personal, serial, configuredFriendsSerial())
+                if (!personal && !trustedFriendsWhatsApp(sbn, personal, serial)) return@runCatching
                 val (enabled, rules) = GuardianCaptureStore(this).phoneShieldSettings()
                 if (guardianWhatsAppCallAction(enabled, account, true, caller, rules) != GuardianCallMode.ALLOW &&
                     connectedListener === this && hasAccess(this)) {
@@ -128,6 +157,10 @@ internal class GuardianNotificationListener : NotificationListenerService() {
                 )))
             }
             return
+        }
+        if (isWhatsApp && !personal && !summary && (captureEnabled || discovering) &&
+            notification.visibility != Notification.VISIBILITY_SECRET && trustedFriendsWhatsApp(sbn, personal, serial)) {
+            captureFriendsMessage(sbn, serial, captureEnabled, discovering)
         }
         val personalUid = if ((isWhatsApp || captureEnabled || discovering) && personal && account == ProbeAccount.MAIN) runCatching {
             packageManager.getApplicationInfo(sbn.packageName, 0).uid

@@ -111,7 +111,7 @@ internal object GuardianCapture {
                     val hasExclusion = mainMessage && monitored.conversation.startsWith("notification:") &&
                         contacts.any { it.key.app == monitored.app && it.key.profile == monitored.profile &&
                             (!it.enabled || !it.retain) }
-                    if (hasExclusion || !guardianCaptureAllowed(includeMain, monitored, contact)) {
+                    if (hasExclusion || !guardianCaptureAllowed(includeMain && !event.requiresContactConsent, monitored, contact)) {
                         if (mainMessage) noteMainCapture(GuardianCaptureStage.CONSENT)
                         return@execute
                     }
