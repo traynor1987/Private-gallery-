@@ -10,6 +10,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.semantics.semantics
@@ -23,12 +24,15 @@ import java.time.ZoneId
 import java.util.UUID
 import kotlinx.coroutines.*
 import uk.co.traynor.privategallery.core.evidence.*
+import uk.co.traynor.privategallery.core.guardian.guardianMessageFromEvidenceEvent
+import uk.co.traynor.privategallery.launcher.GuardianInboxActivity
 
 /** All transient selections/search/forms belong to this authorised composition, never saved state. */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 internal fun EvidenceLocker(controller:EvidenceController,onClose:()->Unit,onImport:()->Unit,
  onAi:(List<String>)->Unit,onExport:(EvidenceExportSelection)->Unit,onOpenArchive:()->Unit,startImportReview:Boolean=false,onAiReport:(List<String>)->Unit=onAi,onReportExport:(String)->Unit={},onImportPhotos:()->Unit=onImport) {
+ val context=LocalContext.current
  val state by controller.state.collectAsState()
  var page by remember(controller){mutableStateOf("Home")}
  var query by remember(controller){mutableStateOf("")}
@@ -187,6 +191,11 @@ internal fun EvidenceLocker(controller:EvidenceController,onClose:()->Unit,onImp
           change("Timeline entry edited"){c->val fresh=c.incidents().single{it.id()==incident.id()};c.upsertIncident(withEvents(fresh,fresh.events().map{if(it.id()==event.id())edited else it}),EvidenceController.now(),"OWNER_EDIT_EVENT")}
          }}){Text("Edit event")}
          TextButton(enabled=!busy,onClick={confirmation="Remove this timeline annotation? Original evidence remains unchanged." to {change("Timeline annotation removed"){c->val fresh=c.incidents().single{it.id()==incident.id()};c.upsertIncident(withEvents(fresh,fresh.events().filterNot{it.id()==event.id()}),EvidenceController.now(),"OWNER_REMOVE_EVENT")}}}){Text("Remove event")}
+        }
+        if(controller.access.owner==EvidenceCatalog.Owner.PRIMARY) guardianMessageFromEvidenceEvent(event.id())?.let{messageId->
+         TextButton(enabled=!busy,onClick={
+          controller.access.publishIfCurrent { GuardianInboxActivity.openEvidenceSource(context,messageId) }
+         }){Text("Open Guardian source")}
         }
         val displayed=catalog.timeline(incident.id());val position=displayed.indexOfFirst{it.id()==event.id()}
         FlowRow {TextButton(enabled=!busy&&position>0,onClick={change("Manual timeline order saved"){current->val fresh=current.timeline(incident.id());val at=fresh.indexOfFirst{it.id()==event.id()};if(at>0)current.moveEvent(incident.id(),event.id(),at-1,EvidenceController.now())else current}}){Text("Move earlier")}

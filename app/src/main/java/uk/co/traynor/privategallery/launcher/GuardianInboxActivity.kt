@@ -79,6 +79,7 @@ class GuardianInboxActivity : ComponentActivity() {
     private var operation: Job? = null
     private var expiry: Job? = null
     private var countdown: Job? = null
+    private var linkedMessageId: String? = null
 
     private val credential = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         val requested = authenticationPending
@@ -96,6 +97,8 @@ class GuardianInboxActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        linkedMessageId = intent.getStringExtra(LINKED_MESSAGE)
+        intent.removeExtra(LINKED_MESSAGE)
         showSenders = privacy.getBoolean("authenticated_sender_names", true)
         window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
         selected = GuardianInboxSection.entries.firstOrNull { it.name == intent.getStringExtra(SECTION) }
@@ -253,6 +256,17 @@ class GuardianInboxActivity : ComponentActivity() {
 
     private fun refresh(): Unit = loadArchive({ store, days, now -> store.inboxRows(days, now) }) { loaded ->
         rows = loaded
+        linkedMessageId?.let { id ->
+            linkedMessageId = null
+            val linked = loaded.firstOrNull { it.id == id }
+            if (linked == null) failure = "The linked Guardian message is no longer available."
+            else {
+                selected = linked.section
+                detail = linked
+                conversation = linked.conversation
+                conversationPreview = null
+            }
+        }
         if (conversationPreview?.first?.let { id ->
                 loaded.none { it.id == id && it.section != GuardianInboxSection.COOLING }
             } == true) conversationPreview = null
@@ -686,6 +700,11 @@ class GuardianInboxActivity : ComponentActivity() {
 
     companion object {
         private const val SECTION = "guardian-inbox-section"
+        private const val LINKED_MESSAGE = "guardian-linked-message"
+
+        internal fun openEvidenceSource(context: android.content.Context, messageId: String) {
+            context.startActivity(Intent(context, GuardianInboxActivity::class.java).putExtra(LINKED_MESSAGE, messageId))
+        }
 
         internal fun open(activity: Activity, section: GuardianInboxSection) {
             activity.startActivity(Intent(activity, GuardianInboxActivity::class.java).putExtra(SECTION, section.name))

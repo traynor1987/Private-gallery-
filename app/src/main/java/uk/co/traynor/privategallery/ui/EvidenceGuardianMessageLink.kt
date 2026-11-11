@@ -64,7 +64,7 @@ internal fun EvidenceGuardianMessageLink(
                     val message = GuardianCaptureStore(context)
                         .eligibleEvidenceMessage(row.id, GuardianCapture.retention(context), guardianInboxClock(context))
                         ?: error("Guardian message became unavailable")
-                    val event = EvidenceCatalog.Event("guardian-${row.id}", emptyList(), row.arrivedAt,
+                    val event = EvidenceCatalog.Event(guardianEvidenceEventId(row.id), emptyList(), row.arrivedAt,
                         "USER", "Incoming Android notification", message)
                     if (current.events().any { it.id() == event.id() }) catalog
                     else catalog.upsertIncident(withEvents(current, current.events() + event),
