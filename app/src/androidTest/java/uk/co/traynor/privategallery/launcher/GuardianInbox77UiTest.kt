@@ -61,18 +61,28 @@ class GuardianInbox77UiTest {
             store.append(GuardianCaptureEvent(0, "conversation", now,
                 listOf(GuardianCaptureEntry(now - 1, "sender-key", message, "Fixture contact"))), 7, now)
             compose.onNodeWithText("Unlock Guardian Inbox").performClick()
+            var focusedSince: Long? = null
             compose.waitUntil(15_000) {
-                shell("dumpsys window").lineSequence().any {
+                val focused = shell("dumpsys window").lineSequence().any {
                     "mCurrentFocus=" in it && ("ConfirmLock" in it || "BiometricPrompt" in it)
                 }
+                val elapsed = android.os.SystemClock.elapsedRealtime()
+                focusedSince = if (focused) focusedSince ?: elapsed else null
+                focusedSince?.let { elapsed - it >= 1_000L } == true
             }
             shell("input keyevent ${pin.map { "KEYCODE_$it" }.joinToString(" ")} KEYCODE_ENTER")
+            compose.waitUntil(15_000) {
+                compose.activityRule.scenario.state == androidx.lifecycle.Lifecycle.State.RESUMED
+            }
             compose.waitUntil(15_000) { compose.onAllNodesWithText("Fixture contact").fetchSemanticsNodes().isNotEmpty() }
             compose.onNodeWithText("Fixture contact").performClick()
             compose.waitUntil(10_000) { compose.onAllNodesWithText("Guardian Conversation").fetchSemanticsNodes().isNotEmpty() }
             compose.onNodeWithText(message).assertIsDisplayed()
             compose.onNodeWithText("Not Upsetting").performClick()
             compose.waitUntil(10_000) { compose.onAllNodesWithText("Clear").fetchSemanticsNodes().isNotEmpty() }
+            val saved = store.inboxRows(7, uk.co.traynor.privategallery.core.guardian.GuardianInboxClock(
+                System.currentTimeMillis(), android.os.SystemClock.elapsedRealtime(), -1)).single()
+            assertTrue(saved.ownerLabel == uk.co.traynor.privategallery.core.guardian.GuardianAssessment.LOW_RISK)
         } finally {
             store.clear()
             shell("locksettings clear --old $pin")
