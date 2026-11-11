@@ -649,6 +649,7 @@ jobs:
         run: sudo chmod 666 /dev/kvm
       - name: Focused Android 17 integration and privacy tests
         env:
+          # The focused run stops after WebView. Full runs continue through every release check.
           NOVA_INPUT_DIAGNOSTICS: ${{ github.event_name == 'push' && github.ref == 'refs/heads/feature/novaos-sanctuary-integration' && contains(github.event.head_commit.message, '[input-diagnostics]') && !contains(github.event.head_commit.message, '[visual-full]') }}
           NOVA_VISUAL_FULL: ${{ (github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[visual-full]')) }}
           NOVA_LAUNCHER_FOCUSED: ${{ github.event_name == 'push' && github.ref == 'refs/heads/feature/novaos-sanctuary-integration' && (contains(github.event.head_commit.message, '[launcher-focused]') || contains(github.event.head_commit.message, '[notification-compat]')) && !contains(github.event.head_commit.message, '[visual-full]') }}
