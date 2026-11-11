@@ -19,6 +19,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import uk.co.traynor.privategallery.core.guardian.*
+import uk.co.traynor.privategallery.core.sanctuary.SanctuaryMode
 
 @Composable
 internal fun GuardianCallShieldScreen(onClose: () -> Unit) {
@@ -37,12 +38,14 @@ internal fun GuardianCallShieldScreen(onClose: () -> Unit) {
     val store = remember(context) { GuardianCaptureStore(context) }
     val scope = rememberCoroutineScope()
     var configuration by remember { mutableStateOf<Pair<Boolean, List<GuardianPhoneRule>>?>(null) }
+    var sanctuaryModes by remember { mutableStateOf<Set<String>?>(null) }
     var busy by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
     var number by remember { mutableStateOf("") }
     LaunchedEffect(store) {
         configuration = withContext(Dispatchers.IO) { runCatching { store.phoneShieldSettings() }.getOrNull() }
-        if (configuration == null) error = "Call Shield settings could not be opened."
+        sanctuaryModes = withContext(Dispatchers.IO) { runCatching { store.phoneShieldSanctuaryModes() }.getOrNull() }
+        if (configuration == null || sanctuaryModes == null) error = "Call Shield settings could not be opened."
     }
     fun save(enabled: Boolean, rules: List<GuardianPhoneRule>) {
         if (busy) return
@@ -51,6 +54,16 @@ internal fun GuardianCallShieldScreen(onClose: () -> Unit) {
             val saved = withContext(Dispatchers.IO) { runCatching { store.savePhoneShieldSettings(enabled, rules) }.isSuccess }
             if (saved) configuration = enabled to rules
             error = if (saved) null else "Call Shield settings could not be saved."
+            busy = false
+        }
+    }
+    fun saveSanctuaryModes(modes: Set<String>) {
+        if (busy) return
+        busy = true
+        scope.launch {
+            val saved = withContext(Dispatchers.IO) { runCatching { store.savePhoneShieldSanctuaryModes(modes) }.isSuccess }
+            if (saved) sanctuaryModes = modes
+            error = if (saved) null else "Sanctuary overrides could not be saved."
             busy = false
         }
     }
@@ -108,6 +121,16 @@ internal fun GuardianCallShieldScreen(onClose: () -> Unit) {
                 Text("WhatsApp Silence and Block both attempt to dismiss supported incoming-call notifications. Calls can still ring or vibrate. Guardian needs Notification Access and an exact caller number in the notification.")
                 Text(if (GuardianNotificationListener.hasAccess(context)) "Notification Access granted" else "Notification Access missing")
                 Text("Dual Messenger uses the Friends WhatsApp profile configured in Sanctuary.")
+                sanctuaryModes?.let { modes ->
+                    HorizontalDivider()
+                    Text("Sanctuary overrides", style = MaterialTheme.typography.titleMedium)
+                    Text("During selected modes, protected mobile numbers set to Silence are temporarily blocked.")
+                    SanctuaryMode.entries.forEach { mode ->
+                        FilterChip(selected = mode.name in modes, enabled = !busy, onClick = {
+                            saveSanctuaryModes(if (mode.name in modes) modes - mode.name else modes + mode.name)
+                        }, label = { Text(mode.label) })
+                    }
+                }
                 error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
             }
         },

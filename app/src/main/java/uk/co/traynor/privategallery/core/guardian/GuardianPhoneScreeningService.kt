@@ -7,6 +7,7 @@ import android.telephony.TelephonyManager
 import android.os.Handler
 import android.os.Looper
 import java.util.concurrent.Executors
+import uk.co.traynor.privategallery.core.sanctuary.SanctuaryStore
 
 class GuardianPhoneScreeningService : CallScreeningService() {
     private val main = Handler(Looper.getMainLooper())
@@ -43,8 +44,13 @@ class GuardianPhoneScreeningService : CallScreeningService() {
                     ?.isRoleHeld(RoleManager.ROLE_CALL_SCREENING) == true
                 if (emergency || !roleHeld) GuardianCallMode.ALLOW
                 else {
-                    val (enabled, rules) = GuardianCaptureStore(this).phoneShieldSettings()
-                    guardianPhoneAction(enabled, roleHeld, number, rules)
+                    val archive = GuardianCaptureStore(this)
+                    val (enabled, rules) = archive.phoneShieldSettings()
+                    val saved = guardianPhoneAction(enabled, roleHeld, number, rules)
+                    val overrides = archive.phoneShieldSanctuaryModes()
+                    val session = if (saved == GuardianCallMode.SILENCE && overrides.isNotEmpty())
+                        SanctuaryStore.get(this).refresh() else null
+                    strengthenGuardianCallMode(saved, session?.mode?.name, overrides)
                 }
             }.getOrDefault(GuardianCallMode.ALLOW)
             main.post {

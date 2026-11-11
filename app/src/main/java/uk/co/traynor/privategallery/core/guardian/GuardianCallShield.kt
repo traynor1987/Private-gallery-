@@ -48,3 +48,10 @@ internal fun guardianWhatsAppCallAction(
         ProbeAccount.UNRESOLVED -> GuardianCallMode.ALLOW
     }
 }
+
+internal fun strengthenGuardianCallMode(
+    saved: GuardianCallMode,
+    activeMode: String?,
+    selectedModes: Set<String>,
+): GuardianCallMode = if (saved != GuardianCallMode.ALLOW && activeMode in selectedModes)
+    GuardianCallMode.BLOCK else saved

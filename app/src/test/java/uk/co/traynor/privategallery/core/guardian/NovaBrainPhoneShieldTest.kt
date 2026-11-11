@@ -22,4 +22,12 @@ class NovaBrainPhoneShieldTest {
             assertEquals(GuardianCallMode.ALLOW, guardianPhoneAction(true, true, it, rules))
         }
     }
+    @Test fun overrideIsTemporaryAndPreservesExplicitAllow() {
+        val modes = setOf("PANIC")
+        val saved = GuardianCallMode.SILENCE
+        assertEquals(GuardianCallMode.BLOCK, strengthenGuardianCallMode(saved, "PANIC", modes))
+        assertEquals(saved, strengthenGuardianCallMode(saved, null, modes))
+        assertEquals(saved, strengthenGuardianCallMode(saved, "WORK", modes))
+        assertEquals(GuardianCallMode.ALLOW, strengthenGuardianCallMode(GuardianCallMode.ALLOW, "PANIC", modes))
+    }
 }

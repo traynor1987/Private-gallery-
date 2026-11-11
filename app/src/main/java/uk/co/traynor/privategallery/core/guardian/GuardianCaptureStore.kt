@@ -84,10 +84,26 @@ internal class GuardianCaptureStore private constructor(private val context: Con
         }
     }
 
+    fun phoneShieldSanctuaryModes(): Set<String> = synchronized(lock) {
+        val modes = phoneShieldArchive().read().firstOrNull()?.optJSONArray("sanctuaryModes")
+            ?: return@synchronized emptySet()
+        List(modes.length(), modes::getString).toSet()
+    }
+
+    fun savePhoneShieldSanctuaryModes(modes: Set<String>) = synchronized(lock) {
+        val archive = phoneShieldArchive()
+        val rows = archive.read()
+        val settings = rows.firstOrNull() ?: JSONObject().put("enabled", false)
+        settings.put("sanctuaryModes", JSONArray(modes.sorted()))
+        archive.write(listOf(settings) + rows.drop(1))
+    }
+
     fun savePhoneShieldSettings(enabled: Boolean, rules: List<GuardianPhoneRule>) = synchronized(lock) {
         require(rules.size <= 100 && rules.distinctBy { it.number }.size == rules.size)
         require(rules.all { guardianPhoneNumber(it.number) == it.number })
-        phoneShieldArchive().write(listOf(JSONObject().put("enabled", enabled)) + rules.map {
+        val archive = phoneShieldArchive()
+        val settings = archive.read().firstOrNull() ?: JSONObject()
+        archive.write(listOf(settings.put("enabled", enabled)) + rules.map {
             JSONObject().put("number", it.number).put("mode", it.mode.name)
                 .put("mainWhatsApp", it.mainWhatsApp.name).put("friendsWhatsApp", it.friendsWhatsApp.name)
         })
