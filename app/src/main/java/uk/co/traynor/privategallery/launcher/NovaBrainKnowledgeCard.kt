@@ -7,10 +7,22 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import uk.co.traynor.privategallery.core.guardian.GuardianCaptureStore
 import uk.co.traynor.privategallery.core.guardian.NovaBrainValidation
 
 @Composable
-internal fun NovaBrainKnowledgeCard(validation: NovaBrainValidation? = null) {
+internal fun NovaBrainKnowledgeCard() {
+    val context = LocalContext.current.applicationContext
+    val revision by GuardianCaptureStore.knowledgeChanges.collectAsState()
+    var validation by remember(context) { mutableStateOf<NovaBrainValidation?>(null) }
+    LaunchedEffect(context, revision) {
+        validation = withContext(Dispatchers.IO) {
+            runCatching { GuardianCaptureStore(context).knowledgeValidation() }.getOrNull()
+        }
+    }
     val percent = validation?.knowledgePercent()
     val stage = when {
         percent == null -> "Unmeasured"

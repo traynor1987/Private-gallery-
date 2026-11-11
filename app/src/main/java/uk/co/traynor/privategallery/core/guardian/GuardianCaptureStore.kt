@@ -6,6 +6,8 @@ import android.provider.Settings
 import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
 import android.util.AtomicFile
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
@@ -53,18 +55,58 @@ internal fun guardianInboxClock(context: Context) = GuardianInboxClock(
 )
 
 /** Private, bounded archive. The capture phase exposes aggregate counts only. */
-internal class GuardianCaptureStore private constructor(private val context: Context, private val training: Boolean, private val fixture: Boolean = false, private val contacts: Boolean = false) {
+internal class GuardianCaptureStore private constructor(private val context: Context, private val training: Boolean, private val fixture: Boolean = false, private val contacts: Boolean = false, private val validation: Boolean = false) {
     constructor(context: Context) : this(context.applicationContext, false)
 
-    private val destination = File(context.noBackupFilesDir, when { contacts -> "guardian-contacts-v1.enc"; fixture -> "guardian-fixture-v1.enc"; training -> "guardian-learning-v1.enc"; else -> ARCHIVE_NAME })
-    private val alias = when { contacts -> "nova-guardian-contacts-v1"; fixture -> "nova-guardian-fixture-v1"; training -> "nova-guardian-learning-v1"; else -> KEY_ALIAS }
+    private val destination = File(context.noBackupFilesDir, when { validation -> "nova-brain-validation-v1.enc"; contacts -> "guardian-contacts-v1.enc"; fixture -> "guardian-fixture-v1.enc"; training -> "guardian-learning-v1.enc"; else -> ARCHIVE_NAME })
+    private val alias = when { validation -> "nova-brain-validation-v1"; contacts -> "nova-guardian-contacts-v1"; fixture -> "nova-guardian-fixture-v1"; training -> "nova-guardian-learning-v1"; else -> KEY_ALIAS }
     private val aad = when {
+        validation -> "NovaOS Nova Brain validation v1".toByteArray(Charsets.UTF_8)
         contacts -> "NovaOS Guardian contact rules v1".toByteArray(Charsets.UTF_8)
         fixture -> "NovaOS Guardian fixture v1".toByteArray(Charsets.UTF_8)
         training -> "NovaOS Guardian learning v1".toByteArray(Charsets.UTF_8)
         else -> AAD
     }
     private val atomic = AtomicFile(destination)
+
+    private fun validationArchive() = GuardianCaptureStore(context, training = false, validation = true)
+
+    private fun validationModel(examples: List<GuardianExample>): String {
+        val entries = examples.map {
+            JSONArray().put(it.assessment.name).put(JSONArray(it.features.sorted())).toString()
+        }.sorted()
+        return fingerprint(JSONArray().put(1).put(JSONArray(entries)).toString().toByteArray(Charsets.UTF_8))
+    }
+
+    fun knowledgeValidation(): NovaBrainValidation? = synchronized(lock) {
+        val result = validationArchive().read().singleOrNull() ?: return@synchronized null
+        val rows = retainedRows(GuardianCapture.retention(context), System.currentTimeMillis())
+        if (result.getString("model") != validationModel(examples(rows))) return@synchronized null
+        NovaBrainValidation(
+            result.getInt("conversations"), result.getInt("upsetting"), result.getInt("ordinary"),
+            result.getDouble("precision"), result.getDouble("recall"), result.getDouble("patternRecall"),
+            result.getDouble("calibration"), result.getDouble("coverage"), result.getDouble("improvement"),
+        )
+    }
+
+    fun measureKnowledge(holdout: List<NovaBrainValidationMessage>): NovaBrainValidation? = synchronized(lock) {
+        val rows = retainedRows(GuardianCapture.retention(context), System.currentTimeMillis())
+        val learned = examples(rows)
+        val conversations = rows.asSequence().filterNot { it.optBoolean("deleted") }
+            .filter { ownerLabel(it) != null }.map {
+                JSONArray().put(it.optString("app", GUARDIAN_WHATSAPP))
+                    .put(it.getLong("profile")).put(it.getString("conversation")).toString()
+            }.toSet()
+        val result = evaluateNovaBrain(holdout, conversations, learned.map { it.features }.toSet())
+            ?: return@synchronized null
+        validationArchive().write(listOf(JSONObject()
+            .put("model", validationModel(learned))
+            .put("conversations", result.conversations).put("upsetting", result.upsetting).put("ordinary", result.ordinary)
+            .put("precision", result.precision).put("recall", result.recall).put("patternRecall", result.patternRecall)
+            .put("calibration", result.calibration).put("coverage", result.confirmedPatternCoverage)
+            .put("improvement", result.validatedImprovement)))
+        result
+    }
 
     private fun contactArchive() = GuardianCaptureStore(context, training = false, contacts = true)
 
@@ -125,6 +167,7 @@ internal class GuardianCaptureStore private constructor(private val context: Con
         val rows = read()
         if (rows.count { it.remove("ownerLabel") != null } > 0) write(rows)
         GuardianCaptureStore(context, true).clear()
+        validationArchive().clear()
     }
 
     fun learningCount(): Int = synchronized(lock) { examples(read()).size }
@@ -363,6 +406,7 @@ internal class GuardianCaptureStore private constructor(private val context: Con
         keyStore().deleteEntry(alias)
         atomic.delete()
         check(!destination.exists())
+        if (!fixture && !contacts) knowledgeRevision.value += 1
     }
 
     private fun cutoff(days: Int, now: Long): Long {
@@ -423,6 +467,7 @@ internal class GuardianCaptureStore private constructor(private val context: Con
             throw error
         }
         check(readBlob()?.contentEquals(blob) == true)
+        if (!fixture && !contacts) knowledgeRevision.value += 1
     }
 
     private fun readBlob(): ByteArray? = try {
@@ -460,5 +505,7 @@ internal class GuardianCaptureStore private constructor(private val context: Con
         private const val MAX_BYTES = 6 * 1024 * 1024
         private val AAD = "NovaOS Guardian capture v1".toByteArray(Charsets.UTF_8)
         private val lock = Any()
+        private val knowledgeRevision = MutableStateFlow(0L)
+        val knowledgeChanges = knowledgeRevision.asStateFlow()
     }
 }
