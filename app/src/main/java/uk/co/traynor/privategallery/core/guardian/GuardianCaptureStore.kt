@@ -76,7 +76,11 @@ internal class GuardianCaptureStore private constructor(private val context: Con
         val records = phoneShieldArchive().read()
         val enabled = records.firstOrNull()?.getBoolean("enabled") ?: false
         enabled to records.drop(1).map {
-            GuardianPhoneRule(it.getString("number"), GuardianCallMode.valueOf(it.getString("mode")))
+            GuardianPhoneRule(
+                it.getString("number"), GuardianCallMode.valueOf(it.getString("mode")),
+                GuardianCallMode.valueOf(it.optString("mainWhatsApp", GuardianCallMode.ALLOW.name)),
+                GuardianCallMode.valueOf(it.optString("friendsWhatsApp", GuardianCallMode.ALLOW.name)),
+            )
         }
     }
 
@@ -85,6 +89,7 @@ internal class GuardianCaptureStore private constructor(private val context: Con
         require(rules.all { guardianPhoneNumber(it.number) == it.number })
         phoneShieldArchive().write(listOf(JSONObject().put("enabled", enabled)) + rules.map {
             JSONObject().put("number", it.number).put("mode", it.mode.name)
+                .put("mainWhatsApp", it.mainWhatsApp.name).put("friendsWhatsApp", it.friendsWhatsApp.name)
         })
     }
 

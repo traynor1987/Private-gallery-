@@ -18,6 +18,9 @@ import android.service.notification.StatusBarNotification
 import android.telecom.TelecomManager
 import android.provider.Telephony
 import java.util.UUID
+import java.util.concurrent.ArrayBlockingQueue
+import java.util.concurrent.ThreadPoolExecutor
+import java.util.concurrent.TimeUnit
 import javax.crypto.Cipher
 import javax.crypto.KeyGenerator
 import javax.crypto.spec.GCMParameterSpec
@@ -30,6 +33,37 @@ import uk.co.traynor.privategallery.launcher.LauncherAppIdentity
 /** Owner-started diagnostics and separately authorised Main WhatsApp capture. */
 internal class GuardianNotificationListener : NotificationListenerService() {
     private var mainAttempt: ExternalAttempt? = null
+    private val callWorker = ThreadPoolExecutor(1, 1, 0L, TimeUnit.MILLISECONDS,
+        ArrayBlockingQueue(16), ThreadPoolExecutor.DiscardPolicy())
+
+    private fun screenWhatsAppCall(sbn: StatusBarNotification, personal: Boolean, serial: Long) {
+        val notification = sbn.notification
+        if (sbn.opPkg != GUARDIAN_WHATSAPP || !sbn.isClearable ||
+            notification.category != Notification.CATEGORY_CALL ||
+            notification.visibility == Notification.VISIBILITY_SECRET) return
+        val caller = runCatching {
+            val extras = notification.extras
+            if (extras.getInt(androidx.core.app.NotificationCompat.EXTRA_CALL_TYPE) != Notification.CallStyle.CALL_TYPE_INCOMING) null
+            else extras.getParcelable(androidx.core.app.NotificationCompat.EXTRA_CALL_PERSON, Person::class.java)?.uri
+        }.getOrNull() ?: return
+        if (personal && runCatching { packageManager.getApplicationInfo(GUARDIAN_WHATSAPP, 0).uid }
+                .getOrNull() != sbn.uid) return
+        callWorker.execute {
+            runCatching {
+                val friendsSerial = SanctuaryStore.get(this).launcherSettings().friendsWhatsApp
+                    ?.let(LauncherAppIdentity::parse)
+                    ?.takeIf { it.flattenedComponent.substringBefore('/') == GUARDIAN_WHATSAPP }
+                    ?.profileSerial
+                val account = probeAccount(personal, serial, friendsSerial)
+                val (enabled, rules) = GuardianCaptureStore(this).phoneShieldSettings()
+                if (guardianWhatsAppCallAction(enabled, account, true, caller, rules) != GuardianCallMode.ALLOW &&
+                    connectedListener === this && hasAccess(this)) {
+                    val current = getActiveNotifications(arrayOf(sbn.key)).singleOrNull()
+                    if (current?.postTime == sbn.postTime && current.isClearable) cancelNotification(sbn.key)
+                }
+            }
+        }
+    }
 
     override fun onListenerConnected() {
         connectedListener = this
@@ -42,6 +76,7 @@ internal class GuardianNotificationListener : NotificationListenerService() {
 
     override fun onDestroy() {
         disconnect(this)
+        callWorker.shutdownNow()
         super.onDestroy()
     }
 
@@ -80,6 +115,7 @@ internal class GuardianNotificationListener : NotificationListenerService() {
         val account = probeAccount(personal, serial, probeFriendsSerial)
         val summary = notification.flags and Notification.FLAG_GROUP_SUMMARY != 0
         if (call) {
+            if (isWhatsApp && !summary) screenWhatsAppCall(sbn, personal, serial)
             if (session != null && !summary) {
                 val dialer = getSystemService(TelecomManager::class.java)?.defaultDialerPackage
                 val source = guardianCallSource(sbn.packageName, dialer, personal, account) ?: return

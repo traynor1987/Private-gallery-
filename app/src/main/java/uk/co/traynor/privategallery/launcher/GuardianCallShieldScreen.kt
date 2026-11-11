@@ -75,7 +75,7 @@ internal fun GuardianCallShieldScreen(onClose: () -> Unit) {
                 }
                 configuration?.let { (enabled, rules) ->
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                        Text("Protect selected numbers")
+                        Text("Protect selected callers")
                         Switch(checked = enabled, enabled = !busy, onCheckedChange = { save(it, rules) })
                     }
                     OutlinedTextField(number, { number = it.take(40) }, label = { Text("Phone number") }, singleLine = true)
@@ -88,16 +88,26 @@ internal fun GuardianCallShieldScreen(onClose: () -> Unit) {
                     rules.forEach { rule ->
                         HorizontalDivider()
                         Text(rule.number)
-                        GuardianCallMode.entries.forEach { mode ->
-                            FilterChip(selected = rule.mode == mode, enabled = !busy, onClick = {
-                                save(enabled, rules.map { if (it.number == rule.number) it.copy(mode = mode) else it })
-                            }, label = { Text(mode.label) })
+                        val platforms = listOf(
+                            Triple("Mobile calls", rule.mode, { mode: GuardianCallMode -> rule.copy(mode = mode) }),
+                            Triple("Main WhatsApp", rule.mainWhatsApp, { mode: GuardianCallMode -> rule.copy(mainWhatsApp = mode) }),
+                            Triple("Dual Messenger WhatsApp", rule.friendsWhatsApp, { mode: GuardianCallMode -> rule.copy(friendsWhatsApp = mode) }),
+                        )
+                        platforms.forEach { (platform, currentMode, update) ->
+                            Text(platform, style = MaterialTheme.typography.labelLarge)
+                            GuardianCallMode.entries.forEach { mode ->
+                                FilterChip(selected = currentMode == mode, enabled = !busy, onClick = {
+                                    save(enabled, rules.map { if (it.number == rule.number) update(mode) else it })
+                                }, label = { Text(mode.label) })
+                            }
                         }
                         TextButton(enabled = !busy, onClick = { save(enabled, rules - rule) }) { Text("Remove number") }
                     }
                 }
                 Text("Silence asks Android to ring silently. Block asks Android to reject the call. Use the number format shown for the incoming call.")
-                Text("WhatsApp call controls and Sanctuary overrides are unavailable here.")
+                Text("WhatsApp Silence and Block both attempt to dismiss supported incoming-call notifications. Calls can still ring or vibrate. Guardian needs Notification Access and an exact caller number in the notification.")
+                Text(if (GuardianNotificationListener.hasAccess(context)) "Notification Access granted" else "Notification Access missing")
+                Text("Dual Messenger uses the Friends WhatsApp profile configured in Sanctuary.")
                 error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
             }
         },
