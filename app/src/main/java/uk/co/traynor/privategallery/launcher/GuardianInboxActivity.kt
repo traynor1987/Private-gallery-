@@ -268,16 +268,12 @@ class GuardianInboxActivity : ComponentActivity() {
     }
 
     private fun reveal(row: GuardianInboxRow) {
-        loadArchive({ store, days, now -> store.prepareInboxReview(row.id, days, now) }) { reviewed ->
-            if (reviewed == null) {
-                refresh()
-            } else {
-                detail = reviewed.first
-                conversation = reviewed.first.conversation
-                conversationPreview = reviewed.first.id to reviewed.second
-                rows = rows.map { if (it.id == reviewed.first.id) reviewed.first else it }
-            }
-        }
+        if (!canReview() || busy) return
+        detail = row
+        conversation = row.conversation
+        conversationPreview = null
+        if (row.section == GuardianInboxSection.COOLING) return
+        reviewConversationMessage(row.conversation, row)
     }
 
     private fun review(row: GuardianInboxRow, action: GuardianInboxAction) {
@@ -431,7 +427,7 @@ class GuardianInboxActivity : ComponentActivity() {
             row.assessment == GuardianAssessment.UNCERTAIN -> "Uncertain · preview hidden until reviewed"
             else -> "Content hidden until reviewed"
         }
-        Card(onClick = { if (!redacted) reveal(row) }, enabled = !busy && !cooling, modifier = Modifier.fillMaxWidth(),
+        Card(onClick = { if (!redacted) reveal(row) }, enabled = !busy && !redacted, modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(18.dp), colors = guardianCardColors()) {
             Row(Modifier.padding(14.dp), verticalAlignment = Alignment.Top,
                 horizontalArrangement = Arrangement.spacedBy(12.dp)) {

@@ -215,7 +215,10 @@ internal fun NotificationCompatibilityScreen(
                 var mainAccepted by remember { mutableStateOf(GuardianNotificationListener.mainDismissalAccepted(context)) }
                 var automatic by remember { mutableStateOf(GuardianNotificationListener.automaticDismissalEnabled(context)) }
                 if (foldAccepted && !mainAccepted) {
-                    Text("Send a harmless message to Main WhatsApp after arming this one-message test. It expires after 60 seconds.")
+                    Text("Arm the test, then send the exact phrase below as a single message to Main WhatsApp. The test expires after 60 seconds.")
+                    status.mainTestMessage?.let { phrase ->
+                        androidx.compose.foundation.text.selection.SelectionContainer { Text(phrase) }
+                    }
                     OutlinedButton(enabled = status.connected, onClick = {
                         externalError = if (GuardianNotificationListener.armMainDismissalTest(context)) null
                             else "Connect the listener and enable encrypted capture before testing."
