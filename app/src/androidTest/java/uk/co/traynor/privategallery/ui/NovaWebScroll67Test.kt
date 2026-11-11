@@ -58,8 +58,8 @@ class NovaWebScroll67Test {
                 <!doctype html><meta name="viewport" content="width=device-width,initial-scale=1">
                 <style>
                   body { margin:0; overflow-anchor:none }
-                  main { position:relative; height:400vh; width:220vw; background:linear-gradient(#ddd,#246) }
-                  input { position:fixed; left:24px; top:25vh; height:64px; width:160px; font-size:18px }
+                  main { position:relative; height:9000px; width:3000px; background:linear-gradient(#ddd,#246) }
+                  input { position:absolute; left:180px; top:1600px; height:64px; width:160px; font-size:18px }
                 </style>
                 <main><input aria-label="Scroll fixture editor"></main>
             """.trimIndent(), "text/html", "UTF-8", null)
@@ -102,6 +102,17 @@ class NovaWebScroll67Test {
                         first.getGlobalVisibleRect(Rect())
                 }
             }
+            // Keyboard geometry must be independent of the preceding gesture's fling and
+            // the retained visual viewport's offset. Prepare the fixture without focusing it.
+            val positioned = AtomicBoolean(false)
+            compose.runOnIdle {
+                assertSame(first, active)
+                assertTrue("The retained page must still be scrolled", first.scrollY > 0)
+                first.evaluateJavascript(
+                    "document.querySelector('input').scrollIntoView({block:'center',inline:'nearest',behavior:'instant'})",
+                ) { positioned.set(true) }
+            }
+            compose.waitUntil(5_000) { positioned.get() }
             val editor = AtomicReference<Point>()
             compose.runOnIdle {
                 assertSame(first, active)
