@@ -61,3 +61,11 @@ class BudgetTest(unittest.TestCase):
             status = budget.status()
             self.assertEqual(status["reserved_upper_bound_micro_usd"], 8)
             self.assertEqual(status["reservation_activity_utc"]["monthly_requests"], 0)
+
+    def test_status_distinguishes_funding_from_the_spending_limit(self):
+        with TemporaryDirectory() as directory:
+            path = Path(directory) / "budget.db"
+            status = Budget(path, "funded", 100, 37_000_000, 102_000, clock=lambda: 99).status()
+            self.assertEqual(status["funded_allowance_micro_usd"], 37_000_000)
+            self.assertEqual(status["configured_spending_limit_micro_usd"], 90_000_000)
+            self.assertEqual(status["configured_ceiling_micro_usd"], 37_000_000)

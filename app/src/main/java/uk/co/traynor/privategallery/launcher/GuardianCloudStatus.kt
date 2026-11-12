@@ -31,7 +31,9 @@ internal fun cloudTeacherStatusLines(status: JSONObject): List<String> = buildLi
         if (source.has(key) && !source.isNull(key)) {
             String.format(Locale.US, "\$%.6f", source.getLong(key).coerceAtLeast(0) / 1_000_000.0)
         } else "Unavailable"
-    add("Funded-cycle spending limit: ${money("configured_ceiling_micro_usd")}")
+    add("Configured funded allowance: ${money("funded_allowance_micro_usd")}")
+    add("Configured maximum spending: ${money("configured_spending_limit_micro_usd")}")
+    add("Effective funded-cycle limit: ${money("configured_ceiling_micro_usd")}")
     add("Reserved this cycle: ${money("reserved_upper_bound_micro_usd")}")
     add("Remaining allowance: ${money("remaining_micro_usd")}")
     add("Reservation per request: ${money("request_reservation_micro_usd")}")

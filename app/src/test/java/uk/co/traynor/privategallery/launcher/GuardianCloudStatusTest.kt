@@ -35,12 +35,15 @@ class GuardianCloudStatusTest {
     fun exhaustedBudgetReportsReservationsAndDeniesAnotherRequest() {
         val status = JSONObject("""{
           "status":"authenticated","model":"gpt-5-mini","analysis_enabled":true,
-          "budget":{"configured_ceiling_micro_usd":37000000,"remaining_micro_usd":1000,
+          "budget":{"funded_allowance_micro_usd":37000000,"configured_spending_limit_micro_usd":90000000,
+            "configured_ceiling_micro_usd":37000000,"remaining_micro_usd":1000,
             "reserved_upper_bound_micro_usd":36999000,"request_reservation_micro_usd":102000,"expired":false,
             "reservation_activity_utc":{"daily_reserved_micro_usd":102000,"daily_requests":1,
               "monthly_reserved_micro_usd":204000,"monthly_requests":2}}
         }""")
         val lines = cloudTeacherStatusLines(status)
+        assertTrue(lines.contains("Configured funded allowance: \$37.000000"))
+        assertTrue(lines.contains("Configured maximum spending: \$90.000000"))
         assertTrue(lines.contains("Budget permits another request: No"))
         assertTrue(lines.any { it.startsWith("Today (UTC):") && it.endsWith("1 requests") })
         assertTrue(lines.any { it.startsWith("Month to date (UTC):") && it.endsWith("2 requests") })

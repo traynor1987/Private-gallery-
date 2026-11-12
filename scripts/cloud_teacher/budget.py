@@ -13,6 +13,8 @@ class Budget:
         self.database = database
         self.cycle = cycle
         self.expires_at = expires_at
+        self.funded_allowance = credits
+        self.spending_limit = limit
         self.ceiling = min(credits, limit)
         self.reserve_amount = reserve
         self.clock = clock
@@ -55,6 +57,8 @@ class Budget:
         expired = now >= self.expires_at
         percent = min(100, 100 * total // self.ceiling) if self.ceiling else 100
         return {"cycle": self.cycle, "expires_at": self.expires_at, "expired": expired,
+                "funded_allowance_micro_usd": self.funded_allowance,
+                "configured_spending_limit_micro_usd": self.spending_limit,
                 "configured_ceiling_micro_usd": self.ceiling, "reserved_upper_bound_micro_usd": total,
                 "remaining_micro_usd": 0 if expired else max(0, self.ceiling - total),
                 "request_reservation_micro_usd": self.reserve_amount,
