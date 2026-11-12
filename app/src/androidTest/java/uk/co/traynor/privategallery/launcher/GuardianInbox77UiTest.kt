@@ -6,6 +6,9 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.performScrollToNode
+import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.test.platform.app.InstrumentationRegistry
 import android.os.ParcelFileDescriptor
 import android.app.KeyguardManager
@@ -78,6 +81,8 @@ class GuardianInbox77UiTest {
             compose.waitUntil(15_000) { compose.onAllNodesWithText("Fixture contact").fetchSemanticsNodes().isNotEmpty() }
             compose.onNodeWithText("Fixture contact").performClick()
             compose.waitUntil(10_000) { compose.onAllNodesWithText("Guardian Conversation").fetchSemanticsNodes().isNotEmpty() }
+            compose.onNodeWithTag("guardian-conversation-history")
+                .performScrollToNode(hasText("Possible patterns · Guilt-tripping"))
             compose.onNodeWithText(message).assertDoesNotExist()
             compose.onNodeWithText("Possible patterns · Guilt-tripping").performScrollTo().assertIsDisplayed()
             compose.onNodeWithText("Review message").performScrollTo().performClick()

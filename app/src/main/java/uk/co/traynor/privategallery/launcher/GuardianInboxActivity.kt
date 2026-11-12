@@ -36,6 +36,7 @@ import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.graphics.layer.drawLayer
 import androidx.compose.ui.graphics.rememberGraphicsLayer
 import androidx.core.content.FileProvider
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.window.DialogProperties
@@ -528,7 +529,7 @@ class GuardianInboxActivity : ComponentActivity() {
                 index += 1 + messages.size
             }
         }
-        LazyColumn(Modifier.weight(1f), state = scroll, verticalArrangement = Arrangement.spacedBy(12.dp),
+        LazyColumn(Modifier.weight(1f).testTag("guardian-conversation-history"), state = scroll, verticalArrangement = Arrangement.spacedBy(12.dp),
             contentPadding = PaddingValues(bottom = 22.dp)) {
             item {
                 GuardianCard("Notification-derived history") {
