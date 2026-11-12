@@ -1,19 +1,15 @@
-# NovaOS 1.7.38.5 Code 78 signing review
+# NovaOS 1.7.38.6 Code 79 release controls
 
-Source: c6ffbb769476b37b0c5bc4939e0f765eff3eef2a
+Source: 06f85bb410580dc86622767d707f422ab5fe7ad9
 Authorization: authenticated owner push
-Physical Fold Main encrypted capture: PASS
-Physical Fold Friends separation: PASS
-Upgrade fixture SHA-256: feac998045bdf02081cf07b53a322e083907849280a11faa0497f2d01ea936ff
-Upgrade controls SHA-256: baee1622007f64f93ad17fcfdb9aa0749038b9089a85e4627af016706705a53b
+Physical Fold Main encrypted capture: PENDING
+Physical Fold Friends separation: PENDING
+Upgrade fixture SHA-256: 8ce2e127d3f891aca4e9bc9f9fcc6a2f6b29ca33baecf4ed93510129f10b11a8
+Upgrade controls SHA-256: b8851a4e28bb867f0c39170fa361f63bc4872e56f0b961f6117995b46a032c19
 Runtime matrix SHA-256: 789b0eef5c8a8383ffefa050bb69064f32a447201838e2e61e6a204ee2092694
-Runtime archive SHA-256: 0e93f6c2de0175ba5235bb120d87d6aefc891e806d1fb1712204f62071982bfd
-Signing workflow SHA-256: 452ba2d99cb6e29a557183f288625bec61b74f59568ed47a4be9a035142060db
+Runtime archive SHA-256: c7e881bd65c6073fb52420cedfefaa015656c21491a266db3e8589fb351c855a
+Signing workflow SHA-256: 66ce87633c1818d33a8174648094af50757f4f856b58f9c80a13b4fb090ed3bc
 
-Runtime run 43032632621 (#307), artifact 13866005380. Exact-source 263-case archive validation passed.
+Runtime run 43199320592 (#339), artifact 13938657175. Code 78 baseline is the distributed production artifact from run 43067384693.
 
-Upgrade fixture uses synthetic data and checks the retained Guardian message, training label and ciphertext before and after process restart. Android execution remains pending the approved original-key signing job.
-
-Ordering: authenticated owner approval and runtime evidence validation precede baseline fixture compilation and signer access. The Android 17 in-place upgrade and process restart run after candidate signing. Staging requires a passing upgrade receipt bound to the frozen source and candidate APK checksum. On failure the workflow uploads only selected diagnostics.
-
-Policy: the authenticated repository owner approves a frozen release revision by committing only .novaos-production-authorization with the immediately preceding revision SHA. Future releases require fresh approval. The GitHub push sender and first-attempt workflow actor are verified against the owner account ID.
+The existing pre-signer gate requires documented physical Fold passes and an authenticated owner push. The original-key in-place upgrade runs on Android 17 before APK publication.

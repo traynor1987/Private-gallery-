@@ -5,8 +5,8 @@ set -euo pipefail
 control_root=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 cd "${PRIVATE_GALLERY_1711_ROOT:-$control_root/..}"
 source "$control_root/release_configuration1711.sh"
-[[ "$baseline_code" == 77 && "$release_code" == 78 && "$baseline_sha" == 15cdfd9e612ffc68960d1374420fe05e425a9877 ]]
-archived_baseline="${PRIVATE_GALLERY_1711_BASELINE_APK:?Exact archived signed 1.7.38.4 Code 77 APK required}"
+[[ "$baseline_code" == 78 && "$release_code" == 79 && "$baseline_sha" == c6ffbb769476b37b0c5bc4939e0f765eff3eef2a ]]
+archived_baseline="${PRIVATE_GALLERY_1711_BASELINE_APK:?Exact archived signed 1.7.38.5 Code 78 APK required}"
 [[ -f "$archived_baseline" && -s "$archived_baseline" ]] || { echo 'Archived baseline APK unavailable' >&2; exit 1; }
 [[ "$(sha256sum "$archived_baseline" | cut -d ' ' -f 1)" == dcfd93b5aec41c0bc4f08a61a3c6aa70a3e3f75a6d72948f0c4635c64109a03e ]] || { echo 'Archived baseline APK hash mismatch' >&2; exit 1; }
 readonly archived_baseline
@@ -25,7 +25,7 @@ if grep -Fxq "package:$fixture_package" <<< "$installed_packages"; then
   exit 1
 fi
 project_root=$(pwd)
-artifact_dir="${PRIVATE_GALLERY_1711_EVIDENCE_DIR:-$project_root/app/build/production-evidence/from77}"
+artifact_dir="${PRIVATE_GALLERY_1711_EVIDENCE_DIR:-$project_root/app/build/production-evidence/from78}"
 [[ ! -e "$artifact_dir" ]] || { echo "Fresh upgrade evidence directory required" >&2; exit 1; }
 mkdir -p "$artifact_dir"
 sdk="$ANDROID_HOME/build-tools/36.0.0"
@@ -89,4 +89,4 @@ adb install -r "$candidate_apk"
 run_fixture verify verify
 adb shell am force-stop "$fixture_package"
 run_fixture verify after-restart
-printf '%s\n' 'PASS: original signed code77 -> code78 in-place upgrade/restart; legacy encrypted data, owner-encrypted evidence, connected collections, chronology corrections, evidence AI credentials, Sanctuary policy, both launcher layouts and Android Home default preserved' > "$artifact_dir/upgrade-result.txt"
+printf '%s\n' 'PASS: original signed code78 -> code79 in-place upgrade/restart; legacy encrypted data, owner-encrypted evidence, connected collections, chronology corrections, evidence AI credentials, Sanctuary policy, both launcher layouts and Android Home default preserved' > "$artifact_dir/upgrade-result.txt"
