@@ -20,7 +20,7 @@ class GuardianCloudStatusTest {
             cloudTeacherApprovedPayload("private original", false)
         }
         val payload = JSONObject(cloudTeacherApprovedPayload("[redacted] asked me to reply", true).decodeToString())
-        assertEquals(setOf("message", "consent"), payload.keySet())
+        assertEquals(setOf("message", "consent"), payload.keys().asSequence().toSet())
         assertEquals("[redacted] asked me to reply", payload.getString("message"))
         assertTrue(payload.getBoolean("consent"))
     }

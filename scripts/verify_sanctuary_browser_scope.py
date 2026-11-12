@@ -31,6 +31,7 @@ ALLOWED_GUARDIAN = {
     f"{CORE}/guardian/NovaBrainEvaluator.kt",
     f"{CORE}/guardian/NovaBrainValidationImport.kt",
     f"{CORE}/guardian/NovaBrainKnowledge.kt",
+    f"{CORE}/guardian/NovaBrainEvidenceSources.kt",
     f"{CORE}/guardian/NovaBrainPatterns.kt",
 }
 
