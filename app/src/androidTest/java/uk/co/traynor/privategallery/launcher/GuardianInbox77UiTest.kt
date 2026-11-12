@@ -86,6 +86,9 @@ class GuardianInbox77UiTest {
             compose.onNodeWithText(message).assertDoesNotExist()
             compose.onNodeWithText("Possible patterns · Guilt-tripping").performScrollTo().assertIsDisplayed()
             compose.onNodeWithText("Review message").performScrollTo().performClick()
+            compose.waitUntil(10_000) {
+                compose.onAllNodesWithText(message).fetchSemanticsNodes().isNotEmpty()
+            }
             compose.onNodeWithText(message).performScrollTo().assertIsDisplayed()
             compose.onNodeWithText("Not Upsetting").performScrollTo().performClick()
             compose.onNodeWithText("Save learning example").performScrollTo().performClick()
