@@ -450,7 +450,7 @@ class GuardianInboxActivity : ComponentActivity() {
                     TextButton(onClick = { settingsOpen = false; diagnostic = true }) {
                         Text("Share safe diagnostic view")
                     }
-                    Text("Cloud analysis is unavailable. Reset removes saved learning examples for future assessments.")
+                    Text("Cloud Teacher is optional and requires approval for each message. Reset removes saved local learning examples.")
                     LauncherToggle("Use recent local conversation context", conversationContext) { enabled ->
                         loadArchive({ store, _, _ -> store.setConversationContext(enabled) }) { conversationContext = enabled }
                     }
@@ -611,6 +611,10 @@ class GuardianInboxActivity : ComponentActivity() {
     private fun MessageActions(row: GuardianInboxRow) {
         val preview = conversationPreview?.takeIf { it.first == row.id }?.second ?: return
         GuardianMessageCopyActions(row, preview, appLabel(row.conversation), !busy && canReview()) {
+            canReview() && !busy && conversationPreview == (row.id to preview) &&
+                rows.any { it.id == row.id && it.section != GuardianInboxSection.COOLING }
+        }
+        GuardianCloudTeacher(preview) {
             canReview() && !busy && conversationPreview == (row.id to preview) &&
                 rows.any { it.id == row.id && it.section != GuardianInboxSection.COOLING }
         }
