@@ -2,8 +2,8 @@
 
 Source: 06f85bb410580dc86622767d707f422ab5fe7ad9
 Authorization: authenticated owner push
-Physical Fold Main encrypted capture: PENDING
-Physical Fold Friends separation: PENDING
+Physical Fold Main encrypted capture: PASS
+Physical Fold Friends separation: PASS
 Upgrade fixture SHA-256: 8ce2e127d3f891aca4e9bc9f9fcc6a2f6b29ca33baecf4ed93510129f10b11a8
 Upgrade controls SHA-256: b8851a4e28bb867f0c39170fa361f63bc4872e56f0b961f6117995b46a032c19
 Runtime matrix SHA-256: 789b0eef5c8a8383ffefa050bb69064f32a447201838e2e61e6a204ee2092694
@@ -13,3 +13,15 @@ Signing workflow SHA-256: 66ce87633c1818d33a8174648094af50757f4f856b58f9c80a13b4
 Runtime run 43199320592 (#339), artifact 13938657175. Code 78 baseline is the distributed production artifact from run 43067384693.
 
 The existing pre-signer gate requires documented physical Fold passes and an authenticated owner push. The original-key in-place upgrade runs on Android 17 before APK publication.
+
+
+## Owner-confirmed Fold evidence
+
+On 12 November 2026 the owner tested on a Samsung Galaxy Z Fold running Android 17 using the isolated Guardian diagnostics APK alongside the installed Code 78 production app. The diagnostics came from run 43196753249, artifact 13934795205.
+
+- Main WhatsApp with DND off increased the encrypted retained count from 0 to 1.
+- Main WhatsApp with DND on increased it from 1 to 2.
+- Friends WhatsApp left the Main retained count at 2.
+- After authenticated Guardian Inbox unlock, both Main test messages were readable.
+
+These observations cover physical notification capture and profile separation. The production-key Code 78 to 79 in-place upgrade and restart remain pending the authorised signing workflow.
