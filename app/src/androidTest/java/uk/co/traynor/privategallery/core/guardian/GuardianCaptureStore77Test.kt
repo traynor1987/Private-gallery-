@@ -9,6 +9,32 @@ import java.io.File
 
 @RunWith(AndroidJUnit4::class)
 class GuardianCaptureStore77Test {
+    @Test fun guardianReleaseFixtureReopensWithoutRewritingCiphertext() {
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        val store = GuardianCaptureStore(context)
+        store.clear()
+        store.resetLearning()
+        try {
+            val now = guardianInboxClock(context)
+            val message = "Synthetic release fixture for archive compatibility"
+            val event = GuardianCaptureEvent(0, "release-fixture", now.wall,
+                listOf(GuardianCaptureEntry(now.wall, "fixture", message)))
+            assertTrue(store.append(event, 7, now.wall, assess = false, clock = now).allDurable)
+            val row = store.inboxRows(7, now).single()
+            assertNotNull(store.prepareInboxReview(row.id, 7, now))
+            assertTrue(store.labelConversationMessage(row.id, GuardianAssessment.LOW_RISK, 7, now))
+            val archive = File(context.noBackupFilesDir, GuardianCaptureStore.ARCHIVE_NAME)
+            val encrypted = archive.readBytes()
+            val reopened = GuardianCaptureStore(context)
+            assertEquals(message, reopened.revealInboxMessage(row.id, 7, now))
+            assertEquals(GuardianAssessment.LOW_RISK, reopened.inboxRows(7, now).single().ownerLabel)
+            assertArrayEquals(encrypted, archive.readBytes())
+        } finally {
+            store.clear()
+            store.resetLearning()
+        }
+    }
+
     @Test fun validationImportPreservesIndependentLabelsAndRejectsInvalidRows() {
         val input = org.json.JSONArray()
         repeat(40) { index ->
