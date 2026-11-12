@@ -101,7 +101,14 @@ class GuardianInboxActivity : ComponentActivity() {
             delay(120_000)
             lock()
         }
-        refresh()
+        if (intent.getBooleanExtra(OPEN_IMPACT, false)) {
+            intent.removeExtra(OPEN_IMPACT)
+            loadArchive({ store, _, _ -> store.personalImpactSettings() }) {
+                impactSettings = it
+                validationOpen = true
+                refresh()
+            }
+        } else refresh()
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -845,7 +852,12 @@ class GuardianInboxActivity : ComponentActivity() {
 
     companion object {
         private const val SECTION = "guardian-inbox-section"
+        private const val OPEN_IMPACT = "guardian-open-personal-impact"
         private const val LINKED_MESSAGE = "guardian-linked-message"
+
+        internal fun openPersonalImpact(activity: Activity) {
+            activity.startActivity(Intent(activity, GuardianInboxActivity::class.java).putExtra(OPEN_IMPACT, true))
+        }
 
         internal fun openEvidenceSource(context: android.content.Context, messageId: String) {
             context.startActivity(Intent(context, GuardianInboxActivity::class.java).putExtra(LINKED_MESSAGE, messageId))

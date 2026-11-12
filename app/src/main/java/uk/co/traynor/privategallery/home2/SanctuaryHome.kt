@@ -1,5 +1,6 @@
 package uk.co.traynor.privategallery.home2
 
+import uk.co.traynor.privategallery.launcher.GuardianInboxActivity
 import android.os.CancellationSignal
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.LocalActivity
@@ -329,6 +330,9 @@ internal fun SanctuarySettings(store: SanctuaryStore, onEnded: () -> Unit, onBac
             }
         }
         SanctuaryRecoveryNote()
+        if (activity != null) TextButton(onClick = { GuardianInboxActivity.openPersonalImpact(activity) }) {
+            Text("Review personal impact in Guardian")
+        }
     }
     if (confirming) {
         PanicHomeAlertDialog(
