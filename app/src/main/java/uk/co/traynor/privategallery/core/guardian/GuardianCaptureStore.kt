@@ -333,6 +333,7 @@ internal class GuardianCaptureStore private constructor(private val context: Con
                 .put("conversation", event.conversation).put("sender", entry.sender)
                 .put("app", event.app).put("sensitivity", event.sensitivity.name).put("holdUncertain", event.holdUncertain)
                 .put("messageAt", entry.time).put("capturedAt", event.observedAt).put("text", entry.text)
+            row.put("patterns", JSONArray(recogniseNovaBrainPatterns(entry.text).map { it.name }))
             guardianSenderDisplayName(entry.displayName)?.let { row.put("displayName", it) }
             if (assess && id !in existing && id !in incoming && examples.isNotEmpty()) {
                 val assessment = classifyGuardian(entry.text, examples, contextFor(row, live + incoming.values), event.sensitivity)
@@ -438,8 +439,9 @@ internal class GuardianCaptureStore private constructor(private val context: Con
     }
 
     private fun applyAssessment(row: JSONObject, assessment: GuardianAssessment, now: GuardianInboxClock) {
-        val patterns = recogniseNovaBrainPatterns(row.getString("text"))
-        row.put("patterns", JSONArray(patterns.map { it.name }))
+        if (!row.has("patterns")) {
+            row.put("patterns", JSONArray(recogniseNovaBrainPatterns(row.getString("text")).map { it.name }))
+        }
         row.put("assessment", assessment.name).put("assessmentVersion", 1)
         if (!row.has("hold") && (assessment == GuardianAssessment.UPSETTING ||
                 assessment == GuardianAssessment.UNCERTAIN && row.optBoolean("holdUncertain"))) startHold(row, now)
