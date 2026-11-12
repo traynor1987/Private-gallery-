@@ -5,6 +5,7 @@ import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import androidx.test.platform.app.InstrumentationRegistry
 import android.os.ParcelFileDescriptor
 import android.app.KeyguardManager
@@ -78,11 +79,11 @@ class GuardianInbox77UiTest {
             compose.onNodeWithText("Fixture contact").performClick()
             compose.waitUntil(10_000) { compose.onAllNodesWithText("Guardian Conversation").fetchSemanticsNodes().isNotEmpty() }
             compose.onNodeWithText(message).assertDoesNotExist()
-            compose.onNodeWithText("Possible patterns · Guilt-tripping").assertIsDisplayed()
-            compose.onNodeWithText("Review message").performClick()
-            compose.onNodeWithText(message).assertIsDisplayed()
-            compose.onNodeWithText("Not Upsetting").performClick()
-            compose.onNodeWithText("Save learning example").performClick()
+            compose.onNodeWithText("Possible patterns · Guilt-tripping").performScrollTo().assertIsDisplayed()
+            compose.onNodeWithText("Review message").performScrollTo().performClick()
+            compose.onNodeWithText(message).performScrollTo().assertIsDisplayed()
+            compose.onNodeWithText("Not Upsetting").performScrollTo().performClick()
+            compose.onNodeWithText("Save learning example").performScrollTo().performClick()
             compose.waitUntil(10_000) { compose.onAllNodesWithText("Remove learning example").fetchSemanticsNodes().isNotEmpty() }
             val saved = store.inboxRows(7, uk.co.traynor.privategallery.core.guardian.GuardianInboxClock(
                 System.currentTimeMillis(), android.os.SystemClock.elapsedRealtime(), -1)).single()
