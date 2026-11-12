@@ -152,40 +152,63 @@ internal class GuardianCaptureStore private constructor(private val context: Con
 
     private fun validationArchive() = GuardianCaptureStore(context, training = false, validation = true)
 
-    private fun validationModel(examples: List<GuardianExample>): String {
+    private fun validationModel(examples: List<GuardianExample>, sourceIds: Set<String>): String {
         val entries = examples.map {
             JSONArray().put(it.assessment.name).put(JSONArray(it.features.sorted())).toString()
         }.sorted()
-        return fingerprint(JSONArray().put(1).put(JSONArray(entries)).toString().toByteArray(Charsets.UTF_8))
+        return fingerprint(JSONArray().put(NOVA_BRAIN_VALIDATION_VERSION).put(JSONArray(entries)).put(JSONArray(sourceIds.sorted())).toString().toByteArray(Charsets.UTF_8))
     }
 
     fun knowledgeValidation(): NovaBrainValidation? = synchronized(lock) {
         val result = validationArchive().read().singleOrNull() ?: return@synchronized null
         val rows = retainedRows(GuardianCapture.retention(context), System.currentTimeMillis())
-        if (result.getString("model") != validationModel(examples(rows))) return@synchronized null
+        if (result.getString("model") != validationModel(examples(rows), trainingSourceIds(rows))) return@synchronized null
+        val metrics = result.getJSONObject("categoryResults")
         NovaBrainValidation(
             result.getInt("conversations"), result.getInt("upsetting"), result.getInt("ordinary"),
             result.getDouble("precision"), result.getDouble("recall"), result.getDouble("patternRecall"),
             result.getDouble("calibration"), result.getDouble("coverage"), result.getDouble("improvement"),
+            result.getInt("falsePositives"), result.getInt("falseNegatives"), result.getDouble("accuracy"),
+            NovaBrainPattern.entries.associateWith { category ->
+                val counts = metrics.getJSONArray(category.name)
+                NovaBrainCategoryResult(counts.getInt(0), counts.getInt(1), counts.getInt(2))
+            },
+            result.getLong("validatedAt"),
         )
     }
 
-    fun measureKnowledge(holdout: List<NovaBrainValidationMessage>): NovaBrainValidation? = synchronized(lock) {
-        val rows = retainedRows(GuardianCapture.retention(context), System.currentTimeMillis())
-        val learned = examples(rows)
+    private fun trainingSourceIds(rows: List<JSONObject>): Set<String> {
         val conversations = rows.asSequence().filterNot { it.optBoolean("deleted") }
             .filter { ownerLabel(it) != null }.map {
                 JSONArray().put(it.optString("app", GUARDIAN_WHATSAPP))
                     .put(it.getLong("profile")).put(it.getString("conversation")).toString()
             }.toSet()
-        val result = evaluateNovaBrain(holdout, conversations, learned.map { it.features }.toSet())
-            ?: return@synchronized null
+        val evidence = GuardianCaptureStore(context, true).read().flatMap { row ->
+            val sources = row.optJSONArray("evidenceSources")
+            if (sources == null) emptyList() else List(sources.length(), sources::getString)
+        }
+        return conversations + evidence
+    }
+
+    fun measureKnowledge(holdout: List<NovaBrainValidationMessage>): NovaBrainValidation? = synchronized(lock) {
+        val rows = retainedRows(GuardianCapture.retention(context), System.currentTimeMillis())
+        val learned = examples(rows)
+        val conversations = trainingSourceIds(rows)
+        val result = evaluateNovaBrain(holdout, conversations, emptySet(), learned)
+            ?.copy(validatedAtMillis = System.currentTimeMillis()) ?: return@synchronized null
+        val metrics = JSONObject()
+        result.categoryResults.forEach { (category, counts) ->
+            metrics.put(category.name, JSONArray().put(counts.truePositive).put(counts.falsePositive).put(counts.falseNegative))
+        }
         validationArchive().write(listOf(JSONObject()
-            .put("model", validationModel(learned))
+            .put("model", validationModel(learned, conversations))
             .put("conversations", result.conversations).put("upsetting", result.upsetting).put("ordinary", result.ordinary)
             .put("precision", result.precision).put("recall", result.recall).put("patternRecall", result.patternRecall)
             .put("calibration", result.calibration).put("coverage", result.confirmedPatternCoverage)
-            .put("improvement", result.validatedImprovement)))
+            .put("improvement", result.validatedImprovement)
+            .put("falsePositives", result.falsePositives).put("falseNegatives", result.falseNegatives)
+            .put("accuracy", result.accuracy).put("categoryResults", metrics)
+            .put("validatedAt", result.validatedAtMillis)))
         result
     }
 
@@ -241,12 +264,16 @@ internal class GuardianCaptureStore private constructor(private val context: Con
         val examples = GuardianCaptureStore(context, true)
         val id = fingerprint(JSONArray(features.sorted()).toString().toByteArray(Charsets.UTF_8))
         val rows = examples.read()
-        val previous = rows.firstOrNull { it.getString("id") == id }?.optJSONArray("evidenceSources")
+        val existing = rows.firstOrNull { it.getString("id") == id }
+        val previous = existing?.optJSONArray("evidenceSources")
         val sources = if (previous == null) emptyList() else List(previous.length(), previous::getString)
         val updatedSources = (listOfNotNull(evidenceId) + sources).distinct().take(MAX_EXAMPLES)
         val saved = rows.filterNot { it.getString("id") == id }
         val row = JSONObject().put("id", id).put("features", JSONArray(features.sorted())).put("label", assessment.name)
         if (updatedSources.isNotEmpty()) row.put("evidenceSources", JSONArray(updatedSources))
+        if (evidenceId == null || existing?.optBoolean("unlinkedApproval", previous == null) == true) {
+            row.put("unlinkedApproval", true)
+        }
         examples.write((listOf(row) + saved).take(MAX_EXAMPLES))
         true
     }
@@ -260,15 +287,17 @@ internal class GuardianCaptureStore private constructor(private val context: Con
 
     fun learningCount(): Int = synchronized(lock) { examples(read()).size }
 
-    fun forgetExample(text: String): Boolean = synchronized(lock) {
+    fun forgetExample(text: String, evidenceId: String? = null): Boolean = synchronized(lock) {
         val features = guardianFeatures(text)
         if (features.isEmpty()) return@synchronized false
         val id = fingerprint(JSONArray(features.sorted()).toString().toByteArray(Charsets.UTF_8))
         val archive = GuardianCaptureStore(context, true)
         val original = archive.read()
-        val revised = original.filterNot { it.getString("id") == id }
-        if (revised.size == original.size) return@synchronized false
-        archive.write(revised)
+        val row = original.firstOrNull { it.getString("id") == id } ?: return@synchronized false
+        val revised = if (evidenceId == null) NovaBrainSourceRemoval(true, null)
+        else removeNovaBrainEvidenceSource(row, evidenceId)
+        if (!revised.found) return@synchronized false
+        archive.write(original.mapNotNull { if (it === row) revised.retained else it })
         true
     }
 

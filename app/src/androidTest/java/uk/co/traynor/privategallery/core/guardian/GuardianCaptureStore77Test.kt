@@ -110,6 +110,25 @@ class GuardianCaptureStore77Test {
         }
     }
 
+    @Test fun encryptedEvidenceApprovalsSurviveRemovingOneSource() {
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        val store = GuardianCaptureStore(context)
+        val text = "please give me time to decide this"
+        store.resetLearning()
+        try {
+            assertTrue(store.teach(text, GuardianAssessment.LOW_RISK, evidenceId = "first"))
+            assertTrue(store.teach(text, GuardianAssessment.LOW_RISK, evidenceId = "second"))
+            val reopened = GuardianCaptureStore(context)
+            assertFalse(reopened.forgetExample(text, "unrelated"))
+            assertTrue(reopened.forgetExample(text, "first"))
+            assertEquals(1, reopened.learningCount())
+            assertTrue(reopened.forgetExample(text, "second"))
+            assertEquals(0, reopened.learningCount())
+        } finally {
+            store.resetLearning()
+        }
+    }
+
     @Test fun verifiedPersistenceRequiresEveryEntryAndNewContent() {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         val now = guardianInboxClock(context)

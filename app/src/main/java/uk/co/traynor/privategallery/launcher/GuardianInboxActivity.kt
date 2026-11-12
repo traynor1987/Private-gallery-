@@ -397,9 +397,11 @@ class GuardianInboxActivity : ComponentActivity() {
             var result by remember { mutableStateOf<String?>(null) }
             GuardianAlertDialog(
                 onDismissRequest = { if (!busy) validationOpen = false },
-                title = { Text("Evaluate Nova Brain locally") },
+                title = { Text("Nova Brain settings") },
                 text = {
                     Column(Modifier.heightIn(max = 420.dp).verticalScroll(rememberScrollState())) {
+                        NovaBrainKnowledgeCard()
+                        GuardianCloudTeacher { validationOpen && canReview() }
                         Text("Paste independently labelled examples from conversations excluded from training. Use JSON rows with conversationId, text and patterns. Use an empty patterns array for ordinary messages.")
                         Text("Pattern labels: " + NovaBrainPattern.entries.joinToString { it.name })
                         OutlinedTextField(input, { if (it.length <= MAX_VALIDATION_INPUT) input = it },
@@ -445,7 +447,7 @@ class GuardianInboxActivity : ComponentActivity() {
                     }) { Text("Monitored Contacts") }
                     GuardianCloudTeacher { settingsOpen && canReview() }
                     TextButton(onClick = { settingsOpen = false; validationOpen = true }) {
-                        Text("Evaluate Nova Brain")
+                        Text("Nova Brain settings")
                     }
                     TextButton(onClick = { settingsOpen = false; callShieldOpen = true }) { Text("Call Shield") }
                     TextButton(onClick = { settingsOpen = false; diagnostic = true }) {

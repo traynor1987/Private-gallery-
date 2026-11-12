@@ -13,6 +13,11 @@ internal data class NovaBrainValidation(
     val calibration: Double,
     val confirmedPatternCoverage: Double,
     val validatedImprovement: Double,
+    val falsePositives: Int = 0,
+    val falseNegatives: Int = 0,
+    val accuracy: Double = 0.0,
+    val categoryResults: Map<NovaBrainPattern, NovaBrainCategoryResult> = emptyMap(),
+    val validatedAtMillis: Long = 0,
 ) {
     fun knowledgePercent(): Int? {
         if (conversations < 10 || upsetting < 20 || ordinary < 20) return null
