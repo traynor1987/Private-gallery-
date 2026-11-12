@@ -5,6 +5,7 @@ import os
 import sqlite3
 from collections import deque
 from threading import Lock
+from pathlib import Path
 from time import monotonic
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from budget import Budget, DEFAULT_LIMIT_MICRO_USD
@@ -138,10 +139,17 @@ class Handler(BaseHTTPRequestHandler):
         self.send_json({"advice": result})
 
 
+def secret(name):
+    filename = os.environ.get(name + "_FILE")
+    if filename:
+        return Path(filename).read_text().strip()
+    return os.environ[name]
+
+
 if __name__ == "__main__":
-    with ThreadingHTTPServer(("127.0.0.1", 8787), Handler) as server:
-        server.openai_key = os.environ["OPENAI_API_KEY"]
-        server.owner_token = os.environ["NOVA_CLOUD_TEACHER_TOKEN"]
+    with ThreadingHTTPServer((os.environ.get("NOVA_CLOUD_BIND", "127.0.0.1"), 8787), Handler) as server:
+        server.openai_key = None
+        server.owner_token = secret("NOVA_CLOUD_TEACHER_TOKEN")
         if len(server.owner_token) < 32 or server.owner_token.startswith("sk-"):
             raise ValueError("Configure an independent, random owner token")
         server.model = os.environ["NOVA_CLOUD_TEACHER_MODEL"]
@@ -154,6 +162,9 @@ if __name__ == "__main__":
                 int(os.environ["NOVA_CLOUD_MAX_REQUEST_MICRO_USD"]),
                 int(os.environ.get("NOVA_CLOUD_LIMIT_MICRO_USD", DEFAULT_LIMIT_MICRO_USD)),
             )
+            server.openai_key = secret("OPENAI_API_KEY")
+            if not server.openai_key:
+                raise ValueError("OpenAI credential is empty")
             server.analysis_enabled = True
         server.limiter = RequestLimiter()
         server.serve_forever()
