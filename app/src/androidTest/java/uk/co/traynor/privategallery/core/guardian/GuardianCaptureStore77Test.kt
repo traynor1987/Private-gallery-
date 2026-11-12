@@ -9,6 +9,41 @@ import java.io.File
 
 @RunWith(AndroidJUnit4::class)
 class GuardianCaptureStore77Test {
+    @Test fun personalImpactIsOptInEncryptedEditableAndIndependentOfArchive() {
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        val store = GuardianCaptureStore(context)
+        store.clear()
+        store.clearPersonalImpact()
+        try {
+            val now = guardianInboxClock(context)
+            val event = GuardianCaptureEvent(0, "impact-fixture", now.wall,
+                listOf(GuardianCaptureEntry(now.wall, "fixture", "Synthetic impact learning test message")))
+            assertTrue(store.append(event, 7, now.wall, assess = false, clock = now).allDurable)
+            val row = store.inboxRows(7, now).single()
+            val conversation = checkNotNull(row.conversation)
+            val feedback = PersonalImpact(MessageImpact.UPSETTING, WarningHelp.YES, WaitingOutcome.BETTER)
+            val file = File(context.noBackupFilesDir, "nova-personal-impact-v1.enc")
+            assertFalse(store.savePersonalImpact(row.id, feedback, 7, now))
+            assertFalse(file.exists())
+            store.savePersonalImpactSettings(PersonalImpactSettings(collect = true))
+            assertTrue(store.savePersonalImpact(row.id, feedback, 7, now))
+            assertFalse(file.readBytes().decodeToString().contains("UPSETTING"))
+            val reopened = GuardianCaptureStore(context)
+            assertEquals(feedback, reopened.personalImpactReview(row.id, conversation).second)
+            val correction = feedback.copy(excluded = true, correction = WarningCorrection.FALSE_POSITIVE)
+            assertTrue(reopened.savePersonalImpact(row.id, correction, 7, now))
+            assertEquals(correction, reopened.personalImpactReview(row.id, conversation).second)
+            assertTrue(reopened.deletePersonalImpact(row.id))
+            assertNull(reopened.personalImpactReview(row.id, conversation).second)
+            reopened.clearPersonalImpact()
+            assertFalse(file.exists())
+            assertEquals(row.id, reopened.inboxRows(7, now).single().id)
+        } finally {
+            store.clearPersonalImpact()
+            store.clear()
+        }
+    }
+
     @Test fun guardianReleaseFixtureReopensWithoutRewritingCiphertext() {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         val store = GuardianCaptureStore(context)

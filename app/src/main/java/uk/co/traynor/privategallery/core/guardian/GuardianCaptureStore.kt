@@ -57,12 +57,13 @@ internal fun guardianInboxClock(context: Context) = GuardianInboxClock(
 )
 
 /** Private, bounded archive. The capture phase exposes aggregate counts only. */
-internal class GuardianCaptureStore private constructor(private val context: Context, private val training: Boolean, private val fixture: Boolean = false, private val contacts: Boolean = false, private val validation: Boolean = false, private val phoneShield: Boolean = false, private val callHistory: Boolean = false) {
+internal class GuardianCaptureStore private constructor(private val context: Context, private val training: Boolean, private val fixture: Boolean = false, private val contacts: Boolean = false, private val validation: Boolean = false, private val phoneShield: Boolean = false, private val callHistory: Boolean = false, private val personalImpact: Boolean = false) {
     constructor(context: Context) : this(context.applicationContext, false)
 
-    private val destination = File(context.noBackupFilesDir, when { callHistory -> "guardian-call-history-v1.enc"; phoneShield -> "guardian-phone-shield-v1.enc"; validation -> "nova-brain-validation-v1.enc"; contacts -> "guardian-contacts-v1.enc"; fixture -> "guardian-fixture-v1.enc"; training -> "guardian-learning-v1.enc"; else -> ARCHIVE_NAME })
-    private val alias = when { callHistory -> "nova-guardian-call-history-v1"; phoneShield -> "nova-guardian-phone-shield-v1"; validation -> "nova-brain-validation-v1"; contacts -> "nova-guardian-contacts-v1"; fixture -> "nova-guardian-fixture-v1"; training -> "nova-guardian-learning-v1"; else -> KEY_ALIAS }
+    private val destination = File(context.noBackupFilesDir, when { personalImpact -> "nova-personal-impact-v1.enc"; callHistory -> "guardian-call-history-v1.enc"; phoneShield -> "guardian-phone-shield-v1.enc"; validation -> "nova-brain-validation-v1.enc"; contacts -> "guardian-contacts-v1.enc"; fixture -> "guardian-fixture-v1.enc"; training -> "guardian-learning-v1.enc"; else -> ARCHIVE_NAME })
+    private val alias = when { personalImpact -> "nova-personal-impact-v1"; callHistory -> "nova-guardian-call-history-v1"; phoneShield -> "nova-guardian-phone-shield-v1"; validation -> "nova-brain-validation-v1"; contacts -> "nova-guardian-contacts-v1"; fixture -> "nova-guardian-fixture-v1"; training -> "nova-guardian-learning-v1"; else -> KEY_ALIAS }
     private val aad = when {
+        personalImpact -> "NovaOS Personal Impact v1".toByteArray(Charsets.UTF_8)
         callHistory -> "NovaOS Guardian call history v1".toByteArray(Charsets.UTF_8)
         phoneShield -> "NovaOS Guardian phone shield v1".toByteArray(Charsets.UTF_8)
         validation -> "NovaOS Nova Brain validation v1".toByteArray(Charsets.UTF_8)
@@ -148,6 +149,90 @@ internal class GuardianCaptureStore private constructor(private val context: Con
             JSONObject().put("number", it.number).put("mode", it.mode.name)
                 .put("mainWhatsApp", it.mainWhatsApp.name).put("friendsWhatsApp", it.friendsWhatsApp.name)
         })
+    }
+
+    private fun impactArchive() = GuardianCaptureStore(context, training = false, personalImpact = true)
+
+    private fun impactSettings(row: JSONObject?) = PersonalImpactSettings(
+        row?.optBoolean("collect") == true, row?.optBoolean("learn") == true,
+        row?.optInt("days", 30)?.takeIf { it in RETENTION_DAYS } ?: 30,
+    )
+
+    private fun impactRows(rows: List<JSONObject>, days: Int, now: Long) =
+        rows.drop(1).filter { it.getLong("savedAt") >= cutoff(days, now) }
+
+    private fun readImpact(archive: GuardianCaptureStore, now: Long): List<JSONObject> {
+        val rows = archive.read()
+        val retained = impactRows(rows, impactSettings(rows.firstOrNull()).days, now)
+        if (retained.size < rows.size - 1) archive.write(listOf(rows.first()) + retained)
+        return rows.take(1) + retained
+    }
+
+    fun personalImpactSettings(): PersonalImpactSettings = synchronized(lock) {
+        impactSettings(impactArchive().read().firstOrNull())
+    }
+
+    fun savePersonalImpactSettings(settings: PersonalImpactSettings) = synchronized(lock) {
+        require(settings.days in RETENTION_DAYS)
+        val archive = impactArchive()
+        val now = System.currentTimeMillis()
+        val rows = readImpact(archive, now)
+        val header = JSONObject().put("collect", settings.collect)
+            .put("learn", settings.learn && settings.collect).put("days", settings.days)
+        archive.write(listOf(header) + impactRows(rows, settings.days, now))
+    }
+
+    private fun impactGroup(key: GuardianConversationKey) =
+        fingerprint(JSONArray().put(key.app).put(key.profile).put(key.conversation).toString().toByteArray(Charsets.UTF_8))
+
+    fun personalImpactReview(id: String, conversation: GuardianConversationKey): Triple<PersonalImpactSettings, PersonalImpact?, MessageImpact?> =
+        synchronized(lock) {
+            val rows = readImpact(impactArchive(), System.currentTimeMillis())
+            val settings = impactSettings(rows.firstOrNull())
+            val reports = rows.drop(1)
+            val existing = reports.firstOrNull { it.optString("messageId") == id }?.let(PersonalImpact::decode)
+            val group = impactGroup(conversation)
+            val earlier = reports.filter { it.optString("group") == group && it.optString("messageId") != id }
+            Triple(settings, existing, predictPersonalImpact(settings, earlier.map(PersonalImpact::decode)))
+        }
+
+    fun savePersonalImpact(id: String, feedback: PersonalImpact, days: Int, now: GuardianInboxClock): Boolean =
+        synchronized(lock) {
+            val archive = impactArchive()
+            val rows = readImpact(archive, now.wall)
+            if (!impactSettings(rows.firstOrNull()).collect || !feedback.hasFeedback()) return@synchronized false
+            val original = retainedRows(days, now.wall).firstOrNull {
+                it.optString("id") == id && !it.optBoolean("deleted")
+            } ?: return@synchronized false
+            val row = inboxRow(original, now)
+            if (row.conversation == null || row.section == GuardianInboxSection.COOLING) return@synchronized false
+            val key = row.conversation
+            val group = impactGroup(key)
+            val recorded = feedback.encode().put("messageId", id).put("savedAt", now.wall).put("group", group)
+            archive.write(rows.take(1) + (listOf(recorded) +
+                rows.drop(1).filterNot { it.optString("messageId") == id }).take(MAX_EXAMPLES))
+            true
+        }
+
+    fun deletePersonalImpact(id: String): Boolean = synchronized(lock) {
+        val archive = impactArchive()
+        val rows = readImpact(archive, System.currentTimeMillis())
+        val revised = rows.take(1) + rows.drop(1).filterNot { it.optString("messageId") == id }
+        if (rows.size == revised.size) return@synchronized false
+        archive.write(revised)
+        true
+    }
+
+    fun clearPersonalImpact() = impactArchive().clear()
+
+    fun personalImpactReport(): Pair<PersonalImpactSummary, PersonalImpactValidation?> = synchronized(lock) {
+        val rows = readImpact(impactArchive(), System.currentTimeMillis())
+        val reports = rows.drop(1)
+        val examples = reports.mapNotNull { row ->
+            row.optString("group").takeIf(String::isNotBlank)?.let { PersonalImpactExample(it, PersonalImpact.decode(row)) }
+        }
+        summarizePersonalImpact(reports.map(PersonalImpact::decode)) to
+            validatePersonalImpact(impactSettings(rows.firstOrNull()), examples)
     }
 
     private fun validationArchive() = GuardianCaptureStore(context, training = false, validation = true)

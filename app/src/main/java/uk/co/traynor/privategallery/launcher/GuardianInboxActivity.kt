@@ -65,6 +65,11 @@ class GuardianInboxActivity : ComponentActivity() {
     private var busy by mutableStateOf(false)
     private var confirmDelete by mutableStateOf(false)
     private var settingsOpen by mutableStateOf(false)
+    private var impactSettings by mutableStateOf(PersonalImpactSettings())
+    private var impactMessage by mutableStateOf<String?>(null)
+    private var pastImpact by mutableStateOf<MessageImpact?>(null)
+    private var impactFeedback by mutableStateOf<PersonalImpact?>(null)
+    private var clearImpactOpen by mutableStateOf(false)
     private var validationOpen by mutableStateOf(false)
     private var callShieldOpen by mutableStateOf(false)
     private val privacy by lazy { getSharedPreferences("guardian_inbox_privacy", MODE_PRIVATE) }
@@ -227,6 +232,11 @@ class GuardianInboxActivity : ComponentActivity() {
         failure = null
         confirmDelete = false
         settingsOpen = false
+        impactSettings = PersonalImpactSettings()
+        impactMessage = null
+        impactFeedback = null
+        pastImpact = null
+        clearImpactOpen = false
         validationOpen = false
         callShieldOpen = false
         diagnostic = false
@@ -394,6 +404,35 @@ class GuardianInboxActivity : ComponentActivity() {
 
     @Composable
     private fun InboxDialogs() {
+        if (canReview()) impactMessage?.let { id ->
+            PersonalImpactDialog(impactFeedback, pastImpact, busy, onSave = { feedback ->
+                loadArchive({ store, days, now -> store.savePersonalImpact(id, feedback, days, now) }) {
+                    if (!it) failure = "Feedback could not be saved for this message."
+                    impactMessage = null
+                    impactFeedback = null
+                }
+            }, onDelete = {
+                loadArchive({ store, _, _ -> store.deletePersonalImpact(id) }) {
+                    impactMessage = null
+                    impactFeedback = null
+                }
+            }, onClose = { impactMessage = null; impactFeedback = null })
+        }
+        if (clearImpactOpen && canReview()) GuardianAlertDialog(
+            onDismissRequest = { clearImpactOpen = false },
+            title = { Text("Delete all personal impact feedback?") },
+            text = { Text("This also turns off collection and learning. Guardian and Evidence Locker records are kept.") },
+            confirmButton = {
+                TextButton(enabled = !busy, onClick = {
+                    loadArchive({ store, _, _ -> store.clearPersonalImpact() }) {
+                        impactSettings = PersonalImpactSettings()
+                        clearImpactOpen = false
+                    }
+                }) { Text("Delete all feedback") }
+            },
+            dismissButton = { TextButton(onClick = { clearImpactOpen = false }) { Text("Cancel") } },
+        )
+
         if (validationOpen && canReview()) {
             var input by remember { mutableStateOf("") }
             var result by remember { mutableStateOf<String?>(null) }
@@ -402,8 +441,24 @@ class GuardianInboxActivity : ComponentActivity() {
                 title = { Text("Nova Brain settings") },
                 text = {
                     Column(Modifier.heightIn(max = 420.dp).verticalScroll(rememberScrollState())) {
-                        NovaBrainKnowledgeCard()
+                        NovaBrainKnowledgeCard(showPersonalImpact = true)
                         GuardianCloudTeacher { validationOpen && canReview() }
+                        LauncherToggle("Collect personal impact feedback", impactSettings.collect) { enabled ->
+                            val updated = impactSettings.copy(collect = enabled, learn = enabled && impactSettings.learn)
+                            loadArchive({ store, _, _ -> store.savePersonalImpactSettings(updated) }) { impactSettings = updated }
+                        }
+                        if (impactSettings.collect) LauncherToggle("Use feedback for local personalisation", impactSettings.learn) { enabled ->
+                            val updated = impactSettings.copy(learn = enabled)
+                            loadArchive({ store, _, _ -> store.savePersonalImpactSettings(updated) }) { impactSettings = updated }
+                        }
+                        Text("Feedback retention · ${impactSettings.days} days")
+                        GuardianCaptureStore.RETENTION_DAYS.sorted().forEach { days ->
+                            TextButton(enabled = !busy && days != impactSettings.days, onClick = {
+                                val updated = impactSettings.copy(days = days)
+                                loadArchive({ store, _, _ -> store.savePersonalImpactSettings(updated) }) { impactSettings = updated }
+                            }) { Text("Keep for $days days") }
+                        }
+                        TextButton(enabled = !busy, onClick = { clearImpactOpen = true }) { Text("Delete all personal impact feedback") }
                         Text("Paste independently labelled examples from conversations excluded from training. Use JSON rows with conversationId, text and patterns. Use an empty patterns array for ordinary messages.")
                         Text("Pattern labels: " + NovaBrainPattern.entries.joinToString { it.name })
                         OutlinedTextField(input, { if (it.length <= MAX_VALIDATION_INPUT) input = it },
@@ -448,7 +503,13 @@ class GuardianInboxActivity : ComponentActivity() {
                         }
                     }) { Text("Monitored Contacts") }
                     GuardianCloudTeacher { settingsOpen && canReview() }
-                    TextButton(onClick = { settingsOpen = false; validationOpen = true }) {
+                    TextButton(onClick = {
+                        loadArchive({ store, _, _ -> store.personalImpactSettings() }) {
+                            impactSettings = it
+                            settingsOpen = false
+                            validationOpen = true
+                        }
+                    }) {
                         Text("Nova Brain settings")
                     }
                     TextButton(onClick = { settingsOpen = false; callShieldOpen = true }) { Text("Call Shield") }
@@ -629,6 +690,18 @@ class GuardianInboxActivity : ComponentActivity() {
             }
         }
         GuardianCard("Message actions") {
+            if (cloudKey != null) TextButton(enabled = !busy, onClick = {
+                loadArchive({ store, _, _ -> store.personalImpactReview(row.id, cloudKey) }) {
+                    if (it.first.collect || it.second != null) {
+                        impactFeedback = it.second
+                        pastImpact = it.third
+                        impactMessage = row.id
+                    } else {
+                        impactSettings = it.first
+                        validationOpen = true
+                    }
+                }
+            }) { Text("Personal impact feedback") }
             if (cloudKey != null) LauncherToggle("Allow Cloud Teacher for this conversation until lock", cloudAllowed) { enabled ->
                 if (canReview() && !busy && conversationPreview == (row.id to preview)) {
                     cloudConversations = if (enabled) cloudConversations + cloudKey
