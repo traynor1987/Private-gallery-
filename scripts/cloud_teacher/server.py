@@ -1,4 +1,5 @@
 """Run behind an HTTPS reverse proxy. Keep OpenAI credentials on the server."""
+import argparse
 import hmac
 import json
 import os
@@ -177,31 +178,38 @@ def secret(name):
     return os.environ[name]
 
 
+def configure(server, *, staging):
+    server.openai_key = None
+    server.owner_token = secret("NOVA_CLOUD_TEACHER_TOKEN")
+    if len(server.owner_token) < 32 or server.owner_token.startswith("sk-"):
+        raise ValueError("Configure an independent, random owner token")
+    server.model = "staging" if staging else os.environ["NOVA_CLOUD_TEACHER_MODEL"]
+    # No assumed credit renewal. Configuration is explicit for each funded cycle.
+    server.analysis_enabled = False
+    if not staging and os.environ.get("NOVA_CLOUD_CREDIT_CYCLE"):
+        server.output_tokens = int(os.environ.get("NOVA_CLOUD_MAX_OUTPUT_TOKENS", "1000"))
+        server.reasoning_effort = os.environ.get("NOVA_CLOUD_REASONING_EFFORT")
+        server.cost_bound = request_cost_bound(server.model, server.output_tokens, server.reasoning_effort)
+        reserve = int(os.environ["NOVA_CLOUD_MAX_REQUEST_MICRO_USD"])
+        if reserve < server.cost_bound:
+            raise ValueError("Cloud Teacher reservation is below the configured request cost bound")
+        server.budget = Budget(
+            os.environ["NOVA_CLOUD_BUDGET_DB"], os.environ["NOVA_CLOUD_CREDIT_CYCLE"],
+            int(os.environ["NOVA_CLOUD_CREDIT_EXPIRY"]), int(os.environ["NOVA_CLOUD_CONFIRMED_CREDIT_MICRO_USD"]),
+            reserve,
+            int(os.environ.get("NOVA_CLOUD_LIMIT_MICRO_USD", DEFAULT_LIMIT_MICRO_USD)),
+        )
+        server.openai_key = secret("OPENAI_API_KEY")
+        if not server.openai_key:
+            raise ValueError("OpenAI credential is empty")
+        server.analysis_enabled = True
+    server.limiter = RequestLimiter()
+
+
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--staging", action="store_true", help="Disable all cloud analysis")
+    args = parser.parse_args()
     with ThreadingHTTPServer((os.environ.get("NOVA_CLOUD_BIND", "127.0.0.1"), 8787), Handler) as server:
-        server.openai_key = None
-        server.owner_token = secret("NOVA_CLOUD_TEACHER_TOKEN")
-        if len(server.owner_token) < 32 or server.owner_token.startswith("sk-"):
-            raise ValueError("Configure an independent, random owner token")
-        server.model = os.environ["NOVA_CLOUD_TEACHER_MODEL"]
-        # No assumed credit renewal. Configuration is explicit for each funded cycle.
-        server.analysis_enabled = False
-        if os.environ.get("NOVA_CLOUD_CREDIT_CYCLE"):
-            server.output_tokens = int(os.environ.get("NOVA_CLOUD_MAX_OUTPUT_TOKENS", "1000"))
-            server.reasoning_effort = os.environ.get("NOVA_CLOUD_REASONING_EFFORT")
-            server.cost_bound = request_cost_bound(server.model, server.output_tokens, server.reasoning_effort)
-            reserve = int(os.environ["NOVA_CLOUD_MAX_REQUEST_MICRO_USD"])
-            if reserve < server.cost_bound:
-                raise ValueError("Cloud Teacher reservation is below the configured request cost bound")
-            server.budget = Budget(
-                os.environ["NOVA_CLOUD_BUDGET_DB"], os.environ["NOVA_CLOUD_CREDIT_CYCLE"],
-                int(os.environ["NOVA_CLOUD_CREDIT_EXPIRY"]), int(os.environ["NOVA_CLOUD_CONFIRMED_CREDIT_MICRO_USD"]),
-                reserve,
-                int(os.environ.get("NOVA_CLOUD_LIMIT_MICRO_USD", DEFAULT_LIMIT_MICRO_USD)),
-            )
-            server.openai_key = secret("OPENAI_API_KEY")
-            if not server.openai_key:
-                raise ValueError("OpenAI credential is empty")
-            server.analysis_enabled = True
-        server.limiter = RequestLimiter()
+        configure(server, staging=args.staging)
         server.serve_forever()

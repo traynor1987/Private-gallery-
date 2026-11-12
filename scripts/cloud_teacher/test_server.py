@@ -1,5 +1,6 @@
 import io
 import json
+import os
 import unittest
 from http.client import HTTPConnection
 from http.server import ThreadingHTTPServer
@@ -119,6 +120,49 @@ class TeacherTest(unittest.TestCase):
                 server.shutdown()
                 worker.join()
 
+
+    def test_staging_ignores_funded_settings_and_blocks_analysis(self):
+        from server import configure
+
+        with ThreadingHTTPServer(("127.0.0.1", 0), Handler) as server:
+            with patch.dict(os.environ, {"NOVA_CLOUD_CREDIT_CYCLE": "funded",
+                                         "NOVA_CLOUD_TEACHER_MODEL": "gpt-5-mini",
+                                         "OPENAI_API_KEY": "synthetic-key"}), \
+                 patch("server.secret", return_value="t" * 32) as read_secret, \
+                 patch("server.Budget") as budget, patch("server.analyze") as upstream:
+                configure(server, staging=True)
+                worker = Thread(target=server.serve_forever, daemon=True)
+                worker.start()
+                conn = HTTPConnection("127.0.0.1", server.server_port, timeout=3)
+                try:
+                    conn.request("GET", "/health")
+                    response = conn.getresponse()
+                    self.assertEqual(response.status, 200)
+                    response.read()
+                    conn.request("GET", "/guardian/status")
+                    response = conn.getresponse()
+                    self.assertEqual(response.status, 401)
+                    response.read()
+                    headers = {"Authorization": "Bearer " + "t" * 32}
+                    conn.request("GET", "/guardian/status", headers=headers)
+                    response = conn.getresponse()
+                    self.assertEqual(response.status, 200)
+                    status = json.loads(response.read())
+                    self.assertFalse(status["analysis_enabled"])
+                    self.assertEqual(status["model"], "staging")
+                    self.assertIsNone(status["budget"])
+                    conn.request("POST", "/guardian/analyze",
+                                 json.dumps({"message": "synthetic", "consent": True}), headers)
+                    response = conn.getresponse()
+                    self.assertEqual(response.status, 503)
+                    response.read()
+                    read_secret.assert_called_once_with("NOVA_CLOUD_TEACHER_TOKEN")
+                    budget.assert_not_called()
+                    upstream.assert_not_called()
+                finally:
+                    conn.close()
+                    server.shutdown()
+                    worker.join()
 
     def test_limiter_reopens_at_window_boundary(self):
         time = [0]

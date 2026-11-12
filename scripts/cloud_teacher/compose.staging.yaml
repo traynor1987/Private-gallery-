@@ -1,0 +1,33 @@
+name: nova-cloud-teacher-staging
+services:
+  teacher:
+    image: nova-cloud-teacher-staging:${NOVA_STAGING_IMAGE_TAG:?Set a reviewed commit tag}
+    build:
+      context: .
+    command: ["python", "server.py", "--staging"]
+    init: true
+    restart: unless-stopped
+    environment:
+      NOVA_CLOUD_BIND: 0.0.0.0
+      NOVA_CLOUD_TEACHER_TOKEN_FILE: /run/secrets/owner-token
+    ports:
+      - "127.0.0.1:${NOVA_STAGING_PORT:-8788}:8787"
+    volumes:
+      - type: bind
+        source: ${NOVA_CONFIG_DIR:-/etc/nova-cloud-teacher}/secrets/owner-token
+        target: /run/secrets/owner-token
+        read_only: true
+        bind:
+          create_host_path: false
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    pids_limit: 80
+    mem_limit: 128m
+    healthcheck:
+      test: ["CMD", "python", "-c", "from urllib.request import urlopen; assert urlopen('http://127.0.0.1:8787/health', timeout=3).status == 200"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+    logging:
+      driver: "none"

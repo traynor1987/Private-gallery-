@@ -22,6 +22,21 @@ curl --fail --silent --show-error http://127.0.0.1:8787/health
 
 Use the initial setup commands only for a fresh configuration. Keep an existing settings file and token during upgrades. Check that port 8787 is unused first. If you use another port, set `NOVA_HOST_PORT` for both deploy and rollback and change the upstream in the dedicated NGINX file. Use a current Docker Engine with loopback port publishing support. The image is tagged by repository commit. Keep the preceding image for rollback.
 
+## Isolated staging on Ubuntu 24.10
+
+From the existing checkout, run the commands below on the VPS. Use a current Docker Engine with loopback-only publishing support (28.0 or later). Staging uses its own Compose project and binds to `127.0.0.1:8788`. If that port is occupied, supply a free port with `sudo env NOVA_STAGING_PORT=YOUR_PORT bash deploy-staging.sh`.
+
+```sh
+cd ~/nova-cloud-source/scripts/cloud_teacher
+sudo bash deploy-staging.sh
+curl --fail --silent --show-error http://127.0.0.1:8788/health
+curl --silent --output /dev/null --write-out '%{http_code}\n' http://127.0.0.1:8788/guardian/status
+sudo sh -c 'printf "Authorization: Bearer %s\n" "$(cat /etc/nova-cloud-teacher/secrets/owner-token)"' |
+  curl --fail --silent --show-error --header @- http://127.0.0.1:8788/guardian/status
+```
+
+Expect health status `ok`, HTTP 401 without authentication, and authenticated status with `analysis_enabled: false` and `budget: null`. The existing owner token is mounted read-only. Staging skips funded settings and mounts neither the OpenAI key nor the production budget volume. Keep NGINX pointed at its existing upstream. Stop staging with `sudo bash deploy-staging.sh down`. The production deploy and rollback scripts retain their funded-host checks.
+
 ## HTTPS after the OS migration
 
 Confirm the domain points to the supported host, including any AAAA record. Check `sudo nginx -T` for an existing server block for this domain. Use a new site file and preserve all existing sites.
