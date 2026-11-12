@@ -62,3 +62,9 @@ Run `sudo bash deploy.sh` again. Test authenticated status first. A successful h
 ## Rollback
 
 Run `sudo bash rollback.sh PREVIOUS_COMMIT_SHA` using the same config directory and host port. Use an image from this deployment series. Rollback keeps the SQLite volume and current configuration, including any existing spending reservations. To take the service offline, disable only its NGINX site, validate and reload NGINX, then stop only the Cloud Teacher Compose service.
+
+## Reading reservation activity
+
+Authenticated `/guardian/status` reports the configured reservation per request and daily and month-to-date reservations in UTC. These are conservative upper bounds, not OpenAI billing or confirmed charges. Failed upstream calls can still be billed and retain their reservation. Activity starts when this version first records a reservation. Earlier reservations still count toward the funded-cycle limit. UTC day and month changes affect reporting only. They never refill a funded cycle.
+
+To clean up the temporary smoke-test container, first confirm its exact name with `sudo docker ps --filter name=nova-teacher-check`. If it is running, use `sudo docker stop nova-teacher-check`. A container started with `--rm` removes itself after stopping. The persistent staging service belongs to a separate Compose project and can keep running.
