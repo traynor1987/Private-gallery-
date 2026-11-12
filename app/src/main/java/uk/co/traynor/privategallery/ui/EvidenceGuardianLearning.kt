@@ -18,6 +18,7 @@ import uk.co.traynor.privategallery.core.guardian.GuardianAssessment
 import uk.co.traynor.privategallery.core.guardian.GuardianCapture
 import uk.co.traynor.privategallery.core.guardian.GuardianCaptureStore
 import uk.co.traynor.privategallery.core.guardian.recogniseNovaBrainPatterns
+import uk.co.traynor.privategallery.launcher.GuardianCloudTeacher
 import uk.co.traynor.privategallery.launcher.GuardianTheme
 import uk.co.traynor.privategallery.launcher.NovaBrainKnowledgeCard
 
@@ -95,6 +96,13 @@ internal fun EvidenceGuardianLearning(
                             modifier = Modifier.fillMaxWidth(), maxLines = 8,
                             label = { Text("Excerpt from reviewed OCR") },
                             supportingText = { Text("Trim to the passage you want Nova Brain to learn.") })
+                        val reviewedExcerpt = excerpt.trim()
+                        if (reviewedExcerpt.isNotEmpty() && reviewedExcerpt in current.transcript()) {
+                            GuardianCloudTeacher(reviewedExcerpt, historicalEvidence = true) {
+                                controller.current() && !busy && record?.id() == current.id() &&
+                                    excerpt.trim() == reviewedExcerpt
+                            }
+                        }
                         val patterns = remember(excerpt) { recogniseNovaBrainPatterns(excerpt) }
                         if (patterns.isNotEmpty()) {
                             Text("Possible patterns · " + patterns.joinToString { it.label })

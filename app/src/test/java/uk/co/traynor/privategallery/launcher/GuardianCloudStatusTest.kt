@@ -15,6 +15,17 @@ class GuardianCloudStatusTest {
     }
 
     @Test
+    fun payloadRequiresApprovalAndContainsOnlyTheReviewedText() {
+        assertThrows(IllegalArgumentException::class.java) {
+            cloudTeacherApprovedPayload("private original", false)
+        }
+        val payload = JSONObject(cloudTeacherApprovedPayload("[redacted] asked me to reply", true).decodeToString())
+        assertEquals(setOf("message", "consent"), payload.keySet())
+        assertEquals("[redacted] asked me to reply", payload.getString("message"))
+        assertTrue(payload.getBoolean("consent"))
+    }
+
+    @Test
     fun stagingNeverDisplaysAnEnabledAnalysisState() {
         val status = JSONObject("""{"status":"authenticated","model":"staging","analysis_enabled":true,"budget":null}""")
         assertTrue(cloudTeacherStatusLines(status).contains("Staging · analysis disabled"))

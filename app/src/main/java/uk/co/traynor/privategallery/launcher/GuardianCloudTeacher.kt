@@ -21,24 +21,19 @@ import java.net.URI
 import java.time.Instant
 import javax.net.ssl.HttpsURLConnection
 
-private fun requestCloud(endpoint: URI, token: String, message: String? = null): JSONObject {
+private fun requestCloud(endpoint: URI, token: String, approvedPayload: ByteArray? = null): JSONObject {
     val connection = endpoint.toURL().openConnection() as HttpsURLConnection
     try {
         connection.instanceFollowRedirects = false
         connection.connectTimeout = 8_000
         connection.readTimeout = 20_000
         connection.setRequestProperty("Authorization", "Bearer $token")
-        if (message != null) {
+        if (approvedPayload != null) {
             connection.requestMethod = "POST"
             connection.doOutput = true
             connection.setRequestProperty("Content-Type", "application/json; charset=utf-8")
-            val bytes = JSONObject().put("message", message).put("consent", true).toString().toByteArray()
-            connection.setFixedLengthStreamingMode(bytes.size)
-            try {
-                connection.outputStream.use { it.write(bytes) }
-            } finally {
-                bytes.fill(0)
-            }
+            connection.setFixedLengthStreamingMode(approvedPayload.size)
+            connection.outputStream.use { it.write(approvedPayload) }
         }
         check(connection.responseCode == 200)
         val response = connection.inputStream.use { it.readNBytes(32769) }
@@ -50,9 +45,17 @@ private fun requestCloud(endpoint: URI, token: String, message: String? = null):
 }
 
 @Composable
-internal fun GuardianCloudTeacher(message: String? = null, canSend: () -> Boolean) {
+internal fun GuardianCloudTeacher(
+    message: String? = null,
+    historicalEvidence: Boolean = false,
+    canSend: () -> Boolean,
+) {
     var open by remember(message) { mutableStateOf(false) }
-    TextButton(onClick = { if (canSend()) open = true }) { Text(if (message == null) "Cloud Teacher status" else "Ask Cloud Teacher") }
+    TextButton(onClick = { if (canSend()) open = true }) { Text(when {
+        historicalEvidence -> "Review OCR excerpt for cloud analysis"
+        message == null -> "Cloud Teacher status"
+        else -> "Ask Cloud Teacher"
+    }) }
     if (!open) return
     var endpoint by remember { mutableStateOf("") }
     var token by remember { mutableStateOf("") }
@@ -108,7 +111,8 @@ internal fun GuardianCloudTeacher(message: String? = null, canSend: () -> Boolea
                         label = { Text("Text to send") })
                     Row {
                         Checkbox(approved, { approved = it }, enabled = !busy)
-                        Text("Allow cloud analysis for this request")
+                        Text(if (historicalEvidence) "Allow cloud analysis of this historical OCR excerpt"
+                        else "Allow cloud analysis for this request")
                     }
                 }
                 OutlinedTextField(endpoint, { endpoint = it.take(512); approved = false; connectionLines = emptyList(); lastConnection = null }, enabled = !busy,
@@ -126,7 +130,7 @@ internal fun GuardianCloudTeacher(message: String? = null, canSend: () -> Boolea
                 if (!canSend()) return@TextButton
                 val approvedEndpoint = url ?: return@TextButton
                 val approvedToken = token
-                val approvedText = upload
+                val payload = cloudTeacherApprovedPayload(upload, approved)
                 approved = false
                 token = ""
                 status = null
@@ -134,7 +138,7 @@ internal fun GuardianCloudTeacher(message: String? = null, canSend: () -> Boolea
                 scope.launch {
                     try {
                         val advice = withContext(Dispatchers.IO) {
-                            requestCloud(approvedEndpoint, approvedToken, approvedText).getString("advice")
+                            requestCloud(approvedEndpoint, approvedToken, payload).getString("advice")
                                 .trim().also { require(it.length in 1..4000) }
                         }
                         if (canSend()) status = "Cloud advisory · $advice"
@@ -145,6 +149,7 @@ internal fun GuardianCloudTeacher(message: String? = null, canSend: () -> Boolea
                     } catch (_: Exception) {
                         status = "The backend rejected the request or returned an invalid response."
                     } finally {
+                        payload.fill(0)
                         busy = false
                     }
                 }

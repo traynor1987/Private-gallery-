@@ -73,6 +73,7 @@ class GuardianInboxActivity : ComponentActivity() {
     private var conversationsOpen by mutableStateOf(false)
     private var conversation by mutableStateOf<GuardianConversationKey?>(null)
     private var conversationPreview by mutableStateOf<Pair<String, String>?>(null)
+    private var cloudConversations by mutableStateOf(emptySet<GuardianConversationKey>())
     private var contactsOpen by mutableStateOf(false)
     private var contacts by mutableStateOf<List<GuardianContact>>(emptyList())
     private var query by mutableStateOf("")
@@ -216,6 +217,7 @@ class GuardianInboxActivity : ComponentActivity() {
 
     private fun lock() {
         authenticated = false
+        cloudConversations = emptySet()
         operation?.cancel()
         expiry?.cancel()
         countdown?.cancel()
@@ -617,11 +619,22 @@ class GuardianInboxActivity : ComponentActivity() {
             canReview() && !busy && conversationPreview == (row.id to preview) &&
                 rows.any { it.id == row.id && it.section != GuardianInboxSection.COOLING }
         }
-        GuardianCloudTeacher(preview) {
-            canReview() && !busy && conversationPreview == (row.id to preview) &&
-                rows.any { it.id == row.id && it.section != GuardianInboxSection.COOLING }
+        val cloudKey = row.conversation
+        val cloudAllowed = cloudKey != null && cloudKey in cloudConversations
+        if (cloudKey != null && cloudAllowed) {
+            GuardianCloudTeacher(preview) {
+                canReview() && !busy && cloudKey in cloudConversations &&
+                    conversationPreview == (row.id to preview) &&
+                    rows.any { it.id == row.id && it.section != GuardianInboxSection.COOLING }
+            }
         }
         GuardianCard("Message actions") {
+            if (cloudKey != null) LauncherToggle("Allow Cloud Teacher for this conversation until lock", cloudAllowed) { enabled ->
+                if (canReview() && !busy && conversationPreview == (row.id to preview)) {
+                    cloudConversations = if (enabled) cloudConversations + cloudKey
+                    else cloudConversations - cloudKey
+                }
+            }
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 TextButton(enabled = !busy, onClick = {
                     conversationPreview = null

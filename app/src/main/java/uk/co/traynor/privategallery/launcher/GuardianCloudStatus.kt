@@ -52,3 +52,8 @@ internal fun cloudTeacherStatusLines(status: JSONObject): List<String> = buildLi
     }
     add("Reservations are conservative estimates. Confirmed OpenAI charges are unavailable here.")
 }
+
+internal fun cloudTeacherApprovedPayload(message: String, approved: Boolean): ByteArray {
+    require(approved && message.length in 1..4096 && message.isNotBlank())
+    return JSONObject().put("message", message).put("consent", true).toString().toByteArray(Charsets.UTF_8)
+}
