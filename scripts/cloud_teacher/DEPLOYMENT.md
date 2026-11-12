@@ -37,7 +37,9 @@ Create `/etc/nova-cloud-teacher/secrets/openai-key` using a secure editor on the
 - `NOVA_CLOUD_CREDIT_CYCLE` is the unique funded cycle identifier. Keep it stable through redeployments.
 - `NOVA_CLOUD_CREDIT_EXPIRY` is the actual expiry as Unix seconds.
 - `NOVA_CLOUD_CONFIRMED_CREDIT_MICRO_USD` is the verified available credit in millionths of a dollar.
-- `NOVA_CLOUD_MAX_REQUEST_MICRO_USD` is a conservative per-request upper bound for the selected model, including the maximum input and output. Verify it against current pricing before enabling analysis.
+- `NOVA_CLOUD_MAX_OUTPUT_TOKENS` defaults to 1000 and accepts 16 through 128000 for GPT-5 mini. This limit includes reasoning tokens.
+- `NOVA_CLOUD_REASONING_EFFORT` is optional. GPT-5 mini supports `minimal`, `low`, `medium`, and `high`. Omit the setting to use the model default. Try `low` for short advisory responses.
+- `NOVA_CLOUD_MAX_REQUEST_MICRO_USD` must cover the configured request cost bound. At the documented standard GPT-5 mini rates this is `100000 + 2 × NOVA_CLOUD_MAX_OUTPUT_TOKENS` microdollars, charging for a full uncached context and the entire output allowance. Set it to at least `102000` at the default cap. Unsupported models or underfunded reservations fail closed. Review [model pricing](https://developers.openai.com/api/docs/models/gpt-5-mini) before changing models or enabling analysis. Reservations are retained on upstream failure because the provider may already have processed the request.
 - `NOVA_CLOUD_LIMIT_MICRO_USD` is optional and can lower the default $90 ceiling.
 
 Run `sudo bash deploy.sh` again. Test authenticated status first. A successful health check does not call OpenAI. Use only a synthetic message for the first approved analysis. The SQLite volume retains reservations across restarts. Never remove it during routine deployment or rollback. NGINX access logs and container logs are disabled for this service.
