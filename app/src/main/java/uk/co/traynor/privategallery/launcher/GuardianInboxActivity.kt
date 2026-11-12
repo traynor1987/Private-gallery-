@@ -65,6 +65,7 @@ class GuardianInboxActivity : ComponentActivity() {
     private var busy by mutableStateOf(false)
     private var confirmDelete by mutableStateOf(false)
     private var settingsOpen by mutableStateOf(false)
+    private var validationOpen by mutableStateOf(false)
     private var callShieldOpen by mutableStateOf(false)
     private val privacy by lazy { getSharedPreferences("guardian_inbox_privacy", MODE_PRIVATE) }
     private var showSenders by mutableStateOf(true)
@@ -224,6 +225,7 @@ class GuardianInboxActivity : ComponentActivity() {
         failure = null
         confirmDelete = false
         settingsOpen = false
+        validationOpen = false
         callShieldOpen = false
         diagnostic = false
         conversationsOpen = false
@@ -390,6 +392,38 @@ class GuardianInboxActivity : ComponentActivity() {
 
     @Composable
     private fun InboxDialogs() {
+        if (validationOpen && canReview()) {
+            var input by remember { mutableStateOf("") }
+            var result by remember { mutableStateOf<String?>(null) }
+            GuardianAlertDialog(
+                onDismissRequest = { if (!busy) validationOpen = false },
+                title = { Text("Evaluate Nova Brain locally") },
+                text = {
+                    Column(Modifier.heightIn(max = 420.dp).verticalScroll(rememberScrollState())) {
+                        Text("Paste independently labelled examples from conversations excluded from training. Use JSON rows with conversationId, text and patterns. Use an empty patterns array for ordinary messages.")
+                        Text("Pattern labels: " + NovaBrainPattern.entries.joinToString { it.name })
+                        OutlinedTextField(input, { if (it.length <= MAX_VALIDATION_INPUT) input = it },
+                            enabled = !busy, label = { Text("Held-out examples JSON") }, maxLines = 6)
+                        result?.let { Text(it) }
+                        failure?.let { Text(it) }
+                    }
+                },
+                confirmButton = {
+                    TextButton(enabled = !busy && input.isNotBlank(), onClick = {
+                        val approved = input
+                        input = ""
+                        loadArchive({ store, _, _ ->
+                            runCatching { store.measureKnowledge(parseNovaBrainValidation(approved)) }.getOrNull()
+                        }) { measured ->
+                            result = measured?.knowledgePercent()?.let { "Validation score saved: $it%" }
+                                ?: "Validation rejected. Check the format, sample counts and overlap with training."
+                        }
+                    }) { Text("Run local evaluation") }
+                },
+                dismissButton = { TextButton(enabled = !busy, onClick = { validationOpen = false }) { Text("Close") } },
+                properties = DialogProperties(securePolicy = SecureFlagPolicy.SecureOn),
+            )
+        }
         if (callShieldOpen) GuardianCallShieldScreen { callShieldOpen = false }
         if (settingsOpen) GuardianAlertDialog(
             onDismissRequest = { settingsOpen = false },
@@ -409,6 +443,9 @@ class GuardianInboxActivity : ComponentActivity() {
                             contactsOpen = true
                         }
                     }) { Text("Monitored Contacts") }
+                    TextButton(onClick = { settingsOpen = false; validationOpen = true }) {
+                        Text("Evaluate Nova Brain")
+                    }
                     TextButton(onClick = { settingsOpen = false; callShieldOpen = true }) { Text("Call Shield") }
                     TextButton(onClick = { settingsOpen = false; diagnostic = true }) {
                         Text("Share safe diagnostic view")

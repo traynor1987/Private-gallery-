@@ -9,6 +9,23 @@ import java.io.File
 
 @RunWith(AndroidJUnit4::class)
 class GuardianCaptureStore77Test {
+    @Test fun validationImportPreservesIndependentLabelsAndRejectsInvalidRows() {
+        val input = org.json.JSONArray()
+        repeat(40) { index ->
+            input.put(org.json.JSONObject().put("conversationId", "held-out-${index / 4}")
+                .put("text", "Fixture $index\nSecond line")
+                .put("patterns", org.json.JSONArray().apply { if (index < 20) put("GUILT") }))
+        }
+        val parsed = parseNovaBrainValidation(input.toString())
+        assertEquals(40, parsed.size)
+        assertEquals("Fixture 0\nSecond line", parsed.first().text)
+        assertEquals(setOf(NovaBrainPattern.GUILT), parsed.first().expectedPatterns)
+        assertTrue(parsed.last().expectedPatterns.isEmpty())
+        input.getJSONObject(0).put("patterns", org.json.JSONArray().put("UNKNOWN"))
+        assertTrue(runCatching { parseNovaBrainValidation(input.toString()) }.isFailure)
+        assertTrue(runCatching { parseNovaBrainValidation("[]") }.isFailure)
+    }
+
     @Test fun callActivityIsOptInEncryptedAndDeletable() {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         val store = GuardianCaptureStore(context)
