@@ -2,6 +2,9 @@
 import hmac
 import json
 import os
+from collections import deque
+from threading import Lock
+from time import monotonic
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.request import HTTPRedirectHandler, Request, build_opener
 
@@ -41,9 +44,54 @@ def authorize(header, token):
     return bool(token) and hmac.compare_digest(header.encode(), f"Bearer {token}".encode())
 
 
+class RequestLimiter:
+    """Bound request bursts for the single owner across all server threads."""
+
+    def __init__(self, limit=6, window=60, clock=monotonic):
+        self.limit = limit
+        self.window = window
+        self.clock = clock
+        self.requests = deque()
+        self.lock = Lock()
+
+    def admit(self):
+        with self.lock:
+            now = self.clock()
+            while self.requests and self.requests[0] <= now - self.window:
+                self.requests.popleft()
+            if len(self.requests) >= self.limit:
+                return False
+            self.requests.append(now)
+            return True
+
+
 class Handler(BaseHTTPRequestHandler):
     def log_message(self, *_):
         pass
+
+    def setup(self):
+        self.request.settimeout(8)
+        super().setup()
+
+    def send_json(self, value):
+        body = json.dumps(value).encode()
+        self.send_response(200)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Cache-Control", "no-store")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
+    def do_GET(self):
+        if self.path == "/health":
+            self.send_json({"status": "ok"})
+        elif self.path != "/guardian/status":
+            self.send_error(404)
+        elif not authorize(self.headers.get("Authorization", ""), self.server.owner_token):
+            self.send_error(401)
+        else:
+            self.send_json({"status": "authenticated", "model": self.server.model,
+                            "analysis_enabled": self.server.analysis_enabled})
 
     def do_POST(self):
         if self.path != "/guardian/analyze":
@@ -63,18 +111,20 @@ class Handler(BaseHTTPRequestHandler):
         except (ValueError, KeyError, TypeError, AttributeError):
             self.send_error(400)
             return
+        if not self.server.analysis_enabled:
+            self.send_error(503)
+            return
+        if not self.server.limiter.admit():
+            self.send_response(429)
+            self.send_header("Retry-After", str(self.server.limiter.window))
+            self.end_headers()
+            return
         try:
             result = analyze(text, self.server.openai_key, self.server.model)
         except Exception:
             self.send_error(502)
             return
-        body = json.dumps({"advice": result}).encode()
-        self.send_response(200)
-        self.send_header("Content-Type", "application/json")
-        self.send_header("Cache-Control", "no-store")
-        self.send_header("Content-Length", str(len(body)))
-        self.end_headers()
-        self.wfile.write(body)
+        self.send_json({"advice": result})
 
 
 if __name__ == "__main__":
@@ -84,4 +134,7 @@ if __name__ == "__main__":
         if len(server.owner_token) < 32 or server.owner_token.startswith("sk-"):
             raise ValueError("Configure an independent, random owner token")
         server.model = os.environ["NOVA_CLOUD_TEACHER_MODEL"]
+        # Hosting can be checked without allowing unmetered OpenAI requests.
+        server.analysis_enabled = False
+        server.limiter = RequestLimiter()
         server.serve_forever()

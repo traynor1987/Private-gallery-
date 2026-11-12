@@ -6,7 +6,7 @@ from http.server import ThreadingHTTPServer
 from threading import Thread
 from unittest.mock import patch
 
-from server import Handler, analyze, authorize
+from server import Handler, RequestLimiter, analyze, authorize
 
 
 class TeacherTest(unittest.TestCase):
@@ -35,6 +35,8 @@ class TeacherTest(unittest.TestCase):
             server.owner_token = "owner-test"
             server.openai_key = "server-only"
             server.model = "test"
+            server.analysis_enabled = True
+            server.limiter = RequestLimiter(limit=1)
             worker = Thread(target=server.serve_forever, daemon=True)
             worker.start()
             try:
@@ -56,7 +58,20 @@ class TeacherTest(unittest.TestCase):
                     status, body = send("owner-test", True)
                     self.assertEqual(status, 200)
                     self.assertEqual(json.loads(body), {"advice": "Advisory"})
+                    self.assertEqual(send("owner-test", True)[0], 429)
+                    server.analysis_enabled = False
+                    self.assertEqual(send("owner-test", True)[0], 503)
                     upstream.assert_called_once_with("synthetic", "server-only", "test")
             finally:
                 server.shutdown()
                 worker.join()
+
+
+    def test_limiter_reopens_at_window_boundary(self):
+        time = [0]
+        limiter = RequestLimiter(limit=1, window=60, clock=lambda: time[0])
+        self.assertTrue(limiter.admit())
+        time[0] = 59
+        self.assertFalse(limiter.admit())
+        time[0] = 60
+        self.assertTrue(limiter.admit())
