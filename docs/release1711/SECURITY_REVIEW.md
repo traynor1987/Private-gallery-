@@ -5,7 +5,7 @@ Authorization: authenticated owner push
 Physical Fold Main encrypted capture: PASS
 Physical Fold Friends separation: PASS
 Upgrade fixture SHA-256: 8ce2e127d3f891aca4e9bc9f9fcc6a2f6b29ca33baecf4ed93510129f10b11a8
-Upgrade controls SHA-256: b8851a4e28bb867f0c39170fa361f63bc4872e56f0b961f6117995b46a032c19
+Upgrade controls SHA-256: ab97bc57eac3ae5e87529717a73a72de15bf028c648d2a57a4fc513831ba6025
 Runtime matrix SHA-256: 789b0eef5c8a8383ffefa050bb69064f32a447201838e2e61e6a204ee2092694
 Runtime archive SHA-256: c7e881bd65c6073fb52420cedfefaa015656c21491a266db3e8589fb351c855a
 Signing workflow SHA-256: 66ce87633c1818d33a8174648094af50757f4f856b58f9c80a13b4fb090ed3bc
@@ -25,3 +25,5 @@ On 12 November 2026 the owner tested on a Samsung Galaxy Z Fold running Android 
 - After authenticated Guardian Inbox unlock, both Main test messages were readable.
 
 These observations cover physical notification capture and profile separation. The production-key Code 78 to 79 in-place upgrade and restart remain pending the authorised signing workflow.
+
+Production run 43218947434 verified signing and candidate identity. The upgrade runner stopped before installation because it still pinned the Code 77 APK checksum. The corrected pin is the SHA-256 of the verified distributed Code 78 APK.
