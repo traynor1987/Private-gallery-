@@ -443,6 +443,7 @@ class GuardianInboxActivity : ComponentActivity() {
                             contactsOpen = true
                         }
                     }) { Text("Monitored Contacts") }
+                    GuardianCloudTeacher { settingsOpen && canReview() }
                     TextButton(onClick = { settingsOpen = false; validationOpen = true }) {
                         Text("Evaluate Nova Brain")
                     }

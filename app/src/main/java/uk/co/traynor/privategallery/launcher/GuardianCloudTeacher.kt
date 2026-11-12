@@ -18,50 +18,49 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import java.net.URI
+import java.time.Instant
 import javax.net.ssl.HttpsURLConnection
 
-internal fun cloudTeacherEndpoint(value: String): URI {
-    val uri = URI(value.trim())
-    require(uri.scheme == "https" && uri.host != null && uri.rawUserInfo == null &&
-        uri.rawQuery == null && uri.rawFragment == null && uri.rawPath == "/guardian/analyze")
-    return uri
-}
-
-private fun requestCloudAdvice(endpoint: URI, token: String, message: String): String {
+private fun requestCloud(endpoint: URI, token: String, message: String? = null): JSONObject {
     val connection = endpoint.toURL().openConnection() as HttpsURLConnection
     try {
         connection.instanceFollowRedirects = false
         connection.connectTimeout = 8_000
         connection.readTimeout = 20_000
-        connection.requestMethod = "POST"
-        connection.doOutput = true
         connection.setRequestProperty("Authorization", "Bearer $token")
-        connection.setRequestProperty("Content-Type", "application/json; charset=utf-8")
-        val bytes = JSONObject().put("message", message).put("consent", true).toString().toByteArray()
-        connection.setFixedLengthStreamingMode(bytes.size)
-        try {
-            connection.outputStream.use { it.write(bytes) }
-        } finally {
-            bytes.fill(0)
+        if (message != null) {
+            connection.requestMethod = "POST"
+            connection.doOutput = true
+            connection.setRequestProperty("Content-Type", "application/json; charset=utf-8")
+            val bytes = JSONObject().put("message", message).put("consent", true).toString().toByteArray()
+            connection.setFixedLengthStreamingMode(bytes.size)
+            try {
+                connection.outputStream.use { it.write(bytes) }
+            } finally {
+                bytes.fill(0)
+            }
         }
         check(connection.responseCode == 200)
         val response = connection.inputStream.use { it.readNBytes(32769) }
         require(response.size <= 32768)
-        return JSONObject(response.toString(Charsets.UTF_8)).getString("advice")
-            .trim().also { require(it.length in 1..4000) }
+        return JSONObject(response.toString(Charsets.UTF_8))
     } finally {
         connection.disconnect()
     }
 }
 
 @Composable
-internal fun GuardianCloudTeacher(message: String, canSend: () -> Boolean) {
+internal fun GuardianCloudTeacher(message: String? = null, canSend: () -> Boolean) {
     var open by remember(message) { mutableStateOf(false) }
-    TextButton(onClick = { if (canSend()) open = true }) { Text("Ask Cloud Teacher") }
+    TextButton(onClick = { if (canSend()) open = true }) { Text(if (message == null) "Cloud Teacher status" else "Ask Cloud Teacher") }
     if (!open) return
     var endpoint by remember { mutableStateOf("") }
     var token by remember { mutableStateOf("") }
     var busy by remember { mutableStateOf(false) }
+    var approved by remember { mutableStateOf(false) }
+    var upload by remember(message) { mutableStateOf(message.orEmpty()) }
+    var connectionLines by remember { mutableStateOf<List<String>>(emptyList()) }
+    var lastConnection by remember { mutableStateOf<Instant?>(null) }
     var status by remember { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
     val url = remember(endpoint) { runCatching { cloudTeacherEndpoint(endpoint) }.getOrNull() }
@@ -72,28 +71,72 @@ internal fun GuardianCloudTeacher(message: String, canSend: () -> Boolean) {
         title = { Text("Cloud Teacher") },
         text = {
             Column(Modifier.heightIn(max = 420.dp).verticalScroll(rememberScrollState())) {
-                Text("Sending shares only this reviewed message with your configured backend and OpenAI. Cloud advice does not change local classification or learning.")
-                OutlinedTextField(endpoint, { endpoint = it.take(512) }, enabled = !busy,
+                Text("Local Nova Brain is available without cloud access.")
+                Text("Check an authenticated HTTPS gateway. Checking status sends only your access token.")
+                lastConnection?.let { Text("Last authenticated check: $it") }
+                connectionLines.forEach { Text(it) }
+                TextButton(enabled = !busy && url != null && validToken, onClick = {
+                    if (!canSend()) return@TextButton
+                    val target = cloudTeacherStatusEndpoint(url ?: return@TextButton)
+                    val credential = token
+                    status = null
+                    connectionLines = emptyList()
+                    busy = true
+                    scope.launch {
+                        try {
+                            val lines = withContext(Dispatchers.IO) {
+                                cloudTeacherStatusLines(requestCloud(target, credential))
+                            }
+                            if (canSend()) {
+                                connectionLines = lines
+                                lastConnection = Instant.now()
+                            }
+                        } catch (error: CancellationException) {
+                            throw error
+                        } catch (_: java.io.IOException) {
+                            status = "Gateway unreachable. Local review is available."
+                        } catch (_: Exception) {
+                            status = "Gateway rejected the request or returned an invalid status."
+                        } finally {
+                            busy = false
+                        }
+                    }
+                }) { Text("Check connection and budget") }
+                if (message != null) {
+                    Text("Only the text below is sent to your gateway and OpenAI. Edit it to remove private details.")
+                    OutlinedTextField(upload, { upload = it.take(4096); approved = false }, enabled = !busy,
+                        label = { Text("Text to send") })
+                    Row {
+                        Checkbox(approved, { approved = it }, enabled = !busy)
+                        Text("Allow cloud analysis for this request")
+                    }
+                }
+                OutlinedTextField(endpoint, { endpoint = it.take(512); approved = false; connectionLines = emptyList(); lastConnection = null }, enabled = !busy,
                     label = { Text("HTTPS backend /guardian/analyze") }, singleLine = true)
-                OutlinedTextField(token, { token = it.take(256) }, enabled = !busy,
+                OutlinedTextField(token, { token = it.take(256); approved = false; connectionLines = emptyList(); lastConnection = null }, enabled = !busy,
                     label = { Text("Backend access token") }, singleLine = true,
                     visualTransformation = PasswordVisualTransformation(),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password))
-                if (busy) Text("Waiting for cloud advice…")
+                if (busy) Text("Contacting Cloud Teacher…")
                 status?.let { Text(it) }
             }
         },
         confirmButton = {
-            TextButton(enabled = !busy && url != null && validToken, onClick = {
+            if (message != null) TextButton(enabled = !busy && url != null && validToken && approved && upload.length in 1..4096 && upload.isNotBlank(), onClick = {
                 if (!canSend()) return@TextButton
                 val approvedEndpoint = url ?: return@TextButton
                 val approvedToken = token
+                val approvedText = upload
+                approved = false
                 token = ""
                 status = null
                 busy = true
                 scope.launch {
                     try {
-                        val advice = withContext(Dispatchers.IO) { requestCloudAdvice(approvedEndpoint, approvedToken, message) }
+                        val advice = withContext(Dispatchers.IO) {
+                            requestCloud(approvedEndpoint, approvedToken, approvedText).getString("advice")
+                                .trim().also { require(it.length in 1..4000) }
+                        }
                         if (canSend()) status = "Cloud advisory · $advice"
                     } catch (error: CancellationException) {
                         throw error
