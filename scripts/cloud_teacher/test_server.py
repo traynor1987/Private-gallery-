@@ -4,7 +4,7 @@ import unittest
 from http.client import HTTPConnection
 from http.server import ThreadingHTTPServer
 from threading import Thread
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 from server import Handler, RequestLimiter, analyze, authorize
 
@@ -37,6 +37,8 @@ class TeacherTest(unittest.TestCase):
             server.model = "test"
             server.analysis_enabled = True
             server.limiter = RequestLimiter(limit=1)
+            server.budget = Mock()
+            server.budget.reserve.return_value = True
             worker = Thread(target=server.serve_forever, daemon=True)
             worker.start()
             try:

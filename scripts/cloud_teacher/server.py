@@ -2,10 +2,12 @@
 import hmac
 import json
 import os
+import sqlite3
 from collections import deque
 from threading import Lock
 from time import monotonic
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from budget import Budget, DEFAULT_LIMIT_MICRO_USD
 from urllib.request import HTTPRedirectHandler, Request, build_opener
 
 
@@ -90,8 +92,10 @@ class Handler(BaseHTTPRequestHandler):
         elif not authorize(self.headers.get("Authorization", ""), self.server.owner_token):
             self.send_error(401)
         else:
+            budget = getattr(self.server, "budget", None)
             self.send_json({"status": "authenticated", "model": self.server.model,
-                            "analysis_enabled": self.server.analysis_enabled})
+                            "analysis_enabled": self.server.analysis_enabled,
+                            "budget": budget.status() if budget else None})
 
     def do_POST(self):
         if self.path != "/guardian/analyze":
@@ -120,6 +124,13 @@ class Handler(BaseHTTPRequestHandler):
             self.end_headers()
             return
         try:
+            if not self.server.budget.reserve():
+                self.send_error(402)
+                return
+        except (OSError, ValueError, sqlite3.Error):
+            self.send_error(503)
+            return
+        try:
             result = analyze(text, self.server.openai_key, self.server.model)
         except Exception:
             self.send_error(502)
@@ -134,7 +145,15 @@ if __name__ == "__main__":
         if len(server.owner_token) < 32 or server.owner_token.startswith("sk-"):
             raise ValueError("Configure an independent, random owner token")
         server.model = os.environ["NOVA_CLOUD_TEACHER_MODEL"]
-        # Hosting can be checked without allowing unmetered OpenAI requests.
+        # No assumed credit renewal. Configuration is explicit for each funded cycle.
         server.analysis_enabled = False
+        if os.environ.get("NOVA_CLOUD_CREDIT_CYCLE"):
+            server.budget = Budget(
+                os.environ["NOVA_CLOUD_BUDGET_DB"], os.environ["NOVA_CLOUD_CREDIT_CYCLE"],
+                int(os.environ["NOVA_CLOUD_CREDIT_EXPIRY"]), int(os.environ["NOVA_CLOUD_CONFIRMED_CREDIT_MICRO_USD"]),
+                int(os.environ["NOVA_CLOUD_MAX_REQUEST_MICRO_USD"]),
+                int(os.environ.get("NOVA_CLOUD_LIMIT_MICRO_USD", DEFAULT_LIMIT_MICRO_USD)),
+            )
+            server.analysis_enabled = True
         server.limiter = RequestLimiter()
         server.serve_forever()
