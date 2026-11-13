@@ -1,5 +1,7 @@
 package uk.co.traynor.privategallery.launcher
 
+import android.Manifest
+import android.content.pm.PackageManager
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -19,13 +21,20 @@ internal object GuardianSafeNotifications {
         if (conversation.app != GUARDIAN_WHATSAPP) return "SMS/MMS"
         val own = context.getSystemService(android.os.UserManager::class.java)
             ?.getSerialNumberForUser(android.os.Process.myUserHandle())
-        return when {
-            own == null || own < 0 || conversation.profile < 0 -> "WhatsApp · profile unknown"
-            conversation.profile == own -> "Main WhatsApp"
-            conversation.profile == uk.co.traynor.privategallery.core.sanctuary.SanctuaryStore.get(context)
-                .launcherSettings().friendsWhatsApp -> "Friends WhatsApp"
-            else -> "WhatsApp · profile unknown"
+        return when (guardianNoticeProfile(conversation.profile, own,
+            GuardianNotificationListener.configuredFriendsSerial(context))) {
+            ProbeAccount.MAIN -> "Main WhatsApp"
+            ProbeAccount.FRIENDS -> "Friends WhatsApp"
+            ProbeAccount.UNRESOLVED -> "WhatsApp · profile unknown"
         }
+    }
+
+    fun mayPost(context: Context): Boolean =
+        context.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED &&
+            context.getSystemService(NotificationManager::class.java)?.areNotificationsEnabled() == true
+
+    fun cancel(context: Context) {
+        context.getSystemService(NotificationManager::class.java)?.cancel(TAG, ID)
     }
 
     fun post(context: Context, row: GuardianInboxRow) {
@@ -38,9 +47,11 @@ internal object GuardianSafeNotifications {
             "SMS/MMS" -> "sms"
             else -> return
         }
-        if (!settings.getBoolean(key, false)) return
+        if (!settings.getBoolean(key, false) || !mayPost(context)) return
+        if (settings.getBoolean("quiet", false) && guardianNoticeQuietHour(
+                java.time.LocalTime.now().hour, settings.getInt("quiet_start", 22), settings.getInt("quiet_end", 7),
+            )) return
         val manager = context.getSystemService(NotificationManager::class.java) ?: return
-        if (!manager.areNotificationsEnabled()) return
         val kind = guardianNoticeKind(row.assessment, row.patterns.orEmpty())
         val text = "${kind.title} · $source"
         val icon = if (kind == GuardianNoticeKind.LOW && settings.getBoolean("tick", true)) "✓ " else ""
@@ -58,6 +69,8 @@ internal object GuardianSafeNotifications {
             .setAutoCancel(true)
             .setTimeoutAfter(settings.getInt("duration", 15).coerceIn(5, 60) * 1000L)
             .setContentIntent(route)
+            .addAction(Notification.Action.Builder(android.graphics.drawable.Icon.createWithResource(context, android.R.drawable.ic_lock_lock),
+                "Open Safe Notifications", route).build())
             .build()
         manager.notify(TAG, ID, notification)
     }

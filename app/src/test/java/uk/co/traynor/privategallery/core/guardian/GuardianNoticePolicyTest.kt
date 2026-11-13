@@ -1,9 +1,30 @@
 package uk.co.traynor.privategallery.core.guardian
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class GuardianNoticePolicyTest {
+    @Test fun routingRequiresAnExactProfileAndRejectsConflictingEnrollment() {
+        assertEquals(ProbeAccount.MAIN, guardianNoticeProfile(0, 0, 150))
+        assertEquals(ProbeAccount.FRIENDS, guardianNoticeProfile(150, 0, 150))
+        assertEquals(ProbeAccount.UNRESOLVED, guardianNoticeProfile(151, 0, 150))
+        assertEquals(ProbeAccount.UNRESOLVED, guardianNoticeProfile(150, 0, null))
+        assertEquals(ProbeAccount.UNRESOLVED, guardianNoticeProfile(0, 0, 0))
+        assertEquals(ProbeAccount.UNRESOLVED, guardianNoticeProfile(150, null, 150))
+    }
+
+    @Test fun quietHoursHandleMidnightAndUseAnExclusiveEnd() {
+        assertTrue(guardianNoticeQuietHour(22, 22, 7))
+        assertTrue(guardianNoticeQuietHour(0, 22, 7))
+        assertFalse(guardianNoticeQuietHour(7, 22, 7))
+        assertFalse(guardianNoticeQuietHour(21, 22, 7))
+        assertTrue(guardianNoticeQuietHour(12, 9, 17))
+        assertFalse(guardianNoticeQuietHour(17, 9, 17))
+        assertFalse(guardianNoticeQuietHour(12, 12, 12))
+    }
+
     @Test fun explicitInsultTakesPriorityOverLowConcern() {
         val patterns = recogniseNovaBrainPatterns("You're a worthless idiot. I will never help you again.")
         assertEquals(GuardianNoticeKind.HIGH, guardianNoticeKind(GuardianAssessment.LOW_RISK, patterns))

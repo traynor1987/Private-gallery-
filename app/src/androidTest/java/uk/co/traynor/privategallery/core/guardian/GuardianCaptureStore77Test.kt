@@ -9,6 +9,28 @@ import java.io.File
 
 @RunWith(AndroidJUnit4::class)
 class GuardianCaptureStore77Test {
+    @Test fun archiveReopensFromAtomicBackupWithoutLosingEncryptedHistory() {
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        val store = GuardianCaptureStore(context)
+        store.clear()
+        try {
+            val now = guardianInboxClock(context)
+            val event = GuardianCaptureEvent(0, "recovery-fixture", now.wall,
+                listOf(GuardianCaptureEntry(now.wall, "fixture", "Synthetic archive recovery message")))
+            assertTrue(store.append(event, 7, now.wall, assess = false, clock = now).allDurable)
+            val archive = File(context.noBackupFilesDir, GuardianCaptureStore.ARCHIVE_NAME)
+            val original = archive.readBytes()
+            val backup = File(archive.path + ".bak")
+            assertTrue(archive.renameTo(backup))
+            archive.writeBytes(byteArrayOf(0))
+            assertEquals(1, GuardianCaptureStore(context).inboxRows(7, now).size)
+            assertArrayEquals(original, archive.readBytes())
+            assertFalse(backup.exists())
+        } finally {
+            store.clear()
+        }
+    }
+
     @Test fun personalImpactRejectsInvalidTagAndMissingKeyWithoutReplacingData() {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         val store = GuardianCaptureStore(context)

@@ -37,13 +37,8 @@ internal class GuardianNotificationListener : NotificationListenerService() {
     private val callWorker = ThreadPoolExecutor(1, 1, 0L, TimeUnit.MILLISECONDS,
         ArrayBlockingQueue(16), ThreadPoolExecutor.DiscardPolicy())
 
-    private fun configuredFriendsSerial(): Long? = SanctuaryStore.get(this).launcherSettings().friendsWhatsApp
-        ?.let(LauncherAppIdentity::parse)
-        ?.takeIf { it.flattenedComponent.substringBefore('/') == GUARDIAN_WHATSAPP }
-        ?.profileSerial
-
     private fun trustedFriendsWhatsApp(sbn: StatusBarNotification, personal: Boolean, serial: Long): Boolean =
-        probeAccount(personal, serial, configuredFriendsSerial()) == ProbeAccount.FRIENDS &&
+        probeAccount(personal, serial, configuredFriendsSerial(this)) == ProbeAccount.FRIENDS &&
             sbn.packageName == GUARDIAN_WHATSAPP && sbn.opPkg == GUARDIAN_WHATSAPP &&
             runCatching {
                 getSystemService(LauncherApps::class.java)
@@ -87,7 +82,7 @@ internal class GuardianNotificationListener : NotificationListenerService() {
                 .getOrNull() != sbn.uid) return
         callWorker.execute {
             runCatching {
-                val account = probeAccount(personal, serial, configuredFriendsSerial())
+                val account = probeAccount(personal, serial, configuredFriendsSerial(this))
                 if (!personal && !trustedFriendsWhatsApp(sbn, personal, serial)) return@runCatching
                 val archive = GuardianCaptureStore(this)
                 val (enabled, rules) = archive.phoneShieldSettings()
@@ -595,13 +590,17 @@ internal class GuardianNotificationListener : NotificationListenerService() {
         fun hasAccess(context: Context): Boolean = context.getSystemService(NotificationManager::class.java)
             ?.isNotificationListenerAccessGranted(ComponentName(context, GuardianNotificationListener::class.java)) == true
 
+        internal fun configuredFriendsSerial(context: Context): Long? =
+            SanctuaryStore.get(context).launcherSettings().friendsWhatsApp
+                ?.let(LauncherAppIdentity::parse)
+                ?.takeIf { it.flattenedComponent.substringBefore('/') == GUARDIAN_WHATSAPP }
+                ?.profileSerial
+
         fun startProbe(context: Context, discoveredCloneSerial: Long? = null) {
             if (!hasAccess(context) || !status.value.connected) return
             handler.removeCallbacks(timeout)
             probe = NotificationProbe()
-            probeFriendsSerial = discoveredCloneSerial ?: SanctuaryStore.get(context).launcherSettings().friendsWhatsApp
-                ?.let(LauncherAppIdentity::parse)?.takeIf { it.flattenedComponent.substringBefore('/') == GUARDIAN_WHATSAPP }
-                ?.profileSerial
+            probeFriendsSerial = discoveredCloneSerial ?: configuredFriendsSerial(context)
             deadline = SystemClock.elapsedRealtime() + PROBE_MILLIS
             status.value = status.value.copy(running = true, results = emptyMap(), calls = emptyMap())
             handler.postDelayed(timeout, PROBE_MILLIS)
@@ -628,6 +627,7 @@ internal class GuardianNotificationListener : NotificationListenerService() {
             if (externalAttempt != null) dismissalFailed("Notification listener disconnected.")
             if (synthetic != null) finishSynthetic(SyntheticResult.DISCONNECTED)
             if (!hasAccess(context)) {
+                uk.co.traynor.privategallery.launcher.GuardianSafeNotifications.cancel(context)
                 foldFixtureVerified = false
                 setAutomaticDismissal(context, false)
                 if (GuardianCapture.isEnabled(context)) GuardianCapture.setEnabled(context, false)

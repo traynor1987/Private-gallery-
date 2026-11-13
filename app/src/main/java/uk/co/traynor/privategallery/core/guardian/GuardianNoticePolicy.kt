@@ -14,3 +14,15 @@ internal fun guardianNoticeKind(assessment: GuardianAssessment?, patterns: Set<N
         assessment == GuardianAssessment.LOW_RISK -> GuardianNoticeKind.LOW
         else -> GuardianNoticeKind.UNCERTAIN
     }
+
+internal fun guardianNoticeProfile(profile: Long, own: Long?, friends: Long?): ProbeAccount {
+    if (own == null || own < 0) return ProbeAccount.UNRESOLVED
+    return probeAccount(profile == own, profile, friends)
+}
+
+internal fun guardianNoticeQuietHour(hour: Int, start: Int, end: Int): Boolean =
+    when {
+        hour !in 0..23 || start !in 0..23 || end !in 0..23 || start == end -> false
+        start < end -> hour in start until end
+        else -> hour >= start || hour < end
+    }

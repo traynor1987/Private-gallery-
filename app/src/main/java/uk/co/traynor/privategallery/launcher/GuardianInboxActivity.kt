@@ -553,8 +553,9 @@ class GuardianInboxActivity : ComponentActivity() {
         )
     }
 
+    private var noticePermissionRevision by mutableIntStateOf(0)
     private val requestNoticePermission =
-        registerForActivityResult(ActivityResultContracts.RequestPermission()) { }
+        registerForActivityResult(ActivityResultContracts.RequestPermission()) { noticePermissionRevision++ }
 
     @Composable
     private fun ColumnScope.SafeCentre() {
@@ -580,7 +581,7 @@ class GuardianInboxActivity : ComponentActivity() {
             }
         }
         if (safeSettings) {
-            val preferences = remember { GuardianSafeNotifications.prefs(this) }
+            val preferences = remember { GuardianSafeNotifications.prefs(this@GuardianInboxActivity) }
             var revision by remember { mutableIntStateOf(0) }
             GuardianAlertDialog(
                 onDismissRequest = { safeSettings = false },
@@ -588,15 +589,41 @@ class GuardianInboxActivity : ComponentActivity() {
                 text = {
                     Column(Modifier.heightIn(max = 420.dp).verticalScroll(rememberScrollState())) {
                         Text("Pop-ups are optional. Android controls heads-up display time, sound and vibration. Guardian always hides previews on the lock screen.")
+                        key(noticePermissionRevision) {
+                            Text(if (GuardianSafeNotifications.mayPost(this@GuardianInboxActivity))
+                                "Android notification posting allowed" else "Android notification posting disabled")
+                        }
                         key(revision) {
                             listOf("enabled" to "Enable Nova Guardian pop-ups", "main" to "Main WhatsApp",
                                 "friends" to "Friends WhatsApp", "sms" to "Monitored SMS/MMS", "tick" to "Low-concern tick")
                                 .forEach { (id, label) ->
                                     LauncherToggle(label, preferences.getBoolean(id, id == "tick")) { enabled ->
                                         preferences.edit().putBoolean(id, enabled).apply()
+                                        if (!enabled && id != "tick") GuardianSafeNotifications.cancel(this@GuardianInboxActivity)
                                         revision++
                                     }
                                 }
+                            LauncherToggle("Quiet hours", preferences.getBoolean("quiet", false)) { enabled ->
+                                preferences.edit().putBoolean("quiet", enabled).apply()
+                                revision++
+                            }
+                            if (preferences.getBoolean("quiet", false)) {
+                                var start by remember { mutableStateOf(preferences.getInt("quiet_start", 22).toString()) }
+                                var end by remember { mutableStateOf(preferences.getInt("quiet_end", 7).toString()) }
+                                OutlinedTextField(start, { start = it.filter(Char::isDigit).take(2) },
+                                    label = { Text("Start hour (0–23)") }, singleLine = true)
+                                OutlinedTextField(end, { end = it.filter(Char::isDigit).take(2) },
+                                    label = { Text("End hour (0–23)") }, singleLine = true)
+                                val startHour = start.toIntOrNull()?.takeIf { it in 0..23 }
+                                val endHour = end.toIntOrNull()?.takeIf { it in 0..23 }
+                                TextButton(enabled = startHour != null && endHour != null && startHour != endHour,
+                                    onClick = {
+                                        preferences.edit().putInt("quiet_start", checkNotNull(startHour))
+                                            .putInt("quiet_end", checkNotNull(endHour)).apply()
+                                        revision++
+                                    }) { Text("Save quiet hours") }
+                                Text("Quiet hours silence Nova Guardian pop-ups. Capture and Sanctuary still follow their own settings.")
+                            }
                             Text("Clear posted alert after ${preferences.getInt("duration", 15)} seconds")
                             Row {
                                 listOf(5, 15, 60).forEach { seconds ->
