@@ -159,7 +159,7 @@ private fun LauncherExitConfirmation(protection: LauncherExitProtection, challen
 }
 
 @Composable
-private fun LauncherExitHold(started: Long?, onStart: () -> Boolean, onEnd: (Boolean) -> Unit) {
+internal fun LauncherExitHold(started: Long?, onStart: () -> Boolean, onEnd: (Boolean) -> Unit, tag: String = "launcher-exit-hold") {
     var progress by remember { mutableFloatStateOf(0f) }
     val windowFocused = LocalWindowInfo.current.isWindowFocused
     LaunchedEffect(started) {
@@ -183,7 +183,7 @@ private fun LauncherExitHold(started: Long?, onStart: () -> Boolean, onEnd: (Boo
         shape = MaterialTheme.shapes.medium,
         border = BorderStroke(if (focused) 2.dp else 1.dp, MaterialTheme.colorScheme.primary),
         color = MaterialTheme.colorScheme.primaryContainer,
-        modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp).testTag("launcher-exit-hold")
+        modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp).testTag(tag)
             .onFocusChanged {
                 focused = it.isFocused
                 if (!focused && heldKey != KeyEvent.KEYCODE_UNKNOWN) {

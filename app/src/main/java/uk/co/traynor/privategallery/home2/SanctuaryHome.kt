@@ -35,6 +35,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
@@ -273,6 +274,10 @@ internal fun SanctuaryHome(
 internal fun SanctuarySettings(store: SanctuaryStore, onEnded: () -> Unit, onBack: () -> Unit) {
     val session by store.current.collectAsState()
     val activity = LocalActivity.current
+    val context = LocalContext.current.applicationContext
+    val activeSession = session
+    val rules = remember(activeSession?.id) { activeSession?.let { sanctuaryChallenges(context, it.mode) } ?: SanctuaryChallenges() }
+    var challengeReady by remember(activeSession?.id) { mutableStateOf(rules.passed(false, false, false)) }
     val sessionId = session?.id
     val pauseRequest = remember(sessionId) { mutableStateOf<CancellationSignal?>(null) }
     var pauseUnavailable by remember(sessionId) { mutableStateOf(false) }
@@ -301,9 +306,10 @@ internal fun SanctuarySettings(store: SanctuaryStore, onEnded: () -> Unit, onBac
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth().testTag("sanctuary-end-phrase"),
             )
+            activeSession?.let { SanctuaryChallengeSteps(it, rules) { ready -> challengeReady = ready } }
             Button(
                 onClick = { confirming = true },
-                enabled = phrase == SanctuaryStore.END_PHRASE,
+                enabled = phrase == SanctuaryStore.END_PHRASE && challengeReady,
                 modifier = Modifier.heightIn(min = 48.dp).testTag("sanctuary-end-review"),
             ) { Text("Review end session") }
             if (failure) Text("The session could not be ended.", color = MaterialTheme.colorScheme.error)
@@ -329,6 +335,10 @@ internal fun SanctuarySettings(store: SanctuaryStore, onEnded: () -> Unit, onBac
                 if (pauseUnavailable) Text("Could not start authentication. Check your Android screen lock.", color = MaterialTheme.colorScheme.error)
             }
         }
+        if (activeSession == null) SanctuaryChallengeSettings(context)
+        if (activeSession != null && activity != null && !rules.passed(false, false, false)) {
+            SanctuaryChallengeRecovery(activity, store, activeSession.id, onEnded)
+        }
         SanctuaryRecoveryNote()
         if (activity != null) TextButton(onClick = { GuardianInboxActivity.openPersonalImpact(activity) }) {
             Text("Review personal impact in Guardian")
@@ -342,7 +352,7 @@ internal fun SanctuarySettings(store: SanctuaryStore, onEnded: () -> Unit, onBac
             confirmButton = {
                 TextButton(onClick = {
                     confirming = false
-                    if (store.end(phrase)) onEnded() else failure = true
+                    if (challengeReady && store.refresh()?.id == sessionId && store.end(phrase)) onEnded() else failure = true
                 }, modifier = Modifier.testTag("sanctuary-confirm-end")) { Text("End session") }
             },
             dismissButton = { TextButton(onClick = { confirming = false }) { Text("Keep session") } },
