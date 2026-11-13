@@ -256,10 +256,10 @@ internal class GuardianCaptureStore private constructor(private val context: Con
         val rows = readImpact(impactArchive(), System.currentTimeMillis())
         val reports = rows.drop(1)
         val examples = reports.mapNotNull { row ->
-            row.optString("group").takeIf(String::isNotBlank)?.let { PersonalImpactExample(it, PersonalImpact.decode(row)) }
+            row.optString("group").takeIf(String::isNotBlank)?.let { Triple(it, row.getLong("savedAt"), PersonalImpact.decode(row)) }
         }
         summarizePersonalImpact(reports.map(PersonalImpact::decode)) to
-            validatePersonalImpact(impactSettings(rows.firstOrNull()), examples)
+            validateConversationImpact(impactSettings(rows.firstOrNull()), examples)
     }
 
     private fun validationArchive() = GuardianCaptureStore(context, training = false, validation = true)

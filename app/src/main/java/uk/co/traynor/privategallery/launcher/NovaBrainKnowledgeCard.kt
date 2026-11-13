@@ -51,7 +51,7 @@ internal fun NovaBrainKnowledgeCard(showPersonalImpact: Boolean = false) {
         }
         if (details) {
             impact?.let { (summary, result) ->
-                Text("Personal impact baseline · " + if (result == null) "Not yet validated"
+                Text("Personal impact · conversation prediction · " + if (result == null) "Not yet validated"
                     else "${(100.0 * result.correct / result.tested).roundToInt()}% on ${result.tested} held-out conversations")
                 result?.let { validated ->
                     fun rate(value: Double?) = value?.let { "${(it * 100).roundToInt()}%" } ?: "Not yet validated"

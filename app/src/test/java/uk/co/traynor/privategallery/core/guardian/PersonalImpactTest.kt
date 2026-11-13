@@ -54,4 +54,16 @@ class PersonalImpactTest {
             summarizePersonalImpact(listOf(example))).isEmpty())
         assertTrue(personalImpactSuggestions(PersonalImpactSettings(true, true), reports).single().contains("3 times"))
     }
+    @Test fun conversationValidationUsesOnlyEarlierFeedbackAndOneTestPerThread() {
+        val settings = PersonalImpactSettings(true, true)
+        val rows = (0 until 10).flatMap { thread ->
+            (1L..3L).map { Triple("$thread", it, example) } +
+                Triple("$thread", 4L, example.copy(impact = if (thread < 4) MessageImpact.FINE else MessageImpact.UPSETTING))
+        }
+        val measured = checkNotNull(validateConversationImpact(settings, rows))
+        assertEquals(10, measured.tested)
+        assertEquals(6, measured.correct)
+        assertEquals(1.0, measured.falsePositiveRate()!!, 0.0)
+        assertNull(validateConversationImpact(settings, rows.map { it.copy(second = 1L) }))
+    }
 }

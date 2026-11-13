@@ -122,3 +122,29 @@ internal fun validatePersonalImpact(
         },
     )
 }
+
+/** Evaluate the same majority predictor as review, using only strictly earlier reports. */
+internal fun validateConversationImpact(
+    settings: PersonalImpactSettings,
+    entries: List<Triple<String, Long, PersonalImpact>>,
+): PersonalImpactValidation? {
+    if (!settings.collect || !settings.learn) return null
+    val predictions = entries.filterNot { it.third.excluded }.groupBy { it.first }.values.mapNotNull { group ->
+        // One final test observation per conversation prevents a busy thread dominating.
+        val latest = group.maxByOrNull { it.second } ?: return@mapNotNull null
+        val actual = latest.third.impact ?: return@mapNotNull null
+        val predicted = predictPersonalImpact(settings, group.filter { it.second < latest.second }.map { it.third })
+            ?: return@mapNotNull null
+        actual to predicted
+    }
+    if (predictions.size < 10 || predictions.map { it.first }.distinct().size < 2) return null
+    val upsetting = predictions.count { it.first == MessageImpact.UPSETTING }
+    return PersonalImpactValidation(
+        predictions.count { it.first == it.second }, predictions.size,
+        predictions.count { it.first != MessageImpact.UPSETTING && it.second == MessageImpact.UPSETTING },
+        predictions.size - upsetting,
+        predictions.count { it.first == MessageImpact.UPSETTING && it.second != MessageImpact.UPSETTING },
+        upsetting,
+        predictions.groupBy { it.first }.mapValues { (_, rows) -> rows.count { it.first == it.second } to rows.size },
+    )
+}
