@@ -9,6 +9,32 @@ import java.io.File
 
 @RunWith(AndroidJUnit4::class)
 class GuardianCaptureStore77Test {
+    @Test fun personalImpactRejectsInvalidTagAndMissingKeyWithoutReplacingData() {
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        val store = GuardianCaptureStore(context)
+        store.clearPersonalImpact()
+        try {
+            store.savePersonalImpactSettings(PersonalImpactSettings(collect = true))
+            val file = File(context.noBackupFilesDir, "nova-personal-impact-v1.enc")
+            val original = file.readBytes()
+            val damaged = original.copyOf()
+            damaged[damaged.lastIndex] = (damaged.last().toInt() xor 1).toByte()
+            file.writeBytes(damaged)
+            assertTrue(runCatching { store.personalImpactSettings() }.isFailure)
+            assertArrayEquals(damaged, file.readBytes())
+            file.writeBytes(original)
+            assertTrue(store.personalImpactSettings().collect)
+            java.security.KeyStore.getInstance("AndroidKeyStore").apply {
+                load(null)
+                deleteEntry("nova-personal-impact-v1")
+            }
+            assertTrue(runCatching { store.personalImpactSettings() }.isFailure)
+            assertArrayEquals(original, file.readBytes())
+        } finally {
+            store.clearPersonalImpact()
+        }
+    }
+
     @Test fun evidenceFeedbackUpsertsAndDeletingReferencesLeavesOtherReports() {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         val store = GuardianCaptureStore(context)

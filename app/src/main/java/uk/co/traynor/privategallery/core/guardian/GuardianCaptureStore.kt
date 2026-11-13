@@ -32,7 +32,7 @@ internal data class GuardianCaptureEvent(
     val requiresContactConsent: Boolean = false,
 )
 
-internal data class GuardianCaptureResult(val added: Int, val retained: Int, val partial: Boolean, val allDurable: Boolean = false)
+internal data class GuardianCaptureResult(val added: Int, val retained: Int, val partial: Boolean, val allDurable: Boolean = false, val addedIds: Set<String> = emptySet())
 
 internal data class GuardianInboxRow(
     val id: String, val time: Long, val section: GuardianInboxSection, val remainingMillis: Long,
@@ -485,12 +485,13 @@ internal class GuardianCaptureStore private constructor(private val context: Con
         val retained = (existing + incoming.filterKeys { it !in existing }).values
             .sortedByDescending { it.getLong("messageAt") }.take(MAX_RECORDS)
         val ids = retained.mapTo(HashSet()) { it.getString("id") }
-        val added = incoming.keys.count { it in ids && it !in existing }
+        val addedIds = incoming.keys.filterTo(linkedSetOf()) { it in ids && it !in existing }
+        val added = addedIds.size
         if (added > 0 || stored.size != live.size) write(retained)
         val readable = retained.filterNot { it.optBoolean("deleted") }.mapTo(HashSet()) { it.getString("id") }
         val partial = candidates.size != event.entries.size
         GuardianCaptureResult(added, readable.size, partial,
-            added > 0 && !partial && incoming.keys.all { it in readable })
+            added > 0 && !partial && incoming.keys.all { it in readable }, addedIds)
     }
 
     fun assessCaptured(event: GuardianCaptureEvent, days: Int, now: GuardianInboxClock) = synchronized(lock) {

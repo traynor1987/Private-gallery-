@@ -144,6 +144,9 @@ internal fun GuardianHome(
                         IconButton(onClick = onSettings) { Icon(Icons.Outlined.Tune, "Settings", tint = GuardianMuted) }
                     }
 
+                    if (activity != null) TextButton(onClick = {
+                        activity.startActivity(GuardianInboxActivity.safeNotificationsIntent(activity))
+                    }) { Text("Safe Notifications Centre") }
                     NovaBrainKnowledgeCard()
 
                     val protection = when {

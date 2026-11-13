@@ -71,6 +71,8 @@ class GuardianInboxActivity : ComponentActivity() {
     private var pastImpact by mutableStateOf<MessageImpact?>(null)
     private var impactFeedback by mutableStateOf<PersonalImpact?>(null)
     private var clearImpactOpen by mutableStateOf(false)
+    private var safeCentre by mutableStateOf(false)
+    private var safeSettings by mutableStateOf(false)
     private var validationOpen by mutableStateOf(false)
     private var callShieldOpen by mutableStateOf(false)
     private val privacy by lazy { getSharedPreferences("guardian_inbox_privacy", MODE_PRIVATE) }
@@ -118,6 +120,7 @@ class GuardianInboxActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        safeCentre = intent.getBooleanExtra(SAFE_CENTRE, false)
         linkedMessageId = intent.getStringExtra(LINKED_MESSAGE)
         intent.removeExtra(LINKED_MESSAGE)
         showSenders = privacy.getBoolean("authenticated_sender_names", true)
@@ -141,7 +144,7 @@ class GuardianInboxActivity : ComponentActivity() {
                                     Icon(Icons.AutoMirrored.Outlined.ArrowBack, "Back", tint = GuardianBlue)
                                 }
                                 Column(Modifier.weight(1f)) {
-                                    Text(if (thread == null && detail == null) "Guardian Inbox" else "Guardian Conversation",
+                                    Text(if (thread == null && detail == null) (if (safeCentre) "Safe Notifications" else "Guardian Inbox") else "Guardian Conversation",
                                         Modifier.semantics { heading() }, style = MaterialTheme.typography.headlineSmall)
                                     Text(if (thread != null) conversationSubtitle(thread) else detail?.let { row -> listOfNotNull(row.senderName.takeIf { showSenders }, appLabel(row.conversation)).joinToString(" · ") } ?: "Protected by Nova Guardian",
                                         color = GuardianMuted, style = MaterialTheme.typography.bodyMedium)
@@ -188,6 +191,7 @@ class GuardianInboxActivity : ComponentActivity() {
                                 if (contactsOpen && !diagnostic) MonitoredContacts()
                                 else if (thread != null || detail != null) ConversationDetail(thread)
                                 else if (conversationsOpen && !diagnostic) Conversations()
+                                else if (safeCentre && !diagnostic) SafeCentre()
                                 else InboxContent(redacted = diagnostic)
                             }
                             else Column(Modifier.weight(1f).verticalScroll(rememberScrollState())) {
@@ -250,6 +254,7 @@ class GuardianInboxActivity : ComponentActivity() {
         impactFeedback = null
         pastImpact = null
         clearImpactOpen = false
+        safeSettings = false
         validationOpen = false
         callShieldOpen = false
         diagnostic = false
@@ -548,9 +553,76 @@ class GuardianInboxActivity : ComponentActivity() {
         )
     }
 
-    private fun appLabel(key: GuardianConversationKey?): String =
-        if (key == null || key.app == GUARDIAN_WHATSAPP) "WhatsApp · Main"
-        else "SMS/MMS · ${key.app}"
+    private val requestNoticePermission =
+        registerForActivityResult(ActivityResultContracts.RequestPermission()) { }
+
+    @Composable
+    private fun ColumnScope.SafeCentre() {
+        Text("Local classifications can be uncertain. Previews stay hidden here.", color = GuardianMuted)
+        TextButton(onClick = { safeSettings = true }) { Text("Safe Notifications settings") }
+        if (rows.isEmpty()) Text("No retained notifications.")
+        LazyColumn(Modifier.fillMaxWidth().weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            items(rows, key = { it.id }) { row ->
+                val kind = guardianNoticeKind(row.assessment, row.patterns.orEmpty())
+                val color = when (kind) {
+                    GuardianNoticeKind.LOW -> GuardianMint
+                    GuardianNoticeKind.UPSETTING, GuardianNoticeKind.HIGH -> androidx.compose.ui.graphics.Color(0xFFFFC879)
+                    GuardianNoticeKind.UNCERTAIN -> GuardianMuted
+                }
+                GuardianCard(kind.title, badge = appLabel(row.conversation), badgeColor = color) {
+                    Text(kind.description)
+                    row.patterns.orEmpty().takeIf { it.isNotEmpty() }?.let { cues ->
+                        Text(cues.joinToString { it.label })
+                    }
+                    if (row.section == GuardianInboxSection.COOLING) Text("Cooling down · content hidden")
+                    TextButton(enabled = !busy, onClick = { reveal(row) }) { Text("Open protected review") }
+                }
+            }
+        }
+        if (safeSettings) {
+            val preferences = remember { GuardianSafeNotifications.prefs(this) }
+            var revision by remember { mutableIntStateOf(0) }
+            GuardianAlertDialog(
+                onDismissRequest = { safeSettings = false },
+                title = { Text("Safe Notifications settings") },
+                text = {
+                    Column(Modifier.heightIn(max = 420.dp).verticalScroll(rememberScrollState())) {
+                        Text("Pop-ups are optional. Android controls heads-up display time, sound and vibration. Guardian always hides previews on the lock screen.")
+                        key(revision) {
+                            listOf("enabled" to "Enable Nova Guardian pop-ups", "main" to "Main WhatsApp",
+                                "friends" to "Friends WhatsApp", "sms" to "Monitored SMS/MMS", "tick" to "Low-concern tick")
+                                .forEach { (id, label) ->
+                                    LauncherToggle(label, preferences.getBoolean(id, id == "tick")) { enabled ->
+                                        preferences.edit().putBoolean(id, enabled).apply()
+                                        revision++
+                                    }
+                                }
+                            Text("Clear posted alert after ${preferences.getInt("duration", 15)} seconds")
+                            Row {
+                                listOf(5, 15, 60).forEach { seconds ->
+                                    TextButton(onClick = {
+                                        preferences.edit().putInt("duration", seconds).apply()
+                                        revision++
+                                    }) { Text("${seconds}s") }
+                                }
+                            }
+                        }
+                        TextButton(onClick = { requestNoticePermission.launch(android.Manifest.permission.POST_NOTIFICATIONS) }) {
+                            Text("Request Android notification permission")
+                        }
+                    }
+                },
+                confirmButton = { TextButton(onClick = { safeSettings = false }) { Text("Done") } },
+                properties = DialogProperties(securePolicy = SecureFlagPolicy.SecureOn),
+            )
+        }
+    }
+
+    private fun appLabel(key: GuardianConversationKey?): String = when {
+        key == null -> "Unknown source"
+        key.app != GUARDIAN_WHATSAPP -> "SMS/MMS · ${key.app}"
+        else -> GuardianSafeNotifications.source(this, key)
+    }
 
     @Composable
     private fun MessageCard(row: GuardianInboxRow, redacted: Boolean) {
@@ -858,6 +930,10 @@ class GuardianInboxActivity : ComponentActivity() {
     }
 
     companion object {
+        private const val SAFE_CENTRE = "guardian-safe-centre"
+        internal fun safeNotificationsIntent(context: android.content.Context) =
+            Intent(context, GuardianInboxActivity::class.java).putExtra(SAFE_CENTRE, true)
+
         private const val SECTION = "guardian-inbox-section"
         private const val OPEN_IMPACT = "guardian-open-personal-impact"
         private const val LINKED_MESSAGE = "guardian-linked-message"

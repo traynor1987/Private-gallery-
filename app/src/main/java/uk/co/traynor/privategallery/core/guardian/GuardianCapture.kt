@@ -130,6 +130,18 @@ internal object GuardianCapture {
                 if (captured != null && captured.added > 0) {
                     // Classification may fail independently. A durable row remains Awaiting Analysis.
                     runCatching { store.assessCaptured(event, days, now) }
+                    if (captured.allDurable && !quietCollection && generation.get() == expected) runCatching {
+                        val added = store.inboxRows(days, now).filter { it.id in captured.addedIds }
+                        val row = added.maxByOrNull { guardianNoticeKind(it.assessment, it.patterns.orEmpty()).let { kind ->
+                            when (kind) {
+                                GuardianNoticeKind.HIGH -> 3
+                                GuardianNoticeKind.UPSETTING -> 2
+                                GuardianNoticeKind.UNCERTAIN -> 1
+                                GuardianNoticeKind.LOW -> 0
+                            }
+                        } }
+                        if (row != null) uk.co.traynor.privategallery.launcher.GuardianSafeNotifications.post(app, row)
+                    }
                 }
                 val counts = runCatching { store.inboxCounts(days, now) }.getOrNull()
                 if (mainMessage) noteMainCapture(when {
