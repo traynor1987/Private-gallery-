@@ -123,17 +123,35 @@ internal fun validatePersonalImpact(
     )
 }
 
-/** Evaluate the same majority predictor as review, using only strictly earlier reports. */
+internal data class ConversationImpactReport(
+    val conversation: String,
+    val capturedAt: Long,
+    val reportedAt: Long,
+    val feedback: PersonalImpact,
+)
+
+internal fun priorConversationImpact(
+    entries: List<ConversationImpactReport>,
+    capturedBefore: Long,
+    reportedBefore: Long,
+): List<PersonalImpact> = entries.filter {
+    it.capturedAt < capturedBefore && it.reportedAt < reportedBefore
+}.map { it.feedback }
+
+/** Evaluate the same majority predictor using only feedback available before the held-out capture. */
 internal fun validateConversationImpact(
     settings: PersonalImpactSettings,
-    entries: List<Triple<String, Long, PersonalImpact>>,
+    entries: List<ConversationImpactReport>,
 ): PersonalImpactValidation? {
     if (!settings.collect || !settings.learn) return null
-    val predictions = entries.filterNot { it.third.excluded }.groupBy { it.first }.values.mapNotNull { group ->
+    val predictions = entries.filterNot { it.feedback.excluded }
+        .groupBy { it.conversation }.values.mapNotNull { group ->
         // One final test observation per conversation prevents a busy thread dominating.
-        val latest = group.maxByOrNull { it.second } ?: return@mapNotNull null
-        val actual = latest.third.impact ?: return@mapNotNull null
-        val predicted = predictPersonalImpact(settings, group.filter { it.second < latest.second }.map { it.third })
+        val latest = group.maxByOrNull { it.capturedAt } ?: return@mapNotNull null
+        if (group.count { it.capturedAt == latest.capturedAt } != 1) return@mapNotNull null
+        val actual = latest.feedback.impact ?: return@mapNotNull null
+        val predicted = predictPersonalImpact(settings,
+            priorConversationImpact(group, latest.capturedAt, latest.capturedAt))
             ?: return@mapNotNull null
         actual to predicted
     }

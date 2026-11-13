@@ -865,7 +865,7 @@ class GuardianInboxActivity : ComponentActivity() {
         }
         GuardianCard("Message actions") {
             if (cloudKey != null) TextButton(enabled = !busy, onClick = {
-                loadArchive({ store, _, _ -> store.personalImpactReview(row.id, cloudKey) }) {
+                loadArchive({ store, _, _ -> store.personalImpactReview(row.id, cloudKey, row.arrivedAt) }) {
                     if (it.first.collect || it.second != null) {
                         impactFeedback = it.second
                         pastImpact = it.third

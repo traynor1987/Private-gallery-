@@ -57,13 +57,25 @@ class PersonalImpactTest {
     @Test fun conversationValidationUsesOnlyEarlierFeedbackAndOneTestPerThread() {
         val settings = PersonalImpactSettings(true, true)
         val rows = (0 until 10).flatMap { thread ->
-            (1L..3L).map { Triple("$thread", it, example) } +
-                Triple("$thread", 4L, example.copy(impact = if (thread < 4) MessageImpact.FINE else MessageImpact.UPSETTING))
+            (1L..3L).map { ConversationImpactReport("$thread", it, it + 1, example) } +
+                ConversationImpactReport("$thread", 5L, 6L,
+                    example.copy(impact = if (thread < 4) MessageImpact.FINE else MessageImpact.UPSETTING))
         }
         val measured = checkNotNull(validateConversationImpact(settings, rows))
         assertEquals(10, measured.tested)
         assertEquals(6, measured.correct)
         assertEquals(1.0, measured.falsePositiveRate()!!, 0.0)
-        assertNull(validateConversationImpact(settings, rows.map { it.copy(second = 1L) }))
+        assertNull(validateConversationImpact(settings, rows.map { it.copy(capturedAt = 1L) }))
+        assertNull(validateConversationImpact(settings, rows.map { it.copy(reportedAt = 5L) }))
+    }
+
+    @Test fun historyExcludesLaterCapturesAndRespectsTheFeedbackCutoff() {
+        val rows = listOf(
+            ConversationImpactReport("thread", 1, 2, example),
+            ConversationImpactReport("thread", 2, 5, example.copy(impact = MessageImpact.NEUTRAL)),
+            ConversationImpactReport("thread", 5, 6, example.copy(impact = MessageImpact.FINE)),
+        )
+        assertEquals(listOf(example), priorConversationImpact(rows, 5, 5))
+        assertEquals(listOf(example, rows[1].feedback), priorConversationImpact(rows, 5, 7))
     }
 }

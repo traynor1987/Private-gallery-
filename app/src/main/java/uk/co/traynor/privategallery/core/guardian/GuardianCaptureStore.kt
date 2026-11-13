@@ -207,15 +207,24 @@ internal class GuardianCaptureStore private constructor(private val context: Con
     private fun impactGroup(key: GuardianConversationKey) =
         fingerprint(JSONArray().put(key.app).put(key.profile).put(key.conversation).toString().toByteArray(Charsets.UTF_8))
 
-    fun personalImpactReview(id: String, conversation: GuardianConversationKey): Triple<PersonalImpactSettings, PersonalImpact?, MessageImpact?> =
+    private fun conversationImpactReport(row: JSONObject): ConversationImpactReport? {
+        val group = row.optString("group").takeIf(String::isNotBlank) ?: return null
+        val capturedAt = row.optLong("capturedAt").takeIf { it > 0 } ?: return null
+        return ConversationImpactReport(group, capturedAt, row.getLong("savedAt"), PersonalImpact.decode(row))
+    }
+
+    fun personalImpactReview(id: String, conversation: GuardianConversationKey, capturedAt: Long): Triple<PersonalImpactSettings, PersonalImpact?, MessageImpact?> =
         synchronized(lock) {
-            val rows = readImpact(impactArchive(), System.currentTimeMillis())
+            val now = System.currentTimeMillis()
+            val rows = readImpact(impactArchive(), now)
             val settings = impactSettings(rows.firstOrNull())
             val reports = rows.drop(1)
             val existing = reports.firstOrNull { it.optString("messageId") == id }?.let(PersonalImpact::decode)
             val group = impactGroup(conversation)
-            val earlier = reports.filter { it.optString("group") == group && it.optString("messageId") != id }
-            Triple(settings, existing, predictPersonalImpact(settings, earlier.map(PersonalImpact::decode)))
+            val history = reports.asSequence().filter { it.optString("messageId") != id }
+                .mapNotNull(::conversationImpactReport).filter { it.conversation == group }.toList()
+            val earlier = priorConversationImpact(history, capturedAt, now)
+            Triple(settings, existing, predictPersonalImpact(settings, earlier))
         }
 
     fun savePersonalImpact(id: String, feedback: PersonalImpact, days: Int, now: GuardianInboxClock): Boolean =
@@ -230,7 +239,8 @@ internal class GuardianCaptureStore private constructor(private val context: Con
             if (row.conversation == null || row.section == GuardianInboxSection.COOLING) return@synchronized false
             val key = row.conversation
             val group = impactGroup(key)
-            val recorded = feedback.encode().put("messageId", id).put("savedAt", now.wall).put("group", group)
+            val recorded = feedback.encode().put("messageId", id).put("savedAt", now.wall)
+                .put("capturedAt", row.arrivedAt).put("group", group)
             archive.write(rows.take(1) + (listOf(recorded) +
                 rows.drop(1).filterNot { it.optString("messageId") == id }).take(MAX_EXAMPLES))
             true
@@ -277,9 +287,7 @@ internal class GuardianCaptureStore private constructor(private val context: Con
     fun personalImpactReport(): Pair<PersonalImpactSummary, PersonalImpactValidation?> = synchronized(lock) {
         val rows = readImpact(impactArchive(), System.currentTimeMillis())
         val reports = rows.drop(1)
-        val examples = reports.mapNotNull { row ->
-            row.optString("group").takeIf(String::isNotBlank)?.let { Triple(it, row.getLong("savedAt"), PersonalImpact.decode(row)) }
-        }
+        val examples = reports.mapNotNull(::conversationImpactReport)
         summarizePersonalImpact(reports.map(PersonalImpact::decode)) to
             validateConversationImpact(impactSettings(rows.firstOrNull()), examples)
     }
