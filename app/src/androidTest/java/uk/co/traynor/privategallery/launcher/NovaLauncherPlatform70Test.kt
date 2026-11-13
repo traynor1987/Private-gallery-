@@ -162,14 +162,21 @@ class NovaLauncherPlatform70Test {
         val original = launchStore.read()
         val keys = PinVaultKeyStore(context)
         val exitPreferences = context.getSharedPreferences("nova-launcher-exit", Context.MODE_PRIVATE)
-        // Android can route Home settings through its permission controller.
+        // Android's Settings resolver can be a trampoline. API 37's Google image
+        // displays DefaultAppActivity in the system Permission Controller after
+        // resolving HOME_SETTINGS to Settings; require that exact destination,
+        // not any arbitrary activity in the controller package.
         val systemFlags = PackageManager.MATCH_DEFAULT_ONLY or PackageManager.MATCH_SYSTEM_ONLY
         val settingsDestinations = listOf(Settings.ACTION_HOME_SETTINGS, Settings.ACTION_SETTINGS)
             .mapNotNull { action ->
                 val resolved = shell("cmd package resolve-activity --brief --user current --query-flags $systemFlags -a $action")
                 ComponentName.unflattenFromString(resolved.lineSequence().last().trim())
-            }.toSet()
+            }.toMutableSet()
         assertTrue("Android must provide a system Home settings destination", settingsDestinations.isNotEmpty())
+        context.packageManager.permissionControllerPackageName?.let { controller ->
+            settingsDestinations += ComponentName(controller,
+                "com.android.permissioncontroller.role.ui.DefaultAppActivity")
+        }
         assertEquals(null, sanctuary.refresh())
         assertFalse("The isolated launcher test requires a clean Primary PIN fixture", keys.isConfigured)
         assertTrue("The isolated launcher test requires clean exit protection preferences", exitPreferences.all.isEmpty())
@@ -204,12 +211,13 @@ class NovaLauncherPlatform70Test {
                 }
                 hold.performTouchInput { up() }
                 try {
-                    await {
-                        shell("dumpsys activity activities").lineSequence()
+                    await("Home settings destinations: $settingsDestinations; see Android state on timeout") {
+                        val resumed = shell("dumpsys activity activities").lineSequence()
                             .filter { "topResumedActivity" in it }
                             .flatMap { it.splitToSequence(' ') }
                             .mapNotNull(ComponentName::unflattenFromString)
-                            .any { it in settingsDestinations }
+                            .toSet()
+                        (resumed intersect settingsDestinations).isNotEmpty()
                     }
                 } finally {
                     shell("input keyevent ${KeyEvent.KEYCODE_BACK}")
@@ -292,12 +300,12 @@ class NovaLauncherPlatform70Test {
         ParcelFileDescriptor.AutoCloseInputStream(instrumentation.uiAutomation.executeShellCommand(command))
             .bufferedReader().use { it.readText().trim() }
 
-    private fun await(predicate: () -> Boolean) {
+    private fun await(description: String = "Expected Android state was not reached", predicate: () -> Boolean) {
         val expires = SystemClock.elapsedRealtime() + 15_000
         do {
             if (predicate()) return
             SystemClock.sleep(75)
         } while (SystemClock.elapsedRealtime() < expires)
-        assertTrue("Expected Android state was not reached", predicate())
+        assertTrue("$description\n${shell("dumpsys activity activities").lineSequence().filter { "topResumedActivity" in it }.joinToString("\n")}", predicate())
     }
 }
