@@ -19,4 +19,15 @@ class PeaceJournalTest {
         assertEquals(listOf(entry), journal.retained(11 * day).sessions)
         assertEquals(WaitingOutcome.BETTER, entry.asImpact().waiting)
     }
+
+    @Test fun clearingReflectionPreservesSessionAndDropsEveryAnswer() {
+        val entry = PeaceSession("session", 5, 30, "Walk", calmer = true, helpful = false,
+            tooRestrictive = false, reviewLater = true, waiting = WaitingOutcome.BETTER)
+        assertTrue(entry.hasReflection())
+        val cleared = entry.withoutReflection()
+        assertFalse(cleared.hasReflection())
+        assertEquals(PeaceSession("session", 5, 30, "Walk"), cleared)
+        val journal = PeaceJournal(enabled = true, sessions = listOf(cleared))
+        assertEquals(journal, PeaceJournal.decode(journal.encode()))
+    }
 }

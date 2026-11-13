@@ -14,6 +14,10 @@ internal data class PeaceSession(
     val waiting: WaitingOutcome? = null,
 ) {
     fun asImpact() = PersonalImpact(waiting = waiting)
+
+    fun hasReflection() = calmer != null || helpful != null || tooRestrictive != null || reviewLater || waiting != null
+
+    fun withoutReflection() = copy(calmer = null, helpful = null, tooRestrictive = null, reviewLater = false, waiting = null)
 }
 
 internal data class PeaceJournal(

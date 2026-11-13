@@ -25,6 +25,7 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.UUID
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 internal fun KeepMyPeace(sanctuary: SanctuaryStore, onBack: () -> Unit) {
     uk.co.traynor.privategallery.ui.CredentialCaptureProtection()
@@ -135,16 +136,17 @@ internal fun KeepMyPeace(sanctuary: SanctuaryStore, onBack: () -> Unit) {
             current.sessions.forEach { entry ->
                 val time = formatter.format(Instant.ofEpochMilli(entry.start).atZone(ZoneId.systemDefault()))
                 TextButton(enabled = !busy, onClick = { feedback = entry }) {
-                    Text("Reflect · $time${entry.activity.takeIf(String::isNotEmpty)?.let { " · $it" }.orEmpty()}")
+                    val action = if (entry.hasReflection()) "Edit reflection" else "Add reflection"
+                    Text("$action · $time${entry.activity.takeIf(String::isNotEmpty)?.let { " · $it" }.orEmpty()}")
                 }
             }
             Text("Goal and retention", style = MaterialTheme.typography.titleMedium)
-            Row {
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 listOf(15, 30, 60).forEach { minutes ->
                     FilterChip(current.goalMinutes == minutes, { update { it.copy(goalMinutes = minutes) } }, { Text("${minutes}m") })
                 }
             }
-            Row {
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 listOf(7, 30, 90).forEach { days ->
                     FilterChip(current.days == days, { update { it.copy(days = days) } }, { Text("${days}d") })
                 }
@@ -195,18 +197,24 @@ private fun PeaceReflection(entry: PeaceSession, onSave: (PeaceSession) -> Unit,
                     Checkbox(report.reviewLater, { report = report.copy(reviewLater = it) })
                     Text("I chose to review later")
                 }
+                if (entry.hasReflection()) {
+                    TextButton(onClick = { report = entry.withoutReflection() }) { Text("Clear answers") }
+                }
             }
         },
-        confirmButton = { TextButton(onClick = { onSave(report) }) { Text("Save reflection") } },
+        confirmButton = { TextButton(onClick = { onSave(report) }) {
+            Text(if (!report.hasReflection() && entry.hasReflection()) "Delete reflection" else "Save reflection")
+        } },
         dismissButton = { TextButton(onClick = onClose) { Text("Cancel") } },
         properties = DialogProperties(securePolicy = SecureFlagPolicy.SecureOn),
     )
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun PeaceAnswer(title: String, current: Boolean?, onChange: (Boolean?) -> Unit) {
     Text(title)
-    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+    FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
         listOf(true to "Yes", false to "No", null to "Skip").forEach { (value, label) ->
             FilterChip(current == value, { onChange(value) }, { Text(label) })
         }
