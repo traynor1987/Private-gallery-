@@ -40,6 +40,18 @@ class PersonalImpactTest {
             }
         assertNull(validatePersonalImpact(PersonalImpactSettings(true, false), rows))
         assertNull(validatePersonalImpact(PersonalImpactSettings(true, true), rows.take(14)))
-        assertEquals(PersonalImpactValidation(1, 5), validatePersonalImpact(PersonalImpactSettings(true, true), rows + rows))
+        val result = checkNotNull(validatePersonalImpact(PersonalImpactSettings(true, true), rows + rows))
+        assertEquals(1, result.correct)
+        assertEquals(5, result.tested)
+        assertEquals(1.0, result.falsePositiveRate()!!, 0.0)
+        assertNull(result.falseNegativeRate())
+        assertEquals(0 to 4, result.byCategory[MessageImpact.FINE])
+    }
+    @Test fun recommendationsRequireOptInAndRepeatedReports() {
+        val reports = summarizePersonalImpact(List(3) { example })
+        assertTrue(personalImpactSuggestions(PersonalImpactSettings(true, false), reports).isEmpty())
+        assertTrue(personalImpactSuggestions(PersonalImpactSettings(true, true),
+            summarizePersonalImpact(listOf(example))).isEmpty())
+        assertTrue(personalImpactSuggestions(PersonalImpactSettings(true, true), reports).single().contains("3 times"))
     }
 }

@@ -66,6 +66,7 @@ class GuardianInboxActivity : ComponentActivity() {
     private var confirmDelete by mutableStateOf(false)
     private var settingsOpen by mutableStateOf(false)
     private var impactSettings by mutableStateOf(PersonalImpactSettings())
+    private var impactSuggestions by mutableStateOf<List<String>>(emptyList())
     private var impactMessage by mutableStateOf<String?>(null)
     private var pastImpact by mutableStateOf<MessageImpact?>(null)
     private var impactFeedback by mutableStateOf<PersonalImpact?>(null)
@@ -103,8 +104,12 @@ class GuardianInboxActivity : ComponentActivity() {
         }
         if (intent.getBooleanExtra(OPEN_IMPACT, false)) {
             intent.removeExtra(OPEN_IMPACT)
-            loadArchive({ store, _, _ -> store.personalImpactSettings() }) {
-                impactSettings = it
+            loadArchive({ store, _, _ ->
+                val settings = store.personalImpactSettings()
+                settings to personalImpactSuggestions(settings, store.personalImpactReport().first)
+            }) {
+                impactSettings = it.first
+                impactSuggestions = it.second
                 validationOpen = true
                 refresh()
             }
@@ -240,6 +245,7 @@ class GuardianInboxActivity : ComponentActivity() {
         confirmDelete = false
         settingsOpen = false
         impactSettings = PersonalImpactSettings()
+        impactSuggestions = emptyList()
         impactMessage = null
         impactFeedback = null
         pastImpact = null
@@ -449,6 +455,7 @@ class GuardianInboxActivity : ComponentActivity() {
                 text = {
                     Column(Modifier.heightIn(max = 420.dp).verticalScroll(rememberScrollState())) {
                         NovaBrainKnowledgeCard(showPersonalImpact = true)
+                        if (impactSettings.collect && impactSettings.learn) impactSuggestions.forEach { Text(it) }
                         GuardianCloudTeacher { validationOpen && canReview() }
                         LauncherToggle("Collect personal impact feedback", impactSettings.collect) { enabled ->
                             val updated = impactSettings.copy(collect = enabled, learn = enabled && impactSettings.learn)

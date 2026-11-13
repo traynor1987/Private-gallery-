@@ -67,7 +67,31 @@ internal fun predictPersonalImpact(settings: PersonalImpactSettings, entries: Li
 
 internal data class PersonalImpactExample(val group: String, val feedback: PersonalImpact)
 
-internal data class PersonalImpactValidation(val correct: Int, val tested: Int)
+internal data class PersonalImpactValidation(
+    val correct: Int,
+    val tested: Int,
+    val falsePositives: Int = 0,
+    val nonUpsetting: Int = 0,
+    val falseNegatives: Int = 0,
+    val upsetting: Int = 0,
+    val byCategory: Map<MessageImpact, Pair<Int, Int>> = emptyMap(),
+) {
+    fun falsePositiveRate() = if (nonUpsetting >= 3) falsePositives.toDouble() / nonUpsetting else null
+    fun falseNegativeRate() = if (upsetting >= 3) falseNegatives.toDouble() / upsetting else null
+}
+
+internal fun personalImpactSuggestions(settings: PersonalImpactSettings, summary: PersonalImpactSummary): List<String> =
+    if (!settings.collect || !settings.learn) emptyList() else buildList {
+        val better = summary.waiting[WaitingOutcome.BETTER] ?: 0
+        val worse = summary.waiting[WaitingOutcome.WORSE] ?: 0
+        val same = summary.waiting[WaitingOutcome.SAME] ?: 0
+        if (better >= 3 && better > worse + same) {
+            add("You reported feeling better after waiting $better times. Consider reviewing selected conversations later or taking a quiet period.")
+        }
+        if (summary.falsePositives >= 3 && summary.falsePositives > summary.falseNegatives) {
+            add("You marked ${summary.falsePositives} warnings as false positives. Consider reviewing Guardian’s warning settings.")
+        }
+    }
 
 /** Keep every message from one conversation in the same partition and weight conversations equally. */
 internal fun validatePersonalImpact(
@@ -86,5 +110,15 @@ internal fun validatePersonalImpact(
     val counts = train.map { it.second }.groupingBy { it }.eachCount()
     val highest = counts.values.max()
     val prediction = counts.entries.singleOrNull { it.value == highest }?.key ?: return null
-    return PersonalImpactValidation(test.count { it.second == prediction }, test.size)
+    val actual = test.map { it.second }
+    val upsetting = actual.count { it == MessageImpact.UPSETTING }
+    val nonUpsetting = actual.size - upsetting
+    return PersonalImpactValidation(
+        actual.count { it == prediction }, actual.size,
+        if (prediction == MessageImpact.UPSETTING) nonUpsetting else 0, nonUpsetting,
+        if (prediction != MessageImpact.UPSETTING) upsetting else 0, upsetting,
+        actual.groupingBy { it }.eachCount().mapValues { (category, total) ->
+            (if (category == prediction) total else 0) to total
+        },
+    )
 }

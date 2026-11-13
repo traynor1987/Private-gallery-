@@ -24,6 +24,7 @@ internal fun PersonalImpactDialog(
     onSave: (PersonalImpact) -> Unit,
     onDelete: () -> Unit,
     onClose: () -> Unit,
+    evidenceOnly: Boolean = false,
 ) {
     var feedback by remember(existing) { mutableStateOf(existing ?: PersonalImpact()) }
     GuardianAlertDialog(
@@ -56,7 +57,8 @@ internal fun PersonalImpactDialog(
                     listOf("False positive", "Missed warning")), feedback.correction, busy) {
                     feedback = feedback.copy(correction = it)
                 }
-                Row {
+                if (evidenceOnly) Text("This evidence report is included in your local totals. Conversation predictions use linked Guardian feedback.")
+                else Row {
                     Checkbox(feedback.excluded, { feedback = feedback.copy(excluded = it) }, enabled = !busy)
                     Text("Exclude this entry from learning")
                 }

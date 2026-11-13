@@ -34,6 +34,7 @@ internal class EvidenceController(context:Context,val access:EvidenceAccess):Aut
  private val main=Handler(Looper.getMainLooper())
  private val scope=CoroutineScope(SupervisorJob()+Dispatchers.Main.immediate)
  private val mutex=Mutex()
+ private val impactStore by lazy { uk.co.traynor.privategallery.core.guardian.GuardianCaptureStore(context.applicationContext) }
  private val ocr=EvidenceOcr(context.applicationContext)
  private val collectionSync=EvidenceCollectionSync(access)
  private val reviewStore=lazy { EvidenceReview68(context.applicationContext,access) }
@@ -237,7 +238,11 @@ internal class EvidenceController(context:Context,val access:EvidenceAccess):Aut
    val catalogue=access.store.read()
    val sourceIds=catalogue.evidence().filter{it.id() in ids}.mapTo(mutableSetOf()){it.sourceId()}
    if(collectionSync.includesAny(sourceIds))throw ConnectedEvidenceRemoval()
-   access.store.update{current->ids.fold(current){state,id->state.removeEvidence(id,now())}}
+   access.withRetirementBoundary {
+    if(access.owner==EvidenceCatalog.Owner.PRIMARY) impactStore.deleteEvidenceImpact(ids.toSet())
+    access.store.update{current->ids.fold(current){state,id->state.removeEvidence(id,now())}}
+   }
+   access.store.read()
   }
  }
  private class ConnectedEvidenceRemoval:IllegalStateException()

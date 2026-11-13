@@ -9,6 +9,28 @@ import java.io.File
 
 @RunWith(AndroidJUnit4::class)
 class GuardianCaptureStore77Test {
+    @Test fun evidenceFeedbackUpsertsAndDeletingReferencesLeavesOtherReports() {
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        val store = GuardianCaptureStore(context)
+        store.clearPersonalImpact()
+        try {
+            val feedback = PersonalImpact(MessageImpact.FINE, WarningHelp.NO, WaitingOutcome.NOT_APPLICABLE)
+            assertFalse(store.saveEvidenceImpact("fixture-a", feedback))
+            store.savePersonalImpactSettings(PersonalImpactSettings(collect = true))
+            assertTrue(store.saveEvidenceImpact("fixture-a", feedback))
+            assertTrue(store.saveEvidenceImpact("fixture-a", feedback.copy(impact = MessageImpact.NEUTRAL)))
+            assertTrue(store.saveEvidenceImpact("fixture-b", feedback))
+            val reopened = GuardianCaptureStore(context)
+            assertEquals(2, reopened.personalImpactReport().first.reports)
+            assertEquals(MessageImpact.NEUTRAL, reopened.evidenceImpactFeedback("fixture-a").second?.impact)
+            reopened.deleteEvidenceImpact(setOf("fixture-a"))
+            assertNull(reopened.evidenceImpactFeedback("fixture-a").second)
+            assertEquals(feedback, reopened.evidenceImpactFeedback("fixture-b").second)
+        } finally {
+            store.clearPersonalImpact()
+        }
+    }
+
     @Test fun personalImpactIsOptInEncryptedEditableAndIndependentOfArchive() {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         val store = GuardianCaptureStore(context)

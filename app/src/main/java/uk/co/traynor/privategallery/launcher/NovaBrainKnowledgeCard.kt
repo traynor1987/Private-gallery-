@@ -53,6 +53,14 @@ internal fun NovaBrainKnowledgeCard(showPersonalImpact: Boolean = false) {
             impact?.let { (summary, result) ->
                 Text("Personal impact baseline · " + if (result == null) "Not yet validated"
                     else "${(100.0 * result.correct / result.tested).roundToInt()}% on ${result.tested} held-out conversations")
+                result?.let { validated ->
+                    fun rate(value: Double?) = value?.let { "${(it * 100).roundToInt()}%" } ?: "Not yet validated"
+                    Text("Impact false-positive rate: ${rate(validated.falsePositiveRate())} · ${validated.nonUpsetting} non-upsetting conversations")
+                    Text("Impact false-negative rate: ${rate(validated.falseNegativeRate())} · ${validated.upsetting} upsetting conversations")
+                    validated.byCategory.forEach { (category, counts) ->
+                        Text("${category.name.lowercase().replaceFirstChar(Char::uppercase)} impact · ${counts.first}/${counts.second} correct")
+                    }
+                }
                 if (summary.reports > 0) {
                     Text("Warning helpful · ${summary.useful} of ${summary.warningAnswers} yes/no answers")
                     Text("Owner corrections · ${summary.falsePositives} false positives, ${summary.falseNegatives} missed warnings")

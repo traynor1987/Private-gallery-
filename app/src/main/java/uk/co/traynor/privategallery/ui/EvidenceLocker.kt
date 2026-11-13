@@ -125,6 +125,7 @@ internal fun EvidenceLocker(controller:EvidenceController,onClose:()->Unit,onImp
     LazyColumn(Modifier.weight(1f).fillMaxWidth().testTag("evidence-list"),verticalArrangement=Arrangement.spacedBy(10.dp)) {
      state.message?.let{item{Text(it,style=MaterialTheme.typography.bodySmall)}}
      if(record!=null) {
+      item { EvidencePersonalImpact(controller,record) }
       evidenceViewer69(viewer,controller,record,state.chronology,busy,state.integrity[record.id()],catalog.rejectedSuggestions(),
        onOpenOriginal={viewOriginal=record.id()},
        onEdit={form=EvidenceForm("Edit evidence",listOf("Name","Description","Notes","Tags (comma separated)","Participants (owner identified)"),
@@ -173,6 +174,7 @@ internal fun EvidenceLocker(controller:EvidenceController,onClose:()->Unit,onImp
        }
       }
       items(incident.evidenceIds(),key={it}){id->catalog.evidence().firstOrNull{it.id()==id}?.let{e->EvidenceRow(controller,e,state.integrity[e.id()],id in selected,{selected=if(id in selected)selected-id else selected+id},{evidenceId=id})
+       EvidencePersonalImpact(controller,e)
        TextButton(enabled=!busy,onClick={change("Reference removed from incident"){it.unlink(listOf(id),incident.id(),EvidenceController.now())}}){Text("Remove from incident")}
        e.ocr().flatMap{it.times()}.take(32).forEach{hint->
         TextButton(enabled=!busy,onClick={form=EvidenceForm("Review extracted timeline claim — unverified",listOf("Title","Owner notes","Timestamp (ISO offset; blank keeps uncertain)"),listOf(hint.text(),hint.provenance(),if(hint.epochMillis()>0)Instant.ofEpochMilli(hint.epochMillis()).toString()else "")){v->
@@ -195,7 +197,10 @@ internal fun EvidenceLocker(controller:EvidenceController,onClose:()->Unit,onImp
         if(controller.access.owner==EvidenceCatalog.Owner.PRIMARY) guardianMessageFromEvidenceEvent(event.id())?.let{messageId->
          TextButton(enabled=!busy,onClick={
           controller.access.publishIfCurrent { GuardianInboxActivity.openEvidenceSource(context,messageId) }
-         }){Text("Open Guardian source")}
+         }){Text("Open Guardian source and feedback")}
+        }
+        event.evidenceIds().singleOrNull()?.let { sourceId ->
+         catalog.evidence().firstOrNull { it.id()==sourceId }?.let { EvidencePersonalImpact(controller,it) }
         }
         val displayed=catalog.timeline(incident.id());val position=displayed.indexOfFirst{it.id()==event.id()}
         FlowRow {TextButton(enabled=!busy&&position>0,onClick={change("Manual timeline order saved"){current->val fresh=current.timeline(incident.id());val at=fresh.indexOfFirst{it.id()==event.id()};if(at>0)current.moveEvent(incident.id(),event.id(),at-1,EvidenceController.now())else current}}){Text("Move earlier")}

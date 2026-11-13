@@ -214,6 +214,33 @@ internal class GuardianCaptureStore private constructor(private val context: Con
             true
         }
 
+    fun evidenceImpactFeedback(id: String): Pair<PersonalImpactSettings, PersonalImpact?> = synchronized(lock) {
+        val rows = readImpact(impactArchive(), System.currentTimeMillis())
+        impactSettings(rows.firstOrNull()) to rows.drop(1)
+            .firstOrNull { it.optString("evidenceId") == id }?.let(PersonalImpact::decode)
+    }
+
+    fun saveEvidenceImpact(id: String, feedback: PersonalImpact): Boolean = synchronized(lock) {
+        require(id.isNotBlank())
+        val archive = impactArchive()
+        val now = System.currentTimeMillis()
+        val rows = readImpact(archive, now)
+        if (!impactSettings(rows.firstOrNull()).collect || !feedback.hasFeedback()) return@synchronized false
+        // Evidence records can move between incidents or belong to several. Without a stable
+        // conversation identity their reports contribute to descriptive totals only.
+        val record = feedback.encode().put("evidenceId", id).put("savedAt", now)
+        archive.write(rows.take(1) + (listOf(record) +
+            rows.drop(1).filterNot { it.optString("evidenceId") == id }).take(MAX_EXAMPLES))
+        true
+    }
+
+    fun deleteEvidenceImpact(ids: Set<String>) = synchronized(lock) {
+        val archive = impactArchive()
+        val rows = readImpact(archive, System.currentTimeMillis())
+        val retained = rows.take(1) + rows.drop(1).filterNot { it.optString("evidenceId") in ids }
+        if (retained.size != rows.size) archive.write(retained)
+    }
+
     fun deletePersonalImpact(id: String): Boolean = synchronized(lock) {
         val archive = impactArchive()
         val rows = readImpact(archive, System.currentTimeMillis())
