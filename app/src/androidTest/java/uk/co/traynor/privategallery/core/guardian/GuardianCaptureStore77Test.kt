@@ -9,6 +9,45 @@ import java.io.File
 
 @RunWith(AndroidJUnit4::class)
 class GuardianCaptureStore77Test {
+    @Test fun deletingOnePeaceReflectionPreservesOtherEncryptedSessionsAndGuardianHistory() {
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        val store = GuardianCaptureStore(context)
+        store.clearKeepMyPeace()
+        store.clear()
+        try {
+            val now = guardianInboxClock(context)
+            val selected = PeaceSession("selected", now.wall - 120_000, now.wall,
+                "Private selected activity", calmer = true, helpful = false,
+                tooRestrictive = false, reviewLater = true, waiting = WaitingOutcome.BETTER)
+            val neighbour = selected.copy(id = "neighbour", activity = "Private neighbour activity")
+            store.updateKeepMyPeace { it.copy(enabled = true, sessions = listOf(selected, neighbour)) }
+            val event = GuardianCaptureEvent(0, "independent-history", now.wall,
+                listOf(GuardianCaptureEntry(now.wall, "fixture", "Independent synthetic Guardian history")))
+            assertTrue(store.append(event, 7, now.wall, assess = false, clock = now).allDurable)
+            val archive = File(context.noBackupFilesDir, GuardianCaptureStore.ARCHIVE_NAME)
+            val historyBefore = archive.readBytes()
+
+            store.updateKeepMyPeace { journal ->
+                journal.copy(sessions = journal.sessions.map {
+                    if (it.id == selected.id) it.withoutReflection() else it
+                })
+            }
+            val reopened = GuardianCaptureStore(context)
+            val cleared = PeaceSession("selected", now.wall - 120_000, now.wall, "Private selected activity")
+            assertEquals(listOf(cleared, neighbour), reopened.keepMyPeace().sessions)
+            assertArrayEquals(historyBefore, archive.readBytes())
+            val journal = File(context.noBackupFilesDir, "nova-keep-my-peace-v1.enc")
+            assertFalse(journal.readBytes().decodeToString().contains(neighbour.activity))
+            reopened.clearKeepMyPeace()
+            assertFalse(journal.exists())
+            assertArrayEquals(historyBefore, archive.readBytes())
+            assertEquals(1, reopened.inboxRows(7, now).size)
+        } finally {
+            store.clearKeepMyPeace()
+            store.clear()
+        }
+    }
+
     @Test fun peaceJournalReopensEncryptedAndCanBeDeletedIndependently() {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         val store = GuardianCaptureStore(context)
