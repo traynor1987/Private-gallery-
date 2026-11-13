@@ -161,5 +161,11 @@ contacts, = [permission for permission in after.findall("uses-permission")
 assert contacts.attrib == {ANDROID + "name": "android.permission.READ_CONTACTS"} and len(contacts) == 0
 after.remove(contacts)
 
+review_later, = [node for node in application.findall("receiver")
+                 if node.get(ANDROID + "name") == ".launcher.GuardianReviewLaterReceiver"]
+assert review_later.attrib == {ANDROID + "name": ".launcher.GuardianReviewLaterReceiver", ANDROID + "exported": "false"}
+assert len(review_later) == 0
+application.remove(review_later)
+
 assert structure(before) == structure(after), "The existing manifest or permission set changed"
 print("PASS: Code 69 protected engines, original package and other permissions preserved; Home and call screening are additive")

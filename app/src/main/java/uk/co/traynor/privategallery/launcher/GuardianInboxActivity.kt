@@ -654,6 +654,22 @@ class GuardianInboxActivity : ComponentActivity() {
                         TextButton(onClick = {
                             runCatching { startActivity(GuardianSafeNotifications.channelSettings(this@GuardianInboxActivity)) }
                         }) { Text("Android sound and vibration settings") }
+                        val listener by GuardianNotificationListener.state.collectAsState()
+                        val listenerAccess = GuardianNotificationListener.hasAccess(this@GuardianInboxActivity)
+                        Text(when {
+                            !listenerAccess -> "Android notification access is off. Existing archive is available."
+                            !listener.connected -> "Android notification access granted. Listener is disconnected."
+                            else -> "Guardian notification listener connected"
+                        })
+                        if (listenerAccess && !listener.connected) TextButton(onClick = {
+                            if (GuardianNotificationListener.hasAccess(this@GuardianInboxActivity)) {
+                                runCatching {
+                                    android.service.notification.NotificationListenerService.requestRebind(
+                                        ComponentName(this@GuardianInboxActivity, GuardianNotificationListener::class.java),
+                                    )
+                                }
+                            }
+                        }) { Text("Reconnect Guardian listener") }
                         TextButton(onClick = { requestNoticePermission.launch(android.Manifest.permission.POST_NOTIFICATIONS) }) {
                             Text("Request Android notification permission")
                         }

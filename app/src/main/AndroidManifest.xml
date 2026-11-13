@@ -76,6 +76,7 @@
       <intent-filter><action android:name="android.accessibilityservice.AccessibilityService" /></intent-filter>
       <meta-data android:name="android.accessibilityservice" android:resource="@xml/sanctuary_accessibility_service" />
     </service>
+    <receiver android:name=".launcher.GuardianReviewLaterReceiver" android:exported="false" />
     <receiver android:name=".core.sanctuary.SanctuaryDndCleanupReceiver" android:exported="false" />
     <receiver android:name=".core.sanctuary.SanctuaryBootReceiver" android:exported="false">
       <intent-filter><action android:name="android.intent.action.BOOT_COMPLETED" /></intent-filter>

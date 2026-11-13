@@ -6,7 +6,9 @@ import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
+import android.content.BroadcastReceiver
 import android.content.Context
+import android.content.Intent
 import uk.co.traynor.privategallery.core.guardian.*
 
 internal object GuardianSafeNotifications {
@@ -14,6 +16,7 @@ internal object GuardianSafeNotifications {
     private const val SILENT_CHANNEL = "guardian-safe-silent"
     private const val TAG = "guardian-safe"
     private const val ID = 1
+    private const val DISMISS = "uk.co.traynor.privategallery.GUARDIAN_REVIEW_LATER"
 
     fun prefs(context: Context) = context.getSharedPreferences("guardian_safe_notices", Context.MODE_PRIVATE)
 
@@ -34,7 +37,9 @@ internal object GuardianSafeNotifications {
         context.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED &&
             context.getSystemService(NotificationManager::class.java)?.areNotificationsEnabled() == true
 
+    @Synchronized
     fun cancel(context: Context) {
+        prefs(context).edit().remove("posted_token").apply()
         context.getSystemService(NotificationManager::class.java)?.cancel(TAG, ID)
     }
 
@@ -50,6 +55,13 @@ internal object GuardianSafeNotifications {
             .putExtra(android.provider.Settings.EXTRA_CHANNEL_ID, CHANNEL)
     }
 
+    @Synchronized
+    fun reviewLater(context: Context, intent: Intent) {
+        val posted = prefs(context).getString("posted_token", null)
+        if (intent.action == DISMISS && posted != null && intent.identifier == posted) cancel(context)
+    }
+
+    @Synchronized
     fun post(context: Context, row: GuardianInboxRow) {
         val settings = prefs(context)
         if (!settings.getBoolean("enabled", false) || !GuardianNotificationListener.hasAccess(context)) return
@@ -79,6 +91,11 @@ internal object GuardianSafeNotifications {
         val icon = if (kind == GuardianNoticeKind.LOW && settings.getBoolean("tick", true)) "✓ " else ""
         val route = PendingIntent.getActivity(context, 0, GuardianInboxActivity.safeNotificationsIntent(context),
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
+        val token = java.util.UUID.randomUUID().toString()
+        val reviewLater = PendingIntent.getBroadcast(context, 0,
+            Intent(context, GuardianReviewLaterReceiver::class.java).setAction(DISMISS).setIdentifier(token),
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_ONE_SHOT,
+        )
         val notification = Notification.Builder(context, if (silent) SILENT_CHANNEL else CHANNEL)
             .setSmallIcon(android.R.drawable.ic_lock_lock)
             .setContentTitle("Nova Guardian")
@@ -97,7 +114,18 @@ internal object GuardianSafeNotifications {
             .setContentIntent(route)
             .addAction(Notification.Action.Builder(android.graphics.drawable.Icon.createWithResource(context, android.R.drawable.ic_lock_lock),
                 "Open Safe Notifications", route).build())
+            .addAction(Notification.Action.Builder(android.graphics.drawable.Icon.createWithResource(context, android.R.drawable.ic_menu_recent_history),
+                "Review later", reviewLater).build())
             .build()
+        settings.edit().putString("posted_token", token).apply()
         manager.notify(TAG, ID, notification)
+    }
+}
+
+
+/** Dismisses only the currently posted Nova alert. The encrypted message stays in Guardian. */
+class GuardianReviewLaterReceiver : BroadcastReceiver() {
+    override fun onReceive(context: Context, intent: Intent) {
+        GuardianSafeNotifications.reviewLater(context, intent)
     }
 }

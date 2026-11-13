@@ -26,6 +26,26 @@ import uk.co.traynor.privategallery.core.guardian.GuardianCaptureStore
 class GuardianInbox77UiTest {
     @get:Rule val compose = createAndroidComposeRule<GuardianInboxActivity>()
 
+    @Test fun reviewLaterOnlyClearsTheMatchingGuardianAlert() {
+        val context = compose.activity
+        val prefs = GuardianSafeNotifications.prefs(context)
+        val token = "synthetic-active-alert"
+        val key = "posted_token"
+        val action = "uk.co.traynor.privategallery.GUARDIAN_REVIEW_LATER"
+        val receiver = GuardianReviewLaterReceiver()
+        prefs.edit().putString(key, token).commit()
+        try {
+            receiver.onReceive(context, android.content.Intent(action).setIdentifier("stale-alert"))
+            assertTrue(prefs.getString(key, null) == token)
+            receiver.onReceive(context, android.content.Intent("unrelated").setIdentifier(token))
+            assertTrue(prefs.getString(key, null) == token)
+            receiver.onReceive(context, android.content.Intent(action).setIdentifier(token))
+            assertTrue(!prefs.contains(key))
+        } finally {
+            GuardianSafeNotifications.cancel(context)
+        }
+    }
+
     @Test fun privateInboxStartsLockedEvenWhenArchiveContainsMessages() {
         val activity = compose.activity
         val store = GuardianCaptureStore(activity)
