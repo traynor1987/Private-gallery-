@@ -173,7 +173,12 @@ class NovaLauncherPlatform70Test {
                 ComponentName.unflattenFromString(resolved.lineSequence().last().trim())
             }.toMutableSet()
         assertTrue("Android must provide a system Home settings destination", settingsDestinations.isNotEmpty())
-        context.packageManager.permissionControllerPackageName?.let { controller ->
+        val systemPackages = shell("cmd package list packages -s").lineSequence()
+            .map { it.trim().removePrefix("package:") }.toSet()
+        // This is the system component recorded by the API 37 Google emulator.
+        // Discover its installation through shell, not hidden PackageManager APIs.
+        val controller = "com.google.android.permissioncontroller"
+        if (controller in systemPackages) {
             settingsDestinations += ComponentName(controller,
                 "com.android.permissioncontroller.role.ui.DefaultAppActivity")
         }
