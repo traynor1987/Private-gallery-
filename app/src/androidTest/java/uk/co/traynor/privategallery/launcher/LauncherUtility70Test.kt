@@ -40,6 +40,15 @@ class LauncherUtility70Test {
         compose.onNodeWithTag("install-app").assertDoesNotExist()
     }
 
+    @Test fun firstPartyCatalogueShowsNamedAppsWithoutUnverifiedInstallActions() {
+        open(LauncherUtility.STORE)
+        compose.onNodeWithTag("store-first-party").performScrollTo().performClick()
+        compose.onNodeWithTag("nova-first-party-store").assertIsDisplayed()
+        compose.onNodeWithText("Shift Tracker").performClick()
+        compose.onNodeWithText("An approved APK, package ID, and signing certificate are needed for installation.").assertIsDisplayed()
+        compose.onNodeWithText("Verify and install").assertDoesNotExist()
+    }
+
     private fun open(utility: LauncherUtility) {
         compose.setContent {
             PrivateGalleryTheme(AppTheme.SYSTEM) {

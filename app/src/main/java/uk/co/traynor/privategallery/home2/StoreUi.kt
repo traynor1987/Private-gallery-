@@ -7,6 +7,9 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.activity.compose.BackHandler
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -21,19 +24,32 @@ import uk.co.traynor.privategallery.ui.navigationHaptic
 
 @Composable internal fun PreviewHeader(title:String,subtitle:String,onBack:()->Unit,actions:@Composable RowScope.()->Unit={}){
  val tap=navigationHaptic()
- Row(Modifier.fillMaxWidth().padding(start=4.dp,end=14.dp,top=8.dp,bottom=8.dp),verticalAlignment=Alignment.CenterVertically){IconButton(onClick={tap();onBack()}){Icon(Icons.Default.ArrowBack,"Back to Home")};Column(Modifier.weight(1f)){Text(title,style=MaterialTheme.typography.headlineSmall);Text(subtitle,style=MaterialTheme.typography.labelMedium,color=MaterialTheme.colorScheme.onSurfaceVariant)};actions()}
+ Row(Modifier.fillMaxWidth().padding(start=4.dp,end=14.dp,top=8.dp,bottom=8.dp),verticalAlignment=Alignment.CenterVertically){IconButton(onClick={tap();onBack()}){Icon(Icons.AutoMirrored.Filled.ArrowBack,"Back")};Column(Modifier.weight(1f)){Text(title,style=MaterialTheme.typography.headlineSmall);Text(subtitle,style=MaterialTheme.typography.labelMedium,color=MaterialTheme.colorScheme.onSurfaceVariant)};actions()}
 }
 @Composable internal fun StoreScreen(data:PreviewData,onBack:()->Unit,onDetail:(StoreEntry)->Unit,onCustom:()->Unit,onVisualFoundation:(()->Unit)?=null){
+ var firstParty by rememberSaveable { mutableStateOf(false) }
+ if (firstParty) {
+  BackHandler { firstParty = false }
+  NovaFirstPartyStore(onBack = { firstParty = false }, onOpenWorkspace = null)
+  return
+ }
  StoreCatalogueScreen(data.catalogue,data.profileLabel,onBack,onDetail,data.profile.installed,
-  isInstalled={data.installed(it)!=null},onCustom=onCustom,onVisualFoundation=onVisualFoundation)
+  isInstalled={data.installed(it)!=null},onCustom=onCustom,onVisualFoundation=onVisualFoundation,
+  onFirstParty=if(data.state.current=="primary"){{firstParty=true}}else null)
 }
 
 @Composable
 internal fun PublicStoreScreen(onBack: () -> Unit, onOpenWorkspace: () -> Unit) {
+ var firstParty by rememberSaveable { mutableStateOf(false) }
+ if (firstParty) {
+  BackHandler { firstParty = false }
+  NovaFirstPartyStore(onBack = { firstParty = false }, onOpenWorkspace = onOpenWorkspace)
+  return
+ }
  val assets = androidx.compose.ui.platform.LocalContext.current.assets
  val catalogue = remember(assets) { readBundledStoreCatalogue(assets) }
  var selected by remember { mutableStateOf<StoreEntry?>(null) }
- StoreCatalogueScreen(catalogue, "Public catalogue", onBack, { selected = it })
+ StoreCatalogueScreen(catalogue, "Web apps", onBack, { selected = it }, onFirstParty = { firstParty = true })
  selected?.let { entry ->
   AlertDialog(
    onDismissRequest = { selected = null },
@@ -57,6 +73,7 @@ private fun StoreCatalogueScreen(
  isInstalled: (StoreEntry) -> Boolean = { false },
  onCustom: (() -> Unit)? = null,
  onVisualFoundation: (() -> Unit)? = null,
+ onFirstParty: (() -> Unit)? = null,
 ) {
  var query by remember{mutableStateOf("")};var category by remember{mutableStateOf("All")};var mine by remember{mutableStateOf(false)}
  val entries=(if(mine)installedApps.orEmpty() else catalogue).filter{(category=="All"||it.category==category)&&(it.name.contains(query,true)||it.description.contains(query,true)||it.publisher.contains(query,true))}
@@ -66,6 +83,13 @@ private fun StoreCatalogueScreen(
   }
   LazyColumn(Modifier.fillMaxSize(),contentPadding=PaddingValues(horizontal=20.dp,vertical=8.dp),verticalArrangement=Arrangement.spacedBy(14.dp)){
    if(onVisualFoundation!=null)item{VisualCatalogueEntry("store-visual-foundation",onVisualFoundation)}
+   if(onFirstParty!=null)item{
+    OutlinedButton(onClick=onFirstParty,modifier=Modifier.fillMaxWidth().testTag("store-first-party")) {
+     Icon(Icons.Default.VerifiedUser,null)
+     Spacer(Modifier.width(8.dp))
+     Text("First-party Android apps")
+    }
+   }
    item{Surface(shape=RoundedCornerShape(30.dp),color=Color(0xFF303F65),contentColor=Color.White){Column(Modifier.fillMaxWidth().background(Brush.linearGradient(listOf(Color(0xFF303F65),Color(0xFF455568),Color(0xFF4B3B70)))).padding(24.dp)){
     Text("YOUR WEB. YOUR SPACE.",style=MaterialTheme.typography.labelSmall)
     Text("A little more\npossibility.",style=MaterialTheme.typography.headlineLarge,fontWeight=FontWeight.Light,modifier=Modifier.padding(vertical=12.dp))
