@@ -576,6 +576,7 @@ class NovaLauncherActivity : ComponentActivity() {
         if (builtIn != null) {
             when (builtIn) {
                 LauncherBuiltIn.SANCTUARY -> openSanctuary()
+                LauncherBuiltIn.SAFE_NOTIFICATIONS -> startActivity(GuardianInboxActivity.safeNotificationsIntent(this))
                 LauncherBuiltIn.PRIMARY_GALLERY -> startActivity(privateWorkspaceEntryIntent(this, primaryGallery = true))
                 else -> activeUtility = builtIn
             }

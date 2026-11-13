@@ -14,6 +14,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.rememberScrollState
@@ -71,6 +72,7 @@ class GuardianInboxActivity : ComponentActivity() {
     private var pastImpact by mutableStateOf<MessageImpact?>(null)
     private var impactFeedback by mutableStateOf<PersonalImpact?>(null)
     private var clearImpactOpen by mutableStateOf(false)
+    private var safeCategory by mutableStateOf<GuardianNoticeKind?>(null)
     private var safeCentre by mutableStateOf(false)
     private var safeSettings by mutableStateOf(false)
     private var validationOpen by mutableStateOf(false)
@@ -255,6 +257,7 @@ class GuardianInboxActivity : ComponentActivity() {
         pastImpact = null
         clearImpactOpen = false
         safeSettings = false
+        safeCategory = null
         validationOpen = false
         callShieldOpen = false
         diagnostic = false
@@ -559,11 +562,32 @@ class GuardianInboxActivity : ComponentActivity() {
 
     @Composable
     private fun ColumnScope.SafeCentre() {
-        Text("Local classifications can be uncertain. Previews stay hidden here.", color = GuardianMuted)
-        TextButton(onClick = { safeSettings = true }) { Text("Safe Notifications settings") }
-        if (rows.isEmpty()) Text("No retained notifications.")
-        LazyColumn(Modifier.fillMaxWidth().weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            items(rows, key = { it.id }) { row ->
+        val filtered = rows.filter {
+            safeCategory == null || safeCategory == guardianNoticeKind(it.assessment, it.patterns.orEmpty())
+        }
+        val date = remember { DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT) }
+        LazyColumn(Modifier.fillMaxWidth().weight(1f).testTag("guardian-safe-centre"),
+            contentPadding = PaddingValues(bottom = 16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            item {
+                GuardianCard("Protected notifications") {
+                    Text("Previews stay hidden until you choose to review. Classifications are local estimates.", color = GuardianMuted)
+                    TextButton(onClick = { safeSettings = true }) { Text("Safe Notifications settings") }
+                }
+            }
+            item {
+                Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    FilterChip(safeCategory == null, { safeCategory = null }, { Text("All") })
+                    GuardianNoticeKind.entries.forEach { kind ->
+                        FilterChip(safeCategory == kind, { safeCategory = kind }, { Text(kind.title) })
+                    }
+                }
+            }
+            if (filtered.isEmpty()) item {
+                GuardianCard(if (rows.isEmpty()) "No retained notifications" else "No notifications in this category") {
+                    if (rows.isNotEmpty()) TextButton(onClick = { safeCategory = null }) { Text("Show all notifications") }
+                }
+            }
+            items(filtered, key = { it.id }) { row ->
                 val kind = guardianNoticeKind(row.assessment, row.patterns.orEmpty())
                 val color = when (kind) {
                     GuardianNoticeKind.LOW -> GuardianMint
@@ -572,6 +596,7 @@ class GuardianInboxActivity : ComponentActivity() {
                 }
                 GuardianCard(kind.title, badge = appLabel(row.conversation), badgeColor = color) {
                     Text(kind.description)
+                    Text(date.format(Date(row.arrivedAt)), color = GuardianMuted, style = MaterialTheme.typography.labelMedium)
                     row.patterns.orEmpty().takeIf { it.isNotEmpty() }?.let { cues ->
                         Text(cues.joinToString { it.label })
                     }

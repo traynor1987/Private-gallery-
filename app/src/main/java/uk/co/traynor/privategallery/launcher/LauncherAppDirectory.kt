@@ -27,6 +27,7 @@ import androidx.compose.material.icons.filled.Badge
 import androidx.compose.material.icons.filled.Calculate
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.PhotoLibrary
+import androidx.compose.material.icons.filled.NotificationsNone
 import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material.icons.filled.SportsEsports
 import androidx.compose.material.icons.filled.Storefront
@@ -282,6 +283,7 @@ internal fun LauncherAppIcon(app: LauncherApp, modifier: Modifier = Modifier) {
             LauncherBuiltIn.CALCULATOR -> Icons.Default.Calculate to Color(0xFF7952BE)
             LauncherBuiltIn.ARCADE -> Icons.Default.SportsEsports to Color(0xFF9A387E)
             LauncherBuiltIn.STORE -> Icons.Default.Storefront to Color(0xFF147E7F)
+            LauncherBuiltIn.SAFE_NOTIFICATIONS -> Icons.Default.NotificationsNone to Color(0xFF286A79)
             LauncherBuiltIn.PRIMARY_GALLERY -> Icons.Default.PhotoLibrary to Color(0xFFAD533C)
         }
         Box(

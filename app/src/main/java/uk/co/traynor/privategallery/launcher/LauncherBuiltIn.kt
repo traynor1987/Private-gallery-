@@ -13,6 +13,7 @@ internal enum class LauncherBuiltIn(
     CALCULATOR(LauncherUtility.CALCULATOR.route, LauncherUtility.CALCULATOR.label, LauncherUtility.CALCULATOR),
     ARCADE(LauncherUtility.ARCADE.route, LauncherUtility.ARCADE.label, LauncherUtility.ARCADE),
     STORE(LauncherUtility.STORE.route, LauncherUtility.STORE.label, LauncherUtility.STORE),
+    SAFE_NOTIFICATIONS("safe-notifications", "Safe Notifications"),
     PRIMARY_GALLERY("vault", "Primary Gallery");
 
     private val policyKey: String get() = "nova:$route"
