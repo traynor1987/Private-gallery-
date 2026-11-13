@@ -6,11 +6,17 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.activity.ComponentActivity
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Box
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.test.hasAnyAncestor
+import androidx.compose.ui.test.hasContentDescription
+import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsOff
 import androidx.compose.ui.test.assertIsOn
@@ -111,8 +117,12 @@ class NovaNavigationHaptics69Test {
             CompositionLocalProvider(LocalView provides view) {
                 PrivateGalleryTheme {
                     Column {
-                        NovaAppHeader("Vault", onHome = { actions += "vault home" }, onBack = { actions += "vault back" })
-                        PreviewHeader("Nova Settings", "Navigation", onBack = { actions += "settings back" })
+                        Box(Modifier.testTag("haptics-vault-header")) {
+                            NovaAppHeader("Vault", onHome = { actions += "vault home" }, onBack = { actions += "vault back" })
+                        }
+                        Box(Modifier.testTag("haptics-settings-header")) {
+                            PreviewHeader("Nova Settings", "Navigation", onBack = { actions += "settings back" })
+                        }
                         NovaNavigation(shell, {}, { actions += "strip home" }, { actions += "strip back" })
                     }
                 }
@@ -121,8 +131,12 @@ class NovaNavigationHaptics69Test {
 
         attachRecordingView()
         compose.onNodeWithContentDescription("Nova Home").performTouchInput { click() }
-        compose.onNodeWithContentDescription("Back").performTouchInput { click() }
-        compose.onNodeWithContentDescription("Back to Home").performTouchInput { click() }
+        // Both headers legitimately expose "Back". Select each owning fixture,
+        // so the callback and haptic assertions still catch miswired controls.
+        compose.onNode(hasContentDescription("Back") and hasAnyAncestor(hasTestTag("haptics-vault-header")))
+            .performTouchInput { click() }
+        compose.onNode(hasContentDescription("Back") and hasAnyAncestor(hasTestTag("haptics-settings-header")))
+            .performTouchInput { click() }
         compose.onNodeWithTag("nova-gesture-strip").performTouchInput { click() }
         compose.runOnIdle {
             assertEquals(listOf("vault home", "vault back", "settings back", "strip home"), actions)
