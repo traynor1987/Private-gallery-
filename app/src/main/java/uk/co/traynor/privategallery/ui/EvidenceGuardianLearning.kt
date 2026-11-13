@@ -16,7 +16,6 @@ import uk.co.traynor.privategallery.core.evidence.EvidenceCatalog
 import uk.co.traynor.privategallery.core.evidence.EvidenceController
 import uk.co.traynor.privategallery.core.guardian.GuardianAssessment
 import uk.co.traynor.privategallery.core.guardian.GuardianCapture
-import uk.co.traynor.privategallery.core.guardian.GuardianCaptureStore
 import uk.co.traynor.privategallery.core.guardian.recogniseNovaBrainPatterns
 import uk.co.traynor.privategallery.launcher.GuardianCloudTeacher
 import uk.co.traynor.privategallery.launcher.GuardianTheme
@@ -47,16 +46,11 @@ internal fun EvidenceGuardianLearning(
         scope.launch {
             val saved = withContext(Dispatchers.IO) {
                 runCatching {
-                    var committed = false
-                    access.withRetirementBoundary {
-                        access.checkCurrent()
-                        val current = access.store.read().evidence().single { it.id() == source.id() }
+                    controller.withEvidenceImpact(source.id()) { store, current ->
                         check(current.ocr().isNotEmpty() && approved in current.transcript())
-                        val store = GuardianCaptureStore(context)
-                        committed = if (assessment == null) store.forgetExample(approved, current.id())
+                        if (assessment == null) store.forgetExample(approved, current.id())
                         else store.teach(approved, assessment, evidenceId = current.id())
                     }
-                    committed
                 }.getOrDefault(false)
             }
             val published = withContext(Dispatchers.Main.immediate) {

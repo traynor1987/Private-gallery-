@@ -238,13 +238,25 @@ internal class EvidenceController(context:Context,val access:EvidenceAccess):Aut
    val catalogue=access.store.read()
    val sourceIds=catalogue.evidence().filter{it.id() in ids}.mapTo(mutableSetOf()){it.sourceId()}
    if(collectionSync.includesAny(sourceIds))throw ConnectedEvidenceRemoval()
-   access.withRetirementBoundary {
-    if(access.owner==EvidenceCatalog.Owner.PRIMARY) impactStore.deleteEvidenceImpact(ids.toSet())
-    access.store.update{current->ids.fold(current){state,id->state.removeEvidence(id,now())}}
+   if(access.owner==EvidenceCatalog.Owner.PRIMARY) access.withRetirementBoundary {
+    access.checkCurrent()
+    impactStore.deleteEvidenceImpact(ids.toSet())
    }
-   access.store.read()
+   access.store.update{current->ids.fold(current){state,id->state.removeEvidence(id,now())}}
   }
  }
+ /** Serialize impact edits with reference removal, and check evidence before taking the authority gate. */
+ suspend fun <T> withEvidenceImpact(id:String,operation:(uk.co.traynor.privategallery.core.guardian.GuardianCaptureStore,EvidenceCatalog.Evidence)->T):T =
+  mutex.withLock {
+   check(access.owner==EvidenceCatalog.Owner.PRIMARY)
+   val record=access.store.read().evidence().single{it.id()==id}
+   var result:Result<T>?=null
+   access.withRetirementBoundary {
+    access.checkCurrent()
+    result=Result.success(operation(impactStore,record))
+   }
+   checkNotNull(result).getOrThrow()
+  }
  private class ConnectedEvidenceRemoval:IllegalStateException()
  /** Transforms are trusted local UI operations, never model output or imported JSON. */
  fun mutate(label:String,transform:(EvidenceCatalog)->EvidenceCatalog)=perform(label){access.store.update(transform)}

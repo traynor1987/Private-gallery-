@@ -3,7 +3,6 @@ package uk.co.traynor.privategallery.ui
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.*
-import androidx.compose.ui.platform.LocalContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -19,7 +18,6 @@ internal fun EvidencePersonalImpact(controller: EvidenceController, record: Evid
     if (access.owner != EvidenceCatalog.Owner.PRIMARY || !controller.current() ||
         (!record.mime().startsWith("image/") && record.ocr().isEmpty())) return
 
-    val context = LocalContext.current.applicationContext
     val scope = rememberCoroutineScope()
     var open by remember(record.id()) { mutableStateOf(false) }
     var busy by remember(record.id()) { mutableStateOf(false) }
@@ -32,15 +30,10 @@ internal fun EvidencePersonalImpact(controller: EvidenceController, record: Evid
         status = null
         scope.launch {
             val result = withContext(Dispatchers.IO) {
-                runCatching {
-                    var result: Result<T>? = null
-                    access.withRetirementBoundary {
-                        access.checkCurrent()
-                        check(access.store.read().evidence().any { it.id() == record.id() })
-                        result = Result.success(operation(GuardianCaptureStore(context)))
-                    }
-                    checkNotNull(result).getOrThrow()
-                }
+                runCatching { controller.withEvidenceImpact(record.id()) { store, current ->
+                    check(current.mime().startsWith("image/") || current.ocr().isNotEmpty())
+                    operation(store)
+                } }
             }
             access.publishIfCurrent {
                 busy = false
