@@ -44,10 +44,10 @@ class ArcadeUiTest {
   compose.onNodeWithTag("nova-arcade").assertIsDisplayed();compose.onNodeWithTag("shortcut-2048").performScrollTo().performClick()
   compose.onNodeWithTag("arcade-achievements").performClick()
   compose.onNodeWithTag("arcade-achievement-progress").assertIsDisplayed()
-  compose.onNodeWithContentDescription("Back to Home").performClick()
+  compose.onNode(hasContentDescription("Back") and hasAnyAncestor(hasTestTag("nova-arcade"))).performClick()
   compose.onNodeWithTag("arcade-settings").performClick()
   compose.onNodeWithContentDescription("Snake speed").assertIsDisplayed()
-  compose.onNodeWithContentDescription("Back to Home").performClick()
+  compose.onNode(hasContentDescription("Back") and hasAnyAncestor(hasTestTag("nova-arcade"))).performClick()
   compose.runOnIdle{assertTrue(PreviewData(space,null).profile.pages.any{"arcade-2048" in it})}
   compose.onNodeWithTag("continue-2048").performScrollTo().performClick()
   compose.onNodeWithTag("tiles-board").assertIsDisplayed().performTouchInput { swipeLeft() }

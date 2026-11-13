@@ -314,7 +314,7 @@ class Home2IntegrationTest {
   compose.onNodeWithText("Uninstall this shortcut?").assertIsDisplayed()
   compose.onNode(hasText("Uninstall") and hasAnyAncestor(hasAnyDescendant(hasText("Uninstall this shortcut?")))).performClick()
   compose.runOnIdle{assertTrue(store.read().apps.isEmpty())}
-  compose.onNodeWithContentDescription("Back to Home").performClick()
+  compose.onNode(hasContentDescription("Back") and hasAnyAncestor(hasTestTag("nova-store"))).performClick()
   compose.onNodeWithTag("app-web:"+installed.id()).assertDoesNotExist()
  }
 
