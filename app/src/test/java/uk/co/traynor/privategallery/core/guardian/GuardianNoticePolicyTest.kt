@@ -6,6 +6,17 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class GuardianNoticePolicyTest {
+    @Test fun minuteScheduleSupportsOvernightAndRejectsInvalidInput() {
+        val start = checkNotNull(guardianNoticeTime("22:35"))
+        val end = checkNotNull(guardianNoticeTime("06:15"))
+        assertFalse(guardianNoticeQuietMinute(start - 1, start, end))
+        assertTrue(guardianNoticeQuietMinute(start, start, end))
+        assertTrue(guardianNoticeQuietMinute(0, start, end))
+        assertFalse(guardianNoticeQuietMinute(end, start, end))
+        assertEquals(null, guardianNoticeTime("24:00"))
+        assertEquals(null, guardianNoticeTime("06:60"))
+    }
+
     @Test fun routingRequiresAnExactProfileAndRejectsConflictingEnrollment() {
         assertEquals(ProbeAccount.MAIN, guardianNoticeProfile(0, 0, 150))
         assertEquals(ProbeAccount.FRIENDS, guardianNoticeProfile(150, 0, 150))

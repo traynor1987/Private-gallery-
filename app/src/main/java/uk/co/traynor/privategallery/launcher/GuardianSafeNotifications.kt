@@ -11,6 +11,7 @@ import uk.co.traynor.privategallery.core.guardian.*
 
 internal object GuardianSafeNotifications {
     private const val CHANNEL = "guardian-safe-notifications"
+    private const val SILENT_CHANNEL = "guardian-safe-silent"
     private const val TAG = "guardian-safe"
     private const val ID = 1
 
@@ -37,6 +38,18 @@ internal object GuardianSafeNotifications {
         context.getSystemService(NotificationManager::class.java)?.cancel(TAG, ID)
     }
 
+    private fun ensureChannels(manager: NotificationManager) {
+        manager.createNotificationChannel(NotificationChannel(CHANNEL, "Nova Guardian", NotificationManager.IMPORTANCE_HIGH))
+        manager.createNotificationChannel(NotificationChannel(SILENT_CHANNEL, "Nova Guardian silent alerts", NotificationManager.IMPORTANCE_LOW))
+    }
+
+    fun channelSettings(context: Context): android.content.Intent {
+        context.getSystemService(NotificationManager::class.java)?.let(::ensureChannels)
+        return android.content.Intent(android.provider.Settings.ACTION_CHANNEL_NOTIFICATION_SETTINGS)
+            .putExtra(android.provider.Settings.EXTRA_APP_PACKAGE, context.packageName)
+            .putExtra(android.provider.Settings.EXTRA_CHANNEL_ID, CHANNEL)
+    }
+
     fun post(context: Context, row: GuardianInboxRow) {
         val settings = prefs(context)
         if (!settings.getBoolean("enabled", false) || !GuardianNotificationListener.hasAccess(context)) return
@@ -48,17 +61,25 @@ internal object GuardianSafeNotifications {
             else -> return
         }
         if (!settings.getBoolean(key, false) || !mayPost(context)) return
-        if (settings.getBoolean("quiet", false) && guardianNoticeQuietHour(
-                java.time.LocalTime.now().hour, settings.getInt("quiet_start", 22), settings.getInt("quiet_end", 7),
-            )) return
-        val manager = context.getSystemService(NotificationManager::class.java) ?: return
+        val now = java.time.LocalTime.now()
         val kind = guardianNoticeKind(row.assessment, row.patterns.orEmpty())
+        val quiet = settings.getBoolean("quiet", false) && guardianNoticeQuietMinute(
+            now.hour * 60 + now.minute,
+            settings.getInt("quiet_start_minute", settings.getInt("quiet_start", 22) * 60),
+            settings.getInt("quiet_end_minute", settings.getInt("quiet_end", 7) * 60),
+        )
+        val quietRule = GuardianQuietRule.entries.firstOrNull {
+            it.name == settings.getString("quiet_rule_${kind.name}", null)
+        } ?: GuardianQuietRule.HIDE
+        if (quiet && quietRule == GuardianQuietRule.HIDE) return
+        val silent = !settings.getBoolean("heads_up", true) || quiet && quietRule == GuardianQuietRule.SILENT
+        val manager = context.getSystemService(NotificationManager::class.java) ?: return
+        ensureChannels(manager)
         val text = "${kind.title} · $source"
         val icon = if (kind == GuardianNoticeKind.LOW && settings.getBoolean("tick", true)) "✓ " else ""
-        manager.createNotificationChannel(NotificationChannel(CHANNEL, "Nova Guardian", NotificationManager.IMPORTANCE_HIGH))
         val route = PendingIntent.getActivity(context, 0, GuardianInboxActivity.safeNotificationsIntent(context),
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
-        val notification = Notification.Builder(context, CHANNEL)
+        val notification = Notification.Builder(context, if (silent) SILENT_CHANNEL else CHANNEL)
             .setSmallIcon(android.R.drawable.ic_lock_lock)
             .setContentTitle("Nova Guardian")
             .setContentText(icon + text)
@@ -66,6 +87,11 @@ internal object GuardianSafeNotifications {
             .setVisibility(Notification.VISIBILITY_SECRET)
             .setLocalOnly(true)
             .setOnlyAlertOnce(true)
+            .setColor(when (kind) {
+                GuardianNoticeKind.LOW -> 0xFF137D57.toInt()
+                GuardianNoticeKind.UPSETTING, GuardianNoticeKind.HIGH -> 0xFF996000.toInt()
+                GuardianNoticeKind.UNCERTAIN -> 0xFF596477.toInt()
+            })
             .setAutoCancel(true)
             .setTimeoutAfter(settings.getInt("duration", 15).coerceIn(5, 60) * 1000L)
             .setContentIntent(route)

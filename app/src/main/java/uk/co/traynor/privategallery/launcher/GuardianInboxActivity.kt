@@ -607,22 +607,39 @@ class GuardianInboxActivity : ComponentActivity() {
                                 preferences.edit().putBoolean("quiet", enabled).apply()
                                 revision++
                             }
+                            LauncherToggle("Use heads-up channel", preferences.getBoolean("heads_up", true)) { enabled ->
+                                preferences.edit().putBoolean("heads_up", enabled).apply()
+                                revision++
+                            }
                             if (preferences.getBoolean("quiet", false)) {
-                                var start by remember { mutableStateOf(preferences.getInt("quiet_start", 22).toString()) }
-                                var end by remember { mutableStateOf(preferences.getInt("quiet_end", 7).toString()) }
-                                OutlinedTextField(start, { start = it.filter(Char::isDigit).take(2) },
-                                    label = { Text("Start hour (0–23)") }, singleLine = true)
-                                OutlinedTextField(end, { end = it.filter(Char::isDigit).take(2) },
-                                    label = { Text("End hour (0–23)") }, singleLine = true)
-                                val startHour = start.toIntOrNull()?.takeIf { it in 0..23 }
-                                val endHour = end.toIntOrNull()?.takeIf { it in 0..23 }
-                                TextButton(enabled = startHour != null && endHour != null && startHour != endHour,
+                                fun time(key: String, fallback: Int): String {
+                                    val value = preferences.getInt("${key}_minute", preferences.getInt(key, fallback) * 60)
+                                    return String.format(java.util.Locale.ROOT, "%02d:%02d", value / 60, value % 60)
+                                }
+                                var start by remember { mutableStateOf(time("quiet_start", 22)) }
+                                var end by remember { mutableStateOf(time("quiet_end", 7)) }
+                                OutlinedTextField(start, { start = it.take(5) }, label = { Text("Start (HH:MM)") }, singleLine = true)
+                                OutlinedTextField(end, { end = it.take(5) }, label = { Text("End (HH:MM)") }, singleLine = true)
+                                val startMinute = guardianNoticeTime(start)
+                                val endMinute = guardianNoticeTime(end)
+                                TextButton(enabled = startMinute != null && endMinute != null && startMinute != endMinute,
                                     onClick = {
-                                        preferences.edit().putInt("quiet_start", checkNotNull(startHour))
-                                            .putInt("quiet_end", checkNotNull(endHour)).apply()
+                                        preferences.edit().putInt("quiet_start_minute", checkNotNull(startMinute))
+                                            .putInt("quiet_end_minute", checkNotNull(endMinute)).apply()
                                         revision++
                                     }) { Text("Save quiet hours") }
-                                Text("Quiet hours silence Nova Guardian pop-ups. Capture and Sanctuary still follow their own settings.")
+                                GuardianNoticeKind.entries.forEach { kind ->
+                                    val key = "quiet_rule_${kind.name}"
+                                    val rule = GuardianQuietRule.entries.firstOrNull {
+                                        it.name == preferences.getString(key, null)
+                                    } ?: GuardianQuietRule.HIDE
+                                    TextButton(onClick = {
+                                        val next = GuardianQuietRule.entries[(rule.ordinal + 1) % GuardianQuietRule.entries.size]
+                                        preferences.edit().putString(key, next.name).apply()
+                                        revision++
+                                    }) { Text("${kind.title} · ${rule.label}") }
+                                }
+                                Text("Quiet hours follow local time. Guardian does not replay alerts afterward. Phone and emergency alerts follow their own Android settings.")
                             }
                             Text("Clear posted alert after ${preferences.getInt("duration", 15)} seconds")
                             Row {
@@ -634,6 +651,9 @@ class GuardianInboxActivity : ComponentActivity() {
                                 }
                             }
                         }
+                        TextButton(onClick = {
+                            runCatching { startActivity(GuardianSafeNotifications.channelSettings(this@GuardianInboxActivity)) }
+                        }) { Text("Android sound and vibration settings") }
                         TextButton(onClick = { requestNoticePermission.launch(android.Manifest.permission.POST_NOTIFICATIONS) }) {
                             Text("Request Android notification permission")
                         }

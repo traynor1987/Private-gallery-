@@ -21,8 +21,23 @@ internal fun guardianNoticeProfile(profile: Long, own: Long?, friends: Long?): P
 }
 
 internal fun guardianNoticeQuietHour(hour: Int, start: Int, end: Int): Boolean =
+    hour in 0..23 && start in 0..23 && end in 0..23 &&
+        guardianNoticeQuietMinute(hour * 60, start * 60, end * 60)
+
+internal enum class GuardianQuietRule(val label: String) {
+    HIDE("Hide alert"), SILENT("Silent alert"), NORMAL("Normal alert"),
+}
+
+internal fun guardianNoticeQuietMinute(minute: Int, start: Int, end: Int): Boolean =
     when {
-        hour !in 0..23 || start !in 0..23 || end !in 0..23 || start == end -> false
-        start < end -> hour in start until end
-        else -> hour >= start || hour < end
+        minute !in 0..1439 || start !in 0..1439 || end !in 0..1439 || start == end -> false
+        start < end -> minute in start until end
+        else -> minute >= start || minute < end
     }
+
+internal fun guardianNoticeTime(value: String): Int? {
+    if (!Regex("[0-9]{2}:[0-9]{2}").matches(value)) return null
+    val hour = value.take(2).toInt()
+    val minute = value.takeLast(2).toInt()
+    return if (hour in 0..23 && minute in 0..59) hour * 60 + minute else null
+}
