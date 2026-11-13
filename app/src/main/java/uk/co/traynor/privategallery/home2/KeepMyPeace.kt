@@ -27,6 +27,7 @@ import java.util.UUID
 
 @Composable
 internal fun KeepMyPeace(sanctuary: SanctuaryStore, onBack: () -> Unit) {
+    uk.co.traynor.privategallery.ui.CredentialCaptureProtection()
     val context = LocalContext.current.applicationContext
     val archive = remember(context) { GuardianCaptureStore(context) }
     val scope = rememberCoroutineScope()

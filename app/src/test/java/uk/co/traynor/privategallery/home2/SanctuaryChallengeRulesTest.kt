@@ -15,6 +15,16 @@ class SanctuaryChallengeRulesTest {
         assertTrue(SanctuaryChallenges().passed(false, false, false))
     }
 
+    @Test fun restoredDraftAndExtraPhraseCannotSkipChallenges() {
+        val valid = "1" + "0".repeat(80)
+        assertEquals(valid, sanctuarySudokuDraft(valid))
+        assertEquals("0".repeat(81), sanctuarySudokuDraft("invalid"))
+        val rules = SanctuaryChallenges(SanctuarySudoku.EASY, extraPhrase = "I am ready")
+        assertFalse(rules.passed(true, false, false, "I am Ready"))
+        assertFalse(rules.passed(false, false, false, "I am ready"))
+        assertTrue(rules.passed(true, false, false, "I am ready"))
+    }
+
     @Test fun everyOfferedDifficultyHasAUniqueSolution() {
         for (difficulty in 0..2) {
             val puzzle = SudokuGame.create(difficulty, 42)

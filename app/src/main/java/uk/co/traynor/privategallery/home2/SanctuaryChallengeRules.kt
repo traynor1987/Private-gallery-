@@ -7,9 +7,10 @@ internal data class SanctuaryChallenges(
     val sudoku: SanctuarySudoku = SanctuarySudoku.OFF,
     val pin: Boolean = false,
     val hold: Boolean = false,
+    val extraPhrase: String = "",
 ) {
-    fun passed(solved: Boolean, verifiedPin: Boolean, held: Boolean) =
-        (sudoku == SanctuarySudoku.OFF || solved) && (!pin || verifiedPin) && (!hold || held)
+    fun passed(solved: Boolean, verifiedPin: Boolean, held: Boolean, phrase: String = "") =
+        (sudoku == SanctuarySudoku.OFF || solved) && (!pin || verifiedPin) && (!hold || held) && (extraPhrase.isEmpty() || phrase == extraPhrase)
 }
 
 internal fun sanctuarySudokuSolved(puzzle: SudokuGame, board: String): Boolean {
@@ -18,3 +19,6 @@ internal fun sanctuarySudokuSolved(puzzle: SudokuGame, board: String): Boolean {
     for (index in board.indices) if (puzzle.given(index) == 0) game = game.enter(index, board[index].digitToInt(), false)
     return game.complete()
 }
+
+internal fun sanctuarySudokuDraft(value: String?): String =
+    value?.takeIf { it.length == 81 && it.all { cell -> cell in '0'..'9' } } ?: "0".repeat(81)

@@ -33,6 +33,7 @@ internal fun sanctuaryChallenges(context: Context, mode: SanctuaryMode): Sanctua
             ?: SanctuarySudoku.OFF,
         prefs.getBoolean("${mode.name}_pin", false),
         prefs.getBoolean("${mode.name}_hold", false),
+        prefs.getString("${mode.name}_extra_phrase", "").orEmpty().take(96),
     )
 }
 
@@ -42,7 +43,8 @@ internal fun SanctuaryChallengeSettings(context: Context) {
     var rules by remember(mode) { mutableStateOf(sanctuaryChallenges(context, mode)) }
     fun save(value: SanctuaryChallenges) {
         challengePreferences(context).edit().putString("${mode.name}_sudoku", value.sudoku.name)
-            .putBoolean("${mode.name}_pin", value.pin).putBoolean("${mode.name}_hold", value.hold).apply()
+            .putBoolean("${mode.name}_pin", value.pin).putBoolean("${mode.name}_hold", value.hold)
+            .putString("${mode.name}_extra_phrase", value.extraPhrase).apply()
         rules = value
     }
     Text("Early exit challenges", style = MaterialTheme.typography.titleMedium)
@@ -53,6 +55,13 @@ internal fun SanctuaryChallengeSettings(context: Context) {
     TextButton(onClick = { save(rules.copy(sudoku = SanctuarySudoku.entries[(rules.sudoku.ordinal + 1) % SanctuarySudoku.entries.size])) }) {
         Text("Sudoku difficulty · ${rules.sudoku.label}")
     }
+    var phrase by remember(mode) { mutableStateOf(rules.extraPhrase) }
+    OutlinedTextField(phrase, { phrase = it.take(96) }, singleLine = true,
+        label = { Text("Additional confirmation phrase") },
+        supportingText = { Text("Use a non-secret phrase. Leave blank to turn off this extra step.") })
+    TextButton(enabled = phrase.trim() != rules.extraPhrase, onClick = {
+        save(rules.copy(extraPhrase = phrase.trim()))
+    }) { Text("Save extra phrase") }
     val pinConfigured = PinVaultKeyStore(context).isConfigured
     Row {
         Checkbox(rules.pin, { save(rules.copy(pin = it)) }, enabled = pinConfigured || rules.pin)
@@ -73,7 +82,20 @@ internal fun SanctuaryChallengeSteps(session: SanctuarySession, rules: Sanctuary
         if (rules.sudoku == SanctuarySudoku.OFF) null
         else runCatching { SudokuGame.create(rules.sudoku.ordinal - 1, session.id.hashCode().toLong()) }.getOrNull()
     }
-    var board by rememberSaveable(session.id, rules.sudoku.name) { mutableStateOf("0".repeat(81)) }
+    val prefs = remember(context) { challengePreferences(context) }
+    var board by remember(session.id, rules.sudoku) {
+        mutableStateOf(sanctuarySudokuDraft(
+            prefs.getString("draft_board", null).takeIf {
+                prefs.getString("draft_session", null) == session.id &&
+                    prefs.getString("draft_difficulty", null) == rules.sudoku.name
+            },
+        ))
+    }
+    fun updateBoard(value: String) {
+        board = value
+        prefs.edit().putString("draft_session", session.id)
+            .putString("draft_difficulty", rules.sudoku.name).putString("draft_board", value).apply()
+    }
     var selected by rememberSaveable(session.id) { mutableIntStateOf(-1) }
     val solved = puzzle != null && sanctuarySudokuSolved(puzzle, board)
     var pin by remember { mutableStateOf("") }
@@ -82,7 +104,13 @@ internal fun SanctuaryChallengeSteps(session: SanctuarySession, rules: Sanctuary
     var pinError by remember { mutableStateOf(false) }
     var holdStart by remember { mutableStateOf<Long?>(null) }
     var held by remember(session.id) { mutableStateOf(false) }
-    LaunchedEffect(solved, pinVerified, held, rules) { onReady(rules.passed(solved, pinVerified, held)) }
+    var phrase by remember(session.id) { mutableStateOf("") }
+    val reportReady by rememberUpdatedState(onReady)
+    LaunchedEffect(solved, pinVerified, held, phrase, rules) { reportReady(rules.passed(solved, pinVerified, held, phrase)) }
+    if (rules.extraPhrase.isNotEmpty()) {
+        Text(rules.extraPhrase)
+        OutlinedTextField(phrase, { phrase = it.take(96) }, label = { Text("Extra confirmation phrase") }, singleLine = true)
+    }
     if (rules.sudoku != SanctuarySudoku.OFF) {
         Text("Sudoku · ${rules.sudoku.label}")
         if (puzzle == null) Text("The puzzle could not be opened. You can use Android credential recovery below.")
@@ -110,15 +138,16 @@ internal fun SanctuaryChallengeSteps(session: SanctuarySession, rules: Sanctuary
             for (digits in listOf(1..5, 6..9)) Row(Modifier.fillMaxWidth()) {
                 digits.forEach { digit ->
                     TextButton(modifier = Modifier.weight(1f), enabled = selected in 0..80 && !solved, onClick = {
-                        if (puzzle.given(selected) == 0) board = board.replaceRange(selected, selected + 1, "$digit")
+                        if (puzzle.given(selected) == 0) updateBoard(board.replaceRange(selected, selected + 1, "$digit"))
                     }) { Text("$digit") }
                 }
             }
-            TextButton(onClick = { board = "0".repeat(81); selected = -1 }) { Text("Reset puzzle") }
+            TextButton(onClick = { updateBoard("0".repeat(81)); selected = -1 }) { Text("Reset puzzle") }
             if (solved) Text("Puzzle solved")
         }
     }
     if (rules.pin && !pinVerified) {
+        uk.co.traynor.privategallery.ui.CredentialCaptureProtection()
         OutlinedTextField(pin, { pin = it.filter { digit -> digit in '0'..'9' }.take(32); pinError = false },
             label = { Text("Primary Vault PIN") }, singleLine = true, enabled = !verifying,
             visualTransformation = PasswordVisualTransformation(), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword))

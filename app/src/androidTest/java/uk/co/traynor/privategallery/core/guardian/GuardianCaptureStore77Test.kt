@@ -9,6 +9,32 @@ import java.io.File
 
 @RunWith(AndroidJUnit4::class)
 class GuardianCaptureStore77Test {
+    @Test fun peaceJournalReopensEncryptedAndCanBeDeletedIndependently() {
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        val store = GuardianCaptureStore(context)
+        val file = File(context.noBackupFilesDir, "nova-keep-my-peace-v1.enc")
+        store.clearKeepMyPeace()
+        try {
+            assertFalse(store.keepMyPeace().enabled)
+            assertFalse(file.exists())
+            val now = System.currentTimeMillis()
+            val entry = PeaceSession("fixture", now - 120_000, now, "Synthetic reflection", helpful = true)
+            store.updateKeepMyPeace { it.copy(enabled = true, sessions = listOf(entry)) }
+            assertFalse(file.readBytes().decodeToString().contains(entry.activity))
+            val reopened = GuardianCaptureStore(context)
+            assertEquals(listOf(entry), reopened.keepMyPeace().sessions)
+            val bytes = file.readBytes()
+            bytes[bytes.lastIndex] = (bytes.last().toInt() xor 1).toByte()
+            file.writeBytes(bytes)
+            assertTrue(runCatching { reopened.keepMyPeace() }.isFailure)
+            assertArrayEquals(bytes, file.readBytes())
+            reopened.clearKeepMyPeace()
+            assertFalse(file.exists())
+        } finally {
+            store.clearKeepMyPeace()
+        }
+    }
+
     @Test fun archiveReopensFromAtomicBackupWithoutLosingEncryptedHistory() {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         val store = GuardianCaptureStore(context)
