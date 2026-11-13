@@ -57,12 +57,13 @@ internal fun guardianInboxClock(context: Context) = GuardianInboxClock(
 )
 
 /** Private, bounded archive. The capture phase exposes aggregate counts only. */
-internal class GuardianCaptureStore private constructor(private val context: Context, private val training: Boolean, private val fixture: Boolean = false, private val contacts: Boolean = false, private val validation: Boolean = false, private val phoneShield: Boolean = false, private val callHistory: Boolean = false, private val personalImpact: Boolean = false) {
+internal class GuardianCaptureStore private constructor(private val context: Context, private val training: Boolean, private val fixture: Boolean = false, private val contacts: Boolean = false, private val validation: Boolean = false, private val phoneShield: Boolean = false, private val callHistory: Boolean = false, private val personalImpact: Boolean = false, private val peace: Boolean = false) {
     constructor(context: Context) : this(context.applicationContext, false)
 
-    private val destination = File(context.noBackupFilesDir, when { personalImpact -> "nova-personal-impact-v1.enc"; callHistory -> "guardian-call-history-v1.enc"; phoneShield -> "guardian-phone-shield-v1.enc"; validation -> "nova-brain-validation-v1.enc"; contacts -> "guardian-contacts-v1.enc"; fixture -> "guardian-fixture-v1.enc"; training -> "guardian-learning-v1.enc"; else -> ARCHIVE_NAME })
-    private val alias = when { personalImpact -> "nova-personal-impact-v1"; callHistory -> "nova-guardian-call-history-v1"; phoneShield -> "nova-guardian-phone-shield-v1"; validation -> "nova-brain-validation-v1"; contacts -> "nova-guardian-contacts-v1"; fixture -> "nova-guardian-fixture-v1"; training -> "nova-guardian-learning-v1"; else -> KEY_ALIAS }
+    private val destination = File(context.noBackupFilesDir, when { peace -> "nova-keep-my-peace-v1.enc"; personalImpact -> "nova-personal-impact-v1.enc"; callHistory -> "guardian-call-history-v1.enc"; phoneShield -> "guardian-phone-shield-v1.enc"; validation -> "nova-brain-validation-v1.enc"; contacts -> "guardian-contacts-v1.enc"; fixture -> "guardian-fixture-v1.enc"; training -> "guardian-learning-v1.enc"; else -> ARCHIVE_NAME })
+    private val alias = when { peace -> "nova-keep-my-peace-v1"; personalImpact -> "nova-personal-impact-v1"; callHistory -> "nova-guardian-call-history-v1"; phoneShield -> "nova-guardian-phone-shield-v1"; validation -> "nova-brain-validation-v1"; contacts -> "nova-guardian-contacts-v1"; fixture -> "nova-guardian-fixture-v1"; training -> "nova-guardian-learning-v1"; else -> KEY_ALIAS }
     private val aad = when {
+        peace -> "NovaOS Keep My Peace v1".toByteArray(Charsets.UTF_8)
         personalImpact -> "NovaOS Personal Impact v1".toByteArray(Charsets.UTF_8)
         callHistory -> "NovaOS Guardian call history v1".toByteArray(Charsets.UTF_8)
         phoneShield -> "NovaOS Guardian phone shield v1".toByteArray(Charsets.UTF_8)
@@ -150,6 +151,27 @@ internal class GuardianCaptureStore private constructor(private val context: Con
                 .put("mainWhatsApp", it.mainWhatsApp.name).put("friendsWhatsApp", it.friendsWhatsApp.name)
         })
     }
+
+    private fun peaceArchive() = GuardianCaptureStore(context, training = false, peace = true)
+
+    fun keepMyPeace(): PeaceJournal = synchronized(lock) {
+        val archive = peaceArchive()
+        val original = archive.read()
+        val journal = PeaceJournal.decode(original)
+        val retained = journal.retained(System.currentTimeMillis())
+        if (journal != retained) archive.write(retained.encode())
+        retained
+    }
+
+    fun updateKeepMyPeace(change: (PeaceJournal) -> PeaceJournal): PeaceJournal = synchronized(lock) {
+        val archive = peaceArchive()
+        val now = System.currentTimeMillis()
+        val next = change(PeaceJournal.decode(archive.read()).retained(now)).retained(now)
+        archive.write(next.encode())
+        next
+    }
+
+    fun clearKeepMyPeace() = peaceArchive().clear()
 
     private fun impactArchive() = GuardianCaptureStore(context, training = false, personalImpact = true)
 
@@ -645,7 +667,7 @@ internal class GuardianCaptureStore private constructor(private val context: Con
         keyStore().deleteEntry(alias)
         atomic.delete()
         check(!destination.exists())
-        if (!fixture && !contacts && !phoneShield && !callHistory) knowledgeRevision.value += 1
+        if (!fixture && !contacts && !phoneShield && !callHistory && !peace) knowledgeRevision.value += 1
     }
 
     private fun cutoff(days: Int, now: Long): Long {
@@ -706,7 +728,7 @@ internal class GuardianCaptureStore private constructor(private val context: Con
             throw error
         }
         check(readBlob()?.contentEquals(blob) == true)
-        if (!fixture && !contacts && !phoneShield && !callHistory) knowledgeRevision.value += 1
+        if (!fixture && !contacts && !phoneShield && !callHistory && !peace) knowledgeRevision.value += 1
     }
 
     private fun readBlob(): ByteArray? = try {

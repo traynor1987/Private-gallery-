@@ -95,6 +95,7 @@ internal fun SanctuaryHome(
     var presetRevision by remember { mutableIntStateOf(0) }
     var message by remember { mutableStateOf<String?>(null) }
     var viewHistory by remember { mutableStateOf(false) }
+    var viewPeace by remember { mutableStateOf(false) }
     var remaining by remember { mutableLongStateOf(0L) }
     LaunchedEffect(store, session?.id, session?.expiresAt) {
         while (true) {
@@ -126,10 +127,11 @@ internal fun SanctuaryHome(
         }
         if (appAuthentication.value == null) message = "Set an Android screen lock to manage Sanctuary app rules."
     }
-    BackHandler(edit != null || appEditor != null || viewHistory) {
+    BackHandler(edit != null || appEditor != null || viewHistory || viewPeace) {
         edit = null
         appEditor = null
         viewHistory = false
+        viewPeace = false
     }
     if (appEditor == SanctuaryAppEditor.ALLOWED) {
         SanctuaryAllowedAppInstances(store, session?.mode ?: selected, session) { appEditor = null }
@@ -165,6 +167,10 @@ internal fun SanctuaryHome(
                 false
             }
         }
+        return
+    }
+    if (viewPeace) {
+        KeepMyPeace(store) { viewPeace = false }
         return
     }
     if (viewHistory) {
@@ -261,6 +267,7 @@ internal fun SanctuaryHome(
             { openAppEditor(SanctuaryAppEditor.VISIBILITY) }, "sanctuary-app-visibility",
         )
         SanctuaryMenuRow("App Guardian setup", "Permissions and protection status", onPermissions, "sanctuary-permissions")
+        SanctuaryMenuRow("Keep My Peace", "Private protected time and reflections", { viewPeace = true }, "sanctuary-keep-my-peace")
         SanctuaryMenuRow("Session history", "Recent sessions on this device", { viewHistory = true }, "sanctuary-history")
         if (onPhone != null) SanctuaryMenuRow(
             "Open Phone", "Call a trusted contact or reach emergency services",
