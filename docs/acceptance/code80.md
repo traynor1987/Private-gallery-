@@ -1,6 +1,6 @@
 # NovaOS Code 80 acceptance
 
-Code 80 is in development. The installed production baseline is NovaOS 1.7.38.6, versionCode 79, package `uk.co.traynor.privategallery`. Use Android 17 (API 37) for verification and a Galaxy Z Fold for physical acceptance.
+Code 80 is in development with candidate version 1.7.38.7 and versionCode 80. The installed production baseline is NovaOS 1.7.38.6, versionCode 79, package `uk.co.traynor.privategallery`. Use Android 17 (API 37) for verification and a Galaxy Z Fold for physical acceptance.
 
 ## Changes for owner review
 
@@ -32,3 +32,11 @@ In Guardian Inbox, open Nova Brain settings and select **Incidents**. Supply ind
 2. Verify package, SDK levels, versionCode 80 and the original signing certificate. The pinned production certificate SHA-256 is `94f2bfc6567f26d067d29077111cfd0ce86d38263c642ad115e43365f05b0d17`.
 3. Following explicit owner approval, use the existing signing controls and test an in-place Code 79 → 80 upgrade on a disposable API 37 environment with representative encrypted data. Verify Keystore continuity after restart, both vaults, Guardian and Evidence Locker, Nova Brain feedback, Sanctuary, launcher layouts, and backup. Keep the owner's installed app and data intact.
 4. Record the physical Fold results, signed upgrade results, APK checksum and publication evidence before calling the release ready.
+
+## Draft release notes
+
+Code 80 adds protected notification review, per-mode Sanctuary challenges, optional Personal Impact feedback, the Keep My Peace journal, and first-party Nova Store verification. Nova Brain also supports local evaluation of independently labelled Evidence Locker OCR. The Store catalogue requires approved release entries before APK installation can be tested.
+
+## Recovery
+
+Keep the currently installed Code 79 app and its data on the owner’s Fold until device and upgrade acceptance are complete. In the disposable upgrade environment, record the baseline and candidate APK digests, package and signer, and validate representative encrypted fixtures after the update and a process restart. If any check fails, retain the logs and fixture evidence and stop delivery. For a regression discovered after an owner upgrade, repair forward with a higher version code and the original signing identity. Keep encrypted data and Keystore entries intact throughout recovery.
