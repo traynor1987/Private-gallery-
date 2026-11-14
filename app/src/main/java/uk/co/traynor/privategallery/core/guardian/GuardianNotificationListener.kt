@@ -246,7 +246,7 @@ internal class GuardianNotificationListener : NotificationListenerService() {
                     guardianCaptureEntries(notification).filter { guardianMayKeepSms(it.text) }, sbn.packageName)
                 if (received != null && received.entries.isNotEmpty()) {
                     val armed = currentMainTest(this)?.takeIf { test ->
-                        received.entries.singleOrNull()?.text == test.message
+                        guardianMatchesLatestTestMessage(received, test.message)
                     }
                     val onDurable: ((Boolean) -> Unit)? = if (isWhatsApp && account == ProbeAccount.MAIN) {
                         { quietCollection -> dismissStoredWhatsApp(sbn, received, armed, quietCollection) }
@@ -276,8 +276,8 @@ internal class GuardianNotificationListener : NotificationListenerService() {
         if (connectedListener !== this || !hasAccess(this) ||
             !GuardianCapture.isEnabled(this)) return
         val test = armed != null
-        if (test) {
-            if (currentMainTest(this) !== armed || captured.entries.singleOrNull()?.text != armed?.message) return
+        if (armed != null) {
+            if (currentMainTest(this) !== armed || !guardianMatchesLatestTestMessage(captured, armed.message)) return
         } else if (friends) {
             if (!friendsDismissalEnabled(this)) return
         } else if (!quietCollection && !automaticDismissalEnabled(this)) return
@@ -757,6 +757,12 @@ internal enum class SyntheticResult(val label: String) {
 
 
 /** Convert only Android-provided incoming MessagingStyle messages from the verified personal WhatsApp UID. */
+/** A test token in older bundled history must not authorize dismissal. */
+internal fun guardianMatchesLatestTestMessage(event: GuardianCaptureEvent, token: String): Boolean {
+    val latest = event.entries.maxOfOrNull { it.time } ?: return false
+    return event.entries.singleOrNull { it.time == latest }?.text == token
+}
+
 internal fun guardianMainNotificationEvent(
     notification: Notification, account: ProbeAccount, packageName: String, uidMatches: Boolean,
     profileSerial: Long, notificationKey: String, now: Long,

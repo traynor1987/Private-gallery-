@@ -24,6 +24,22 @@ import java.io.File
 class VisualFoundationTest {
     @get:Rule val compose = createAndroidComposeRule<ComponentActivity>()
 
+    @Test fun labsKeepsCategoryHeadingsAndConceptStatus() {
+        val navigator = VisualNavigator()
+        compose.setContent { VisualFoundation(navigator, onClose = {}, onRealApp = { error("Unexpected real app") }) }
+        compose.onNodeWithText("NovaOS Labs").assertIsDisplayed()
+        val list = compose.onNodeWithTag("visual-catalogue-list")
+        listOf("Core applications", "Privacy & security", "AI experience", "System & utilities").forEach { category ->
+            list.performScrollToKey(category)
+            compose.onNodeWithText(category).assertIsDisplayed()
+        }
+        list.performScrollToKey("notifications")
+        compose.onNodeWithTag("visual-module-notifications").performClick()
+        compose.onNodeWithTag("visual-screen-notifications").assertIsDisplayed()
+        compose.onNodeWithTag("visual-demo-indicator").assertIsDisplayed()
+        compose.onNodeWithText("Synthetic data").assertIsDisplayed()
+    }
+
     @Test fun coreModulesNavigateWithDemoStatusAtFoldWidths() = verifyModules(
         listOf("health", "notes", "files", "calendar", "tasks", "clipboard", "time"),
     )

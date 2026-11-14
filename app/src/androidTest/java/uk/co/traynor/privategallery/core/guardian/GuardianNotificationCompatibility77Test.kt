@@ -20,6 +20,28 @@ import uk.co.traynor.privategallery.core.sanctuary.SanctuaryStore
 
 @RunWith(AndroidJUnit4::class)
 class GuardianNotificationCompatibility77Test {
+    @Test fun groupedMainTestMatchesOnlyTheUniqueNewestCapturedMessage() {
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        val token = "Exact Nova Guardian test fixture"
+        val sender = Person.Builder().setName("Synthetic sender").setKey("remote").build()
+        val owner = Person.Builder().setName("Synthetic owner").setKey("local").build()
+        fun capture(first: String, second: String, secondTime: Long = 2, summary: Boolean = false) =
+            guardianMainNotificationEvent(
+                Notification.Builder(context, "fixture").setCategory(Notification.CATEGORY_MESSAGE)
+                    .setGroup("synthetic").setGroupSummary(summary)
+                    .setStyle(Notification.MessagingStyle(owner).setGroupConversation(true)
+                        .addMessage(first, 1, sender).addMessage(second, secondTime, sender)).build(),
+                ProbeAccount.MAIN, GUARDIAN_WHATSAPP, true, 0, "synthetic-key", 3,
+            )
+        val grouped = checkNotNull(capture("Earlier message", token))
+        assertEquals(2, grouped.entries.size)
+        assertTrue(guardianMatchesLatestTestMessage(grouped, token))
+        assertFalse(guardianMatchesLatestTestMessage(checkNotNull(capture(token, "New message")), token))
+        assertFalse(guardianMatchesLatestTestMessage(checkNotNull(capture("Earlier", "$token extra")), token))
+        assertFalse(guardianMatchesLatestTestMessage(checkNotNull(capture("Earlier", token, 1)), token))
+        assertNull(capture("Earlier", token, summary = true))
+    }
+
     @Test fun androidBindsAndRevokesAnExplicitlyGrantedListener() {
         val instrumentation = InstrumentationRegistry.getInstrumentation()
         val context = instrumentation.targetContext

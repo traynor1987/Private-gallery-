@@ -122,7 +122,7 @@ internal fun VisualFoundation(
                     Icon(Icons.AutoMirrored.Filled.ArrowBack, backLabel)
                 }
                 Column(Modifier.weight(1f)) {
-                    Text(module?.title ?: "Nova Visual Foundation", style = MaterialTheme.typography.titleLarge)
+                    Text(module?.title ?: "NovaOS Labs", style = MaterialTheme.typography.titleLarge)
                     Text(if (module?.id == "sanctuary") "Protection is not active" else "Synthetic data",
                         color = colors.onSurfaceVariant, style = MaterialTheme.typography.labelMedium)
                 }
@@ -158,7 +158,8 @@ private fun VisualCatalogue(onOpen: (String) -> Unit, onRealApp: (String) -> Uni
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         item {
-            Text("Demo apps", style = MaterialTheme.typography.titleMedium)
+            Text("Explore upcoming NovaOS applications, experimental interfaces and future system capabilities.",
+                style = MaterialTheme.typography.bodyMedium)
         }
         visualGroups.forEach { (group, modules) ->
           item(key = group) { Text(group, style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary) }
@@ -261,7 +262,7 @@ internal fun VisualCatalogueEntry(tag: String, onOpen: () -> Unit) {
     TextButton(onClick = onOpen, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).testTag(tag)) {
         Icon(Icons.Default.Science, null)
         Spacer(Modifier.width(8.dp))
-        Text("Visual Foundation · DEMO")
+        Text("NovaOS Labs · Concepts")
     }
 }
 
