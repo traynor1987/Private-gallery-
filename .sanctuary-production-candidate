@@ -18,6 +18,7 @@
     "release_configuration1711.sh": "7ca6540d03c99513c6deaae2ea82528c4981c0cc51d629c5c5c4f5e0182df8d5",
     "verify_release1711_gate.py": "45a581363a36145d9f43b4ce1fa6e9c8f390487fa5525dc6e199b1f47644c5e7"
   },
-  "workflow_sha256": "08d34bdf8a8952935f018bb25c0dde9ad68328b9aa09896b0b07223f41bbf9e5",
-  "review_sha256": "a1986274d1eefa57aef2184f9314d95216cabecaa6e14859956c20df6a839de1"
+  "workflow_sha256": "41e0f4138e78ce639cbd9146b8ec4304c9101d6368e530f8cacad39403cecbe7",
+  "review_sha256": "47569474953b0a85412aad8cabd3ca407ffddf35a58a117a70e2c4047046b8a5",
+  "delivery_recipient_sha256": "0055c59e3cb0fe8c6a72f3e6861f0f6231f23cb7e2a3a0ea9af1dce32c831a23"
 }

@@ -34,7 +34,8 @@ jobs:
           control.mkdir();inputs.mkdir()
           paths=['.sanctuary-production-candidate','.github/workflows/sanctuary-production.yml',
                  'docs/release1711/UpgradeFixtureTest.kt','docs/release1711/SECURITY_REVIEW.md',
-                 'docs/release1711/RUNTIME_CASES.json','docs/release1711/UPGRADE_CONTROLS.md']
+                 'docs/release1711/RUNTIME_CASES.json','docs/release1711/UPGRADE_CONTROLS.md',
+                 'docs/release1711/code80-transfer-recipient.pem']
           names=('compile_upgrade1711_fixture.sh','verify_compiled_upgrade1711.py','verify_code79_baseline.py',
                  'verify_production_candidate1711.sh','verify_synthetic_upgrade1711.sh','verify_signed_upgrade1711.py',
                  'release_configuration1711.sh','verify_release1711_gate.py')
@@ -54,6 +55,8 @@ jobs:
           marker=json.loads((control/'.sanctuary-production-candidate').read_bytes())
           assert marker['source']=='681cd0babbcd3a3b2733ae795ca27de08f1fbf68' and marker['test_run']==43599592120 and type(marker['test_artifact']) is int and marker['test_artifact']>0
           assert re.fullmatch('[a-f0-9]{64}',marker['fixture_sha256'])
+          recipient=control/'docs/release1711/code80-transfer-recipient.pem'
+          assert hashlib.sha256(recipient.read_bytes()).hexdigest()==marker['delivery_recipient_sha256']
           workflow=hashlib.sha256((control/'.github/workflows/sanctuary-production.yml').read_bytes()).hexdigest()
           assert marker.get('workflow_sha256')==workflow, 'Signing workflow changed after review'
           review=(control/'docs/release1711/SECURITY_REVIEW.md').read_text()
@@ -263,6 +266,38 @@ jobs:
             app/build/production-evidence/from79/*.txt
           if-no-files-found: error
           retention-days: 30
+      - name: Seal the verified APK and manifest for private transfer
+        run: |
+          set -euo pipefail
+          umask 077
+          stage=$(mktemp -d "$RUNNER_TEMP/code80-delivery.XXXXXX")
+          trap 'rm -rf "$stage"' EXIT
+          name=NovaOS-1.7.38.7-code80.apk
+          apk=app/build/outputs/apk/release/app-release.apk
+          recorded=$(cut -d ' ' -f1 app/build/production-evidence/apk-sha256.txt)
+          test "$(sha256sum "$apk" | cut -d ' ' -f1)" = "$recorded"
+          test "$recorded" = "$(cut -d ' ' -f1 app/build/production-evidence/from79/upgrade-candidate-sha256.txt)"
+          cp "$apk" "$stage/$name"
+          python3 - "$stage/verification.json" "$name" "$recorded" <<'PY'
+          import json,os,sys
+          from pathlib import Path
+          manifest=dict(filename=sys.argv[2],apk_sha256=sys.argv[3],source_sha=os.environ['FROZEN_SOURCE'],
+                        run_id=os.environ['GITHUB_RUN_ID'],run_number=os.environ['GITHUB_RUN_NUMBER'],
+                        package='uk.co.traynor.privategallery',version='1.7.38.7',version_code=80,min_sdk=37,target_sdk=37,
+                        certificate_sha256='94f2bfc6567f26d067d29077111cfd0ce86d38263c642ad115e43365f05b0d17',
+                        code79_upgrade='PASS',code80_after_restart='PASS')
+          Path(sys.argv[1]).write_text(json.dumps(manifest,indent=2)+'\n')
+          PY
+          tar -C "$stage" -cf - "$name" verification.json | openssl cms -encrypt -binary -aes-256-gcm \
+            -outform DER -out "$RUNNER_TEMP/novaos-code80-delivery.cms" \
+            "$RUNNER_TEMP/release1711-controls/docs/release1711/code80-transfer-recipient.pem"
+      - name: Retain encrypted transfer only
+        uses: actions/upload-artifact@v4
+        with:
+          name: novaos-code80-sealed-transfer
+          path: ${{ runner.temp }}/novaos-code80-delivery.cms
+          if-no-files-found: error
+          retention-days: 3
       - name: Remove original signing material on every outcome
         if: always()
         run: rm -f "$RUNNER_TEMP/private-gallery-release.jks"
