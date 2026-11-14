@@ -299,7 +299,7 @@ class GuardianCaptureStore77Test {
         }
     }
 
-    @Test fun verifiedPersistenceRequiresEveryEntryAndNewContent() {
+    @Test fun verifiedPersistenceAllowsAnArchivedRepostWithoutAddingRows() {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         val now = guardianInboxClock(context)
         val store = GuardianCaptureStore(context)
@@ -314,7 +314,10 @@ class GuardianCaptureStore77Test {
             val reopened = GuardianCaptureStore(context)
             assertEquals("Synthetic sender", reopened.inboxRows(7, now).single().senderName)
             assertNull(reopened.inboxRows(7, now).single().assessment)
-            assertFalse(reopened.append(event, 7, now.wall, assess = false).allDurable)
+            val repost = reopened.append(event, 7, now.wall, assess = false)
+            assertTrue(repost.allDurable)
+            assertEquals(0, repost.added)
+            assertTrue(repost.addedIds.isEmpty())
             val next = first.copy(time = now.wall - 1, text = "a new private message")
             val partial = event.copy(entries = listOf(first, next, next.copy(sender = "")))
             assertFalse(reopened.append(partial, 7, now.wall, assess = false).allDurable)

@@ -94,6 +94,9 @@ internal fun NovaLauncherScreen(
     smartFolderPresentation: LauncherSmartFolderPresentation = LauncherSmartFolderPresentation.AUTOMATIC,
     appVisibility: SanctuaryAppVisibility = SanctuaryAppVisibility(hideBlockedApps = state.hideBlocked,
         hideFromSearch = state.hideBlocked, hideFromSuggestions = state.hideBlocked, hideFromRecentlyUsed = state.hideBlocked),
+    showNotificationBar: Boolean = true,
+    onNotificationBarChange: (Boolean) -> Unit = {},
+    onHomeSurfaceVisible: (Boolean) -> Unit = {},
 ) {
     val theme = when (state.appearance.theme) {
         LauncherTheme.SYSTEM -> AppTheme.SYSTEM
@@ -107,7 +110,8 @@ internal fun NovaLauncherScreen(
             LauncherSetup(state, eligible, decisions, actions, isDefaultHome, outsideProtection, launcherProtected)
         } else {
             LauncherRuntime(state, apps, shortcuts, decisions, actions, isDefaultHome, outsideProtection,
-                launcherProtected, homeGeneration, sanctuaryStatus, smartState, smartSettings, defaultHomeUi, smartFolderPresentation, appVisibility)
+                launcherProtected, homeGeneration, sanctuaryStatus, smartState, smartSettings, defaultHomeUi, smartFolderPresentation, appVisibility,
+                showNotificationBar, onNotificationBarChange, onHomeSurfaceVisible)
         }
     }
 }
@@ -139,6 +143,9 @@ private fun LauncherRuntime(
     defaultHomeUi: LauncherDefaultHomeUi?,
     smartFolderPresentation: LauncherSmartFolderPresentation,
     appVisibility: SanctuaryAppVisibility,
+    showNotificationBar: Boolean,
+    onNotificationBarChange: (Boolean) -> Unit,
+    onHomeSurfaceVisible: (Boolean) -> Unit,
 ) {
     val guardianContext = LocalContext.current
     var guardianOptions by remember(guardianContext) { mutableStateOf(GuardianHomeOptions.read(guardianContext)) }
@@ -268,6 +275,12 @@ private fun LauncherRuntime(
         val updatePage: (Int) -> Unit = { if (isInner) innerPage = it else coverPage = it }
         val libraryEntry = if (isInner) innerLibrary else coverLibrary
         val librarySelected = libraryEntry != null
+        val homeVisible = surface == LauncherSurface.HOME && !guardianSelected && !librarySelected
+        val reportHomeVisibility by rememberUpdatedState(onHomeSurfaceVisible)
+        DisposableEffect(homeVisible) {
+            reportHomeVisibility(homeVisible)
+            onDispose { reportHomeVisibility(false) }
+        }
         val libraryQuery = if (isInner) innerLibraryQuery else coverLibraryQuery
         val libraryCategory = if (isInner) innerLibraryCategory else coverLibraryCategory
         fun setLibraryQuery(value: String) { if (isInner) innerLibraryQuery = value else coverLibraryQuery = value }
@@ -508,6 +521,8 @@ private fun LauncherRuntime(
                         onLibrarySettings = { surface = LauncherSurface.LIBRARY_SETTINGS },
                         onGuardianSettings = { surface = LauncherSurface.GUARDIAN_SETTINGS },
                         defaultHomeUi = defaultHomeUi,
+                        showNotificationBar = showNotificationBar,
+                        onNotificationBarChange = onNotificationBarChange,
                         wide = wide,
                     )
                 }

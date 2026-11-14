@@ -36,6 +36,19 @@ class NovaLauncherPlatform70Test {
     private val context = instrumentation.targetContext
     private val home = ComponentName(context, NovaLauncherActivity::class.java)
 
+    @Test fun notificationBarPreferencePersistsAcrossStoreInstances() {
+        val store = NovaLauncherStore(context)
+        val original = store.showNotificationBar()
+        try {
+            assertTrue(store.setShowNotificationBar(false))
+            assertFalse(NovaLauncherStore(context).showNotificationBar())
+            assertTrue(store.setShowNotificationBar(true))
+            assertTrue(NovaLauncherStore(context).showNotificationBar())
+        } finally {
+            store.setShowNotificationBar(original)
+        }
+    }
+
     @Test fun homeRegistrationAndExistingWorkspaceEntryAreSeparate() {
         val manager = context.packageManager
         val homeIntent = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME).setPackage(context.packageName)

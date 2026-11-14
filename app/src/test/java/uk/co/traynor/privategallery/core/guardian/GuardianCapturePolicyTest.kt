@@ -4,6 +4,15 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class GuardianCapturePolicyTest {
+    @Test fun dismissalRequiresBothListenerCallbackAndAbsence() {
+        assertEquals(GuardianRemovalObservation.WAITING, guardianRemovalObservation(false, false, false, false))
+        assertEquals(GuardianRemovalObservation.ABSENT_UNCONFIRMED, guardianRemovalObservation(false, false, false, true))
+        assertEquals(GuardianRemovalObservation.CONFIRMED, guardianRemovalObservation(false, true, false, false))
+        assertEquals(GuardianRemovalObservation.REPOSTED, guardianRemovalObservation(true, true, true, false))
+        assertEquals(GuardianRemovalObservation.UNVERIFIED, guardianRemovalObservation(null, true, false, true))
+        assertEquals(GuardianRemovalObservation.UNVERIFIED, guardianRemovalObservation(true, true, false, true))
+    }
+
     @Test fun callsAreOnlyAttributedToTheDefaultDialerOrAnObservedWhatsAppProfile() {
         assertEquals(GuardianCallSource.PHONE, guardianCallSource("phone", "phone", true, ProbeAccount.MAIN))
         assertNull(guardianCallSource("phone", "phone", false, ProbeAccount.UNRESOLVED))

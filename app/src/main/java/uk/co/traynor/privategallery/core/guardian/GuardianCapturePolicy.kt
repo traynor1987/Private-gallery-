@@ -77,3 +77,20 @@ internal enum class GuardianCaptureStage(val label: String) {
     STORAGE("Encrypted archive write or read could not be verified"),
     QUEUE("Capture queue full"),
 }
+
+internal enum class GuardianRemovalObservation {
+    WAITING, CONFIRMED, ABSENT_UNCONFIRMED, REPOSTED, UNVERIFIED,
+}
+
+internal fun guardianRemovalObservation(
+    active: Boolean?,
+    listenerRemoval: Boolean,
+    repostObserved: Boolean,
+    expired: Boolean,
+): GuardianRemovalObservation = when {
+    active == false && listenerRemoval -> GuardianRemovalObservation.CONFIRMED
+    active == true && listenerRemoval && repostObserved -> GuardianRemovalObservation.REPOSTED
+    !expired -> GuardianRemovalObservation.WAITING
+    active == false -> GuardianRemovalObservation.ABSENT_UNCONFIRMED
+    else -> GuardianRemovalObservation.UNVERIFIED
+}

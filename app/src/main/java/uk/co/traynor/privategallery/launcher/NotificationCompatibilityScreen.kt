@@ -233,8 +233,14 @@ internal fun NotificationCompatibilityScreen(
                     if (GuardianNotificationListener.setAutomaticDismissal(context, enabled)) automatic = enabled
                     else externalError = "Verify the Main WhatsApp test on your Fold before enabling automatic dismissal."
                 }
+                var friends by remember { mutableStateOf(GuardianNotificationListener.friendsDismissalEnabled(context)) }
+                LauncherToggle("Dismiss eligible Friends WhatsApp messages", friends) { enabled ->
+                    if (GuardianNotificationListener.setFriendsDismissal(context, enabled)) friends = enabled
+                    else externalError = "The Friends WhatsApp setting could not be saved."
+                }
+                Text("Friends dismissal requires a verified Dual Messenger profile and permission to retain that conversation.")
                 status.mainDismissal?.let { Text(it) }
-                Text("Samsung may briefly show a notification before Guardian can dismiss it. Friends notifications remain available.")
+                Text("Samsung may briefly show a notification before Guardian can dismiss it.")
 
                 externalError?.let { Text(it, color = MaterialTheme.colorScheme.error) }
             }

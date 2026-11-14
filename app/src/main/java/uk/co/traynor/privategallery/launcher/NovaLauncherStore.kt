@@ -15,6 +15,11 @@ internal const val MAX_LAUNCHER_BACKUP_BYTES = 768 * 1024
 internal class NovaLauncherStore(context: Context) {
     private val prefs = context.applicationContext.getSharedPreferences(LAUNCHER_LAYOUT_PREFS, Context.MODE_PRIVATE)
 
+    fun showNotificationBar(): Boolean = prefs.getBoolean("show_notification_bar", true)
+
+    fun setShowNotificationBar(show: Boolean): Boolean =
+        prefs.edit().putBoolean("show_notification_bar", show).commit()
+
     fun askForDefaultHome(): Boolean = prefs.getBoolean("ask_default_home", true)
 
     fun setAskForDefaultHome(ask: Boolean): Boolean = prefs.edit().putBoolean("ask_default_home", ask).commit()

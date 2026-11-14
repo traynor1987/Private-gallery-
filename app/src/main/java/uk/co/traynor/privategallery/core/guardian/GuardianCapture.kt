@@ -122,11 +122,6 @@ internal object GuardianCapture {
                     store.append(selected, days, now.wall, assess = false, clock = now)
                 }
                 val captured = result.getOrNull()
-                if (captured?.allDurable == true && onDurable != null && generation.get() == expected) {
-                    Handler(Looper.getMainLooper()).post {
-                        if (generation.get() == expected && isEnabled(app)) onDurable(quietCollection)
-                    }
-                }
                 if (captured != null && captured.added > 0) {
                     // Classification may fail independently. A durable row remains Awaiting Analysis.
                     runCatching { store.assessCaptured(event, days, now) }
@@ -143,7 +138,15 @@ internal object GuardianCapture {
                         if (row != null) uk.co.traynor.privategallery.launcher.GuardianSafeNotifications.post(app, row)
                     }
                 }
+                if (captured?.allDurable == true && onDurable != null && generation.get() == expected) {
+                    Handler(Looper.getMainLooper()).post {
+                        if (generation.get() == expected && isEnabled(app)) onDurable(quietCollection)
+                    }
+                }
                 val counts = runCatching { store.inboxCounts(days, now) }.getOrNull()
+                if (mainMessage && captured?.allDurable != true) {
+                    android.util.Log.i("NovaGuardianDismissal", "No complete encrypted capture; cancellation withheld")
+                }
                 if (mainMessage) noteMainCapture(when {
                     captured == null || counts == null -> GuardianCaptureStage.STORAGE
                     captured.partial -> GuardianCaptureStage.PARTIAL

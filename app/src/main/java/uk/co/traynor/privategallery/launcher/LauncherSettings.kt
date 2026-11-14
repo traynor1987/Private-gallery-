@@ -46,6 +46,8 @@ internal fun LauncherSettings(
     onGuardianSettings: () -> Unit = {},
     defaultHomeUi: LauncherDefaultHomeUi? = null,
     wide: Boolean = false,
+    showNotificationBar: Boolean = true,
+    onNotificationBarChange: (Boolean) -> Unit = {},
 ) {
     var confirmDockReset by remember { mutableStateOf(false) }
     var notificationCompatibility by remember { mutableStateOf(false) }
@@ -87,6 +89,10 @@ internal fun LauncherSettings(
                 HorizontalDivider()
                 Text("Appearance", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 10.dp))
                 LauncherAppearanceOptions(state.appearance, { actions.save(state.copy(appearance = it)) }, actions.chooseWallpaper, showDock = false)
+                Text("Notification bar", style = MaterialTheme.typography.titleSmall)
+                LauncherToggle("Show notification bar", showNotificationBar, onNotificationBarChange)
+                Text("Show or hide the notification bar while on the Home screen.",
+                    style = MaterialTheme.typography.bodySmall)
                 OutlinedButton(onClick = onGuardianSettings) { Text("Guardian Home") }
                 LauncherToggle("Show Dock Icon Labels", state.dockOptions.labels) {
                     actions.save(state.copy(dockOptions = state.dockOptions.copy(labels = it)))

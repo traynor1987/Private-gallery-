@@ -536,7 +536,7 @@ internal class GuardianCaptureStore private constructor(private val context: Con
         val readable = retained.filterNot { it.optBoolean("deleted") }.mapTo(HashSet()) { it.getString("id") }
         val partial = candidates.size != event.entries.size
         GuardianCaptureResult(added, readable.size, partial,
-            added > 0 && !partial && incoming.keys.all { it in readable }, addedIds)
+            incoming.isNotEmpty() && !partial && incoming.keys.all { it in readable }, addedIds)
     }
 
     fun assessCaptured(event: GuardianCaptureEvent, days: Int, now: GuardianInboxClock) = synchronized(lock) {

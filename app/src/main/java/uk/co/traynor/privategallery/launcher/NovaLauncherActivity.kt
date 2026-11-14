@@ -110,6 +110,8 @@ class NovaLauncherActivity : ComponentActivity() {
     private var defaultHome by mutableStateOf<Boolean?>(null)
     private var askDefaultHome by mutableStateOf(true)
     private var defaultHomeOpening by mutableStateOf(LauncherDefaultHomePromptSession())
+    private var homeSurfaceVisible = false
+    private var showNotificationBar by mutableStateOf(true)
     private var homeTopResumed by mutableStateOf(false)
     private var homeWindowFocused by mutableStateOf(false)
     private lateinit var launcherExit: LauncherExitProtection
@@ -294,6 +296,17 @@ class NovaLauncherActivity : ComponentActivity() {
                     defaultHome == true, outsideProtection, actions, homeGeneration, launcherProtected, sanctuaryStatus,
                     defaultHomeUi = LauncherDefaultHomeUi(defaultHome, askDefaultHome,
                         canShowDefaultHomePrompt(), homeWindowFocused, defaultHomeOpening),
+                    showNotificationBar = showNotificationBar,
+                    onNotificationBarChange = { show ->
+                        if (store.setShowNotificationBar(show)) {
+                            showNotificationBar = show
+                            applyNotificationBar()
+                        } else message("The notification bar setting could not be saved.")
+                    },
+                    onHomeSurfaceVisible = { visible ->
+                        homeSurfaceVisible = visible
+                        applyNotificationBar()
+                    },
                     smartState = smart, smartFolderPresentation = smartFolderPresentation, appVisibility = appVisibility,
                     smartSettings = { eligible ->
                         LauncherSmartSettings(tracking, eligible, onClearLegacyHistory = {
@@ -360,6 +373,8 @@ class NovaLauncherActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
+        showNotificationBar = store.showNotificationBar()
+        applyNotificationBar()
         reloadWorkspaceLayout()
         refreshProtection()
         askDefaultHome = store.askForDefaultHome()
@@ -372,6 +387,7 @@ class NovaLauncherActivity : ComponentActivity() {
     override fun onPause() {
         usageRefresh?.cancel()
         launcherExit.cancel()
+        window.insetsController?.show(android.view.WindowInsets.Type.statusBars())
         super.onPause()
     }
 
@@ -394,10 +410,23 @@ class NovaLauncherActivity : ComponentActivity() {
     override fun onTopResumedActivityChanged(isTopResumedActivity: Boolean) {
         super.onTopResumedActivityChanged(isTopResumedActivity)
         homeTopResumed = isTopResumedActivity
+        applyNotificationBar()
         if (isTopResumedActivity) SanctuaryLauncherPolicy.launcherResumed(this)
         else {
             launcherExit.cancel()
             SanctuaryLauncherPolicy.launcherPaused()
+        }
+    }
+
+    private fun applyNotificationBar() {
+        val controller = window.insetsController ?: return
+        val statusBars = android.view.WindowInsets.Type.statusBars()
+        if (homeTopResumed && homeSurfaceVisible && !showNotificationBar) {
+            controller.systemBarsBehavior = android.view.WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+            controller.hide(statusBars)
+        } else {
+            controller.show(statusBars)
+            controller.systemBarsBehavior = android.view.WindowInsetsController.BEHAVIOR_DEFAULT
         }
     }
 
