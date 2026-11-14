@@ -5,6 +5,7 @@ import argparse
 import hashlib
 import io
 import json
+import shutil
 from pathlib import Path
 import zipfile
 
@@ -46,9 +47,14 @@ def verify(path: Path) -> str:
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("archive", type=Path)
+    parser.add_argument("--extract", type=Path)
     args = parser.parse_args()
     try:
         checksum = verify(args.archive)
+        if args.extract:
+            with zipfile.ZipFile(args.archive) as archive, archive.open(APK_NAME) as apk:
+                with args.extract.open("xb") as output:
+                    shutil.copyfileobj(apk, output)
     except (OSError, ValueError, zipfile.BadZipFile) as error:
         parser.exit(1, f"{error}\n")
     print(f"Verified archived Code 79 APK SHA-256 {checksum}")

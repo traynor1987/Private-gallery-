@@ -1,29 +1,15 @@
-# NovaOS 1.7.38.6 Code 79 release controls
+# NovaOS 1.7.38.7 Code 80 private upgrade controls
 
-Source: 06f85bb410580dc86622767d707f422ab5fe7ad9
+Source: 681cd0babbcd3a3b2733ae795ca27de08f1fbf68
 Authorization: authenticated owner push
-Physical Fold Main encrypted capture: PASS
-Physical Fold Friends separation: PASS
-Upgrade fixture SHA-256: 8ce2e127d3f891aca4e9bc9f9fcc6a2f6b29ca33baecf4ed93510129f10b11a8
-Upgrade controls SHA-256: ab97bc57eac3ae5e87529717a73a72de15bf028c648d2a57a4fc513831ba6025
+Release scope: private disposable upgrade verification only
+Physical Fold acceptance: pending
+Upgrade fixture SHA-256: b0e186bc86d312685bce246e5b30d20ce37e050bf25c4d1baea707d2c37259ea
+Upgrade controls SHA-256: bae0a06992a86185dffa5135eb49f1ddf2f45b3708822c0fee51a73dced7fb9b
 Runtime matrix SHA-256: 789b0eef5c8a8383ffefa050bb69064f32a447201838e2e61e6a204ee2092694
-Runtime archive SHA-256: c7e881bd65c6073fb52420cedfefaa015656c21491a266db3e8589fb351c855a
-Signing workflow SHA-256: 66ce87633c1818d33a8174648094af50757f4f856b58f9c80a13b4fb090ed3bc
+Runtime archive SHA-256: 5cfe74e5535494f0eaab58f44c2f5725a25e001201e407a9841744cea1c6c181
+Signing workflow SHA-256: 08d34bdf8a8952935f018bb25c0dde9ad68328b9aa09896b0b07223f41bbf9e5
 
-Runtime run 43199320592 (#339), artifact 13938657175. Code 78 baseline is the distributed production artifact from run 43067384693.
-
-The existing pre-signer gate requires documented physical Fold passes and an authenticated owner push. The original-key in-place upgrade runs on Android 17 before APK publication.
-
-
-## Owner-confirmed Fold evidence
-
-On 12 November 2026 the owner tested on a Samsung Galaxy Z Fold running Android 17 using the isolated Guardian diagnostics APK alongside the installed Code 78 production app. The diagnostics came from run 43196753249, artifact 13934795205.
-
-- Main WhatsApp with DND off increased the encrypted retained count from 0 to 1.
-- Main WhatsApp with DND on increased it from 1 to 2.
-- Friends WhatsApp left the Main retained count at 2.
-- After authenticated Guardian Inbox unlock, both Main test messages were readable.
-
-These observations cover physical notification capture and profile separation. The production-key Code 78 to 79 in-place upgrade and restart remain pending the authorised signing workflow.
-
-Production run 43218947434 verified signing and candidate identity. The upgrade runner stopped before installation because it still pinned the Code 77 APK checksum. The corrected pin is the SHA-256 of the verified distributed Code 78 APK.
+The original Code 79 baseline is pinned to production run 43226350763. Only the
+upgrade receipts are uploaded from the public repository. The candidate APK is
+used on the disposable emulator and remains on the ephemeral runner.
