@@ -56,9 +56,17 @@ private class WallpaperPickerTicket {var delivered=false;var uri:Uri?=null}
   old?.close()
   return published
  }
+ fun startOperation(block:suspend CoroutineScope.()->Unit) {
+  operation?.cancel()
+  busy=true
+  error=null
+  // Completion checks the registered job before releasing busy state.
+  val next=scope.launch(start=CoroutineStart.LAZY,block=block)
+  operation=next
+  next.start()
+ }
  fun select(coordinator:WallpaperCoordinator,id:String) {
-  operation?.cancel();busy=true;error=null
-  operation=scope.launch {
+  startOperation {
    var candidate:WallpaperImage?=null
    try {
     withContext(Dispatchers.IO){candidate=coordinator.image(id)}
@@ -102,7 +110,7 @@ private class WallpaperPickerTicket {var delivered=false;var uri:Uri?=null}
   val result=delivered;delivered=null;pending=null
   if(result!=null) {
    val uri=result.uri
-   if(uri!=null){busy=true;operation=scope.launch {
+   if(uri!=null){startOperation {
     var candidate:WallpaperImage?=null
     try{withContext(Dispatchers.IO){candidate=coordinator.systemImage(uri)};ensureActive();if(adopt(coordinator,checkNotNull(candidate)))candidate=null}
     catch(cancelled:CancellationException){throw cancelled}catch(_:Exception){if(active===coordinator&&coordinator.current())error="Image could not be opened. Existing wallpaper is unchanged."}
@@ -121,13 +129,13 @@ private class WallpaperPickerTicket {var delivered=false;var uri:Uri?=null}
      if(grid)WallpaperVaultGrid(coordinator,items,busy,error,onBack={grid=false},onSelect={select(coordinator,it)})
      else WallpaperScreen(draft,image?.bitmap,if(owner.owner==EvidenceCatalog.Owner.HIDDEN)"Hidden Space"else "Primary Space",context.filesDir,busy,error,
       onChange={draft=it},onBuiltin={value->image?.close();image=null;draft=Wallpaper(builtin=value)},
-      onChooseVault={grid=true;busy=true;error=null;operation=scope.launch {
+      onChooseVault={grid=true;startOperation {
        try{val listed=withContext(Dispatchers.IO){coordinator.images()};ensureActive();if(active===coordinator&&owner.current())coordinator.access.publishIfCurrent{items=listed}}
        catch(cancelled:CancellationException){throw cancelled}catch(_:Exception){if(active===coordinator&&coordinator.current())error="Vault images could not be loaded."}
        finally{if(active===coordinator&&operation===currentCoroutineContext()[Job])busy=false}
       }},
       onPickSystem={if(owner.current()&&pending==null){val ticket=WallpaperPickerTicket();pending=ticket;retire();try{picker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))}catch(_:Exception){ticket.delivered=true;delivered=ticket}}},
-      onApply={busy=true;error=null;operation=scope.launch {
+      onApply={startOperation {
        try{withContext(Dispatchers.IO){coordinator.apply(draft,image)};ensureActive();if(active===coordinator&&owner.current()&&coordinator.current())dismiss()}
        catch(cancelled:CancellationException){throw cancelled}catch(_:Exception){if(active===coordinator&&coordinator.current())error="Wallpaper could not be saved. Existing wallpaper is unchanged."}
        finally{if(active===coordinator&&operation===currentCoroutineContext()[Job])busy=false}
@@ -141,7 +149,7 @@ private class WallpaperPickerTicket {var delivered=false;var uri:Uri?=null}
 @Composable private fun WallpaperVaultGrid(coordinator:WallpaperCoordinator,items:List<VaultItem>,busy:Boolean,error:String?,onBack:()->Unit,onSelect:(String)->Unit) {
  Column(Modifier.fillMaxSize().safeDrawingPadding().testTag("wallpaper-vault-grid")) {
   PreviewHeader("NovaOS Vault",if(coordinator.access.owner==EvidenceCatalog.Owner.HIDDEN)"Hidden Space"else "Primary Space",onBack)
-  if(busy)LinearProgressIndicator(Modifier.fillMaxWidth())
+  if(busy)LinearProgressIndicator(Modifier.fillMaxWidth().testTag("wallpaper-vault-loading"))
   error?.let{Text(it,Modifier.padding(24.dp),color=MaterialTheme.colorScheme.error)}
   if(!busy&&items.isEmpty()&&error==null)Text("No images in this Space.",Modifier.padding(24.dp))
   LazyVerticalGrid(GridCells.Adaptive(104.dp),contentPadding=PaddingValues(12.dp),horizontalArrangement=Arrangement.spacedBy(8.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {

@@ -94,7 +94,11 @@ class WallpaperUiTest {
   }catch(timeout:ComposeTimeoutException) {
    val grid=compose.onAllNodesWithTag("wallpaper-vault-grid").fetchSemanticsNodes().isNotEmpty()
    val readyTiles=compose.onAllNodes(tile).fetchSemanticsNodes().size
-   val loadError=compose.onAllNodesWithText("Image unavailable. Choose another image.").fetchSemanticsNodes().isNotEmpty()
+   val sourceTiles=compose.onAllNodesWithTag("wallpaper-vault-item-${f.source.id}").fetchSemanticsNodes().size
+   val loading=compose.onAllNodesWithTag("wallpaper-vault-loading").fetchSemanticsNodes().isNotEmpty()
+   val loadError=compose.onAllNodesWithText("Image unavailable. Choose another image.")
+    .fetchSemanticsNodes().isNotEmpty() ||
+    compose.onAllNodesWithText("Vault images could not be loaded.").fetchSemanticsNodes().isNotEmpty()
    val focus = runCatching {
     val automation = androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().uiAutomation
     android.os.ParcelFileDescriptor.AutoCloseInputStream(
@@ -107,7 +111,7 @@ class WallpaperUiTest {
      }.take(30).joinToString("\n")
     }
    }.getOrElse { "Window manager diagnostics unavailable: ${it.javaClass.simpleName}" }
-   throw AssertionError("Vault selection did not reach the zoom editor. grid=$grid readyTiles=$readyTiles loadError=$loadError\n${modalCaptureState1762(activity).description}\n$focus",timeout)
+   throw AssertionError("Vault selection did not reach the zoom editor. grid=$grid sourceTiles=$sourceTiles readyTiles=$readyTiles loading=$loading loadError=$loadError\n${modalCaptureState1762(activity).description}\n$focus",timeout)
   }
  }
  private fun home(hidden:Boolean) {
