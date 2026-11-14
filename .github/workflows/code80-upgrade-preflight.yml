@@ -1,0 +1,36 @@
+name: Code 80 upgrade fixture preflight
+on:
+  push:
+    branches: [feature/novaos-sanctuary-integration]
+    paths:
+      - .github/workflows/code80-upgrade-preflight.yml
+      - scripts/prepare_code80_upgrade_fixture.py
+permissions:
+  contents: read
+jobs:
+  compile-fixture:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Install Android 17 compilation tools
+        run: |
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-37.1" "build-tools;36.0.0"
+      - name: Compile the upgrade fixture against distributed Code 79 source
+        run: |
+          bash scripts/prime_gradle95_ci.sh
+          baseline=$(mktemp -d "$RUNNER_TEMP/code79-source.XXXXXX")
+          git archive 06f85bb410580dc86622767d707f422ab5fe7ad9 | tar -x -C "$baseline"
+          cmp gradle/wrapper/gradle-wrapper.jar "$baseline/gradle/wrapper/gradle-wrapper.jar"
+          grep -Fq '/gradle-9.5.0-bin.zip' "$baseline/gradle/wrapper/gradle-wrapper.properties"
+          cp gradle/wrapper/gradle-wrapper.properties "$baseline/gradle/wrapper/gradle-wrapper.properties"
+          python3 scripts/prepare_code80_upgrade_fixture.py "$baseline" docs/release1711/UpgradeFixtureTest.kt
+          cd "$baseline"
+          ./gradlew :app:compileDebugAndroidTestKotlin --no-daemon --console=plain
