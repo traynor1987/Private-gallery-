@@ -33,6 +33,10 @@ Use an isolated, CI-verified test build and synthetic fixtures for these checks.
 
 In Guardian Inbox, open Nova Brain settings and select **Incidents**. Supply independently labelled OCR in JSON rows with `incidentId`, `evidenceId`, `text`, and `patterns`. Use stable Evidence Locker record IDs, one row per record, and an empty patterns array for an ordinary example. Use at least 10 incidents, 20 examples with labelled patterns and 20 ordinary examples. Exclude training records and any recrops or copies of the same OCR. Nova Brain rejects repeated record IDs, duplicate or sufficiently similar OCR, and overlap with known training examples. The incident result reports OCR-level accuracy and error counts beside the shared Knowledge Meter. It updates only after a valid local evaluation.
 
+## Guardian screenshot to Evidence Locker
+
+Unlock Guardian, reveal a synthetic archived message, select **Save to Evidence Locker**, and confirm with the Primary Vault PIN. Wait for the encrypted-save confirmation. In Primary Evidence Locker, verify the PNG, assign it to a test incident, and retry the save to confirm there is one catalogue record for the event. Remove that record and confirm the Guardian message and incident remain. Confirm no Gallery image was created. Repeat on both Fold displays with sender names hidden, and separately test Gallery, Android Sharesheet and image clipboard with the actual receiving apps.
+
 ## Production upgrade gate
 
 1. Freeze the reviewed Code 80 source and record the exact passing Android 17 run and artifact digest. The distributed Code 79 baseline is [production run 43226350763, artifact 13949047165](https://github.com/traynor1987/Private-gallery-/actions/runs/43226350763/artifacts/13949047165). Download the original archive and run `python3 scripts/verify_code79_baseline.py /path/to/archive.zip`. This checks the archive and APK digests against the recorded release and checks the original release receipt. The existing production workflow targets Code 78 → 79.

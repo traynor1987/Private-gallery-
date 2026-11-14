@@ -59,7 +59,24 @@ internal fun GuardianMessageCopyActions(
     val context = LocalContext.current
     var selection by remember(row.id, message) { mutableStateOf<TextFieldValue?>(null) }
     val scope = rememberCoroutineScope()
+    val evidenceGate = remember(row.id, message) { Any() }
+    val evidenceCurrent = remember(row.id, message) { java.util.concurrent.atomic.AtomicBoolean(true) }
+    val lifecycle = androidx.lifecycle.compose.LocalLifecycleOwner.current.lifecycle
+    DisposableEffect(lifecycle, evidenceCurrent) {
+        val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+            if (event == androidx.lifecycle.Lifecycle.Event.ON_PAUSE) {
+                synchronized(evidenceGate) { evidenceCurrent.set(false) }
+            }
+        }
+        lifecycle.addObserver(observer)
+        onDispose {
+            lifecycle.removeObserver(observer)
+            synchronized(evidenceGate) { evidenceCurrent.set(false) }
+        }
+    }
     var sharePreview by remember(row.id, message) { mutableStateOf(false) }
+    var evidenceOpen by remember(row.id, message) { mutableStateOf(false) }
+    var pin by remember(row.id, message) { mutableStateOf("") }
     var sharing by remember(row.id, message) { mutableStateOf(false) }
     var feedback by remember(row.id, message) { mutableStateOf<String?>(null) }
     fun copy(text: String) {
@@ -127,6 +144,52 @@ internal fun GuardianMessageCopyActions(
         }
     }
 
+    fun saveEvidence() {
+        if (!enabled || !canCopy() || sharing || pin.isEmpty()) return
+        val entered = pin.toCharArray()
+        pin = ""
+        sharing = true
+        scope.launch {
+            val identity = Any()
+            var key: ByteArray? = null
+            var opened: uk.co.traynor.privategallery.core.evidence.EvidenceAccess? = null
+            var controller: uk.co.traynor.privategallery.core.evidence.EvidenceController? = null
+            try {
+                withContext(Dispatchers.IO) {
+                    key = uk.co.traynor.privategallery.core.security.PinVaultKeyStore(context).unlock(entered)
+                    opened = uk.co.traynor.privategallery.core.evidence.EvidenceAccess.primary(
+                        context.applicationContext, identity, { identity }, { evidenceCurrent.get() },
+                        { checkNotNull(key).copyOf() }, evidenceGate,
+                    )
+                }
+                controller = uk.co.traynor.privategallery.core.evidence.EvidenceController(context, checkNotNull(opened))
+                if (!canCopy()) return@launch
+                val archive = checkNotNull(controller)
+                withContext(Dispatchers.IO) {
+                    val output = uk.co.traynor.privategallery.core.browser.v2.BrowserScreenshotBuffer(
+                        uk.co.traynor.privategallery.core.browser.v2.BrowserScreenshotPolicy.MAX_PNG_BYTES)
+                    try {
+                        renderGuardianScreenshot(reconstruction, output)
+                        archive.saveGuardianScreenshot(row.id, output::input)
+                    } finally { output.wipe() }
+                }
+                if (canCopy()) {
+                    feedback = "Screenshot saved in encrypted Evidence Locker."
+                    evidenceOpen = false
+                }
+            } catch (cancelled: kotlinx.coroutines.CancellationException) {
+                throw cancelled
+            } catch (_: Exception) {
+                feedback = "Could not save to Evidence Locker. Check your Primary Vault PIN and try again."
+            } finally {
+                if (controller != null) controller.close() else opened?.close()
+                synchronized(evidenceGate) { key?.fill(0) }
+                entered.fill('\u0000')
+                sharing = false
+            }
+        }.invokeOnCompletion { entered.fill('\u0000') }
+    }
+
     GuardianCard("Copy and export") {
         Text("Copied content is handed to Android. Clipboard history and other apps may retain it.", color = GuardianMuted)
         TextButton(enabled = enabled && message.isNotBlank(), onClick = { copy(message) }) { Text("Copy Message") }
@@ -137,7 +200,29 @@ internal fun GuardianMessageCopyActions(
         TextButton(enabled = enabled && message.isNotBlank(), onClick = { if (canCopy()) sharePreview = true }) {
             Text("Save Screenshot")
         }
+        TextButton(enabled = enabled && message.isNotBlank(), onClick = {
+            if (canCopy()) { feedback = null; evidenceOpen = true }
+        }) { Text("Save to Evidence Locker") }
     }
+    if (evidenceOpen) GuardianAlertDialog(
+        onDismissRequest = { if (!sharing) { evidenceOpen = false; pin = "" } },
+        title = { Text("Save to Evidence Locker") },
+        text = {
+            Column {
+                uk.co.traynor.privategallery.ui.CredentialCaptureProtection()
+                Text("Enter your Primary Vault PIN to save this screenshot as encrypted evidence.")
+                OutlinedTextField(pin, { pin = it.filter { digit -> digit in '0'..'9' }.take(32) },
+                    enabled = !sharing, singleLine = true, label = { Text("Primary Vault PIN") },
+                    visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(),
+                    keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                        keyboardType = androidx.compose.ui.text.input.KeyboardType.NumberPassword))
+                feedback?.let { Text(it) }
+            }
+        },
+        confirmButton = { TextButton(enabled = !sharing && pin.isNotEmpty(), onClick = ::saveEvidence) { Text("Save encrypted screenshot") } },
+        dismissButton = { TextButton(enabled = !sharing, onClick = { evidenceOpen = false; pin = "" }) { Text("Cancel") } },
+        properties = DialogProperties(securePolicy = SecureFlagPolicy.SecureOn),
+    )
     if (sharePreview) GuardianAlertDialog(
         onDismissRequest = { if (!sharing) sharePreview = false },
         title = { Text("Save or share screenshot") },

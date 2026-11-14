@@ -204,6 +204,9 @@ class GuardianInbox77UiTest {
             }
             compose.onNodeWithText(message).performScrollTo().assertIsDisplayed()
             compose.onNodeWithText("Copy Message").performScrollTo().assertIsDisplayed()
+            compose.onNodeWithText("Save to Evidence Locker").performScrollTo().performClick()
+            compose.onNodeWithText("Primary Vault PIN").assertIsDisplayed()
+            compose.onNodeWithText("Cancel").performClick()
             compose.onNodeWithText("Save Screenshot").performScrollTo().performClick()
             compose.onNodeWithText("Save to Gallery").assertIsDisplayed()
             compose.onNodeWithText("Cancel export").performClick()
@@ -216,6 +219,46 @@ class GuardianInbox77UiTest {
         } finally {
             store.clear()
             shell("locksettings clear --old $pin")
+        }
+    }
+
+    @Test fun guardianScreenshotCommitsEncryptedEvidenceAndDeduplicatesByEvent() {
+        val activity = compose.activity
+        val root = java.io.File(activity.cacheDir, "guardian-evidence-" + java.util.UUID.randomUUID())
+        val context = object : android.content.ContextWrapper(activity) {
+            override fun getFilesDir() = java.io.File(root, "files").apply { mkdirs() }
+        }
+        val key = ByteArray(32) { 51 }
+        val identity = Any()
+        val access = uk.co.traynor.privategallery.core.evidence.EvidenceAccess.primary(
+            context, identity, { identity }, { true }, { key.copyOf() }, Any(),
+        )
+        val controller = compose.runOnUiThread {
+            uk.co.traynor.privategallery.core.evidence.EvidenceController(context, access)
+        }
+        val bytes = java.io.ByteArrayOutputStream().also {
+            renderGuardianScreenshot("Synthetic message with an emoji 👋\nand a second line.", it)
+        }.toByteArray()
+        val messageId = "12".repeat(32)
+        try {
+            kotlinx.coroutines.runBlocking {
+                val id = controller.saveGuardianScreenshot(messageId) { bytes.inputStream() }
+                assertTrue(controller.saveGuardianScreenshot(messageId) { error("Duplicate should not import") } == id)
+                val record = access.store.read().evidence().single()
+                assertTrue(record.metadata().embedded()["Guardian event"] == "guardian-$messageId")
+                assertTrue(record.metadata().vaultOnly())
+                val original = access.reader().readVerified(record.sourceId()) { _, input -> input.readBytes() }
+                assertTrue(original.contentEquals(bytes))
+                val payload = java.io.File(context.filesDir, "vault/payloads/${record.sourceId()}.vault")
+                assertTrue(payload.isFile && !payload.readBytes().contentEquals(bytes))
+                access.store.update { it.removeEvidence(id, System.currentTimeMillis()) }
+                assertTrue(access.store.read().evidence().isEmpty())
+            }
+        } finally {
+            compose.runOnUiThread { controller.close() }
+            key.fill(0)
+            bytes.fill(0)
+            root.deleteRecursively()
         }
     }
 

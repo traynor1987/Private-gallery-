@@ -23,6 +23,7 @@ internal interface EvidenceSources {
  fun list():List<EvidenceOriginal>
  fun inspect(sourceId:String):EvidenceOriginal
  fun <T> readVerified(sourceId:String,cancelled:()->Boolean,consume:(EvidenceOriginal,InputStream)->T):T
+ fun importGenerated(source:VaultImportSource):EvidenceOriginal = error("Generated imports require Primary Vault authority")
  fun import(uri:Uri):EvidenceOriginal
  fun imageCrop(sourceId:String):NormalizedCrop?=null
  fun collections():List<VaultCollection> = emptyList()
@@ -197,6 +198,13 @@ internal class EvidenceAccess private constructor(
     check(primaryPayload(context,sourceId).isFile){"Original payload unavailable"}
     access.checkCurrent();check(!cancelled())
    }
+  }
+  override fun importGenerated(source:VaultImportSource):EvidenceOriginal=repository{repo,lease ->
+   val result=VaultImportCoordinator(repo).acquire(source.copy(
+    isCancelled={source.isCancelled()||!access.current()},
+    publishIfAllowed={publish->lease.commit{publish()}}))
+   val item=when(result){is ImportResult.Imported->result.item;is ImportResult.Duplicate->result.existing}
+   EvidenceOriginal(item,EvidenceMetadata.fromItem(item))
   }
   override fun import(uri:Uri):EvidenceOriginal=repository{repo,lease ->
    val acquired=ProviderAccess.provider(context,uri)

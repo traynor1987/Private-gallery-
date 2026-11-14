@@ -29,29 +29,7 @@ internal fun createGuardianShareFile(context: Context, text: String, image: Bool
         if (!image) {
             file.writeText(text, Charsets.UTF_8)
         } else {
-            val width = 960
-            val padding = 48
-            val paint = TextPaint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
-                color = Color.WHITE
-                textSize = 32f
-            }
-            val layout = StaticLayout.Builder.obtain(text, 0, text.length, paint, width - 2 * padding)
-                .setAlignment(Layout.Alignment.ALIGN_NORMAL)
-                .setLineSpacing(8f, 1f)
-                .build()
-            val height = layout.height + padding * 2
-            require(height in 1..16_384) { "This message is too tall for a single image." }
-            val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
-            try {
-                Canvas(bitmap).apply {
-                    drawColor(Color.rgb(13, 23, 39))
-                    translate(padding.toFloat(), padding.toFloat())
-                    layout.draw(this)
-                }
-                file.outputStream().use { check(bitmap.compress(Bitmap.CompressFormat.PNG, 100, it)) }
-            } finally {
-                bitmap.recycle()
-            }
+            file.outputStream().use { renderGuardianScreenshot(text, it) }
         }
         return file
     } catch (error: Throwable) {
@@ -112,4 +90,30 @@ internal fun stageGuardianGalleryImage(context: Context, file: File): Uri {
 internal fun publishGuardianGalleryImage(context: Context, uri: Uri) {
     val values = ContentValues().apply { put(MediaStore.Images.Media.IS_PENDING, 0) }
     check(context.contentResolver.update(uri, values, null, null) == 1)
+}
+
+internal fun renderGuardianScreenshot(text: String, output: java.io.OutputStream) {
+    val width = 960
+    val padding = 48
+    val paint = TextPaint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.WHITE
+        textSize = 32f
+    }
+    val layout = StaticLayout.Builder.obtain(text, 0, text.length, paint, width - 2 * padding)
+        .setAlignment(Layout.Alignment.ALIGN_NORMAL)
+        .setLineSpacing(8f, 1f)
+        .build()
+    val height = layout.height + padding * 2
+    require(height in 1..16_384) { "This message is too tall for a single image." }
+    val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+    try {
+        Canvas(bitmap).apply {
+            drawColor(Color.rgb(13, 23, 39))
+            translate(padding.toFloat(), padding.toFloat())
+            layout.draw(this)
+        }
+        check(bitmap.compress(Bitmap.CompressFormat.PNG, 100, output))
+    } finally {
+        bitmap.recycle()
+    }
 }

@@ -278,6 +278,40 @@ internal class EvidenceController(context:Context,val access:EvidenceAccess):Aut
   val acquired=access.sources.import(uri)
   registerRecord(acquired.item.id,extract,acquired)
  }
+ /** Store the screenshot through the existing authenticated Primary Vault and catalogue. */
+ suspend fun saveGuardianScreenshot(messageId:String,openPng:()->java.io.InputStream):String=withContext(Dispatchers.IO) {
+  require(access.owner==EvidenceCatalog.Owner.PRIMARY && messageId.matches(Regex("[0-9a-f]{64}")))
+  val operation=currentCoroutineContext()
+  guardianScreenshotMutex.withLock {
+   access.checkCurrent()
+   val reference=uk.co.traynor.privategallery.core.guardian.guardianEvidenceEventId(messageId)
+   access.store.read().evidence().firstOrNull{it.metadata().embedded()["Guardian event"]==reference}?.let{
+    checkSource(it,access.sources.inspect(it.sourceId()))
+    return@withLock it.id()
+   }
+   val source=uk.co.traynor.privategallery.core.vault.VaultImportSource(
+    "Guardian screenshot.png","image/png",openPng,vaultOnly=true,isCancelled={!operation.isActive})
+   var acquired=access.sources.importGenerated(source)
+   if(!acquired.item.vaultOnly || access.store.read().evidence().any{it.sourceId()==acquired.item.id}) {
+    acquired=access.sources.importGenerated(source.copy(createDistinctCopy=true))
+   }
+   val record=readRegistration(acquired.item.id,acquired)
+   val metadata=record.metadata()
+   val linked=EvidenceCatalog.Evidence(record.id(),record.sourceId(),record.name(),record.mime(),record.sha256(),
+    record.size(),record.importedAt(),EvidenceCatalog.Metadata(metadata.sourceName(),metadata.fileCreatedAt(),
+     metadata.fileModifiedAt(),metadata.dateAddedAt(),metadata.captureAt(),metadata.width(),metadata.height(),
+     metadata.embedded()+("Guardian event" to reference),metadata.vaultOnly()),
+    record.description(),record.notes(),record.tags(),record.participants(),record.ocr(),record.corrections())
+   operation.ensureActive()
+   val saved=access.store.update{catalog ->
+    operation.ensureActive()
+    checkSource(linked,access.sources.inspect(linked.sourceId()))
+    if(catalog.evidence().any{it.sourceId()==linked.sourceId()})catalog
+    else catalog.upsertEvidence(linked,now(),"IMPORT_GUARDIAN_SCREENSHOT")
+   }
+   saved.evidence().single{it.sourceId()==linked.sourceId() && it.metadata().embedded()["Guardian event"]==reference}.id()
+  }
+ }
  private suspend fun registerRecord(sourceId:String,extract:Boolean,acquired:EvidenceOriginal?=null):EvidenceCatalog {
   val operation=currentCoroutineContext()
   val existing=access.store.read().evidence().firstOrNull{it.sourceId()==sourceId}
@@ -398,6 +432,7 @@ internal class EvidenceController(context:Context,val access:EvidenceAccess):Aut
  companion object {
   private const val METADATA_LIMIT=2*1024*1024
   private const val OCR_LIMIT=32*1024*1024
+  private val guardianScreenshotMutex=Mutex()
   fun now()=System.currentTimeMillis()
   fun annotated(e:EvidenceCatalog.Evidence,name:String,description:String,notes:String,tags:List<String>,participants:List<String>)=
    EvidenceCatalog.Evidence(e.id(),e.sourceId(),name,e.mime(),e.sha256(),e.size(),e.importedAt(),e.metadata(),description,notes,tags,participants,e.ocr(),e.corrections())
