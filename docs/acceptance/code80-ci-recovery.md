@@ -27,17 +27,11 @@ Run 369 was skipped because its commit did not request the runtime job. Run 370 
 
 ## Verification
 
-As of 22:04 UTC, [371](https://github.com/traynor1987/Private-gallery-/actions/runs/43513701844) and [372](https://github.com/traynor1987/Private-gallery-/actions/runs/43513773380) have passed Android compilation, debug APK/test APK assembly, JVM tests, Home/encrypted adapter checks and browser/APK preservation checks. Both are still running Android 17 instrumentation. Final runtime results are pending; update this section before delivery.
+[Run 373](https://github.com/traynor1987/Private-gallery-/actions/runs/43517512484) passed on `77edc336b600f741de39d879476cf6261b677a2b`. The archive contains 673 passing JVM cases, 199 passing focused instrumentation executions and 263 passing cases in the broad API 37 instrumentation report. Counts for focused and broad runs can overlap. All had zero failures, errors or skips. CI confirmed the isolated test package, Home/encrypted adapter and protected browser/core checks, plus eight real backup process-stop/restart boundaries. The dedicated visual-only and Sanctuary source-preservation steps were skipped by branch condition. The evidence archive (artifact 14084307024) has SHA-256 `988b769ebbc4a1393e1f2e171580e0348a8124d23193446c1f1f5e0a358203b2`. The test build used Android Debug signing. APK publication steps were skipped.
 
-Local freshly compiled Kotlin/JUnit policy suite: **47/47 passed** (Guardian policies and classifiers, Nova Brain evaluation/Knowledge Meter, personal impact, journal, Store trust rules, Sudoku challenges).
+The recovered local focused class bundle passed 47/47 on rerun. The updated Store trust source was then compiled separately and passed its three focused JVM tests. The Store change is `26da59903aad86d4cf2da45e2883af0aba08cdd2` with [verification run 374](https://github.com/traynor1987/Private-gallery-/actions/runs/43537701581).
 
-Host checks passed: Arcade 126, Calculator 89 plus concealed-entry wiring, backup scheduling 12, private-app policy/catalogue/hidden-store/command/icon/screenshot checks, VPN DNS/fixture transport checks, and emulator preflight 4 tests.
-
-Local Android Gradle compilation was attempted but unavailable: Gradle 9.5.0 distribution was not cached and the download failed with network-unreachable. The full `check_home2_host.sh` wrapper also cannot finish locally because its encrypted adapter fixture requires an absent JDK/Gradle dependency cache; its Java policy checks passed. Use GitHub Android 17 results for compilation and instrumentation.
-
-Baseline run 368: 673 JVM tests passed; completed instrumented groups included Guardian capture store 19, listener compatibility 2, inbox 4, and Evidence Locker learning UI 2. Those counts describe the old source, not the final checkpoint.
-
-All recovery changes so far are instrumentation tests. Production app code, encryption formats and aliases, Sanctuary policy, Store verification, signing controls and release versions are unchanged.
+The Code 79 owner archive from [production run 17](https://github.com/traynor1987/Private-gallery-/actions/runs/43226350763) passed the read-only baseline verifier. The legacy `scripts.tests.test_upgrade1711_controls` suite still contains Code 64 → 65 fixture expectations against later production controls. Its failures require separate reconciliation before relying on it for a Code 80 gate.
 
 ## Acceptance still required
 
@@ -49,8 +43,7 @@ All recovery changes so far are instrumentation tests. Production app code, encr
 
 ## Resume
 
-1. Fetch the named branch and confirm its current HEAD before editing.
-2. Inspect final job results and logs for runs 371 (`43513701844`) and 372 (`43513773380`). Fix any reported failure before expanding scope.
-3. Run the exact failed class first where an API 37 runner is available. For the full existing verification job, push changes with `[home2-runtime] [visual-full] [verification-only]` only. Do not use workflow_dispatch, signing, probe-publication or production-authorization markers.
-4. Reconcile final counts and remaining physical checks in this checkpoint and `docs/acceptance/code80.md`.
-5. Keep Code 80 IN PROGRESS. Do not rename Code 81 or trigger production signing, APK publication or VPS deployment.
+1. Confirm the remote branch tip and inspect run 374 step results and XML before treating the Store change as Android-verified.
+2. Prepare separate Code 80 upgrade controls against the pinned Code 79 archive. Existing signing instructions and version pins still describe Code 79.
+3. Execute the Fold checklist in `docs/acceptance/code80.md` on an isolated test build. Record the actual APK and build commit.
+4. Keep Code 80 in progress pending the representative in-place upgrade and physical acceptance.

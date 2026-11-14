@@ -24,7 +24,7 @@ Use an isolated, CI-verified test build and synthetic fixtures for these checks.
 
 ## Production upgrade gate
 
-1. Freeze the reviewed Code 80 source and record the exact passing Android 17 run and artifact digest. Prepare Code 80 release controls using the exact distributed, original-key-signed Code 79 APK as baseline. The existing production workflow targets Code 78 → 79.
+1. Freeze the reviewed Code 80 source and record the exact passing Android 17 run and artifact digest. The distributed Code 79 baseline is [production run 43226350763, artifact 13949047165](https://github.com/traynor1987/Private-gallery-/actions/runs/43226350763/artifacts/13949047165). Download the original archive and run `python3 scripts/verify_code79_baseline.py /path/to/archive.zip`. This checks the archive and APK digests against the recorded release and checks the original release receipt. The existing production workflow targets Code 78 → 79.
 2. Verify package, SDK levels, versionCode 80 and the original signing certificate. The pinned production certificate SHA-256 is `94f2bfc6567f26d067d29077111cfd0ce86d38263c642ad115e43365f05b0d17`.
 3. Following explicit owner approval, use the existing signing controls and test an in-place Code 79 → 80 upgrade on a disposable API 37 environment with representative encrypted data. Verify Keystore continuity after restart, both vaults, Guardian and Evidence Locker, Nova Brain feedback, Sanctuary, launcher layouts, and backup. Keep the owner's installed app and data intact.
 4. Record the physical Fold results, signed upgrade results, APK checksum and publication evidence before calling the release ready.
