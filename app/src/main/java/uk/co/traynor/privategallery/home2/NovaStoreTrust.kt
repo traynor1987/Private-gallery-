@@ -5,18 +5,27 @@ import java.net.URI
 internal data class NovaStoreRelease(
     val packageName: String,
     val versionCode: Long,
+    val versionName: String,
     val certificate: String,
     val sha256: String,
     val url: String,
 ) {
     init {
         require(packageName.matches(Regex("[a-zA-Z][a-zA-Z0-9_]*(\\.[a-zA-Z][a-zA-Z0-9_]*)+")))
+        require(versionName.isNotBlank())
         require(versionCode > 0 && certificate.matches(sha256Format) && sha256.matches(sha256Format))
         require(trustedNovaReleaseUrl(url, initial = true))
     }
 
-    fun accepts(packageName: String, versionCode: Long, signers: List<String>, installedCode: Long?): Boolean =
-        this.packageName == packageName && this.versionCode == versionCode && signers == listOf(certificate) &&
+    fun accepts(
+        packageName: String,
+        versionCode: Long,
+        versionName: String?,
+        signers: List<String>,
+        installedCode: Long?,
+    ): Boolean =
+        this.packageName == packageName && this.versionCode == versionCode &&
+            this.versionName == versionName && signers == listOf(certificate) &&
             (installedCode == null || versionCode > installedCode)
 
     private companion object {

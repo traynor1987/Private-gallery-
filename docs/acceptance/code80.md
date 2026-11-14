@@ -4,7 +4,7 @@ Code 80 is in development. The installed production baseline is NovaOS 1.7.38.6,
 
 ## Changes for owner review
 
-- Nova Store has a first-party Android catalogue alongside the existing web catalogue. Android installs and updates require an owner-approved release entry containing the package ID, version code, HTTPS release asset URL, APK SHA-256 and signing certificate SHA-256.
+- Nova Store has a first-party Android catalogue alongside the existing web catalogue. Android installs and updates require an owner-approved release entry containing the package ID, version name, version code, HTTPS release asset URL, APK SHA-256 and signing certificate SHA-256.
 - Safe Notifications opens from Nova Launcher and remains behind Guardian authentication. Its concern filters and timestamps help navigate retained notifications.
 - Personal Impact conversation validation uses feedback that was available before the held-out notification was captured. Older feedback remains readable and editable. Reports without a capture time are excluded from this validation.
 
@@ -19,7 +19,7 @@ Use an isolated, CI-verified test build and synthetic fixtures for these checks.
 | Sanctuary | Launch protected Main WhatsApp from Nova Launcher and from Android Settings. Try each configured early-exit challenge. Fold mid-puzzle, then test recovery and normal expiry. | Interception continues. Puzzle progress survives the display change. Recovery, emergency access and normal expiry remain available. |
 | Nova Brain and Evidence Locker | Save an approved synthetic screenshot and OCR record, link it to Guardian, edit its feedback, and delete the feedback. Compare validation views across apps. | Evidence stays intact. Edits and deletions apply to learning references. Insufficient validation shows no percentage. |
 | Keep My Peace | Create, edit and delete a synthetic journal entry, relaunch, and inspect Recents. | Journal data persists privately, with editing and deletion confined to the selected entries. |
-| Nova Store | With approved fixtures, exercise install, update, checksum and signer mismatch, and attempt an install during Sanctuary. | Android requests confirmation for verified APKs. Mismatches and restricted installs are blocked. A verified update preserves the installed app's data. |
+| Nova Store | With approved fixtures, exercise install, update, checksum, version-name and signer mismatches, and attempt an install during Sanctuary. | Android requests confirmation for verified APKs. Mismatches and restricted installs are blocked. A verified update preserves the installed app's data. |
 | Vaults and backup | Check Primary Vault fingerprint policy, Hidden Vault PIN policy, hidden launcher entry, Panic Exit, and encrypted backup and restore using disposable data. | Authentication boundaries hold and encrypted fixtures restore correctly. |
 
 ## Production upgrade gate

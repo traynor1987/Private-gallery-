@@ -5,16 +5,22 @@ import org.junit.Test
 
 class NovaStoreTrustTest {
     private val signer = "a".repeat(64)
-    private val release = NovaStoreRelease("uk.co.nova.fixture", 20, signer, "b".repeat(64),
+    private val release = NovaStoreRelease("uk.co.nova.fixture", 20, "2.0", signer, "b".repeat(64),
         "https://github.com/traynor1987/fixture/releases/download/v20/fixture.apk")
 
-    @Test fun acceptsOnlyPinnedPackageVersionAndSingleSigner() {
-        assertTrue(release.accepts("uk.co.nova.fixture", 20, listOf(signer), 19))
-        assertFalse(release.accepts("uk.co.nova.other", 20, listOf(signer), 19))
-        assertFalse(release.accepts("uk.co.nova.fixture", 21, listOf(signer), 19))
-        assertFalse(release.accepts("uk.co.nova.fixture", 20, listOf(signer, "c".repeat(64)), 19))
-        assertFalse(release.accepts("uk.co.nova.fixture", 20, listOf(signer), 20))
-        assertFalse(release.accepts("uk.co.nova.fixture", 20, emptyList(), null))
+    @Test fun acceptsOnlyPinnedPackageVersionNameVersionCodeAndSingleSigner() {
+        assertTrue(release.accepts("uk.co.nova.fixture", 20, "2.0", listOf(signer), 19))
+        assertFalse(release.accepts("uk.co.nova.fixture", 20, "2.0-test", listOf(signer), 19))
+        assertFalse(release.accepts("uk.co.nova.fixture", 20, null, listOf(signer), 19))
+        assertFalse(release.accepts("uk.co.nova.other", 20, "2.0", listOf(signer), 19))
+        assertFalse(release.accepts("uk.co.nova.fixture", 21, "2.0", listOf(signer), 19))
+        assertFalse(release.accepts("uk.co.nova.fixture", 20, "2.0", listOf(signer, "c".repeat(64)), 19))
+        assertFalse(release.accepts("uk.co.nova.fixture", 20, "2.0", listOf(signer), 20))
+        assertFalse(release.accepts("uk.co.nova.fixture", 20, "2.0", emptyList(), null))
+    }
+
+    @Test fun rejectsCatalogueEntriesWithBlankVersionNames() {
+        assertThrows(IllegalArgumentException::class.java) { release.copy(versionName = " ") }
     }
 
     @Test fun restrictsSourceAndRedirects() {

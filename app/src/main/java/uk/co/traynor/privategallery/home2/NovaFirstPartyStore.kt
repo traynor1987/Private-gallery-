@@ -46,8 +46,14 @@ private fun releases(context: Context): Map<String, NovaStoreRelease> {
     val catalogue = context.assets.open("nova-first-party-releases.json").bufferedReader().use { JSONObject(it.readText()) }
     return firstPartyApps.mapNotNull { app ->
         val row = catalogue.optJSONObject(app.id) ?: return@mapNotNull null
-        val entry = NovaStoreRelease(row.getString("package"), row.getLong("versionCode"),
-            row.getString("certificateSha256"), row.getString("apkSha256"), row.getString("url"))
+        val entry = NovaStoreRelease(
+            packageName = row.getString("package"),
+            versionCode = row.getLong("versionCode"),
+            versionName = row.get("versionName") as String,
+            certificate = row.getString("certificateSha256"),
+            sha256 = row.getString("apkSha256"),
+            url = row.getString("url"),
+        )
         if (app.id == "novaos") require(entry.packageName == NOVA_PACKAGE && entry.certificate == NOVA_CERTIFICATE)
         app.id to entry
     }.toMap()
@@ -113,7 +119,10 @@ private fun downloadVerifiedNovaApk(context: Context, release: NovaStoreRelease)
             PackageManager.PackageInfoFlags.of(PackageManager.GET_SIGNING_CERTIFICATES.toLong())))
         val installed = manager.installed(release.packageName)
         check(installed == null || installed.signers() == listOf(release.certificate))
-        check(release.accepts(candidate.packageName, candidate.longVersionCode, candidate.signers(), installed?.longVersionCode))
+        check(release.accepts(
+            candidate.packageName, candidate.longVersionCode, candidate.versionName,
+            candidate.signers(), installed?.longVersionCode,
+        ))
         return output
     } catch (error: Exception) {
         output.delete()
@@ -175,7 +184,7 @@ internal fun NovaFirstPartyStore(onBack: () -> Unit, onOpenWorkspace: (() -> Uni
                                 Text(app.description, style = MaterialTheme.typography.bodyMedium)
                                 Text(when {
                                     local != null -> "Installed · ${local.versionName ?: local.longVersionCode}"
-                                    release != null -> "Verified release · build ${release.versionCode}"
+                                    release != null -> "Approved release · ${release.versionName}"
                                     else -> "Awaiting an approved release"
                                 }, style = MaterialTheme.typography.labelMedium)
                             }
@@ -195,7 +204,7 @@ internal fun NovaFirstPartyStore(onBack: () -> Unit, onOpenWorkspace: (() -> Uni
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(app.description)
                 if (release == null) Text("An approved APK, package ID, and signing certificate are needed for installation.")
-                else Text("Approved build ${release.versionCode} · ${release.packageName}")
+                else Text("Approved version ${release.versionName} · Build ${release.versionCode}\n${release.packageName}")
                 if (!installedIdentityValid) Text("The installed signing certificate does not match the approved release.")
                 if (busy) LinearProgressIndicator(Modifier.fillMaxWidth())
                 if (app.id == "novaos" && onOpenWorkspace != null) TextButton(onClick = onOpenWorkspace) { Text("Open NovaOS") }
