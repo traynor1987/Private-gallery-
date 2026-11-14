@@ -17,6 +17,28 @@ class NovaBrainEvaluatorTest {
         )
     }
 
+    @Test fun incidentImportRequiresIndependentIncidentAndEvidenceIdentifiers() {
+        fun payload(withDuplicate: Boolean) = org.json.JSONArray(holdout.mapIndexed { index, row ->
+            org.json.JSONObject().put("incidentId", row.conversationId)
+                .put("evidenceId", if (withDuplicate && index == 4) "record-0" else "record-$index")
+                .put("text", row.text).put("patterns", org.json.JSONArray(row.expectedPatterns.map { it.name }))
+        }).toString()
+        val imported = parseNovaBrainValidation(payload(false), NovaBrainValidationScope.INCIDENT)
+        assertEquals(10, evaluateNovaBrain(imported, emptySet(), emptySet())!!.conversations)
+        assertNull(evaluateNovaBrain(imported, setOf("record-0"), emptySet()))
+        assertThrows(IllegalArgumentException::class.java) {
+            parseNovaBrainValidation(payload(true), NovaBrainValidationScope.INCIDENT)
+        }
+        assertThrows(org.json.JSONException::class.java) { parseNovaBrainValidation(payload(false)) }
+    }
+
+    @Test fun rejectsRepeatedShortOcrWithDifferentWhitespaceAndEvidenceIds() {
+        val repeated = holdout.mapIndexed { index, row -> row.copy(evidenceId = "record-$index") }.toMutableList()
+        repeated[2] = repeated[2].copy(text = "Yes okay")
+        repeated[3] = repeated[3].copy(text = "YES\u00a0  okay")
+        assertNull(evaluateNovaBrain(repeated, emptySet(), emptySet()))
+    }
+
     @Test fun measuresMatchesAndFalsePositives() {
         val result = checkNotNull(evaluateNovaBrain(holdout, emptySet(), emptySet()))
         assertEquals(1.0, result.precision, 0.0)

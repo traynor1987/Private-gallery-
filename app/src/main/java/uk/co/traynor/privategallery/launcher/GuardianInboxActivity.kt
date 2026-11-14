@@ -455,6 +455,7 @@ class GuardianInboxActivity : ComponentActivity() {
         )
 
         if (validationOpen && canReview()) {
+            var validationScope by remember { mutableStateOf(NovaBrainValidationScope.CONVERSATION) }
             var input by remember { mutableStateOf("") }
             var result by remember { mutableStateOf<String?>(null) }
             GuardianAlertDialog(
@@ -481,7 +482,17 @@ class GuardianInboxActivity : ComponentActivity() {
                             }) { Text("Keep for $days days") }
                         }
                         TextButton(enabled = !busy, onClick = { clearImpactOpen = true }) { Text("Delete all personal impact feedback") }
-                        Text("Paste independently labelled examples from conversations excluded from training. Use JSON rows with conversationId, text and patterns. Use an empty patterns array for ordinary messages.")
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            NovaBrainValidationScope.entries.forEach { option ->
+                                FilterChip(selected = validationScope == option, enabled = !busy,
+                                    onClick = { validationScope = option; input = ""; result = null },
+                                    label = { Text(if (option == NovaBrainValidationScope.INCIDENT) "Incidents" else "Conversations") })
+                            }
+                        }
+                        Text(if (validationScope == NovaBrainValidationScope.INCIDENT)
+                            "Paste independently labelled OCR from held-out incidents. Each JSON row needs incidentId, a unique Evidence Locker evidenceId, text, and patterns."
+                            else "Paste independently labelled examples from held-out conversations. Each JSON row needs conversationId, text, and patterns.")
+                        Text("Use an empty patterns array for ordinary examples.")
                         Text("Pattern labels: " + NovaBrainPattern.entries.joinToString { it.name })
                         OutlinedTextField(input, { if (it.length <= MAX_VALIDATION_INPUT) input = it },
                             enabled = !busy, label = { Text("Held-out examples JSON") }, maxLines = 6)
@@ -492,11 +503,15 @@ class GuardianInboxActivity : ComponentActivity() {
                 confirmButton = {
                     TextButton(enabled = !busy && input.isNotBlank(), onClick = {
                         val approved = input
+                        val approvedScope = validationScope
                         input = ""
                         loadArchive({ store, _, _ ->
-                            runCatching { store.measureKnowledge(parseNovaBrainValidation(approved)) }.getOrNull()
+                            runCatching { store.measureKnowledge(parseNovaBrainValidation(approved, approvedScope), approvedScope) }.getOrNull()
                         }) { measured ->
-                            result = measured?.knowledgePercent()?.let { "Validation score saved: $it%" }
+                            result = measured?.let {
+                                if (approvedScope == NovaBrainValidationScope.INCIDENT) "Incident validation saved."
+                                else it.knowledgePercent()?.let { score -> "Validation score saved: $score%" }
+                            }
                                 ?: "Validation rejected. Check the format, sample counts and overlap with training."
                         }
                     }) { Text("Run local evaluation") }

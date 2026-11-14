@@ -14,6 +14,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import uk.co.traynor.privategallery.core.guardian.GuardianCaptureStore
 import uk.co.traynor.privategallery.core.guardian.NovaBrainValidation
+import uk.co.traynor.privategallery.core.guardian.NovaBrainValidationScope
 import uk.co.traynor.privategallery.core.guardian.NOVA_BRAIN_VALIDATION_VERSION
 import uk.co.traynor.privategallery.core.guardian.PersonalImpactSummary
 import uk.co.traynor.privategallery.core.guardian.PersonalImpactValidation
@@ -24,6 +25,7 @@ internal fun NovaBrainKnowledgeCard(showPersonalImpact: Boolean = false) {
     val context = LocalContext.current.applicationContext
     val revision by GuardianCaptureStore.knowledgeChanges.collectAsState()
     var validation by remember(context) { mutableStateOf<NovaBrainValidation?>(null) }
+    var incidentValidation by remember(context) { mutableStateOf<NovaBrainValidation?>(null) }
     var impact by remember(showPersonalImpact) {
         mutableStateOf<Pair<PersonalImpactSummary, PersonalImpactValidation?>?>(null)
     }
@@ -31,6 +33,9 @@ internal fun NovaBrainKnowledgeCard(showPersonalImpact: Boolean = false) {
         impact = if (showPersonalImpact) withContext(Dispatchers.IO) {
             runCatching { GuardianCaptureStore(context).personalImpactReport() }.getOrNull()
         } else null
+        incidentValidation = withContext(Dispatchers.IO) {
+            runCatching { GuardianCaptureStore(context).knowledgeValidation(NovaBrainValidationScope.INCIDENT) }.getOrNull()
+        }
         validation = withContext(Dispatchers.IO) {
             runCatching { GuardianCaptureStore(context).knowledgeValidation() }.getOrNull()
         }
@@ -50,6 +55,12 @@ internal fun NovaBrainKnowledgeCard(showPersonalImpact: Boolean = false) {
             Text(if (details) "Hide learning details" else "View learning details")
         }
         if (details) {
+            val incident = incidentValidation
+            Text(if (incident == null) "Evidence Locker incidents · Not yet validated"
+                else "Evidence Locker incidents · ${(incident.accuracy * 100).roundToInt()}% accuracy on ${incident.conversations} held-out incidents")
+            if (incident != null) {
+                Text("${incident.upsetting + incident.ordinary} OCR examples · ${incident.falsePositives} false positives · ${incident.falseNegatives} false negatives")
+            }
             impact?.let { (summary, result) ->
                 Text("Personal impact · conversation prediction · " + if (result == null) "Not yet validated"
                     else "${(100.0 * result.correct / result.tested).roundToInt()}% on ${result.tested} held-out conversations")

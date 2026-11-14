@@ -22,6 +22,10 @@ Use an isolated, CI-verified test build and synthetic fixtures for these checks.
 | Nova Store | With approved fixtures, exercise install, update, checksum, version-name and signer mismatches, and attempt an install during Sanctuary. | Android requests confirmation for verified APKs. Mismatches and restricted installs are blocked. A verified update preserves the installed app's data. |
 | Vaults and backup | Check Primary Vault fingerprint policy, Hidden Vault PIN policy, hidden launcher entry, Panic Exit, and encrypted backup and restore using disposable data. | Authentication boundaries hold and encrypted fixtures restore correctly. |
 
+## Local incident validation
+
+In Guardian Inbox, open Nova Brain settings and select **Incidents**. Supply independently labelled OCR in JSON rows with `incidentId`, `evidenceId`, `text`, and `patterns`. Use stable Evidence Locker record IDs, one row per record, and an empty patterns array for an ordinary example. Use at least 10 incidents, 20 examples with labelled patterns and 20 ordinary examples. Exclude training records and any recrops or copies of the same OCR. Nova Brain rejects repeated record IDs, duplicate or sufficiently similar OCR, and overlap with known training examples. The incident result reports OCR-level accuracy and error counts beside the shared Knowledge Meter. It updates only after a valid local evaluation.
+
 ## Production upgrade gate
 
 1. Freeze the reviewed Code 80 source and record the exact passing Android 17 run and artifact digest. The distributed Code 79 baseline is [production run 43226350763, artifact 13949047165](https://github.com/traynor1987/Private-gallery-/actions/runs/43226350763/artifacts/13949047165). Download the original archive and run `python3 scripts/verify_code79_baseline.py /path/to/archive.zip`. This checks the archive and APK digests against the recorded release and checks the original release receipt. The existing production workflow targets Code 78 → 79.

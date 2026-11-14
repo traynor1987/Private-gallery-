@@ -301,8 +301,12 @@ internal class GuardianCaptureStore private constructor(private val context: Con
         return fingerprint(JSONArray().put(NOVA_BRAIN_VALIDATION_VERSION).put(JSONArray(entries)).put(JSONArray(sourceIds.sorted())).toString().toByteArray(Charsets.UTF_8))
     }
 
-    fun knowledgeValidation(): NovaBrainValidation? = synchronized(lock) {
-        val result = validationArchive().read().singleOrNull() ?: return@synchronized null
+    fun knowledgeValidation(
+        scope: NovaBrainValidationScope = NovaBrainValidationScope.CONVERSATION,
+    ): NovaBrainValidation? = synchronized(lock) {
+        val result = validationArchive().read().singleOrNull {
+            it.optString("scope", NovaBrainValidationScope.CONVERSATION.name) == scope.name
+        } ?: return@synchronized null
         val rows = retainedRows(GuardianCapture.retention(context), System.currentTimeMillis())
         if (result.getString("model") != validationModel(examples(rows), trainingSourceIds(rows))) return@synchronized null
         val metrics = result.getJSONObject("categoryResults")
@@ -332,7 +336,13 @@ internal class GuardianCaptureStore private constructor(private val context: Con
         return conversations + evidence
     }
 
-    fun measureKnowledge(holdout: List<NovaBrainValidationMessage>): NovaBrainValidation? = synchronized(lock) {
+    fun measureKnowledge(
+        holdout: List<NovaBrainValidationMessage>,
+        scope: NovaBrainValidationScope = NovaBrainValidationScope.CONVERSATION,
+    ): NovaBrainValidation? = synchronized(lock) {
+        if (holdout.any { (it.evidenceId != null) != (scope == NovaBrainValidationScope.INCIDENT) }) {
+            return@synchronized null
+        }
         val rows = retainedRows(GuardianCapture.retention(context), System.currentTimeMillis())
         val learned = examples(rows)
         val conversations = trainingSourceIds(rows)
@@ -342,7 +352,12 @@ internal class GuardianCaptureStore private constructor(private val context: Con
         result.categoryResults.forEach { (category, counts) ->
             metrics.put(category.name, JSONArray().put(counts.truePositive).put(counts.falsePositive).put(counts.falseNegative))
         }
-        validationArchive().write(listOf(JSONObject()
+        val archive = validationArchive()
+        val otherScopes = archive.read().filterNot {
+            it.optString("scope", NovaBrainValidationScope.CONVERSATION.name) == scope.name
+        }
+        archive.write(otherScopes + JSONObject()
+            .put("scope", scope.name)
             .put("model", validationModel(learned, conversations))
             .put("conversations", result.conversations).put("upsetting", result.upsetting).put("ordinary", result.ordinary)
             .put("precision", result.precision).put("recall", result.recall).put("patternRecall", result.patternRecall)
@@ -350,7 +365,7 @@ internal class GuardianCaptureStore private constructor(private val context: Con
             .put("improvement", result.validatedImprovement)
             .put("falsePositives", result.falsePositives).put("falseNegatives", result.falseNegatives)
             .put("accuracy", result.accuracy).put("categoryResults", metrics)
-            .put("validatedAt", result.validatedAtMillis)))
+            .put("validatedAt", result.validatedAtMillis))
         result
     }
 

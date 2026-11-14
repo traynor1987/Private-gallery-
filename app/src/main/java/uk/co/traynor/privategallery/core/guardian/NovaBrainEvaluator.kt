@@ -6,6 +6,7 @@ internal data class NovaBrainValidationMessage(
     val conversationId: String,
     val text: String,
     val expectedPatterns: Set<NovaBrainPattern>,
+    val evidenceId: String? = null,
 )
 
 internal const val NOVA_BRAIN_VALIDATION_VERSION = 2
@@ -30,7 +31,11 @@ internal fun evaluateNovaBrain(
     val negatives = holdout.size - positives
     if (conversations.size < 10 || positives < 20 || negatives < 20) return null
     if (conversations.any { it.isBlank() || it in trainingConversationIds }) return null
-    val texts = holdout.map { it.text.trim().lowercase(Locale.ROOT) }
+    val evidenceIds = holdout.mapNotNull { it.evidenceId }
+    if (evidenceIds.size != evidenceIds.toSet().size ||
+        evidenceIds.any { it.isBlank() || it in trainingConversationIds }) return null
+    val whitespace = Regex("[\\s\\p{Z}]+")
+    val texts = holdout.map { it.text.trim().lowercase(Locale.ROOT).replace(whitespace, " ") }
     if (texts.any(String::isBlank) || texts.toSet().size != holdout.size) return null
     val features = holdout.map { guardianFeatures(it.text) }
     val trained = trainingFeatures + examples.map { it.features }
