@@ -865,7 +865,7 @@ class GuardianInboxActivity : ComponentActivity() {
     @Composable
     private fun MessageActions(row: GuardianInboxRow) {
         val preview = conversationPreview?.takeIf { it.first == row.id }?.second ?: return
-        GuardianMessageCopyActions(row, preview, appLabel(row.conversation), !busy && canReview()) {
+        GuardianMessageCopyActions(row, preview, appLabel(row.conversation), !busy && canReview(), showSenders) {
             canReview() && !busy && conversationPreview == (row.id to preview) &&
                 rows.any { it.id == row.id && it.section != GuardianInboxSection.COOLING }
         }

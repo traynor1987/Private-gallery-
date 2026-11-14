@@ -28,6 +28,15 @@ import java.text.DateFormat
 import java.util.Date
 import uk.co.traynor.privategallery.core.guardian.GuardianInboxRow
 
+internal fun guardianSensitiveMessageClip(text: String): ClipData {
+    require(text.isNotBlank())
+    return ClipData.newPlainText("Guardian message", text).apply {
+        description.extras = PersistableBundle().apply {
+            putBoolean(ClipDescription.EXTRA_IS_SENSITIVE, true)
+        }
+    }
+}
+
 // Keep the selection handles while routing copying through the sensitive-clip action.
 private object GuardianSelectionToolbar : TextToolbar {
     override val status: TextToolbarStatus get() = TextToolbarStatus.Hidden
@@ -44,35 +53,33 @@ internal fun GuardianMessageCopyActions(
     message: String,
     source: String,
     enabled: Boolean,
+    showSender: Boolean,
     canCopy: () -> Boolean,
 ) {
     val context = LocalContext.current
-    var expanded by remember(row.id, message) { mutableStateOf(false) }
     var selection by remember(row.id, message) { mutableStateOf<TextFieldValue?>(null) }
     val scope = rememberCoroutineScope()
     var sharePreview by remember(row.id, message) { mutableStateOf(false) }
     var sharing by remember(row.id, message) { mutableStateOf(false) }
     var feedback by remember(row.id, message) { mutableStateOf<String?>(null) }
     fun copy(text: String) {
-        if (!enabled || !canCopy() || text.isEmpty()) return
-        val clipboard = context.getSystemService(ClipboardManager::class.java) ?: return
+        if (!enabled || !canCopy() || text.isBlank()) return
         feedback = runCatching {
-            val clip = ClipData.newPlainText("Guardian message", text)
-            clip.description.extras = PersistableBundle().apply {
-                putBoolean(ClipDescription.EXTRA_IS_SENSITIVE, true)
-            }
-            clipboard.setPrimaryClip(clip)
+            val clipboard = checkNotNull(context.getSystemService(ClipboardManager::class.java))
+            clipboard.setPrimaryClip(guardianSensitiveMessageClip(text))
         }.fold({ "Copied to Android clipboard." }, { "Could not copy this message." })
     }
     val timestamp = DateFormat.getDateTimeInstance().format(Date(row.time))
-    val details = "Sender: ${row.senderName ?: "Unavailable"}\nTime: $timestamp\nSource: $source\n\n$message"
-    val reconstruction = "Guardian reconstruction of captured notification\n\n$details"
+    val summary = "Protected Guardian summary\nSource: $source\nTime: $timestamp\n" +
+        "Assessment: ${row.assessment?.label ?: "Awaiting analysis"}"
+    val sender = row.senderName?.takeIf { showSender }?.let { "Sender: $it\n" }.orEmpty()
+    val reconstruction = "Nova Guardian · Archived message\n\nSource: $source\nTime: $timestamp\n$sender\n$message"
 
-    fun share(image: Boolean) {
+    fun export(image: Boolean, gallery: Boolean = false, clipboardImage: Boolean = false) {
         if (!enabled || !canCopy() || sharing) return
         // The system chooser cannot guarantee that the selected app is approved by Sanctuary.
         if (SanctuaryStore.get(context).refresh() != null) {
-            feedback = "External sharing is unavailable during Sanctuary. You can still copy or preview this message."
+            feedback = "Image export and external sharing are unavailable during Sanctuary."
             sharePreview = false
             return
         }
@@ -83,13 +90,35 @@ internal fun GuardianMessageCopyActions(
             try {
                 withContext(Dispatchers.IO) { file = createGuardianShareFile(context, reconstruction, image) }
                 if (canCopy() && SanctuaryStore.get(context).refresh() == null) {
-                    shareGuardianFile(context, checkNotNull(file), image)
-                    handedOff = true
+                    if (gallery) {
+                        val prepared = checkNotNull(file)
+                        var uri: android.net.Uri? = null
+                        var published = false
+                        try {
+                            withContext(Dispatchers.IO) { uri = stageGuardianGalleryImage(context, prepared) }
+                            if (canCopy() && SanctuaryStore.get(context).refresh() == null) {
+                                publishGuardianGalleryImage(context, checkNotNull(uri))
+                                published = true
+                                feedback = "Screenshot saved to Gallery."
+                            }
+                        } finally {
+                            if (!published) withContext(NonCancellable + Dispatchers.IO) {
+                                uri?.let { pending -> runCatching { context.contentResolver.delete(pending, null, null) } }
+                            }
+                        }
+                    } else if (clipboardImage) {
+                        copyGuardianImage(context, checkNotNull(file))
+                        handedOff = true
+                        feedback = "Screenshot copied to Android clipboard."
+                    } else {
+                        shareGuardianFile(context, checkNotNull(file), image)
+                        handedOff = true
+                    }
                 }
             } catch (cancelled: kotlinx.coroutines.CancellationException) {
                 throw cancelled
             } catch (_: Exception) {
-                feedback = "Could not prepare this export. Try text if the image is too tall."
+                feedback = "Could not complete this export."
             } finally {
                 if (!handedOff) withContext(NonCancellable + Dispatchers.IO) { file?.delete() }
                 sharing = false
@@ -98,35 +127,31 @@ internal fun GuardianMessageCopyActions(
         }
     }
 
-    Box {
-        TextButton(enabled = enabled, onClick = { expanded = true }) { Text("Copy message") }
-        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-            DropdownMenuItem(text = { Text("Copy Text") }, onClick = {
-                expanded = false
-                copy(message)
-            })
-            DropdownMenuItem(text = { Text("Select Text") }, onClick = {
-                expanded = false
-                if (canCopy()) selection = TextFieldValue(message)
-            })
-            DropdownMenuItem(text = { Text("Copy With Details") }, onClick = {
-                expanded = false
-                copy(details)
-            })
+    GuardianCard("Copy and export") {
+        Text("Copied content is handed to Android. Clipboard history and other apps may retain it.", color = GuardianMuted)
+        TextButton(enabled = enabled && message.isNotBlank(), onClick = { copy(message) }) { Text("Copy Message") }
+        TextButton(enabled = enabled, onClick = { copy(summary) }) { Text("Copy Protected Summary") }
+        TextButton(enabled = enabled && message.isNotBlank(), onClick = { if (canCopy()) selection = TextFieldValue(message) }) {
+            Text("Select text")
+        }
+        TextButton(enabled = enabled && message.isNotBlank(), onClick = { if (canCopy()) sharePreview = true }) {
+            Text("Save Screenshot")
         }
     }
-    TextButton(enabled = enabled, onClick = { if (canCopy()) sharePreview = true }) { Text("Share Safely") }
     if (sharePreview) GuardianAlertDialog(
         onDismissRequest = { if (!sharing) sharePreview = false },
-        title = { Text("Review Guardian export") },
+        title = { Text("Save or share screenshot") },
         text = {
             Column(Modifier.heightIn(max = 400.dp).verticalScroll(rememberScrollState())) {
-                Text("Sharing sends this content outside NovaOS.")
+                Text("Gallery, Android clipboard and apps you share with may retain a copy outside NovaOS encryption.")
                 Text(reconstruction)
+                TextButton(enabled = !sharing, onClick = { export(true) }) { Text("Share Securely") }
+                TextButton(enabled = !sharing, onClick = { export(true, clipboardImage = true) }) { Text("Copy image") }
+                TextButton(enabled = !sharing, onClick = { export(false) }) { Text("Share text") }
             }
         },
-        confirmButton = { TextButton(enabled = !sharing, onClick = { share(true) }) { Text("Share image") } },
-        dismissButton = { TextButton(enabled = !sharing, onClick = { share(false) }) { Text("Share text") } },
+        confirmButton = { TextButton(enabled = !sharing, onClick = { export(true, gallery = true) }) { Text("Save to Gallery") } },
+        dismissButton = { TextButton(enabled = !sharing, onClick = { sharePreview = false }) { Text("Cancel export") } },
         properties = DialogProperties(securePolicy = SecureFlagPolicy.SecureOn),
     )
     feedback?.let { Text(it, color = GuardianMuted) }

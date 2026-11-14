@@ -203,6 +203,10 @@ class GuardianInbox77UiTest {
                 compose.onAllNodesWithText(message).fetchSemanticsNodes().isNotEmpty()
             }
             compose.onNodeWithText(message).performScrollTo().assertIsDisplayed()
+            compose.onNodeWithText("Copy Message").performScrollTo().assertIsDisplayed()
+            compose.onNodeWithText("Save Screenshot").performScrollTo().performClick()
+            compose.onNodeWithText("Save to Gallery").assertIsDisplayed()
+            compose.onNodeWithText("Cancel export").performClick()
             compose.onNodeWithText("Not Upsetting").performScrollTo().performClick()
             compose.onNodeWithText("Save learning example").performScrollTo().performClick()
             compose.waitUntil(10_000) { compose.onAllNodesWithText("Remove learning example").fetchSemanticsNodes().isNotEmpty() }
@@ -212,6 +216,36 @@ class GuardianInbox77UiTest {
         } finally {
             store.clear()
             shell("locksettings clear --old $pin")
+        }
+    }
+
+    @Test fun guardianExportPreservesClipboardAndRendersLongMessage() {
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        val message = "First line! 👋\nSecond line — exact.\n".repeat(55)
+        val clip = guardianSensitiveMessageClip(message)
+        assertTrue(clip.description.extras!!.getBoolean(android.content.ClipDescription.EXTRA_IS_SENSITIVE))
+        assertTrue(clip.getItemAt(0).text.toString() == message)
+        val short = createGuardianShareFile(context, "Short", true)
+        val long = createGuardianShareFile(context, message, true)
+        try {
+            val shortSize = android.graphics.BitmapFactory.Options().apply { inJustDecodeBounds = true }
+            val longSize = android.graphics.BitmapFactory.Options().apply { inJustDecodeBounds = true }
+            android.graphics.BitmapFactory.decodeFile(short.path, shortSize)
+            android.graphics.BitmapFactory.decodeFile(long.path, longSize)
+            assertTrue(longSize.outMimeType == "image/png")
+            assertTrue(longSize.outWidth == shortSize.outWidth)
+            assertTrue(longSize.outHeight > shortSize.outHeight * 10)
+            val uri = stageGuardianGalleryImage(context, long)
+            try {
+                publishGuardianGalleryImage(context, uri)
+                val published = context.contentResolver.openInputStream(uri)!!.use { it.readBytes() }
+                assertTrue(published.contentEquals(long.readBytes()))
+            } finally {
+                context.contentResolver.delete(uri, null, null)
+            }
+        } finally {
+            short.delete()
+            long.delete()
         }
     }
 
