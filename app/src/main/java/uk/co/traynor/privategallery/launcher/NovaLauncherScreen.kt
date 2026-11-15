@@ -170,12 +170,12 @@ private fun LauncherRuntime(
     var innerGuardian by rememberSaveable(homeGeneration) { mutableStateOf(false) }
     var surface by rememberSaveable(homeGeneration) { mutableStateOf(LauncherSurface.HOME) }
     var guardianSettingsFromHome by rememberSaveable(homeGeneration) { mutableStateOf(false) }
-    var guardianDiagnosticsFromSettings by rememberSaveable(homeGeneration) { mutableStateOf(false) }
+    var guardianDiagnosticsReturn by rememberSaveable(homeGeneration) { mutableStateOf(LauncherSurface.HOME) }
     fun closeGuardianSettings() {
         surface = if (guardianSettingsFromHome) LauncherSurface.HOME else LauncherSurface.SETTINGS
     }
     fun closeGuardianDiagnostics() {
-        surface = if (guardianDiagnosticsFromSettings) LauncherSurface.GUARDIAN_SETTINGS else LauncherSurface.HOME
+        surface = guardianDiagnosticsReturn
     }
     var launcherSettingsCategory by rememberSaveable(homeGeneration) { mutableStateOf<LauncherSettingsCategory?>(null) }
     var animateDockOnReturn by remember(homeGeneration) { mutableStateOf(false) }
@@ -294,6 +294,9 @@ private fun LauncherRuntime(
             LauncherSurface.LIBRARY_SETTINGS -> surface = LauncherSurface.SETTINGS
             LauncherSurface.GUARDIAN_SETTINGS -> closeGuardianSettings()
             LauncherSurface.GUARDIAN_DIAGNOSTICS -> closeGuardianDiagnostics()
+            LauncherSurface.SETTINGS -> {
+                if (launcherSettingsCategory == null) showHome() else launcherSettingsCategory = null
+            }
             LauncherSurface.EDIT -> closeEditor()
             else -> { showHome(animateDock = surface == LauncherSurface.DRAWER); query = "" }
         }
@@ -480,7 +483,7 @@ private fun LauncherRuntime(
                                     },
                                     onSanctuary = actions.openSanctuary,
                                     onDiagnostics = {
-                                        guardianDiagnosticsFromSettings = false
+                                        guardianDiagnosticsReturn = LauncherSurface.HOME
                                         surface = LauncherSurface.GUARDIAN_DIAGNOSTICS
                                     })
                             }
@@ -554,7 +557,7 @@ private fun LauncherRuntime(
                         },
                         onBack = ::closeGuardianSettings,
                         onDiagnostics = {
-                            guardianDiagnosticsFromSettings = true
+                            guardianDiagnosticsReturn = LauncherSurface.GUARDIAN_SETTINGS
                             surface = LauncherSurface.GUARDIAN_DIAGNOSTICS
                         },
                     )
@@ -570,6 +573,10 @@ private fun LauncherRuntime(
                         onGuardianSettings = {
                             guardianSettingsFromHome = false
                             surface = LauncherSurface.GUARDIAN_SETTINGS
+                        },
+                        onNotificationCompatibility = {
+                            guardianDiagnosticsReturn = LauncherSurface.SETTINGS
+                            surface = LauncherSurface.GUARDIAN_DIAGNOSTICS
                         },
                         defaultHomeUi = defaultHomeUi,
                         showNotificationBar = showNotificationBar,

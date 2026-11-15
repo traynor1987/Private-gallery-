@@ -1,6 +1,5 @@
 package uk.co.traynor.privategallery.launcher
 
-import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.layout.*
@@ -72,27 +71,19 @@ internal fun LauncherSettings(
     onCategory: (LauncherSettingsCategory?) -> Unit,
     onLibrarySettings: () -> Unit = {},
     onGuardianSettings: () -> Unit = {},
+    onNotificationCompatibility: () -> Unit,
     defaultHomeUi: LauncherDefaultHomeUi? = null,
     wide: Boolean = false,
     showNotificationBar: Boolean = true,
     onNotificationBarChange: (Boolean) -> Unit = {},
 ) {
     var confirmDockReset by remember { mutableStateOf(false) }
-    var notificationCompatibility by rememberSaveable { mutableStateOf(false) }
     val tap = navigationHaptic()
-    if (notificationCompatibility && !protectedBySanctuary) {
-        NotificationCompatibilityScreen { notificationCompatibility = false }
-        return
-    }
-    LaunchedEffect(protectedBySanctuary) {
-        if (protectedBySanctuary) notificationCompatibility = false
-    }
 
     fun goBack() {
         tap()
         if (category == null) onBack() else onCategory(null)
     }
-    BackHandler(enabled = category != null, onBack = ::goBack)
     LauncherPanel(category?.title ?: "Launcher settings", ::goBack) {
         key(category) {
             LazyColumn(
@@ -240,7 +231,7 @@ internal fun LauncherSettings(
 
                     LauncherSettingsCategory.RECOVERY -> {
                         if (!protectedBySanctuary) item {
-                            OutlinedButton(onClick = { notificationCompatibility = true }) { Text("Notification compatibility") }
+                            OutlinedButton(onClick = onNotificationCompatibility) { Text("Notification compatibility") }
                         }
                         item {
                             Text("Layout backup", style = MaterialTheme.typography.titleMedium)
