@@ -17,7 +17,7 @@ ROOT=Path(__file__).resolve().parents[1]
 BRANCH='feature/novaos-sanctuary-integration'
 BASELINE='681cd0babbcd3a3b2733ae795ca27de08f1fbf68'
 CONTROLS=('compile_upgrade1711_fixture.sh','verify_compiled_upgrade1711.py',
-          'verify_production_candidate1711.sh',
+          'verify_code80_baseline_payload.py','verify_production_candidate1711.sh',
           'verify_synthetic_upgrade1711.sh','verify_signed_upgrade1711.py',
           'release_configuration1711.sh','verify_release1711_gate.py')
 REQUIRED_STEPS={'Build isolated test identity and run JVM checks',

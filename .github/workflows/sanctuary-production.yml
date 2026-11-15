@@ -36,7 +36,7 @@ jobs:
                  'docs/release1711/UpgradeFixtureTest.kt','docs/release1711/SECURITY_REVIEW.md',
                  'docs/release1711/RUNTIME_CASES.json','docs/release1711/UPGRADE_CONTROLS.md',
                  'docs/release1711/code80-transfer-recipient.pem']
-          names=('compile_upgrade1711_fixture.sh','verify_compiled_upgrade1711.py','verify_production_candidate1711.sh','verify_synthetic_upgrade1711.sh','verify_signed_upgrade1711.py',
+          names=('compile_upgrade1711_fixture.sh','verify_compiled_upgrade1711.py','verify_code80_baseline_payload.py','verify_production_candidate1711.sh','verify_synthetic_upgrade1711.sh','verify_signed_upgrade1711.py',
                  'release_configuration1711.sh','verify_release1711_gate.py')
           paths+=['scripts/'+name for name in names]
           for name in paths:
@@ -195,7 +195,7 @@ jobs:
         run: |
           test "$(git rev-parse HEAD)" = "$FROZEN_SOURCE"
           ./gradlew lintRelease assembleRelease --stacktrace --no-daemon --console=plain
-      - name: Reproduce and authenticate the exact installed Code 80 baseline
+      - name: Authenticate the rebuilt Code 80 baseline against original package contents
         env:
           ORG_GRADLE_PROJECT_PRIVATE_GALLERY_STORE_FILE: ${{ runner.temp }}/private-gallery-release.jks
           ORG_GRADLE_PROJECT_PRIVATE_GALLERY_STORE_PASSWORD: ${{ secrets.PRIVATE_GALLERY_SIGNING_STORE_PASSWORD }}
@@ -212,7 +212,7 @@ jobs:
           trap 'rm -rf "$baseline_dir"' EXIT
           (cd "$baseline_dir" && ./gradlew lintRelease assembleRelease --stacktrace --no-daemon --console=plain)
           cp "$baseline_dir/app/build/outputs/apk/release/app-release.apk" "$PRIVATE_GALLERY_1711_BASELINE_APK"
-          printf '%s  %s\n' '2833899890a99cc12dfb36e2bf4add2e2d9ddf92af77d517411ee37a9a46ef66' "$PRIVATE_GALLERY_1711_BASELINE_APK" | sha256sum -c | tee app/build/production-evidence/baseline-archive-validation.txt
+          python3 "$RUNNER_TEMP/release1711-controls/scripts/verify_code80_baseline_payload.py" "$PRIVATE_GALLERY_1711_BASELINE_APK" | tee app/build/production-evidence/baseline-archive-validation.txt
           "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose --print-certs "$PRIVATE_GALLERY_1711_BASELINE_APK" > app/build/production-evidence/baseline-signature.txt
           grep -Fxq 'Signer #1 certificate SHA-256 digest: 94f2bfc6567f26d067d29077111cfd0ce86d38263c642ad115e43365f05b0d17' app/build/production-evidence/baseline-signature.txt
           grep -Fxq 'Verified using v2 scheme (APK Signature Scheme v2): true' app/build/production-evidence/baseline-signature.txt
@@ -277,6 +277,7 @@ jobs:
         with:
           name: novaos-code80-maintenance-upgrade-receipts
           path: |
+            app/build/production-evidence/baseline-archive-validation.txt
             app/build/production-evidence/package.txt
             app/build/production-evidence/signature.txt
             app/build/production-evidence/apk-sha256.txt
