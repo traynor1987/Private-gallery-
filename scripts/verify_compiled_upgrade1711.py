@@ -6,7 +6,7 @@ import json
 from pathlib import Path
 import re
 
-BASELINE = '681cd0babbcd3a3b2733ae795ca27de08f1fbf68'
+BASELINE = 'af433ec62cbdd316bb9c12fd110ea07282c587a3'
 TARGET = b'uk.co.traynor.privategallery.hiddenprototype'
 BUILD_TARGET = b'      applicationIdSuffix = if (guardianProbe) ".capture77.guardianprobe" else ".hiddenprototype"'
 

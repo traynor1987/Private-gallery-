@@ -52,7 +52,7 @@ jobs:
           assert subprocess.check_output(['git','rev-list','--parents','-n','1',head],text=True).split()==[head,approved_revision]
           assert subprocess.check_output(['git','diff','--name-only',approved_revision,head],text=True).splitlines()==['.novaos-production-authorization']
           marker=json.loads((control/'.sanctuary-production-candidate').read_bytes())
-          assert marker['source']=='af433ec62cbdd316bb9c12fd110ea07282c587a3' and marker['test_run']==43702765536
+          assert marker['source']=='13e45eae02837470e7585f8b643651da884f502b' and marker['test_run']==43740944953
           assert re.fullmatch('[a-f0-9]{64}',marker['fixture_sha256'])
           recipient=control/'docs/release1711/code80-transfer-recipient.pem'
           assert hashlib.sha256(recipient.read_bytes()).hexdigest()==marker['delivery_recipient_sha256']
@@ -63,7 +63,7 @@ jobs:
           (inputs/'owner-approval.json').write_text(json.dumps({
               'approving_login':event['sender']['login'],'approving_id':event['sender']['id'],
               'approved_revision':approved_revision,'approval_commit':head,
-              'source':marker['source'],'version':'1.7.38.7','version_code':82,
+              'source':marker['source'],'version':'1.7.38.7','version_code':83,
               'workflow_sha256':workflow,'regression_run':marker['test_run'],
           },indent=2)+'\n')
           (inputs/'release-control-sha.txt').write_text(subprocess.check_output(['git','rev-parse','HEAD'],text=True))
@@ -121,9 +121,9 @@ jobs:
             const runtime=Buffer.from((await github.rest.actions.downloadArtifact({...context.repo,artifact_id:artifact.id,archive_format:'zip'})).data);
             if(hash(runtime)!==marker.runtime_archive_sha256)throw Error('Original runtime archive changed');
             fs.writeFileSync(path.join(root,'original-runtime.zip'),runtime);
-            const baselineRun=(await github.rest.actions.getWorkflowRun({...context.repo,run_id:43629517564})).data;
+            const baselineRun=(await github.rest.actions.getWorkflowRun({...context.repo,run_id:43702829697})).data;
             write('baseline-github-run.json',baselineRun);
-            if(baselineRun.event!=='push'||baselineRun.head_branch!=='feature/novaos-sanctuary-integration'||baselineRun.head_repository?.full_name!=='traynor1987/Private-gallery-'||baselineRun.status!=='completed'||baselineRun.conclusion!=='success'||baselineRun.head_sha!=='58a3b1d6cad22f84841291106e4ed6f168b830af'||baselineRun.path.split('@')[0]!=='.github/workflows/sanctuary-production.yml')throw Error('Pinned Code 80 production run differs');
+            if(baselineRun.event!=='push'||baselineRun.head_branch!=='feature/novaos-sanctuary-integration'||baselineRun.head_repository?.full_name!=='traynor1987/Private-gallery-'||baselineRun.status!=='completed'||baselineRun.conclusion!=='success'||baselineRun.head_sha!=='a07a0e75166c97ce954b723716af14e94e787389'||baselineRun.path.split('@')[0]!=='.github/workflows/sanctuary-production.yml')throw Error('Pinned Code 80 production run differs');
       - name: Validate original runtime reports and authenticated owner authorization before signer access
         run: |
           controls="$RUNNER_TEMP/release1711-controls"
@@ -203,7 +203,7 @@ jobs:
           ORG_GRADLE_PROJECT_PRIVATE_GALLERY_KEY_PASSWORD: ${{ secrets.PRIVATE_GALLERY_SIGNING_KEY_PASSWORD }}
         run: |
           set -euo pipefail
-          baseline=681cd0babbcd3a3b2733ae795ca27de08f1fbf68
+          baseline=af433ec62cbdd316bb9c12fd110ea07282c587a3
           baseline_dir=$(mktemp -d "$RUNNER_TEMP/code80-source.XXXXXX")
           # The distributed APK embeds the Git revision through Android Gradle Plugin.
           git clone --no-local --no-checkout "$PWD" "$baseline_dir"
@@ -218,7 +218,7 @@ jobs:
           grep -Fxq 'Verified using v2 scheme (APK Signature Scheme v2): true' app/build/production-evidence/baseline-signature.txt
           grep -Fxq 'Number of signers: 1' app/build/production-evidence/baseline-signature.txt
           "$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging "$PRIVATE_GALLERY_1711_BASELINE_APK" > app/build/production-evidence/baseline-package.txt
-          grep -Fq "package: name='uk.co.traynor.privategallery' versionCode='80' versionName='1.7.38.7'" app/build/production-evidence/baseline-package.txt
+          grep -Fq "package: name='uk.co.traynor.privategallery' versionCode='82' versionName='1.7.38.7'" app/build/production-evidence/baseline-package.txt
           grep -Fxq "sdkVersion:'37'" app/build/production-evidence/baseline-package.txt
           grep -Fxq "targetSdkVersion:'37'" app/build/production-evidence/baseline-package.txt
           if grep -q 'application-debuggable' app/build/production-evidence/baseline-package.txt; then exit 1; fi
@@ -243,7 +243,7 @@ jobs:
           "$ANDROID_HOME/build-tools/36.0.0/zipalign" -c -P 16 -v 4 app/build/outputs/apk/release/app-release.apk > app/build/production-evidence/alignment.txt
       - name: Enable emulator acceleration
         run: sudo chmod 666 /dev/kvm
-      - name: Original-key Code 80 to versionCode 82 upgrade and restart without uninstall or clear
+      - name: Original-key Build 82 to versionCode 83 upgrade and restart without uninstall or clear
         uses: reactivecircus/android-emulator-runner@v2
         env:
           PRODUCTION_UPGRADE: '1'
@@ -292,7 +292,7 @@ jobs:
           umask 077
           stage=$(mktemp -d "$RUNNER_TEMP/code80-delivery.XXXXXX")
           trap 'rm -rf "$stage"' EXIT
-          name=NovaOS-1.7.38.7-code80-maintenance-v82.apk
+          name=NovaOS-1.7.38.7-code80-maintenance-v83.apk
           apk=app/build/outputs/apk/release/app-release.apk
           recorded=$(cut -d ' ' -f1 app/build/production-evidence/apk-sha256.txt)
           test "$(sha256sum "$apk" | cut -d ' ' -f1)" = "$recorded"
@@ -303,9 +303,9 @@ jobs:
           from pathlib import Path
           manifest=dict(filename=sys.argv[2],apk_sha256=sys.argv[3],source_sha=os.environ['FROZEN_SOURCE'],
                         run_id=os.environ['GITHUB_RUN_ID'],run_number=os.environ['GITHUB_RUN_NUMBER'],
-                        package='uk.co.traynor.privategallery',version='1.7.38.7',version_code=82,min_sdk=37,target_sdk=37,
+                        package='uk.co.traynor.privategallery',version='1.7.38.7',version_code=83,min_sdk=37,target_sdk=37,
                         certificate_sha256='94f2bfc6567f26d067d29077111cfd0ce86d38263c642ad115e43365f05b0d17',
-                        code80_upgrade='PASS',version82_after_restart='PASS')
+                        code80_upgrade='PASS',version83_after_restart='PASS')
           Path(sys.argv[1]).write_text(json.dumps(manifest,indent=2)+'\n')
           PY
           tar -C "$stage" -cf - "$name" verification.json | openssl cms -encrypt -binary -aes-256-gcm \

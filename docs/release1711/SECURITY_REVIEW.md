@@ -1,22 +1,19 @@
 # NovaOS 1.7.38.7 Code 80 maintenance upgrade controls
 
-Source: af433ec62cbdd316bb9c12fd110ea07282c587a3
+Source: 13e45eae02837470e7585f8b643651da884f502b
 Authorization: authenticated owner push
 Release scope: private disposable upgrade verification only
 Physical Fold acceptance: pending
-Upgrade fixture SHA-256: ce00d3df11a1304d2ef69d7edc0aebf760ca7787c337822d0f13b3c44dfa1dae
-Upgrade controls SHA-256: 2819da810a12672064f63ccedc593df3e2b6771470d93f982186b33eccb7ce60
+Upgrade fixture SHA-256: 1ba2169f2674b138c7e8ef08c9bd46c16f73aa73f2f4b03a7cd74a2607f68235
+Upgrade controls SHA-256: 202f76d9c7c87d400cd20924595f4b991a9a75828cbca81b813eeb3239c9a7e5
 Runtime matrix SHA-256: 62b209459a34f97e06eb73a0ccb88d7f503b7260696b3607812120ac3e2d3967
-Runtime workflow run: 43702765536
-Signing workflow SHA-256: f51ea027222a1adbc66d4f8437d99ad697e8a7c0e73a2d889c88eb9e0f446201
+Runtime workflow run: 43740944953
+Signing workflow SHA-256: 890527cd27981ef8e00866802011560ad8015cacb9a71a0f9a4bcc75993c852b
 
 The signing job waits for the selected Android 17 regression run. The original
 GitHub artifact ID and digest are recorded from that run's authenticated API
 response and verified against the downloaded bytes and the reviewed test matrix.
 
-The original Code 80 baseline is pinned to production run 43629517564. The rebuilt baseline must have the original production certificate and every
-ZIP-entry name and uncompressed byte must match the delivered APK. The receipts
-record whether the complete rebuilt APK hash also matches. A payload mismatch
-blocks delivery. The emulator verifies the encrypted in-place update and process restart
+Build 82 is pinned to production run 43702829697. The baseline must match the original production certificate and the exact APK SHA-256 recorded in its upgrade receipts. A rebuild mismatch blocks the upgrade gate. The emulator verifies the encrypted in-place update and process restart
 before the candidate can be transferred. The public Actions artifact contains
 only ciphertext under the existing private recipient's certificate.
