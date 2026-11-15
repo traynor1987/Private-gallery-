@@ -48,7 +48,7 @@ internal fun GuardianAlertSettings(page: GuardianAlertPage, onBack: () -> Unit) 
                                 preferences.edit().putString("alert_retention", option.name).apply()
                             }
                         }
-                        Text("Swiping away an alert or selecting Review later leaves its encrypted record in Guardian.")
+                        Text("Swiping away an alert or selecting Review later leaves its encrypted record in Guardian. Android may also expire long-lived alerts.")
                     }
                     GuardianAlertPage.PRIVACY -> {
                         Text("Sender identity", style = MaterialTheme.typography.titleSmall)
