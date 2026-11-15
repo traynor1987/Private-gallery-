@@ -34,6 +34,27 @@ class SpacePreferencesTest {
  private fun refused(action: () -> Unit) {
   try { action(); fail("Retired handle accepted") } catch (_: IllegalStateException) {}
  }
+ @Test fun core_app_documents_are_encrypted_namespaced_and_reject_stale_saves() = Fixture().use { f ->
+  val marker = "private-code81-draft-value"
+  val notes = NovaCoreAppDocuments(f.space, NovaCoreApp.NOTES)
+  assertNull(notes.read("draft"))
+  val first = checkNotNull(notes.save("draft", null, """{"body":"$marker"}"""))
+  assertNull(NovaCoreAppDocuments(f.space, NovaCoreApp.TASKS).read("draft"))
+  SpaceContext(f.context, f.primary).use { reopened ->
+   val writer = NovaCoreAppDocuments(reopened, NovaCoreApp.NOTES)
+   assertEquals(first, writer.read("draft"))
+   val second = checkNotNull(writer.save("draft", first.revision, """{"body":"$marker updated"}"""))
+   assertNull(notes.save("draft", first.revision, """{"body":"stale"}"""))
+   assertEquals(second, notes.read("draft"))
+  }
+  assertTrue(f.root.walkTopDown().any { it.isFile && it.extension == "enc" })
+  assertFalse(f.root.walkTopDown().filter { it.isFile }.any {
+   it.readBytes().toString(Charsets.ISO_8859_1).contains(marker)
+  })
+  f.space.close()
+  refused { notes.read("draft") }
+ }
+
  @Test fun standard_types_are_encrypted_round_trip_with_defensive_copies_and_merge() = Fixture().use { f ->
   assertSame(f.space, f.space.applicationContext)
   assertEquals("primary", f.space.spaceId)
@@ -71,6 +92,7 @@ class SpacePreferencesTest {
    val primary = f.space.getSharedPreferences("layout", 0)
    primary.edit().putString("private", "primary").apply()
    assertEquals("hidden", hidden.spaceId)
+   assertTrue(runCatching { NovaCoreAppDocuments(hidden, NovaCoreApp.NOTES) }.isFailure)
    assertFalse(hidden.getSharedPreferences("layout", 0).contains("private"))
    val original = File(f.primary.root, "home2").listFiles()!!.single { it.extension == "enc" }
    hidden.getSharedPreferences("layout", 0).edit().putString("private", "hidden").apply()
