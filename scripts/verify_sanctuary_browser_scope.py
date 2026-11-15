@@ -53,7 +53,7 @@ for revision in (("HEAD",), ()):
     assert not unexpected, f"Unexpected protected-core changes: {sorted(unexpected)}"
 
 build_file = "app/build.gradle.kts"
-expected = original(build_file).replace("versionCode = 69", "versionCode = 80", 1).replace(
+expected = original(build_file).replace("versionCode = 69", "versionCode = 81", 1).replace(
     'versionName = "1.7.34"', 'versionName = "1.7.38.7"', 1,
 )
 debug_version = """
