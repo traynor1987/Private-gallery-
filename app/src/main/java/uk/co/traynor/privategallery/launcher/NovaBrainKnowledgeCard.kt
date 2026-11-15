@@ -29,7 +29,11 @@ internal fun NovaBrainKnowledgeCard(showPersonalImpact: Boolean = false) {
     var impact by remember(showPersonalImpact) {
         mutableStateOf<Pair<PersonalImpactSummary, PersonalImpactValidation?>?>(null)
     }
+    var impactStats by remember(context, showPersonalImpact) { mutableStateOf<Triple<Boolean, Int, Int>?>(null) }
     LaunchedEffect(context, revision, showPersonalImpact) {
+        impactStats = if (showPersonalImpact) withContext(Dispatchers.IO) {
+            runCatching { GuardianCaptureStore(context).personalImpactLearningStats() }.getOrNull()
+        } else null
         impact = if (showPersonalImpact) withContext(Dispatchers.IO) {
             runCatching { GuardianCaptureStore(context).personalImpactReport() }.getOrNull()
         } else null
@@ -45,7 +49,7 @@ internal fun NovaBrainKnowledgeCard(showPersonalImpact: Boolean = false) {
     var details by remember { mutableStateOf(false) }
     GuardianCard("Nova Brain knowledge", badge = stage) {
         if (percent == null) {
-            Text("A score appears after enough unseen conversations have been evaluated.")
+            Text("A score needs a current held-out evaluation with at least 10 unseen conversations, 20 upsetting examples and 20 ordinary examples. Training changes can require a new evaluation.")
         } else {
             val progress by animateFloatAsState(percent / 100f, label = "Knowledge level")
             Text("$percent%")
@@ -60,6 +64,13 @@ internal fun NovaBrainKnowledgeCard(showPersonalImpact: Boolean = false) {
                 else "Evidence Locker incidents · ${(incident.accuracy * 100).roundToInt()}% accuracy on ${incident.conversations} held-out incidents")
             if (incident != null) {
                 Text("${incident.upsetting + incident.ordinary} OCR examples · ${incident.falsePositives} false positives · ${incident.falseNegatives} false negatives")
+            }
+            impactStats?.let { (active, eligible, conversations) ->
+                Text("Personal impact learning · " + if (active) "On" else "Off")
+                Text("$eligible eligible impact reports across $conversations conversations")
+                if (active && impact?.second == null) {
+                    Text("Personal impact validation needs predictions for at least 10 conversations and at least two reported impact categories. Each prediction needs enough earlier feedback.")
+                }
             }
             impact?.let { (summary, result) ->
                 Text("Personal impact · conversation prediction · " + if (result == null) "Not yet validated"

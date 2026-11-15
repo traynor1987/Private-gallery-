@@ -9,6 +9,33 @@ import java.io.File
 
 @RunWith(AndroidJUnit4::class)
 class GuardianCaptureStore77Test {
+    @Test fun archiveReloadDoesNotReviewAndOwnerLabelDoesNotRewriteOriginalAssessment() {
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        val store = GuardianCaptureStore(context)
+        store.clear()
+        try {
+            val now = guardianInboxClock(context)
+            val event = GuardianCaptureEvent(0, "review-fixture", now.wall,
+                listOf(GuardianCaptureEntry(now.wall, "fixture", "Unique synthetic review words")))
+            assertTrue(store.append(event, 7, now.wall, assess = false, clock = now).allDurable)
+            val pending = store.inboxRows(7, now).single()
+            assertNull(pending.assessment)
+            assertFalse(GuardianCaptureStore(context).inboxRows(7, now).single().reviewed)
+            val reviewed = checkNotNull(store.prepareInboxReview(pending.id, 7, now)).first
+            assertTrue(reviewed.reviewed)
+            assertNotNull(reviewed.originalAssessment)
+            assertTrue(store.labelConversationMessage(pending.id, GuardianAssessment.LOW_RISK, 7, now))
+            val reopened = GuardianCaptureStore(context).inboxRows(7, now).single()
+            assertEquals(reviewed.originalAssessment, reopened.originalAssessment)
+            assertEquals(reviewed.assessment, reopened.assessment)
+            assertEquals(reviewed.section, reopened.section)
+            assertEquals(GuardianAssessment.LOW_RISK, reopened.ownerLabel)
+            assertTrue(reopened.reviewed)
+        } finally {
+            store.clear()
+        }
+    }
+
     @Test fun deletingOnePeaceReflectionPreservesOtherEncryptedSessionsAndGuardianHistory() {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         val store = GuardianCaptureStore(context)

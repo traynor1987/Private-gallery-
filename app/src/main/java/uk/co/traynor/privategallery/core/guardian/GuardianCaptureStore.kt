@@ -43,6 +43,8 @@ internal data class GuardianInboxRow(
     val availableAfter: Long? = null,
     val ownerLabel: GuardianAssessment? = null,
     val patterns: Set<NovaBrainPattern>? = null,
+    val originalAssessment: GuardianAssessment? = assessment,
+    val reviewed: Boolean = false,
 )
 
 /** The export only needs section membership and layout-local list keys. */
@@ -223,7 +225,7 @@ internal class GuardianCaptureStore private constructor(private val context: Con
             val group = impactGroup(conversation)
             val history = reports.asSequence().filter { it.optString("messageId") != id }
                 .mapNotNull(::conversationImpactReport).filter { it.conversation == group }.toList()
-            val earlier = priorConversationImpact(history, capturedAt, now)
+            val earlier = priorConversationImpact(history, capturedAt, capturedAt)
             Triple(settings, existing, predictPersonalImpact(settings, earlier))
         }
 
@@ -283,6 +285,14 @@ internal class GuardianCaptureStore private constructor(private val context: Con
     }
 
     fun clearPersonalImpact() = impactArchive().clear()
+
+    fun personalImpactLearningStats(): Triple<Boolean, Int, Int> = synchronized(lock) {
+        val rows = readImpact(impactArchive(), System.currentTimeMillis())
+        val settings = impactSettings(rows.firstOrNull())
+        val eligible = rows.drop(1).mapNotNull(::conversationImpactReport)
+            .filter { !it.feedback.excluded && it.feedback.impact != null }
+        Triple(settings.collect && settings.learn, eligible.size, eligible.map { it.conversation }.distinct().size)
+    }
 
     fun personalImpactReport(): Pair<PersonalImpactSummary, PersonalImpactValidation?> = synchronized(lock) {
         val rows = readImpact(impactArchive(), System.currentTimeMillis())
@@ -597,7 +607,12 @@ internal class GuardianCaptureStore private constructor(private val context: Con
             write(rows)
         }
         val revised = inboxRow(stored, now)
-        if (revised.section == GuardianInboxSection.COOLING) null else revised to stored.getString("text")
+        if (revised.section == GuardianInboxSection.COOLING) return@synchronized null
+        if (!stored.optBoolean("explicitlyReviewed")) {
+            stored.put("explicitlyReviewed", true)
+            write(rows)
+        }
+        revised.copy(reviewed = true) to stored.getString("text")
     }
 
     fun eligibleEvidenceMessage(id: String, days: Int, now: GuardianInboxClock): String? = synchronized(lock) {
@@ -637,6 +652,10 @@ internal class GuardianCaptureStore private constructor(private val context: Con
     private fun applyAssessment(row: JSONObject, assessment: GuardianAssessment, now: GuardianInboxClock) {
         if (!row.has("patterns")) {
             row.put("patterns", JSONArray(recogniseNovaBrainPatterns(row.getString("text")).map { it.name }))
+        }
+        if (!row.has("originalAssessment")) {
+            val previous = row.optString("assessment").takeIf { row.optInt("assessmentVersion") == 1 }
+            row.put("originalAssessment", previous ?: assessment.name)
         }
         row.put("assessment", assessment.name).put("assessmentVersion", 1)
         if (!row.has("hold") && (assessment == GuardianAssessment.UPSETTING ||
@@ -692,7 +711,9 @@ internal class GuardianCaptureStore private constructor(private val context: Con
                 (0 until stored.length()).mapNotNull { index ->
                     NovaBrainPattern.entries.firstOrNull { it.name == stored.optString(index) }
                 }.toSet()
-            })
+            },
+            GuardianAssessment.entries.firstOrNull { it.name == row.optString("originalAssessment") } ?: assessment,
+            row.optBoolean("explicitlyReviewed") || review == "ready" || review == "archived")
     }
 
     fun clear() = synchronized(lock) {

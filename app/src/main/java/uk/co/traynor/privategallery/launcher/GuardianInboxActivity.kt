@@ -70,6 +70,7 @@ class GuardianInboxActivity : ComponentActivity() {
     private var impactSuggestions by mutableStateOf<List<String>>(emptyList())
     private var impactMessage by mutableStateOf<String?>(null)
     private var pastImpact by mutableStateOf<MessageImpact?>(null)
+    private var feedbackNotice by mutableStateOf<String?>(null)
     private var impactFeedback by mutableStateOf<PersonalImpact?>(null)
     private var clearImpactOpen by mutableStateOf(false)
     private var safeCategory by mutableStateOf<GuardianNoticeKind?>(null)
@@ -267,6 +268,7 @@ class GuardianInboxActivity : ComponentActivity() {
         impactSuggestions = emptyList()
         impactMessage = null
         impactFeedback = null
+        feedbackNotice = null
         pastImpact = null
         clearImpactOpen = false
         safeSettings = false
@@ -422,6 +424,18 @@ class GuardianInboxActivity : ComponentActivity() {
             }
             item {
                 GuardianCard(selected.label, badge = if (busy) "Checking" else listed.size.toString()) {
+                    if (!redacted) {
+                        Text("${rows.size} retained · ${rows.count { it.assessment != null }} analysed · " +
+                            "${rows.count { it.assessment == GuardianAssessment.UNCERTAIN }} uncertain · " +
+                            "${rows.count { it.reviewed }} reviewed", color = GuardianMuted)
+                        Text(when (selected) {
+                            GuardianInboxSection.PENDING -> "Only messages without an assessment appear here."
+                            GuardianInboxSection.PROTECTED -> "Uncertain messages and messages with elapsed holds can appear here."
+                            GuardianInboxSection.COOLING -> "Only messages with an active hold appear here."
+                            GuardianInboxSection.READY -> "Messages with a low-risk estimate or explicitly marked ready appear here."
+                            GuardianInboxSection.HISTORY -> "Messages you move to history appear here."
+                        }, color = GuardianMuted)
+                    }
                     Text(if (listed.isEmpty() && !busy) "No messages in this section."
                         else "Message previews stay hidden until you choose to review them.", color = GuardianMuted)
                     failure?.let { Text(it, color = MaterialTheme.colorScheme.error) }
@@ -442,9 +456,11 @@ class GuardianInboxActivity : ComponentActivity() {
         if (canReview()) impactMessage?.let { id ->
             PersonalImpactDialog(impactFeedback, pastImpact, busy, onSave = { feedback ->
                 loadArchive({ store, days, now -> store.savePersonalImpact(id, feedback, days, now) }) {
-                    if (!it) failure = "Feedback could not be saved for this message."
-                    impactMessage = null
-                    impactFeedback = null
+                    if (it) {
+                        impactFeedback = feedback
+                        feedbackNotice = "Personal impact feedback saved on this device."
+                        impactMessage = null
+                    } else failure = "Feedback could not be saved for this message."
                 }
             }, onDelete = {
                 loadArchive({ store, _, _ -> store.deletePersonalImpact(id) }) {
@@ -898,6 +914,7 @@ class GuardianInboxActivity : ComponentActivity() {
             }
         }
         GuardianCard("Message actions") {
+            feedbackNotice?.let { Text(it, color = GuardianMuted) }
             if (cloudKey != null) TextButton(enabled = !busy, onClick = {
                 loadArchive({ store, _, _ -> store.personalImpactReview(row.id, cloudKey, row.arrivedAt) }) {
                     if (it.first.collect || it.second != null) {
@@ -964,6 +981,7 @@ class GuardianInboxActivity : ComponentActivity() {
     private fun reviewConversationMessage(thread: GuardianConversationKey?, row: GuardianInboxRow) {
         val openedDetail = detail
         confirmDelete = false
+        feedbackNotice = null
         conversationPreview = null
         loadArchive({ store, days, now -> store.prepareInboxReview(row.id, days, now) }) { reviewed ->
             if (reviewed != null) GuardianSafeNotifications.reviewed(this, row.id)
@@ -1123,9 +1141,18 @@ internal fun GuardianConversationCard(
                 }
                 return@Column
             }
+            Text(row.originalAssessment?.let { "Original Guardian assessment · ${it.label}" }
+                ?: "Assessment pending", color = GuardianMuted)
+            row.assessment?.takeIf { it != row.originalAssessment }?.let {
+                Text("Guardian reassessment · ${it.label}", color = GuardianMuted)
+            }
+            Text(if (row.reviewed) "Reviewed" else "Review pending", color = GuardianMuted)
+            row.ownerLabel?.let {
+                val label = if (it == GuardianAssessment.LOW_RISK) "Not upsetting" else "Upsetting"
+                Text("Your training label · $label · Saved for future local assessment", color = GuardianMuted)
+            }
             if (preview == null) {
                 val patterns = row.patterns
-                Text(row.assessment?.let { "Local estimate · ${it.label}" } ?: "Assessment pending", color = GuardianMuted)
                 when {
                     patterns == null -> Text("Pre-read pattern assessment is unavailable for this capture.")
                     patterns.isEmpty() -> Text("No supported pattern cues detected. Context may change the interpretation.")
