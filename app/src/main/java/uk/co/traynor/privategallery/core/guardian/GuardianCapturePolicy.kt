@@ -78,6 +78,20 @@ internal enum class GuardianCaptureStage(val label: String) {
     QUEUE("Capture queue full"),
 }
 
+/** A one-time token may retry only the notification that first used it. */
+internal class GuardianMainDismissalTest(val message: String, private val until: Long) {
+    private var key: String? = null
+
+    fun mayTarget(notificationKey: String, now: Long): Boolean =
+        now < until && (key == null || key == notificationKey)
+
+    fun bind(notificationKey: String, now: Long): Boolean {
+        if (!mayTarget(notificationKey, now)) return false
+        key = notificationKey
+        return true
+    }
+}
+
 internal enum class GuardianRemovalObservation {
     WAITING, CONFIRMED, ABSENT_UNCONFIRMED, REPOSTED, UNVERIFIED,
 }

@@ -4,6 +4,17 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class GuardianCapturePolicyTest {
+    @Test fun dismissalTestRetriesOnlyTheOriginalKeyUntilItFinishes() {
+        val test = GuardianMainDismissalTest("exact token", 60_000)
+
+        assertTrue(test.mayTarget("original", 1))
+        assertTrue(test.bind("original", 1))
+        assertTrue(test.mayTarget("original", 59_999))
+        assertFalse(test.mayTarget("other", 2))
+        assertFalse(test.bind("other", 2))
+        assertFalse(test.mayTarget("original", 60_000))
+    }
+
     @Test fun dismissalRequiresBothListenerCallbackAndAbsence() {
         assertEquals(GuardianRemovalObservation.WAITING, guardianRemovalObservation(false, false, false, false))
         assertEquals(GuardianRemovalObservation.ABSENT_UNCONFIRMED, guardianRemovalObservation(false, false, false, true))

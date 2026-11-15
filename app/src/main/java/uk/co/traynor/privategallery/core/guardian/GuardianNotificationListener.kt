@@ -245,7 +245,7 @@ internal class GuardianNotificationListener : NotificationListenerService() {
                 else GuardianCaptureEvent(serial, identity, System.currentTimeMillis(),
                     guardianCaptureEntries(notification).filter { guardianMayKeepSms(it.text) }, sbn.packageName)
                 if (received != null && received.entries.isNotEmpty()) {
-                    val armed = currentMainTest(this)?.takeIf { test ->
+                    val armed = currentMainTest(this, sbn.key)?.takeIf { test ->
                         guardianMatchesLatestTestMessage(received, test.message)
                     }
                     val onDurable: ((Boolean) -> Unit)? = if (isWhatsApp && account == ProbeAccount.MAIN) {
@@ -269,7 +269,7 @@ internal class GuardianNotificationListener : NotificationListenerService() {
     private fun dismissStoredWhatsApp(
         original: StatusBarNotification,
         captured: GuardianCaptureEvent,
-        armed: MainDismissalTest?,
+        armed: GuardianMainDismissalTest?,
         quietCollection: Boolean,
         friends: Boolean = false,
     ) {
@@ -277,7 +277,7 @@ internal class GuardianNotificationListener : NotificationListenerService() {
             !GuardianCapture.isEnabled(this)) return
         val test = armed != null
         if (armed != null) {
-            if (currentMainTest(this) !== armed || !guardianMatchesLatestTestMessage(captured, armed.message)) return
+            if (currentMainTest(this, original.key) !== armed || !guardianMatchesLatestTestMessage(captured, armed.message)) return
         } else if (friends) {
             if (!friendsDismissalEnabled(this)) return
         } else if (!quietCollection && !automaticDismissalEnabled(this)) return
@@ -318,23 +318,29 @@ internal class GuardianNotificationListener : NotificationListenerService() {
         }
         if (current.key in mainAttempts && retries != null) {
             // Wait for the active attempt to observe this repost and recheck its archived content.
-            mainAttempts.getValue(current.key).repost = { dismissStoredWhatsApp(original, captured, armed, quietCollection, friends) }
+            mainAttempts.getValue(current.key).repost = {
+                onNotificationPosted(current, currentRanking)
+            }
             reportMainDismissal("Original notification reposted")
             return
         }
+        if (armed != null && !armed.bind(current.key, now)) return
         mainRetries[current.key] = (retries?.first ?: now) to ((retries?.second ?: 0) + 1)
-        if (test) mainTest = null
-        val attempt = ExternalAttempt(current.key)
+        val attempt = ExternalAttempt(current.key, current.postTime)
         mainAttempts[current.key] = attempt
         reportMainDismissal("Cancellation requested after encrypted capture")
         if (test) status.value = status.value.copy(mainTestMessage = null)
         fun finish(message: String, verified: Boolean = false) {
             if (mainAttempts[attempt.key] !== attempt) return
             mainAttempts.remove(attempt.key)
-            if (test && verified) mainTestRemoved = true
+            val retry = attempt.repost?.takeIf { !verified && connectedListener === this && hasAccess(this) }
+            if (test && retry == null) {
+                if (mainTest === armed) mainTest = null
+                mainTestRemoved = verified
+            }
             reportMainDismissal(message)
             status.value = status.value.copy(mainTestRemoved = mainTestRemoved)
-            if (!verified && connectedListener === this && hasAccess(this)) attempt.repost?.invoke()
+            retry?.invoke()
         }
         if (runCatching { cancelNotification(current.key) }.isFailure) {
             finish("Android rejected the cancellation request")
@@ -410,7 +416,9 @@ internal class GuardianNotificationListener : NotificationListenerService() {
 
     override fun onNotificationRemoved(sbn: StatusBarNotification, rankingMap: RankingMap, reason: Int) {
         if (externalAttempt?.key == sbn.key && reason == REASON_LISTENER_CANCEL) externalAttempt?.removedByListener = true
-        if (reason == REASON_LISTENER_CANCEL) mainAttempts[sbn.key]?.removedByListener = true
+        if (reason == REASON_LISTENER_CANCEL) {
+            mainAttempts[sbn.key]?.takeIf { it.postTime == sbn.postTime }?.removedByListener = true
+        }
     }
 
     companion object {
@@ -420,7 +428,7 @@ internal class GuardianNotificationListener : NotificationListenerService() {
         private const val OWN_TEST_PREFIX = "nova-guardian-presentation-"
         private const val EXTERNAL_FIXTURE_PREFIX = "nova-guardian-shell-fixture-"
         private data class SyntheticTest(val tag: String)
-        private data class ExternalAttempt(val key: String, var removedByListener: Boolean = false) {
+        private data class ExternalAttempt(val key: String, val postTime: Long, var removedByListener: Boolean = false) {
             var repost: (() -> Unit)? = null
         }
         private var synthetic: SyntheticTest? = null
@@ -504,8 +512,7 @@ internal class GuardianNotificationListener : NotificationListenerService() {
             foldFixtureVerified && hasAccess(context) && status.value.connected &&
                 dismissalPrefs(context).edit().putBoolean("fold_accepted", true).commit()
 
-        private data class MainDismissalTest(val message: String, val until: Long)
-        @Volatile private var mainTest: MainDismissalTest? = null
+        @Volatile private var mainTest: GuardianMainDismissalTest? = null
         private var mainTestRemoved = false
 
         fun mainDismissalAccepted(context: Context): Boolean =
@@ -520,14 +527,14 @@ internal class GuardianNotificationListener : NotificationListenerService() {
         fun setFriendsDismissal(context: Context, enabled: Boolean): Boolean =
             dismissalPrefs(context).edit().putBoolean("friends_enabled", enabled).commit()
 
-        private fun currentMainTest(context: Context): MainDismissalTest? =
-            mainTest?.takeIf { foldDismissalAccepted(context) && SystemClock.elapsedRealtime() < it.until }
+        private fun currentMainTest(context: Context, key: String): GuardianMainDismissalTest? =
+            mainTest?.takeIf { foldDismissalAccepted(context) && it.mayTarget(key, SystemClock.elapsedRealtime()) }
 
         fun armMainDismissalTest(context: Context): Boolean {
             if (!foldDismissalAccepted(context) || !hasAccess(context) || !status.value.connected ||
                 !GuardianCapture.isEnabled(context) || connectedListener?.mainAttempts?.isNotEmpty() == true ||
                 automaticDismissalEnabled(context)) return false
-            val armed = MainDismissalTest("Nova Guardian test ${UUID.randomUUID().toString().take(12)}",
+            val armed = GuardianMainDismissalTest("Nova Guardian test ${UUID.randomUUID().toString().take(12)}",
                 SystemClock.elapsedRealtime() + 60_000)
             mainTest = armed
             mainTestRemoved = false
@@ -573,7 +580,7 @@ internal class GuardianNotificationListener : NotificationListenerService() {
                 }
             }.getOrNull() ?: return false
             if (!target.isClearable) return false
-            val attempt = ExternalAttempt(target.key)
+            val attempt = ExternalAttempt(target.key, target.postTime)
             if (fold) foldFixtureVerified = false
             externalAttempt = attempt
             status.value = status.value.copy(synthetic = SyntheticResult.DISMISSING,
@@ -756,13 +763,13 @@ internal enum class SyntheticResult(val label: String) {
 }
 
 
-/** Convert only Android-provided incoming MessagingStyle messages from the verified personal WhatsApp UID. */
 /** A test token in older bundled history must not authorize dismissal. */
 internal fun guardianMatchesLatestTestMessage(event: GuardianCaptureEvent, token: String): Boolean {
     val latest = event.entries.maxOfOrNull { it.time } ?: return false
     return event.entries.singleOrNull { it.time == latest }?.text == token
 }
 
+/** Convert only Android-provided incoming MessagingStyle messages from the verified personal WhatsApp UID. */
 internal fun guardianMainNotificationEvent(
     notification: Notification, account: ProbeAccount, packageName: String, uidMatches: Boolean,
     profileSerial: Long, notificationKey: String, now: Long,

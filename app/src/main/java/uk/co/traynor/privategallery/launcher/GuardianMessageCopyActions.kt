@@ -105,7 +105,7 @@ internal fun GuardianMessageCopyActions(
             var file: java.io.File? = null
             var handedOff = false
             try {
-                withContext(Dispatchers.IO) { file = createGuardianShareFile(context, reconstruction, image) }
+                if (image) withContext(Dispatchers.IO) { file = createGuardianShareFile(context, reconstruction, true) }
                 if (canCopy() && SanctuaryStore.get(context).refresh() == null) {
                     if (gallery) {
                         val prepared = checkNotNull(file)
@@ -127,9 +127,11 @@ internal fun GuardianMessageCopyActions(
                         copyGuardianImage(context, checkNotNull(file))
                         handedOff = true
                         feedback = "Screenshot copied to Android clipboard."
-                    } else {
-                        shareGuardianFile(context, checkNotNull(file), image)
+                    } else if (image) {
+                        shareGuardianFile(context, checkNotNull(file))
                         handedOff = true
+                    } else {
+                        shareGuardianText(context, reconstruction)
                     }
                 }
             } catch (cancelled: kotlinx.coroutines.CancellationException) {

@@ -961,13 +961,17 @@ private fun LauncherDots(
                 onClick = { onPage(index) },
                 modifier = Modifier.width(36.dp).height(42.dp).semantics { this.selected = index == selected },
             ) {
-                Icon(if (index == selected) Icons.Default.Circle else Icons.Default.RadioButtonUnchecked,
-                    when {
+                val isGuardian = guardianFirst && index == 0
+                Icon(when {
+                    isGuardian -> Icons.Default.Shield
+                    index == selected -> Icons.Default.Circle
+                    else -> Icons.Default.RadioButtonUnchecked
+                }, when {
                         guardianFirst && index == 0 -> "Guardian page"
                         libraryLast && index == count - 1 -> "App Library page"
                         else -> "Home page ${index + if (guardianFirst) 0 else 1}"
                     },
-                    Modifier.size(7.dp),
+                    Modifier.size(if (isGuardian) 18.dp else 7.dp),
                     tint = if (index == selected) accent else LocalContentColor.current.copy(alpha = .75f))
             }
         }

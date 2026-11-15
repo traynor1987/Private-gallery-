@@ -38,9 +38,14 @@ internal fun createGuardianShareFile(context: Context, text: String, image: Bool
     }
 }
 
-internal fun shareGuardianFile(context: Context, file: File, image: Boolean) {
+internal fun shareGuardianText(context: Context, text: String) {
+    val send = Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, text)
+    context.startActivity(Intent.createChooser(send, "Share Guardian text"))
+}
+
+internal fun shareGuardianFile(context: Context, file: File) {
     val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
-    val send = Intent(Intent.ACTION_SEND).setType(if (image) "image/png" else "text/plain")
+    val send = Intent(Intent.ACTION_SEND).setType("image/png")
         .putExtra(Intent.EXTRA_STREAM, uri)
         .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
         .apply { clipData = ClipData.newRawUri("Guardian export", uri) }
