@@ -239,6 +239,20 @@ internal fun NotificationCompatibilityScreen(
                     else externalError = "The Friends WhatsApp setting could not be saved."
                 }
                 Text("Friends dismissal requires a verified Dual Messenger profile and permission to retain that conversation.")
+                var recheck by remember { mutableStateOf<String?>(null) }
+                var confirmReconciliation by remember { mutableStateOf(false) }
+                OutlinedButton(enabled = status.connected, onClick = {
+                    recheck = GuardianNotificationListener.recheckMainNotifications(context)
+                    confirmReconciliation = true
+                }) { Text("Recheck protected notifications") }
+                recheck?.let { Text(it) }
+                if (confirmReconciliation && automatic) {
+                    Text("Reconciliation verifies encrypted capture before requesting removal of eligible originals.")
+                    OutlinedButton(enabled = status.connected, onClick = {
+                        recheck = GuardianNotificationListener.recheckMainNotifications(context, reconcile = true)
+                        confirmReconciliation = false
+                    }) { Text("Confirm Main WhatsApp reconciliation") }
+                }
                 status.mainDismissal?.let { Text(it) }
                 Text("Samsung may briefly show a notification before Guardian can dismiss it.")
 

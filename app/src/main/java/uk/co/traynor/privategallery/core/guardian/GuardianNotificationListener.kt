@@ -33,6 +33,7 @@ import uk.co.traynor.privategallery.launcher.LauncherAppIdentity
 
 /** Owner-started diagnostics and separately authorised Main WhatsApp capture. */
 internal class GuardianNotificationListener : NotificationListenerService() {
+    private val changedRetries = LinkedHashMap<String, Pair<Long, Int>>()
     private val mainAttempts = mutableMapOf<String, ExternalAttempt>()
     private val mainRetries = LinkedHashMap<String, Pair<Long, Int>>()
     private val callWorker = ThreadPoolExecutor(1, 1, 0L, TimeUnit.MILLISECONDS,
@@ -124,7 +125,66 @@ internal class GuardianNotificationListener : NotificationListenerService() {
                         it.notification.flags and Notification.FLAG_GROUP_SUMMARY == 0
                 }.take(8).forEach { onNotificationPosted(it, ranking) }
             }.onFailure { reportMainDismissal("Android could not recover recent active notifications") }
+            if (automaticDismissalEnabled(this)) runCatching {
+                mainSnapshot().asSequence().filter { it.postTime < cutoff }
+                    .mapNotNull { sbn -> reconciliationEvent(sbn)?.let { sbn to it } }
+                    .take(16).forEach { (sbn, event) -> queueReconciliation(sbn, event) }
+            }.onFailure { reportMainDismissal("Android could not recheck older active originals") }
         }
+    }
+
+    private fun mainSnapshot(): List<StatusBarNotification> =
+        activeNotifications.filter { it.packageName == GUARDIAN_WHATSAPP && it.user == Process.myUserHandle() }
+
+    private fun reconciliationEvent(sbn: StatusBarNotification): GuardianCaptureEvent? {
+        if (sbn.packageName != GUARDIAN_WHATSAPP || sbn.opPkg != GUARDIAN_WHATSAPP ||
+            sbn.user != Process.myUserHandle() || staticIneligibility(sbn) != null
+        ) return null
+        val uid = runCatching { packageManager.getApplicationInfo(GUARDIAN_WHATSAPP, 0).uid }.getOrNull()
+        val serial = getSystemService(UserManager::class.java)?.getSerialNumberForUser(sbn.user) ?: return null
+        val account = probeAccount(true, serial, configuredFriendsSerial(this))
+        val event = guardianMainNotificationEvent(sbn.notification, account, sbn.packageName,
+            uid != null && uid == sbn.uid, serial, sbn.key, System.currentTimeMillis()) ?: return null
+        return event.takeIf { allNotificationMessagesRetained(sbn.notification, it) }
+    }
+
+    private fun queueReconciliation(sbn: StatusBarNotification, event: GuardianCaptureEvent) {
+        if (connectedListener !== this || !hasAccess(this) || !automaticDismissalEnabled(this) ||
+            !GuardianCapture.isEnabled(this)
+        ) return
+        GuardianCapture.record(this, event, GuardianConversationKey(event.app, event.profileSerial, event.conversation)) {
+            quiet -> dismissStoredWhatsApp(sbn, event, null, quiet)
+        }
+    }
+
+    private fun staticIneligibility(sbn: StatusBarNotification): String? = when {
+        sbn.notification.flags and Notification.FLAG_GROUP_SUMMARY != 0 -> "Group summary left visible"
+        sbn.notification.flags and Notification.FLAG_ONGOING_EVENT != 0 -> "Ongoing original left visible"
+        !sbn.isClearable -> "Android marks the original as non-clearable"
+        sbn.notification.visibility == Notification.VISIBILITY_SECRET -> "Secret original excluded"
+        else -> null
+    }
+
+    private fun retryChangedMain(key: String) {
+        val now = SystemClock.elapsedRealtime()
+        changedRetries.entries.removeAll { now - it.value.first >= 30_000 }
+        val prior = changedRetries[key]
+        val count = prior?.second ?: 0
+        if (count >= 3 || (prior == null && changedRetries.size >= 64)) {
+            reportMainDismissal("Changed original recheck limit reached")
+            return
+        }
+        changedRetries[key] = (prior?.first ?: now) to (count + 1)
+        handler.postDelayed({
+            if (connectedListener === this && hasAccess(this) &&
+                automaticDismissalEnabled(this) && GuardianCapture.isEnabled(this)
+            ) {
+                val latest = runCatching { getActiveNotifications(arrayOf(key)).singleOrNull() }.getOrNull()
+                latest?.let { active ->
+                    runCatching { reconciliationEvent(active) }.getOrNull()?.let { queueReconciliation(active, it) }
+                }
+            }
+        }, 300L shl count)
     }
 
     override fun onListenerDisconnected() = disconnect(this)
@@ -284,7 +344,10 @@ internal class GuardianNotificationListener : NotificationListenerService() {
         val current = runCatching { getActiveNotifications(arrayOf(original.key)).singleOrNull() }.getOrElse {
             reportMainDismissal("Android could not check the active notification")
             return
-        } ?: return
+        } ?: run {
+            reportMainDismissal("Original key is no longer active")
+            return
+        }
         val uid = runCatching { packageManager.getApplicationInfo(GUARDIAN_WHATSAPP, 0).uid }.getOrNull()
         val serial = getSystemService(UserManager::class.java)?.let { users ->
             runCatching { users.getSerialNumberForUser(current.user) }.getOrNull()
@@ -295,15 +358,22 @@ internal class GuardianNotificationListener : NotificationListenerService() {
         val currentEvent = if (friends) friendsEvent(current.notification, serial, captured.observedAt)
             else guardianMainNotificationEvent(current.notification, ProbeAccount.MAIN, current.packageName,
                 true, serial, current.key, captured.observedAt)
-        if (current.packageName != GUARDIAN_WHATSAPP || current.opPkg != GUARDIAN_WHATSAPP || !trusted ||
-            serial != captured.profileSerial || current.postTime != original.postTime || !current.isClearable ||
-            current.notification.visibility == Notification.VISIBILITY_SECRET ||
-            current.notification.flags and Notification.FLAG_ONGOING_EVENT != 0 ||
-            current.notification.flags and Notification.FLAG_GROUP_SUMMARY != 0 ||
-            !allNotificationMessagesRetained(current.notification, captured) ||
-            currentEvent != captured
-        ) {
-            reportMainDismissal("Original changed or is ineligible for cancellation")
+        val identityMatches = current.packageName == GUARDIAN_WHATSAPP &&
+            current.opPkg == GUARDIAN_WHATSAPP && trusted && serial == captured.profileSerial
+        val changed = current.postTime != original.postTime || (currentEvent != null && currentEvent != captured)
+        val reason = when {
+            !identityMatches -> "Original package, UID or profile did not match"
+            staticIneligibility(current) != null -> staticIneligibility(current)
+            currentEvent == null -> "Original has no supported message payload"
+            changed -> "Active original changed after capture"
+            !allNotificationMessagesRetained(current.notification, captured) -> "Original message coverage incomplete"
+            else -> null
+        }
+        if (reason != null) {
+            reportMainDismissal(reason)
+            if (identityMatches && changed && staticIneligibility(current) == null && !friends && !test) {
+                retryChangedMain(current.key)
+            }
             return
         }
 
@@ -319,9 +389,10 @@ internal class GuardianNotificationListener : NotificationListenerService() {
         if (current.key in mainAttempts && retries != null) {
             // Wait for the active attempt to observe this repost and recheck its archived content.
             mainAttempts.getValue(current.key).repost = {
-                onNotificationPosted(current, currentRanking)
+                val latest = runCatching { getActiveNotifications(arrayOf(current.key)).singleOrNull() }.getOrNull()
+                if (latest != null) onNotificationPosted(latest, currentRanking)
             }
-            reportMainDismissal("Original notification reposted")
+            reportMainDismissal("Another archived update is waiting for the active cancellation attempt")
             return
         }
         if (armed != null && !armed.bind(current.key, now)) return
@@ -360,7 +431,11 @@ internal class GuardianNotificationListener : NotificationListenerService() {
                 GuardianRemovalObservation.ABSENT_UNCONFIRMED ->
                     finish("Original notification is no longer active; removal reason unconfirmed")
                 GuardianRemovalObservation.REPOSTED -> finish("Original notification reposted")
-                GuardianRemovalObservation.UNVERIFIED -> finish("Android removal could not be verified")
+                GuardianRemovalObservation.UNVERIFIED -> {
+                    val hasRepost = attempt.repost != null
+                    finish("Android removal could not be verified")
+                    if (active == true && !hasRepost && !friends && !test) retryChangedMain(attempt.key)
+                }
                 GuardianRemovalObservation.WAITING -> handler.postDelayed({ verify() }, 150)
             }
         }
@@ -434,6 +509,30 @@ internal class GuardianNotificationListener : NotificationListenerService() {
         private var synthetic: SyntheticTest? = null
         private var externalAttempt: ExternalAttempt? = null
         private var connectedListener: GuardianNotificationListener? = null
+
+        internal fun recheckMainNotifications(context: Context, reconcile: Boolean = false): String {
+            val listener = connectedListener?.takeIf { hasAccess(context) }
+                ?: return "Notification listener is unavailable."
+            if (reconcile && (!automaticDismissalEnabled(context) || !GuardianCapture.isEnabled(context))) {
+                return "Enable encrypted capture and automatic Main dismissal before reconciling."
+            }
+            return runCatching {
+                val active = listener.mainSnapshot()
+                val reasons = active.groupingBy { original ->
+                    listener.staticIneligibility(original) ?: if (listener.reconciliationEvent(original) == null)
+                        "Unsupported payload, source or incomplete message coverage" else "Eligible for archive verification"
+                }.eachCount()
+                val candidates = if (reconcile) active.asSequence()
+                    .mapNotNull { original -> listener.reconciliationEvent(original)?.let { original to it } }
+                    .take(16).toList() else emptyList()
+                candidates.forEach { (original, event) -> listener.queueReconciliation(original, event) }
+                buildString {
+                    append("Active Main WhatsApp originals: ${active.size}")
+                    reasons.forEach { (reason, count) -> append("\n$reason: $count") }
+                    if (reconcile) append("\nSubmitted for encrypted archive verification: ${candidates.size}")
+                }
+            }.getOrElse { "Android could not inspect active Main WhatsApp notifications." }
+        }
 
         fun postSynthetic(context: Context) {
             if (!hasAccess(context) || !status.value.connected || synthetic != null ||
