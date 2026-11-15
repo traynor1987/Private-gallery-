@@ -205,7 +205,10 @@ jobs:
           set -euo pipefail
           baseline=681cd0babbcd3a3b2733ae795ca27de08f1fbf68
           baseline_dir=$(mktemp -d "$RUNNER_TEMP/code80-source.XXXXXX")
-          git archive "$baseline" | tar -x -C "$baseline_dir"
+          # The distributed APK embeds the Git revision through Android Gradle Plugin.
+          git clone --no-local --no-checkout "$PWD" "$baseline_dir"
+          git -C "$baseline_dir" checkout --detach "$baseline"
+          test "$(git -C "$baseline_dir" rev-parse HEAD)" = "$baseline"
           trap 'rm -rf "$baseline_dir"' EXIT
           (cd "$baseline_dir" && ./gradlew lintRelease assembleRelease --stacktrace --no-daemon --console=plain)
           cp "$baseline_dir/app/build/outputs/apk/release/app-release.apk" "$PRIVATE_GALLERY_1711_BASELINE_APK"
