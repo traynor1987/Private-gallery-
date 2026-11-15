@@ -42,7 +42,7 @@ class GuardianInbox77UiTest {
         fun shell(command: String) = ParcelFileDescriptor.AutoCloseInputStream(
             instrumentation.uiAutomation.executeShellCommand(command),
         ).bufferedReader().use { it.readText() }
-        fun posted() = manager.activeNotifications.singleOrNull { it.tag == "guardian-safe" }?.notification
+        fun posted() = manager.activeNotifications.singleOrNull { it.tag == "guardian-safe:private-row-id" }?.notification
         check(preferences.all.isEmpty()) { "Safe notification fixture requires clean preferences" }
         check(sanctuary.refresh() == null)
         var opened: GuardianInboxActivity? = null
@@ -53,7 +53,7 @@ class GuardianInbox77UiTest {
                 uk.co.traynor.privategallery.core.guardian.GuardianNotificationListener.hasAccess(context)
             }
             check(preferences.edit().putBoolean("enabled", true).putBoolean("main", true)
-                .putBoolean("quiet", false).putInt("duration", 60).commit())
+                .putBoolean("quiet", false).putString("alert_sender", "HIDDEN").putInt("duration", 5).commit())
             assertTrue(sanctuary.startFoldTest(uk.co.traynor.privategallery.core.sanctuary.SanctuaryMode.PANIC))
             val session = checkNotNull(sanctuary.refresh()).id
             val row = uk.co.traynor.privategallery.core.guardian.GuardianInboxRow(
@@ -66,6 +66,7 @@ class GuardianInbox77UiTest {
             GuardianSafeNotifications.post(context, row)
             compose.waitUntil(5_000) { posted() != null }
             val alert = checkNotNull(posted())
+            org.junit.Assert.assertEquals(0L, alert.timeoutAfter)
             org.junit.Assert.assertEquals(android.app.Notification.VISIBILITY_SECRET, alert.visibility)
             org.junit.Assert.assertNull(alert.publicVersion)
             val preview = listOf(android.app.Notification.EXTRA_TITLE, android.app.Notification.EXTRA_TEXT,
@@ -121,21 +122,32 @@ class GuardianInbox77UiTest {
 
     @Test fun reviewLaterOnlyClearsTheMatchingGuardianAlert() {
         val context = compose.activity
-        val prefs = GuardianSafeNotifications.prefs(context)
-        val token = "synthetic-active-alert"
-        val key = "posted_token"
+        val manager = checkNotNull(context.getSystemService(android.app.NotificationManager::class.java))
+        val instrumentation = InstrumentationRegistry.getInstrumentation()
+        instrumentation.uiAutomation.grantRuntimePermission(context.packageName, android.Manifest.permission.POST_NOTIFICATIONS)
+        val channel = "guardian-review-later-fixture"
+        manager.createNotificationChannel(android.app.NotificationChannel(channel, "Synthetic alerts",
+            android.app.NotificationManager.IMPORTANCE_LOW))
+        val selected = "guardian-safe:synthetic-first"
+        val other = "guardian-safe:synthetic-second"
         val action = "uk.co.traynor.privategallery.GUARDIAN_REVIEW_LATER"
         val receiver = GuardianReviewLaterReceiver()
-        prefs.edit().putString(key, token).commit()
+        val fixture = android.app.Notification.Builder(context, channel)
+            .setSmallIcon(android.R.drawable.ic_lock_lock).setContentTitle("Synthetic Guardian alert").build()
+        fun active() = manager.activeNotifications.mapNotNull { it.tag }.toSet()
         try {
-            receiver.onReceive(context, android.content.Intent(action).setIdentifier("stale-alert"))
-            assertTrue(prefs.getString(key, null) == token)
-            receiver.onReceive(context, android.content.Intent("unrelated").setIdentifier(token))
-            assertTrue(prefs.getString(key, null) == token)
-            receiver.onReceive(context, android.content.Intent(action).setIdentifier(token))
-            assertTrue(!prefs.contains(key))
+            manager.notify(selected, 1, fixture)
+            manager.notify(other, 1, fixture)
+            compose.waitUntil(5_000) { active().containsAll(listOf(selected, other)) }
+            receiver.onReceive(context, android.content.Intent(action).setIdentifier("guardian-safe:stale-alert"))
+            receiver.onReceive(context, android.content.Intent("unrelated").setIdentifier(selected))
+            assertTrue(active().containsAll(listOf(selected, other)))
+            receiver.onReceive(context, android.content.Intent(action).setIdentifier(selected))
+            compose.waitUntil(5_000) { selected !in active() }
+            assertTrue(other in active())
         } finally {
             GuardianSafeNotifications.cancel(context)
+            manager.deleteNotificationChannel(channel)
         }
     }
 
