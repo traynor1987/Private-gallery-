@@ -568,11 +568,12 @@ class NovaLauncherActivity : ComponentActivity() {
     }
 
     private fun save(next: NovaLauncherState): Boolean {
-        if (!store.save(next)) {
+        val reconciled = next.reconcileUserFolders()
+        if (!store.save(reconciled)) {
             message("The launcher layout could not be saved.")
             return false
         }
-        model = next
+        model = reconciled
         updateWallpaper()
         return true
     }

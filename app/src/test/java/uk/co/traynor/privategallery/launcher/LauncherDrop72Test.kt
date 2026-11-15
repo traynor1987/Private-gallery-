@@ -8,6 +8,21 @@ class LauncherDrop72Test {
     private val music = LauncherItem.App("example.music/.Main")
     private val maps = LauncherItem.App("example.maps/.Main")
 
+    @Test fun committedFolderEditDissolvesAtItsSlotAndRejectedDropKeepsFolder() {
+        val folder = LauncherItem.Folder("Tools", listOf(phone.component, maps.component))
+        val layout = LauncherLayout(pages = listOf(listOf(LauncherItem.Workspace, folder, music)))
+        val edited = checkNotNull(layout.replaceFolderAt(
+            LauncherSlot(0, 1), folder, folder.copy(apps = listOf(maps.component)),
+        ))
+        val saved = NovaLauncherState(cover = edited).reconcileUserFolders()
+        assertEquals(listOf(LauncherItem.Workspace, maps, music), saved.cover.pages.single())
+        val empty = NovaLauncherState(cover = edited.copy(dock = listOf(folder.copy(apps = emptyList()))))
+        assertEquals(emptyList<LauncherItem>(), empty.reconcileUserFolders().cover.dock)
+        val invalid = layout.dropLauncherItem(folder, LauncherSlot(0, 1), LauncherDrop(LauncherSlot(8, 0)))
+        assertEquals(layout, invalid)
+        assertEquals(layout, NovaLauncherState(cover = invalid).reconcileUserFolders().cover)
+    }
+
     @Test fun reorderUsesTheInsertionBoundaryBeforeRemovingTheSource() {
         val layout = LauncherLayout(pages = listOf(listOf(phone, music, maps)))
         val result = layout.dropLauncherItem(phone, LauncherSlot(0, 0), LauncherDrop(LauncherSlot(0, 2)))

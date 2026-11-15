@@ -113,6 +113,27 @@ internal data class NovaLauncherState(
     val dockOptions: LauncherDockOptions = LauncherDockOptions(),
     val newAppPlacement: LauncherNewAppPlacement = LauncherNewAppPlacement.LIBRARY_ONLY,
 ) {
+    /** Canonicalize saved user folders without changing pages or smart folders. */
+    fun reconcileUserFolders(removed: Set<String> = emptySet()): NovaLauncherState {
+        fun reconcile(items: List<LauncherItem>): List<LauncherItem> = items.mapNotNull { item ->
+            if (item !is LauncherItem.Folder) return@mapNotNull item
+            val apps = item.apps.filterNot { it in removed }
+            when (apps.size) {
+                0 -> null
+                1 -> LauncherItem.App(apps.single())
+                else -> if (apps == item.apps) item else item.copy(apps = apps)
+            }
+        }
+        fun reconcile(layout: LauncherLayout) = layout.copy(
+            pages = layout.pages.map { reconcile(it) }, dock = reconcile(layout.dock),
+        )
+        return copy(
+            cover = reconcile(cover), inner = reconcile(inner),
+            coverCleanupUndo = coverCleanupUndo?.map { reconcile(it) },
+            innerCleanupUndo = innerCleanupUndo?.map { reconcile(it) },
+        )
+    }
+
     fun layout(wide: Boolean): LauncherLayout = if (wide && separateDisplays) inner else cover
 
     fun withLayout(wide: Boolean, layout: LauncherLayout): NovaLauncherState =

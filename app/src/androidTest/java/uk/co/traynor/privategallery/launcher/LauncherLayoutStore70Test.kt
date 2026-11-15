@@ -20,7 +20,7 @@ class LauncherLayoutStore70Test {
             val expected = NovaLauncherState(
                 configured = true,
                 cover = LauncherLayout(listOf(listOf(LauncherItem.App(browser))), listOf(LauncherItem.Workspace), setOf(browser)),
-                inner = LauncherLayout(listOf(listOf(LauncherItem.Folder("Tools", listOf(other)))), listOf(LauncherItem.Workspace), setOf(other)),
+                inner = LauncherLayout(listOf(listOf(LauncherItem.App(other))), listOf(LauncherItem.Workspace), setOf(other)),
                 appearance = LauncherAppearance(wallpaper = LauncherWallpaper.MIDNIGHT, theme = LauncherTheme.DARK),
                 drawer = LauncherDrawerOptions(orientation = LauncherDrawerOrientation.HORIZONTAL),
                 workspaceGesture = LauncherGesture.DOUBLE_TAP,
@@ -30,6 +30,32 @@ class LauncherLayoutStore70Test {
             )
             assertTrue(store.save(expected))
             assertEquals(expected, NovaLauncherStore(context).read())
+        } finally {
+            assertTrue(store.save(before))
+        }
+    }
+
+    @Test fun legacySingletonsReopenInPlaceOnBothDisplaysAndDock() {
+        val store = NovaLauncherStore(context)
+        val before = store.read()
+        val prefs = context.getSharedPreferences(LAUNCHER_LAYOUT_PREFS, android.content.Context.MODE_PRIVATE)
+        val app = LauncherItem.App(browser)
+        val single = LauncherItem.Folder("One", listOf(browser))
+        val pair = LauncherItem.Folder("Two", listOf(browser, other))
+        val old = before.copy(
+            separateDisplays = true,
+            cover = LauncherLayout(pages = listOf(listOf(LauncherItem.Workspace, single, pair)), dock = listOf(single)),
+            inner = LauncherLayout(pages = listOf(emptyList(), listOf(single, LauncherItem.Workspace))),
+            coverCleanupUndo = null, innerCleanupUndo = null,
+        )
+        try {
+            assertTrue(prefs.edit().putString(LAUNCHER_STATE_KEY, LauncherLayoutCodec.encode(old, false)).commit())
+            val migrated = NovaLauncherStore(context).read()
+            assertEquals(listOf(LauncherItem.Workspace, app, pair), migrated.layout(false).pages.single())
+            assertEquals(listOf(app, LauncherItem.Workspace), migrated.layout(true).pages[1])
+            assertEquals(listOf(app), migrated.cover.dock)
+            assertEquals(migrated, LauncherLayoutCodec.decode(prefs.getString(LAUNCHER_STATE_KEY, "")!!, false))
+            assertEquals(migrated, NovaLauncherStore(context).read())
         } finally {
             assertTrue(store.save(before))
         }

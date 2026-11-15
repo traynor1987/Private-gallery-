@@ -26,11 +26,13 @@ internal class NovaLauncherStore(context: Context) {
 
     fun read(): NovaLauncherState = synchronized(lock) {
         val raw = prefs.getString(LAUNCHER_STATE_KEY, null) ?: return@synchronized NovaLauncherState()
-        runCatching { LauncherLayoutCodec.decode(raw, portable = false) }.getOrDefault(NovaLauncherState())
+        val decoded = runCatching { LauncherLayoutCodec.decode(raw, portable = false) }.getOrDefault(NovaLauncherState())
+        val reconciled = decoded.reconcileUserFolders()
+        if (decoded != reconciled && save(reconciled)) reconciled else decoded
     }
 
     fun save(state: NovaLauncherState): Boolean = synchronized(lock) {
-        val encoded = runCatching { LauncherLayoutCodec.encode(state, portable = false) }.getOrNull()
+        val encoded = runCatching { LauncherLayoutCodec.encode(state.reconcileUserFolders(), portable = false) }.getOrNull()
             ?: return@synchronized false
         val update = prefs.edit().putString(LAUNCHER_STATE_KEY, encoded)
         if (state.newAppPlacement == LauncherNewAppPlacement.HOME) {
@@ -269,7 +271,7 @@ internal object LauncherLayoutCodec {
             JSONObject().put("type", "app").put("component", value.component)
         }
         is LauncherItem.Folder -> {
-            require(validFolderName(value.name) && validFolderApps(value.apps, minimum = 1))
+            require(validFolderName(value.name) && validFolderApps(value.apps, minimum = 0))
             JSONObject().put("type", "folder").put("name", value.name).put("apps", JSONArray(value.apps))
         }
         is LauncherItem.SmartFolder -> {
@@ -306,8 +308,8 @@ internal object LauncherLayoutCodec {
         "folder" -> {
             value.requireKeys(setOf("type", "name", "apps"))
             val name = value.string("name")
-            val apps = value.getJSONArray("apps").read(1..MAX_LAUNCHER_FOLDER_ITEMS) { it as String }
-            require(validFolderName(name) && validFolderApps(apps, minimum = 1))
+            val apps = value.getJSONArray("apps").read(0..MAX_LAUNCHER_FOLDER_ITEMS) { it as String }
+            require(validFolderName(name) && validFolderApps(apps, minimum = 0))
             LauncherItem.Folder(name, apps)
         }
         "smart-folder" -> {
