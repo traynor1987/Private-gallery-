@@ -1,14 +1,14 @@
 # NovaOS 1.7.38.7 Code 80 maintenance upgrade controls
 
-Source: f2dbfbcce068ee5f999fe8b0533471ea96c3aa96
+Source: 990a689f02298e98cf611dcb7874b70296a642bd
 Authorization: authenticated owner push
 Release scope: private disposable upgrade verification only
 Physical Fold acceptance: pending
-Upgrade fixture SHA-256: eb3b3348d598d63967ba019fa3d21e1c528fb65f14a7914162ece9af07d768af
-Upgrade controls SHA-256: 1810fd90a86196187ec2468c0544ead3f6e0902eb87817befe73bbab48c13e9e
+Upgrade fixture SHA-256: ce00d3df11a1304d2ef69d7edc0aebf760ca7787c337822d0f13b3c44dfa1dae
+Upgrade controls SHA-256: 2819da810a12672064f63ccedc593df3e2b6771470d93f982186b33eccb7ce60
 Runtime matrix SHA-256: 62b209459a34f97e06eb73a0ccb88d7f503b7260696b3607812120ac3e2d3967
-Runtime workflow run: 43661668897
-Signing workflow SHA-256: 62ccd8e0168cda56917a148f9f4245d0cc0d8beb3e9d6847cfbbb3164b3f73c7
+Runtime workflow run: 43698254304
+Signing workflow SHA-256: 7acc879b35f0f18217409b81bb431a35f7d1e0fd2b760d2f3c23a8b37292ba5c
 
 The signing job waits for the selected Android 17 regression run. The original
 GitHub artifact ID and digest are recorded from that run's authenticated API

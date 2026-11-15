@@ -1,22 +1,22 @@
 {
-  "source": "f2dbfbcce068ee5f999fe8b0533471ea96c3aa96",
+  "source": "990a689f02298e98cf611dcb7874b70296a642bd",
   "baseline_source": "681cd0babbcd3a3b2733ae795ca27de08f1fbf68",
   "baseline_code": 80,
-  "candidate_code": 81,
-  "test_run": 43661668897,
-  "fixture_sha256": "eb3b3348d598d63967ba019fa3d21e1c528fb65f14a7914162ece9af07d768af",
+  "candidate_code": 82,
+  "test_run": 43698254304,
+  "fixture_sha256": "ce00d3df11a1304d2ef69d7edc0aebf760ca7787c337822d0f13b3c44dfa1dae",
   "matrix_sha256": "62b209459a34f97e06eb73a0ccb88d7f503b7260696b3607812120ac3e2d3967",
   "controls_sha256": {
     "compile_upgrade1711_fixture.sh": "9936af39629a1c43eecc65a8873310537e463b802c01bb9ab4da6bc9574d03f6",
     "verify_compiled_upgrade1711.py": "f3c04b11afeae1a3ce8d8b262ef910ee960de89e789153991dd89c00383777b1",
     "verify_code80_baseline_payload.py": "9cfd3f601af8fda2bb48c9ef86076e2227240f4cffe9d0c010c7e1c579b2ea8e",
     "verify_production_candidate1711.sh": "a96058f489ac590fbbb5c259066ebf4321919a58022fbbc0fa9b86ddc4b8e176",
-    "verify_synthetic_upgrade1711.sh": "baf98a7afbe43fe60725d6c1ed19874a8daec616e7819a6c1c5167600076dd2d",
+    "verify_synthetic_upgrade1711.sh": "8550f9986f68b186937db85e11d23faf7371f18a95c80ca6a9fdda3177dad95d",
     "verify_signed_upgrade1711.py": "3170680e165a6e571a953240246f4210906588b981ae0e4ca19e559512adbb62",
-    "release_configuration1711.sh": "73ddbec8caf91142320057b6380082b577b6521a73153599208836aacb0426b4",
-    "verify_release1711_gate.py": "d982cbda61a2aa9e17e8ceeb46906a9ce2b83242a8527b2802f0ea5aa976b993"
+    "release_configuration1711.sh": "de7dc14ce84756a8ff00108c0b16b6aaf308b19a403f490cbd6b0f23fa00a2fb",
+    "verify_release1711_gate.py": "1611ee48db63ca4b5b3a40c7eb63d7af3568211d44ef80ba9ca03c00b4348582"
   },
-  "workflow_sha256": "62ccd8e0168cda56917a148f9f4245d0cc0d8beb3e9d6847cfbbb3164b3f73c7",
-  "review_sha256": "a9db11b8fac571729cafe2cba0c8dd4ded65e07bb10c42c20be28c894f1d3079",
+  "workflow_sha256": "7acc879b35f0f18217409b81bb431a35f7d1e0fd2b760d2f3c23a8b37292ba5c",
+  "review_sha256": "ad9c2057a1f0e16b8c383fed9645c3bdbc6f45a72fc948130b644f5cd065ae91",
   "delivery_recipient_sha256": "0055c59e3cb0fe8c6a72f3e6861f0f6231f23cb7e2a3a0ea9af1dce32c831a23"
 }
