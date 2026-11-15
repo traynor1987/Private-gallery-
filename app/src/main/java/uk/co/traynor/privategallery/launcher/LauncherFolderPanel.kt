@@ -251,7 +251,7 @@ internal fun LauncherFolderPanel(
                                     keys = ArrayList(folder.apps)
                                     error = false
                                 }) { Text("Cancel") }
-                                Button(enabled = name.isNotBlank() && keys.isNotEmpty(), onClick = {
+                                Button(enabled = keys.isEmpty() || name.isNotBlank(), onClick = {
                                     val next = LauncherItem.Folder(name.trim(), keys.toList())
                                     if (onSave?.invoke(next) == true) editing = false else error = true
                                 }) { Text("Save folder") }

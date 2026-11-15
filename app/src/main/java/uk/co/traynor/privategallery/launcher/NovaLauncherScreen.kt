@@ -609,7 +609,7 @@ private fun LauncherRuntime(
                     onSave = if (mayEdit && slot != null) { replacement ->
                         val next = sourceLayout.replaceFolderAt(slot, selected, replacement)
                         if (next != null && (next == sourceLayout || actions.save(state.withLayout(opened.inner, next)))) {
-                            folder = opened.copy(item = replacement)
+                            folder = if (replacement.apps.size >= 2) opened.copy(item = replacement) else null
                             true
                         } else false
                     } else null,
