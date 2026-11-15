@@ -28,6 +28,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import androidx.activity.compose.LocalActivity
 import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.repeatOnLifecycle
 import kotlinx.coroutines.delay
 import uk.co.traynor.privategallery.core.guardian.GuardianInboxSection
@@ -131,13 +132,10 @@ internal fun GuardianHome(
     val activity = LocalActivity.current
     val listener by GuardianNotificationListener.state.collectAsState()
     val capture by GuardianCapture.state.collectAsState()
-    LaunchedEffect(context, activity) {
-        if (activity == null) {
+    val lifecycle = LocalLifecycleOwner.current.lifecycle
+    LaunchedEffect(context, lifecycle) {
+        lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
             GuardianCaptureStore.archiveChanges.collect { GuardianCapture.refresh(context) }
-        } else {
-            activity.lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
-                GuardianCaptureStore.archiveChanges.collect { GuardianCapture.refresh(context) }
-            }
         }
     }
     val access = GuardianNotificationListener.hasAccess(context)
