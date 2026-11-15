@@ -75,6 +75,7 @@ class GuardianInboxActivity : ComponentActivity() {
     private var safeCategory by mutableStateOf<GuardianNoticeKind?>(null)
     private var safeCentre by mutableStateOf(false)
     private var safeSettings by mutableStateOf(false)
+    private var alertPage by mutableStateOf<GuardianAlertPage?>(null)
     private var validationOpen by mutableStateOf(false)
     private var callShieldOpen by mutableStateOf(false)
     private val privacy by lazy { getSharedPreferences("guardian_inbox_privacy", MODE_PRIVATE) }
@@ -117,7 +118,18 @@ class GuardianInboxActivity : ComponentActivity() {
                 validationOpen = true
                 refresh()
             }
-        } else refresh()
+        } else {
+            when (intent.getStringExtra(OPEN_SETTINGS)) {
+                GuardianAlertPage.PRIVACY.name -> alertPage = GuardianAlertPage.PRIVACY
+                GuardianAlertPage.RETENTION.name -> alertPage = GuardianAlertPage.RETENTION
+                "contacts" -> {
+                    loadArchive({ store, _, _ -> store.monitoredContacts() }) { contacts = it; contactsOpen = true }
+                }
+                "call-shield" -> callShieldOpen = true
+            }
+            intent.removeExtra(OPEN_SETTINGS)
+            if (!busy) refresh()
+        }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -195,6 +207,7 @@ class GuardianInboxActivity : ComponentActivity() {
                                 else if (conversationsOpen && !diagnostic) Conversations()
                                 else if (safeCentre && !diagnostic) SafeCentre()
                                 else InboxContent(redacted = diagnostic)
+                                InboxDialogs()
                             }
                             else Column(Modifier.weight(1f).verticalScroll(rememberScrollState())) {
                                 GuardianCard("Inbox locked") {
@@ -257,6 +270,7 @@ class GuardianInboxActivity : ComponentActivity() {
         pastImpact = null
         clearImpactOpen = false
         safeSettings = false
+        alertPage = null
         safeCategory = null
         validationOpen = false
         callShieldOpen = false
@@ -331,6 +345,7 @@ class GuardianInboxActivity : ComponentActivity() {
         confirmDelete = false
         loadArchive({ store, days, now -> store.reviewInboxMessage(row.id, action, days, now) }) { saved ->
             if (saved) {
+                GuardianSafeNotifications.reviewed(this, row.id)
                 GuardianCapture.refresh(applicationContext)
                 refresh()
             } else failure = "This message could not be updated."
@@ -420,7 +435,6 @@ class GuardianInboxActivity : ComponentActivity() {
                 }
             }
         }
-        InboxDialogs()
     }
 
     @Composable
@@ -521,6 +535,9 @@ class GuardianInboxActivity : ComponentActivity() {
             )
         }
         if (callShieldOpen) GuardianCallShieldScreen { callShieldOpen = false }
+        alertPage?.let { page ->
+            GuardianAlertSettings(page) { alertPage = null }
+        }
         if (settingsOpen) GuardianAlertDialog(
             onDismissRequest = { settingsOpen = false },
             title = { Text("Inbox privacy") },
@@ -530,7 +547,13 @@ class GuardianInboxActivity : ComponentActivity() {
                         privacy.edit().putBoolean("authenticated_sender_names", enabled).apply()
                         showSenders = enabled
                     }
-                    Text("Guardian Home and pop-ups keep sender names hidden.")
+                    Text("Android alert previews use separate privacy settings.")
+                    TextButton(onClick = { settingsOpen = false; alertPage = GuardianAlertPage.PRIVACY }) {
+                        Text("Notification Privacy")
+                    }
+                    TextButton(onClick = { settingsOpen = false; alertPage = GuardianAlertPage.RETENTION }) {
+                        Text("Alert retention")
+                    }
                     Text("Message details require authentication. Active holds always hide message text.")
                     TextButton(onClick = {
                         loadArchive({ store, _, _ -> store.monitoredContacts() }) {
@@ -628,7 +651,7 @@ class GuardianInboxActivity : ComponentActivity() {
                 title = { Text("Safe Notifications settings") },
                 text = {
                     Column(Modifier.heightIn(max = 420.dp).verticalScroll(rememberScrollState())) {
-                        Text("Pop-ups are optional. Android controls heads-up display time, sound and vibration. Guardian always hides previews on the lock screen.")
+                        Text("Android controls heads-up duration, sound and vibration. Alert retention controls the shade entry separately.")
                         key(noticePermissionRevision) {
                             Text(if (GuardianSafeNotifications.mayPost(this@GuardianInboxActivity))
                                 "Android notification posting allowed" else "Android notification posting disabled")
@@ -681,14 +704,11 @@ class GuardianInboxActivity : ComponentActivity() {
                                 }
                                 Text("Quiet hours follow local time. Guardian does not replay alerts afterward. Phone and emergency alerts follow their own Android settings.")
                             }
-                            Text("Clear posted alert after ${preferences.getInt("duration", 15)} seconds")
-                            Row {
-                                listOf(5, 15, 60).forEach { seconds ->
-                                    TextButton(onClick = {
-                                        preferences.edit().putInt("duration", seconds).apply()
-                                        revision++
-                                    }) { Text("${seconds}s") }
-                                }
+                            TextButton(onClick = { safeSettings = false; alertPage = GuardianAlertPage.RETENTION }) {
+                                Text("Alert retention · ${GuardianSafeNotifications.retention(this@GuardianInboxActivity).label}")
+                            }
+                            TextButton(onClick = { safeSettings = false; alertPage = GuardianAlertPage.PRIVACY }) {
+                                Text("Notification Privacy")
                             }
                         }
                         TextButton(onClick = {
@@ -794,7 +814,6 @@ class GuardianInboxActivity : ComponentActivity() {
                 }
             }
         }
-        InboxDialogs()
     }
 
     private fun conversationSubtitle(key: GuardianConversationKey): String {
@@ -947,6 +966,7 @@ class GuardianInboxActivity : ComponentActivity() {
         confirmDelete = false
         conversationPreview = null
         loadArchive({ store, days, now -> store.prepareInboxReview(row.id, days, now) }) { reviewed ->
+            if (reviewed != null) GuardianSafeNotifications.reviewed(this, row.id)
             if (conversation != thread || (thread == null && detail != openedDetail)) return@loadArchive
             if (reviewed == null) {
                 GuardianCapture.refresh(applicationContext)
@@ -1026,6 +1046,10 @@ class GuardianInboxActivity : ComponentActivity() {
                         val levels = GuardianSensitivity.entries
                         saveContact(entry.key, entry.copy(sensitivity = levels[(entry.sensitivity.ordinal + 1) % levels.size]))
                     }) { Text("Change sensitivity") }
+                    GuardianAlertContactOptions(entry, busy) { changed ->
+                        GuardianSafeNotifications.cancel(this@GuardianInboxActivity)
+                        saveContact(entry.key, changed)
+                    }
                     TextButton(enabled = !busy, onClick = { saveContact(entry.key, null) }) { Text("Remove monitoring") }
                 }
             }
@@ -1039,6 +1063,11 @@ class GuardianInboxActivity : ComponentActivity() {
 
         private const val SECTION = "guardian-inbox-section"
         private const val OPEN_IMPACT = "guardian-open-personal-impact"
+        private const val OPEN_SETTINGS = "guardian-open-settings"
+
+        internal fun openSettings(activity: Activity, destination: String) {
+            activity.startActivity(Intent(activity, GuardianInboxActivity::class.java).putExtra(OPEN_SETTINGS, destination))
+        }
         private const val LINKED_MESSAGE = "guardian-linked-message"
 
         internal fun openPersonalImpact(activity: Activity) {

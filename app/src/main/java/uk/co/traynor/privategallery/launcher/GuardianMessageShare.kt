@@ -19,18 +19,13 @@ import androidx.core.content.FileProvider
 import java.io.File
 import java.util.UUID
 
-internal fun createGuardianShareFile(context: Context, text: String, image: Boolean): File {
+internal fun createGuardianShareFile(context: Context, text: String): File {
     val directory = File(context.cacheDir, "share-copies").apply { mkdirs() }
     val cutoff = System.currentTimeMillis() - 15 * 60_000L
-    directory.listFiles()?.filter { it.name.startsWith("guardian-export-") && it.lastModified() < cutoff }
-        ?.forEach { it.delete() }
-    val file = File(directory, "guardian-export-${UUID.randomUUID()}.${if (image) "png" else "txt"}")
+    directory.listFiles()?.filter { it.isFile && it.lastModified() <= cutoff }?.forEach { it.delete() }
+    val file = File(directory, "${UUID.randomUUID()}.png")
     try {
-        if (!image) {
-            file.writeText(text, Charsets.UTF_8)
-        } else {
-            file.outputStream().use { renderGuardianScreenshot(text, it) }
-        }
+        file.outputStream().use { renderGuardianScreenshot(text, it) }
         return file
     } catch (error: Throwable) {
         file.delete()
@@ -45,13 +40,16 @@ internal fun shareGuardianText(context: Context, text: String) {
 
 internal fun shareGuardianFile(context: Context, file: File) {
     val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
-    val send = Intent(Intent.ACTION_SEND).setType("image/png")
-        .putExtra(Intent.EXTRA_STREAM, uri)
-        .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-        .apply { clipData = ClipData.newRawUri("Guardian export", uri) }
+    val send = guardianImageSendIntent(uri)
     context.startActivity(Intent.createChooser(send, "Share Guardian export"))
     scheduleGuardianExportCleanup(context, uri, file)
 }
+
+internal fun guardianImageSendIntent(uri: Uri): Intent =
+    Intent(Intent.ACTION_SEND).setType("image/png")
+        .putExtra(Intent.EXTRA_STREAM, uri)
+        .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        .apply { clipData = ClipData.newRawUri("Guardian export", uri) }
 
 private fun scheduleGuardianExportCleanup(context: Context, uri: Uri, file: File) {
     val app = context.applicationContext

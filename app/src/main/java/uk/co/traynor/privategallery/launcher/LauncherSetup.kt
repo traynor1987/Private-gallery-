@@ -284,6 +284,7 @@ internal fun LauncherAppearanceOptions(
     change: (LauncherAppearance) -> Unit,
     chooseWallpaper: () -> Unit,
     showDock: Boolean = true,
+    showGrid: Boolean = true,
 ) {
     LauncherOptions("Wallpaper", LauncherWallpaper.entries, value.wallpaper, { change(value.copy(wallpaper = it)) })
     TextButton(onClick = chooseWallpaper) { Text("Android wallpaper settings") }
@@ -295,7 +296,7 @@ internal fun LauncherAppearanceOptions(
     }
     LauncherOptions("Icon Size", LauncherIconSize.entries, value.iconSize, { change(value.copy(iconSize = it)) })
     LauncherToggle("Show Home Icon Labels", value.labels) { change(value.copy(labels = it)) }
-    LauncherOptions("Grid density", LauncherGrid.entries, value.grid, { change(value.copy(grid = it)) })
+    if (showGrid) LauncherOptions("Grid density", LauncherGrid.entries, value.grid, { change(value.copy(grid = it)) })
     if (showDock) LauncherOptions("Dock", LauncherDock.entries, value.dock, { change(value.copy(dock = it)) })
 }
 

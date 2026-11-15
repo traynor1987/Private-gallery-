@@ -7,6 +7,23 @@ internal data class LauncherDrop(val slot: LauncherSlot, val group: Boolean = fa
 internal fun LauncherLayout.itemsAt(page: Int?): List<LauncherItem>? =
     if (page == null) dock else pages.getOrNull(page)
 
+internal fun LauncherLayout.uniqueFolderSlot(folder: LauncherItem.Folder): LauncherSlot? = buildList {
+    pages.forEachIndexed { page, items ->
+        items.forEachIndexed { index, item -> if (item == folder) add(LauncherSlot(page, index)) }
+    }
+    dock.forEachIndexed { index, item -> if (item == folder) add(LauncherSlot(null, index)) }
+}.singleOrNull()
+
+internal fun LauncherLayout.replaceFolderAt(
+    slot: LauncherSlot,
+    expected: LauncherItem.Folder,
+    replacement: LauncherItem.Folder,
+): LauncherLayout? {
+    val items = itemsAt(slot.page) ?: return null
+    if (items.getOrNull(slot.index) != expected) return null
+    return withItemsAt(slot.page, items.mapIndexed { index, item -> if (index == slot.index) replacement else item })
+}
+
 internal fun LauncherLayout.dropLauncherItem(
     item: LauncherItem,
     source: LauncherSlot?,

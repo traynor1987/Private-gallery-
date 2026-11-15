@@ -41,3 +41,43 @@ internal fun guardianNoticeTime(value: String): Int? {
     val minute = value.takeLast(2).toInt()
     return if (hour in 0..23 && minute in 0..59) hour * 60 + minute else null
 }
+
+internal enum class GuardianAlertRetention(val label: String, val timeoutMillis: Long?) {
+    UNTIL_REVIEWED("Until reviewed or manually dismissed", null),
+    HOUR("1 hour", 3_600_000L),
+    FOUR_HOURS("4 hours", 14_400_000L),
+    TWELVE_HOURS("12 hours", 43_200_000L),
+    DAY("24 hours", 86_400_000L);
+
+    companion object {
+        fun read(value: String?) = entries.firstOrNull { it.name == value } ?: UNTIL_REVIEWED
+    }
+}
+
+internal enum class GuardianAlertSender(val label: String) {
+    HIDDEN("Hide sender identity"),
+    NAME("Show sender name"),
+    ALIAS("Show private nickname"),
+}
+
+internal enum class GuardianAlertLockScreen(val label: String, val showSender: Boolean, val showPreview: Boolean) {
+    HIDDEN("Hide sender and message", false, false),
+    SENDER("Show sender only", true, false),
+    FOLLOW("Follow unlocked-device preferences", true, true),
+}
+
+internal fun guardianAlertSender(mode: GuardianAlertSender, sender: String?, alias: String?): String? =
+    guardianSenderDisplayName(when (mode) {
+        GuardianAlertSender.HIDDEN -> null
+        GuardianAlertSender.NAME -> sender
+        GuardianAlertSender.ALIAS -> alias
+    })
+
+internal fun guardianAlertMayPreview(
+    optedIn: Boolean,
+    eligible: Boolean,
+    kind: GuardianNoticeKind,
+    validation: NovaBrainValidation?,
+): Boolean = optedIn && eligible && kind == GuardianNoticeKind.LOW &&
+    validation != null && validation.knowledgePercent() != null && validation.validatedAtMillis > 0 &&
+    validation.recall >= .95 && validation.falseNegatives == 0

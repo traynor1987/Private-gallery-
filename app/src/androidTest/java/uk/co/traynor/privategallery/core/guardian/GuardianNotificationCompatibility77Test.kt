@@ -11,6 +11,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.test.core.app.ActivityScenario
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import uk.co.traynor.privategallery.launcher.applyGuardianAlertPolicy
 import org.junit.Assert.*
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -20,6 +21,27 @@ import uk.co.traynor.privategallery.core.sanctuary.SanctuaryStore
 
 @RunWith(AndroidJUnit4::class)
 class GuardianNotificationCompatibility77Test {
+    @Test fun shadeRetentionAndLockScreenRedactionAreIndependent() {
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        val redacted = Notification.Builder(context, "silent-fixture")
+            .setContentText("Sample sender").build()
+        val persistent = Notification.Builder(context, "heads-up-fixture")
+            .setContentText("Synthetic message")
+            .applyGuardianAlertPolicy(GuardianAlertRetention.UNTIL_REVIEWED, GuardianAlertLockScreen.HIDDEN, redacted)
+            .build()
+        assertEquals(0L, persistent.timeoutAfter)
+        assertEquals(Notification.VISIBILITY_SECRET, persistent.visibility)
+        assertNull(persistent.publicVersion)
+        assertEquals(0, persistent.flags and Notification.FLAG_ONGOING_EVENT)
+        val timed = Notification.Builder(context, "silent-fixture")
+            .setContentText("Synthetic message")
+            .applyGuardianAlertPolicy(GuardianAlertRetention.HOUR, GuardianAlertLockScreen.SENDER, redacted)
+            .build()
+        assertEquals(3_600_000L, timed.timeoutAfter)
+        assertEquals(Notification.VISIBILITY_PRIVATE, timed.visibility)
+        assertEquals("Sample sender", timed.publicVersion?.extras?.getCharSequence(Notification.EXTRA_TEXT))
+    }
+
     @Test fun groupedMainTestMatchesOnlyTheUniqueNewestCapturedMessage() {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         val token = "Exact Nova Guardian test fixture"

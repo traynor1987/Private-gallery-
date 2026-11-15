@@ -166,6 +166,63 @@ class NovaLauncher70UiTest {
         compose.runOnIdle { assertEquals(listOf(musicItem, phoneItem), state.cover.pages.single()) }
     }
 
+    @Test fun coverLauncherSettingsReturnsFromNestedScreensWithoutChangingHome() {
+        val original = NovaLauncherState(configured = true, separateDisplays = true)
+        var saves = 0
+        var homeSelections = 0
+        compose.setContent {
+            NovaLauncherScreen(original, apps, emptyList(), emptyMap(), true, false, actions(
+                save = { saves++; true },
+                selectHome = { homeSelections++ },
+            ))
+        }
+        compose.onNodeWithContentDescription("Launcher settings").performClick()
+        val menu = compose.onNodeWithTag("launcher-settings-menu")
+        menu.assertIsDisplayed()
+        compose.onNodeWithText("Change Default Launcher").assertDoesNotExist()
+
+        compose.onNodeWithTag("launcher-settings-category-home").performClick()
+        compose.onNodeWithText("Change Default Launcher").assertIsDisplayed()
+        compose.runOnIdle { compose.activity.onBackPressedDispatcher.onBackPressed() }
+        menu.assertIsDisplayed()
+
+        menu.performScrollToNode(hasTestTag("launcher-settings-category-folders"))
+        compose.onNodeWithTag("launcher-settings-category-folders").performClick()
+        compose.onNodeWithText("App Library").performScrollTo().performClick()
+        compose.onNodeWithText("App Library").assertIsDisplayed()
+        compose.onNodeWithContentDescription("Back").performClick()
+        compose.onNodeWithText("Folders & App Library").assertIsDisplayed()
+
+        compose.runOnIdle {
+            assertEquals(0, saves)
+            assertEquals(0, homeSelections)
+        }
+    }
+
+    @Test fun innerLauncherSettingsEditPreservesStoredPreferencesAndLayouts() {
+        val original = NovaLauncherState(
+            configured = true,
+            separateDisplays = true,
+            workspaceGesture = LauncherGesture.DOUBLE_TAP,
+            appearance = LauncherAppearance(labels = false, iconSize = LauncherIconSize.LARGE),
+        )
+        var state by mutableStateOf(original)
+        compose.setContent {
+            NovaLauncherScreen(state, apps, emptyList(), emptyMap(), true, false, actions(
+                save = { state = it; true },
+            ))
+        }
+        compose.onNodeWithContentDescription("Launcher settings").performClick()
+        compose.onNodeWithTag("launcher-settings-category-layout").performClick()
+        compose.onNodeWithText("Edit Home pages, dock and widgets").performScrollTo().performClick()
+        compose.onNodeWithTag("launcher-layout-editor").assertIsDisplayed()
+        compose.onNodeWithContentDescription("Back").performClick()
+        compose.onNodeWithText("Home Screen & Layout").assertIsDisplayed()
+
+        compose.onNodeWithText("Separate Fold layouts").assertIsDisplayed()
+        compose.runOnIdle { assertEquals(original, state) }
+    }
+
     private fun exerciseDisplay(wide: Boolean) {
         val cover = LauncherLayout(pages = listOf(listOf(LauncherItem.App(phone.component))))
         val inner = LauncherLayout(pages = listOf(listOf(LauncherItem.App(music.component))))

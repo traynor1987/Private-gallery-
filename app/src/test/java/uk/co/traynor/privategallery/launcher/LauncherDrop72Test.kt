@@ -21,6 +21,19 @@ class LauncherDrop72Test {
         assertEquals(listOf(folder.copy(apps = folder.apps + music.component)), result.pages.single())
     }
 
+    @Test fun folderEditReplacesOnlyItsOriginalSlotEvenWhenAnotherFolderIsIdentical() {
+        val folder = LauncherItem.Folder("Work", listOf(phone.component, maps.component))
+        val replacement = LauncherItem.Folder("Couriers", listOf(maps.component, phone.component, music.component))
+        val layout = LauncherLayout(pages = listOf(listOf(folder), listOf(music, folder)))
+        assertEquals(null, layout.uniqueFolderSlot(folder))
+        assertEquals(
+            listOf(listOf(folder), listOf(music, replacement)),
+            layout.replaceFolderAt(LauncherSlot(1, 1), folder, replacement)?.pages,
+        )
+        assertEquals(null, layout.replaceFolderAt(LauncherSlot(1, 0), folder, replacement))
+        assertEquals(LauncherSlot(0, 0), layout.copy(pages = layout.pages.take(1)).uniqueFolderSlot(folder))
+    }
+
     @Test fun groupingAppsInTheSamePageKeepsTheTargetPosition() {
         val layout = LauncherLayout(pages = listOf(listOf(phone, maps, music)))
         val result = layout.dropLauncherItem(phone, LauncherSlot(0, 0), LauncherDrop(LauncherSlot(0, 2), group = true))

@@ -208,6 +208,7 @@ class NovaLauncherPlatform70Test {
                     "topResumedActivity" in it && home.className in it
                 } }
                 compose.onNodeWithContentDescription("Launcher settings").performClick()
+                compose.onNodeWithTag("launcher-settings-category-home").performClick()
                 compose.onNodeWithText("Change Default Launcher").performClick()
                 compose.onNodeWithTag("launcher-exit-pin").performTextInput("219438")
                 compose.onNodeWithText("Verify").performClick()

@@ -27,9 +27,12 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import androidx.activity.compose.LocalActivity
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.repeatOnLifecycle
 import kotlinx.coroutines.delay
 import uk.co.traynor.privategallery.core.guardian.GuardianInboxSection
 import uk.co.traynor.privategallery.core.guardian.GuardianCapture
+import uk.co.traynor.privategallery.core.guardian.GuardianCaptureStore
 import uk.co.traynor.privategallery.core.guardian.GuardianNotificationListener
 import uk.co.traynor.privategallery.core.guardian.ProbeAccount
 import uk.co.traynor.privategallery.core.guardian.SyntheticResult
@@ -68,21 +71,50 @@ internal data class GuardianHomeOptions(
 @Composable
 internal fun GuardianHomeSettings(
     options: GuardianHomeOptions, onChange: (GuardianHomeOptions) -> Unit, onBack: () -> Unit,
+    onDiagnostics: () -> Unit = {},
 ) {
-    LauncherPanel("Guardian Home", onBack) {
+    val activity = LocalActivity.current
+    LauncherPanel("Guardian Settings", onBack) {
         Column(Modifier.weight(1f).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             ListItem(headlineContent = { Text("Show Guardian Page") }, trailingContent = {
                 Switch(options.showPage, { onChange(options.copy(showPage = it)) },
                     modifier = Modifier.testTag("guardian-show-page"))
             })
+            if (activity != null) {
+                GuardianCard("Notifications") {
+                    TextButton(onClick = {
+                        activity.startActivity(GuardianInboxActivity.safeNotificationsIntent(activity))
+                    }) { Text("Safe Notifications Centre") }
+                    GuardianAlertPage.entries.forEach { page ->
+                        TextButton(onClick = { GuardianInboxActivity.openSettings(activity, page.name) }) {
+                            Text(page.title)
+                        }
+                    }
+                    TextButton(onClick = onDiagnostics) { Text("Notification Compatibility") }
+                }
+                GuardianCard("Guardian tools") {
+                    TextButton(onClick = { GuardianInboxActivity.open(activity, GuardianInboxSection.PENDING) }) {
+                        Text("Guardian Inbox")
+                    }
+                    TextButton(onClick = { GuardianInboxActivity.openSettings(activity, "contacts") }) {
+                        Text("Monitored Contacts")
+                    }
+                    TextButton(onClick = { GuardianInboxActivity.openPersonalImpact(activity) }) {
+                        Text("Personal Impact Learning")
+                    }
+                    TextButton(onClick = { GuardianInboxActivity.openSettings(activity, "call-shield") }) {
+                        Text("Call Shield")
+                    }
+                    TextButton(onClick = onDiagnostics) { Text("Guardian Health and Diagnostics") }
+                    NovaBrainKnowledgeCard()
+                }
+            }
             LauncherToggle("Show Sanctuary Countdown", options.countdown) { onChange(options.copy(countdown = it)) }
             LauncherToggle("Show Ready Message Count", options.ready) { onChange(options.copy(ready = it)) }
             LauncherToggle("Show Cooling Down Count", options.cooling) { onChange(options.copy(cooling = it)) }
             LauncherToggle("Show Guardian Health", options.health) { onChange(options.copy(health = it)) }
             LauncherToggle("Hide Sender Names", options.hideSenders) { onChange(options.copy(hideSenders = it)) }
             LauncherToggle("Hide Message Previews", options.hidePreviews) { onChange(options.copy(hidePreviews = it)) }
-            Text("Sender and preview preferences will apply when the encrypted inbox is available.")
-            Text("Guardian Page Theme · NovaOS Original")
         }
     }
 }
@@ -101,7 +133,15 @@ internal fun GuardianHome(
     val activity = LocalActivity.current
     val listener by GuardianNotificationListener.state.collectAsState()
     val capture by GuardianCapture.state.collectAsState()
-    LaunchedEffect(context) { GuardianCapture.refresh(context) }
+    LaunchedEffect(context, activity) {
+        if (activity == null) {
+            GuardianCaptureStore.archiveChanges.collect { GuardianCapture.refresh(context) }
+        } else {
+            activity.lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                GuardianCaptureStore.archiveChanges.collect { GuardianCapture.refresh(context) }
+            }
+        }
+    }
     val access = GuardianNotificationListener.hasAccess(context)
     val dnd = context.getSystemService(NotificationManager::class.java)?.isNotificationPolicyAccessGranted == true
     val counts = capture.inbox
@@ -195,7 +235,18 @@ internal fun GuardianHome(
 
                     val learning = capture.learningCount
                     GuardianCard("Guardian assessment", badge = if ((learning ?: 0) > 0) "Local estimates" else "Analysis pending") {
-                        if (counts != null) Text("${counts.pending} awaiting review", style = MaterialTheme.typography.titleMedium)
+                        if (counts == null) {
+                            Text(if (capture.busy) "Checking archive…" else "Archive counts unavailable", color = GuardianMuted)
+                        } else {
+                            Text("${counts.total} messages retained", style = MaterialTheme.typography.titleMedium)
+                            Text("${counts.pending} awaiting analysis · ${counts.protected} protected · ${counts.history} in history",
+                                color = GuardianMuted, style = MaterialTheme.typography.bodyMedium)
+                            if (counts.protected > 0) {
+                                TextButton(onClick = { openInbox(GuardianInboxSection.PROTECTED) }) {
+                                    Text("Review protected messages")
+                                }
+                            }
+                        }
                         Text(when {
                             learning == null -> "Nova Brain could not verify the local example store."
                             learning == 0 -> "Teach Nova Brain a few examples to personalise local estimates."
@@ -227,7 +278,7 @@ internal fun GuardianHome(
                                 capture.limited -> "Check diagnostics"
                                 capture.busy -> "Checking"
                                 capture.enabled && !connected -> "Listener required"
-                                capture.enabled -> "${capture.retained ?: 0} retained · ${if (capture.includesMain) "Main WhatsApp" else "Selected conversations only"}"
+                                capture.enabled -> "${capture.retained?.let { "$it retained" } ?: "Count unavailable"} · ${if (capture.includesMain) "Main WhatsApp" else "Selected conversations only"}"
                                 else -> "Off"
                             })
                             GuardianHealthLine("Nova Brain", when {

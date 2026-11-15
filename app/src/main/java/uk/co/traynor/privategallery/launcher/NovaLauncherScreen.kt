@@ -119,6 +119,23 @@ internal fun NovaLauncherScreen(
 private enum class LauncherSurface { HOME, DRAWER, LIBRARY, SETTINGS, GUARDIAN_SETTINGS, GUARDIAN_DIAGNOSTICS, LIBRARY_SETTINGS, EDIT }
 private enum class LauncherLibraryEntry { PAGER, DRAWER }
 
+private data class OpenLauncherFolder(val item: LauncherItem.Folder, val slot: LauncherSlot?, val inner: Boolean)
+
+private val openLauncherFolderSaver = listSaver<OpenLauncherFolder?, String>(
+    save = { opened ->
+        opened?.let {
+            listOf(it.item.name, it.inner.toString(), it.slot?.page?.toString().orEmpty(),
+                it.slot?.index?.toString().orEmpty()) + it.item.apps
+        }.orEmpty()
+    },
+    restore = { fields ->
+        fields.firstOrNull()?.let { name ->
+            val slot = fields[3].toIntOrNull()?.let { LauncherSlot(fields[2].toIntOrNull(), it) }
+            OpenLauncherFolder(LauncherItem.Folder(name, fields.drop(4)), slot, fields[1].toBoolean())
+        }
+    },
+)
+
 private val openSmartFolderSaver = listSaver<LauncherItem.SmartFolder?, String>(
     save = { folder -> folder?.let { listOf(it.category.name, it.customName.orEmpty()) + it.included }.orEmpty() },
     restore = { fields -> fields.firstOrNull()?.let { category ->
@@ -152,10 +169,16 @@ private fun LauncherRuntime(
     var coverGuardian by rememberSaveable(homeGeneration) { mutableStateOf(false) }
     var innerGuardian by rememberSaveable(homeGeneration) { mutableStateOf(false) }
     var surface by rememberSaveable(homeGeneration) { mutableStateOf(LauncherSurface.HOME) }
+    var launcherSettingsCategory by rememberSaveable(homeGeneration) { mutableStateOf<LauncherSettingsCategory?>(null) }
     var animateDockOnReturn by remember(homeGeneration) { mutableStateOf(false) }
     fun showHome(animateDock: Boolean = false) {
         animateDockOnReturn = animateDock
+        launcherSettingsCategory = null
         surface = LauncherSurface.HOME
+    }
+    fun closeEditor() {
+        if (launcherSettingsCategory == LauncherSettingsCategory.LAYOUT) surface = LauncherSurface.SETTINGS
+        else showHome()
     }
     var query by rememberSaveable(homeGeneration) { mutableStateOf("") }
     var coverPage by rememberSaveable(homeGeneration) { mutableIntStateOf(0) }
@@ -167,7 +190,9 @@ private fun LauncherRuntime(
     var coverLibraryCategory by rememberSaveable(homeGeneration) { mutableStateOf<LauncherCategory?>(null) }
     var innerLibraryCategory by rememberSaveable(homeGeneration) { mutableStateOf<LauncherCategory?>(null) }
     var searchRequested by rememberSaveable(homeGeneration) { mutableStateOf(false) }
-    var folder by remember(homeGeneration) { mutableStateOf<LauncherItem.Folder?>(null) }
+    var folder by rememberSaveable(homeGeneration, stateSaver = openLauncherFolderSaver) {
+        mutableStateOf<OpenLauncherFolder?>(null)
+    }
     val appsByComponent = remember(apps) { apps.associateBy { it.component } }
     val decisions = remember(apps, policy, launcherProtected) {
         if (!launcherProtected) policy else policy + apps.filter { policy.forLauncherApp(it) == null }
@@ -242,10 +267,10 @@ private fun LauncherRuntime(
             else -> openDrawer()
         }
     }
-    fun open(item: LauncherItem) {
+    fun open(item: LauncherItem, slot: LauncherSlot? = null, inner: Boolean = false) {
         when (item) {
             is LauncherItem.App -> actions.launchApp(item.component)
-            is LauncherItem.Folder -> folder = item
+            is LauncherItem.Folder -> folder = OpenLauncherFolder(item, slot, inner)
             is LauncherItem.SmartFolder -> {
                 homeFolder = item
                 category = item.category
@@ -260,6 +285,7 @@ private fun LauncherRuntime(
             LauncherSurface.LIBRARY -> closeLibrary()
             LauncherSurface.LIBRARY_SETTINGS, LauncherSurface.GUARDIAN_SETTINGS -> surface = LauncherSurface.SETTINGS
             LauncherSurface.GUARDIAN_DIAGNOSTICS -> showHome()
+            LauncherSurface.EDIT -> closeEditor()
             else -> { showHome(animateDock = surface == LauncherSurface.DRAWER); query = "" }
         }
     }
@@ -402,7 +428,8 @@ private fun LauncherRuntime(
                         onPage = updatePage, onDrawer = ::openDrawer,
                         onSettings = { surface = LauncherSurface.SETTINGS },
                         onEdit = { surface = LauncherSurface.EDIT },
-                        onItem = ::open,
+                        onItem = { open(it) },
+                        onFolder = { item, slot -> open(item, slot, isInner) },
                         gestures = gestures,
                         dragPageRequest = dragPageRequest.takeIf { activeDrag != null },
                         librarySelected = librarySelected,
@@ -453,7 +480,7 @@ private fun LauncherRuntime(
                     onBack = { showHome(animateDock = true) },
                     onApp = { actions.launchApp(it.component) },
                     onShortcut = actions.launchShortcut,
-                    onFolder = { folder = it },
+                    onFolder = { open(it, layout.uniqueFolderSlot(it), isInner) },
                     gestures = gestures,
                     onLibrary = {
                         query = ""
@@ -511,6 +538,7 @@ private fun LauncherRuntime(
                             it.save(guardianContext)
                         },
                         onBack = { surface = LauncherSurface.SETTINGS },
+                        onDiagnostics = { surface = LauncherSurface.GUARDIAN_DIAGNOSTICS },
                     )
                 }
                 LauncherSurface.SETTINGS -> GuardianTheme {
@@ -518,6 +546,8 @@ private fun LauncherRuntime(
                         state, decisions, visibleApps, actions, isDefaultHome, outsideProtection, launcherProtected,
                         onBack = { showHome() },
                         onEdit = { surface = LauncherSurface.EDIT },
+                        category = launcherSettingsCategory,
+                        onCategory = { launcherSettingsCategory = it },
                         onLibrarySettings = { surface = LauncherSurface.LIBRARY_SETTINGS },
                         onGuardianSettings = { surface = LauncherSurface.GUARDIAN_SETTINGS },
                         defaultHomeUi = defaultHomeUi,
@@ -529,36 +559,32 @@ private fun LauncherRuntime(
                 LauncherSurface.EDIT -> LauncherLayoutEditor(
                     state, layout, wide, currentPage, apps.filter { canDisplay(it.component) }, decisions,
                     onEdit = ::edit, onPage = updatePage, actions = actions,
-                    onBack = { showHome() },
+                    onBack = ::closeEditor,
                     protectedBySanctuary = launcherProtected,
                 )
             }
 
-            folder?.let { selected ->
-                GuardianAlertDialog(
-                    onDismissRequest = { folder = null },
-                    title = { Text(selected.name) },
-                    text = {
-                        Column(Modifier.heightIn(max = 340.dp).verticalScroll(rememberScrollState())) {
-                            val members = selected.apps
-                                .filter { canDisplay(it) }
-                                .mapNotNull(appsByComponent::get)
-                            if (members.isEmpty()) Text("No available apps in this folder.")
-                            members.forEach { app ->
-                                TextButton(onClick = {
-                                    folder = null
-                                    actions.launchApp(app.component)
-                                }) {
-                                    LauncherArtworkIcon(app, state.appearance, Modifier.size(38.dp))
-                                    Spacer(Modifier.width(10.dp))
-                                    val label = app.profileLabel?.let { "${app.label} · $it" } ?: app.label
-                                    Text(if (decisions.forLauncherApp(app)?.canLaunch == false)
-                                        "$label · Locked by Sanctuary" else label)
-                                }
-                            }
-                        }
+            folder?.let { opened ->
+                val selected = opened.item
+                val sourceLayout = state.layout(opened.inner)
+                val slot = opened.slot
+                val mayEdit = !launcherProtected && slot != null && (slot.page != null || !state.dockOptions.locked) &&
+                    sourceLayout.itemsAt(slot.page)?.getOrNull(slot.index) == selected
+                val preferences = remember(context, opened) { LauncherFolderAppearance.read(context) }
+                LauncherFolderPanel(
+                    selected, appsByComponent, { canDisplay(it) }, decisions, state.appearance, preferences,
+                    onLaunch = { component ->
+                        folder = null
+                        actions.launchApp(component)
                     },
-                    confirmButton = { TextButton(onClick = { folder = null }) { Text("Close") } },
+                    onDismiss = { folder = null },
+                    onSave = if (mayEdit && slot != null) { replacement ->
+                        val next = sourceLayout.replaceFolderAt(slot, selected, replacement)
+                        if (next != null && (next == sourceLayout || actions.save(state.withLayout(opened.inner, next)))) {
+                            folder = opened.copy(item = replacement)
+                            true
+                        } else false
+                    } else null,
                 )
             }
             editingFolder?.let { (slot, item) ->
@@ -581,7 +607,7 @@ private fun LauncherRuntime(
                         anchor, app, layout, currentPage, state.appearance.dock != LauncherDock.HIDDEN,
                         launcherProtected, actions,
                         dismiss = gestures::dismissMenu,
-                        open = { open(anchor.origin.item) },
+                        open = { open(anchor.origin.item, anchor.origin.slot, isInner) },
                         editHome = { surface = LauncherSurface.EDIT },
                         save = ::edit,
                         onEditSmartFolder = { slot, item -> editingFolder = slot to item },
@@ -631,6 +657,7 @@ internal fun LauncherHome(
     onEdit: () -> Unit,
     onItem: (LauncherItem) -> Unit,
     gestures: LauncherIconGestures,
+    onFolder: ((LauncherItem.Folder, LauncherSlot) -> Unit)? = null,
     dragPageRequest: Int?,
     librarySelected: Boolean = false,
     onLibrarySelected: (Boolean) -> Unit = {},
@@ -787,7 +814,7 @@ internal fun LauncherHome(
                                     LauncherHomeGrid(
                                         items, appearance.grid.columns(wide), appearance, apps, decisions, onItem,
                                         gestures = gestures, slots = items.indices.map { LauncherSlot(index, it) },
-                                        smartMembers = smartMembers, visible = ::visible,
+                                        smartMembers = smartMembers, visible = ::visible, onFolder = onFolder,
                                         expandedSmartFolders = smartFolderPresentation.expands(
                                             homeWidth, homeHeight, items,
                                         ),
@@ -866,6 +893,7 @@ internal fun LauncherHome(
                         LauncherSharedDock(
                             layout.dock, appearance, state.dockOptions, apps, decisions, compact, gestures,
                             onItem, ::visible, smartMembers, active = !atGuardian && (!atLibrary || state.dockOptions.showInLibrary),
+                            onFolder = onFolder,
                         )
                     }
                     Box(Modifier.fillMaxWidth().height(46.dp), contentAlignment = Alignment.Center) {
@@ -992,6 +1020,7 @@ internal fun LauncherHomeGrid(
     smartMembers: (LauncherItem.SmartFolder) -> List<LauncherApp> = { emptyList() },
     expandedSmartFolders: Boolean = false,
     visible: (LauncherItem) -> Boolean = { true },
+    onFolder: ((LauncherItem.Folder, LauncherSlot) -> Unit)? = null,
 ) {
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(14.dp)) {
         smartFolderRows(items, columns, expandedSmartFolders).forEach { row ->
@@ -1001,8 +1030,11 @@ internal fun LauncherHomeGrid(
                 row.forEach { (index, item) ->
                     Box(Modifier.weight(1f), contentAlignment = Alignment.TopCenter) {
                         if (visible(item)) {
-                            LauncherTile(item, appearance, apps, decisions, { onItem(item) }, interactive = interactive,
-                                gestures = gestures, origin = LauncherIconOrigin(item, slots.getOrNull(index)),
+                            val slot = slots.getOrNull(index)
+                            LauncherTile(item, appearance, apps, decisions, {
+                                if (item is LauncherItem.Folder && onFolder != null && slot != null) onFolder(item, slot)
+                                else onItem(item)
+                            }, interactive = interactive, gestures = gestures, origin = LauncherIconOrigin(item, slot),
                                 smartMembers = smartMembers, expandedSmartFolder = expandedRow,
                                 folderMembers = { folder ->
                                     folder.apps.filter { visible(LauncherItem.App(it)) }.mapNotNull(apps::get)

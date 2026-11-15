@@ -426,22 +426,42 @@ class GuardianCaptureStore77Test {
         try {
             val entry = GuardianCaptureEntry(now.wall - 1, "synthetic sender", "synthetic held message")
             val event = GuardianCaptureEvent(0, "conversation", now.wall, listOf(entry))
+            val initialRevision = GuardianCaptureStore.archiveChanges.value
             store.append(event, 7, now.wall)
-            assertEquals(1, store.inboxCounts(7, now).pending)
+            assertTrue(GuardianCaptureStore.archiveChanges.value > initialRevision)
+            val pendingCounts = store.inboxCounts(7, now)
+            assertEquals(1, pendingCounts.pending)
+            assertEquals(1, pendingCounts.total)
+            assertEquals(7L * 86_400_000L, pendingCounts.refreshAfterMillis)
             val id = store.inboxRows(7, now).single().id
             assertTrue(store.reviewInboxMessage(id, GuardianInboxAction.READY, 7, now))
             assertEquals(1, store.inboxCounts(7, now).ready)
             assertTrue(store.reviewInboxMessage(id, GuardianInboxAction.HOLD, 7, now))
             val reopened = GuardianCaptureStore(context)
-            assertEquals(1, reopened.inboxCounts(7, now).cooling)
+            val coolingCounts = reopened.inboxCounts(7, now)
+            assertEquals(1, coolingCounts.cooling)
+            assertEquals(1, coolingCounts.total)
+            assertEquals(GUARDIAN_HOLD_MILLIS, coolingCounts.refreshAfterMillis)
+            val beforeRepost = GuardianCaptureStore.archiveChanges.value
             assertEquals(0, reopened.append(event, 7, now.wall).added)
+            assertEquals(beforeRepost, GuardianCaptureStore.archiveChanges.value)
             assertNull(reopened.revealInboxMessage(id, 7, now))
             assertFalse(reopened.reviewInboxMessage(id, GuardianInboxAction.READY, 7, now))
             val after = now.copy(wall = now.wall + GUARDIAN_HOLD_MILLIS, elapsed = now.elapsed + GUARDIAN_HOLD_MILLIS)
-            assertEquals(1, reopened.inboxCounts(7, after).protected)
+            val protectedCounts = reopened.inboxCounts(7, after)
+            assertEquals(1, protectedCounts.protected)
+            assertEquals(1, protectedCounts.total)
+            assertEquals(0, protectedCounts.pending)
+            val expiresAt = now.wall + 7L * 86_400_000L
+            val expires = after.copy(wall = expiresAt, elapsed = now.elapsed + expiresAt - now.wall)
+            assertEquals(1L, reopened.inboxCounts(7, expires.copy(wall = expiresAt - 1)).refreshAfterMillis)
             assertEquals(entry.text, reopened.revealInboxMessage(id, 7, after))
             assertTrue(reopened.reviewInboxMessage(id, GuardianInboxAction.ARCHIVE, 7, after))
             assertEquals(1, reopened.inboxCounts(7, after).history)
+            val beforeDelete = GuardianCaptureStore.archiveChanges.value
+            assertTrue(reopened.reviewInboxMessage(id, GuardianInboxAction.DELETE, 7, after))
+            assertTrue(GuardianCaptureStore.archiveChanges.value > beforeDelete)
+            assertEquals(0, reopened.inboxCounts(7, after).total)
         } finally {
             store.clear()
         }

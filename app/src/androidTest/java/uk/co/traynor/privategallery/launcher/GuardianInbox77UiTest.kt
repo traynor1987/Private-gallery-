@@ -268,8 +268,8 @@ class GuardianInbox77UiTest {
         val clip = guardianSensitiveMessageClip(message)
         assertTrue(clip.description.extras!!.getBoolean(android.content.ClipDescription.EXTRA_IS_SENSITIVE))
         assertTrue(clip.getItemAt(0).text.toString() == message)
-        val short = createGuardianShareFile(context, "Short", true)
-        val long = createGuardianShareFile(context, message, true)
+        val short = createGuardianShareFile(context, "Short")
+        val long = createGuardianShareFile(context, message)
         try {
             val shortSize = android.graphics.BitmapFactory.Options().apply { inJustDecodeBounds = true }
             val longSize = android.graphics.BitmapFactory.Options().apply { inJustDecodeBounds = true }
@@ -278,6 +278,12 @@ class GuardianInbox77UiTest {
             assertTrue(longSize.outMimeType == "image/png")
             assertTrue(longSize.outWidth == shortSize.outWidth)
             assertTrue(longSize.outHeight > shortSize.outHeight * 10)
+            val shared = androidx.core.content.FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", long)
+            val send = guardianImageSendIntent(shared)
+            assertTrue(send.type == "image/png")
+            assertTrue(send.flags and android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION != 0)
+            assertTrue(send.clipData?.getItemAt(0)?.uri == shared)
+            assertTrue(context.contentResolver.openInputStream(shared)!!.use { it.readBytes() }.contentEquals(long.readBytes()))
             val uri = stageGuardianGalleryImage(context, long)
             try {
                 publishGuardianGalleryImage(context, uri)
@@ -286,6 +292,9 @@ class GuardianInbox77UiTest {
             } finally {
                 context.contentResolver.delete(uri, null, null)
             }
+            assertTrue(long.setLastModified(System.currentTimeMillis() - 16 * 60_000L))
+            assertTrue(runCatching { context.contentResolver.openInputStream(shared)?.close() }.isFailure)
+            assertTrue(!long.exists())
         } finally {
             short.delete()
             long.delete()

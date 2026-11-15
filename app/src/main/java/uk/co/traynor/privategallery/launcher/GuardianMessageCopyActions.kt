@@ -105,7 +105,7 @@ internal fun GuardianMessageCopyActions(
             var file: java.io.File? = null
             var handedOff = false
             try {
-                if (image) withContext(Dispatchers.IO) { file = createGuardianShareFile(context, reconstruction, true) }
+                if (image) withContext(Dispatchers.IO) { file = createGuardianShareFile(context, reconstruction) }
                 if (canCopy() && SanctuaryStore.get(context).refresh() == null) {
                     if (gallery) {
                         val prepared = checkNotNull(file)

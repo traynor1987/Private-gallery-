@@ -375,19 +375,23 @@ internal class GuardianCaptureStore private constructor(private val context: Con
         contactArchive().read().map {
             GuardianContact(GuardianConversationKey(it.getString("app"), it.getLong("profile"), it.getString("conversation")),
                 it.getString("name"), it.getBoolean("enabled"), it.getBoolean("retain"),
-                GuardianSensitivity.valueOf(it.getString("sensitivity")), it.optBoolean("holdUncertain"), it.optBoolean("quietCollection"))
+                GuardianSensitivity.valueOf(it.getString("sensitivity")), it.optBoolean("holdUncertain"), it.optBoolean("quietCollection"),
+                GuardianAlertSender.entries.firstOrNull { mode -> mode.name == it.optString("alertSender") },
+                guardianSenderDisplayName(it.optString("alertAlias")))
         }
     }
 
     fun saveContact(key: GuardianConversationKey, contact: GuardianContact?) = synchronized(lock) {
         require(contact == null || contact.key == key && key.profile >= 0 && key.conversation.length in 1..512 &&
-            key.app.length in 1..200 && contact.name.length in 1..100)
+            key.app.length in 1..200 && contact.name.length in 1..100 &&
+            (contact.alertAlias == null || guardianSenderDisplayName(contact.alertAlias) == contact.alertAlias))
         val retained = monitoredContacts().filterNot { it.key == key } + listOfNotNull(contact)
         require(retained.size <= 100)
         contactArchive().write(retained.map {
             JSONObject().put("app", it.key.app).put("profile", it.key.profile).put("conversation", it.key.conversation)
                 .put("name", it.name).put("enabled", it.enabled).put("retain", it.retain).put("sensitivity", it.sensitivity.name).put("holdUncertain", it.holdUncertain)
                 .put("quietCollection", it.quietCollection)
+                .put("alertSender", it.alertSender?.name).put("alertAlias", it.alertAlias)
         })
     }
 
@@ -558,13 +562,18 @@ internal class GuardianCaptureStore private constructor(private val context: Con
     fun summary(days: Int, now: Long): Int = synchronized(lock) { retainedRows(days, now).count { !it.optBoolean("deleted") } }
 
     fun inboxCounts(days: Int, now: GuardianInboxClock): GuardianInboxCounts = synchronized(lock) {
-        val rows = retainedRows(days, now.wall).filterNot { it.optBoolean("deleted") }.map { inboxRow(it, now) }
+        val rows = inboxRows(days, now)
         val sections = rows.groupingBy { it.section }.eachCount()
+        val horizon = cutoff(days, now.wall)
+        val nextChange = rows.minOfOrNull { row ->
+            val expiresIn = minOf(row.time, row.arrivedAt) - horizon + 1L
+            row.remainingMillis.takeIf { it > 0L }?.let { minOf(it, expiresIn) } ?: expiresIn
+        }
         GuardianInboxCounts(
             sections[GuardianInboxSection.PENDING] ?: 0, sections[GuardianInboxSection.READY] ?: 0,
             sections[GuardianInboxSection.COOLING] ?: 0, sections[GuardianInboxSection.PROTECTED] ?: 0,
             sections[GuardianInboxSection.HISTORY] ?: 0,
-            rows.asSequence().map { it.remainingMillis }.filter { it > 0 }.minOrNull(),
+            nextChange,
         )
     }
 
@@ -690,6 +699,7 @@ internal class GuardianCaptureStore private constructor(private val context: Con
         keyStore().deleteEntry(alias)
         atomic.delete()
         check(!destination.exists())
+        if (alias == KEY_ALIAS) archiveRevision.value += 1
         if (!fixture && !contacts && !phoneShield && !callHistory && !peace) knowledgeRevision.value += 1
     }
 
@@ -751,6 +761,7 @@ internal class GuardianCaptureStore private constructor(private val context: Con
             throw error
         }
         check(readBlob()?.contentEquals(blob) == true)
+        if (alias == KEY_ALIAS) archiveRevision.value += 1
         if (!fixture && !contacts && !phoneShield && !callHistory && !peace) knowledgeRevision.value += 1
     }
 
@@ -789,6 +800,8 @@ internal class GuardianCaptureStore private constructor(private val context: Con
         private const val MAX_BYTES = 6 * 1024 * 1024
         private val AAD = "NovaOS Guardian capture v1".toByteArray(Charsets.UTF_8)
         private val lock = Any()
+        private val archiveRevision = MutableStateFlow(0L)
+        val archiveChanges = archiveRevision.asStateFlow()
         private val knowledgeRevision = MutableStateFlow(0L)
         val knowledgeChanges = knowledgeRevision.asStateFlow()
     }

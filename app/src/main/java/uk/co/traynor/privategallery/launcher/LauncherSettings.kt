@@ -1,27 +1,36 @@
 package uk.co.traynor.privategallery.launcher
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.selection.selectable
-import androidx.compose.foundation.selection.selectableGroup
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.selection.toggleable
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.Apps
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowForward
 import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material.icons.filled.DragHandle
+import androidx.compose.material.icons.filled.Gesture
+import androidx.compose.material.icons.filled.GridView
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Shield
+import androidx.compose.material.icons.filled.Tune
+import androidx.compose.material.icons.filled.Wallpaper
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
@@ -29,7 +38,24 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import uk.co.traynor.privategallery.core.sanctuary.SanctuaryLauncherPolicy.Decision
+import uk.co.traynor.privategallery.ui.NovaNavigationHapticsSetting
+import uk.co.traynor.privategallery.ui.navigationHaptic
 import kotlin.math.abs
+
+internal enum class LauncherSettingsCategory(
+    val route: String,
+    val title: String,
+    val summary: String,
+    val icon: ImageVector,
+) {
+    HOME("home", "Home & Default Launcher", "Android Home app and exit protection", Icons.Default.Home),
+    LAYOUT("layout", "Home Screen & Layout", "Pages, grid, dock, widgets and Fold layouts", Icons.Default.GridView),
+    GESTURES("gestures", "Gestures & Navigation", "Workspace gestures and navigation haptics", Icons.Default.Gesture),
+    APPEARANCE("appearance", "Appearance & Wallpapers", "Themes, icons, wallpaper and notification bar", Icons.Default.Wallpaper),
+    FOLDERS("folders", "Folders & App Library", "Folder appearance, smart folders, sorting and search", Icons.Default.Apps),
+    SANCTUARY("sanctuary", "Sanctuary Integration", "Approved apps and protection outside Home", Icons.Default.Shield),
+    RECOVERY("recovery", "Advanced & Recovery", "Diagnostics, layout backup and Android Home recovery", Icons.Default.Tune),
+}
 
 @Composable
 internal fun LauncherSettings(
@@ -42,6 +68,8 @@ internal fun LauncherSettings(
     protectedBySanctuary: Boolean,
     onBack: () -> Unit,
     onEdit: () -> Unit,
+    category: LauncherSettingsCategory?,
+    onCategory: (LauncherSettingsCategory?) -> Unit,
     onLibrarySettings: () -> Unit = {},
     onGuardianSettings: () -> Unit = {},
     defaultHomeUi: LauncherDefaultHomeUi? = null,
@@ -50,110 +78,184 @@ internal fun LauncherSettings(
     onNotificationBarChange: (Boolean) -> Unit = {},
 ) {
     var confirmDockReset by remember { mutableStateOf(false) }
-    var notificationCompatibility by remember { mutableStateOf(false) }
+    var notificationCompatibility by rememberSaveable { mutableStateOf(false) }
+    val tap = navigationHaptic()
     if (notificationCompatibility && !protectedBySanctuary) {
         NotificationCompatibilityScreen { notificationCompatibility = false }
         return
     }
-    LauncherPanel("Launcher settings", onBack) {
-        LazyColumn(Modifier.fillMaxWidth().weight(1f), contentPadding = PaddingValues(bottom = 18.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            item {
-                Text("Home app", style = MaterialTheme.typography.titleMedium)
-                Text(launcherDefaultHomeStatus(if (defaultHomeUi == null) defaultHome else defaultHomeUi.isDefault))
-                if (defaultHomeUi != null) {
-                    LauncherToggle("Ask to make NovaOS default", defaultHomeUi.ask, actions.setAskForDefaultHome)
-                    OutlinedButton(onClick = actions.checkDefaultHome) { Text("Check Default Launcher") }
-                }
-                Button(onClick = actions.selectHome) { Text("Change Default Launcher") }
-                actions.configureExitProtection?.let { configure ->
-                    OutlinedButton(onClick = configure) { Text("Launcher exit protection") }
-                }
-                Text("To recover if the launcher cannot open, pull down Android Quick Settings, open Settings, then choose Apps → Default apps → Home app → One UI Home.",
-                    style = MaterialTheme.typography.bodySmall)
-            }
-            item {
-                HorizontalDivider()
-                Text("Layout", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 10.dp))
-                LauncherToggle("Separate Fold layouts", state.separateDisplays) { actions.save(state.copy(separateDisplays = it)) }
-                OutlinedButton(onClick = onEdit) { Text("Edit Home pages, dock and widgets") }
-                if (!protectedBySanctuary) actions.reloadWorkspaceLayout?.let { reload ->
-                    WorkspaceLayoutOptions(actions.openWorkspace, reload)
-                }
-                LauncherOptions("Open NovaOS gesture", LauncherGesture.entries, state.workspaceGesture, {
-                    actions.save(state.copy(workspaceGesture = it))
-                })
-                Text("Use the selected gesture in the empty area below the Home grid.", style = MaterialTheme.typography.bodySmall)
-            }
-            item {
-                HorizontalDivider()
-                Text("Appearance", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 10.dp))
-                LauncherAppearanceOptions(state.appearance, { actions.save(state.copy(appearance = it)) }, actions.chooseWallpaper, showDock = false)
-                Text("Notification bar", style = MaterialTheme.typography.titleSmall)
-                LauncherToggle("Show notification bar", showNotificationBar, onNotificationBarChange)
-                Text("Show or hide the notification bar while on the Home screen.",
-                    style = MaterialTheme.typography.bodySmall)
-                OutlinedButton(onClick = onGuardianSettings) { Text("Guardian Home") }
-                LauncherToggle("Show Dock Icon Labels", state.dockOptions.labels) {
-                    actions.save(state.copy(dockOptions = state.dockOptions.copy(labels = it)))
-                }
-            }
-            item {
-                HorizontalDivider()
-                Text("Dock", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 10.dp))
-                LauncherToggle("Lock Dock Layout", state.dockOptions.locked) {
-                    actions.save(state.copy(dockOptions = state.dockOptions.copy(locked = it)))
-                }
-                LauncherToggle("Show Dock on App Library", state.dockOptions.showInLibrary) {
-                    actions.save(state.copy(dockOptions = state.dockOptions.copy(showInLibrary = it)))
-                }
-                LauncherOptions("Dock Background", LauncherDock.entries.filter { it != LauncherDock.HIDDEN },
-                    state.appearance.dock, { actions.save(state.copy(appearance = state.appearance.copy(dock = it))) })
-                OutlinedButton(onClick = { confirmDockReset = true }, enabled = !protectedBySanctuary) {
-                    Text("Reset Dock Layout")
-                }
-            }
-            if (!protectedBySanctuary) item {
-                HorizontalDivider()
-                Text("Notifications", style = MaterialTheme.typography.titleMedium)
-                OutlinedButton(onClick = { notificationCompatibility = true }) {
-                    Text("Notification compatibility")
-                }
-            }
-            item {
-                HorizontalDivider()
-                Text("New Apps", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 10.dp))
-                LauncherToggle("Add to Home automatically", state.newAppPlacement == LauncherNewAppPlacement.HOME) {
-                    actions.save(state.copy(newAppPlacement = if (it) LauncherNewAppPlacement.HOME
-                        else LauncherNewAppPlacement.LIBRARY_ONLY))
-                }
-                Text("When off, add new apps to App Library only.", style = MaterialTheme.typography.bodySmall)
-            }
-            item {
-                HorizontalDivider()
-                Text("App drawer and search", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 10.dp))
-                LauncherDrawerSettings(state.drawer) { actions.save(state.copy(drawer = it)) }
-                OutlinedButton(onClick = onLibrarySettings) { Text("App Library") }
-            }
-            item {
-                HorizontalDivider()
-                Text("Sanctuary", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 10.dp))
-                LauncherPolicySummary(apps, decisions, protectedBySanctuary, outsideProtection)
-                LauncherToggle("Protect outside approved apps", outsideProtection, actions.setOutsideProtection)
-                Text("Keep the Sanctuary shield over blocked apps opened outside Nova Launcher when Android permits. Standard App Guardian remains available while this is off.",
-                    style = MaterialTheme.typography.bodySmall)
-                Button(onClick = actions.openSanctuary) { Text("Open Sanctuary") }
-                OutlinedButton(onClick = actions.reviewSanctuary) { Text("Review Sanctuary approved apps") }
-                TextButton(onClick = actions.emergencyPhone) { Text("Phone and emergency access") }
-            }
-            item {
-                HorizontalDivider()
-                Text("Layout backup", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 10.dp))
-                Text("Export or restore ordinary launcher layouts, folders, favourites and appearance. Android requires widgets to be added again on a new device.",
-                    style = MaterialTheme.typography.bodySmall)
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    TextButton(onClick = actions.exportLayout) { Text("Export layout") }
-                    TextButton(onClick = actions.importLayout) { Text("Restore layout") }
+    LaunchedEffect(protectedBySanctuary) {
+        if (protectedBySanctuary) notificationCompatibility = false
+    }
+
+    fun goBack() {
+        tap()
+        if (category == null) onBack() else onCategory(null)
+    }
+    BackHandler(enabled = category != null, onBack = ::goBack)
+    LauncherPanel(category?.title ?: "Launcher settings", ::goBack) {
+        key(category) {
+            LazyColumn(
+                modifier = Modifier.align(Alignment.CenterHorizontally)
+                    .widthIn(max = 680.dp).fillMaxWidth().weight(1f)
+                    .testTag(if (category == null) "launcher-settings-menu" else "launcher-settings-${category.route}"),
+                contentPadding = PaddingValues(bottom = 18.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                when (category) {
+                    null -> items(LauncherSettingsCategory.entries, key = { it.route }) { entry ->
+                        Surface(
+                            onClick = { tap(); onCategory(entry) },
+                            modifier = Modifier.fillMaxWidth().testTag("launcher-settings-category-${entry.route}"),
+                            shape = RoundedCornerShape(18.dp),
+                            color = MaterialTheme.colorScheme.surfaceContainer,
+                        ) {
+                            Row(
+                                Modifier.fillMaxWidth().heightIn(min = 72.dp).padding(14.dp),
+                                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Surface(shape = RoundedCornerShape(12.dp), color = MaterialTheme.colorScheme.secondaryContainer) {
+                                    Icon(entry.icon, contentDescription = null, modifier = Modifier.padding(10.dp).size(22.dp),
+                                        tint = MaterialTheme.colorScheme.primary)
+                                }
+                                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                                    Text(entry.title, style = MaterialTheme.typography.titleMedium)
+                                    Text(entry.summary, style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                }
+                                Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null)
+                            }
+                        }
+                    }
+
+                    LauncherSettingsCategory.HOME -> item {
+                        val context = LocalContext.current
+                        val current = if (defaultHomeUi == null) defaultHome else defaultHomeUi.isDefault
+                        val homeApp = remember(context, current, defaultHomeUi?.windowFocused) {
+                            if (current == false) resolveAndroidHome(context)?.loadLabel(context.packageManager)?.toString()
+                            else null
+                        }
+                        Text("Current Android Home app", style = MaterialTheme.typography.titleMedium)
+                        Text(if (homeApp.isNullOrBlank()) launcherDefaultHomeStatus(current) else homeApp)
+                        if (defaultHomeUi != null) {
+                            LauncherToggle("Ask to make NovaOS default", defaultHomeUi.ask, actions.setAskForDefaultHome)
+                            OutlinedButton(onClick = actions.checkDefaultHome) { Text("Check Default Launcher") }
+                        }
+                        Button(onClick = actions.selectHome) { Text("Change Default Launcher") }
+                        actions.configureExitProtection?.let { configure ->
+                            OutlinedButton(onClick = configure) { Text("Launcher exit protection") }
+                        }
+                        LauncherHomeRecovery()
+                    }
+
+                    LauncherSettingsCategory.LAYOUT -> {
+                        item {
+                            LauncherToggle("Separate Fold layouts", state.separateDisplays) {
+                                actions.save(state.copy(separateDisplays = it))
+                            }
+                            OutlinedButton(onClick = onEdit) { Text("Edit Home pages, dock and widgets") }
+                            LauncherOptions("Grid density", LauncherGrid.entries, state.appearance.grid, {
+                                actions.save(state.copy(appearance = state.appearance.copy(grid = it)))
+                            })
+                            if (!protectedBySanctuary) actions.reloadWorkspaceLayout?.let { reload ->
+                                WorkspaceLayoutOptions(actions.openWorkspace, reload)
+                            }
+                        }
+                        item {
+                            HorizontalDivider()
+                            Text("Dock", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 10.dp))
+                            LauncherToggle("Show Dock Icon Labels", state.dockOptions.labels) {
+                                actions.save(state.copy(dockOptions = state.dockOptions.copy(labels = it)))
+                            }
+                            LauncherToggle("Lock Dock Layout", state.dockOptions.locked) {
+                                actions.save(state.copy(dockOptions = state.dockOptions.copy(locked = it)))
+                            }
+                            LauncherToggle("Show Dock on App Library", state.dockOptions.showInLibrary) {
+                                actions.save(state.copy(dockOptions = state.dockOptions.copy(showInLibrary = it)))
+                            }
+                            LauncherOptions("Dock Background", LauncherDock.entries.filter { it != LauncherDock.HIDDEN },
+                                state.appearance.dock, { actions.save(state.copy(appearance = state.appearance.copy(dock = it))) })
+                            OutlinedButton(onClick = { confirmDockReset = true }, enabled = !protectedBySanctuary) {
+                                Text("Reset Dock Layout")
+                            }
+                        }
+                    }
+
+                    LauncherSettingsCategory.GESTURES -> item {
+                        LauncherOptions("Open NovaOS gesture", LauncherGesture.entries, state.workspaceGesture, {
+                            actions.save(state.copy(workspaceGesture = it))
+                        })
+                        Text("Use the selected gesture in the empty area below the Home grid.", style = MaterialTheme.typography.bodySmall)
+                        HorizontalDivider(Modifier.padding(vertical = 12.dp))
+                        NovaNavigationHapticsSetting()
+                    }
+
+                    LauncherSettingsCategory.APPEARANCE -> {
+                        item {
+                            Text("Notification bar", style = MaterialTheme.typography.titleMedium)
+                            LauncherToggle("Show notification bar", showNotificationBar, onNotificationBarChange)
+                            Text("Show or hide the notification bar while on the Home screen.", style = MaterialTheme.typography.bodySmall)
+                            OutlinedButton(onClick = onGuardianSettings) { Text("Guardian Home") }
+                            OutlinedButton(onClick = { onCategory(LauncherSettingsCategory.FOLDERS) }) { Text("Folder appearance") }
+                        }
+                        item {
+                            HorizontalDivider(Modifier.padding(bottom = 12.dp))
+                            LauncherAppearanceOptions(
+                                state.appearance, { actions.save(state.copy(appearance = it)) }, actions.chooseWallpaper,
+                                showDock = false, showGrid = false,
+                            )
+                        }
+                    }
+
+                    LauncherSettingsCategory.FOLDERS -> {
+                        item { OutlinedButton(onClick = onLibrarySettings) { Text("App Library") } }
+                        item { LauncherFolderAppearanceSettings() }
+                        item {
+                            Text("New apps", style = MaterialTheme.typography.titleMedium)
+                            LauncherToggle("Add to Home automatically", state.newAppPlacement == LauncherNewAppPlacement.HOME) {
+                                actions.save(state.copy(newAppPlacement = if (it) LauncherNewAppPlacement.HOME
+                                    else LauncherNewAppPlacement.LIBRARY_ONLY))
+                            }
+                            Text("When off, add new apps to App Library only.", style = MaterialTheme.typography.bodySmall)
+                        }
+                        item {
+                            Text("App drawer and search", style = MaterialTheme.typography.titleMedium)
+                            LauncherDrawerSettings(state.drawer) { actions.save(state.copy(drawer = it)) }
+                        }
+                    }
+
+                    LauncherSettingsCategory.SANCTUARY -> item {
+                        LauncherPolicySummary(apps, decisions, protectedBySanctuary, outsideProtection)
+                        LauncherToggle("Protect outside approved apps", outsideProtection, actions.setOutsideProtection)
+                        Text("Keep the Sanctuary shield over blocked apps opened outside Nova Launcher when Android permits. Standard App Guardian remains available while this is off.",
+                            style = MaterialTheme.typography.bodySmall)
+                        Button(onClick = actions.openSanctuary) { Text("Open Sanctuary") }
+                        OutlinedButton(onClick = actions.reviewSanctuary) { Text("Review Sanctuary approved apps") }
+                        actions.configureExitProtection?.let { configure ->
+                            OutlinedButton(onClick = configure) { Text("Launcher exit protection") }
+                        }
+                        TextButton(onClick = actions.emergencyPhone) { Text("Phone and emergency access") }
+                    }
+
+                    LauncherSettingsCategory.RECOVERY -> {
+                        if (!protectedBySanctuary) item {
+                            OutlinedButton(onClick = { notificationCompatibility = true }) { Text("Notification compatibility") }
+                        }
+                        item {
+                            Text("Layout backup", style = MaterialTheme.typography.titleMedium)
+                            Text("Export or restore ordinary launcher layouts, folders, favourites and appearance. Android requires widgets to be added again on a new device.",
+                                style = MaterialTheme.typography.bodySmall)
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                TextButton(onClick = actions.exportLayout) { Text("Export layout") }
+                                TextButton(onClick = actions.importLayout) { Text("Restore layout") }
+                            }
+                            OutlinedButton(onClick = { confirmDockReset = true }, enabled = !protectedBySanctuary) {
+                                Text("Reset Dock Layout")
+                            }
+                            LauncherHomeRecovery()
+                        }
+                    }
                 }
             }
         }
@@ -172,6 +274,16 @@ internal fun LauncherSettings(
             dismissButton = { TextButton(onClick = { confirmDockReset = false }) { Text("Cancel") } },
         )
     }
+}
+
+@Composable
+private fun LauncherHomeRecovery() {
+    Text("Android Home recovery", style = MaterialTheme.typography.titleSmall)
+    Text(
+        "If the launcher cannot open, pull down Android Quick Settings and choose Settings → Apps → Default apps → Home app → One UI Home.",
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+    )
 }
 
 private data class LauncherFolderEdit(val index: Int?, val value: LauncherItem.Folder?)

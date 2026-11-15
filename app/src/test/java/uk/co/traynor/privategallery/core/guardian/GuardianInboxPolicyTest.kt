@@ -4,6 +4,14 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class GuardianInboxPolicyTest {
+    @Test fun dashboardTotalIncludesProtectedAndHistoryWithoutTreatingThemAsPending() {
+        val counts = GuardianInboxCounts(pending = 0, ready = 0, cooling = 0, protected = 2, history = 1,
+            refreshAfterMillis = null)
+        assertEquals(3, counts.total)
+        assertEquals(2, counts.protected)
+        assertEquals(0, counts.pending)
+    }
+
     @Test fun missingClassificationStaysPendingAndExpiredHoldNeedsReview() {
         val start = GuardianInboxClock(100_000_000L, 50_000L, 3)
         val before = start.copy(wall = start.wall + 1_000L, elapsed = start.elapsed + 1_000L)

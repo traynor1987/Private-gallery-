@@ -30,6 +30,7 @@ python3 scripts/run_backup_repair62.py --evidence-incident
 python3 scripts/run_backup_repair62.py --calculator-copy
 bash scripts/run_launcher70_restart.sh
 bash scripts/run_visual_checkpoint.sh NovaLauncher70UiTest launcher-ui-70 uk.co.traynor.privategallery.launcher
+bash scripts/run_visual_checkpoint.sh LauncherFolder80UiTest launcher-folders-80 uk.co.traynor.privategallery.launcher
 
 bash scripts/run_visual_checkpoint.sh LauncherSanctuaryControls70Test launcher-sanctuary-controls-70 uk.co.traynor.privategallery.launcher
 bash scripts/run_visual_checkpoint.sh LauncherUtility70Test launcher-utility-70 uk.co.traynor.privategallery.launcher

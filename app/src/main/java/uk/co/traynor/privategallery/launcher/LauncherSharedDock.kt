@@ -30,6 +30,7 @@ internal fun LauncherSharedDock(
     visible: (LauncherItem) -> Boolean,
     smartMembers: (LauncherItem.SmartFolder) -> List<LauncherApp>,
     active: Boolean,
+    onFolder: ((LauncherItem.Folder, LauncherSlot) -> Unit)? = null,
 ) {
     val canEdit = active && !options.locked
     if (canEdit) {
@@ -68,7 +69,10 @@ internal fun LauncherSharedDock(
                     val cell = if (scroll) Modifier.width(52.dp) else Modifier.weight(1f)
                     Box(cell.fillMaxHeight().testTag("launcher-dock-slot-$index"), contentAlignment = Alignment.Center) {
                         if (visible(item)) LauncherTile(
-                            item, appearance, apps, decisions, { open(item) }, compact = true,
+                            item, appearance, apps, decisions, {
+                                if (item is LauncherItem.Folder && onFolder != null) onFolder(item, LauncherSlot(null, index))
+                                else open(item)
+                            }, compact = true,
                             interactive = active,
                             gestures = gestures.takeIf { canEdit },
                             origin = LauncherIconOrigin(item, LauncherSlot(null, index)),
