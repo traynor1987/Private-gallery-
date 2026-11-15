@@ -157,13 +157,8 @@ internal class GuardianNotificationListener : NotificationListenerService() {
         }
     }
 
-    private fun staticIneligibility(sbn: StatusBarNotification): String? = when {
-        sbn.notification.flags and Notification.FLAG_GROUP_SUMMARY != 0 -> "Group summary left visible"
-        sbn.notification.flags and Notification.FLAG_ONGOING_EVENT != 0 -> "Ongoing original left visible"
-        !sbn.isClearable -> "Android marks the original as non-clearable"
-        sbn.notification.visibility == Notification.VISIBILITY_SECRET -> "Secret original excluded"
-        else -> null
-    }
+    private fun staticIneligibility(sbn: StatusBarNotification): String? =
+        guardianOriginalIneligibility(sbn.notification, sbn.isClearable)
 
     private fun retryChangedMain(key: String) {
         val now = SystemClock.elapsedRealtime()
@@ -908,3 +903,11 @@ private fun guardianCaptureEntries(notification: Notification): List<GuardianCap
                     entry.text?.toString().orEmpty(), sender.name?.toString())
             }
     }.getOrDefault(emptyList())
+
+internal fun guardianOriginalIneligibility(notification: Notification, clearable: Boolean): String? = when {
+    notification.flags and Notification.FLAG_GROUP_SUMMARY != 0 -> "Group summary left visible"
+    notification.flags and Notification.FLAG_ONGOING_EVENT != 0 -> "Ongoing original left visible"
+    !clearable -> "Android marks the original as non-clearable"
+    notification.visibility == Notification.VISIBILITY_SECRET -> "Secret original excluded"
+    else -> null
+}

@@ -21,6 +21,17 @@ import uk.co.traynor.privategallery.core.sanctuary.SanctuaryStore
 
 @RunWith(AndroidJUnit4::class)
 class GuardianNotificationCompatibility77Test {
+    @Test fun reconciliationExcludesGroupSummaryAndProtectedOriginals() {
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        val child = Notification.Builder(context, "fixture").setGroup("synthetic").build()
+        val summary = Notification.Builder(context, "fixture").setGroup("synthetic").setGroupSummary(true).build()
+        val secret = Notification.Builder(context, "fixture").setVisibility(Notification.VISIBILITY_SECRET).build()
+        assertNull(guardianOriginalIneligibility(child, true))
+        assertEquals("Group summary left visible", guardianOriginalIneligibility(summary, true))
+        assertEquals("Android marks the original as non-clearable", guardianOriginalIneligibility(child, false))
+        assertEquals("Secret original excluded", guardianOriginalIneligibility(secret, true))
+    }
+
     @Test fun shadeRetentionAndLockScreenRedactionAreIndependent() {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         val redacted = Notification.Builder(context, "silent-fixture")
