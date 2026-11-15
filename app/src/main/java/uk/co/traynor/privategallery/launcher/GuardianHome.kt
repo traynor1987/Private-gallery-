@@ -113,8 +113,6 @@ internal fun GuardianHomeSettings(
             LauncherToggle("Show Ready Message Count", options.ready) { onChange(options.copy(ready = it)) }
             LauncherToggle("Show Cooling Down Count", options.cooling) { onChange(options.copy(cooling = it)) }
             LauncherToggle("Show Guardian Health", options.health) { onChange(options.copy(health = it)) }
-            LauncherToggle("Hide Sender Names", options.hideSenders) { onChange(options.copy(hideSenders = it)) }
-            LauncherToggle("Hide Message Previews", options.hidePreviews) { onChange(options.copy(hidePreviews = it)) }
         }
     }
 }

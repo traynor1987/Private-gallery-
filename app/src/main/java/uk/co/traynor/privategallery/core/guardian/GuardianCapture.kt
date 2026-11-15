@@ -82,7 +82,10 @@ internal object GuardianCapture {
 
     fun clear(context: Context) {
         generation.incrementAndGet()
-        manage(context) { _, store -> store.clear() }
+        manage(context) { app, store ->
+            store.clear()
+            uk.co.traynor.privategallery.launcher.GuardianSafeNotifications.cancel(app)
+        }
     }
 
     fun record(context: Context, event: GuardianCaptureEvent, monitored: GuardianConversationKey, onDurable: ((Boolean) -> Unit)? = null) {

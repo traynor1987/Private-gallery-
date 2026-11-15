@@ -403,7 +403,8 @@ class GuardianCaptureStore77Test {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         val store = GuardianCaptureStore(context)
         val key = GuardianConversationKey(GUARDIAN_WHATSAPP, 0, "shortcut:synthetic")
-        val contact = GuardianContact(key, "Synthetic private contact", holdUncertain = true)
+        val contact = GuardianContact(key, "Synthetic private contact", holdUncertain = true,
+            alertSender = GuardianAlertSender.ALIAS, alertAlias = "Synthetic private alias")
         try {
             store.saveContact(key, contact)
             val reopened = GuardianCaptureStore(context)
@@ -412,6 +413,7 @@ class GuardianCaptureStore77Test {
             assertFalse(reopened.monitoredContacts().any { it.key == key.copy(app = "another.app") })
             val bytes = File(context.noBackupFilesDir, "guardian-contacts-v1.enc").readBytes()
             assertFalse(bytes.toString(Charsets.UTF_8).contains(contact.name))
+            assertFalse(bytes.toString(Charsets.UTF_8).contains(checkNotNull(contact.alertAlias)))
         } finally {
             store.saveContact(key, null)
         }

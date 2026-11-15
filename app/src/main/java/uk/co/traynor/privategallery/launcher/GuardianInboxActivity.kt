@@ -657,7 +657,7 @@ class GuardianInboxActivity : ComponentActivity() {
                                 "Android notification posting allowed" else "Android notification posting disabled")
                         }
                         key(revision) {
-                            listOf("enabled" to "Enable Nova Guardian pop-ups", "main" to "Main WhatsApp",
+                            listOf("enabled" to "Enable Nova Guardian alerts", "main" to "Main WhatsApp",
                                 "friends" to "Friends WhatsApp", "sms" to "Monitored SMS/MMS", "tick" to "Low-concern tick")
                                 .forEach { (id, label) ->
                                     LauncherToggle(label, preferences.getBoolean(id, id == "tick")) { enabled ->
@@ -993,10 +993,14 @@ class GuardianInboxActivity : ComponentActivity() {
         }
     }
 
-    private fun saveContact(key: GuardianConversationKey, contact: GuardianContact?) {
+    private fun saveContact(key: GuardianConversationKey, contact: GuardianContact?, clearAlerts: Boolean = false) {
         if (busy || !canReview()) return
         GuardianCapture.invalidatePending()
-        loadArchive({ store, _, _ -> store.saveContact(key, contact); store.monitoredContacts() }) { contacts = it }
+        loadArchive({ store, _, _ ->
+            store.saveContact(key, contact)
+            if (clearAlerts) GuardianSafeNotifications.cancel(applicationContext)
+            store.monitoredContacts()
+        }) { contacts = it }
     }
 
     @Composable
@@ -1047,8 +1051,7 @@ class GuardianInboxActivity : ComponentActivity() {
                         saveContact(entry.key, entry.copy(sensitivity = levels[(entry.sensitivity.ordinal + 1) % levels.size]))
                     }) { Text("Change sensitivity") }
                     GuardianAlertContactOptions(entry, busy) { changed ->
-                        GuardianSafeNotifications.cancel(this@GuardianInboxActivity)
-                        saveContact(entry.key, changed)
+                        saveContact(entry.key, changed, clearAlerts = true)
                     }
                     TextButton(enabled = !busy, onClick = { saveContact(entry.key, null) }) { Text("Remove monitoring") }
                 }

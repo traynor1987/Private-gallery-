@@ -119,7 +119,6 @@ class LauncherHomeLibraryPager73UiTest {
             compose.onNodeWithTag("guardian-show-page").performClick()
             assertTrue(!GuardianHomeOptions.read(compose.activity).showPage)
             compose.runOnIdle { compose.activity.onBackPressedDispatcher.onBackPressed() }
-            compose.runOnIdle { compose.activity.onBackPressedDispatcher.onBackPressed() }
             homeApp(1).assertIsDisplayed()
             pager.performTouchInput { swipeRight() }
             compose.onNodeWithTag("launcher-guardian-home").assertDoesNotExist()

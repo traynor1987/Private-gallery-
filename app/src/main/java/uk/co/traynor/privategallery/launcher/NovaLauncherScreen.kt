@@ -169,6 +169,14 @@ private fun LauncherRuntime(
     var coverGuardian by rememberSaveable(homeGeneration) { mutableStateOf(false) }
     var innerGuardian by rememberSaveable(homeGeneration) { mutableStateOf(false) }
     var surface by rememberSaveable(homeGeneration) { mutableStateOf(LauncherSurface.HOME) }
+    var guardianSettingsFromHome by rememberSaveable(homeGeneration) { mutableStateOf(false) }
+    var guardianDiagnosticsFromSettings by rememberSaveable(homeGeneration) { mutableStateOf(false) }
+    fun closeGuardianSettings() {
+        surface = if (guardianSettingsFromHome) LauncherSurface.HOME else LauncherSurface.SETTINGS
+    }
+    fun closeGuardianDiagnostics() {
+        surface = if (guardianDiagnosticsFromSettings) LauncherSurface.GUARDIAN_SETTINGS else LauncherSurface.HOME
+    }
     var launcherSettingsCategory by rememberSaveable(homeGeneration) { mutableStateOf<LauncherSettingsCategory?>(null) }
     var animateDockOnReturn by remember(homeGeneration) { mutableStateOf(false) }
     fun showHome(animateDock: Boolean = false) {
@@ -283,8 +291,9 @@ private fun LauncherRuntime(
     BackHandler(surface != LauncherSurface.HOME) {
         when (surface) {
             LauncherSurface.LIBRARY -> closeLibrary()
-            LauncherSurface.LIBRARY_SETTINGS, LauncherSurface.GUARDIAN_SETTINGS -> surface = LauncherSurface.SETTINGS
-            LauncherSurface.GUARDIAN_DIAGNOSTICS -> showHome()
+            LauncherSurface.LIBRARY_SETTINGS -> surface = LauncherSurface.SETTINGS
+            LauncherSurface.GUARDIAN_SETTINGS -> closeGuardianSettings()
+            LauncherSurface.GUARDIAN_DIAGNOSTICS -> closeGuardianDiagnostics()
             LauncherSurface.EDIT -> closeEditor()
             else -> { showHome(animateDock = surface == LauncherSurface.DRAWER); query = "" }
         }
@@ -465,9 +474,15 @@ private fun LauncherRuntime(
                         guardianPage = if (guardianOptions.showPage) {
                             {
                                 GuardianHome(guardianOptions, sanctuaryStatus, apps, decisions,
-                                    onSettings = { surface = LauncherSurface.GUARDIAN_SETTINGS },
+                                    onSettings = {
+                                        guardianSettingsFromHome = true
+                                        surface = LauncherSurface.GUARDIAN_SETTINGS
+                                    },
                                     onSanctuary = actions.openSanctuary,
-                                    onDiagnostics = { surface = LauncherSurface.GUARDIAN_DIAGNOSTICS })
+                                    onDiagnostics = {
+                                        guardianDiagnosticsFromSettings = false
+                                        surface = LauncherSurface.GUARDIAN_DIAGNOSTICS
+                                    })
                             }
                         } else null,
                     )
@@ -526,7 +541,7 @@ private fun LauncherRuntime(
                 }
                 LauncherSurface.GUARDIAN_DIAGNOSTICS -> GuardianTheme {
                     NotificationCompatibilityScreen(
-                        allowPermissionChanges = !launcherProtected, onBack = { showHome() },
+                        allowPermissionChanges = !launcherProtected, onBack = ::closeGuardianDiagnostics,
                     )
                 }
                 LauncherSurface.GUARDIAN_SETTINGS -> GuardianTheme {
@@ -537,8 +552,11 @@ private fun LauncherRuntime(
                             guardianOptions = it
                             it.save(guardianContext)
                         },
-                        onBack = { surface = LauncherSurface.SETTINGS },
-                        onDiagnostics = { surface = LauncherSurface.GUARDIAN_DIAGNOSTICS },
+                        onBack = ::closeGuardianSettings,
+                        onDiagnostics = {
+                            guardianDiagnosticsFromSettings = true
+                            surface = LauncherSurface.GUARDIAN_DIAGNOSTICS
+                        },
                     )
                 }
                 LauncherSurface.SETTINGS -> GuardianTheme {
@@ -549,7 +567,10 @@ private fun LauncherRuntime(
                         category = launcherSettingsCategory,
                         onCategory = { launcherSettingsCategory = it },
                         onLibrarySettings = { surface = LauncherSurface.LIBRARY_SETTINGS },
-                        onGuardianSettings = { surface = LauncherSurface.GUARDIAN_SETTINGS },
+                        onGuardianSettings = {
+                            guardianSettingsFromHome = false
+                            surface = LauncherSurface.GUARDIAN_SETTINGS
+                        },
                         defaultHomeUi = defaultHomeUi,
                         showNotificationBar = showNotificationBar,
                         onNotificationBarChange = onNotificationBarChange,
