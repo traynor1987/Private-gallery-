@@ -24,6 +24,8 @@ internal data class NovaFile(
     fun supports(flag: Int) = flags and flag != 0
 }
 
+internal class NovaFileCleanupException : IOException("The provider retained an incomplete temporary file")
+
 internal class NovaFilesAccess(
     private val resolver: ContentResolver,
     private val tree: Uri,
@@ -124,6 +126,8 @@ internal class NovaFilesAccess(
             file.mimeType.ifBlank { "application/octet-stream" }, "NovaOS-incomplete-" + UUID.randomUUID()))
         var verified = false
         try {
+            val staged = query(created).single()
+            check(staged.supports(Document.FLAG_SUPPORTS_RENAME) && staged.supports(Document.FLAG_SUPPORTS_DELETE))
             val digest = MessageDigest.getInstance("SHA-256")
             val byteCount = checkNotNull(resolver.openInputStream(uri(file))).use { input ->
                 checkNotNull(resolver.openOutputStream(created, "w")).use { output ->
@@ -167,7 +171,9 @@ internal class NovaFilesAccess(
             checkNotNull(DocumentsContract.renameDocument(resolver, created, file.name))
             verified = true
         } finally {
-            if (!verified) runCatching { DocumentsContract.deleteDocument(resolver, created) }
+            if (!verified && !runCatching { DocumentsContract.deleteDocument(resolver, created) }.getOrDefault(false)) {
+                throw NovaFileCleanupException()
+            }
         }
     }
 

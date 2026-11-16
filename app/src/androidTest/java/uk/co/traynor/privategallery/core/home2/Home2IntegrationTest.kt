@@ -3,6 +3,7 @@ package uk.co.traynor.privategallery.core.home2
 import android.content.Context
 import android.content.ContextWrapper
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableIntStateOf
@@ -92,14 +93,18 @@ class Home2IntegrationTest {
   fun originalClockVisible() = SpaceContext(context, access).use { WidgetData(it).clockVisible(spaceId) }
   override fun close() { access.close(); session.lock(); vaultKey.fill(0); root.deleteRecursively() }
  }
- private fun showHome(hidden: Boolean = false, records: List<PrivateAppCatalog.App> = emptyList(), onSwitch:(()->Unit)?=null): SpaceFixture {
+ private fun showHome(hidden: Boolean = false, records: List<PrivateAppCatalog.App> = emptyList(), onSwitch:(()->Unit)?=null,
+  followActivityLifecycle: Boolean = false): SpaceFixture {
   val f = SpaceFixture(hidden, compose.activity).also { fixture = it }
   val bridge = if (hidden) null else NativeAppBridge(MemoryAppStore(records), f.access::current,
    { appLaunches.add(it) }, {}, { browsedUrls.add(it) })
   compose.setContent {
    if (attached) key(generation) {
     CompositionLocalProvider(LocalContext provides f.context) {
-     IntegratedHome(f.access, true, { nativeLaunches.add(it) }, {}, {}, onSwitch, bridge)
+     val lifecycle = androidx.lifecycle.compose.LocalLifecycleOwner.current.lifecycle
+     val lifecycleState = lifecycle.currentStateFlow.collectAsState()
+     val visible = !followActivityLifecycle || lifecycleState.value.isAtLeast(androidx.lifecycle.Lifecycle.State.RESUMED)
+     IntegratedHome(f.access, visible, { nativeLaunches.add(it) }, {}, {}, onSwitch, bridge)
     }
    }
   }
@@ -182,6 +187,29 @@ class Home2IntegrationTest {
   }
  }
 
+
+
+ @Test fun files_picker_returns_to_the_authenticated_workspace_after_activity_pause() {
+  val f = showHome(followActivityLifecycle = true)
+  openDrawer()
+  compose.onNodeWithTag("drawer-search").performTextInput("Nova Files")
+  Espresso.closeSoftKeyboard()
+  compose.onNodeWithTag("drawer-nova-files").assertIsDisplayed().performClick()
+  compose.waitUntil(10_000) {
+   compose.onAllNodes(hasText("Choose folder") and isEnabled()).fetchSemanticsNodes().isNotEmpty()
+  }
+  compose.onNodeWithText("Choose folder").performClick()
+  uk.co.traynor.privategallery.core.backup.BackupDocumentsUi62.folder()
+  compose.waitUntil(15_000) {
+   compose.onAllNodesWithText("Nova62 synthetic documents").fetchSemanticsNodes().isNotEmpty()
+  }
+  compose.onNodeWithTag("nova-files").assertIsDisplayed()
+  SpaceContext(f.context, f.access).use { space ->
+   val selected = checkNotNull(NovaFilesSelection(space).read().tree)
+   assertTrue(android.provider.DocumentsContract.isTreeUri(selected))
+   assertTrue(compose.activity.contentResolver.persistedUriPermissions.any { it.uri == selected && it.isReadPermission })
+  }
+ }
 
  @Test fun files_read_only_the_picker_granted_fixture_and_stop_when_space_access_retires() {
   val documents = uk.co.traynor.privategallery.core.backup.BackupDocuments62

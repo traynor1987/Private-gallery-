@@ -1,14 +1,9 @@
 package uk.co.traynor.privategallery.home2
 
-import android.app.Activity
-import android.content.Intent
 import android.net.Uri
-import android.provider.DocumentsContract
 import android.provider.DocumentsContract.Document
 import android.text.format.Formatter
 import androidx.activity.compose.BackHandler
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -40,9 +35,13 @@ private data class FilesListing(val provider: NovaFilesAccess, val root: NovaFil
 private data class FileTransfer(val file: NovaFile, val source: NovaFile, val move: Boolean)
 
 @Composable
-internal fun NovaFilesScreen(space: SpaceContext, onBack: () -> Unit) {
+internal fun NovaFilesScreen(
+    space: SpaceContext,
+    onBack: () -> Unit,
+    onChooseFolder: (() -> Unit)?,
+    pickerMessage: String?,
+) {
     val scope = rememberCoroutineScope()
-    var store by remember(space) { mutableStateOf<NovaFilesSelection?>(null) }
     var selection by remember(space) { mutableStateOf<NovaFilesSelection.Selection?>(null) }
     var access by remember(space) { mutableStateOf<NovaFilesAccess?>(null) }
     var hasWriteGrant by remember(space) { mutableStateOf(false) }
@@ -51,7 +50,7 @@ internal fun NovaFilesScreen(space: SpaceContext, onBack: () -> Unit) {
     var files by remember(space) { mutableStateOf<List<NovaFile>>(emptyList()) }
     var sort by remember(space) { mutableStateOf(FileSort.NAME) }
     var search by remember(space) { mutableStateOf("") }
-    var status by remember(space) { mutableStateOf<String?>(null) }
+    var status by remember(space) { mutableStateOf(pickerMessage) }
     var working by remember(space) { mutableStateOf(false) }
     var loading by remember(space) { mutableStateOf(true) }
     var reload by remember(space) { mutableIntStateOf(0) }
@@ -62,12 +61,9 @@ internal fun NovaFilesScreen(space: SpaceContext, onBack: () -> Unit) {
     var transfer by remember(space) { mutableStateOf<FileTransfer?>(null) }
 
     LaunchedEffect(space) {
-        val result = withContext(Dispatchers.IO) { runCatching { NovaFilesSelection(space).let { it to it.read() } } }
+        val result = withContext(Dispatchers.IO) { runCatching { NovaFilesSelection(space).read() } }
         if (!space.current()) return@LaunchedEffect
-        result.onSuccess { (settings, selected) ->
-            store = settings
-            selection = selected
-        }.onFailure {
+        result.onSuccess { selection = it }.onFailure {
             loading = false
             status = "The encrypted folder selection could not be loaded."
         }
@@ -102,44 +98,18 @@ internal fun NovaFilesScreen(space: SpaceContext, onBack: () -> Unit) {
         }
         loading = false
     }
-    val folderPicker = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) picker@{ result ->
-        if (result.resultCode != Activity.RESULT_OK || !space.current()) return@picker
-        val settings = store ?: return@picker
-        val previous = selection ?: return@picker
-        val data = result.data ?: return@picker
-        val tree = data.data ?: return@picker
-        val flags = data.flags and (Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
-        working = true
-        scope.launch {
-            val saved = withContext(Dispatchers.IO) {
-                runCatching {
-                    check(space.current() && flags and Intent.FLAG_GRANT_READ_URI_PERMISSION != 0)
-                    check(DocumentsContract.isTreeUri(tree))
-                    space.contentResolver.takePersistableUriPermission(tree, flags)
-                    checkNotNull(settings.save(previous, tree))
-                }
-            }
-            if (!space.current()) return@launch
-            saved.onSuccess {
-                access = null
-                root = null
-                path = emptyList()
-                transfer = null
-                search = ""
-                status = null
-                selection = it
-            }.onFailure { status = "Access to the selected folder could not be saved." }
-            working = false
-        }
-    }
-
     fun change(success: String, failure: String, operation: suspend () -> Unit) {
         working = true
         status = null
         scope.launch {
             val result = withContext(Dispatchers.IO) { runCatching { operation() } }
             if (!space.current()) return@launch
-            status = if (result.isSuccess) success else failure
+            status = when {
+                result.isSuccess -> success
+                result.exceptionOrNull() is NovaFileCleanupException ->
+                    "The provider left a NovaOS-incomplete temporary file in the destination. The source was retained."
+                else -> failure
+            }
             if (result.isSuccess) transfer = null
             reload++
             working = false
@@ -170,11 +140,8 @@ internal fun NovaFilesScreen(space: SpaceContext, onBack: () -> Unit) {
         if (working || loading) LinearProgressIndicator(Modifier.fillMaxWidth())
         status?.let { Text(it) }
         Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            Button(enabled = active && store != null, onClick = {
-                folderPicker.launch(Intent(Intent.ACTION_OPEN_DOCUMENT_TREE).addFlags(
-                    Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION or
-                        Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION or Intent.FLAG_GRANT_PREFIX_URI_PERMISSION))
-            }) { Text("Choose folder") }
+            Button(enabled = active && selection != null && onChooseFolder != null,
+                onClick = { onChooseFolder?.invoke() }) { Text("Choose folder") }
             if (path.isNotEmpty()) {
                 TextButton(enabled = !working, onClick = { navigateUp() }) { Text("Up") }
             }

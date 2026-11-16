@@ -50,6 +50,8 @@ import uk.co.traynor.privategallery.core.home2.SpaceContext
  wallpaperOwner?.let{owner->WallpaperEditorHost(owner,visible,onClose={wallpaperOwner=null;if(context.current())models.getOrNull()?.data?.refreshWallpaper()})}
  LaunchedEffect(visible){if(visible&&context.current())models.getOrNull()?.data?.let{it.refreshInstalled();it.refreshWallpaper()}}
  DisposableEffect(lifecycle){val observer=androidx.lifecycle.LifecycleEventObserver{_,event->if(event==androidx.lifecycle.Lifecycle.Event.ON_PAUSE||event==androidx.lifecycle.Lifecycle.Event.ON_STOP){audio.pause();video.pause()}};lifecycle.lifecycle.addObserver(observer);onDispose{lifecycle.lifecycle.removeObserver(observer)}}
+ val filesPicker = if (access.owner == uk.co.traynor.privategallery.core.evidence.EvidenceCatalog.Owner.PRIMARY)
+  rememberNovaFilesPicker(context) else null
  NovaHomeStatusBarPolicy(visible&&live&&context.current())
  if(!visible||!live||!context.current())return
  val value=models.getOrElse{
@@ -61,7 +63,7 @@ import uk.co.traynor.privategallery.core.home2.SpaceContext
    NovaPreview(value.data,pool,value.mind,audio,value.widgets,value.history,video,
    onBackup={if(context.current())backupOwner=if(wallpaperOwnerFactory!=null)wallpaperOwnerFactory.invoke()else uk.co.traynor.privategallery.core.home2.WallpaperOwner(access.owner,{context.current()},{access},false)},
    onPickImage={if(context.current())wallpaperOwner=if(wallpaperOwnerFactory!=null)wallpaperOwnerFactory.invoke()else uk.co.traynor.privategallery.core.home2.WallpaperOwner(access.owner,{context.current()},{access},false)},
-   onOpen={},filesDir=context.filesDir,onNative={id->if(context.current()){value.data.shell.touchInternal(context.spaceId,id);onLaunch(id)}},onLock=onLock,onPanic=onPanic,externalRecentsRequest=externalRecentsRequest,onRecentsConsumed=onRecentsConsumed,workspaceProjection=sharedLayout)
+   onOpen={},filesDir=context.filesDir,onNative={id->if(context.current()){value.data.shell.touchInternal(context.spaceId,id);onLaunch(id)}},onLock=onLock,onPanic=onPanic,externalRecentsRequest=externalRecentsRequest,onRecentsConsumed=onRecentsConsumed,workspaceProjection=sharedLayout,filesPicker=filesPicker)
   }
   if(access.owner==uk.co.traynor.privategallery.core.evidence.EvidenceCatalog.Owner.PRIMARY){
    BoxWithConstraints(Modifier.fillMaxSize()) {

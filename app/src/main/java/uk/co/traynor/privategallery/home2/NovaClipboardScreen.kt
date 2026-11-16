@@ -6,6 +6,7 @@ import android.content.ClipboardManager
 import android.os.PersistableBundle
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -15,6 +16,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
@@ -188,8 +190,11 @@ internal fun NovaClipboardScreen(space: SpaceContext, onBack: () -> Unit) {
                 OutlinedTextField(current.text, { editor = current.copy(text = it.take(16_000)) },
                     modifier = Modifier.fillMaxWidth(), label = { Text("Snippet") }, minLines = 3,
                     enabled = !busy && (!current.sensitive || reveal),
-                    visualTransformation = if (current.sensitive && !reveal) PasswordVisualTransformation()
+                    keyboardOptions = if (current.sensitive) KeyboardOptions(
+                        keyboardType = KeyboardType.Password, autoCorrectEnabled = false) else KeyboardOptions.Default,
+                    visualTransformation = if (current.sensitive) PasswordVisualTransformation()
                         else VisualTransformation.None)
+                if (current.sensitive && reveal) Text(current.text)
                 if (current.sensitive && !reveal) {
                     TextButton(enabled = !busy, onClick = { reveal = true }) { Text("Reveal to edit") }
                 }
