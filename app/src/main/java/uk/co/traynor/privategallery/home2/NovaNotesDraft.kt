@@ -25,6 +25,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import uk.co.traynor.privategallery.core.home2.SpaceContext
+import uk.co.traynor.privategallery.core.home2.NovaNoteAttachment
 
 private enum class NotesConfirmation { DELETE, DISCARD }
 
@@ -34,6 +35,8 @@ internal fun NovaNotesDraft(
     onBack: () -> Unit,
     openNoteId: String? = null,
     onOpenLink: ((NovaCoreLink) -> Unit)? = null,
+    chooseAttachment: ((String) -> Unit)? = null,
+    attachmentMessage: String? = null,
 ) {
     val scope = rememberCoroutineScope()
     var library by remember(space) { mutableStateOf<NovaNotesLibrary?>(null) }
@@ -47,6 +50,8 @@ internal fun NovaNotesDraft(
     val redo = remember(space) { mutableStateListOf<NovaNote>() }
     var query by remember(space) { mutableStateOf("") }
     var status by remember(space) { mutableStateOf<String?>(null) }
+    var attachmentPreview by remember(space) { mutableStateOf<NovaNoteAttachment?>(null) }
+    var showSnippets by remember(space) { mutableStateOf(false) }
     var showLinks by remember(space) { mutableStateOf(false) }
     var resolveConflict by remember(space) { mutableStateOf(false) }
     var busy by remember(space) { mutableStateOf(true) }
@@ -69,7 +74,7 @@ internal fun NovaNotesDraft(
             resolveConflict = false
             undo.clear()
             redo.clear()
-            status = when {
+            status = attachmentMessage ?: when {
                 recovery.isFailure -> "The recovery draft could not be read. Saved notes are read-only."
                 recovered?.note != null && openNoteId != null && recovered.note.id != openNoteId ->
                     "Finish or discard the recovered draft before opening the linked note."
@@ -250,6 +255,22 @@ internal fun NovaNotesDraft(
                     label = { Text("Tags") }, singleLine = true, modifier = Modifier.fillMaxWidth())
                 NotesBodyEditor(note, canEdit, undo.isNotEmpty(), redo.isNotEmpty(),
                     onBody = { edit(note.copy(body = it)) }, onUndo = { undoOrRedo(false) }, onRedo = { undoOrRedo(true) })
+                TextButton(enabled = canEdit, onClick = { showSnippets = true }) { Text("Insert saved snippet") }
+                Text("Attachments", style = MaterialTheme.typography.titleSmall)
+                note.attachments.forEach { attachment ->
+                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                        TextButton(enabled = !busy, onClick = { attachmentPreview = attachment },
+                            modifier = Modifier.weight(1f)) { Text(attachment.name) }
+                        TextButton(enabled = canEdit, onClick = {
+                            edit(note.copy(attachments = note.attachments.filterNot { it.id == attachment.id }))
+                        }) { Text("Remove") }
+                    }
+                }
+                if (chooseAttachment != null) {
+                    TextButton(enabled = canEdit && note.attachments.size < NovaNoteAttachment.MAX_COUNT, onClick = {
+                        if (checkpoint(note) != null) chooseAttachment(note.id)
+                    }) { Text("Attach file (up to 24 KiB)") }
+                }
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     FilterChip(note.pinned, { edit(note.copy(pinned = !note.pinned)) },
                         { Text("Pinned") }, enabled = canEdit)
@@ -261,7 +282,7 @@ internal fun NovaNotesDraft(
                     }
                 }
                 Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Button(enabled = canEdit && (note.title.isNotBlank() || note.body.isNotBlank()), onClick = {
+                    Button(enabled = canEdit && (note.title.isNotBlank() || note.body.isNotBlank() || note.attachments.isNotEmpty()), onClick = {
                         persist(delete = false)
                     }) { Text("Save note") }
                     if (resolveConflict) TextButton(enabled = canEdit, onClick = { persist(delete = false, asCopy = true) }) {
@@ -274,6 +295,32 @@ internal fun NovaNotesDraft(
         }
     }
 
+    val snippetNote = editor
+    if (showSnippets && snippetNote != null) {
+        NovaNotesSnippetPicker(space, onClose = { showSnippets = false }) { snippet ->
+            showSnippets = false
+            val separator = if (snippetNote.body.isEmpty()) "" else "\n"
+            edit(snippetNote.copy(body = snippetNote.body + separator + snippet.text))
+        }
+    }
+
+    attachmentPreview?.let { attachment ->
+        val bytes = remember(attachment) {
+            if (attachment.mime.startsWith("text/")) attachment.readBytes().let { bytes ->
+                try { bytes.decodeToString() } finally { bytes.fill(0) }
+            } else null
+        }
+        AlertDialog(
+            onDismissRequest = { attachmentPreview = null },
+            title = { Text(attachment.name) },
+            text = {
+                Column(Modifier.heightIn(max = 220.dp).verticalScroll(rememberScrollState())) {
+                    Text(bytes ?: "${attachment.mime}. An encrypted copy is stored with this note.")
+                }
+            },
+            confirmButton = { TextButton(onClick = { attachmentPreview = null }) { Text("Close") } },
+        )
+    }
     val linkedNote = editor
     if (showLinks && linkedNote != null && onOpenLink != null) {
         NovaRelatedNoteItems(space, linkedNote.id, onOpen = { link ->
@@ -409,4 +456,37 @@ private fun renderNoteLine(line: String) = buildAnnotatedString {
         position = match.range.last + 1
     }
     append(line.substring(position))
+}
+
+
+@Composable
+private fun NovaNotesSnippetPicker(space: SpaceContext, onClose: () -> Unit, onInsert: (NovaSnippet) -> Unit) {
+    var snippets by remember(space) { mutableStateOf<Result<List<NovaSnippet>>?>(null) }
+    LaunchedEffect(space) {
+        val result = withContext(Dispatchers.IO) {
+            runCatching { NovaClipboardLibrary(space).read(java.time.Instant.now()).snippets }
+        }
+        if (space.current()) snippets = result
+    }
+    AlertDialog(
+        onDismissRequest = onClose,
+        title = { Text("Insert saved snippet") },
+        text = {
+            val result = snippets
+            val list = result?.getOrNull()
+            when {
+                result == null -> LinearProgressIndicator(Modifier.fillMaxWidth())
+                list == null -> Text("Saved snippets could not be opened.")
+                list.isEmpty() -> Text("You have no saved snippets in Nova Clipboard.")
+                else -> LazyColumn(Modifier.heightIn(max = 300.dp)) {
+                    items(list, key = NovaSnippet::id) { snippet ->
+                        TextButton(onClick = { if (space.current()) onInsert(snippet) }) {
+                            Text(if (snippet.sensitive) "Insert sensitive snippet" else snippet.title.ifBlank { "Untitled snippet" })
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = { TextButton(onClick = onClose) { Text("Cancel") } },
+    )
 }

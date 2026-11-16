@@ -170,7 +170,10 @@ fun main(args:Array<String>){
  val recovered=SpaceContext(base,EvidenceAccess(restoreAccess.root,EvidenceAccess.Owner.PRIMARY));check(recovered.getSharedPreferences("nova_mind_v1",0).getString("primary",null)=="[]");recovered.close();backupSpace.close();values.values.forEach{it.fill(0)};bad.values.forEach{it.fill(0)}
  println("PASS: portable allowlist, owner-only notes, credential exclusion, atomic settings restore, validation failure preservation, revocation rollback, interrupted directory recovery")
  val code81Access=EvidenceAccess(File(root,"code81-primary"),EvidenceAccess.Owner.PRIMARY)
- val note=NovaNote("note-test","Host test","SYNTHETIC_CODE81_PRIVATE_BODY",notebook="Work / Planning",tags="research")
+ val attachment=NovaNoteAttachment("attachment-memo","memo.txt","text/plain","SGVsbG8=")
+ check(attachment.readBytes().contentEquals("Hello".toByteArray()))
+ check(runCatching { NovaNoteAttachment("bad","memo.txt","text/plain","**").readBytes() }.isFailure)
+ val note=NovaNote("note-test","Host test","SYNTHETIC_CODE81_PRIVATE_BODY",notebook="Work / Planning",tags="research",attachments=listOf(attachment))
  SpaceContext(base,code81Access).use { owner ->
   val notes=NovaNotesLibrary(owner)
   check(notes.writeDraft(notes.readDraft(),null,note)!=null)

@@ -47,6 +47,7 @@ private data class CalendarEdit(
     val zone: String = event.zone.id,
     val minutes: String = event.minutes.toString(),
     val allDay: Boolean = event.time == null,
+    val reminder: String = event.reminderMinutes?.toString().orEmpty(),
 ) {
     fun build(): NovaCalendarEvent? = runCatching {
         check(event.title.isNotBlank())
@@ -56,7 +57,8 @@ private data class CalendarEdit(
         val eventZone = if (allDay) event.zone else ZoneId.of(zone.trim())
         check(start == null || eventZone.rules.getValidOffsets(day.atTime(start)).isNotEmpty())
         event.copy(title = event.title.trim(), firstDate = day, time = start, zone = eventZone,
-            minutes = if (allDay) event.minutes else minutes.toInt())
+            minutes = if (allDay) event.minutes else minutes.toInt(),
+            reminderMinutes = reminder.trim().takeIf(String::isNotEmpty)?.toInt())
     }.getOrNull()
 }
 
@@ -92,6 +94,9 @@ internal fun NovaCalendarScreen(
             runCatching { NovaCalendarLibrary(space).let { it to it.read() } } to
                 runCatching { NovaTaskLibrary(space).read().tasks }
         }
+        val reminderError = withContext(Dispatchers.IO) {
+            calendar.getOrNull()?.second?.let { runCatching { NovaReminders.syncCalendar(space, it.events) }.isFailure } ?: false
+        }
         if (!space.current()) return@LaunchedEffect
         calendar.onSuccess { (library, saved) ->
             store = library
@@ -106,6 +111,7 @@ internal fun NovaCalendarScreen(
             status = when {
                 openEventId != null && requested == null -> "The linked event is unavailable."
                 dueTasks.isFailure -> "Task due dates are unavailable."
+                reminderError -> "Android reminders could not be updated."
                 else -> null
             }
         }.onFailure { status = "Encrypted events could not be opened." }
@@ -117,14 +123,18 @@ internal fun NovaCalendarScreen(
         val previous = snapshot ?: return
         busy = true
         scope.launch {
-            val result = withContext(Dispatchers.IO) { runCatching { library.save(previous, events) } }
+            val result = withContext(Dispatchers.IO) { runCatching {
+                library.save(previous, events)?.let { saved ->
+                    saved to runCatching { NovaReminders.syncCalendar(space, saved.events) }.isSuccess
+                }
+            } }
             if (!space.current()) return@launch
             result.onSuccess { saved ->
                 if (saved == null) status = "Events changed elsewhere. Close the editor and reload."
                 else {
-                    snapshot = saved
+                    snapshot = saved.first
                     editor = null
-                    status = successMessage
+                    status = if (saved.second) successMessage else "$successMessage. Android reminders could not be updated."
                 }
             }.onFailure { status = "The encrypted calendar may be full or unavailable." }
             busy = false
@@ -228,6 +238,12 @@ internal fun NovaCalendarScreen(
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 CalendarEditFields(current, !busy, onEdit = { editor = it })
+                OutlinedTextField(current.reminder, { editor = current.copy(reminder = it.take(4)) },
+                    modifier = Modifier.fillMaxWidth(), label = { Text("Remind minutes before (optional)") },
+                    supportingText = { if (current.allDay) Text("All-day reminders are based on 09:00 local time.") },
+                    isError = current.reminder.isNotBlank() && current.reminder.trim().toIntOrNull() !in 0..1440,
+                    singleLine = true, enabled = !busy)
+                if (current.reminder.isNotBlank()) NovaReminderPermission(space, !busy)
                 Row(Modifier.horizontalScroll(rememberScrollState())) {
                     TextButton(enabled = !busy, onClick = { pickNote = true }) {
                         Text(if (current.event.noteId == null) "Link a note" else "Change linked note")
@@ -245,7 +261,7 @@ internal fun NovaCalendarScreen(
                     }
                 }
                 if (candidate == null && current.event.title.isNotBlank()) {
-                    Text("Check the date, time zone and duration. The start must exist in that time zone.")
+                    Text("Check the date, time zone, duration and reminder. Reminders use a lead time of 0–1440 minutes.")
                 }
                 Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     Button(enabled = !busy && candidate != null, onClick = {

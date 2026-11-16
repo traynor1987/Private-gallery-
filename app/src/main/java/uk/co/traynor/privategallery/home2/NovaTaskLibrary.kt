@@ -33,6 +33,7 @@ internal data class NovaTask(
     val tags: String = "",
     val subtasks: List<NovaSubtask> = emptyList(),
     val noteId: String? = null,
+    val remindAt: java.time.LocalTime? = null,
 )
 
 internal fun completeNovaTask(tasks: List<NovaTask>, id: String, completed: Boolean): List<NovaTask> {
@@ -100,6 +101,7 @@ internal class NovaTaskLibrary(space: SpaceContext) {
                     }.also(::validateSubtasks)
                 }.orEmpty(),
                 entry.optString("noteId").takeIf(String::isNotBlank),
+                entry.optString("remindAt").takeIf(String::isNotEmpty)?.let(java.time.LocalTime::parse),
             )
         })
     }
@@ -122,6 +124,7 @@ internal class NovaTaskLibrary(space: SpaceContext) {
                     if (task.nextCreated) put("nextCreated", true)
                     if (task.tags.isNotEmpty()) put("tags", task.tags)
                     task.noteId?.let { put("noteId", it) }
+                    task.remindAt?.let { put("remindAt", it.toString()) }
                     if (task.subtasks.isNotEmpty()) put("subtasks", JSONArray(task.subtasks.map { subtask ->
                         JSONObject().put("id", subtask.id).put("title", subtask.title).put("completed", subtask.completed)
                     }))

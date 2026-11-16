@@ -27,9 +27,11 @@ internal data class NovaCalendarEvent(
     val repeat: NovaEventRepeat,
     val skippedDates: Set<LocalDate> = emptySet(),
     val noteId: String? = null,
+    val reminderMinutes: Int? = null,
 ) {
     init {
         require(minutes in 1..1440)
+        require(reminderMinutes == null || reminderMinutes in 0..1440)
     }
 
     private fun repeatsOn(date: LocalDate): Boolean {
@@ -93,6 +95,7 @@ internal class NovaCalendarLibrary(space: SpaceContext) {
                     (0 until dates.length()).map { LocalDate.parse(dates.getString(it)) }.toSet()
                 }.orEmpty(),
                 event.optString("noteId").takeIf(String::isNotBlank),
+                if (event.has("reminderMinutes")) event.getInt("reminderMinutes") else null,
             )
         })
     }
@@ -111,6 +114,7 @@ internal class NovaCalendarLibrary(space: SpaceContext) {
                 .put("repeat", event.repeat.name)
                 .apply {
                     event.noteId?.let { put("noteId", it) }
+                    event.reminderMinutes?.let { put("reminderMinutes", it) }
                     if (event.skippedDates.isNotEmpty()) put("skippedDates", JSONArray(event.skippedDates.sorted().map(LocalDate::toString)))
                 })
         }

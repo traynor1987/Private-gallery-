@@ -14,6 +14,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import java.time.LocalDate
+import java.time.LocalTime
 import java.util.UUID
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -21,7 +22,10 @@ import kotlinx.coroutines.withContext
 import uk.co.traynor.privategallery.core.home2.NovaCoreApp
 import uk.co.traynor.privategallery.core.home2.SpaceContext
 
-private data class TaskEditor(val task: NovaTask, val dueText: String, val newSubtask: String = "")
+private data class TaskEditor(
+    val task: NovaTask, val dueText: String, val newSubtask: String = "",
+    val reminderText: String = task.remindAt?.toString().orEmpty(),
+)
 private data class ProjectEditor(val original: String, val name: String)
 private enum class TaskConfirmation { DELETE, DISCARD }
 
@@ -51,13 +55,20 @@ internal fun NovaTasksScreen(
         val result = withContext(Dispatchers.IO) {
             runCatching { NovaTaskLibrary(space).let { it to it.read() } }
         }
+        val reminderError = withContext(Dispatchers.IO) {
+            result.getOrNull()?.second?.let { runCatching { NovaReminders.syncTasks(space, it.tasks) }.isFailure } ?: false
+        }
         if (!space.current()) return@LaunchedEffect
         result.onSuccess { (opened, saved) ->
             store = opened
             snapshot = saved
             val requested = openTaskId?.let { id -> saved.tasks.find { it.id == id } }
             if (requested != null) editor = TaskEditor(requested, requested.due?.toString().orEmpty())
-            status = if (openTaskId != null && requested == null) "The linked task is unavailable." else null
+            status = when {
+                openTaskId != null && requested == null -> "The linked task is unavailable."
+                reminderError -> "Android reminders could not be updated."
+                else -> null
+            }
         }.onFailure { status = "Encrypted tasks could not be opened." }
         loading = false
     }
@@ -67,15 +78,19 @@ internal fun NovaTasksScreen(
         val previous = snapshot ?: return
         loading = true
         scope.launch {
-            val result = withContext(Dispatchers.IO) { runCatching { library.save(previous, tasks) } }
+            val result = withContext(Dispatchers.IO) { runCatching {
+                library.save(previous, tasks)?.let { saved ->
+                    saved to runCatching { NovaReminders.syncTasks(space, saved.tasks) }.isSuccess
+                }
+            } }
             if (!space.current()) return@launch
             result.onSuccess { saved ->
                 if (saved == null) {
                     status = "Tasks changed elsewhere. Return to the list and reload."
                 } else {
-                    snapshot = saved
+                    snapshot = saved.first
                     editor = null
-                    status = confirmationMessage
+                    status = if (saved.second) confirmationMessage else "$confirmationMessage. Android reminders could not be updated."
                 }
             }.onFailure { status = "Tasks could not be saved. Encrypted storage may be full or unavailable." }
             loading = false
@@ -196,6 +211,9 @@ internal fun NovaTasksScreen(
             val date = current.dueText.trim()
             val due = date.takeIf { it.isNotEmpty() }?.let { runCatching { LocalDate.parse(it) }.getOrNull() }
             val invalidDate = date.isNotEmpty() && due == null
+            val reminderText = current.reminderText.trim()
+            val reminder = reminderText.takeIf(String::isNotEmpty)?.let { runCatching { LocalTime.parse(it) }.getOrNull() }
+            val invalidReminder = reminderText.isNotEmpty() && (reminder == null || due == null)
             Column(
                 Modifier.weight(1f).verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -209,6 +227,11 @@ internal fun NovaTasksScreen(
                 OutlinedTextField(current.dueText, { editor = current.copy(dueText = it.take(10)) },
                     modifier = Modifier.fillMaxWidth(), label = { Text("Due date (YYYY-MM-DD)") },
                     isError = invalidDate, singleLine = true, enabled = !loading)
+                OutlinedTextField(current.reminderText, { editor = current.copy(reminderText = it.take(8)) },
+                    modifier = Modifier.fillMaxWidth(), label = { Text("Reminder time (HH:MM, optional)") },
+                    supportingText = { if (invalidReminder) Text("Enter a valid time and set a due date.") },
+                    isError = invalidReminder, singleLine = true, enabled = !loading)
+                if (reminder != null) NovaReminderPermission(space, !loading)
                 OutlinedTextField(task.tags, { editor = current.copy(task = task.copy(tags = it.take(200))) },
                     modifier = Modifier.fillMaxWidth(), label = { Text("Tags") }, singleLine = true, enabled = !loading)
                 Row(Modifier.horizontalScroll(rememberScrollState())) {
@@ -264,8 +287,8 @@ internal fun NovaTasksScreen(
                 }
                 Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     Button(enabled = !loading && task.title.isNotBlank() && task.subtasks.all { it.title.isNotBlank() } &&
-                        subtaskTitle.isBlank() && !invalidDate && (task.repeat == NovaTaskRepeat.NONE || due != null), onClick = {
-                        val updated = task.copy(title = task.title.trim(), project = task.project.trim(), due = due,
+                        subtaskTitle.isBlank() && !invalidDate && !invalidReminder && (task.repeat == NovaTaskRepeat.NONE || due != null), onClick = {
+                        val updated = task.copy(title = task.title.trim(), project = task.project.trim(), due = due, remindAt = reminder,
                             subtasks = task.subtasks.map { it.copy(title = it.title.trim()) },
                             repeatDay = if (due == task.due) task.repeatDay else due?.dayOfMonth)
                         val tasks = if (savedTasks.any { it.id == task.id }) {

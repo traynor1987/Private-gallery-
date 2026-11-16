@@ -7,6 +7,10 @@ import java.io.File
 import java.util.UUID
 import org.junit.Assert.*
 import org.junit.Test
+import uk.co.traynor.privategallery.home2.NovaNote
+import uk.co.traynor.privategallery.home2.NovaNotesLibrary
+import uk.co.traynor.privategallery.home2.NovaReminders
+import uk.co.traynor.privategallery.home2.NovaTask
 import uk.co.traynor.privategallery.core.evidence.EvidenceAccess
 import uk.co.traynor.privategallery.core.hidden.HiddenSession
 
@@ -53,6 +57,68 @@ class SpacePreferencesTest {
   })
   f.space.close()
   refused { notes.read("draft") }
+ }
+
+ @Test fun attachment_is_recovered_after_reauthentication_and_portable_without_source_access() = Fixture().use { f ->
+  val notes = NovaNotesLibrary(f.space)
+  val note = NovaNote("attachment-note", "Private", "Draft")
+  assertNotNull(notes.writeDraft(notes.readDraft(), null, note))
+  val source = File(f.root, "example.txt").apply { writeText("PRIVATE_ATTACHMENT_TEST") }
+  val attachment = NovaNoteAttachment("file-example", "example.txt", "text/plain",
+   java.util.Base64.getEncoder().encodeToString(source.readBytes()))
+  f.space.close()
+  f.identity = Any()
+  f.access().use { reopened ->
+   SpaceContext(f.context, reopened).use { space ->
+    val writer = NovaNotesLibrary(space)
+    assertFalse(writer.attachToDraft("another-note", attachment))
+    assertTrue(writer.attachToDraft(note.id, attachment))
+    assertTrue(writer.attachToDraft(note.id, attachment))
+    assertTrue(source.delete())
+    val draft = writer.readDraft()
+    assertEquals(listOf(attachment), draft.note?.attachments)
+    assertNotNull(writer.finishDraft(draft, false))
+    val values = space.backupValues()
+    try {
+     writer.save(writer.read(), emptyList())
+     space.restoreBackupValues(values)
+     val recovered = writer.read().notes.single().attachments.single()
+     assertArrayEquals("PRIVATE_ATTACHMENT_TEST".toByteArray(), recovered.readBytes())
+    } finally {
+     values.values.forEach { it.fill(0) }
+    }
+   }
+  }
+ }
+
+ @Test fun reminders_persist_reschedule_and_cancel_through_the_android_alarm() = Fixture().use { f ->
+  val context = object : ContextWrapper(f.context) {
+   override fun getApplicationContext(): Context = this
+  }
+  val zone = java.time.ZoneId.systemDefault()
+  val date = java.time.LocalDate.now(zone).plusDays(2)
+  val first = NovaTask("reminder-task", "Private task", due = date, remindAt = java.time.LocalTime.of(10, 0))
+  val edited = first.copy(remindAt = java.time.LocalTime.of(11, 0))
+  fun next(time: java.time.LocalTime) = date.atTime(time).atZone(zone).toInstant()
+  fun registered() = android.app.PendingIntent.getBroadcast(context, 0,
+   android.content.Intent(context, uk.co.traynor.privategallery.home2.NovaReminderReceiver::class.java).setAction(NovaReminders.ALARM),
+   android.app.PendingIntent.FLAG_NO_CREATE or android.app.PendingIntent.FLAG_IMMUTABLE)
+  SpaceContext(context, f.primary).use { store ->
+   try {
+    NovaReminders.syncTasks(store, listOf(first))
+    assertNotNull(registered())
+    assertEquals(next(checkNotNull(first.remindAt)), NovaReminders.nextScheduledAt(context, zone))
+    NovaReminders.dispatch(context, shouldNotify = false)
+    assertEquals(next(checkNotNull(first.remindAt)), NovaReminders.nextScheduledAt(context, zone))
+    NovaReminders.syncTasks(store, listOf(edited))
+    NovaReminders.syncTasks(store, listOf(edited))
+    assertEquals(next(checkNotNull(edited.remindAt)), NovaReminders.nextScheduledAt(context, zone))
+   } finally {
+    NovaReminders.syncTasks(store, emptyList())
+   }
+  }
+  assertNull(NovaReminders.nextScheduledAt(context, zone))
+  assertNull(registered())
  }
 
  @Test fun standard_types_are_encrypted_round_trip_with_defensive_copies_and_merge() = Fixture().use { f ->

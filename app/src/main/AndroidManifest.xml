@@ -78,6 +78,13 @@
     </service>
     <receiver android:name=".launcher.GuardianReviewLaterReceiver" android:exported="false" />
     <receiver android:name=".core.sanctuary.SanctuaryDndCleanupReceiver" android:exported="false" />
+    <receiver android:name=".home2.NovaReminderReceiver" android:exported="false">
+      <intent-filter>
+        <action android:name="android.intent.action.BOOT_COMPLETED" />
+        <action android:name="android.intent.action.TIME_SET" />
+        <action android:name="android.intent.action.TIMEZONE_CHANGED" />
+      </intent-filter>
+    </receiver>
     <receiver android:name=".core.sanctuary.SanctuaryBootReceiver" android:exported="false">
       <intent-filter><action android:name="android.intent.action.BOOT_COMPLETED" /></intent-filter>
     </receiver>

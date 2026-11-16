@@ -87,6 +87,8 @@ private val lightColors=lightColorScheme(primary=Color(0xFF285F65),secondary=Col
    var arcadeGame by remember{mutableStateOf<String?>(null)}
    var screen by remember{mutableStateOf("home")}
    var openedCoreLink by remember { mutableStateOf<NovaCoreLink?>(null) }
+   var notesPickerRevision by remember{mutableIntStateOf(0)}
+   var notesPickerMessage by remember{mutableStateOf<String?>(null)}
    var filesPickerRevision by remember{mutableIntStateOf(0)}
    var filesPickerMessage by remember{mutableStateOf<String?>(null)}
    val visual = remember { VisualNavigator() }
@@ -149,7 +151,11 @@ private val lightColors=lightColorScheme(primary=Color(0xFF285F65),secondary=Col
    }
    LaunchedEffect(filesPicker?.returned) {
     val request = filesPicker?.returned ?: return@LaunchedEffect
-    if(state.current=="primary" && permitSanctuaryRoute("nova-files")) {
+    if(request.noteId!=null) {
+     if(state.current=="primary" && permitSanctuaryRoute("nova-notes-draft")) {
+      screen="nova-notes-draft";notesPickerRevision++;notesPickerMessage=request.message
+     }
+    } else if(state.current=="primary" && permitSanctuaryRoute("nova-files")) {
      screen="nova-files";filesPickerRevision++;filesPickerMessage=request.message
     }
     filesPicker.acknowledge()
@@ -367,8 +373,11 @@ private val lightColors=lightColorScheme(primary=Color(0xFF285F65),secondary=Col
          "recents"->NovaRecents(data,pool,onHome=goHome,onResume=resumeTab,onInternal={id->if(permitSanctuaryRoute(id)){if(id in nativeHomeApps)onNative(id)else screen=id}},onCloseInternal={id->if(id=="browser-v1")onNative("close-browser");data.shell.closeInternal(state.current,id);if(id=="mind")audio.pause();if(id=="video")video.close()})
          "nova-notes-draft"->if(state.current=="primary" && permitSanctuaryRoute("nova-notes-draft")) {
           (localContext as? uk.co.traynor.privategallery.core.home2.SpaceContext)?.let { space ->
-           NovaNotesDraft(space, onBack=goHome,
-            openNoteId=linkedRecord?.takeIf { it.app == NovaCoreApp.NOTES }?.id, onOpenLink=openCoreLink)
+           key(notesPickerRevision) {
+            NovaNotesDraft(space, onBack=goHome,
+             openNoteId=linkedRecord?.takeIf { it.app == NovaCoreApp.NOTES }?.id, onOpenLink=openCoreLink,
+             chooseAttachment=filesPicker?.chooseAttachment, attachmentMessage=notesPickerMessage)
+           }
           }
          }
          "nova-tasks"->if(state.current=="primary" && permitSanctuaryRoute("nova-tasks")) {

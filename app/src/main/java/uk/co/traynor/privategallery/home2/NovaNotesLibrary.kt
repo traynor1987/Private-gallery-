@@ -7,6 +7,7 @@ import org.json.JSONObject
 import uk.co.traynor.privategallery.core.home2.NovaCoreApp
 import uk.co.traynor.privategallery.core.home2.NovaCoreAppDocuments
 import uk.co.traynor.privategallery.core.home2.SpaceContext
+import uk.co.traynor.privategallery.core.home2.NovaNoteAttachment
 
 internal data class NovaNote(
     val id: String,
@@ -15,6 +16,7 @@ internal data class NovaNote(
     val pinned: Boolean = false,
     val notebook: String = "",
     val tags: String = "",
+    val attachments: List<NovaNoteAttachment> = emptyList(),
 )
 
 internal class NovaNotesLibrary(space: SpaceContext) {
@@ -53,6 +55,14 @@ internal class NovaNotesLibrary(space: SpaceContext) {
         val value = JSONObject().put("baseFingerprint", fingerprint).put("note", encode(note))
         val saved = documents.save(EDITOR, previous.revision, value.toString()) ?: return null
         return Draft(saved.revision, fingerprint, note)
+    }
+
+    fun attachToDraft(noteId: String, attachment: NovaNoteAttachment): Boolean {
+        val draft = readDraft()
+        val note = draft.note?.takeIf { it.id == noteId } ?: return false
+        if (note.attachments.any { it.id == attachment.id }) return true
+        if (note.attachments.size >= NovaNoteAttachment.MAX_COUNT) return false
+        return writeDraft(draft, null, note.copy(attachments = note.attachments + attachment)) != null
     }
 
     fun discardDraft(previous: Draft): Draft? {
@@ -94,6 +104,7 @@ internal class NovaNotesLibrary(space: SpaceContext) {
     private fun fingerprint(note: NovaNote): String {
         val fields = JSONArray(listOf(note.id, note.title, note.body, note.pinned))
         if (note.notebook.isNotEmpty() || note.tags.isNotEmpty()) fields.put(note.notebook).put(note.tags)
+        if (note.attachments.isNotEmpty()) fields.put(JSONArray(note.attachments.map { it.encode() }))
         val digest = MessageDigest.getInstance("SHA-256")
         for (unit in fields.toString()) {
             digest.update((unit.code ushr 8).toByte())
@@ -107,11 +118,20 @@ internal class NovaNotesLibrary(space: SpaceContext) {
             .apply {
                 if (note.notebook.isNotEmpty()) put("notebook", note.notebook)
                 if (note.tags.isNotEmpty()) put("tags", note.tags)
+                if (note.attachments.isNotEmpty()) {
+                    require(note.attachments.size <= NovaNoteAttachment.MAX_COUNT)
+                    put("attachments", JSONArray(note.attachments.map { it.encode() }))
+                }
             }
 
     private fun decode(entry: JSONObject) = NovaNote(
         entry.getString("id"), entry.getString("title"), entry.getString("body"), entry.getBoolean("pinned"),
         entry.optString("notebook"), entry.optString("tags"),
+        entry.optJSONArray("attachments")?.let { attachments ->
+            require(attachments.length() <= NovaNoteAttachment.MAX_COUNT)
+            List(attachments.length()) { NovaNoteAttachment.decode(attachments.getJSONObject(it)) }
+                .also { require(it.map(NovaNoteAttachment::id).toSet().size == it.size) }
+        }.orEmpty(),
     )
 
     private companion object {

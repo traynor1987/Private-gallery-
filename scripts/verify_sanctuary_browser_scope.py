@@ -224,5 +224,18 @@ assert review_later.attrib == {ANDROID + "name": ".launcher.GuardianReviewLaterR
 assert len(review_later) == 0
 application.remove(review_later)
 
+reminder, = [node for node in application.findall("receiver")
+             if node.get(ANDROID + "name") == ".home2.NovaReminderReceiver"]
+assert structure(reminder) == structure(ET.fromstring(f"""
+    <receiver xmlns:android="{ANDROID[1:-1]}" android:name=".home2.NovaReminderReceiver" android:exported="false">
+      <intent-filter>
+        <action android:name="android.intent.action.BOOT_COMPLETED" />
+        <action android:name="android.intent.action.TIME_SET" />
+        <action android:name="android.intent.action.TIMEZONE_CHANGED" />
+      </intent-filter>
+    </receiver>
+""")), "Only the private reminder receiver and the three system broadcasts are permitted"
+application.remove(reminder)
+
 assert structure(before) == structure(after), "The existing manifest or permission set changed"
 print("PASS: Code 69 protected engines, original package and other permissions preserved; Home and call screening are additive")

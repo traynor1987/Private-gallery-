@@ -6,6 +6,7 @@ import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.ZoneId
+import java.util.Base64
 import org.json.JSONArray
 import org.json.JSONObject
 import uk.co.traynor.privategallery.core.backup.PortablePreferenceSchema
@@ -70,6 +71,32 @@ internal class NovaCoreAppDocuments(space: SpaceContext, app: NovaCoreApp) {
         private val lock = Any()
         private val ID = Regex("[a-zA-Z0-9_-]{1,80}")
         internal const val MAX_DOCUMENT_CHARS = 262_144
+    }
+}
+
+internal data class NovaNoteAttachment(val id: String, val name: String, val mime: String, val content: String) {
+    fun readBytes(): ByteArray {
+        require(id.isNotBlank() && id.length <= 80 && name.isNotBlank() && name.length <= 160)
+        require(mime.length <= 100 && mime.matches(MIME))
+        require(content.length <= MAX_BYTES * 4 / 3)
+        return Base64.getDecoder().decode(content).also {
+            require(it.size <= MAX_BYTES)
+        }
+    }
+
+    fun encode(): JSONObject = JSONObject().put("id", id).put("name", name)
+        .put("mime", mime).put("content", content)
+
+    companion object {
+        const val MAX_BYTES = 24 * 1024
+        const val MAX_COUNT = 3
+        private val MIME = Regex("[a-zA-Z0-9.+_-]+/[a-zA-Z0-9.+_-]+")
+
+        fun decode(value: JSONObject): NovaNoteAttachment {
+            PortablePreferenceSchema.keys(value, setOf("id", "name", "mime", "content"))
+            return NovaNoteAttachment(value.getString("id"), value.getString("name"),
+                value.getString("mime"), value.getString("content")).also { it.readBytes().fill(0) }
+        }
     }
 }
 
@@ -151,24 +178,31 @@ internal object NovaCoreAppBackup {
     }
 
     private fun note(value: JSONObject) {
-        keys(value, "id", "title", "body", "pinned", "notebook", "tags")
+        keys(value, "id", "title", "body", "pinned", "notebook", "tags", "attachments")
         id(value)
         text(value, "title", 200)
         text(value, "body", 32_000)
         flag(value, "pinned")
         optional(value, "notebook") { text(value, "notebook", 120) }
         optional(value, "tags") { text(value, "tags", 200) }
+        optional(value, "attachments") {
+            records(value.getJSONArray("attachments"), NovaNoteAttachment.MAX_COUNT) { NovaNoteAttachment.decode(it) }
+        }
     }
 
     private fun task(value: JSONObject) {
         keys(value, "id", "title", "description", "project", "due", "priority", "completed", "repeat", "repeatDay",
-            "nextCreated", "tags", "subtasks", "noteId")
+            "nextCreated", "tags", "subtasks", "noteId", "remindAt")
         id(value)
         text(value, "title", 200)
         text(value, "description", 4_096)
         text(value, "project", 120)
         val due = text(value, "due", 10)
         if (due.isNotEmpty()) date(due)
+        optional(value, "remindAt") {
+            require(due.isNotEmpty())
+            require(runCatching { LocalTime.parse(text(value, "remindAt", 20)) }.isSuccess)
+        }
         require(text(value, "priority", 12) in setOf("NONE", "LOW", "NORMAL", "HIGH"))
         flag(value, "completed")
         optional(value, "repeat") { require(text(value, "repeat", 12) in setOf("NONE", "DAILY", "WEEKLY", "MONTHLY")) }
@@ -186,7 +220,8 @@ internal object NovaCoreAppBackup {
     }
 
     private fun event(value: JSONObject) {
-        keys(value, "id", "title", "description", "firstDate", "time", "zone", "minutes", "repeat", "skippedDates", "noteId")
+        keys(value, "id", "title", "description", "firstDate", "time", "zone", "minutes", "repeat", "skippedDates", "noteId", "reminderMinutes")
+        optional(value, "reminderMinutes") { number(value, "reminderMinutes", 0, 1440) }
         id(value)
         text(value, "title", 200)
         text(value, "description", 4_096)

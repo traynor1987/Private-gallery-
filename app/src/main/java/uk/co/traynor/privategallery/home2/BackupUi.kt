@@ -286,8 +286,13 @@ private data class BackupNotice(val message: String, val failed: Boolean = false
      val candidate=plan?:return@TextButton
      operation{captured->
       captured.restoreSettings(candidate)
+      val remindersRestored = captured.owner != "primary" || runCatching {
+       NovaReminders.syncTasks(captured.space, NovaTaskLibrary(captured.space).read().tasks)
+       NovaReminders.syncCalendar(captured.space, NovaCalendarLibrary(captured.space).read().events)
+      }.isSuccess
       withContext(Dispatchers.Main.immediate){dismiss();onSettingsRestored()}
-      "Supported settings restored."
+      if (remindersRestored) "Supported settings restored."
+      else "Settings restored. Reopen Tasks and Calendar to restore Android reminders."
      }
     }){Text("Replace settings")}
    },
