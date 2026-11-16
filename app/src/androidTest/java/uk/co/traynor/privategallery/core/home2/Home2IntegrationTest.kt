@@ -33,6 +33,11 @@ import uk.co.traynor.privategallery.core.hidden.HiddenSession
 import uk.co.traynor.privategallery.core.privateapps.PrivateAppCatalog
 import uk.co.traynor.privategallery.core.privateapps.PrivateAppStore
 import uk.co.traynor.privategallery.home2.IntegratedHome
+import uk.co.traynor.privategallery.home2.NovaTasksScreen
+import uk.co.traynor.privategallery.home2.NovaNotesDraft
+import uk.co.traynor.privategallery.home2.NovaFilesScreen
+import uk.co.traynor.privategallery.home2.NovaClipboardScreen
+import uk.co.traynor.privategallery.home2.NovaCalendarScreen
 import uk.co.traynor.privategallery.home2.NovaLockEntry
 import uk.co.traynor.privategallery.home2.NovaClipboardLibrary
 import uk.co.traynor.privategallery.home2.NovaFilesAccess
@@ -479,10 +484,11 @@ class Home2IntegrationTest {
   }
  }
 
- @Test fun notes_actions_remain_reachable_on_cover_and_inner_with_large_text() {
+ @Test fun core_app_actions_remain_reachable_on_cover_and_inner_with_large_text() {
   SpaceFixture(false, compose.activity).use { f ->
    SpaceContext(f.context, f.access).use { space ->
     var unfolded by mutableStateOf(false)
+    var app by mutableStateOf(NovaCoreApp.NOTES)
     var exits = 0
     compose.setContent {
      BoxWithConstraints(Modifier.fillMaxSize()) {
@@ -494,27 +500,45 @@ class Home2IntegrationTest {
        androidx.compose.ui.unit.Density(density.density, fontScale = 2f)) {
        Box(Modifier.requiredSize(width, height)) {
         androidx.compose.material3.MaterialTheme {
-         uk.co.traynor.privategallery.home2.NovaNotesDraft(space, onBack = { exits++ })
+         val onDone: () -> Unit = { exits++ }
+         when (app) {
+          NovaCoreApp.NOTES -> NovaNotesDraft(space, onBack = onDone)
+          NovaCoreApp.TASKS -> NovaTasksScreen(space, onBack = onDone)
+          NovaCoreApp.CALENDAR -> NovaCalendarScreen(space, onBack = onDone)
+          NovaCoreApp.FILES -> NovaFilesScreen(space, onBack = onDone, onChooseFolder = {}, pickerMessage = null)
+          NovaCoreApp.CLIPBOARD -> NovaClipboardScreen(space, onBack = onDone)
+         }
         }
        }
       }
      }
     }
-    compose.waitUntil(10_000) {
-     compose.onAllNodes(hasText("New note") and isEnabled()).fetchSemanticsNodes().isNotEmpty()
-    }
-    fun verifyActions() {
-     val screen = compose.onNodeWithTag("nova-notes-draft").getUnclippedBoundsInRoot()
-     listOf("New note", "Reload", "Done").forEach { label ->
-      val bounds = compose.onNodeWithText(label).assertIsDisplayed().assertIsEnabled().getUnclippedBoundsInRoot()
-      assertTrue("$label must fit inside the workspace", (bounds.right - bounds.left) >= 48.dp &&
-       bounds.left >= screen.left && bounds.right <= screen.right)
+    val creationActions = mapOf(
+     NovaCoreApp.NOTES to "New note",
+     NovaCoreApp.TASKS to "New task",
+     NovaCoreApp.CALENDAR to "New event",
+     NovaCoreApp.FILES to "Choose folder",
+     NovaCoreApp.CLIPBOARD to "New snippet",
+    )
+    for ((workspace, creationAction) in creationActions) {
+     compose.runOnIdle { app = workspace; unfolded = false }
+     compose.waitUntil(10_000) {
+      compose.onAllNodes(hasText(creationAction) and isEnabled()).fetchSemanticsNodes().isNotEmpty()
+     }
+     val actions = if (workspace == NovaCoreApp.FILES) listOf(creationAction, "Done")
+      else listOf(creationAction, "Reload", "Done")
+     for (inner in listOf(false, true)) {
+      compose.runOnIdle { unfolded = inner }
+      val screen = compose.onNodeWithTag(workspace.route).getUnclippedBoundsInRoot()
+      for (label in actions) {
+       val bounds = compose.onNodeWithText(label).assertIsDisplayed().assertIsEnabled().getUnclippedBoundsInRoot()
+       assertTrue("${workspace.label} $label must fit inside the workspace",
+        (bounds.right - bounds.left) >= 48.dp && bounds.left >= screen.left && bounds.right <= screen.right)
+      }
+      compose.onNodeWithText("Done").performClick()
      }
     }
-    verifyActions()
-    compose.onNodeWithText("Done").performClick()
-    compose.runOnIdle { assertEquals(1, exits); unfolded = true }
-    verifyActions()
+    compose.runOnIdle { assertEquals(creationActions.size * 2, exits) }
    }
   }
  }
