@@ -41,7 +41,15 @@ class BackupUi62Test {
   val owner=WallpaperOwner(if(hidden)EvidenceCatalog.Owner.HIDDEN else EvidenceCatalog.Owner.PRIMARY,{live.get()&&(!hidden||f.session.isAuthenticationCurrent(auth))},{if(hidden)EvidenceAccess.hidden(f.context,f.session){live.get()}else EvidenceAccess.primary(f.context,f.key,{f.key},{live.get()},{f.key.copyOf()},Any())})
   try{compose.setContent{if(attached)CompositionLocalProvider(LocalContext provides f.context,LocalActivityResultRegistryOwner provides object:ActivityResultRegistryOwner{override val activityResultRegistry=picker}){MaterialTheme{BackupHost(owner,true,onClose={attached=false})}}}
    compose.waitUntil(10000){compose.onAllNodesWithTag("nova-backup").fetchSemanticsNodes().isNotEmpty()};action(f,picker,live)
-  }finally{compose.runOnIdle{attached=false;live.set(false)};f.close();root.deleteRecursively()}
+  } finally {
+   compose.runOnIdle { attached = false; live.set(false) }
+   try {
+    compose.waitForIdle()
+   } finally {
+    f.close()
+    check(root.deleteRecursively()) { "Backup UI fixture cleanup failed" }
+   }
+  }
  }
  @Test fun primaryScheduleHydratesPersistedCheckboxesAndHasNoHiddenDisclosure() {
   val prefs=compose.activity.getSharedPreferences("nova-backup-due",0);val charging=prefs.getBoolean("charging",true);val wifi=prefs.getBoolean("wifi",true)
