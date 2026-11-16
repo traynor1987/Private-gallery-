@@ -33,6 +33,9 @@ import uk.co.traynor.privategallery.home2.IntegratedHome
 import uk.co.traynor.privategallery.home2.NovaLockEntry
 import uk.co.traynor.privategallery.home2.NovaNote
 import uk.co.traynor.privategallery.home2.NovaNotesLibrary
+import uk.co.traynor.privategallery.home2.NovaTask
+import uk.co.traynor.privategallery.home2.NovaTaskLibrary
+import uk.co.traynor.privategallery.home2.NovaTaskPriority
 import uk.co.traynor.privategallery.home2.WidgetData
 
 /** Exercises the integrated launcher, its real encrypted Space context and production app adapter.
@@ -146,6 +149,37 @@ class Home2IntegrationTest {
   compose.waitUntil(5_000){compose.runOnIdle {compose.activity.window.decorView.hasWindowFocus()}}
  }
 
+
+
+ @Test fun task_drawer_entry_opens_the_private_tasks_screen() {
+  showHome()
+  openDrawer()
+  compose.onNodeWithTag("drawer-search").performTextInput("Nova Tasks")
+  Espresso.closeSoftKeyboard()
+  compose.onNodeWithTag("drawer-nova-tasks").assertIsDisplayed().performClick()
+  compose.onNodeWithTag("nova-tasks").assertIsDisplayed()
+ }
+
+ @Test fun tasks_keep_due_date_completion_and_project_after_reopen() {
+  SpaceFixture(false, compose.activity).use { f ->
+   SpaceContext(f.context, f.access).use { space ->
+    val tasks = NovaTaskLibrary(space)
+    val initial = tasks.read()
+    val task = NovaTask("prepare", "Prepare", "Review fixtures", "Code 81",
+     java.time.LocalDate.of(2026, 11, 20), NovaTaskPriority.HIGH)
+    val saved = checkNotNull(tasks.save(initial, listOf(task)))
+    assertNull(tasks.save(initial, emptyList()))
+    assertNotNull(tasks.save(saved, listOf(task.copy(completed = true))))
+   }
+   SpaceContext(f.context, f.access).use { space ->
+    val saved = NovaTaskLibrary(space).read().tasks.single()
+    assertTrue(saved.completed)
+    assertEquals("Code 81", saved.project)
+    assertEquals(java.time.LocalDate.of(2026, 11, 20), saved.due)
+    assertEquals(NovaTaskPriority.HIGH, saved.priority)
+   }
+  }
+ }
 
  @Test fun notes_keep_the_legacy_draft_and_persist_multiple_edits_without_overwriting_newer_changes() {
   SpaceFixture(false, compose.activity).use { f ->
