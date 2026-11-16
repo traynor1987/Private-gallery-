@@ -60,7 +60,8 @@ class LauncherSmartFolderStore73Test {
         }
     }
 
-    @Test fun legacyPortableLayoutRetainsPlainShortcutsAndManualFolders() {
+    @Test fun legacyPortableLayoutDissolvesSingletonInPlaceAndRetainsManualFolder() {
+        val browserApp = "com.example.browser/.BrowserActivity"
         val store = NovaLauncherStore(context)
         val before = store.read()
         try {
@@ -69,7 +70,8 @@ class LauncherSmartFolderStore73Test {
                   "type":"nova-launcher-layout","schema":1,"separateDisplays":true,
                   "cover":{
                     "pages":[[{"type":"app","component":"$personalApp"},
-                              {"type":"folder","name":"Chat","apps":["$personalApp"]}]],
+                              {"type":"folder","name":"Browser","apps":["$browserApp"]},
+                              {"type":"folder","name":"Chat","apps":["$personalApp","$workApp"]}]],
                     "dock":[{"type":"workspace"}],"favourites":["$personalApp"]
                   },
                   "inner":{"pages":[[]],"dock":[{"type":"workspace"}],"favourites":[]},
@@ -83,10 +85,14 @@ class LauncherSmartFolderStore73Test {
             assertTrue(store.restoreLayout(legacy))
             assertEquals(
                 LauncherLayout(
-                    pages = listOf(listOf(LauncherItem.App(personalApp), LauncherItem.Folder("Chat", listOf(personalApp)))),
+                    pages = listOf(listOf(
+                        LauncherItem.App(personalApp),
+                        LauncherItem.App(browserApp),
+                        LauncherItem.Folder("Chat", listOf(personalApp, workApp)),
+                    )),
                     favourites = setOf(personalApp),
                 ),
-                store.read().cover,
+                NovaLauncherStore(context).read().cover,
             )
         } finally {
             assertTrue(store.save(before))
