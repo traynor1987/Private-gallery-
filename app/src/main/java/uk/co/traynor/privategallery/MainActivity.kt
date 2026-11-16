@@ -816,6 +816,7 @@ class MainActivity : FragmentActivity() {
         decor.invalidate()
     }
     internal fun panicExit() {
+        novaFilesPickerTicket.clear()
         panicCoverPending=true
         coverSensitiveContent()
         lock()
@@ -1265,6 +1266,10 @@ class MainActivity : FragmentActivity() {
         }
     }
 
+    private val novaFilesPickerTicket get() = retained.novaFilesPickerTicket
+    private val novaFilesFolderPicker = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
+        novaFilesPickerTicket.accept(it)
+    }
     private var launcherEntry by mutableStateOf<String?>(null)
     private var standalonePrimaryVaultChrome by mutableStateOf(false)
 
@@ -2324,6 +2329,7 @@ class MainActivity : FragmentActivity() {
         (homeVisible || novaHomeAdmissionRequired())
     @Composable private fun HomePresentation() {
         val hidden=retained.hidden.selected
+        if (hidden) SideEffect { novaFilesPickerTicket.clear() }
         val admitted=!hideContent && route in setOf(Route.GALLERY,Route.VAULT,Route.FAVOURITE,Route.BROWSER,Route.SETTINGS) &&
             if(hidden)retained.hidden.authenticated&&retained.hidden.session.isUnlocked else session.isUnlocked&&sessionKey!=null
         if(!admitted)return
@@ -2381,6 +2387,8 @@ class MainActivity : FragmentActivity() {
             },
             wallpaperOwnerFactory=::homeWallpaperOwner,
             externalRecentsRequest=novaRecentsRequested,onRecentsConsumed={novaRecentsRequested=0},
+            activityFilesTicket=if(hidden)null else novaFilesPickerTicket,
+            activityFilesLaunch=if(hidden)null else { request -> novaFilesFolderPicker.launch(request) },
             onThemeConnection={data ->
                 if(data!=null&&access.current()) {
                     homeThemeAccess=access;homeThemeData=data

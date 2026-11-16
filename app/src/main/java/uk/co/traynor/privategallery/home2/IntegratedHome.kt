@@ -12,7 +12,7 @@ import uk.co.traynor.privategallery.core.home2.NativeAppsBridge
 import uk.co.traynor.privategallery.core.home2.SpaceContext
 
 /** Existing preview components, backed exclusively by a captured real Space authority. */
-@Composable internal fun IntegratedHome(access:EvidenceAccess,visible:Boolean,onLaunch:(String)->Unit,onLock:()->Unit,onPanic:()->Unit,onSwitch:(()->Unit)?,apps:NativeAppsBridge?,nativeThemeFallback:String?=null,onThemeCommitted:(String)->Unit={},onThemeConnection:(PreviewData?)->Unit={},wallpaperOwnerFactory:(()->uk.co.traynor.privategallery.core.home2.WallpaperOwner?)?=null,externalRecentsRequest:Int=0,onRecentsConsumed:()->Unit={}) {
+@Composable internal fun IntegratedHome(access:EvidenceAccess,visible:Boolean,onLaunch:(String)->Unit,onLock:()->Unit,onPanic:()->Unit,onSwitch:(()->Unit)?,apps:NativeAppsBridge?,nativeThemeFallback:String?=null,onThemeCommitted:(String)->Unit={},onThemeConnection:(PreviewData?)->Unit={},wallpaperOwnerFactory:(()->uk.co.traynor.privategallery.core.home2.WallpaperOwner?)?=null,externalRecentsRequest:Int=0,onRecentsConsumed:()->Unit={},activityFilesTicket:NovaFilesPickerTicket?=null,activityFilesLaunch:((android.content.Intent)->Unit)?=null) {
  val base=LocalContext.current
  val context=remember(access){SpaceContext(base,access)}
  val lifecycle=androidx.lifecycle.compose.LocalLifecycleOwner.current
@@ -51,7 +51,7 @@ import uk.co.traynor.privategallery.core.home2.SpaceContext
  LaunchedEffect(visible){if(visible&&context.current())models.getOrNull()?.data?.let{it.refreshInstalled();it.refreshWallpaper()}}
  DisposableEffect(lifecycle){val observer=androidx.lifecycle.LifecycleEventObserver{_,event->if(event==androidx.lifecycle.Lifecycle.Event.ON_PAUSE||event==androidx.lifecycle.Lifecycle.Event.ON_STOP){audio.pause();video.pause()}};lifecycle.lifecycle.addObserver(observer);onDispose{lifecycle.lifecycle.removeObserver(observer)}}
  val filesPicker = if (access.owner == uk.co.traynor.privategallery.core.evidence.EvidenceCatalog.Owner.PRIMARY)
-  rememberNovaFilesPicker(context) else null
+  rememberNovaFilesPicker(context,visible&&live,activityFilesTicket,activityFilesLaunch) else null
  NovaHomeStatusBarPolicy(visible&&live&&context.current())
  if(!visible||!live||!context.current())return
  val value=models.getOrElse{

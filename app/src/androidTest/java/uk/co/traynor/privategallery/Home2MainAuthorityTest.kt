@@ -14,6 +14,65 @@ class Home2MainAuthorityTest {
  @get:Rule val compose=createEmptyComposeRule()
  private fun state(activity:MainActivity)=ViewModelProvider(activity)[ProtectedSessionState::class.java]
  @Suppress("UNCHECKED_CAST") private fun route(activity:MainActivity) = MainActivity::class.java.getDeclaredField("route\$delegate").apply{isAccessible=true}.get(activity) as MutableState<Route>
+
+ @Test fun files_folder_picker_preserves_the_default_lock_and_finishes_after_primary_reauthentication(){
+  var root: java.io.File? = null
+  var previous: java.io.File? = null
+  val key = ByteArray(32) { 67 }
+  fun admit(activity: MainActivity) {
+   val owner = state(activity)
+   owner.hidden.leave()
+   owner.session.setTimeout(uk.co.traynor.privategallery.core.security.AutoLockTimeout.IMMEDIATELY)
+   owner.key = key.copyOf()
+   owner.session.unlock()
+   owner.homePrimaryAuthentication = owner.session.captureAuthenticationEpoch()
+   owner.homeVisible = true
+   route(activity).value = Route.GALLERY
+  }
+  try {
+   ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+    scenario.onActivity { activity ->
+     val directory = java.io.File(activity.filesDir, "evidence-state")
+     root = directory
+     if (directory.exists()) {
+      val backup = java.io.File(directory.parentFile, "evidence-state-files-" + java.util.UUID.randomUUID())
+      check(directory.renameTo(backup))
+      previous = backup
+     }
+     admit(activity)
+    }
+    compose.waitUntil(15_000) { compose.onAllNodesWithTag("open-apps").fetchSemanticsNodes().isNotEmpty() }
+    compose.onNodeWithTag("open-apps").performClick()
+    compose.onNodeWithTag("drawer-search").performTextInput("Nova Files")
+    androidx.test.espresso.Espresso.closeSoftKeyboard()
+    compose.onNodeWithTag("drawer-nova-files").assertIsDisplayed().performClick()
+    compose.waitUntil(10_000) {
+     compose.onAllNodes(hasText("Choose folder") and isEnabled()).fetchSemanticsNodes().isNotEmpty()
+    }
+    compose.onNodeWithText("Choose folder").performClick()
+    uk.co.traynor.privategallery.core.backup.BackupDocumentsUi62.folder()
+    compose.waitUntil(15_000) {
+     var locked = false
+     scenario.onActivity { activity -> locked = !state(activity).session.isUnlocked }
+     locked
+    }
+    scenario.onActivity { activity ->
+     assertFalse("Opening the folder picker must preserve auto-lock", state(activity).session.isUnlocked)
+     admit(activity)
+    }
+    compose.waitUntil(15_000) {
+     compose.onAllNodesWithText("Nova62 synthetic documents").fetchSemanticsNodes().isNotEmpty()
+    }
+    compose.onNodeWithTag("nova-files").assertIsDisplayed()
+    scenario.onActivity { it.panicExit() }
+   }
+  } finally {
+   key.fill(0)
+   root?.deleteRecursively()
+   previous?.let { check(it.renameTo(checkNotNull(root))) }
+  }
+ }
+
  @Test fun retained_hidden_authority_never_blocks_an_independent_primary_credential_request(){
   ActivityScenario.launch(MainActivity::class.java).use{scenario->scenario.onActivity{activity->
    val owner=state(activity)

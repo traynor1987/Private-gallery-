@@ -9,6 +9,7 @@ import uk.co.traynor.privategallery.core.security.*
 class ProtectedSessionState : ViewModel() {
     internal val hidden = uk.co.traynor.privategallery.ui.HiddenVaultState()
     internal val session = LockSession(AutoLockTimeout.IMMEDIATELY)
+    internal val novaFilesPickerTicket = uk.co.traynor.privategallery.home2.NovaFilesPickerTicket()
     @Volatile internal var key: ByteArray? = null
     internal var automaticBiometricPromptAttempted = false
     internal var route = Route.LOCK
@@ -22,5 +23,5 @@ class ProtectedSessionState : ViewModel() {
     internal var homePrimaryAuthentication:Long?=null
     internal var homeHiddenAuthentication:uk.co.traynor.privategallery.core.hidden.HiddenSession.Authentication?=null
     internal var primaryGallery by androidx.compose.runtime.mutableStateOf(false)
-    override fun onCleared() {clearNovaNavigation(); hidden.leave(); key?.fill(0); key = null; session.lock() }
+    override fun onCleared() {novaFilesPickerTicket.clear();clearNovaNavigation(); hidden.leave(); key?.fill(0); key = null; session.lock() }
 }
