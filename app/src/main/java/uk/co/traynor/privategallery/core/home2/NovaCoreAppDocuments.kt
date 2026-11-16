@@ -7,6 +7,7 @@ import java.time.LocalDate
 import java.time.LocalTime
 import java.time.ZoneId
 import java.util.Base64
+import java.util.Locale
 import org.json.JSONArray
 import org.json.JSONObject
 import uk.co.traynor.privategallery.core.backup.PortablePreferenceSchema
@@ -131,8 +132,18 @@ internal object NovaCoreAppBackup {
                 }
             } else when (app) {
                 NovaCoreApp.NOTES -> {
-                    keys(value, "notes")
+                    keys(value, "notes", "protectedNotebooks")
                     records(value.getJSONArray("notes"), validate = ::note)
+                    optional(value, "protectedNotebooks") {
+                        val names = value.getJSONArray("protectedNotebooks")
+                        require(names.length() <= 512)
+                        val unique = hashSetOf<String>()
+                        repeat(names.length()) { index ->
+                            val name = names.get(index)
+                            require(name is String && name.length in 1..120 && name.isNotBlank() &&
+                                name == name.trim().lowercase(Locale.ROOT) && unique.add(name))
+                        }
+                    }
                 }
                 NovaCoreApp.TASKS -> {
                     keys(value, "tasks")

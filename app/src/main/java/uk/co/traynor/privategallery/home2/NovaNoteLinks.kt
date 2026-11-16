@@ -41,8 +41,9 @@ internal fun NovaNotePicker(
     LaunchedEffect(space) {
         val result = withContext(Dispatchers.IO) { runCatching {
             val store = NovaNotesLibrary(space)
-            val saved = store.read().notes
-            val draft = if (includeDraft) store.readDraft().note else null
+            val library = store.read()
+            val saved = library.notes.filterNot(library::isProtected)
+            val draft = if (includeDraft) store.readDraft().note?.takeUnless { library.requiredProtection(it).isNotEmpty() } else null
             if (draft == null) saved else listOf(draft) + saved.filterNot { it.id == draft.id }
         } }
         if (space.current()) loaded = result

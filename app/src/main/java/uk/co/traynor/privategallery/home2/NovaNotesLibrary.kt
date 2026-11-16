@@ -2,6 +2,7 @@ package uk.co.traynor.privategallery.home2
 
 import java.security.MessageDigest
 import java.util.HexFormat
+import java.util.Locale
 import org.json.JSONArray
 import org.json.JSONObject
 import uk.co.traynor.privategallery.core.home2.NovaCoreApp
@@ -19,10 +20,24 @@ internal data class NovaNote(
     val attachments: List<NovaNoteAttachment> = emptyList(),
 )
 
+internal fun notebookKey(name: String) = name.trim().lowercase(Locale.ROOT)
+
 internal class NovaNotesLibrary(space: SpaceContext) {
     private val documents = NovaCoreAppDocuments(space, NovaCoreApp.NOTES)
 
-    data class Snapshot(val revision: Long?, val notes: List<NovaNote>)
+    data class Snapshot(
+        val revision: Long?, val notes: List<NovaNote>, val protectedNotebooks: Set<String> = emptySet(),
+    ) {
+        private val notesById by lazy { notes.associateBy(NovaNote::id) }
+
+        fun isProtected(note: NovaNote) = notebookKey(note.notebook) in protectedNotebooks
+
+        fun requiredProtection(note: NovaNote): Set<String> {
+            val original = notesById[note.id]?.notebook
+            return listOfNotNull(note.notebook, original).map(::notebookKey)
+                .filter { it in protectedNotebooks }.toSet()
+        }
+    }
 
     fun read(): Snapshot {
         val document = documents.read(LIBRARY)
@@ -33,10 +48,15 @@ internal class NovaNotesLibrary(space: SpaceContext) {
             }.orEmpty()
             return Snapshot(null, notes)
         }
-        val entries = JSONObject(document.json).getJSONArray("notes")
+        val value = JSONObject(document.json)
+        val entries = value.getJSONArray("notes")
+        val locked = value.optJSONArray("protectedNotebooks")?.let { array ->
+            require(array.length() <= 512)
+            (0 until array.length()).map { notebookKey(array.getString(it)) }.toSet()
+        }.orEmpty()
         return Snapshot(document.revision, List(entries.length()) { index ->
             decode(entries.getJSONObject(index))
-        })
+        }, locked)
     }
 
     data class Draft(val revision: Long?, val baseFingerprint: String?, val note: NovaNote?)
@@ -61,6 +81,7 @@ internal class NovaNotesLibrary(space: SpaceContext) {
         val draft = readDraft()
         val base = if (draft.note == null && allowStart) read().notes.find { it.id == noteId } else null
         val note = (draft.note ?: base)?.takeIf { it.id == noteId } ?: return false
+        if (allowStart && read().requiredProtection(note).isNotEmpty()) return false
         if (note.attachments.any { it.id == attachment.id }) return true
         if (note.attachments.size >= NovaNoteAttachment.MAX_COUNT) return false
         return writeDraft(draft, base, note.copy(attachments = note.attachments + attachment)) != null
@@ -72,9 +93,12 @@ internal class NovaNotesLibrary(space: SpaceContext) {
         return Draft(cleared.revision, null, null)
     }
 
-    fun finishDraft(draft: Draft, delete: Boolean, copyId: String? = null): Snapshot? {
+    fun finishDraft(
+        draft: Draft, delete: Boolean, copyId: String? = null, unlockedNotebooks: Set<String> = emptySet(),
+    ): Snapshot? {
         val note = requireNotNull(draft.note)
         val current = read()
+        if (!unlockedNotebooks.containsAll(current.requiredProtection(note))) return null
         require(copyId == null || (copyId.isNotBlank() && !delete))
         if (copyId != null && current.notes.any { it.id == copyId }) return null
         if (copyId == null && current.notes.find { it.id == note.id }?.let(::fingerprint) != draft.baseFingerprint) return null
@@ -85,21 +109,33 @@ internal class NovaNotesLibrary(space: SpaceContext) {
             else -> current.notes.map { if (it.id == note.id) note else it }
         }
         val saved = documents.saveTogether(mapOf(
-            LIBRARY to NovaCoreAppDocuments.Change(current.revision, encodeLibrary(notes)),
+            LIBRARY to NovaCoreAppDocuments.Change(current.revision, encodeLibrary(notes, current.protectedNotebooks)),
             EDITOR to NovaCoreAppDocuments.Change(draft.revision, "{}"),
         )) ?: return null
-        return Snapshot(saved.getValue(LIBRARY).revision, notes)
+        return Snapshot(saved.getValue(LIBRARY).revision, notes, current.protectedNotebooks)
     }
 
     fun save(previous: Snapshot, notes: List<NovaNote>): Snapshot? {
-        val document = documents.save(LIBRARY, previous.revision, encodeLibrary(notes)) ?: return null
-        return Snapshot(document.revision, notes.toList())
+        val document = documents.save(LIBRARY, previous.revision,
+            encodeLibrary(notes, previous.protectedNotebooks)) ?: return null
+        return Snapshot(document.revision, notes.toList(), previous.protectedNotebooks)
     }
 
-    private fun encodeLibrary(notes: List<NovaNote>): String {
+    fun setNotebookProtected(previous: Snapshot, notebook: String, protect: Boolean): Snapshot? {
+        val key = notebookKey(notebook)
+        require(key.isNotBlank() && key.length <= 120)
+        val names = if (protect) previous.protectedNotebooks + key else previous.protectedNotebooks - key
+        require(names.size <= 512)
+        val document = documents.save(LIBRARY, previous.revision, encodeLibrary(previous.notes, names)) ?: return null
+        return Snapshot(document.revision, previous.notes, names)
+    }
+
+    private fun encodeLibrary(notes: List<NovaNote>, protectedNotebooks: Set<String>): String {
         val entries = JSONArray()
         notes.forEach { entries.put(encode(it)) }
-        return JSONObject().put("notes", entries).toString()
+        val library = JSONObject().put("notes", entries)
+        if (protectedNotebooks.isNotEmpty()) library.put("protectedNotebooks", JSONArray(protectedNotebooks.sorted()))
+        return library.toString()
     }
 
     private fun fingerprint(note: NovaNote): String {

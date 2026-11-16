@@ -2415,6 +2415,16 @@ class MainActivity : FragmentActivity() {
             coreAppRequest=if(hidden)null else pendingCoreApp,
             onCoreAppRequestConsumed={pendingCoreApp=null},
             activityFilesLaunch=if(hidden)null else { request -> novaFilesFolderPicker.launch(request) },
+            verifyNotebookPin=if(hidden)null else { pin ->
+                try {
+                    val now = android.os.SystemClock.elapsedRealtime()
+                    val previous = privateAppPinAttemptAt.get()
+                    access.current() && !retained.hidden.selected && activityResumed &&
+                        (previous < 0 || now - previous >= 1_000) &&
+                        privateAppPinAttemptAt.compareAndSet(previous, now) &&
+                        verifySecretPin(pin) && access.current() && !retained.hidden.selected && activityResumed
+                } finally { pin.fill('\u0000') }
+            },
             onImportPrimaryFile=if(hidden)null else { uri, report ->
                 if(access.current() && !retained.hidden.selected && activityResumed) importSelected(listOf(uri), report, filesEntry = true)
                 else report("Primary Space is locked.")

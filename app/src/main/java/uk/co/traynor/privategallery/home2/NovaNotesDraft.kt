@@ -18,6 +18,12 @@ import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import java.util.UUID
@@ -29,6 +35,8 @@ import uk.co.traynor.privategallery.core.home2.NovaNoteAttachment
 
 private enum class NotesConfirmation { DELETE, DISCARD }
 
+private data class NotebookRequest(val name: String, val protect: Boolean? = null)
+
 @Composable
 internal fun NovaNotesDraft(
     space: SpaceContext,
@@ -37,7 +45,10 @@ internal fun NovaNotesDraft(
     onOpenLink: ((NovaCoreLink) -> Unit)? = null,
     chooseAttachment: ((String) -> Unit)? = null,
     attachmentMessage: String? = null,
+    consumeAttachmentMessage: () -> Unit = {},
     openFiles: (() -> Unit)? = null,
+    exportAttachment: ((String, NovaNoteAttachment) -> Unit)? = null,
+    verifyNotebookPin: ((CharArray) -> Boolean)? = null,
 ) {
     val scope = rememberCoroutineScope()
     var library by remember(space) { mutableStateOf<NovaNotesLibrary?>(null) }
@@ -58,6 +69,32 @@ internal fun NovaNotesDraft(
     var busy by remember(space) { mutableStateOf(true) }
     var reload by remember(space) { mutableIntStateOf(0) }
     var confirmation by remember(space) { mutableStateOf<NotesConfirmation?>(null) }
+    var unlockedNotebooks by remember(space) { mutableStateOf(setOf<String>()) }
+    var notebookRequest by remember(space) { mutableStateOf<NotebookRequest?>(null) }
+    val lifecycle = LocalLifecycleOwner.current.lifecycle
+    DisposableEffect(space, lifecycle) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_STOP) {
+                unlockedNotebooks = emptySet()
+                notebookRequest = null
+                attachmentPreview = null
+                confirmation = null
+                showLinks = false
+                showSnippets = false
+                undo.clear()
+                redo.clear()
+                query = ""
+            }
+        }
+        lifecycle.addObserver(observer)
+        onDispose { lifecycle.removeObserver(observer) }
+    }
+
+    fun lockedNotebook(note: NovaNote): String? =
+        snapshot?.requiredProtection(note)?.firstOrNull { it !in unlockedNotebooks }
+
+    fun canSee(note: NovaNote): Boolean = lockedNotebook(note) == null
+
     LaunchedEffect(space, reload, openNoteId) {
         busy = true
         val result = withContext(Dispatchers.IO) {
@@ -91,10 +128,12 @@ internal fun NovaNotesDraft(
             editorBase = null
             status = "Encrypted notes could not be opened."
         }
+        if (attachmentMessage != null) consumeAttachmentMessage()
         busy = false
     }
 
     fun checkpoint(note: NovaNote): NovaNotesLibrary.Draft? {
+        if (!canSee(note)) return null
         val store = library ?: return null
         val previous = draft ?: return null
         if (previous.note == note) return previous
@@ -111,6 +150,10 @@ internal fun NovaNotesDraft(
 
     fun edit(note: NovaNote) {
         val before = editor ?: return
+        if (!canSee(before) || !canSee(note)) {
+            status = "Unlock the destination notebook before moving a note there."
+            return
+        }
         if (note.title.length > 200 || note.body.length > 32_000 ||
             note.notebook.length > 120 || note.tags.length > 200) {
             status = "That edit exceeds the note field limit."
@@ -129,7 +172,9 @@ internal fun NovaNotesDraft(
         val from = if (forward) redo else undo
         val to = if (forward) undo else redo
         if (from.isEmpty()) return
-        val target = from.removeAt(from.lastIndex)
+        val target = from.last()
+        if (!canSee(current) || !canSee(target)) return
+        from.removeAt(from.lastIndex)
         to.add(current)
         editor = target
         checkpoint(target)
@@ -140,9 +185,12 @@ internal fun NovaNotesDraft(
         val current = editor ?: return
         val pending = checkpoint(current) ?: return
         val copyId = if (asCopy) UUID.randomUUID().toString() else null
+        val notebookAccess = unlockedNotebooks
         busy = true
         scope.launch {
-            val result = withContext(Dispatchers.IO) { runCatching { store.finishDraft(pending, delete, copyId) } }
+            val result = withContext(Dispatchers.IO) {
+                runCatching { store.finishDraft(pending, delete, copyId, notebookAccess) }
+            }
             if (!space.current()) return@launch
             result.onSuccess { saved ->
                 if (saved == null) {
@@ -164,6 +212,11 @@ internal fun NovaNotesDraft(
 
     fun closeEditor() {
         val current = editor ?: return
+        if (!canSee(current)) {
+            editor = null
+            editorBase = null
+            return
+        }
         if (draft?.note != null || current != (editorBase ?: NovaNote(current.id, "", ""))) {
             if (checkpoint(current) == null) return
             status = "Draft saved for recovery"
@@ -192,7 +245,7 @@ internal fun NovaNotesDraft(
                     editorBase = null
                     undo.clear()
                     redo.clear()
-                    editor = NovaNote(UUID.randomUUID().toString(), "", "")
+                    editor = NovaNote(UUID.randomUUID().toString(), "", "", notebook = notebook.orEmpty())
                 }) { Text("New note") }
                 TextButton(enabled = !busy, onClick = { reload++ }) { Text("Reload") }
                 TextButton(enabled = !busy, onClick = onBack) { Text("Done") }
@@ -206,26 +259,48 @@ internal fun NovaNotesDraft(
             }
             OutlinedTextField(query, { query = it }, enabled = !busy && snapshot != null,
                 label = { Text("Search notes") }, singleLine = true, modifier = Modifier.fillMaxWidth())
-            val notebooks = saved.map { it.notebook }.filter(String::isNotBlank).distinct().sorted()
-            val activeNotebook = notebook?.takeIf { it in notebooks }
+            val protected = snapshot?.protectedNotebooks.orEmpty()
+            val labels = saved.map { it.notebook }.filter(String::isNotBlank).associateBy(::notebookKey)
+            val notebooks = (labels.keys + protected).sorted().map { labels[it] ?: it }
+            val activeNotebook = notebook?.let(::notebookKey)
+            val activeKey = activeNotebook.orEmpty()
+            val protectedTab = activeKey in protected
+            val mayOpenTab = activeKey in unlockedNotebooks
             if (notebooks.isNotEmpty()) {
                 Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     FilterChip(activeNotebook == null, { notebook = null }, { Text("All notebooks") })
                     notebooks.forEach { name ->
-                        FilterChip(activeNotebook == name, { notebook = name }, { Text(name) })
+                        FilterChip(activeNotebook == notebookKey(name), { notebook = name }, {
+                            Text(if (notebookKey(name) in protected) "Locked: $name" else name)
+                        })
                     }
+                }
+            }
+            if (notebook != null && verifyNotebookPin != null) {
+                if (protectedTab && !mayOpenTab) {
+                    TextButton(enabled = !busy, onClick = { notebookRequest = NotebookRequest(activeKey) }) {
+                        Text("Unlock notebook")
+                    }
+                } else {
+                    TextButton(enabled = !busy, onClick = {
+                        notebookRequest = NotebookRequest(activeKey, protect = !protectedTab)
+                    }) { Text(if (protectedTab) "Remove notebook protection" else "Protect notebook") }
                 }
             }
             FilterChip(sortByTitle, { sortByTitle = !sortByTitle }, { Text("Sort by title") })
             val search = query.trim()
             val matching = saved.filter {
-                (activeNotebook == null || it.notebook == activeNotebook) &&
+                canSee(it) && (activeNotebook == null || notebookKey(it.notebook) == activeNotebook) &&
                     listOf(it.title, it.body, it.notebook, it.tags).any { value -> value.contains(search, true) }
             }
             val pinnedFirst = compareByDescending<NovaNote> { it.pinned }
             val filtered = matching.sortedWith(if (sortByTitle) pinnedFirst.thenBy { it.title.lowercase() } else pinnedFirst)
             if (!busy && snapshot != null && filtered.isEmpty()) {
-                Text(if (saved.isEmpty()) "No notes yet" else "No matching notes")
+                Text(when {
+                    protectedTab && !mayOpenTab -> "Unlock this notebook to view its notes."
+                    saved.isEmpty() -> "No notes yet"
+                    else -> "No matching notes"
+                })
             }
             LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 items(filtered, key = { it.id }) { item ->
@@ -243,6 +318,12 @@ internal fun NovaNotesDraft(
                     }
                 }
             }
+        } else if (!canSee(note)) {
+            Text("This note is in a protected notebook.")
+            if (verifyNotebookPin != null) Button(enabled = !busy, onClick = {
+                lockedNotebook(note)?.let { notebookRequest = NotebookRequest(it) }
+            }) { Text("Unlock notebook") }
+            TextButton(onClick = { closeEditor() }) { Text("Back to notes") }
         } else {
             Column(
                 Modifier.weight(1f).verticalScroll(rememberScrollState()),
@@ -302,7 +383,7 @@ internal fun NovaNotesDraft(
     }
 
     val snippetNote = editor
-    if (showSnippets && snippetNote != null) {
+    if (showSnippets && snippetNote != null && canSee(snippetNote)) {
         NovaNotesSnippetPicker(space, onClose = { showSnippets = false }) { snippet ->
             showSnippets = false
             val separator = if (snippetNote.body.isEmpty()) "" else "\n"
@@ -325,10 +406,21 @@ internal fun NovaNotesDraft(
                 }
             },
             confirmButton = { TextButton(onClick = { attachmentPreview = null }) { Text("Close") } },
+            dismissButton = {
+                val note = editor
+                if (note != null && snapshot?.requiredProtection(note)?.isEmpty() == true && exportAttachment != null) {
+                    TextButton(enabled = !busy && draft != null, onClick = {
+                        if (checkpoint(note) != null) {
+                            attachmentPreview = null
+                            exportAttachment(note.id, attachment)
+                        }
+                    }) { Text("Save a copy outside NovaOS") }
+                }
+            },
         )
     }
     val linkedNote = editor
-    if (showLinks && linkedNote != null && onOpenLink != null) {
+    if (showLinks && linkedNote != null && canSee(linkedNote) && onOpenLink != null) {
         NovaRelatedNoteItems(space, linkedNote.id, onOpen = { link ->
             val before = draft?.note ?: editorBase
             if (before != null && linkedNote != before && checkpoint(linkedNote) == null) {
@@ -338,6 +430,31 @@ internal fun NovaNotesDraft(
                 onOpenLink(link)
             }
         }, onDismiss = { showLinks = false })
+    }
+
+    val request = notebookRequest
+    if (request != null && verifyNotebookPin != null) {
+        NovaNotebookPinDialog(request, enabled = !busy, onClose = { notebookRequest = null }) { pin ->
+            val store = library ?: return@NovaNotebookPinDialog false
+            val previous = snapshot ?: return@NovaNotebookPinDialog false
+            val accepted = withContext(Dispatchers.IO) {
+                runCatching { verifyNotebookPin(pin) }.getOrDefault(false)
+            }
+            if (!accepted || notebookRequest !== request || !space.current()) return@NovaNotebookPinDialog false
+            if (request.protect == null) {
+                unlockedNotebooks = unlockedNotebooks + request.name
+            } else {
+                val saved = withContext(Dispatchers.IO) {
+                    runCatching { store.setNotebookProtected(previous, request.name, request.protect) }.getOrNull()
+                }
+                if (saved == null || !space.current()) return@NovaNotebookPinDialog false
+                snapshot = saved
+                unlockedNotebooks = unlockedNotebooks - request.name
+                status = if (request.protect) "Notebook protected" else "Notebook protection removed"
+            }
+            notebookRequest = null
+            true
+        }
     }
 
     confirmation?.let { action ->
@@ -494,5 +611,46 @@ private fun NovaNotesSnippetPicker(space: SpaceContext, onClose: () -> Unit, onI
             }
         },
         confirmButton = { TextButton(onClick = onClose) { Text("Cancel") } },
+    )
+}
+
+
+@Composable
+private fun NovaNotebookPinDialog(
+    request: NotebookRequest, enabled: Boolean, onClose: () -> Unit,
+    verify: suspend (CharArray) -> Boolean,
+) {
+    var pin by remember(request) { mutableStateOf("") }
+    var failed by remember(request) { mutableStateOf(false) }
+    var checking by remember(request) { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
+    AlertDialog(
+        onDismissRequest = { if (!checking) onClose() },
+        title = {
+            Text(when (request.protect) {
+                true -> "Protect notebook"
+                false -> "Remove notebook protection"
+                null -> "Unlock notebook"
+            })
+        },
+        text = {
+            OutlinedTextField(pin, { pin = it.filter(Char::isDigit) },
+                label = { Text("Primary Space PIN") }, singleLine = true, enabled = !checking,
+                visualTransformation = PasswordVisualTransformation(),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
+                isError = failed, supportingText = { if (failed) Text("Could not confirm the PIN or update the notebook.") })
+        },
+        confirmButton = {
+            TextButton(enabled = enabled && !checking && pin.isNotBlank(), onClick = {
+                val entered = pin.toCharArray()
+                pin = ""
+                checking = true
+                scope.launch {
+                    try { failed = !verify(entered) }
+                    finally { entered.fill('\u0000'); checking = false }
+                }
+            }) { Text("Confirm") }
+        },
+        dismissButton = { TextButton(enabled = !checking, onClick = onClose) { Text("Cancel") } },
     )
 }

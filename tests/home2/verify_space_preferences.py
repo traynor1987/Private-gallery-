@@ -184,6 +184,17 @@ fun main(args:Array<String>){
   check(draft.note==note)
   check(notes.finishDraft(draft,delete=false)?.notes==listOf(note))
   check(notes.readDraft().note==null)
+  val locked=checkNotNull(notes.setNotebookProtected(notes.read(),note.notebook,true))
+  check(locked.isProtected(note))
+  check(locked.isProtected(note.copy(notebook=" work / PLANNING ")))
+  check(!locked.isProtected(note.copy(notebook="Other")))
+  check(locked.requiredProtection(note.copy(notebook="Other"))==setOf("work / planning"))
+  check(notes.read().protectedNotebooks==setOf("work / planning"))
+  val protectedDraft=checkNotNull(notes.writeDraft(notes.readDraft(),note,note.copy(notebook="Other")))
+  check(notes.finishDraft(protectedDraft,delete=false)==null)
+  checkNotNull(notes.discardDraft(protectedDraft))
+
+  checkNotNull(notes.setNotebookProtected(locked,note.notebook,false))
   val secondAttachment=NovaNoteAttachment("another-file","copy.txt","text/plain","Y29weQ==")
   check(!notes.attachToDraft(note.id,secondAttachment))
   check(!notes.attachToDraft("missing-note",secondAttachment,allowStart=true))
@@ -246,6 +257,7 @@ fun main(args:Array<String>){
   check(restoredSeries==listOf(event))
   check(calendar.save(calendar.read(),calendarEvents)!=null)
   check(owner.getSharedPreferences(NovaCoreApp.FILES.namespace,0).edit().putString("authed-tree","synthetic-device-grant").commit())
+  checkNotNull(notes.setNotebookProtected(notes.read(),note.notebook,true))
   val coreArchive=owner.backupValues()
   try {
    val prefixes=NovaCoreAppBackup.namespaces.map{"preferences:$it"}.toSet()
@@ -259,6 +271,7 @@ fun main(args:Array<String>){
    SpaceContext(base,restoredCore).use { target ->
     target.restoreBackupValues(coreArchive)
     check(NovaNotesLibrary(target).read().notes==listOf(note,updatedWide))
+    check(NovaNotesLibrary(target).read().isProtected(note))
     check(NovaTaskLibrary(target).read().tasks==backupTasks)
     check(NovaCalendarLibrary(target).read().events==calendarEvents)
     val restoredSnippets=NovaClipboardLibrary(target).read(now)

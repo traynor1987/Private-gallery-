@@ -68,7 +68,7 @@ private val lightColors=lightColorScheme(primary=Color(0xFF285F65),secondary=Col
 /** Adapted from recovered HomeDesktopScreen: pager, dock, gesture alternatives,
  * clock, procedural wallpapers and bounded adaptive grids. Preview data only. */
 @OptIn(ExperimentalMaterial3Api::class,ExperimentalFoundationApi::class)
-@Composable internal fun NovaPreview(data:PreviewData,pool:PreviewBrowserModel,mind:MindData,audio:MindAudio,widgets:WidgetData,searchHistory:NovaSearchHistory,video:NovaVideoModel,onPickImage:()->Unit,onOpen:(String)->Unit,filesDir:File,onNative:(String)->Unit,onLock:()->Unit,onPanic:()->Unit,externalRecentsRequest:Int=0,onRecentsConsumed:()->Unit={},onBackup:()->Unit={},workspaceProjection:Profile?=null,filesPicker:NovaFilesPicker?=null,coreAppRequest:NovaCoreApp?=null,onCoreAppRequestConsumed:()->Unit={},onImportPrimaryFile:((android.net.Uri,(String)->Unit)->Unit)?=null){
+@Composable internal fun NovaPreview(data:PreviewData,pool:PreviewBrowserModel,mind:MindData,audio:MindAudio,widgets:WidgetData,searchHistory:NovaSearchHistory,video:NovaVideoModel,onPickImage:()->Unit,onOpen:(String)->Unit,filesDir:File,onNative:(String)->Unit,onLock:()->Unit,onPanic:()->Unit,externalRecentsRequest:Int=0,onRecentsConsumed:()->Unit={},onBackup:()->Unit={},workspaceProjection:Profile?=null,filesPicker:NovaFilesPicker?=null,coreAppRequest:NovaCoreApp?=null,onCoreAppRequestConsumed:()->Unit={},onImportPrimaryFile:((android.net.Uri,(String)->Unit)->Unit)?=null,verifyNotebookPin:((CharArray)->Boolean)?=null){
  val state=data.state
  val dark=when(state.theme){"light"->false;"system"->isSystemInDarkTheme();else->true}
  MaterialTheme(colorScheme=if(dark)darkColors else lightColors){
@@ -377,7 +377,9 @@ private val lightColors=lightColorScheme(primary=Color(0xFF285F65),secondary=Col
             NovaNotesDraft(space, onBack=goHome,
              openNoteId=linkedRecord?.takeIf { it.app == NovaCoreApp.NOTES }?.id, onOpenLink=openCoreLink,
              chooseAttachment=filesPicker?.chooseAttachment, attachmentMessage=notesPickerMessage,
-             openFiles={ launch("nova-files") })
+             consumeAttachmentMessage={ notesPickerMessage=null },
+             exportAttachment=filesPicker?.exportAttachment,
+             openFiles={ launch("nova-files") }, verifyNotebookPin=verifyNotebookPin)
            }
           }
          }

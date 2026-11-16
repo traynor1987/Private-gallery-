@@ -19,6 +19,7 @@ import uk.co.traynor.privategallery.core.home2.SpaceContext
 internal data class NovaFilesPicker(
     val chooseFolder: () -> Unit,
     val chooseAttachment: (String) -> Unit,
+    val exportAttachment: (String, NovaNoteAttachment) -> Unit,
     val returned: Return?,
     val acknowledge: () -> Unit,
 ) {
@@ -27,7 +28,12 @@ internal data class NovaFilesPicker(
 
 /** Carries only the picker result. The activity owns this across a normal auto-lock. */
 internal class NovaFilesPickerTicket {
-    data class AttachmentRequest(val noteId: String, val id: String = UUID.randomUUID().toString())
+    sealed interface AttachmentRequest {
+        val noteId: String
+
+        data class Import(override val noteId: String, val id: String = UUID.randomUUID().toString()) : AttachmentRequest
+        data class Export(override val noteId: String, val id: String, val filename: String, val mime: String) : AttachmentRequest
+    }
     class Selection(val tree: Uri?, val flags: Int, val cancelled: Boolean, val launchFailed: Boolean = false,
         val attachment: AttachmentRequest? = null)
 
@@ -36,17 +42,22 @@ internal class NovaFilesPickerTicket {
     var returned by mutableStateOf<Selection?>(null)
         private set
 
-    fun launch(launchPicker: (Intent) -> Unit, noteId: String? = null) {
+    fun launch(launchPicker: (Intent) -> Unit, request: AttachmentRequest? = null) {
         if (inFlight || returned != null) return
         inFlight = true
-        val request = noteId?.let { AttachmentRequest(it) }
         attachmentRequest = request
         runCatching {
-            val intent = if (request == null) Intent(Intent.ACTION_OPEN_DOCUMENT_TREE).addFlags(
-                FILE_GRANT_FLAGS or Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION or
-                    Intent.FLAG_GRANT_PREFIX_URI_PERMISSION,
-            ) else Intent(Intent.ACTION_OPEN_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE)
-                .setType("*/*").addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            val intent = when (request) {
+                null -> Intent(Intent.ACTION_OPEN_DOCUMENT_TREE).addFlags(
+                    FILE_GRANT_FLAGS or Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION or
+                        Intent.FLAG_GRANT_PREFIX_URI_PERMISSION,
+                )
+                is AttachmentRequest.Import -> Intent(Intent.ACTION_OPEN_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE)
+                    .setType("*/*").addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                is AttachmentRequest.Export -> Intent(Intent.ACTION_CREATE_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE)
+                    .setType(request.mime).putExtra(Intent.EXTRA_TITLE, request.filename)
+                    .addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
+            }
             launchPicker(intent)
         }.onFailure {
             inFlight = false
@@ -91,7 +102,13 @@ internal fun rememberNovaFilesPicker(
         val message = when {
             selection.launchFailed -> "Android's document picker could not be opened."
             selection.cancelled -> null
-            attachment != null -> withContext(Dispatchers.IO) {
+            attachment is NovaFilesPickerTicket.AttachmentRequest.Export -> withContext(Dispatchers.IO) {
+                runCatching { writeAttachmentCopy(space, selection, attachment) }
+                    .fold({ "Attachment copy saved to your chosen location." }, {
+                        "The attachment copy did not complete. Check the destination for a partial file. The encrypted original was kept."
+                    })
+            }
+            attachment is NovaFilesPickerTicket.AttachmentRequest.Import -> withContext(Dispatchers.IO) {
                 runCatching { saveSelectedAttachment(space, selection, attachment) }
                     .fold({ "Attachment saved in the encrypted draft" }, {
                         when (it) {
@@ -114,7 +131,13 @@ internal fun rememberNovaFilesPicker(
     }
     return NovaFilesPicker(
         chooseFolder = { if (active && space.current()) ticket.launch(launch) },
-        chooseAttachment = { id -> if (active && space.current()) ticket.launch(launch, id) },
+        chooseAttachment = { id ->
+            if (active && space.current()) ticket.launch(launch, NovaFilesPickerTicket.AttachmentRequest.Import(id))
+        },
+        exportAttachment = { noteId, attachment ->
+            if (active && space.current()) ticket.launch(launch,
+                NovaFilesPickerTicket.AttachmentRequest.Export(noteId, attachment.id, attachment.name, attachment.mime))
+        },
         returned = returned,
         acknowledge = { returned = null },
     )
@@ -151,7 +174,7 @@ private class AttachmentSizeExceeded : IllegalArgumentException()
 
 private fun saveSelectedAttachment(
     space: SpaceContext, selection: NovaFilesPickerTicket.Selection,
-    request: NovaFilesPickerTicket.AttachmentRequest,
+    request: NovaFilesPickerTicket.AttachmentRequest.Import,
 ) {
     check(space.current())
     val uri = requireNotNull(selection.tree)
@@ -180,5 +203,30 @@ internal fun saveNovaNoteAttachment(
         check(NovaNotesLibrary(space).attachToDraft(noteId, attachment, allowStart))
     } finally {
         bytes.fill(0)
+    }
+}
+
+
+private fun writeAttachmentCopy(
+    space: SpaceContext, selection: NovaFilesPickerTicket.Selection,
+    request: NovaFilesPickerTicket.AttachmentRequest.Export,
+) {
+    check(space.current())
+    val uri = requireNotNull(selection.tree)
+    require(uri.scheme == "content" && selection.flags and Intent.FLAG_GRANT_WRITE_URI_PERMISSION != 0)
+    val library = NovaNotesLibrary(space)
+    val saved = library.read()
+    val note = library.readDraft().note?.takeIf { it.id == request.noteId }
+        ?: saved.notes.find { it.id == request.noteId } ?: error("Note unavailable")
+    check(saved.requiredProtection(note).isEmpty())
+    val data = note.attachments.single { it.id == request.id }.readBytes()
+    try {
+        check(space.current())
+        requireNotNull(space.contentResolver.openOutputStream(uri, "wt")).use { output ->
+            check(space.current())
+            output.write(data)
+        }
+    } finally {
+        data.fill(0)
     }
 }

@@ -413,6 +413,70 @@ class Home2IntegrationTest {
   compose.onNodeWithTag("nova-note-title").assertTextContains("Private draft")
  }
 
+ @Test fun notes_attach_a_real_android_document_and_keep_the_copy_after_source_deletion() {
+  val documents = uk.co.traynor.privategallery.core.backup.BackupDocuments62
+  val source = documents.createPersisted()
+  val sourceId = android.provider.DocumentsContract.getDocumentId(source)
+  val contents = "Synthetic Notes picker contents".encodeToByteArray()
+  var sourceDeleted = false
+  try {
+   checkNotNull(compose.activity.contentResolver.openOutputStream(source, "wt")).use { it.write(contents) }
+   val f = showHome(followActivityLifecycle = true)
+   openDrawer()
+   compose.onNodeWithTag("drawer-search").performTextInput("Nova Notes")
+   Espresso.closeSoftKeyboard()
+   compose.onNodeWithTag("app-nova-notes-draft").assertIsDisplayed().performClick()
+   compose.waitUntil(10_000) { compose.onAllNodes(hasText("New note") and isEnabled()).fetchSemanticsNodes().isNotEmpty() }
+   compose.onNodeWithText("New note").performClick()
+   compose.onNodeWithTag("nova-note-title").performTextInput("Picker document")
+   Espresso.closeSoftKeyboard()
+   compose.onNodeWithText("Attach file (up to 24 KiB)").performScrollTo().performClick()
+   uk.co.traynor.privategallery.core.backup.BackupDocumentsUi62.open(sourceId)
+   compose.waitUntil(15_000) {
+    compose.onAllNodesWithText("Attachment saved in the encrypted draft").fetchSemanticsNodes().isNotEmpty()
+   }
+   documents.delete(source)
+   sourceDeleted = true
+   SpaceContext(f.context, f.access).use { space ->
+    val attachment = checkNotNull(NovaNotesLibrary(space).readDraft().note).attachments.single()
+    assertArrayEquals(contents, attachment.readBytes())
+   }
+  } finally {
+   if (!sourceDeleted) documents.delete(source)
+  }
+ }
+
+ @Test fun protected_notebook_hides_content_until_primary_pin_is_confirmed() {
+  SpaceFixture(false, compose.activity).use { f ->
+   SpaceContext(f.context, f.access).use { space ->
+    val library = NovaNotesLibrary(space)
+    val note = NovaNote("locked-note", "Protected title", "Protected body", notebook = "Work")
+    val initial = checkNotNull(library.save(library.read(), listOf(note)))
+    assertNotNull(library.setNotebookProtected(initial, "Work", true))
+    compose.setContent {
+     androidx.compose.material3.MaterialTheme {
+      uk.co.traynor.privategallery.home2.NovaNotesDraft(space, onBack = {},
+       verifyNotebookPin = { pin -> pin.contentEquals("123456".toCharArray()) })
+     }
+    }
+    compose.waitUntil(10_000) { compose.onAllNodesWithText("Locked: Work").fetchSemanticsNodes().isNotEmpty() }
+    compose.onNodeWithText("Protected title").assertDoesNotExist()
+    compose.onNodeWithText("Locked: Work").performClick()
+    compose.onNodeWithText("Unlock notebook").performClick()
+    compose.onNodeWithText("Primary Space PIN").performTextInput("654321")
+    compose.onNodeWithText("Confirm").performClick()
+    compose.waitUntil(10_000) {
+     compose.onAllNodesWithText("Could not confirm the PIN or update the notebook.").fetchSemanticsNodes().isNotEmpty()
+    }
+    compose.onNodeWithText("Protected title").assertDoesNotExist()
+    compose.onNodeWithText("Primary Space PIN").performTextInput("123456")
+    compose.onNodeWithText("Confirm").performClick()
+    compose.waitUntil(10_000) { compose.onAllNodesWithText("Protected title").fetchSemanticsNodes().isNotEmpty() }
+    compose.onNodeWithText("Protected title").assertIsDisplayed()
+   }
+  }
+ }
+
  @Test fun notes_recover_unsaved_text_and_reject_a_stale_editor() {
   SpaceFixture(false, compose.activity).use { f ->
    val original = NovaNote("note", "Original", "Saved text")
