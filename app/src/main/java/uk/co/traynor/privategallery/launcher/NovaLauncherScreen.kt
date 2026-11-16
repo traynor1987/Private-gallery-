@@ -613,6 +613,13 @@ private fun LauncherRuntime(
                             true
                         } else false
                     } else null,
+                    onMoveOut = if (mayEdit && slot != null) { component ->
+                        val next = sourceLayout.moveFolderMemberOut(slot, selected, component)
+                        if (next != null && actions.save(state.withLayout(opened.inner, next))) {
+                            folder = null
+                            true
+                        } else false
+                    } else null,
                 )
             }
             editingFolder?.let { (slot, item) ->

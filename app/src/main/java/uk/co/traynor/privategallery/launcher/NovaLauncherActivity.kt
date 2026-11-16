@@ -135,7 +135,18 @@ class NovaLauncherActivity : ComponentActivity() {
 
     private val packageChanges = object : LauncherApps.Callback() {
         private fun changed() = refreshCatalogue()
-        override fun onPackageRemoved(packageName: String, user: UserHandle) = changed()
+        override fun onPackageRemoved(packageName: String, user: UserHandle) {
+            val personal = user == Process.myUserHandle()
+            val serial = if (personal) null else runCatching {
+                getSystemService(android.os.UserManager::class.java)?.getSerialNumberForUser(user)
+            }.getOrNull()?.takeIf { it >= 0 }
+            if (personal || serial != null) {
+                val persisted = store.read()
+                val cleaned = persisted.removeUninstalledFolderMembers(packageName, serial)
+                if (cleaned != persisted) save(cleaned)
+            }
+            changed()
+        }
         override fun onPackageAdded(packageName: String, user: UserHandle) {
             if (model.newAppPlacement == LauncherNewAppPlacement.HOME) pendingAddedPackages += packageName to user
             changed()

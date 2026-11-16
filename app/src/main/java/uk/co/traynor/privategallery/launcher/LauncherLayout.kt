@@ -113,6 +113,18 @@ internal data class NovaLauncherState(
     val dockOptions: LauncherDockOptions = LauncherDockOptions(),
     val newAppPlacement: LauncherNewAppPlacement = LauncherNewAppPlacement.LIBRARY_ONLY,
 ) {
+    fun removeUninstalledFolderMembers(packageName: String, profileSerial: Long?): NovaLauncherState {
+        val removed = sequenceOf(cover, inner).flatMap { layout ->
+            (layout.pages.asSequence().flatten() + layout.dock.asSequence())
+                .filterIsInstance<LauncherItem.Folder>().flatMap { it.apps.asSequence() }
+        }.filter { component ->
+            val identity = LauncherAppIdentity.parse(component)
+            identity != null && identity.profileSerial == profileSerial &&
+                identity.flattenedComponent.substringBefore('/') == packageName
+        }.toSet()
+        return if (removed.isEmpty()) this else reconcileUserFolders(removed)
+    }
+
     /** Canonicalize saved user folders without changing pages or smart folders. */
     fun reconcileUserFolders(removed: Set<String> = emptySet()): NovaLauncherState {
         fun reconcile(items: List<LauncherItem>): List<LauncherItem> = items.mapNotNull { item ->

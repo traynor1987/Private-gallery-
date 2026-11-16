@@ -67,3 +67,24 @@ internal fun groupLauncherApp(item: LauncherItem, target: LauncherItem?): Launch
         else -> null
     }
 }
+
+/** Move one stored folder member to the slot immediately after its source. */
+internal fun LauncherLayout.moveFolderMemberOut(
+    slot: LauncherSlot,
+    expected: LauncherItem.Folder,
+    component: String,
+): LauncherLayout? {
+    val items = itemsAt(slot.page) ?: return null
+    if (items.getOrNull(slot.index) != expected || component !in expected.apps ||
+        items.any { it == LauncherItem.App(component) }
+    ) return null
+    val remaining = expected.apps.filterNot { it == component }
+    val capacity = if (slot.page == null) MAX_LAUNCHER_DOCK_ITEMS else MAX_LAUNCHER_PAGE_ITEMS
+    if (remaining.isNotEmpty() && items.size >= capacity) return null
+    val next = items.toMutableList()
+    if (remaining.isEmpty()) next.removeAt(slot.index)
+    else next[slot.index] = if (remaining.size == 1) LauncherItem.App(remaining.single())
+        else expected.copy(apps = remaining)
+    next.add(slot.index + if (remaining.isEmpty()) 0 else 1, LauncherItem.App(component))
+    return withItemsAt(slot.page, next)
+}

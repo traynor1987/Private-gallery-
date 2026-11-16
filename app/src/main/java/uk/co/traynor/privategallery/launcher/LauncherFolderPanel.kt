@@ -129,6 +129,7 @@ internal fun LauncherFolderPanel(
     onLaunch: (String) -> Unit,
     onDismiss: () -> Unit,
     onSave: ((LauncherItem.Folder) -> Boolean)?,
+    onMoveOut: ((String) -> Boolean)? = null,
 ) {
     var mode by rememberSaveable(preferences.mode) { mutableStateOf(preferences.mode) }
     var editing by rememberSaveable(folder) { mutableStateOf(false) }
@@ -239,9 +240,14 @@ internal fun LauncherFolderPanel(
                                     keys = ArrayList(keys.map { if (it in apps) known.next().component else it })
                                 }
                             }
+                            val moveOut = onMoveOut?.takeIf { keys == folder.apps && name == folder.name }
+                            if (moveOut != null) Text("Drag an app below the list to move it beside this folder.",
+                                style = MaterialTheme.typography.bodySmall)
                             FolderReorderList(keys, apps, Modifier.weight(1f, fill = false), onMove = { from, to ->
                                 keys = ArrayList(keys.movingLauncherItem(from, to))
-                            }, onRemove = { keys = ArrayList(keys - it) })
+                            }, onRemove = { keys = ArrayList(keys - it) }, onMoveOut = moveOut?.let { move ->
+                                { component -> move(component).also { error = !it } }
+                            })
                             if (error) Text("The folder changed or could not be saved.",
                                 color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
                             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
@@ -340,10 +346,13 @@ private fun FolderReorderList(
     modifier: Modifier,
     onMove: (Int, Int) -> Unit,
     onRemove: (String) -> Unit,
+    onMoveOut: ((String) -> Boolean)?,
 ) {
     val list = rememberLazyListState()
     val haptics = LocalHapticFeedback.current
     val move by rememberUpdatedState(onMove)
+    val moveOut by rememberUpdatedState(onMoveOut)
+    val exitDistance = with(androidx.compose.ui.platform.LocalDensity.current) { 32.dp.toPx() }
     var dragging by remember { mutableStateOf<String?>(null) }
     var target by remember { mutableIntStateOf(-1) }
     LazyColumn(modifier.testTag("launcher-folder-order"), state = list) {
@@ -362,6 +371,7 @@ private fun FolderReorderList(
                         Modifier.size(48.dp).semantics {
                             contentDescription = "Reorder $label"
                             customActions = buildList {
+                                if (onMoveOut != null) add(CustomAccessibilityAction("Move out of folder") { moveOut?.invoke(key) == true })
                                 if (index > 0) add(CustomAccessibilityAction("Move up") { move(index, index - 1); true })
                                 if (index < keys.lastIndex) add(CustomAccessibilityAction("Move down") { move(index, index + 1); true })
                             }
@@ -383,7 +393,9 @@ private fun FolderReorderList(
                                     }?.index ?: index
                                 },
                                 onDragEnd = {
-                                    if (target in keys.indices) move(index, target)
+                                    if (position > list.layoutInfo.viewportEndOffset + exitDistance && moveOut != null) {
+                                        moveOut?.invoke(key)
+                                    } else if (target in keys.indices) move(index, target)
                                     dragging = null
                                     target = -1
                                 },

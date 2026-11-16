@@ -1,12 +1,37 @@
 package uk.co.traynor.privategallery.launcher
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Test
 
 class LauncherDrop72Test {
     private val phone = LauncherItem.App("example.phone/.Main")
     private val music = LauncherItem.App("example.music/.Main")
     private val maps = LauncherItem.App("example.maps/.Main")
+
+    @Test fun movingOutDissolvesFolderAndPlacesBothShortcutsWithoutAnIntermediateWrite() {
+        val folder = LauncherItem.Folder("Tools", listOf(phone.component, maps.component))
+        val slot = LauncherSlot(null, 1)
+        val layout = LauncherLayout(dock = listOf(LauncherItem.Workspace, folder))
+        assertEquals(listOf(LauncherItem.Workspace, maps, phone),
+            layout.moveFolderMemberOut(slot, folder, phone.component)?.dock)
+        assertNull(layout.moveFolderMemberOut(slot.copy(index = 0), folder, phone.component))
+        assertNull(layout.copy(dock = layout.dock + phone).moveFolderMemberOut(slot, folder, phone.component))
+        assertEquals(listOf(LauncherItem.Workspace, folder), layout.dock)
+    }
+
+    @Test fun uninstallDissolvesOnlyFoldersContainingTheRemovedProfile() {
+        val clone = "${phone.component}#17"
+        val personal = LauncherItem.Folder("Personal", listOf(phone.component, maps.component))
+        val work = LauncherItem.Folder("Work", listOf(clone, music.component))
+        val state = NovaLauncherState(cover = LauncherLayout(pages = listOf(listOf(personal))),
+            inner = LauncherLayout(dock = listOf(LauncherItem.Workspace, work)))
+        val result = state.removeUninstalledFolderMembers(phone.component.substringBefore('/'), 17)
+        assertEquals(state.cover, result.cover)
+        assertEquals(listOf(LauncherItem.Workspace, music), result.inner.dock)
+        assertEquals(listOf(maps), state.removeUninstalledFolderMembers(phone.component.substringBefore('/'), null)
+            .cover.pages.single())
+    }
 
     @Test fun committedFolderEditDissolvesAtItsSlotAndRejectedDropKeepsFolder() {
         val folder = LauncherItem.Folder("Tools", listOf(phone.component, maps.component))
