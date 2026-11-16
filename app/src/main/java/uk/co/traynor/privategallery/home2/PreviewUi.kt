@@ -152,7 +152,7 @@ private val lightColors=lightColorScheme(primary=Color(0xFF285F65),secondary=Col
     when{
      id.startsWith("resume-internal:")->{val route=id.removePrefix("resume-internal:");if(data.shell.internalRecents.any{it.first==state.current&&it.second==route}){if(route in nativeHomeApps)onNative(route)else screen=route}}
      id.startsWith("recent-tab:")->{pool.tabs.firstOrNull{it.id==id.removePrefix("recent-tab:")&&it.profile==state.current}?.let{pool.select(it);screen="home"}}
-     (id=="nova-notes-draft" || id=="nova-tasks" || id=="nova-calendar") && state.current=="primary"->{screen=id}
+     (id=="nova-notes-draft" || id=="nova-tasks" || id=="nova-calendar" || id=="nova-files" || id=="nova-clipboard") && state.current=="primary"->{screen=id}
      id.startsWith("visual:") && state.current=="primary"->{
       val moduleId=id.removePrefix("visual:")
       if(visualModules.any{it.id==moduleId}){openVisual("home");visual.open(moduleId)}
@@ -353,6 +353,16 @@ private val lightColors=lightColorScheme(primary=Color(0xFF285F65),secondary=Col
            NovaCalendarScreen(space, onBack=goHome)
           }
          }
+         "nova-files"->if(state.current=="primary" && permitSanctuaryRoute("nova-files")) {
+          (localContext as? uk.co.traynor.privategallery.core.home2.SpaceContext)?.let { space ->
+           NovaFilesScreen(space, onBack=goHome)
+          }
+         }
+         "nova-clipboard"->if(state.current=="primary" && permitSanctuaryRoute("nova-clipboard")) {
+          (localContext as? uk.co.traynor.privategallery.core.home2.SpaceContext)?.let { space ->
+           NovaClipboardScreen(space, onBack=goHome)
+          }
+         }
          "visual-foundation"->if(state.current=="primary")VisualFoundation(
           visual,onClose={screen=visualReturn},onRealApp={id->visual.reset();screen="home";launch(id)},
           canOpenModule={id->permitSanctuaryRoute("visual:$id")},
@@ -403,7 +413,8 @@ private val lightColors=lightColorScheme(primary=Color(0xFF285F65),secondary=Col
      if(state.current=="primary") {
       VisualCatalogueEntry("drawer-visual-foundation"){openVisual("home")}
       Row(Modifier.horizontalScroll(rememberScrollState()),horizontalArrangement=Arrangement.spacedBy(8.dp)) {
-       listOf("nova-notes-draft" to "Nova Notes", "nova-tasks" to "Nova Tasks", "nova-calendar" to "Nova Calendar").forEach { (route, label) ->
+       listOf("nova-notes-draft" to "Nova Notes", "nova-tasks" to "Nova Tasks", "nova-calendar" to "Nova Calendar",
+        "nova-files" to "Nova Files", "nova-clipboard" to "Nova Clipboard").forEach { (route, label) ->
         if (label.contains(search.trim(), ignoreCase=true)) {
          TextButton(onClick={launch(route)},modifier=Modifier.testTag("drawer-$route")){Text(label)}
         }

@@ -31,6 +31,11 @@ import uk.co.traynor.privategallery.core.privateapps.PrivateAppCatalog
 import uk.co.traynor.privategallery.core.privateapps.PrivateAppStore
 import uk.co.traynor.privategallery.home2.IntegratedHome
 import uk.co.traynor.privategallery.home2.NovaLockEntry
+import uk.co.traynor.privategallery.home2.NovaClipboardLibrary
+import uk.co.traynor.privategallery.home2.NovaFilesAccess
+import uk.co.traynor.privategallery.home2.NovaFilesSelection
+import uk.co.traynor.privategallery.home2.NovaSnippet
+import uk.co.traynor.privategallery.home2.SnippetRetention
 import uk.co.traynor.privategallery.home2.NovaCalendarEvent
 import uk.co.traynor.privategallery.home2.NovaCalendarLibrary
 import uk.co.traynor.privategallery.home2.NovaEventRepeat
@@ -154,6 +159,64 @@ class Home2IntegrationTest {
 
 
 
+
+
+ @Test fun clipboard_retention_is_local_and_preserves_pinned_snippets() {
+  SpaceFixture(false, compose.activity).use { f ->
+   val now = java.time.Instant.parse("2026-11-16T12:00:00Z")
+   val old = now.minus(java.time.Duration.ofDays(8))
+   val expired = NovaSnippet("old", "", "Expired", "", false, true, old)
+   val pinned = NovaSnippet("pin", "", "Pinned", "Work", true, true, old)
+   SpaceContext(f.context, f.access).use { space ->
+    val clipboard = NovaClipboardLibrary(space)
+    assertNotNull(clipboard.save(clipboard.read(now), SnippetRetention.MANUAL, listOf(expired, pinned), now))
+    val retentionSaved = clipboard.save(clipboard.read(now), SnippetRetention.WEEK, listOf(expired, pinned), now)
+    assertEquals(listOf(pinned), retentionSaved?.snippets)
+    assertTrue(NovaNotesLibrary(space).read().notes.isEmpty())
+   }
+   SpaceContext(f.context, f.access).use { space ->
+    val reopened = NovaClipboardLibrary(space).read(now)
+    assertEquals(SnippetRetention.WEEK, reopened.retention)
+    assertEquals(listOf(pinned), reopened.snippets)
+   }
+  }
+ }
+
+
+ @Test fun files_read_only_the_picker_granted_fixture_and_stop_when_space_access_retires() {
+  val documents = uk.co.traynor.privategallery.core.backup.BackupDocuments62
+  val tree = documents.persistedTree()
+  val created = documents.createPersisted()
+  try {
+   SpaceFixture(false, compose.activity).use { f ->
+    val files = NovaFilesAccess(f.context.contentResolver, tree, f.access::current)
+    assertTrue(files.root().directory)
+    assertTrue(files.children(files.root()).any { it.id == android.provider.DocumentsContract.getDocumentId(created) })
+   }
+   val denied = NovaFilesAccess(compose.activity.contentResolver, tree) { false }
+   assertTrue(runCatching { denied.root() }.isFailure)
+  } finally {
+   documents.delete(created)
+  }
+ }
+
+ @Test fun files_remember_only_the_explicit_tree_and_reject_path_like_names() {
+  SpaceFixture(false, compose.activity).use { f ->
+   val selectorUri = android.net.Uri.parse("content://example.documents/tree/root")
+   SpaceContext(f.context, f.access).use { space ->
+    val files = NovaFilesSelection(space)
+    assertNull(files.read().tree)
+    assertNotNull(files.save(files.read(), selectorUri))
+   }
+   SpaceContext(f.context, f.access).use { space ->
+    assertEquals(selectorUri, NovaFilesSelection(space).read().tree)
+    assertEquals("Receipts", NovaFilesAccess.checkedName(" Receipts "))
+    for (bad in listOf("..", ".", "../folder", "nested/folder", "")) {
+     assertTrue(runCatching { NovaFilesAccess.checkedName(bad) }.isFailure)
+    }
+   }
+  }
+ }
 
  @Test fun calendar_preserves_recurring_wall_time_across_dst_and_reopens_events() {
   SpaceFixture(false, compose.activity).use { f ->
