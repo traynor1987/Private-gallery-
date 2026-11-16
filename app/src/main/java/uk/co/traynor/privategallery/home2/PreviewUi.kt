@@ -87,6 +87,8 @@ private val lightColors=lightColorScheme(primary=Color(0xFF285F65),secondary=Col
    var arcadeGame by remember{mutableStateOf<String?>(null)}
    var screen by remember{mutableStateOf("home")}
    var openedCoreLink by remember { mutableStateOf<NovaCoreLink?>(null) }
+   var coreReturnScreen by remember(state.current) { mutableStateOf("home") }
+   var coreReturnDrawer by remember(state.current) { mutableStateOf(false) }
    var notesPickerRevision by remember{mutableIntStateOf(0)}
    var notesPickerMessage by remember{mutableStateOf<String?>(null)}
    var filesPickerRevision by remember{mutableIntStateOf(0)}
@@ -160,12 +162,21 @@ private val lightColors=lightColorScheme(primary=Color(0xFF285F65),secondary=Col
     }
     filesPicker.acknowledge()
    }
+   fun rememberCoreAppOrigin() {
+    if (NovaCoreApp.entries.any { it.route == screen }) return
+    coreReturnScreen = when (screen) {
+     "store", "search", "recents" -> screen
+     else -> "home"
+    }
+    coreReturnDrawer = drawer && coreReturnScreen == "home"
+   }
    val launch:(String)->Unit=launch@{id->
     val recent = if (id.startsWith("recent-tab:")) {
      pool.tabs.firstOrNull{it.id==id.removePrefix("recent-tab:")&&it.profile==state.current}?.app
       ?: return@launch
     } else null
     if (!permitSanctuaryRoute(recent?.id ?: id, recent?.url)) return@launch
+    if (state.current == "primary" && NovaCoreApp.entries.any { it.route == id }) rememberCoreAppOrigin()
     openedCoreLink = null
     drawer=false;quick=false;editing=false;edgePanel=false
     when{
@@ -220,6 +231,7 @@ private val lightColors=lightColorScheme(primary=Color(0xFF285F65),secondary=Col
    }
    val openCoreLink: (NovaCoreLink) -> Unit = { link ->
     if (state.current == "primary" && permitSanctuaryRoute(link.app.route)) {
+     rememberCoreAppOrigin()
      openedCoreLink = link
      drawer=false;quick=false;editing=false;edgePanel=false
      screen = link.app.route
@@ -241,11 +253,21 @@ private val lightColors=lightColorScheme(primary=Color(0xFF285F65),secondary=Col
     widgets.editingId=null;drawer=false;quick=false;editing=false;selected=null;openFolder=null;detailId=null;edgePanel=false;pool.closeFullscreen()
     host?.let{(it.getSystemService(android.content.Context.INPUT_METHOD_SERVICE) as? android.view.inputmethod.InputMethodManager)?.hideSoftInputFromWindow(it.window.decorView.windowToken,0)}
     visual.reset()
+    openedCoreLink = null; coreReturnScreen = "home"; coreReturnDrawer = false
     screen=if(sanctuary)"sanctuary"else "home"
+   }
+   val closeCoreApp: () -> Unit = {
+    val destination = coreReturnScreen
+    val reopenDrawer = coreReturnDrawer
+    goHome()
+    if (state.current == "primary" && !sanctuary && permitSanctuaryRoute(destination)) {
+     screen = destination
+     drawer = reopenDrawer
+    }
    }
    val goBack:()->Unit={
     val ime=host?.window?.decorView?.rootWindowInsets?.isVisible(android.view.WindowInsets.Type.ime())==true
-    if(ime)host?.let{(it.getSystemService(android.content.Context.INPUT_METHOD_SERVICE) as? android.view.inputmethod.InputMethodManager)?.hideSoftInputFromWindow(it.window.decorView.windowToken,0)}else when{screen=="home"&&widgets.editingId!=null->widgets.editingId=null;selected!=null->selected=null;openFolder!=null->openFolder=null;detailId!=null->detailId=null;editing->editing=false;quick->quick=false;drawer->drawer=false;screen=="visual-foundation"->{if(!visual.back())screen=visualReturn};screen=="chat-inspector"->screen=inspectorReturn;screen=="chat-settings"->screen="chat";screen=="navigation-settings"||screen=="sanctuary-settings"->screen="home-settings";screen=="sanctuary-permissions"->screen="sanctuary";screen=="recents"->screen=if(recentsReturn in listOf("chat","mind","store","wallpaper","photos","guide","video","search","widgets","backup","arcade","nova-calculator","lock-settings")&&data.shell.internalRecents.none{it.first==state.current&&it.second==recentsReturn})"home"else PreviewShellRules.returnRoute(recentsReturn,pool.active?.profile==state.current);else->screen=if(sanctuary)"sanctuary"else "home"}
+    if(ime)host?.let{(it.getSystemService(android.content.Context.INPUT_METHOD_SERVICE) as? android.view.inputmethod.InputMethodManager)?.hideSoftInputFromWindow(it.window.decorView.windowToken,0)}else when{screen=="home"&&widgets.editingId!=null->widgets.editingId=null;selected!=null->selected=null;openFolder!=null->openFolder=null;detailId!=null->detailId=null;editing->editing=false;quick->quick=false;drawer->drawer=false;screen=="visual-foundation"->{if(!visual.back())screen=visualReturn};screen=="chat-inspector"->screen=inspectorReturn;screen=="chat-settings"->screen="chat";screen=="navigation-settings"||screen=="sanctuary-settings"->screen="home-settings";screen=="sanctuary-permissions"->screen="sanctuary";NovaCoreApp.entries.any { it.route == screen } -> closeCoreApp();screen=="recents"->screen=if(recentsReturn in listOf("chat","mind","store","wallpaper","photos","guide","video","search","widgets","backup","arcade","nova-calculator","lock-settings")&&data.shell.internalRecents.none{it.first==state.current&&it.second==recentsReturn})"home"else PreviewShellRules.returnRoute(recentsReturn,pool.active?.profile==state.current);else->screen=if(sanctuary)"sanctuary"else "home"}
    }
    LaunchedEffect(screen, sanctuaryStore) {
     if (sanctuaryStore != null && screen in setOf("sanctuary", "sanctuary-settings", "sanctuary-permissions")) {
@@ -374,7 +396,7 @@ private val lightColors=lightColorScheme(primary=Color(0xFF285F65),secondary=Col
          "nova-notes-draft"->if(state.current=="primary" && permitSanctuaryRoute("nova-notes-draft")) {
           (localContext as? uk.co.traynor.privategallery.core.home2.SpaceContext)?.let { space ->
            key(notesPickerRevision) {
-            NovaNotesDraft(space, onBack=goHome,
+            NovaNotesDraft(space, onBack=closeCoreApp,
              openNoteId=linkedRecord?.takeIf { it.app == NovaCoreApp.NOTES }?.id, onOpenLink=openCoreLink,
              chooseAttachment=filesPicker?.chooseAttachment, attachmentMessage=notesPickerMessage,
              consumeAttachmentMessage={ notesPickerMessage=null },
@@ -385,13 +407,13 @@ private val lightColors=lightColorScheme(primary=Color(0xFF285F65),secondary=Col
          }
          "nova-tasks"->if(state.current=="primary" && permitSanctuaryRoute("nova-tasks")) {
           (localContext as? uk.co.traynor.privategallery.core.home2.SpaceContext)?.let { space ->
-           NovaTasksScreen(space, onBack=goHome,
+           NovaTasksScreen(space, onBack=closeCoreApp,
             openTaskId=linkedRecord?.takeIf { it.app == NovaCoreApp.TASKS }?.id, onOpenLink=openCoreLink)
           }
          }
          "nova-calendar"->if(state.current=="primary" && permitSanctuaryRoute("nova-calendar")) {
           (localContext as? uk.co.traynor.privategallery.core.home2.SpaceContext)?.let { space ->
-           NovaCalendarScreen(space, onBack=goHome,
+           NovaCalendarScreen(space, onBack=closeCoreApp,
             openEventId=linkedRecord?.takeIf { it.app == NovaCoreApp.CALENDAR }?.id,
             openDay=(openedCoreLink as? NovaCoreLink.DueDay)?.date, onOpenLink=openCoreLink,
             sendToAndroidCalendar={ occurrence ->
@@ -403,7 +425,7 @@ private val lightColors=lightColorScheme(primary=Color(0xFF285F65),secondary=Col
          "nova-files"->if(state.current=="primary" && permitSanctuaryRoute("nova-files")) {
           (localContext as? uk.co.traynor.privategallery.core.home2.SpaceContext)?.let { space ->
            key(filesPickerRevision) {
-            NovaFilesScreen(space, onBack=goHome, onChooseFolder=filesPicker?.chooseFolder,
+            NovaFilesScreen(space, onBack=closeCoreApp, onChooseFolder=filesPicker?.chooseFolder,
              pickerMessage=filesPickerMessage,onImportPrimaryFile=onImportPrimaryFile,
              onOpenNote={ id -> openCoreLink(NovaCoreLink.Record(NovaCoreApp.NOTES,id)) })
            }
@@ -411,7 +433,7 @@ private val lightColors=lightColorScheme(primary=Color(0xFF285F65),secondary=Col
          }
          "nova-clipboard"->if(state.current=="primary" && permitSanctuaryRoute("nova-clipboard")) {
           (localContext as? uk.co.traynor.privategallery.core.home2.SpaceContext)?.let { space ->
-           NovaClipboardScreen(space, onBack=goHome)
+           NovaClipboardScreen(space, onBack=closeCoreApp)
           }
          }
          "visual-foundation"->if(state.current=="primary")VisualFoundation(

@@ -2,6 +2,12 @@
 
 Record the candidate commit, Android 17 CI run, test package ID, Fold model, Android build, display size and font setting. Use the separately identified Code 81 test build and disposable data. Leave the installed Code 80 Build 83 and its data in place.
 
+## Evidence before physical testing
+
+- Android 17 CI #428 at `e51efc2938811cc915b839b01a969eb1124cf9ec` ran 286 instrumentation tests with zero failures or skips. It included Notes at simulated cover and inner widths, encrypted backup fixtures, reminder registration and cancellation, attachment handling, and launcher folder checks.
+- Match the CI run's source SHA to the candidate under test. Use the newer all-app Fold test for action layout evidence. The emulator changes viewport width without a physical hinge, Samsung display handoff, or real user data.
+- Treat every case below as pending until it has a recorded result on the owner's Fold.
+
 ## Cover and inner display
 
 Run each case on the cover and inner display at default and large font sizes. Repeat the active case while opening and closing the Fold. Record the route, expected outcome, observed outcome and any clipping or lost state.

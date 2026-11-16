@@ -353,6 +353,17 @@ class Home2IntegrationTest {
   Espresso.closeSoftKeyboard()
   compose.onNodeWithTag("app-nova-tasks").assertIsDisplayed().performClick()
   compose.onNodeWithTag("nova-tasks").assertIsDisplayed()
+  compose.waitUntil(10_000) {
+   compose.onAllNodes(hasText("Done") and isEnabled()).fetchSemanticsNodes().isNotEmpty()
+  }
+  compose.onNodeWithText("Done").performClick()
+  compose.onNodeWithTag("drawer-sheet").assertIsDisplayed()
+  compose.onNodeWithTag("drawer-search").performTextReplacement("Nova Tasks")
+  Espresso.closeSoftKeyboard()
+  compose.onNodeWithTag("app-nova-tasks").performClick()
+  compose.onNodeWithTag("nova-tasks").assertIsDisplayed()
+  Espresso.pressBack()
+  compose.onNodeWithTag("drawer-sheet").assertIsDisplayed()
  }
 
  @Test fun recurring_tasks_keep_the_monthly_anchor_without_duplicate_successors() {
