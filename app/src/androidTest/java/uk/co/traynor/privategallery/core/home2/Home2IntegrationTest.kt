@@ -31,6 +31,9 @@ import uk.co.traynor.privategallery.core.privateapps.PrivateAppCatalog
 import uk.co.traynor.privategallery.core.privateapps.PrivateAppStore
 import uk.co.traynor.privategallery.home2.IntegratedHome
 import uk.co.traynor.privategallery.home2.NovaLockEntry
+import uk.co.traynor.privategallery.home2.NovaCalendarEvent
+import uk.co.traynor.privategallery.home2.NovaCalendarLibrary
+import uk.co.traynor.privategallery.home2.NovaEventRepeat
 import uk.co.traynor.privategallery.home2.NovaNote
 import uk.co.traynor.privategallery.home2.NovaNotesLibrary
 import uk.co.traynor.privategallery.home2.NovaTask
@@ -150,6 +153,30 @@ class Home2IntegrationTest {
  }
 
 
+
+
+ @Test fun calendar_preserves_recurring_wall_time_across_dst_and_reopens_events() {
+  SpaceFixture(false, compose.activity).use { f ->
+   val london = java.time.ZoneId.of("Europe/London")
+   val before = java.time.LocalDate.of(2026, 3, 22)
+   val after = before.plusWeeks(1)
+   val event = NovaCalendarEvent("weekly", "Weekly check-in", "", before,
+    java.time.LocalTime.of(9, 0), london, 45, NovaEventRepeat.WEEKLY)
+   SpaceContext(f.context, f.access).use { space ->
+    val calendar = NovaCalendarLibrary(space)
+    assertNotNull(calendar.save(calendar.read(), listOf(event)))
+   }
+   SpaceContext(f.context, f.access).use { space ->
+    val reopened = NovaCalendarLibrary(space).read().events.single()
+    assertEquals(event, reopened)
+    assertEquals(java.time.Instant.parse("2026-03-22T09:00:00Z"),
+     reopened.occurrencesOn(before, london).single().start)
+    assertEquals(java.time.Instant.parse("2026-03-29T08:00:00Z"),
+     reopened.occurrencesOn(after, london).single().start)
+    assertTrue(reopened.occurrencesOn(after.plusDays(1), london).isEmpty())
+   }
+  }
+ }
 
  @Test fun task_drawer_entry_opens_the_private_tasks_screen() {
   showHome()

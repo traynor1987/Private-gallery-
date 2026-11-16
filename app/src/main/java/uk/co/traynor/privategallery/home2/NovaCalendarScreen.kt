@@ -1,0 +1,306 @@
+package uk.co.traynor.privategallery.home2
+
+import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import java.time.LocalDate
+import java.time.LocalTime
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
+import java.time.format.FormatStyle
+import java.time.format.TextStyle
+import java.time.temporal.TemporalAdjusters
+import java.time.temporal.WeekFields
+import java.util.Locale
+import java.util.UUID
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import uk.co.traynor.privategallery.core.home2.SpaceContext
+
+private enum class CalendarView(val label: String) {
+    MONTH("Month"), WEEK("Week"), DAY("Day"), AGENDA("Agenda");
+
+    fun shift(date: LocalDate, direction: Long) = when (this) {
+        MONTH -> date.plusMonths(direction)
+        WEEK -> date.plusWeeks(direction)
+        DAY -> date.plusDays(direction)
+        AGENDA -> date.plusDays(30 * direction)
+    }
+}
+
+private data class CalendarEdit(
+    val event: NovaCalendarEvent,
+    val date: String = event.firstDate.toString(),
+    val time: String = event.time?.toString().orEmpty(),
+    val zone: String = event.zone.id,
+    val minutes: String = event.minutes.toString(),
+    val allDay: Boolean = event.time == null,
+) {
+    fun build(): NovaCalendarEvent? = runCatching {
+        check(event.title.isNotBlank())
+        val day = LocalDate.parse(date)
+        check(day.year in 1..9999)
+        val start = if (allDay) null else LocalTime.parse(time)
+        val eventZone = if (allDay) event.zone else ZoneId.of(zone.trim())
+        check(start == null || eventZone.rules.getValidOffsets(day.atTime(start)).isNotEmpty())
+        event.copy(title = event.title.trim(), firstDate = day, time = start, zone = eventZone,
+            minutes = if (allDay) event.minutes else minutes.toInt())
+    }.getOrNull()
+}
+
+private enum class CalendarConfirmation { DELETE, DISCARD }
+
+@Composable
+internal fun NovaCalendarScreen(space: SpaceContext, onBack: () -> Unit) {
+    val scope = rememberCoroutineScope()
+    val displayZone = ZoneId.systemDefault()
+    var store by remember(space) { mutableStateOf<NovaCalendarLibrary?>(null) }
+    var snapshot by remember(space) { mutableStateOf<NovaCalendarLibrary.Snapshot?>(null) }
+    var tasks by remember(space) { mutableStateOf<List<NovaTask>>(emptyList()) }
+    var editor by remember(space) { mutableStateOf<CalendarEdit?>(null) }
+    var focus by remember(space) { mutableStateOf(LocalDate.now(displayZone)) }
+    var mode by remember(space) { mutableStateOf(CalendarView.MONTH) }
+    var query by remember(space) { mutableStateOf("") }
+    var status by remember(space) { mutableStateOf<String?>(null) }
+    var busy by remember(space) { mutableStateOf(true) }
+    var reload by remember(space) { mutableIntStateOf(0) }
+    var confirmation by remember(space) { mutableStateOf<CalendarConfirmation?>(null) }
+
+    LaunchedEffect(space, reload) {
+        busy = true
+        val (calendar, dueTasks) = withContext(Dispatchers.IO) {
+            runCatching { NovaCalendarLibrary(space).let { it to it.read() } } to
+                runCatching { NovaTaskLibrary(space).read().tasks }
+        }
+        if (!space.current()) return@LaunchedEffect
+        calendar.onSuccess { (library, saved) ->
+            store = library
+            snapshot = saved
+            tasks = dueTasks.getOrDefault(emptyList())
+            status = if (dueTasks.isFailure) "Task due dates are unavailable." else null
+        }.onFailure { status = "Encrypted events could not be opened." }
+        busy = false
+    }
+
+    fun write(events: List<NovaCalendarEvent>, successMessage: String) {
+        val library = store ?: return
+        val previous = snapshot ?: return
+        busy = true
+        scope.launch {
+            val result = withContext(Dispatchers.IO) { runCatching { library.save(previous, events) } }
+            if (!space.current()) return@launch
+            result.onSuccess { saved ->
+                if (saved == null) status = "Events changed elsewhere. Close the editor and reload."
+                else {
+                    snapshot = saved
+                    editor = null
+                    status = successMessage
+                }
+            }.onFailure { status = "The encrypted calendar may be full or unavailable." }
+            busy = false
+        }
+    }
+
+    fun closeEditor() {
+        val current = editor ?: return
+        val saved = snapshot?.events?.find { it.id == current.event.id }?.let { CalendarEdit(it) }
+        if (current != saved && (saved != null || current.event.title.isNotBlank() ||
+                current.event.description.isNotBlank())) {
+            confirmation = CalendarConfirmation.DISCARD
+        } else editor = null
+    }
+
+    BackHandler(enabled = busy || editor != null) { if (!busy) closeEditor() }
+    Column(
+        Modifier.fillMaxSize().safeDrawingPadding().imePadding().padding(16.dp).testTag("nova-calendar"),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Text("Nova Calendar", style = MaterialTheme.typography.headlineSmall)
+        if (busy) LinearProgressIndicator(Modifier.fillMaxWidth())
+        status?.let { Text(it) }
+        val current = editor
+        val events = snapshot?.events.orEmpty()
+        if (current == null) {
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                Button(enabled = !busy && snapshot != null, onClick = {
+                    status = null
+                    editor = CalendarEdit(NovaCalendarEvent(UUID.randomUUID().toString(), "", "", focus,
+                        null, displayZone, 30, NovaEventRepeat.NONE))
+                }) { Text("New event") }
+                TextButton(enabled = !busy, onClick = { reload++ }) { Text("Reload") }
+                TextButton(enabled = !busy, onClick = onBack) { Text("Done") }
+            }
+            Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                CalendarView.entries.forEach { view ->
+                    FilterChip(mode == view, { mode = view }, { Text(view.label) })
+                }
+            }
+            Column(
+                Modifier.weight(1f).verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                OutlinedTextField(query, { query = it }, label = { Text("Search visible events") },
+                    singleLine = true, modifier = Modifier.fillMaxWidth())
+                CalendarDates(focus, mode, onDate = { focus = it })
+                val weekStart = focus.with(TemporalAdjusters.previousOrSame(WeekFields.of(Locale.getDefault()).firstDayOfWeek))
+                val dates = when (mode) {
+                    CalendarView.MONTH, CalendarView.DAY -> listOf(focus)
+                    CalendarView.WEEK -> List(7) { weekStart.plusDays(it.toLong()) }
+                    CalendarView.AGENDA -> List(30) { focus.plusDays(it.toLong()) }
+                }
+                val search = query.trim()
+                val visibleEvents = events.filter { it.title.contains(search, true) || it.description.contains(search, true) }
+                val visibleTasks = tasks.filter { !it.completed && it.title.contains(search, true) }.groupBy { it.due }
+                var anyVisible = false
+                for (date in dates) {
+                    val matches = visibleEvents.flatMap { it.occurrencesOn(date, displayZone) }.sortedBy { it.start }
+                    val due = visibleTasks[date].orEmpty()
+                    if (matches.isEmpty() && due.isEmpty()) continue
+                    anyVisible = true
+                    Text(date.format(DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM)),
+                        style = MaterialTheme.typography.titleSmall)
+                    due.forEach { task -> Text("Task due · " + task.title) }
+                    matches.forEach { occurrence ->
+                        val event = occurrence.event
+                        OutlinedCard(onClick = { status = null; editor = CalendarEdit(event) },
+                            enabled = !busy, modifier = Modifier.fillMaxWidth()) {
+                            Column(Modifier.padding(10.dp)) {
+                                Text(event.title)
+                                val whenText = occurrence.start?.let {
+                                    it.atZone(displayZone).format(DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT))
+                                } ?: "All day"
+                                Text(whenText, style = MaterialTheme.typography.labelMedium)
+                            }
+                        }
+                    }
+                }
+                if (!anyVisible && !busy && snapshot != null) Text("No events or task due dates in this view")
+            }
+        } else {
+            val candidate = current.build()
+            Column(
+                Modifier.weight(1f).verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                CalendarEditFields(current, !busy, onEdit = { editor = it })
+                if (candidate == null && current.event.title.isNotBlank()) {
+                    Text("Check the date, time zone and duration. The start must exist in that time zone.")
+                }
+                Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Button(enabled = !busy && candidate != null, onClick = {
+                        val event = candidate ?: return@Button
+                        val updated = if (events.any { it.id == event.id }) {
+                            events.map { if (it.id == event.id) event else it }
+                        } else events + event
+                        write(updated, "Event saved")
+                    }) { Text("Save event") }
+                    TextButton(enabled = !busy, onClick = { closeEditor() }) { Text("Back to calendar") }
+                    if (events.any { it.id == current.event.id }) {
+                        TextButton(enabled = !busy, onClick = { confirmation = CalendarConfirmation.DELETE }) { Text("Delete") }
+                    }
+                }
+            }
+        }
+    }
+    confirmation?.let { action ->
+        val deleting = action == CalendarConfirmation.DELETE
+        AlertDialog(
+            onDismissRequest = { confirmation = null },
+            title = { Text(if (deleting) "Delete this event and its recurrences?" else "Discard unsaved changes?") },
+            confirmButton = {
+                TextButton(onClick = {
+                    confirmation = null
+                    if (deleting) write(snapshot?.events.orEmpty().filterNot { it.id == editor?.event?.id }, "Event deleted")
+                    else editor = null
+                }) { Text(if (deleting) "Delete" else "Discard") }
+            },
+            dismissButton = { TextButton(onClick = { confirmation = null }) { Text("Cancel") } },
+        )
+    }
+}
+
+@Composable
+private fun CalendarDates(date: LocalDate, mode: CalendarView, onDate: (LocalDate) -> Unit) {
+    val locale = Locale.getDefault()
+    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+        TextButton(onClick = { onDate(mode.shift(date, -1)) }) { Text("Previous") }
+        TextButton(onClick = { onDate(LocalDate.now()) }) { Text("Today") }
+        TextButton(onClick = { onDate(mode.shift(date, 1)) }) { Text("Next") }
+    }
+    if (mode == CalendarView.MONTH) {
+        val startOfMonth = date.withDayOfMonth(1)
+        val firstWeekday = WeekFields.of(locale).firstDayOfWeek
+        val gridStart = startOfMonth.with(TemporalAdjusters.previousOrSame(firstWeekday))
+        Text(date.format(DateTimeFormatter.ofPattern("MMMM yyyy", locale)), style = MaterialTheme.typography.titleMedium)
+        Row(Modifier.fillMaxWidth()) {
+            repeat(7) { day ->
+                Box(Modifier.weight(1f), contentAlignment = androidx.compose.ui.Alignment.Center) {
+                    Text(firstWeekday.plus(day.toLong()).getDisplayName(TextStyle.SHORT, locale),
+                        maxLines = 1, overflow = TextOverflow.Clip)
+                }
+            }
+        }
+        val offset = java.time.temporal.ChronoUnit.DAYS.between(gridStart, startOfMonth).toInt()
+        repeat((offset + date.lengthOfMonth() + 6) / 7) { week ->
+            Row(Modifier.fillMaxWidth()) {
+                repeat(7) { day ->
+                    val cell = gridStart.plusDays((7 * week + day).toLong())
+                    val cellLabel = cell.format(DateTimeFormatter.ofLocalizedDate(FormatStyle.FULL))
+                    if (cell.month == date.month) {
+                        if (cell == date) {
+                            Button(onClick = { onDate(cell) }, modifier = Modifier.weight(1f).heightIn(min = 48.dp)
+                                .semantics { contentDescription = cellLabel }, contentPadding = PaddingValues(0.dp)) {
+                                Text(cell.dayOfMonth.toString())
+                            }
+                        } else {
+                            TextButton(onClick = { onDate(cell) }, modifier = Modifier.weight(1f).heightIn(min = 48.dp)
+                                .semantics { contentDescription = cellLabel }, contentPadding = PaddingValues(0.dp)) {
+                                Text(cell.dayOfMonth.toString())
+                            }
+                        }
+                    } else Spacer(Modifier.weight(1f))
+                }
+            }
+        }
+    } else {
+        Text(date.format(DateTimeFormatter.ofLocalizedDate(FormatStyle.FULL)), style = MaterialTheme.typography.titleMedium)
+    }
+}
+
+@Composable
+private fun CalendarEditFields(value: CalendarEdit, enabled: Boolean, onEdit: (CalendarEdit) -> Unit) {
+    OutlinedTextField(value.event.title, { onEdit(value.copy(event = value.event.copy(title = it.take(200)))) },
+        modifier = Modifier.fillMaxWidth(), label = { Text("Title") }, singleLine = true, enabled = enabled)
+    OutlinedTextField(value.event.description, { onEdit(value.copy(event = value.event.copy(description = it.take(4096)))) },
+        modifier = Modifier.fillMaxWidth(), label = { Text("Description") }, enabled = enabled)
+    OutlinedTextField(value.date, { onEdit(value.copy(date = it.take(10))) },
+        modifier = Modifier.fillMaxWidth(), label = { Text("Date (YYYY-MM-DD)") }, singleLine = true, enabled = enabled)
+    FilterChip(value.allDay, { onEdit(value.copy(allDay = !value.allDay)) }, { Text("All day") }, enabled = enabled)
+    if (!value.allDay) {
+        OutlinedTextField(value.time, { onEdit(value.copy(time = it.take(5))) },
+            modifier = Modifier.fillMaxWidth(), label = { Text("Start time (HH:MM)") }, singleLine = true, enabled = enabled)
+        OutlinedTextField(value.zone, { onEdit(value.copy(zone = it.take(100))) },
+            modifier = Modifier.fillMaxWidth(), label = { Text("Time zone (e.g. Europe/London)") },
+            singleLine = true, enabled = enabled)
+        OutlinedTextField(value.minutes, { onEdit(value.copy(minutes = it.take(4))) },
+            modifier = Modifier.fillMaxWidth(), label = { Text("Duration in minutes") }, singleLine = true, enabled = enabled)
+    }
+    Text("Repeat")
+    Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        NovaEventRepeat.entries.forEach { repeat ->
+            FilterChip(value.event.repeat == repeat, { onEdit(value.copy(event = value.event.copy(repeat = repeat))) },
+                { Text(repeat.label) }, enabled = enabled)
+        }
+    }
+}
