@@ -25,6 +25,11 @@ internal data class NovaFile(
     fun supports(flag: Int) = flags and flag != 0
 }
 
+internal fun acceptsPrimaryVaultFile(mime: String): Boolean =
+    mime.length in 1..120 &&
+        (mime.startsWith("image/") || mime.startsWith("video/") ||
+            uk.co.traynor.privategallery.core.vault.VaultDocumentPolicy.isDocument(mime))
+
 internal class NovaFileCleanupException : IOException("The provider retained an incomplete temporary file")
 
 internal class NovaFilesAccess(
@@ -49,6 +54,39 @@ internal class NovaFilesAccess(
     }
 
     private fun uri(file: NovaFile): Uri = DocumentsContract.buildDocumentUriUsingTree(tree, file.id)
+
+    fun authorizedFileUri(file: NovaFile): Uri {
+        requireAccess()
+        require(!file.directory && !file.supports(Document.FLAG_VIRTUAL_DOCUMENT))
+        return uri(file)
+    }
+
+    data class Preview(val text: String, val truncated: Boolean)
+
+    fun preview(file: NovaFile): Preview {
+        require(file.mimeType.startsWith("text/") || file.mimeType == "application/json")
+        val buffer = ByteArray(PREVIEW_LIMIT + 1)
+        try {
+            val fileUri = authorizedFileUri(file)
+            val count = checkNotNull(resolver.openInputStream(fileUri)).use { input ->
+                var size = 0
+                while (size < buffer.size) {
+                    check(stillAuthorized())
+                    val read = input.read(buffer, size, buffer.size - size)
+                    if (read < 0) break
+                    if (read == 0) throw IOException("Provider made no progress")
+                    size += read
+                }
+                size
+            }
+            requireAccess()
+            val text = String(buffer, 0, minOf(count, PREVIEW_LIMIT), Charsets.UTF_8)
+            require(text.none { it == '\u0000' }) { "Provider returned binary data" }
+            return Preview(text, count > PREVIEW_LIMIT)
+        } finally {
+            buffer.fill(0)
+        }
+    }
 
     fun root(): NovaFile {
         requireAccess()
@@ -185,6 +223,7 @@ internal class NovaFilesAccess(
     }
 
     companion object {
+        private const val PREVIEW_LIMIT = 32 * 1024
         private val PROJECTION = arrayOf(Document.COLUMN_DOCUMENT_ID, Document.COLUMN_DISPLAY_NAME,
             Document.COLUMN_MIME_TYPE, Document.COLUMN_SIZE, Document.COLUMN_LAST_MODIFIED, Document.COLUMN_FLAGS)
 

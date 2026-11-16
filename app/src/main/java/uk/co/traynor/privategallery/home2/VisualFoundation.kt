@@ -1,5 +1,7 @@
 package uk.co.traynor.privategallery.home2
 
+import uk.co.traynor.privategallery.core.home2.NovaCoreApp
+
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -229,6 +231,11 @@ private fun VisualModuleBody(module: VisualModule, navigator: VisualNavigator, o
                 .testTag("visual-active-section"),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
+            if (detail == null) NovaCoreApp.entries.firstOrNull { it.storageId == module.id }?.let { app ->
+                TextButton(onClick = { onRealApp(app.route) }, modifier = Modifier.testTag("visual-open-" + app.storageId)) {
+                    Text("Open " + app.label)
+                }
+            }
             key(module.id) {
                 when {
                     module in visualCore && module.id != "health" -> VisualProductivityDesign(module, navigator)

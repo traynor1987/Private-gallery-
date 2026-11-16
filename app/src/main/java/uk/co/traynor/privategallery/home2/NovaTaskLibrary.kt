@@ -17,6 +17,8 @@ internal enum class NovaTaskRepeat(val label: String) {
     NONE("Never"), DAILY("Daily"), WEEKLY("Weekly"), MONTHLY("Monthly"),
 }
 
+internal data class NovaSubtask(val id: String, val title: String, val completed: Boolean = false)
+
 internal data class NovaTask(
     val id: String,
     val title: String,
@@ -29,6 +31,8 @@ internal data class NovaTask(
     val repeatDay: Int? = null,
     val nextCreated: Boolean = false,
     val tags: String = "",
+    val subtasks: List<NovaSubtask> = emptyList(),
+    val noteId: String? = null,
 )
 
 internal fun completeNovaTask(tasks: List<NovaTask>, id: String, completed: Boolean): List<NovaTask> {
@@ -42,7 +46,7 @@ internal fun completeNovaTask(tasks: List<NovaTask>, id: String, completed: Bool
         NovaTaskRepeat.MONTHLY -> YearMonth.from(date).plusMonths(1).let { month ->
             month.atDay(minOf(task.repeatDay ?: date.dayOfMonth, month.lengthOfMonth()))
         }
-    }?.takeIf { it.year in 1..9999 } else null
+    }?.takeIf { it.year in 0..9999 } else null
     val updated = tasks.map {
         if (it.id == id) it.copy(completed = completed, nextCreated = it.nextCreated || nextDate != null) else it
     }
@@ -50,7 +54,8 @@ internal fun completeNovaTask(tasks: List<NovaTask>, id: String, completed: Bool
     val nextId = UUID.nameUUIDFromBytes("nova-task-next:$id".toByteArray(Charsets.UTF_8)).toString()
     if (tasks.any { it.id == nextId }) return updated
     return updated + task.copy(id = nextId, due = nextDate, completed = false,
-        repeatDay = task.repeatDay ?: date?.dayOfMonth, nextCreated = false)
+        repeatDay = task.repeatDay ?: date?.dayOfMonth, nextCreated = false,
+        subtasks = task.subtasks.map { it.copy(completed = false) })
 }
 
 internal enum class NovaTaskView(val label: String) {
@@ -87,6 +92,14 @@ internal class NovaTaskLibrary(space: SpaceContext) {
                 entry.optInt("repeatDay").takeIf { it in 1..31 },
                 entry.optBoolean("nextCreated"),
                 entry.optString("tags"),
+                entry.optJSONArray("subtasks")?.let { array ->
+                    require(array.length() <= MAX_SUBTASKS)
+                    List(array.length()) { child ->
+                        val value = array.getJSONObject(child)
+                        NovaSubtask(value.getString("id"), value.getString("title"), value.getBoolean("completed"))
+                    }.also(::validateSubtasks)
+                }.orEmpty(),
+                entry.optString("noteId").takeIf(String::isNotBlank),
             )
         })
     }
@@ -94,6 +107,7 @@ internal class NovaTaskLibrary(space: SpaceContext) {
     fun save(previous: Snapshot, tasks: List<NovaTask>): Snapshot? {
         val entries = JSONArray()
         for (task in tasks) {
+            validateSubtasks(task.subtasks)
             entries.put(JSONObject()
                 .put("id", task.id)
                 .put("title", task.title)
@@ -102,13 +116,28 @@ internal class NovaTaskLibrary(space: SpaceContext) {
                 .put("due", task.due?.toString().orEmpty())
                 .put("priority", task.priority.name)
                 .put("completed", task.completed)
-                .put("repeat", task.repeat.name)
-                .put("repeatDay", task.repeatDay)
-                .put("nextCreated", task.nextCreated)
-                .put("tags", task.tags))
+                .apply {
+                    if (task.repeat != NovaTaskRepeat.NONE) put("repeat", task.repeat.name)
+                    task.repeatDay?.let { put("repeatDay", it) }
+                    if (task.nextCreated) put("nextCreated", true)
+                    if (task.tags.isNotEmpty()) put("tags", task.tags)
+                    task.noteId?.let { put("noteId", it) }
+                    if (task.subtasks.isNotEmpty()) put("subtasks", JSONArray(task.subtasks.map { subtask ->
+                        JSONObject().put("id", subtask.id).put("title", subtask.title).put("completed", subtask.completed)
+                    }))
+                })
         }
         val document = documents.save("library", previous.revision,
             JSONObject().put("tasks", entries).toString()) ?: return null
         return Snapshot(document.revision, tasks.toList())
     }
+    private fun validateSubtasks(subtasks: List<NovaSubtask>) {
+        require(subtasks.size <= MAX_SUBTASKS && subtasks.map { it.id }.toSet().size == subtasks.size)
+        require(subtasks.all { it.id.length in 1..80 && it.title.isNotBlank() && it.title.length <= 200 })
+    }
+
+    companion object {
+        const val MAX_SUBTASKS = 100
+    }
+
 }

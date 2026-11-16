@@ -2415,6 +2415,10 @@ class MainActivity : FragmentActivity() {
             coreAppRequest=if(hidden)null else pendingCoreApp,
             onCoreAppRequestConsumed={pendingCoreApp=null},
             activityFilesLaunch=if(hidden)null else { request -> novaFilesFolderPicker.launch(request) },
+            onImportPrimaryFile=if(hidden)null else { uri, report ->
+                if(access.current() && !retained.hidden.selected && activityResumed) importSelected(listOf(uri), report, filesEntry = true)
+                else report("Primary Space is locked.")
+            },
             onThemeConnection={data ->
                 if(data!=null&&access.current()) {
                     homeThemeAccess=access;homeThemeData=data
@@ -3242,8 +3246,11 @@ class MainActivity : FragmentActivity() {
         }
     }
 
-    private fun importSelected(uris: List<Uri>, onComplete: (String) -> Unit) {
-        if(hideContent) return
+    private fun importSelected(uris: List<Uri>, onComplete: (String) -> Unit) =
+        importSelected(uris, onComplete, filesEntry = false)
+
+    private fun importSelected(uris: List<Uri>, onComplete: (String) -> Unit, filesEntry: Boolean) {
+        if(hideContent || (filesEntry && retained.hidden.selected)) return
         val owner=sessionKey ?: return
         val key=owner.copyOf()
         val generation=phoneTransferGeneration
@@ -3253,7 +3260,13 @@ class MainActivity : FragmentActivity() {
             var copied=0
             try {
                 val transfer=uk.co.traynor.privategallery.core.vault.PhoneVaultTransfer(applicationContext,key,null,publish={commit -> synchronized(phoneTransferGate) {check(current());commit()}},authorized=current)
-                uris.distinct().forEach {uri -> if(current()) runCatching {transfer.copy(uri)}.onSuccess {copied++} }
+                uris.distinct().forEach { uri ->
+                    if(current()) runCatching {
+                        if(filesEntry) transfer.copy(uri, uk.co.traynor.privategallery.core.backup.PortableArchive.MAX_ITEM,
+                            { mime -> uk.co.traynor.privategallery.home2.acceptsPrimaryVaultFile(mime) })
+                        else transfer.copy(uri)
+                    }.onSuccess { copied++ }
+                }
                 withContext(Dispatchers.Main) {if(current())onComplete("$copied of ${uris.distinct().size} verified copies. Originals retained.")}
             } finally {key.fill(0)}
         }

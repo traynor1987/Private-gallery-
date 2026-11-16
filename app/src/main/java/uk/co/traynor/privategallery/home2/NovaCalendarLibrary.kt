@@ -26,6 +26,7 @@ internal data class NovaCalendarEvent(
     val minutes: Int,
     val repeat: NovaEventRepeat,
     val skippedDates: Set<LocalDate> = emptySet(),
+    val noteId: String? = null,
 ) {
     init {
         require(minutes in 1..1440)
@@ -91,6 +92,7 @@ internal class NovaCalendarLibrary(space: SpaceContext) {
                 event.optJSONArray("skippedDates")?.let { dates ->
                     (0 until dates.length()).map { LocalDate.parse(dates.getString(it)) }.toSet()
                 }.orEmpty(),
+                event.optString("noteId").takeIf(String::isNotBlank),
             )
         })
     }
@@ -107,7 +109,10 @@ internal class NovaCalendarLibrary(space: SpaceContext) {
                 .put("zone", event.zone.id)
                 .put("minutes", event.minutes)
                 .put("repeat", event.repeat.name)
-                .put("skippedDates", JSONArray(event.skippedDates.sorted().map(LocalDate::toString))))
+                .apply {
+                    event.noteId?.let { put("noteId", it) }
+                    if (event.skippedDates.isNotEmpty()) put("skippedDates", JSONArray(event.skippedDates.sorted().map(LocalDate::toString)))
+                })
         }
         val saved = documents.save("library", previous.revision,
             JSONObject().put("events", entries).toString()) ?: return null

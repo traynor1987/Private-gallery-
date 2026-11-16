@@ -26,11 +26,11 @@ import uk.co.traynor.privategallery.ui.navigationHaptic
  val tap=navigationHaptic()
  Row(Modifier.fillMaxWidth().padding(start=4.dp,end=14.dp,top=8.dp,bottom=8.dp),verticalAlignment=Alignment.CenterVertically){IconButton(onClick={tap();onBack()}){Icon(Icons.AutoMirrored.Filled.ArrowBack,"Back")};Column(Modifier.weight(1f)){Text(title,style=MaterialTheme.typography.headlineSmall);Text(subtitle,style=MaterialTheme.typography.labelMedium,color=MaterialTheme.colorScheme.onSurfaceVariant)};actions()}
 }
-@Composable internal fun StoreScreen(data:PreviewData,onBack:()->Unit,onDetail:(StoreEntry)->Unit,onCustom:()->Unit,onVisualFoundation:(()->Unit)?=null){
+@Composable internal fun StoreScreen(data:PreviewData,onBack:()->Unit,onDetail:(StoreEntry)->Unit,onCustom:()->Unit,onVisualFoundation:(()->Unit)?=null,onOpenCoreApp:((String)->Unit)?=null){
  var firstParty by rememberSaveable { mutableStateOf(false) }
  if (firstParty) {
   BackHandler { firstParty = false }
-  NovaFirstPartyStore(onBack = { firstParty = false }, onOpenWorkspace = null)
+  NovaFirstPartyStore(onBack = { firstParty = false }, onOpenWorkspace = null, onOpenCoreApp = onOpenCoreApp)
   return
  }
  StoreCatalogueScreen(data.catalogue,data.profileLabel,onBack,onDetail,data.profile.installed,

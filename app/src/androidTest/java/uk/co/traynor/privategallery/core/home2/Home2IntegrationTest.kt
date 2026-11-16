@@ -43,6 +43,7 @@ import uk.co.traynor.privategallery.home2.NovaEventRepeat
 import uk.co.traynor.privategallery.home2.NovaNote
 import uk.co.traynor.privategallery.home2.NovaNotesLibrary
 import uk.co.traynor.privategallery.home2.NovaTaskRepeat
+import uk.co.traynor.privategallery.home2.NovaSubtask
 import uk.co.traynor.privategallery.home2.completeNovaTask
 import uk.co.traynor.privategallery.home2.NovaTask
 import uk.co.traynor.privategallery.home2.NovaTaskLibrary
@@ -350,7 +351,8 @@ class Home2IntegrationTest {
  @Test fun recurring_tasks_keep_the_monthly_anchor_without_duplicate_successors() {
   SpaceFixture(false, compose.activity).use { f ->
    val date = java.time.LocalDate.of(2027, 1, 31)
-   val first = NovaTask("first", "Monthly task", due = date, repeat = NovaTaskRepeat.MONTHLY, tags = "home")
+   val first = NovaTask("first", "Monthly task", due = date, repeat = NovaTaskRepeat.MONTHLY, tags = "home",
+    subtasks = listOf(NovaSubtask("check", "Check the meter", true)))
    SpaceContext(f.context, f.access).use { space ->
     val library = NovaTaskLibrary(space)
     assertNotNull(library.save(library.read(), completeNovaTask(listOf(first), first.id, true)))
@@ -361,6 +363,7 @@ class Home2IntegrationTest {
     val february = saved.tasks.single { !it.completed }
     assertEquals(java.time.LocalDate.of(2027, 2, 28), february.due)
     assertEquals("home", february.tags)
+    assertEquals(listOf(NovaSubtask("check", "Check the meter")), february.subtasks)
     val reopened = completeNovaTask(saved.tasks, first.id, false)
     assertEquals(saved.tasks, completeNovaTask(reopened, first.id, true))
     val march = completeNovaTask(saved.tasks, february.id, true).single { !it.completed }
@@ -437,7 +440,8 @@ class Home2IntegrationTest {
 
  @Test fun notes_publish_draft_and_clear_recovery_in_the_same_transaction() {
   SpaceFixture(false, compose.activity).use { f ->
-   val note = NovaNote("new-note", "Recovered title", "Recovered body")
+   val note = NovaNote("new-note", "Recovered title", "**Recovered body**\n- [x] Ready",
+    notebook = "Personal / Plans", tags = "plans")
    SpaceContext(f.context, f.access).use { space ->
     val library = NovaNotesLibrary(space)
     val draft = checkNotNull(library.writeDraft(library.readDraft(), null, note))

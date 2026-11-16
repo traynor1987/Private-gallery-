@@ -34,6 +34,8 @@ internal object PortablePreferenceSchema {
    // Both app imports use the same complete codecs as local loads.
    "nova_arcade_v1"->uk.co.traynor.privategallery.core.arcade.ArcadePreferences.validate(values)
    "nova_calculator_v1"->uk.co.traynor.privategallery.core.calculator.CalculatorPreferences.validate(values)
+   in uk.co.traynor.privategallery.core.home2.NovaCoreAppBackup.namespaces ->
+    uk.co.traynor.privategallery.core.home2.NovaCoreAppBackup.validate(name,values,owner)
    else->error("Unsupported preference namespace")
   }
  }

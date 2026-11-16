@@ -68,7 +68,7 @@ private val lightColors=lightColorScheme(primary=Color(0xFF285F65),secondary=Col
 /** Adapted from recovered HomeDesktopScreen: pager, dock, gesture alternatives,
  * clock, procedural wallpapers and bounded adaptive grids. Preview data only. */
 @OptIn(ExperimentalMaterial3Api::class,ExperimentalFoundationApi::class)
-@Composable internal fun NovaPreview(data:PreviewData,pool:PreviewBrowserModel,mind:MindData,audio:MindAudio,widgets:WidgetData,searchHistory:NovaSearchHistory,video:NovaVideoModel,onPickImage:()->Unit,onOpen:(String)->Unit,filesDir:File,onNative:(String)->Unit,onLock:()->Unit,onPanic:()->Unit,externalRecentsRequest:Int=0,onRecentsConsumed:()->Unit={},onBackup:()->Unit={},workspaceProjection:Profile?=null,filesPicker:NovaFilesPicker?=null,coreAppRequest:NovaCoreApp?=null,onCoreAppRequestConsumed:()->Unit={}){
+@Composable internal fun NovaPreview(data:PreviewData,pool:PreviewBrowserModel,mind:MindData,audio:MindAudio,widgets:WidgetData,searchHistory:NovaSearchHistory,video:NovaVideoModel,onPickImage:()->Unit,onOpen:(String)->Unit,filesDir:File,onNative:(String)->Unit,onLock:()->Unit,onPanic:()->Unit,externalRecentsRequest:Int=0,onRecentsConsumed:()->Unit={},onBackup:()->Unit={},workspaceProjection:Profile?=null,filesPicker:NovaFilesPicker?=null,coreAppRequest:NovaCoreApp?=null,onCoreAppRequestConsumed:()->Unit={},onImportPrimaryFile:((android.net.Uri,(String)->Unit)->Unit)?=null){
  val state=data.state
  val dark=when(state.theme){"light"->false;"system"->isSystemInDarkTheme();else->true}
  MaterialTheme(colorScheme=if(dark)darkColors else lightColors){
@@ -86,6 +86,7 @@ private val lightColors=lightColorScheme(primary=Color(0xFF285F65),secondary=Col
    var mindPage by remember{mutableStateOf("home")}
    var arcadeGame by remember{mutableStateOf<String?>(null)}
    var screen by remember{mutableStateOf("home")}
+   var openedCoreLink by remember { mutableStateOf<NovaCoreLink?>(null) }
    var filesPickerRevision by remember{mutableIntStateOf(0)}
    var filesPickerMessage by remember{mutableStateOf<String?>(null)}
    val visual = remember { VisualNavigator() }
@@ -159,6 +160,7 @@ private val lightColors=lightColorScheme(primary=Color(0xFF285F65),secondary=Col
       ?: return@launch
     } else null
     if (!permitSanctuaryRoute(recent?.id ?: id, recent?.url)) return@launch
+    openedCoreLink = null
     drawer=false;quick=false;editing=false;edgePanel=false
     when{
      id.startsWith("resume-internal:")->{val route=id.removePrefix("resume-internal:");if(data.shell.internalRecents.any{it.first==state.current&&it.second==route}){if(route in nativeHomeApps)onNative(route)else screen=route}}
@@ -210,6 +212,14 @@ private val lightColors=lightColorScheme(primary=Color(0xFF285F65),secondary=Col
      onCoreAppRequestConsumed()
     }
    }
+   val openCoreLink: (NovaCoreLink) -> Unit = { link ->
+    if (state.current == "primary" && permitSanctuaryRoute(link.app.route)) {
+     openedCoreLink = link
+     drawer=false;quick=false;editing=false;edgePanel=false
+     screen = link.app.route
+    }
+   }
+   val linkedRecord = openedCoreLink as? NovaCoreLink.Record
    val latestLaunch by rememberUpdatedState(launch)
    val lifecycle = LocalLifecycleOwner.current.lifecycle
    DisposableEffect(lifecycle, sanctuaryStore) {
@@ -357,24 +367,28 @@ private val lightColors=lightColorScheme(primary=Color(0xFF285F65),secondary=Col
          "recents"->NovaRecents(data,pool,onHome=goHome,onResume=resumeTab,onInternal={id->if(permitSanctuaryRoute(id)){if(id in nativeHomeApps)onNative(id)else screen=id}},onCloseInternal={id->if(id=="browser-v1")onNative("close-browser");data.shell.closeInternal(state.current,id);if(id=="mind")audio.pause();if(id=="video")video.close()})
          "nova-notes-draft"->if(state.current=="primary" && permitSanctuaryRoute("nova-notes-draft")) {
           (localContext as? uk.co.traynor.privategallery.core.home2.SpaceContext)?.let { space ->
-           NovaNotesDraft(space, onBack=goHome)
+           NovaNotesDraft(space, onBack=goHome,
+            openNoteId=linkedRecord?.takeIf { it.app == NovaCoreApp.NOTES }?.id, onOpenLink=openCoreLink)
           }
          }
          "nova-tasks"->if(state.current=="primary" && permitSanctuaryRoute("nova-tasks")) {
           (localContext as? uk.co.traynor.privategallery.core.home2.SpaceContext)?.let { space ->
-           NovaTasksScreen(space, onBack=goHome)
+           NovaTasksScreen(space, onBack=goHome,
+            openTaskId=linkedRecord?.takeIf { it.app == NovaCoreApp.TASKS }?.id, onOpenLink=openCoreLink)
           }
          }
          "nova-calendar"->if(state.current=="primary" && permitSanctuaryRoute("nova-calendar")) {
           (localContext as? uk.co.traynor.privategallery.core.home2.SpaceContext)?.let { space ->
-           NovaCalendarScreen(space, onBack=goHome)
+           NovaCalendarScreen(space, onBack=goHome,
+            openEventId=linkedRecord?.takeIf { it.app == NovaCoreApp.CALENDAR }?.id,
+            openDay=(openedCoreLink as? NovaCoreLink.DueDay)?.date, onOpenLink=openCoreLink)
           }
          }
          "nova-files"->if(state.current=="primary" && permitSanctuaryRoute("nova-files")) {
           (localContext as? uk.co.traynor.privategallery.core.home2.SpaceContext)?.let { space ->
            key(filesPickerRevision) {
             NovaFilesScreen(space, onBack=goHome, onChooseFolder=filesPicker?.chooseFolder,
-             pickerMessage=filesPickerMessage)
+             pickerMessage=filesPickerMessage,onImportPrimaryFile=onImportPrimaryFile)
            }
           }
          }
@@ -388,7 +402,8 @@ private val lightColors=lightColorScheme(primary=Color(0xFF285F65),secondary=Col
           canOpenModule={id->permitSanctuaryRoute("visual:$id")},
          )
          "store"->StoreScreen(data,onBack=goHome,onDetail={if(permitSanctuaryRoute("store:${it.id}",it.url))detailId=it.id},onCustom={custom=true},
-          onVisualFoundation=if(state.current=="primary"){{openVisual("store")}}else null)
+          onVisualFoundation=if(state.current=="primary"){{openVisual("store")}}else null,
+          onOpenCoreApp=if(state.current=="primary")launch else null)
          "wallpaper"->LaunchedEffect(Unit){onPickImage();goHome()}
          "photos"->LaunchedEffect(Unit){onNative("photos")}
          "guide"->LaunchedEffect(Unit){onNative("native-settings")}

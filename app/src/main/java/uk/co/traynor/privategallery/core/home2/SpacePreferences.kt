@@ -61,7 +61,7 @@ internal class SpaceContext(base: Context, private val access: EvidenceAccess) :
  internal fun backupValues():Map<String,ByteArray> = synchronized(gate) {
   checkCurrent();val result=linkedMapOf<String,ByteArray>()
   try {
-   uk.co.traynor.privategallery.core.backup.BackupPolicy.preferences.forEach {name ->
+   uk.co.traynor.privategallery.core.backup.BackupPolicy.preferencesFor(spaceId).forEach {name ->
     @Suppress("UNCHECKED_CAST") val values=getSharedPreferences(name,0).all as Map<String,Any>
     val safe=portableValues(name,values,false)
     if(safe.isNotEmpty())result["preferences:$name"]=encode(safe)
@@ -79,7 +79,7 @@ internal class SpaceContext(base: Context, private val access: EvidenceAccess) :
   values.forEach { (name,bytes) ->
    require(bytes.size in 1..MAX_BYTES)
    when {
-    name.startsWith("preferences:")-> {val namespace=name.removePrefix("preferences:");require(uk.co.traynor.privategallery.core.backup.BackupPolicy.allowed(namespace));portableValues(namespace,decode(bytes),true)}
+    name.startsWith("preferences:")-> {val namespace=name.removePrefix("preferences:");require(uk.co.traynor.privategallery.core.backup.BackupPolicy.allowed(namespace,spaceId));portableValues(namespace,decode(bytes),true)}
     name.startsWith("wallpaper:")->{require(UUID_PATTERN.matches(name.removePrefix("wallpaper:")));StoredWallpaperImage.validateImport(bytes)}
     else->error("Unsupported backup preference")
    }
@@ -123,7 +123,7 @@ internal class SpaceContext(base: Context, private val access: EvidenceAccess) :
   root.parentFile?.listFiles().orEmpty().filter{it.name.startsWith("home2-backup-next-")}.forEach{it.deleteRecursively()}
  }
  private fun portableValues(name:String,values:Map<String,Any>,restore:Boolean,appIds:Map<String,String> = emptyMap(),installedApps:org.json.JSONArray = org.json.JSONArray()):MutableMap<String,Any> {
-  require(uk.co.traynor.privategallery.core.backup.BackupPolicy.allowed(name))
+  require(uk.co.traynor.privategallery.core.backup.BackupPolicy.allowed(name,spaceId))
   if(restore)uk.co.traynor.privategallery.core.backup.PortablePreferenceSchema.validate(name,values,spaceId)
   val safe=linkedMapOf<String,Any>()
   when(name) {
@@ -159,6 +159,8 @@ internal class SpaceContext(base: Context, private val access: EvidenceAccess) :
    }
    "nova_mind_v1"->listOf(spaceId,"preferred").forEach{key->values[key]?.let{safe[key]=it}}
    "nova_shell_v1"->listOf("displayDim","reverse","gestures","edge","left","edgePosition","favourites:$spaceId").forEach{key->values[key]?.let{safe[key]=it}}
+   in uk.co.traynor.privategallery.core.home2.NovaCoreAppBackup.namespaces ->
+    safe.putAll(uk.co.traynor.privategallery.core.home2.NovaCoreAppBackup.portableAt(name,values,spaceId,java.time.Instant.now()))
    else->values.forEach{(key,value)->require(!Regex("(?i)(secret|pin|password|token|credential|cookie|api.?key)").containsMatchIn(key)){"Sensitive app setting is not eligible"};safe[key]=copy(value)}
   }
   if(!restore)uk.co.traynor.privategallery.core.backup.PortablePreferenceSchema.validate(name,safe,spaceId)

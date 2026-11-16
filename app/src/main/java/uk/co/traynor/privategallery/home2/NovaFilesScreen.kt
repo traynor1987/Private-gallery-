@@ -42,6 +42,7 @@ internal fun NovaFilesScreen(
     onBack: () -> Unit,
     onChooseFolder: (() -> Unit)?,
     pickerMessage: String?,
+    onImportPrimaryFile: ((Uri, (String) -> Unit) -> Unit)? = null,
 ) {
     val scope = rememberCoroutineScope()
     var selection by remember(space) { mutableStateOf<NovaFilesSelection.Selection?>(null) }
@@ -59,6 +60,8 @@ internal fun NovaFilesScreen(
     var loading by remember(space) { mutableStateOf(true) }
     var reload by remember(space) { mutableIntStateOf(0) }
     var detail by remember(space) { mutableStateOf<NovaFile?>(null) }
+    var preview by remember(space, detail?.id) { mutableStateOf<NovaFilesAccess.Preview?>(null) }
+    var toImport by remember(space) { mutableStateOf<NovaFile?>(null) }
     var nameRequest by remember(space) { mutableStateOf<FileNameRequest?>(null) }
     var nameText by remember(space) { mutableStateOf("") }
     var toDelete by remember(space) { mutableStateOf<NovaFile?>(null) }
@@ -176,6 +179,14 @@ internal fun NovaFilesScreen(
         }
         if (folder != null && provider != null) {
             Text(folder.name, style = MaterialTheme.typography.titleMedium)
+            val knownSizes = files.mapNotNull { it.bytes?.takeIf { bytes -> bytes >= 0 && !it.directory } }
+            val knownTotal = knownSizes.fold(0L) { total, bytes ->
+                if (bytes > Long.MAX_VALUE - total) Long.MAX_VALUE else total + bytes
+            }
+            if (!loading) {
+                val total = if (knownSizes.isEmpty()) "" else " · " + Formatter.formatFileSize(space, knownTotal) + " reported"
+                Text(files.size.toString() + " items" + total, style = MaterialTheme.typography.labelMedium)
+            }
             val pending = transfer
             if (pending == null) {
                 OutlinedTextField(search, { search = it }, label = { Text("Search this folder") },
@@ -273,7 +284,32 @@ internal fun NovaFilesScreen(
                             Text(if (file.id in selection?.favourites.orEmpty()) "Remove favourite" else "Add to favourites")
                         }
                     }
+                    if (provider != null && !file.directory) {
+                        if (file.mimeType.startsWith("text/") || file.mimeType == "application/json") {
+                            TextButton(enabled = active, onClick = {
+                                working = true
+                                scope.launch {
+                                    val opened = withContext(Dispatchers.IO) { runCatching { provider.preview(file) } }
+                                    if (!space.current()) return@launch
+                                    if (detail?.id == file.id) preview = opened.getOrNull()
+                                    if (opened.isFailure) status = "The file preview could not be opened."
+                                    working = false
+                                }
+                            }) { Text("Preview text") }
+                        }
+                        if (onImportPrimaryFile != null && !file.supports(Document.FLAG_VIRTUAL_DOCUMENT) &&
+                            acceptsPrimaryVaultFile(file.mimeType) &&
+                            (file.bytes ?: 0L) <= uk.co.traynor.privategallery.core.backup.PortableArchive.MAX_ITEM) {
+                            TextButton(enabled = active, onClick = { detail = null; toImport = file }) {
+                                Text("Import into Primary Vault")
+                            }
+                        }
+                    }
                     file.bytes?.let { Text(Formatter.formatFileSize(space, it)) }
+                    preview?.let {
+                        if (it.truncated) Text("Showing the first 32 KiB")
+                        Text(it.text.ifEmpty { "Empty file" })
+                    }
                     file.modified?.takeIf { it > 0L }?.let {
                         Text(java.text.DateFormat.getDateTimeInstance().format(java.util.Date(it)))
                     }
@@ -299,6 +335,34 @@ internal fun NovaFilesScreen(
                 }
             },
             confirmButton = { TextButton(onClick = { detail = null }) { Text("Close") } },
+        )
+    }
+    toImport?.let { file ->
+        AlertDialog(
+            onDismissRequest = { toImport = null },
+            title = { Text("Import into Primary Vault?") },
+            text = { Text("Create a verified encrypted copy of " + file.name + ". The original will stay in its folder.") },
+            confirmButton = {
+                TextButton(enabled = active && provider != null && onImportPrimaryFile != null, onClick = {
+                    toImport = null
+                    working = true
+                    scope.launch {
+                        val resolved = withContext(Dispatchers.IO) { runCatching { provider?.authorizedFileUri(file) } }
+                        if (!space.current()) return@launch
+                        val source = resolved.getOrNull()
+                        if (source == null || onImportPrimaryFile == null) {
+                            status = "Folder access is unavailable."
+                            working = false
+                        } else onImportPrimaryFile(source) { result ->
+                            if (space.current()) {
+                                status = result
+                                working = false
+                            }
+                        }
+                    }
+                }) { Text("Import copy") }
+            },
+            dismissButton = { TextButton(onClick = { toImport = null }) { Text("Cancel") } },
         )
     }
     nameRequest?.let { request ->

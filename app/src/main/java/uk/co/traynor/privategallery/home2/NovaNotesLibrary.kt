@@ -13,6 +13,8 @@ internal data class NovaNote(
     val title: String,
     val body: String,
     val pinned: Boolean = false,
+    val notebook: String = "",
+    val tags: String = "",
 )
 
 internal class NovaNotesLibrary(space: SpaceContext) {
@@ -59,11 +61,14 @@ internal class NovaNotesLibrary(space: SpaceContext) {
         return Draft(cleared.revision, null, null)
     }
 
-    fun finishDraft(draft: Draft, delete: Boolean): Snapshot? {
+    fun finishDraft(draft: Draft, delete: Boolean, copyId: String? = null): Snapshot? {
         val note = requireNotNull(draft.note)
         val current = read()
-        if (current.notes.find { it.id == note.id }?.let(::fingerprint) != draft.baseFingerprint) return null
+        require(copyId == null || (copyId.isNotBlank() && !delete))
+        if (copyId != null && current.notes.any { it.id == copyId }) return null
+        if (copyId == null && current.notes.find { it.id == note.id }?.let(::fingerprint) != draft.baseFingerprint) return null
         val notes = when {
+            copyId != null -> listOf(note.copy(id = copyId)) + current.notes
             delete -> current.notes.filterNot { it.id == note.id }
             draft.baseFingerprint == null -> listOf(note) + current.notes
             else -> current.notes.map { if (it.id == note.id) note else it }
@@ -88,6 +93,7 @@ internal class NovaNotesLibrary(space: SpaceContext) {
 
     private fun fingerprint(note: NovaNote): String {
         val fields = JSONArray(listOf(note.id, note.title, note.body, note.pinned))
+        if (note.notebook.isNotEmpty() || note.tags.isNotEmpty()) fields.put(note.notebook).put(note.tags)
         val digest = MessageDigest.getInstance("SHA-256")
         for (unit in fields.toString()) {
             digest.update((unit.code ushr 8).toByte())
@@ -98,9 +104,14 @@ internal class NovaNotesLibrary(space: SpaceContext) {
 
     private fun encode(note: NovaNote) =
         JSONObject().put("id", note.id).put("title", note.title).put("body", note.body).put("pinned", note.pinned)
+            .apply {
+                if (note.notebook.isNotEmpty()) put("notebook", note.notebook)
+                if (note.tags.isNotEmpty()) put("tags", note.tags)
+            }
 
     private fun decode(entry: JSONObject) = NovaNote(
         entry.getString("id"), entry.getString("title"), entry.getString("body"), entry.getBoolean("pinned"),
+        entry.optString("notebook"), entry.optString("tags"),
     )
 
     private companion object {

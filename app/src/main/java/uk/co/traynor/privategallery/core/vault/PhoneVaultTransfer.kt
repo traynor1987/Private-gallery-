@@ -3,6 +3,8 @@ package uk.co.traynor.privategallery.core.vault
 import android.content.Context
 import android.net.Uri
 import android.provider.MediaStore
+import java.io.FilterInputStream
+import java.io.InputStream
 import java.security.MessageDigest
 import uk.co.traynor.privategallery.core.hidden.HiddenRepository
 import uk.co.traynor.privategallery.core.hidden.HiddenSession
@@ -20,12 +22,18 @@ internal class PhoneVaultTransfer(
 
     private val verifiedCopies=java.util.IdentityHashMap<VaultItem,Uri>()
 
-    fun copy(uri: Uri): VaultItem {
+    fun copy(uri: Uri): VaultItem = copy(uri, Long.MAX_VALUE) { true }
+
+    fun copy(uri: Uri, maxBytes: Long, acceptsMime: (String) -> Boolean): VaultItem {
         check(authorized())
         val item=target?.import(uri) ?: when(val result=VaultImportCoordinator(primary!!).acquire(VaultImportSource(
             displayName=context.contentResolver.query(uri,arrayOf(android.provider.OpenableColumns.DISPLAY_NAME),null,null,null)?.use {if(it.moveToFirst())it.getString(0)else null} ?: "Imported media",
-            mimeType=context.contentResolver.getType(uri) ?: "application/octet-stream",
-            openStream={checkNotNull(context.contentResolver.openInputStream(uri))},sourceReference=uri.toString(),
+            mimeType=(context.contentResolver.getType(uri) ?: "application/octet-stream")
+                .also { require(acceptsMime(it)) { "Unsupported Primary Vault import type" } },
+            openStream={
+                val input = checkNotNull(context.contentResolver.openInputStream(uri))
+                if (maxBytes == Long.MAX_VALUE) input else LimitedFileInput(input, maxBytes)
+            },sourceReference=uri.toString(),
             isCancelled={!authorized()},publishIfAllowed={ commit -> publish {check(authorized());commit()} },
         ))) {
             is ImportResult.Imported -> result.item
@@ -58,4 +66,21 @@ internal class PhoneVaultTransfer(
         check(size==verified.plaintextSize && MessageDigest.isEqual(digest.digest(),verified.plaintextSha256))
         return uri
     }
+}
+
+
+private class LimitedFileInput(input: InputStream, private val limit: Long) : FilterInputStream(input) {
+    private var consumed = 0L
+
+    private fun consume(count: Long) {
+        if (count <= 0) return
+        require(count <= limit - consumed) { "File exceeds the portable Vault limit" }
+        consumed += count
+    }
+
+    override fun read(): Int = super.read().also { if (it >= 0) consume(1) }
+    override fun read(bytes: ByteArray, offset: Int, length: Int): Int =
+        super.read(bytes, offset, length).also { consume(it.toLong()) }
+    override fun skip(count: Long): Long = super.skip(count).also(::consume)
+    override fun markSupported(): Boolean = false
 }

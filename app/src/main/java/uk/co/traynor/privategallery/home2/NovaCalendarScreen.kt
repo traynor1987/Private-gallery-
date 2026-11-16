@@ -26,6 +26,7 @@ import java.util.UUID
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import uk.co.traynor.privategallery.core.home2.NovaCoreApp
 import uk.co.traynor.privategallery.core.home2.SpaceContext
 
 private enum class CalendarView(val label: String) {
@@ -62,7 +63,13 @@ private data class CalendarEdit(
 private enum class CalendarConfirmation { DELETE, DISCARD }
 
 @Composable
-internal fun NovaCalendarScreen(space: SpaceContext, onBack: () -> Unit) {
+internal fun NovaCalendarScreen(
+    space: SpaceContext,
+    onBack: () -> Unit,
+    openEventId: String? = null,
+    openDay: LocalDate? = null,
+    onOpenLink: ((NovaCoreLink) -> Unit)? = null,
+) {
     val scope = rememberCoroutineScope()
     val displayZone = ZoneId.systemDefault()
     var store by remember(space) { mutableStateOf<NovaCalendarLibrary?>(null) }
@@ -75,10 +82,11 @@ internal fun NovaCalendarScreen(space: SpaceContext, onBack: () -> Unit) {
     var status by remember(space) { mutableStateOf<String?>(null) }
     var busy by remember(space) { mutableStateOf(true) }
     var reload by remember(space) { mutableIntStateOf(0) }
+    var pickNote by remember(space) { mutableStateOf(false) }
     var skipOccurrence by remember(space) { mutableStateOf<NovaOccurrence?>(null) }
     var confirmation by remember(space) { mutableStateOf<CalendarConfirmation?>(null) }
 
-    LaunchedEffect(space, reload) {
+    LaunchedEffect(space, reload, openEventId, openDay) {
         busy = true
         val (calendar, dueTasks) = withContext(Dispatchers.IO) {
             runCatching { NovaCalendarLibrary(space).let { it to it.read() } } to
@@ -89,7 +97,17 @@ internal fun NovaCalendarScreen(space: SpaceContext, onBack: () -> Unit) {
             store = library
             snapshot = saved
             tasks = dueTasks.getOrDefault(emptyList())
-            status = if (dueTasks.isFailure) "Task due dates are unavailable." else null
+            val requested = openEventId?.let { id -> saved.events.find { it.id == id } }
+            if (requested != null) editor = CalendarEdit(requested)
+            if (openDay != null) {
+                focus = openDay
+                mode = CalendarView.DAY
+            }
+            status = when {
+                openEventId != null && requested == null -> "The linked event is unavailable."
+                dueTasks.isFailure -> "Task due dates are unavailable."
+                else -> null
+            }
         }.onFailure { status = "Encrypted events could not be opened." }
         busy = false
     }
@@ -171,7 +189,12 @@ internal fun NovaCalendarScreen(space: SpaceContext, onBack: () -> Unit) {
                     anyVisible = true
                     Text(date.format(DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM)),
                         style = MaterialTheme.typography.titleSmall)
-                    due.forEach { task -> Text("Task due · " + task.title) }
+                    due.forEach { task ->
+                        if (onOpenLink == null) Text("Task due · " + task.title)
+                        else TextButton(enabled = !busy, onClick = {
+                            onOpenLink(NovaCoreLink.Record(NovaCoreApp.TASKS, task.id))
+                        }) { Text("Task due · " + task.title) }
+                    }
                     matches.forEach { occurrence ->
                         val event = occurrence.event
                         OutlinedCard(onClick = { status = null; editor = CalendarEdit(event) },
@@ -182,6 +205,11 @@ internal fun NovaCalendarScreen(space: SpaceContext, onBack: () -> Unit) {
                                     it.atZone(displayZone).format(DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT))
                                 } ?: "All day"
                                 Text(whenText, style = MaterialTheme.typography.labelMedium)
+                                if (onOpenLink != null) event.noteId?.let { id ->
+                                    TextButton(enabled = !busy, onClick = {
+                                        onOpenLink(NovaCoreLink.Record(NovaCoreApp.NOTES, id))
+                                    }) { Text("Open linked note") }
+                                }
                                 if (event.repeat != NovaEventRepeat.NONE) {
                                     TextButton(enabled = !busy, onClick = { skipOccurrence = occurrence }) {
                                         Text("Skip this occurrence")
@@ -200,6 +228,14 @@ internal fun NovaCalendarScreen(space: SpaceContext, onBack: () -> Unit) {
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 CalendarEditFields(current, !busy, onEdit = { editor = it })
+                Row(Modifier.horizontalScroll(rememberScrollState())) {
+                    TextButton(enabled = !busy, onClick = { pickNote = true }) {
+                        Text(if (current.event.noteId == null) "Link a note" else "Change linked note")
+                    }
+                    if (current.event.noteId != null) TextButton(enabled = !busy, onClick = {
+                        editor = current.copy(event = current.event.copy(noteId = null))
+                    }) { Text("Unlink note") }
+                }
                 if (current.event.skippedDates.isNotEmpty()) {
                     Text("Skipped dates")
                     current.event.skippedDates.sorted().forEach { date ->
@@ -227,6 +263,10 @@ internal fun NovaCalendarScreen(space: SpaceContext, onBack: () -> Unit) {
             }
         }
     }
+    if (pickNote) NovaNotePicker(space, onChoose = { id ->
+        editor = editor?.let { it.copy(event = it.event.copy(noteId = id)) }
+        pickNote = false
+    }, onDismiss = { pickNote = false })
     skipOccurrence?.let { occurrence ->
         AlertDialog(
             onDismissRequest = { skipOccurrence = null },

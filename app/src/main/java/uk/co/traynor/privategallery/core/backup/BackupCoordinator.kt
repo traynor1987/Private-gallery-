@@ -54,7 +54,8 @@ internal class BackupCoordinator(private val context:Context,val access:Evidence
   try {
    values=space.backupValues();space.validateBackupValues(values)
    val state=snapshot();require(state.items.all{it.state in setOf(VaultItemState.COMPLETE,VaultItemState.TRASHED)}){"Finish pending media operations before backup"};val items=state.items.filter{it.state in setOf(VaultItemState.COMPLETE,VaultItemState.TRASHED)};require(items.size<=10000)
-   val manifest=JSONObject().put("schema",1).put("minReader",1).put("maxReader",1).put("owner",owner).put("minNovaVersion","1.7.11.6").put("maxNovaVersion","1.7.*").put("created",System.currentTimeMillis()).put("excluded",BackupPolicy.unsupported).toString().encodeToByteArray()
+   val reader=BackupPolicy.readerFor(values.keys)
+   val manifest=JSONObject().put("schema",1).put("minReader",reader).put("maxReader",reader).put("owner",owner).put("minNovaVersion",BackupPolicy.minimumVersion(reader)).put("maxNovaVersion","1.7.*").put("created",System.currentTimeMillis()).put("excluded",BackupPolicy.unsupported).toString().encodeToByteArray()
    val collections=BackupMedia.collections(state);metadata+=manifest;metadata+=collections;require(collections.size<=8*1024*1024){"Collection metadata exceeds portable archive limit"};BackupMedia.merge(VaultIndexSnapshot(emptyList()),emptyList(),items.associate{it.id to it.id},collections)
    fun entry(category:String,body:ByteArray,name:String?=null):PortableArchive.Entry {val json=JSONObject().put("category",category);if(name!=null)json.put("name",name);return PortableArchive.Entry(json.toString().encodeToByteArray().also{metadata+=it}){it.write(body)}}
    val entries=mutableListOf(entry("manifest",manifest))
@@ -78,12 +79,12 @@ internal class BackupCoordinator(private val context:Context,val access:Evidence
   checkCurrent();val file=File(stageRoot,"restore-${UUID.randomUUID()}.enc")
   try {
    provider.read().use{input->FileOutputStream(file).use{out->copy(input,out,PortableArchive.MAX_TOTAL+64L*1024*1024);out.fd.sync()}}
-   var manifestSeen=false;var collectionSeen=false;var count=0;var bytes=0L;var created=0L;var apps=0;var appsSeen=false;var collectionCount=0
+   var manifestSeen=false;var minimumReader=1;var collectionSeen=false;var count=0;var bytes=0L;var created=0L;var apps=0;var appsSeen=false;var collectionCount=0
    val names=mutableListOf<String>();val ids=hashSetOf<String>();val values=linkedMapOf<String,ByteArray>()
    try {
     FileInputStream(file).use{input->PortableArchive.read(input,key.copyOf(),::current){meta,payload->
      val json=JSONObject(meta.decodeToString());val category=json.getString("category")
-     if(!manifestSeen){require(category=="manifest");val manifest=JSONObject(readBounded(payload,65536).decodeToString());require(manifest.getInt("schema")==1&&manifest.getInt("minReader")<=1&&manifest.getInt("maxReader")>=1);BackupPolicy.requireOwner(manifest.getString("owner"),owner);require(manifest.getString("minNovaVersion")=="1.7.11.6"&&manifest.getString("maxNovaVersion")=="1.7.*");created=manifest.getLong("created");manifestSeen=true}
+     if(!manifestSeen){require(category=="manifest");val manifest=JSONObject(readBounded(payload,65536).decodeToString());minimumReader=manifest.getInt("minReader");require(manifest.getInt("schema")==1&&minimumReader in 1..2&&manifest.getInt("maxReader")>=minimumReader);BackupPolicy.requireOwner(manifest.getString("owner"),owner);require(manifest.getString("minNovaVersion")==BackupPolicy.minimumVersion(minimumReader)&&manifest.getString("maxNovaVersion")=="1.7.*");created=manifest.getLong("created");manifestSeen=true}
      else when(category){
       "media"->{val item=BackupMedia.item(json);require(ids.add(item.id)&&++count<=10000);bytes=Math.addExact(bytes,item.plaintextSize);if(names.size<12)names+=item.displayName;val digest=MessageDigest.getInstance("SHA-256");var length=0L;val buffer=ByteArray(65536);try{while(true){val read=payload.read(buffer);if(read<0)break;length+=read;digest.update(buffer,0,read)}}finally{buffer.fill(0)};BackupMedia.verify(item,length,digest.digest())}
       "collections"->{require(!collectionSeen);collectionSeen=true;val data=readBounded(payload,8*1024*1024);try{BackupMedia.requireOwnerCollections(data,owner);collectionCount=BackupMedia.merge(VaultIndexSnapshot(emptyList()),emptyList(),ids.associateWith{it},data).collections.size}finally{data.fill(0)}}
@@ -92,7 +93,7 @@ internal class BackupCoordinator(private val context:Context,val access:Evidence
       else->error("Unsupported archive category")
      }
     }}
-    require(manifestSeen&&collectionSeen);space.validateBackupValues(values);checkCurrent()
+    require(manifestSeen&&collectionSeen&&minimumReader>=BackupPolicy.readerFor(values.keys));space.validateBackupValues(values);checkCurrent()
     RestorePlan(file,key.copyOf(),count,bytes,values.size,names,created,apps,collectionCount).also{plan->plans.add(plan);try{checkCurrent()}catch(failure:Throwable){plans.remove(plan);plan.close();throw failure}}
    }finally{values.values.forEach{it.fill(0)}}
   }catch(failure:Throwable){file.delete();throw failure}

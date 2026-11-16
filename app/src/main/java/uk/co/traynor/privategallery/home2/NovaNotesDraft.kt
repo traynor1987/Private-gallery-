@@ -1,6 +1,7 @@
 package uk.co.traynor.privategallery.home2
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -10,6 +11,14 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.TextRange
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.font.FontStyle
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import java.util.UUID
 import kotlinx.coroutines.Dispatchers
@@ -20,32 +29,62 @@ import uk.co.traynor.privategallery.core.home2.SpaceContext
 private enum class NotesConfirmation { DELETE, DISCARD }
 
 @Composable
-internal fun NovaNotesDraft(space: SpaceContext, onBack: () -> Unit) {
+internal fun NovaNotesDraft(
+    space: SpaceContext,
+    onBack: () -> Unit,
+    openNoteId: String? = null,
+    onOpenLink: ((NovaCoreLink) -> Unit)? = null,
+) {
     val scope = rememberCoroutineScope()
     var library by remember(space) { mutableStateOf<NovaNotesLibrary?>(null) }
     var snapshot by remember(space) { mutableStateOf<NovaNotesLibrary.Snapshot?>(null) }
     var editor by remember(space) { mutableStateOf<NovaNote?>(null) }
     var editorBase by remember(space) { mutableStateOf<NovaNote?>(null) }
     var draft by remember(space) { mutableStateOf<NovaNotesLibrary.Draft?>(null) }
+    var notebook by remember(space) { mutableStateOf<String?>(null) }
+    var sortByTitle by remember(space) { mutableStateOf(false) }
+    val undo = remember(space) { mutableStateListOf<NovaNote>() }
+    val redo = remember(space) { mutableStateListOf<NovaNote>() }
     var query by remember(space) { mutableStateOf("") }
     var status by remember(space) { mutableStateOf<String?>(null) }
+    var showLinks by remember(space) { mutableStateOf(false) }
+    var resolveConflict by remember(space) { mutableStateOf(false) }
     var busy by remember(space) { mutableStateOf(true) }
     var reload by remember(space) { mutableIntStateOf(0) }
     var confirmation by remember(space) { mutableStateOf<NotesConfirmation?>(null) }
-    LaunchedEffect(space, reload) {
+    LaunchedEffect(space, reload, openNoteId) {
         busy = true
         val result = withContext(Dispatchers.IO) {
-            runCatching { NovaNotesLibrary(space).let { Triple(it, it.read(), it.readDraft()) } }
+            runCatching { NovaNotesLibrary(space).let { store -> Triple(store, store.read(), runCatching { store.readDraft() }) } }
         }
         if (!space.current()) return@LaunchedEffect
-        result.onSuccess { (store, saved, recovered) ->
+        result.onSuccess { (store, saved, recovery) ->
+            val recovered = recovery.getOrNull()
             library = store
             snapshot = saved
             draft = recovered
-            editor = recovered.note
+            val requested = openNoteId?.let { id -> saved.notes.find { it.id == id } }
+            editor = recovered?.note ?: requested
+            editorBase = if (recovered?.note == null) requested else null
+            resolveConflict = false
+            undo.clear()
+            redo.clear()
+            status = when {
+                recovery.isFailure -> "The recovery draft could not be read. Saved notes are read-only."
+                recovered?.note != null && openNoteId != null && recovered.note.id != openNoteId ->
+                    "Finish or discard the recovered draft before opening the linked note."
+                recovered?.note != null -> "Recovered an unsaved draft"
+                openNoteId != null && requested == null -> "The linked note is unavailable."
+                else -> null
+            }
+        }.onFailure {
+            library = null
+            snapshot = null
+            draft = null
+            editor = null
             editorBase = null
-            status = if (recovered.note == null) null else "Recovered an unsaved draft"
-        }.onFailure { status = "Encrypted notes could not be opened." }
+            status = "Encrypted notes could not be opened."
+        }
         busy = false
     }
 
@@ -65,29 +104,51 @@ internal fun NovaNotesDraft(space: SpaceContext, onBack: () -> Unit) {
     }
 
     fun edit(note: NovaNote) {
-        if (note.title.length > 200 || note.body.length > 32_000) {
-            status = "Notes support up to 200 title characters and 32,000 body characters."
+        val before = editor ?: return
+        if (note.title.length > 200 || note.body.length > 32_000 ||
+            note.notebook.length > 120 || note.tags.length > 200) {
+            status = "That edit exceeds the note field limit."
             return
         }
+        if (before == note) return
+        if (undo.size == 24) undo.removeAt(0)
+        undo.add(before)
+        redo.clear()
         editor = note
         checkpoint(note)
     }
 
-    fun persist(delete: Boolean) {
+    fun undoOrRedo(forward: Boolean) {
+        val current = editor ?: return
+        val from = if (forward) redo else undo
+        val to = if (forward) undo else redo
+        if (from.isEmpty()) return
+        val target = from.removeAt(from.lastIndex)
+        to.add(current)
+        editor = target
+        checkpoint(target)
+    }
+
+    fun persist(delete: Boolean, asCopy: Boolean = false) {
         val store = library ?: return
         val current = editor ?: return
         val pending = checkpoint(current) ?: return
+        val copyId = if (asCopy) UUID.randomUUID().toString() else null
         busy = true
         scope.launch {
-            val result = withContext(Dispatchers.IO) { runCatching { store.finishDraft(pending, delete) } }
+            val result = withContext(Dispatchers.IO) { runCatching { store.finishDraft(pending, delete, copyId) } }
             if (!space.current()) return@launch
             result.onSuccess { saved ->
-                if (saved == null) status = "The saved note changed. Your draft is still available."
+                if (saved == null) {
+                    resolveConflict = true
+                    status = "The saved note changed. Save your draft as a new note to keep both versions."
+                }
                 else {
                     snapshot = saved
                     draft = NovaNotesLibrary.Draft(Math.addExact(checkNotNull(pending.revision), 1L), null, null)
                     editor = null
                     editorBase = null
+                    resolveConflict = false
                     status = if (delete) "Note deleted" else "Note saved"
                 }
             }.onFailure { status = "Could not save the note. The recovery draft is still available." }
@@ -116,12 +177,15 @@ internal fun NovaNotesDraft(space: SpaceContext, onBack: () -> Unit) {
         if (busy) LinearProgressIndicator(Modifier.fillMaxWidth())
         status?.let { Text(it) }
         val note = editor
+        val canEdit = !busy && draft != null
         val saved = snapshot?.notes.orEmpty()
         if (note == null) {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Button(enabled = !busy && snapshot != null && draft?.note == null, onClick = {
+                Button(enabled = canEdit && snapshot != null && draft?.note == null, onClick = {
                     status = null
                     editorBase = null
+                    undo.clear()
+                    redo.clear()
                     editor = NovaNote(UUID.randomUUID().toString(), "", "")
                 }) { Text("New note") }
                 TextButton(enabled = !busy, onClick = { reload++ }) { Text("Reload") }
@@ -136,22 +200,39 @@ internal fun NovaNotesDraft(space: SpaceContext, onBack: () -> Unit) {
             }
             OutlinedTextField(query, { query = it }, enabled = !busy && snapshot != null,
                 label = { Text("Search notes") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+            val notebooks = saved.map { it.notebook }.filter(String::isNotBlank).distinct().sorted()
+            val activeNotebook = notebook?.takeIf { it in notebooks }
+            if (notebooks.isNotEmpty()) {
+                Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    FilterChip(activeNotebook == null, { notebook = null }, { Text("All notebooks") })
+                    notebooks.forEach { name ->
+                        FilterChip(activeNotebook == name, { notebook = name }, { Text(name) })
+                    }
+                }
+            }
+            FilterChip(sortByTitle, { sortByTitle = !sortByTitle }, { Text("Sort by title") })
             val search = query.trim()
-            val filtered = saved.filter { it.title.contains(search, true) || it.body.contains(search, true) }
-                .sortedByDescending { it.pinned }
+            val matching = saved.filter {
+                (activeNotebook == null || it.notebook == activeNotebook) &&
+                    listOf(it.title, it.body, it.notebook, it.tags).any { value -> value.contains(search, true) }
+            }
+            val pinnedFirst = compareByDescending<NovaNote> { it.pinned }
+            val filtered = matching.sortedWith(if (sortByTitle) pinnedFirst.thenBy { it.title.lowercase() } else pinnedFirst)
             if (!busy && snapshot != null && filtered.isEmpty()) {
                 Text(if (saved.isEmpty()) "No notes yet" else "No matching notes")
             }
             LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 items(filtered, key = { it.id }) { item ->
                     OutlinedCard(
-                        onClick = { status = null; editorBase = item; editor = item },
+                        onClick = { if (canEdit) status = null; editorBase = item; undo.clear(); redo.clear(); editor = item },
                         enabled = !busy && pending?.note == null,
                         modifier = Modifier.fillMaxWidth(),
                     ) {
                         Column(Modifier.padding(12.dp)) {
                             Text(item.title.ifBlank { "Untitled note" })
-                            if (item.pinned) Text("Pinned", style = MaterialTheme.typography.labelSmall)
+                            val details = listOf(item.notebook, item.tags, if (item.pinned) "Pinned" else "")
+                                .filter(String::isNotBlank)
+                            if (details.isNotEmpty()) Text(details.joinToString(" · "), style = MaterialTheme.typography.labelSmall)
                         }
                     }
                 }
@@ -161,26 +242,49 @@ internal fun NovaNotesDraft(space: SpaceContext, onBack: () -> Unit) {
                 Modifier.weight(1f).verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-                OutlinedTextField(note.title, { edit(note.copy(title = it)) }, enabled = !busy,
+                OutlinedTextField(note.title, { edit(note.copy(title = it)) }, enabled = canEdit,
                     label = { Text("Title") }, singleLine = true, modifier = Modifier.fillMaxWidth().testTag("nova-note-title"))
-                OutlinedTextField(note.body, { edit(note.copy(body = it)) }, enabled = !busy,
-                    label = { Text("Note") }, minLines = 6, modifier = Modifier.fillMaxWidth())
+                OutlinedTextField(note.notebook, { edit(note.copy(notebook = it)) }, enabled = canEdit,
+                    label = { Text("Notebook / folder") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                OutlinedTextField(note.tags, { edit(note.copy(tags = it)) }, enabled = canEdit,
+                    label = { Text("Tags") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                NotesBodyEditor(note, canEdit, undo.isNotEmpty(), redo.isNotEmpty(),
+                    onBody = { edit(note.copy(body = it)) }, onUndo = { undoOrRedo(false) }, onRedo = { undoOrRedo(true) })
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     FilterChip(note.pinned, { edit(note.copy(pinned = !note.pinned)) },
-                        { Text("Pinned") }, enabled = !busy)
+                        { Text("Pinned") }, enabled = canEdit)
                     if (saved.any { it.id == note.id }) {
-                        TextButton(enabled = !busy, onClick = { confirmation = NotesConfirmation.DELETE }) { Text("Delete") }
+                        if (onOpenLink != null) TextButton(enabled = !busy, onClick = {
+                            showLinks = true
+                        }) { Text("Linked items") }
+                        TextButton(enabled = canEdit, onClick = { confirmation = NotesConfirmation.DELETE }) { Text("Delete") }
                     }
                 }
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Button(enabled = !busy && (note.title.isNotBlank() || note.body.isNotBlank()), onClick = {
+                Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Button(enabled = canEdit && (note.title.isNotBlank() || note.body.isNotBlank()), onClick = {
                         persist(delete = false)
                     }) { Text("Save note") }
+                    if (resolveConflict) TextButton(enabled = canEdit, onClick = { persist(delete = false, asCopy = true) }) {
+                        Text("Save as a new note")
+                    }
                     TextButton(enabled = !busy, onClick = { closeEditor() }) { Text("Back") }
-                    TextButton(enabled = !busy, onClick = { confirmation = NotesConfirmation.DISCARD }) { Text("Discard draft") }
+                    TextButton(enabled = canEdit, onClick = { confirmation = NotesConfirmation.DISCARD }) { Text("Discard draft") }
                 }
             }
         }
+    }
+
+    val linkedNote = editor
+    if (showLinks && linkedNote != null && onOpenLink != null) {
+        NovaRelatedNoteItems(space, linkedNote.id, onOpen = { link ->
+            val before = draft?.note ?: editorBase
+            if (before != null && linkedNote != before && checkpoint(linkedNote) == null) {
+                showLinks = false
+            } else {
+                showLinks = false
+                onOpenLink(link)
+            }
+        }, onDismiss = { showLinks = false })
     }
 
     confirmation?.let { action ->
@@ -202,6 +306,7 @@ internal fun NovaNotesDraft(space: SpaceContext, onBack: () -> Unit) {
                             draft = cleared
                             editor = null
                             editorBase = null
+                            resolveConflict = false
                             status = null
                         }
                     }
@@ -210,4 +315,98 @@ internal fun NovaNotesDraft(space: SpaceContext, onBack: () -> Unit) {
             dismissButton = { TextButton(onClick = { confirmation = null }) { Text("Cancel") } },
         )
     }
+}
+
+@Composable
+private fun NotesBodyEditor(
+    note: NovaNote,
+    enabled: Boolean,
+    canUndo: Boolean,
+    canRedo: Boolean,
+    onBody: (String) -> Unit,
+    onUndo: () -> Unit,
+    onRedo: () -> Unit,
+) {
+    var input by remember(note.id) { mutableStateOf(TextFieldValue(note.body)) }
+    var preview by remember(note.id) { mutableStateOf(false) }
+    LaunchedEffect(note.body) {
+        if (input.text != note.body) input = TextFieldValue(note.body, TextRange(note.body.length))
+    }
+    fun setInput(updated: TextFieldValue) {
+        if (updated.text.length <= 32_000) input = updated
+        if (updated.text != note.body) onBody(updated.text)
+    }
+    fun wrap(marker: String) {
+        val start = input.selection.min
+        val end = input.selection.max
+        if (start == end) {
+            val text = input.text.substring(0, start) + marker + marker + input.text.substring(end)
+            setInput(TextFieldValue(text, TextRange(start + marker.length)))
+            return
+        }
+        val selected = input.text.substring(start, end).split('\n')
+        val formatted = selected.mapIndexed { index, line ->
+            val startsLine = index > 0 || start == 0 || input.text[start - 1] == '\n'
+            val checklist = if (startsLine) noteChecklistPrefix.find(line)?.value.orEmpty() else ""
+            val content = line.drop(checklist.length)
+            if (content.isEmpty()) line else checklist + marker + content + marker
+        }.joinToString("\n")
+        val text = input.text.substring(0, start) + formatted + input.text.substring(end)
+        val singleLine = selected.size == 1 && formatted.startsWith(marker)
+        val selection = if (singleLine) TextRange(start + marker.length, start + formatted.length - marker.length)
+            else TextRange(start + formatted.length)
+        setInput(TextFieldValue(text, selection))
+    }
+    Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+        TextButton(enabled = enabled && canUndo, onClick = onUndo) { Text("Undo") }
+        TextButton(enabled = enabled && canRedo, onClick = onRedo) { Text("Redo") }
+        TextButton(enabled = enabled && !preview, onClick = { wrap("**") }) { Text("Bold") }
+        TextButton(enabled = enabled && !preview, onClick = { wrap("*") }) { Text("Italic") }
+        TextButton(enabled = enabled && !preview, onClick = {
+            val text = input.text + if (input.text.isEmpty() || input.text.endsWith('\n')) "- [ ] " else "\n- [ ] "
+            setInput(TextFieldValue(text, TextRange(text.length)))
+        }) { Text("Add checklist item") }
+        TextButton(enabled = enabled, onClick = { preview = !preview }) { Text(if (preview) "Edit text" else "Preview") }
+    }
+    if (!preview) {
+        OutlinedTextField(input, ::setInput, enabled = enabled, label = { Text("Note") }, minLines = 6,
+            modifier = Modifier.fillMaxWidth())
+    } else {
+        val lines = note.body.split('\n')
+        LazyColumn(Modifier.fillMaxWidth().heightIn(max = 460.dp)) {
+            items(lines.size) { index ->
+                val line = lines[index]
+                val checked = line.startsWith("- [x] ", ignoreCase = true)
+                if (checked || line.startsWith("- [ ] ")) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Checkbox(checked, onCheckedChange = { value ->
+                            val updated = lines.toMutableList()
+                            updated[index] = (if (value) "- [x] " else "- [ ] ") + line.drop(6)
+                            onBody(updated.joinToString("\n"))
+                        }, enabled = enabled)
+                        Text(renderNoteLine(line.drop(6)))
+                    }
+                } else Text(renderNoteLine(line))
+            }
+        }
+    }
+}
+
+private val noteInlineMarkup = Regex("""\*\*\*([^*]+)\*\*\*|\*\*([^*]+)\*\*|\*([^*]+)\*""")
+private val noteChecklistPrefix = Regex("""^- \[[ xX]\] """)
+
+private fun renderNoteLine(line: String) = buildAnnotatedString {
+    var position = 0
+    for (match in noteInlineMarkup.findAll(line)) {
+        append(line.substring(position, match.range.first))
+        val text = match.groups[1]?.value ?: match.groups[2]?.value ?: match.groupValues[3]
+        val style = when {
+            match.groups[1] != null -> SpanStyle(fontWeight = FontWeight.Bold, fontStyle = FontStyle.Italic)
+            match.groups[2] != null -> SpanStyle(fontWeight = FontWeight.Bold)
+            else -> SpanStyle(fontStyle = FontStyle.Italic)
+        }
+        withStyle(style) { append(text) }
+        position = match.range.last + 1
+    }
+    append(line.substring(position))
 }

@@ -1,5 +1,6 @@
 """Require the signed Code 69 security boundary and an additive Android Home registration."""
 from pathlib import Path
+import hashlib
 import subprocess
 import xml.etree.ElementTree as ET
 
@@ -48,11 +49,63 @@ def original(path):
 # Code 81 adds a Primary Space adapter without changing the encrypted engine.
 ALLOWED_CORE_APP_ADAPTERS = {f"{CORE}/home2/NovaCoreAppDocuments.kt"}
 
+# Validate the exact additive backup wiring against the protected baseline.
+# The new data schema lives in the existing Code 81 adapter above.
+CODE81_BACKUP_WIRING = {
+    f"{CORE}/home2/SpacePreferences.kt": (
+        ("BackupPolicy.preferences.forEach", "BackupPolicy.preferencesFor(spaceId).forEach"),
+        ("BackupPolicy.allowed(namespace)", "BackupPolicy.allowed(namespace,spaceId)"),
+        ("BackupPolicy.allowed(name)", "BackupPolicy.allowed(name,spaceId)"),
+        (
+            "   else->values.forEach{(key,value)->require(!Regex",
+            "   in uk.co.traynor.privategallery.core.home2.NovaCoreAppBackup.namespaces ->\n"
+            "    safe.putAll(uk.co.traynor.privategallery.core.home2.NovaCoreAppBackup.portableAt(name,values,spaceId,java.time.Instant.now()))\n"
+            "   else->values.forEach{(key,value)->require(!Regex",
+        ),
+    ),
+    f"{CORE}/backup/BackupPolicy.kt": (
+        (
+            " fun allowed(name:String)=name in preferences",
+            ' fun preferencesFor(owner:String)=if(owner=="primary")preferences+'
+            'uk.co.traynor.privategallery.core.home2.NovaCoreAppBackup.namespaces else preferences\n'
+            ' fun allowed(name:String,owner:String="primary")=name in preferencesFor(owner)\n'
+            ' fun readerFor(entries:Set<String>)=if(entries.any{it.startsWith("preferences:")&&\n'
+            '  it.removePrefix("preferences:") in uk.co.traynor.privategallery.core.home2.NovaCoreAppBackup.namespaces})2 else 1\n'
+            ' fun minimumVersion(reader:Int)=when(reader){1->"1.7.11.6";2->"1.7.38.7";else->error("Unsupported backup reader")}',
+        ),
+    ),
+    f"{CORE}/backup/PortablePreferenceSchema.kt": (
+        (
+            '   else->error("Unsupported preference namespace")',
+            '   in uk.co.traynor.privategallery.core.home2.NovaCoreAppBackup.namespaces ->\n'
+            '    uk.co.traynor.privategallery.core.home2.NovaCoreAppBackup.validate(name,values,owner)\n'
+            '   else->error("Unsupported preference namespace")',
+        ),
+    ),
+}
+
+for path, replacements in CODE81_BACKUP_WIRING.items():
+    expected = original(path)
+    for before, after in replacements:
+        assert expected.count(before) == 1, f"Backup baseline moved: {path}"
+        expected = expected.replace(before, after, 1)
+    assert (ROOT / path).read_text() == expected, f"Unexpected protected backup wiring: {path}"
+
+# These two adapters are pinned byte-for-byte, including
+# the archive reader compatibility and the new, stricter Files import limit.
+CODE81_EXACT_ADAPTERS = {
+    f"{CORE}/backup/BackupCoordinator.kt": "fa2dedf1d88865e0bee5e9362109f5c1e6a921909fb00bb6ab168474f8d5b8fa",
+    f"{CORE}/vault/PhoneVaultTransfer.kt": "8fe53b2491622958d4c8d59322ffee3e2a4d12041a6d88f926e12a59ed8ec604",
+}
+for path, checksum in CODE81_EXACT_ADAPTERS.items():
+    assert hashlib.sha256((ROOT / path).read_bytes()).hexdigest() == checksum, f"Unexpected protected adapter changes: {path}"
+
 for revision in (("HEAD",), ()):
     raw = subprocess.check_output(
         ["git", "diff", "--name-only", BASE, *revision, "--", CORE], cwd=ROOT, text=True,
     )
-    unexpected = set(raw.splitlines()) - ALLOWED_SANCTUARY - ALLOWED_GUARDIAN - ALLOWED_CORE_APP_ADAPTERS
+    unexpected = (set(raw.splitlines()) - ALLOWED_SANCTUARY - ALLOWED_GUARDIAN
+                  - ALLOWED_CORE_APP_ADAPTERS - CODE81_BACKUP_WIRING.keys() - CODE81_EXACT_ADAPTERS.keys())
     assert not unexpected, f"Unexpected protected-core changes: {sorted(unexpected)}"
 
 build_file = "app/build.gradle.kts"

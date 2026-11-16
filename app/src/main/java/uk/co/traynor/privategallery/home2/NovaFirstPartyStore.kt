@@ -1,5 +1,7 @@
 package uk.co.traynor.privategallery.home2
 
+import uk.co.traynor.privategallery.core.home2.NovaCoreApp
+
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageInfo
@@ -131,7 +133,7 @@ private fun downloadVerifiedNovaApk(context: Context, release: NovaStoreRelease)
 }
 
 @Composable
-internal fun NovaFirstPartyStore(onBack: () -> Unit, onOpenWorkspace: (() -> Unit)?) {
+internal fun NovaFirstPartyStore(onBack: () -> Unit, onOpenWorkspace: (() -> Unit)?, onOpenCoreApp: ((String) -> Unit)? = null) {
     val context = LocalContext.current
     val appContext = context.applicationContext
     val scope = rememberCoroutineScope()
@@ -172,6 +174,20 @@ internal fun NovaFirstPartyStore(onBack: () -> Unit, onOpenWorkspace: (() -> Uni
                 verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 if (catalogue == null) item { LinearProgressIndicator(Modifier.fillMaxWidth()) }
                 status?.let { message -> item { Text(message) } }
+                if (onOpenCoreApp != null) {
+                    item { Text("Built into NovaOS", style = MaterialTheme.typography.titleMedium) }
+                    items(NovaCoreApp.entries, key = { "workspace:" + it.storageId }) { app ->
+                        ElevatedCard(onClick = { onOpenCoreApp(app.route) }, modifier = Modifier.fillMaxWidth()) {
+                            Row(Modifier.fillMaxWidth().padding(16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                                AppIcon(LaunchApp(app.route, app.label, app.symbol), 48.dp)
+                                Column {
+                                    Text(app.label, style = MaterialTheme.typography.titleMedium)
+                                    Text("Open in Primary Space", style = MaterialTheme.typography.labelMedium)
+                                }
+                            }
+                        }
+                    }
+                }
                 items(firstPartyApps, key = { it.id }) { app ->
                     val release = catalogue?.get(app.id)
                     val local = if (app.id == "novaos") installed[NOVA_PACKAGE] ?: installed[appContext.packageName]

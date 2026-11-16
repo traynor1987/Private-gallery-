@@ -20,6 +20,7 @@ import androidx.compose.ui.window.SecureFlagPolicy
 import kotlinx.coroutines.*
 import uk.co.traynor.privategallery.core.backup.*
 import uk.co.traynor.privategallery.core.crypto.RecoveryKey
+import uk.co.traynor.privategallery.core.evidence.EvidenceCatalog
 import uk.co.traynor.privategallery.core.home2.WallpaperOwner
 
 private class BackupPickerTicket(val restore:Boolean,val tree:Boolean=false){var delivered=false;var uri:Uri?=null}
@@ -272,7 +273,10 @@ private data class BackupNotice(val message: String, val failed: Boolean = false
    title={Text("Replace supported settings?")},
    text={
     Column(verticalArrangement=Arrangement.spacedBy(12.dp)){
-     Text("The archive replaces the included Home, wallpaper, navigation, notes and app preferences in this Space.")
+     Text("The archive replaces the included Home, wallpaper, navigation, notes and app data in this Space.")
+     if (owner.owner == EvidenceCatalog.Owner.PRIMARY) {
+      Text("Depending on the archive, this includes Notes, Tasks, Calendar and Clipboard. Android folder grants and external files stay on this device.")
+     }
      Text("Media and authentication settings are preserved. This Space locks after the restore so each screen reloads the restored settings.")
     }
    },
