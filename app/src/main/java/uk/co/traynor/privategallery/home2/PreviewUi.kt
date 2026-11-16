@@ -152,6 +152,7 @@ private val lightColors=lightColorScheme(primary=Color(0xFF285F65),secondary=Col
     when{
      id.startsWith("resume-internal:")->{val route=id.removePrefix("resume-internal:");if(data.shell.internalRecents.any{it.first==state.current&&it.second==route}){if(route in nativeHomeApps)onNative(route)else screen=route}}
      id.startsWith("recent-tab:")->{pool.tabs.firstOrNull{it.id==id.removePrefix("recent-tab:")&&it.profile==state.current}?.let{pool.select(it);screen="home"}}
+     id=="nova-notes-draft" && state.current=="primary"->{screen=id}
      id.startsWith("visual:") && state.current=="primary"->{
       val moduleId=id.removePrefix("visual:")
       if(visualModules.any{it.id==moduleId}){openVisual("home");visual.open(moduleId)}
@@ -337,6 +338,11 @@ private val lightColors=lightColorScheme(primary=Color(0xFF285F65),secondary=Col
           )
          }
          "recents"->NovaRecents(data,pool,onHome=goHome,onResume=resumeTab,onInternal={id->if(permitSanctuaryRoute(id)){if(id in nativeHomeApps)onNative(id)else screen=id}},onCloseInternal={id->if(id=="browser-v1")onNative("close-browser");data.shell.closeInternal(state.current,id);if(id=="mind")audio.pause();if(id=="video")video.close()})
+         "nova-notes-draft"->if(state.current=="primary" && permitSanctuaryRoute("nova-notes-draft")) {
+          (localContext as? uk.co.traynor.privategallery.core.home2.SpaceContext)?.let { space ->
+           NovaNotesDraft(space, onBack=goHome)
+          }
+         }
          "visual-foundation"->if(state.current=="primary")VisualFoundation(
           visual,onClose={screen=visualReturn},onRealApp={id->visual.reset();screen="home";launch(id)},
           canOpenModule={id->permitSanctuaryRoute("visual:$id")},
@@ -384,7 +390,14 @@ private val lightColors=lightColorScheme(primary=Color(0xFF285F65),secondary=Col
      }
      Text(data.profileLabel,style=MaterialTheme.typography.labelMedium,color=MaterialTheme.colorScheme.primary)
      OutlinedTextField(search,{search=it},Modifier.fillMaxWidth().padding(vertical=16.dp).testTag("drawer-search"),placeholder={Text("Search apps and folders")},leadingIcon={Icon(Icons.Default.Search,null)},singleLine=true,shape=Shape)
-     if(state.current=="primary")VisualCatalogueEntry("drawer-visual-foundation"){openVisual("home")}
+     if(state.current=="primary") {
+      VisualCatalogueEntry("drawer-visual-foundation"){openVisual("home")}
+      if ("Nova Notes".contains(search.trim(), ignoreCase=true)) {
+       TextButton(onClick={launch("nova-notes-draft")},modifier=Modifier.testTag("drawer-nova-notes-draft")){
+        Text("Nova Notes · Private draft")
+       }
+      }
+     }
      val visualMatches=if(state.current=="primary"&&search.isNotBlank())visualModules.filter{it.title.contains(search.trim(),true)}else emptyList()
      AdaptiveAppGrid(data,data.drawerIds().filter{id->val f=profile.folders.firstOrNull{it.id==id};(f?.name?:data.app(id)?.name?:"").contains(search,true)},onLaunch=launch,onSelect={selected=it},modifier=Modifier.weight(1f),
       visualMatches=visualMatches,onVisual={id->launch("visual:$id")})
