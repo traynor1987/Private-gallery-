@@ -1,6 +1,8 @@
 package uk.co.traynor.privategallery.home2
 
 import java.time.LocalDate
+import java.time.YearMonth
+import java.util.UUID
 import org.json.JSONArray
 import org.json.JSONObject
 import uk.co.traynor.privategallery.core.home2.NovaCoreApp
@@ -11,6 +13,10 @@ internal enum class NovaTaskPriority(val label: String) {
     NONE("None"), LOW("Low"), NORMAL("Normal"), HIGH("High"),
 }
 
+internal enum class NovaTaskRepeat(val label: String) {
+    NONE("Never"), DAILY("Daily"), WEEKLY("Weekly"), MONTHLY("Monthly"),
+}
+
 internal data class NovaTask(
     val id: String,
     val title: String,
@@ -19,7 +25,33 @@ internal data class NovaTask(
     val due: LocalDate? = null,
     val priority: NovaTaskPriority = NovaTaskPriority.NONE,
     val completed: Boolean = false,
+    val repeat: NovaTaskRepeat = NovaTaskRepeat.NONE,
+    val repeatDay: Int? = null,
+    val nextCreated: Boolean = false,
+    val tags: String = "",
 )
+
+internal fun completeNovaTask(tasks: List<NovaTask>, id: String, completed: Boolean): List<NovaTask> {
+    val task = tasks.find { it.id == id } ?: return tasks
+    if (task.completed == completed) return tasks
+    val date = task.due
+    val nextDate = if (completed && !task.nextCreated && date != null) when (task.repeat) {
+        NovaTaskRepeat.NONE -> null
+        NovaTaskRepeat.DAILY -> date.plusDays(1)
+        NovaTaskRepeat.WEEKLY -> date.plusWeeks(1)
+        NovaTaskRepeat.MONTHLY -> YearMonth.from(date).plusMonths(1).let { month ->
+            month.atDay(minOf(task.repeatDay ?: date.dayOfMonth, month.lengthOfMonth()))
+        }
+    }?.takeIf { it.year in 1..9999 } else null
+    val updated = tasks.map {
+        if (it.id == id) it.copy(completed = completed, nextCreated = it.nextCreated || nextDate != null) else it
+    }
+    if (nextDate == null) return updated
+    val nextId = UUID.nameUUIDFromBytes("nova-task-next:$id".toByteArray(Charsets.UTF_8)).toString()
+    if (tasks.any { it.id == nextId }) return updated
+    return updated + task.copy(id = nextId, due = nextDate, completed = false,
+        repeatDay = task.repeatDay ?: date?.dayOfMonth, nextCreated = false)
+}
 
 internal enum class NovaTaskView(val label: String) {
     TODAY("Today"), UPCOMING("Upcoming"), ALL("All tasks"), COMPLETED("Completed"), PROJECTS("Projects");
@@ -51,6 +83,10 @@ internal class NovaTaskLibrary(space: SpaceContext) {
                 entry.optString("due").takeIf(String::isNotBlank)?.let { LocalDate.parse(it) },
                 NovaTaskPriority.valueOf(entry.getString("priority")),
                 entry.getBoolean("completed"),
+                NovaTaskRepeat.valueOf(entry.optString("repeat", NovaTaskRepeat.NONE.name)),
+                entry.optInt("repeatDay").takeIf { it in 1..31 },
+                entry.optBoolean("nextCreated"),
+                entry.optString("tags"),
             )
         })
     }
@@ -65,7 +101,11 @@ internal class NovaTaskLibrary(space: SpaceContext) {
                 .put("project", task.project)
                 .put("due", task.due?.toString().orEmpty())
                 .put("priority", task.priority.name)
-                .put("completed", task.completed))
+                .put("completed", task.completed)
+                .put("repeat", task.repeat.name)
+                .put("repeatDay", task.repeatDay)
+                .put("nextCreated", task.nextCreated)
+                .put("tags", task.tags))
         }
         val document = documents.save("library", previous.revision,
             JSONObject().put("tasks", entries).toString()) ?: return null

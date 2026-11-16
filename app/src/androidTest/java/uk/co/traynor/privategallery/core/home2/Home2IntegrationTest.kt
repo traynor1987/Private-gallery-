@@ -42,6 +42,8 @@ import uk.co.traynor.privategallery.home2.NovaCalendarLibrary
 import uk.co.traynor.privategallery.home2.NovaEventRepeat
 import uk.co.traynor.privategallery.home2.NovaNote
 import uk.co.traynor.privategallery.home2.NovaNotesLibrary
+import uk.co.traynor.privategallery.home2.NovaTaskRepeat
+import uk.co.traynor.privategallery.home2.completeNovaTask
 import uk.co.traynor.privategallery.home2.NovaTask
 import uk.co.traynor.privategallery.home2.NovaTaskLibrary
 import uk.co.traynor.privategallery.home2.NovaTaskPriority
@@ -166,6 +168,29 @@ class Home2IntegrationTest {
 
 
 
+ @Test fun clipboard_privacy_setting_survives_reopen_and_retention_updates() {
+  SpaceFixture(false, compose.activity).use { f ->
+   val now = java.time.Instant.parse("2027-03-26T12:00:00Z")
+   val old = now.minus(java.time.Duration.ofDays(2))
+   val snippets = listOf(
+    NovaSnippet("regular", "Regular", "Text", "", false, false, old),
+    NovaSnippet("pinned", "Pinned", "Text", "", true, false, old),
+   )
+   SpaceContext(f.context, f.access).use { space ->
+    val library = NovaClipboardLibrary(space)
+    val persisted = library.save(library.read(now), SnippetRetention.DAY, snippets, now, protectAllCopies = true)
+    assertEquals(listOf("pinned"), persisted?.snippets?.map { it.id })
+   }
+   SpaceContext(f.context, f.access).use { space ->
+    val library = NovaClipboardLibrary(space)
+    val saved = library.read(now)
+    assertTrue(saved.protectAllCopies)
+    val updated = library.save(saved, SnippetRetention.MANUAL, saved.snippets, now)
+    assertTrue(checkNotNull(updated).protectAllCopies)
+   }
+  }
+ }
+
  @Test fun clipboard_retention_is_local_and_preserves_pinned_snippets() {
   SpaceFixture(false, compose.activity).use { f ->
    val now = java.time.Instant.parse("2026-11-16T12:00:00Z")
@@ -194,7 +219,7 @@ class Home2IntegrationTest {
   openDrawer()
   compose.onNodeWithTag("drawer-search").performTextInput("Nova Files")
   Espresso.closeSoftKeyboard()
-  compose.onNodeWithTag("drawer-nova-files").assertIsDisplayed().performClick()
+  compose.onNodeWithTag("app-nova-files").assertIsDisplayed().performClick()
   compose.waitUntil(10_000) {
    compose.onAllNodes(hasText("Choose folder") and isEnabled()).fetchSemanticsNodes().isNotEmpty()
   }
@@ -228,6 +253,29 @@ class Home2IntegrationTest {
   }
  }
 
+ @Test fun files_history_and_favourites_are_encrypted_and_bound_to_the_selected_tree() {
+  SpaceFixture(false, compose.activity).use { f ->
+   val firstTree = android.net.Uri.parse("content://example.documents/tree/first")
+   val secondTree = android.net.Uri.parse("content://example.documents/tree/second")
+   SpaceContext(f.context, f.access).use { space ->
+    val store = NovaFilesSelection(space)
+    val first = checkNotNull(store.save(store.read(), firstTree))
+    val viewed = checkNotNull(store.markViewed(first, "example-id"))
+    assertNull(store.toggleFavourite(first, "stale-id"))
+    assertNotNull(store.toggleFavourite(viewed, "example-id"))
+   }
+   SpaceContext(f.context, f.access).use { space ->
+    val store = NovaFilesSelection(space)
+    val reopened = store.read()
+    assertEquals(setOf("example-id"), reopened.favourites)
+    assertEquals(listOf("example-id"), reopened.recent)
+    val changed = checkNotNull(store.save(reopened, secondTree))
+    assertEquals(secondTree, changed.tree)
+    assertTrue(changed.favourites.isEmpty() && changed.recent.isEmpty())
+   }
+  }
+ }
+
  @Test fun files_remember_only_the_explicit_tree_and_reject_path_like_names() {
   SpaceFixture(false, compose.activity).use { f ->
    val selectorUri = android.net.Uri.parse("content://example.documents/tree/root")
@@ -242,6 +290,27 @@ class Home2IntegrationTest {
     for (bad in listOf("..", ".", "../folder", "nested/folder", "")) {
      assertTrue(runCatching { NovaFilesAccess.checkedName(bad) }.isFailure)
     }
+   }
+  }
+ }
+
+ @Test fun recurring_calendar_event_keeps_one_skipped_occurrence_across_reopen() {
+  SpaceFixture(false, compose.activity).use { f ->
+   val first = java.time.LocalDate.of(2027, 3, 27)
+   val zone = java.time.ZoneId.of("Europe/London")
+   val skipped = first.plusDays(1)
+   val event = NovaCalendarEvent("series", "Daily", "", first, java.time.LocalTime.NOON,
+    zone, 30, NovaEventRepeat.DAILY, setOf(skipped))
+   SpaceContext(f.context, f.access).use { space ->
+    val calendar = NovaCalendarLibrary(space)
+    assertNotNull(calendar.save(calendar.read(), listOf(event)))
+   }
+   SpaceContext(f.context, f.access).use { space ->
+    val restored = NovaCalendarLibrary(space).read().events.single()
+    assertEquals(setOf(skipped), restored.skippedDates)
+    assertTrue(restored.occurrencesOn(skipped, zone).isEmpty())
+    assertEquals(1, restored.occurrencesOn(first, zone).size)
+    assertEquals(1, restored.occurrencesOn(skipped.plusDays(1), zone).size)
    }
   }
  }
@@ -274,8 +343,30 @@ class Home2IntegrationTest {
   openDrawer()
   compose.onNodeWithTag("drawer-search").performTextInput("Nova Tasks")
   Espresso.closeSoftKeyboard()
-  compose.onNodeWithTag("drawer-nova-tasks").assertIsDisplayed().performClick()
+  compose.onNodeWithTag("app-nova-tasks").assertIsDisplayed().performClick()
   compose.onNodeWithTag("nova-tasks").assertIsDisplayed()
+ }
+
+ @Test fun recurring_tasks_keep_the_monthly_anchor_without_duplicate_successors() {
+  SpaceFixture(false, compose.activity).use { f ->
+   val date = java.time.LocalDate.of(2027, 1, 31)
+   val first = NovaTask("first", "Monthly task", due = date, repeat = NovaTaskRepeat.MONTHLY, tags = "home")
+   SpaceContext(f.context, f.access).use { space ->
+    val library = NovaTaskLibrary(space)
+    assertNotNull(library.save(library.read(), completeNovaTask(listOf(first), first.id, true)))
+   }
+   SpaceContext(f.context, f.access).use { space ->
+    val library = NovaTaskLibrary(space)
+    val saved = library.read()
+    val february = saved.tasks.single { !it.completed }
+    assertEquals(java.time.LocalDate.of(2027, 2, 28), february.due)
+    assertEquals("home", february.tags)
+    val reopened = completeNovaTask(saved.tasks, first.id, false)
+    assertEquals(saved.tasks, completeNovaTask(reopened, first.id, true))
+    val march = completeNovaTask(saved.tasks, february.id, true).single { !it.completed }
+    assertEquals(java.time.LocalDate.of(2027, 3, 31), march.due)
+   }
+  }
  }
 
  @Test fun tasks_keep_due_date_completion_and_project_after_reopen() {
@@ -295,6 +386,67 @@ class Home2IntegrationTest {
     assertEquals("Code 81", saved.project)
     assertEquals(java.time.LocalDate.of(2026, 11, 20), saved.due)
     assertEquals(NovaTaskPriority.HIGH, saved.priority)
+   }
+  }
+ }
+
+ @Test fun notes_reopen_draft_after_leaving_through_nova_home() {
+  showHome()
+  fun openNotes() {
+   openDrawer()
+   compose.onNodeWithTag("drawer-search").performTextInput("Nova Notes")
+   Espresso.closeSoftKeyboard()
+   compose.onNodeWithTag("app-nova-notes-draft").assertIsDisplayed().performClick()
+  }
+  openNotes()
+  compose.waitUntil(10_000) { compose.onAllNodes(hasText("New note") and isEnabled()).fetchSemanticsNodes().isNotEmpty() }
+  compose.onNodeWithText("New note").performClick()
+  compose.onNodeWithTag("nova-note-title").performTextInput("Private draft")
+  compose.onNodeWithText("Draft saved for recovery").assertIsDisplayed()
+  Espresso.closeSoftKeyboard()
+  compose.onNodeWithTag("nova-home").performClick()
+  openNotes()
+  compose.waitUntil(10_000) { compose.onAllNodesWithText("Recovered an unsaved draft").fetchSemanticsNodes().isNotEmpty() }
+  compose.onNodeWithTag("nova-note-title").assertTextContains("Private draft")
+ }
+
+ @Test fun notes_recover_unsaved_text_and_reject_a_stale_editor() {
+  SpaceFixture(false, compose.activity).use { f ->
+   val original = NovaNote("note", "Original", "Saved text")
+   val edited = original.copy(body = "Unsaved private text")
+   SpaceContext(f.context, f.access).use { space ->
+    val library = NovaNotesLibrary(space)
+    val saved = checkNotNull(library.save(library.read(), listOf(original)))
+    val draft = checkNotNull(library.writeDraft(library.readDraft(), original, edited))
+    assertEquals(edited, draft.note)
+    assertNotNull(library.save(saved, listOf(original.copy(body = "Newer saved content"))))
+   }
+   SpaceContext(f.context, f.access).use { space ->
+    val library = NovaNotesLibrary(space)
+    val recovered = library.readDraft()
+    assertEquals(edited, recovered.note)
+    assertNull(library.finishDraft(recovered, delete = false))
+    assertEquals("Newer saved content", library.read().notes.single().body)
+    assertEquals(edited, library.readDraft().note)
+    assertNotNull(library.discardDraft(recovered))
+    assertNull(library.writeDraft(recovered, original, edited))
+    assertNull(library.readDraft().note)
+   }
+  }
+ }
+
+ @Test fun notes_publish_draft_and_clear_recovery_in_the_same_transaction() {
+  SpaceFixture(false, compose.activity).use { f ->
+   val note = NovaNote("new-note", "Recovered title", "Recovered body")
+   SpaceContext(f.context, f.access).use { space ->
+    val library = NovaNotesLibrary(space)
+    val draft = checkNotNull(library.writeDraft(library.readDraft(), null, note))
+    assertEquals(listOf(note), library.finishDraft(draft, delete = false)?.notes)
+   }
+   SpaceContext(f.context, f.access).use { space ->
+    val library = NovaNotesLibrary(space)
+    assertNull(library.readDraft().note)
+    assertEquals(listOf(note), library.read().notes)
    }
   }
  }

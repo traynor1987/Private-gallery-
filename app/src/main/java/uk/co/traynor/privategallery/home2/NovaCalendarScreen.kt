@@ -75,6 +75,7 @@ internal fun NovaCalendarScreen(space: SpaceContext, onBack: () -> Unit) {
     var status by remember(space) { mutableStateOf<String?>(null) }
     var busy by remember(space) { mutableStateOf(true) }
     var reload by remember(space) { mutableIntStateOf(0) }
+    var skipOccurrence by remember(space) { mutableStateOf<NovaOccurrence?>(null) }
     var confirmation by remember(space) { mutableStateOf<CalendarConfirmation?>(null) }
 
     LaunchedEffect(space, reload) {
@@ -181,6 +182,11 @@ internal fun NovaCalendarScreen(space: SpaceContext, onBack: () -> Unit) {
                                     it.atZone(displayZone).format(DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT))
                                 } ?: "All day"
                                 Text(whenText, style = MaterialTheme.typography.labelMedium)
+                                if (event.repeat != NovaEventRepeat.NONE) {
+                                    TextButton(enabled = !busy, onClick = { skipOccurrence = occurrence }) {
+                                        Text("Skip this occurrence")
+                                    }
+                                }
                             }
                         }
                     }
@@ -194,6 +200,14 @@ internal fun NovaCalendarScreen(space: SpaceContext, onBack: () -> Unit) {
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 CalendarEditFields(current, !busy, onEdit = { editor = it })
+                if (current.event.skippedDates.isNotEmpty()) {
+                    Text("Skipped dates")
+                    current.event.skippedDates.sorted().forEach { date ->
+                        TextButton(enabled = !busy, onClick = {
+                            editor = current.copy(event = current.event.copy(skippedDates = current.event.skippedDates - date))
+                        }) { Text("Restore $date") }
+                    }
+                }
                 if (candidate == null && current.event.title.isNotBlank()) {
                     Text("Check the date, time zone and duration. The start must exist in that time zone.")
                 }
@@ -212,6 +226,25 @@ internal fun NovaCalendarScreen(space: SpaceContext, onBack: () -> Unit) {
                 }
             }
         }
+    }
+    skipOccurrence?.let { occurrence ->
+        AlertDialog(
+            onDismissRequest = { skipOccurrence = null },
+            title = { Text("Skip this occurrence?") },
+            text = { Text("The rest of the series will stay on your calendar.") },
+            confirmButton = {
+                TextButton(enabled = !busy, onClick = {
+                    skipOccurrence = null
+                    val events = snapshot?.events.orEmpty().map { event ->
+                        if (event.id == occurrence.event.id) {
+                            event.copy(skippedDates = event.skippedDates + occurrence.sourceDate)
+                        } else event
+                    }
+                    write(events, "Occurrence skipped")
+                }) { Text("Skip") }
+            },
+            dismissButton = { TextButton(onClick = { skipOccurrence = null }) { Text("Cancel") } },
+        )
     }
     confirmation?.let { action ->
         val deleting = action == CalendarConfirmation.DELETE

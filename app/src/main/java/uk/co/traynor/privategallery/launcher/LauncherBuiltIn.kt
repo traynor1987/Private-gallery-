@@ -1,5 +1,6 @@
 package uk.co.traynor.privategallery.launcher
 
+import uk.co.traynor.privategallery.core.home2.NovaCoreApp
 import uk.co.traynor.privategallery.core.sanctuary.SanctuaryLauncherPolicy.Decision
 import uk.co.traynor.privategallery.core.sanctuary.SanctuarySession
 
@@ -8,13 +9,21 @@ internal enum class LauncherBuiltIn(
     val route: String,
     val label: String,
     val utility: LauncherUtility? = null,
+    val coreApp: NovaCoreApp? = null,
 ) {
     SANCTUARY("sanctuary", "Nova Sanctuary"),
     CALCULATOR(LauncherUtility.CALCULATOR.route, LauncherUtility.CALCULATOR.label, LauncherUtility.CALCULATOR),
     ARCADE(LauncherUtility.ARCADE.route, LauncherUtility.ARCADE.label, LauncherUtility.ARCADE),
     STORE(LauncherUtility.STORE.route, LauncherUtility.STORE.label, LauncherUtility.STORE),
     SAFE_NOTIFICATIONS("safe-notifications", "Safe Notifications"),
-    PRIMARY_GALLERY("vault", "Primary Gallery");
+    PRIMARY_GALLERY("vault", "Primary Gallery"),
+    NOTES(NovaCoreApp.NOTES),
+    TASKS(NovaCoreApp.TASKS),
+    CALENDAR(NovaCoreApp.CALENDAR),
+    FILES(NovaCoreApp.FILES),
+    CLIPBOARD(NovaCoreApp.CLIPBOARD);
+
+    constructor(coreApp: NovaCoreApp) : this(coreApp.route, coreApp.label, coreApp = coreApp)
 
     private val policyKey: String get() = "nova:$route"
 

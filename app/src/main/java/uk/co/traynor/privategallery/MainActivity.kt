@@ -1,5 +1,7 @@
 package uk.co.traynor.privategallery
 
+import uk.co.traynor.privategallery.core.home2.NovaCoreApp
+
 import androidx.compose.ui.platform.testTag
 
 import uk.co.traynor.privategallery.ui.playerActivity
@@ -244,6 +246,14 @@ internal const val ACTION_OPEN_PRIVATE_WORKSPACE = "uk.co.traynor.privategallery
 
 internal const val ACTION_OPEN_PRIMARY_GALLERY = "uk.co.traynor.privategallery.action.OPEN_PRIMARY_GALLERY"
 private const val STATE_LAUNCHER_ENTRY = "launcher.workspace.entry"
+private const val STATE_CORE_APP_ENTRY = "launcher.workspace.coreApp"
+private const val ACTION_CORE_APP_PREFIX = "uk.co.traynor.privategallery.action.CORE_APP."
+
+private fun coreAppForAction(action: String?): NovaCoreApp? =
+    NovaCoreApp.entries.firstOrNull { action == ACTION_CORE_APP_PREFIX + it.name }
+
+internal fun privateCoreAppEntryIntent(context: android.content.Context, app: NovaCoreApp): Intent =
+    privateWorkspaceEntryIntent(context).setAction(ACTION_CORE_APP_PREFIX + app.name)
 private const val STATE_STANDALONE_VAULT_CHROME = "launcher.workspace.standaloneVaultChrome"
 
 internal fun privateWorkspaceEntryIntent(context: android.content.Context, primaryGallery: Boolean = false): Intent =
@@ -816,6 +826,7 @@ class MainActivity : FragmentActivity() {
         decor.invalidate()
     }
     internal fun panicExit() {
+        pendingCoreApp = null
         novaFilesPickerTicket.clear()
         panicCoverPending=true
         coverSensitiveContent()
@@ -1128,6 +1139,11 @@ class MainActivity : FragmentActivity() {
         automaticBiometricPromptAttempted=false
         triggerAutomaticBiometricPromptIfNeeded()
     }
+    internal fun cancelNovaCredentials() {
+        pendingCoreApp = null
+        closeNovaCredentials()
+    }
+
     internal fun closeNovaCredentials() {
         novaCredentialsRequested = false
         if (launcherEntry == ACTION_OPEN_PRIMARY_GALLERY && !session.isUnlocked) {
@@ -1271,6 +1287,7 @@ class MainActivity : FragmentActivity() {
         novaFilesPickerTicket.accept(it)
     }
     private var launcherEntry by mutableStateOf<String?>(null)
+    private var pendingCoreApp by mutableStateOf<NovaCoreApp?>(null)
     private var standalonePrimaryVaultChrome by mutableStateOf(false)
 
     override fun onNewIntent(intent: Intent) {
@@ -1281,12 +1298,14 @@ class MainActivity : FragmentActivity() {
     override fun onSaveInstanceState(outState: Bundle) {
         super.onSaveInstanceState(outState)
         outState.putString(STATE_LAUNCHER_ENTRY, launcherEntry)
+        outState.putString(STATE_CORE_APP_ENTRY, pendingCoreApp?.name)
         outState.putBoolean(STATE_STANDALONE_VAULT_CHROME, standalonePrimaryVaultChrome)
     }
 
     private fun enterPrivateWorkspaceFromLauncher(request: Intent) {
         val action = request.action
-        if (action != ACTION_OPEN_PRIVATE_WORKSPACE && action != ACTION_OPEN_PRIMARY_GALLERY) return
+        val coreApp = coreAppForAction(action)
+        if (coreApp == null && action != ACTION_OPEN_PRIVATE_WORKSPACE && action != ACTION_OPEN_PRIMARY_GALLERY) return
         // Consume the one-shot request. Only the caller's explicit destination is supported.
         setIntent(Intent(this, MainActivity::class.java))
         if (request.data != null || request.extras?.isEmpty == false || request.clipData != null ||
@@ -1299,11 +1318,13 @@ class MainActivity : FragmentActivity() {
         // A new Android task must not reuse authentication from any existing workspace owner.
         for (owner in workspaceActivities.toList()) owner.retireWorkspaceForLauncherEntry()
         launcherEntry = action
+        pendingCoreApp = coreApp
         standalonePrimaryVaultChrome = action == ACTION_OPEN_PRIMARY_GALLERY
         if (route == Route.LOCK) requestNovaCredentials()
     }
 
     private fun retireWorkspaceForLauncherEntry() {
+        pendingCoreApp = null
         standalonePrimaryVaultChrome = false
         if (session.isUnlocked || sessionKey != null || retained.hidden.session.isUnlocked || retained.hidden.selected) {
             panicCoverPending = true
@@ -1390,7 +1411,10 @@ class MainActivity : FragmentActivity() {
         route = if ((session.isUnlocked && sessionKey != null) || (retained.hidden.selected && retained.hidden.session.isUnlocked)) retained.route else if (keys.isConfigured) Route.LOCK else Route.SETUP
         workspaceActivities.add(this)
         launcherEntry = savedInstanceState?.getString(STATE_LAUNCHER_ENTRY)
-            ?.takeIf { it == ACTION_OPEN_PRIVATE_WORKSPACE || it == ACTION_OPEN_PRIMARY_GALLERY }
+            ?.takeIf { it == ACTION_OPEN_PRIVATE_WORKSPACE || it == ACTION_OPEN_PRIMARY_GALLERY || coreAppForAction(it) != null }
+        pendingCoreApp = coreAppForAction(launcherEntry)?.takeIf {
+            savedInstanceState?.getString(STATE_CORE_APP_ENTRY) == it.name
+        }
         standalonePrimaryVaultChrome = launcherEntry == ACTION_OPEN_PRIMARY_GALLERY &&
             savedInstanceState?.getBoolean(STATE_STANDALONE_VAULT_CHROME) == true
         enterPrivateWorkspaceFromLauncher(intent)
@@ -2388,6 +2412,8 @@ class MainActivity : FragmentActivity() {
             wallpaperOwnerFactory=::homeWallpaperOwner,
             externalRecentsRequest=novaRecentsRequested,onRecentsConsumed={novaRecentsRequested=0},
             activityFilesTicket=if(hidden)null else novaFilesPickerTicket,
+            coreAppRequest=if(hidden)null else pendingCoreApp,
+            onCoreAppRequestConsumed={pendingCoreApp=null},
             activityFilesLaunch=if(hidden)null else { request -> novaFilesFolderPicker.launch(request) },
             onThemeConnection={data ->
                 if(data!=null&&access.current()) {
@@ -4187,7 +4213,7 @@ private fun PrivateGalleryApp(
         val host=androidx.activity.compose.LocalActivity.current as? MainActivity
         if(host?.novaCredentialsRequested!=true)uk.co.traynor.privategallery.home2.NovaLockEntry{host?.requestNovaCredentials()}
         else {
-            androidx.activity.compose.BackHandler{host.closeNovaCredentials()}
+            androidx.activity.compose.BackHandler{host.cancelNovaCredentials()}
             Column(Modifier.fillMaxSize()) {
                 Box(Modifier.weight(1f)) {PinUnlock({pin->onUnlock(pin).also{if(it.isFailure)host.closeNovaCredentials()}}, biometricEnabled, onBiometricUnlock, onForgotPin = onOpenRecovery, onDirectHiddenUnlock = onDirectHiddenUnlock?.let{hidden->{pin->hidden(pin).also{if(it.isFailure)host.closeNovaCredentials()}}})}
             }

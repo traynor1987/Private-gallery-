@@ -65,6 +65,7 @@ import android.content.*
 import java.io.File
 import java.util.UUID
 import uk.co.traynor.privategallery.core.evidence.EvidenceAccess
+import uk.co.traynor.privategallery.home2.*
 fun main(args:Array<String>){
  val root=File(args[0]).apply{deleteRecursively();mkdirs()}
  val base=ContextWrapper(null)
@@ -168,11 +169,62 @@ fun main(args:Array<String>){
  val directory=File(restoreAccess.root,"home2");check(directory.renameTo(File(restoreAccess.root,"home2-backup-old")))
  val recovered=SpaceContext(base,EvidenceAccess(restoreAccess.root,EvidenceAccess.Owner.PRIMARY));check(recovered.getSharedPreferences("nova_mind_v1",0).getString("primary",null)=="[]");recovered.close();backupSpace.close();values.values.forEach{it.fill(0)};bad.values.forEach{it.fill(0)}
  println("PASS: portable allowlist, owner-only notes, credential exclusion, atomic settings restore, validation failure preservation, revocation rollback, interrupted directory recovery")
+ val code81Access=EvidenceAccess(File(root,"code81-primary"),EvidenceAccess.Owner.PRIMARY)
+ val note=NovaNote("note-test","Host test","SYNTHETIC_CODE81_PRIVATE_BODY")
+ SpaceContext(base,code81Access).use { owner ->
+  val notes=NovaNotesLibrary(owner)
+  check(notes.writeDraft(notes.readDraft(),null,note)!=null)
+ }
+ SpaceContext(base,code81Access).use { owner ->
+  val notes=NovaNotesLibrary(owner)
+  val draft=notes.readDraft()
+  check(draft.note==note)
+  check(notes.finishDraft(draft,delete=false)?.notes==listOf(note))
+  check(notes.readDraft().note==null)
+  check(notes.writeDraft(draft,null,note)==null)
+  check(NovaTaskLibrary(owner).read().tasks.isEmpty())
+  val jan=java.time.LocalDate.of(2027,1,31)
+  val first=NovaTask("monthly","Monthly",due=jan,repeat=NovaTaskRepeat.MONTHLY)
+  val completed=completeNovaTask(listOf(first),first.id,true)
+  val feb=completed.single{!it.completed}
+  check(feb.due==java.time.LocalDate.of(2027,2,28))
+  check(completeNovaTask(completeNovaTask(completed,first.id,false),first.id,true)==completed)
+  check(completeNovaTask(completed,feb.id,true).single{!it.completed}.due==java.time.LocalDate.of(2027,3,31))
+  val zone=java.time.ZoneId.of("Europe/London")
+  val day=java.time.LocalDate.of(2027,3,27)
+  val event=NovaCalendarEvent("event","Series","",day,java.time.LocalTime.NOON,zone,30,NovaEventRepeat.DAILY,setOf(day.plusDays(1)))
+  check(event.occurrencesOn(day.plusDays(1),zone).isEmpty())
+  check(event.occurrencesOn(day.plusDays(2),zone).single().start==java.time.Instant.parse("2027-03-29T11:00:00Z"))
+  val clipboard=NovaClipboardLibrary(owner)
+  val now=java.time.Instant.parse("2027-03-26T12:00:00Z")
+  val expired=NovaSnippet("expired","Sample","sample text","",false,false,now.minusSeconds(90_000))
+  check(clipboard.save(clipboard.read(now),SnippetRetention.DAY,listOf(expired),now,protectAllCopies=true)?.snippets?.isEmpty()==true)
+  check(clipboard.read(now).protectAllCopies)
+  val wideText=NovaNote("unicode","Escaped","\u0001".repeat(30_000))
+  check(notes.save(notes.read(),listOf(note,wideText))!=null)
+  val updatedWide=wideText.copy(title="Edited still within the limit")
+  val wideDraft=checkNotNull(notes.writeDraft(notes.readDraft(),wideText,updatedWide))
+  check(notes.finishDraft(wideDraft,delete=false)?.notes==listOf(note,updatedWide))
+  val prefs=owner.getSharedPreferences("nova-core-notes-v1",0)
+  check(prefs.edit().putString("editor","invalid JSON").commit())
+  check(runCatching { notes.readDraft() }.isFailure)
+  check(notes.read().notes==listOf(note,updatedWide))
+ }
+ check(code81Access.root.walkTopDown().filter{it.isFile}.none{it.readBytes().toString(Charsets.ISO_8859_1).contains(note.body)})
+ SpaceContext(base,EvidenceAccess(File(root,"code81-hidden"),EvidenceAccess.Owner.HIDDEN)).use { hiddenOwner ->
+  check(runCatching{NovaNotesLibrary(hiddenOwner)}.isFailure)
+ }
+ println("PASS: Code 81 draft recovery, atomic save, stale writes, corruption and owner isolation, recurrence and retention")
  root.deleteRecursively();println("PASS: encrypted types, copies, merge, listeners, owner/name AAD, corruption preservation, wallpaper, commit revocation, stale handles, lease closure")
 }
 """)
 production=[root/'app/src/main/java/uk/co/traynor/privategallery/home2/CalculatorData.kt',root/'app/src/main/java/uk/co/traynor/privategallery/home2/ArcadeData.kt',root/'app/src/main/java/uk/co/traynor/privategallery/core/backup/PortablePreferenceSchema.kt',
     root/'app/src/main/java/uk/co/traynor/privategallery/core/backup/SettingsDirectoryTransaction.kt',root/'app/src/main/java/uk/co/traynor/privategallery/core/backup/BackupPolicy.kt',root/'app/src/main/java/uk/co/traynor/privategallery/core/backup/PortableWidgets.kt',root/'app/src/main/java/uk/co/traynor/privategallery/core/crypto/VaultCipher.kt',root/'app/src/main/java/uk/co/traynor/privategallery/core/home2/SpacePreferences.kt']
+code81_sources = root/'app/src/main/java/uk/co/traynor/privategallery'
+production += [code81_sources/'core/home2/NovaCoreAppDocuments.kt']
+production += [code81_sources/'home2'/name for name in (
+    'NovaNotesLibrary.kt', 'NovaTaskLibrary.kt', 'NovaCalendarLibrary.kt', 'NovaClipboardLibrary.kt',
+)]
 args=[str(jdk/'java'),'-cp',compiler,'org.jetbrains.kotlin.cli.jvm.K2JVMCompiler','-no-stdlib','-no-reflect','-jvm-target','17','-classpath',classpath,'-d',str(out),str(compose),str(kt),*[str(x) for x in production]]
 subprocess.run(args,check=True)
 subprocess.run([str(jdk/'java'),'-cp',classpath,'uk.co.traynor.privategallery.core.home2.ChecksKt',str(work/'data')],check=True)

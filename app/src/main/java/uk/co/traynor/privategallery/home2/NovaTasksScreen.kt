@@ -108,7 +108,7 @@ internal fun NovaTasksScreen(space: SpaceContext, onBack: () -> Unit) {
             val search = query.trim()
             val today = LocalDate.now()
             val matches = savedTasks.filter { task ->
-                view.includes(task, today) && listOf(task.title, task.description, task.project)
+                view.includes(task, today) && listOf(task.title, task.description, task.project, task.tags)
                     .any { it.contains(search, ignoreCase = true) }
             }
             val ordered = if (view == NovaTaskView.PROJECTS) {
@@ -126,7 +126,7 @@ internal fun NovaTasksScreen(space: SpaceContext, onBack: () -> Unit) {
                     ) {
                         Row(Modifier.padding(end = 12.dp), verticalAlignment = Alignment.CenterVertically) {
                             Checkbox(task.completed, onCheckedChange = { completed ->
-                                persist(savedTasks.map { if (it.id == task.id) it.copy(completed = completed) else it },
+                                persist(completeNovaTask(savedTasks, task.id, completed),
                                     if (completed) "Task completed" else "Task reopened")
                             }, enabled = !loading)
                             Column(Modifier.weight(1f).padding(vertical = 10.dp)) {
@@ -134,6 +134,7 @@ internal fun NovaTasksScreen(space: SpaceContext, onBack: () -> Unit) {
                                 val details = listOfNotNull(
                                     task.project.takeIf { it.isNotBlank() },
                                     task.due?.toString(),
+                                    task.tags.takeIf(String::isNotBlank),
                                     task.priority.takeUnless { it == NovaTaskPriority.NONE }?.label,
                                 )
                                 if (details.isNotEmpty()) Text(details.joinToString(" · "),
@@ -161,6 +162,16 @@ internal fun NovaTasksScreen(space: SpaceContext, onBack: () -> Unit) {
                 OutlinedTextField(current.dueText, { editor = current.copy(dueText = it.take(10)) },
                     modifier = Modifier.fillMaxWidth(), label = { Text("Due date (YYYY-MM-DD)") },
                     isError = invalidDate, singleLine = true, enabled = !loading)
+                OutlinedTextField(task.tags, { editor = current.copy(task = task.copy(tags = it.take(200))) },
+                    modifier = Modifier.fillMaxWidth(), label = { Text("Tags") }, singleLine = true, enabled = !loading)
+                Text("Repeat after completion")
+                Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    NovaTaskRepeat.entries.forEach { repeat ->
+                        FilterChip(task.repeat == repeat, { editor = current.copy(task = task.copy(repeat = repeat)) },
+                            { Text(repeat.label) }, enabled = !loading)
+                    }
+                }
+                if (task.repeat != NovaTaskRepeat.NONE && due == null) Text("Set a due date for recurring tasks.")
                 Text("Priority")
                 Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     NovaTaskPriority.entries.forEach { priority ->
@@ -169,8 +180,9 @@ internal fun NovaTasksScreen(space: SpaceContext, onBack: () -> Unit) {
                     }
                 }
                 Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Button(enabled = !loading && task.title.isNotBlank() && !invalidDate, onClick = {
-                        val updated = task.copy(title = task.title.trim(), project = task.project.trim(), due = due)
+                    Button(enabled = !loading && task.title.isNotBlank() && !invalidDate && (task.repeat == NovaTaskRepeat.NONE || due != null), onClick = {
+                        val updated = task.copy(title = task.title.trim(), project = task.project.trim(), due = due,
+                            repeatDay = if (due == task.due) task.repeatDay else due?.dayOfMonth)
                         val tasks = if (savedTasks.any { it.id == task.id }) {
                             savedTasks.map { if (it.id == task.id) updated else it }
                         } else savedTasks + updated

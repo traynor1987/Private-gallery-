@@ -21,7 +21,7 @@ private val routes = mapOf(
     "arcade" to LauncherBuiltIn.ARCADE,
     "nova-calculator" to LauncherBuiltIn.CALCULATOR,
     "sanctuary" to LauncherBuiltIn.SANCTUARY,
-)
+) + LauncherBuiltIn.entries.filter { it.coreApp != null }.associateBy { it.route }
 
 private fun routeByComponent(applicationId: String) =
     routes.entries.associate { (route, builtIn) -> builtIn.app(applicationId).component to route }

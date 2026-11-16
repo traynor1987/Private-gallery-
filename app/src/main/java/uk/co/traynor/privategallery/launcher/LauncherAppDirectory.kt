@@ -26,6 +26,10 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Badge
 import androidx.compose.material.icons.filled.Calculate
 import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.DateRange
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.PhotoLibrary
 import androidx.compose.material.icons.filled.NotificationsNone
 import androidx.compose.material.icons.filled.Shield
@@ -285,6 +289,11 @@ internal fun LauncherAppIcon(app: LauncherApp, modifier: Modifier = Modifier) {
             LauncherBuiltIn.STORE -> Icons.Default.Storefront to Color(0xFF147E7F)
             LauncherBuiltIn.SAFE_NOTIFICATIONS -> Icons.Default.NotificationsNone to Color(0xFF286A79)
             LauncherBuiltIn.PRIMARY_GALLERY -> Icons.Default.PhotoLibrary to Color(0xFFAD533C)
+            LauncherBuiltIn.NOTES -> Icons.Default.Edit to Color(0xFF8C6329)
+            LauncherBuiltIn.TASKS -> Icons.Default.CheckCircle to Color(0xFF317259)
+            LauncherBuiltIn.CALENDAR -> Icons.Default.DateRange to Color(0xFF435DA5)
+            LauncherBuiltIn.FILES -> Icons.Default.Folder to Color(0xFF7351A8)
+            LauncherBuiltIn.CLIPBOARD -> Icons.Default.ContentCopy to Color(0xFF286A79)
         }
         Box(
             modifier.clip(RoundedCornerShape(24)).background(Brush.linearGradient(listOf(color, Color(0xFF192440)))),

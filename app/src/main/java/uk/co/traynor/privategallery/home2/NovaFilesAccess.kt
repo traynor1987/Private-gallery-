@@ -7,6 +7,7 @@ import android.provider.DocumentsContract.Document
 import java.io.IOException
 import java.security.MessageDigest
 import java.util.UUID
+import org.json.JSONArray
 import org.json.JSONObject
 import uk.co.traynor.privategallery.core.home2.NovaCoreApp
 import uk.co.traynor.privategallery.core.home2.NovaCoreAppDocuments
@@ -199,17 +200,53 @@ internal class NovaFilesAccess(
 internal class NovaFilesSelection(space: SpaceContext) {
     private val documents = NovaCoreAppDocuments(space, NovaCoreApp.FILES)
 
-    data class Selection(val revision: Long?, val tree: Uri?)
+    data class Selection(
+        val revision: Long?,
+        val tree: Uri?,
+        val favourites: Set<String> = emptySet(),
+        val recent: List<String> = emptyList(),
+    )
 
     fun read(): Selection {
         val document = documents.read("authed-tree") ?: return Selection(null, null)
-        val tree = JSONObject(document.json).getString("tree").takeIf(String::isNotBlank)?.let { Uri.parse(it) }
-        return Selection(document.revision, tree)
+        val value = JSONObject(document.json)
+        val tree = value.getString("tree").takeIf(String::isNotBlank)?.let { Uri.parse(it) }
+        return Selection(document.revision, tree, readIds(value, "favourites").toSet(), readIds(value, "recent"))
     }
 
-    fun save(previous: Selection, tree: Uri?): Selection? {
-        val document = documents.save("authed-tree", previous.revision,
-            JSONObject().put("tree", tree?.toString().orEmpty()).toString()) ?: return null
-        return Selection(document.revision, tree)
+    fun save(previous: Selection, tree: Uri?): Selection? =
+        update(previous.revision, if (previous.tree == tree) previous else Selection(previous.revision, tree))
+
+    fun markViewed(previous: Selection, id: String): Selection? {
+        require(previous.tree != null && id.length in 1..MAX_ID_LENGTH)
+        return update(previous.revision, previous.copy(recent = (listOf(id) + previous.recent).distinct().take(MAX_IDS)))
+    }
+
+    fun toggleFavourite(previous: Selection, id: String): Selection? {
+        require(previous.tree != null && id.length in 1..MAX_ID_LENGTH)
+        val next = if (id in previous.favourites) previous.favourites - id else previous.favourites + id
+        require(next.size <= MAX_IDS) { "Favourites list is full" }
+        return update(previous.revision, previous.copy(favourites = next))
+    }
+
+    private fun update(revision: Long?, selection: Selection): Selection? {
+        val value = JSONObject().put("tree", selection.tree?.toString().orEmpty())
+            .put("favourites", JSONArray(selection.favourites.toList()))
+            .put("recent", JSONArray(selection.recent))
+        val document = documents.save("authed-tree", revision, value.toString()) ?: return null
+        return selection.copy(revision = document.revision)
+    }
+
+    private fun readIds(value: JSONObject, key: String): List<String> {
+        val entries = value.optJSONArray(key) ?: return emptyList()
+        require(entries.length() <= MAX_IDS)
+        return (0 until entries.length()).map { entries.getString(it).also { id ->
+            require(id.length in 1..MAX_ID_LENGTH)
+        } }.distinct()
+    }
+
+    private companion object {
+        const val MAX_IDS = 80
+        const val MAX_ID_LENGTH = 1_024
     }
 }

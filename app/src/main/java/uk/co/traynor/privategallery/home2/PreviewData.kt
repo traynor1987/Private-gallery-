@@ -1,5 +1,7 @@
 package uk.co.traynor.privategallery.home2
 
+import uk.co.traynor.privategallery.core.home2.NovaCoreApp
+
 import android.content.Context
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -71,7 +73,7 @@ class PreviewData(private val context:Context,private val apps:uk.co.traynor.pri
   return runCatching {
    val raw=prefs.getString(WORKSPACE_PREVIOUS,null)?:return@runCatching false
    val json=JSONObject(raw).put("installed",JSONArray().apply{profile.installed.forEach{put(entryJson(it))}})
-   val stored=readProfile(json)
+   val stored=readProfile(json, includeCoreApps = true)
    val pageCount=maxOf(stored.pages.size,lastWidgetPage+1).coerceIn(1,8)
    val previousWallpaper=if(stored.wallpaper.image==null && profile.wallpaper.image==null)stored.wallpaper else profile.wallpaper
    val restored=stored.copy(pages=stored.pages+List(pageCount-stored.pages.size){emptyList()},wallpaper=previousWallpaper)
@@ -100,10 +102,12 @@ class PreviewData(private val context:Context,private val apps:uk.co.traynor.pri
   val ids=layout.getJSONArray("installedIds");val restored=(0 until ids.length()).mapNotNull{i->val id=ids.getString(i);old.firstOrNull{it.id==id}?:catalogue.firstOrNull{entryKey(it)==id}?.copy(id=id)}
   val o=JSONObject(layout.toString());o.remove("installedIds");o.put("installed",JSONArray().apply{(old+restored).distinctBy{it.id}.forEach{put(entryJson(it))}})
   val wall=o.getJSONObject("wallpaper");val image=wall.optString("image");if(image.isBlank()||!java.io.File(context.filesDir,image).isFile)wall.remove("image")
-  val next=readProfile(o);change{next};return error==null
+  val next=readProfile(o, includeCoreApps = owner=="primary");change{next};return error==null
  }
  fun profile(id:String):Profile {require(id==owner);return if(owner=="hidden")state.hidden else state.primary}
- fun allApps(p:Profile=profile)=builtinApps+p.installed.map{entry->val artwork=catalogue.firstOrNull{StoreUrl.key(it.url)==StoreUrl.key(entry.url)};LaunchApp(entry.id,entry.name,"website",if(artwork!=null)entry.copy(icon=artwork.icon)else entry)}
+ fun allApps(p:Profile=profile)=builtinApps+
+  (if(owner=="primary") NovaCoreApp.entries.map { LaunchApp(it.route, it.label, it.symbol) } else emptyList())+
+  p.installed.map{entry->val artwork=catalogue.firstOrNull{StoreUrl.key(it.url)==StoreUrl.key(entry.url)};LaunchApp(entry.id,entry.name,"website",if(artwork!=null)entry.copy(icon=artwork.icon)else entry)}
  fun app(id:String)=allApps().firstOrNull{it.id==id}
  fun drawerIds(p:Profile=profile):List<String> {
   val grouped=p.folders.flatMap{it.apps}.toSet()
@@ -216,10 +220,11 @@ class PreviewData(private val context:Context,private val apps:uk.co.traynor.pri
   private fun array(v:List<*>)=JSONArray(v)
   private fun profileJson(p:Profile)=JSONObject().put("installed",JSONArray().apply{p.installed.forEach{put(entryJson(it))}}).put("pages",JSONArray().apply{p.pages.forEach{put(array(it))}}).put("dock",array(p.dock)).put("drawer",array(p.drawerOrder)).put("folders",JSONArray().apply{p.folders.forEach{put(JSONObject().put("id",it.id).put("name",it.name).put("apps",array(it.apps)))}}).put("columns",p.columns).put("iconSize",p.iconSize).put("wallpaper",JSONObject().put("builtin",p.wallpaper.builtin).put("image",p.wallpaper.image).put("imageRevision",p.wallpaper.imageRevision).put("zoom",p.wallpaper.zoom).put("x",p.wallpaper.x).put("y",p.wallpaper.y).put("blur",p.wallpaper.blur).put("dim",p.wallpaper.dim))
   private fun encode(s:PreviewState)=JSONObject().put("schema",1).put("current",s.current).put("theme",s.theme).put("primary",profileJson(s.primary)).put("hidden",profileJson(s.hidden))
-  private fun readProfile(o:JSONObject):Profile {
+  private fun readProfile(o:JSONObject, includeCoreApps:Boolean):Profile {
    val installed=o.getJSONArray("installed");require(installed.length()<=200)
    val apps=(0 until installed.length()).map{entry(installed.getJSONObject(it),true)}.distinctBy{it.id}
-   val available=(builtinApps.map{it.id}+apps.map{it.id}).toSet()
+   val coreRoutes=if(includeCoreApps)NovaCoreApp.entries.map{it.route}else emptyList()
+   val available=(builtinApps.map{it.id}+coreRoutes+apps.map{it.id}).toSet()
    val folders=o.getJSONArray("folders");require(folders.length()<=64)
    val groups=(0 until folders.length()).map{val f=folders.getJSONObject(it);AppFolder(f.getString("id"),f.getString("name").take(32),strings(f.getJSONArray("apps")).filter{it in available}.distinct())}.filter{it.id.startsWith("folder:")&&it.apps.isNotEmpty()}.distinctBy{it.id}
    val valid=available+groups.map{it.id};val pages=o.getJSONArray("pages");require(pages.length() in 1..8)
@@ -228,6 +233,6 @@ class PreviewData(private val context:Context,private val apps:uk.co.traynor.pri
    fun number(name:String,default:Double,low:Float,high:Float)=w.optDouble(name,default).toFloat().let{if(it.isFinite())it.coerceIn(low,high)else default.toFloat()}
    return Profile(apps,home,strings(o.getJSONArray("dock")).filter{it in available}.distinct().take(5),groups,strings(o.optJSONArray("drawer")?:JSONArray()).filter{it in valid}.distinct(),Wallpaper(w.optString("builtin","Aurora").takeIf{it in listOf("Aurora","Midnight","Dusk")}?:"Aurora",file,number("zoom",1.0,1f,3f),number("x",0.0,-1f,1f),number("y",0.0,-1f,1f),number("blur",0.0,0f,24f),number("dim",.12,0f,.8f),w.optLong("imageRevision",0L).coerceAtLeast(0)),o.optInt("columns",4).coerceIn(3,6),o.optInt("iconSize",60).coerceIn(44,76))
   }
-  private fun decode(o:JSONObject):PreviewState {require(o.getInt("schema")==1);return PreviewState(o.optString("current").takeIf{it in listOf("primary","hidden")}?:"primary",o.optString("theme").takeIf{it in listOf("dark","light","system")}?:"dark",readProfile(o.getJSONObject("primary")),readProfile(o.getJSONObject("hidden")))}
+  private fun decode(o:JSONObject):PreviewState {require(o.getInt("schema")==1);return PreviewState(o.optString("current").takeIf{it in listOf("primary","hidden")}?:"primary",o.optString("theme").takeIf{it in listOf("dark","light","system")}?:"dark",readProfile(o.getJSONObject("primary"), includeCoreApps = true),readProfile(o.getJSONObject("hidden"), includeCoreApps = false))}
  }
 }

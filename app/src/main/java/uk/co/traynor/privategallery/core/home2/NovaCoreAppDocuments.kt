@@ -3,8 +3,12 @@ package uk.co.traynor.privategallery.core.home2
 import android.content.Context
 import org.json.JSONObject
 
-internal enum class NovaCoreApp(val storageId: String) {
-    NOTES("notes"), TASKS("tasks"), CALENDAR("calendar"), FILES("files"), CLIPBOARD("clipboard"),
+internal enum class NovaCoreApp(val storageId: String, val route: String, val label: String, val symbol: String) {
+    NOTES("notes", "nova-notes-draft", "Nova Notes", "edit"),
+    TASKS("tasks", "nova-tasks", "Nova Tasks", "apps"),
+    CALENDAR("calendar", "nova-calendar", "Nova Calendar", "widgets"),
+    FILES("files", "nova-files", "Nova Files", "folder"),
+    CLIPBOARD("clipboard", "nova-clipboard", "Nova Clipboard", "edit"),
 }
 
 /** Stores app documents through the authenticated, encrypted Primary Space preferences. */
@@ -20,14 +24,26 @@ internal class NovaCoreAppDocuments(space: SpaceContext, app: NovaCoreApp) {
      * A missing document expects a null revision. Stale writers cannot replace a later draft.
      * Call on a background dispatcher, as a successful return requires a durable commit.
      */
-    fun save(id: String, expectedRevision: Long?, json: String): Document? = synchronized(lock) {
-        require(json.length <= MAX_DOCUMENT_CHARS)
-        JSONObject(json)
-        val current = stored(id)
-        if (current?.revision != expectedRevision) return@synchronized null
-        val next = Document(Math.addExact(current?.revision ?: 0L, 1L), json)
-        val value = JSONObject().put("revision", next.revision).put("json", next.json)
-        check(prefs.edit().putString(id, value.toString()).commit()) { "App document could not be saved" }
+    fun save(id: String, expectedRevision: Long?, json: String): Document? =
+        saveTogether(mapOf(id to Change(expectedRevision, json)))?.getValue(id)
+
+    data class Change(val expectedRevision: Long?, val json: String)
+
+    /** One encrypted preferences commit publishes all changes, or none on a conflict. */
+    fun saveTogether(changes: Map<String, Change>): Map<String, Document>? = synchronized(lock) {
+        val next = linkedMapOf<String, Document>()
+        for ((id, change) in changes) {
+            require(change.json.length <= MAX_DOCUMENT_CHARS)
+            JSONObject(change.json)
+            val current = stored(id)
+            if (current?.revision != change.expectedRevision) return@synchronized null
+            next[id] = Document(Math.addExact(current?.revision ?: 0L, 1L), change.json)
+        }
+        val editor = prefs.edit()
+        for ((id, document) in next) {
+            editor.putString(id, JSONObject().put("revision", document.revision).put("json", document.json).toString())
+        }
+        check(editor.commit()) { "App documents could not be saved" }
         next
     }
 

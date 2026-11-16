@@ -25,13 +25,14 @@ internal data class NovaCalendarEvent(
     val zone: ZoneId,
     val minutes: Int,
     val repeat: NovaEventRepeat,
+    val skippedDates: Set<LocalDate> = emptySet(),
 ) {
     init {
         require(minutes in 1..1440)
     }
 
     private fun repeatsOn(date: LocalDate): Boolean {
-        if (date < firstDate) return false
+        if (date < firstDate || date in skippedDates) return false
         return when (repeat) {
             NovaEventRepeat.NONE -> date == firstDate
             NovaEventRepeat.DAILY -> true
@@ -87,6 +88,9 @@ internal class NovaCalendarLibrary(space: SpaceContext) {
                 ZoneId.of(event.getString("zone")),
                 event.getInt("minutes"),
                 NovaEventRepeat.valueOf(event.getString("repeat")),
+                event.optJSONArray("skippedDates")?.let { dates ->
+                    (0 until dates.length()).map { LocalDate.parse(dates.getString(it)) }.toSet()
+                }.orEmpty(),
             )
         })
     }
@@ -102,7 +106,8 @@ internal class NovaCalendarLibrary(space: SpaceContext) {
                 .put("time", event.time?.toString().orEmpty())
                 .put("zone", event.zone.id)
                 .put("minutes", event.minutes)
-                .put("repeat", event.repeat.name))
+                .put("repeat", event.repeat.name)
+                .put("skippedDates", JSONArray(event.skippedDates.sorted().map(LocalDate::toString))))
         }
         val saved = documents.save("library", previous.revision,
             JSONObject().put("events", entries).toString()) ?: return null

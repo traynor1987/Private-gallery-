@@ -45,7 +45,7 @@ class Home2MainAuthorityTest {
     compose.onNodeWithTag("open-apps").performClick()
     compose.onNodeWithTag("drawer-search").performTextInput("Nova Files")
     androidx.test.espresso.Espresso.closeSoftKeyboard()
-    compose.onNodeWithTag("drawer-nova-files").assertIsDisplayed().performClick()
+    compose.onNodeWithTag("app-nova-files").assertIsDisplayed().performClick()
     compose.waitUntil(10_000) {
      compose.onAllNodes(hasText("Choose folder") and isEnabled()).fetchSemanticsNodes().isNotEmpty()
     }

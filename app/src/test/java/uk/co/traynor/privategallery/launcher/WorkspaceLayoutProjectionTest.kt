@@ -15,6 +15,22 @@ class WorkspaceLayoutProjectionTest {
     private val store = LauncherBuiltIn.STORE.app(applicationId).component
     private val arcade = LauncherBuiltIn.ARCADE.app(applicationId).component
 
+    @Test fun coreAppsHaveDistinctFixedComponentsAndProjectAsHomeAndDockItems() {
+        val apps = LauncherBuiltIn.entries.filter { it.coreApp != null }
+        assertEquals(5, apps.size)
+        val components = apps.map { it.app(applicationId).component }
+        assertEquals(5, components.toSet().size)
+        apps.zip(components).forEach { (app, component) ->
+            assertSame(app, LauncherBuiltIn.find(applicationId, component))
+            assertTrue(app.decision(null).canLaunch)
+        }
+        val routes = apps.map { it.route }
+        val projection = Profile(pages = listOf(routes), dock = routes).publicProjection(applicationId)
+        val shortcuts = components.map { LauncherItem.App(it) }
+        assertEquals(listOf(shortcuts), projection.pages)
+        assertEquals(shortcuts, projection.dock)
+    }
+
     @Test fun primaryProjectionNeverIncludesPrivateRoutesNamesOrMedia() {
         val privateApp = "web:01234567-89ab-cdef-0123-456789abcdef"
         val profile = Profile(

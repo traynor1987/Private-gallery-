@@ -73,6 +73,7 @@ import uk.co.traynor.privategallery.core.sanctuary.SanctuarySession
 import uk.co.traynor.privategallery.core.sanctuary.SanctuaryStore
 import uk.co.traynor.privategallery.core.sanctuary.panicSanctuaryPersonalApps
 import uk.co.traynor.privategallery.core.ui.AppTheme
+import uk.co.traynor.privategallery.privateCoreAppEntryIntent
 import uk.co.traynor.privategallery.privateWorkspaceEntryIntent
 import uk.co.traynor.privategallery.ui.PrivateGalleryTheme
 
@@ -619,7 +620,11 @@ class NovaLauncherActivity : ComponentActivity() {
                 LauncherBuiltIn.SANCTUARY -> openSanctuary()
                 LauncherBuiltIn.SAFE_NOTIFICATIONS -> startActivity(GuardianInboxActivity.safeNotificationsIntent(this))
                 LauncherBuiltIn.PRIMARY_GALLERY -> startActivity(privateWorkspaceEntryIntent(this, primaryGallery = true))
-                else -> activeUtility = builtIn
+                else -> {
+                    val coreApp = builtIn.coreApp
+                    if (coreApp != null) startActivity(privateCoreAppEntryIntent(this, coreApp))
+                    else activeUtility = builtIn
+                }
             }
         } else if (directory.start(target)) recordLauncherSuccess(target)
         else {

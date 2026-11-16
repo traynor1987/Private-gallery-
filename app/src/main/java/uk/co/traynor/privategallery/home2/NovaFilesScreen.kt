@@ -26,6 +26,8 @@ import uk.co.traynor.privategallery.core.home2.SpaceContext
 private enum class FileSort(val label: String) {
     NAME("Name"), NEWEST("Newest"), SIZE("Size"),
 }
+private enum class FilesFilter(val label: String) { ALL("All"), RECENT("Recent"), FAVOURITES("Favourites") }
+
 private enum class FileNameAction(val label: String) {
     CREATE("Create folder"), RENAME("Rename"),
 }
@@ -49,6 +51,8 @@ internal fun NovaFilesScreen(
     var path by remember(space) { mutableStateOf<List<NovaFile>>(emptyList()) }
     var files by remember(space) { mutableStateOf<List<NovaFile>>(emptyList()) }
     var sort by remember(space) { mutableStateOf(FileSort.NAME) }
+    var filter by remember(space) { mutableStateOf(FilesFilter.ALL) }
+    var savingMarks by remember(space) { mutableStateOf(false) }
     var search by remember(space) { mutableStateOf("") }
     var status by remember(space) { mutableStateOf(pickerMessage) }
     var working by remember(space) { mutableStateOf(false) }
@@ -68,7 +72,7 @@ internal fun NovaFilesScreen(
             status = "The encrypted folder selection could not be loaded."
         }
     }
-    LaunchedEffect(space, selection, path, reload) {
+    LaunchedEffect(space, selection != null, selection?.tree, path, reload) {
         val selected = selection ?: return@LaunchedEffect
         val tree: Uri? = selected.tree
         loading = true
@@ -116,9 +120,28 @@ internal fun NovaFilesScreen(
         }
     }
 
+    fun mark(file: NovaFile, favourite: Boolean) {
+        val previous = selection ?: return
+        if (savingMarks) return
+        savingMarks = true
+        scope.launch {
+            val result = withContext(Dispatchers.IO) {
+                runCatching {
+                    val store = NovaFilesSelection(space)
+                    if (favourite) store.toggleFavourite(previous, file.id) else store.markViewed(previous, file.id)
+                }
+            }
+            if (!space.current()) return@launch
+            val updated = result.getOrNull()
+            if (updated != null) selection = updated
+            else status = "Could not update this folder’s file history."
+            savingMarks = false
+        }
+    }
+
     fun navigateUp() {
         when {
-            path.isNotEmpty() -> { path = path.dropLast(1); search = ""; status = null }
+            path.isNotEmpty() -> { path = path.dropLast(1); search = ""; filter = FilesFilter.ALL; status = null }
             transfer != null -> transfer = null
             else -> onBack()
         }
@@ -185,23 +208,43 @@ internal fun NovaFilesScreen(
                     TextButton(enabled = active, onClick = { transfer = null }) { Text("Cancel") }
                 }
             }
+            if (pending == null) {
+                Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    FilesFilter.entries.forEach { item ->
+                        FilterChip(filter == item, { filter = item }, { Text(item.label) }, enabled = active)
+                    }
+                }
+            }
             val ordering = when (sort) {
                 FileSort.NAME -> compareBy<NovaFile> { it.name.lowercase() }
                 FileSort.NEWEST -> compareByDescending<NovaFile> { it.modified ?: 0L }
                 FileSort.SIZE -> compareByDescending<NovaFile> { it.bytes ?: 0L }
             }
-            val shown = files.filter {
-                if (pending != null) it.directory else it.name.contains(search.trim(), true)
-            }.sortedWith(compareByDescending<NovaFile> { it.directory }.then(ordering))
+            val recent = selection?.recent.orEmpty().withIndex().associate { it.value to it.index }
+            val favourites = selection?.favourites.orEmpty()
+            val shown = files.filter { file ->
+                if (pending != null) file.directory else file.name.contains(search.trim(), true) && when (filter) {
+                    FilesFilter.ALL -> true
+                    FilesFilter.RECENT -> file.id in recent
+                    FilesFilter.FAVOURITES -> file.id in favourites
+                }
+            }.let { entries ->
+                if (filter == FilesFilter.RECENT && pending == null) entries.sortedBy { recent[it.id] }
+                else entries.sortedWith(compareByDescending<NovaFile> { it.directory }.then(ordering))
+            }
             LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 if (active && shown.isEmpty()) item { Text("No matching items") }
                 items(shown, key = { it.id }) { file ->
                     OutlinedCard(onClick = {
                         if (file.directory) {
                             path = path + file
+                            filter = FilesFilter.ALL
                             search = ""
                             status = null
-                        } else detail = file
+                        } else {
+                            detail = file
+                            mark(file, favourite = false)
+                        }
                     }, enabled = active, modifier = Modifier.fillMaxWidth()) {
                         Row(Modifier.padding(horizontal = 10.dp), verticalAlignment = Alignment.CenterVertically) {
                             Column(Modifier.weight(1f).padding(vertical = 10.dp)) {
@@ -225,6 +268,11 @@ internal fun NovaFilesScreen(
             text = {
                 Column(Modifier.verticalScroll(rememberScrollState())) {
                     Text(if (file.directory) "Folder" else file.mimeType.ifBlank { "File" })
+                    if (!file.directory) {
+                        TextButton(enabled = !savingMarks && active, onClick = { mark(file, favourite = true) }) {
+                            Text(if (file.id in selection?.favourites.orEmpty()) "Remove favourite" else "Add to favourites")
+                        }
+                    }
                     file.bytes?.let { Text(Formatter.formatFileSize(space, it)) }
                     file.modified?.takeIf { it > 0L }?.let {
                         Text(java.text.DateFormat.getDateTimeInstance().format(java.util.Date(it)))

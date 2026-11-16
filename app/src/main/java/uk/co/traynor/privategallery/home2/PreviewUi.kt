@@ -1,4 +1,6 @@
 package uk.co.traynor.privategallery.home2
+
+import uk.co.traynor.privategallery.core.home2.NovaCoreApp
 import uk.co.traynor.privategallery.R
 
 import android.graphics.BitmapFactory
@@ -66,7 +68,7 @@ private val lightColors=lightColorScheme(primary=Color(0xFF285F65),secondary=Col
 /** Adapted from recovered HomeDesktopScreen: pager, dock, gesture alternatives,
  * clock, procedural wallpapers and bounded adaptive grids. Preview data only. */
 @OptIn(ExperimentalMaterial3Api::class,ExperimentalFoundationApi::class)
-@Composable internal fun NovaPreview(data:PreviewData,pool:PreviewBrowserModel,mind:MindData,audio:MindAudio,widgets:WidgetData,searchHistory:NovaSearchHistory,video:NovaVideoModel,onPickImage:()->Unit,onOpen:(String)->Unit,filesDir:File,onNative:(String)->Unit,onLock:()->Unit,onPanic:()->Unit,externalRecentsRequest:Int=0,onRecentsConsumed:()->Unit={},onBackup:()->Unit={},workspaceProjection:Profile?=null,filesPicker:NovaFilesPicker?=null){
+@Composable internal fun NovaPreview(data:PreviewData,pool:PreviewBrowserModel,mind:MindData,audio:MindAudio,widgets:WidgetData,searchHistory:NovaSearchHistory,video:NovaVideoModel,onPickImage:()->Unit,onOpen:(String)->Unit,filesDir:File,onNative:(String)->Unit,onLock:()->Unit,onPanic:()->Unit,externalRecentsRequest:Int=0,onRecentsConsumed:()->Unit={},onBackup:()->Unit={},workspaceProjection:Profile?=null,filesPicker:NovaFilesPicker?=null,coreAppRequest:NovaCoreApp?=null,onCoreAppRequestConsumed:()->Unit={}){
  val state=data.state
  val dark=when(state.theme){"light"->false;"system"->isSystemInDarkTheme();else->true}
  MaterialTheme(colorScheme=if(dark)darkColors else lightColors){
@@ -161,7 +163,7 @@ private val lightColors=lightColorScheme(primary=Color(0xFF285F65),secondary=Col
     when{
      id.startsWith("resume-internal:")->{val route=id.removePrefix("resume-internal:");if(data.shell.internalRecents.any{it.first==state.current&&it.second==route}){if(route in nativeHomeApps)onNative(route)else screen=route}}
      id.startsWith("recent-tab:")->{pool.tabs.firstOrNull{it.id==id.removePrefix("recent-tab:")&&it.profile==state.current}?.let{pool.select(it);screen="home"}}
-     (id=="nova-notes-draft" || id=="nova-tasks" || id=="nova-calendar" || id=="nova-files" || id=="nova-clipboard") && state.current=="primary"->{screen=id}
+     state.current=="primary" && NovaCoreApp.entries.any { it.route == id }->{screen=id}
      id.startsWith("visual:") && state.current=="primary"->{
       val moduleId=id.removePrefix("visual:")
       if(visualModules.any{it.id==moduleId}){openVisual("home");visual.open(moduleId)}
@@ -201,6 +203,12 @@ private val lightColors=lightColorScheme(primary=Color(0xFF285F65),secondary=Col
      "guide"->{screen="guide";drawer=false}
      else->if(id.startsWith("folder:"))openFolder=id else if(data.app(id)?.website!=null){pool.open(data.app(id)!!.website!!,data.state.current);drawer=false}else onNative(id)
     }}
+   }
+   LaunchedEffect(coreAppRequest, state.current) {
+    if (state.current == "primary" && coreAppRequest != null) {
+     launch(coreAppRequest.route)
+     onCoreAppRequestConsumed()
+    }
    }
    val latestLaunch by rememberUpdatedState(launch)
    val lifecycle = LocalLifecycleOwner.current.lifecycle
@@ -424,14 +432,6 @@ private val lightColors=lightColorScheme(primary=Color(0xFF285F65),secondary=Col
      OutlinedTextField(search,{search=it},Modifier.fillMaxWidth().padding(vertical=16.dp).testTag("drawer-search"),placeholder={Text("Search apps and folders")},leadingIcon={Icon(Icons.Default.Search,null)},singleLine=true,shape=Shape)
      if(state.current=="primary") {
       VisualCatalogueEntry("drawer-visual-foundation"){openVisual("home")}
-      Row(Modifier.horizontalScroll(rememberScrollState()),horizontalArrangement=Arrangement.spacedBy(8.dp)) {
-       listOf("nova-notes-draft" to "Nova Notes", "nova-tasks" to "Nova Tasks", "nova-calendar" to "Nova Calendar",
-        "nova-files" to "Nova Files", "nova-clipboard" to "Nova Clipboard").forEach { (route, label) ->
-        if (label.contains(search.trim(), ignoreCase=true)) {
-         TextButton(onClick={launch(route)},modifier=Modifier.testTag("drawer-$route")){Text(label)}
-        }
-       }
-      }
      }
      val visualMatches=if(state.current=="primary"&&search.isNotBlank())visualModules.filter{it.title.contains(search.trim(),true)}else emptyList()
      AdaptiveAppGrid(data,data.drawerIds().filter{id->val f=profile.folders.firstOrNull{it.id==id};(f?.name?:data.app(id)?.name?:"").contains(search,true)},onLaunch=launch,onSelect={selected=it},modifier=Modifier.weight(1f),

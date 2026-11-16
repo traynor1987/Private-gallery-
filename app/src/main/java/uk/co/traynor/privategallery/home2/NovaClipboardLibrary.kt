@@ -9,7 +9,7 @@ import uk.co.traynor.privategallery.core.home2.NovaCoreAppDocuments
 import uk.co.traynor.privategallery.core.home2.SpaceContext
 
 internal enum class SnippetRetention(val label: String, val days: Long?) {
-    MANUAL("Until deleted", null), WEEK("7 days", 7), MONTH("30 days", 30);
+    MANUAL("Until deleted", null), DAY("1 day", 1), WEEK("7 days", 7), MONTH("30 days", 30);
 
     fun retains(snippet: NovaSnippet, at: Instant): Boolean =
         days == null || snippet.pinned || snippet.updated >= at.minus(Duration.ofDays(days))
@@ -28,7 +28,12 @@ internal data class NovaSnippet(
 internal class NovaClipboardLibrary(space: SpaceContext) {
     private val documents = NovaCoreAppDocuments(space, NovaCoreApp.CLIPBOARD)
 
-    data class Snapshot(val revision: Long?, val retention: SnippetRetention, val snippets: List<NovaSnippet>)
+    data class Snapshot(
+        val revision: Long?,
+        val retention: SnippetRetention,
+        val snippets: List<NovaSnippet>,
+        val protectAllCopies: Boolean = false,
+    )
 
     fun read(at: Instant): Snapshot {
         val current = load()
@@ -48,10 +53,16 @@ internal class NovaClipboardLibrary(space: SpaceContext) {
                 NovaSnippet(entry.getString("id"), entry.getString("title"), entry.getString("text"),
                     entry.getString("category"), entry.getBoolean("pinned"), entry.getBoolean("sensitive"),
                     Instant.ofEpochMilli(entry.getLong("updated")))
-            })
+            }, data.optBoolean("protectAllCopies"))
     }
 
-    fun save(previous: Snapshot, retention: SnippetRetention, snippets: List<NovaSnippet>, at: Instant): Snapshot? {
+    fun save(
+        previous: Snapshot,
+        retention: SnippetRetention,
+        snippets: List<NovaSnippet>,
+        at: Instant,
+        protectAllCopies: Boolean = previous.protectAllCopies,
+    ): Snapshot? {
         val retained = snippets.filter { retention.retains(it, at) }
         val entries = JSONArray()
         for (snippet in retained) {
@@ -65,7 +76,8 @@ internal class NovaClipboardLibrary(space: SpaceContext) {
                 .put("updated", snippet.updated.toEpochMilli()))
         }
         val saved = documents.save("library", previous.revision,
-            JSONObject().put("retention", retention.name).put("snippets", entries).toString()) ?: return null
-        return Snapshot(saved.revision, retention, retained)
+            JSONObject().put("retention", retention.name).put("snippets", entries)
+                .put("protectAllCopies", protectAllCopies).toString()) ?: return null
+        return Snapshot(saved.revision, retention, retained, protectAllCopies)
     }
 }

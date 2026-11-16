@@ -37,6 +37,8 @@ internal fun NovaClipboardScreen(space: SpaceContext, onBack: () -> Unit) {
     var snapshot by remember(space) { mutableStateOf<NovaClipboardLibrary.Snapshot?>(null) }
     var editor by remember(space) { mutableStateOf<NovaSnippet?>(null) }
     var query by remember(space) { mutableStateOf("") }
+    var favouritesOnly by remember(space) { mutableStateOf(false) }
+    var category by remember(space) { mutableStateOf<String?>(null) }
     var reveal by remember(space) { mutableStateOf(false) }
     var status by remember(space) { mutableStateOf<String?>(null) }
     var busy by remember(space) { mutableStateOf(true) }
@@ -58,13 +60,21 @@ internal fun NovaClipboardScreen(space: SpaceContext, onBack: () -> Unit) {
         busy = false
     }
 
-    fun persist(snippets: List<NovaSnippet>, message: String, retention: SnippetRetention? = null) {
+    fun persist(
+        snippets: List<NovaSnippet>,
+        message: String,
+        retention: SnippetRetention? = null,
+        protectAllCopies: Boolean? = null,
+    ) {
         val library = store ?: return
         val previous = snapshot ?: return
         busy = true
         scope.launch {
             val result = withContext(Dispatchers.IO) {
-                runCatching { library.save(previous, retention ?: previous.retention, snippets, Instant.now()) }
+                runCatching {
+                    library.save(previous, retention ?: previous.retention, snippets, Instant.now(),
+                        protectAllCopies ?: previous.protectAllCopies)
+                }
             }
             if (!space.current()) return@launch
             result.onSuccess { saved ->
@@ -97,7 +107,7 @@ internal fun NovaClipboardScreen(space: SpaceContext, onBack: () -> Unit) {
         val target = clipboard ?: return
         status = runCatching {
             val clip = ClipData.newPlainText("Nova Clipboard", snippet.text)
-            if (snippet.sensitive) {
+            if (snippet.sensitive || snapshot?.protectAllCopies == true) {
                 clip.description.extras = PersistableBundle().apply {
                     putBoolean(ClipDescription.EXTRA_IS_SENSITIVE, true)
                 }
@@ -146,6 +156,10 @@ internal fun NovaClipboardScreen(space: SpaceContext, onBack: () -> Unit) {
             OutlinedTextField(query, { query = it }, label = { Text("Search snippets") }, singleLine = true,
                 modifier = Modifier.fillMaxWidth())
             if (snapshot != null) {
+                val privacyEnabled = snapshot?.protectAllCopies == true
+                FilterChip(privacyEnabled, {
+                    persist(snippets, "Clipboard privacy updated", protectAllCopies = !privacyEnabled)
+                }, { Text("Protect all snippet copies") }, enabled = !busy)
                 Text("Retention for unpinned snippets")
                 Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     SnippetRetention.entries.forEach { retention ->
@@ -156,10 +170,22 @@ internal fun NovaClipboardScreen(space: SpaceContext, onBack: () -> Unit) {
                     }
                 }
             }
+            val categories = snippets.map { it.category }.filter(String::isNotBlank).distinct().sorted()
+            val activeCategory = category?.takeIf { it in categories }
+            Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                FilterChip(favouritesOnly, { favouritesOnly = !favouritesOnly }, { Text("Favourites") })
+                if (categories.isNotEmpty()) {
+                    FilterChip(activeCategory == null, { category = null }, { Text("All categories") })
+                    categories.forEach { label ->
+                        FilterChip(activeCategory == label, { category = label }, { Text(label) })
+                    }
+                }
+            }
             val search = query.trim()
             val visible = snippets.filter {
-                it.title.contains(search, true) || it.category.contains(search, true) ||
-                    (!it.sensitive && it.text.contains(search, true))
+                (!favouritesOnly || it.pinned) && (activeCategory == null || it.category == activeCategory) &&
+                    (it.title.contains(search, true) || it.category.contains(search, true) ||
+                        (!it.sensitive && it.text.contains(search, true)))
             }.sortedWith(compareByDescending<NovaSnippet> { it.pinned }.thenByDescending { it.updated })
             LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 if (!busy && snapshot != null && visible.isEmpty()) item { Text("No matching snippets") }
@@ -182,6 +208,7 @@ internal fun NovaClipboardScreen(space: SpaceContext, onBack: () -> Unit) {
             }
         } else {
             val saved = snippets.find { it.id == current.id }
+            val protectedEditing = current.sensitive || snapshot?.protectAllCopies == true
             Column(Modifier.weight(1f).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedTextField(current.title, { editor = current.copy(title = it.take(200)) },
                     modifier = Modifier.fillMaxWidth(), label = { Text("Title") }, enabled = !busy, singleLine = true)
@@ -190,11 +217,11 @@ internal fun NovaClipboardScreen(space: SpaceContext, onBack: () -> Unit) {
                 OutlinedTextField(current.text, { editor = current.copy(text = it.take(16_000)) },
                     modifier = Modifier.fillMaxWidth(), label = { Text("Snippet") }, minLines = 3,
                     enabled = !busy && (!current.sensitive || reveal),
-                    keyboardOptions = if (current.sensitive) KeyboardOptions(
+                    keyboardOptions = if (protectedEditing) KeyboardOptions(
                         keyboardType = KeyboardType.Password, autoCorrectEnabled = false) else KeyboardOptions.Default,
-                    visualTransformation = if (current.sensitive) PasswordVisualTransformation()
+                    visualTransformation = if (protectedEditing) PasswordVisualTransformation()
                         else VisualTransformation.None)
-                if (current.sensitive && reveal) Text(current.text)
+                if (protectedEditing && (!current.sensitive || reveal)) Text(current.text)
                 if (current.sensitive && !reveal) {
                     TextButton(enabled = !busy, onClick = { reveal = true }) { Text("Reveal to edit") }
                 }
