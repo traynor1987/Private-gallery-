@@ -31,6 +31,8 @@ import uk.co.traynor.privategallery.core.privateapps.PrivateAppCatalog
 import uk.co.traynor.privategallery.core.privateapps.PrivateAppStore
 import uk.co.traynor.privategallery.home2.IntegratedHome
 import uk.co.traynor.privategallery.home2.NovaLockEntry
+import uk.co.traynor.privategallery.home2.NovaNote
+import uk.co.traynor.privategallery.home2.NovaNotesLibrary
 import uk.co.traynor.privategallery.home2.WidgetData
 
 /** Exercises the integrated launcher, its real encrypted Space context and production app adapter.
@@ -142,6 +144,31 @@ class Home2IntegrationTest {
   compose.waitForIdle()
   compose.onNodeWithTag("nova-quick-panel").assertDoesNotExist()
   compose.waitUntil(5_000){compose.runOnIdle {compose.activity.window.decorView.hasWindowFocus()}}
+ }
+
+
+ @Test fun notes_keep_the_legacy_draft_and_persist_multiple_edits_without_overwriting_newer_changes() {
+  SpaceFixture(false, compose.activity).use { f ->
+   SpaceContext(f.context, f.access).use { space ->
+    val legacy = org.json.JSONObject().put("title", "Existing draft").put("body", "Legacy body")
+    assertNotNull(NovaCoreAppDocuments(space, NovaCoreApp.NOTES).save("draft", null, legacy.toString()))
+    val library = NovaNotesLibrary(space)
+    val initial = library.read()
+    assertEquals("Existing draft", initial.notes.single().title)
+    val first = initial.notes.single()
+    val second = NovaNote("checklist", "Shopping", "Apples", true)
+    val changed = checkNotNull(library.save(initial, listOf(first, second)))
+    assertNull(library.save(initial, emptyList()))
+    val reopened = NovaNotesLibrary(space)
+    assertEquals(changed, reopened.read())
+    assertNotNull(reopened.save(changed, listOf(second.copy(body = "Apples and milk"))))
+   }
+   SpaceContext(f.context, f.access).use { space ->
+    val surviving = NovaNotesLibrary(space).read().notes.single()
+    assertEquals("Apples and milk", surviving.body)
+    assertTrue(surviving.pinned)
+   }
+  }
  }
 
  @Test fun protected_entry_never_opens_home_until_the_user_requests_native_authentication() {
