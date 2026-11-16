@@ -56,12 +56,42 @@ class Home2MainAuthorityTest {
      scenario.onActivity { activity -> locked = !state(activity).session.isUnlocked }
      locked
     }
+    compose.waitUntil(10_000) {
+     var returned = false
+     scenario.onActivity { activity -> returned = state(activity).novaFilesPickerTicket.returned != null }
+     returned
+    }
     scenario.onActivity { activity ->
-     assertFalse("Opening the folder picker must preserve auto-lock", state(activity).session.isUnlocked)
+     val owner = state(activity)
+     assertFalse("Opening the folder picker must preserve auto-lock", owner.session.isUnlocked)
+     val result = checkNotNull(owner.novaFilesPickerTicket.returned)
+     assertFalse("DocumentsUI cancelled the folder selection", result.cancelled)
+     assertTrue("DocumentsUI did not return a tree", android.provider.DocumentsContract.isTreeUri(checkNotNull(result.tree)))
+     assertTrue("DocumentsUI did not return a read grant", result.flags and android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION != 0)
      admit(activity)
     }
-    compose.waitUntil(15_000) {
-     compose.onAllNodesWithText("Nova62 synthetic documents").fetchSemanticsNodes().isNotEmpty()
+    try {
+     compose.waitUntil(15_000) {
+      compose.onAllNodesWithText("Nova62 synthetic documents").fetchSemanticsNodes().isNotEmpty()
+     }
+    } catch (failure: androidx.compose.ui.test.ComposeTimeoutException) {
+     val filesVisible = compose.onAllNodesWithTag("nova-files").fetchSemanticsNodes().isNotEmpty()
+     val homeVisible = compose.onAllNodesWithTag("open-apps").fetchSemanticsNodes().isNotEmpty()
+     var stage = ""
+     scenario.onActivity { activity ->
+      val owner = state(activity)
+      val actualKey = owner.key
+      val selected = if (actualKey != null && owner.session.isUnlocked) runCatching {
+       uk.co.traynor.privategallery.core.evidence.EvidenceAccess.primary(activity.applicationContext,
+        actualKey, { owner.key }, { owner.session.isUnlocked }, { actualKey.copyOf() }, Any()).use { access ->
+        uk.co.traynor.privategallery.core.home2.SpaceContext(activity.applicationContext, access).use { space ->
+         uk.co.traynor.privategallery.home2.NovaFilesSelection(space).read().tree != null
+        }
+       }
+      }.fold({ it.toString() }, { it.javaClass.simpleName }) else "locked"
+      stage = "resultPending=${owner.novaFilesPickerTicket.returned != null}, selected=$selected, route=${route(activity).value}"
+     }
+     throw AssertionError("Folder handoff stalled: $stage, filesVisible=$filesVisible, homeVisible=$homeVisible").apply { initCause(failure) }
     }
     compose.onNodeWithTag("nova-files").assertIsDisplayed()
     scenario.onActivity { it.panicExit() }
