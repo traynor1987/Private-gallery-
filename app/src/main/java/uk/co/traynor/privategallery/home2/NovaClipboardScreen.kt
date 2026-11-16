@@ -144,7 +144,7 @@ internal fun NovaClipboardScreen(space: SpaceContext, onBack: () -> Unit) {
         val current = editor
         val snippets = snapshot?.snippets.orEmpty()
         if (current == null) {
-            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            NovaCoreAppActions {
                 Button(enabled = !busy && snapshot != null, onClick = {
                     status = null
                     reveal = false

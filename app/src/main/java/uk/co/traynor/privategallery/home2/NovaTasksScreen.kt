@@ -120,7 +120,7 @@ internal fun NovaTasksScreen(
         val current = editor
         val savedTasks = snapshot?.tasks.orEmpty()
         if (current == null) {
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            NovaCoreAppActions {
                 Button(enabled = !loading && snapshot != null, onClick = {
                     status = null
                     editor = TaskEditor(NovaTask(UUID.randomUUID().toString(), ""), "")

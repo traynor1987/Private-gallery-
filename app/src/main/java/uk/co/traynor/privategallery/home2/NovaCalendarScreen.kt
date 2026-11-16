@@ -163,7 +163,7 @@ internal fun NovaCalendarScreen(
         val current = editor
         val events = snapshot?.events.orEmpty()
         if (current == null) {
-            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            NovaCoreAppActions {
                 Button(enabled = !busy && snapshot != null, onClick = {
                     status = null
                     editor = CalendarEdit(NovaCalendarEvent(UUID.randomUUID().toString(), "", "", focus,

@@ -11,6 +11,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -473,6 +475,46 @@ class Home2IntegrationTest {
     compose.onNodeWithText("Confirm").performClick()
     compose.waitUntil(10_000) { compose.onAllNodesWithText("Protected title").fetchSemanticsNodes().isNotEmpty() }
     compose.onNodeWithText("Protected title").assertIsDisplayed()
+   }
+  }
+ }
+
+ @Test fun notes_actions_remain_reachable_on_cover_and_inner_with_large_text() {
+  SpaceFixture(false, compose.activity).use { f ->
+   SpaceContext(f.context, f.access).use { space ->
+    var unfolded by mutableStateOf(false)
+    var exits = 0
+    compose.setContent {
+     BoxWithConstraints(Modifier.fillMaxSize()) {
+      val width = if (unfolded) 840.dp else 320.dp
+      val height = 720.dp
+      val density = androidx.compose.ui.platform.LocalDensity.current
+      check(maxWidth >= width && maxHeight >= height) { "Fold fixture requires a larger emulator viewport" }
+      CompositionLocalProvider(androidx.compose.ui.platform.LocalDensity provides
+       androidx.compose.ui.unit.Density(density.density, fontScale = 2f)) {
+       Box(Modifier.requiredSize(width, height)) {
+        androidx.compose.material3.MaterialTheme {
+         uk.co.traynor.privategallery.home2.NovaNotesDraft(space, onBack = { exits++ })
+        }
+       }
+      }
+     }
+    }
+    compose.waitUntil(10_000) {
+     compose.onAllNodes(hasText("New note") and isEnabled()).fetchSemanticsNodes().isNotEmpty()
+    }
+    fun verifyActions() {
+     val screen = compose.onNodeWithTag("nova-notes-draft").getUnclippedBoundsInRoot()
+     listOf("New note", "Reload", "Done").forEach { label ->
+      val bounds = compose.onNodeWithText(label).assertIsDisplayed().assertIsEnabled().getUnclippedBoundsInRoot()
+      assertTrue("$label must fit inside the workspace", (bounds.right - bounds.left) >= 48.dp &&
+       bounds.left >= screen.left && bounds.right <= screen.right)
+     }
+    }
+    verifyActions()
+    compose.onNodeWithText("Done").performClick()
+    compose.runOnIdle { assertEquals(1, exits); unfolded = true }
+    verifyActions()
    }
   }
  }

@@ -239,7 +239,7 @@ internal fun NovaNotesDraft(
         val canEdit = !busy && draft != null
         val saved = snapshot?.notes.orEmpty()
         if (note == null) {
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            NovaCoreAppActions {
                 Button(enabled = canEdit && snapshot != null && draft?.note == null, onClick = {
                     status = null
                     editorBase = null

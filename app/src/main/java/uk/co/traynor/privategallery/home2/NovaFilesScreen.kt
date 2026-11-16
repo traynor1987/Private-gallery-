@@ -167,7 +167,7 @@ internal fun NovaFilesScreen(
         Text("Nova Files", style = MaterialTheme.typography.headlineSmall)
         if (working || loading) LinearProgressIndicator(Modifier.fillMaxWidth())
         status?.let { Text(it) }
-        Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        NovaCoreAppActions {
             Button(enabled = active && selection != null && onChooseFolder != null,
                 onClick = { onChooseFolder?.invoke() }) { Text("Choose folder") }
             if (path.isNotEmpty()) {
