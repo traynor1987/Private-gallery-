@@ -33,12 +33,7 @@ class CalculatorUiTest {
   val context=object:ContextWrapper(base){override fun getFilesDir()=File(dir,"files").apply{mkdirs()};override fun getNoBackupFilesDir()=File(dir,"hidden").apply{mkdirs()};override fun getApplicationContext():Context=base.applicationContext};local=context
   val identity=Any();access=EvidenceAccess.primary(context,identity,{identity},{true},{ByteArray(32){39}},Any());return SpaceContext(context,access!!)
  }
- @After fun close(){compose.runOnIdle{attached=false};access?.close();root?.deleteRecursively()}
- @Test fun drawerLaunchArithmeticMemoryHistoryAndCopyUseNativeCalculator(){
-  val space=fixture();compose.setContent{if(attached)CompositionLocalProvider(LocalContext provides local!!){IntegratedHome(access!!,true,{},{},{},null,null)}}
-  compose.onNodeWithTag("open-apps").performClick();compose.onNodeWithTag("drawer-search").performTextInput("Nova Calculator");compose.onNodeWithTag("app-nova-calculator").performClick()
-  compose.onNodeWithTag("calculator").assertIsDisplayed();compose.onNodeWithTag("calculator-expression").performTextInput("0.1+0.2")
-  compose.onNodeWithTag("calculator-key-=").performScrollTo().performClick();compose.onNodeWithTag("calculator-result").performScrollTo().assertTextEquals("0.3")
+ private fun awaitCalculatorWindow() {
   androidx.test.espresso.Espresso.closeSoftKeyboard()
   compose.waitUntil(10_000) {
    compose.runOnIdle {
@@ -46,6 +41,18 @@ class CalculatorUiTest {
     decor.hasWindowFocus() && decor.rootWindowInsets?.isVisible(android.view.WindowInsets.Type.ime()) == false
    }
   }
+ }
+ @After fun close(){compose.runOnIdle{attached=false};access?.close();root?.deleteRecursively()}
+ @Test fun drawerLaunchArithmeticMemoryHistoryAndCopyUseNativeCalculator(){
+  val space=fixture();compose.setContent{if(attached)CompositionLocalProvider(LocalContext provides local!!){IntegratedHome(access!!,true,{},{},{},null,null)}}
+  compose.onNodeWithTag("open-apps").performClick();compose.onNodeWithTag("drawer-search").performTextInput("Nova Calculator");compose.onNodeWithTag("app-nova-calculator").performClick()
+  awaitCalculatorWindow()
+  compose.onNodeWithTag("calculator").assertIsDisplayed()
+  compose.onNodeWithTag("calculator-expression").performTextInput("0.1+0.2")
+  compose.onNodeWithTag("calculator-expression").assertTextContains("0.1+0.2")
+  awaitCalculatorWindow()
+  compose.onNodeWithTag("calculator-key-=").performScrollTo().performClick()
+  compose.onNodeWithTag("calculator-result").performScrollTo().assertTextEquals("0.3")
   compose.onNodeWithText("Memory").performScrollTo().performClick()
   compose.onNodeWithContentDescription("Store in memory").performScrollTo().performClick()
   compose.runOnIdle { assertEquals("Encrypted calculator memory", "0.3", CalculatorData(space).memory?.toPlainString()) }
