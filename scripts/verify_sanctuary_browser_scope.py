@@ -45,11 +45,14 @@ def original(path):
     return subprocess.check_output(["git", "show", f"{BASE}:{path}"], cwd=ROOT, text=True)
 
 
+# Code 81 adds a Primary Space adapter without changing the encrypted engine.
+ALLOWED_CORE_APP_ADAPTERS = {f"{CORE}/home2/NovaCoreAppDocuments.kt"}
+
 for revision in (("HEAD",), ()):
     raw = subprocess.check_output(
         ["git", "diff", "--name-only", BASE, *revision, "--", CORE], cwd=ROOT, text=True,
     )
-    unexpected = set(raw.splitlines()) - ALLOWED_SANCTUARY - ALLOWED_GUARDIAN
+    unexpected = set(raw.splitlines()) - ALLOWED_SANCTUARY - ALLOWED_GUARDIAN - ALLOWED_CORE_APP_ADAPTERS
     assert not unexpected, f"Unexpected protected-core changes: {sorted(unexpected)}"
 
 build_file = "app/build.gradle.kts"
