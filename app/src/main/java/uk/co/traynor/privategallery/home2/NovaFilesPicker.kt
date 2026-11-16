@@ -156,6 +156,15 @@ private fun saveSelectedAttachment(
     check(space.current())
     val uri = requireNotNull(selection.tree)
     require(uri.scheme == "content" && selection.flags and Intent.FLAG_GRANT_READ_URI_PERMISSION != 0)
+    saveNovaNoteAttachment(space, uri, request.noteId, request.id, allowStart = false)
+}
+
+internal fun saveNovaNoteAttachment(
+    space: SpaceContext, uri: Uri, noteId: String, attachmentId: String = UUID.randomUUID().toString(),
+    allowStart: Boolean,
+) {
+    check(space.current())
+    require(uri.scheme == "content")
     val resolver = space.contentResolver
     val name = resolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)?.use {
         if (it.moveToFirst()) it.getString(0) else null
@@ -166,9 +175,9 @@ private fun saveSelectedAttachment(
     }
     try {
         if (bytes.size > NovaNoteAttachment.MAX_BYTES) throw AttachmentSizeExceeded()
-        val attachment = NovaNoteAttachment(request.id, name, mime, Base64.getEncoder().encodeToString(bytes))
+        val attachment = NovaNoteAttachment(attachmentId, name, mime, Base64.getEncoder().encodeToString(bytes))
         attachment.readBytes().fill(0)
-        check(NovaNotesLibrary(space).attachToDraft(request.noteId, attachment))
+        check(NovaNotesLibrary(space).attachToDraft(noteId, attachment, allowStart))
     } finally {
         bytes.fill(0)
     }

@@ -376,7 +376,8 @@ private val lightColors=lightColorScheme(primary=Color(0xFF285F65),secondary=Col
            key(notesPickerRevision) {
             NovaNotesDraft(space, onBack=goHome,
              openNoteId=linkedRecord?.takeIf { it.app == NovaCoreApp.NOTES }?.id, onOpenLink=openCoreLink,
-             chooseAttachment=filesPicker?.chooseAttachment, attachmentMessage=notesPickerMessage)
+             chooseAttachment=filesPicker?.chooseAttachment, attachmentMessage=notesPickerMessage,
+             openFiles={ launch("nova-files") })
            }
           }
          }
@@ -390,14 +391,19 @@ private val lightColors=lightColorScheme(primary=Color(0xFF285F65),secondary=Col
           (localContext as? uk.co.traynor.privategallery.core.home2.SpaceContext)?.let { space ->
            NovaCalendarScreen(space, onBack=goHome,
             openEventId=linkedRecord?.takeIf { it.app == NovaCoreApp.CALENDAR }?.id,
-            openDay=(openedCoreLink as? NovaCoreLink.DueDay)?.date, onOpenLink=openCoreLink)
+            openDay=(openedCoreLink as? NovaCoreLink.DueDay)?.date, onOpenLink=openCoreLink,
+            sendToAndroidCalendar={ occurrence ->
+             space.current() && sanctuaryStore?.refresh()==null &&
+              runCatching { localContext.startActivity(occurrence.calendarInsertIntent()) }.isSuccess
+            })
           }
          }
          "nova-files"->if(state.current=="primary" && permitSanctuaryRoute("nova-files")) {
           (localContext as? uk.co.traynor.privategallery.core.home2.SpaceContext)?.let { space ->
            key(filesPickerRevision) {
             NovaFilesScreen(space, onBack=goHome, onChooseFolder=filesPicker?.chooseFolder,
-             pickerMessage=filesPickerMessage,onImportPrimaryFile=onImportPrimaryFile)
+             pickerMessage=filesPickerMessage,onImportPrimaryFile=onImportPrimaryFile,
+             onOpenNote={ id -> openCoreLink(NovaCoreLink.Record(NovaCoreApp.NOTES,id)) })
            }
           }
          }

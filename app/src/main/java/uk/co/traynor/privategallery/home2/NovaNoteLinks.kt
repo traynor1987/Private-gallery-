@@ -32,15 +32,24 @@ internal sealed interface NovaCoreLink {
 }
 
 @Composable
-internal fun NovaNotePicker(space: SpaceContext, onChoose: (String) -> Unit, onDismiss: () -> Unit) {
+internal fun NovaNotePicker(
+    space: SpaceContext, onChoose: (String) -> Unit, onDismiss: () -> Unit,
+    title: String = "Link a saved note",
+    includeDraft: Boolean = false,
+) {
     var loaded by remember(space) { mutableStateOf<Result<List<NovaNote>>?>(null) }
     LaunchedEffect(space) {
-        val result = withContext(Dispatchers.IO) { runCatching { NovaNotesLibrary(space).read().notes } }
+        val result = withContext(Dispatchers.IO) { runCatching {
+            val store = NovaNotesLibrary(space)
+            val saved = store.read().notes
+            val draft = if (includeDraft) store.readDraft().note else null
+            if (draft == null) saved else listOf(draft) + saved.filterNot { it.id == draft.id }
+        } }
         if (space.current()) loaded = result
     }
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Link a saved note") },
+        title = { Text(title) },
         text = {
             val result = loaded
             when {

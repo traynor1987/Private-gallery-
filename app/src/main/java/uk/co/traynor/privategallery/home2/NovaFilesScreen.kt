@@ -43,6 +43,7 @@ internal fun NovaFilesScreen(
     onChooseFolder: (() -> Unit)?,
     pickerMessage: String?,
     onImportPrimaryFile: ((Uri, (String) -> Unit) -> Unit)? = null,
+    onOpenNote: ((String) -> Unit)? = null,
 ) {
     val scope = rememberCoroutineScope()
     var selection by remember(space) { mutableStateOf<NovaFilesSelection.Selection?>(null) }
@@ -61,6 +62,7 @@ internal fun NovaFilesScreen(
     var reload by remember(space) { mutableIntStateOf(0) }
     var detail by remember(space) { mutableStateOf<NovaFile?>(null) }
     var preview by remember(space, detail?.id) { mutableStateOf<NovaFilesAccess.Preview?>(null) }
+    var toAttach by remember(space) { mutableStateOf<NovaFile?>(null) }
     var toImport by remember(space) { mutableStateOf<NovaFile?>(null) }
     var nameRequest by remember(space) { mutableStateOf<FileNameRequest?>(null) }
     var nameText by remember(space) { mutableStateOf("") }
@@ -297,6 +299,12 @@ internal fun NovaFilesScreen(
                                 }
                             }) { Text("Preview text") }
                         }
+                        if (onOpenNote != null && !file.supports(Document.FLAG_VIRTUAL_DOCUMENT) &&
+                            (file.bytes ?: 0L) <= uk.co.traynor.privategallery.core.home2.NovaNoteAttachment.MAX_BYTES) {
+                            TextButton(enabled = active, onClick = { detail = null; toAttach = file }) {
+                                Text("Attach to a Nova Note")
+                            }
+                        }
                         if (onImportPrimaryFile != null && !file.supports(Document.FLAG_VIRTUAL_DOCUMENT) &&
                             acceptsPrimaryVaultFile(file.mimeType) &&
                             (file.bytes ?: 0L) <= uk.co.traynor.privategallery.core.backup.PortableArchive.MAX_ITEM) {
@@ -336,6 +344,24 @@ internal fun NovaFilesScreen(
             },
             confirmButton = { TextButton(onClick = { detail = null }) { Text("Close") } },
         )
+    }
+    toAttach?.let { file ->
+        NovaNotePicker(space, title = "Attach to a note", includeDraft = true, onDismiss = { toAttach = null }, onChoose = { id ->
+            toAttach = null
+            working = true
+            scope.launch {
+                val result = withContext(Dispatchers.IO) {
+                    runCatching {
+                        val source = checkNotNull(provider).authorizedFileUri(file)
+                        saveNovaNoteAttachment(space, source, id, allowStart = true)
+                    }
+                }
+                if (!space.current()) return@launch
+                working = false
+                if (result.isSuccess) onOpenNote?.invoke(id)
+                else status = "Could not attach the file. Check that it is 24 KiB or less and that no other note draft is open."
+            }
+        })
     }
     toImport?.let { file ->
         AlertDialog(

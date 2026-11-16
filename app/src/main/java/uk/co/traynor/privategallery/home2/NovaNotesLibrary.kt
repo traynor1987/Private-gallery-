@@ -57,12 +57,13 @@ internal class NovaNotesLibrary(space: SpaceContext) {
         return Draft(saved.revision, fingerprint, note)
     }
 
-    fun attachToDraft(noteId: String, attachment: NovaNoteAttachment): Boolean {
+    fun attachToDraft(noteId: String, attachment: NovaNoteAttachment, allowStart: Boolean = false): Boolean {
         val draft = readDraft()
-        val note = draft.note?.takeIf { it.id == noteId } ?: return false
+        val base = if (draft.note == null && allowStart) read().notes.find { it.id == noteId } else null
+        val note = (draft.note ?: base)?.takeIf { it.id == noteId } ?: return false
         if (note.attachments.any { it.id == attachment.id }) return true
         if (note.attachments.size >= NovaNoteAttachment.MAX_COUNT) return false
-        return writeDraft(draft, null, note.copy(attachments = note.attachments + attachment)) != null
+        return writeDraft(draft, base, note.copy(attachments = note.attachments + attachment)) != null
     }
 
     fun discardDraft(previous: Draft): Draft? {

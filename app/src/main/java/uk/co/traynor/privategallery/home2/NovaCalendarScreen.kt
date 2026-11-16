@@ -71,6 +71,7 @@ internal fun NovaCalendarScreen(
     openEventId: String? = null,
     openDay: LocalDate? = null,
     onOpenLink: ((NovaCoreLink) -> Unit)? = null,
+    sendToAndroidCalendar: ((NovaOccurrence) -> Boolean)? = null,
 ) {
     val scope = rememberCoroutineScope()
     val displayZone = ZoneId.systemDefault()
@@ -85,6 +86,7 @@ internal fun NovaCalendarScreen(
     var busy by remember(space) { mutableStateOf(true) }
     var reload by remember(space) { mutableIntStateOf(0) }
     var pickNote by remember(space) { mutableStateOf(false) }
+    var handoffOccurrence by remember(space) { mutableStateOf<NovaOccurrence?>(null) }
     var skipOccurrence by remember(space) { mutableStateOf<NovaOccurrence?>(null) }
     var confirmation by remember(space) { mutableStateOf<CalendarConfirmation?>(null) }
 
@@ -220,7 +222,16 @@ internal fun NovaCalendarScreen(
                                         onOpenLink(NovaCoreLink.Record(NovaCoreApp.NOTES, id))
                                     }) { Text("Open linked note") }
                                 }
+                                if (sendToAndroidCalendar != null) {
+                                    TextButton(enabled = !busy, onClick = { handoffOccurrence = occurrence }) {
+                                        Text("Copy to Android calendar")
+                                    }
+                                }
                                 if (event.repeat != NovaEventRepeat.NONE) {
+                                    TextButton(enabled = !busy, onClick = {
+                                        status = null
+                                        editor = CalendarEdit(occurrence.detached())
+                                    }) { Text("Edit this occurrence") }
                                     TextButton(enabled = !busy, onClick = { skipOccurrence = occurrence }) {
                                         Text("Skip this occurrence")
                                     }
@@ -253,11 +264,12 @@ internal fun NovaCalendarScreen(
                     }) { Text("Unlink note") }
                 }
                 if (current.event.skippedDates.isNotEmpty()) {
-                    Text("Skipped dates")
+                    Text("Skipped or edited dates")
                     current.event.skippedDates.sorted().forEach { date ->
+                        val replacement = events.any { it.originalOccurrence == NovaOriginalOccurrence(current.event.id, date) }
                         TextButton(enabled = !busy, onClick = {
                             editor = current.copy(event = current.event.copy(skippedDates = current.event.skippedDates - date))
-                        }) { Text("Restore $date") }
+                        }) { Text(if (replacement) "Replace edited event with original on $date" else "Restore $date") }
                     }
                 }
                 if (candidate == null && current.event.title.isNotBlank()) {
@@ -266,10 +278,9 @@ internal fun NovaCalendarScreen(
                 Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     Button(enabled = !busy && candidate != null, onClick = {
                         val event = candidate ?: return@Button
-                        val updated = if (events.any { it.id == event.id }) {
-                            events.map { if (it.id == event.id) event else it }
-                        } else events + event
-                        write(updated, "Event saved")
+                        val updated = runCatching { saveNovaCalendarEvent(events, event) }.getOrNull()
+                        if (updated == null) status = "The original series is unavailable. Reload the calendar."
+                        else write(updated, "Event saved")
                     }) { Text("Save event") }
                     TextButton(enabled = !busy, onClick = { closeEditor() }) { Text("Back to calendar") }
                     if (events.any { it.id == current.event.id }) {
@@ -283,6 +294,25 @@ internal fun NovaCalendarScreen(
         editor = editor?.let { it.copy(event = it.event.copy(noteId = id)) }
         pickNote = false
     }, onDismiss = { pickNote = false })
+    handoffOccurrence?.let { occurrence ->
+        AlertDialog(
+            onDismissRequest = { handoffOccurrence = null },
+            title = { Text("Open your Android calendar?") },
+            text = {
+                Text("Your chosen calendar app will receive this occurrence’s title, description and time. " +
+                    "Review it there and save it only if you want a separate copy.")
+            },
+            confirmButton = {
+                TextButton(enabled = !busy, onClick = {
+                    handoffOccurrence = null
+                    if (sendToAndroidCalendar?.invoke(occurrence) != true) {
+                        status = "No Android calendar opened. Check for a calendar app or try outside Sanctuary."
+                    }
+                }) { Text("Open calendar editor") }
+            },
+            dismissButton = { TextButton(onClick = { handoffOccurrence = null }) { Text("Cancel") } },
+        )
+    }
     skipOccurrence?.let { occurrence ->
         AlertDialog(
             onDismissRequest = { skipOccurrence = null },
@@ -310,7 +340,13 @@ internal fun NovaCalendarScreen(
             confirmButton = {
                 TextButton(onClick = {
                     confirmation = null
-                    if (deleting) write(snapshot?.events.orEmpty().filterNot { it.id == editor?.event?.id }, "Event deleted")
+                    if (deleting) {
+                        editor?.event?.id?.let { id ->
+                            write(snapshot?.events.orEmpty().filterNot {
+                                it.id == id || it.originalOccurrence?.seriesId == id
+                            }, "Event deleted")
+                        }
+                    }
                     else editor = null
                 }) { Text(if (deleting) "Delete" else "Discard") }
             },
@@ -385,11 +421,15 @@ private fun CalendarEditFields(value: CalendarEdit, enabled: Boolean, onEdit: (C
         OutlinedTextField(value.minutes, { onEdit(value.copy(minutes = it.take(4))) },
             modifier = Modifier.fillMaxWidth(), label = { Text("Duration in minutes") }, singleLine = true, enabled = enabled)
     }
-    Text("Repeat")
-    Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-        NovaEventRepeat.entries.forEach { repeat ->
-            FilterChip(value.event.repeat == repeat, { onEdit(value.copy(event = value.event.copy(repeat = repeat))) },
-                { Text(repeat.label) }, enabled = enabled)
+    if (value.event.originalOccurrence != null) {
+        Text("Editing one occurrence")
+    } else {
+        Text("Repeat")
+        Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            NovaEventRepeat.entries.forEach { repeat ->
+                FilterChip(value.event.repeat == repeat, { onEdit(value.copy(event = value.event.copy(repeat = repeat))) },
+                    { Text(repeat.label) }, enabled = enabled)
+            }
         }
     }
 }

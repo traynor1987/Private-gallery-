@@ -140,7 +140,19 @@ internal object NovaCoreAppBackup {
                 }
                 NovaCoreApp.CALENDAR -> {
                     keys(value, "events")
-                    records(value.getJSONArray("events"), validate = ::event)
+                    val events = value.getJSONArray("events")
+                    records(events, validate = ::event)
+                    val byId = (0 until events.length()).map(events::getJSONObject).associateBy(::id)
+                    val claimed = hashSetOf<Pair<String, String>>()
+                    for (record in byId.values) {
+                        val original = record.optJSONObject("originalOccurrence") ?: continue
+                        val seriesId = original.getString("seriesId")
+                        val sourceDate = original.getString("date")
+                        val parent = byId[seriesId]
+                        require(parent != null && !parent.has("originalOccurrence") && claimed.add(seriesId to sourceDate))
+                        val skip = parent.getJSONArray("skippedDates")
+                        require((0 until skip.length()).any { skip.getString(it) == sourceDate })
+                    }
                 }
                 NovaCoreApp.CLIPBOARD -> {
                     keys(value, "retention", "snippets", "protectAllCopies")
@@ -220,8 +232,16 @@ internal object NovaCoreAppBackup {
     }
 
     private fun event(value: JSONObject) {
-        keys(value, "id", "title", "description", "firstDate", "time", "zone", "minutes", "repeat", "skippedDates", "noteId", "reminderMinutes")
+        keys(value, "id", "title", "description", "firstDate", "time", "zone", "minutes", "repeat", "skippedDates", "noteId", "reminderMinutes", "originalOccurrence")
         optional(value, "reminderMinutes") { number(value, "reminderMinutes", 0, 1440) }
+        optional(value, "originalOccurrence") {
+            require(value.getString("repeat") == "NONE" && !value.has("skippedDates"))
+            val source = value.getJSONObject("originalOccurrence")
+            keys(source, "seriesId", "date")
+            val series = text(source, "seriesId", 80)
+            require(series.isNotBlank() && series != value.getString("id"))
+            date(text(source, "date", 10))
+        }
         id(value)
         text(value, "title", 200)
         text(value, "description", 4_096)

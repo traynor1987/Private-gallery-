@@ -6,6 +6,7 @@ import java.time.LocalTime
 import java.time.YearMonth
 import java.time.ZoneId
 import java.time.temporal.ChronoUnit
+import java.util.UUID
 import org.json.JSONArray
 import org.json.JSONObject
 import uk.co.traynor.privategallery.core.home2.NovaCoreApp
@@ -28,14 +29,16 @@ internal data class NovaCalendarEvent(
     val skippedDates: Set<LocalDate> = emptySet(),
     val noteId: String? = null,
     val reminderMinutes: Int? = null,
+    val originalOccurrence: NovaOriginalOccurrence? = null,
 ) {
     init {
         require(minutes in 1..1440)
         require(reminderMinutes == null || reminderMinutes in 0..1440)
+        require(originalOccurrence == null || (repeat == NovaEventRepeat.NONE && skippedDates.isEmpty()))
     }
 
-    private fun repeatsOn(date: LocalDate): Boolean {
-        if (date < firstDate || date in skippedDates) return false
+    internal fun isScheduledOn(date: LocalDate): Boolean {
+        if (date < firstDate) return false
         return when (repeat) {
             NovaEventRepeat.NONE -> date == firstDate
             NovaEventRepeat.DAILY -> true
@@ -47,6 +50,8 @@ internal data class NovaCalendarEvent(
             NovaEventRepeat.YEARLY -> firstDate.plusYears((date.year - firstDate.year).toLong()) == date
         }
     }
+
+    private fun repeatsOn(date: LocalDate) = date !in skippedDates && isScheduledOn(date)
 
     fun occurrencesOn(day: LocalDate, displayZone: ZoneId): List<NovaOccurrence> {
         if (time == null) {
@@ -72,6 +77,33 @@ internal data class NovaCalendarEvent(
 
 internal data class NovaOccurrence(val event: NovaCalendarEvent, val sourceDate: LocalDate, val start: Instant?)
 
+internal data class NovaOriginalOccurrence(val seriesId: String, val date: LocalDate)
+
+internal fun NovaOccurrence.detached(): NovaCalendarEvent {
+    require(event.repeat != NovaEventRepeat.NONE)
+    val key = UUID.nameUUIDFromBytes("nova-event-occurrence:${event.id}:$sourceDate".encodeToByteArray()).toString()
+    return event.copy(id = key, firstDate = sourceDate, repeat = NovaEventRepeat.NONE, skippedDates = emptySet(),
+        originalOccurrence = NovaOriginalOccurrence(event.id, sourceDate))
+}
+
+internal fun saveNovaCalendarEvent(events: List<NovaCalendarEvent>, updated: NovaCalendarEvent): List<NovaCalendarEvent> {
+    val source = updated.originalOccurrence
+    val retained = if (source != null) {
+        val series = events.find { it.id == source.seriesId && it.originalOccurrence == null }
+        require(series != null && (source.date in series.skippedDates || series.isScheduledOn(source.date)))
+        events.map { if (it.id == series.id) series.copy(skippedDates = series.skippedDates + source.date) else it }
+    } else {
+        events.filterNot {
+            it.originalOccurrence?.let { original ->
+                original.seriesId == updated.id && original.date !in updated.skippedDates
+            } == true
+        }
+    }
+    return if (retained.any { it.id == updated.id }) {
+        retained.map { if (it.id == updated.id) updated else it }
+    } else retained + updated
+}
+
 internal class NovaCalendarLibrary(space: SpaceContext) {
     private val documents = NovaCoreAppDocuments(space, NovaCoreApp.CALENDAR)
 
@@ -96,6 +128,9 @@ internal class NovaCalendarLibrary(space: SpaceContext) {
                 }.orEmpty(),
                 event.optString("noteId").takeIf(String::isNotBlank),
                 if (event.has("reminderMinutes")) event.getInt("reminderMinutes") else null,
+                event.optJSONObject("originalOccurrence")?.let { original ->
+                    NovaOriginalOccurrence(original.getString("seriesId"), LocalDate.parse(original.getString("date")))
+                },
             )
         })
     }
@@ -115,6 +150,9 @@ internal class NovaCalendarLibrary(space: SpaceContext) {
                 .apply {
                     event.noteId?.let { put("noteId", it) }
                     event.reminderMinutes?.let { put("reminderMinutes", it) }
+                    event.originalOccurrence?.let {
+                        put("originalOccurrence", JSONObject().put("seriesId", it.seriesId).put("date", it.date.toString()))
+                    }
                     if (event.skippedDates.isNotEmpty()) put("skippedDates", JSONArray(event.skippedDates.sorted().map(LocalDate::toString)))
                 })
         }

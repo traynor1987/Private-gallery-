@@ -37,6 +37,7 @@ internal fun NovaNotesDraft(
     onOpenLink: ((NovaCoreLink) -> Unit)? = null,
     chooseAttachment: ((String) -> Unit)? = null,
     attachmentMessage: String? = null,
+    openFiles: (() -> Unit)? = null,
 ) {
     val scope = rememberCoroutineScope()
     var library by remember(space) { mutableStateOf<NovaNotesLibrary?>(null) }
@@ -270,6 +271,11 @@ internal fun NovaNotesDraft(
                     TextButton(enabled = canEdit && note.attachments.size < NovaNoteAttachment.MAX_COUNT, onClick = {
                         if (checkpoint(note) != null) chooseAttachment(note.id)
                     }) { Text("Attach file (up to 24 KiB)") }
+                }
+                if (openFiles != null) {
+                    TextButton(enabled = canEdit, onClick = {
+                        if (checkpoint(note) != null) openFiles()
+                    }) { Text("Browse Nova Files") }
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     FilterChip(note.pinned, { edit(note.copy(pinned = !note.pinned)) },
