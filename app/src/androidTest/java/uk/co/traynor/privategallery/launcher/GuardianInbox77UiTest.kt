@@ -220,7 +220,10 @@ class GuardianInbox77UiTest {
             compose.onNodeWithText("Save to Evidence Locker").performScrollTo().performClick()
             compose.onNodeWithText("Primary Vault PIN").assertIsDisplayed()
             compose.onNodeWithText("Cancel").performClick()
+            compose.waitUntil(10_000) { activity.hasWindowFocus() }
+            compose.onNodeWithText("Primary Vault PIN").assertDoesNotExist()
             compose.onNodeWithText("Save Screenshot").performScrollTo().performClick()
+            compose.waitUntil(10_000) { compose.onAllNodesWithText("Save to Gallery").fetchSemanticsNodes().isNotEmpty() }
             compose.onNodeWithText("Save to Gallery").assertIsDisplayed()
             compose.onNodeWithText("Cancel export").performClick()
             compose.onNodeWithText("Not Upsetting").performScrollTo().performClick()

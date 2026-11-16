@@ -53,6 +53,19 @@ ALLOWED_CORE_APP_ADAPTERS = {f"{CORE}/home2/NovaCoreAppDocuments.kt"}
 # The new data schema lives in the existing Code 81 adapter above.
 CODE81_BACKUP_WIRING = {
     f"{CORE}/home2/SpacePreferences.kt": (
+        (
+            " internal fun onRetire(action:()->Unit)=access.onRetire(action)",
+            " internal fun onRetire(action:()->Unit)=access.onRetire(action)\n"
+            " /** Serialize a durable background write with retirement of its originating authority. */\n"
+            " internal fun commitAuthorizedWrite(action: () -> Unit) {\n"
+            "  access.leases.acquire().use { lease ->\n"
+            "   lease.commit {\n"
+            "    checkLease(lease)\n"
+            "    action()\n"
+            "   }\n"
+            "  }\n"
+            " }",
+        ),
         ("BackupPolicy.preferences.forEach", "BackupPolicy.preferencesFor(spaceId).forEach"),
         ("BackupPolicy.allowed(namespace)", "BackupPolicy.allowed(namespace,spaceId)"),
         ("BackupPolicy.allowed(name)", "BackupPolicy.allowed(name,spaceId)"),

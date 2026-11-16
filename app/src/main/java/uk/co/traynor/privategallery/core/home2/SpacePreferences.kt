@@ -41,6 +41,15 @@ internal class SpaceContext(base: Context, private val access: EvidenceAccess) :
  fun current(): Boolean = !closed.get() && access.current()
  internal fun publishIfCurrent(action:()->Unit)=access.publishIfCurrent {if(!closed.get())action()}
  internal fun onRetire(action:()->Unit)=access.onRetire(action)
+ /** Serialize a durable background write with retirement of its originating authority. */
+ internal fun commitAuthorizedWrite(action: () -> Unit) {
+  access.leases.acquire().use { lease ->
+   lease.commit {
+    checkLease(lease)
+    action()
+   }
+  }
+ }
  private fun checkCurrent() { check(current()) { "Space access retired; unlock the originating vault again" } }
  override fun close() {
   if (closed.compareAndSet(false, true)) {

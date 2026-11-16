@@ -181,6 +181,7 @@ class SpacePreferencesTest {
   val replacement = SpaceContext(f.context, replacementAccess)
   try {
    refused { prefs.all }; refused { editor.commit() }; refused { prefs.edit() }
+   refused { f.space.commitAuthorizedWrite { fail("A retired space committed a write") } }
    assertEquals("saved", replacement.getSharedPreferences("layout", 0).getString("value", null))
    val replacementPrefs = replacement.getSharedPreferences("layout", 0)
    replacement.close(); refused { replacementPrefs.all }

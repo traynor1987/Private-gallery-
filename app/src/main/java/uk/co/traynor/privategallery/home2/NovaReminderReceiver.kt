@@ -72,10 +72,10 @@ internal object NovaReminders {
                 val key = prefix + id
                 merged[key] = records[key]?.takeIf { it.schedule == schedule } ?: Entry(schedule, now)
             }
-            check(space.publishIfCurrent {
+            space.commitAuthorizedWrite {
                 if (records != merged) write(context, merged)
                 arm(context, merged)
-            })
+            }
         }
 
     fun dispatch(context: Context, shouldNotify: Boolean) = synchronized(lock) {
