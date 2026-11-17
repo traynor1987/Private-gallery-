@@ -5,7 +5,7 @@ import uk.co.traynor.privategallery.BuildConfig
 
 /** Explicit cleanup of synthetic credentials. Production rollback APIs retain ownership checks. */
 internal object PrimaryCredentialFixture {
-    fun clearPin(context: Context) {
+    fun clearPin(context: Context) = synchronized(PrimaryVaultSetupGuard.storageLock) {
         check(BuildConfig.HIDDEN_PROTOTYPE)
         // These tests create a fresh disposable Primary Vault. Its ciphertext must not
         // outlive the fixture credentials and masquerade as an owner Vault in the next test.

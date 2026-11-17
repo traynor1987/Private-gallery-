@@ -1,4 +1,21 @@
 {
+  "uk.co.traynor.privategallery.core.hidden.HiddenDocumentLifecycleTest": [
+    "pdfAboveLegacyMediaReadLimitDisplaysAuthenticatesAndRevokes",
+    "pdfAndCsvRemainEncryptedPreviewReopenTrashRestoreAndRevoke",
+    "truncatedDocumentNeverPublishesAndFreshRetrySucceeds"
+  ],
+  "uk.co.traynor.privategallery.core.hidden.HiddenCredentialSeparationTest": [
+    "setupChangeRecoveryAndFreshPrimaryCreationRejectMatchingCredentials"
+  ],
+  "uk.co.traynor.privategallery.core.security.NovaPrimarySecurityReconciliationTest": [
+    "recoveryConfirmationSurvivesStoreRecreationWithoutChangingVaultKey",
+    "setupCannotReplacePartialCredentialsOrOrphanedCiphertext",
+    "unrelatedRestoreCannotClearExistingPinEnvelope"
+  ],
+  "uk.co.traynor.privategallery.core.vault.VaultBackupRestoreTest": [
+    "freshRestoreInstallsNewPinOnlyAfterCiphertextAuthenticates",
+    "interruptedRestoreOnlyFinishesWhenExistingCiphertextMatchesArchive"
+  ],
   "uk.co.traynor.privategallery.home2.VisualFoundationTest": [
     "aiEntryPointsOnlyLaunchExistingAppsOnExplicitTap",
     "aiModulesNavigateWithDemoStatusAtFoldWidths",
@@ -97,14 +114,14 @@
     "actualCalculatorAdmissionRequiresIndependentPinAndPanicRejectsRetainedCallbacks"
   ],
   "uk.co.traynor.privategallery.core.home2.SpacePreferencesTest": [
-    "hidden_handles_remain_retired_when_the_same_vault_is_unlocked_again",
-    "owner_and_preference_names_are_authenticated_and_corruption_is_preserved",
-    "stale_handles_and_editors_never_reactivate_after_unlock_and_wrapper_close",
-    "standard_types_are_encrypted_round_trip_with_defensive_copies_and_merge",
-    "wallpaper_uses_encrypted_bytes_and_rejects_foreign_or_retired_access",
     "attachment_is_recovered_after_reauthentication_and_portable_without_source_access",
     "core_app_documents_are_encrypted_namespaced_and_reject_stale_saves",
-    "reminders_persist_reschedule_and_cancel_through_the_android_alarm"
+    "hidden_handles_remain_retired_when_the_same_vault_is_unlocked_again",
+    "owner_and_preference_names_are_authenticated_and_corruption_is_preserved",
+    "reminders_persist_reschedule_and_cancel_through_the_android_alarm",
+    "stale_handles_and_editors_never_reactivate_after_unlock_and_wrapper_close",
+    "standard_types_are_encrypted_round_trip_with_defensive_copies_and_merge",
+    "wallpaper_uses_encrypted_bytes_and_rejects_foreign_or_retired_access"
   ],
   "uk.co.traynor.privategallery.core.home2.WallpaperStoreTest": [
     "both_owners_read_originals_without_changing_gallery_and_cancel_does_not_commit",
@@ -256,33 +273,33 @@
   "uk.co.traynor.privategallery.core.home2.Home2IntegrationTest": [
     "adding_a_clock_widget_preserves_the_original_clock_and_its_visibility_setting_survives_reopen",
     "authenticated_hidden_home_names_its_exit_return_to_primary",
-    "calm_now_opens_real_breathing_through_the_space_context_and_can_pause_and_return_home",
-    "cover_inner_and_landscape_layouts_keep_the_clock_drawer_and_quick_panel_reachable",
-    "default_home_has_the_original_clock_and_native_settings_launches_the_production_route",
-    "duplicate_addresses_and_existing_port_or_ip_apps_keep_each_uuid_and_launch_its_exact_record",
-    "hidden_search_web_is_unavailable_and_a_tap_leaves_local_search_and_home_usable",
-    "hidden_theme_never_imports_primary_native_choice_and_cannot_write_after_retirement",
-    "native_theme_migration_is_once_only_and_preserves_home_customisations",
-    "owner_shortcut_names_survive_catalogue_refresh_and_reopening_without_changing_native_settings",
-    "primary_home_discards_stale_switch_actions_across_menu_quick_panel_search_and_recents",
-    "protected_entry_never_opens_home_until_the_user_requests_native_authentication",
-    "store_install_home_launch_my_apps_and_uninstall_use_the_real_encrypted_native_catalogue",
     "calendar_preserves_recurring_wall_time_across_dst_and_reopens_events",
+    "calm_now_opens_real_breathing_through_the_space_context_and_can_pause_and_return_home",
     "clipboard_privacy_setting_survives_reopen_and_retention_updates",
     "clipboard_retention_is_local_and_preserves_pinned_snippets",
     "core_app_actions_remain_reachable_on_cover_and_inner_with_large_text",
+    "cover_inner_and_landscape_layouts_keep_the_clock_drawer_and_quick_panel_reachable",
+    "default_home_has_the_original_clock_and_native_settings_launches_the_production_route",
+    "duplicate_addresses_and_existing_port_or_ip_apps_keep_each_uuid_and_launch_its_exact_record",
     "files_history_and_favourites_are_encrypted_and_bound_to_the_selected_tree",
     "files_picker_returns_to_the_authenticated_workspace_after_activity_pause",
     "files_read_only_the_picker_granted_fixture_and_stop_when_space_access_retires",
     "files_remember_only_the_explicit_tree_and_reject_path_like_names",
+    "hidden_search_web_is_unavailable_and_a_tap_leaves_local_search_and_home_usable",
+    "hidden_theme_never_imports_primary_native_choice_and_cannot_write_after_retirement",
+    "native_theme_migration_is_once_only_and_preserves_home_customisations",
     "notes_attach_a_real_android_document_and_keep_the_copy_after_source_deletion",
     "notes_keep_the_legacy_draft_and_persist_multiple_edits_without_overwriting_newer_changes",
     "notes_publish_draft_and_clear_recovery_in_the_same_transaction",
     "notes_recover_unsaved_text_and_reject_a_stale_editor",
     "notes_reopen_draft_after_returning_to_the_drawer",
+    "owner_shortcut_names_survive_catalogue_refresh_and_reopening_without_changing_native_settings",
+    "primary_home_discards_stale_switch_actions_across_menu_quick_panel_search_and_recents",
+    "protected_entry_never_opens_home_until_the_user_requests_native_authentication",
     "protected_notebook_hides_content_until_primary_pin_is_confirmed",
     "recurring_calendar_event_keeps_one_skipped_occurrence_across_reopen",
     "recurring_tasks_keep_the_monthly_anchor_without_duplicate_successors",
+    "store_install_home_launch_my_apps_and_uninstall_use_the_real_encrypted_native_catalogue",
     "task_drawer_entry_opens_the_private_tasks_screen",
     "tasks_keep_due_date_completion_and_project_after_reopen"
   ],
@@ -297,13 +314,13 @@
     "immediateHiddenTimeoutReturnsNeutralAndStartsFreshPrimaryEntry"
   ],
   "uk.co.traynor.privategallery.Home2MainAuthorityTest": [
+    "files_folder_picker_preserves_the_default_lock_and_finishes_after_primary_reauthentication",
     "home_revokes_browser_interaction_synchronously_before_the_next_composition",
     "pinning_hidden_settings_capture_requires_its_original_hidden_authentication",
     "pinning_primary_settings_capture_retires_on_route_space_and_same_key_reauthentication",
     "real_main_primary_image_inside_retained_hidden_previews_and_applies_only_primary_wallpaper",
     "retained_hidden_authority_never_blocks_an_independent_primary_credential_request",
-    "wallpaper_capture_uses_actual_primary_image_owner_inside_retained_hidden_and_retires_on_space_change_and_panic",
-    "files_folder_picker_preserves_the_default_lock_and_finishes_after_primary_reauthentication"
+    "wallpaper_capture_uses_actual_primary_image_owner_inside_retained_hidden_and_retires_on_space_change_and_panic"
   ],
   "uk.co.traynor.privategallery.HomeOwnedWindowPanicTest": [
     "activeBackupIoStopsAtRealMainLockPanicAndBackgroundInBothSpaces",

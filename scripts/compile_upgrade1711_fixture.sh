@@ -6,7 +6,7 @@ cd "${PRIVATE_GALLERY_1711_ROOT:-$control_root/..}"
 for forbidden in KEYSTORE_BASE64 STORE_PASSWORD KEY_PASSWORD KEY_ALIAS ORG_GRADLE_PROJECT_PRIVATE_GALLERY_STORE_FILE ORG_GRADLE_PROJECT_PRIVATE_GALLERY_STORE_PASSWORD ORG_GRADLE_PROJECT_PRIVATE_GALLERY_KEY_ALIAS ORG_GRADLE_PROJECT_PRIVATE_GALLERY_KEY_PASSWORD; do
   [[ ! -v "$forbidden" ]] || { echo 'Fixture compilation must precede signer environment access' >&2; exit 1; }
 done
-[[ "${GITHUB_ACTIONS:-}" == true && "${GITHUB_EVENT_NAME:-}" == push && "${GITHUB_REPOSITORY:-}" == traynor1987/Private-gallery- && "${GITHUB_REF:-}" == refs/heads/feature/novaos-code81-core-apps ]] || { echo 'Unsupported fixture compilation invocation' >&2; exit 1; }
+[[ "${GITHUB_ACTIONS:-}" == true && "${GITHUB_EVENT_NAME:-}" == push && "${GITHUB_REPOSITORY:-}" == traynor1987/Private-gallery- && "${GITHUB_REF:-}" == refs/heads/main ]] || { echo 'Unsupported fixture compilation invocation' >&2; exit 1; }
 [[ "${FROZEN_SOURCE:-}" =~ ^[a-f0-9]{40}$ && "$FROZEN_SOURCE" != 0000000000000000000000000000000000000000 ]]
 [[ "$(git rev-parse HEAD)" == "$FROZEN_SOURCE" ]]
 fixture="${PRIVATE_GALLERY_1711_UPGRADE_FIXTURE:?Reviewed fixture required}"

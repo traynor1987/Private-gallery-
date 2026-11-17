@@ -1,7 +1,7 @@
 name: NovaOS publish verified stable candidate
 on:
   push:
-    branches: [feature/novaos-code81-core-apps]
+    branches: [main]
     paths: ['.novaos-publish-authorization']
 permissions:
   contents: read
@@ -11,7 +11,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   publish:
-    if: github.repository == 'traynor1987/Private-gallery-' && github.actor_id == '16270479' && github.event.sender.id == 16270479 && github.triggering_actor == 'traynor1987'
+    if: github.repository == 'traynor1987/Private-gallery-' && github.actor_id == '16270479' && github.event.sender.id == 16270479 && github.triggering_actor == 'traynor1987' && contains(github.event.head_commit.message, '[novaos-publish-authorization]')
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     environment: novaos-production-publication

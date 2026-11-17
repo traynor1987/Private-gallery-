@@ -135,3 +135,24 @@ These follow-up changes remain subject to the final exact-source Android and pop
 
 
 CI 444 passed compilation and JVM checks, then failed at NovaLauncherPlatform70Test.sanctuaryHomeSettingsRequiresPinPhraseAndUninterruptedHold during fixture cleanup. The fixture called clearFailedRestore after ordinary setup. That production API correctly refuses to erase credentials without restore ownership. Test cleanup is now explicit in an androidTest-only helper guarded by HIDDEN_PROTOTYPE. It retires the synthetic Vault before removing its fixture credentials. The ownership-denial regressions continue to call the production rollback API and require rejection.
+
+
+## Promotion gate mapping
+
+The initial A/B/C/D rows remain a historical inventory. Promotion decisions use the reconciled behavior and exact-source verification below.
+
+| Behavior | Modern implementation and verification |
+|---|---|
+| Credential formats and keys | Core crypto remains unchanged. Primary uses the existing vault-key-envelope and vault-recovery-envelope. Hidden retains hidden-v1 and its existing package-qualified Keystore alias. No F1/Secondary migration is performed because the authentic installed Build 83 source uses hidden-v1. Old F1 encoding and optional Secondary biometric APIs remain archived. |
+| Recovery lifecycle and rollback | Adapted archived lifecycle preserves existing envelopes and binds pending confirmation and cleanup to the correct record. Focused lifecycle tests and the new Android recreation/ownership cases cover these paths. |
+| Primary setup and interrupted writes | Bounded inventory, partial-envelope admission, staged-index verification and shared metadata/setup/restore locking are adapted. Existing V1-V7 index tests and new corruption/admission tests cover the preserved encoding. |
+| Primary session operations | Existing EvidenceAccess/EvidenceAuthorities leases capture key identity and authentication epoch. Collection and crop tasks now use these leases. Existing media/AI/transfer paths retain captured owner, cancellation, destination checks and final publication guards. Key copies are wiped and preview jobs/resources are retired on lock. The adapter API remains backward compatible for the separately compiled authentic-baseline upgrade fixture. |
+| Portable and legacy backup | Modern BackupCoordinator already uses captured leases, authenticated media verification and transactional Space restoration. Legacy fresh restore now has serialized ownership-safe rollback. VaultBackupRestoreTest is included in the required lane. Compiled backup-exclusion verification is restored as a production gate. |
+| Concealed authority, collision and lifecycle | Modern HiddenSession uses private authentication identities, monotonic elapsed time, scoped operations and synchronous revocation. HiddenCredentialStore retains independent PIN-only Keystore storage, AtomicFile recovery and failure-closed handling. Hidden foundation/authority/stream checks pass. The required Android matrix now also includes HiddenCredentialSeparationTest and HiddenDocumentLifecycleTest alongside the existing credential and discoverability tests. |
+| Diagnostic privacy | Archived closed-vocabulary serialization and adversarial tests are adapted. Twenty-five focused diagnostic tests pass, including hostile strings and exception frames. |
+| Native scrolling | The current Browser V2 toolbar is separate from the native page. Existing NovaWebScroll67Test remains mandatory in the focused visual lane and checks the actual retained renderer/scroll state. The historical synchronization-only test change does not require transplanting old UI source. |
+| Historical documentation and merge commits | All old commits remain in the archive and will remain in main ancestry through the reviewed promotion commit. Their old acceptance reports are not reused as proof for changed application source. |
+
+The required API37 runtime matrix contains 295 cases plus the unchanged mandatory focused suites and process-restart evidence. No case was removed. Final gate closure requires their successful original reports and the authentic populated Build 83 upgrade on the frozen release source.
+
+The promotion preparation routes modern main through the existing API37 lane. The historical API36 workflow remains on its historical branches. Main signing and publication accept only authenticated owner authorization commits and retain the original exact-source, artifact, review, fixture and certificate checks. An explicitly reviewed runtime branch can be main or the Code 81 preparation branch, but the run and artifact must match the exact frozen source and that source must be in the authorized main history. This permits a verified fast-forward promotion without inventing new app source or weakening provenance.

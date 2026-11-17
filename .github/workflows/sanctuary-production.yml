@@ -1,7 +1,7 @@
 name: NovaOS Code 81 protected production upgrade
 on:
   push:
-    branches: [feature/novaos-code81-core-apps]
+    branches: [main]
     paths: ['.novaos-production-authorization']
 permissions:
   contents: read
@@ -11,7 +11,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   sanctuary-production:
-    if: github.repository == 'traynor1987/Private-gallery-' && github.event_name == 'push' && github.ref == 'refs/heads/feature/novaos-code81-core-apps' && github.actor_id == '16270479' && github.event.sender.id == 16270479 && github.run_attempt == 1
+    if: github.repository == 'traynor1987/Private-gallery-' && github.event_name == 'push' && github.ref == 'refs/heads/main' && github.actor_id == '16270479' && github.event.sender.id == 16270479 && github.run_attempt == 1 && contains(github.event.head_commit.message, '[novaos-production-authorization]')
     runs-on: ubuntu-24.04
     timeout-minutes: 150
     permissions:
@@ -36,7 +36,7 @@ jobs:
                  'docs/release1711/UpgradeFixtureTest.kt','docs/release1711/SECURITY_REVIEW.md',
                  'docs/release1711/RUNTIME_CASES.json']
           names=('compile_upgrade1711_fixture.sh','verify_compiled_upgrade1711.py','fetch_code81_upgrade_baseline.py','verify_code80_apk_identity.py','verify_code79_baseline.py','verify_novaos_release_assets.py','verify_production_candidate1711.sh','verify_synthetic_upgrade1711.sh','verify_signed_upgrade1711.py',
-                 'release_configuration1711.sh','verify_release1711_gate.py')
+                 'release_configuration1711.sh','verify_release1711_gate.py','verify_backup_exclusions.py')
           paths+=['scripts/'+name for name in names]
           for name in paths:
               original=source_root/name
@@ -51,7 +51,10 @@ jobs:
           assert subprocess.check_output(['git','rev-list','--parents','-n','1',head],text=True).split()==[head,approved_revision]
           assert subprocess.check_output(['git','diff','--name-only',approved_revision,head],text=True).splitlines()==['.novaos-production-authorization']
           marker=json.loads((control/'.sanctuary-production-candidate').read_bytes())
-          assert marker['source']=='de8716aad373509c48cd820dd3d63aac4af13d6e' and marker['test_run']==44079639233
+          assert re.fullmatch('[a-f0-9]{40}', marker['source']) and marker['source'] != '0'*40
+          assert type(marker['test_run']) is int and marker['test_run'] > 0
+          assert marker.get('runtime_branch', 'main') in ('main', 'feature/novaos-code81-core-apps')
+          subprocess.run(['git','merge-base','--is-ancestor',marker['source'],head],check=True)
           assert re.fullmatch('[a-f0-9]{64}',marker['fixture_sha256'])
           workflow=hashlib.sha256((control/'.github/workflows/sanctuary-production.yml').read_bytes()).hexdigest()
           assert marker.get('workflow_sha256')==workflow, 'Signing workflow changed after review'
@@ -85,7 +88,7 @@ jobs:
             const marker=JSON.parse(fs.readFileSync(path.join(process.env.RUNNER_TEMP,'release1711-controls/.sanctuary-production-candidate'),'utf8'));
             const write=(name,value)=>fs.writeFileSync(path.join(root,name),JSON.stringify(value,null,2)+'\n');
             const hash=bytes=>crypto.createHash('sha256').update(bytes).digest('hex');
-            if(context.repo.owner!=='traynor1987'||context.repo.repo!=='Private-gallery-'||context.eventName!=='push'||context.ref!=='refs/heads/feature/novaos-code81-core-apps')throw Error('Wrong release context');
+            if(context.repo.owner!=='traynor1987'||context.repo.repo!=='Private-gallery-'||context.eventName!=='push'||context.ref!=='refs/heads/main')throw Error('Wrong release context');
             if(!Number.isSafeInteger(marker.test_run)||marker.test_run<=0)throw Error('Missing immutable runtime run ID');
             const authorization=JSON.parse(fs.readFileSync(path.join(root,'owner-approval.json'),'utf8'));
             const approvalRun=(await github.rest.actions.getWorkflowRun({...context.repo,run_id:context.runId})).data;
@@ -94,13 +97,13 @@ jobs:
             const deadline=Date.now()+60*60_000;
             do {
               run=(await github.rest.actions.getWorkflowRun({...context.repo,run_id:marker.test_run})).data;
-              if(run.head_sha!==marker.source||run.head_branch!=='feature/novaos-code81-core-apps'||run.event!=='push'||run.head_repository?.full_name!=='traynor1987/Private-gallery-'||run.path.split('@')[0]!=='.github/workflows/fast-development.yml')throw Error('Runtime run is not the authorized candidate');
+              if(run.head_sha!==marker.source||run.head_branch!==(marker.runtime_branch || 'main')||run.event!=='push'||run.head_repository?.full_name!=='traynor1987/Private-gallery-'||run.path.split('@')[0]!=='.github/workflows/fast-development.yml')throw Error('Runtime run is not the authorized candidate');
               if(run.status==='completed')break;
               if(Date.now()>=deadline)throw Error('Runtime verification did not finish before the deadline');
               await new Promise(resolve=>setTimeout(resolve,60_000));
             } while(true);
             write('github-run.json',run);
-            if(run.head_sha!==marker.source||run.head_branch!=='feature/novaos-code81-core-apps'||run.event!=='push'||run.status!=='completed'||run.conclusion!=='success'||run.head_repository?.full_name!=='traynor1987/Private-gallery-'||run.path.split('@')[0]!=='.github/workflows/fast-development.yml')throw Error('Runtime source/branch/workflow did not pass');
+            if(run.head_sha!==marker.source||run.head_branch!==(marker.runtime_branch || 'main')||run.event!=='push'||run.status!=='completed'||run.conclusion!=='success'||run.head_repository?.full_name!=='traynor1987/Private-gallery-'||run.path.split('@')[0]!=='.github/workflows/fast-development.yml')throw Error('Runtime source/branch/workflow did not pass');
             const jobs=(await github.rest.actions.listJobsForWorkflowRun({...context.repo,run_id:run.id,per_page:100})).data;
             write('github-jobs.json',jobs);
             if(jobs.total_count!==jobs.jobs.length)throw Error('Incomplete original jobs response');
@@ -215,6 +218,7 @@ jobs:
       - name: Verify frozen candidate package signature OCR distribution and 16KiB alignment
         run: |
           bash "$RUNNER_TEMP/release1711-controls/scripts/verify_production_candidate1711.sh"
+          python3 "$RUNNER_TEMP/release1711-controls/scripts/verify_backup_exclusions.py" --project "$PWD" --apk app/build/outputs/apk/release/app-release.apk --aapt2 "$ANDROID_HOME/build-tools/36.0.0/aapt2"
           python3 scripts/verify_evidence179_distribution.py app/build/outputs/apk/release/app-release.apk arm64-v8a,x86_64 app/build/production-evidence/ocr-distribution.json
           "$ANDROID_HOME/build-tools/36.0.0/zipalign" -c -P 16 -v 4 app/build/outputs/apk/release/app-release.apk > app/build/production-evidence/alignment.txt
       - name: Enable emulator acceleration

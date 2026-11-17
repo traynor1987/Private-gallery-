@@ -14,7 +14,7 @@ import zipfile
 from verify_novaos_release_assets import verify
 
 REPO = "traynor1987/Private-gallery-"
-BRANCH = "feature/novaos-code81-core-apps"
+BRANCH = "main"
 ASSETS = {"private-gallery-release.apk", "private-gallery-release.apk.sha256",
           "private-gallery-release.metadata.json"}
 PRODUCTION_STEPS = {

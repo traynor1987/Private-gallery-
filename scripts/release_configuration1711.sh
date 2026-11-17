@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Prepared production identity only; this file does not authorize signing or publishing.
-[[ "${GITHUB_REF:-}" == refs/heads/feature/novaos-code81-core-apps ]] || { echo 'Unsupported NovaOS Sanctuary integration branch' >&2; exit 1; }
+[[ "${GITHUB_REF:-}" == refs/heads/main ]] || { echo 'Unsupported NovaOS Sanctuary integration branch' >&2; exit 1; }
 release_min_sdk=37
 release_version=1.7.38.8
 release_code=84

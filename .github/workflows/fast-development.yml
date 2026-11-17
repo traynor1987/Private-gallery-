@@ -30,7 +30,7 @@ name: Private Gallery fast development
 permissions:
   contents: read
 concurrency:
-  group: fast-${{ (github.ref == 'refs/heads/feature/novaos-sanctuary' || (github.ref == 'refs/heads/feature/novaos-sanctuary-integration' || github.ref == 'refs/heads/feature/novaos-code81-core-apps')) && github.sha || github.ref }}
+  group: fast-${{ (github.ref == 'refs/heads/feature/novaos-sanctuary' || (github.ref == 'refs/heads/feature/novaos-sanctuary-integration' || (github.ref == 'refs/heads/feature/novaos-code81-core-apps' || github.ref == 'refs/heads/main'))) && github.sha || github.ref }}
   cancel-in-progress: true
 jobs:
   fast:
@@ -211,7 +211,7 @@ jobs:
 
           app/build/reports/lint-results-debug.html'
         if-no-files-found: warn
-    if: github.ref != 'refs/heads/integration/novaos-1.7-home2' && github.ref != 'refs/heads/feature/novaos-visual-foundation' && (github.ref != 'refs/heads/feature/novaos-sanctuary' && (github.ref != 'refs/heads/feature/novaos-sanctuary-integration' && github.ref != 'refs/heads/feature/novaos-code81-core-apps')) && github.ref != 'refs/heads/release/1.7.10-private-home' && github.ref != 'refs/heads/release/1.7.8-private-apps' && github.ref != 'refs/heads/release/1.7.9-evidence-locker' && (github.event_name == 'push' || github.event.pull_request.head.repo.fork == true) && !(github.event_name == 'push' && github.ref == 'refs/heads/release/1.7.6.2-ui-browser-polish' && contains(github.event.head_commit.message, '[focused1762]'))
+    if: github.ref != 'refs/heads/integration/novaos-1.7-home2' && github.ref != 'refs/heads/feature/novaos-visual-foundation' && (github.ref != 'refs/heads/feature/novaos-sanctuary' && (github.ref != 'refs/heads/feature/novaos-sanctuary-integration' && (github.ref != 'refs/heads/feature/novaos-code81-core-apps' && github.ref != 'refs/heads/main'))) && github.ref != 'refs/heads/release/1.7.10-private-home' && github.ref != 'refs/heads/release/1.7.8-private-apps' && github.ref != 'refs/heads/release/1.7.9-evidence-locker' && (github.event_name == 'push' || github.event.pull_request.head.repo.fork == true) && !(github.event_name == 'push' && github.ref == 'refs/heads/release/1.7.6.2-ui-browser-polish' && contains(github.event.head_commit.message, '[focused1762]'))
 
   private-apps-checkpoint:
     if: github.event_name == 'push' && github.ref == 'refs/heads/release/1.7.8-private-apps'
@@ -556,14 +556,14 @@ jobs:
             app/build/outputs/connected_android_test_additional_output
 
   home2-integration:
-    if: (github.event_name == 'push' && (github.ref == 'refs/heads/integration/novaos-1.7-home2' || github.ref == 'refs/heads/feature/novaos-visual-foundation' || (github.ref == 'refs/heads/feature/novaos-sanctuary' || (github.ref == 'refs/heads/feature/novaos-sanctuary-integration' || github.ref == 'refs/heads/feature/novaos-code81-core-apps'))) && contains(github.event.head_commit.message, '[home2-runtime]')) || (github.event_name == 'workflow_dispatch' && (github.ref == 'refs/heads/feature/novaos-sanctuary-integration' || github.ref == 'refs/heads/feature/novaos-code81-core-apps'))
+    if: (github.event_name == 'push' && (github.ref == 'refs/heads/integration/novaos-1.7-home2' || github.ref == 'refs/heads/feature/novaos-visual-foundation' || (github.ref == 'refs/heads/feature/novaos-sanctuary' || (github.ref == 'refs/heads/feature/novaos-sanctuary-integration' || (github.ref == 'refs/heads/feature/novaos-code81-core-apps' || github.ref == 'refs/heads/main')))) && (github.ref == 'refs/heads/main' || contains(github.event.head_commit.message, '[home2-runtime]'))) || (github.event_name == 'workflow_dispatch' && (github.ref == 'refs/heads/feature/novaos-sanctuary-integration' || (github.ref == 'refs/heads/feature/novaos-code81-core-apps' || github.ref == 'refs/heads/main')))
     runs-on: ubuntu-24.04
-    timeout-minutes: ${{ (github.ref == 'refs/heads/feature/novaos-sanctuary-integration' || github.ref == 'refs/heads/feature/novaos-code81-core-apps') && 75 || (github.ref == 'refs/heads/feature/novaos-visual-foundation' || github.ref == 'refs/heads/feature/novaos-sanctuary') && 60 || 45 }}
+    timeout-minutes: ${{ (github.ref == 'refs/heads/feature/novaos-sanctuary-integration' || (github.ref == 'refs/heads/feature/novaos-code81-core-apps' || github.ref == 'refs/heads/main')) && 75 || (github.ref == 'refs/heads/feature/novaos-visual-foundation' || github.ref == 'refs/heads/feature/novaos-sanctuary') && 60 || 45 }}
     permissions:
       contents: write
     env:
       NOVA_NOTIFICATION_COMPAT: ${{ github.event_name == 'push' && github.ref == 'refs/heads/feature/novaos-sanctuary-integration' && contains(github.event.head_commit.message, '[notification-compat]') && !contains(github.event.head_commit.message, '[visual-full]') }}
-      ORG_GRADLE_PROJECT_novaGuardianProbe: ${{ github.event_name == 'push' && (github.ref == 'refs/heads/feature/novaos-sanctuary-integration' || github.ref == 'refs/heads/feature/novaos-code81-core-apps') && contains(github.event.head_commit.message, '[notification-compat]') && !contains(github.event.head_commit.message, '[visual-full]') }}
+      ORG_GRADLE_PROJECT_novaGuardianProbe: ${{ github.event_name == 'push' && (github.ref == 'refs/heads/feature/novaos-sanctuary-integration' || (github.ref == 'refs/heads/feature/novaos-code81-core-apps' || github.ref == 'refs/heads/main')) && contains(github.event.head_commit.message, '[notification-compat]') && !contains(github.event.head_commit.message, '[visual-full]') }}
       NOVA_FOLD_SIGN: ${{ github.ref == 'refs/heads/feature/novaos-sanctuary-integration' && (github.event_name == 'workflow_dispatch' || (contains(github.event.head_commit.message, '[fold-test-sign]') && contains(github.event.head_commit.message, '[visual-full]'))) }}
     steps:
       - name: Require dedicated Fold signing configuration
@@ -595,8 +595,10 @@ jobs:
           "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --version | tee app/build/home2-evidence/command-tools-version.txt
           grep -Fxq '22.0' app/build/home2-evidence/command-tools-version.txt
           "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-37.1" "build-tools;36.0.0" "emulator"
+      - name: Verify production promotion and release controls
+        run: PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python3 -m unittest scripts.tests.test_code81_main_release_controls scripts.tests.test_verify_backup_exclusions scripts.tests.test_publish_verified_novaos
       - name: Prepare checksum-verified Gradle wrapper distribution
-        if: (github.ref == 'refs/heads/feature/novaos-sanctuary-integration' || github.ref == 'refs/heads/feature/novaos-code81-core-apps')
+        if: (github.ref == 'refs/heads/feature/novaos-sanctuary-integration' || (github.ref == 'refs/heads/feature/novaos-code81-core-apps' || github.ref == 'refs/heads/main'))
         run: bash scripts/prime_gradle95_ci.sh
       - name: Build isolated test identity and run JVM checks
         run: ./gradlew testDebugUnitTest assembleDebug assembleDebugAndroidTest -Pkotlin.incremental=false --no-daemon --console=plain
@@ -651,9 +653,9 @@ jobs:
       - name: Focused Android 17 integration and privacy tests
         env:
           # The focused run stops after WebView. Full runs continue through every release check.
-          NOVA_INPUT_DIAGNOSTICS: ${{ github.event_name == 'push' && (github.ref == 'refs/heads/feature/novaos-sanctuary-integration' || github.ref == 'refs/heads/feature/novaos-code81-core-apps') && contains(github.event.head_commit.message, '[input-diagnostics]') && !contains(github.event.head_commit.message, '[visual-full]') }}
+          NOVA_INPUT_DIAGNOSTICS: ${{ github.event_name == 'push' && (github.ref == 'refs/heads/feature/novaos-sanctuary-integration' || (github.ref == 'refs/heads/feature/novaos-code81-core-apps' || github.ref == 'refs/heads/main')) && contains(github.event.head_commit.message, '[input-diagnostics]') && !contains(github.event.head_commit.message, '[visual-full]') }}
           NOVA_VISUAL_FULL: ${{ (github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[visual-full]')) }}
-          NOVA_LAUNCHER_FOCUSED: ${{ github.event_name == 'push' && (github.ref == 'refs/heads/feature/novaos-sanctuary-integration' || github.ref == 'refs/heads/feature/novaos-code81-core-apps') && (contains(github.event.head_commit.message, '[launcher-focused]') || contains(github.event.head_commit.message, '[notification-compat]')) && !contains(github.event.head_commit.message, '[visual-full]') }}
+          NOVA_LAUNCHER_FOCUSED: ${{ github.event_name == 'push' && (github.ref == 'refs/heads/feature/novaos-sanctuary-integration' || (github.ref == 'refs/heads/feature/novaos-code81-core-apps' || github.ref == 'refs/heads/main')) && (contains(github.event.head_commit.message, '[launcher-focused]') || contains(github.event.head_commit.message, '[notification-compat]')) && !contains(github.event.head_commit.message, '[visual-full]') }}
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: '37.0'
@@ -697,13 +699,13 @@ jobs:
         run: |
           grep -Ex 'Android 17 visual checkpoint: [0-9]+/[0-9]+ PASS' app/build/home2-evidence/visual-checkpoint/result.txt
       - name: Validate actual Backup process restart evidence
-        if: (github.ref != 'refs/heads/feature/novaos-visual-foundation' && (github.ref != 'refs/heads/feature/novaos-sanctuary' && (github.ref != 'refs/heads/feature/novaos-sanctuary-integration' && github.ref != 'refs/heads/feature/novaos-code81-core-apps'))) || (github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[visual-full]'))
+        if: (github.ref != 'refs/heads/feature/novaos-visual-foundation' && (github.ref != 'refs/heads/feature/novaos-sanctuary' && (github.ref != 'refs/heads/feature/novaos-sanctuary-integration' && (github.ref != 'refs/heads/feature/novaos-code81-core-apps' && github.ref != 'refs/heads/main')))) || (github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[visual-full]'))
         run: python3 scripts/verify_release1711_gate.py --restart-folder app/build/home2-evidence/backup-restart62 --source "$(git rev-parse HEAD)"
       - name: Validate every selected original Android report
-        if: (github.ref != 'refs/heads/feature/novaos-visual-foundation' && (github.ref != 'refs/heads/feature/novaos-sanctuary' && (github.ref != 'refs/heads/feature/novaos-sanctuary-integration' && github.ref != 'refs/heads/feature/novaos-code81-core-apps'))) || (github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[visual-full]'))
+        if: (github.ref != 'refs/heads/feature/novaos-visual-foundation' && (github.ref != 'refs/heads/feature/novaos-sanctuary' && (github.ref != 'refs/heads/feature/novaos-sanctuary-integration' && (github.ref != 'refs/heads/feature/novaos-code81-core-apps' && github.ref != 'refs/heads/main')))) || (github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[visual-full]'))
         run: python3 scripts/verify_home2_runtime.py app/build/outputs/androidTest-results/connected/debug > app/build/home2-evidence/runtime.json
       - name: Record isolated Fold signer compatibility
-        if: (github.ref == 'refs/heads/feature/novaos-sanctuary-integration' || github.ref == 'refs/heads/feature/novaos-code81-core-apps')
+        if: (github.ref == 'refs/heads/feature/novaos-sanctuary-integration' || (github.ref == 'refs/heads/feature/novaos-code81-core-apps' || github.ref == 'refs/heads/main'))
         run: |
           baseline=8ddfe8b413812577c86d001d951219f6e3f79263f8771b856eba4bb633cab352
           actual="$(sed -n 's/^Signer #1 certificate SHA-256 digest: //p' app/build/home2-evidence/signature.txt)"

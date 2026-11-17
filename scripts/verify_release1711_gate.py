@@ -14,13 +14,13 @@ import xml.etree.ElementTree as ET
 import zipfile
 
 ROOT=Path(__file__).resolve().parents[1]
-BRANCH='feature/novaos-code81-core-apps'
+BRANCH='main'
 BASELINE='c22bad35c3c934b8d95cf91e95b0b893cacd8e2c'
 CONTROLS=('compile_upgrade1711_fixture.sh','verify_compiled_upgrade1711.py',
           'fetch_code81_upgrade_baseline.py','verify_code80_apk_identity.py','verify_code79_baseline.py',
           'verify_novaos_release_assets.py','verify_production_candidate1711.sh',
           'verify_synthetic_upgrade1711.sh','verify_signed_upgrade1711.py',
-          'release_configuration1711.sh','verify_release1711_gate.py')
+          'release_configuration1711.sh','verify_release1711_gate.py','verify_backup_exclusions.py')
 REQUIRED_STEPS={'Build isolated test identity and run JVM checks',
                 'Verify reused Home policies and encrypted adapter',
                 'Verify browser engine preservation and isolated APK',
@@ -339,7 +339,11 @@ def validate(marker,review,run,jobs,artifact,archive,matrix_raw,current_controls
                  'Runtime matrix SHA-256: '+sha(matrix_raw),'Runtime workflow run: '+str(marker['test_run'])):
         require(line in text.splitlines(),'Missing exact release policy line: '+line)
     require(type(marker.get('test_run')) is int and marker['test_run']>0 and run.get('id')==marker['test_run'],'Wrong runtime run')
-    require(run.get('event')=='push' and run.get('head_sha')==source and run.get('head_branch')==BRANCH,'Wrong runtime source/branch/event')
+    runtime_branch = marker.get('runtime_branch', BRANCH)
+    require(runtime_branch in ('main', 'feature/novaos-code81-core-apps'), 'Unapproved runtime branch')
+    if 'runtime_branch' in marker:
+        require('Runtime branch: '+runtime_branch in text.splitlines(), 'Missing approved runtime branch')
+    require(run.get('event')=='push' and run.get('head_sha')==source and run.get('head_branch')==runtime_branch,'Wrong runtime source/branch/event')
     require(run.get('status')=='completed' and run.get('conclusion')=='success','Runtime workflow not successful')
     require(run.get('head_repository',{}).get('full_name')=='traynor1987/Private-gallery-','Wrong runtime repository')
     require(run.get('path','').split('@')[0]=='.github/workflows/fast-development.yml','Wrong runtime workflow')
