@@ -11,6 +11,31 @@ URL = f"https://github.com/{release.REPO}/releases/tag/{CANDIDATE['tag']}"
 
 
 class ReleaseChecks(unittest.TestCase):
+    def test_promoted_source_reuses_only_explicit_exact_commit_regression_evidence(self):
+        candidate = dict(CANDIDATE)
+        branch = "feature/novaos-code81-core-apps"
+        def record(run_id, source, workflow, evidence_branch):
+            return dict(id=run_id, head_sha=source, head_branch=evidence_branch,
+                        event="push", head_repository={"full_name": release.REPO},
+                        status="completed", conclusion="success", path=".github/workflows/"+workflow,
+                        actor={"id": 16270479}, run_attempt=1)
+        regression = record(candidate["regression_run"], candidate["source"], "fast-development.yml", branch)
+        production = record(candidate["production_run"], candidate["production_head"], "sanctuary-production.yml", "main")
+        def jobs(name, mandatory):
+            return [dict(name=name, steps=[dict(name=step, conclusion="success") for step in mandatory])]
+        arguments = (regression, jobs("home2-integration", release.REGRESSION_STEPS),
+                     production, jobs("sanctuary-production", release.PRODUCTION_STEPS))
+        with self.assertRaisesRegex(ValueError, "provenance"):
+            release.check_provenance(candidate, *arguments)
+        candidate["regression_branch"] = branch
+        release.check_provenance(candidate, *arguments)
+        regression["head_sha"] = "0" * 40
+        with self.assertRaisesRegex(ValueError, "provenance"):
+            release.check_provenance(candidate, *arguments)
+        candidate["regression_branch"] = "unreviewed/branch"
+        with self.assertRaisesRegex(ValueError, "Unreviewed"):
+            release.check_provenance(candidate, *arguments)
+
     def test_tag_must_exist_and_resolve_to_approved_source(self):
         with patch.object(release, "api", side_effect=RuntimeError("HTTP 404")):
             with self.assertRaisesRegex(ValueError, "Missing tag"):

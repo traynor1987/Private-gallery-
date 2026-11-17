@@ -167,3 +167,19 @@ The newly selected HiddenCredentialSeparationTest also scopes its Primary files 
 
 
 CI 453 passed all 734 JVM tests and 294 of 295 selected Android runtime tests, with no skips. All panic-window, recovery, setup-admission, credential-separation and Vault backup/restore cases passed. The remaining failure was the existing protected-notebook correct-PIN retry timing out at Home2IntegrationTest line 501. Its original artifact is 14364848243, SHA-256 fc76c8df902c43ef372349a0fea73b9be4768cb976c7138b8ccd974caab69969. There was no qualifying launcher ANR and the bounded wrapper did not retry it. The test now explicitly replaces each PIN entry and asserts that the real verifier received one rejected and one accepted attempt before checking dialog dismissal and protected content. A focused run of the existing complete Home2IntegrationTest is placed first for this diagnostic checkpoint; every mandatory full-suite check remains afterward. No application PIN or notebook-protection check is relaxed.
+
+
+## Verified promotion closure
+
+The initial A/D inventory is reconciled under the promotion gate mapping above. No outstanding essential item was identified within this reviewed reconciliation scope. This does not claim that archived F1 encodings are identical to the installed hidden-v1 format or that physical Fold acceptance occurred.
+
+Final audited application source: b79b85efc5bae8e0bedb832e21a62d462e6f4397.
+Android 17 verification: CI 455, run 44167100460. Original reports contain 734 passed JVM tests and 295 passed selected Android runtime tests, with zero failures, errors or skips. The production evidence verifier independently accepted the mandatory focused suites, eight killed-process recovery phases and launcher restart evidence. Original artifact 14371200164 has SHA-256 1333b178d0635d3c98f446b34c3e71652c2b06f35ed3d4e5f300159332850001. The protected-notebook regression now also asserts the rejected and accepted verifier results; its early focused run and the full runtime run both passed.
+
+PR 62 records the anchored review and is confirmed merged at this exact commit. Main was fast-forwarded from 93ed56fbfcd6cb04731a87452dbcbf2e6d6bcb10 to the audited source. Both main and the development branch were read back from GitHub. The archive remains at the old main SHA. No force update, tag rewrite, source-tree merge conflict or branch deletion was used.
+
+The production controls separately pin this immutable source and its exact preparation-branch verification run. Publication explicitly permits this reviewed branch only when the source/run match; the original owner-signed upgrade receipt must bind the same run and APK. All original artifact, certificate, upgrade and tag checks remain. Fourteen focused release-control tests pass for this control-only change. No application source is changed by these controls.
+
+The earlier tagging failure occurred before modern NovaOS was present on default main. Automatic tagging will be tested again against the promoted source using the existing scoped workflow token. A missing GitHub App credential is not assumed to be a blocker; an actual remaining permission rejection must identify it.
+
+The new original-key-signed APK and authentic populated Build 83 upgrade remain mandatory before stable publication. The retained older APK and its old upgrade receipt do not validate the reconciled application source.

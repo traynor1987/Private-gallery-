@@ -51,12 +51,18 @@ def check_job(jobs, name, mandatory):
 
 
 def check_provenance(candidate, regression, regression_jobs, production, production_jobs):
-    for record, run_id, source, workflow in (
-        (regression, candidate["regression_run"], candidate["source"], "fast-development.yml"),
-        (production, candidate["production_run"], candidate["production_head"], "sanctuary-production.yml"),
+    # Promotion preserves the exact already-tested commit. Reuse its explicitly
+    # reviewed preparation-branch run; the protected signer still runs on main
+    # and binds that immutable run ID to the original upgrade/owner receipt.
+    regression_branch = candidate.get("regression_branch", BRANCH)
+    require(regression_branch in (BRANCH, "feature/novaos-code81-core-apps"),
+            "Unreviewed regression evidence branch")
+    for record, run_id, source, workflow, branch in (
+        (regression, candidate["regression_run"], candidate["source"], "fast-development.yml", regression_branch),
+        (production, candidate["production_run"], candidate["production_head"], "sanctuary-production.yml", BRANCH),
     ):
         require(record["id"] == run_id and record["head_sha"] == source and
-                record["head_branch"] == BRANCH and record["event"] == "push" and
+                record["head_branch"] == branch and record["event"] == "push" and
                 record["head_repository"]["full_name"] == REPO and record["status"] == "completed" and
                 record["path"].split("@")[0] == f".github/workflows/{workflow}",
                 f"Run {run_id} provenance does not match the pinned candidate")
