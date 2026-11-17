@@ -237,6 +237,13 @@ class Home2IntegrationTest {
    compose.onAllNodesWithText("Nova62 synthetic documents").fetchSemanticsNodes().isNotEmpty()
   }
   compose.onNodeWithTag("nova-files").assertIsDisplayed()
+  compose.onNodeWithText("Info").performClick()
+  compose.onNodeWithTag("nova-files-storage").assertIsDisplayed()
+  compose.onNodeWithText("Drive capacity unavailable.", substring = true).assertIsDisplayed()
+  compose.onNodeWithText("Sample storage").assertDoesNotExist()
+  Espresso.pressBack()
+  compose.onNodeWithText("Recent").performClick()
+  compose.onNodeWithText("No recently opened files in this folder").assertIsDisplayed()
   SpaceContext(f.context, f.access).use { space ->
    val selected = checkNotNull(NovaFilesSelection(space).read().tree)
    assertTrue(android.provider.DocumentsContract.isTreeUri(selected))
@@ -354,9 +361,9 @@ class Home2IntegrationTest {
   compose.onNodeWithTag("app-nova-tasks").assertIsDisplayed().performClick()
   compose.onNodeWithTag("nova-tasks").assertIsDisplayed()
   compose.waitUntil(10_000) {
-   compose.onAllNodes(hasText("Done") and isEnabled()).fetchSemanticsNodes().isNotEmpty()
+   compose.onAllNodes(hasContentDescription("Back") and isEnabled()).fetchSemanticsNodes().isNotEmpty()
   }
-  compose.onNodeWithText("Done").performClick()
+  compose.onNodeWithContentDescription("Back").performClick()
   compose.onNodeWithTag("drawer-sheet").assertIsDisplayed()
   compose.onNodeWithTag("drawer-search").performTextReplacement("Nova Tasks")
   Espresso.closeSoftKeyboard()
@@ -536,17 +543,16 @@ class Home2IntegrationTest {
      compose.waitUntil(10_000) {
       compose.onAllNodes(hasText(creationAction) and isEnabled()).fetchSemanticsNodes().isNotEmpty()
      }
-     val actions = if (workspace == NovaCoreApp.FILES) listOf(creationAction, "Done")
-      else listOf(creationAction, "Reload", "Done")
+     val actions = listOf(hasText(creationAction), hasContentDescription("Back"))
      for (inner in listOf(false, true)) {
       compose.runOnIdle { unfolded = inner }
       val screen = compose.onNodeWithTag(workspace.route).getUnclippedBoundsInRoot()
-      for (label in actions) {
-       val bounds = compose.onNodeWithText(label).assertIsDisplayed().assertIsEnabled().getUnclippedBoundsInRoot()
-       assertTrue("${workspace.label} $label must fit inside the workspace",
+      for (action in actions) {
+       val bounds = compose.onNode(action).assertIsDisplayed().assertIsEnabled().getUnclippedBoundsInRoot()
+       assertTrue("${workspace.label} $action must fit inside the workspace",
         (bounds.right - bounds.left) >= 48.dp && bounds.left >= screen.left && bounds.right <= screen.right)
       }
-      compose.onNodeWithText("Done").performClick()
+      compose.onNodeWithContentDescription("Back").performClick()
      }
     }
     compose.runOnIdle { assertEquals(creationActions.size * 2, exits) }

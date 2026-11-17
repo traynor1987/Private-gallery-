@@ -10,11 +10,17 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ViewList
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.currentCoroutineContext
@@ -26,7 +32,21 @@ import uk.co.traynor.privategallery.core.home2.SpaceContext
 private enum class FileSort(val label: String) {
     NAME("Name"), NEWEST("Newest"), SIZE("Size"),
 }
-private enum class FilesFilter(val label: String) { ALL("All"), RECENT("Recent"), FAVOURITES("Favourites") }
+private enum class FilesSection(val label: String) { BROWSE("Browse"), RECENT("Recent"), INFO("Info") }
+
+private enum class FileType(val label: String) {
+    ALL("All types"), PDF("PDF"), IMAGE("Image"), TEXT("Text"), AUDIO("Audio"), OTHER("Other");
+
+    companion object {
+        fun of(mime: String): FileType = when {
+            mime == "application/pdf" -> PDF
+            mime.startsWith("image/") -> IMAGE
+            mime.startsWith("audio/") -> AUDIO
+            mime.startsWith("text/") || mime == "application/json" -> TEXT
+            else -> OTHER
+        }
+    }
+}
 
 private enum class FileNameAction(val label: String) {
     CREATE("Create folder"), RENAME("Rename"),
@@ -52,8 +72,11 @@ internal fun NovaFilesScreen(
     var root by remember(space) { mutableStateOf<NovaFile?>(null) }
     var path by remember(space) { mutableStateOf<List<NovaFile>>(emptyList()) }
     var files by remember(space) { mutableStateOf<List<NovaFile>>(emptyList()) }
-    var sort by remember(space) { mutableStateOf(FileSort.NAME) }
-    var filter by remember(space) { mutableStateOf(FilesFilter.ALL) }
+    var sort by rememberSaveable { mutableStateOf(FileSort.NEWEST) }
+    var section by rememberSaveable { mutableStateOf(FilesSection.BROWSE) }
+    var grid by rememberSaveable { mutableStateOf(true) }
+    var favouritesOnly by rememberSaveable { mutableStateOf(false) }
+    var type by rememberSaveable { mutableStateOf(FileType.ALL) }
     var savingMarks by remember(space) { mutableStateOf(false) }
     var search by remember(space) { mutableStateOf("") }
     var status by remember(space) { mutableStateOf(pickerMessage) }
@@ -146,13 +169,14 @@ internal fun NovaFilesScreen(
 
     fun navigateUp() {
         when {
-            path.isNotEmpty() -> { path = path.dropLast(1); search = ""; filter = FilesFilter.ALL; status = null }
             transfer != null -> transfer = null
+            section != FilesSection.BROWSE -> section = FilesSection.BROWSE
+            path.isNotEmpty() -> { path = path.dropLast(1); search = ""; status = null }
             else -> onBack()
         }
     }
 
-    BackHandler(enabled = working || path.isNotEmpty() || transfer != null) {
+    BackHandler(enabled = working || path.isNotEmpty() || transfer != null || section != FilesSection.BROWSE) {
         if (!working) navigateUp()
     }
 
@@ -164,7 +188,13 @@ internal fun NovaFilesScreen(
         Modifier.fillMaxSize().safeDrawingPadding().imePadding().padding(16.dp).testTag("nova-files"),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        Text("Nova Files", style = MaterialTheme.typography.headlineSmall)
+        CoreWorkspaceHeader("Nova Files", enabled = !working, onBack = ::navigateUp)
+        if (transfer == null) Row(Modifier.horizontalScroll(rememberScrollState())) {
+            FilesSection.entries.forEach { tab ->
+                FilterChip(section == tab, { section = tab }, { Text(tab.label) },
+                    modifier = Modifier.padding(end = 8.dp))
+            }
+        }
         if (working || loading) LinearProgressIndicator(Modifier.fillMaxWidth())
         status?.let { Text(it) }
         NovaCoreAppActions {
@@ -173,26 +203,16 @@ internal fun NovaFilesScreen(
             if (path.isNotEmpty()) {
                 TextButton(enabled = !working, onClick = { navigateUp() }) { Text("Up") }
             }
-            TextButton(enabled = !working, onClick = onBack) { Text("Done") }
         }
         if (selection?.tree == null && !loading) Text("Choose a folder with Android to browse its files.")
         if (selection?.tree != null && folder == null && active) {
             TextButton(onClick = { path = emptyList(); status = null; reload++ }) { Text("Reopen root") }
         }
         if (folder != null && provider != null) {
-            Text(folder.name, style = MaterialTheme.typography.titleMedium)
-            val knownSizes = files.mapNotNull { it.bytes?.takeIf { bytes -> bytes >= 0 && !it.directory } }
-            val knownTotal = knownSizes.fold(0L) { total, bytes ->
-                if (bytes > Long.MAX_VALUE - total) Long.MAX_VALUE else total + bytes
-            }
-            if (!loading) {
-                val total = if (knownSizes.isEmpty()) "" else " · " + Formatter.formatFileSize(space, knownTotal) + " reported"
-                Text(files.size.toString() + " items" + total, style = MaterialTheme.typography.labelMedium)
-            }
+            WorkspaceLabel(folder.name, if (loading) "" else "${files.size} items")
             val pending = transfer
-            if (pending == null) {
-                OutlinedTextField(search, { search = it }, label = { Text("Search this folder") },
-                    singleLine = true, modifier = Modifier.fillMaxWidth(), enabled = active)
+            if (pending == null && section != FilesSection.INFO) {
+                WorkspaceSearch(search, { search = it }, "Search this folder", Modifier.fillMaxWidth(), enabled = active)
                 Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     FileSort.entries.forEach { order ->
                         FilterChip(sort == order, { sort = order }, { Text(order.label) }, enabled = active)
@@ -204,7 +224,7 @@ internal fun NovaFilesScreen(
                         }) { Text("New folder") }
                     }
                 }
-            } else {
+            } else if (pending != null) {
                 Text(if (pending.move) "Choose the destination folder for the move." else "Choose the destination folder for the copy.")
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     Button(
@@ -221,10 +241,25 @@ internal fun NovaFilesScreen(
                     TextButton(enabled = active, onClick = { transfer = null }) { Text("Cancel") }
                 }
             }
-            if (pending == null) {
-                Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    FilesFilter.entries.forEach { item ->
-                        FilterChip(filter == item, { filter = item }, { Text(item.label) }, enabled = active)
+            if (pending == null && section != FilesSection.INFO) {
+                var typeMenu by remember { mutableStateOf(false) }
+                Row(Modifier.horizontalScroll(rememberScrollState()), verticalAlignment = Alignment.CenterVertically) {
+                    Box {
+                        TextButton(onClick = { typeMenu = true }, enabled = active) {
+                            Icon(Icons.Default.FilterList, null, Modifier.size(18.dp))
+                            Spacer(Modifier.width(4.dp))
+                            Text(type.label)
+                        }
+                        DropdownMenu(typeMenu, { typeMenu = false }) {
+                            FileType.entries.forEach { option ->
+                                DropdownMenuItem({ Text(option.label) }, { type = option; typeMenu = false })
+                            }
+                        }
+                    }
+                    FilterChip(favouritesOnly, { favouritesOnly = !favouritesOnly }, { Text("Favourites") })
+                    if (section == FilesSection.BROWSE) IconButton({ grid = !grid }, enabled = active) {
+                        Icon(if (grid) Icons.AutoMirrored.Filled.ViewList else Icons.Default.GridView,
+                            if (grid) "List folders" else "Grid folders")
                     }
                 }
             }
@@ -236,37 +271,64 @@ internal fun NovaFilesScreen(
             val recent = selection?.recent.orEmpty().withIndex().associate { it.value to it.index }
             val favourites = selection?.favourites.orEmpty()
             val shown = files.filter { file ->
-                if (pending != null) file.directory else file.name.contains(search.trim(), true) && when (filter) {
-                    FilesFilter.ALL -> true
-                    FilesFilter.RECENT -> file.id in recent
-                    FilesFilter.FAVOURITES -> file.id in favourites
-                }
+                if (pending != null) file.directory else file.name.contains(search.trim(), true) &&
+                    (!favouritesOnly || file.id in favourites) &&
+                    (section != FilesSection.RECENT || file.id in recent) &&
+                    (file.directory || type == FileType.ALL || FileType.of(file.mimeType) == type)
             }.let { entries ->
-                if (filter == FilesFilter.RECENT && pending == null) entries.sortedBy { recent[it.id] }
+                if (section == FilesSection.RECENT && sort == FileSort.NEWEST) entries.sortedBy { recent[it.id] }
                 else entries.sortedWith(compareByDescending<NovaFile> { it.directory }.then(ordering))
             }
-            LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                if (active && shown.isEmpty()) item { Text("No matching items") }
-                items(shown, key = { it.id }) { file ->
-                    OutlinedCard(onClick = {
-                        if (file.directory) {
-                            path = path + file
-                            filter = FilesFilter.ALL
-                            search = ""
-                            status = null
-                        } else {
-                            detail = file
-                            mark(file, favourite = false)
-                        }
-                    }, enabled = active, modifier = Modifier.fillMaxWidth()) {
-                        Row(Modifier.padding(horizontal = 10.dp), verticalAlignment = Alignment.CenterVertically) {
-                            Column(Modifier.weight(1f).padding(vertical = 10.dp)) {
-                                Text(file.name)
-                                Text(if (file.directory) "Folder" else file.bytes?.let { Formatter.formatFileSize(space, it) }.orEmpty(),
-                                    style = MaterialTheme.typography.labelMedium)
+            val openFile: (NovaFile) -> Unit = { file ->
+                if (file.directory) {
+                    path = path + file
+                    section = FilesSection.BROWSE
+                    favouritesOnly = false
+                    search = ""
+                    status = null
+                } else {
+                    detail = file
+                    mark(file, favourite = false)
+                }
+            }
+            BoxWithConstraints(Modifier.weight(1f).fillMaxWidth()) {
+                val columns = if (maxWidth >= 640.dp) 3 else 2
+                val gridFolders = grid && section == FilesSection.BROWSE
+                val folders = if (gridFolders) shown.filter { it.directory } else emptyList()
+                LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    if (active && pending == null && (section == FilesSection.INFO || (section == FilesSection.BROWSE && path.isEmpty()))) {
+                        item { AuthorisedStorageCard(space, files) }
+                    }
+                    if (section == FilesSection.INFO) return@LazyColumn
+                    if (active && shown.isEmpty()) item {
+                        Text(if (section == FilesSection.RECENT) "No recently opened files in this folder" else "No matching items")
+                    }
+                    if (folders.isNotEmpty()) item { WorkspaceLabel("Folders", folders.size.toString()) }
+                    items(folders.chunked(columns)) { group ->
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            group.forEach { file ->
+                                Column(Modifier.weight(1f)) {
+                                    WorkspaceFolderCard(file.name, "", Modifier.fillMaxWidth(), enabled = active) { openFile(file) }
+                                    if (pending == null) TextButton(
+                                        onClick = { detail = file }, enabled = active,
+                                        modifier = Modifier.semantics { contentDescription = "Details for ${file.name}" },
+                                    ) { Text("Details") }
+                                }
                             }
+                            repeat(columns - group.size) { Spacer(Modifier.weight(1f)) }
+                        }
+                    }
+                    items(shown.filterNot { gridFolders && it.directory }, key = { it.id }) { file ->
+                        val fileType = FileType.of(file.mimeType)
+                        val subtitle = if (file.directory) "Folder" else listOfNotNull(
+                            fileType.takeUnless { it == FileType.OTHER }?.label,
+                            file.bytes?.takeIf { it >= 0 }?.let { Formatter.formatFileSize(space, it) },
+                        ).joinToString(" · ").ifBlank { "File" }
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            WorkspaceRow(file.name, subtitle, if (file.directory) Icons.Default.Folder else fileIcon(fileType.label),
+                                Modifier.weight(1f), enabled = active) { openFile(file) }
                             if (pending == null && file.directory) {
-                                TextButton(enabled = active, onClick = { detail = file }) { Text("Details") }
+                                IconButton({ detail = file }, enabled = active) { Icon(Icons.Default.Info, "Details for ${file.name}") }
                             }
                         }
                     }
@@ -423,5 +485,35 @@ internal fun NovaFilesScreen(
             },
             dismissButton = { TextButton(onClick = { toDelete = null }) { Text("Cancel") } },
         )
+    }
+}
+
+
+@Composable
+private fun AuthorisedStorageCard(space: SpaceContext, files: List<NovaFile>) {
+    val colors = MaterialTheme.colorScheme
+    val documents = files.filterNot { it.directory }
+    val sizes = documents.mapNotNull { file ->
+        file.bytes?.takeIf { it >= 0 }?.let { FileType.of(file.mimeType) to it }
+    }
+    val totals = sizes.groupBy({ it.first }, { it.second }).mapValues { (_, values) ->
+        values.fold(0L) { total, bytes -> total + bytes.coerceAtMost(Long.MAX_VALUE - total) }
+    }
+    val reported = totals.values.fold(0L) { total, bytes -> total + bytes.coerceAtMost(Long.MAX_VALUE - total) }
+    val palette = mapOf(
+        FileType.PDF to colors.primary, FileType.IMAGE to colors.tertiary,
+        FileType.AUDIO to colors.secondary, FileType.TEXT to colors.onSurfaceVariant,
+        FileType.OTHER to colors.outline,
+    )
+    WorkspaceStorageCard(
+        "Storage overview",
+        if (sizes.isEmpty() && documents.isNotEmpty()) "Unavailable" else Formatter.formatFileSize(space, reported),
+        if (documents.size == sizes.size) "Reported file sizes in this folder. Drive capacity unavailable."
+        else "Sizes reported for ${sizes.size} of ${documents.size} files. Drive capacity unavailable.",
+        totals.map { (type, bytes) -> bytes.toFloat() to palette.getValue(type) },
+        Modifier.testTag("nova-files-storage"),
+    )
+    totals.forEach { (type, bytes) ->
+        Text("${type.label} · ${Formatter.formatFileSize(space, bytes)}", style = MaterialTheme.typography.labelMedium)
     }
 }

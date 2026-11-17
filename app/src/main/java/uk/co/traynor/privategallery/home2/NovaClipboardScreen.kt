@@ -138,9 +138,10 @@ internal fun NovaClipboardScreen(space: SpaceContext, onBack: () -> Unit) {
         Modifier.fillMaxSize().safeDrawingPadding().imePadding().padding(16.dp).testTag("nova-clipboard"),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        Text("Nova Clipboard", style = MaterialTheme.typography.headlineSmall)
+        CoreWorkspaceHeader("Nova Clipboard", enabled = !busy, onBack = { if (editor != null) closeEditor() else onBack() })
         if (busy) LinearProgressIndicator(Modifier.fillMaxWidth())
-        status?.let { Text(it) }
+        status?.let { Text(it, style = MaterialTheme.typography.bodyMedium) }
+        if (!busy && snapshot == null) TextButton(onClick = { reload++ }) { Text("Try again") }
         val current = editor
         val snippets = snapshot?.snippets.orEmpty()
         if (current == null) {
@@ -150,11 +151,9 @@ internal fun NovaClipboardScreen(space: SpaceContext, onBack: () -> Unit) {
                     reveal = false
                     editor = NovaSnippet(UUID.randomUUID().toString(), "", "", "", false, false, Instant.now())
                 }) { Text("New snippet") }
-                TextButton(enabled = !busy, onClick = { reload++ }) { Text("Reload") }
-                TextButton(enabled = !busy, onClick = onBack) { Text("Done") }
             }
-            OutlinedTextField(query, { query = it }, label = { Text("Search snippets") }, singleLine = true,
-                modifier = Modifier.fillMaxWidth())
+            WorkspaceSearch(query, { query = it }, "Search snippets", Modifier.fillMaxWidth(),
+                enabled = !busy && snapshot != null)
             if (snapshot != null) {
                 val privacyEnabled = snapshot?.protectAllCopies == true
                 FilterChip(privacyEnabled, {
@@ -190,12 +189,13 @@ internal fun NovaClipboardScreen(space: SpaceContext, onBack: () -> Unit) {
             LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 if (!busy && snapshot != null && visible.isEmpty()) item { Text("No matching snippets") }
                 items(visible, key = { it.id }) { snippet ->
-                    OutlinedCard(onClick = { reveal = false; status = null; editor = snippet },
+                    CoreWorkspaceCard(onClick = { reveal = false; status = null; editor = snippet },
                         enabled = !busy, modifier = Modifier.fillMaxWidth()) {
                         Column(Modifier.padding(10.dp)) {
                             Text(snippet.title.ifBlank { if (snippet.sensitive) "Sensitive snippet" else "Untitled snippet" })
-                            if (snippet.category.isNotBlank()) Text(snippet.category)
-                            if (snippet.pinned) Text("Pinned")
+                            val metadata = listOf(snippet.category, if (snippet.pinned) "Pinned" else "",
+                                if (snippet.sensitive) "Protected" else "").filter(String::isNotBlank)
+                            if (metadata.isNotEmpty()) Text(metadata.joinToString(" · "), style = MaterialTheme.typography.labelMedium)
                             if (!snippet.sensitive) Text(snippet.text.take(100), maxLines = 2)
                         }
                     }

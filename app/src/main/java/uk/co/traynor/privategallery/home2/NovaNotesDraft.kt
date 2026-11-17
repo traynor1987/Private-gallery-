@@ -7,6 +7,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.PushPin
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -232,9 +234,10 @@ internal fun NovaNotesDraft(
         Modifier.fillMaxSize().safeDrawingPadding().imePadding().padding(16.dp).testTag("nova-notes-draft"),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        Text("Nova Notes", style = MaterialTheme.typography.headlineSmall)
+        CoreWorkspaceHeader("Nova Notes", enabled = !busy, onBack = { if (editor != null) closeEditor() else onBack() })
         if (busy) LinearProgressIndicator(Modifier.fillMaxWidth())
-        status?.let { Text(it) }
+        status?.let { Text(it, style = MaterialTheme.typography.bodyMedium) }
+        if (!busy && snapshot == null) TextButton(onClick = { reload++ }) { Text("Try again") }
         val note = editor
         val canEdit = !busy && draft != null
         val saved = snapshot?.notes.orEmpty()
@@ -247,8 +250,6 @@ internal fun NovaNotesDraft(
                     redo.clear()
                     editor = NovaNote(UUID.randomUUID().toString(), "", "", notebook = notebook.orEmpty())
                 }) { Text("New note") }
-                TextButton(enabled = !busy, onClick = { reload++ }) { Text("Reload") }
-                TextButton(enabled = !busy, onClick = onBack) { Text("Done") }
             }
             val pending = draft
             if (pending?.note != null) {
@@ -257,8 +258,8 @@ internal fun NovaNotesDraft(
                     editorBase = null
                 }) { Text("Resume draft") }
             }
-            OutlinedTextField(query, { query = it }, enabled = !busy && snapshot != null,
-                label = { Text("Search notes") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+            WorkspaceSearch(query, { query = it }, "Search notes", Modifier.fillMaxWidth(),
+                enabled = !busy && snapshot != null)
             val protected = snapshot?.protectedNotebooks.orEmpty()
             val labels = saved.map { it.notebook }.filter(String::isNotBlank).associateBy(::notebookKey)
             val notebooks = (labels.keys + protected).sorted().map { labels[it] ?: it }
@@ -302,18 +303,41 @@ internal fun NovaNotesDraft(
                     else -> "No matching notes"
                 })
             }
-            LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                items(filtered, key = { it.id }) { item ->
-                    OutlinedCard(
-                        onClick = { if (canEdit) status = null; editorBase = item; undo.clear(); redo.clear(); editor = item },
-                        enabled = !busy && pending?.note == null,
-                        modifier = Modifier.fillMaxWidth(),
-                    ) {
-                        Column(Modifier.padding(12.dp)) {
-                            Text(item.title.ifBlank { "Untitled note" })
-                            val details = listOf(item.notebook, item.tags, if (item.pinned) "Pinned" else "")
-                                .filter(String::isNotBlank)
-                            if (details.isNotEmpty()) Text(details.joinToString(" · "), style = MaterialTheme.typography.labelSmall)
+            BoxWithConstraints(Modifier.weight(1f).fillMaxWidth()) {
+                val columns = when {
+                    maxWidth >= 650.dp -> 3
+                    maxWidth >= 310.dp -> 2
+                    else -> 1
+                }
+                LazyColumn(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    val groups = listOf("Pinned" to filtered.filter { it.pinned },
+                        (notebook ?: "Library") to filtered.filterNot { it.pinned })
+                    for ((title, notes) in groups) {
+                        if (notes.isEmpty()) continue
+                        item { WorkspaceLabel(title, "${notes.size} notes") }
+                        items(notes.chunked(columns), key = { it.first().id }) { group ->
+                            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                                group.forEach { item ->
+                                    val colors = MaterialTheme.colorScheme
+                                    WorkspaceNoteCard(
+                                        item.title, item.body, item.notebook, item.tags,
+                                        item.body.lineSequence().any { it.startsWith("- [") },
+                                        if (item.pinned) colors.primaryContainer else colors.secondaryContainer,
+                                        if (item.pinned) colors.onPrimaryContainer else colors.onSecondaryContainer,
+                                        Modifier.weight(1f), enabled = canEdit && pending?.note == null,
+                                        onClick = {
+                                            status = null
+                                            editorBase = item
+                                            undo.clear()
+                                            redo.clear()
+                                            editor = item
+                                        },
+                                    ) {
+                                        if (item.pinned) Icon(Icons.Default.PushPin, "Pinned", Modifier.size(14.dp))
+                                    }
+                                }
+                                repeat(columns - group.size) { Spacer(Modifier.weight(1f)) }
+                            }
                         }
                     }
                 }

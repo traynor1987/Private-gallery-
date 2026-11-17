@@ -11,6 +11,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import java.time.LocalDate
@@ -114,9 +115,10 @@ internal fun NovaTasksScreen(
         Modifier.fillMaxSize().safeDrawingPadding().imePadding().padding(16.dp).testTag("nova-tasks"),
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        Text("Nova Tasks", style = MaterialTheme.typography.headlineSmall)
+        CoreWorkspaceHeader("Nova Tasks", enabled = !loading, onBack = { if (editor != null) closeEditor() else onBack() })
         if (loading) LinearProgressIndicator(Modifier.fillMaxWidth())
-        status?.let { Text(it) }
+        status?.let { Text(it, style = MaterialTheme.typography.bodyMedium) }
+        if (!loading && snapshot == null) TextButton(onClick = { reload++ }) { Text("Try again") }
         val current = editor
         val savedTasks = snapshot?.tasks.orEmpty()
         if (current == null) {
@@ -125,16 +127,14 @@ internal fun NovaTasksScreen(
                     status = null
                     editor = TaskEditor(NovaTask(UUID.randomUUID().toString(), ""), "")
                 }) { Text("New task") }
-                TextButton(enabled = !loading, onClick = { reload++ }) { Text("Reload") }
-                TextButton(enabled = !loading, onClick = onBack) { Text("Done") }
             }
             Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 NovaTaskView.entries.forEach { tab ->
                     FilterChip(view == tab, { view = tab }, { Text(tab.label) })
                 }
             }
-            OutlinedTextField(query, { query = it }, enabled = !loading && snapshot != null,
-                label = { Text("Search tasks") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+            WorkspaceSearch(query, { query = it }, "Search tasks", Modifier.fillMaxWidth(),
+                enabled = !loading && snapshot != null)
             if (view == NovaTaskView.PROJECTS && projects.isNotEmpty()) {
                 Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     FilterChip(activeProject == null, { projectFilter = null }, { Text("All projects") })
@@ -164,8 +164,18 @@ internal fun NovaTasksScreen(
                 .thenByDescending { it.priority.ordinal })
             if (!loading && snapshot != null && ordered.isEmpty()) Text("No tasks in this view")
             LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                if (view == NovaTaskView.TODAY && snapshot != null) {
+                    val due = savedTasks.filter { it.due == today || (!it.completed && it.due?.isBefore(today) == true) }
+                    val completed = due.count { it.completed }
+                    item {
+                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            WorkspaceLabel("Today’s progress", "$completed of ${due.size} done")
+                            WorkspaceTaskProgress(completed, due.size)
+                        }
+                    }
+                }
                 items(ordered, key = { it.id }) { task ->
-                    OutlinedCard(
+                    CoreWorkspaceCard(
                         onClick = { editor = TaskEditor(task, task.due?.toString().orEmpty()); status = null },
                         enabled = !loading,
                         modifier = Modifier.fillMaxWidth(),
@@ -176,7 +186,8 @@ internal fun NovaTasksScreen(
                                     if (completed) "Task completed" else "Task reopened")
                             }, enabled = !loading)
                             Column(Modifier.weight(1f).padding(vertical = 10.dp)) {
-                                Text(task.title)
+                                Text(task.title, style = MaterialTheme.typography.titleMedium,
+                                    textDecoration = if (task.completed) TextDecoration.LineThrough else TextDecoration.None)
                                 val details = listOfNotNull(
                                     task.project.takeIf { it.isNotBlank() },
                                     task.due?.toString(),

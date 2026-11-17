@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
@@ -157,9 +158,10 @@ internal fun NovaCalendarScreen(
         Modifier.fillMaxSize().safeDrawingPadding().imePadding().padding(16.dp).testTag("nova-calendar"),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        Text("Nova Calendar", style = MaterialTheme.typography.headlineSmall)
+        CoreWorkspaceHeader("Nova Calendar", enabled = !busy, onBack = { if (editor != null) closeEditor() else onBack() })
         if (busy) LinearProgressIndicator(Modifier.fillMaxWidth())
-        status?.let { Text(it) }
+        status?.let { Text(it, style = MaterialTheme.typography.bodyMedium) }
+        if (!busy && snapshot == null) TextButton(onClick = { reload++ }) { Text("Try again") }
         val current = editor
         val events = snapshot?.events.orEmpty()
         if (current == null) {
@@ -169,8 +171,6 @@ internal fun NovaCalendarScreen(
                     editor = CalendarEdit(NovaCalendarEvent(UUID.randomUUID().toString(), "", "", focus,
                         null, displayZone, 30, NovaEventRepeat.NONE))
                 }) { Text("New event") }
-                TextButton(enabled = !busy, onClick = { reload++ }) { Text("Reload") }
-                TextButton(enabled = !busy, onClick = onBack) { Text("Done") }
             }
             Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 CalendarView.entries.forEach { view ->
@@ -181,9 +181,13 @@ internal fun NovaCalendarScreen(
                 Modifier.weight(1f).verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                OutlinedTextField(query, { query = it }, label = { Text("Search visible events") },
-                    singleLine = true, modifier = Modifier.fillMaxWidth())
-                CalendarDates(focus, mode, onDate = { focus = it })
+                WorkspaceSearch(query, { query = it }, "Search visible events", Modifier.fillMaxWidth(),
+                enabled = !busy && snapshot != null)
+                Surface(shape = RoundedCornerShape(20.dp), color = MaterialTheme.colorScheme.surfaceContainer) {
+                    Column(Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
+                        CalendarDates(focus, mode, onDate = { focus = it })
+                    }
+                }
                 val weekStart = focus.with(TemporalAdjusters.previousOrSame(WeekFields.of(Locale.getDefault()).firstDayOfWeek))
                 val dates = when (mode) {
                     CalendarView.MONTH, CalendarView.DAY -> listOf(focus)
@@ -209,10 +213,10 @@ internal fun NovaCalendarScreen(
                     }
                     matches.forEach { occurrence ->
                         val event = occurrence.event
-                        OutlinedCard(onClick = { status = null; editor = CalendarEdit(event) },
+                        CoreWorkspaceCard(onClick = { status = null; editor = CalendarEdit(event) },
                             enabled = !busy, modifier = Modifier.fillMaxWidth()) {
                             Column(Modifier.padding(10.dp)) {
-                                Text(event.title)
+                                Text(event.title, style = MaterialTheme.typography.titleMedium)
                                 val whenText = occurrence.start?.let {
                                     it.atZone(displayZone).format(DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT))
                                 } ?: "All day"

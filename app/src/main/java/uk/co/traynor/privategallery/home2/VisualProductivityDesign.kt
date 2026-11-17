@@ -107,7 +107,7 @@ private fun NotesWorkspace(navigator: VisualNavigator) {
         }
     } else {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
-            WorkspaceSearch(query, { query = it }, "Search notes", Modifier.weight(1f))
+            WorkspaceSearch(query, { query = it }, "Search notes", Modifier.weight(1f).testTag("visual-notes-search"))
             SmallFloatingActionButton(
                 onClick = createNote,
                 modifier = Modifier.size(48.dp).testTag("visual-notes-new"),
@@ -175,22 +175,35 @@ private fun NotePreview(note: SampleNote, modifier: Modifier, onClick: () -> Uni
         "Outdoors" -> colours.tertiaryContainer to colours.onTertiaryContainer
         else -> colours.secondaryContainer to colours.onSecondaryContainer
     }
+    WorkspaceNoteCard(note.title, note.text, note.book, "#${note.tag.lowercase()}", note.checks.isNotEmpty(),
+        background, foreground, modifier, onClick = onClick) {
+        if (note.favourite) Icon(Icons.Default.Favorite, "Favourite", Modifier.size(14.dp))
+    }
+}
+
+@Composable
+internal fun WorkspaceNoteCard(
+    title: String, body: String, notebook: String, tags: String, checklist: Boolean,
+    background: Color, foreground: Color, modifier: Modifier, enabled: Boolean = true,
+    onClick: () -> Unit, indicator: @Composable () -> Unit,
+) {
     Surface(
-        onClick = onClick,
-        modifier = modifier.heightIn(min = 132.dp),
-        shape = RoundedCornerShape(18.dp),
-        color = background,
-        contentColor = foreground,
+        onClick = onClick, enabled = enabled, modifier = modifier.heightIn(min = 132.dp),
+        shape = RoundedCornerShape(18.dp), color = background, contentColor = foreground,
     ) {
         Column(Modifier.padding(13.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
-                Icon(if (note.checks.isEmpty()) Icons.Default.StickyNote2 else Icons.Default.Checklist, null, Modifier.size(16.dp))
-                Text(note.book, Modifier.weight(1f), style = MaterialTheme.typography.labelMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                if (note.favourite) Icon(Icons.Default.Favorite, "Favourite", Modifier.size(14.dp))
+                Icon(if (checklist) Icons.Default.Checklist else Icons.Default.StickyNote2, null, Modifier.size(16.dp))
+                Text(notebook, Modifier.weight(1f), style = MaterialTheme.typography.labelMedium,
+                    maxLines = 1, overflow = TextOverflow.Ellipsis)
+                indicator()
             }
-            Text(note.title.ifBlank { "Untitled note" }, style = MaterialTheme.typography.titleMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)
-            Text(note.text.ifBlank { "Empty note" }, style = MaterialTheme.typography.bodySmall, maxLines = 2, overflow = TextOverflow.Ellipsis)
-            Text("#${note.tag.lowercase()}", style = MaterialTheme.typography.labelSmall)
+            Text(title.ifBlank { "Untitled note" }, style = MaterialTheme.typography.titleMedium,
+                maxLines = 2, overflow = TextOverflow.Ellipsis)
+            Text(body.ifBlank { "Empty note" }, style = MaterialTheme.typography.bodySmall,
+                maxLines = 2, overflow = TextOverflow.Ellipsis)
+            if (tags.isNotEmpty()) Text(tags, style = MaterialTheme.typography.labelSmall,
+                maxLines = 2, overflow = TextOverflow.Ellipsis)
         }
     }
 }
@@ -344,16 +357,9 @@ private fun FilesWorkspace(module: VisualModule, navigator: VisualNavigator) {
                             val modifier = Modifier.weight(1f).testTag("visual-files-folder-$name")
                             val count = productivityFiles.count { it.parent == path || it.parent.startsWith("$path /") }
                             if (grid) {
-                                Surface(onClick = open, modifier = modifier.heightIn(min = 90.dp), shape = RoundedCornerShape(15.dp),
-                                    color = MaterialTheme.colorScheme.primaryContainer) {
-                                    Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
-                                        Icon(Icons.Default.Folder, null, tint = MaterialTheme.colorScheme.onPrimaryContainer)
-                                        Text(name, style = MaterialTheme.typography.titleSmall)
-                                        Text("$count files", style = MaterialTheme.typography.labelSmall)
-                                    }
-                                }
+                                WorkspaceFolderCard(name, "$count files", modifier, onClick = open)
                             } else {
-                                WorkspaceRow(name, "$count files", Icons.Default.Folder, modifier, open)
+                                WorkspaceRow(name, "$count files", Icons.Default.Folder, modifier, onClick = open)
                             }
                         }
                         repeat(columns - chunk.size) { Spacer(Modifier.weight(1f)) }
@@ -377,7 +383,7 @@ private fun FilesWorkspace(module: VisualModule, navigator: VisualNavigator) {
 }
 
 private fun fileSize(file: SampleFile) = if (file.sizeKb >= 1000) "${file.sizeKb / 1000.0} MB" else "${file.sizeKb} KB"
-private fun fileIcon(type: String): ImageVector = when (type) {
+internal fun fileIcon(type: String): ImageVector = when (type) {
     "PDF" -> Icons.Default.PictureAsPdf
     "Image" -> Icons.Default.Image
     "Audio" -> Icons.Default.AudioFile
@@ -387,15 +393,47 @@ private fun fileIcon(type: String): ImageVector = when (type) {
 @Composable
 private fun StorageStrip() {
     val colors = MaterialTheme.colorScheme
-    Surface(shape = RoundedCornerShape(18.dp), color = colors.surfaceContainer, modifier = Modifier.fillMaxWidth().testTag("visual-files-storage")) {
+    WorkspaceStorageCard(
+        "Sample storage", "28.9 / 64 GB",
+        "Documents  12 GB   ·   Images  10 GB   ·   Audio  6.9 GB",
+        listOf(12f to colors.primary, 10f to colors.tertiary, 6.9f to colors.secondary, 35.1f to colors.outlineVariant),
+        Modifier.testTag("visual-files-storage"),
+    )
+}
+
+@Composable
+internal fun WorkspaceFolderCard(
+    name: String, detail: String, modifier: Modifier = Modifier, enabled: Boolean = true, onClick: () -> Unit,
+) {
+    val colors = MaterialTheme.colorScheme
+    Surface(onClick = onClick, enabled = enabled, modifier = modifier.heightIn(min = 90.dp),
+        shape = RoundedCornerShape(15.dp), color = colors.primaryContainer) {
+        Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+            Icon(Icons.Default.Folder, null, tint = colors.onPrimaryContainer)
+            Text(name, style = MaterialTheme.typography.titleSmall)
+            if (detail.isNotBlank()) Text(detail, style = MaterialTheme.typography.labelSmall)
+        }
+    }
+}
+
+@Composable
+internal fun WorkspaceStorageCard(
+    title: String, amount: String, detail: String, segments: List<Pair<Float, Color>>,
+    modifier: Modifier = Modifier,
+) {
+    val colors = MaterialTheme.colorScheme
+    Surface(shape = RoundedCornerShape(18.dp), color = colors.surfaceContainer, modifier = modifier.fillMaxWidth()) {
         Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            WorkspaceLabel("Sample storage", "28.9 / 64 GB")
-            Row(Modifier.fillMaxWidth().height(9.dp), horizontalArrangement = Arrangement.spacedBy(3.dp)) {
-                listOf(12f to colors.primary, 10f to colors.tertiary, 6.9f to colors.secondary, 35.1f to colors.outlineVariant).forEach { (part, color) ->
-                    Spacer(Modifier.fillMaxHeight().weight(part).background(color, CircleShape))
+            WorkspaceLabel(title, amount)
+            val visible = segments.filter { (weight, _) -> weight > 0 }
+            if (visible.isNotEmpty()) {
+                Row(Modifier.fillMaxWidth().height(9.dp), horizontalArrangement = Arrangement.spacedBy(3.dp)) {
+                    visible.forEach { (part, color) ->
+                        Spacer(Modifier.fillMaxHeight().weight(part).background(color, CircleShape))
+                    }
                 }
             }
-            Text("Documents  12 GB   ·   Images  10 GB   ·   Audio  6.9 GB", style = MaterialTheme.typography.labelMedium)
+            Text(detail, style = MaterialTheme.typography.labelMedium)
         }
     }
 }
@@ -603,13 +641,7 @@ private fun TasksWorkspace(module: VisualModule, navigator: VisualNavigator) {
         0 -> {
             val total = completed.count { it }
             WorkspaceLabel("Today", "$total of ${completed.size} done")
-            Row(Modifier.fillMaxWidth().height(8.dp), horizontalArrangement = Arrangement.spacedBy(5.dp)) {
-                repeat(completed.size) { index ->
-                    Spacer(Modifier.weight(1f).fillMaxHeight().background(
-                        if (index < total) colors.primary else colors.outlineVariant, CircleShape,
-                    ))
-                }
-            }
+            WorkspaceTaskProgress(total, completed.size)
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 listOf("All", "Open", "Done").forEach { label ->
                     FilterChip(filter == label, { filter = label }, { Text(label) }, modifier = Modifier.heightIn(min = 48.dp))
@@ -722,7 +754,7 @@ private fun ClipboardWorkspace(module: VisualModule, navigator: VisualNavigator)
 }
 
 @Composable
-private fun WorkspaceLabel(title: String, meta: String) {
+internal fun WorkspaceLabel(title: String, meta: String) {
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(title, Modifier.weight(1f), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
         Text(meta, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -730,9 +762,12 @@ private fun WorkspaceLabel(title: String, meta: String) {
 }
 
 @Composable
-private fun WorkspaceSearch(query: String, onChange: (String) -> Unit, hint: String, modifier: Modifier) {
+internal fun WorkspaceSearch(
+    query: String, onChange: (String) -> Unit, hint: String, modifier: Modifier,
+    enabled: Boolean = true,
+) {
     OutlinedTextField(
-        value = query, onValueChange = onChange, modifier = modifier.testTag("visual-notes-search"),
+        value = query, onValueChange = onChange, modifier = modifier, enabled = enabled,
         singleLine = true, placeholder = { Text(hint) },
         leadingIcon = { Icon(Icons.Default.Search, null) },
         trailingIcon = if (query.isEmpty()) null else { { IconButton({ onChange("") }) { Icon(Icons.Default.Close, "Clear search") } } },
@@ -741,9 +776,12 @@ private fun WorkspaceSearch(query: String, onChange: (String) -> Unit, hint: Str
 }
 
 @Composable
-private fun WorkspaceRow(title: String, subtitle: String, image: ImageVector, modifier: Modifier, onClick: () -> Unit) {
+internal fun WorkspaceRow(
+    title: String, subtitle: String, image: ImageVector, modifier: Modifier = Modifier,
+    enabled: Boolean = true, onClick: () -> Unit,
+) {
     val colors = MaterialTheme.colorScheme
-    Row(modifier.fillMaxWidth().heightIn(min = 56.dp).clickable(onClick = onClick).padding(vertical = 5.dp),
+    Row(modifier.fillMaxWidth().heightIn(min = 56.dp).clickable(enabled = enabled, onClick = onClick).padding(vertical = 5.dp),
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
         Box(Modifier.size(38.dp).background(colors.secondaryContainer, RoundedCornerShape(11.dp)), contentAlignment = Alignment.Center) {
             Icon(image, null, tint = colors.onSecondaryContainer, modifier = Modifier.size(21.dp))
@@ -764,5 +802,21 @@ private fun WorkspaceDetail(item: VisualRow, image: ImageVector) {
         Text(item.title, style = MaterialTheme.typography.headlineSmall)
         item.badge?.let { Text(it, style = MaterialTheme.typography.labelLarge, color = colors.primary) }
         Text(item.detail, style = MaterialTheme.typography.bodyLarge)
+    }
+}
+
+
+@Composable
+internal fun WorkspaceTaskProgress(completed: Int, total: Int) {
+    if (total == 0) return
+    val colors = MaterialTheme.colorScheme
+    val segments = total.coerceAtMost(8)
+    val filled = (completed.toFloat() / total * segments).toInt()
+    Row(Modifier.fillMaxWidth().height(8.dp), horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+        repeat(segments) { index ->
+            Spacer(Modifier.weight(1f).fillMaxHeight().background(
+                if (index < filled) colors.primary else colors.outlineVariant, CircleShape,
+            ))
+        }
     }
 }

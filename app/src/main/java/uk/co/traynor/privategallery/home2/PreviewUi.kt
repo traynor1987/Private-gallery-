@@ -455,7 +455,9 @@ private val lightColors=lightColorScheme(primary=Color(0xFF285F65),secondary=Col
      }
      if(audio.sound.isNotBlank())Surface(tonalElevation=3.dp){Row(Modifier.fillMaxWidth().padding(horizontal=16.dp),verticalAlignment=Alignment.CenterVertically){Text("Calm · ${audio.sound}",Modifier.weight(1f));IconButton(onClick={if(audio.playing)audio.pause()else audio.resume()}){Icon(if(audio.playing)Icons.Default.Pause else Icons.Default.PlayArrow,"Toggle calm sound")};TextButton(onClick={launch("mind:sounds")}){Text("Open")}}}
      if(screen!="browser")NovaMiniPlayer(pool,state.current,onResume=resumeTab)
-     NovaNavigation(data.shell,onRecents=openRecents,onHome=goHome,onBack=goBack)
+     if (NovaCoreApp.entries.none { it.route == screen }) {
+      NovaNavigation(data.shell,onRecents=openRecents,onHome=goHome,onBack=goBack)
+     }
     }
    }
    if(selectedWidget!=null)WidgetOptions(data,widgets,selectedWidget!!){selectedWidget=null}
