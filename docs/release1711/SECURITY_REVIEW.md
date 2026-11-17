@@ -1,19 +1,13 @@
-# NovaOS 1.7.38.7 Code 80 maintenance upgrade controls
+# NovaOS 1.7.38.8 (Build 84) production controls
 
-Source: 13e45eae02837470e7585f8b643651da884f502b
+Source: de8716aad373509c48cd820dd3d63aac4af13d6e
 Authorization: authenticated owner push
-Release scope: private disposable upgrade verification only
+Release scope: public stable after disposable upgrade verification
 Physical Fold acceptance: pending
-Upgrade fixture SHA-256: 1ba2169f2674b138c7e8ef08c9bd46c16f73aa73f2f4b03a7cd74a2607f68235
-Upgrade controls SHA-256: 202f76d9c7c87d400cd20924595f4b991a9a75828cbca81b813eeb3239c9a7e5
+Upgrade fixture SHA-256: 4fa962f1c198232ccb324b7493c216be452defa0a88620286d503c960429d727
+Upgrade controls SHA-256: 80f0cd26d50443000d0c6a8685a7decb8bb18854149d0bd7f00fbff52b8018ee
 Runtime matrix SHA-256: 62b209459a34f97e06eb73a0ccb88d7f503b7260696b3607812120ac3e2d3967
-Runtime workflow run: 43740944953
-Signing workflow SHA-256: 890527cd27981ef8e00866802011560ad8015cacb9a71a0f9a4bcc75993c852b
+Runtime workflow run: 44079639233
+Signing workflow SHA-256: 40ea043aa438e8a7f6a92489e6cb06ca064c153e63e083af195e011b336c5c04
 
-The signing job waits for the selected Android 17 regression run. The original
-GitHub artifact ID and digest are recorded from that run's authenticated API
-response and verified against the downloaded bytes and the reviewed test matrix.
-
-Build 82 is pinned to production run 43702829697. The baseline must match the original production certificate and the exact APK SHA-256 recorded in its upgrade receipts. A rebuild mismatch blocks the upgrade gate. The emulator verifies the encrypted in-place update and process restart
-before the candidate can be transferred. The public Actions artifact contains
-only ciphertext under the existing private recipient's certificate.
+The release job binds original Android 17 CI evidence, fixture, controls, and owner authorization to the frozen app source before allowing signer access. The Build 83 GitHub APK must match production run #30 and the original production signer. The sealed test environment seeds Build 83, installs Build 84 in place, verifies retained data and verifies it again after force-stop. Only then may the job stage the APK and checksum, verify the Git tag and draft assets, and publish stable.

@@ -1,22 +1,24 @@
 {
-  "source": "13e45eae02837470e7585f8b643651da884f502b",
-  "baseline_source": "af433ec62cbdd316bb9c12fd110ea07282c587a3",
-  "baseline_code": 82,
-  "candidate_code": 83,
-  "test_run": 43740944953,
-  "fixture_sha256": "1ba2169f2674b138c7e8ef08c9bd46c16f73aa73f2f4b03a7cd74a2607f68235",
+  "source": "de8716aad373509c48cd820dd3d63aac4af13d6e",
+  "baseline_source": "c22bad35c3c934b8d95cf91e95b0b893cacd8e2c",
+  "baseline_code": 83,
+  "candidate_code": 84,
+  "test_run": 44079639233,
+  "fixture_sha256": "4fa962f1c198232ccb324b7493c216be452defa0a88620286d503c960429d727",
   "matrix_sha256": "62b209459a34f97e06eb73a0ccb88d7f503b7260696b3607812120ac3e2d3967",
   "controls_sha256": {
-    "compile_upgrade1711_fixture.sh": "830c75f4c4f00a5798cb4fb7254841f54ac4100a7baf44be361ba63bf0f51c5f",
-    "verify_compiled_upgrade1711.py": "078821154ad8fccb4d4ea57f1c13f66547114903d6ae40012ddbefd05d3055f8",
-    "verify_code80_baseline_payload.py": "276899e26b00bada6a5f8713d29d915a3d919933b366d960c7aac4f3a69aca33",
+    "compile_upgrade1711_fixture.sh": "54098546ae3ad8c6cebb565527e4f8a0dd743460d7b23fb4256161b1a4d1ea6b",
+    "verify_compiled_upgrade1711.py": "704844a9e1954d97634bfa376ae6e55ca1effc27d487482345275dd28ddd5000",
+    "fetch_code81_upgrade_baseline.py": "0d438aa1fb0881e2b4a91b08ff33f95cc16e1aafaedc5234bd0e8831fd7ae71d",
+    "verify_code80_apk_identity.py": "a3424927bb9f0ca87ab2464c20c3ae7262d34245ba9573ebd557dbe322da0835",
+    "verify_code79_baseline.py": "3cbc439cb6883d58f48068d111a4ba7a0cda7a359f8e1cc7e4eecba983668fce",
+    "verify_novaos_release_assets.py": "eef24a21f94fb1b9704ce2053dab5a86b3665ed7071cde4876606e816de53177",
     "verify_production_candidate1711.sh": "a96058f489ac590fbbb5c259066ebf4321919a58022fbbc0fa9b86ddc4b8e176",
-    "verify_synthetic_upgrade1711.sh": "7f030153873ffcf237c0ad55686d6009c0dba202c1242697a713703ab3145ee5",
+    "verify_synthetic_upgrade1711.sh": "69594636d24c5bfc1eaa3771a81c26a89c097b119f20734b8e9c9516d50a643d",
     "verify_signed_upgrade1711.py": "3170680e165a6e571a953240246f4210906588b981ae0e4ca19e559512adbb62",
-    "release_configuration1711.sh": "b006392799052793bf938d3ff388c122d63356053235255b07b5ab80872a9095",
-    "verify_release1711_gate.py": "235ce572d6c1408f4367da39718ae0d6647dbb4930172c77c1120aab85ed71f9"
+    "release_configuration1711.sh": "8c952241657bceb9394703c17cab8164e06dde6ad512ed8cf6daf58e26cd3796",
+    "verify_release1711_gate.py": "8d6aa71102895df4aade96a54a4c1cc2589204b98ee301e4496370428f0d94bf"
   },
-  "workflow_sha256": "890527cd27981ef8e00866802011560ad8015cacb9a71a0f9a4bcc75993c852b",
-  "review_sha256": "e0f06b06652d8f71b46db830b2d69050f87a32bc7e962fc2a0c386b20ae7ec3b",
-  "delivery_recipient_sha256": "0055c59e3cb0fe8c6a72f3e6861f0f6231f23cb7e2a3a0ea9af1dce32c831a23"
+  "workflow_sha256": "40ea043aa438e8a7f6a92489e6cb06ca064c153e63e083af195e011b336c5c04",
+  "review_sha256": "280508ce8e86164d54e1d0d493d5582dd8c9702d4bd3b57236f76a299b7460cd"
 }

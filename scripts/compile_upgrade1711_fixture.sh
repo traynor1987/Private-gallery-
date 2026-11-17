@@ -6,7 +6,7 @@ cd "${PRIVATE_GALLERY_1711_ROOT:-$control_root/..}"
 for forbidden in KEYSTORE_BASE64 STORE_PASSWORD KEY_PASSWORD KEY_ALIAS ORG_GRADLE_PROJECT_PRIVATE_GALLERY_STORE_FILE ORG_GRADLE_PROJECT_PRIVATE_GALLERY_STORE_PASSWORD ORG_GRADLE_PROJECT_PRIVATE_GALLERY_KEY_ALIAS ORG_GRADLE_PROJECT_PRIVATE_GALLERY_KEY_PASSWORD; do
   [[ ! -v "$forbidden" ]] || { echo 'Fixture compilation must precede signer environment access' >&2; exit 1; }
 done
-[[ "${GITHUB_ACTIONS:-}" == true && "${GITHUB_EVENT_NAME:-}" == push && "${GITHUB_REPOSITORY:-}" == traynor1987/Private-gallery- && "${GITHUB_REF:-}" == refs/heads/feature/novaos-sanctuary-integration ]] || { echo 'Unsupported fixture compilation invocation' >&2; exit 1; }
+[[ "${GITHUB_ACTIONS:-}" == true && "${GITHUB_EVENT_NAME:-}" == push && "${GITHUB_REPOSITORY:-}" == traynor1987/Private-gallery- && "${GITHUB_REF:-}" == refs/heads/feature/novaos-code81-core-apps ]] || { echo 'Unsupported fixture compilation invocation' >&2; exit 1; }
 [[ "${FROZEN_SOURCE:-}" =~ ^[a-f0-9]{40}$ && "$FROZEN_SOURCE" != 0000000000000000000000000000000000000000 ]]
 [[ "$(git rev-parse HEAD)" == "$FROZEN_SOURCE" ]]
 fixture="${PRIVATE_GALLERY_1711_UPGRADE_FIXTURE:?Reviewed fixture required}"
@@ -22,7 +22,7 @@ PYOUTPUT
 [[ ! -e "$output" ]]
 mkdir -p "$output"
 control_root=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
-baseline=af433ec62cbdd316bb9c12fd110ea07282c587a3
+baseline=c22bad35c3c934b8d95cf91e95b0b893cacd8e2c
 baseline_dir=$(mktemp -d "${RUNNER_TEMP:?}/upgrade1711-source.XXXXXX")
 trap 'rm -rf "$baseline_dir"' EXIT
 if ! git cat-file -e "$baseline^{commit}"; then git fetch --no-tags origin "$baseline"; fi
