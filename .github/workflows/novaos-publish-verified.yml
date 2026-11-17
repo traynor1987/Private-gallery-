@@ -14,21 +14,34 @@ jobs:
     if: github.repository == 'traynor1987/Private-gallery-' && github.actor_id == '16270479' && github.event.sender.id == 16270479 && github.run_attempt == 1
     runs-on: ubuntu-24.04
     timeout-minutes: 15
+    environment: novaos-production-publication
     permissions:
       contents: write
       actions: read
     steps:
       - uses: actions/checkout@v4
         with: { fetch-depth: 0, persist-credentials: false }
-      - name: Validate owner authorization and exact remote tag
-        env:
-          GH_TOKEN: ${{ github.token }}
+      - name: Validate owner authorization
         run: |
           set -euo pipefail
           read -r approved < .novaos-publish-authorization
           test "$approved" = "${{ github.event.before }}"
           test "$(git rev-list --parents -n 1 HEAD)" = "$GITHUB_SHA $approved"
           test "$(git diff --name-only "$approved" HEAD)" = .novaos-publish-authorization
+      - name: Obtain scoped tag credential when configured
+        if: vars.NOVAOS_RELEASE_APP_ID != ''
+        id: release-app
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ vars.NOVAOS_RELEASE_APP_ID }}
+          private-key: ${{ secrets.NOVAOS_RELEASE_APP_PRIVATE_KEY }}
+          permission-contents: write
+          permission-workflows: write
+      - name: Create or verify the exact stable tag
+        env:
+          GH_TOKEN: ${{ github.token }}
+          NOVAOS_TAG_TOKEN: ${{ steps.release-app.outputs.token }}
+        run: |
           PYTHONDONTWRITEBYTECODE=1 python3 scripts/publish_verified_novaos.py --candidate .novaos-stable-candidate.json --preflight
       - uses: actions/setup-java@v5
         with: { distribution: temurin, java-version: '17' }

@@ -24,6 +24,30 @@ class ReleaseChecks(unittest.TestCase):
         ]):
             release.verify_tag(CANDIDATE)
 
+    def test_missing_tag_is_pushed_at_exact_source_and_verified(self):
+        with patch.object(release, "verify_tag", side_effect=[False, True]), \
+                patch.object(release.subprocess, "run") as push:
+            release.ensure_tag(CANDIDATE)
+        command = push.call_args.args[0]
+        self.assertEqual(f"{CANDIDATE['source']}:refs/tags/{CANDIDATE['tag']}", command[-1])
+        self.assertNotIn("--force", command)
+
+    def test_existing_tag_is_never_replaced(self):
+        with patch.object(release, "verify_tag", side_effect=ValueError("wrong target")), \
+                patch.object(release.subprocess, "run") as push:
+            with self.assertRaisesRegex(ValueError, "wrong target"):
+                release.ensure_tag(CANDIDATE)
+        push.assert_not_called()
+
+    def test_tag_permission_failure_stops_before_publication(self):
+        with patch.object(release, "verify_tag", return_value=False), \
+                patch.object(release.subprocess, "run") as push:
+            push.return_value.returncode = 1
+            push.return_value.stderr = "remote: HTTP 403"
+            with self.assertRaisesRegex(ValueError, "HTTP 403.*GitHub App"):
+                release.ensure_tag(CANDIDATE)
+        push.assert_called_once()
+
     def test_missing_and_incorrect_assets_are_rejected(self):
         with self.assertRaisesRegex(ValueError, "missing verified assets"):
             release.check_remote_assets({"assets": []}, {"apk": "sha256:expected"})

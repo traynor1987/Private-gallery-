@@ -3,6 +3,7 @@
 import argparse
 import hashlib
 import json
+import os
 from pathlib import Path
 import re
 import subprocess
@@ -116,19 +117,48 @@ def api(path):
     return json.loads(gh("api", f"repos/{REPO}/{path}"))
 
 
-def verify_tag(candidate):
+def verify_tag(candidate, *, allow_missing=False):
     tag = candidate["tag"]
     require(re.fullmatch(r"v\d+(?:\.\d+){3}", tag), "Invalid stable release tag")
     try:
         ref = api(f"git/ref/tags/{tag}")["object"]
     except RuntimeError as error:
         if "HTTP 404" in str(error):
+            if allow_missing:
+                return False
             raise ValueError(f"Missing tag {tag}; it must resolve to {candidate['source']}") from error
         raise
     if ref["type"] == "tag":
         ref = api(f"git/tags/{ref['sha']}")["object"]
     require(ref["type"] == "commit" and ref["sha"] == candidate["source"],
             "Remote tag does not point to the frozen release source")
+    return True
+
+
+def ensure_tag(candidate):
+    if verify_tag(candidate, allow_missing=True):
+        return
+    source, tag = candidate["source"], candidate["tag"]
+    require(re.fullmatch(r"[0-9a-f]{40}", source), "Invalid frozen release source")
+    push_env = os.environ.copy()
+    tag_token = push_env.pop("NOVAOS_TAG_TOKEN", "")
+    if tag_token:
+        push_env["GH_TOKEN"] = tag_token
+    result = subprocess.run(
+        ["git", "-c", "credential.helper=", "-c", "credential.helper=!gh auth git-credential",
+         "push", "--porcelain", f"https://github.com/{REPO}.git", f"{source}:refs/tags/{tag}"],
+        env=push_env, capture_output=True, text=True, check=False,
+    )
+    # A concurrent publisher may have created the tag. Trust only the remote target.
+    if verify_tag(candidate, allow_missing=True):
+        return
+    if result.returncode:
+        raise ValueError(
+            f"Automatic tag creation failed for {tag}: {result.stderr.strip() or result.stdout.strip()}. "
+            "If GitHub rejected the workflow token, configure the repository-scoped NovaOS release GitHub App "
+            "(Contents and Workflows read/write) in the novaos-production-publication environment."
+        )
+    raise ValueError(f"Git accepted the push, but {tag} could not be verified on GitHub")
 
 
 def archive(candidate, kind, name, work):
@@ -209,16 +239,19 @@ def main():
     args = parser.parse_args()
     candidate = json.loads(args.candidate.read_text())
     try:
-        verify_tag(candidate)
-        if args.preflight:
-            print("PASS: exact remote stable tag")
-            return
         for key in ("regression_run", "production_run"):
             require(type(candidate[key]) is int, "Invalid workflow run")
         regression = f"actions/runs/{candidate['regression_run']}"
         production = f"actions/runs/{candidate['production_run']}"
         check_provenance(candidate, api(regression), api(regression + "/jobs?per_page=100")["jobs"],
                          api(production), api(production + "/jobs?per_page=100")["jobs"])
+        if args.preflight:
+            ensure_tag(candidate)
+            print("PASS: exact remote stable tag")
+            return
+        verify_tag(candidate)
+        subprocess.run(["git", "fetch", "--no-tags", f"https://github.com/{REPO}.git",
+                        f"refs/tags/{candidate['tag']}:refs/tags/{candidate['tag']}"], check=True)
         args.work.mkdir(mode=0o700)
         assets = archive(candidate, "assets", "novaos-code81-verified-stable-assets", args.work)
         receipts = archive(candidate, "receipts", "novaos-code81-production-upgrade-receipts", args.work)

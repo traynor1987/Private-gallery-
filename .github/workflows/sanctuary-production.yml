@@ -76,10 +76,6 @@ jobs:
                         'PRIVATE_GALLERY_1711_SIGNED_INSTRUMENTATION_APK':Path(os.environ['RUNNER_TEMP'])/'release1711-signed/instrumentation.apk'}
               for name,value in settings.items(): output.write(name+'='+str(value)+'\n')
           PY
-      - name: Require the exact production tag before tooling or signing
-        run: |
-          git fetch --no-tags origin refs/tags/v1.7.38.8:refs/novaos-release/verified-tag
-          test "$(git rev-parse 'refs/novaos-release/verified-tag^{commit}')" = "$FROZEN_SOURCE"
       - name: Fetch original exact-source runtime API evidence and baseline run provenance
         uses: actions/github-script@v7
         with:
@@ -290,8 +286,6 @@ jobs:
             'apkSha256':digest,
           },indent=2)+'\n')
           PY
-          git fetch --no-tags origin refs/tags/v1.7.38.8:refs/novaos-release/verified-tag
-          test "$(git rev-parse 'refs/novaos-release/verified-tag^{commit}')" = "$FROZEN_SOURCE"
           if ! git show-ref --verify --quiet refs/tags/v1.7.38.8; then
             git tag v1.7.38.8 "$FROZEN_SOURCE"
           fi
