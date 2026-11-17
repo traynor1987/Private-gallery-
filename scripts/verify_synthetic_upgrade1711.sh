@@ -73,17 +73,31 @@ git rev-parse HEAD > "$artifact_dir/upgrade-candidate-source-sha.txt"
 adb install "$archived_baseline"
 adb install "$instrumentation_apk"
 run_fixture() {
-  local phase=$1 label=$2 restart=false
+  local phase=$1 label=$2 restart=false instrument_status=0
   if [[ "$label" == after-restart ]]; then restart=true; fi
-  adb shell am instrument -w -e restartCheck "$restart" -e baselineCode "$baseline_code" -e candidateCode "$release_code" -e class "uk.co.traynor.privategallery.upgrade.UpgradeFixtureTest#$phase" "$fixture_package.test/androidx.test.runner.AndroidJUnitRunner" | tee "$artifact_dir/upgrade-$label.txt"
-  python3 - "$artifact_dir/upgrade-$label.txt" <<'PY'
+  adb shell input keyevent KEYCODE_WAKEUP
+  adb shell wm dismiss-keyguard
+  adb shell am instrument -w -e restartCheck "$restart" -e baselineCode "$baseline_code" -e candidateCode "$release_code" -e class "uk.co.traynor.privategallery.upgrade.UpgradeFixtureTest#$phase" "$fixture_package.test/androidx.test.runner.AndroidJUnitRunner" | tee "$artifact_dir/upgrade-$label.txt" || instrument_status=$?
+  if ! python3 - "$artifact_dir/upgrade-$label.txt" <<'PY'
 from pathlib import Path
 import re,sys
 text=Path(sys.argv[1]).read_text()
 assert len(re.findall(r'^OK \(1 test\)\s*$',text,re.M))==1
 assert not any(word in text for word in ('FAILURES!!!','INSTRUMENTATION_FAILED','Process crashed','FAILURE:'))
 PY
+  then
+    instrument_status=1
+  fi
+  if (( instrument_status != 0 )); then
+    # Synthetic device state only, captured before the emulator is removed.
+    adb shell dumpsys power | grep -E 'mWakefulness=|Display Power:' || true
+    adb shell dumpsys window | grep -E 'mCurrentFocus=|mFocusedApp=|mKeyguard' || true
+    adb shell dumpsys activity activities | grep -E 'topResumedActivity=|mResumedActivity' || true
+    adb logcat -d -s AndroidRuntime:E | tail -60 || true
+    return 1
+  fi
 }
+adb shell svc power stayon true
 run_fixture seed seed
 adb install -r "$candidate_apk"
 run_fixture verify verify

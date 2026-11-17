@@ -721,7 +721,7 @@ class UpgradeFixtureTest {
         var started: android.app.Activity? = null
         try {
             context.startActivity(hostile)
-            val deadline = SystemClock.uptimeMillis() + 15_000L
+            val deadline = SystemClock.uptimeMillis() + 30_000L
             var verified = false
             while (!verified && SystemClock.uptimeMillis() < deadline) {
                 instrumentation.runOnMainSync {
@@ -744,7 +744,7 @@ class UpgradeFixtureTest {
                 }
                 if (!verified) SystemClock.sleep(50)
             }
-            assertTrue("Production HOME activity resumed with window focus", verified)
+            assertTrue("Production HOME activity resumed with window focus (activity observed: ${started != null})", verified)
             assertEquals("Opening optional Home preserves Android's previous default",
                 previousHome, launcherRegistration())
         } finally {

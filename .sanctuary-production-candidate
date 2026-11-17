@@ -4,7 +4,7 @@
   "baseline_code": 83,
   "candidate_code": 84,
   "test_run": 44079639233,
-  "fixture_sha256": "4fa962f1c198232ccb324b7493c216be452defa0a88620286d503c960429d727",
+  "fixture_sha256": "00fa86483f88b6c2179454c8e452fd06724fc04d19131145e5325720e46930b2",
   "matrix_sha256": "e0c54baba756d385e021341d9571785da3aa4380d419ef0da6482ad0b308dce2",
   "controls_sha256": {
     "compile_upgrade1711_fixture.sh": "54098546ae3ad8c6cebb565527e4f8a0dd743460d7b23fb4256161b1a4d1ea6b",
@@ -14,11 +14,11 @@
     "verify_code79_baseline.py": "3cbc439cb6883d58f48068d111a4ba7a0cda7a359f8e1cc7e4eecba983668fce",
     "verify_novaos_release_assets.py": "eef24a21f94fb1b9704ce2053dab5a86b3665ed7071cde4876606e816de53177",
     "verify_production_candidate1711.sh": "a96058f489ac590fbbb5c259066ebf4321919a58022fbbc0fa9b86ddc4b8e176",
-    "verify_synthetic_upgrade1711.sh": "69594636d24c5bfc1eaa3771a81c26a89c097b119f20734b8e9c9516d50a643d",
+    "verify_synthetic_upgrade1711.sh": "ddf3d5d8e1f5e7241d7edb40356e263e116dcde75984e47916be039226449d08",
     "verify_signed_upgrade1711.py": "3170680e165a6e571a953240246f4210906588b981ae0e4ca19e559512adbb62",
     "release_configuration1711.sh": "8c952241657bceb9394703c17cab8164e06dde6ad512ed8cf6daf58e26cd3796",
     "verify_release1711_gate.py": "67e96c2607db4399acbb2705d8c591edc8f4f9e150caccd1384ac61f0ba397e4"
   },
   "workflow_sha256": "40ea043aa438e8a7f6a92489e6cb06ca064c153e63e083af195e011b336c5c04",
-  "review_sha256": "2ef93e971cce5a70426cdb5a65e18f1be315b3acb54784853403f9b917c995ed"
+  "review_sha256": "efcc26cf1924be7f643d81ac5ba811815d4a2aacc65731837d3f7e6caa37ffda"
 }
