@@ -15,16 +15,20 @@ class HiddenCredentialSeparationTest {
         val base = InstrumentationRegistry.getInstrumentation().targetContext
         val id = UUID.randomUUID().toString()
         val parent = File(base.noBackupFilesDir, "separation-test-$id")
+        val primaryFiles = File(base.cacheDir, "separation-primary-$id").apply { check(mkdirs()) }
         val preferenceNames = mutableSetOf<String>()
         val context = object : ContextWrapper(base) {
             override fun getPackageName() = "${base.packageName}.test.$id"
             override fun getNoBackupFilesDir(): File = parent
+            override fun getFilesDir(): File = primaryFiles
             override fun getSharedPreferences(name: String, mode: Int): android.content.SharedPreferences {
                 val qualified = "test-$id-$name"
                 preferenceNames.add(qualified)
                 return base.getSharedPreferences(qualified, mode)
             }
         }
+        assertNotEquals("Synthetic PIN admission and cleanup must not address another fixture Vault",
+            base.filesDir.canonicalFile, context.filesDir.canonicalFile)
         val primary = PinVaultKeyStore(context)
         val hidden = HiddenCredentialStore(context)
         var primaryKey: ByteArray? = null
@@ -61,6 +65,7 @@ class HiddenCredentialSeparationTest {
             preferenceNames.forEach { base.getSharedPreferences(it, Context.MODE_PRIVATE).edit().clear().commit() }
             KeyStore.getInstance("AndroidKeyStore").apply { load(null); deleteEntry("${context.packageName}.hidden.v1.default") }
             parent.deleteRecursively()
+            primaryFiles.deleteRecursively()
         }
     }
 }

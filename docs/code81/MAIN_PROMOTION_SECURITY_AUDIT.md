@@ -162,3 +162,5 @@ CI 447 failed in the focused input checks while mCurrentFocus belonged to Applic
 
 
 CI 446 reached the complete runtime suite and failed eight HomeOwnedWindowPanicTest cases because that synthetic fixture created its new Primary PIN before moving existing synthetic Vault ciphertext out of the real Activity storage root. The new setup-admission guard correctly refused. Fixture key creation now occurs inside the preservation/cleanup transaction after its existing Vault has been archived, with original data restored in finally. Production admission is unchanged.
+
+The newly selected HiddenCredentialSeparationTest also scopes its Primary files directory alongside its existing unique preferences and Hidden directory. Its rollback fixture can therefore neither inspect nor remove another test fixture’s Primary Vault. The test asserts this separation and still exercises real matching-PIN rejection and original-key persistence.
