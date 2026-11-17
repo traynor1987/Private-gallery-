@@ -13,6 +13,7 @@ URL = f"https://github.com/{release.REPO}/releases/tag/{CANDIDATE['tag']}"
 class ReleaseChecks(unittest.TestCase):
     def test_promoted_source_reuses_only_explicit_exact_commit_regression_evidence(self):
         candidate = dict(CANDIDATE)
+        candidate.pop("regression_branch", None)
         branch = "feature/novaos-code81-core-apps"
         def record(run_id, source, workflow, evidence_branch):
             return dict(id=run_id, head_sha=source, head_branch=evidence_branch,

@@ -183,3 +183,18 @@ The production controls separately pin this immutable source and its exact prepa
 The earlier tagging failure occurred before modern NovaOS was present on default main. Automatic tagging will be tested again against the promoted source using the existing scoped workflow token. A missing GitHub App credential is not assumed to be a blocker; an actual remaining permission rejection must identify it.
 
 The new original-key-signed APK and authentic populated Build 83 upgrade remain mandatory before stable publication. The retained older APK and its old upgrade receipt do not validate the reconciled application source.
+
+
+## Protected Build 84 release gate passed
+
+Production run 35 (44177566227) succeeded from authenticated main authorisation commit 13d216ca13c494e4ae7c719ceaaf53d466d381bf. It built frozen application source b79b85efc5bae8e0bedb832e21a62d462e6f4397 as uk.co.traynor.privategallery, 1.7.38.8 / 84, minimum and target API37. Original certificate SHA-256: 94f2bfc6567f26d067d29077111cfd0ce86d38263c642ad115e43365f05b0d17.
+
+The authentic original-key Build 83 APK, pinned to SHA-256 5613a7cb6dff7b19a4206bf752ce22bf7b4891e36ce8ca1df9f2cd0ffab1946f, was installed and populated on a disposable Android 17 emulator. Original seed, in-place upgrade verification and post-force-stop verification each passed one instrumentation phase. Receipts confirm retained encrypted Vaults, Guardian, Evidence Locker, Sanctuary, launcher layouts, wallpapers, authentication/settings and Android Home selection. This is representative emulator evidence, not a claim that the owner's physical device has been upgraded.
+
+Signed APK SHA-256: f0086165ec7e54ea90987b7001442161271347abcb820a4e696a0295397fcc30.
+Stable assets artifact: 14372505955, archive SHA-256 61af6e7d3f7bab51224c4a4345b74ffa307f4154271e0e6c41842de51e5fbc8c.
+Upgrade receipts artifact: 14372251175, archive SHA-256 8d29118aba15a08479ec2c7854706ab6a67827654ae14975a0733d0f60a539c6.
+
+Both archives were downloaded independently and their GitHub digests checked. The extracted APK passed independent full Android signature, certificate, package/version and alignment checks. Source, owner approval, original GitHub job stages, APK and baseline hashes match the immutable receipts. Publication remains a separate operation and cannot rebuild or re-sign the APK.
+
+The publication regression fixture explicitly removes any real candidate branch opt-in before testing the no-opt-in rejection path. Its assertions remain independent of the newly pinned production metadata; all fourteen focused release-control tests pass.
