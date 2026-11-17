@@ -433,6 +433,8 @@ class Home2IntegrationTest {
   compose.onNodeWithText("Resume draft").assertIsDisplayed()
   compose.onNodeWithContentDescription("Back").performClick()
   compose.onNodeWithTag("drawer-sheet").assertIsDisplayed()
+  compose.onNodeWithTag("drawer-search").performTextReplacement("Nova Notes")
+  Espresso.closeSoftKeyboard()
   compose.onNodeWithTag("app-nova-notes-draft").assertIsDisplayed().performClick()
   compose.waitUntil(10_000) { compose.onAllNodesWithText("Recovered an unsaved draft").fetchSemanticsNodes().isNotEmpty() }
   compose.onNodeWithTag("nova-note-title").assertTextContains("Private draft")
