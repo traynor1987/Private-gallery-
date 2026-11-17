@@ -39,7 +39,8 @@ class BrowserAcceptanceDebugConsoleTest {
 
         val report = console.report()
         assertTrue(report.contains("+0000ms NAVIGATION_REQUEST scheme=https"))
-        assertTrue(report.contains("+0020ms JS_ERROR message=TypeError"))
+        assertTrue(report.contains("+0020ms JS_ERROR"))
+        assertFalse(report.contains("message=TypeError"))
         assertTrue(report.contains("JS errors: 1"))
     }
 
@@ -49,7 +50,7 @@ class BrowserAcceptanceDebugConsoleTest {
         console.recordConsole("ERROR", "https://example.test/a?token=supersecret Authorization: Bearer abcdefghijklmnopqrstuvwxyz0123456789")
 
         val report = console.report()
-        assertTrue(report.contains("[redacted]"))
+        assertTrue(report.contains("CONSOLE_ERROR"))
         assertFalse(report.contains("supersecret"))
         assertFalse(report.contains("abcdefghijklmnopqrstuvwxyz"))
     }
@@ -63,8 +64,8 @@ class BrowserAcceptanceDebugConsoleTest {
         )
 
         val report = console.report()
-        assertTrue(report.contains("[url]"))
-        assertTrue(report.contains("[host]"))
+        assertTrue(report.contains("CONSOLE_ERROR"))
+        assertFalse(report.contains("message="))
         assertFalse(report.contains("private.example.test"))
         assertFalse(report.contains("cdn.private.example.test"))
         assertFalse(report.contains("keep-secret"))
@@ -77,7 +78,7 @@ class BrowserAcceptanceDebugConsoleTest {
 
         val report = console.report()
         listOf("192.0.2.44", "password", "private.example.test", "2001:db8", "session=", "secret", "abcdefghijklmnopqrstuvwxyz").forEach { value -> assertFalse(report.contains(value)) }
-        assertTrue(report.contains("[url]"))
+        assertTrue(report.contains("CONSOLE_ERROR"))
     }
 
     @Test fun `disabled acceptance console never retains events`() {

@@ -125,3 +125,10 @@ Vault collection and crop operations reuse the existing EvidenceAccess Primary k
 CI 443 failed in the selected WallpaperUiTest phase. Seven first-import cases hit the missing-index guard because the importer wrote ciphertext before its initial index existed. The importer now creates an authenticated empty index under the metadata and source-publication guards before writing its first payload. Export also checks existing material before initialising an empty index. No test was disabled.
 
 Twenty-three focused recovery, inventory and setup-guard JVM tests pass. Evidence lease host checks pass, including 21 captured-authority checks. Three Android tests cover partial credentials/orphan ciphertext, persisted recovery confirmation and refusal of unrelated rollback. Existing VaultBackupRestoreTest is included in the required runtime matrix, which now contains 291 cases. Android results for these changes remain pending.
+
+
+The diagnostic privacy comparison is now resolved at source level by reusing archived BrowserDiagnosticPrivacy, BrowserAcceptanceDebugConsole and BrowserV2FatalCrashCapture. Modern branding is retained. Existing negative privacy assertions remain and the archived adversarial tests are added alongside them. Positive assertions now expect categorical error information instead of excerpts of raw console messages. Twenty-five focused diagnostic JVM tests pass with host Android dependency fixtures.
+
+Primary backup export now captures its originating presentation authority and rejects a lock/re-authentication transition throughout export and final UI status publication. A completed fresh restore cannot authenticate a later request after its originating setup context changes.
+
+These follow-up changes remain subject to the final exact-source Android and populated upgrade gates. No source change is covered by the retained APK's old release evidence.

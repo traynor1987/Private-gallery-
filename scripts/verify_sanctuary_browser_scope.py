@@ -108,6 +108,9 @@ for path, replacements in CODE81_BACKUP_WIRING.items():
 # the archive reader compatibility and the new, stricter Files import limit.
 # Audited main-promotion adaptations retain the installed encryption format.
 CODE81_EXACT_ADAPTERS = {
+    f"{CORE}/browser/v2/BrowserV2FatalCrashCapture.kt": "aedb8e170870d07b4507d9bac6aa9e24eaf6f85379f4d136059174e95fe38d47",
+    f"{CORE}/browser/BrowserAcceptanceDebugConsole.kt": "745cfd76252583242988b64ed5508ea5420e5d73f9bc4bb2abd1ebe1a60c708b",
+    f"{CORE}/browser/BrowserDiagnosticPrivacy.kt": "3d5625ce4a7d6a5c3e626841ee8232695806a5adb1a674e56a0b2d8c38d30777",
     f"{CORE}/security/PrimaryVaultSetupGuard.kt": "af0c8edd45bcb8a27f225950c6a1166c507d070a9c4b1c0b516f88dd44484f97",
     f"{CORE}/security/RecoverySetupLifecycle.kt": "554959c73ad9c8d4018110a26d56b3fc8665a041afbce5a4143cfd5ff664eadf",
     f"{CORE}/security/RecoveryVaultKeyStore.kt": "155cb9855e8ac253598f00adecb2d569b1d785ff03c63679cebcf423319c976b",

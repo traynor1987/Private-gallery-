@@ -33,7 +33,7 @@ class BrowserV2FatalCrashCaptureTest {
         assertTrue(report.contains("uk.co.traynor.privategallery.MainActivity.onValueChange(MainActivity.kt:317)"))
         assertTrue(report.contains("androidx.compose.ui.text.input.TextFieldValue.copy(TextFieldValue.kt:88)"))
         assertTrue(report.contains("Browser state category: OMNIBOX_TEXT_CHANGED"))
-        assertTrue(report.contains("Active tab count: 1"))
+        assertFalse(report.contains("Active tab count:"))
         assertTrue(report.contains("Real WebView parented: true"))
         assertTrue(report.contains("WebView parent category: AndroidViewHolder"))
         assertTrue(report.contains("Last Browser structural event: OMNIBOX_TEXT_CHANGED"))

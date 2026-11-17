@@ -1,0 +1,140 @@
+package uk.co.traynor.privategallery.core.browser
+
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
+import org.junit.Test
+
+class ArchivedBrowserAcceptanceDebugConsoleTest {
+    @Test fun `V2 navigation keeps initial attachment evidence and elapsed time`() {
+        var now = 1_000L
+        val console = BrowserAcceptanceDebugConsole(enabled = true) { now }
+        console.record("WEBVIEW_INITIAL_STATE", mapOf("window_attached" to "false"))
+        now += 40
+        console.record("WEBVIEW_ATTACHED", mapOf("window_attached" to "true"))
+        now += 60
+        console.startNavigation(emptyMap(), preserveEvents = true)
+        now += 30
+        console.record("PAGE_STARTED")
+
+        val events = console.events()
+        assertTrue(events.first().contains("+0000ms WEBVIEW_INITIAL_STATE"))
+        assertTrue(events.any { it.contains("+0040ms WEBVIEW_ATTACHED") })
+        assertTrue(events.any { it.contains("+0100ms NAVIGATION_REQUEST") })
+        assertTrue(events.last().contains("+0130ms PAGE_STARTED"))
+        console.clear()
+        assertTrue(console.events().isEmpty())
+    }
+
+    @Test fun `acceptance console keeps ordered bounded trace and preserves errors`() {
+        var now = 1_000L
+        val console = BrowserAcceptanceDebugConsole(enabled = true, maximumEvents = 4) { now }
+
+        console.startNavigation(mapOf("scheme" to "https"))
+        now += 12
+        console.record("RESOURCE_REQUEST", mapOf("type" to "script"))
+        now += 8
+        console.record("JS_ERROR", mapOf("message" to "TypeError"), isError = true)
+        now += 3
+        console.record("RESOURCE_REQUEST", mapOf("type" to "image"))
+
+        val report = console.report()
+        assertTrue(report.contains("+0000ms NAVIGATION_REQUEST scheme=https"))
+        assertTrue(report.contains("+0020ms JS_ERROR"))
+        assertTrue(report.contains("JS errors: 1"))
+    }
+
+    @Test fun `acceptance console redacts console secrets and query strings`() {
+        val console = BrowserAcceptanceDebugConsole(enabled = true) { 1L }
+
+        console.recordConsole("ERROR", "https://example.test/a?token=supersecret Authorization: Bearer abcdefghijklmnopqrstuvwxyz0123456789")
+
+        val report = console.report()
+        assertTrue(report.contains("category=JS_CONSOLE:error:"))
+        assertFalse(report.contains("supersecret"))
+        assertFalse(report.contains("abcdefghijklmnopqrstuvwxyz"))
+    }
+
+    @Test fun `acceptance console redacts complete URLs and embedded hostnames`() {
+        val console = BrowserAcceptanceDebugConsole(enabled = true) { 1L }
+
+        console.recordConsole(
+            "ERROR",
+            "request https://private.example.test/path?token=keep-secret failed; fallback cdn.private.example.test:8443/script.js",
+        )
+
+        val report = console.report()
+        assertTrue(report.contains("category=JS_CONSOLE:error:"))
+        assertTrue(report.contains("category=JS_CONSOLE:error:"))
+        assertFalse(report.contains("private.example.test"))
+        assertFalse(report.contains("cdn.private.example.test"))
+        assertFalse(report.contains("keep-secret"))
+    }
+
+    @Test fun `acceptance console redacts socket addresses IP literals credentials and escaped URL forms`() {
+        val console = BrowserAcceptanceDebugConsole(enabled = true) { 1L }
+
+        console.recordConsole("ERROR", "ws://user:password@192.0.2.44:8080/socket?token=secret wss:\\/\\/private.example.test\\/api?key=secret [2001:db8::1] cookie=session=abcdef authorization=Basic abcdefghijklmnopqrstuvwxyz0123456789")
+
+        val report = console.report()
+        listOf("192.0.2.44", "password", "private.example.test", "2001:db8", "session=", "secret", "abcdefghijklmnopqrstuvwxyz").forEach { value -> assertFalse(report.contains(value)) }
+        assertTrue(report.contains("category=JS_CONSOLE:error:"))
+    }
+
+    @Test fun `disabled acceptance console never retains events`() {
+        val console = BrowserAcceptanceDebugConsole(enabled = false) { 1L }
+        console.startNavigation(mapOf("scheme" to "https"))
+        console.recordConsole("ERROR", "private token=secret")
+
+        assertTrue(console.report().contains("Acceptance diagnostics disabled"))
+        assertFalse(console.report().contains("secret"))
+    }
+
+    @Test fun `acceptance capture can be paused without enabling a release console`() {
+        val console = BrowserAcceptanceDebugConsole(enabled = true) { 1L }
+        console.setCaptureEnabled(false)
+        console.recordConsole("ERROR", "private token=secret")
+        assertTrue(console.report().contains("Acceptance diagnostics disabled"))
+        assertFalse(console.report().contains("secret"))
+
+        val releaseConsole = BrowserAcceptanceDebugConsole(enabled = false) { 1L }
+        releaseConsole.setCaptureEnabled(true)
+        releaseConsole.recordConsole("ERROR", "private token=secret")
+        assertTrue(releaseConsole.report().contains("Acceptance diagnostics disabled"))
+    }
+
+    @Test fun `acceptance events separate safe detail fields for readable copy all output`() {
+        val console = BrowserAcceptanceDebugConsole(enabled = true) { 1L }
+
+        console.record("MAIN_PAGE_STARTED", mapOf("scheme" to "https", "main_frame" to "true"))
+
+        assertTrue(console.events().single().contains("scheme=https main_frame=true"))
+    }
+
+    @Test fun `environment summary survives a new navigation trace`() {
+        val console = BrowserAcceptanceDebugConsole(enabled = true) { 1L }
+        console.record("WEBVIEW_PROVIDER", mapOf("package" to "com.android.webview", "version" to "123"))
+        console.record("WEBVIEW_CONFIGURATION", mapOf("javascript" to "true", "third_party_cookies" to "false"))
+
+        console.startNavigation(mapOf("scheme" to "https"))
+
+        val report = console.report()
+        assertTrue(report.contains("WebView provider: com.android.webview 123"))
+        assertTrue(report.contains("WebView configuration: javascript=true third_party_cookies=false"))
+    }
+    @Test fun arbitraryUnquotedCategoriesKeysValuesAndSummaryLabelsAreDiscarded() {
+        val marker = "SENSITIVE_NAME_PROMPT_TOKEN_UNQUOTED"
+        val console = BrowserAcceptanceDebugConsole(enabled = true) { 1L }
+        console.startNavigation(mapOf(marker to marker, "scheme" to marker))
+        console.record(marker, mapOf(marker to marker, "item_count" to "271"))
+        console.record("WEBVIEW_PROVIDER", mapOf("package" to marker, "version" to marker))
+        console.record("WEBVIEW_CONFIGURATION", mapOf(marker to marker, "javascript" to marker))
+        console.record("VPN_STATE", mapOf("state" to marker))
+        console.recordConsole(marker, marker, 5)
+        val report = console.report(mapOf(marker to marker, "Hidden item count" to "271"))
+        assertFalse(report.contains(marker))
+        assertFalse(report.contains("271"))
+        assertFalse(report.contains("Hidden"))
+        assertFalse(report.contains("item_count"))
+        assertTrue(report.contains("UNKNOWN_EVENT"))
+    }
+}

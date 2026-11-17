@@ -1721,34 +1721,40 @@ class MainActivity : FragmentActivity() {
     private fun exportEncryptedBackup(recoveryKey: CharArray) {
         val uri = backupExportUri ?: run { recoveryKey.fill('\u0000'); return }
         backupExportUri = null
+        val allowed = capturePrimaryEditorAuthority()
         val key = sessionKey?.copyOf() ?: run { recoveryKey.fill('\u0000'); backupStatus = "Unlock Vault before exporting."; return }
+        if (!allowed()) { key.fill(0); recoveryKey.fill('\u0000'); return }
         backupStatus = "Verifying and exporting encrypted Vault…"
         lifecycleScope.launch(Dispatchers.IO) {
-            val exportJob = coroutineContext[Job]
-            val result = runCatching {
-                check(session.isUnlocked && !hideContent)
-                val envelope = recoveryKeys.exportEnvelope()
-                val output = checkNotNull(contentResolver.openOutputStream(uri, "wt")) { "Cannot open backup destination" }
-                output.use {
-                    AndroidVaultRepository(applicationContext, key).exportBackup(recoveryKey, envelope, it, progress = { done, total ->
-                        check(session.isUnlocked && !hideContent) { "Vault locked during export" }
-                        runOnUiThread { backupStatus = "Exporting encrypted Vault · $done/$total files" }
-                    }, cancelled = { !session.isUnlocked || hideContent || exportJob?.isActive != true })
+            try {
+                val exportJob = coroutineContext[Job]
+                val result = runCatching {
+                    check(allowed())
+                    val envelope = recoveryKeys.exportEnvelope()
+                    checkNotNull(contentResolver.openOutputStream(uri, "wt")).use { output ->
+                        AndroidVaultRepository(applicationContext, key,
+                            { commit -> synchronized(phoneTransferGate) { check(allowed()); commit() } },
+                            allowed).exportBackup(recoveryKey, envelope, output, progress = { done, total ->
+                            check(allowed()) { "Vault locked during export" }
+                            runOnUiThread { if (allowed()) backupStatus = "Exporting encrypted Vault · $done/$total files" }
+                        }, cancelled = { !allowed() || exportJob?.isActive != true })
+                    }
                 }
-            }
-            key.fill(0); recoveryKey.fill('\u0000')
-            runOnUiThread {
-                backupStatus = if (result.isSuccess) "Encrypted Vault backup saved. Keep your offline recovery key separately."
+                runOnUiThread {
+                    if (allowed()) backupStatus = if (result.isSuccess)
+                        "Encrypted Vault backup saved. Keep your offline recovery key separately."
                     else "Backup did not finish. Delete the incomplete document and try again."
-            }
-        }
+                }
+            } finally { key.fill(0); recoveryKey.fill('\u0000') }
+        }.invokeOnCompletion { key.fill(0); recoveryKey.fill('\u0000') }
     }
 
     private fun restoreEncryptedBackup(recoveryKey: CharArray, pin: CharArray, completed: (Boolean) -> Unit) {
         val uri = backupRestoreUri ?: run { recoveryKey.fill('\u0000'); pin.fill('\u0000'); completed(false); return }
+        val generation = phoneTransferGeneration
         lifecycleScope.launch(Dispatchers.IO) {
             val result = runCatching {
-                check(route == Route.SETUP && !keys.isConfigured)
+                check(route == Route.SETUP && !keys.isConfigured && phoneTransferGeneration == generation)
                 checkNotNull(contentResolver.openInputStream(uri)) { "Cannot open backup" }.use { input ->
                     AndroidVaultRepository.restoreBackup(applicationContext, input, recoveryKey, pin, keys, recoveryKeys)
                 }
@@ -1756,6 +1762,10 @@ class MainActivity : FragmentActivity() {
             recoveryKey.fill('\u0000'); pin.fill('\u0000')
             runOnUiThread {
                 result.onSuccess { restored ->
+                    if (route != Route.SETUP || phoneTransferGeneration != generation) {
+                        restored.fill(0)
+                        return@onSuccess
+                    }
                     sessionKey?.fill(0)
                     sessionKey = restored
                     session.unlock()

@@ -2,7 +2,7 @@ package uk.co.traynor.privategallery.core.browser
 
 /**
  * Bounded, local-only WebView acceptance trace. Callers must supply structural metadata only;
- * this class never accepts or stores URLs, headers, cookies, DOM data, or storage contents.
+ * serialization applies a closed vocabulary even when a caller supplies untrusted strings.
  */
 class BrowserAcceptanceDebugConsole(
     private val enabled: Boolean,
@@ -28,29 +28,31 @@ class BrowserAcceptanceDebugConsole(
         if (!preserveEvents) entries.clear()
         if (!preserveEvents || traceStartedAt == 0L) traceStartedAt = nowMillis()
         resourceRequests = 0; resourceErrors = 0; httpErrors = 0; jsWarnings = 0; jsErrors = 0
-        append("NAVIGATION_REQUEST", details, false)
+        append("NAVIGATION_REQUEST", BrowserDiagnosticPrivacy.details("NAVIGATION_REQUEST", details), false)
     }
 
     fun record(category: String, details: Map<String, String> = emptyMap(), isError: Boolean = false) {
         if (!captureEnabled) return
+        val safeCategory = BrowserDiagnosticPrivacy.category(category)
+        val safeDetails = BrowserDiagnosticPrivacy.details(safeCategory, details)
         if (traceStartedAt == 0L) traceStartedAt = nowMillis()
         when {
-            category.startsWith("RESOURCE_REQUEST") -> resourceRequests++
-            category.contains("HTTP_ERROR") -> httpErrors++
-            category.contains("RESOURCE_ERROR") || category.contains("NETWORK_ERROR") -> resourceErrors++
-            category.startsWith("JS_ERROR") -> jsErrors++
-            category.startsWith("JS_WARNING") -> jsWarnings++
+            safeCategory.startsWith("RESOURCE_REQUEST") -> resourceRequests++
+            safeCategory.contains("HTTP_ERROR") -> httpErrors++
+            safeCategory.contains("RESOURCE_ERROR") || safeCategory.contains("NETWORK_ERROR") -> resourceErrors++
+            safeCategory.startsWith("JS_ERROR") -> jsErrors++
+            safeCategory.startsWith("JS_WARNING") -> jsWarnings++
         }
-        when (category) {
-            "WEBVIEW_PROVIDER" -> webViewProvider = listOfNotNull(details["package"], details["version"]).joinToString(" ")
-            "WEBVIEW_CONFIGURATION" -> webViewConfiguration = details.toSortedMap()
-            "VPN_STATE" -> vpnState = details["state"]
+        when (safeCategory) {
+            "WEBVIEW_PROVIDER" -> webViewProvider = listOfNotNull(safeDetails["package"], safeDetails["version"]).joinToString(" ")
+            "WEBVIEW_CONFIGURATION" -> webViewConfiguration = safeDetails.toSortedMap()
+            "VPN_STATE" -> vpnState = safeDetails["state"]
             "MAIN_PAGE_STARTED" -> mainPageState = "loading"
             "MAIN_PAGE_COMMIT_VISIBLE" -> mainPageState = "visible"
             "MAIN_PAGE_FINISHED" -> mainPageState = "finished"
             "MAIN_PAGE_ERROR", "MAIN_HTTP_ERROR" -> mainPageState = "error"
         }
-        append(category, details, isError)
+        append(safeCategory, safeDetails, isError)
     }
 
     fun recordConsole(level: String?, message: String?, line: Int? = null) {
@@ -58,24 +60,26 @@ class BrowserAcceptanceDebugConsole(
         val normalised = level?.uppercase()?.takeIf { it in setOf("DEBUG", "LOG", "INFO", "WARNING", "ERROR") } ?: "OTHER"
         if (normalised == "WARNING") jsWarnings++
         if (normalised == "ERROR") jsErrors++
-        val details = linkedMapOf("level" to normalised, "message" to sanitiseConsole(message))
-        line?.takeIf { it >= 0 }?.let { details["line"] = it.toString() }
+        val details = linkedMapOf("level" to normalised, "category" to BrowserDiagnosticsPolicy.consoleMessage(if (normalised == "INFO") "log" else normalised, message))
+        // Page source line is intentionally not persisted.
+        @Suppress("UNUSED_VARIABLE") val ignoredLine = line
         append(if (normalised == "WARNING") "CONSOLE_WARNING" else if (normalised == "ERROR") "CONSOLE_ERROR" else "JS_CONSOLE", details, normalised == "ERROR")
     }
 
     fun summary(extra: Map<String, String> = emptyMap()): List<String> = if (!captureEnabled) listOf("Acceptance diagnostics disabled") else buildList {
-        webViewProvider?.let { add("WebView provider: ${safeValue(it)}") }
+        webViewProvider?.let { add("WebView provider: ${it}") }
         webViewConfiguration.takeIf { it.isNotEmpty() }?.let { configuration ->
-            add("WebView configuration: " + configuration.entries.joinToString(" ") { "${it.key}=${safeValue(it.value)}" })
+            add("WebView configuration: " + configuration.entries.joinToString(" ") { "${it.key}=${it.value}" })
         }
-        vpnState?.let { add("VPN state: ${safeValue(it)}") }
-        mainPageState?.let { add("Main page state: ${safeValue(it)}") }
+        vpnState?.let { add("VPN state: ${it}") }
+        mainPageState?.let { add("Main page state: ${it}") }
         add("Resource requests: $resourceRequests")
         add("Resource errors: $resourceErrors")
         add("HTTP errors: $httpErrors")
         add("JS warnings: $jsWarnings")
         add("JS errors: $jsErrors")
-        extra.toSortedMap().forEach { (key, value) -> add("$key: ${safeValue(value)}") }
+        // Arbitrary summary labels/values are not diagnostic categories.
+        @Suppress("UNUSED_VARIABLE") val ignoredExtra = extra
     }
 
     fun events(): List<String> = if (!captureEnabled) emptyList() else entries.map { entry ->
@@ -101,7 +105,7 @@ class BrowserAcceptanceDebugConsole(
     fun isCaptureEnabled(): Boolean = captureEnabled
 
     private fun append(category: String, details: Map<String, String>, isError: Boolean) {
-        val clean = details.mapValues { (_, value) -> safeValue(value) }
+        val clean = details
         // Preserve errors; coalesce only adjacent identical non-error successes.
         val last = entries.lastOrNull()
         if (!isError && last != null && !last.error && last.category == category && last.details == clean) return
@@ -112,24 +116,4 @@ class BrowserAcceptanceDebugConsole(
         }
     }
 
-    private fun sanitiseConsole(raw: String?): String {
-        var value = raw.orEmpty().take(280)
-        // A console message can include a failed-request address. Acceptance traces must not
-        // retain either its full address or a hostname embedded in ordinary prose.
-        value = value.replace(Regex("(?i)(?:https?|wss?)://[^\\s\\]\\[(){}<>\\\"']+"), "[url]")
-        value = value.replace(Regex("(?i)(?:https?|wss?):\\\\/\\\\/[^\\s\\]\\[(){}<>\\\"']+"), "[url]")
-        value = value.replace(Regex("(?i)\\b(?:https?|wss?)://[^@\\s]+@[^\\s\\]\\[(){}<>\\\"']+"), "[url]")
-        value = value.replace(
-            Regex("(?i)\\b(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\\.)+(?:[a-z]{2,63})(?::\\d{1,5})?(?:/[^\\s\\]\\[(){}<>\\\"']*)?"),
-            "[host]",
-        )
-        value = value.replace(Regex("([?&][A-Za-z0-9_.-]+)=([^&#\\s]+)"), "$1=[redacted]")
-        value = value.replace(Regex("(?i)(bearer|authorization|cookie|set-cookie)\\s*[:=]\\s*[^\\s,;]+"), "$1=[redacted]")
-        value = value.replace(Regex("(?i)\\b(?:\\d{1,3}\\.){3}\\d{1,3}(?::\\d{1,5})?\\b"), "[ip]")
-        value = value.replace(Regex("(?i)\\[[0-9a-f:]{2,}\\]"), "[ip]")
-        value = value.replace(Regex("[A-Za-z0-9_\\-]{24,}"), "[redacted]")
-        return safeValue(value)
-    }
-
-    private fun safeValue(value: String): String = value.replace(Regex("[\\r\\n\\t]"), " ").take(300)
 }
