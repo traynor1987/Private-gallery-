@@ -8,6 +8,53 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class EncryptedIndexStoreTest {
+    @Test fun `missing index cannot hide existing encrypted payloads`() {
+        val root = Files.createTempDirectory("private-gallery-missing-index").toFile()
+        try {
+            val payload = File(root, "payloads/retained.vault")
+            check(payload.parentFile.mkdirs())
+            val encryptedBytes = byteArrayOf(1, 2, 3, 4)
+            payload.writeBytes(encryptedBytes)
+            val failure = runCatching { EncryptedIndexStore(root).loadSnapshot(ByteArray(32)) }.exceptionOrNull()
+            assertTrue("Missing metadata must require recovery", failure is IllegalStateException)
+            assertArrayEquals(encryptedBytes, payload.readBytes())
+            assertTrue(!File(root, "vault-index.enc").exists())
+        } finally { root.deleteRecursively() }
+    }
+
+    @Test fun `missing index permits a genuinely empty vault`() {
+        val root = Files.createTempDirectory("private-gallery-empty-index").toFile()
+        try {
+            assertTrue(EncryptedIndexStore(root).loadSnapshot(ByteArray(32)).items.isEmpty())
+        } finally { root.deleteRecursively() }
+    }
+
+    @Test fun `corrupt staged index preserves committed encrypted data`() {
+        val root = Files.createTempDirectory("private-gallery-index-corruption").toFile()
+        try {
+            val key = ByteArray(32) { it.toByte() }
+            val original = VaultIndexSnapshot(emptyList(), listOf(VaultCollection("original", "Keep", 42)))
+            EncryptedIndexStore(root).saveSnapshot(original, key)
+            val committed = File(root, "vault-index.enc").readBytes()
+            val corruptingStore = EncryptedIndexStore(root, syncOutput = { output ->
+                output.fd.sync()
+                java.io.RandomAccessFile(File(root, "vault-index.new"), "rw").use { staged ->
+                    staged.seek(staged.length() - 1)
+                    val last = staged.readByte()
+                    staged.seek(staged.length() - 1)
+                    staged.writeByte(last.toInt() xor 1)
+                }
+            })
+            val failure = runCatching {
+                corruptingStore.saveSnapshot(VaultIndexSnapshot(emptyList()), key)
+            }.exceptionOrNull()
+            assertTrue("Corrupt ciphertext must be rejected before promotion", failure != null)
+            assertArrayEquals(committed, File(root, "vault-index.enc").readBytes())
+            assertEquals("Keep", EncryptedIndexStore(root).loadSnapshot(key).collections.single().name)
+            assertTrue(!File(root, "vault-index.new").exists())
+        } finally { root.deleteRecursively() }
+    }
+
     @Test fun `recently deleted timestamp and collection membership survive encrypted round trip`() {
         val root = Files.createTempDirectory("private-gallery-trash").toFile()
         try {

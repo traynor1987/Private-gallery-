@@ -51,7 +51,12 @@ class EncryptedIndexStore(
     fun load(key: ByteArray): List<VaultItem> = loadSnapshot(key).items
 
     fun loadSnapshot(key: ByteArray): VaultIndexSnapshot {
-        if (!index.exists()) return VaultIndexSnapshot(emptyList())
+        if (!index.exists()) {
+            check(uk.co.traynor.privategallery.core.security.PrimaryStorageInventory.isEmptyOrMissing(root.toPath())) {
+                "Primary index missing for existing, partial or unavailable material"
+            }
+            return VaultIndexSnapshot(emptyList())
+        }
         FileInputStream(index).use { input ->
             val nonce = input.readExactly(EncryptionHeader.NONCE_BYTES)
             check(nonce.size == EncryptionHeader.NONCE_BYTES) { "Corrupt vault index header" }
@@ -86,11 +91,29 @@ class EncryptedIndexStore(
                 VaultCipher.encrypt(ByteArrayInputStream(plaintext), output, key, INDEX_AAD, nonce)
                 syncOutput(output)
             }
+            verifyStagedIndex(plaintext, key)
             check(temporary.renameTo(index)) { "Unable to commit encrypted vault index" }
         } finally {
             plaintext.fill(0)
             temporary.delete()
         }
+    }
+
+    /** Authenticate read-back before replacing the sole committed legacy index. */
+    private fun verifyStagedIndex(expected: ByteArray, key: ByteArray) {
+        var position = 0
+        FileInputStream(temporary).use { input ->
+            val nonce = input.readExactly(EncryptionHeader.NONCE_BYTES)
+            VaultCipher.decrypt(input, object : java.io.OutputStream() {
+                override fun write(value: Int) = write(byteArrayOf(value.toByte()), 0, 1)
+                override fun write(buffer: ByteArray, offset: Int, length: Int) {
+                    check(position.toLong() + length <= expected.size) { "Invalid staged vault index length" }
+                    for (index in 0 until length) check(buffer[offset + index] == expected[position + index]) { "Staged vault index differs" }
+                    position += length
+                }
+            }, key, INDEX_AAD, EncryptionHeader(nonce))
+        }
+        check(position == expected.size) { "Incomplete staged vault index" }
     }
 
     private fun serializeLegacy(items: List<VaultItem>): ByteArray = ByteArrayOutputStream().use { buffer ->
