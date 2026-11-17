@@ -11,7 +11,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   publish:
-    if: github.repository == 'traynor1987/Private-gallery-' && github.actor_id == '16270479' && github.event.sender.id == 16270479 && github.run_attempt == 1
+    if: github.repository == 'traynor1987/Private-gallery-' && github.actor_id == '16270479' && github.event.sender.id == 16270479 && github.triggering_actor == 'traynor1987'
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     environment: novaos-production-publication
@@ -31,7 +31,7 @@ jobs:
       - name: Obtain scoped tag credential when configured
         if: vars.NOVAOS_RELEASE_APP_ID != ''
         id: release-app
-        uses: actions/create-github-app-token@v2
+        uses: actions/create-github-app-token@fee1f7d63c2ff003460e3d139729b119787bc349 # v2
         with:
           app-id: ${{ vars.NOVAOS_RELEASE_APP_ID }}
           private-key: ${{ secrets.NOVAOS_RELEASE_APP_PRIVATE_KEY }}

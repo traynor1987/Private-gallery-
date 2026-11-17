@@ -153,8 +153,9 @@ def ensure_tag(candidate):
     if verify_tag(candidate, allow_missing=True):
         return
     if result.returncode:
+        detail = "\n".join(stream.strip() for stream in (result.stdout, result.stderr) if stream.strip())
         raise ValueError(
-            f"Automatic tag creation failed for {tag}: {result.stderr.strip() or result.stdout.strip()}. "
+            f"Automatic tag creation failed for {tag}: {detail}. "
             "If GitHub rejected the workflow token, configure the repository-scoped NovaOS release GitHub App "
             "(Contents and Workflows read/write) in the novaos-production-publication environment."
         )

@@ -43,6 +43,7 @@ class ReleaseChecks(unittest.TestCase):
         with patch.object(release, "verify_tag", return_value=False), \
                 patch.object(release.subprocess, "run") as push:
             push.return_value.returncode = 1
+            push.return_value.stdout = ""
             push.return_value.stderr = "remote: HTTP 403"
             with self.assertRaisesRegex(ValueError, "HTTP 403.*GitHub App"):
                 release.ensure_tag(CANDIDATE)
