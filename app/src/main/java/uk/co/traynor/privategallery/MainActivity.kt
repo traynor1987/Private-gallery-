@@ -170,6 +170,7 @@ import uk.co.traynor.privategallery.core.security.LockSession
 import uk.co.traynor.privategallery.core.security.PinVaultKeyStore
 import uk.co.traynor.privategallery.core.security.BiometricVaultKeyStore
 import uk.co.traynor.privategallery.core.security.RecoveryVaultKeyStore
+import uk.co.traynor.privategallery.core.security.RecoverySetupState
 import uk.co.traynor.privategallery.core.security.RecoveryKeySetupPolicy
 import uk.co.traynor.privategallery.core.crypto.InvalidRecoveryKeyException
 import uk.co.traynor.privategallery.core.security.ScreenPrivacyPreference
@@ -1408,6 +1409,12 @@ class MainActivity : FragmentActivity() {
         if(savedInstanceState==null) automaticBiometricPromptAttempted = false
         if(retained.hidden.selected && !retained.hidden.session.isUnlocked)retained.hidden.leave()
         route = if ((session.isUnlocked && sessionKey != null) || (retained.hidden.selected && retained.hidden.session.isUnlocked)) retained.route else if (keys.isConfigured) Route.LOCK else Route.SETUP
+        if (route == Route.RECOVERY_KEY_SETUP && pendingRecoveryKey == null) {
+            sessionKey?.fill(0)
+            sessionKey = null
+            session.lock()
+            route = Route.LOCK
+        }
         workspaceActivities.add(this)
         launcherEntry = savedInstanceState?.getString(STATE_LAUNCHER_ENTRY)
             ?.takeIf { it == ACTION_OPEN_PRIVATE_WORKSPACE || it == ACTION_OPEN_PRIMARY_GALLERY || coreAppForAction(it) != null }
@@ -1696,6 +1703,8 @@ class MainActivity : FragmentActivity() {
         browserWebView?.let { BrowserCallbackBindings.recordAcceptance(it, "WEBVIEW_DESTROYED", mapOf("reason" to "explicit_cleanup")) }
         browserWebView = null
         browserV2Session.destroyAll()
+        pendingRecoveryKey?.fill('\u0000')
+        pendingRecoveryKey = null
         if (!isChangingConfigurations) { retained.hidden.leave(); sessionKey?.fill(0); sessionKey = null; session.lock() }
         super.onDestroy()
     }
@@ -1703,8 +1712,8 @@ class MainActivity : FragmentActivity() {
     private fun createPin(pin: CharArray): Result<Unit> = runCatching {
         sessionKey?.fill(0)
         sessionKey = keys.create(pin)
-        val recoveryReady = prepareRecoveryKeyIfNeeded()
         session.unlock()
+        val recoveryReady = prepareRecoveryKeyIfNeeded()
         reconcileAfterUnlock()
         route = if (recoveryReady) Route.RECOVERY_KEY_SETUP else if (biometricAvailable) Route.BIOMETRIC_SETUP else Route.VAULT
     }
@@ -2882,20 +2891,40 @@ class MainActivity : FragmentActivity() {
         route = retained.afterAuthentication
     }
 
-    private fun finishRecoveryKeySetup() {
+    private fun finishRecoveryKeySetup(confirmation: CharArray): Result<Unit> = runCatching {
+        val owner = checkNotNull(sessionKey) { "Unlock Primary first" }
+        val epoch = session.captureAuthenticationEpoch()
+        recoveryKeys.confirm(confirmation, owner) { commit ->
+            synchronized(phoneTransferGate) {
+                check(sessionKey === owner && session.isAuthenticationCurrent(epoch) && !hideContent) {
+                    "Recovery confirmation interrupted"
+                }
+                commit()
+            }
+        }
         pendingRecoveryKey?.fill('\u0000')
         pendingRecoveryKey = null
         route = if (biometricAvailable) Route.BIOMETRIC_SETUP else retained.afterAuthentication
-    }
+    }.also { confirmation.fill('\u0000') }
 
-    /** A migration path for vaults created before offline recovery existed. */
+    /** Pending setup restarts only after legitimate Primary authentication. */
     private fun prepareRecoveryKeyIfNeeded(): Boolean {
-        if (!RecoveryKeySetupPolicy.shouldShowAfterUnlock(recoveryKeys.isConfigured)) return false
-        return runCatching {
-            pendingRecoveryKey?.fill('\u0000')
-            pendingRecoveryKey = recoveryKeys.create(checkNotNull(sessionKey))
-            true
-        }.getOrDefault(false)
+        if (!RecoveryKeySetupPolicy.shouldShowAfterUnlock(recoveryKeys.setupState)) return false
+        val owner = checkNotNull(sessionKey)
+        val epoch = session.captureAuthenticationEpoch()
+        pendingRecoveryKey?.fill('\u0000')
+        val commit: ((() -> Unit) -> Unit) = { action ->
+            synchronized(phoneTransferGate) {
+                check(sessionKey === owner && session.isAuthenticationCurrent(epoch) && !hideContent)
+                action()
+            }
+        }
+        pendingRecoveryKey = if (recoveryKeys.setupState == RecoverySetupState.PENDING_CONFIRMATION) {
+            recoveryKeys.restartPending(owner, commit)
+        } else {
+            recoveryKeys.create(owner, commit)
+        }
+        return true
     }
 
     private fun applyAutoLockTimeout(timeout: AutoLockTimeout) {
@@ -3389,101 +3418,94 @@ class MainActivity : FragmentActivity() {
         }.invokeOnCompletion { key.fill(0) }
     }
 
+    /** Reuse the existing Primary lease authority for Vault work and final UI publication. */
+    private fun <T> primaryVaultTask(
+        action: (AndroidVaultRepository) -> T,
+        completed: (Result<T>) -> Unit,
+    ) {
+        val identity = sessionKey ?: return
+        val epoch = session.captureAuthenticationEpoch()
+        val presentation = capturePrimaryEditorAuthority()
+        val access = runCatching {
+            uk.co.traynor.privategallery.core.evidence.EvidenceAccess.primary(
+                applicationContext, identity, { sessionKey },
+                { session.isAuthenticationCurrent(epoch) && presentation() },
+                { checkNotNull(sessionKey).copyOf() }, phoneTransferGate,
+            )
+        }.getOrNull() ?: return
+        lifecycleScope.launch {
+            try {
+                val result = withContext(Dispatchers.IO) {
+                    runCatching {
+                        access.leases.acquire().use { lease ->
+                            check(access.current() && lease.current()) { "Vault operation interrupted" }
+                            val repository = AndroidVaultRepository(applicationContext, lease.key(),
+                                { commit -> lease.commit { check(access.current()); commit() } },
+                                { access.current() && lease.current() })
+                            action(repository).also { check(access.current() && lease.current()) }
+                        }
+                    }
+                }
+                access.publishIfCurrent { completed(result) }
+            } finally { access.close() }
+        }.invokeOnCompletion { access.close() }
+    }
+
     private fun loadCollections(onLoaded: (List<VaultCollection>) -> Unit) {
         if (hideContent) { onLoaded(emptyList()); return }
-        val key = sessionKey?.copyOf() ?: return
-        lifecycleScope.launch(Dispatchers.IO) {
-            val collections = runCatching { AndroidVaultRepository(applicationContext, key).collections() }.getOrDefault(emptyList())
-            key.fill(0)
-            runOnUiThread { onLoaded(if (hideContent) emptyList() else collections) }
-        }
+        primaryVaultTask({ it.collections() }) { onLoaded(it.getOrDefault(emptyList())) }
     }
 
     private fun loadFavouriteCollection(onLoaded: (VaultCollection?) -> Unit) {
         if (hideContent) { onLoaded(null); return }
-        val key = sessionKey?.copyOf() ?: return
-        lifecycleScope.launch(Dispatchers.IO) {
-            val collection = runCatching { AndroidVaultRepository(applicationContext, key).migrateLegacyFavourite() }.getOrNull()
-            key.fill(0)
-            runOnUiThread { onLoaded(if (hideContent) null else collection) }
-        }
+        primaryVaultTask({ it.migrateLegacyFavourite() }) { onLoaded(it.getOrNull()) }
     }
 
     private fun setFavouriteCollection(collectionId: String, onComplete: (String) -> Unit) {
-        val key = sessionKey?.copyOf() ?: return
-        lifecycleScope.launch(Dispatchers.IO) {
-            val result = runCatching { AndroidVaultRepository(applicationContext, key).setFavouriteCollection(collectionId) }
-            key.fill(0)
-            runOnUiThread { onComplete(if (result.isSuccess) "Favourite collection updated." else "Unable to update favourite collection.") }
+        primaryVaultTask({ it.setFavouriteCollection(collectionId) }) {
+            onComplete(if (it.isSuccess) "Favourite collection updated." else "Unable to update favourite collection.")
         }
     }
 
-    internal fun updatePrimaryCollectionPresentation(id:String,cover:String?,pin:Boolean?,done:(String)->Unit) {
-        val allowed=capturePrimaryEditorAuthority();val key=sessionKey?.copyOf() ?: return
-        lifecycleScope.launch(Dispatchers.IO) {
-            val result=try {runCatching {check(allowed());val r=AndroidVaultRepository(applicationContext,key)
-                val publish:((()->Unit)->Unit)={commit ->synchronized(phoneTransferGate){check(allowed());commit()}}
-                if(pin!=null)r.pinCollection(id,pin,publish) else r.setCollectionCover(id,cover,publish)
-            }}finally{key.fill(0)}
-            withContext(Dispatchers.Main){if(allowed())done(if(result.isSuccess)"Collection updated." else "Collection change failed; media retained.")}
-        }.invokeOnCompletion {key.fill(0)}
+    internal fun updatePrimaryCollectionPresentation(id: String, cover: String?, pin: Boolean?, done: (String) -> Unit) {
+        primaryVaultTask({ repository ->
+            if (pin != null) repository.pinCollection(id, pin) else repository.setCollectionCover(id, cover)
+        }) {
+            done(if (it.isSuccess) "Collection updated." else "Collection change failed; media retained.")
+        }
     }
 
     private fun createCollection(name: String, onComplete: (Result<VaultCollection>) -> Unit) {
-        val key = sessionKey?.copyOf() ?: return
-        lifecycleScope.launch(Dispatchers.IO) {
-            val result = runCatching { AndroidVaultRepository(applicationContext, key).createCollection(name) }
-            key.fill(0)
-            runOnUiThread { onComplete(result) }
-        }
+        primaryVaultTask({ it.createCollection(name) }, onComplete)
     }
 
     private fun addItemsToCollection(collectionId: String, itemIds: List<String>, onComplete: (String) -> Unit) {
-        val key = sessionKey?.copyOf() ?: return
-        lifecycleScope.launch(Dispatchers.IO) {
-            val result = runCatching { AndroidVaultRepository(applicationContext, key).addItemsToCollection(collectionId, itemIds) }
-            key.fill(0)
-            runOnUiThread { onComplete(if (result.isSuccess) "Added to collection." else "Unable to update collection.") }
+        primaryVaultTask({ it.addItemsToCollection(collectionId, itemIds) }) {
+            onComplete(if (it.isSuccess) "Added to collection." else "Unable to update collection.")
         }
     }
 
     private fun renameCollection(collectionId: String, name: String, onComplete: (String) -> Unit) {
-        val key = sessionKey?.copyOf() ?: return
-        lifecycleScope.launch(Dispatchers.IO) {
-            val result = runCatching { AndroidVaultRepository(applicationContext, key).renameCollection(collectionId, name) }
-            key.fill(0)
-            runOnUiThread { onComplete(if (result.isSuccess) "Collection renamed." else "Unable to rename collection.") }
+        primaryVaultTask({ it.renameCollection(collectionId, name) }) {
+            onComplete(if (it.isSuccess) "Collection renamed." else "Unable to rename collection.")
         }
     }
 
     private fun deleteCollection(collectionId: String, onComplete: (String) -> Unit) {
-        val key = sessionKey?.copyOf() ?: return
-        lifecycleScope.launch(Dispatchers.IO) {
-            val result = runCatching { AndroidVaultRepository(applicationContext, key).deleteCollection(collectionId) }
-            key.fill(0)
-            runOnUiThread { onComplete(if (result.isSuccess) "Collection deleted. Vault media was retained." else "Unable to delete collection.") }
+        primaryVaultTask({ it.deleteCollection(collectionId) }) {
+            onComplete(if (it.isSuccess) "Collection deleted. Vault media was retained." else "Unable to delete collection.")
         }
     }
 
     private fun removeItemsFromCollection(collectionId: String, itemIds: List<String>, onComplete: (String) -> Unit) {
-        val key = sessionKey?.copyOf() ?: return
-        lifecycleScope.launch(Dispatchers.IO) {
-            val result = runCatching {
-                AndroidVaultRepository(applicationContext, key).also { repository -> itemIds.forEach { repository.removeItemFromCollection(collectionId, it) } }
-            }
-            key.fill(0)
-            runOnUiThread { onComplete(if (result.isSuccess) "Removed from collection. Vault media was retained." else "Unable to update collection.") }
+        primaryVaultTask({ repository -> itemIds.forEach { repository.removeItemFromCollection(collectionId, it) } }) {
+            onComplete(if (it.isSuccess) "Removed from collection. Vault media was retained." else "Unable to update collection.")
         }
     }
 
     private fun loadCollectionItems(collectionId: String, onLoaded: (List<VaultItem>) -> Unit) {
         if (hideContent) { onLoaded(emptyList()); return }
-        val key = sessionKey?.copyOf() ?: return
-        lifecycleScope.launch(Dispatchers.IO) {
-            val items = runCatching { AndroidVaultRepository(applicationContext, key).itemsInCollection(collectionId) }.getOrDefault(emptyList())
-            key.fill(0)
-            runOnUiThread { onLoaded(if (hideContent) emptyList() else items) }
-        }
+        primaryVaultTask({ it.itemsInCollection(collectionId) }) { onLoaded(it.getOrDefault(emptyList())) }
     }
 
     private fun moveSelected(uris: List<Uri>, onComplete: (String) -> Unit) {
@@ -3735,52 +3757,28 @@ class MainActivity : FragmentActivity() {
         job.invokeOnCompletion { key.fill(0); runOnUiThread { previewJobs.remove(job) } }
     }
 
-    private fun loadImageEdit(item: VaultItem, onComplete: (ImageEditState?) -> Unit) {
-        if (hideContent) { onComplete(null); return }
-        val key = sessionKey?.copyOf() ?: return
-        lifecycleScope.launch(Dispatchers.IO) {
-            val edit = runCatching { AndroidVaultRepository(applicationContext, key).imageEdit(item.id) }.getOrNull()
-            key.fill(0)
-            runOnUiThread { onComplete(if (hideContent) null else edit) }
-        }
+    private fun loadImageEdit(item: VaultItem, onLoaded: (ImageEditState?) -> Unit) {
+        primaryVaultTask({ it.imageEdit(item.id) }) { onLoaded(it.getOrNull()) }
     }
 
     private fun applyImageCrop(item: VaultItem, crop: NormalizedCrop, onComplete: (Result<ImageEditState>) -> Unit) {
-        if (hideContent) { onComplete(Result.failure(IllegalStateException("Unavailable"))); return }
-        val key = sessionKey?.copyOf() ?: return
-        lifecycleScope.launch(Dispatchers.IO) {
-            val result = runCatching {
-                check(!hideContent) { "Unavailable" }
-                synchronized(previewCacheLock) { AndroidVaultRepository(applicationContext, key).applyImageCrop(item.id, crop) }
-            }
-            key.fill(0)
-            runOnUiThread { if (result.isSuccess) invalidatePreview(item.id); onComplete(result) }
+        primaryVaultTask({ repository -> synchronized(previewCacheLock) { repository.applyImageCrop(item.id, crop) } }) {
+            if (it.isSuccess) invalidatePreview(item.id)
+            onComplete(it)
         }
     }
 
     private fun undoImageCrop(item: VaultItem, onComplete: (Result<ImageEditState?>) -> Unit) {
-        if (hideContent) { onComplete(Result.failure(IllegalStateException("Unavailable"))); return }
-        val key = sessionKey?.copyOf() ?: return
-        lifecycleScope.launch(Dispatchers.IO) {
-            val result = runCatching {
-                check(!hideContent) { "Unavailable" }
-                synchronized(previewCacheLock) { AndroidVaultRepository(applicationContext, key).undoImageCrop(item.id) }
-            }
-            key.fill(0)
-            runOnUiThread { if (result.isSuccess) invalidatePreview(item.id); onComplete(result) }
+        primaryVaultTask({ repository -> synchronized(previewCacheLock) { repository.undoImageCrop(item.id) } }) {
+            if (it.isSuccess) invalidatePreview(item.id)
+            onComplete(it)
         }
     }
 
     private fun resetImageCrop(item: VaultItem, onComplete: (Result<Unit>) -> Unit) {
-        if (hideContent) { onComplete(Result.failure(IllegalStateException("Unavailable"))); return }
-        val key = sessionKey?.copyOf() ?: return
-        lifecycleScope.launch(Dispatchers.IO) {
-            val result = runCatching {
-                check(!hideContent) { "Unavailable" }
-                synchronized(previewCacheLock) { AndroidVaultRepository(applicationContext, key).resetImageCrop(item.id) }
-            }
-            key.fill(0)
-            runOnUiThread { if (result.isSuccess) invalidatePreview(item.id); onComplete(result) }
+        primaryVaultTask({ repository -> synchronized(previewCacheLock) { repository.resetImageCrop(item.id) } }) {
+            if (it.isSuccess) invalidatePreview(item.id)
+            onComplete(it.map { })
         }
     }
 
@@ -4053,7 +4051,7 @@ private fun PrivateGalleryApp(
     onUnlock: (CharArray) -> Result<Unit>,
     onChangePin: (CharArray, CharArray) -> Result<Unit>,
     onRecoverWithOfflineKey: (CharArray, CharArray) -> Result<Unit>,
-    onFinishRecoveryKeySetup: () -> Unit,
+    onFinishRecoveryKeySetup: (CharArray) -> Result<Unit>,
     onOpenRecovery: () -> Unit,
     onCloseRecovery: () -> Unit,
     onLock: () -> Unit,
@@ -4831,9 +4829,11 @@ internal fun PinUnlock(onUnlock: (CharArray) -> Result<Unit>, biometricEnabled: 
 }
 
 @Composable
-private fun RecoveryKeySetup(recoveryKey: String, onFinish: () -> Unit) {
+private fun RecoveryKeySetup(recoveryKey: String, onFinish: (CharArray) -> Result<Unit>) {
     uk.co.traynor.privategallery.ui.CredentialCaptureProtection()
     var acknowledged by remember { mutableStateOf(false) }
+    var confirmation by remember { mutableStateOf("") }
+    var error by remember { mutableStateOf<String?>(null) }
     LockSurface {
         GalleryPageTitle("Keep this offline", "Recovery key")
         Text("This key can restore access if you forget your PIN. Store it somewhere safe. It will only be shown once.", color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -4844,7 +4844,20 @@ private fun RecoveryKeySetup(recoveryKey: String, onFinish: () -> Unit) {
             androidx.compose.material3.Checkbox(checked = acknowledged, onCheckedChange = { acknowledged = it })
             Text("I have stored this recovery key securely.")
         }
-        Button(onClick = onFinish, enabled = acknowledged, modifier = Modifier.fillMaxWidth()) { Text("Continue") }
+        OutlinedTextField(
+            value = confirmation,
+            onValueChange = { confirmation = it; error = null },
+            label = { Text("Re-enter your saved recovery key") },
+            visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(),
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true,
+        )
+        error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+        Button(onClick = {
+            val result = onFinish(confirmation.toCharArray())
+            if (result.isSuccess) confirmation = ""
+            else error = "Recovery key could not be confirmed. Check the saved key and try again."
+        }, enabled = acknowledged && confirmation.isNotBlank(), modifier = Modifier.fillMaxWidth()) { Text("Continue") }
     }
 }
 

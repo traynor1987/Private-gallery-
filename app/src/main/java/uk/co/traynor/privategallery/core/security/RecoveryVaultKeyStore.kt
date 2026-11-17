@@ -1,70 +1,41 @@
 package uk.co.traynor.privategallery.core.security
 
 import android.content.Context
-import android.util.Base64
-import uk.co.traynor.privategallery.core.crypto.RecoveryEnvelope
-import uk.co.traynor.privategallery.core.crypto.RecoveryKey
 import uk.co.traynor.privategallery.core.crypto.RecoveryWrappedKey
 
-/** Persists only an authenticated recovery-key envelope around the existing VDEK. */
+/** Persists only encrypted envelopes around the existing Primary VDEK. */
 class RecoveryVaultKeyStore(context: Context) {
-    private val preferences = context.getSharedPreferences(PREFERENCES, Context.MODE_PRIVATE)
-
-    val isConfigured: Boolean get() = preferences.contains(SALT) && preferences.contains(NONCE) && preferences.contains(CIPHERTEXT)
-
-    /** Returns the recovery secret once. It is never persisted by the app. */
-    fun create(vdek: ByteArray): CharArray {
-        check(!isConfigured) { "Recovery key already configured" }
-        val recoveryKey = RecoveryKey.generate()
-        val keyForEnvelope = recoveryKey.copyOf()
-        try {
-            save(RecoveryEnvelope.create(keyForEnvelope, vdek))
-        } finally {
-            keyForEnvelope.fill('\u0000')
+    private val preferences = context.getSharedPreferences("vault-recovery-envelope", Context.MODE_PRIVATE)
+    private val lifecycle = RecoverySetupLifecycle(FailClosedRecoveryPersistence(preferences, object : RecoveryEnvelopePersistence {
+        // SharedPreferences may publish in-memory changes even when disk commit fails.
+        // Treat this instance as unavailable after failure, never as confirmed recovery.
+        private var writeFailed = false
+        override fun read(): Map<String, String> = synchronized(preferences) {
+            if (writeFailed) return@synchronized mapOf("write_failure" to "unavailable")
+            val all = preferences.all
+            if (all.values.any { it !is String }) return@synchronized mapOf("invalid_type" to "unavailable")
+            all.mapValues { it.value as String }
         }
-        return recoveryKey
-    }
+        override fun commit(expected: Map<String, String>, values: Map<String, String>): Boolean = synchronized(preferences) {
+            if (writeFailed || read() != expected) return@synchronized false
+            val editor = preferences.edit().clear()
+            values.forEach { (name, value) -> editor.putString(name, value) }
+            val committed = editor.commit()
+            if (!committed) writeFailed = true
+            committed
+        }
+    }))
 
-    fun unlock(recoveryKey: CharArray): ByteArray = RecoveryEnvelope.unwrap(recoveryKey, load())
+    val setupState: RecoverySetupState get() = lifecycle.setupState
+    val isConfigured: Boolean get() = setupState == RecoverySetupState.CONFIRMED
+    val isLegacyExisting: Boolean get() = lifecycle.isLegacyExisting
+    val isPossessionVerified: Boolean get() = lifecycle.isPossessionVerified
 
-    /** Ciphertext-only envelope for a portable backup. The recovery secret is excluded. */
-    fun exportEnvelope(): RecoveryWrappedKey = load()
-
-    fun installForRestoredVault(envelope: RecoveryWrappedKey) {
-        check(!isConfigured) { "Recovery key already configured" }
-        require(envelope.salt.size == 16 && envelope.nonce.size == 12 && envelope.ciphertext.size == 48)
-        save(envelope)
-    }
-
-    /** Roll back only a newly installed envelope after an unsuccessful fresh restore. */
-    fun clearFailedRestore() {
-        check(preferences.edit().clear().commit()) { "Unable to roll back recovery envelope" }
-    }
-
-    private fun load(): RecoveryWrappedKey = RecoveryWrappedKey(
-        decode(preferences.getString(SALT, null)),
-        decode(preferences.getString(NONCE, null)),
-        decode(preferences.getString(CIPHERTEXT, null)),
-    )
-
-    private fun save(envelope: RecoveryWrappedKey) {
-        check(preferences.edit()
-            .putString(SALT, encode(envelope.salt))
-            .putString(NONCE, encode(envelope.nonce))
-            .putString(CIPHERTEXT, encode(envelope.ciphertext))
-            .commit()) { "Unable to persist recovery vault envelope" }
-    }
-
-    private fun encode(value: ByteArray): String = Base64.encodeToString(value, Base64.NO_WRAP)
-    private fun decode(value: String?): ByteArray {
-        check(value != null) { "Recovery key is not configured" }
-        return Base64.decode(value, Base64.NO_WRAP)
-    }
-
-    private companion object {
-        const val PREFERENCES = "vault-recovery-envelope"
-        const val SALT = "salt"
-        const val NONCE = "nonce"
-        const val CIPHERTEXT = "ciphertext"
-    }
+    fun create(vdek: ByteArray, commit: (() -> Unit) -> Unit = { it() }): CharArray = lifecycle.create(vdek, commit)
+    fun restartPending(vdek: ByteArray, commit: (() -> Unit) -> Unit = { it() }): CharArray = lifecycle.restartPending(vdek, commit)
+    fun confirm(secret: CharArray, expectedVdek: ByteArray, commit: (() -> Unit) -> Unit = { it() }) = lifecycle.confirm(secret, expectedVdek, commit)
+    fun unlock(recoveryKey: CharArray): ByteArray = lifecycle.unlock(recoveryKey)
+    fun exportEnvelope(): RecoveryWrappedKey = lifecycle.exportEnvelope()
+    fun installForRestoredVault(envelope: RecoveryWrappedKey) = lifecycle.installForRestoredVault(envelope)
+    fun clearFailedRestore() = lifecycle.clearFailedRestore()
 }

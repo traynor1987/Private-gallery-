@@ -1,9 +1,10 @@
 package uk.co.traynor.privategallery.core.security
 
-/**
- * Recovery setup is a one-time migration. Every successful unlock path must
- * consult this policy; biometric unlock must not bypass it.
- */
+/** Pending setup can restart only after legitimate authenticated Primary access. */
 object RecoveryKeySetupPolicy {
+    fun shouldShowAfterUnlock(state: RecoverySetupState): Boolean =
+        state == RecoverySetupState.NOT_CONFIGURED || state == RecoverySetupState.PENDING_CONFIRMATION
+
+    /** Compatibility for older callers; state-aware callers must handle corrupt state separately. */
     fun shouldShowAfterUnlock(recoveryKeyConfigured: Boolean): Boolean = !recoveryKeyConfigured
 }

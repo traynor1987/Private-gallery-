@@ -108,6 +108,12 @@ for path, replacements in CODE81_BACKUP_WIRING.items():
 # the archive reader compatibility and the new, stricter Files import limit.
 # Audited main-promotion adaptations retain the installed encryption format.
 CODE81_EXACT_ADAPTERS = {
+    f"{CORE}/security/PrimaryVaultSetupGuard.kt": "af0c8edd45bcb8a27f225950c6a1166c507d070a9c4b1c0b516f88dd44484f97",
+    f"{CORE}/security/RecoverySetupLifecycle.kt": "554959c73ad9c8d4018110a26d56b3fc8665a041afbce5a4143cfd5ff664eadf",
+    f"{CORE}/security/RecoveryVaultKeyStore.kt": "155cb9855e8ac253598f00adecb2d569b1d785ff03c63679cebcf423319c976b",
+    f"{CORE}/security/RecoveryKeySetupPolicy.kt": "8696e66b15e2f44e8d6f6b8fb8eaec730a8248a2c1360bdced1656f29f06205d",
+    f"{CORE}/security/PinVaultKeyStore.kt": "e7f2f8eadf36f50c2e881752407ae9a9106a1acebff43b041fcf45d2aeeb2ece",
+    f"{CORE}/vault/AndroidVaultRepository.kt": "2a820fba2e75b48c126d0c5908a863dc696dca978a78f90c51f5e7f7eeea12ad",
     f"{CORE}/vault/EncryptedIndexStore.kt": "64b1ff89e0d6ca96eb1a56652af6deed1631680714d0f961fd80fe3136520783",
     f"{CORE}/security/PrimaryStorageInventory.kt": "41187c425f3139258e23cdfeeb8b41f0d6a93712480b95616df8958c10390ab3",
     f"{CORE}/update/ReleaseUpdate.kt": "4fa36d12cf9044d695faba3f10d4233cc0fa4ab21a8040f6e3d33120343a5a59",

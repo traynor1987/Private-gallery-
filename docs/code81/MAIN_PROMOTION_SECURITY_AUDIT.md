@@ -112,3 +112,16 @@ Keep version 1.7.38.8 / 84 during reconciliation. Choosing 1.7.39 is allowed at 
 The publication workflow already supports a repository-scoped GitHub App token from novaos-production-publication. The previous run had no app token and GitHub rejected the tag because it required Workflows write. Owner setup of NOVAOS_RELEASE_APP_ID and NOVAOS_RELEASE_APP_PRIVATE_KEY remains necessary unless another existing authorised scoped credential becomes available. No new publication retry is warranted while that dependency is absent.
 
 Main, release tags and published assets have not been changed by this checkpoint. No production signing, emulator upgrade or release publication is triggered by the archive operation.
+
+
+## Security reconciliation follow-up
+
+The recovery lifecycle from archived main is adapted without changing the existing salt, nonce, ciphertext, VDEK or Keystore identifiers. Existing envelopes remain recognised. Newly generated recovery secrets require owner re-entry before confirmation. Interrupted pending setup requires fresh Primary authentication and can restart its one-time display. Recovery rollback compares the exact record installed by that restore and refuses unrelated deletion.
+
+Primary setup now checks partial PIN, recovery and biometric records plus the complete bounded storage inventory. Setup, metadata operations and fresh restore share the existing Primary storage lock. Restore cleanup is tied to the restoring instance and preserves ciphertext if rollback becomes uncertain.
+
+Vault collection and crop operations reuse the existing EvidenceAccess Primary key leases and final publication fence. Their authority captures both key identity and authentication epoch before asynchronous work. No separate encryption or credential system was introduced.
+
+CI 443 failed in the selected WallpaperUiTest phase. Seven first-import cases hit the missing-index guard because the importer wrote ciphertext before its initial index existed. The importer now creates an authenticated empty index under the metadata and source-publication guards before writing its first payload. Export also checks existing material before initialising an empty index. No test was disabled.
+
+Twenty-three focused recovery, inventory and setup-guard JVM tests pass. Evidence lease host checks pass, including 21 captured-authority checks. Three Android tests cover partial credentials/orphan ciphertext, persisted recovery confirmation and refusal of unrelated rollback. Existing VaultBackupRestoreTest is included in the required runtime matrix, which now contains 291 cases. Android results for these changes remain pending.

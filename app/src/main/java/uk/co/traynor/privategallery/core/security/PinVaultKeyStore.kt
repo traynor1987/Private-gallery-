@@ -10,19 +10,29 @@ import uk.co.traynor.privategallery.core.crypto.PinWrappedKey
 class PinVaultKeyStore(private val context: Context) {
     private val preferences = context.getSharedPreferences(PREFERENCES, Context.MODE_PRIVATE)
 
+    private var installedRestore: Map<String, *>? = null
+
+    internal val hasEnvelopeMaterial: Boolean get() = preferences.all.isNotEmpty()
+
     val isConfigured: Boolean
         get() = preferences.contains(SALT)
 
-    fun create(pin: CharArray): ByteArray = synchronized(uk.co.traynor.privategallery.core.hidden.HiddenCredentialStore.gate) {
+    fun create(pin: CharArray): ByteArray = synchronized(PrimaryVaultSetupGuard.storageLock) {
+        synchronized(uk.co.traynor.privategallery.core.hidden.HiddenCredentialStore.gate) {
         val vdek = ByteArray(VAULT_KEY_BYTES)
         try {
-            check(!isConfigured) { "Vault already configured" }
+            check(PrimaryVaultSetupGuard.canCreate(context.filesDir, hasEnvelopeMaterial,
+                context.getSharedPreferences("vault-recovery-envelope", Context.MODE_PRIVATE).all.isNotEmpty(),
+                context.getSharedPreferences("vault-biometric-envelope", Context.MODE_PRIVATE).all.isNotEmpty())) {
+                "Existing Vault or credentials require recovery"
+            }
             rejectHiddenPin(pin)
             SecureRandom().nextBytes(vdek)
             save(PinEnvelope.create(pin, vdek))
             vdek
         } catch (failure: Throwable) { vdek.fill(0); throw failure }
         finally { pin.fill('\u0000') }
+        }
     }
 
     fun unlock(pin: CharArray): ByteArray = PinEnvelope.unwrap(pin, load())
@@ -51,8 +61,22 @@ class PinVaultKeyStore(private val context: Context) {
         }
     }
 
-    fun clearFailedRestore() {
-        check(preferences.edit().clear().commit()) { "Unable to roll back PIN envelope" }
+    internal fun installPinForRestoredVault(newPin: CharArray, vdek: ByteArray) =
+        synchronized(PrimaryVaultSetupGuard.storageLock) {
+            synchronized(uk.co.traynor.privategallery.core.hidden.HiddenCredentialStore.gate) {
+                check(!hasEnvelopeMaterial) { "Primary credentials already exist" }
+                replacePinForRecoveredVault(newPin, vdek)
+                installedRestore = preferences.all.toMap()
+            }
+        }
+
+    fun clearFailedRestore() = synchronized(PrimaryVaultSetupGuard.storageLock) {
+        synchronized(uk.co.traynor.privategallery.core.hidden.HiddenCredentialStore.gate) {
+            val expected = checkNotNull(installedRestore) { "No PIN envelope owned by this restore" }
+            check(preferences.all == expected) { "Primary credentials changed after restore" }
+            check(preferences.edit().clear().commit()) { "Unable to roll back PIN envelope" }
+            installedRestore = null
+        }
     }
 
     private fun load(): PinWrappedKey = PinWrappedKey(

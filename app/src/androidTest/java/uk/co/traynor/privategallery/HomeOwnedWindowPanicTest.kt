@@ -407,7 +407,7 @@ class HomeOwnedWindowPanicTest {
         val priorRecovery=recoveryField.get(activity)
         // These picker-return tests model an existing fully provisioned vault, not
         // first-unlock recovery migration. Use the actual isolated encrypted store.
-        val fixtureRecovery=if(pickerGrace)uk.co.traynor.privategallery.core.security.RecoveryVaultKeyStore(context).also{it.create(key).fill('\u0000');check(it.isConfigured)}else null
+        val fixtureRecovery=if(pickerGrace)uk.co.traynor.privategallery.core.security.RecoveryVaultKeyStore(context).also{it.confirm(it.create(key), key);check(it.isConfigured)}else null
         val panic=activity.getSharedPreferences("privacy-shield",Context.MODE_PRIVATE)
         val names=listOf("enabled","three-finger","quick-lock");val priorPanic=names.associateWith {panic.all[it]}
         val schedulePrefs=activity.getSharedPreferences("nova-backup-due",0);val priorSchedule=schedulePrefs.all.toMap()

@@ -42,7 +42,7 @@ class LauncherWorkspace70Test {
         try {
             val key = keys.create(pin.toCharArray())
             try {
-                recovery.create(key).fill('\u0000')
+                recovery.confirm(recovery.create(key), key)
             } finally {
                 key.fill(0)
             }

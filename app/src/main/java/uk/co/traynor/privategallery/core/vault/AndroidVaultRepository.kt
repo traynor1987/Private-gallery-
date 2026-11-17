@@ -108,7 +108,8 @@ class AndroidVaultRepository @JvmOverloads constructor(
         val recovered = RecoveryEnvelope.unwrap(recoveryKey, envelope)
         try {
             check(MessageDigest.isEqual(recovered, vaultKey)) { "Recovery key does not match this Vault" }
-            if (!File(root, "vault-index.enc").exists()) index.saveSnapshot(VaultIndexSnapshot(emptyList()), vaultKey)
+            val current = snapshot()
+            if (!File(root, "vault-index.enc").exists()) saveSnapshot(current)
             VaultBackupArchive.write(root, vaultKey, envelope, output, progress, cancelled)
         } finally { recovered.fill(0) }
     }
@@ -199,10 +200,10 @@ class AndroidVaultRepository @JvmOverloads constructor(
         publish {saveSnapshot(next)}
     }
 
-    fun setCollectionCover(id:String,item:String?,publish:((()->Unit)->Unit)={it()}) = synchronized(METADATA_LOCK) {
+    fun setCollectionCover(id:String,item:String?,publish:((()->Unit)->Unit)=this.publish) = synchronized(METADATA_LOCK) {
         val next=VaultCollectionsState(snapshot()).setCover(id,item).asSnapshot();publish {saveSnapshot(next)}
     }
-    fun pinCollection(id:String,pinned:Boolean,publish:((()->Unit)->Unit)={it()}) = synchronized(METADATA_LOCK) {
+    fun pinCollection(id:String,pinned:Boolean,publish:((()->Unit)->Unit)=this.publish) = synchronized(METADATA_LOCK) {
         VaultPresentationStore(root,"primary",vaultKey,publish).pinCollection(id,pinned,snapshot().collections.mapTo(mutableSetOf()){it.id})
     }
 
@@ -437,6 +438,12 @@ class AndroidVaultRepository @JvmOverloads constructor(
     }
 
     override fun importVerified(source: VaultImportSource): ImportResult {
+        synchronized(METADATA_LOCK) {
+            val current = snapshot()
+            if (!File(root, "vault-index.enc").exists()) {
+                publish { source.publishIfAllowed { check(!source.isCancelled()); saveSnapshot(current) } }
+            }
+        }
         val id = UUID.randomUUID().toString()
         val captured=source.capturedAtEpochMillis ?: source.sourceReference?.let {reference->
             runCatching {uk.co.traynor.privategallery.core.gallery.MediaCaptureDate.read(context,Uri.parse(reference),source.mimeType)}.getOrNull()
@@ -664,14 +671,14 @@ class AndroidVaultRepository @JvmOverloads constructor(
 
     companion object {
         private const val DEFAULT_BUFFER = 64 * 1024
-        private val METADATA_LOCK = Any()
+        private val METADATA_LOCK = uk.co.traynor.privategallery.core.security.PrimaryVaultSetupGuard.storageLock
         /** Fresh installation only. No existing Vault or configured device key is overwritten. */
         fun restoreBackup(context: Context, input: InputStream, recoveryKey: CharArray, newPin: CharArray,
-                          keys: PinVaultKeyStore, recoveryKeys: RecoveryVaultKeyStore): ByteArray {
+                          keys: PinVaultKeyStore, recoveryKeys: RecoveryVaultKeyStore): ByteArray = synchronized(METADATA_LOCK) {
             require(newPin.size >= 6 && newPin.all(Char::isDigit)) { "Choose a PIN of at least six digits" }
             val root = File(context.filesDir, "vault")
             val stage = File(context.filesDir, "vault-restore-staging")
-            check(!keys.isConfigured) { "Vault is already configured" }
+            check(!keys.hasEnvelopeMaterial) { "Vault credentials already exist or require recovery" }
             if (stage.exists()) check(stage.deleteRecursively()) { "Unable to clear interrupted restore" }
             var installed = false
             var pinInstalled = false
@@ -700,14 +707,21 @@ class AndroidVaultRepository @JvmOverloads constructor(
                         recoveryKeys.installForRestoredVault(restored.recoveryEnvelope)
                         recoveryInstalled = true
                     }
-                    keys.replacePinForRecoveredVault(newPin, restored.key)
+                    keys.installPinForRestoredVault(newPin, restored.key)
                     pinInstalled = true
-                    return restored.key.copyOf()
+                    return@synchronized restored.key.copyOf()
                 } finally { restored.key.fill(0) }
             } catch (failure: Throwable) {
-                if (pinInstalled || keys.isConfigured) keys.clearFailedRestore()
-                if (recoveryInstalled) recoveryKeys.clearFailedRestore()
-                if (installed) root.deleteRecursively()
+                var rolledBack = true
+                if (pinInstalled) runCatching { keys.clearFailedRestore() }.onFailure {
+                    rolledBack = false
+                    failure.addSuppressed(it)
+                }
+                if (recoveryInstalled) runCatching { recoveryKeys.clearFailedRestore() }.onFailure {
+                    rolledBack = false
+                    failure.addSuppressed(it)
+                }
+                if (installed && rolledBack) root.deleteRecursively()
                 stage.deleteRecursively()
                 throw failure
             } finally { newPin.fill('\u0000'); recoveryKey.fill('\u0000') }
