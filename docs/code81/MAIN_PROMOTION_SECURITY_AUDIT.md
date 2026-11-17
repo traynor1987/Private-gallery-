@@ -198,3 +198,6 @@ Upgrade receipts artifact: 14372251175, archive SHA-256 8d29118aba15a08479ec2c78
 Both archives were downloaded independently and their GitHub digests checked. The extracted APK passed independent full Android signature, certificate, package/version and alignment checks. Source, owner approval, original GitHub job stages, APK and baseline hashes match the immutable receipts. Publication remains a separate operation and cannot rebuild or re-sign the APK.
 
 The publication regression fixture explicitly removes any real candidate branch opt-in before testing the no-opt-in rejection path. Its assertions remain independent of the newly pinned production metadata; all fourteen focused release-control tests pass.
+
+
+Publication run 4 (44181288478) confirmed automatic tag creation with the existing contents-write workflow token after main promotion. Remote v1.7.38.8 resolves to b79b85efc5bae8e0bedb832e21a62d462e6f4397. No GitHub App or manual owner tag was needed. Its next step failed before publication because sdkmanager was not in PATH. The publisher now uses the same explicit ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager path as the protected production runner. This correction changes no APK, source freeze, signing input or upgrade evidence; only publication is retried.
