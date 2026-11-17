@@ -107,6 +107,7 @@ for path, replacements in CODE81_BACKUP_WIRING.items():
 # These two adapters are pinned byte-for-byte, including
 # the archive reader compatibility and the new, stricter Files import limit.
 CODE81_EXACT_ADAPTERS = {
+    f"{CORE}/update/ReleaseUpdate.kt": "4fa36d12cf9044d695faba3f10d4233cc0fa4ab21a8040f6e3d33120343a5a59",
     f"{CORE}/backup/BackupCoordinator.kt": "fa2dedf1d88865e0bee5e9362109f5c1e6a921909fb00bb6ab168474f8d5b8fa",
     f"{CORE}/vault/PhoneVaultTransfer.kt": "8fe53b2491622958d4c8d59322ffee3e2a4d12041a6d88f926e12a59ed8ec604",
 }

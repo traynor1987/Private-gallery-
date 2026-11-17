@@ -147,7 +147,6 @@ import kotlinx.coroutines.withContext
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.material3.OutlinedButton
 import java.io.File
-import java.io.FileOutputStream
 import java.text.DateFormat
 import java.util.Date
 import uk.co.traynor.privategallery.core.vault.AndroidVaultRepository
@@ -3216,22 +3215,22 @@ class MainActivity : FragmentActivity() {
 
     private fun downloadUpdate() {
         val release = availableUpdate ?: return
+        if (packageName != uk.co.traynor.privategallery.home2.NOVA_PACKAGE) {
+            updateStatus = "Production updates are only available from installed NovaOS."
+            return
+        }
+        availableUpdate = null
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && !packageManager.canRequestPackageInstalls()) {
+            availableUpdate = release
             updateStatus = "Allow installs from NovaOS, then download again."
             startActivity(Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, Uri.parse("package:$packageName")))
             return
         }
         updateStatus = "Downloading…"
         lifecycleScope.launch(Dispatchers.IO) {
-            val apk = GithubReleaseUpdateService().downloadVerified(release)
-            if (apk == null) {
-                runOnUiThread { updateStatus = "Verification failed — update was not installed." }
-                return@launch
-            }
             try {
-                val updateDirectory = File(cacheDir, "updates").apply { mkdirs() }
-                val output = File(updateDirectory, "private-gallery-release.apk")
-                FileOutputStream(output).use { stream -> stream.write(apk); stream.fd.sync() }
+                val identity = checkNotNull(GithubReleaseUpdateService().verifiedIdentity(release))
+                val output = uk.co.traynor.privategallery.home2.downloadVerifiedNovaApk(this@MainActivity, identity)
                 val uri = FileProvider.getUriForFile(this@MainActivity, "$packageName.fileprovider", output)
                 val installIntent = Intent(Intent.ACTION_VIEW).apply {
                     setDataAndType(uri, "application/vnd.android.package-archive")
@@ -3241,17 +3240,22 @@ class MainActivity : FragmentActivity() {
                     val canInstall = Build.VERSION.SDK_INT < Build.VERSION_CODES.O || packageManager.canRequestPackageInstalls()
                     val installerAvailable = installIntent.resolveActivity(packageManager) != null
                     if (!UpdateInstallPolicy.canHandOffToAndroid(canInstall, installerAvailable)) {
+                        availableUpdate = release
                         updateStatus = "Android installer is unavailable."
                         return@runOnUiThread
                     }
                     runCatching { startActivity(installIntent) }
                         .onSuccess { updateStatus = "Installation handed to Android" }
-                        .onFailure { updateStatus = "Android installer could not be opened." }
+                        .onFailure {
+                            availableUpdate = release
+                            updateStatus = "Android installer could not be opened."
+                        }
                 }
-            } catch (_: Throwable) {
-                runOnUiThread { updateStatus = "Download failed" }
-            } finally {
-                apk.fill(0)
+            } catch (_: Exception) {
+                runOnUiThread {
+                    availableUpdate = release
+                    updateStatus = "Update could not be downloaded or verified."
+                }
             }
         }
     }

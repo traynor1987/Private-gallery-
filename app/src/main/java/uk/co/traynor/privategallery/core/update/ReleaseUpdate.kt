@@ -1,10 +1,12 @@
 package uk.co.traynor.privategallery.core.update
 
-import java.security.MessageDigest
 import java.net.HttpURLConnection
 import java.net.URL
 import java.net.URI
 import org.json.JSONObject
+import uk.co.traynor.privategallery.home2.NOVA_CERTIFICATE
+import uk.co.traynor.privategallery.home2.NOVA_PACKAGE
+import uk.co.traynor.privategallery.home2.NovaStoreRelease
 
 data class ReleaseVersion(val raw: String, val parts: List<Int>) : Comparable<ReleaseVersion> {
     override fun compareTo(other: ReleaseVersion): Int {
@@ -19,7 +21,7 @@ data class ReleaseVersion(val raw: String, val parts: List<Int>) : Comparable<Re
     companion object {
         fun parse(value: String): ReleaseVersion {
             val clean = value.removePrefix("v")
-            require(clean.matches(Regex("\\d+(\\.\\d+){0,2}"))) { "Invalid release version" }
+            require(clean.matches(Regex("\\d+(\\.\\d+){0,3}"))) { "Invalid release version" }
             return ReleaseVersion(clean, clean.split('.').map(String::toInt))
         }
     }
@@ -29,6 +31,7 @@ data class ReleaseMetadata(
     val version: ReleaseVersion,
     val apkUrl: String,
     val sha256Url: String,
+    val identityUrl: String,
 ) {
     companion object {
         fun parse(json: String): ReleaseMetadata {
@@ -37,17 +40,28 @@ data class ReleaseMetadata(
             val assets = release.optJSONArray("assets") ?: error("Release assets are missing")
             var apkUrl: String? = null
             var shaUrl: String? = null
+            var identityUrl: String? = null
             for (index in 0 until assets.length()) {
                 val asset = assets.getJSONObject(index)
                 when (asset.optString("name")) {
                     "private-gallery-release.apk" -> apkUrl = asset.optString("browser_download_url").takeIf(String::isNotBlank)
                     "private-gallery-release.apk.sha256" -> shaUrl = asset.optString("browser_download_url").takeIf(String::isNotBlank)
+                    "private-gallery-release.metadata.json" -> identityUrl = asset.optString("browser_download_url").takeIf(String::isNotBlank)
                 }
             }
+            val tag = release.getString("tag_name")
+            val prefix = "https://github.com/traynor1987/Private-gallery-/releases/download/$tag/"
+            fun asset(url: String?, name: String): String {
+                requireNotNull(url) { "Release $name is missing" }
+                requireOfficialAsset(url)
+                require(url == prefix + name) { "Release asset does not match its tag" }
+                return url
+            }
             return ReleaseMetadata(
-                version = ReleaseVersion.parse(release.getString("tag_name")),
-                apkUrl = requireNotNull(apkUrl) { "Release APK is missing" }.also(::requireOfficialAsset),
-                sha256Url = requireNotNull(shaUrl) { "Release SHA-256 is missing" }.also(::requireOfficialAsset),
+                version = ReleaseVersion.parse(tag),
+                apkUrl = asset(apkUrl, "private-gallery-release.apk"),
+                sha256Url = asset(shaUrl, "private-gallery-release.apk.sha256"),
+                identityUrl = asset(identityUrl, "private-gallery-release.metadata.json"),
             )
         }
 
@@ -108,10 +122,15 @@ class GithubReleaseUpdateService(
         }
     }
 
-    fun downloadVerified(release: ReleaseMetadata): ByteArray? = runCatching {
-        val apk = transport.fetch(release.apkUrl)
-        val expected = transport.fetch(release.sha256Url).decodeToString()
-        apk.takeIf { UpdateVerifier.matchesSha256(it, expected) }
+    internal fun verifiedIdentity(release: ReleaseMetadata): NovaStoreRelease? = runCatching {
+        val identity = JSONObject(transport.fetch(release.identityUrl).decodeToString())
+        val digest = transport.fetch(release.sha256Url).decodeToString().trim().substringBefore(' ').lowercase()
+        require(identity.getString("package") == NOVA_PACKAGE)
+        require(identity.getString("versionName") == release.version.raw)
+        require(identity.getString("certificateSha256") == NOVA_CERTIFICATE)
+        require(identity.getString("apkSha256") == digest)
+        NovaStoreRelease(NOVA_PACKAGE, identity.getLong("versionCode"), release.version.raw,
+            NOVA_CERTIFICATE, digest, release.apkUrl)
     }.getOrNull()
 
     private companion object {
@@ -129,10 +148,4 @@ private fun Throwable.asUpdateFailure(): UpdateFailure = when (this) {
         else -> UpdateFailure.INVALID_RELEASE_METADATA
     }
     else -> UpdateFailure.INVALID_RELEASE_METADATA
-}
-
-object UpdateVerifier {
-    fun matchesSha256(bytes: ByteArray, expected: String): Boolean =
-        MessageDigest.getInstance("SHA-256").digest(bytes).joinToString("") { "%02x".format(it) }
-            .equals(expected.trim().lowercase().substringBefore(' '), ignoreCase = true)
 }

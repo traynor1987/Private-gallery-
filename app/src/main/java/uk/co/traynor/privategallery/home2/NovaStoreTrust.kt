@@ -2,6 +2,9 @@ package uk.co.traynor.privategallery.home2
 
 import java.net.URI
 
+internal const val NOVA_PACKAGE = "uk.co.traynor.privategallery"
+internal const val NOVA_CERTIFICATE = "94f2bfc6567f26d067d29077111cfd0ce86d38263c642ad115e43365f05b0d17"
+
 internal data class NovaStoreRelease(
     val packageName: String,
     val versionCode: Long,

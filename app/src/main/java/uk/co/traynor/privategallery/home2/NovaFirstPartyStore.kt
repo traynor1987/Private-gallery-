@@ -32,8 +32,6 @@ import java.net.URI
 import java.security.MessageDigest
 import java.util.HexFormat
 
-private const val NOVA_PACKAGE = "uk.co.traynor.privategallery"
-private const val NOVA_CERTIFICATE = "94f2bfc6567f26d067d29077111cfd0ce86d38263c642ad115e43365f05b0d17"
 private const val MAX_APK_BYTES = 256L * 1024 * 1024
 
 private data class FirstPartyApp(val id: String, val name: String, val description: String)
@@ -71,7 +69,7 @@ private fun PackageInfo.signers(): List<String> = signingInfo?.apkContentsSigner
     HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(it.toByteArray()))
 }
 
-private fun downloadVerifiedNovaApk(context: Context, release: NovaStoreRelease): File {
+internal fun downloadVerifiedNovaApk(context: Context, release: NovaStoreRelease): File {
     val directory = File(context.cacheDir, "updates").apply { mkdirs() }
     directory.listFiles()?.filter {
         it.name.startsWith("nova-store-") && System.currentTimeMillis() - it.lastModified() > 86_400_000
