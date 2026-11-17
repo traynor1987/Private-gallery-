@@ -480,24 +480,33 @@ class Home2IntegrationTest {
     val note = NovaNote("locked-note", "Protected title", "Protected body", notebook = "Work")
     val initial = checkNotNull(library.save(library.read(), listOf(note)))
     assertNotNull(library.setNotebookProtected(initial, "Work", true))
+    val verifiedAttempts = java.util.concurrent.ConcurrentLinkedQueue<Boolean>()
     compose.setContent {
      androidx.compose.material3.MaterialTheme {
       uk.co.traynor.privategallery.home2.NovaNotesDraft(space, onBack = {},
-       verifyNotebookPin = { pin -> pin.contentEquals("123456".toCharArray()) })
+       verifyNotebookPin = { pin ->
+        pin.contentEquals("123456".toCharArray()).also { verifiedAttempts.add(it) }
+       })
      }
     }
     compose.waitUntil(10_000) { compose.onAllNodesWithText("Locked: Work").fetchSemanticsNodes().isNotEmpty() }
     compose.onNodeWithText("Protected title").assertDoesNotExist()
     compose.onNodeWithText("Locked: Work").performClick()
     compose.onNodeWithText("Unlock notebook").performClick()
-    compose.onNodeWithText("Primary Space PIN").performTextInput("654321")
+    compose.onNodeWithText("Primary Space PIN").performTextReplacement("654321")
     compose.onNodeWithText("Confirm").performClick()
     compose.waitUntil(10_000) {
      compose.onAllNodesWithText("Could not confirm the PIN or update the notebook.").fetchSemanticsNodes().isNotEmpty()
     }
+    compose.runOnIdle { assertEquals(listOf(false), verifiedAttempts.toList()) }
     compose.onNodeWithText("Protected title").assertDoesNotExist()
-    compose.onNodeWithText("Primary Space PIN").performTextInput("123456")
+    // Replace the rejected entry explicitly; this tests authorization independently
+    // of the platform IME's asynchronous edit/selection synchronization.
+    compose.onNodeWithText("Primary Space PIN").performTextReplacement("123456")
     compose.onNodeWithText("Confirm").performClick()
+    compose.waitUntil(10_000) { verifiedAttempts.size == 2 }
+    compose.runOnIdle { assertEquals(listOf(false, true), verifiedAttempts.toList()) }
+    compose.waitUntil(10_000) { compose.onAllNodesWithText("Primary Space PIN").fetchSemanticsNodes().isEmpty() }
     compose.waitUntil(10_000) { compose.onAllNodesWithText("Protected title").fetchSemanticsNodes().isNotEmpty() }
     compose.onNodeWithText("Protected title").assertIsDisplayed()
    }
