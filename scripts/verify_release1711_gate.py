@@ -71,7 +71,7 @@ def runtime_cases(archive,matrix,source):
         require(len(restart_prefixes)==1,'Missing original process restart evidence')
         prefix=restart_prefixes[0]
         restart_cases({name[len(prefix):]:zipped.read(name) for name in names if name.startswith(prefix) and not name.endswith('/')},source)
-        groups={'web-scroll-regression-77':1,'wallpaper-return-regression-77':12,'guardian-notification-compatibility-77':4,'guardian-capture-store-77':20,'guardian-inbox-77':7,'guardian-evidence-learning-77':2,'visual-checkpoint':10,'sanctuary-checkpoint':4,'sanctuary-dnd':1,
+        groups={'web-scroll-regression-77':1,'wallpaper-return-regression-77':12,'guardian-notification-compatibility-77':5,'guardian-capture-store-77':21,'launcher-folders-80':4,'guardian-inbox-77':7,'guardian-evidence-learning-77':2,'visual-checkpoint':10,'sanctuary-checkpoint':4,'sanctuary-dnd':1,
                 'sanctuary-guardian':1,'sanctuary-accessibility':1,'sanctuary-browser':2,
                 'redesign621':18,'navigation-hidden':1,'navigation-web':1,'navigation-haptics':1,
                 'evidence-collections-68':4,'evidence-ai-68':4,'evidence-dates-68':1,
@@ -111,7 +111,7 @@ def runtime_cases(archive,matrix,source):
             ],
             'launcher-smart-folders-73': [
                 ('uk.co.traynor.privategallery.launcher.LauncherSmartFolderStore73Test',
-                 'legacyPortableLayoutRetainsPlainShortcutsAndManualFolders'),
+                 'legacyPortableLayoutDissolvesSingletonInPlaceAndRetainsManualFolder'),
                 ('uk.co.traynor.privategallery.launcher.LauncherSmartFolderStore73Test',
                  'smartFolderImportRejectsNonAppKeysWithoutReplacingExistingLayout'),
                 ('uk.co.traynor.privategallery.launcher.LauncherSmartFolderStore73Test',
@@ -182,6 +182,8 @@ def runtime_cases(archive,matrix,source):
                  'innerShowsCountdownAndPauseStateWithoutReplacingTheMode'),
             ],
             'launcher-storage-70': [
+                ('uk.co.traynor.privategallery.launcher.LauncherLayoutStore70Test',
+                 'legacySingletonsReopenInPlaceOnBothDisplaysAndDock'),
                 ('uk.co.traynor.privategallery.launcher.LauncherLayoutStore70Test',
                  'categoryOverridesRetainAppProfileIdentityAcrossStoreReopens'),
                 ('uk.co.traynor.privategallery.launcher.LauncherLayoutStore70Test',

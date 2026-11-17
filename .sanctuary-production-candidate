@@ -5,7 +5,7 @@
   "candidate_code": 84,
   "test_run": 44079639233,
   "fixture_sha256": "4fa962f1c198232ccb324b7493c216be452defa0a88620286d503c960429d727",
-  "matrix_sha256": "62b209459a34f97e06eb73a0ccb88d7f503b7260696b3607812120ac3e2d3967",
+  "matrix_sha256": "e0c54baba756d385e021341d9571785da3aa4380d419ef0da6482ad0b308dce2",
   "controls_sha256": {
     "compile_upgrade1711_fixture.sh": "54098546ae3ad8c6cebb565527e4f8a0dd743460d7b23fb4256161b1a4d1ea6b",
     "verify_compiled_upgrade1711.py": "704844a9e1954d97634bfa376ae6e55ca1effc27d487482345275dd28ddd5000",
@@ -17,8 +17,8 @@
     "verify_synthetic_upgrade1711.sh": "69594636d24c5bfc1eaa3771a81c26a89c097b119f20734b8e9c9516d50a643d",
     "verify_signed_upgrade1711.py": "3170680e165a6e571a953240246f4210906588b981ae0e4ca19e559512adbb62",
     "release_configuration1711.sh": "8c952241657bceb9394703c17cab8164e06dde6ad512ed8cf6daf58e26cd3796",
-    "verify_release1711_gate.py": "8d6aa71102895df4aade96a54a4c1cc2589204b98ee301e4496370428f0d94bf"
+    "verify_release1711_gate.py": "67e96c2607db4399acbb2705d8c591edc8f4f9e150caccd1384ac61f0ba397e4"
   },
   "workflow_sha256": "40ea043aa438e8a7f6a92489e6cb06ca064c153e63e083af195e011b336c5c04",
-  "review_sha256": "280508ce8e86164d54e1d0d493d5582dd8c9702d4bd3b57236f76a299b7460cd"
+  "review_sha256": "2ef93e971cce5a70426cdb5a65e18f1be315b3acb54784853403f9b917c995ed"
 }

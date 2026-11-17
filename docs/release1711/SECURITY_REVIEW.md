@@ -5,8 +5,8 @@ Authorization: authenticated owner push
 Release scope: public stable after disposable upgrade verification
 Physical Fold acceptance: pending
 Upgrade fixture SHA-256: 4fa962f1c198232ccb324b7493c216be452defa0a88620286d503c960429d727
-Upgrade controls SHA-256: 80f0cd26d50443000d0c6a8685a7decb8bb18854149d0bd7f00fbff52b8018ee
-Runtime matrix SHA-256: 62b209459a34f97e06eb73a0ccb88d7f503b7260696b3607812120ac3e2d3967
+Upgrade controls SHA-256: 4ee15e29a18113ba87cf2fe10ad5d6d0b059d28327b3678efe214d768ae804ce
+Runtime matrix SHA-256: e0c54baba756d385e021341d9571785da3aa4380d419ef0da6482ad0b308dce2
 Runtime workflow run: 44079639233
 Signing workflow SHA-256: 40ea043aa438e8a7f6a92489e6cb06ca064c153e63e083af195e011b336c5c04
 
