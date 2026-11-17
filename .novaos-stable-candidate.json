@@ -1,0 +1,15 @@
+{
+  "tag": "v1.7.38.8",
+  "source": "de8716aad373509c48cd820dd3d63aac4af13d6e",
+  "version_code": 84,
+  "baseline_code": 83,
+  "apk_sha256": "784ca47cc7aa26a26bc1c655860f1037b765cdf096f392ce94952068d19e804c",
+  "baseline_sha256": "5613a7cb6dff7b19a4206bf752ce22bf7b4891e36ce8ca1df9f2cd0ffab1946f",
+  "regression_run": 44079639233,
+  "production_run": 44093018185,
+  "production_head": "0dc538493d41989c75df3c6d8242947b2feab470",
+  "assets_id": 14333822016,
+  "assets_sha256": "e21949411b1740b73a2dc0b13e4958e9776107524a530d1bf454cfb435863dda",
+  "receipts_id": 14333038795,
+  "receipts_sha256": "b3996f34ac79506c699c963e25d0f20ae4f992e3d9ffd7bb318045602d35c983"
+}

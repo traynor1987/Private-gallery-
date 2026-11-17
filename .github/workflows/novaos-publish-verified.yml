@@ -1,0 +1,43 @@
+name: NovaOS publish verified stable candidate
+on:
+  push:
+    branches: [feature/novaos-code81-core-apps]
+    paths: ['.novaos-publish-authorization']
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: novaos-stable-publication
+  cancel-in-progress: false
+jobs:
+  publish:
+    if: github.repository == 'traynor1987/Private-gallery-' && github.actor_id == '16270479' && github.event.sender.id == 16270479 && github.run_attempt == 1
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: write
+      actions: read
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0, persist-credentials: false }
+      - name: Validate owner authorization and exact remote tag
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          read -r approved < .novaos-publish-authorization
+          test "$approved" = "${{ github.event.before }}"
+          test "$(git rev-list --parents -n 1 HEAD)" = "$GITHUB_SHA $approved"
+          test "$(git diff --name-only "$approved" HEAD)" = .novaos-publish-authorization
+          PYTHONDONTWRITEBYTECODE=1 python3 scripts/publish_verified_novaos.py --candidate .novaos-stable-candidate.json --preflight
+      - uses: actions/setup-java@v5
+        with: { distribution: temurin, java-version: '17' }
+      - name: Install APK verification tools only
+        run: sdkmanager "build-tools;36.0.0"
+      - name: Verify retained artifacts, publish, and confirm stable updater feed
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          PYTHONDONTWRITEBYTECODE=1 python3 scripts/publish_verified_novaos.py \
+            --candidate .novaos-stable-candidate.json --work "$RUNNER_TEMP/novaos-stable-publication" \
+            --tools "$ANDROID_HOME/build-tools/36.0.0"

@@ -1,0 +1,85 @@
+import json
+from pathlib import Path
+import tempfile
+import unittest
+from unittest.mock import patch
+
+import publish_verified_novaos as release
+
+CANDIDATE = json.loads((Path(__file__).parents[2] / ".novaos-stable-candidate.json").read_text())
+URL = f"https://github.com/{release.REPO}/releases/tag/{CANDIDATE['tag']}"
+
+
+class ReleaseChecks(unittest.TestCase):
+    def test_tag_must_exist_and_resolve_to_approved_source(self):
+        with patch.object(release, "api", side_effect=RuntimeError("HTTP 404")):
+            with self.assertRaisesRegex(ValueError, "Missing tag"):
+                release.verify_tag(CANDIDATE)
+        with patch.object(release, "api", return_value={"object": {"type": "commit", "sha": "bad"}}):
+            with self.assertRaisesRegex(ValueError, "frozen release source"):
+                release.verify_tag(CANDIDATE)
+        with patch.object(release, "api", side_effect=[
+            {"object": {"type": "tag", "sha": "annotation"}},
+            {"object": {"type": "commit", "sha": CANDIDATE["source"]}},
+        ]):
+            release.verify_tag(CANDIDATE)
+
+    def test_missing_and_incorrect_assets_are_rejected(self):
+        with self.assertRaisesRegex(ValueError, "missing verified assets"):
+            release.check_remote_assets({"assets": []}, {"apk": "sha256:expected"})
+        with self.assertRaisesRegex(ValueError, "different assets"):
+            release.check_remote_assets({"assets": [{"name": "apk", "digest": "wrong"}]}, {"apk": "expected"})
+
+    def test_http_403_is_not_retried(self):
+        with tempfile.TemporaryDirectory() as tmp, patch.object(release, "digest", return_value="a"), \
+                patch.object(release, "find_release", side_effect=RuntimeError("HTTP 403")) as find, \
+                patch.object(release.time, "sleep") as sleep:
+            with self.assertRaisesRegex(ValueError, "contents: write"):
+                release.publish(CANDIDATE, Path(tmp))
+            find.assert_called_once()
+            sleep.assert_not_called()
+
+    def test_interrupted_draft_resumes_after_transient_error(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            directory = Path(tmp)
+            for name in release.ASSETS:
+                (directory / name).write_text(name)
+            path = f"https://github.com/{release.REPO}/releases/download/{CANDIDATE['tag']}/"
+            assets = [{"name": name, "digest": "sha256:" + release.digest(directory / name),
+                       "browser_download_url": path + name} for name in sorted(release.ASSETS)]
+            partial = {"draft": True, "prerelease": False, "assets": assets[:1]}
+            full = dict(partial, assets=assets)
+            latest = dict(full, draft=False, tag_name=CANDIDATE["tag"], html_url=URL)
+            with patch.object(release, "find_release", side_effect=[partial, full, full]), \
+                    patch.object(release, "gh", side_effect=[RuntimeError("HTTP 503"), b""]) as gh, \
+                    patch.object(release, "api", return_value=latest), patch.object(release, "verify_tag"), \
+                    patch.object(release.time, "sleep") as sleep:
+                self.assertEqual(URL, release.publish(CANDIDATE, directory))
+            sleep.assert_called_once_with(1)
+            self.assertEqual(("release", "upload"), gh.call_args_list[0].args[:2])
+            self.assertEqual(("release", "edit"), gh.call_args_list[1].args[:2])
+
+    def test_upgrade_receipts_are_bound_to_source_and_apk(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            upgrade = root / "from80"
+            upgrade.mkdir()
+            approval = {
+                "source": CANDIDATE["source"], "version": CANDIDATE["tag"][1:],
+                "version_code": CANDIDATE["version_code"], "approval_run": CANDIDATE["production_run"],
+                "regression_run": CANDIDATE["regression_run"], "approval_commit": CANDIDATE["production_head"],
+            }
+            (root / "owner-approval.json").write_text(json.dumps(approval))
+            (upgrade / "upgrade-baseline-sha256.txt").write_text(CANDIDATE["baseline_sha256"])
+            (upgrade / "upgrade-candidate-sha256.txt").write_text(CANDIDATE["apk_sha256"])
+            with patch.object(release, "digest", return_value=CANDIDATE["apk_sha256"]):
+                self.assertEqual(upgrade, release.check_local_receipts(CANDIDATE, root, root))
+                with self.assertRaisesRegex(ValueError, "another release"):
+                    release.check_local_receipts(dict(CANDIDATE, source="0" * 40), root, root)
+            with patch.object(release, "digest", return_value="0" * 64):
+                with self.assertRaisesRegex(ValueError, "immutable candidate"):
+                    release.check_local_receipts(CANDIDATE, root, root)
+
+
+if __name__ == "__main__":
+    unittest.main()
