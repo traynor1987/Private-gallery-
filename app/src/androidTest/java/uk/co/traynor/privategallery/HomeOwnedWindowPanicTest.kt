@@ -402,12 +402,9 @@ class HomeOwnedWindowPanicTest {
             override fun getSharedPreferences(name:String,mode:Int)=super.getSharedPreferences("$prefix-$name",mode).also {preferences+="$prefix-$name"}
         }
         val keysField=MainActivity::class.java.getDeclaredField("keys").apply {isAccessible=true}
-        val priorKeys=keysField.get(activity);val keys=PinVaultKeyStore(context);val key=keys.create("613842".toCharArray())
+        val priorKeys=keysField.get(activity);val keys=PinVaultKeyStore(context);var key=ByteArray(0)
         val recoveryField=MainActivity::class.java.getDeclaredField("recoveryKeys").apply{isAccessible=true}
         val priorRecovery=recoveryField.get(activity)
-        // These picker-return tests model an existing fully provisioned vault, not
-        // first-unlock recovery migration. Use the actual isolated encrypted store.
-        val fixtureRecovery=if(pickerGrace)uk.co.traynor.privategallery.core.security.RecoveryVaultKeyStore(context).also{it.confirm(it.create(key), key);check(it.isConfigured)}else null
         val panic=activity.getSharedPreferences("privacy-shield",Context.MODE_PRIVATE)
         val names=listOf("enabled","three-finger","quick-lock");val priorPanic=names.associateWith {panic.all[it]}
         val schedulePrefs=activity.getSharedPreferences("nova-backup-due",0);val priorSchedule=schedulePrefs.all.toMap()
@@ -424,6 +421,11 @@ class HomeOwnedWindowPanicTest {
             if(!directory.exists())null else File(root,"saved-${java.util.UUID.randomUUID()}").also {check(directory.renameTo(it)){"Preserve existing synthetic Home files before this fixture"}}
         }
         try {
+            // Preserve prior synthetic ciphertext before admitting a new fixture key.
+            // Production must continue refusing new setup over any existing Vault.
+            key=keys.create("613842".toCharArray())
+            // Picker-return cases model an already provisioned, confirmed recovery key.
+            val fixtureRecovery=if(pickerGrace)uk.co.traynor.privategallery.core.security.RecoveryVaultKeyStore(context).also{it.confirm(it.create(key), key);check(it.isConfigured)}else null
             compose.runOnIdle {
                 check(panic.edit().putBoolean("enabled",true).putBoolean("three-finger",true).putBoolean("quick-lock",false).commit())
                 keysField.set(activity,keys);if(fixtureRecovery!=null)recoveryField.set(activity,fixtureRecovery);state<Boolean>("hideContent").value=false;state<Boolean>("biometricEnabled").value=false
