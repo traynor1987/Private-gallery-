@@ -418,22 +418,22 @@ class Home2IntegrationTest {
   }
  }
 
- @Test fun notes_reopen_draft_after_leaving_through_nova_home() {
+ @Test fun notes_reopen_draft_after_returning_to_the_drawer() {
   showHome()
-  fun openNotes() {
-   openDrawer()
-   compose.onNodeWithTag("drawer-search").performTextInput("Nova Notes")
-   Espresso.closeSoftKeyboard()
-   compose.onNodeWithTag("app-nova-notes-draft").assertIsDisplayed().performClick()
-  }
-  openNotes()
+  openDrawer()
+  compose.onNodeWithTag("drawer-search").performTextInput("Nova Notes")
+  Espresso.closeSoftKeyboard()
+  compose.onNodeWithTag("app-nova-notes-draft").assertIsDisplayed().performClick()
   compose.waitUntil(10_000) { compose.onAllNodes(hasText("New note") and isEnabled()).fetchSemanticsNodes().isNotEmpty() }
   compose.onNodeWithText("New note").performClick()
   compose.onNodeWithTag("nova-note-title").performTextInput("Private draft")
   compose.onNodeWithText("Draft saved for recovery").assertIsDisplayed()
   Espresso.closeSoftKeyboard()
-  compose.onNodeWithTag("nova-home").performClick()
-  openNotes()
+  compose.onNodeWithContentDescription("Back").performClick()
+  compose.onNodeWithText("Resume draft").assertIsDisplayed()
+  compose.onNodeWithContentDescription("Back").performClick()
+  compose.onNodeWithTag("drawer-sheet").assertIsDisplayed()
+  compose.onNodeWithTag("app-nova-notes-draft").assertIsDisplayed().performClick()
   compose.waitUntil(10_000) { compose.onAllNodesWithText("Recovered an unsaved draft").fetchSemanticsNodes().isNotEmpty() }
   compose.onNodeWithTag("nova-note-title").assertTextContains("Private draft")
  }
@@ -543,13 +543,13 @@ class Home2IntegrationTest {
      compose.waitUntil(10_000) {
       compose.onAllNodes(hasText(creationAction) and isEnabled()).fetchSemanticsNodes().isNotEmpty()
      }
-     val actions = listOf(hasText(creationAction), hasContentDescription("Back"))
+     val actions = listOf(creationAction to hasText(creationAction), "Back" to hasContentDescription("Back"))
      for (inner in listOf(false, true)) {
       compose.runOnIdle { unfolded = inner }
       val screen = compose.onNodeWithTag(workspace.route).getUnclippedBoundsInRoot()
-      for (action in actions) {
+      for ((label, action) in actions) {
        val bounds = compose.onNode(action).assertIsDisplayed().assertIsEnabled().getUnclippedBoundsInRoot()
-       assertTrue("${workspace.label} $action must fit inside the workspace",
+       assertTrue("${workspace.label} $label must fit inside the workspace (control $bounds, workspace $screen)",
         (bounds.right - bounds.left) >= 48.dp && bounds.left >= screen.left && bounds.right <= screen.right)
       }
       compose.onNodeWithContentDescription("Back").performClick()
