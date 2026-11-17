@@ -10,8 +10,8 @@ android {
     applicationId = "uk.co.traynor.privategallery"
     minSdk = 37
     targetSdk = 37
-    versionCode = 83
-    versionName = "1.7.38.7"
+    versionCode = 84
+    versionName = "1.7.38.8"
     resValue("string", "app_name", "NovaOS")
     buildConfigField("boolean", "HIDDEN_PROTOTYPE", "false")
     buildConfigField("boolean", "HIDDEN_ENABLED", "true")
@@ -64,7 +64,10 @@ android {
 // The isolated Fold preview advances independently of the production release.
 androidComponents {
   onVariants(selector().withBuildType("debug")) { variant ->
-    variant.outputs.forEach { it.versionCode.set(71) }
+    variant.outputs.forEach { output ->
+      output.versionCode.set(71)
+      output.versionName.set("1.7.38.7-TEST-ONLY")
+    }
   }
 }
 
