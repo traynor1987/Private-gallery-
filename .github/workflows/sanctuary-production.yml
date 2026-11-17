@@ -291,6 +291,17 @@ jobs:
             --tag v1.7.38.8 --source "$FROZEN_SOURCE" --baseline-code 83 \
             --assets "$stage" --notes "$stage/notes.md" --tools "$ANDROID_HOME/build-tools/36.0.0" \
             --evidence app/build/production-evidence/from80
+      - name: Retain verified publication inputs
+        uses: actions/upload-artifact@v4
+        with:
+          name: novaos-code81-verified-stable-assets
+          path: |
+            ${{ runner.temp }}/code81-release/private-gallery-release.apk
+            ${{ runner.temp }}/code81-release/private-gallery-release.apk.sha256
+            ${{ runner.temp }}/code81-release/private-gallery-release.metadata.json
+            ${{ runner.temp }}/code81-release/notes.md
+          if-no-files-found: error
+          retention-days: 7
       - name: Publish verified APK to the stable GitHub feed
         env:
           GH_TOKEN: ${{ github.token }}
@@ -306,8 +317,23 @@ jobs:
             echo 'Existing release requires inspection; refusing to overwrite' >&2
             exit 1
           fi
-          gh api --method POST "repos/$repo/git/refs" -f ref="refs/tags/$tag" -f sha="$FROZEN_SOURCE" --silent
-          test "$(gh api "repos/$repo/git/ref/tags/$tag" --jq .object.sha)" = "$FROZEN_SOURCE"
+          # GitHub rejected tag creation by the Actions integration. Resolve the owner-created
+          # tag independently of the temporary local tag used for asset validation.
+          verify_remote_tag() {
+            git fetch --no-tags origin "refs/tags/$tag:refs/novaos-release/verified-tag"
+            test "$(git rev-parse 'refs/novaos-release/verified-tag^{commit}')" = "$FROZEN_SOURCE"
+          }
+          remote_tag=
+          for attempt in {1..45}; do
+            remote_tag=$(git ls-remote --refs origin "refs/tags/$tag")
+            if [[ -n "$remote_tag" ]]; then break; fi
+            sleep 60
+          done
+          if [[ -z "$remote_tag" ]]; then
+            echo "Owner-created tag $tag is missing. Verified APK assets remain available in this run." >&2
+            exit 1
+          fi
+          verify_remote_tag
           gh release create "$tag" "$stage/private-gallery-release.apk" \
             "$stage/private-gallery-release.apk.sha256" "$stage/private-gallery-release.metadata.json" \
             --repo "$repo" --verify-tag --draft --title 'NovaOS 1.7.38.8 (Build 84)' --notes-file "$stage/notes.md"
@@ -325,7 +351,7 @@ jobs:
                   expected[name]='sha256:'+hashlib.file_digest(stream,'sha256').hexdigest()
           assert actual==expected, 'GitHub draft assets do not match locally verified assets'
           PY
-          test "$(gh api "repos/$repo/git/ref/tags/$tag" --jq .object.sha)" = "$FROZEN_SOURCE"
+          verify_remote_tag
           gh release edit "$tag" --repo "$repo" --draft=false --latest
           gh api "repos/$repo/releases/latest" > "$stage/latest.json"
           python3 - "$stage" "$tag" <<'PY'

@@ -8,6 +8,6 @@ Upgrade fixture SHA-256: 00fa86483f88b6c2179454c8e452fd06724fc04d19131145e532572
 Upgrade controls SHA-256: 17ea3fc306a538c60ac41befaba087dd0f4d0d8fafe8a55d44feba503772dffd
 Runtime matrix SHA-256: e0c54baba756d385e021341d9571785da3aa4380d419ef0da6482ad0b308dce2
 Runtime workflow run: 44079639233
-Signing workflow SHA-256: 40ea043aa438e8a7f6a92489e6cb06ca064c153e63e083af195e011b336c5c04
+Signing workflow SHA-256: 291f3b542b469a6073eecf1b041f3da41929888ce03f9b0ad6deccf316c50fe9
 
 The release job binds original Android 17 CI evidence, fixture, controls, and owner authorization to the frozen app source before allowing signer access. The Build 83 GitHub APK must match production run #30 and the original production signer. The sealed test environment seeds Build 83, installs Build 84 in place, verifies retained data and verifies it again after force-stop. Only then may the job stage the APK and checksum, verify the Git tag and draft assets, and publish stable.
