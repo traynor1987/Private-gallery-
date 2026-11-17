@@ -48,7 +48,7 @@ class HiddenCredentialSeparationTest {
             assertTrue(runCatching { primary.changePin("123456".toCharArray(), "728491".toCharArray()) }.isFailure)
             primary.unlock("123456".toCharArray()).fill(0)
             assertTrue(runCatching { primary.replacePinForRecoveredVault("728491".toCharArray(), pk) }.isFailure)
-            primary.clearFailedRestore()
+            uk.co.traynor.privategallery.core.security.PrimaryCredentialFixture.clearPin(context)
             assertTrue(runCatching { primary.create("728491".toCharArray()) }.isFailure)
             primary.replacePinForRecoveredVault("654321".toCharArray(), pk)
             val restored = primary.unlock("654321".toCharArray())

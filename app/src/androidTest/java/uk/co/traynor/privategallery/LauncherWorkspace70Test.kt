@@ -84,8 +84,8 @@ class LauncherWorkspace70Test {
         } finally {
             instrumentation.runOnMainSync { destination?.finish() }
             instrumentation.waitForIdleSync()
-            recovery.clearFailedRestore()
-            keys.clearFailedRestore()
+            uk.co.traynor.privategallery.core.security.PrimaryCredentialFixture.clearRecovery(context)
+            uk.co.traynor.privategallery.core.security.PrimaryCredentialFixture.clearPin(context)
         }
     }
 

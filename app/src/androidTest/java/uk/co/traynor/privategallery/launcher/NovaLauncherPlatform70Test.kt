@@ -246,7 +246,7 @@ class NovaLauncherPlatform70Test {
         } finally {
             if (sanctuary.refresh() != null) assertTrue(sanctuary.end(SanctuaryStore.END_PHRASE))
             assertTrue(launchStore.save(original))
-            keys.clearFailedRestore()
+            uk.co.traynor.privategallery.core.security.PrimaryCredentialFixture.clearPin(context)
             assertTrue(exitPreferences.edit().clear().commit())
         }
     }

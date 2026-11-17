@@ -132,3 +132,6 @@ The diagnostic privacy comparison is now resolved at source level by reusing arc
 Primary backup export now captures its originating presentation authority and rejects a lock/re-authentication transition throughout export and final UI status publication. A completed fresh restore cannot authenticate a later request after its originating setup context changes.
 
 These follow-up changes remain subject to the final exact-source Android and populated upgrade gates. No source change is covered by the retained APK's old release evidence.
+
+
+CI 444 passed compilation and JVM checks, then failed at NovaLauncherPlatform70Test.sanctuaryHomeSettingsRequiresPinPhraseAndUninterruptedHold during fixture cleanup. The fixture called clearFailedRestore after ordinary setup. That production API correctly refuses to erase credentials without restore ownership. Test cleanup is now explicit in an androidTest-only helper guarded by HIDDEN_PROTOTYPE. It retires the synthetic Vault before removing its fixture credentials. The ownership-denial regressions continue to call the production rollback API and require rejection.

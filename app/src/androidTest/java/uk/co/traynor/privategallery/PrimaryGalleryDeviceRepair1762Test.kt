@@ -134,7 +134,7 @@ class PrimaryGalleryDeviceRepair1762Test {
             assertArrayEquals("Browsing never rewrites encrypted payload",encrypted,payload.readBytes())
         } finally {
             compose.runOnIdle {state.hidden.leave();state.key=null;state.session.lock();state.primaryGallery=false;route.value=Route.LOCK}
-            plain.fill(0);key.fill(0);encrypted.fill(0);root.deleteRecursively();hiddenRoot.deleteRecursively();credentials.clearFailedRestore()
+            plain.fill(0);key.fill(0);encrypted.fill(0);root.deleteRecursively();hiddenRoot.deleteRecursively();uk.co.traynor.privategallery.core.security.PrimaryCredentialFixture.clearPin(activity)
         }
     }
 }
