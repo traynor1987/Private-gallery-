@@ -7,6 +7,7 @@ from unittest.mock import patch
 import publish_verified_novaos as release
 
 CANDIDATE = json.loads((Path(__file__).parents[2] / ".novaos-stable-candidate.json").read_text())
+CANDIDATE.pop("release_id", None)  # Publication scenario tests select their own draft state.
 URL = f"https://github.com/{release.REPO}/releases/tag/{CANDIDATE['tag']}"
 
 
@@ -109,6 +110,78 @@ class ReleaseChecks(unittest.TestCase):
             sleep.assert_called_once_with(1)
             self.assertEqual(("release", "upload"), gh.call_args_list[0].args[:2])
             self.assertEqual(("release", "edit"), gh.call_args_list[1].args[:2])
+
+    def test_pinned_existing_draft_is_reused_by_id_without_listing_or_duplicate_creation(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            for name in release.ASSETS:
+                (root/name).write_text(name)
+            prefix = f"https://github.com/{release.REPO}/releases/download/{CANDIDATE['tag']}/"
+            assets = [dict(name=name, digest="sha256:"+release.digest(root/name), browser_download_url=prefix+name) for name in release.ASSETS]
+            draft = dict(id=123, tag_name=CANDIDATE["tag"], draft=True, prerelease=False, assets=[])
+            full = dict(draft, assets=assets)
+            latest = dict(full, draft=False, html_url=URL)
+            with patch.object(release, "api", side_effect=[draft, full, latest]) as api, \
+                 patch.object(release, "find_release") as listing, patch.object(release, "gh", return_value=b"") as gh, \
+                 patch.object(release, "verify_tag"):
+                self.assertEqual(URL, release.publish(dict(CANDIDATE, release_id=123),root))
+                listing.assert_not_called()
+                self.assertEqual(["releases/123","releases/123","releases/latest"], [c.args[0] for c in api.call_args_list])
+                self.assertFalse(any(c.args[:2] == ("release","create") for c in gh.call_args_list))
+        with patch.object(release, "api", return_value=dict(id=123, tag_name="wrong")), patch.object(release, "digest", return_value="unchanged"):
+            with self.assertRaisesRegex(ValueError,"another candidate"):
+                release.publish(dict(CANDIDATE,release_id=123),Path("unused"))
+
+    def test_new_draft_readback_waits_without_creating_a_second_draft(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            for name in release.ASSETS:
+                (root / name).write_text(name)
+            prefix = f"https://github.com/{release.REPO}/releases/download/{CANDIDATE['tag']}/"
+            assets = [dict(name=name, digest="sha256:"+release.digest(root/name),
+                           browser_download_url=prefix+name) for name in release.ASSETS]
+            draft = dict(draft=True, prerelease=False, assets=[])
+            full = dict(draft, assets=assets)
+            latest = dict(full, draft=False, tag_name=CANDIDATE["tag"], html_url=URL)
+            with patch.object(release, "find_release", side_effect=[None, None, draft, full]), \
+                 patch.object(release, "gh", return_value=b"") as gh, \
+                 patch.object(release, "api", return_value=latest), \
+                 patch.object(release, "verify_tag"), patch.object(release.time, "sleep") as sleep:
+                self.assertEqual(URL, release.publish(CANDIDATE, root))
+            self.assertEqual(1, sum(call.args[:2] == ("release", "create") for call in gh.call_args_list))
+            sleep.assert_called_once_with(1)
+
+    def test_asset_readback_requires_complete_digests_and_rejects_mismatch_immediately(self):
+        partial = dict(prerelease=False, draft=True, assets=[])
+        complete = dict(partial, assets=[dict(name="apk", digest="sha256:expected")])
+        with patch.object(release, "find_release", side_effect=[partial, complete]), patch.object(release.time, "sleep") as sleep:
+            self.assertEqual(complete, release.confirmed_release(CANDIDATE["tag"], {"apk": "sha256:expected"}))
+            sleep.assert_called_once_with(1)
+        wrong = dict(partial, assets=[dict(name="apk", digest="wrong")])
+        with patch.object(release, "find_release", return_value=wrong), patch.object(release.time, "sleep") as sleep:
+            with self.assertRaisesRegex(ValueError, "different assets"):
+                release.confirmed_release(CANDIDATE["tag"], {"apk": "sha256:expected"})
+            sleep.assert_not_called()
+
+    def test_asset_confirmation_uses_exact_draft_id_and_rejects_another_tag(self):
+        draft = dict(id=123, tag_name=CANDIDATE["tag"], draft=True, prerelease=False, assets=[])
+        with patch.object(release, "api", return_value=draft) as api, patch.object(release, "find_release") as listing:
+            self.assertEqual(draft, release.confirmed_release(CANDIDATE["tag"], {}, release_id=123))
+            api.assert_called_once_with("releases/123")
+            listing.assert_not_called()
+        with patch.object(release, "api", return_value=dict(draft, tag_name="v0.0.0.0")):
+            with self.assertRaisesRegex(ValueError, "another candidate"):
+                release.confirmed_release(CANDIDATE["tag"], {}, release_id=123)
+
+    def test_latest_readback_waits_for_visibility_and_fails_closed_when_missing(self):
+        latest = dict(tag_name=CANDIDATE["tag"], draft=False, prerelease=False, assets=[])
+        with patch.object(release, "api", side_effect=[RuntimeError("HTTP 404"), latest]), patch.object(release.time, "sleep") as sleep:
+            self.assertEqual(latest, release.confirmed_release(CANDIDATE["tag"], {}, stable=True))
+            sleep.assert_called_once_with(1)
+        with patch.object(release, "find_release", return_value=None) as find, patch.object(release.time, "sleep"):
+            with self.assertRaisesRegex(ValueError, "bounded readback"):
+                release.confirmed_release(CANDIDATE["tag"])
+            self.assertEqual(4, find.call_count)
 
     def test_upgrade_receipts_are_bound_to_source_and_apk(self):
         with tempfile.TemporaryDirectory() as tmp:

@@ -199,28 +199,57 @@ def find_release(tag):
     return matches[0] if matches else None
 
 
+
+def confirmed_release(tag, expected=None, *, stable=False, release_id=None, attempts=4):
+    """Bounded read-after-write confirmation; missing state is never success."""
+    for attempt in range(attempts):
+        try:
+            release = api("releases/latest") if stable else (api(f"releases/{release_id}") if release_id is not None else find_release(tag))
+        except RuntimeError as error:
+            if not stable or "HTTP 404" not in str(error):
+                raise
+            release = None
+        if release is not None and release_id is not None:
+            require(release["id"] == release_id and release["tag_name"] == tag, "Release ID refers to another candidate")
+        if release is not None and (not stable or release["tag_name"] == tag):
+            require(not release["prerelease"], "Stable candidate cannot use a prerelease")
+            if expected is None:
+                return release
+            current = check_remote_assets(release, expected, allow_partial=True)
+            if current == expected and (not stable or not release["draft"]):
+                return release
+        if attempt + 1 < attempts:
+            time.sleep(2 ** attempt)
+    raise ValueError("GitHub did not confirm the complete " + ("latest stable release" if stable else "draft release") + " within the bounded readback window")
+
 def publish(candidate, assets, attempts=3):
     tag = candidate["tag"]
     expected = {name: "sha256:" + digest(assets / name) for name in ASSETS}
     for attempt in range(attempts):
         try:
-            release = find_release(tag)
+            release_id = candidate.get("release_id")
+            if release_id is not None:
+                require(type(release_id) is int and release_id > 0, "Invalid pinned release ID")
+                release = api(f"releases/{release_id}")
+                require(release["id"] == release_id and release["tag_name"] == tag,
+                        "Pinned release belongs to another candidate")
+            else:
+                release = find_release(tag)
             if release is None:
                 gh("release", "create", tag, "--verify-tag", "--draft", "--repo", REPO,
                    "--title", f"NovaOS {tag[1:]} — Build {candidate['version_code']}",
                    "--notes-file", str(assets / "notes.md"))
-                release = find_release(tag)
-                require(release is not None, "Cannot verify the GitHub draft")
+                release = confirmed_release(tag)
             require(not release["prerelease"], "Stable candidate cannot use a prerelease")
             current = check_remote_assets(release, expected, allow_partial=release["draft"])
             if release["draft"]:
                 missing = [str(assets / name) for name in sorted(expected.keys() - current.keys())]
                 if missing:
                     gh("release", "upload", tag, *missing, "--repo", REPO)
-                check_remote_assets(find_release(tag), expected)
+                confirmed_release(tag, expected, release_id=release.get("id"))
                 verify_tag(candidate)
                 gh("release", "edit", tag, "--draft=false", "--latest", "--repo", REPO)
-            latest = api("releases/latest")
+            latest = confirmed_release(tag, expected, stable=True)
             require(not latest["draft"] and not latest["prerelease"] and latest["tag_name"] == tag,
                     "Candidate is not the latest stable release")
             check_remote_assets(latest, expected)

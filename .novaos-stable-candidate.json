@@ -12,5 +12,6 @@
   "assets_sha256": "61af6e7d3f7bab51224c4a4345b74ffa307f4154271e0e6c41842de51e5fbc8c",
   "receipts_id": 14372251175,
   "receipts_sha256": "8d29118aba15a08479ec2c7854706ab6a67827654ae14975a0733d0f60a539c6",
-  "regression_branch": "feature/novaos-code81-core-apps"
+  "regression_branch": "feature/novaos-code81-core-apps",
+  "release_id": 449228108
 }

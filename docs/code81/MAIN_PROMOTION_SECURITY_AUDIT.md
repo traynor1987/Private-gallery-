@@ -201,3 +201,8 @@ The publication regression fixture explicitly removes any real candidate branch 
 
 
 Publication run 4 (44181288478) confirmed automatic tag creation with the existing contents-write workflow token after main promotion. Remote v1.7.38.8 resolves to b79b85efc5bae8e0bedb832e21a62d462e6f4397. No GitHub App or manual owner tag was needed. Its next step failed before publication because sdkmanager was not in PATH. The publisher now uses the same explicit ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager path as the protected production runner. This correction changes no APK, source freeze, signing input or upgrade evidence; only publication is retried.
+
+
+Publication run 5 (44181702017) passed tag and SDK verification, verified the retained signed artifacts, and created draft release 449228108. Immediate draft-list readback returned no match, so publication correctly stopped before exposing an incomplete release. Independent GitHub readback confirms that exact draft, with no assets yet. The publisher now uses bounded read-after-write confirmation, refreshes uploaded assets through the exact draft ID when available, and waits for the complete latest-stable response before claiming success. Missing assets are never treated as success; wrong digests/tags and HTTP403 still fail closed. Nineteen focused release-control tests pass. The same signed APK, original-key upgrade receipt and tag are reused; no Android build or signing job is repeated.
+
+The existing owner-authorised draft ID 449228108 is now pinned in the publication candidate and read directly by ID, with exact tag checks. This avoids creating a duplicate draft or depending on a paginated draft-list read after creation. Wrong release IDs/tags are rejected before upload.
