@@ -8,6 +8,24 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class EncryptedIndexStoreTest {
+    @Test fun `verified index retains NovaOS v7 dates and pinned collections`() {
+        val root = Files.createTempDirectory("private-gallery-index-v7").toFile()
+        try {
+            val key = ByteArray(32) { it.toByte() }
+            val item = VaultItem("photo", "image/jpeg", "photo.jpg", 42, 7,
+                ByteArray(32), ByteArray(12), VaultItemState.COMPLETE,
+                addedAtEpochMillis = 1000, adjustedTakenAtEpochMillis = 2000,
+                adjustedTimeZone = "Europe/London")
+            val pinned = VaultCollection("collection", "Pinned", 42, isPinned = true)
+            EncryptedIndexStore(root).saveSnapshot(VaultIndexSnapshot(listOf(item), listOf(pinned)), key)
+            val restored = EncryptedIndexStore(root).loadSnapshot(key)
+            assertEquals(1000L, restored.items.single().addedAtEpochMillis)
+            assertEquals(2000L, restored.items.single().adjustedTakenAtEpochMillis)
+            assertEquals("Europe/London", restored.items.single().adjustedTimeZone)
+            assertTrue(restored.collections.single().isPinned)
+        } finally { root.deleteRecursively() }
+    }
+
     @Test fun `missing index cannot hide existing encrypted payloads`() {
         val root = Files.createTempDirectory("private-gallery-missing-index").toFile()
         try {

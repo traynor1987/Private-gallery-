@@ -87,9 +87,9 @@ Disposition totals are 18 A, 2 B, 19 C and 9 D across all 48 commits.
 
 ## Targeted adaptations in this checkpoint
 
-EncryptedIndexStore now authenticates and compares staged plaintext before replacing vault-index.enc. It retains current V1 through V7 serialization, AES-GCM associated data, filenames, package identity and keys. A tampered staged authentication tag caused the new regression to fail before the fix. After the adaptation, all nine selected index and migration tests pass.
+EncryptedIndexStore now authenticates and compares staged plaintext before replacing vault-index.enc. It retains current V1 through V7 serialization, AES-GCM associated data, filenames, package identity and keys. A tampered staged authentication tag caused the new regression to fail before the fix. After the adaptation, all ten selected index and migration tests pass.
 
-A missing index now refuses to represent a populated or uncertain Vault as empty. PrimaryStorageInventory is reused from archived main and rejects files, symlinks, inaccessible directories and observed inventory changes. Tests confirm existing payload bytes survive the refusal and a genuinely empty Vault remains readable.
+A missing index now refuses to represent a populated or uncertain Vault as empty. PrimaryStorageInventory is reused from archived main and rejects files, symlinks, inaccessible directories and observed inventory changes. Tests confirm existing payload bytes survive the refusal and a genuinely empty Vault remains readable. A V7 regression verifies retained dates, time zone and pinned-collection metadata.
 
 The complete current Hidden foundation host script also runs independently. Its result must not be described as Android Keystore or populated upgrade verification.
 
