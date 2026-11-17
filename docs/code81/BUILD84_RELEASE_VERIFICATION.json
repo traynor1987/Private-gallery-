@@ -1,0 +1,95 @@
+{
+  "schema": 1,
+  "release_family": "Code 81",
+  "package": "uk.co.traynor.privategallery",
+  "version_name": "1.7.38.8",
+  "version_code": 84,
+  "minimum_api": 37,
+  "target_api": 37,
+  "application_source": "b79b85efc5bae8e0bedb832e21a62d462e6f4397",
+  "tag": "v1.7.38.8",
+  "tag_source_verified": true,
+  "promotion_pr": 62,
+  "promotion_strategy": "fast-forward of exact tested commit with archived main as ancestor",
+  "old_main_archive": {
+    "branch": "archive/private-gallery-phase2-2026-10-01",
+    "source": "93ed56fbfcd6cb04731a87452dbcbf2e6d6bcb10"
+  },
+  "regression": {
+    "run_number": 455,
+    "run_id": 44167100460,
+    "source": "b79b85efc5bae8e0bedb832e21a62d462e6f4397",
+    "jvm": {
+      "passed": 734,
+      "failed": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "selected_android_runtime": {
+      "passed": 295,
+      "failed": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "mandatory_focused_reports": "verified",
+    "killed_process_backup_phases": 8,
+    "launcher_restart_phases": 1,
+    "artifact_id": 14371200164,
+    "artifact_sha256": "1333b178d0635d3c98f446b34c3e71652c2b06f35ed3d4e5f300159332850001"
+  },
+  "production": {
+    "run_number": 35,
+    "run_id": 44177566227,
+    "authorisation_commit": "13d216ca13c494e4ae7c719ceaaf53d466d381bf",
+    "conclusion": "success",
+    "upgrade": "authentic populated Build 83 to 84 on disposable Android 17 emulator",
+    "upgrade_phases": {
+      "seed": "passed",
+      "verify_in_place": "passed",
+      "after_restart": "passed"
+    },
+    "uninstall_or_data_clear_during_upgrade": false,
+    "baseline_apk_sha256": "5613a7cb6dff7b19a4206bf752ce22bf7b4891e36ce8ca1df9f2cd0ffab1946f"
+  },
+  "apk": {
+    "filename": "private-gallery-release.apk",
+    "bytes": 151484043,
+    "sha256": "f0086165ec7e54ea90987b7001442161271347abcb820a4e696a0295397fcc30",
+    "certificate_sha256": "94f2bfc6567f26d067d29077111cfd0ce86d38263c642ad115e43365f05b0d17",
+    "independent_signature_package_version_alignment_verification": "passed"
+  },
+  "publication": {
+    "run_number": 6,
+    "run_id": 44182986028,
+    "conclusion": "success",
+    "release_id": 449228108,
+    "draft": false,
+    "prerelease": false,
+    "latest_stable_verified": true,
+    "release_url": "https://github.com/traynor1987/Private-gallery-/releases/tag/v1.7.38.8",
+    "apk_url": "https://github.com/traynor1987/Private-gallery-/releases/download/v1.7.38.8/private-gallery-release.apk",
+    "automatic_tagging": "existing contents-write workflow token; no additional credential or manual tag",
+    "signed_artifact_rebuilt_for_publication_retries": false
+  },
+  "updater_verification": {
+    "anonymous_live_release_response": "passed",
+    "anonymous_actual_apk_download": "passed",
+    "all_three_asset_digests": "passed",
+    "production_parser_and_service_with_live_response": "passed",
+    "original_certificate_and_package": "passed",
+    "offers_84_over_83_and_rejects_equal_code": "passed",
+    "physical_in_app_download_and_installer_confirmation": "pending_owner",
+    "build83_one_time_manual_update": "permitted due to its old parser"
+  },
+  "labs": "all existing demonstrations preserved",
+  "development_branch_preserved": true,
+  "physical_fold_acceptance": "pending_owner",
+  "physical_checklist": [
+    "Install over Build 83 using Update; never uninstall or clear storage. Stop on signature mismatch or downgrade.",
+    "Check Primary authentication and Hidden PIN; existing Vault, Guardian, Evidence Locker, wallpapers and launcher data.",
+    "Check Main WhatsApp capture/dismissal, protected recheck and Friends WhatsApp separation.",
+    "Check five core apps, protected Notes PIN retry, autosave/drafts, reminders, attachments and encrypted backup.",
+    "Check cover/inner layouts, folding, rotation, keyboard, Back navigation and folder dissolution.",
+    "Check Updates & About after installation; Android installer confirmation remains owner controlled."
+  ]
+}
