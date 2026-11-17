@@ -26,6 +26,18 @@ class MainReleaseControls(unittest.TestCase):
         values[4]["digest"] = "sha256:" + marker["runtime_archive_sha256"]
         return values
 
+    def test_main_runs_the_same_modern_shell_checks_as_the_feature_branch(self):
+        import yaml
+        root = Path(__file__).resolve().parents[2]
+        workflow = yaml.safe_load((root / ".github/workflows/fast-development.yml").read_text())
+        job = workflow["jobs"]["home2-integration"]
+        for step in job["steps"]:
+            script = step.get("run", step.get("with", {}).get("script", ""))
+            for line in script.splitlines():
+                if "GITHUB_REF" in line and "feature/novaos-code81-core-apps" in line:
+                    self.assertIn("refs/heads/main", line)
+        self.assertIn("refs/heads/main", next(step for step in job["steps"] if step.get("name") == "Focused Android 17 integration and privacy tests")["env"]["NOVA_VISUAL_FULL"])
+
     def test_main_source_passes_provenance_before_separate_runtime_report_validation(self):
         with tempfile.TemporaryDirectory() as directory:
             values = self.fixture(directory)

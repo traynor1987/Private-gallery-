@@ -17,7 +17,7 @@ capture() {
   exit "$status"
 }
 trap capture EXIT
-./gradlew connectedDebugAndroidTest \
+bash scripts/run_android17_checked_command.sh "$output" -- ./gradlew connectedDebugAndroidTest \
   -Pandroid.testInstrumentationRunnerArguments.class="$test_package.$test_class" \
   -Pandroid.enableAdditionalTestOutput=true \
   -Pandroid.testInstrumentationRunnerArguments.additionalTestOutputDir="/sdcard/Android/media/$test_app/additional_test_output" \
