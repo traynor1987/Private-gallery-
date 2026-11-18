@@ -411,5 +411,10 @@
   "uk.co.traynor.privategallery.PanicCapture1751Test": [
     "hiddenRecordingPanicRetainsOriginalDestinationAndRequiresFreshAuthentication",
     "primaryRecordingPanicRetainsRecoverableEncryptedCapture"
+  ],
+  "uk.co.traynor.privategallery.core.update.Updater85RuntimeTest": [
+    "failedChecksKeepLastSuccessfulTimestampAndInstallerResultCannotFakeUpgrade",
+    "firstCheckAfterUpgradeUsesActualInstalledPackageInsteadOfMissingOldInstallMarker",
+    "privateUpdateProviderIsReadOnlyAndCannotExposeVaultPaths"
   ]
 }

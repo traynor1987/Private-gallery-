@@ -151,7 +151,14 @@ class EvidenceLocker179UiTest {
    compose.waitUntil(15000){controller.state.value.catalog?.incidents()?.singleOrNull()?.events()?.size==2&&!controller.state.value.busy}
    val uncertain=f.access.store.read().incidents().single().events().single{it.title()=="Uncertain event179"}
    assertEquals(0L,uncertain.timestamp());assertEquals("USER",uncertain.provenance())
-   compose.evidenceNode(hasText("Move earlier") and hasAnyAncestor(hasTestTag("evidence-event-${uncertain.id()}"))).performClick()
+   // The event form has just left composition. Finish its IME transition, then
+   // resolve the stable list rather than an indexed lazy node retained by the shared helper.
+   androidx.test.espresso.Espresso.closeSoftKeyboard()
+   compose.waitForIdle()
+   val eventTag="evidence-event-${uncertain.id()}"
+   compose.onNodeWithTag("evidence-list").performScrollToNode(hasTestTag(eventTag))
+   compose.onNode(hasText("Move earlier") and hasAnyAncestor(hasTestTag(eventTag)))
+    .performScrollTo().assertIsDisplayed().assertIsEnabled().performClick()
    compose.waitUntil(15000){controller.state.value.catalog?.incidents()?.singleOrNull()?.manualOrder()==true&&!controller.state.value.busy}
    assertEquals(uncertain.id(),f.access.store.read().incidents().single().events().first().id())
    val third=(repo.importVerified(VaultImportSource("third-copy179.txt","text/plain",{duplicateBytes.inputStream()},createDistinctCopy=true))as ImportResult.Imported).item

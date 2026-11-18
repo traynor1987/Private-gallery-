@@ -69,7 +69,11 @@ private fun PackageInfo.signers(): List<String> = signingInfo?.apkContentsSigner
     HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(it.toByteArray()))
 }
 
-internal fun downloadVerifiedNovaApk(context: Context, release: NovaStoreRelease): File {
+internal fun downloadVerifiedNovaApk(context: Context, release: NovaStoreRelease,
+    onProgress: (Long, Long) -> Unit = { _, _ -> },
+    cancelled: () -> Boolean = { false },
+    onVerifying: () -> Unit = {},
+): File {
     val directory = File(context.cacheDir, "updates").apply { mkdirs() }
     directory.listFiles()?.filter {
         it.name.startsWith("nova-store-") && System.currentTimeMillis() - it.lastModified() > 86_400_000
@@ -81,6 +85,7 @@ internal fun downloadVerifiedNovaApk(context: Context, release: NovaStoreRelease
         var finished = false
         repeat(4) {
             if (finished) return@repeat
+            check(!cancelled()) { "Download cancelled" }
             check(trustedNovaReleaseUrl(target.toString(), initial = false))
             val connection = target.toURL().openConnection() as HttpURLConnection
             try {
@@ -90,19 +95,13 @@ internal fun downloadVerifiedNovaApk(context: Context, release: NovaStoreRelease
                 when (connection.responseCode) {
                     301, 302, 303, 307, 308 -> target = target.resolve(checkNotNull(connection.getHeaderField("Location")))
                     200 -> {
-                        check(connection.contentLengthLong <= MAX_APK_BYTES)
-                        var bytes = 0L
+                        val expectedBytes = connection.contentLengthLong
+                        check(expectedBytes <= MAX_APK_BYTES)
+                        check(expectedBytes <= 0 || directory.usableSpace > expectedBytes + 8L * 1024 * 1024) { "Insufficient storage" }
                         connection.inputStream.use { input ->
-                            output.outputStream().use { destination ->
-                                val buffer = ByteArray(64 * 1024)
-                                while (true) {
-                                    val count = input.read(buffer)
-                                    if (count < 0) break
-                                    bytes += count
-                                    check(bytes <= MAX_APK_BYTES)
-                                    digest.update(buffer, 0, count)
-                                    destination.write(buffer, 0, count)
-                                }
+                            java.io.FileOutputStream(output).use { destination ->
+                                uk.co.traynor.privategallery.core.update.VerifiedUpdateTransfer.copy(input,destination,expectedBytes,MAX_APK_BYTES,digest,cancelled,onProgress)
+                                destination.fd.sync()
                             }
                         }
                         finished = true
@@ -113,10 +112,15 @@ internal fun downloadVerifiedNovaApk(context: Context, release: NovaStoreRelease
                 connection.disconnect()
             }
         }
+        check(!cancelled()) { "Download cancelled" }
+        onVerifying()
         check(finished && HexFormat.of().formatHex(digest.digest()) == release.sha256)
         val manager = context.packageManager
         val candidate = checkNotNull(manager.getPackageArchiveInfo(output.path,
             PackageManager.PackageInfoFlags.of(PackageManager.GET_SIGNING_CERTIFICATES.toLong())))
+        val app = checkNotNull(candidate.applicationInfo)
+        check(uk.co.traynor.privategallery.core.update.UpdateInstallPolicy.acceptsAndroid17(app.minSdkVersion,app.targetSdkVersion))
+        check(app.flags and android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE == 0)
         val installed = manager.installed(release.packageName)
         check(installed == null || installed.signers() == listOf(release.certificate))
         check(release.accepts(
