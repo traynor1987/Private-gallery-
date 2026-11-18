@@ -257,7 +257,25 @@ class EvidenceLocker179UiTest {
    compose.runOnIdle{controller.refresh()};waitReady(controller,1)
    compose.setContent{CompositionLocalProvider(LocalContext provides f.context){PrivateGalleryTheme(AppTheme.LIGHT){EvidenceLocker(controller,{},{},{},{},{})}}}
    compose.onNodeWithText("Timeline").performClick();click("Reviewed time179");click("Review time: 10:00")
-   chooseTimestamp(10);compose.onNodeWithText("Save").performClick()
+   chooseTimestamp(10)
+   // Returning from the date/time dialog can restore the parent's editor and
+   // reopen the IME asynchronously. Do not resolve Save's gesture while that
+   // action row is still moving (the cold/warm checkpoints exercise both).
+   val automation=InstrumentationRegistry.getInstrumentation().uiAutomation
+   val previousFlags=automation.serviceInfo.flags
+   automation.serviceInfo=automation.serviceInfo.apply { flags=previousFlags or AccessibilityServiceInfo.FLAG_RETRIEVE_INTERACTIVE_WINDOWS }
+   try {
+    compose.evidenceNode(hasSetTextAction() and hasText("Title")).performTouchInput { click() }.assertIsFocused()
+    compose.waitUntil(10000) { automation.windows.any { it.type==AccessibilityWindowInfo.TYPE_INPUT_METHOD } }
+    androidx.test.espresso.Espresso.closeSoftKeyboard()
+    compose.waitUntil(10000) {
+     automation.windows.none { it.type==AccessibilityWindowInfo.TYPE_INPUT_METHOD } &&
+      compose.runOnIdle { compose.activity.window.decorView.hasWindowFocus() &&
+       compose.activity.window.decorView.rootWindowInsets?.isVisible(android.view.WindowInsets.Type.ime())==false }
+    }
+   } finally { automation.serviceInfo=automation.serviceInfo.apply { flags=previousFlags } }
+   compose.onNode(hasText("Save") and hasClickAction()).assertIsDisplayed().assertIsEnabled().performTouchInput { click() }
+   field("Title").assertDoesNotExist()
    compose.waitUntil(15000){!controller.state.value.busy&&controller.state.value.catalog?.incidents()?.single()?.events()?.size==1}
    val event=f.access.store.read().incidents().single().events().single()
    assertEquals("USER",event.provenance());assertTrue(event.notes().contains("OCR page 1: 10:00"));assertTrue(event.notes().contains("Date and timezone unavailable"))

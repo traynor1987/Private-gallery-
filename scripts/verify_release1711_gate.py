@@ -311,6 +311,9 @@ def runtime_cases(archive,matrix,source):
                                    'backendFailureKeepsLocalReviewAndDoesNotAutomaticallyRetryPaidRequest')]
             for display in ('cloud-teacher83-cover', 'cloud-teacher83-inner')
         })
+        exact['evidence-timestamp83-cold'] = [
+            ('uk.co.traynor.privategallery.ui.EvidenceLocker179UiTest',
+             'editedExtractedTimestampRemainsUserEnteredWithRawQuotePreserved')]
         exact['evidence-correction86-cold'] = [
             ('uk.co.traynor.privategallery.ui.EvidenceLocker179UiTest',
              'primaryActualImportExtractCorrectIncidentSearchRemoveAndReopenPreservesOriginal')]
