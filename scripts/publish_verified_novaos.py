@@ -19,10 +19,10 @@ ASSETS = {"private-gallery-release.apk", "private-gallery-release.apk.sha256",
           "private-gallery-release.metadata.json"}
 PRODUCTION_STEPS = {
     "Validate original runtime reports and authenticated owner authorization before signer access",
-    "Verify published Build 84 baseline before signer access",
+    "Verify published Build 85 baseline before signer access",
     "Verify the existing permanent private key and original certificate",
     "Verify frozen candidate package signature OCR distribution and 16KiB alignment",
-    "Original-key Build 84 to versionCode 85 upgrade and restart without uninstall or clear",
+    "Original-key Build 85 to versionCode 86 upgrade and restart without uninstall or clear",
     "Preserve verified upgrade receipts only", "Stage and verify stable update assets",
     "Retain verified publication inputs",
 }
@@ -95,13 +95,13 @@ def check_local_receipts(candidate, assets, receipts):
             "Signed APK differs from the immutable candidate")
     upgrade = receipts / "from80"
     require(read(upgrade / "upgrade-baseline-sha256.txt").split()[0] == candidate["baseline_sha256"],
-            "Upgrade used a different Build 84 baseline")
+            "Upgrade used a different Build 85 baseline")
     require(read(upgrade / "upgrade-candidate-sha256.txt").split()[0] == candidate["apk_sha256"],
             "Upgrade tested a different candidate")
     rehearsal=json.loads(read(upgrade / "in-app-update.json"))
     require(all(rehearsal.get(key)==value for key,value in {
-        "result":"PASS","source":candidate["source"],"baseline_code":84,
-        "candidate_code":85,"installed_code":85,"apk_sha256":candidate["apk_sha256"],
+        "result":"PASS","source":candidate["source"],"baseline_code":candidate["baseline_code"],
+        "candidate_code":candidate["version_code"],"installed_code":candidate["version_code"],"apk_sha256":candidate["apk_sha256"],
         "discovery":"PASS","download_and_verification":"PASS","android_installer":"confirmed",
     }.items()), "Missing exact-artifact in-app Android upgrade rehearsal")
     return upgrade

@@ -40,13 +40,19 @@ internal class NovaBrainConnection(private val transport: BrainStatusTransport =
             if (cancelled()) return BrainConnectionStatus()
             try {
                 val health = transport.get(configuration.endpoint("/health"), null)
-                if (health.code in 500..599 && attempt == 0) return@repeat
+                if (health.code in 500..599) {
+                    if (attempt == 0) return@repeat
+                    return BrainConnectionStatus(BrainConnectionPhase.OFFLINE, "Server unavailable · local Nova Brain remains available")
+                }
                 check(health.code == 200 && JSONObject(health.body.decodeToString()).getString("status") == "ok")
                 if (cancelled()) return BrainConnectionStatus()
                 val response = transport.get(configuration.endpoint("/guardian/status"), configuration.token)
                 if (response.code in setOf(401, 403)) return BrainConnectionStatus(BrainConnectionPhase.AUTHENTICATION_REQUIRED,
                     "Authentication rejected · check your backend owner token. Local processing is available.")
-                if (response.code in 500..599 && attempt == 0) return@repeat
+                if (response.code in 500..599) {
+                    if (attempt == 0) return@repeat
+                    return BrainConnectionStatus(BrainConnectionPhase.OFFLINE, "Server unavailable · local Nova Brain remains available")
+                }
                 if (response.code == 429) return BrainConnectionStatus(BrainConnectionPhase.ERROR,
                     "Server is busy · try again later. Local processing is available.")
                 check(response.code == 200)

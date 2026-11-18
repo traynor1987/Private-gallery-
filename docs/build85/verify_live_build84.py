@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Drive authentic production Build84's UI against the published public feed on disposable API37.
+"""Drive authentic production Build85's UI against the published public feed on disposable API37.
 
 No instrumentation, substituted transport, secondary test app, app data editing, uninstall,
 or replacement adb installation is used. The Android installer performs the update.
@@ -210,48 +210,48 @@ def main():
     wait_device_ready()
     require(installed() is None, 'Production package must be absent initially; never clear/uninstall')
     candidate = json.loads(args.candidate.read_text())
-    require(candidate['tag'] == 'v1.7.39' and candidate['version_code'] == 85, 'Wrong release candidate')
+    require(candidate['tag'] == 'v1.7.40' and candidate['version_code'] == 86, 'Wrong release candidate')
     release = public_release(args.output)
     require(release['tag_name'] == candidate['tag'] and not release['draft'] and not release['prerelease'], 'Not the actual latest stable release')
     apk = next(a for a in release['assets'] if a['name'] == 'private-gallery-release.apk')
     require(apk['digest'] == 'sha256:' + candidate['apk_sha256'], 'Live APK differs from the verified candidate')
     (args.output / 'live-release.json').write_text(json.dumps(release, indent=2)+'\n')
-    baseline = args.output.parent / 'authentic-build84.apk'
+    baseline = args.output.parent / 'authentic-build85.apk'
     fetch(baseline, Path(os.environ['ANDROID_HOME']) / 'build-tools/36.0.0')
     adb('install', '--no-streaming', baseline)
-    require(installed() == 84, 'Authentic Build84 installation not observed')
+    require(installed() == 85, 'Authentic Build85 installation not observed')
     adb('shell', 'svc', 'power', 'stayon', 'true')
     adb('shell', 'input', 'keyevent', 'KEYCODE_WAKEUP')
     adb('shell', 'wm', 'dismiss-keyguard')
     # This changes only the disposable emulator's ordinary install-source permission.
     adb('shell', 'appops', 'set', PACKAGE, 'REQUEST_INSTALL_PACKAGES', 'allow')
     before = open_updates(allow_setup=True)
-    require(has(before, '1.7.38.8 · Build 84'), 'Build84 screen does not identify its real installed version')
+    require(has(before, '1.7.39 · Build 85'), 'Build85 screen does not identify its real installed version')
     click(before, 'Check for updates')
-    available = wait_for(lambda t: has(t, 'Update available · 1.7.39') and has(t, 'Download update'), 'Build84 real public update discovery')
-    save_ui(available, args.output / 'build84-live-update-available.xml')
-    print('PASS: authentic installed Build84 discovers Build85 through its real UI and public GitHub feed', flush=True)
-    click(available, 'Download update')
+    available = wait_for(lambda t: has(t, '1.7.40 · Build 86 available') and has(t, 'Download & Install'), 'Build85 real public update discovery')
+    save_ui(available, args.output / 'build85-live-update-available.xml')
+    print('PASS: authentic installed Build85 discovers Build86 through its real UI and public GitHub feed', flush=True)
+    click(available, 'Download & Install')
     installers = {'com.android.packageinstaller', 'com.google.android.packageinstaller', 'com.android.permissioncontroller'}
     installer = wait_for(lambda t: any(n.get('package') in installers and n.get('text') in ('Update', 'Install') for n in t.iter('node')), 'real verified download and Android installer', 240)
     save_ui(installer, args.output / 'live-android-installer.xml')
     action = next(n for n in installer.iter('node') if n.get('package') in installers and n.get('text') in ('Update', 'Install'))
     tap(action)
     deadline = time.monotonic() + 120
-    while installed() != 85:
-        require(time.monotonic() < deadline, 'Android did not report installed Build85')
+    while installed() != 86:
+        require(time.monotonic() < deadline, 'Android did not report installed Build86')
         time.sleep(1)
     (args.output / 'live-update-installed.json').write_text(json.dumps({'result': 'INSTALLED', 'installed_code': installed(), 'source': candidate['source'], 'apk_sha256': candidate['apk_sha256'], 'live_github_discovery': 'PASS', 'live_download': 'PASS', 'android_installer': 'confirmed', 'restart_review': 'pending'}, indent=2)+'\n')
     adb('shell', 'am', 'force-stop', PACKAGE)
     after = open_updates(allow_setup=False)
-    require(has(after, '1.7.39 · Build 85'), 'Restart did not show the installed Build85')
+    require(has(after, '1.7.40 · Build 86'), 'Restart did not show the installed Build86')
     # Opening About triggers the repaired refresh. Wait for that actual network result
     # rather than attempting to click its deliberately disabled checking button.
-    after = wait_for(lambda t: has(t, '1.7.39 · Build 85') and has(t, '1.7.39 · Up to date'), 'Build85 real up-to-date screen')
-    save_ui(after, args.output / 'build85-live-up-to-date.xml')
-    receipt = dict(schema=1, result='PASS', source=candidate['source'], apk_sha256=candidate['apk_sha256'], baseline_code=84, installed_code=85, live_github_discovery='PASS', live_download='PASS', android_installer='confirmed', restart_and_same_pin='PASS', up_to_date_screen='PASS', instrumentation='none', physical_fold='owner_confirmation_pending')
+    after = wait_for(lambda t: has(t, '1.7.40 · Build 86') and has(t, '1.7.40 · Up to date'), 'Build86 real up-to-date screen')
+    save_ui(after, args.output / 'build86-live-up-to-date.xml')
+    receipt = dict(schema=1, result='PASS', source=candidate['source'], apk_sha256=candidate['apk_sha256'], baseline_code=85, installed_code=86, live_github_discovery='PASS', live_download='PASS', android_installer='confirmed', restart_and_same_pin='PASS', up_to_date_screen='PASS', instrumentation='none', physical_fold='owner_confirmation_pending')
     (args.output / 'live-upgrade.json').write_text(json.dumps(receipt, indent=2)+'\n')
-    print('PASS: real public in-app Build84 -> Android installer -> installed Build85 -> restart -> Up to date', flush=True)
+    print('PASS: real public in-app Build85 -> Android installer -> installed Build86 -> restart -> Up to date', flush=True)
 
 if __name__ == '__main__':
     try:

@@ -47,7 +47,7 @@ import uk.co.traynor.privategallery.core.sanctuary.SanctuaryMode
 import uk.co.traynor.privategallery.core.sanctuary.SanctuaryPreset
 import uk.co.traynor.privategallery.core.sanctuary.SanctuaryStore
 
-/** Reviewed release-control instrumentation for original-key Build 84 to versionCode 85 upgrade.
+/** Reviewed release-control instrumentation for original-key Build 85 to versionCode 86 upgrade.
  * Captured and hash-checked before frozen application checkout; never modifies baseline app.
  */
 class UpgradeFixtureTest {
@@ -58,9 +58,9 @@ class UpgradeFixtureTest {
     private val candidateCode get() = checkNotNull(arguments.getString("candidateCode")).toInt()
     private fun guard() {
         check(context.packageName == "uk.co.traynor.privategallery.hiddenprototype")
-        check(baselineCode == 84 && candidateCode == 85)
+        check(baselineCode == 85 && candidateCode == 86)
     }
-    /** Disposable emulator only: exercise the immutable Build84 updater against controlled
+    /** Disposable emulator only: exercise the immutable Build85 updater against controlled
      * release responses and the real original-key candidate bytes. APK/signature validation,
      * FileProvider grants and Android PackageInstaller are the unmodified application paths.
      * The transport substitution lives only in this signed instrumentation process. */
@@ -70,7 +70,7 @@ class UpgradeFixtureTest {
         assertEquals(37,android.os.Build.VERSION.SDK_INT)
         val port=checkNotNull(arguments.getString("updateFixturePort")).toInt()
         check(port in 1024..65535)
-        val prefix="https://github.com/traynor1987/Private-gallery-/releases/download/v1.7.39/"
+        val prefix="https://github.com/traynor1987/Private-gallery-/releases/download/v1.7.40/"
         val routes=mapOf(
             "https://api.github.com/repos/traynor1987/Private-gallery-/releases/latest" to "/release.json",
             prefix+"private-gallery-release.apk" to "/candidate.apk",
@@ -107,33 +107,36 @@ class UpgradeFixtureTest {
         val instrumentation=InstrumentationRegistry.getInstrumentation()
         val activity=instrumentation.startActivitySync(Intent().setClassName(context.packageName,context.packageName+".MainActivity").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
         fun invoke(name:String)=instrumentation.runOnMainSync{activity.javaClass.getDeclaredMethod(name).apply{isAccessible=true}.invoke(activity)}
-        fun value(name:String):Any? {
-            var result:Any?=null
-            instrumentation.runOnMainSync {
-                val state=activity.javaClass.getDeclaredField(name+"\$delegate").apply{isAccessible=true}.get(activity) as androidx.compose.runtime.State<*>
-                result=state.value
-            }
-            return result
+        val model = activity.javaClass.getDeclaredField("novaUpdater\$delegate").apply { isAccessible=true }.get(activity)
+            .let { (it as Lazy<*>).value as uk.co.traynor.privategallery.core.update.NovaUpdateModel }
+        fun updateState(): uk.co.traynor.privategallery.core.update.NovaUpdateState {
+            var result: uk.co.traynor.privategallery.core.update.NovaUpdateState? = null
+            instrumentation.runOnMainSync { result = model.state }
+            return checkNotNull(result)
         }
         invoke("checkForUpdates")
         val checkDeadline=SystemClock.elapsedRealtime()+60_000
-        while(value("availableUpdate")==null && SystemClock.elapsedRealtime()<checkDeadline)Thread.sleep(100)
-        assertNotNull("Build84 discovery failed: "+value("updateStatus"),value("availableUpdate"))
-        assertTrue(value("availableUpdate").toString().contains("1.7.39"))
+        while(updateState().phase==uk.co.traynor.privategallery.core.update.UpdatePhase.CHECKING && SystemClock.elapsedRealtime()<checkDeadline)Thread.sleep(100)
+        val available=updateState()
+        assertEquals(uk.co.traynor.privategallery.core.update.UpdatePhase.AVAILABLE,available.phase)
+        assertEquals(86L,available.release?.versionCode)
+        assertEquals("1.7.40",available.release?.version?.raw)
         invoke("downloadUpdate")
         val deadline=SystemClock.elapsedRealtime()+180_000
         while(SystemClock.elapsedRealtime()<deadline) {
-            val status=value("updateStatus").toString()
-            if(status=="Installation handed to Android") {
-                instrumentation.sendStatus(0,android.os.Bundle().apply{putString(android.app.Instrumentation.REPORT_KEY_STREAMRESULT,"NOVA_UPDATE_HANDOFF_READY original=84 candidate=85 transport=controlled-loopback apkVerification=unmodified\n")})
-                // Keep this target process alive until the host confirms Android's Update button.
+            val state=updateState()
+            if(state.phase==uk.co.traynor.privategallery.core.update.UpdatePhase.INSTALLATION_REQUESTED) {
+                instrumentation.sendStatus(0,android.os.Bundle().apply{putString(android.app.Instrumentation.REPORT_KEY_STREAMRESULT,"NOVA_UPDATE_HANDOFF_READY original=85 candidate=86 transport=controlled-loopback apkVerification=unmodified\n")})
                 while(SystemClock.elapsedRealtime()<deadline)Thread.sleep(1000)
                 fail("Android package installation was not confirmed in time")
             }
-            if(status!="Downloading…")fail("Build84 updater could not hand off: $status")
+            assertTrue("Build85 updater failed: ${state.message}",state.phase in setOf(
+                uk.co.traynor.privategallery.core.update.UpdatePhase.DOWNLOADING,
+                uk.co.traynor.privategallery.core.update.UpdatePhase.VERIFYING,
+                uk.co.traynor.privategallery.core.update.UpdatePhase.READY))
             Thread.sleep(100)
         }
-        fail("Build84 download timed out")
+        fail("Build85 download timed out")
     }
 
     private fun hash(bytes: ByteArray) = MessageDigest.getInstance("SHA-256").digest(bytes).joinToString("") { "%02x".format(it) }
