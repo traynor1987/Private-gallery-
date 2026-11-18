@@ -1,4 +1,22 @@
 {
+  "uk.co.traynor.privategallery.launcher.NovaBrain86UiTest": [
+    "connectionSetupExplainsPrivacyAndRequiresHttpsAndBackendTokenBeforeSaving",
+    "savedAndRemovedConfigurationNotifiesOtherReviewSurfacesWithoutSendingAnything"
+  ],
+  "uk.co.traynor.privategallery.ui.AiPrivacySettingsTest": [
+    "consentIsProviderScopedAndClearable",
+    "credentialsAreKeystoreEncryptedAndClearable",
+    "openAiAndReplicateCredentialsRemainIndependent",
+    "seedreamModerationDefaultsOffAndPersistsOnlyExplicitOwnerChoice"
+  ],
+  "uk.co.traynor.privategallery.core.update.Updater86UiTest": [
+    "foldedDownloadShowsRealPercentageBytesSpeedCancelRetryAndVerification",
+    "unfoldedDownloadShowsRealPercentageBytesSpeedCancelRetryAndVerification"
+  ],
+  "uk.co.traynor.privategallery.core.brain.NovaBrain86RuntimeTest": [
+    "authenticatedDisabledStatusNeverActivatesAnalysisAndOfflineUsesNoOwnerContent",
+    "sharedConfigurationIsKeystoreEncryptedSurvivesRecreationAndCanBeRemoved"
+  ],
   "uk.co.traynor.privategallery.core.update.Updater85RuntimeTest": [
     "aboutEntryRefreshesIdleModelAfterRecreationWithoutRetryingFailedChecks",
     "failedChecksKeepLastSuccessfulTimestampAndInstallerResultCannotFakeUpgrade",

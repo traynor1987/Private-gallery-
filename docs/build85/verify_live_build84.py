@@ -227,6 +227,9 @@ def main():
     adb('shell', 'appops', 'set', PACKAGE, 'REQUEST_INSTALL_PACKAGES', 'allow')
     before = open_updates(allow_setup=True)
     require(has(before, '1.7.39 · Build 85'), 'Build85 screen does not identify its real installed version')
+    # Installed Build85 starts its first real check on About entry. Wait for
+    # that completed result before exercising the explicit check action.
+    before = wait_for(lambda t: has(t, '1.7.40 · Build 86 available') and has(t, 'Download & Install'), 'Build85 automatic first check')
     click(before, 'Check for updates')
     available = wait_for(lambda t: has(t, '1.7.40 · Build 86 available') and has(t, 'Download & Install'), 'Build85 real public update discovery')
     save_ui(available, args.output / 'build85-live-update-available.xml')
@@ -245,8 +248,10 @@ def main():
     adb('shell', 'am', 'force-stop', PACKAGE)
     after = open_updates(allow_setup=False)
     require(has(after, '1.7.40 · Build 86'), 'Restart did not show the installed Build86')
-    # Opening About triggers the repaired refresh. Wait for that actual network result
-    # rather than attempting to click its deliberately disabled checking button.
+    # PackageManager has already confirmed86. Explicitly refresh the real feed
+    # after restart as well as verifying the installed version.
+    after = wait_for(lambda t: has(t, '1.7.40 · Up to date'), 'installed-version confirmation')
+    click(after, 'Check for updates')
     after = wait_for(lambda t: has(t, '1.7.40 · Build 86') and has(t, '1.7.40 · Up to date'), 'Build86 real up-to-date screen')
     save_ui(after, args.output / 'build86-live-up-to-date.xml')
     receipt = dict(schema=1, result='PASS', source=candidate['source'], apk_sha256=candidate['apk_sha256'], baseline_code=85, installed_code=86, live_github_discovery='PASS', live_download='PASS', android_installer='confirmed', restart_and_same_pin='PASS', up_to_date_screen='PASS', instrumentation='none', physical_fold='owner_confirmation_pending')
