@@ -74,6 +74,11 @@ internal fun GuardianCloudTeacher(message: String? = null, historicalEvidence: B
         lifecycle.addObserver(observer)
         onDispose { lifecycle.removeObserver(observer) }
     }
+    // Read readiness in the parent composition so both dialog slots receive the
+    // same current permission/consent snapshot after an asynchronous status read.
+    val canCheck = !readingSettings && !busy && configuration != null && canSend()
+    val canApprove = !readingSettings && enabled && !busy && server?.canAnalyze == true && canSend()
+    val canSubmit = canApprove && approved && configuration != null && upload.isNotBlank() && upload.length <= 4096
     GuardianAlertDialog(onDismissRequest = { open = false }, title = { Text("Cloud Teacher") },
         text = {
             Column(Modifier.heightIn(max = 420.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -83,7 +88,7 @@ internal fun GuardianCloudTeacher(message: String? = null, historicalEvidence: B
                     else -> "Cloud Teacher is off · enable it in Settings → Nova Brain after reviewing its disclosure"
                 }, Modifier.testTag("cloud-teacher-permission-status"))
                 Text("Uses your saved Nova Brain connection. No token needs to be re-entered. Local Guardian protection continues independently.")
-                TextButton(enabled = !busy && configuration != null && canSend(), onClick = {
+                TextButton(enabled = canCheck, onClick = {
                     if (!canSend()) return@TextButton
                     val saved = configuration ?: return@TextButton
                     busy = true; feedback = null; server = null; approved = false
@@ -107,7 +112,7 @@ internal fun GuardianCloudTeacher(message: String? = null, historicalEvidence: B
                     OutlinedTextField(upload, { upload = it.take(4096); approved = false; forceNew = false; lesson = null }, enabled = !busy,
                         modifier = Modifier.testTag("cloud-teacher-approved-excerpt"), label = { Text("Exact excerpt to send") }, maxLines = 8)
                     Row {
-                        Checkbox(approved, { approved = it }, enabled = enabled && !busy && server?.canAnalyze == true,
+                        Checkbox(approved, { approved = it }, enabled = canApprove,
                             modifier = Modifier.testTag("cloud-teacher-request-consent"))
                         Text("Approve only this edited excerpt and the server's stated maximum reservation")
                     }
@@ -127,8 +132,7 @@ internal fun GuardianCloudTeacher(message: String? = null, historicalEvidence: B
             }
         },
         confirmButton = {
-            if (message != null) TextButton(enabled = enabled && !busy && approved && canSend() &&
-                configuration != null && server?.canAnalyze == true && upload.isNotBlank(), onClick = {
+            if (message != null) TextButton(enabled = canSubmit, onClick = {
                 if (!canSend()) return@TextButton
                 val saved = configuration ?: return@TextButton
                 val status = server ?: return@TextButton
