@@ -21,17 +21,20 @@ def _integer(value, minimum=0, maximum=MONTHLY_MAX_MICRO_USD):
 
 class Budget:
     def __init__(self, database, cycle, expires_at, credits, reserve,
-                 limit=DEFAULT_LIMIT_MICRO_USD, clock=time, *, monthly_limit=MONTHLY_MAX_MICRO_USD):
+                 limit=DEFAULT_LIMIT_MICRO_USD, clock=time, *, monthly_limit=MONTHLY_MAX_MICRO_USD,
+                 request_limit=None):
         if (not isinstance(cycle, str) or not cycle or len(cycle) > 200 or
                 not _integer(limit, 1, DEFAULT_LIMIT_MICRO_USD) or
                 not _integer(credits, maximum=2**63-1) or not _integer(reserve, 1) or
                 not _integer(monthly_limit, 1) or type(expires_at) not in (int, float) or
-                not math.isfinite(expires_at)):
+                not math.isfinite(expires_at) or
+                (request_limit is not None and not _integer(request_limit,1,1_000_000))):
             raise ValueError("Invalid credit-cycle configuration")
         self.database, self.cycle, self.expires_at = database, cycle, expires_at
         self.funded_allowance, self.spending_limit = credits, limit
         self.ceiling, self.reserve_amount = min(credits, limit), reserve
         self.clock, self.monthly_limit = clock, monthly_limit
+        self.request_limit = request_limit
         with sqlite3.connect(database) as db:
             db.execute("BEGIN IMMEDIATE")
             db.execute("CREATE TABLE IF NOT EXISTS reservations (cycle TEXT PRIMARY KEY, total INTEGER NOT NULL)")
@@ -108,6 +111,9 @@ class Budget:
                 return {'decision': 'halted'}
             if now >= self.expires_at:
                 return {'decision': 'expired'}
+            requests = db.execute('SELECT COUNT(*) FROM request_reservations WHERE cycle=?', (self.cycle,)).fetchone()[0]
+            if self.request_limit is not None and requests >= self.request_limit:
+                return {'decision': 'approved_request_limit_exhausted'}
             row = db.execute("SELECT total FROM reservations WHERE cycle=?", (self.cycle,)).fetchone()
             total = (row[0] if row else 0) + self.reserve_amount
             if total > self.ceiling:
@@ -125,6 +131,11 @@ class Budget:
         with sqlite3.connect(self.database) as db:
             db.execute("BEGIN IMMEDIATE")
             db.execute("UPDATE request_reservations SET state='uncertain' WHERE id=? AND state='pending'", (str(UUID(request_id)),))
+
+    def halt_unverified_pricing(self):
+        with sqlite3.connect(self.database) as db:
+            db.execute('BEGIN IMMEDIATE')
+            db.execute("INSERT OR REPLACE INTO budget_metadata VALUES ('halted','pricing_unverified')")
 
     def reconcile(self, request_id, usage_cost_micro_usd):
         """Server-only verified usage calculation; never an Android-supplied cost.
@@ -172,6 +183,7 @@ class Budget:
             exposure, carry, legacy = self._exposure(db, month)
             measured = db.execute("SELECT COALESCE(SUM(actual),0) FROM request_reservations WHERE state='settled' AND (day BETWEEN ? AND ? OR settled_day BETWEEN ? AND ?)", (month+'-01',month+'-31',month+'-01',month+'-31')).fetchone()[0]
             halted = db.execute("SELECT 1 FROM budget_metadata WHERE key='halted'").fetchone() is not None
+            request_count = db.execute('SELECT COUNT(*) FROM request_reservations WHERE cycle=?', (self.cycle,)).fetchone()[0]
         total, expired = row[0] if row else 0, now >= self.expires_at
         percent = max(min(100,100*total//self.ceiling) if self.ceiling else 100,
                       min(100,100*exposure//self.monthly_limit))
@@ -189,6 +201,8 @@ class Budget:
                 'unresolved_carry_micro_usd':carry,
                 'legacy_unattributed_micro_usd':legacy,
                 'paid_requests_halted':halted,
+                'approved_request_limit':self.request_limit,
+                'approved_requests_remaining':None if self.request_limit is None else max(0,self.request_limit-request_count),
                 'reservation_activity_utc':{'day':day,'month':month,
                     'daily_reserved_micro_usd':daily[0] if daily else 0,
                     'daily_requests':daily[1] if daily else 0,

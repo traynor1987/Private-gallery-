@@ -41,10 +41,11 @@ costs count conservatively in both months. Bound violations halt future requests
 Clock rollback fails closed. Legacy undated/unreconciled amounts are preserved,
 not assumed to be paid, refunded or attributed to an invented month.
 
-Local verification: all 25 backend tests passed, including all original 13 tests,
+Initial local verification: all 25 backend tests passed, including all original 13 tests,
 monthly cross-cycle concurrency, duplicate identities, unknown outcomes, rollover,
-legacy preservation and usage reconciliation. API integration of the new request
-identity/reconciliation methods is still pending; no full-feature completion claim.
+legacy preservation and usage reconciliation. The initial checkpoint did not yet wire API dispatch. The subsequent development
+now binds all paid requests to durable identities and reconciliation; see below.
+There is no full-feature completion claim.
 
 ## Deployment and release boundaries
 
@@ -71,8 +72,8 @@ Preserve it. Publishing new source requires an unused version/code (next is
 
 ## Remaining implementation and acceptance
 
-1. Bind paid API dispatch to the request ledger, bounded usage reconciliation,
-   validated structured advice and clear errors. No automatic paid retry.
+1. Paid API dispatch, durable identities, bounded usage reconciliation and structured
+   advisory responses are now implemented and locally verified; no live paid test.
 2. Add encrypted default-off Android opt-in, per-request edited preview/approval,
    structured advisory history/deletion, shared local-learning review and current
    authenticated budget/model status. No automatic training/validation or uploads.
@@ -103,3 +104,31 @@ is an estimate at reviewed rates, not a provider invoice or remaining balance.
 Provider spend alerts differ from enforced limits; current official hard limits
 can block requests but are not instantaneous. Actual account settings remain
 unverified. This local backend cannot cap unrelated API usage in other services.
+
+## Paid API integration checkpoint
+
+41 local backend tests now pass. The existing /guardian/analyze route reserves a
+durable request identity with an owner-keyed excerpt digest before any provider
+call. UUID retries and changed-payload conflicts cannot dispatch twice; legacy
+clients without UUIDs get a stable owner-keyed identity. Timeouts keep the full
+bound, including when recording the uncertain annotation fails. There is no
+automatic paid retry. Responses carry bounded structured pattern hypotheses,
+uncertainty and a summary marked model_prediction, never owner-confirmed facts.
+
+Validated standard-tier token usage reconciles input, cached input and output
+(reasoning is already inside output) using integer micro-USD and upward rounding.
+Missing usage retains the full reservation; unverified pricing/model/tier/components
+halt further paid dispatch. Backend records retain no excerpts or model text.
+Unexpected request failures log only a static redacted event.
+
+Paid availability now additionally requires NOVA_CLOUD_ANALYSIS_APPROVED=true on
+a supported funded deployment. Defaults are a $0.25 total cycle allowance and one
+approved request; neither a month change nor a successful refund renews that count.
+A funded supported deployment can report its real ledger with approval OFF without
+reading the OpenAI key. Staging ignores funded/approval settings, reads only the
+existing owner token and never loads the ledger/OpenAI key. Its existing Compose
+mounts, loopback binding and unsupported-host production gate remain intact.
+
+Do not set approval or deploy paid configuration as part of this checkpoint. No
+real key was used, no credit was spent and no VPS service was changed. Android
+opt-in, encrypted advisory history and full integration verification remain in work.

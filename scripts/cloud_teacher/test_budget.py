@@ -7,6 +7,19 @@ from budget import Budget
 
 
 class BudgetTest(unittest.TestCase):
+    def test_approved_request_count_persists_even_when_usage_is_zero(self):
+        from uuid import uuid4
+        with TemporaryDirectory() as directory:
+            path=Path(directory)/'budget.db'
+            budget=Budget(path,'approved-test',100,250000,102000,clock=lambda:99,request_limit=1)
+            identity=str(uuid4())
+            self.assertEqual(budget.begin_request(identity,'a'*64)['decision'],'reserved')
+            budget.reconcile(identity,0)
+            reopened=Budget(path,'approved-test',100,250000,102000,clock=lambda:99,request_limit=1)
+            self.assertFalse(reopened.reserve())
+            self.assertEqual(reopened.status()['approved_requests_remaining'],0)
+            self.assertEqual(reopened.begin_request(identity,'a'*64)['decision'],'duplicate')
+
     def test_monthly_limit_is_atomic_across_independent_cycles(self):
         from datetime import UTC, datetime
         now = datetime(2026, 11, 18, tzinfo=UTC).timestamp()

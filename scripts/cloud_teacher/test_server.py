@@ -7,8 +7,13 @@ from http.server import ThreadingHTTPServer
 from threading import Thread
 from unittest.mock import Mock, patch
 from urllib.error import HTTPError, URLError
+from uuid import uuid4
 
 from server import Handler, RequestLimiter, analyze, authorize, request_cost_bound
+from protocol import AnalysisResult
+
+LESSON = {'assessment':'UNCERTAIN','patterns':['EMOTIONAL_PRESSURE'],
+          'uncertainty':'HIGH','summary':'Possible pressure.'}
 
 
 class TeacherTest(unittest.TestCase):
@@ -26,9 +31,12 @@ class TeacherTest(unittest.TestCase):
             self.assertEqual(json.loads(request.data)["max_output_tokens"], 1000)
             self.assertNotIn("reasoning", json.loads(request.data))
             return io.BytesIO(json.dumps({"status": "completed", "output": [
-                {"type": "message", "content": [{"type": "output_text", "text": "Possible pressure."}]}
+                {"type": "message", "content": [{"type": "output_text", "text": json.dumps(LESSON)}]}
             ]}).encode())
-        self.assertEqual(analyze("only the selected message", "server-test", "gpt-5-mini", upstream), "Possible pressure.")
+        result = analyze("only the selected message", "server-test", "gpt-5-mini", upstream)
+        self.assertEqual(result.advice, "Possible pressure.")
+        self.assertEqual(result.lesson, LESSON)
+        self.assertIsNone(result.usage_cost_micro_usd, 'Missing usage must not invent a refund')
 
     def test_incomplete_response_is_rejected(self):
         with self.assertRaises(ValueError):
@@ -63,7 +71,7 @@ class TeacherTest(unittest.TestCase):
             server.analysis_enabled = True
             server.limiter = RequestLimiter(limit=1)
             server.budget = Mock()
-            server.budget.reserve.return_value = True
+            server.budget.begin_request.return_value = {'decision':'reserved'}
             server.budget.reserve_amount = 102_000
             worker = Thread(target=server.serve_forever, daemon=True)
             worker.start()
@@ -72,20 +80,23 @@ class TeacherTest(unittest.TestCase):
                     conn = HTTPConnection("127.0.0.1", server.server_port, timeout=3)
                     try:
                         conn.request("POST", "/guardian/analyze",
-                                     json.dumps({"message": "synthetic", "consent": consent}),
+                                     json.dumps({"message": "synthetic", "consent": consent, "request_id":str(uuid4())}),
                                      {"Authorization": f"Bearer {token}"})
                         response = conn.getresponse()
                         return response.status, response.read()
                     finally:
                         conn.close()
 
-                with patch("server.analyze", return_value="Advisory") as upstream:
+                with patch("server.analyze", return_value=AnalysisResult({**LESSON,'summary':'Advisory'},None)) as upstream:
                     self.assertEqual(send("wrong", True)[0], 401)
                     self.assertEqual(send("owner-test", False)[0], 400)
                     upstream.assert_not_called()
                     status, body = send("owner-test", True)
                     self.assertEqual(status, 200)
-                    self.assertEqual(json.loads(body), {"advice": "Advisory"})
+                    self.assertEqual(json.loads(body)['advice'], 'Advisory')
+                    self.assertEqual(json.loads(body)['lesson'], {**LESSON,'summary':'Advisory'})
+                    self.assertEqual(json.loads(body)['source'], 'model_prediction')
+                    self.assertFalse(json.loads(body)['provider_billing_verified'])
                     self.assertEqual(send("owner-test", True)[0], 429)
                     server.analysis_enabled = False
                     self.assertEqual(send("owner-test", True)[0], 503)
@@ -94,18 +105,18 @@ class TeacherTest(unittest.TestCase):
 
                 server.analysis_enabled = True
                 server.limiter = RequestLimiter()
-                server.budget.reserve.reset_mock()
+                server.budget.begin_request.reset_mock()
                 server.budget.reserve_amount = 101_999
                 with patch("server.analyze") as upstream:
                     self.assertEqual(send("owner-test", True)[0], 503)
-                    server.budget.reserve.assert_not_called()
+                    server.budget.begin_request.assert_not_called()
                     server.budget.reserve_amount = 102_000
-                    server.budget.reserve.return_value = False
+                    server.budget.begin_request.return_value = {'decision':'monthly_limit_exhausted'}
                     self.assertEqual(send("owner-test", True)[0], 402)
                     upstream.assert_not_called()
 
-                server.budget.reserve.return_value = True
-                server.budget.reserve.reset_mock()
+                server.budget.begin_request.return_value = {'decision':'reserved'}
+                server.budget.begin_request.reset_mock()
                 failures = [(TimeoutError("sensitive"), 504), (URLError(TimeoutError("sensitive")), 504),
                             (HTTPError("https://api.openai.com", 429, "sensitive", {}, None), 502),
                             (ValueError("sensitive"), 502)]
@@ -115,7 +126,8 @@ class TeacherTest(unittest.TestCase):
                         self.assertEqual(status, expected)
                         self.assertNotIn(b"sensitive", body)
                         upstream.assert_called_once()
-                self.assertEqual(server.budget.reserve.call_count, len(failures))
+                self.assertEqual(server.budget.begin_request.call_count, len(failures))
+                self.assertGreaterEqual(server.budget.mark_uncertain.call_count, len(failures))
             finally:
                 server.shutdown()
                 worker.join()
@@ -126,6 +138,7 @@ class TeacherTest(unittest.TestCase):
 
         with ThreadingHTTPServer(("127.0.0.1", 0), Handler) as server:
             with patch.dict(os.environ, {"NOVA_CLOUD_CREDIT_CYCLE": "funded",
+                                         "NOVA_CLOUD_ANALYSIS_APPROVED": "true",
                                          "NOVA_CLOUD_TEACHER_MODEL": "gpt-5-mini",
                                          "OPENAI_API_KEY": "synthetic-key"}), \
                  patch("server.secret", return_value="t" * 32) as read_secret, \

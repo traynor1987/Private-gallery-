@@ -68,3 +68,42 @@ Run `sudo bash rollback.sh PREVIOUS_COMMIT_SHA` using the same config directory 
 Authenticated `/guardian/status` reports the configured reservation per request and daily and month-to-date reservations in UTC. These are conservative upper bounds, not OpenAI billing or confirmed charges. Failed upstream calls can still be billed and retain their reservation. Activity starts when this version first records a reservation. Earlier reservations still count toward the funded-cycle limit. UTC day and month changes affect reporting only. They never refill a funded cycle.
 
 To clean up the temporary smoke-test container, first confirm its exact name with `sudo docker ps --filter name=nova-teacher-check`. If it is running, use `sudo docker stop nova-teacher-check`. A container started with `--rm` removes itself after stopping. The persistent staging service belongs to a separate Compose project and can keep running.
+
+## Code83 paid-analysis readiness (not activation instructions)
+
+The source now has a separate paid-availability gate. Existing funded configuration
+or a saved key alone does not enable analysis: NOVA_CLOUD_ANALYSIS_APPROVED defaults
+off. Do not set it to true until the owner has approved a cost-limited synthetic
+trial after deployment, privacy, security and budget checks. This requirement does
+not change deploy.sh supported-host restrictions or the forced-off staging image.
+
+On an authorized supported funded deployment, the same /guardian/status reports the
+existing SQLite ledger without needing approval or loading the OpenAI key. The
+monthly maximum is 100000000 micro-USD (UTC), independent of funded-cycle IDs. The
+existing tighter funded-cycle maximum remains90000000. The initial analysis allowance
+NOVA_CLOUD_ANALYSIS_ALLOWANCE_MICRO_USD defaults250000 and the persistent
+NOVA_CLOUD_APPROVED_REQUEST_LIMIT defaults1. Existing recorded spending is not reset
+to make room. A higher approved operating allowance/request count requires owner
+review; no Android request can change these server settings. Monthly limits can be
+lowered with NOVA_CLOUD_MONTHLY_LIMIT_MICRO_USD, never raised above100000000 by clients.
+
+Back up the existing database using SQLite's supported backup mechanism before the
+additive schema migration. Preserve its volume, funded cycles and all legacy rows.
+Old reservations without usage/outcome receipts remain conservative exposure; they
+are not silently forgiven at rollover. Investigate them against actual provider
+records before any administrative reconciliation. The API exposes no ledger-reset
+or client-cost-override operation.
+
+Approved requests carry UUID request_id plus the exact approved message/consent.
+Identical retries cannot trigger another provider call. Legacy clients without UUID
+receive stable owner-keyed identities. No excerpt or advisory is saved in the server
+ledger; only keyed digest, UUID, dates, financial bounds and state. Missing usage
+retains the full reservation. Returned usage costs use reviewed standard text rates,
+not a provider invoice or live credit balance; unknown pricing halts paid dispatch.
+Reasoning tokens are included in output usage, not added twice.
+
+The OpenAI request uses store=false and no tools/background requests. This does not
+assert Zero Data Retention: provider abuse-monitoring retention may still apply per
+account policy. A local history deletion cannot delete provider records or erase
+the security-critical spending ledger. No WhatsApp/evidence/private feedback is
+automatically uploaded.
