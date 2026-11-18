@@ -49,9 +49,17 @@ def installed():
     return int(match[1]) if match else None
 
 def tree():
-    adb('shell', 'rm', '-f', '/sdcard/nova85-live-ui.xml')
-    adb('shell', 'uiautomator', 'dump', '--compressed', '/sdcard/nova85-live-ui.xml')
-    return ET.fromstring(adb('shell', 'cat', '/sdcard/nova85-live-ui.xml'))
+    # Android can expose a null accessibility root during a real Activity/package restart.
+    # Each attempt deletes the old dump, so no stale hierarchy can satisfy an assertion.
+    deadline = time.monotonic() + 60
+    while time.monotonic() < deadline:
+        try:
+            adb('shell', 'rm', '-f', '/sdcard/nova85-live-ui.xml')
+            adb('shell', 'uiautomator', 'dump', '--compressed', '/sdcard/nova85-live-ui.xml')
+            return ET.fromstring(adb('shell', 'cat', '/sdcard/nova85-live-ui.xml'))
+        except (subprocess.CalledProcessError, subprocess.TimeoutExpired, ET.ParseError):
+            time.sleep(1)
+    raise RuntimeError('Android did not expose a fresh accessibility root after restart')
 
 def labels(root):
     return [value for n in root.iter('node') for key in ('text', 'content-desc') if (value := n.get(key))]
@@ -105,10 +113,12 @@ def scroll(root):
     adb('shell', 'input', 'swipe', (x1+x2)//2, y1+(y2-y1)*4//5, (x1+x2)//2, y1+(y2-y1)//5, 400)
 
 def open_updates(allow_setup):
+    authenticated = False
     adb('shell', 'am', 'start', '-n', PACKAGE + '/.LauncherActivity')
     for _ in range(28):
         root = tree()
         if has(root, 'Updates & About'):
+            require(allow_setup or authenticated, 'Restart must authenticate the existing owner PIN')
             click(root, 'Updates & About')
             return wait_for(lambda t: has(t, 'Installed') and has(t, 'Check for updates'), 'Updates & About')
         if has(root, 'Don’t Ask Again'):
@@ -130,10 +140,13 @@ def open_updates(allow_setup):
             require(len(checks) == 1, 'Expected recovery acknowledgement checkbox')
             tap(checks[0])
             click(tree(), 'Continue')
+        elif has(root, 'Enter NovaOS'):
+            click(root, 'Enter NovaOS')
         elif has(root, 'Enter passcode'):
             for digit in PIN:
                 click(tree(), digit)
             click(tree(), 'Unlock')
+            authenticated = True
         elif has(root, 'Use biometrics?'):
             click(root, 'Finish')
         elif has(root, 'Search apps and folders'):
@@ -228,6 +241,7 @@ def main():
     while installed() != 85:
         require(time.monotonic() < deadline, 'Android did not report installed Build85')
         time.sleep(1)
+    (args.output / 'live-update-installed.json').write_text(json.dumps({'result': 'INSTALLED', 'installed_code': installed(), 'source': candidate['source'], 'apk_sha256': candidate['apk_sha256'], 'live_github_discovery': 'PASS', 'live_download': 'PASS', 'android_installer': 'confirmed', 'restart_review': 'pending'}, indent=2)+'\n')
     adb('shell', 'am', 'force-stop', PACKAGE)
     after = open_updates(allow_setup=False)
     require(has(after, '1.7.39 · Build 85'), 'Restart did not show the installed Build85')
