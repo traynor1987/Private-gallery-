@@ -74,7 +74,10 @@ def fields(root):
 
 def enter(node, value):
     tap(node)
-    adb('shell', 'input', 'text', value)
+    try:
+        adb('shell', 'input', 'text', value)
+    except (subprocess.CalledProcessError, subprocess.TimeoutExpired):
+        raise RuntimeError('Synthetic credential/input action failed') from None
     adb('shell', 'input', 'keyevent', 'KEYCODE_BACK')
 
 def scroll(root):
@@ -186,8 +189,8 @@ def main():
     adb('shell', 'am', 'force-stop', PACKAGE)
     after = open_updates(allow_setup=False)
     require(has(after, '1.7.39 · Build 85'), 'Restart did not show the installed Build85')
-    if not has(after, '1.7.39 · Up to date'):
-        click(after, 'Check for updates')
+    # Opening About triggers the repaired refresh. Wait for that actual network result
+    # rather than attempting to click its deliberately disabled checking button.
     after = wait_for(lambda t: has(t, '1.7.39 · Build 85') and has(t, '1.7.39 · Up to date'), 'Build85 real up-to-date screen')
     save_ui(after, args.output / 'build85-live-up-to-date.xml')
     receipt = dict(schema=1, result='PASS', source=candidate['source'], apk_sha256=candidate['apk_sha256'], baseline_code=84, installed_code=85, live_github_discovery='PASS', live_download='PASS', android_installer='confirmed', restart_and_same_pin='PASS', up_to_date_screen='PASS', instrumentation='none', physical_fold='owner_confirmation_pending')
