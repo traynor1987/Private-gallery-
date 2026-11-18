@@ -19,10 +19,10 @@
     "release_configuration1711.sh": "7bb9ef92a34fdde9a5e0b82efe61e2215cba3c367aaf87fb54c76dcca465d069",
     "verify_release1711_gate.py": "e762dd6f974f5fc73c28e57173e23466ddc78fb937d4ec2c3f510f60f601672a",
     "verify_backup_exclusions.py": "36c66427926d56f0862cb898722fcf68a08c3f3cbc8c6e3947f457b16f0911f6",
-    "rehearse_in_app_update85.py": "0b09f1b1eab0163e0f7fe987c84399ac945bd9b19a9e7f5bd49b1c512238dde2"
+    "rehearse_in_app_update85.py": "c1ab31d1785a2b4327993e6020473973822507f3ed1f0867c4890e2092dc4386"
   },
-  "workflow_sha256": "ee5e3889164c6ae984d029ec1260d09c49f6b25d2c3bc65fb2f867a805633a75",
-  "review_sha256": "f595460a96109739df8eb7359688ffb85b0f0ebd8f67acb3144372a0022a976f",
+  "workflow_sha256": "a0b5cfe533e77fa00b841124f56ddc5d91238a40917c56042781c52f7618886e",
+  "review_sha256": "7a1b013bdf338f0704560603a2c5f7d4f27b99c738c54884973a6fdb09523d06",
   "runtime_branch": "main",
   "test_artifact": 14431890753,
   "runtime_archive_sha256": "ae5901a76c27598a9144531c4f482f5881c4e56f2454008e9b1bb3dda3da2dc1"

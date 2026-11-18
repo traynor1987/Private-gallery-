@@ -22,7 +22,31 @@ PACKAGE = 'uk.co.traynor.privategallery'
 CERTIFICATE = '94f2bfc6567f26d067d29077111cfd0ce86d38263c642ad115e43365f05b0d17'
 
 def adb(*args):
-    return subprocess.run(['adb', *args], check=True, capture_output=True, text=True).stdout
+    return subprocess.run(['adb', *args], check=True, capture_output=True, text=True, timeout=35).stdout
+
+def installer_tree(output):
+    """Observe a fresh installer hierarchy across Android's transient null-root handoff."""
+    deadline=time.monotonic()+60
+    attempts=[]
+    while time.monotonic()<deadline:
+        dump=""
+        try:
+            # uiautomator may exit zero with no file while the Activity changes.
+            # Delete every previous dump; a stale hierarchy must never authorize a tap.
+            adb('shell','rm','-f','/sdcard/nova85-installer.xml')
+            dump=adb('shell','uiautomator','dump','--compressed','/sdcard/nova85-installer.xml')
+            xml=adb('shell','cat','/sdcard/nova85-installer.xml')
+            ET.fromstring(xml)
+            return xml
+        except (subprocess.CalledProcessError,subprocess.TimeoutExpired,ET.ParseError) as failure:
+            attempts.append(dict(attempt=len(attempts)+1,result=type(failure).__name__,dump=dump.strip()))
+            (output/'in-app-installer-wait.txt').write_text(json.dumps(attempts,indent=2)+'\n')
+            time.sleep(1)
+    # Disposable synthetic device only. Preserve why observation failed before cleanup.
+    for label,command in (('window',('shell','dumpsys','window')),('activity',('shell','dumpsys','activity','activities'))):
+        try:(output/('in-app-installer-'+label+'.txt')).write_text(adb(*command))
+        except (subprocess.CalledProcessError,subprocess.TimeoutExpired):pass
+    raise RuntimeError('Android did not expose a fresh installer hierarchy within 60 seconds; inspect in-app-installer-wait.txt')
 
 def installed():
     match = re.search(r'versionCode=(\d+)\b',adb('shell','dumpsys','package',PACKAGE))
@@ -67,8 +91,7 @@ def rehearsal(apk, output, source):
                     time.sleep(1)
                 clicked=False
                 for _ in range(20):
-                    adb('shell','uiautomator','dump','/sdcard/nova85-installer.xml')
-                    xml=adb('shell','cat','/sdcard/nova85-installer.xml')
+                    xml=installer_tree(output)
                     (output/'in-app-installer-ui.xml').write_text(xml)
                     for node in ET.fromstring(xml).iter('node'):
                         if node.get('package') not in ('com.android.packageinstaller','com.google.android.packageinstaller','com.android.permissioncontroller'):continue

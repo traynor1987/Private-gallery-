@@ -329,7 +329,7 @@ jobs:
           for name in ('baseline-signature.txt','baseline-package.txt','baseline-archive-validation.txt','signature.txt','package.txt','source-sha.txt','apk-sha256.txt','ocr-distribution.json','alignment.txt','instrumentation-payload-validation.txt','release-summary.json'):
               original=evidence/name
               if original.is_file() and not original.is_symlink(): shutil.copyfile(original,destination/name)
-          for name in ('upgrade-baseline-package.txt','upgrade-candidate-package.txt','upgrade-baseline-signature.txt','upgrade-candidate-signature.txt','upgrade-instrumentation-signature.txt','upgrade-compilation.json','upgrade-seed.txt','upgrade-verify.txt','upgrade-after-restart.txt','upgrade-result.txt','in-app-update.json','in-app-update-instrumentation.txt','in-app-installer-ui.xml'):
+          for name in ('upgrade-baseline-package.txt','upgrade-candidate-package.txt','upgrade-baseline-signature.txt','upgrade-candidate-signature.txt','upgrade-instrumentation-signature.txt','upgrade-compilation.json','upgrade-seed.txt','upgrade-verify.txt','upgrade-after-restart.txt','upgrade-result.txt','in-app-update.json','in-app-update-instrumentation.txt','in-app-installer-ui.xml','in-app-installer-wait.txt','in-app-installer-window.txt','in-app-installer-activity.txt'):
               original=evidence/'from80'/name
               if original.is_file() and not original.is_symlink(): shutil.copyfile(original,destination/name)
           for name in ('lint-results-release.html','lint-results-release.xml'):

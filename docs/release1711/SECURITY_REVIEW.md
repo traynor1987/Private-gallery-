@@ -5,10 +5,10 @@ Authorization: authenticated owner push
 Release scope: public stable after disposable upgrade verification
 Physical Fold acceptance: pending
 Upgrade fixture SHA-256: e54fb444e855fbf10b40ebaa35e53c3c73325d3d4210b1701ce490935d5dcb5d
-Upgrade controls SHA-256: 12e4f7e7e8752d719985abe078d383b6164d322e7d732ac3c86eb21bdbe1351c
+Upgrade controls SHA-256: 5aef6b4e2e8cc13e4f9f832639e00803af2de88ec190f7d8366e120f081b2ab4
 Runtime matrix SHA-256: b8277030fb8bdf705e7beb4b7d6e9694566ee4a68733175c1aeee0bf75b1909b
 Runtime workflow run: 44304942793
-Signing workflow SHA-256: ee5e3889164c6ae984d029ec1260d09c49f6b25d2c3bc65fb2f867a805633a75
+Signing workflow SHA-256: a0b5cfe533e77fa00b841124f56ddc5d91238a40917c56042781c52f7618886e
 Runtime branch: main
 
 The existing authenticated evidence step must obtain the completed main run and its original
@@ -27,6 +27,11 @@ e062aac04c5de268db52f4b3fc6066e90cb4bbcd and verifies the original published Bui
 The populated rehearsal must use unchanged Build85 updater validation, the actual signed86 APK,
 Android installer confirmation and real PackageManager86 before reauthentication/data checks.
 No replacement adb install-r, uninstall or clear substitutes for the updater.
+Release-harness observation repair: retry a missing or malformed fresh installer hierarchy
+during the Android Activity handoff; discard stale dumps, preserve bounded diagnostics,
+retain the observed enabled installer action and PackageManager86 requirements.
+Three focused host regressions pass. Exact APK source15c1 and original main CI487 reports
+are unchanged and reused; mandatory app verification is not weakened or bypassed.
 Public release discovery/download/installer/restart is verified separately after publication.
 Live VPS HTTPS health and unauthenticated rejection passed; owner-token setup and physical
 Fold86 installation remain owner-only acceptance steps. No owner token is embedded in source.
