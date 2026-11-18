@@ -4923,6 +4923,18 @@ private fun LockSurface(content: @Composable () -> Unit) {
     }
 }
 
+/** Build84 has no pending-install marker; opening About must check the actual release. */
+@Composable
+internal fun RefreshUpdatesOnAboutEntry(
+    isAbout: Boolean,
+    updater: uk.co.traynor.privategallery.core.update.NovaUpdateModel?,
+) {
+    LaunchedEffect(isAbout, updater) {
+        if (isAbout && updater?.state?.phase == uk.co.traynor.privategallery.core.update.UpdatePhase.IDLE)
+            updater.check()
+    }
+}
+
 @Composable
 internal fun SettingsHome(
     autoLockTimeout: AutoLockTimeout,
@@ -4985,19 +4997,13 @@ internal fun SettingsHome(
     val updateOwner = LocalContext.current.playerActivity() as? MainActivity
     val liveUpdater = updateOwner?.novaUpdater
     val liveUpdate = liveUpdater?.state
-    // Build84 did not persist an installer target. Refresh this existing screen after
-    // reopening; package state alone must never masquerade as a successful server check.
-    LaunchedEffect(category, liveUpdater) {
-        if (category == SettingsCategory.ABOUT && liveUpdater?.state?.phase == uk.co.traynor.privategallery.core.update.UpdatePhase.IDLE)
-            liveUpdater.check()
-    }
-
     val appContext = LocalContext.current.applicationContext
     val aiConfiguration = remember(appContext) { uk.co.traynor.privategallery.core.editor.AiProviderRegistry.initialize(appContext) }
     val aiStatus by aiConfiguration.status.collectAsState()
     val versionPresentation = uk.co.traynor.privategallery.core.ui.InAppVersionPresentation(hideContent,BuildConfig.VERSION_NAME,BuildConfig.VERSION_CODE)
     val showHiddenSettings = !hideContent && hiddenBrowserSettings != null
     var category by remember { mutableStateOf<SettingsCategory?>(null) }
+    RefreshUpdatesOnAboutEntry(category == SettingsCategory.ABOUT, liveUpdater)
     val diagnosticsGate = remember { uk.co.traynor.privategallery.core.browser.hidden.OwnerDiagnosticsGate(android.os.SystemClock::elapsedRealtime) }
     var diagnosticsAuthenticated by remember { mutableStateOf(false) }
     var secretOpen by remember { mutableStateOf(false) }

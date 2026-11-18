@@ -11,6 +11,36 @@ import java.io.File
 
 /** Real API37 private provider and ViewModel tests; never installs or touches production data. */
 class Updater85RuntimeTest {
+    @get:org.junit.Rule val compose = androidx.compose.ui.test.junit4.createComposeRule()
+
+    @Test fun aboutEntryRefreshesIdleModelAfterRecreationWithoutRetryingFailedChecks() {
+        val prefs=context.getSharedPreferences("private-gallery-settings",Context.MODE_PRIVATE)
+        val pending=prefs.getLong("update-install-target",0)
+        val calls=java.util.concurrent.atomic.AtomicInteger()
+        val about=androidx.compose.runtime.mutableStateOf(false)
+        lateinit var first:NovaUpdateModel
+        lateinit var recreated:NovaUpdateModel
+        try {
+            check(prefs.edit().remove("update-install-target").commit())
+            instrumentation.runOnMainSync {
+                val service=GithubReleaseUpdateService { calls.incrementAndGet();throw GithubHttpException(403) }
+                first=NovaUpdateModel(context.applicationContext as Application,service)
+                recreated=NovaUpdateModel(context.applicationContext as Application,service)
+            }
+            val current=androidx.compose.runtime.mutableStateOf(first)
+            compose.setContent { uk.co.traynor.privategallery.RefreshUpdatesOnAboutEntry(about.value,current.value) }
+            compose.runOnIdle { assertEquals(0,calls.get());about.value=true }
+            compose.waitUntil(10_000) { first.state.phase==UpdatePhase.FAILED }
+            compose.runOnIdle { assertEquals(1,calls.get());about.value=false }
+            compose.runOnIdle { about.value=true }
+            compose.runOnIdle { assertEquals(1,calls.get());current.value=recreated }
+            compose.waitUntil(10_000) { recreated.state.phase==UpdatePhase.FAILED }
+            compose.runOnIdle { assertEquals(2,calls.get()) }
+        } finally {
+            check(prefs.edit().apply { if(pending==0L)remove("update-install-target") else putLong("update-install-target",pending) }.commit())
+        }
+    }
+
     private val instrumentation get()=InstrumentationRegistry.getInstrumentation()
     private val context get()=instrumentation.targetContext
     @Test fun privateUpdateProviderIsReadOnlyAndCannotExposeVaultPaths() {
