@@ -1,4 +1,17 @@
 {
+  "uk.co.traynor.privategallery.core.brain.LiveNovaBrain87Test": [
+    "actualVpsValidatesHttpsAndRejectsSyntheticCredentialsWithoutClaimingAuthenticatedConnectivity"
+  ],
+  "uk.co.traynor.privategallery.core.brain.NovaBrain87RuntimeTest": [
+    "originalBuild86ConfigurationLoadsWithoutInventedAuthenticationAndVerifiedHistoryIsEncrypted",
+    "rejectedOrStaleAuthenticationCannotRecordSuccessOrResurrectClearedCredentials"
+  ],
+  "uk.co.traynor.privategallery.launcher.NovaBrain87UiTest": [
+    "actualAuthenticatedResponseIsRecordedAndRejectionDoesNotOverwriteLastSuccess",
+    "actualSettingsHasDedicatedNovaBrainRouteAndKeepsKnowledgeSeparateFromConnectivity",
+    "recreatedScreenKeepsHistoricalReceiptWithoutPretendingItHasACurrentConnection",
+    "serverOutageUsesLocalModeAndNeverInventsAuthenticatedEnvironmentOrTimestamp"
+  ],
   "uk.co.traynor.privategallery.launcher.NovaBrain86UiTest": [
     "connectionSetupExplainsPrivacyAndRequiresHttpsAndBackendTokenBeforeSaving",
     "savedAndRemovedConfigurationNotifiesOtherReviewSurfacesWithoutSendingAnything"
