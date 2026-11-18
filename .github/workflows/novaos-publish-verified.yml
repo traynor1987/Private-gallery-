@@ -13,7 +13,7 @@ jobs:
   publish:
     if: github.repository == 'traynor1987/Private-gallery-' && github.actor_id == '16270479' && github.event.sender.id == 16270479 && github.triggering_actor == 'traynor1987' && contains(github.event.head_commit.message, '[novaos-publish-authorization]')
     runs-on: ubuntu-24.04
-    timeout-minutes: 15
+    timeout-minutes: 30
     environment: novaos-production-publication
     permissions:
       contents: write
@@ -54,3 +54,29 @@ jobs:
           PYTHONDONTWRITEBYTECODE=1 python3 scripts/publish_verified_novaos.py \
             --candidate .novaos-stable-candidate.json --work "$RUNNER_TEMP/novaos-stable-publication" \
             --tools "$ANDROID_HOME/build-tools/36.0.0"
+      - name: Enable disposable Android verification
+        run: sudo chmod 666 /dev/kvm
+      - name: Verify authentic installed Build 84 through the live public in-app update
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: '37.0'
+          target: google_apis
+          arch: x86_64
+          avd-name: novaos85-live-public-update
+          force-avd-creation: true
+          profile: pixel_2
+          cores: 4
+          ram-size: 4096M
+          heap-size: 512M
+          disk-size: 8G
+          disable-animations: false
+          emulator-options: -no-window -gpu software -no-snapshot -noaudio -no-boot-anim -feature -HardwareDecoder
+          script: python3 docs/build85/verify_live_build84.py --candidate .novaos-stable-candidate.json --output "$RUNNER_TEMP/novaos85-live-public-evidence"
+      - name: Retain actual public update UI and installed-version evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: novaos85-live-public-update-evidence
+          path: ${{ runner.temp }}/novaos85-live-public-evidence
+          if-no-files-found: warn
+          retention-days: 30
