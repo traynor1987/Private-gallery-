@@ -45,8 +45,13 @@ jobs:
           PYTHONDONTWRITEBYTECODE=1 python3 scripts/publish_verified_novaos.py --candidate .novaos-stable-candidate.json --preflight
       - uses: actions/setup-java@v5
         with: { distribution: temurin, java-version: '17' }
-      - name: Install APK verification tools only
-        run: '"$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "build-tools;36.0.0"'
+      - name: Install API37-compatible APK and emulator tools
+        run: |
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --install "cmdline-tools;22.0"
+          mv "$ANDROID_HOME/cmdline-tools/latest" "$RUNNER_TEMP/previous-android-command-tools-publication"
+          ln -s "$ANDROID_HOME/cmdline-tools/22.0" "$ANDROID_HOME/cmdline-tools/latest"
+          test "$("$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --version)" = 22.0
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "build-tools;36.0.0" "emulator"
       - name: Verify retained artifacts, publish, and confirm stable updater feed
         env:
           GH_TOKEN: ${{ github.token }}

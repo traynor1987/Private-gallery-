@@ -188,9 +188,14 @@ def main():
     args = p.parse_args()
     require(os.environ.get('GITHUB_ACTIONS') == 'true' and os.environ.get('GITHUB_REPOSITORY') == REPO, 'Repository CI only')
     require(adb('shell', 'getprop', 'ro.kernel.qemu') == '1' and adb('shell', 'getprop', 'ro.build.version.sdk') == '37', 'Disposable API37 emulator required')
+    args.output.mkdir(parents=True, exist_ok=False)
+    avd = Path(os.environ['ANDROID_AVD_HOME']) / 'novaos85-live-public-update.avd/config.ini'
+    configuration = {k.strip(): v.strip() for line in avd.read_text().splitlines() if '=' in line for k, v in [line.split('=', 1)]}
+    target = configuration.get('target', '')
+    (args.output / 'avd-target.txt').write_text(target + '\n')
+    require(target == 'android-37.0', 'AVD tools did not create the requested API37 metadata: ' + target)
     wait_device_ready()
     require(installed() is None, 'Production package must be absent initially; never clear/uninstall')
-    args.output.mkdir(parents=True, exist_ok=False)
     candidate = json.loads(args.candidate.read_text())
     require(candidate['tag'] == 'v1.7.39' and candidate['version_code'] == 85, 'Wrong release candidate')
     release = public_release(args.output)
