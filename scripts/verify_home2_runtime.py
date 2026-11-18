@@ -3,6 +3,9 @@ from pathlib import Path
 import re, sys, xml.etree.ElementTree as ET, json
 root=Path(__file__).resolve().parents[1]
 classes=[
+ 'uk.co.traynor.privategallery.core.brain.LiveNovaBrain87Test',
+ 'uk.co.traynor.privategallery.core.brain.NovaBrain87RuntimeTest',
+ 'uk.co.traynor.privategallery.launcher.NovaBrain87UiTest',
  'uk.co.traynor.privategallery.launcher.NovaBrain86UiTest',
  'uk.co.traynor.privategallery.ui.AiPrivacySettingsTest',
  'uk.co.traynor.privategallery.core.update.Updater86UiTest',

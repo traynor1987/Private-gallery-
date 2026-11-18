@@ -5079,6 +5079,7 @@ internal fun SettingsHome(
                                         SettingsCategory.GALLERY -> Icons.Default.PhotoLibrary
                                         SettingsCategory.BROWSER -> Icons.Default.Language
                                         SettingsCategory.VPN -> Icons.Default.VpnKey
+                                        SettingsCategory.NOVA_BRAIN -> Icons.Default.Psychology
                                         SettingsCategory.AI -> Icons.Default.AutoAwesome
                                         SettingsCategory.APPEARANCE -> Icons.Default.Palette
                                         SettingsCategory.ABOUT -> Icons.Default.Info
@@ -5273,8 +5274,10 @@ internal fun SettingsHome(
             browserRequireVpn, onBrowserRequireVpnChanged, browserAutoConnectVpn, onBrowserAutoConnectVpnChanged,
             clearBrowserDataOnLock, onClearBrowserDataOnLockChanged, onClearBrowserData, contentBlocker,
         )
-        if (category == SettingsCategory.AI) {
+        if (category == SettingsCategory.NOVA_BRAIN) {
             uk.co.traynor.privategallery.launcher.NovaBrainConnectionSettings()
+        }
+        if (category == SettingsCategory.AI) {
             uk.co.traynor.privategallery.ui.AiEditingSettings()
         }
         if (category == SettingsCategory.ABOUT) SettingsSection(SettingsSections.UPDATES) {

@@ -21,12 +21,14 @@ import kotlinx.coroutines.*
 import uk.co.traynor.privategallery.core.brain.*
 
 @Composable
-internal fun NovaBrainConnectionSettings(canUse: () -> Boolean = { true }, onConfigurationChanged: () -> Unit = {}) {
+internal fun NovaBrainConnectionSettings(canUse: () -> Boolean = { true }, onConfigurationChanged: () -> Unit = {},
+    connection: NovaBrainConnection = NovaBrainConnection(), clock: () -> java.time.Instant = java.time.Instant::now) {
     val context = LocalContext.current.applicationContext
     val store = remember(context) { NovaBrainConnectionStore(context) }
     val scope = rememberCoroutineScope()
     var configured by remember { mutableStateOf(false) }
     var status by remember { mutableStateOf(BrainConnectionStatus()) }
+    var lastAuthenticated by remember { mutableStateOf<BrainAuthenticatedCheck?>(null) }
     var setup by remember { mutableStateOf(false) }
     var saving by remember { mutableStateOf(false) }
     var origin by remember { mutableStateOf("") }
@@ -35,33 +37,61 @@ internal fun NovaBrainConnectionSettings(canUse: () -> Boolean = { true }, onCon
     var message by remember { mutableStateOf<String?>(null) }
     var pending by remember { mutableStateOf<Job?>(null) }
     var revision by remember { mutableIntStateOf(0) }
+    fun reloadConfiguration() {
+        if (saving || status.phase == BrainConnectionPhase.CHECKING) return
+        val ticket = ++revision
+        scope.launch {
+            try {
+                val saved = withContext(Dispatchers.IO) { store.readRecord() }
+                if (ticket == revision) {
+                    configured = saved != null
+                    configuredOrigin = saved?.configuration?.origin.orEmpty()
+                    if (!setup) origin = configuredOrigin
+                    lastAuthenticated = saved?.lastAuthenticated
+                }
+            } catch (_: Exception) {
+                if (ticket == revision) message = "Saved connection could not be read securely. Configure it again or retry."
+            }
+        }
+    }
     val lifecycle = LocalLifecycleOwner.current.lifecycle
     DisposableEffect(lifecycle) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_STOP) { revision++; pending?.cancel(); token = ""; setup = false; status = BrainConnectionStatus() }
+            if (event == Lifecycle.Event.ON_START) reloadConfiguration()
         }
         lifecycle.addObserver(observer)
         onDispose { revision++; pending?.cancel(); token = ""; lifecycle.removeObserver(observer) }
     }
-    LaunchedEffect(store) {
-        try {
-            val saved = withContext(Dispatchers.IO) { store.read() }
-            configured = saved != null
-            configuredOrigin = saved?.origin.orEmpty()
-            origin = configuredOrigin
-        } catch (_: Exception) { message = "Saved connection could not be read. Configure it again." }
-    }
+    LaunchedEffect(store) { reloadConfiguration() }
     ElevatedCard(Modifier.fillMaxWidth()) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Text("Nova Brain connection", style = MaterialTheme.typography.titleLarge)
-            Text(status.message, Modifier.testTag("nova-brain-status"))
-            Text("Local learning, Guardian, Evidence Locker and Sanctuary work offline. Connection checks send only your access token to the status endpoint. No messages, evidence or personal feedback are sent.")
-            Text("Connecting does not activate Cloud Teacher or paid analysis. Each sensitive request still requires its own preview and explicit consent.")
-            if (configured) Text("Server: $configuredOrigin")
+            Text(when (status.phase) {
+                BrainConnectionPhase.CONNECTED -> "Connected · authenticated test passed"
+                BrainConnectionPhase.AUTHENTICATION_REQUIRED -> "Authentication required"
+                BrainConnectionPhase.OFFLINE -> "Server unavailable"
+                BrainConnectionPhase.ERROR -> "Connection error"
+                BrainConnectionPhase.CHECKING -> "Testing connection…"
+                BrainConnectionPhase.DISCONNECTED -> if (configured) "Disconnected · test the saved connection" else "Disconnected · no backend configured"
+            }, Modifier.testTag("nova-brain-status"), style = MaterialTheme.typography.titleMedium)
+            if (status.phase !in setOf(BrainConnectionPhase.DISCONNECTED, BrainConnectionPhase.CHECKING)) Text(status.message)
+            Text("Backend environment: " + (lastAuthenticated?.let { if (it.staging) "Staging" else "Production configuration" } ?: "Not yet verified"), Modifier.testTag("nova-brain-environment"))
+            Text("Last successful authenticated connection: " + (lastAuthenticated?.at?.let {
+                java.text.DateFormat.getDateTimeInstance().format(java.util.Date.from(it))
+            } ?: "Never"), Modifier.testTag("nova-brain-last-authenticated"))
+            if (lastAuthenticated != null) Text("Environment and server analysis below describe that authenticated response, not a live deployment inspection.", style = MaterialTheme.typography.bodySmall)
+            Text(if (status.phase == BrainConnectionPhase.CONNECTED) "Offline fallback: Ready · local protection remains available" else "Offline mode: Active · local protection remains available", Modifier.testTag("nova-brain-offline"))
+            Text("Cloud analysis: " + (lastAuthenticated?.let { if (it.analysisEnabled) "Server reports available · owner consent still required" else "Disabled by server" } ?: "Not verified"), Modifier.testTag("nova-brain-analysis"))
+            Text("Automatic Cloud Teacher: Off · connection tests do not activate paid analysis")
+            Text("Data sharing: No automatic messages, evidence or private feedback uploads", Modifier.testTag("nova-brain-privacy"))
+            Text("Guardian and Evidence Locker remain local-first. Their existing optional cloud requests require a reviewed excerpt and explicit consent. Sanctuary works offline.")
+            Text("Connection tests send only your access token to the status endpoint. Local Knowledge evaluation is separate from backend connectivity.")
+            if (configured) Text("HTTPS backend configured")
             if (status.phase == BrainConnectionPhase.CHECKING) LinearProgressIndicator(Modifier.fillMaxWidth())
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedButton(enabled = !saving && status.phase != BrainConnectionPhase.CHECKING, onClick = { if (canUse()) { origin = configuredOrigin; token = ""; setup = true } }) { Text(if (configured) "Configure" else "Connect") }
-                if (configured) TextButton(enabled = status.phase != BrainConnectionPhase.CHECKING, onClick = {
+                OutlinedButton(modifier = Modifier.weight(1f), enabled = !saving && status.phase != BrainConnectionPhase.CHECKING, onClick = { if (canUse()) { origin = configuredOrigin; token = ""; setup = true } }) { Text(if (configured) "Configure" else "Connect") }
+                TextButton(modifier = Modifier.weight(1f), enabled = configured && !saving && status.phase != BrainConnectionPhase.CHECKING, onClick = {
                     if (!canUse()) return@TextButton
                     val ticket = ++revision
                     status = BrainConnectionStatus(BrainConnectionPhase.CHECKING, "Checking HTTPS and authentication…")
@@ -69,12 +99,19 @@ internal fun NovaBrainConnectionSettings(canUse: () -> Boolean = { true }, onCon
                         val result = withContext(Dispatchers.IO) {
                             try {
                                 val saved = store.read()
-                                if (saved == null) BrainConnectionStatus() else NovaBrainConnection().check(saved) { !isActive }
-                            } catch (_: Exception) { BrainConnectionStatus(BrainConnectionPhase.ERROR, "Connection configuration unavailable · local processing continues") }
+                                if (saved == null) BrainConnectionStatus() to null else {
+                                    val checked = connection.check(saved) { !isActive }
+                                    ensureActive()
+                                    val receipt = if (checked.phase == BrainConnectionPhase.CONNECTED) store.rememberAuthenticated(saved, checked, clock()) else null
+                                    if (checked.phase == BrainConnectionPhase.CONNECTED && receipt == null) BrainConnectionStatus(BrainConnectionPhase.DISCONNECTED, "Configuration changed · test the current connection again") to null
+                                    else checked to receipt
+                                }
+                            } catch (cancelled: CancellationException) { throw cancelled }
+                            catch (_: Exception) { BrainConnectionStatus(BrainConnectionPhase.ERROR, "Secure connection configuration unavailable · configure or retry. Local processing continues.") to null }
                         }
-                        if (ticket == revision && canUse()) status = result
+                        if (ticket == revision && canUse()) { status = result.first; result.second?.let { lastAuthenticated = it } }
                     }
-                }) { Text("Check connection") }
+                }) { Text("Test connection") }
             }
             message?.let { Text(it) }
         }
@@ -95,12 +132,13 @@ internal fun NovaBrainConnectionSettings(canUse: () -> Boolean = { true }, onCon
         confirmButton = { TextButton(enabled = !saving && runCatching { NovaBrainConfiguration(origin.trim(), token) }.isSuccess, onClick = {
             if (!canUse()) return@TextButton
             val configuration = NovaBrainConfiguration(origin.trim(), token)
+            revision++; pending?.cancel()
             token = ""
             saving = true
             pending = scope.launch {
                 try {
                     withContext(Dispatchers.IO) { store.save(configuration) }
-                    if (canUse()) { configuredOrigin = configuration.origin; configured = true; setup = false; status = BrainConnectionStatus(); message = "Connection saved · tap Check connection"; onConfigurationChanged() }
+                    if (canUse()) { configuredOrigin = configuration.origin; configured = true; lastAuthenticated = null; setup = false; status = BrainConnectionStatus(); message = "Connection saved · tap Test connection"; onConfigurationChanged() }
                 } catch (cancelled: CancellationException) { throw cancelled }
                 catch (_: Exception) { message = "Connection could not be saved securely. Retry." }
                 finally { saving = false }
@@ -114,7 +152,7 @@ internal fun NovaBrainConnectionSettings(canUse: () -> Boolean = { true }, onCon
                     pending = scope.launch {
                         try {
                             withContext(Dispatchers.IO) { store.clear() }
-                            configured = false; configuredOrigin = ""; origin = ""; setup = false; status = BrainConnectionStatus(); message = "Connection removed"; onConfigurationChanged()
+                            configured = false; configuredOrigin = ""; origin = ""; lastAuthenticated = null; setup = false; status = BrainConnectionStatus(); message = "Connection removed"; onConfigurationChanged()
                         } catch (cancelled: CancellationException) { throw cancelled }
                         catch (_: Exception) { message = "Connection could not be removed. Retry." }
                         finally { saving = false }
