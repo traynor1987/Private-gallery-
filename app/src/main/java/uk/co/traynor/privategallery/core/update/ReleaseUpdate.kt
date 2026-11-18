@@ -32,6 +32,9 @@ data class ReleaseMetadata(
     val apkUrl: String,
     val sha256Url: String,
     val identityUrl: String,
+    val notes: String = "",
+    val versionCode: Long? = null,
+    val apkDigest: String? = null,
 ) {
     companion object {
         fun parse(json: String): ReleaseMetadata {
@@ -62,6 +65,10 @@ data class ReleaseMetadata(
                 apkUrl = asset(apkUrl, "private-gallery-release.apk"),
                 sha256Url = asset(shaUrl, "private-gallery-release.apk.sha256"),
                 identityUrl = asset(identityUrl, "private-gallery-release.metadata.json"),
+                notes = release.optString("body").take(32_000),
+                apkDigest = (0 until assets.length()).map { assets.getJSONObject(it) }
+                    .single { it.optString("name") == "private-gallery-release.apk" }
+                    .optString("digest").removePrefix("sha256:").takeIf { it.matches(Regex("[a-f0-9]{64}")) },
             )
         }
 
@@ -122,6 +129,21 @@ class GithubReleaseUpdateService(
         }
     }
 
+    fun check(installedVersion: String, installedCode: Long): UpdateCheck {
+        val response = try { transport.fetch(LATEST_RELEASE_URL).decodeToString() }
+        catch (failure: Exception) { return UpdateCheck.Failed(failure.asUpdateFailure()) }
+        return try {
+            val release = ReleaseMetadata.parse(response)
+            val identity = verifiedIdentity(release) ?: return UpdateCheck.Failed(UpdateFailure.INVALID_RELEASE_METADATA)
+            require(release.apkDigest != null && release.apkDigest == identity.sha256) { "Invalid release metadata" }
+            val verified = release.copy(versionCode = identity.versionCode)
+            if (identity.versionCode > installedCode) {
+                require(release.version > ReleaseVersion.parse(installedVersion)) { "Invalid version progression" }
+                UpdateCheck.Available(verified)
+            } else UpdateCheck.UpToDate(verified)
+        } catch (failure: Exception) { UpdateCheck.Failed(failure.asUpdateFailure()) }
+    }
+
     internal fun verifiedIdentity(release: ReleaseMetadata): NovaStoreRelease? = runCatching {
         val identity = JSONObject(transport.fetch(release.identityUrl).decodeToString())
         val digest = transport.fetch(release.sha256Url).decodeToString().trim().substringBefore(' ').lowercase()
@@ -129,6 +151,7 @@ class GithubReleaseUpdateService(
         require(identity.getString("versionName") == release.version.raw)
         require(identity.getString("certificateSha256") == NOVA_CERTIFICATE)
         require(identity.getString("apkSha256") == digest)
+        require(release.apkDigest == null || release.apkDigest == digest)
         NovaStoreRelease(NOVA_PACKAGE, identity.getLong("versionCode"), release.version.raw,
             NOVA_CERTIFICATE, digest, release.apkUrl)
     }.getOrNull()

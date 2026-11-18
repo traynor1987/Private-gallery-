@@ -55,6 +55,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -794,6 +795,7 @@ class MainActivity : FragmentActivity() {
     }
     override fun onResume() {
         super.onResume()
+        novaUpdater.refreshInstalled()
         activityResumed = true
         activityResumeRevision++
         retryPendingNovaPrivateApp()
@@ -3229,74 +3231,18 @@ class MainActivity : FragmentActivity() {
         }
     }
 
-    private fun checkForUpdates() {
-        updateStatus = "Checking…"
-        availableUpdate = null
-        lifecycleScope.launch(Dispatchers.IO) {
-            val result = GithubReleaseUpdateService().check(BuildConfig.VERSION_NAME)
-            when (result) {
-                is UpdateCheck.UpToDate -> publishUpdateStatus("${result.release.version.raw} · Up to date", null)
-                is UpdateCheck.Available -> publishUpdateStatus("Update available · ${result.release.version.raw}", result.release)
-                is UpdateCheck.Failed -> publishUpdateStatus(result.reason.userMessage, null)
-            }
-        }
+    internal val novaUpdater by lazy { androidx.lifecycle.ViewModelProvider(this)[uk.co.traynor.privategallery.core.update.NovaUpdateModel::class.java] }
+    private val updateInstaller = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        novaUpdater.installResult(result.resultCode)
     }
-
-    private fun publishUpdateStatus(status: String, release: ReleaseMetadata?) {
-        val checked = DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT).format(Date())
-        appSettings.edit().putString("update-last-checked", checked).apply()
-        runOnUiThread {
-            updateStatus = status
-            updateLastChecked = checked
-            availableUpdate = release
-        }
+    private val updatePermission = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
+        if (packageManager.canRequestPackageInstalls()) requestUpdateInstall()
     }
-
-    private fun downloadUpdate() {
-        val release = availableUpdate ?: return
-        if (packageName != uk.co.traynor.privategallery.home2.NOVA_PACKAGE) {
-            updateStatus = "Production updates are only available from installed NovaOS."
-            return
-        }
-        availableUpdate = null
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && !packageManager.canRequestPackageInstalls()) {
-            availableUpdate = release
-            updateStatus = "Allow installs from NovaOS, then download again."
-            startActivity(Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, Uri.parse("package:$packageName")))
-            return
-        }
-        updateStatus = "Downloading…"
-        lifecycleScope.launch(Dispatchers.IO) {
-            try {
-                val identity = checkNotNull(GithubReleaseUpdateService().verifiedIdentity(release))
-                val output = uk.co.traynor.privategallery.home2.downloadVerifiedNovaApk(this@MainActivity, identity)
-                val uri = FileProvider.getUriForFile(this@MainActivity, "$packageName.fileprovider", output)
-                val installIntent = Intent(Intent.ACTION_VIEW).apply {
-                    setDataAndType(uri, "application/vnd.android.package-archive")
-                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                }
-                runOnUiThread {
-                    val canInstall = Build.VERSION.SDK_INT < Build.VERSION_CODES.O || packageManager.canRequestPackageInstalls()
-                    val installerAvailable = installIntent.resolveActivity(packageManager) != null
-                    if (!UpdateInstallPolicy.canHandOffToAndroid(canInstall, installerAvailable)) {
-                        availableUpdate = release
-                        updateStatus = "Android installer is unavailable."
-                        return@runOnUiThread
-                    }
-                    runCatching { startActivity(installIntent) }
-                        .onSuccess { updateStatus = "Installation handed to Android" }
-                        .onFailure {
-                            availableUpdate = release
-                            updateStatus = "Android installer could not be opened."
-                        }
-                }
-            } catch (_: Exception) {
-                runOnUiThread {
-                    availableUpdate = release
-                    updateStatus = "Update could not be downloaded or verified."
-                }
-            }
-        }
+    private fun checkForUpdates() { novaUpdater.check() }
+    private fun downloadUpdate() { novaUpdater.download { requestUpdateInstall() } }
+    private fun requestUpdateInstall() {
+        if(isDestroyed || isFinishing || !lifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.RESUMED))return
+        novaUpdater.requestInstall({ updateInstaller.launch(it) }, { updatePermission.launch(it) })
     }
 
     private fun importSelected(uris: List<Uri>, onComplete: (String) -> Unit) =
@@ -5030,6 +4976,9 @@ internal fun SettingsHome(
     allowHiddenDiagnostics: Boolean = false,
     storagePanel: (@Composable () -> Unit)? = null,
 ) {
+    val updateOwner = LocalContext.current.playerActivity() as? MainActivity
+    val liveUpdater = updateOwner?.novaUpdater
+    val liveUpdate = liveUpdater?.state
     val appContext = LocalContext.current.applicationContext
     val aiConfiguration = remember(appContext) { uk.co.traynor.privategallery.core.editor.AiProviderRegistry.initialize(appContext) }
     val aiStatus by aiConfiguration.status.collectAsState()
@@ -5319,11 +5268,22 @@ internal fun SettingsHome(
             }
             if (discovery.discovered && secretDiscovered) Text("Protected settings unlocked")
             Text("Latest", style = MaterialTheme.typography.titleMedium)
-            Text(versionPresentation.updateStatus(updateStatus), color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(versionPresentation.updateStatus(liveUpdate?.message ?: updateStatus), color = MaterialTheme.colorScheme.onSurfaceVariant)
             Text("Last checked", style = MaterialTheme.typography.titleMedium)
-            Text(updateLastChecked, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            androidx.compose.material3.OutlinedButton(onClick = { discovery = discovery.reset(); hiddenEntry.reset(); onCheckForUpdates() }, modifier = Modifier.fillMaxWidth()) { Text("Check for updates") }
-            if (updateAvailable) Button(onClick = { discovery = discovery.reset(); hiddenEntry.reset(); onDownloadUpdate() }, modifier = Modifier.fillMaxWidth()) { Text("Download update") }
+            Text(liveUpdater?.lastChecked ?: updateLastChecked, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            liveUpdate?.release?.notes?.takeIf { it.isNotBlank() && !hideContent }?.let { Text(it) }
+            liveUpdate?.let { value ->
+                if(value.phase in setOf(uk.co.traynor.privategallery.core.update.UpdatePhase.DOWNLOADING,uk.co.traynor.privategallery.core.update.UpdatePhase.VERIFYING)) {
+                    val progress=value.progress
+                    if(progress!=null) LinearProgressIndicator(progress={progress},modifier=Modifier.fillMaxWidth()) else LinearProgressIndicator(Modifier.fillMaxWidth())
+                    Text(if(value.total>0) "${value.bytes / 1024 / 1024} / ${value.total / 1024 / 1024} MB" else "${value.bytes / 1024 / 1024} MB")
+                    TextButton(onClick={liveUpdater?.cancel()}){Text("Cancel download")}
+                }
+            }
+            androidx.compose.material3.OutlinedButton(onClick = { discovery = discovery.reset(); hiddenEntry.reset(); onCheckForUpdates() }, enabled=liveUpdate?.busy!=true, modifier = Modifier.fillMaxWidth()) { Text("Check for updates") }
+            if (liveUpdate?.release != null && !liveUpdate.busy && liveUpdate.phase != uk.co.traynor.privategallery.core.update.UpdatePhase.UP_TO_DATE) {
+                Button(onClick = { discovery = discovery.reset(); hiddenEntry.reset(); onDownloadUpdate() }, modifier = Modifier.fillMaxWidth()) { Text(if(liveUpdate.phase==uk.co.traynor.privategallery.core.update.UpdatePhase.READY) "Install update" else "Download & Install") }
+            } else if (liveUpdate==null && updateAvailable) Button(onClick=onDownloadUpdate,modifier=Modifier.fillMaxWidth()){Text("Download & Install")}
         }
         if (category == SettingsCategory.ABOUT) SettingsSection(SettingsSections.ABOUT) {
             androidx.compose.material3.Surface(onClick = {

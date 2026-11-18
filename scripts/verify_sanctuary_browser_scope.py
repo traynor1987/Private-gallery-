@@ -119,7 +119,13 @@ CODE81_EXACT_ADAPTERS = {
     f"{CORE}/vault/AndroidVaultRepository.kt": "2a820fba2e75b48c126d0c5908a863dc696dca978a78f90c51f5e7f7eeea12ad",
     f"{CORE}/vault/EncryptedIndexStore.kt": "64b1ff89e0d6ca96eb1a56652af6deed1631680714d0f961fd80fe3136520783",
     f"{CORE}/security/PrimaryStorageInventory.kt": "41187c425f3139258e23cdfeeb8b41f0d6a93712480b95616df8958c10390ab3",
-    f"{CORE}/update/ReleaseUpdate.kt": "4fa36d12cf9044d695faba3f10d4233cc0fa4ab21a8040f6e3d33120343a5a59",
+    # Build85 updater-only adaptations, reviewed independently of encrypted engines.
+    f"{CORE}/update/ReleaseUpdate.kt": "65051b4b2dc308d30c3cb901c915db87c1e6f4d77ebcc098e4329b1b21ebe73c",
+    f"{CORE}/update/UpdateInstallPolicy.kt": "480a2268b8326ab01c3775947811da8f6de201171a21c9f64ff6b58887956083",
+    f"{CORE}/update/NovaUpdateState.kt": "a0c965b311768d7d6af48e13a5a09cfa84261e75cafb38b5fa19b0dbe4db8130",
+    f"{CORE}/update/NovaUpdateModel.kt": "e72150930b629dc3590584bef95b4c492e79d8934d1ea47a39bbd4dbc8ac9bac",
+    f"{CORE}/update/VerifiedUpdateTransfer.kt": "daaa76f41460d1611201405ce80130b669697103549dd936a00c2a1a6ab11a9e",
+    f"{CORE}/media/ExpiringShareProvider.kt": "42a7c51bc7fe69079c0deff07663bceb65aafcb0bc253c9709fb19045892a409",
     f"{CORE}/backup/BackupCoordinator.kt": "fa2dedf1d88865e0bee5e9362109f5c1e6a921909fb00bb6ab168474f8d5b8fa",
     f"{CORE}/vault/PhoneVaultTransfer.kt": "8fe53b2491622958d4c8d59322ffee3e2a4d12041a6d88f926e12a59ed8ec604",
 }
@@ -135,8 +141,8 @@ for revision in (("HEAD",), ()):
     assert not unexpected, f"Unexpected protected-core changes: {sorted(unexpected)}"
 
 build_file = "app/build.gradle.kts"
-expected = original(build_file).replace("versionCode = 69", "versionCode = 84", 1).replace(
-    'versionName = "1.7.34"', 'versionName = "1.7.38.8"', 1,
+expected = original(build_file).replace("versionCode = 69", "versionCode = 85", 1).replace(
+    'versionName = "1.7.34"', 'versionName = "1.7.39"', 1,
 )
 debug_version = """
 // The isolated Fold preview advances independently of the production release.
@@ -265,6 +271,16 @@ assert structure(reminder) == structure(ET.fromstring(f"""
     </receiver>
 """)), "Only the private reminder receiver and the three system broadcasts are permitted"
 application.remove(reminder)
+
+# Exact, visibility-only installer query; no new permission or exported component.
+installer_query = ET.fromstring(f"""
+    <intent xmlns:android="{ANDROID[1:-1]}">
+      <action android:name="android.intent.action.VIEW" />
+      <data android:mimeType="application/vnd.android.package-archive" />
+    </intent>
+""")
+installer_visibility, = [node for node in queries.findall("intent") if structure(node) == structure(installer_query)]
+queries.remove(installer_visibility)
 
 assert structure(before) == structure(after), "The existing manifest or permission set changed"
 print("PASS: Code 69 protected engines, original package and other permissions preserved; Home and call screening are additive")
