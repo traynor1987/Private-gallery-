@@ -206,12 +206,17 @@ class ReleaseChecks(unittest.TestCase):
             (root / "owner-approval.json").write_text(json.dumps(approval))
             (upgrade / "upgrade-baseline-sha256.txt").write_text(CANDIDATE["baseline_sha256"])
             (upgrade / "upgrade-candidate-sha256.txt").write_text(CANDIDATE["apk_sha256"])
-            rehearsal=dict(result="PASS",source=CANDIDATE["source"],baseline_code=84,candidate_code=85,installed_code=85,apk_sha256=CANDIDATE["apk_sha256"],discovery="PASS",download_and_verification="PASS",android_installer="confirmed")
+            rehearsal=dict(result="PASS",source=CANDIDATE["source"],baseline_code=CANDIDATE["baseline_code"],candidate_code=CANDIDATE["version_code"],installed_code=CANDIDATE["version_code"],apk_sha256=CANDIDATE["apk_sha256"],discovery="PASS",download_and_verification="PASS",android_installer="confirmed")
             (upgrade/"in-app-update.json").write_text(json.dumps(rehearsal))
             with patch.object(release, "digest", return_value=CANDIDATE["apk_sha256"]):
                 self.assertEqual(upgrade, release.check_local_receipts(CANDIDATE, root, root))
                 with self.assertRaisesRegex(ValueError, "another release"):
                     release.check_local_receipts(dict(CANDIDATE, source="0" * 40), root, root)
+            for field in ("baseline_code", "candidate_code", "installed_code"):
+                (upgrade/"in-app-update.json").write_text(json.dumps(dict(rehearsal, **{field: rehearsal[field]-1})))
+                with patch.object(release,"digest",return_value=CANDIDATE["apk_sha256"]):
+                    with self.assertRaisesRegex(ValueError,"in-app Android upgrade"):
+                        release.check_local_receipts(CANDIDATE,root,root)
             (upgrade/"in-app-update.json").write_text(json.dumps(dict(rehearsal,apk_sha256="0"*64)))
             with patch.object(release,"digest",return_value=CANDIDATE["apk_sha256"]):
                 with self.assertRaisesRegex(ValueError,"in-app Android upgrade"):

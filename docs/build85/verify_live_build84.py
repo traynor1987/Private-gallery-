@@ -104,13 +104,31 @@ def enter(node, value):
         raise RuntimeError('Synthetic credential/input action failed') from None
     adb('shell', 'input', 'keyevent', 'KEYCODE_BACK')
 
-def scroll(root):
+def scroll(root, reverse=False):
     visible = [n for n in root.iter('node') if n.get('scrollable') == 'true']
     require(visible, 'No observed scroll container')
     b = re.fullmatch(r'\[(\d+),(\d+)\]\[(\d+),(\d+)\]', visible[-1].get('bounds', ''))
     require(b is not None, 'Scrollable bounds missing')
     x1, y1, x2, y2 = map(int, b.groups())
-    adb('shell', 'input', 'swipe', (x1+x2)//2, y1+(y2-y1)*4//5, (x1+x2)//2, y1+(y2-y1)//5, 400)
+    high, low = y1+(y2-y1)//5, y1+(y2-y1)*4//5
+    adb('shell', 'input', 'swipe', (x1+x2)//2, high if reverse else low, (x1+x2)//2, low if reverse else high, 400)
+
+def reveal_action(text):
+    # Long real release notes can place both update buttons below the Fold cover viewport.
+    for _ in range(12):
+        root = tree()
+        if any(n.get('enabled') != 'false' for n in action_nodes(root, text)):
+            return root
+        scroll(root)
+    raise RuntimeError('Could not reveal the real update action: ' + text)
+
+def updates_summary():
+    for _ in range(12):
+        root = tree()
+        if has(root, 'Installed'):
+            return root
+        scroll(root, reverse=True)
+    raise RuntimeError('Could not return to the real installed-version summary')
 
 def open_updates(allow_setup):
     authenticated = False
@@ -120,7 +138,7 @@ def open_updates(allow_setup):
         if has(root, 'Updates & About'):
             require(allow_setup or authenticated, 'Restart must authenticate the existing owner PIN')
             click(root, 'Updates & About')
-            return wait_for(lambda t: has(t, 'Installed') and has(t, 'Check for updates'), 'Updates & About')
+            return wait_for(lambda t: has(t, 'Installed'), 'Updates & About installed-version summary')
         if has(root, 'Don’t Ask Again'):
             click(root, 'Don’t Ask Again')
         elif has(root, 'Set up NovaOS'):
@@ -229,12 +247,16 @@ def main():
     require(has(before, '1.7.39 · Build 85'), 'Build85 screen does not identify its real installed version')
     # Installed Build85 starts its first real check on About entry. Wait for
     # that completed result before exercising the explicit check action.
-    before = wait_for(lambda t: has(t, '1.7.40 · Build 86 available') and has(t, 'Download & Install'), 'Build85 automatic first check')
-    click(before, 'Check for updates')
-    available = wait_for(lambda t: has(t, '1.7.40 · Build 86 available') and has(t, 'Download & Install'), 'Build85 real public update discovery')
+    before = wait_for(lambda t: has(t, '1.7.40 · Build 86 available'), 'Build85 automatic first check')
+    save_ui(before, args.output / 'build85-first-public-discovery.xml')
+    click(reveal_action('Check for updates'), 'Check for updates')
+    updates_summary()
+    available = wait_for(lambda t: has(t, '1.7.40 · Build 86 available'), 'Build85 real public update discovery')
     save_ui(available, args.output / 'build85-live-update-available.xml')
     print('PASS: authentic installed Build85 discovers Build86 through its real UI and public GitHub feed', flush=True)
-    click(available, 'Download & Install')
+    download = reveal_action('Download & Install')
+    save_ui(download, args.output / 'build85-live-download-action.xml')
+    click(download, 'Download & Install')
     installers = {'com.android.packageinstaller', 'com.google.android.packageinstaller', 'com.android.permissioncontroller'}
     installer = wait_for(lambda t: any(n.get('package') in installers and n.get('text') in ('Update', 'Install') for n in t.iter('node')), 'real verified download and Android installer', 240)
     save_ui(installer, args.output / 'live-android-installer.xml')
@@ -251,7 +273,8 @@ def main():
     # PackageManager has already confirmed86. Explicitly refresh the real feed
     # after restart as well as verifying the installed version.
     after = wait_for(lambda t: has(t, '1.7.40 · Up to date'), 'installed-version confirmation')
-    click(after, 'Check for updates')
+    click(reveal_action('Check for updates'), 'Check for updates')
+    updates_summary()
     after = wait_for(lambda t: has(t, '1.7.40 · Build 86') and has(t, '1.7.40 · Up to date'), 'Build86 real up-to-date screen')
     save_ui(after, args.output / 'build86-live-up-to-date.xml')
     receipt = dict(schema=1, result='PASS', source=candidate['source'], apk_sha256=candidate['apk_sha256'], baseline_code=85, installed_code=86, live_github_discovery='PASS', live_download='PASS', android_installer='confirmed', restart_and_same_pin='PASS', up_to_date_screen='PASS', instrumentation='none', physical_fold='owner_confirmation_pending')
