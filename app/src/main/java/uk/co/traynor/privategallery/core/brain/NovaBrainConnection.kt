@@ -30,6 +30,16 @@ internal data class BrainConnectionStatus(
     val analysisEnabledOnServer: Boolean = false,
     val staging: Boolean = false,
 )
+/** Historical authenticated response only; it never implies a current connection. */
+internal data class BrainAuthenticatedCheck(
+    val at: java.time.Instant,
+    val staging: Boolean,
+    val analysisEnabled: Boolean,
+)
+internal data class BrainConnectionRecord(
+    val configuration: NovaBrainConfiguration,
+    val lastAuthenticated: BrainAuthenticatedCheck? = null,
+)
 internal data class BrainResponse(val code: Int, val body: ByteArray)
 internal fun interface BrainStatusTransport { fun get(endpoint: URI, token: String?): BrainResponse }
 

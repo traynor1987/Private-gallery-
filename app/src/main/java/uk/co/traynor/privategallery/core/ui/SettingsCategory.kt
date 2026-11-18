@@ -5,6 +5,7 @@ enum class SettingsCategory(val title: String, val summary: String) {
     GALLERY("Gallery & Vault", "Media browsing, thumbnails and collections"),
     BROWSER("Browser", "Search, history and browsing data"),
     VPN("VPN", "Profiles and connection behaviour"),
+    NOVA_BRAIN("Nova Brain", "VPS connection, authentication and offline status"),
     AI("AI editing", "Provider, consent and Vault-only output"),
     APPEARANCE("Appearance", "Theme and display"),
     ABOUT("Updates & About", "Version, updates and licences"),

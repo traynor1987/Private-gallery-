@@ -8,10 +8,11 @@ object SettingsSections {
     const val APPEARANCE = "Appearance"
     const val BROWSER = "Browser"
     const val AI_EDITING = "AI editing"
+    const val NOVA_BRAIN = "Nova Brain"
     const val UPDATES = "Updates"
     const val ABOUT = "About"
 
-    val production = listOf(SECURITY, PRIVACY, APPEARANCE, BROWSER, AI_EDITING, UPDATES, ABOUT)
+    val production = listOf(SECURITY, PRIVACY, APPEARANCE, BROWSER, NOVA_BRAIN, AI_EDITING, UPDATES, ABOUT)
 }
 
 object SettingsLayoutPolicy {

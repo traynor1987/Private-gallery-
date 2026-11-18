@@ -119,11 +119,14 @@ CODE81_EXACT_ADAPTERS = {
     f"{CORE}/vault/AndroidVaultRepository.kt": "2a820fba2e75b48c126d0c5908a863dc696dca978a78f90c51f5e7f7eeea12ad",
     f"{CORE}/vault/EncryptedIndexStore.kt": "64b1ff89e0d6ca96eb1a56652af6deed1631680714d0f961fd80fe3136520783",
     f"{CORE}/security/PrimaryStorageInventory.kt": "41187c425f3139258e23cdfeeb8b41f0d6a93712480b95616df8958c10390ab3",
+    # Build87 reviewed ordinary Settings navigation; no authentication/encryption engine change.
+    f"{CORE}/ui/SettingsCategory.kt": "df26ffaba9eb7b212ac30914336862c37d376f202aa092621ca85cfddb86cb46",
+    f"{CORE}/ui/SettingsSections.kt": "d6851604f9f98d644391981cb39cd51581dc392d4a2e1b7da22b0c24c7f41716",
     # Build86 reviewed connectivity/presentation adapters; encrypted engines remain pinned above.
     f"{CORE}/update/UpdateTransferMeter.kt": "aa36c46552d3e3b037457d6e5719fed323c215e0538b3fe3aa06d77f704090bb",
     f"{CORE}/update/NovaUpdateDownloadInterface.kt": "20c22bc603b92356a5c3c89b97807e147918397b4d4ae7a0719cb685b7342ddf",
-    f"{CORE}/brain/NovaBrainConnection.kt": "1b3a3cf041757cdd97126d01f25ab6dad5863e133fc359274ffa0a1541f2bfec",
-    f"{CORE}/brain/NovaBrainConnectionStore.kt": "912328b291dab2be71a7234beab0e88204af95d4cf91a57b1e4ab12836603ecd",
+    f"{CORE}/brain/NovaBrainConnection.kt": "fa9ac8743138c2fabc32688ccb8316ee3859335f444d5dd2536935646ebff83e",
+    f"{CORE}/brain/NovaBrainConnectionStore.kt": "f176c3e1fbf1c9ef4e89930338632940f95d8667da016df8a61d6474c3fbf321",
     # Build85 updater-only adaptations, reviewed independently of encrypted engines.
     f"{CORE}/update/ReleaseUpdate.kt": "810b3488c5b4ee8cdd22f1922265be35c50c123842fda17ed0e173d341468f67",
     f"{CORE}/update/UpdateInstallPolicy.kt": "480a2268b8326ab01c3775947811da8f6de201171a21c9f64ff6b58887956083",
@@ -146,8 +149,8 @@ for revision in (("HEAD",), ()):
     assert not unexpected, f"Unexpected protected-core changes: {sorted(unexpected)}"
 
 build_file = "app/build.gradle.kts"
-expected = original(build_file).replace("versionCode = 69", "versionCode = 86", 1).replace(
-    'versionName = "1.7.34"', 'versionName = "1.7.40"', 1,
+expected = original(build_file).replace("versionCode = 69", "versionCode = 87", 1).replace(
+    'versionName = "1.7.34"', 'versionName = "1.7.41"', 1,
 )
 debug_version = """
 // The isolated Fold preview advances independently of the production release.
