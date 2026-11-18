@@ -128,7 +128,7 @@ internal fun GuardianCloudTeacher(message: String? = null, historicalEvidence: B
                             if (plan.cached != null) Triple(plan.cached, true, status)
                             else {
                                 val reply = client.analyze(saved, excerpt, true, plan.id, status,
-                                    permission = { store.enabled() && connectionStore.read() == saved }, cancelled = { !isActive })
+                                    permission = { canSend() && store.enabled() && connectionStore.read() == saved }, cancelled = { !isActive })
                                 if (!store.recordSuccess(plan.id, saved, reply.lesson)) error("Configuration or permission changed")
                                 Triple(reply.lesson, false, reply.status)
                             }

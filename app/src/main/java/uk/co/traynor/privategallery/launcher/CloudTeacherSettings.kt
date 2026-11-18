@@ -73,9 +73,10 @@ internal fun CloudTeacherSettings(canUse: () -> Boolean = { true }, onOpenHistor
                 "Manual requests permitted · each excerpt still needs approval" else "Off · no cloud analysis requests")
             Text("No background analysis, automatic WhatsApp/evidence uploads or private feedback sharing. Connecting alone never enables paid analysis.")
             val last = history?.mapNotNull { it.completedAt }?.maxOrNull()
-            Text("Last successful cloud analysis: " + if (history == null) "Unavailable" else last?.let(::cloudDate) ?: "Never",
+            Text("Last successful cloud analysis: " + if (history == null) "Unavailable" else last?.let(::cloudDate) ?: "None retained",
                 Modifier.testTag("cloud-teacher-last-success"))
             Text("Guardian, Evidence Locker, local learning and Sanctuary work offline.")
+            Text("To review an example, use Ask Cloud Teacher on an approved Guardian conversation, or Teach Guardian in Primary Evidence Locker. Each request opens an editable excerpt and a separate approval.")
             TextButton(enabled = !writing && canUse(), onClick = {
                 if (!canUse()) return@TextButton
                 if (onOpenHistory != null) onOpenHistory()

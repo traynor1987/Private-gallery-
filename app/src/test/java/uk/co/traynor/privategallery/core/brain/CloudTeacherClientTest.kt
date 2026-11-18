@@ -70,4 +70,26 @@ class CloudTeacherClientTest {
             assertFalse(error.message.orEmpty().contains("private arbitrary"))
         }
     }
+    @Test fun permissionRevokedImmediatelyBeforeDispatchSendsNoPayload() {
+        var calls=0;var checks=0
+        val client=CloudTeacherClient { _,_,_ -> calls++;error("revoked authority must not dispatch") }
+        assertThrows(CloudTeacherException::class.java) {
+            client.analyze(config,"approved excerpt",true,UUID.randomUUID().toString(),CloudTeacherStatus.parse(readyBody()),{ ++checks == 1 })
+        }
+        assertEquals(2,checks);assertEquals(0,calls)
+    }
+    @Test fun cancelledRequestNeverDispatchesAndCertificateFailuresAreNotBypassed() {
+        var calls=0
+        val client=CloudTeacherClient { _,_,_ -> calls++;throw javax.net.ssl.SSLHandshakeException("private certificate diagnostics") }
+        assertThrows(java.util.concurrent.CancellationException::class.java) {
+            client.analyze(config,"approved excerpt",true,UUID.randomUUID().toString(),CloudTeacherStatus.parse(readyBody()),{true},{true})
+        }
+        assertEquals(0,calls)
+        val error=assertThrows(CloudTeacherException::class.java) {
+            client.analyze(config,"approved excerpt",true,UUID.randomUUID().toString(),CloudTeacherStatus.parse(readyBody()),{true})
+        }
+        assertEquals(CloudFailure.SECURE_CONNECTION,error.failure);assertEquals(1,calls)
+        assertFalse(error.toString().contains("private certificate"))
+    }
+
 }
