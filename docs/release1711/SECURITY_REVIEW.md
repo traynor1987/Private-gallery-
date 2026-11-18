@@ -1,13 +1,13 @@
 # NovaOS 1.7.40 (Build 86) production controls
 
-Source: 773ec6c8df6d28d338c0d572f5ced10238b0e83f
+Source: 15c1a2754d90bba0be58881101a72dc9aa480391
 Authorization: authenticated owner push
 Release scope: public stable after disposable upgrade verification
 Physical Fold acceptance: pending
 Upgrade fixture SHA-256: e54fb444e855fbf10b40ebaa35e53c3c73325d3d4210b1701ce490935d5dcb5d
 Upgrade controls SHA-256: 12e4f7e7e8752d719985abe078d383b6164d322e7d732ac3c86eb21bdbe1351c
 Runtime matrix SHA-256: b8277030fb8bdf705e7beb4b7d6e9694566ee4a68733175c1aeee0bf75b1909b
-Runtime workflow run: 44303565575
+Runtime workflow run: 44304942793
 Signing workflow SHA-256: ee5e3889164c6ae984d029ec1260d09c49f6b25d2c3bc65fb2f867a805633a75
 Runtime branch: main
 
