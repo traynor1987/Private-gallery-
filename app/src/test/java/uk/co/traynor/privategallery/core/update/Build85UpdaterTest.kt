@@ -9,7 +9,7 @@ import org.junit.Test
 class Build85UpdaterTest {
     private val digest="ab".repeat(32)
     private val prefix="https://github.com/traynor1987/Private-gallery-/releases/download/v1.7.39/"
-    private fun response(code:Long=85,flag:String="",sum:String=digest)= """{"tag_name":"v1.7.39","body":"Release notes","draft":false,"prerelease":false,$flag"assets":[{"name":"private-gallery-release.apk","digest":"sha256:$sum","browser_download_url":"${prefix}private-gallery-release.apk"},{"name":"private-gallery-release.apk.sha256","browser_download_url":"${prefix}private-gallery-release.apk.sha256"},{"name":"private-gallery-release.metadata.json","browser_download_url":"${prefix}private-gallery-release.metadata.json"}]}"""
+    private fun response(flag:String="",sum:String=digest)= """{"tag_name":"v1.7.39","body":"Release notes","draft":false,"prerelease":false,$flag"assets":[{"name":"private-gallery-release.apk","digest":"sha256:$sum","browser_download_url":"${prefix}private-gallery-release.apk"},{"name":"private-gallery-release.apk.sha256","browser_download_url":"${prefix}private-gallery-release.apk.sha256"},{"name":"private-gallery-release.metadata.json","browser_download_url":"${prefix}private-gallery-release.metadata.json"}]}"""
     private fun service(code:Long=85,identitySum:String=digest,apiSum:String=digest)=GithubReleaseUpdateService { url ->
         when {
             url.endsWith("latest") -> response(sum=apiSum)
@@ -29,6 +29,28 @@ class Build85UpdaterTest {
     @Test fun trustedApiDigestAndSeparateMetadataMustAgree() {
         assertTrue(service(apiSum="cd".repeat(32)).check("1.7.38.8",84) is UpdateCheck.Failed)
         assertTrue(service(identitySum="cd".repeat(32)).check("1.7.38.8",84) is UpdateCheck.Failed)
+    }
+    @Test fun apiFailuresAndStableFilteringFailClosed() {
+        for(status in listOf(403,429,500)) {
+            val check=GithubReleaseUpdateService{throw GithubHttpException(status)}.check("1.7.38.8",84)
+            assertEquals(UpdateCheck.Failed(UpdateFailure.GITHUB_API_ERROR),check)
+        }
+        for(flag in listOf("draft","prerelease")) {
+            val check=GithubReleaseUpdateService{response().replace("\"$flag\":false","\"$flag\":true").toByteArray()}.check("1.7.38.8",84)
+            assertEquals(UpdateCheck.Failed(UpdateFailure.NO_VALID_RELEASE),check)
+        }
+    }
+    @Test fun wrongSigningIdentityAndPackageMetadataAreRejected() {
+        val real="94f2bfc6567f26d067d29077111cfd0ce86d38263c642ad115e43365f05b0d17"
+        for(replacement in listOf(real to "ef".repeat(32),"uk.co.traynor.privategallery" to "other.package")) {
+            // Replace only authenticated metadata; the official release response stays identical.
+            val changed=GithubReleaseUpdateService{url ->
+                if(url.endsWith("latest"))response().toByteArray()
+                else if(url.endsWith("metadata.json"))"""{"package":"uk.co.traynor.privategallery","versionName":"1.7.39","versionCode":85,"certificateSha256":"$real","apkSha256":"$digest"}""".replace(replacement.first,replacement.second).toByteArray()
+                else digest.toByteArray()
+            }
+            assertTrue(changed.check("1.7.38.8",84) is UpdateCheck.Failed)
+        }
     }
     @Test fun privateTransferDetectsTruncationOversizeInterruptionAndAllowsFreshRetry() {
         val body=ByteArray(100){it.toByte()}

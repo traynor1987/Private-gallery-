@@ -51,6 +51,16 @@ class ReleaseChecks(unittest.TestCase):
         ]):
             release.verify_tag(CANDIDATE)
 
+    def test_build85_three_part_tag_is_valid_and_bound_to_exact_main_source(self):
+        candidate=dict(CANDIDATE,tag="v1.7.39",version_code=85)
+        with patch.object(release,"api",return_value={"object":{"type":"commit","sha":candidate["source"]}}):
+            self.assertTrue(release.verify_tag(candidate))
+        for invalid in ("v1.7","v1.7.39-test","v1.7.39/other"):
+            with patch.object(release,"api") as network:
+                with self.assertRaisesRegex(ValueError,"Invalid stable release tag"):
+                    release.verify_tag(dict(candidate,tag=invalid))
+                network.assert_not_called()
+
     def test_missing_tag_is_pushed_at_exact_source_and_verified(self):
         with patch.object(release, "verify_tag", side_effect=[False, True]), \
                 patch.object(release.subprocess, "run") as push:
@@ -196,10 +206,16 @@ class ReleaseChecks(unittest.TestCase):
             (root / "owner-approval.json").write_text(json.dumps(approval))
             (upgrade / "upgrade-baseline-sha256.txt").write_text(CANDIDATE["baseline_sha256"])
             (upgrade / "upgrade-candidate-sha256.txt").write_text(CANDIDATE["apk_sha256"])
+            rehearsal=dict(result="PASS",source=CANDIDATE["source"],baseline_code=84,candidate_code=85,installed_code=85,apk_sha256=CANDIDATE["apk_sha256"],discovery="PASS",download_and_verification="PASS",android_installer="confirmed")
+            (upgrade/"in-app-update.json").write_text(json.dumps(rehearsal))
             with patch.object(release, "digest", return_value=CANDIDATE["apk_sha256"]):
                 self.assertEqual(upgrade, release.check_local_receipts(CANDIDATE, root, root))
                 with self.assertRaisesRegex(ValueError, "another release"):
                     release.check_local_receipts(dict(CANDIDATE, source="0" * 40), root, root)
+            (upgrade/"in-app-update.json").write_text(json.dumps(dict(rehearsal,apk_sha256="0"*64)))
+            with patch.object(release,"digest",return_value=CANDIDATE["apk_sha256"]):
+                with self.assertRaisesRegex(ValueError,"in-app Android upgrade"):
+                    release.check_local_receipts(CANDIDATE,root,root)
             with patch.object(release, "digest", return_value="0" * 64):
                 with self.assertRaisesRegex(ValueError, "immutable candidate"):
                     release.check_local_receipts(CANDIDATE, root, root)

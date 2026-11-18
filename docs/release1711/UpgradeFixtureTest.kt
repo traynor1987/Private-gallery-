@@ -47,7 +47,7 @@ import uk.co.traynor.privategallery.core.sanctuary.SanctuaryMode
 import uk.co.traynor.privategallery.core.sanctuary.SanctuaryPreset
 import uk.co.traynor.privategallery.core.sanctuary.SanctuaryStore
 
-/** Reviewed release-control instrumentation for original-key Code 80 to versionCode 84 upgrade.
+/** Reviewed release-control instrumentation for original-key Build 84 to versionCode 85 upgrade.
  * Captured and hash-checked before frozen application checkout; never modifies baseline app.
  */
 class UpgradeFixtureTest {
@@ -58,8 +58,84 @@ class UpgradeFixtureTest {
     private val candidateCode get() = checkNotNull(arguments.getString("candidateCode")).toInt()
     private fun guard() {
         check(context.packageName == "uk.co.traynor.privategallery.hiddenprototype")
-        check(baselineCode == 83 && candidateCode == 84)
+        check(baselineCode == 84 && candidateCode == 85)
     }
+    /** Disposable emulator only: exercise the immutable Build84 updater against controlled
+     * release responses and the real original-key candidate bytes. APK/signature validation,
+     * FileProvider grants and Android PackageInstaller are the unmodified application paths.
+     * The transport substitution lives only in this signed instrumentation process. */
+    @Test fun prepareInAppUpdate() {
+        guard()
+        assertEquals(baselineCode.toLong(),context.packageManager.getPackageInfo(context.packageName,0).longVersionCode)
+        assertEquals(37,android.os.Build.VERSION.SDK_INT)
+        val port=checkNotNull(arguments.getString("updateFixturePort")).toInt()
+        check(port in 1024..65535)
+        val prefix="https://github.com/traynor1987/Private-gallery-/releases/download/v1.7.39/"
+        val routes=mapOf(
+            "https://api.github.com/repos/traynor1987/Private-gallery-/releases/latest" to "/release.json",
+            prefix+"private-gallery-release.apk" to "/candidate.apk",
+            prefix+"private-gallery-release.apk.sha256" to "/candidate.sha256",
+            prefix+"private-gallery-release.metadata.json" to "/metadata.json"
+        )
+        java.net.URL.setURLStreamHandlerFactory { protocol -> if(protocol!="https")null else object:java.net.URLStreamHandler() {
+            override fun openConnection(url:java.net.URL):java.net.URLConnection {
+                val route=checkNotNull(routes[url.toString()]){"Unreviewed synthetic release URL"}
+                return object:java.net.HttpURLConnection(url) {
+                    private var socket:java.net.Socket?=null
+                    private var body:java.io.BufferedInputStream?=null
+                    private val headers=mutableMapOf<String,String>()
+                    override fun connect() {
+                        if(connected)return
+                        val channel=java.net.Socket().also{it.connect(java.net.InetSocketAddress("127.0.0.1",port),15_000);it.soTimeout=30_000}
+                        socket=channel
+                        channel.getOutputStream().write("GET $route HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n".toByteArray(Charsets.US_ASCII))
+                        val input=channel.getInputStream().buffered();body=input
+                        fun line():String {val text=StringBuilder();while(true){val c=input.read();check(c>=0);if(c==10)break;if(c!=13)text.append(c.toChar());check(text.length<8192)};return text.toString()}
+                        check(line().startsWith("HTTP/1.0 200") || throw IllegalStateException("Fixture HTTP failed"))
+                        while(true){val value=line();if(value.isEmpty())break;headers[value.substringBefore(':').lowercase()]=value.substringAfter(':').trim()}
+                        connected=true
+                    }
+                    override fun getResponseCode():Int {connect();return 200}
+                    override fun getHeaderField(name:String):String? {connect();return headers[name.lowercase()]}
+                    override fun getContentLengthLong():Long {connect();return checkNotNull(headers["content-length"]).toLong()}
+                    override fun getInputStream():java.io.InputStream {connect();return checkNotNull(body)}
+                    override fun disconnect(){socket?.close()}
+                    override fun usingProxy()=false
+                }
+            }
+        }}
+        val instrumentation=InstrumentationRegistry.getInstrumentation()
+        val activity=instrumentation.startActivitySync(Intent().setClassName(context.packageName,context.packageName+".MainActivity").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+        fun invoke(name:String)=instrumentation.runOnMainSync{activity.javaClass.getDeclaredMethod(name).apply{isAccessible=true}.invoke(activity)}
+        fun value(name:String):Any? {
+            var result:Any?=null
+            instrumentation.runOnMainSync {
+                val state=activity.javaClass.getDeclaredField(name+"\$delegate").apply{isAccessible=true}.get(activity) as androidx.compose.runtime.State<*>
+                result=state.value
+            }
+            return result
+        }
+        invoke("checkForUpdates")
+        val checkDeadline=SystemClock.elapsedRealtime()+60_000
+        while(value("availableUpdate")==null && SystemClock.elapsedRealtime()<checkDeadline)Thread.sleep(100)
+        assertNotNull("Build84 discovery failed: "+value("updateStatus"),value("availableUpdate"))
+        assertTrue(value("availableUpdate").toString().contains("1.7.39"))
+        invoke("downloadUpdate")
+        val deadline=SystemClock.elapsedRealtime()+180_000
+        while(SystemClock.elapsedRealtime()<deadline) {
+            val status=value("updateStatus").toString()
+            if(status=="Installation handed to Android") {
+                instrumentation.sendStatus(0,android.os.Bundle().apply{putString(android.app.Instrumentation.REPORT_KEY_STREAMRESULT,"NOVA_UPDATE_HANDOFF_READY original=84 candidate=85 transport=controlled-loopback apkVerification=unmodified\n")})
+                // Keep this target process alive until the host confirms Android's Update button.
+                while(SystemClock.elapsedRealtime()<deadline)Thread.sleep(1000)
+                fail("Android package installation was not confirmed in time")
+            }
+            if(status!="Downloading…")fail("Build84 updater could not hand off: $status")
+            Thread.sleep(100)
+        }
+        fail("Build84 download timed out")
+    }
+
     private fun hash(bytes: ByteArray) = MessageDigest.getInstance("SHA-256").digest(bytes).joinToString("") { "%02x".format(it) }
     private fun encryptedHashes(): JSONObject = JSONObject().also { result ->
         // AndroidX rewrites these exact runtime files with PackageInfo.lastUpdateTime
@@ -552,6 +628,36 @@ class UpgradeFixtureTest {
      * raw: opening the UI model may perform an explicit theme migration, outside preservation.
      * All these ciphertext files remain inside the existing complete filesystem assertions.
      */
+    private fun coreApplicationState85(space:uk.co.traynor.privategallery.core.home2.SpaceContext,seed:Boolean) {
+        val notes=uk.co.traynor.privategallery.home2.NovaNotesLibrary(space)
+        val tasks=uk.co.traynor.privategallery.home2.NovaTaskLibrary(space)
+        val calendar=uk.co.traynor.privategallery.home2.NovaCalendarLibrary(space)
+        val clipboard=uk.co.traynor.privategallery.home2.NovaClipboardLibrary(space)
+        val attachment=uk.co.traynor.privategallery.core.home2.NovaNoteAttachment("upgrade-attachment","synthetic.txt","text/plain",java.util.Base64.getEncoder().encodeToString("Synthetic encrypted attachment".toByteArray()))
+        val note=uk.co.traynor.privategallery.home2.NovaNote("upgrade-note","Upgrade note","Keep every encrypted word",true,"Upgrade notebook","upgrade",listOf(attachment))
+        val task=uk.co.traynor.privategallery.home2.NovaTask("upgrade-task","Upgrade task",project="Upgrade project",due=java.time.LocalDate.of(2030,3,30),priority=uk.co.traynor.privategallery.home2.NovaTaskPriority.HIGH,repeat=uk.co.traynor.privategallery.home2.NovaTaskRepeat.WEEKLY,tags="upgrade",subtasks=listOf(uk.co.traynor.privategallery.home2.NovaSubtask("upgrade-subtask","Keep child")),noteId=note.id,remindAt=java.time.LocalTime.of(10,0))
+        val event=uk.co.traynor.privategallery.home2.NovaCalendarEvent("upgrade-event","Upgrade event","Preserve zone and recurrence",java.time.LocalDate.of(2030,3,30),java.time.LocalTime.of(10,30),ZoneId.of("Europe/London"),30,uk.co.traynor.privategallery.home2.NovaEventRepeat.WEEKLY,noteId=note.id,reminderMinutes=15)
+        val now=Instant.parse("2026-11-18T00:00:00Z")
+        val snippet=uk.co.traynor.privategallery.home2.NovaSnippet("upgrade-snippet","Upgrade snippet","Synthetic private snippet","Upgrade",true,true,now)
+        if(seed) {
+            assertNotNull(notes.save(notes.read(),listOf(note)))
+            assertNotNull(notes.setNotebookProtected(notes.read(),note.notebook,true))
+            assertNotNull(notes.writeDraft(notes.readDraft(),note,note.copy(body="Unsaved encrypted draft survives")))
+            assertNotNull(tasks.save(tasks.read(),listOf(task)))
+            assertNotNull(calendar.save(calendar.read(),listOf(event)))
+            assertNotNull(clipboard.save(clipboard.read(now),uk.co.traynor.privategallery.home2.SnippetRetention.MANUAL,listOf(snippet),now,true))
+        }
+        val library=notes.read()
+        assertEquals(note,library.notes.single());assertTrue(library.isProtected(note))
+        assertEquals("Unsaved encrypted draft survives",notes.readDraft().note?.body)
+        assertEquals(task,tasks.read().tasks.single())
+        assertEquals(event,calendar.read().events.single())
+        val snippets=clipboard.read(now)
+        assertEquals(snippet,snippets.snippets.single());assertTrue(snippets.protectAllCopies)
+        // Read-only verification must never claim an ungranted Android tree permission.
+        assertNull(uk.co.traynor.privategallery.home2.NovaFilesSelection(space).read().tree)
+    }
+
     private fun home2State(before:JSONObject,seed:Boolean) {
         val key=PinVaultKeyStore(context).unlock("738291".toCharArray())
         val hidden=hiddenSession(false);val identity=Any()
@@ -560,6 +666,7 @@ class UpgradeFixtureTest {
         try {
             for((owner,access) in listOf("primary" to primary,"hidden" to secret)) {
                 uk.co.traynor.privategallery.core.home2.SpaceContext(context,access).use { space ->
+                    if(owner=="primary")coreApplicationState85(space,seed)
                     val prefs=space.getSharedPreferences("nova_preview_v1",0)
                     val widgets=uk.co.traynor.privategallery.home2.WidgetData(space)
                     val mind=uk.co.traynor.privategallery.home2.MindData(space)

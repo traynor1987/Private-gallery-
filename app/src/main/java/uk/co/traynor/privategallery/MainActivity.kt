@@ -796,6 +796,7 @@ class MainActivity : FragmentActivity() {
     override fun onResume() {
         super.onResume()
         novaUpdater.refreshInstalled()
+        if (installAfterUpdatePermission) requestUpdateInstall()
         activityResumed = true
         activityResumeRevision++
         retryPendingNovaPrivateApp()
@@ -3235,13 +3236,18 @@ class MainActivity : FragmentActivity() {
     private val updateInstaller = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         novaUpdater.installResult(result.resultCode)
     }
+    private var installAfterUpdatePermission = false
     private val updatePermission = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
-        if (packageManager.canRequestPackageInstalls()) requestUpdateInstall()
+        val granted = packageManager.canRequestPackageInstalls()
+        novaUpdater.permissionResult(granted)
+        installAfterUpdatePermission = granted
+        if (granted) requestUpdateInstall()
     }
     private fun checkForUpdates() { novaUpdater.check() }
     private fun downloadUpdate() { novaUpdater.download { requestUpdateInstall() } }
     private fun requestUpdateInstall() {
         if(isDestroyed || isFinishing || !lifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.RESUMED))return
+        installAfterUpdatePermission = false
         novaUpdater.requestInstall({ updateInstaller.launch(it) }, { updatePermission.launch(it) })
     }
 

@@ -1,0 +1,102 @@
+#!/usr/bin/env python3
+"""Disposable API37 rehearsal of authentic Build84's existing updater and Android installer.
+
+Only release transport is controlled; immutable baseline application code, candidate signature
+checks, private FileProvider and Android's package installation remain real. No live owner data.
+"""
+import argparse
+import hashlib
+from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
+import json
+import os
+from pathlib import Path
+import re
+import shutil
+import subprocess
+import tempfile
+import threading
+import time
+import xml.etree.ElementTree as ET
+
+PACKAGE = 'uk.co.traynor.privategallery'
+CERTIFICATE = '94f2bfc6567f26d067d29077111cfd0ce86d38263c642ad115e43365f05b0d17'
+
+def adb(*args):
+    return subprocess.run(['adb', *args], check=True, capture_output=True, text=True).stdout
+
+def installed():
+    match = re.search(r'versionCode=(\d+)\b',adb('shell','dumpsys','package',PACKAGE))
+    return int(match[1]) if match else None
+
+def rehearsal(apk, output, source):
+    assert os.environ.get('GITHUB_ACTIONS')=='true' and os.environ.get('PRODUCTION_UPGRADE')=='1'
+    assert adb('shell','getprop','ro.kernel.qemu').strip()=='1'
+    assert adb('shell','getprop','ro.build.version.sdk').strip()=='37'
+    assert installed()==84, 'Authentic populated Build84 must already be installed'
+    output.mkdir(parents=True,exist_ok=True)
+    with tempfile.TemporaryDirectory(prefix='nova85-controlled-update-') as temporary:
+        root=Path(temporary)
+        digest=hashlib.file_digest(apk.open('rb'),'sha256').hexdigest()
+        shutil.copyfile(apk,root/'candidate.apk')
+        (root/'candidate.sha256').write_text(digest+'  private-gallery-release.apk\n')
+        (root/'metadata.json').write_text(json.dumps(dict(package=PACKAGE,versionName='1.7.39',versionCode=85,certificateSha256=CERTIFICATE,apkSha256=digest)))
+        prefix='https://github.com/traynor1987/Private-gallery-/releases/download/v1.7.39/'
+        assets=[dict(name=name,browser_download_url=prefix+name,**({'digest':'sha256:'+digest} if name.endswith('.apk') else {})) for name in ('private-gallery-release.apk','private-gallery-release.apk.sha256','private-gallery-release.metadata.json')]
+        (root/'release.json').write_text(json.dumps(dict(tag_name='v1.7.39',draft=False,prerelease=False,body='Controlled Build85 release rehearsal',assets=assets)))
+        class Handler(SimpleHTTPRequestHandler):
+            def __init__(self,*args,**kwargs):super().__init__(*args,directory=str(root),**kwargs)
+            def log_message(self,*args):pass
+            def do_GET(self):
+                if self.path not in ('/release.json','/candidate.apk','/candidate.sha256','/metadata.json'):
+                    self.send_error(404);return
+                super().do_GET()
+        server=ThreadingHTTPServer(('127.0.0.1',0),Handler)
+        threading.Thread(target=server.serve_forever,daemon=True).start()
+        port=server.server_port
+        process=None
+        log=output/'in-app-update-instrumentation.txt'
+        try:
+            adb('reverse',f'tcp:{port}',f'tcp:{port}')
+            adb('shell','appops','set',PACKAGE,'REQUEST_INSTALL_PACKAGES','allow')
+            with log.open('w') as transcript:
+                process=subprocess.Popen(['adb','shell','am','instrument','-w','-e','baselineCode','84','-e','candidateCode','85','-e','updateFixturePort',str(port),'-e','class',PACKAGE+'.upgrade.UpgradeFixtureTest#prepareInAppUpdate',PACKAGE+'.test/androidx.test.runner.AndroidJUnitRunner'],stdout=transcript,stderr=subprocess.STDOUT)
+                deadline=time.monotonic()+240
+                while 'NOVA_UPDATE_HANDOFF_READY' not in log.read_text():
+                    if process.poll() is not None:raise RuntimeError('Build84 in-app discovery/download/installer failed; inspect in-app-update-instrumentation.txt')
+                    if time.monotonic()>deadline:raise RuntimeError('Build84 in-app update handoff timed out')
+                    time.sleep(1)
+                clicked=False
+                for _ in range(20):
+                    adb('shell','uiautomator','dump','/sdcard/nova85-installer.xml')
+                    xml=adb('shell','cat','/sdcard/nova85-installer.xml')
+                    (output/'in-app-installer-ui.xml').write_text(xml)
+                    for node in ET.fromstring(xml).iter('node'):
+                        if node.get('package') not in ('com.android.packageinstaller','com.google.android.packageinstaller','com.android.permissioncontroller'):continue
+                        if node.get('text') not in ('Update','Install') or node.get('enabled')!='true':continue
+                        bounds=re.fullmatch(r'\[(\d+),(\d+)\]\[(\d+),(\d+)\]',node.get('bounds',''))
+                        if bounds:
+                            x1,y1,x2,y2=map(int,bounds.groups());adb('shell','input','tap',str((x1+x2)//2),str((y1+y2)//2));clicked=True;break
+                    if clicked:break
+                    time.sleep(1)
+                assert clicked, 'Android installer confirmation was not available'
+                deadline=time.monotonic()+90
+                while installed()!=85:
+                    if time.monotonic()>deadline:raise RuntimeError('Android did not report installed Build85')
+                    time.sleep(1)
+                (output/'in-app-update.json').write_text(json.dumps(dict(schema=1,result='PASS',source=source,baseline_code=84,candidate_code=85,installed_code=85,apk_sha256=digest,transport='controlled-loopback',baseline_application='authentic-unmodified',discovery='PASS',download_and_verification='PASS',android_installer='confirmed',live_github_discovery='requires_postpublication_confirmation'),indent=2)+'\n')
+        finally:
+            if process is not None and process.poll() is None:
+                process.terminate()
+                try:process.wait(timeout=10)
+                except subprocess.TimeoutExpired:process.kill();process.wait(timeout=10)
+            adb('reverse','--remove',f'tcp:{port}')
+            server.shutdown();server.server_close()
+
+def main():
+    parser=argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--apk',required=True,type=Path);parser.add_argument('--output',required=True,type=Path);parser.add_argument('--source',required=True)
+    args=parser.parse_args()
+    assert re.fullmatch(r'[a-f0-9]{40}',args.source)
+    rehearsal(args.apk,args.output,args.source)
+
+if __name__=='__main__':main()

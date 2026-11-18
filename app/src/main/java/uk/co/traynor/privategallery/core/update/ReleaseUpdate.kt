@@ -1,7 +1,6 @@
 package uk.co.traynor.privategallery.core.update
 
 import java.net.HttpURLConnection
-import java.net.URL
 import java.net.URI
 import org.json.JSONObject
 import uk.co.traynor.privategallery.home2.NOVA_CERTIFICATE
@@ -100,16 +99,7 @@ class GithubHttpException(val statusCode: Int) : java.io.IOException("GitHub ret
 fun interface ReleaseTransport { fun fetch(url: String): ByteArray }
 
 class GithubReleaseUpdateService(
-    private val transport: ReleaseTransport = ReleaseTransport { url ->
-        (URL(url).openConnection() as HttpURLConnection).run {
-            connectTimeout = 15_000
-            readTimeout = 30_000
-            requestMethod = "GET"
-            setRequestProperty("Accept", "application/vnd.github+json")
-            if (responseCode !in 200..299) throw GithubHttpException(responseCode)
-            inputStream.use { it.readBytes() }
-        }
-    },
+    private val transport: ReleaseTransport = ReleaseTransport(::fetchReleaseMetadata),
 ) {
     fun check(installedVersion: String): UpdateCheck {
         val response = try {
@@ -171,4 +161,39 @@ private fun Throwable.asUpdateFailure(): UpdateFailure = when (this) {
         else -> UpdateFailure.INVALID_RELEASE_METADATA
     }
     else -> UpdateFailure.INVALID_RELEASE_METADATA
+}
+
+/** Bounded metadata, HTTPS-only redirects, and no credentials outside GitHub's release hosts. */
+private fun fetchReleaseMetadata(url: String): ByteArray {
+    var target = URI(url)
+    repeat(4) {
+        require(target.toString() == "https://api.github.com/repos/traynor1987/Private-gallery-/releases/latest" ||
+            uk.co.traynor.privategallery.home2.trustedNovaReleaseUrl(target.toString(), initial = false))
+        val connection = target.toURL().openConnection() as HttpURLConnection
+        try {
+            connection.instanceFollowRedirects = false
+            connection.connectTimeout = 15_000
+            connection.readTimeout = 30_000
+            connection.setRequestProperty("Accept", "application/vnd.github+json")
+            when(val status = connection.responseCode) {
+                301,302,303,307,308 -> target=target.resolve(checkNotNull(connection.getHeaderField("Location")))
+                200 -> {
+                    require(connection.contentLengthLong <= 1_048_576) { "Metadata too large" }
+                    return connection.inputStream.use { input ->
+                        val output=java.io.ByteArrayOutputStream()
+                        val buffer=ByteArray(8192)
+                        while(true) {
+                            val count=input.read(buffer)
+                            if(count<0)break
+                            require(output.size()+count <= 1_048_576) { "Metadata too large" }
+                            output.write(buffer,0,count)
+                        }
+                        output.toByteArray()
+                    }
+                }
+                else -> throw GithubHttpException(status)
+            }
+        } finally { connection.disconnect() }
+    }
+    throw java.io.IOException("Too many release redirects")
 }

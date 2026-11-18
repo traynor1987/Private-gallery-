@@ -5,10 +5,10 @@ set -euo pipefail
 control_root=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 cd "${PRIVATE_GALLERY_1711_ROOT:-$control_root/..}"
 source "$control_root/release_configuration1711.sh"
-[[ "$baseline_code" == 83 && "$release_code" == 84 && "$baseline_sha" == c22bad35c3c934b8d95cf91e95b0b893cacd8e2c ]]
-archived_baseline="${PRIVATE_GALLERY_1711_BASELINE_APK:?Exact archived signed 1.7.38.7 Code 80 APK required}"
+[[ "$baseline_code" == 84 && "$release_code" == 85 && "$baseline_sha" == b79b85efc5bae8e0bedb832e21a62d462e6f4397 ]]
+archived_baseline="${PRIVATE_GALLERY_1711_BASELINE_APK:?Exact published signed 1.7.38.8 Build 84 APK required}"
 [[ -f "$archived_baseline" && -s "$archived_baseline" ]] || { echo 'Archived baseline APK unavailable' >&2; exit 1; }
-printf '%s  %s\n' 5613a7cb6dff7b19a4206bf752ce22bf7b4891e36ce8ca1df9f2cd0ffab1946f "$archived_baseline" | sha256sum -c -
+printf '%s  %s\n' f0086165ec7e54ea90987b7001442161271347abcb820a4e696a0295397fcc30 "$archived_baseline" | sha256sum -c -
 readonly archived_baseline
 [[ "$(git rev-parse HEAD)" == "${FROZEN_SOURCE:?Exact tested source required}" ]]
 python3 "$control_root/verify_release1711_gate.py" --receipt "${PRIVATE_GALLERY_1711_GATE_RECEIPT:?Exact-source reviewed pre-signer gate required}" --source "$FROZEN_SOURCE"
@@ -99,8 +99,8 @@ PY
 }
 adb shell svc power stayon true
 run_fixture seed seed
-adb install -r "$candidate_apk"
+python3 "$control_root/rehearse_in_app_update85.py" --apk "$candidate_apk" --output "$artifact_dir" --source "$FROZEN_SOURCE"
 run_fixture verify verify
 adb shell am force-stop "$fixture_package"
 run_fixture verify after-restart
-printf '%s\n' 'PASS: original-key Code 80 with authenticated contents -> versionCode 84 in-place upgrade/restart; legacy encrypted data, owner-encrypted evidence, connected collections, chronology corrections, evidence AI credentials, Sanctuary policy, both launcher layouts and Android Home default preserved' > "$artifact_dir/upgrade-result.txt"
+printf '%s\n' 'PASS: original-key Build 84 with authenticated contents -> versionCode 85 in-place upgrade/restart; legacy encrypted data, owner-encrypted evidence, connected collections, chronology corrections, evidence AI credentials, Sanctuary policy, both launcher layouts and Android Home default preserved' > "$artifact_dir/upgrade-result.txt"

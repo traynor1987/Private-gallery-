@@ -24,6 +24,7 @@ class NovaUpdateModel internal constructor(app: Application, private val release
     var lastChecked by mutableStateOf(preferences.getString("update-last-checked", "Never") ?: "Never"); private set
     private var job: Job? = null
     private var apk: File? = null
+    private var permissionPending = false
     @Volatile private var generation = 0L
     init {
         if (preferences.getLong("update-install-target",0)>0) {
@@ -95,10 +96,17 @@ class NovaUpdateModel internal constructor(app: Application, private val release
         ++generation;job?.cancel();apk?.delete();apk=null
         state=state.copy(phase=UpdatePhase.CANCELLED,message="Download cancelled")
     }
+    fun permissionResult(granted: Boolean) {
+        permissionPending = false
+        if(!granted && state.phase==UpdatePhase.READY)
+            state=state.copy(message="Allow installs from NovaOS to continue. Your installed version is unchanged.")
+    }
     fun requestInstall(launch: (Intent) -> Unit, permission: (Intent) -> Unit) {
-        if(state.phase!=UpdatePhase.READY)return
+        if(state.phase!=UpdatePhase.READY || permissionPending)return
         if(!context.packageManager.canRequestPackageInstalls()) {
-            permission(Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,Uri.parse("package:${context.packageName}")))
+            permissionPending = true
+            try { permission(Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,Uri.parse("package:${context.packageName}"))) }
+            catch(_:Exception) { permissionPending=false;state=state.copy(message="Android install permission settings are unavailable. Retry safely.") }
             return
         }
         val file=apk?.takeIf { it.isFile } ?: run {state=state.copy(phase=UpdatePhase.FAILED,message="Update file unavailable. Download again.");return}
