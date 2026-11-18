@@ -39,6 +39,7 @@ internal fun GuardianCloudTeacher(message: String? = null, historicalEvidence: B
     val scope = rememberCoroutineScope()
     var configuration by remember { mutableStateOf<NovaBrainConfiguration?>(null) }
     var enabled by remember { mutableStateOf(false) }
+    var readingSettings by remember { mutableStateOf(true) }
     var busy by remember { mutableStateOf(false) }
     var approved by remember { mutableStateOf(false) }
     var upload by remember(message) { mutableStateOf(message.orEmpty()) }
@@ -49,11 +50,13 @@ internal fun GuardianCloudTeacher(message: String? = null, historicalEvidence: B
     var forceNew by remember { mutableStateOf(false) }
     var feedback by remember { mutableStateOf<String?>(null) }
     LaunchedEffect(revision) {
+        readingSettings = true
         try {
             val saved = withContext(Dispatchers.IO) { connectionStore.read() to store.enabled() }
             if (canSend()) { configuration = saved.first; enabled = saved.second }
         } catch (cancelled: CancellationException) { throw cancelled }
         catch (_: Exception) { configuration = null; enabled = false; feedback = "Saved settings could not be read securely. Local review remains available." }
+        finally { readingSettings = false }
     }
     val lifecycle = LocalLifecycleOwner.current.lifecycle
     DisposableEffect(lifecycle) {
@@ -66,8 +69,11 @@ internal fun GuardianCloudTeacher(message: String? = null, historicalEvidence: B
     GuardianAlertDialog(onDismissRequest = { open = false }, title = { Text("Cloud Teacher") },
         text = {
             Column(Modifier.heightIn(max = 420.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                Text(if (enabled) "Manual Cloud Teacher permitted · per-request approval required"
-                    else "Cloud Teacher is off · enable it in Settings → Nova Brain after reviewing its disclosure")
+                Text(when {
+                    readingSettings -> "Reading encrypted Cloud Teacher settings…"
+                    enabled -> "Manual Cloud Teacher permitted · per-request approval required"
+                    else -> "Cloud Teacher is off · enable it in Settings → Nova Brain after reviewing its disclosure"
+                }, Modifier.testTag("cloud-teacher-permission-status"))
                 Text("Uses your saved Nova Brain connection. No token needs to be re-entered. Local Guardian protection continues independently.")
                 TextButton(enabled = !busy && configuration != null && canSend(), onClick = {
                     if (!canSend()) return@TextButton

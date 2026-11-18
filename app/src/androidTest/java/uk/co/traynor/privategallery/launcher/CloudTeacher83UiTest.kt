@@ -27,6 +27,17 @@ class CloudTeacher83UiTest {
     @Before fun prepare() { check(context.packageName.endsWith(".hiddenprototype"));store.clearHistory();store.setEnabled(false);connection.save(config) }
     @After fun cleanup() { store.clearHistory();store.setEnabled(false);connection.clear() }
     private fun waitFor(text:String)=compose.waitUntil(10_000) { compose.onAllNodesWithText(text).fetchSemanticsNodes().size==1 }
+    private fun waitForPermission() {
+        val expected="Manual Cloud Teacher permitted · per-request approval required"
+        try {
+            compose.waitUntil(10_000) {
+                compose.onAllNodes(hasTestTag("cloud-teacher-permission-status") and hasText(expected),useUnmergedTree=true).fetchSemanticsNodes().size==1
+            }
+            compose.onNodeWithTag("cloud-teacher-permission-status",useUnmergedTree=true).performScrollTo().assertTextEquals(expected)
+        } catch(error:Throwable) {
+            throw AssertionError("Synthetic permission readiness failed; encryptedEnabled="+store.enabled()+"; savedConfigMatches="+(connection.read()==config)+"; "+compose.onRoot(useUnmergedTree=true).printToString(),error)
+        }
+    }
     private fun status()=JSONObject("""{"status":"authenticated","model":"gpt-5-mini","analysis_enabled":true,"budget":{
       "funded_allowance_micro_usd":1000000,"configured_spending_limit_micro_usd":250000,"configured_ceiling_micro_usd":250000,
       "remaining_micro_usd":250000,"request_reservation_micro_usd":102000,"monthly_spending_limit_micro_usd":100000000,
@@ -50,7 +61,7 @@ class CloudTeacher83UiTest {
         store.setEnabled(true);val calls=AtomicInteger(0)
         val client=CloudTeacherClient { _,_,payload -> assertNull(payload);calls.incrementAndGet();BrainResponse(200,"""{"status":"authenticated","model":"staging","analysis_enabled":false,"budget":null}""".toByteArray()) }
         compose.setContent { MaterialTheme { GuardianCloudTeacher("Synthetic original",client=client) { true } } }
-        compose.onNodeWithText("Ask Cloud Teacher").performClick();waitFor("Manual Cloud Teacher permitted · per-request approval required")
+        compose.onNodeWithText("Ask Cloud Teacher").performClick();waitForPermission()
         compose.onNodeWithText("Check connection and budget").performScrollTo().performClick();waitFor("Staging · analysis disabled")
         compose.onNodeWithText("Send this message to OpenAI").assertIsNotEnabled()
         compose.onNodeWithTag("cloud-teacher-request-consent").performScrollTo().assertIsNotEnabled()
@@ -75,7 +86,7 @@ class CloudTeacher83UiTest {
             BrainResponse(200,body.toString().toByteArray())
         }
         compose.setContent { MaterialTheme { GuardianCloudTeacher("Synthetic original excluded",client=client) { true } } }
-        compose.onNodeWithText("Ask Cloud Teacher").performClick();waitFor("Manual Cloud Teacher permitted · per-request approval required")
+        compose.onNodeWithText("Ask Cloud Teacher").performClick();waitForPermission()
         compose.onNodeWithText("Check connection and budget").performScrollTo().performClick();waitFor("Server analysis available")
         compose.onNodeWithTag("cloud-teacher-approved-excerpt").performScrollTo().performTextReplacement("[redacted] synthetic approved text")
         compose.onNodeWithText("Send this message to OpenAI").assertIsNotEnabled()
@@ -96,7 +107,7 @@ class CloudTeacher83UiTest {
             else { posts.incrementAndGet();throw java.net.SocketTimeoutException("synthetic sensitive diagnostics") }
         }
         compose.setContent { MaterialTheme { GuardianCloudTeacher("Synthetic approved excerpt",client=client) { true } } }
-        compose.onNodeWithText("Ask Cloud Teacher").performClick();waitFor("Manual Cloud Teacher permitted · per-request approval required")
+        compose.onNodeWithText("Ask Cloud Teacher").performClick();waitForPermission()
         compose.onNodeWithText("Check connection and budget").performScrollTo().performClick();waitFor("Server analysis available")
         compose.onNodeWithTag("cloud-teacher-request-consent").performScrollTo().performClick()
         compose.onNodeWithText("Send this message to OpenAI").performClick()
