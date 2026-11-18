@@ -288,6 +288,12 @@ def runtime_cases(archive,matrix,source):
                  'settingsTestUsesTheSharedEffectAndRespectsPersistedToggleAndViewPolicy'),
             ],
         }
+        exact.update({
+            display: [('uk.co.traynor.privategallery.core.update.Updater86UiTest', name)
+                      for name in ('foldedDownloadShowsRealPercentageBytesSpeedCancelRetryAndVerification',
+                                   'unfoldedDownloadShowsRealPercentageBytesSpeedCancelRetryAndVerification')]
+            for display in ('updater86-cover', 'updater86-inner')
+        })
         for group, identities in exact.items():
             require(len(identities) >= groups.get(group, 1), 'Focused coverage was reduced for '+group)
             groups[group] = len(identities)
