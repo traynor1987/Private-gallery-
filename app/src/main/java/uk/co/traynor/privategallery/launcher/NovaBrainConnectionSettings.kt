@@ -30,6 +30,7 @@ internal fun NovaBrainConnectionSettings(canUse: () -> Boolean = { true }, onCon
     var setup by remember { mutableStateOf(false) }
     var saving by remember { mutableStateOf(false) }
     var origin by remember { mutableStateOf("") }
+    var configuredOrigin by remember { mutableStateOf("") }
     var token by remember { mutableStateOf("") }
     var message by remember { mutableStateOf<String?>(null) }
     var pending by remember { mutableStateOf<Job?>(null) }
@@ -46,7 +47,8 @@ internal fun NovaBrainConnectionSettings(canUse: () -> Boolean = { true }, onCon
         try {
             val saved = withContext(Dispatchers.IO) { store.read() }
             configured = saved != null
-            origin = saved?.origin.orEmpty()
+            configuredOrigin = saved?.origin.orEmpty()
+            origin = configuredOrigin
         } catch (_: Exception) { message = "Saved connection could not be read. Configure it again." }
     }
     ElevatedCard(Modifier.fillMaxWidth()) {
@@ -55,10 +57,10 @@ internal fun NovaBrainConnectionSettings(canUse: () -> Boolean = { true }, onCon
             Text(status.message, Modifier.testTag("nova-brain-status"))
             Text("Local learning, Guardian, Evidence Locker and Sanctuary work offline. Connection checks send only your access token to the status endpoint. No messages, evidence or personal feedback are sent.")
             Text("Connecting does not activate Cloud Teacher or paid analysis. Each sensitive request still requires its own preview and explicit consent.")
-            if (configured) Text("Server: $origin")
+            if (configured) Text("Server: $configuredOrigin")
             if (status.phase == BrainConnectionPhase.CHECKING) LinearProgressIndicator(Modifier.fillMaxWidth())
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedButton(enabled = !saving && status.phase != BrainConnectionPhase.CHECKING, onClick = { if (canUse()) { token = ""; setup = true } }) { Text(if (configured) "Configure" else "Connect") }
+                OutlinedButton(enabled = !saving && status.phase != BrainConnectionPhase.CHECKING, onClick = { if (canUse()) { origin = configuredOrigin; token = ""; setup = true } }) { Text(if (configured) "Configure" else "Connect") }
                 if (configured) TextButton(enabled = status.phase != BrainConnectionPhase.CHECKING, onClick = {
                     if (!canUse()) return@TextButton
                     val ticket = ++revision
@@ -98,7 +100,7 @@ internal fun NovaBrainConnectionSettings(canUse: () -> Boolean = { true }, onCon
             pending = scope.launch {
                 try {
                     withContext(Dispatchers.IO) { store.save(configuration) }
-                    if (canUse()) { configured = true; setup = false; status = BrainConnectionStatus(); message = "Connection saved · tap Check connection"; onConfigurationChanged() }
+                    if (canUse()) { configuredOrigin = configuration.origin; configured = true; setup = false; status = BrainConnectionStatus(); message = "Connection saved · tap Check connection"; onConfigurationChanged() }
                 } catch (cancelled: CancellationException) { throw cancelled }
                 catch (_: Exception) { message = "Connection could not be saved securely. Retry." }
                 finally { saving = false }
@@ -112,7 +114,7 @@ internal fun NovaBrainConnectionSettings(canUse: () -> Boolean = { true }, onCon
                     pending = scope.launch {
                         try {
                             withContext(Dispatchers.IO) { store.clear() }
-                            configured = false; origin = ""; setup = false; status = BrainConnectionStatus(); message = "Connection removed"; onConfigurationChanged()
+                            configured = false; configuredOrigin = ""; origin = ""; setup = false; status = BrainConnectionStatus(); message = "Connection removed"; onConfigurationChanged()
                         } catch (cancelled: CancellationException) { throw cancelled }
                         catch (_: Exception) { message = "Connection could not be removed. Retry." }
                         finally { saving = false }

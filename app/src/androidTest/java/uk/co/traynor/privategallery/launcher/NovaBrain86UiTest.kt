@@ -41,6 +41,12 @@ class NovaBrain86UiTest {
             compose.waitUntil(10_000) { changes==1 }
             assertEquals("https://synthetic.example",store.read()?.origin)
             compose.onNodeWithText("Configure").performClick()
+            compose.onNodeWithText("HTTPS server address").performTextReplacement("https://discarded.example")
+            compose.onNodeWithText("Cancel").performClick()
+            compose.onNodeWithText("Server: https://synthetic.example").assertIsDisplayed()
+            compose.onNodeWithText("Server: https://discarded.example").assertDoesNotExist()
+            assertEquals("https://synthetic.example",store.read()?.origin)
+            compose.onNodeWithText("Configure").performClick()
             compose.onNodeWithText("Disconnect").performClick()
             compose.waitUntil(10_000) { changes==2 }
             assertNull(store.read())
