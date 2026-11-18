@@ -23,5 +23,7 @@
   },
   "workflow_sha256": "1124e3d9a1f57f13953648268e094becd697175f4f4c551293c55bd7da2ebf39",
   "review_sha256": "dfdf940cc6483f1bd7a8ece47f3bd84872b5779f0360af2ca008906361323a36",
-  "runtime_branch": "main"
+  "runtime_branch": "main",
+  "test_artifact": 14456675740,
+  "runtime_archive_sha256": "140962bccfcf8479db153941b5fd02dccecd4ce3852c4757087a95fd6a5a4446"
 }
