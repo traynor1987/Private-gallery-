@@ -235,7 +235,7 @@ class Handler(BaseHTTPRequestHandler):
                             "status": "authenticated", "model": self.server.model,
                             "analysis_enabled": self.server.analysis_enabled,
                             "budget": self.server.budget.status()})
-        except (OSError, ValueError, sqlite3.Error):
+        except (OSError, ValueError, TypeError, sqlite3.Error):
             self.send_failure(503, 'budget_reconciliation_required')
 
 

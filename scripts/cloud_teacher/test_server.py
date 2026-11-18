@@ -73,6 +73,7 @@ class TeacherTest(unittest.TestCase):
             server.budget = Mock()
             server.budget.begin_request.return_value = {'decision':'reserved'}
             server.budget.reserve_amount = 102_000
+            server.budget.status.return_value = {'synthetic_fixture': True}
             worker = Thread(target=server.serve_forever, daemon=True)
             worker.start()
             try:
@@ -97,6 +98,7 @@ class TeacherTest(unittest.TestCase):
                     self.assertEqual(json.loads(body)['lesson'], {**LESSON,'summary':'Advisory'})
                     self.assertEqual(json.loads(body)['source'], 'model_prediction')
                     self.assertFalse(json.loads(body)['provider_billing_verified'])
+                    self.assertEqual(json.loads(body)['budget'], {'synthetic_fixture': True})
                     self.assertEqual(send("owner-test", True)[0], 429)
                     server.analysis_enabled = False
                     self.assertEqual(send("owner-test", True)[0], 503)
