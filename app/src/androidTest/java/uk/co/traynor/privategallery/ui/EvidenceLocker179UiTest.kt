@@ -70,9 +70,40 @@ class EvidenceLocker179UiTest {
    waitReady(controller,0)
    click("More actions");click("Add existing evidence");compose.evidenceNode(hasContentDescription("Register original alpha179.txt")).assertIsDisplayed().assertHeightIsAtLeast(48.dp).performClick().assertIsOn();approveImportReview();waitReady(controller,1)
    compose.onNodeWithText("Evidence").performClick();compose.evidenceNode(hasText("alpha179.txt")).performClick();waitReady(controller,1)
-   click("Review / correct");field("Owner-corrected text").performTextReplacement("unique179 owner corrected Alice timestamp uncertain")
-   compose.onNodeWithText("Save").performClick()
-   compose.waitUntil(15000){controller.state.value.catalog?.evidence()?.singleOrNull()?.transcript()?.startsWith("unique179")==true&&!controller.state.value.busy}
+   click("Review / correct")
+   val correctedText="unique179 owner corrected Alice timestamp uncertain"
+   val correctionAutomation=InstrumentationRegistry.getInstrumentation().uiAutomation
+   val correctionFlags=correctionAutomation.serviceInfo.flags
+   correctionAutomation.serviceInfo=correctionAutomation.serviceInfo.apply {
+    flags=correctionFlags or AccessibilityServiceInfo.FLAG_RETRIEVE_INTERACTIVE_WINDOWS
+   }
+   try {
+    // A replacement requests IME focus asynchronously. In the cold standalone
+    // checkpoint the keyboard previously opened after Save's gesture was resolved,
+    // moving the action row while that gesture was being delivered.
+    field("Owner-corrected text").performTouchInput { click() }.assertIsFocused()
+    compose.waitUntil(10000) {
+     correctionAutomation.windows.any { it.type==AccessibilityWindowInfo.TYPE_INPUT_METHOD }
+    }
+    field("Owner-corrected text").performTextReplacement(correctedText).assertTextContains(correctedText)
+    androidx.test.espresso.Espresso.closeSoftKeyboard()
+    compose.waitUntil(10000) {
+     correctionAutomation.windows.none { it.type==AccessibilityWindowInfo.TYPE_INPUT_METHOD } &&
+      compose.runOnIdle { compose.activity.window.decorView.hasWindowFocus() &&
+       compose.activity.window.decorView.rootWindowInsets?.isVisible(android.view.WindowInsets.Type.ime())==false }
+    }
+   } finally {
+    correctionAutomation.serviceInfo=correctionAutomation.serviceInfo.apply { flags=correctionFlags }
+   }
+   field("Owner-corrected text").assertTextContains(correctedText)
+   compose.onNode(hasText("Save") and hasClickAction()).assertIsDisplayed().assertIsEnabled().performTouchInput { click() }
+   field("Owner-corrected text").assertDoesNotExist()
+   try {
+    compose.waitUntil(15000){controller.state.value.catalog?.evidence()?.singleOrNull()?.transcript()?.startsWith("unique179")==true&&!controller.state.value.busy}
+   } catch(failure:ComposeTimeoutException) {
+    val state=controller.state.value
+    throw AssertionError("Correction did not persist. busy=${state.busy} revision=${state.catalog?.revision()} corrections=${state.catalog?.evidence()?.singleOrNull()?.corrections()?.size} status=${state.message}",failure)
+   }
    val corrected=f.access.store.read().evidence().single();assertTrue(corrected.ocr().single().text().contains("arrange delivery"));assertEquals(1,corrected.corrections().size)
    compose.runOnIdle{compose.activity.onBackPressedDispatcher.onBackPressed()}
    click("Add evidence");compose.evidenceNode(hasContentDescription("Register original beta179.txt")).assertIsDisplayed().assertHeightIsAtLeast(48.dp).performClick().assertIsOn();approveImportReview();waitReady(controller,2)

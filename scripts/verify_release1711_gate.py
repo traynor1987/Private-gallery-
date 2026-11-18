@@ -294,6 +294,9 @@ def runtime_cases(archive,matrix,source):
                                    'unfoldedDownloadShowsRealPercentageBytesSpeedCancelRetryAndVerification')]
             for display in ('updater86-cover', 'updater86-inner')
         })
+        exact['evidence-correction86-cold'] = [
+            ('uk.co.traynor.privategallery.ui.EvidenceLocker179UiTest',
+             'primaryActualImportExtractCorrectIncidentSearchRemoveAndReopenPreservesOriginal')]
         for group, identities in exact.items():
             require(len(identities) >= groups.get(group, 1), 'Focused coverage was reduced for '+group)
             groups[group] = len(identities)
