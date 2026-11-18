@@ -29,7 +29,19 @@ def require(ok, message):
         raise RuntimeError(message)
 
 def adb(*args):
-    return subprocess.check_output(['adb', *map(str, args)], text=True, timeout=35).strip()
+    return subprocess.check_output(['adb', *map(str, args)], text=True, timeout=60 if args and args[0] == 'install' else 35).strip()
+
+def wait_device_ready():
+    deadline = time.monotonic() + 90
+    while time.monotonic() < deadline:
+        try:
+            if adb('shell', 'getprop', 'sys.boot_completed') == '1' and adb('shell', 'cmd', 'package', 'path', 'android').startswith('package:'):
+                adb('shell', 'ls', '/sdcard')  # FUSE must be mounted before any real APK installation.
+                return
+        except (subprocess.CalledProcessError, subprocess.TimeoutExpired):
+            pass
+        time.sleep(2)
+    raise RuntimeError('Disposable emulator package/storage services did not become ready')
 
 def installed():
     match = re.search(r'versionCode=(\d+)\b', adb('shell', 'dumpsys', 'package', PACKAGE))
@@ -54,8 +66,11 @@ def tap(node):
     require(x2 > x1 and y2 > y1, 'UI action is not visible')
     adb('shell', 'input', 'tap', (x1+x2)//2, (y1+y2)//2)
 
+def action_nodes(root, text):
+    return [n for n in root.iter('node') if n.get('class') != 'android.widget.EditText' and (n.get('text') == text or n.get('content-desc') == text)]
+
 def click(root, text):
-    matches = [n for n in root.iter('node') if n.get('text') == text or n.get('content-desc') == text]
+    matches = action_nodes(root, text)
     require(matches, 'Missing UI action: ' + text)
     matches.sort(key=lambda n: n.get('clickable') != 'true')
     tap(matches[0])
@@ -122,7 +137,7 @@ def open_updates(allow_setup):
             click(root, 'Finish')
         elif has(root, 'Search apps and folders'):
             enter(fields(root)[0], 'Settings')
-            click(wait_for(lambda t: has(t, 'Settings'), 'native Settings search result'), 'Settings')
+            click(wait_for(lambda t: bool(action_nodes(t, 'Settings')), 'native Settings search result'), 'Settings')
         elif has(root, 'Settings') and not has(root, 'Privacy & Security'):
             click(root, 'Settings')
         elif has(root, 'Apps'):
@@ -151,6 +166,7 @@ def main():
     args = p.parse_args()
     require(os.environ.get('GITHUB_ACTIONS') == 'true' and os.environ.get('GITHUB_REPOSITORY') == REPO, 'Repository CI only')
     require(adb('shell', 'getprop', 'ro.kernel.qemu') == '1' and adb('shell', 'getprop', 'ro.build.version.sdk') == '37', 'Disposable API37 emulator required')
+    wait_device_ready()
     require(installed() is None, 'Production package must be absent initially; never clear/uninstall')
     args.output.mkdir(parents=True, exist_ok=False)
     candidate = json.loads(args.candidate.read_text())
@@ -163,7 +179,7 @@ def main():
     (args.output / 'live-release.json').write_text(json.dumps(release, indent=2)+'\n')
     baseline = args.output.parent / 'authentic-build84.apk'
     fetch(baseline, Path(os.environ['ANDROID_HOME']) / 'build-tools/36.0.0')
-    adb('install', baseline)
+    adb('install', '--no-streaming', baseline)
     require(installed() == 84, 'Authentic Build84 installation not observed')
     adb('shell', 'svc', 'power', 'stayon', 'true')
     adb('shell', 'input', 'keyevent', 'KEYCODE_WAKEUP')
@@ -207,8 +223,13 @@ if __name__ == '__main__':
                 if adb('shell', 'getprop', 'ro.kernel.qemu') == '1':
                     destination = Path(sys.argv[sys.argv.index('--output') + 1])
                     destination.mkdir(parents=True, exist_ok=True)
+                    (destination / 'host-disk.txt').write_text(subprocess.check_output(['df', '-h'], text=True))
+                    for name, command in [('device-disk', ('shell', 'df', '-h')), ('device-crash', ('logcat', '-d', '-b', 'crash', '-t', '100')), ('installed-package', ('shell', 'dumpsys', 'package', PACKAGE))]:
+                        try:
+                            (destination / ('failure-' + name + '.txt')).write_text(adb(*command))
+                        except Exception:
+                            pass
                     save_ui(tree(), destination / 'failure-ui-redacted.xml')
-                    (destination / 'failure-installed-package.txt').write_text(adb('shell', 'dumpsys', 'package', PACKAGE))
             except Exception:
                 pass  # Preserve the original failure and its traceback.
         raise
