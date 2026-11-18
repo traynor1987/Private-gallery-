@@ -85,7 +85,8 @@ class EvidenceLocker179UiTest {
     compose.waitUntil(10000) {
      correctionAutomation.windows.any { it.type==AccessibilityWindowInfo.TYPE_INPUT_METHOD }
     }
-    field("Owner-corrected text").performTextReplacement(correctedText).assertTextContains(correctedText)
+    field("Owner-corrected text").performTextReplacement(correctedText)
+    field("Owner-corrected text").assertTextContains(correctedText)
     androidx.test.espresso.Espresso.closeSoftKeyboard()
     compose.waitUntil(10000) {
      correctionAutomation.windows.none { it.type==AccessibilityWindowInfo.TYPE_INPUT_METHOD } &&
