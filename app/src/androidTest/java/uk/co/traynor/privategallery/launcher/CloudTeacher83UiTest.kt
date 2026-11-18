@@ -26,7 +26,17 @@ class CloudTeacher83UiTest {
     private val config=NovaBrainConfiguration("https://synthetic.example","synthetic-owner-token-".repeat(3))
     @Before fun prepare() { check(context.packageName.endsWith(".hiddenprototype"));store.clearHistory();store.setEnabled(false);connection.save(config) }
     @After fun cleanup() { store.clearHistory();store.setEnabled(false);connection.clear() }
-    private fun waitFor(text:String)=compose.waitUntil(10_000) { compose.onAllNodesWithText(text).fetchSemanticsNodes().size==1 }
+    private fun diagnostic(error:Throwable):Nothing {
+        val tree=runCatching {
+            val roots=compose.onAllNodes(isRoot(),useUnmergedTree=true)
+            roots.fetchSemanticsNodes().indices.joinToString("\n") { roots[it].printToString() }
+        }.getOrElse { "Tree unavailable: "+it.javaClass.simpleName }
+        throw AssertionError("Synthetic readiness failed; encryptedEnabled="+store.enabled()+"; savedConfigMatches="+(connection.read()==config)+"; original="+error.message+"; tree="+tree,error)
+    }
+    private fun waitFor(text:String) {
+        try { compose.waitUntil(10_000) { compose.onAllNodesWithText(text).fetchSemanticsNodes().size==1 } }
+        catch(error:Throwable) { diagnostic(error) }
+    }
     private fun waitForPermission() {
         val expected="Manual Cloud Teacher permitted · per-request approval required"
         try {
@@ -35,7 +45,7 @@ class CloudTeacher83UiTest {
             }
             compose.onNodeWithTag("cloud-teacher-permission-status",useUnmergedTree=true).performScrollTo().assertTextEquals(expected)
         } catch(error:Throwable) {
-            throw AssertionError("Synthetic permission readiness failed; encryptedEnabled="+store.enabled()+"; savedConfigMatches="+(connection.read()==config)+"; "+compose.onRoot(useUnmergedTree=true).printToString(),error)
+            diagnostic(error)
         }
     }
     private fun status()=JSONObject("""{"status":"authenticated","model":"gpt-5-mini","analysis_enabled":true,"budget":{
