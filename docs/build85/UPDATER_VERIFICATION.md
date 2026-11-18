@@ -15,6 +15,8 @@ read-only. No Vault path or encryption key is added to provider roots. Metadata 
 transfers are bounded and HTTPS-only. Cancellation deletes an incomplete download.
 Only PackageManager reporting the requested installed version confirms installation.
 The successful-check timestamp is preserved across failed checks and process restart.
+Opening Updates & About with no retained state refreshes the real stable release, including
+after the immutable Build84 updater installs Build85 without persisting an install marker.
 
 The protected release workflow is extended in place, not replaced. It pins authentic
 Build84, compiles the reviewed fixture against that exact baseline, and seeds the existing

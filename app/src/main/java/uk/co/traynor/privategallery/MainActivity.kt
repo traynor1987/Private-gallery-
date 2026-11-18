@@ -4985,6 +4985,13 @@ internal fun SettingsHome(
     val updateOwner = LocalContext.current.playerActivity() as? MainActivity
     val liveUpdater = updateOwner?.novaUpdater
     val liveUpdate = liveUpdater?.state
+    // Build84 did not persist an installer target. Refresh this existing screen after
+    // reopening; package state alone must never masquerade as a successful server check.
+    LaunchedEffect(category, liveUpdater) {
+        if (category == SettingsCategory.ABOUT && liveUpdater?.state?.phase == uk.co.traynor.privategallery.core.update.UpdatePhase.IDLE)
+            liveUpdater.check()
+    }
+
     val appContext = LocalContext.current.applicationContext
     val aiConfiguration = remember(appContext) { uk.co.traynor.privategallery.core.editor.AiProviderRegistry.initialize(appContext) }
     val aiStatus by aiConfiguration.status.collectAsState()
