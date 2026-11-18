@@ -3,7 +3,7 @@
 set -euo pipefail
 [[ "${GITHUB_ACTIONS:-}" == true ]]
 case "${GITHUB_REF:-}" in
-  refs/heads/feature/novaos-build85-updater|refs/heads/main|refs/heads/integration/novaos-1.7-home2|refs/heads/feature/novaos-visual-foundation|refs/heads/feature/novaos-sanctuary|refs/heads/feature/novaos-sanctuary-integration|refs/heads/feature/novaos-code81-core-apps) ;;
+  refs/heads/feature/novaos-build86-connectivity|refs/heads/feature/novaos-build85-updater|refs/heads/main|refs/heads/integration/novaos-1.7-home2|refs/heads/feature/novaos-visual-foundation|refs/heads/feature/novaos-sanctuary|refs/heads/feature/novaos-sanctuary-integration|refs/heads/feature/novaos-code81-core-apps) ;;
   *) exit 1 ;;
 esac
 root=${1:-app/build/home2-evidence}

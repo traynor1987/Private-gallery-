@@ -23,6 +23,7 @@ internal object VerifiedUpdateTransfer {
                 digest.update(buffer,0,count);output.write(buffer,0,count);progress(bytes,expectedBytes)
             }
             check(bytes>0 && (expectedBytes<=0 || bytes==expectedBytes)) { "Incomplete download" }
+            progress(bytes, if (expectedBytes > 0) expectedBytes else bytes)
             return bytes
         } finally {buffer.fill(0)}
     }

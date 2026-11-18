@@ -49,7 +49,11 @@ class PatchEvidenceTest(unittest.TestCase):
    self.assertNotIn(bad,s)
   for required in ('run_patch1761.sh','release_policy.py evidence','verify_synthetic_upgrade.sh','verify_patch_production1761.py','verify_permanent_signer.sh'):
    self.assertIn(required,s)
- def test_fast_lane_has_no_emulator_action(self):self.assertNotIn('android-emulator-runner',(ROOT/'.github/workflows/fast-development.yml').read_text())
+ def test_fast_lane_has_no_emulator_action(self):
+  import yaml
+  workflow=yaml.safe_load((ROOT/'.github/workflows/fast-development.yml').read_text())
+  self.assertFalse(any('android-emulator-runner' in step.get('uses','') for step in workflow['jobs']['fast']['steps']))
+  self.assertTrue(any('android-emulator-runner' in step.get('uses','') for step in workflow['jobs']['home2-integration']['steps']))
  def test_full_lane_retains_original_tests_and_monthly_dispatch(self):
   full=(ROOT/'.github/workflows/acceptance1761.yml').read_text();self.assertIn('HiddenRuntimeFailureTest',full);self.assertIn('run_release1761_platform.sh',full);self.assertIn('workflow_dispatch:',full)
   self.assertIn("cron: '17 4 1 * *'",(ROOT/'.github/workflows/periodic-security.yml').read_text())

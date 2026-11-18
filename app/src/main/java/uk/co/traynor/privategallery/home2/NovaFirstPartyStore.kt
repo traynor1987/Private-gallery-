@@ -73,6 +73,7 @@ internal fun downloadVerifiedNovaApk(context: Context, release: NovaStoreRelease
     onProgress: (Long, Long) -> Unit = { _, _ -> },
     cancelled: () -> Boolean = { false },
     onVerifying: () -> Unit = {},
+    expectedSize: Long? = null,
 ): File {
     val directory = File(context.cacheDir, "updates").apply { mkdirs() }
     directory.listFiles()?.filter {
@@ -95,9 +96,10 @@ internal fun downloadVerifiedNovaApk(context: Context, release: NovaStoreRelease
                 when (connection.responseCode) {
                     301, 302, 303, 307, 308 -> target = target.resolve(checkNotNull(connection.getHeaderField("Location")))
                     200 -> {
-                        val expectedBytes = connection.contentLengthLong
-                        check(expectedBytes <= MAX_APK_BYTES)
-                        check(expectedBytes <= 0 || directory.usableSpace > expectedBytes + 8L * 1024 * 1024) { "Insufficient storage" }
+                        val declaredBytes = connection.contentLengthLong
+                        check(expectedSize == null || declaredBytes <= 0 || expectedSize == declaredBytes) { "Update size mismatch" }
+                        val expectedBytes = expectedSize ?: declaredBytes
+                        uk.co.traynor.privategallery.core.update.UpdateStoragePolicy.requireSpace(expectedBytes, directory.usableSpace, MAX_APK_BYTES)
                         connection.inputStream.use { input ->
                             java.io.FileOutputStream(output).use { destination ->
                                 uk.co.traynor.privategallery.core.update.VerifiedUpdateTransfer.copy(input,destination,expectedBytes,MAX_APK_BYTES,digest,cancelled,onProgress)

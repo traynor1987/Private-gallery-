@@ -15,7 +15,7 @@ class MainReleaseControls(unittest.TestCase):
     def fixture(self, directory):
         values = historical.Upgrade1711Controls().gate_fixture(directory)
         marker = values[0]
-        marker.update(baseline_code=84, candidate_code=85)
+        marker.update(baseline_code=85, candidate_code=86)
         values[1] += (
             b"Authorization: authenticated owner push\n"
             b"Release scope: public stable after disposable upgrade verification\n"

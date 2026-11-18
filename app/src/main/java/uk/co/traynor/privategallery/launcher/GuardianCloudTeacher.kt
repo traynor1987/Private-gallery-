@@ -66,6 +66,17 @@ internal fun GuardianCloudTeacher(
     var lastConnection by remember { mutableStateOf<Instant?>(null) }
     var status by remember { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
+    val context = androidx.compose.ui.platform.LocalContext.current.applicationContext
+    var connectionRevision by remember { mutableIntStateOf(0) }
+    LaunchedEffect(open, connectionRevision) {
+        if (open && canSend()) {
+            val saved = withContext(Dispatchers.IO) { runCatching { uk.co.traynor.privategallery.core.brain.NovaBrainConnectionStore(context).read() }.getOrNull() }
+            if (canSend()) {
+                endpoint = saved?.origin?.trimEnd('/')?.plus("/guardian/analyze").orEmpty()
+                token = saved?.token.orEmpty()
+            }
+        }
+    }
     val url = remember(endpoint) { runCatching { cloudTeacherEndpoint(endpoint) }.getOrNull() }
     val validToken = token.length in 32..256 && !token.startsWith("sk-") &&
         token.all { it in 'a'..'z' || it in 'A'..'Z' || it in '0'..'9' || it in "-_." }
@@ -74,6 +85,10 @@ internal fun GuardianCloudTeacher(
         title = { Text("Cloud Teacher") },
         text = {
             Column(Modifier.heightIn(max = 420.dp).verticalScroll(rememberScrollState())) {
+                NovaBrainConnectionSettings(canUse = { !busy && canSend() }, onConfigurationChanged = {
+                    endpoint = ""; token = ""; approved = false; connectionLines = emptyList(); lastConnection = null; status = null
+                    connectionRevision++
+                })
                 Text("Local Nova Brain is available without cloud access.")
                 Text("Check an authenticated HTTPS gateway. Checking status sends only your access token.")
                 lastConnection?.let { Text("Last authenticated check: $it") }

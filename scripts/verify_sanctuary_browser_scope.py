@@ -119,12 +119,17 @@ CODE81_EXACT_ADAPTERS = {
     f"{CORE}/vault/AndroidVaultRepository.kt": "2a820fba2e75b48c126d0c5908a863dc696dca978a78f90c51f5e7f7eeea12ad",
     f"{CORE}/vault/EncryptedIndexStore.kt": "64b1ff89e0d6ca96eb1a56652af6deed1631680714d0f961fd80fe3136520783",
     f"{CORE}/security/PrimaryStorageInventory.kt": "41187c425f3139258e23cdfeeb8b41f0d6a93712480b95616df8958c10390ab3",
+    # Build86 reviewed connectivity/presentation adapters; encrypted engines remain pinned above.
+    f"{CORE}/update/UpdateTransferMeter.kt": "aa36c46552d3e3b037457d6e5719fed323c215e0538b3fe3aa06d77f704090bb",
+    f"{CORE}/update/NovaUpdateDownloadInterface.kt": "20c22bc603b92356a5c3c89b97807e147918397b4d4ae7a0719cb685b7342ddf",
+    f"{CORE}/brain/NovaBrainConnection.kt": "1b3a3cf041757cdd97126d01f25ab6dad5863e133fc359274ffa0a1541f2bfec",
+    f"{CORE}/brain/NovaBrainConnectionStore.kt": "912328b291dab2be71a7234beab0e88204af95d4cf91a57b1e4ab12836603ecd",
     # Build85 updater-only adaptations, reviewed independently of encrypted engines.
-    f"{CORE}/update/ReleaseUpdate.kt": "3f6ca65ecbb7173a517d56a284d7ee0253079133e501c75cca3a71cc9e91a213",
+    f"{CORE}/update/ReleaseUpdate.kt": "810b3488c5b4ee8cdd22f1922265be35c50c123842fda17ed0e173d341468f67",
     f"{CORE}/update/UpdateInstallPolicy.kt": "480a2268b8326ab01c3775947811da8f6de201171a21c9f64ff6b58887956083",
-    f"{CORE}/update/NovaUpdateState.kt": "a0c965b311768d7d6af48e13a5a09cfa84261e75cafb38b5fa19b0dbe4db8130",
-    f"{CORE}/update/NovaUpdateModel.kt": "f518c3bf82d69187be0b622829d8886af13d4a31cf795077bacc8a80b22c7e5d",
-    f"{CORE}/update/VerifiedUpdateTransfer.kt": "daaa76f41460d1611201405ce80130b669697103549dd936a00c2a1a6ab11a9e",
+    f"{CORE}/update/NovaUpdateState.kt": "198b6c41d6bfcbe4eb3e6f93897d2b86d937e698be902b6cd29c25a7696c9567",
+    f"{CORE}/update/NovaUpdateModel.kt": "aa45b54c579ea3009afdfd1b32e7413c7e959952b4f90f5d1dc5f75dd076e7fb",
+    f"{CORE}/update/VerifiedUpdateTransfer.kt": "d9f813cc1d855eed8f0299b04c86c1ea01594601a9da784d3da2874b54e23889",
     f"{CORE}/media/ExpiringShareProvider.kt": "42a7c51bc7fe69079c0deff07663bceb65aafcb0bc253c9709fb19045892a409",
     f"{CORE}/backup/BackupCoordinator.kt": "fa2dedf1d88865e0bee5e9362109f5c1e6a921909fb00bb6ab168474f8d5b8fa",
     f"{CORE}/vault/PhoneVaultTransfer.kt": "8fe53b2491622958d4c8d59322ffee3e2a4d12041a6d88f926e12a59ed8ec604",
@@ -141,8 +146,8 @@ for revision in (("HEAD",), ()):
     assert not unexpected, f"Unexpected protected-core changes: {sorted(unexpected)}"
 
 build_file = "app/build.gradle.kts"
-expected = original(build_file).replace("versionCode = 69", "versionCode = 85", 1).replace(
-    'versionName = "1.7.34"', 'versionName = "1.7.39"', 1,
+expected = original(build_file).replace("versionCode = 69", "versionCode = 86", 1).replace(
+    'versionName = "1.7.34"', 'versionName = "1.7.40"', 1,
 )
 debug_version = """
 // The isolated Fold preview advances independently of the production release.

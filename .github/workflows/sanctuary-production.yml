@@ -63,7 +63,7 @@ jobs:
           (inputs/'owner-approval.json').write_text(json.dumps({
               'approving_login':event['sender']['login'],'approving_id':event['sender']['id'],
               'approved_revision':approved_revision,'approval_commit':head,
-              'source':marker['source'],'version':'1.7.39','version_code':85,
+              'source':marker['source'],'version':'1.7.40','version_code':86,
               'workflow_sha256':workflow,'regression_run':marker['test_run'],
           },indent=2)+'\n')
           (inputs/'release-control-sha.txt').write_text(subprocess.check_output(['git','rev-parse','HEAD'],text=True))
@@ -121,9 +121,9 @@ jobs:
             const runtime=Buffer.from((await github.rest.actions.downloadArtifact({...context.repo,artifact_id:artifact.id,archive_format:'zip'})).data);
             if(hash(runtime)!==marker.runtime_archive_sha256)throw Error('Original runtime archive changed');
             fs.writeFileSync(path.join(root,'original-runtime.zip'),runtime);
-            const baselineRun=(await github.rest.actions.getWorkflowRun({...context.repo,run_id:44177566227})).data;
+            const baselineRun=(await github.rest.actions.getWorkflowRun({...context.repo,run_id:44261020498})).data;
             write('baseline-github-run.json',baselineRun);
-            if(baselineRun.event!=='push'||baselineRun.head_branch!=='main'||baselineRun.head_repository?.full_name!=='traynor1987/Private-gallery-'||baselineRun.status!=='completed'||baselineRun.conclusion!=='success'||baselineRun.head_sha!=='13d216ca13c494e4ae7c719ceaaf53d466d381bf'||baselineRun.path.split('@')[0]!=='.github/workflows/sanctuary-production.yml')throw Error('Pinned Build 84 production run differs');
+            if(baselineRun.event!=='push'||baselineRun.head_branch!=='main'||baselineRun.head_repository?.full_name!=='traynor1987/Private-gallery-'||baselineRun.status!=='completed'||baselineRun.conclusion!=='success'||baselineRun.head_sha!=='f67091037a92560cde320a2e22d83cb8f6bcf52b'||baselineRun.path.split('@')[0]!=='.github/workflows/sanctuary-production.yml')throw Error('Pinned Build 85 production run differs');
       - name: Validate original runtime reports and authenticated owner authorization before signer access
         run: |
           controls="$RUNNER_TEMP/release1711-controls"
@@ -163,7 +163,7 @@ jobs:
           bash "$controls/compile_upgrade1711_fixture.sh"
           python3 "$controls/verify_compiled_upgrade1711.py" --directory "$PRIVATE_GALLERY_1711_COMPILED_DIR" --source "$FROZEN_SOURCE" --fixture "$PRIVATE_GALLERY_1711_UPGRADE_FIXTURE" --compiler "$controls/compile_upgrade1711_fixture.sh"
           chmod -R a-w "$PRIVATE_GALLERY_1711_COMPILED_DIR"
-      - name: Verify published Build 84 baseline before signer access
+      - name: Verify published Build 85 baseline before signer access
         run: |
           controls="$RUNNER_TEMP/release1711-controls/scripts"
           python3 "$controls/fetch_code81_upgrade_baseline.py" "$PRIVATE_GALLERY_1711_BASELINE_APK" "$ANDROID_HOME/build-tools/36.0.0" | tee app/build/production-evidence/baseline-archive-validation.txt
@@ -192,7 +192,7 @@ jobs:
           jarsigner -verify "$probe/probe.jar" > "$probe/verification.txt"
           grep -q 'jar verified' "$probe/verification.txt"
           printf 'PASS: existing permanent private key; original certificate SHA256 94f2bfc6567f26d067d29077111cfd0ce86d38263c642ad115e43365f05b0d17\n' > app/build/production-evidence/permanent-signer.txt
-      - name: Build the frozen original-key NovaOS 1.7.39 candidate
+      - name: Build the frozen original-key NovaOS 1.7.40 candidate
         env:
           ORG_GRADLE_PROJECT_PRIVATE_GALLERY_STORE_FILE: ${{ runner.temp }}/private-gallery-release.jks
           ORG_GRADLE_PROJECT_PRIVATE_GALLERY_STORE_PASSWORD: ${{ secrets.PRIVATE_GALLERY_SIGNING_STORE_PASSWORD }}
@@ -223,7 +223,7 @@ jobs:
           "$ANDROID_HOME/build-tools/36.0.0/zipalign" -c -P 16 -v 4 app/build/outputs/apk/release/app-release.apk > app/build/production-evidence/alignment.txt
       - name: Enable emulator acceleration
         run: sudo chmod 666 /dev/kvm
-      - name: Original-key Build 84 to versionCode 85 upgrade and restart without uninstall or clear
+      - name: Original-key Build 85 to versionCode 86 upgrade and restart without uninstall or clear
         uses: reactivecircus/android-emulator-runner@v2
         env:
           PRODUCTION_UPGRADE: '1'
@@ -277,8 +277,10 @@ jobs:
           (cd "$stage" && sha256sum private-gallery-release.apk > private-gallery-release.apk.sha256)
           install -m 0600 /dev/null "$stage/notes.md"
           cat > "$stage/notes.md" <<'NOTES'
-          NovaOS 1.7.39 (Build 85), Android 17.
-          Includes verified stable GitHub updates and the Code 81 core apps.
+          NovaOS 1.7.40 (Build 86), Android 17.
+          Secure configurable Nova Brain HTTPS connection with encrypted credentials and offline fallback.
+          Real-byte download progress, percentage, size, speed, cancellation and retry in the existing updater.
+          Local learning remains private; connecting does not activate cloud analysis or automatic uploads.
           Updates & About downloads and verifies the update before Android installation confirmation.
           NOTES
           python3 - "$stage" <<'PY'
@@ -287,16 +289,16 @@ jobs:
           root=Path(sys.argv[1])
           digest=(root/'private-gallery-release.apk.sha256').read_text().split()[0]
           (root/'private-gallery-release.metadata.json').write_text(json.dumps({
-            'package':'uk.co.traynor.privategallery','versionName':'1.7.39','versionCode':85,
+            'package':'uk.co.traynor.privategallery','versionName':'1.7.40','versionCode':86,
             'certificateSha256':'94f2bfc6567f26d067d29077111cfd0ce86d38263c642ad115e43365f05b0d17',
             'apkSha256':digest,
           },indent=2)+'\n')
           PY
-          if ! git show-ref --verify --quiet refs/tags/v1.7.39; then
-            git tag v1.7.39 "$FROZEN_SOURCE"
+          if ! git show-ref --verify --quiet refs/tags/v1.7.40; then
+            git tag v1.7.40 "$FROZEN_SOURCE"
           fi
           python3 "$RUNNER_TEMP/release1711-controls/scripts/verify_novaos_release_assets.py" \
-            --tag v1.7.39 --source "$FROZEN_SOURCE" --baseline-code 84 \
+            --tag v1.7.40 --source "$FROZEN_SOURCE" --baseline-code 85 \
             --assets "$stage" --notes "$stage/notes.md" --tools "$ANDROID_HOME/build-tools/36.0.0" \
             --evidence app/build/production-evidence/from80
       - name: Retain verified publication inputs

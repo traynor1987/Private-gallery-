@@ -17,7 +17,10 @@ class Release1761ConfigurationTest(unittest.TestCase):
   self.assertNotIn('continue-on-error: true',s)
  def test_real_update_version_and_package_identity_not_decoy(self):
   main=(ROOT/'app/src/main/java/uk/co/traynor/privategallery/MainActivity.kt').read_text()
-  self.assertIn('GithubReleaseUpdateService().check(BuildConfig.VERSION_NAME)',main)
+  self.assertIn('private fun checkForUpdates() { novaUpdater.check() }',main)
+  model=(ROOT/'app/src/main/java/uk/co/traynor/privategallery/core/update/NovaUpdateModel.kt').read_text()
+  self.assertIn('context.packageManager.getPackageInfo(context.packageName,0)',model)
+  self.assertIn('releases.check(actual.versionName ?: \"0\",actual.longVersionCode)',model)
   # This test validates the immutable 1.7.6.1 candidate even on later branches.
   gradle=subprocess.check_output(['git','show','33e9669daeb3bf5a3d2cb0aae4d3480fe4b538c2:app/build.gradle.kts'],cwd=ROOT,text=True)
   self.assertIn('applicationId = "uk.co.traynor.privategallery"',gradle)
