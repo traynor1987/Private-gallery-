@@ -132,3 +132,15 @@ mounts, loopback binding and unsupported-host production gate remain intact.
 Do not set approval or deploy paid configuration as part of this checkpoint. No
 real key was used, no credit was spent and no VPS service was changed. Android
 opt-in, encrypted advisory history and full integration verification remain in work.
+
+## Android implementation checkpoint — not a production verification claim
+
+The manual Cloud Teacher dialog now uses the saved Nova Brain configuration, a default-off encrypted global permission, read-only authenticated server budget preflight, an editable exact excerpt and fresh per-request consent. New POSTs use a persisted request UUID, never retry automatically, and fail closed on staging, unknown/inconsistent budget, exhaustion, revoked permission, changed configuration or malformed responses. TLS uses normal platform certificate/hostname validation with redirects disabled.
+
+The same existing Keystore credential adapter stores at most20 encrypted advisory classifications and request/cost/time metadata. It does not retain excerpts or model summaries, which could echo private Guardian/Evidence content. Private history is behind the existing Guardian device-authentication route. Deletion intent prevents late replies from recreating removed records; clearing a corrupt index only removes this feature's own files. The original saved connection and encryption keys remain unchanged.
+
+Cloud predictions remain distinct from owner labels and held-out evaluation. Guardian and Evidence Locker use their existing local correction/Personal Impact controls; cloud results never automatically train, validate, block, or change Sanctuary. No network request happens merely by opening settings or receiving a notification. Hidden Vault content is not wired into the cloud request path.
+
+Local checks at this checkpoint:41 backend tests,17 pure Kotlin protocol/client/existing connection tests,10 CI/main-preservation/preflight control tests, YAML/Bash syntax and exact protected-core adapter/manifest checks passed. Added8 Android Keystore/history tests and4 consent/status/edited-excerpt/failure UI tests; these still require the existing API37 CI runtime, including both Fold viewport groups. No Android runtime pass is claimed before those reports exist. Existing updater files and their exact hashes are unchanged.
+
+Paid deployment remains blocked by the reported Ubuntu24.10 staging host and lack of administrative deployment/billing evidence. No paid request, production activation, version/tag replacement, signing or publication was performed. Existing v1.7.41/build87 remains intact; a future release must use an unused version and complete its own production signing/populated-upgrade/public-feed gates.

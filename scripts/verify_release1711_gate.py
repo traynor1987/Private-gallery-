@@ -302,6 +302,14 @@ def runtime_cases(archive,matrix,source):
                                    'recreatedScreenKeepsHistoricalReceiptWithoutPretendingItHasACurrentConnection')]
             for display in ('nova-brain87-cover', 'nova-brain87-inner')
         })
+        exact.update({
+            display: [('uk.co.traynor.privategallery.launcher.CloudTeacher83UiTest', name)
+                      for name in ('disclosureRequiresExplicitConsentAndCancellationKeepsCloudOff',
+                                   'stagingCanBeCheckedReadOnlyButNeverSendsAnAnalysisEvenWithLocalPermission',
+                                   'onlyEditedApprovedExcerptIsSentAndSuggestionIsNotRecordedAsOwnerFeedback',
+                                   'backendFailureKeepsLocalReviewAndDoesNotAutomaticallyRetryPaidRequest')]
+            for display in ('cloud-teacher83-cover', 'cloud-teacher83-inner')
+        })
         exact['evidence-correction86-cold'] = [
             ('uk.co.traynor.privategallery.ui.EvidenceLocker179UiTest',
              'primaryActualImportExtractCorrectIncidentSearchRemoveAndReopenPreservesOriginal')]

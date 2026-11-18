@@ -84,6 +84,7 @@ internal fun NovaBrainConnectionSettings(canUse: () -> Boolean = { true }, onCon
             Text(if (status.phase == BrainConnectionPhase.CONNECTED) "Offline fallback: Ready · local protection remains available" else "Offline mode: Active · local protection remains available", Modifier.testTag("nova-brain-offline"))
             Text("Cloud analysis: " + (lastAuthenticated?.let { if (it.analysisEnabled) "Server reports available · owner consent still required" else "Disabled by server" } ?: "Not verified"), Modifier.testTag("nova-brain-analysis"))
             Text("Automatic Cloud Teacher: Off · connection tests do not activate paid analysis")
+            status.cloudStatus?.lines()?.forEach { Text(it, style = MaterialTheme.typography.bodySmall) }
             Text("Data sharing: No automatic messages, evidence or private feedback uploads", Modifier.testTag("nova-brain-privacy"))
             Text("Guardian and Evidence Locker remain local-first. Their existing optional cloud requests require a reviewed excerpt and explicit consent. Sanctuary works offline.")
             Text("Connection tests send only your access token to the status endpoint. Local Knowledge evaluation is separate from backend connectivity.")

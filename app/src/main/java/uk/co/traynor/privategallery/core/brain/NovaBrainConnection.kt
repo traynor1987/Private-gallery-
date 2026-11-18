@@ -29,6 +29,7 @@ internal data class BrainConnectionStatus(
     val message: String = "Disconnected · local Nova Brain remains available",
     val analysisEnabledOnServer: Boolean = false,
     val staging: Boolean = false,
+    val cloudStatus: CloudTeacherStatus? = null,
 )
 /** Historical authenticated response only; it never implies a current connection. */
 internal data class BrainAuthenticatedCheck(
@@ -40,7 +41,9 @@ internal data class BrainConnectionRecord(
     val configuration: NovaBrainConfiguration,
     val lastAuthenticated: BrainAuthenticatedCheck? = null,
 )
-internal data class BrainResponse(val code: Int, val body: ByteArray)
+internal data class BrainResponse(val code: Int, val body: ByteArray) {
+    override fun toString() = "BrainResponse(code=$code, redacted)"
+}
 internal fun interface BrainStatusTransport { fun get(endpoint: URI, token: String?): BrainResponse }
 
 /** Read-only status contract inspected in scripts/cloud_teacher/server.py. Never calls /analyze. */
@@ -73,7 +76,8 @@ internal class NovaBrainConnection(private val transport: BrainStatusTransport =
                 val enabled = status.getBoolean("analysis_enabled") && !staging
                 return BrainConnectionStatus(BrainConnectionPhase.CONNECTED,
                     if (staging) "Connected · authenticated · staging, analysis disabled"
-                    else "Connected · authenticated · ${if (enabled) "server analysis available" else "analysis disabled"}", enabled, staging)
+                    else "Connected · authenticated · ${if (enabled) "server analysis available" else "analysis disabled"}", enabled, staging,
+                    CloudTeacherStatus.parse(status))
             } catch (_: SSLException) {
                 return BrainConnectionStatus(BrainConnectionPhase.ERROR, "Secure connection failed · certificate validation was not bypassed. Local processing is available.")
             } catch (_: IOException) {
