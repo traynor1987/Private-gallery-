@@ -34,6 +34,7 @@ data class ReleaseMetadata(
     val notes: String = "",
     val versionCode: Long? = null,
     val apkDigest: String? = null,
+    val apkSizeBytes: Long? = null,
 ) {
     companion object {
         fun parse(json: String): ReleaseMetadata {
@@ -65,6 +66,9 @@ data class ReleaseMetadata(
                 sha256Url = asset(shaUrl, "private-gallery-release.apk.sha256"),
                 identityUrl = asset(identityUrl, "private-gallery-release.metadata.json"),
                 notes = release.optString("body").take(32_000),
+                apkSizeBytes = (0 until assets.length()).map { assets.getJSONObject(it) }
+                    .single { it.optString("name") == "private-gallery-release.apk" }
+                    .optLong("size", -1).takeIf { it in 1..(256L * 1024 * 1024) },
                 apkDigest = (0 until assets.length()).map { assets.getJSONObject(it) }
                     .single { it.optString("name") == "private-gallery-release.apk" }
                     .optString("digest").removePrefix("sha256:").takeIf { it.matches(Regex("[a-f0-9]{64}")) },

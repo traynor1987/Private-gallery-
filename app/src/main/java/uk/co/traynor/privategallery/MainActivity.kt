@@ -5273,7 +5273,10 @@ internal fun SettingsHome(
             browserRequireVpn, onBrowserRequireVpnChanged, browserAutoConnectVpn, onBrowserAutoConnectVpnChanged,
             clearBrowserDataOnLock, onClearBrowserDataOnLockChanged, onClearBrowserData, contentBlocker,
         )
-        if (category == SettingsCategory.AI) uk.co.traynor.privategallery.ui.AiEditingSettings()
+        if (category == SettingsCategory.AI) {
+            uk.co.traynor.privategallery.launcher.NovaBrainConnectionSettings()
+            uk.co.traynor.privategallery.ui.AiEditingSettings()
+        }
         if (category == SettingsCategory.ABOUT) SettingsSection(SettingsSections.UPDATES) {
             androidx.compose.material3.Surface(onClick = {
                 discovery = discovery.tapInstalled()
@@ -5290,18 +5293,19 @@ internal fun SettingsHome(
             Text(versionPresentation.updateStatus(liveUpdate?.message ?: updateStatus), color = MaterialTheme.colorScheme.onSurfaceVariant)
             Text("Last checked", style = MaterialTheme.typography.titleMedium)
             Text(liveUpdater?.lastChecked ?: updateLastChecked, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            liveUpdate?.release?.let { release ->
+                Text("NovaOS ${release.version.raw} · Build ${release.versionCode ?: "—"}")
+                release.apkSizeBytes?.let { Text("Download size: ${uk.co.traynor.privategallery.core.update.updateMegabytes(it)} MB") }
+            }
             liveUpdate?.release?.notes?.takeIf { it.isNotBlank() && !hideContent }?.let { Text(it) }
             liveUpdate?.let { value ->
-                if(value.phase in setOf(uk.co.traynor.privategallery.core.update.UpdatePhase.DOWNLOADING,uk.co.traynor.privategallery.core.update.UpdatePhase.VERIFYING)) {
-                    val progress=value.progress
-                    if(progress!=null) LinearProgressIndicator(progress={progress},modifier=Modifier.fillMaxWidth()) else LinearProgressIndicator(Modifier.fillMaxWidth())
-                    Text(if(value.total>0) "${value.bytes / 1024 / 1024} / ${value.total / 1024 / 1024} MB" else "${value.bytes / 1024 / 1024} MB")
-                    TextButton(onClick={liveUpdater?.cancel()}){Text("Cancel download")}
-                }
+                uk.co.traynor.privategallery.core.update.NovaUpdateDownloadInterface(
+                    value, onCancel={liveUpdater?.cancel()}, onRetry=onDownloadUpdate,
+                )
             }
             androidx.compose.material3.OutlinedButton(onClick = { discovery = discovery.reset(); hiddenEntry.reset(); onCheckForUpdates() }, enabled=liveUpdate?.busy!=true, modifier = Modifier.fillMaxWidth()) { Text("Check for updates") }
             if (liveUpdate?.release != null && !liveUpdate.busy && liveUpdate.phase != uk.co.traynor.privategallery.core.update.UpdatePhase.UP_TO_DATE) {
-                Button(onClick = { discovery = discovery.reset(); hiddenEntry.reset(); onDownloadUpdate() }, modifier = Modifier.fillMaxWidth()) { Text(if(liveUpdate.phase==uk.co.traynor.privategallery.core.update.UpdatePhase.READY) "Install update" else "Download & Install") }
+                Button(onClick = { discovery = discovery.reset(); hiddenEntry.reset(); onDownloadUpdate() }, modifier = Modifier.fillMaxWidth()) { Text(if(liveUpdate.phase==uk.co.traynor.privategallery.core.update.UpdatePhase.READY) "Install update" else if(liveUpdate.phase==uk.co.traynor.privategallery.core.update.UpdatePhase.FAILED) "Retry download" else "Download update") }
             } else if (liveUpdate==null && updateAvailable) Button(onClick=onDownloadUpdate,modifier=Modifier.fillMaxWidth()){Text("Download & Install")}
         }
         if (category == SettingsCategory.ABOUT) SettingsSection(SettingsSections.ABOUT) {

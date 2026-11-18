@@ -68,18 +68,20 @@ class NovaUpdateModel internal constructor(app: Application, private val release
         if(state.phase==UpdatePhase.READY && apk?.isFile==true) {onReady();return}
         val release=state.release ?: return
         val ticket=++generation
-        state=NovaUpdateState(UpdatePhase.DOWNLOADING,"Downloading…",release)
+        state=NovaUpdateState(UpdatePhase.DOWNLOADING,"Downloading…",release,total=release.apkSizeBytes ?: -1)
         job=viewModelScope.launch {
             try {
                 val active=currentCoroutineContext()[Job]!!
                 val file=withContext(Dispatchers.IO) {
                     val identity=checkNotNull(releases.verifiedIdentity(release))
                     check(identity.versionCode>installed().longVersionCode)
-                    downloadVerifiedNovaApk(context,identity,onProgress={ bytes,total ->
-                        viewModelScope.launch { if(generation==ticket && state.phase==UpdatePhase.DOWNLOADING)state=state.copy(bytes=bytes,total=total) }
+                    val meter=UpdateTransferMeter()
+                    downloadVerifiedNovaApk(context,identity,expectedSize=release.apkSizeBytes,onProgress={ bytes,total ->
+                        val sample=meter.sample(bytes,total)
+                        if(sample!=null)viewModelScope.launch { if(generation==ticket && state.phase==UpdatePhase.DOWNLOADING)state=state.copy(bytes=bytes,total=total,bytesPerSecond=sample.bytesPerSecond) }
                     },cancelled={ !active.isActive || generation!=ticket },onVerifying={
                         viewModelScope.launch { if(generation==ticket && state.phase==UpdatePhase.DOWNLOADING)state=state.copy(phase=UpdatePhase.VERIFYING,message="Verifying package, signature and integrity…") }
-                    })
+                    }).also { if(!active.isActive || generation!=ticket) { it.delete();throw CancellationException() } }
                 }
                 if(ticket!=generation){file.delete();return@launch}
                 apk=file
@@ -90,6 +92,11 @@ class NovaUpdateModel internal constructor(app: Application, private val release
                 if(generation==ticket)state=state.copy(phase=UpdatePhase.FAILED,message=if(failure.message?.contains("storage",true)==true)"Insufficient storage. Free space and retry." else "Download or verification failed. Retry safely.")
             }
         }
+    }
+    override fun onCleared() {
+        ++generation;job?.cancel()
+        if(state.phase!=UpdatePhase.INSTALLATION_REQUESTED)apk?.delete()
+        super.onCleared()
     }
     fun cancel() {
         if(state.phase==UpdatePhase.INSTALLATION_REQUESTED)return
