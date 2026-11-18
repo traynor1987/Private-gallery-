@@ -14,6 +14,7 @@ import subprocess
 import sys
 import time
 import urllib.request
+import urllib.error
 import xml.etree.ElementTree as ET
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -159,6 +160,27 @@ def save_ui(root, output):
                 n.set(key, '[synthetic credential redacted]')
     ET.ElementTree(root).write(output, encoding='utf-8', xml_declaration=True)
 
+def public_release(output):
+    deadline = time.monotonic() + 65 * 60
+    url = f'https://api.github.com/repos/{REPO}/releases/latest'
+    while True:
+        try:
+            request = urllib.request.Request(url, headers={'Accept': 'application/vnd.github+json', 'User-Agent': 'NovaOS-public-upgrade-verification'})
+            with urllib.request.urlopen(request, timeout=30) as response:
+                return json.load(response)
+        except urllib.error.HTTPError as failure:
+            reset = failure.headers.get('X-RateLimit-Reset')
+            retry = failure.headers.get('Retry-After')
+            limited = failure.headers.get('X-RateLimit-Remaining') == '0'
+            if failure.code not in (403, 429) or not (limited and reset or retry):
+                raise
+            retry_at = max(time.time() + 1, float(reset) + 3 if limited and reset else time.time() + float(retry))
+            require(time.monotonic() + retry_at - time.time() < deadline, 'Public GitHub quota did not recover within the bounded verification window')
+            (output / 'public-feed-rate-limit.json').write_text(json.dumps({'status': failure.code, 'remaining': failure.headers.get('X-RateLimit-Remaining'), 'reset_epoch': reset, 'retry_after': retry}, indent=2)+'\n')
+            print(f'Public updater feed is rate limited on this disposable runner; honoring reset epoch {int(retry_at)} before app testing', flush=True)
+            while time.time() < retry_at:
+                time.sleep(max(0.05, min(30, retry_at - time.time())))
+
 def main():
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument('--candidate', type=Path, required=True)
@@ -171,8 +193,7 @@ def main():
     args.output.mkdir(parents=True, exist_ok=False)
     candidate = json.loads(args.candidate.read_text())
     require(candidate['tag'] == 'v1.7.39' and candidate['version_code'] == 85, 'Wrong release candidate')
-    with urllib.request.urlopen(f'https://api.github.com/repos/{REPO}/releases/latest', timeout=30) as response:
-        release = json.load(response)
+    release = public_release(args.output)
     require(release['tag_name'] == candidate['tag'] and not release['draft'] and not release['prerelease'], 'Not the actual latest stable release')
     apk = next(a for a in release['assets'] if a['name'] == 'private-gallery-release.apk')
     require(apk['digest'] == 'sha256:' + candidate['apk_sha256'], 'Live APK differs from the verified candidate')
