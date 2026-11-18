@@ -1,10 +1,12 @@
 """Main-branch provenance checks, independent of Android compilation and emulator execution."""
 import copy
+import os
 from pathlib import Path
 import tempfile
 import unittest
 from unittest.mock import patch
 import sys
+import subprocess
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from scripts.tests import test_upgrade1711_controls as historical
@@ -12,6 +14,29 @@ gate = historical.gate
 
 
 class MainReleaseControls(unittest.TestCase):
+    def test_repair_branch_runs_the_same_pinned_v1_and_current_engine_guards_as_main(self):
+        import yaml
+        root = Path(__file__).resolve().parents[2]
+        workflow = yaml.safe_load((root / '.github/workflows/fast-development.yml').read_text())
+        step = next(s for s in workflow['jobs']['home2-integration']['steps'] if s.get('name') == 'Verify browser engine preservation and isolated APK')
+        guard = step['run'].split('mkdir -p app/build/home2-evidence',1)[0]
+        with tempfile.TemporaryDirectory() as directory:
+            temporary=Path(directory);bins=temporary/'bin';bins.mkdir();trace=temporary/'trace'
+            for command in ('git','python3'):
+                executable=bins/command
+                executable.write_text('#!/bin/bash\nprintf "%s %s\\n" "'+command+'" "$*" >> "$NOVA_GUARD_TRACE"\n')
+                executable.chmod(0o755)
+            for branch in ('main','feature/novaos-build87-brain-status'):
+                trace.write_text('')
+                subprocess.run(['/bin/bash','-ec',guard],cwd=root,check=True,
+                    env=dict(os.environ,GITHUB_REF='refs/heads/'+branch,RUNNER_TEMP=directory,NOVA_GUARD_TRACE=str(trace),PATH=str(bins)+':'+os.environ['PATH']))
+                commands=trace.read_text().splitlines()
+                checks=[s for s in commands if s.startswith('python3 ')]
+                self.assertEqual(2,len(checks),(branch,commands))
+                self.assertTrue(checks[0].endswith('/scripts/verify_v1_preservation1711.py'))
+                self.assertEqual('python3 scripts/verify_sanctuary_browser_scope.py',checks[1])
+                self.assertTrue(any('worktree add --detach' in s and '3f2bac952d68f54566251126329b643da498ca44' in s for s in commands))
+
     def fixture(self, directory):
         values = historical.Upgrade1711Controls().gate_fixture(directory)
         marker = values[0]

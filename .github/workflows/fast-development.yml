@@ -621,7 +621,7 @@ jobs:
           PYTHONDONTWRITEBYTECODE=1 python3 scripts/tests/test_home2_emulator_preflight.py
       - name: Verify browser engine preservation and isolated APK
         run: |
-          if [[ "$GITHUB_REF" == refs/heads/feature/novaos-sanctuary-integration || "$GITHUB_REF" == refs/heads/feature/novaos-build85-updater || "$GITHUB_REF" == refs/heads/feature/novaos-build86-connectivity || "$GITHUB_REF" == refs/heads/main || "$GITHUB_REF" == refs/heads/feature/novaos-code81-core-apps ]]; then
+          if [[ "$GITHUB_REF" == refs/heads/feature/novaos-sanctuary-integration || "$GITHUB_REF" == refs/heads/feature/novaos-build85-updater || "$GITHUB_REF" == refs/heads/feature/novaos-build86-connectivity || "$GITHUB_REF" == refs/heads/feature/novaos-build87-brain-status || "$GITHUB_REF" == refs/heads/main || "$GITHUB_REF" == refs/heads/feature/novaos-code81-core-apps ]]; then
             baseline="$RUNNER_TEMP/sanctuary-v1-baseline"
             git worktree add --detach "$baseline" 3f2bac952d68f54566251126329b643da498ca44
             python3 "$baseline/scripts/verify_v1_preservation1711.py"
@@ -636,7 +636,7 @@ jobs:
           "$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging "$apk" > app/build/home2-evidence/package.txt
           if [[ "$NOVA_NOTIFICATION_COMPAT" == true ]]; then
             grep -F "package: name='uk.co.traynor.privategallery.capture77.guardianprobe' versionCode='71' versionName='1.7.38.7-TEST-ONLY'" app/build/home2-evidence/package.txt
-          elif [[ "$GITHUB_REF" == refs/heads/feature/novaos-sanctuary-integration || "$GITHUB_REF" == refs/heads/feature/novaos-build85-updater || "$GITHUB_REF" == refs/heads/feature/novaos-build86-connectivity || "$GITHUB_REF" == refs/heads/main || "$GITHUB_REF" == refs/heads/feature/novaos-code81-core-apps ]]; then
+          elif [[ "$GITHUB_REF" == refs/heads/feature/novaos-sanctuary-integration || "$GITHUB_REF" == refs/heads/feature/novaos-build85-updater || "$GITHUB_REF" == refs/heads/feature/novaos-build86-connectivity || "$GITHUB_REF" == refs/heads/feature/novaos-build87-brain-status || "$GITHUB_REF" == refs/heads/main || "$GITHUB_REF" == refs/heads/feature/novaos-code81-core-apps ]]; then
             grep -F "package: name='uk.co.traynor.privategallery.hiddenprototype' versionCode='71' versionName='1.7.38.7-TEST-ONLY'" app/build/home2-evidence/package.txt
           elif [[ "$GITHUB_REF" == refs/heads/feature/novaos-sanctuary ]]; then
             grep -F "package: name='uk.co.traynor.privategallery.hiddenprototype' versionCode='66' versionName='1.7.31-TEST-ONLY'" app/build/home2-evidence/package.txt
