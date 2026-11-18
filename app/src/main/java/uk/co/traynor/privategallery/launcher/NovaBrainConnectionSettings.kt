@@ -21,13 +21,14 @@ import kotlinx.coroutines.*
 import uk.co.traynor.privategallery.core.brain.*
 
 @Composable
-internal fun NovaBrainConnectionSettings(canUse: () -> Boolean = { true }) {
+internal fun NovaBrainConnectionSettings(canUse: () -> Boolean = { true }, onConfigurationChanged: () -> Unit = {}) {
     val context = LocalContext.current.applicationContext
     val store = remember(context) { NovaBrainConnectionStore(context) }
     val scope = rememberCoroutineScope()
     var configured by remember { mutableStateOf(false) }
     var status by remember { mutableStateOf(BrainConnectionStatus()) }
     var setup by remember { mutableStateOf(false) }
+    var saving by remember { mutableStateOf(false) }
     var origin by remember { mutableStateOf("") }
     var token by remember { mutableStateOf("") }
     var message by remember { mutableStateOf<String?>(null) }
@@ -57,7 +58,7 @@ internal fun NovaBrainConnectionSettings(canUse: () -> Boolean = { true }) {
             if (configured) Text("Server: $origin")
             if (status.phase == BrainConnectionPhase.CHECKING) LinearProgressIndicator(Modifier.fillMaxWidth())
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedButton(enabled = status.phase != BrainConnectionPhase.CHECKING, onClick = { if (canUse()) { token = ""; setup = true } }) { Text(if (configured) "Configure" else "Connect") }
+                OutlinedButton(enabled = !saving && status.phase != BrainConnectionPhase.CHECKING, onClick = { if (canUse()) { token = ""; setup = true } }) { Text(if (configured) "Configure" else "Connect") }
                 if (configured) TextButton(enabled = status.phase != BrainConnectionPhase.CHECKING, onClick = {
                     if (!canUse()) return@TextButton
                     val ticket = ++revision
@@ -77,42 +78,47 @@ internal fun NovaBrainConnectionSettings(canUse: () -> Boolean = { true }) {
         }
     }
     if (setup) AlertDialog(
-        onDismissRequest = { token = ""; setup = false },
+        onDismissRequest = { if (!saving) { token = ""; setup = false } },
         title = { Text("Connect Nova Brain") },
         text = {
             Column(Modifier.heightIn(max = 400.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text("Use your existing HTTPS backend and its owner token. Saving does not send any data or activate analysis.")
-                OutlinedTextField(origin, { origin = it.take(512); message = null }, label = { Text("HTTPS server address") }, singleLine = true)
-                OutlinedTextField(token, { token = it.take(256); message = null }, label = { Text("Backend owner token") }, singleLine = true,
+                OutlinedTextField(origin, { origin = it.take(512); message = null }, enabled = !saving, label = { Text("HTTPS server address") }, singleLine = true)
+                OutlinedTextField(token, { token = it.take(256); message = null }, enabled = !saving, label = { Text("Backend owner token") }, singleLine = true,
                     visualTransformation = PasswordVisualTransformation(), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password))
                 Text("The address and token are encrypted using Android Keystore and excluded from backups. Never enter an OpenAI API key here.")
                 message?.let { Text(it) }
             }
         },
-        confirmButton = { TextButton(enabled = runCatching { NovaBrainConfiguration(origin.trim(), token) }.isSuccess, onClick = {
+        confirmButton = { TextButton(enabled = !saving && runCatching { NovaBrainConfiguration(origin.trim(), token) }.isSuccess, onClick = {
             if (!canUse()) return@TextButton
             val configuration = NovaBrainConfiguration(origin.trim(), token)
             token = ""
+            saving = true
             pending = scope.launch {
                 try {
                     withContext(Dispatchers.IO) { store.save(configuration) }
-                    if (canUse()) { configured = true; setup = false; status = BrainConnectionStatus(); message = "Connection saved · tap Check connection" }
-                } catch (_: Exception) { message = "Connection could not be saved securely. Retry." }
+                    if (canUse()) { configured = true; setup = false; status = BrainConnectionStatus(); message = "Connection saved · tap Check connection"; onConfigurationChanged() }
+                } catch (cancelled: CancellationException) { throw cancelled }
+                catch (_: Exception) { message = "Connection could not be saved securely. Retry." }
+                finally { saving = false }
             }
         }) { Text("Save securely") } },
         dismissButton = {
             Row {
-                if (configured) TextButton(onClick = {
+                if (configured) TextButton(enabled = !saving, onClick = {
                     if (!canUse()) return@TextButton
-                    revision++; pending?.cancel(); token = ""
+                    revision++; pending?.cancel(); token = ""; saving = true
                     pending = scope.launch {
                         try {
                             withContext(Dispatchers.IO) { store.clear() }
-                            configured = false; origin = ""; setup = false; status = BrainConnectionStatus(); message = "Connection removed"
-                        } catch (_: Exception) { message = "Connection could not be removed. Retry." }
+                            configured = false; origin = ""; setup = false; status = BrainConnectionStatus(); message = "Connection removed"; onConfigurationChanged()
+                        } catch (cancelled: CancellationException) { throw cancelled }
+                        catch (_: Exception) { message = "Connection could not be removed. Retry." }
+                        finally { saving = false }
                     }
                 }) { Text("Disconnect") }
-                TextButton(onClick = { token = ""; setup = false }) { Text("Cancel") }
+                TextButton(enabled = !saving, onClick = { token = ""; setup = false }) { Text("Cancel") }
             }
         },
         properties = DialogProperties(securePolicy = SecureFlagPolicy.SecureOn),
