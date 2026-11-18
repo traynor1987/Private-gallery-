@@ -1,4 +1,10 @@
 {
+  "uk.co.traynor.privategallery.core.update.Updater85RuntimeTest": [
+    "aboutEntryRefreshesIdleModelAfterRecreationWithoutRetryingFailedChecks",
+    "failedChecksKeepLastSuccessfulTimestampAndInstallerResultCannotFakeUpgrade",
+    "firstCheckAfterUpgradeUsesActualInstalledPackageInsteadOfMissingOldInstallMarker",
+    "privateUpdateProviderIsReadOnlyAndCannotExposeVaultPaths"
+  ],
   "uk.co.traynor.privategallery.core.hidden.HiddenDocumentLifecycleTest": [
     "pdfAboveLegacyMediaReadLimitDisplaysAuthenticatesAndRevokes",
     "pdfAndCsvRemainEncryptedPreviewReopenTrashRestoreAndRevoke",
@@ -411,10 +417,5 @@
   "uk.co.traynor.privategallery.PanicCapture1751Test": [
     "hiddenRecordingPanicRetainsOriginalDestinationAndRequiresFreshAuthentication",
     "primaryRecordingPanicRetainsRecoverableEncryptedCapture"
-  ],
-  "uk.co.traynor.privategallery.core.update.Updater85RuntimeTest": [
-    "failedChecksKeepLastSuccessfulTimestampAndInstallerResultCannotFakeUpgrade",
-    "firstCheckAfterUpgradeUsesActualInstalledPackageInsteadOfMissingOldInstallMarker",
-    "privateUpdateProviderIsReadOnlyAndCannotExposeVaultPaths"
   ]
 }
