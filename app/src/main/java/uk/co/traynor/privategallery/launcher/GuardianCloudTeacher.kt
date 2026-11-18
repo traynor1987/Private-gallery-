@@ -49,14 +49,22 @@ internal fun GuardianCloudTeacher(message: String? = null, historicalEvidence: B
     var cached by remember { mutableStateOf(false) }
     var forceNew by remember { mutableStateOf(false) }
     var feedback by remember { mutableStateOf<String?>(null) }
-    LaunchedEffect(revision) {
+    var readGeneration by remember { mutableIntStateOf(0) }
+    // Start the reader from committed composition using the remembered scope,
+    // as the existing connection screen does. Each revision owns its completion.
+    DisposableEffect(revision) {
+        val ticket = ++readGeneration
         readingSettings = true
-        try {
-            val saved = withContext(Dispatchers.IO) { connectionStore.read() to store.enabled() }
-            if (canSend()) { configuration = saved.first; enabled = saved.second }
-        } catch (cancelled: CancellationException) { throw cancelled }
-        catch (_: Exception) { configuration = null; enabled = false; feedback = "Saved settings could not be read securely. Local review remains available." }
-        finally { readingSettings = false }
+        val reader = scope.launch {
+            try {
+                val saved = withContext(Dispatchers.IO) { connectionStore.read() to store.enabled() }
+                if (ticket == readGeneration && canSend()) { configuration = saved.first; enabled = saved.second }
+            } catch (cancelled: CancellationException) { throw cancelled }
+            catch (_: Exception) {
+                if (ticket == readGeneration) { configuration = null; enabled = false; feedback = "Saved settings could not be read securely. Local review remains available." }
+            } finally { if (ticket == readGeneration) readingSettings = false }
+        }
+        onDispose { readGeneration++; reader.cancel() }
     }
     val lifecycle = LocalLifecycleOwner.current.lifecycle
     DisposableEffect(lifecycle) {

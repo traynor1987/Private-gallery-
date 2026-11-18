@@ -78,9 +78,10 @@ class Budget:
 
     def _exposure(self, db, month):
         dated = db.execute("SELECT COALESCE(SUM(total),0) FROM daily_reservations WHERE day BETWEEN ? AND ?", (month+'-01', month+'-31')).fetchone()[0]
-        carry = db.execute("SELECT COALESCE(SUM(bound),0) FROM request_reservations WHERE state IN ('pending','uncertain') AND day<?", (month+'-01',)).fetchone()[0]
-        # Legacy dated reservations also lack final usage/outcome receipts.
-        carry += db.execute("SELECT COALESCE(SUM(total),0) FROM legacy_reservation_dates WHERE day<?", (month+'-01',)).fetchone()[0]
+        carry = db.execute("SELECT COALESCE(SUM(bound),0) FROM request_reservations WHERE state IN ('pending','uncertain') AND day NOT BETWEEN ? AND ?", (month+'-01',month+'-31')).fetchone()[0]
+        # Legacy dates lack final usage/outcome receipts. Dates ahead of the
+        # current month can reflect an old clock correction: never forgive them.
+        carry += db.execute("SELECT COALESCE(SUM(total),0) FROM legacy_reservation_dates WHERE day NOT BETWEEN ? AND ?", (month+'-01',month+'-31')).fetchone()[0]
         legacy = int(db.execute("SELECT value FROM budget_metadata WHERE key='legacy_unattributed'").fetchone()[0])
         if min(dated, carry, legacy) < 0:
             raise ValueError("Invalid budget exposure")

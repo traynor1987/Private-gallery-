@@ -304,7 +304,8 @@ def runtime_cases(archive,matrix,source):
         })
         exact.update({
             display: [('uk.co.traynor.privategallery.launcher.CloudTeacher83UiTest', name)
-                      for name in ('disclosureRequiresExplicitConsentAndCancellationKeepsCloudOff',
+                      for name in ('repeatedOpeningLoadsSavedPermissionWithoutNetworkOrNewConsent',
+                                   'disclosureRequiresExplicitConsentAndCancellationKeepsCloudOff',
                                    'stagingCanBeCheckedReadOnlyButNeverSendsAnAnalysisEvenWithLocalPermission',
                                    'onlyEditedApprovedExcerptIsSentAndSuggestionIsNotRecordedAsOwnerFeedback',
                                    'backendFailureKeepsLocalReviewAndDoesNotAutomaticallyRetryPaidRequest')]

@@ -67,6 +67,18 @@ class CloudTeacher83UiTest {
         waitFor("Off · no cloud analysis requests");assertFalse(store.enabled())
         compose.onNodeWithText(config.token).assertDoesNotExist()
     }
+    @Test fun repeatedOpeningLoadsSavedPermissionWithoutNetworkOrNewConsent() {
+        store.setEnabled(true);val calls=AtomicInteger(0)
+        val client=CloudTeacherClient { _,_,_ -> calls.incrementAndGet();error("Opening must not contact the backend") }
+        compose.setContent { MaterialTheme { GuardianCloudTeacher("Synthetic approved example",client=client) { true } } }
+        repeat(5) {
+            compose.onNodeWithText("Ask Cloud Teacher").performClick();waitForPermission()
+            compose.onNodeWithText("Send this message to OpenAI").assertIsNotEnabled()
+            compose.onNodeWithText("Close").performClick()
+            compose.onNodeWithTag("cloud-teacher-permission-status").assertDoesNotExist()
+        }
+        assertEquals(0,calls.get());assertTrue(store.history().isEmpty());assertEquals(config,connection.read())
+    }
     @Test fun stagingCanBeCheckedReadOnlyButNeverSendsAnAnalysisEvenWithLocalPermission() {
         store.setEnabled(true);val calls=AtomicInteger(0)
         val client=CloudTeacherClient { _,_,payload -> assertNull(payload);calls.incrementAndGet();BrainResponse(200,"""{"status":"authenticated","model":"staging","analysis_enabled":false,"budget":null}""".toByteArray()) }

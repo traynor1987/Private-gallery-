@@ -139,6 +139,22 @@ class BudgetTest(unittest.TestCase):
             reopened = Budget(path, 'new', now+86400, 90_000_000, 60_000_000, clock=lambda: now)
             self.assertEqual(reopened.status()['unresolved_carry_micro_usd'], 60_000_000)
 
+    def test_future_dated_legacy_exposure_is_not_forgiven_after_clock_correction(self):
+        import sqlite3
+        from datetime import UTC,datetime
+        now=datetime(2026,11,18,tzinfo=UTC).timestamp()
+        with TemporaryDirectory() as directory:
+            path=Path(directory)/'budget.db'
+            with sqlite3.connect(path) as db:
+                db.execute("CREATE TABLE reservations(cycle TEXT PRIMARY KEY,total INTEGER NOT NULL)")
+                db.execute("INSERT INTO reservations VALUES('legacy',60000000)")
+                db.execute("CREATE TABLE daily_reservations(day TEXT PRIMARY KEY,total INTEGER NOT NULL,requests INTEGER NOT NULL)")
+                db.execute("INSERT INTO daily_reservations VALUES('2026-12-02',60000000,1)")
+            budget=Budget(path,'new',now+86400,90_000_000,60_000_000,clock=lambda:now)
+            self.assertFalse(budget.reserve(),"Unreconciled legacy amounts cannot disappear when an old clock was ahead")
+            self.assertEqual(budget.status()['unresolved_carry_micro_usd'],60_000_000)
+            self.assertEqual(budget.status()['monthly_exposure_micro_usd'],60_000_000)
+
     def test_legacy_undated_totals_cannot_be_forgotten_by_cycle_rename(self):
         import sqlite3
         with TemporaryDirectory() as directory:
