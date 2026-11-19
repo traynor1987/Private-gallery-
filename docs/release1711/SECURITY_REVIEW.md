@@ -80,3 +80,7 @@ Build88 release remains untouched. Physical Galaxy Z Fold installation and
 on-device recovery of the owner's own messages remain owner confirmation.
 Paid Cloud Teacher remains disabled pending separately verified safe deployment,
 live budget enforcement and explicit paid-test approval. Staging restrictions stay.
+
+## Verified production candidate
+
+Protected production45 run44517611515 at60440176b032d6db75c0b99402421dd6765c4041 passed. Original-key package1.7.43/code89/API37, certificate94f2bfc6567f26d067d29077111cfd0ce86d38263c642ad115e43365f05b0d17 and APK SHA25658fdf2ae00e3f58aa30a36120eed9e170a3dac8b234a97056ee3056e0cbe8340 verified independently. Assets14527437011 and receipts14526897510 match their original API ZIP digests. Authenticated populated original Build88→89 discovery, download/integrity/signature verification, Android installer, observed installed89, encrypted Guardian/Vault/Evidence/NovaBrain data and real process restart passed with no uninstall or reset. The aged original Guardian ciphertext and checkpoint survived. Transport was controlled-loopback before publication; actual public GitHub feed and physical owner installation are separate pending checks.
