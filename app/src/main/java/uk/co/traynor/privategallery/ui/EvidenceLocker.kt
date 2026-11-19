@@ -100,11 +100,6 @@ internal fun EvidenceLocker(controller:EvidenceController,onClose:()->Unit,onImp
      })
     Text(if(controller.access.owner==EvidenceCatalog.Owner.PRIMARY)"Primary · encrypted local evidence"else"Hidden · encrypted local evidence",style=MaterialTheme.typography.labelLarge)
     FlowRow(horizontalArrangement=Arrangement.spacedBy(4.dp)) {listOf("Home","Evidence","Timeline","Nova AI").forEach{target->FilterChip(selected=page==target,onClick={page=target;evidenceId=null;incidentId=null},label={Text(target)})}}
-    if(controller.access.owner==EvidenceCatalog.Owner.PRIMARY && page in setOf("Home","Evidence") && evidenceId==null) {
-     TextButton(onClick={
-      if(controller.current()) uk.co.traynor.privategallery.launcher.GuardianInboxActivity.openEvidence(context)
-     }) { Text("Guardian captured evidence") }
-    }
     if(state.busy)LinearProgressIndicator(Modifier.fillMaxWidth())
     if(catalog==null){Text("Opening encrypted catalogue…");return@Column}
     val busy=state.busy
@@ -221,6 +216,13 @@ internal fun EvidenceLocker(controller:EvidenceController,onClose:()->Unit,onImp
          onExisting={originalsSelected=emptySet();choice="Import"},onLibrary={page="Evidence"},onTimeline={page="Timeline"},
          onAi={query="";page="Nova AI"},onNewIncident={incidentForm()},onArchive=onOpenArchive,onRefresh={controller.refresh()},
          onConnect={choice="Connect collections"},onPhotos=onImportPhotos,onReview={choice="Review queue"})
+       }
+       if(controller.access.owner==EvidenceCatalog.Owner.PRIMARY) {
+        item {
+         TextButton(onClick={
+          if(controller.current()) GuardianInboxActivity.openEvidence(context)
+         }) { Text("Guardian captured evidence") }
+        }
        }
        item {
         EvidenceConnectedSummary(state,suggestionCount=incidentSuggestions.size,onRetry=controller::syncCollections,
