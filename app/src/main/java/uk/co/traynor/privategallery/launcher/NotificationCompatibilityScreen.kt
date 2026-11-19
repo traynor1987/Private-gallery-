@@ -94,7 +94,7 @@ internal fun NotificationCompatibilityScreen(
                 when {
                     !access -> "Permission Required"
                     !status.connected -> "Compatibility Issue · Android listener disconnected"
-                    else -> "Limited Protection · diagnostics only"
+                    else -> "Notification listener connected"
                 },
                 style = MaterialTheme.typography.titleMedium,
             )
@@ -273,6 +273,7 @@ private fun GuardianCaptureControls(allowChanges: Boolean, listenerReady: Boolea
     val context = LocalContext.current
     val health by GuardianCapture.state.collectAsState()
     val captureStage by GuardianCapture.mainCaptureStage.collectAsState()
+    val overflows by GuardianCapture.queueOverflows.collectAsState()
     var consent by remember { mutableStateOf(false) }
     var confirmClear by remember { mutableStateOf(false) }
     LaunchedEffect(context) { GuardianCapture.refresh(context) }
@@ -288,7 +289,17 @@ private fun GuardianCaptureControls(allowChanges: Boolean, listenerReady: Boolea
         else -> "Capture off · ${health.retained ?: 0} retained"
     })
     if (health.enabled) Text(if (health.includesMain) "Scope · Main WhatsApp and selected SMS/MMS" else "Scope · Selected conversations only")
-    captureStage?.let { Text(it.label) }
+    Text(captureStage?.label ?: "No Main notification intake result in this session")
+    if (overflows > 0) Text("Capture queue reached capacity · $overflows notification updates could not be processed in this session")
+    val diagnostics = health.diagnostics
+    Text("Last retained capture · " + (diagnostics?.lastCaptureAt?.let {
+        java.text.DateFormat.getDateTimeInstance().format(java.util.Date(it))
+    } ?: "Unavailable"))
+    Text("Latest local assessment · " + (diagnostics?.decision ?: "Unavailable"))
+    if (!health.busy && health.enabled && health.learningCount == null) {
+        Text("Local rules available · saved learning examples could not be read")
+    }
+    Text("Ordinary messages normally keep their original app notification. Look for captured messages in Guardian Inbox → Ready to Read.")
     OutlinedButton(
         enabled = allowChanges && !health.busy && (health.enabled || listenerReady),
         onClick = {

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Disposable API37 rehearsal of authentic Build90's existing updater and Android installer.
+"""Disposable API37 rehearsal of authentic Build91's existing updater and Android installer.
 
 Only release transport is controlled; immutable baseline application code, candidate signature
 checks, private FileProvider and Android's package installation remain real. No live owner data.
@@ -56,17 +56,17 @@ def rehearsal(apk, output, source):
     assert os.environ.get('GITHUB_ACTIONS')=='true' and os.environ.get('PRODUCTION_UPGRADE')=='1'
     assert adb('shell','getprop','ro.kernel.qemu').strip()=='1'
     assert adb('shell','getprop','ro.build.version.sdk').strip()=='37'
-    assert installed()==90, 'Authentic populated Build90 must already be installed'
+    assert installed()==91, 'Authentic populated Build91 must already be installed'
     output.mkdir(parents=True,exist_ok=True)
     with tempfile.TemporaryDirectory(prefix='nova85-controlled-update-') as temporary:
         root=Path(temporary)
         digest=hashlib.file_digest(apk.open('rb'),'sha256').hexdigest()
         shutil.copyfile(apk,root/'candidate.apk')
         (root/'candidate.sha256').write_text(digest+'  private-gallery-release.apk\n')
-        (root/'metadata.json').write_text(json.dumps(dict(package=PACKAGE,versionName='1.7.45',versionCode=91,certificateSha256=CERTIFICATE,apkSha256=digest)))
-        prefix='https://github.com/traynor1987/Private-gallery-/releases/download/v1.7.45/'
+        (root/'metadata.json').write_text(json.dumps(dict(package=PACKAGE,versionName='1.7.46',versionCode=92,certificateSha256=CERTIFICATE,apkSha256=digest)))
+        prefix='https://github.com/traynor1987/Private-gallery-/releases/download/v1.7.46/'
         assets=[dict(name=name,browser_download_url=prefix+name,**({'digest':'sha256:'+digest,'size':apk.stat().st_size} if name.endswith('.apk') else {})) for name in ('private-gallery-release.apk','private-gallery-release.apk.sha256','private-gallery-release.metadata.json')]
-        (root/'release.json').write_text(json.dumps(dict(tag_name='v1.7.45',draft=False,prerelease=False,body='Controlled Build91 release rehearsal',assets=assets)))
+        (root/'release.json').write_text(json.dumps(dict(tag_name='v1.7.46',draft=False,prerelease=False,body='Controlled Build92 release rehearsal',assets=assets)))
         class Handler(SimpleHTTPRequestHandler):
             def __init__(self,*args,**kwargs):super().__init__(*args,directory=str(root),**kwargs)
             def log_message(self,*args):pass
@@ -83,11 +83,11 @@ def rehearsal(apk, output, source):
             adb('reverse',f'tcp:{port}',f'tcp:{port}')
             adb('shell','appops','set',PACKAGE,'REQUEST_INSTALL_PACKAGES','allow')
             with log.open('w') as transcript:
-                process=subprocess.Popen(['adb','shell','am','instrument','-w','-e','baselineCode','90','-e','candidateCode','91','-e','updateFixturePort',str(port),'-e','class',PACKAGE+'.upgrade.UpgradeFixtureTest#prepareInAppUpdate',PACKAGE+'.test/androidx.test.runner.AndroidJUnitRunner'],stdout=transcript,stderr=subprocess.STDOUT)
+                process=subprocess.Popen(['adb','shell','am','instrument','-w','-e','baselineCode','91','-e','candidateCode','92','-e','updateFixturePort',str(port),'-e','class',PACKAGE+'.upgrade.UpgradeFixtureTest#prepareInAppUpdate',PACKAGE+'.test/androidx.test.runner.AndroidJUnitRunner'],stdout=transcript,stderr=subprocess.STDOUT)
                 deadline=time.monotonic()+240
                 while 'NOVA_UPDATE_HANDOFF_READY' not in log.read_text():
-                    if process.poll() is not None:raise RuntimeError('Build90 in-app discovery/download/installer failed; inspect in-app-update-instrumentation.txt')
-                    if time.monotonic()>deadline:raise RuntimeError('Build90 in-app update handoff timed out')
+                    if process.poll() is not None:raise RuntimeError('Build91 in-app discovery/download/installer failed; inspect in-app-update-instrumentation.txt')
+                    if time.monotonic()>deadline:raise RuntimeError('Build91 in-app update handoff timed out')
                     time.sleep(1)
                 clicked=False
                 for _ in range(20):
@@ -103,10 +103,10 @@ def rehearsal(apk, output, source):
                     time.sleep(1)
                 assert clicked, 'Android installer confirmation was not available'
                 deadline=time.monotonic()+90
-                while installed()!=91:
+                while installed()!=92:
                     if time.monotonic()>deadline:raise RuntimeError('Android did not report installed Build91')
                     time.sleep(1)
-                (output/'in-app-update.json').write_text(json.dumps(dict(schema=1,result='PASS',source=source,baseline_code=90,candidate_code=91,installed_code=91,apk_sha256=digest,transport='controlled-loopback',baseline_application='authentic-unmodified',discovery='PASS',download_and_verification='PASS',android_installer='confirmed',live_github_discovery='requires_postpublication_confirmation'),indent=2)+'\n')
+                (output/'in-app-update.json').write_text(json.dumps(dict(schema=1,result='PASS',source=source,baseline_code=91,candidate_code=92,installed_code=92,apk_sha256=digest,transport='controlled-loopback',baseline_application='authentic-unmodified',discovery='PASS',download_and_verification='PASS',android_installer='confirmed',live_github_discovery='requires_postpublication_confirmation'),indent=2)+'\n')
         finally:
             if process is not None and process.poll() is None:
                 process.terminate()

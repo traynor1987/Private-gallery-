@@ -165,4 +165,45 @@ class GuardianEvidence90RuntimeTest {
         assertTrue(guardianDismissalAllowed(automatic = true, quietCollection = false, held = true))
     }
 
+    @Test fun captureUsesLocalRulesIfSeparateLearningArchiveCannotBeRead() = fixture { store, settings, now ->
+        settings.enable(configuration.origin)
+        assertTrue(settings.setScope(configuration.origin, key, true))
+        val learning = File(context.noBackupFilesDir, "guardian-learning-v1.enc")
+        val unreadable = byteArrayOf(1, 2, 3)
+        learning.writeBytes(unreadable)
+
+        val event = capture(now).copy(entries = listOf(
+            GuardianCaptureEntry(now.wall - 3, "fixture", "Hi"),
+            GuardianCaptureEntry(now.wall - 2, "fixture", "Good morning 😊"),
+            GuardianCaptureEntry(now.wall - 1, "fixture", "How are you?"),
+            GuardianCaptureEntry(now.wall, "fixture", "I will hit you."),
+        ))
+        val result = store.append(event, 0, now.wall, assess = false, clock = now)
+        assertTrue(result.allDurable)
+        assertEquals(4, result.added)
+        assertTrue(store.captureDiagnostics(now).decision!!.contains("Awaiting local assessment"))
+        assertFalse(store.assessCaptured(event, 0, now, result.addedIds, classifyWithoutExamples = true))
+
+        val later = GuardianInboxClock(now.wall + 40 * GuardianRetention89.DAY, 10_000, now.boot + 1)
+        val reopened = GuardianCaptureStore(context)
+        val rows = reopened.inboxRows(0, now).associateBy { it.time }
+        for (entry in event.entries.dropLast(1)) {
+            val row = rows.getValue(entry.time)
+            assertEquals(GuardianInboxSection.READY, row.section)
+            assertEquals(entry.text, reopened.revealInboxMessage(row.id, 0, later))
+        }
+        val hostile = rows.getValue(event.entries.last().time)
+        assertEquals(GuardianAssessment.UPSETTING, hostile.assessment)
+        assertEquals(GuardianInboxSection.COOLING, hostile.section)
+        assertNull(reopened.revealInboxMessage(hostile.id, 0, now))
+        assertEquals(GuardianInboxSection.PROTECTED, reopened.inboxRows(0, later).single { it.id == hostile.id }.section)
+        val uncertain = capture(later)
+        val uncertainId = store.append(uncertain, 0, later.wall, assess = false, clock = later).addedIds.single()
+        assertFalse(store.assessCaptured(uncertain, 0, later, setOf(uncertainId), classifyWithoutExamples = true))
+        assertEquals(GuardianAssessment.UNCERTAIN, reopened.notificationRows(uncertain, 0, later).single().assessment)
+        assertNull(reopened.nextAutomaticCloud(later.wall))
+        assertEquals(5, reopened.inboxRows(0, later).size)
+        assertArrayEquals(unreadable, learning.readBytes())
+    }
+
 }

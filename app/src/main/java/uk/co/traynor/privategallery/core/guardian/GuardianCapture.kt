@@ -31,7 +31,10 @@ internal data class GuardianDurableNotification(
 /** Serialises settings, archive writes and deletion without blocking Android's listener callbacks. */
 internal object GuardianCapture {
     private val worker = Executors.newSingleThreadExecutor()
+    private const val MAX_PENDING_NOTIFICATIONS = 64
     private val pendingEvents = AtomicInteger()
+    private val overflows = MutableStateFlow(0)
+    val queueOverflows = overflows.asStateFlow()
     private val generation = AtomicInteger()
     private val status = MutableStateFlow(GuardianCaptureHealth())
     val state = status.asStateFlow()
@@ -103,8 +106,9 @@ internal object GuardianCapture {
         val expected = generation.get()
         val isWhatsApp = event.app == GUARDIAN_WHATSAPP
         val mainMessage = isWhatsApp && !event.requiresContactConsent
-        if (pendingEvents.incrementAndGet() > 16) {
+        if (pendingEvents.incrementAndGet() > MAX_PENDING_NOTIFICATIONS) {
             pendingEvents.decrementAndGet()
+            overflows.update { it + 1 }
             status.update { it.copy(limited = true) }
             if (mainMessage) noteMainCapture(GuardianCaptureStage.QUEUE)
             return

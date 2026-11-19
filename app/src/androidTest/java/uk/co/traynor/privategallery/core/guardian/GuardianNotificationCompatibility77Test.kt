@@ -304,6 +304,34 @@ class GuardianNotificationCompatibility77Test {
                 assertEquals(index + 1, GuardianCapture.state.value.inbox?.ready)
                 assertEquals(filter, manager.currentInterruptionFilter)
             }
+
+            val now = System.currentTimeMillis()
+            val burst = List(24) { index ->
+                val message = Notification.MessagingStyle(local)
+                    .addMessage("Synthetic burst message ${index + 1}", now - 24 + index, sender)
+                val payload = Notification.Builder(context, "fixture").setStyle(message)
+                    .setCategory(Notification.CATEGORY_MESSAGE).setShortcutId("burst").build()
+                checkNotNull(guardianMainNotificationEvent(payload, ProbeAccount.MAIN, GUARDIAN_WHATSAPP,
+                    true, 0, "synthetic-burst", now))
+            }
+            val overflows = GuardianCapture.queueOverflows.value
+            // Block the encrypted archive briefly so this exercises the actual intake queue limit.
+            val archiveLock = GuardianCaptureStore::class.java.getDeclaredField("lock").apply { isAccessible = true }
+                .get(null)
+            synchronized(archiveLock) {
+                for (event in burst) {
+                    val key = GuardianConversationKey(event.app, event.profileSerial, event.conversation)
+                    GuardianCapture.record(context, event, key)
+                }
+            }
+            await("All rapid deliveries reached the encrypted Inbox") {
+                GuardianCapture.state.value.inbox?.total == 26
+            }
+            assertEquals(overflows, GuardianCapture.queueOverflows.value)
+            val reopened = GuardianCaptureStore(context)
+            val clock = guardianInboxClock(context)
+            val originals = reopened.inboxRows(0, clock).mapNotNull { row -> reopened.revealInboxMessage(row.id, 0, clock) }
+            assertTrue(burst.all { event -> originals.count { it == event.entries.single().text } == 1 })
         } finally {
             shell("cmd notification set_dnd $oldDnd")
             shell("cmd notification disallow_listener $component")

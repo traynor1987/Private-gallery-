@@ -201,6 +201,14 @@ class GuardianInbox77UiTest {
             assertEquals(GuardianInboxSection.COOLING, store.inboxRows(7, receipt).single().section)
             assertEquals(GuardianInboxSection.PROTECTED,
                 store.inboxRows(7, GuardianInboxClock(now, 0L, -1)).single().section)
+            val ordinary = event.copy(observedAt = now, entries = listOf(
+                GuardianCaptureEntry(now - 1, "ordinary-fixture", "Hi", "Ordinary fixture contact"),
+            ))
+            val ordinaryClock = GuardianInboxClock(now, 0L, -1)
+            assertTrue(store.append(ordinary, 7, now, assess = false, clock = ordinaryClock).allDurable)
+            store.assessCaptured(ordinary, 7, ordinaryClock, classifyWithoutExamples = true)
+            assertEquals(GuardianInboxSection.READY, store.notificationRows(ordinary, 7, ordinaryClock).single().section)
+            compose.onNodeWithText("Ordinary fixture contact").assertDoesNotExist()
             compose.onNodeWithText("Unlock Guardian Inbox").performClick()
             var focusedSince: Long? = null
             compose.waitUntil(15_000) {
@@ -215,6 +223,9 @@ class GuardianInbox77UiTest {
             compose.waitUntil(15_000) {
                 compose.activityRule.scenario.state == androidx.lifecycle.Lifecycle.State.RESUMED
             }
+            compose.waitUntil(15_000) { compose.onAllNodesWithText("Ordinary fixture contact").fetchSemanticsNodes().isNotEmpty() }
+            compose.onNodeWithText("Ordinary fixture contact").assertIsDisplayed()
+            compose.onNodeWithText("Hi").assertDoesNotExist()
             compose.onNodeWithText(GuardianInboxSection.PROTECTED.label).performScrollTo().performClick()
             compose.waitUntil(15_000) { compose.onAllNodesWithText("Fixture contact").fetchSemanticsNodes().isNotEmpty() }
             compose.onNodeWithText("Fixture contact").performClick()

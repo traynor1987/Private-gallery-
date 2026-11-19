@@ -512,12 +512,13 @@ internal class GuardianCaptureStore private constructor(private val context: Con
         else -> null
     }
 
-    private fun examples(rows: List<JSONObject>): List<GuardianExample> {
-        val evidence = GuardianCaptureStore(context, true).read().map { row ->
-            val features = row.getJSONArray("features")
-            GuardianExample(List(features.length(), features::getString).toSet(),
-                GuardianAssessment.valueOf(row.getString("label")))
-        }
+    private fun evidenceExamples(): List<GuardianExample> = GuardianCaptureStore(context, true).read().map { row ->
+        val features = row.getJSONArray("features")
+        GuardianExample(List(features.length(), features::getString).toSet(),
+            GuardianAssessment.valueOf(row.getString("label")))
+    }
+
+    private fun examples(rows: List<JSONObject>, evidence: List<GuardianExample> = evidenceExamples()): List<GuardianExample> {
         val conversation = rows.asSequence().filterNot { it.optBoolean("deleted") }
             .sortedByDescending { it.optLong("trainedAt", it.optLong("capturedAt")) }.mapNotNull { row ->
             val label = ownerLabel(row) ?: return@mapNotNull null
@@ -596,7 +597,9 @@ internal class GuardianCaptureStore private constructor(private val context: Con
     fun assessCaptured(event: GuardianCaptureEvent, days: Int, now: GuardianInboxClock,
         automaticIds: Set<String> = emptySet(), classifyWithoutExamples: Boolean = false): Boolean = synchronized(lock) {
         val rows = retainedRows(days, now.wall)
-        val learned = examples(rows)
+        // A separate learning file can fail verification while the capture archive is healthy.
+        val evidence = runCatching { evidenceExamples() }
+        val learned = examples(rows, evidence.getOrDefault(emptyList()))
         if (learned.isEmpty() && !classifyWithoutExamples) return@synchronized false
         // Android can bundle older messages in a single notification update. Preserve and
         // classify all of them locally, but only the unambiguous newest fresh excerpt can queue.
@@ -605,7 +608,7 @@ internal class GuardianCaptureStore private constructor(private val context: Con
             ?.takeIf { GuardianAutomaticCloudPolicy.validWindow(it.time, now.wall) }
             ?.let { identity(event, it) }
             ?.takeIf { it in automaticIds }
-        val consent = if (automaticId == null) null else runCatching { currentCloudConsent()?.second }.getOrNull()
+        val consent = if (automaticId == null || evidence.isFailure) null else runCatching { currentCloudConsent()?.second }.getOrNull()
         var pending = if (consent == null) 0 else rows.count { pendingCloud(it, consent, now.wall) != null }
         var queued = false
         val ids = event.entries.mapTo(HashSet()) { identity(event, it) }
@@ -643,8 +646,12 @@ internal class GuardianCaptureStore private constructor(private val context: Con
         GuardianCaptureDiagnostics(
             state?.arrivedAt,
             state?.let { row ->
-                val disposition = if (row.section == GuardianInboxSection.COOLING) "Held for review" else "No active content hold"
-                listOfNotNull(disposition, row.assessmentReason?.label ?: row.assessment?.label).joinToString(" · ")
+                val disposition = when {
+                    row.section == GuardianInboxSection.COOLING -> "Held for review"
+                    row.assessment == null -> "Awaiting local assessment"
+                    else -> "No active content hold"
+                }
+                listOfNotNull(disposition, row.assessment?.label, row.assessmentReason?.label).joinToString(" · ")
             },
             rows.mapNotNull { row ->
                 row.optJSONObject("cloud")?.takeIf { it.optString("state") == GuardianCloudState.COMPLETE.name }
