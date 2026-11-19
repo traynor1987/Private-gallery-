@@ -119,9 +119,13 @@ internal class GuardianNotificationListener : NotificationListenerService() {
             val cutoff = System.currentTimeMillis() - 30_000
             runCatching {
                 val ranking = currentRanking
+                val sms = runCatching { Telephony.Sms.getDefaultSmsPackage(this) }.getOrNull()
                 activeNotifications.asSequence().filter {
-                    it.packageName == GUARDIAN_WHATSAPP && it.postTime >= cutoff &&
-                        (it.notification.category == null || it.notification.category == Notification.CATEGORY_MESSAGE) &&
+                    val category = it.notification.category
+                    val messagingSource = it.packageName == GUARDIAN_WHATSAPP &&
+                        (category == null || category == Notification.CATEGORY_MESSAGE) ||
+                        it.packageName == sms && category == Notification.CATEGORY_MESSAGE
+                    messagingSource && it.postTime >= cutoff &&
                         it.notification.flags and Notification.FLAG_GROUP_SUMMARY == 0
                 }.take(8).forEach { onNotificationPosted(it, ranking) }
             }.onFailure { reportMainDismissal("Android could not recover recent active notifications") }
@@ -879,6 +883,7 @@ internal fun guardianMainNotificationEvent(
 ): GuardianCaptureEvent? {
     val summary = notification.flags and Notification.FLAG_GROUP_SUMMARY != 0
     if (!canCaptureGuardianNotification(uidMatches, packageName, account, summary) || profileSerial < 0 ||
+        notification.visibility == Notification.VISIBILITY_SECRET ||
         (notification.category != null && notification.category != Notification.CATEGORY_MESSAGE)) return null
     val messages = guardianCaptureEntries(notification)
     if (messages.isEmpty()) return null
