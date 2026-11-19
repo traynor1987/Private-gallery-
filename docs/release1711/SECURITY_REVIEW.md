@@ -1,43 +1,62 @@
-# NovaOS 1.7.41 (Build87) production review
+# NovaOS1.7.42 (Build88) production review
 
-Source: 9075b111a87e9dbcf39566b71c2763b380b58088
+Source: 430774e549a86d5c0db159ec24230bc4ac05bbc3
 Authorization: authenticated owner push
 Release scope: public stable after disposable upgrade verification
 Physical Fold acceptance: pending
-Upgrade fixture SHA-256: 75dcc77c549901279a4edd05d6bcedb03423e972c7b685db0e6c182333f9d6f5
-Upgrade controls SHA-256: 01ff3c7e01b4cc68af74a4c24b518bcde14dde14a2e268b62f1343a262de43fb
-Runtime matrix SHA-256: 7f1b6f8d8095548e7a5fc0ab84b87c13c0d0e2fe102e0d3f0d9c5797f849fbc0
-Runtime workflow run: 44356300929
-Signing workflow SHA-256: 1124e3d9a1f57f13953648268e094becd697175f4f4c551293c55bd7da2ebf39
-Runtime branch: main
+Upgrade fixture SHA-256: 21f4eccdd21ceaf78338624b3edfa7e8f1933372559e9b5b9bb30821cb4ad5ca
+Upgrade controls SHA-256: e04a78c5eb42acffefbfeea91d6e51197fc09c26565350c5183c932707979280
+Runtime matrix SHA-256: efa685acd15864a07d54677666310ffec899c866766f59d2a0ea1ed3a592db14
+Runtime workflow run: 44445871334
+Signing workflow SHA-256: 8b5a21b640b2ef59fde3dc99ab52a6c96ab56bcadbb85b84422ed0333f9e1c57
+Runtime branch: feature/novaos-code83-cloud-teacher
 
-The main runtime is pending at preparation. The existing protected workflow independently
-waits for success and resolves the original archive ID/digest before the signer gate.
-The original authenticated GitHub API archive ID/digest and all exact-source main reports
-must pass the existing pre-signer gate. This preparation does not claim a signed upgrade
-or publication before their real receipts exist. This is implementation self-review,
-not independent reviewer approval. Owner authorization covers repair, main merge, signing
-and stable in-app publication under the current Build86 audit directive.
+The owner explicitly authorized Build88 on19November2026, main integration,
+original-key signing, the existing stable publication workflow and normal in-app
+installation, with paid Cloud Teacher disabled until separate deployment, live
+budget and paid-test approval gates pass. This is implementation self-review,
+not a claim of independent reviewer approval or physical owner acceptance.
 
-Reviewed app repair: ordinary Settings -> Nova Brain, actual authenticated test status,
-encrypted last-authenticated history in the existing credential record, historical-result
-labeling, explicit offline/privacy/analysis availability and stale-config rejection.
-Original validated HTTPS/status transport, original package and certificate pin, updater
-discovery/download/verification/installer, Vault encryption and protected engines remain.
-Guardian and Evidence Locker retain optional reviewed per-request consent. No automatic
-message/evidence/feedback uploads, paid analysis, Cloud Teacher activation or VPS deployment.
-Live HTTPS health200 and unauthenticated401 are distinct from successful owner-token auth.
-The live Android TLS/synthetic-token rejection case is not an authenticated-success claim.
-Existing staging safety restrictions are preserved. Owner-token verification of actual
-live mode/analysis availability and physical Fold installation remain owner-only acceptance.
+The frozen production source is present on main before signer access. Its original
+approved preparation-branch run and original archive/digest are verified by the
+existing gate, including all329 exact API37 identities, all focused groups and
+actual killed-process recovery receipts. CI508's source95c1112 is preserved as
+the completed feature baseline; its reports are not relabelled as this source.
 
-The reviewed fixture compiles against authentic original-key Build86 source
-15c1a2754d90bba0be58881101a72dc9aa480391 before signer access and verifies its published
-APK SHA256 9c7d5918e0321556a42507ed914216724eb0354c01c8359f9022dd253b94fe7d.
-The populated fixture additionally seeds Build86 legacy encrypted Nova Brain configuration
-and checks preservation alongside existing Vault/Guardian/Evidence/launcher/Sanctuary data.
-It requires the actual baseline updater, actual signed87 bytes, Android installer confirmation,
-PackageManager87 and reauthentication/data verification after restart. No substitute
-adb candidate install, uninstall, clear or mock-only success satisfies the release gate.
-The unchanged existing publisher separately verifies real public in-app discovery, download,
-installer, installed87, restart/same PIN and Up-to-date UI after stable publication.
+The application feature source/resources/manifests match CI508; only its release
+identity changes to1.7.42/code88. The existing release controls now bind the
+authentic published Build87 source9075b111a87e9dbcf39566b71c2763b380b58088 and APK
+SHA25605b1122c80e6746e242419d08f48882d516ac6730eda4a4befa57a8e83afd0d4.
+Package uk.co.traynor.privategallery, API37-only policy and certificate pin
+94f2bfc6567f26d067d29077111cfd0ce86d38263c642ad115e43365f05b0d17 remain.
+
+Manual Cloud Teacher is default-off and requires disclosure, read-only authenticated
+budget preflight, editable minimum excerpt and explicit approval for every request.
+Guardian, Primary Evidence and local learning share existing owner-confirmed
+learning; predictions cannot validate the Knowledge Meter or change protection.
+Encrypted advisory metadata excludes excerpts/model summaries and uses existing
+Guardian authentication. Hidden Vault/private feedback/complete files are not
+automatically transmitted. Local protection and Sanctuary remain independent of
+connectivity, provider availability and budget. The same SQLite backend now has a
+maximum$100 UTC monthly ceiling, conservative reservations, concurrency protection,
+idempotency and usage reconciliation. Backend code/tests are not deployment or
+provider billing evidence. The reported$37 is not treated as a verified balance.
+
+The production staging restriction, paid approval flag, server key isolation and
+supported-host gate remain. No token rotation, VPS service change, paid API request
+or OpenAI activation is authorized here. The public health/authentication-required
+checks are distinct from authenticated ledger or paid-analysis verification.
+
+The signer must compile the reviewed fixture against authentic Build87 before
+credential access, verify baseline package/certificate/hash, then install the real
+candidate through Build87's existing download/verification/Android-installer path.
+Populated encrypted Vault/Guardian/Evidence/shared learning/Nova Brain credentials,
+launcher and Sanctuary data must survive reauthentication and a real restart.
+No uninstall, data clear or adb candidate replacement can satisfy this gate.
+
+After protected receipts pass, the existing publisher alone creates/verifies
+v1.7.42, publishes a normal APK with unchanged metadata schema and checks authentic
+Build87 against the actual latest-stable GitHub feed. Installed88/restart/Up-to-date
+must be observed. The already-published v1.7.41 tag/assets remain untouched. No
+signing, populated upgrade, public-update or physical install success is claimed
+before its own receipt exists.
