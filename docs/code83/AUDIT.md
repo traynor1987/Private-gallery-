@@ -1,5 +1,35 @@
 # Code 83 Cloud Teacher audit and development checkpoint
 
+## Owner-authorized Build88 release preparation — 19 November 2026
+
+The owner explicitly approved NovaOS1.7.42/versionCode88, preserving the published
+Build87 release. Paid analysis must remain disabled until safe deployment, live
+budget enforcement and separate owner approval are verified. This release does not
+authorize VPS changes, a paid request or a replacement update channel.
+
+Application Kotlin/resources/manifests remain byte-identical to the CI508 source
+95c1112baf1c02930a5085ecc7620a3bfb8875fa. Only the package version changes. CI508's
+767 JVM cases,329 API37 cases, focused groups and real process-restart evidence are
+preserved. The existing exact-source signer gate additionally requires current
+release-candidate evidence after the version/build-configuration change; it is not
+silently relabelled as the old tested APK.
+
+The existing production workflow, fixture and publisher now target authentic
+original-key Build87 (source9075b111a87e9dbcf39566b71c2763b380b58088, APK SHA256
+05b1122c80e6746e242419d08f48882d516ac6730eda4a4befa57a8e83afd0d4,
+151582387bytes) to88. The baseline identity, API37 minimum/target, nondebuggable
+flag and pinned original certificate were independently rechecked locally.
+Build87 production run44366264003 is successful at its original main trigger
+6e9211604cc0c8dca4a70416efa45f6f72655c3a. This identifies the published release
+baseline; the owner's physical installed version is not remotely observable.
+
+The same reviewed preparation-branch evidence mechanism already used for Code81
+now explicitly permits Code83. Exact source/run/artifact checks and main ancestry
+remain mandatory. No unreviewed branch or changed-source report is accepted.
+The existing publisher will test actual Build87 UI discovery/download/installer
+and installed88/restart/Up-to-date against the real GitHub feed after publication.
+No new signing, upgrade or publication result is claimed by this preparation.
+
 Base main: a5a88f831a0c4350a7dc6205a395517d9c777898 (18 November 2026).
 
 The owner confirms a successful authenticated staging connection on 18 November,
