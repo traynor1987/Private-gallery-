@@ -215,6 +215,7 @@ class GuardianInbox77UiTest {
             compose.waitUntil(15_000) {
                 compose.activityRule.scenario.state == androidx.lifecycle.Lifecycle.State.RESUMED
             }
+            compose.onNodeWithText(GuardianInboxSection.PROTECTED.label).performScrollTo().performClick()
             compose.waitUntil(15_000) { compose.onAllNodesWithText("Fixture contact").fetchSemanticsNodes().isNotEmpty() }
             compose.onNodeWithText("Fixture contact").performClick()
             compose.waitUntil(10_000) { compose.onAllNodesWithText("Guardian Conversation").fetchSemanticsNodes().isNotEmpty() }

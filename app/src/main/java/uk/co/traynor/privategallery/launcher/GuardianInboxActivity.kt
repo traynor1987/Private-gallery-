@@ -468,7 +468,7 @@ class GuardianInboxActivity : ComponentActivity() {
                             GuardianInboxSection.PENDING -> "Only messages without an assessment appear here."
                             GuardianInboxSection.PROTECTED -> "Uncertain messages and messages with elapsed holds can appear here."
                             GuardianInboxSection.COOLING -> "Only messages with an active hold appear here."
-                            GuardianInboxSection.READY -> "Messages with a low-risk estimate or explicitly marked ready appear here."
+                            GuardianInboxSection.READY -> "Low-risk messages, uncertain messages without a hold, and messages you marked ready."
                             GuardianInboxSection.HISTORY -> "Messages you move to history appear here."
                         }, color = GuardianMuted)
                     }
