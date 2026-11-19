@@ -42,6 +42,8 @@ internal fun GuardianRetentionScreen89(
                 }
             }
             Text("Capture retention is separate from Android alert timeout and Personal Impact feedback retention.")
+        } }
+        item { GuardianCard("Encrypted storage & recovery") {
             Text("Storage is bounded. If full, new captures fail visibly; existing messages are never evicted. Saved training originals survive Inbox clearing. Deleting learning labels does not delete originals.")
             TextButton(enabled = !busy, onClick = onInspect) { Text("Check encrypted storage & recovery") }
             report?.let {

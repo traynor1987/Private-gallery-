@@ -306,7 +306,7 @@ private fun GuardianCaptureControls(allowChanges: Boolean, listenerReady: Boolea
         ) { Text(GuardianRetention89.label(days)) }
     }
     OutlinedButton(enabled = allowChanges && !health.busy, onClick = { confirmClear = true }) {
-        Text("Clear Inbox — preserve training")
+        Text("Archive Inbox — keep all originals")
     }
     if (consent && allowChanges) GuardianAlertDialog(
         onDismissRequest = { consent = false },
@@ -329,12 +329,12 @@ private fun GuardianCaptureControls(allowChanges: Boolean, listenerReady: Boolea
     )
     if (confirmClear && allowChanges) GuardianAlertDialog(
         onDismissRequest = { confirmClear = false },
-        title = { Text("Clear ordinary Inbox captures?") },
-        text = { Text("Ordinary captures and their on-device recovery copies are permanently deleted. Saved training originals move to History. Active holds are skipped. The encryption key and local learning are preserved.") },
+        title = { Text("Move Inbox messages to History?") },
+        text = { Text("This archives messages without deleting any original, recovery copy, training evidence or encryption key. Active holds are skipped. Permanent individual or bulk deletion is a separate confirmed action in Guardian Settings → Messages, retention & recovery.") },
         confirmButton = { TextButton(onClick = {
             confirmClear = false
             GuardianCapture.clear(context)
-        }) { Text("Clear") } },
+        }) { Text("Archive Inbox") } },
         dismissButton = { TextButton(onClick = { confirmClear = false }) { Text("Cancel") } },
     )
 }

@@ -787,7 +787,21 @@ internal class GuardianCaptureStore private constructor(private val context: Con
     }
 
     fun clearInboxPreservingTraining(now: GuardianInboxClock) = synchronized(lock) {
-        deleteInboxMessages(read().mapTo(linkedSetOf()) { it.getString("id") }, false, now)
+        val rows = read()
+        var trainingPreserved = 0
+        var held = 0
+        var changed = false
+        for (row in rows.filterNot { it.optBoolean("deleted") }) {
+            if (inboxRow(row, now).section == GuardianInboxSection.COOLING) { held++; continue }
+            if (savedForTraining(row)) trainingPreserved++
+            if (row.optString("review") != "archived") {
+                row.remove("hold")
+                row.put("review", "archived").put("holdReviewed", true)
+                changed = true
+            }
+        }
+        if (changed) write(rows)
+        GuardianDeletion89(0, trainingPreserved, held)
     }
 
     private val recoveryDirectory get() = File(context.noBackupFilesDir, "guardian-recovery89")
