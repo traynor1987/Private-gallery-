@@ -16,10 +16,12 @@ import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import org.junit.Assert.assertTrue
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import kotlin.math.max
 import kotlin.math.min
 import org.junit.Rule
 import org.junit.Test
+import uk.co.traynor.privategallery.core.guardian.GuardianAssessment
 import uk.co.traynor.privategallery.core.guardian.GuardianCaptureEntry
 import uk.co.traynor.privategallery.core.guardian.GuardianCaptureEvent
 import uk.co.traynor.privategallery.core.guardian.GuardianCaptureStore
@@ -255,8 +257,8 @@ class GuardianInbox77UiTest {
             val finished = GuardianInboxClock(System.currentTimeMillis(), android.os.SystemClock.elapsedRealtime(), -1)
             assertEquals(2, store.inboxRows(7, finished).size)
             val saved = store.notificationRows(event, 7, finished).single()
-            assertEquals(uk.co.traynor.privategallery.core.guardian.GuardianAssessment.LOW_RISK, saved.ownerLabel)
-            assertEquals(null, store.notificationRows(ordinary, 7, finished).single().ownerLabel)
+            assertEquals(GuardianAssessment.LOW_RISK, saved.ownerLabel)
+            assertNull(store.notificationRows(ordinary, 7, finished).single().ownerLabel)
         } finally {
             store.clear()
             shell("locksettings clear --old $pin")
