@@ -3,6 +3,8 @@ from pathlib import Path
 import re, sys, xml.etree.ElementTree as ET, json
 root=Path(__file__).resolve().parents[1]
 classes=[
+ 'uk.co.traynor.privategallery.core.guardian.GuardianRetention89RuntimeTest',
+ 'uk.co.traynor.privategallery.launcher.GuardianRetention89UiTest',
  'uk.co.traynor.privategallery.core.brain.CloudTeacher83RuntimeTest',
  'uk.co.traynor.privategallery.launcher.CloudTeacher83UiTest',
  'uk.co.traynor.privategallery.core.brain.LiveNovaBrain87Test',

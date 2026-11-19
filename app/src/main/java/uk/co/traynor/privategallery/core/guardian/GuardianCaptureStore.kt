@@ -45,6 +45,7 @@ internal data class GuardianInboxRow(
     val patterns: Set<NovaBrainPattern>? = null,
     val originalAssessment: GuardianAssessment? = assessment,
     val reviewed: Boolean = false,
+    val savedForTraining: Boolean = false,
 )
 
 /** The export only needs section membership and layout-local list keys. */
@@ -181,6 +182,11 @@ internal class GuardianCaptureStore private constructor(private val context: Con
         row?.optBoolean("collect") == true, row?.optBoolean("learn") == true,
         row?.optInt("days", 30)?.takeIf { it in RETENTION_DAYS } ?: 30,
     )
+
+    private fun cutoff(days: Int, now: Long): Long {
+        require(days in RETENTION_DAYS)
+        return now - days * GuardianRetention89.DAY
+    }
 
     private fun impactRows(rows: List<JSONObject>, days: Int, now: Long) =
         rows.drop(1).filter { it.getLong("savedAt") >= cutoff(days, now) }
@@ -451,7 +457,10 @@ internal class GuardianCaptureStore private constructor(private val context: Con
 
     fun resetLearning() = synchronized(lock) {
         val rows = read()
-        if (rows.count { it.remove("ownerLabel") != null } > 0) write(rows)
+        if (rows.count { row ->
+            if (ownerLabel(row) != null) row.put("savedForTraining", true)
+            row.remove("ownerLabel") != null
+        } > 0) write(rows)
         GuardianCaptureStore(context, true).clear()
         validationArchive().clear()
     }
@@ -475,6 +484,7 @@ internal class GuardianCaptureStore private constructor(private val context: Con
     private fun ownerLabel(row: JSONObject): GuardianAssessment? = when (row.optString("ownerLabel")) {
         GuardianAssessment.LOW_RISK.name -> GuardianAssessment.LOW_RISK
         GuardianAssessment.UPSETTING.name -> GuardianAssessment.UPSETTING
+        GuardianAssessment.UNCERTAIN.name -> GuardianAssessment.UNCERTAIN
         else -> null
     }
 
@@ -484,7 +494,8 @@ internal class GuardianCaptureStore private constructor(private val context: Con
             GuardianExample(List(features.length(), features::getString).toSet(),
                 GuardianAssessment.valueOf(row.getString("label")))
         }
-        val conversation = rows.asSequence().filterNot { it.optBoolean("deleted") }.mapNotNull { row ->
+        val conversation = rows.asSequence().filterNot { it.optBoolean("deleted") }
+            .sortedByDescending { it.optLong("trainedAt", it.optLong("capturedAt")) }.mapNotNull { row ->
             val label = ownerLabel(row) ?: return@mapNotNull null
             val features = guardianFeatures(row.getString("text"))
             if (features.isEmpty()) null else GuardianExample(features, label)
@@ -499,7 +510,10 @@ internal class GuardianCaptureStore private constructor(private val context: Con
             val row = rows.firstOrNull { it.getString("id") == id && !it.optBoolean("deleted") } ?: return@synchronized false
             val state = inboxRow(row, now)
             if (state.assessment == null || state.section == GuardianInboxSection.COOLING) return@synchronized false
-            if (label == null) row.remove("ownerLabel") else row.put("ownerLabel", label.name)
+            if (label == null) {
+                if (ownerLabel(row) != null) row.put("savedForTraining", true)
+                row.remove("ownerLabel")
+            } else row.put("ownerLabel", label.name).put("savedForTraining", true).put("trainedAt", now.wall)
             write(rows)
             true
         }
@@ -517,12 +531,12 @@ internal class GuardianCaptureStore private constructor(private val context: Con
 
     fun append(event: GuardianCaptureEvent, days: Int, now: Long, assess: Boolean = true, clock: GuardianInboxClock = GuardianInboxClock(now, 0L, -1)): GuardianCaptureResult = synchronized(lock) {
         require(event.profileSerial >= 0 && event.conversation.length in 1..512 && event.observedAt <= now)
-        val cutoff = cutoff(days, now)
+        require(days in GuardianRetention89.choices)
         val stored = read()
-        val live = stored.filter { isRetained(it, cutoff) }
+        val live = stored
         val existing = live.associateBy { it.getString("id") }
         val candidates = event.entries.filter {
-            it.time in cutoff..event.observedAt && it.sender.length in 1..512 &&
+            it.time in 0..event.observedAt && it.sender.length in 1..512 &&
                 it.sender.isNotBlank() && it.text.length in 1..2048 && it.text.isNotBlank()
         }
         val examples by lazy { runCatching { examples(live) }.getOrDefault(emptyList()) }
@@ -542,11 +556,14 @@ internal class GuardianCaptureStore private constructor(private val context: Con
             incoming.putIfAbsent(id, row)
         }
         val retained = (existing + incoming.filterKeys { it !in existing }).values
-            .sortedByDescending { it.getLong("messageAt") }.take(MAX_RECORDS)
+            .sortedByDescending { it.getLong("messageAt") }
         val ids = retained.mapTo(HashSet()) { it.getString("id") }
         val addedIds = incoming.keys.filterTo(linkedSetOf()) { it in ids && it !in existing }
         val added = addedIds.size
-        if (added > 0 || stored.size != live.size) write(retained)
+        if (retained.size > MAX_CAPTURE_RECORDS || !fits(retained)) {
+            return@synchronized GuardianCaptureResult(0, stored.count { !it.optBoolean("deleted") }, true, false)
+        }
+        if (added > 0) write(retained)
         val readable = retained.filterNot { it.optBoolean("deleted") }.mapTo(HashSet()) { it.getString("id") }
         val partial = candidates.size != event.entries.size
         GuardianCaptureResult(added, readable.size, partial,
@@ -574,11 +591,11 @@ internal class GuardianCaptureStore private constructor(private val context: Con
     fun inboxCounts(days: Int, now: GuardianInboxClock): GuardianInboxCounts = synchronized(lock) {
         val rows = inboxRows(days, now)
         val sections = rows.groupingBy { it.section }.eachCount()
-        val horizon = cutoff(days, now.wall)
-        val nextChange = rows.minOfOrNull { row ->
-            val expiresIn = minOf(row.time, row.arrivedAt) - horizon + 1L
-            row.remainingMillis.takeIf { it > 0L }?.let { minOf(it, expiresIn) } ?: expiresIn
-        }
+        val nextChange = rows.flatMap { row ->
+            listOfNotNull(row.remainingMillis.takeIf { it > 0L },
+                GuardianRetention89.archiveAfter(days, row.arrivedAt, now.wall)
+                    ?.takeIf { it > 0L && row.section != GuardianInboxSection.HISTORY && !row.savedForTraining })
+        }.minOrNull()
         GuardianInboxCounts(
             sections[GuardianInboxSection.PENDING] ?: 0, sections[GuardianInboxSection.READY] ?: 0,
             sections[GuardianInboxSection.COOLING] ?: 0, sections[GuardianInboxSection.PROTECTED] ?: 0,
@@ -588,7 +605,7 @@ internal class GuardianCaptureStore private constructor(private val context: Con
     }
 
     fun inboxRows(days: Int, now: GuardianInboxClock): List<GuardianInboxRow> = synchronized(lock) {
-        retainedRows(days, now.wall).filterNot { it.optBoolean("deleted") }.map { inboxRow(it, now) }
+        retainedRows(days, now.wall).filterNot { it.optBoolean("deleted") }.map { inboxRow(it, now, days) }
     }
 
     fun revealInboxMessage(id: String, days: Int, now: GuardianInboxClock): String? = synchronized(lock) {
@@ -632,12 +649,13 @@ internal class GuardianCaptureStore private constructor(private val context: Con
                 GuardianInboxAction.HOLD -> startHold(row, now)
                 GuardianInboxAction.ARCHIVE -> row.remove("hold").also { row.put("review", "archived").put("holdReviewed", true) }
                 GuardianInboxAction.DELETE -> {
-                    val keep = setOf("id", "capturedAt", "messageAt")
-                    row.keys().asSequence().filterNot { it in keep }.toList().forEach { row.remove(it) }
-                    row.put("deleted", true)
+                    // Deleting an Inbox copy must never delete independently saved training evidence.
+                    if (savedForTraining(row)) row.put("review", "archived") else tombstone(row)
                 }
             }
+            if (action == GuardianInboxAction.DELETE && row.optBoolean("deleted")) recordDeletions(listOf(row))
             write(rows)
+            if (action == GuardianInboxAction.DELETE && row.optBoolean("deleted")) scrubRecovery(setOf(id))
             true
         }
 
@@ -682,14 +700,12 @@ internal class GuardianCaptureStore private constructor(private val context: Con
     }
 
     private fun retainedRows(days: Int, now: Long): List<JSONObject> {
-        val stored = read()
-        val cutoff = cutoff(days, now)
-        val live = stored.filter { isRetained(it, cutoff) }
-        if (stored.size != live.size) write(live)
-        return live
+        require(days in GuardianRetention89.choices)
+        // Reading, restarting, background refresh and model evaluation never erase captures.
+        return read()
     }
 
-    private fun inboxRow(row: JSONObject, now: GuardianInboxClock): GuardianInboxRow {
+    private fun inboxRow(row: JSONObject, now: GuardianInboxClock, days: Int = 0): GuardianInboxRow {
         val assessment = if (row.optInt("assessmentVersion") == 1)
             GuardianAssessment.entries.firstOrNull { it.name == row.optString("assessment") } else null
         val review = row.optString("review")
@@ -699,8 +715,10 @@ internal class GuardianCaptureStore private constructor(private val context: Con
             GuardianInboxHold(row.getLong("capturedAt") + GUARDIAN_HOLD_MILLIS, 0L, -1)
         } else null
         val remaining = hold?.remaining(now) ?: 0L
-        val section = guardianInboxSection(hold, review == "ready" || assessment == GuardianAssessment.LOW_RISK,
-            now, review == "archived")
+        val archived = review == "archived" || !savedForTraining(row) &&
+            GuardianRetention89.archiveAfter(days, row.getLong("capturedAt"), now.wall) == 0L
+        val section = guardianInboxSection(hold?.takeIf { remaining > 0 || !archived },
+            review == "ready" || assessment == GuardianAssessment.LOW_RISK, now, archived)
         return GuardianInboxRow(row.getString("id"), row.getLong("messageAt"),
             if (section == GuardianInboxSection.PENDING && assessment == GuardianAssessment.UNCERTAIN)
                 GuardianInboxSection.PROTECTED else section, remaining, assessment,
@@ -713,24 +731,190 @@ internal class GuardianCaptureStore private constructor(private val context: Con
                 }.toSet()
             },
             GuardianAssessment.entries.firstOrNull { it.name == row.optString("originalAssessment") } ?: assessment,
-            row.optBoolean("explicitlyReviewed") || review == "ready" || review == "archived")
+            row.optBoolean("explicitlyReviewed") || review == "ready" || review == "archived", savedForTraining(row))
+    }
+
+    private fun savedForTraining(row: JSONObject) = row.optBoolean("savedForTraining") || ownerLabel(row) != null
+
+    fun saveInboxForTraining(id: String, label: GuardianAssessment?, days: Int, now: GuardianInboxClock): Boolean = synchronized(lock) {
+        val rows = retainedRows(days, now.wall)
+        val row = rows.firstOrNull { it.optString("id") == id && !it.optBoolean("deleted") } ?: return@synchronized false
+        if (inboxRow(row, now).section == GuardianInboxSection.COOLING) return@synchronized false
+        row.put("savedForTraining", true)
+        if (label != null) row.put("ownerLabel", label.name).put("trainedAt", now.wall)
+        write(rows)
+        true
+    }
+
+    fun forgetInboxTeaching(id: String, days: Int, now: GuardianInboxClock): Boolean = synchronized(lock) {
+        val rows = retainedRows(days, now.wall)
+        val row = rows.firstOrNull { it.optString("id") == id && !it.optBoolean("deleted") } ?: return@synchronized false
+        if (inboxRow(row, now).section == GuardianInboxSection.COOLING) return@synchronized false
+        val labelled = ownerLabel(row) != null
+        if (labelled) row.put("savedForTraining", true)
+        row.remove("ownerLabel")
+        val standalone = forgetExample(row.getString("text"))
+        if (labelled) write(rows)
+        labelled || standalone
+    }
+
+    private fun tombstone(row: JSONObject) {
+        val keep = setOf("id", "capturedAt", "messageAt")
+        row.keys().asSequence().filterNot { it in keep }.toList().forEach(row::remove)
+        row.put("deleted", true)
+    }
+
+    fun deleteInboxMessages(ids: Set<String>, includeTraining: Boolean, now: GuardianInboxClock): GuardianDeletion89 = synchronized(lock) {
+        val rows = read()
+        val erased = linkedSetOf<String>()
+        var trainingPreserved = 0
+        var held = 0
+        for (row in rows.filter { it.optString("id") in ids && !it.optBoolean("deleted") }) {
+            if (inboxRow(row, now).section == GuardianInboxSection.COOLING) { held++; continue }
+            if (savedForTraining(row) && !includeTraining) {
+                row.put("review", "archived")
+                trainingPreserved++
+            } else {
+                erased += row.getString("id")
+                tombstone(row)
+            }
+        }
+        // Commit independent encrypted deletion intent before AtomicFile can roll a main write back.
+        recordDeletions(rows.filter { it.optBoolean("deleted") })
+        write(rows)
+        scrubRecovery(erased)
+        GuardianDeletion89(erased.size, trainingPreserved, held)
+    }
+
+    fun clearInboxPreservingTraining(now: GuardianInboxClock) = synchronized(lock) {
+        val rows = read()
+        var trainingPreserved = 0
+        var held = 0
+        var changed = false
+        for (row in rows.filterNot { it.optBoolean("deleted") }) {
+            if (inboxRow(row, now).section == GuardianInboxSection.COOLING) { held++; continue }
+            if (savedForTraining(row)) trainingPreserved++
+            if (row.optString("review") != "archived") {
+                row.remove("hold")
+                row.put("review", "archived").put("holdReviewed", true)
+                changed = true
+            }
+        }
+        if (changed) write(rows)
+        GuardianDeletion89(0, trainingPreserved, held)
+    }
+
+    private val recoveryDirectory get() = File(context.noBackupFilesDir, "guardian-recovery89")
+    private fun recoveryCopies() = recoveryDirectory.listFiles().orEmpty().filter { it.name.matches(Regex("capture-[0-2]\\.enc")) }
+
+    /** Preserve raw ciphertext BEFORE AtomicFile.openRead can promote or remove a legacy backup. */
+    private fun preserveRecovery() {
+        val marker = File(recoveryDirectory, "checkpoint.complete")
+        if (marker.exists()) return
+        check(recoveryDirectory.isDirectory || recoveryDirectory.mkdirs())
+        listOf(destination, File(destination.path + ".bak"), File(destination.path + ".new")).forEachIndexed { index, source ->
+            if (source.isFile) {
+                val copy = File(recoveryDirectory, "capture-$index.enc")
+                if (!copy.exists()) {
+                    val bytes = source.inputStream().use { it.readNBytes(MAX_BYTES + 1) }
+                    require(bytes.size <= MAX_BYTES)
+                    writeBlob(AtomicFile(copy), bytes)
+                    check(copy.readBytes().contentEquals(bytes))
+                }
+            }
+        }
+        java.io.FileOutputStream(marker).use { it.write(byteArrayOf(1)); it.fd.sync() }
+    }
+
+    private fun recoveryRows(file: File): List<JSONObject> {
+        val bytes = file.inputStream().use { it.readNBytes(MAX_BYTES + 1) }
+        require(bytes.size <= MAX_BYTES)
+        return decode(bytes)
+    }
+
+    private fun scrubRecovery(ids: Set<String>) {
+        if (ids.isEmpty()) return
+        for (file in recoveryCopies()) {
+            // Fail visibly if an unreadable snapshot cannot be proven free of the deleted message.
+            val rows = recoveryRows(file)
+            rows.filter { it.optString("id") in ids }.forEach(::tombstone)
+            writeBlob(AtomicFile(file), encode(rows))
+        }
+    }
+
+    private val deletionJournal get() = File(recoveryDirectory, "deletions.enc")
+    private fun journalRows(): List<JSONObject> {
+        val target = AtomicFile(deletionJournal)
+        val blob = try { target.openRead().use { it.readNBytes(MAX_BYTES + 1) } }
+        catch (missing: FileNotFoundException) {
+            if (deletionJournal.exists() || File(deletionJournal.path + ".bak").exists()) throw missing
+            return emptyList()
+        }
+        require(blob.size <= MAX_BYTES)
+        return decode(blob).also { rows -> check(rows.all { it.optBoolean("deleted") }) }
+    }
+
+    private fun recordDeletions(rows: List<JSONObject>) {
+        if (rows.isEmpty()) return
+        val records = (journalRows() + rows).associateBy { it.getString("id") }.values.toList()
+        check(records.size <= MAX_CAPTURE_RECORDS && fits(records))
+        writeBlob(AtomicFile(deletionJournal), encode(records))
+    }
+
+    private fun snapshotTombstones(): Set<String> = journalRows().mapTo(hashSetOf()) { it.getString("id") }.apply {
+        recoveryCopies().forEach { copy -> addAll(runCatching {
+            recoveryRows(copy).filter { it.optBoolean("deleted") }.map { it.getString("id") }
+        }.getOrDefault(emptyList())) }
+    }
+
+    fun inspectRecovery(): GuardianRecoveryReport89 = synchronized(lock) {
+        val current = read()
+        val known = current.mapTo(hashSetOf()) { it.getString("id") }
+        val recovered = linkedSetOf<String>()
+        val deleted = snapshotTombstones()
+        var unreadable = 0
+        val copies = recoveryCopies()
+        for (copy in copies) runCatching {
+            for (row in recoveryRows(copy)) if (validCapture(row) && row.getString("id") !in known && row.getString("id") !in deleted) recovered += row.getString("id")
+        }.onFailure { unreadable++ }
+        GuardianRecoveryReport89(current.count { !it.optBoolean("deleted") }, copies.size, recovered.size, unreadable)
+    }
+
+    private fun validCapture(row: JSONObject): Boolean = runCatching {
+        !row.optBoolean("deleted") && row.getString("id").matches(Regex("[a-f0-9]{64}")) &&
+            row.getLong("capturedAt") >= 0 && row.getLong("messageAt") >= 0 &&
+            row.getLong("profile") >= 0 && row.getString("conversation").length in 1..512 &&
+            row.getString("sender").length in 1..512 && row.getString("text").length in 1..2048
+    }.getOrDefault(false)
+
+    fun restoreRecovery(): Int = synchronized(lock) {
+        val rows = read().toMutableList()
+        val known = rows.mapTo(hashSetOf()) { it.getString("id") }
+        var restored = 0
+        known += snapshotTombstones()
+        for (copy in recoveryCopies()) {
+            val candidates = runCatching { recoveryRows(copy) }.getOrNull() ?: continue
+            for (row in candidates) if (validCapture(row) && row.getString("id") !in known) {
+                row.put("review", "archived")
+                val revised = rows + row
+                check(revised.size <= MAX_CAPTURE_RECORDS && fits(revised))
+                rows += row
+                known += row.getString("id")
+                restored++
+            }
+        }
+        if (restored > 0) write(rows)
+        restored
     }
 
     fun clear() = synchronized(lock) {
+        if (alias == KEY_ALIAS) check(!recoveryDirectory.exists() || recoveryDirectory.deleteRecursively())
         keyStore().deleteEntry(alias)
         atomic.delete()
         check(!destination.exists())
         if (alias == KEY_ALIAS) archiveRevision.value += 1
         if (!fixture && !contacts && !phoneShield && !callHistory && !peace) knowledgeRevision.value += 1
     }
-
-    private fun cutoff(days: Int, now: Long): Long {
-        require(days in RETENTION_DAYS)
-        return now - days * 86_400_000L
-    }
-
-    private fun isRetained(row: JSONObject, cutoff: Long) =
-        row.getLong("capturedAt") >= cutoff && row.getLong("messageAt") >= cutoff
 
     private fun identity(event: GuardianCaptureEvent, entry: GuardianCaptureEntry): String {
         val values = JSONArray().put(event.profileSerial).put(event.conversation).put(entry.time).put(entry.sender).put(entry.text)
@@ -747,6 +931,22 @@ internal class GuardianCaptureStore private constructor(private val context: Con
 
     private fun read(): List<JSONObject> {
         val blob = readBlob() ?: return emptyList()
+        val rows = decode(blob)
+        if (alias == KEY_ALIAS) {
+            val deleted = snapshotTombstones()
+            val pending = rows.filter { !it.optBoolean("deleted") && it.optString("id") in deleted }
+            if (pending.isNotEmpty()) {
+                // Complete previously owner-approved deletion after a crash/AtomicFile rollback.
+                // This is never time-based cleanup and cannot resurrect a deleted capture.
+                pending.forEach(::tombstone)
+                write(rows)
+                scrubRecovery(deleted)
+            }
+        }
+        return rows
+    }
+
+    private fun decode(blob: ByteArray): List<JSONObject> {
         require(blob.size >= 1 + IV_BYTES + TAG_BYTES && blob[0] == VERSION)
         val cipher = Cipher.getInstance("AES/GCM/NoPadding")
         cipher.init(Cipher.DECRYPT_MODE, key(create = false), GCMParameterSpec(128, blob, 1, IV_BYTES))
@@ -754,16 +954,20 @@ internal class GuardianCaptureStore private constructor(private val context: Con
         val plain = cipher.doFinal(blob, 1 + IV_BYTES, blob.size - 1 - IV_BYTES)
         return try {
             val rows = JSONArray(plain.toString(Charsets.UTF_8))
-            require(rows.length() <= MAX_RECORDS)
+            require(rows.length() <= if (alias == KEY_ALIAS) MAX_CAPTURE_RECORDS else MAX_RECORDS)
             List(rows.length(), rows::getJSONObject)
         } finally {
             plain.fill(0)
         }
     }
 
-    private fun write(rows: List<JSONObject>) {
+    private fun fits(rows: List<JSONObject>) = JSONArray(rows).toString().toByteArray(Charsets.UTF_8).let {
+        try { it.size + 1 + IV_BYTES + TAG_BYTES <= MAX_BYTES } finally { it.fill(0) }
+    }
+
+    private fun encode(rows: List<JSONObject>): ByteArray {
         val plain = JSONArray(rows).toString().toByteArray(Charsets.UTF_8)
-        val blob = try {
+        return try {
             val cipher = Cipher.getInstance("AES/GCM/NoPadding")
             cipher.init(Cipher.ENCRYPT_MODE, key(create = true))
             check(cipher.iv.size == IV_BYTES)
@@ -772,21 +976,31 @@ internal class GuardianCaptureStore private constructor(private val context: Con
         } finally {
             plain.fill(0)
         }
-        require(blob.size <= MAX_BYTES)
-        val output = atomic.startWrite()
-        try {
-            output.write(blob)
-            atomic.finishWrite(output)
-        } catch (error: Exception) {
-            atomic.failWrite(output)
-            throw error
-        }
+    }
+
+    private fun write(rows: List<JSONObject>) {
+        if (alias == KEY_ALIAS) preserveRecovery()
+        val blob = encode(rows)
+        writeBlob(atomic, blob)
         check(readBlob()?.contentEquals(blob) == true)
         if (alias == KEY_ALIAS) archiveRevision.value += 1
         if (!fixture && !contacts && !phoneShield && !callHistory && !peace) knowledgeRevision.value += 1
     }
 
+    private fun writeBlob(target: AtomicFile, blob: ByteArray) {
+        require(blob.size <= MAX_BYTES)
+        val output = target.startWrite()
+        try {
+            output.write(blob)
+            target.finishWrite(output)
+        } catch (error: Exception) {
+            target.failWrite(output)
+            throw error
+        }
+    }
+
     private fun readBlob(): ByteArray? = try {
+        if (alias == KEY_ALIAS) preserveRecovery()
         atomic.openRead().use { it.readNBytes(MAX_BYTES + 1).also { bytes -> require(bytes.size <= MAX_BYTES) } }
     } catch (missing: FileNotFoundException) {
         if (destination.exists() || File(destination.path + ".bak").exists()) throw missing
@@ -796,7 +1010,7 @@ internal class GuardianCaptureStore private constructor(private val context: Con
     private fun key(create: Boolean): SecretKey {
         val store = keyStore()
         if (store.containsAlias(alias)) return store.getKey(alias, null) as SecretKey
-        check(create && !destination.exists())
+        check(create && !destination.exists() && (alias != KEY_ALIAS || recoveryCopies().isEmpty() && !deletionJournal.exists()))
         return KeyGenerator.getInstance(KeyProperties.KEY_ALGORITHM_AES, "AndroidKeyStore").run {
             init(KeyGenParameterSpec.Builder(alias, KeyProperties.PURPOSE_ENCRYPT or KeyProperties.PURPOSE_DECRYPT)
                 .setBlockModes(KeyProperties.BLOCK_MODE_GCM)
@@ -816,6 +1030,7 @@ internal class GuardianCaptureStore private constructor(private val context: Con
         private const val VERSION: Byte = 1
         private const val IV_BYTES = 12
         private const val TAG_BYTES = 16
+        private const val MAX_CAPTURE_RECORDS = 16_384
         private const val MAX_RECORDS = 256
         private const val MAX_EXAMPLES = 128
         private const val MAX_BYTES = 6 * 1024 * 1024

@@ -1,0 +1,74 @@
+"""Build89 identity and authentic Build88 upgrade contract; no signing or release claims."""
+from pathlib import Path
+import subprocess
+import unittest
+from unittest.mock import patch
+
+import fetch_code81_upgrade_baseline as baseline
+from scripts.tests import test_code81_main_release_controls as main_controls
+
+ROOT = Path(__file__).resolve().parents[2]
+
+
+class Build89ReleaseControls(unittest.TestCase):
+    def test_protected_build_guard_adds_only_reviewed_retention_policy_and_identity(self):
+        path = 'scripts/verify_sanctuary_browser_scope.py'
+        previous = subprocess.check_output(['git','show','cce2f3fb8b13da4ebaeb2c07712dec42f826daee:'+path],cwd=ROOT,text=True)
+        expected = previous.replace('"versionCode = 88"', '"versionCode = 89"', 1).replace(
+            '\'versionName = "1.7.42"\'', '\'versionName = "1.7.43"\'', 1)
+        expected = expected.replace('    f"{CORE}/guardian/GuardianCaptureStore.kt",',
+            '    f"{CORE}/guardian/GuardianCaptureStore.kt",\n    f"{CORE}/guardian/GuardianRetention89.kt",')
+        self.assertNotEqual(previous, expected)
+        self.assertEqual(expected, (ROOT/path).read_text())
+
+    def test_single_bracket_shell_conditions_never_embed_boolean_operators(self):
+        import yaml
+        workflow = yaml.safe_load((ROOT / '.github/workflows/fast-development.yml').read_text())
+        for job in workflow['jobs'].values():
+            for step in job.get('steps', []):
+                self.assertNotRegex(step.get('run', ''), r'(?<!\[)\[[^\[\]\n]*(?:&&|\|\|)[^\[\]\n]*\](?!\])', step.get('name'))
+
+    def test_current_candidate_and_baseline_are_consistent_across_existing_controls(self):
+        build = (ROOT / 'app/build.gradle.kts').read_text()
+        self.assertRegex(build, r'versionCode\s*=\s*89\b')
+        self.assertIn('versionName = "1.7.43"', build)
+        configuration = (ROOT / 'scripts/release_configuration1711.sh').read_text()
+        for line in ('release_version=1.7.43', 'release_code=89',
+                     'baseline_version=1.7.42', 'baseline_code=88',
+                     'baseline_sha=430774e549a86d5c0db159ec24230bc4ac05bbc3'):
+            self.assertIn(line, configuration.splitlines())
+        self.assertEqual(151697075, baseline.BASELINE_SIZE)
+        self.assertEqual('c13cd18c78246b77ea90fdfbe0c12fc82ffa6c66ad4a1c434fe0b27725e42f11', baseline.BASELINE_SHA256)
+        self.assertEqual('https://github.com/traynor1987/Private-gallery-/releases/download/v1.7.42/private-gallery-release.apk', baseline.BASELINE_URL)
+        fixture = (ROOT / 'docs/release1711/UpgradeFixtureTest.kt').read_text()
+        self.assertIn('baselineCode == 88 && candidateCode == 89', fixture)
+        self.assertIn('assertEquals(88L,available.release?.versionCode)', fixture)
+        self.assertIn('original=88 candidate=89', fixture)
+        live = (ROOT / 'docs/build85/verify_live_build84.py').read_text()
+        for text in ("installed() == 88", "installed() != 89", "1.7.43 · Build 89 available", "1.7.43 · Up to date", 'baseline_code=88, installed_code=89'):
+            self.assertIn(text, live)
+
+    def test_retention_preparation_run_remains_bound_to_exact_source_and_main_ancestry(self):
+        import tempfile
+        from scripts.tests.test_code81_main_release_controls import gate
+        with tempfile.TemporaryDirectory() as directory:
+            values = main_controls.MainReleaseControls().fixture(directory)
+            branch = 'feature/novaos-guardian-retention89'
+            values[0]['runtime_branch'] = branch
+            values[2]['head_branch'] = branch
+            values[1] += ('Runtime branch: '+branch+'\n').encode()
+            values[0]['review_sha256'] = gate.sha(values[1])
+            with patch.object(gate, 'runtime_cases', return_value=339) as reports:
+                proof = gate.validate(*values)
+            reports.assert_called_once()
+            self.assertEqual(339, proof['validated_case_count'])
+            values[2]['head_sha'] = '2'*40
+            with patch.object(gate, 'runtime_cases') as reports, self.assertRaisesRegex(ValueError, 'runtime source/branch/event'):
+                gate.validate(*values)
+            reports.assert_not_called()
+        workflow = (ROOT / '.github/workflows/sanctuary-production.yml').read_text()
+        self.assertIn("['git','merge-base','--is-ancestor',marker['source'],head]", workflow)
+
+
+if __name__ == '__main__':
+    unittest.main()

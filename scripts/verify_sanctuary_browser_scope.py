@@ -26,6 +26,7 @@ ALLOWED_GUARDIAN = {
     f"{CORE}/guardian/GuardianCapture.kt",
     f"{CORE}/guardian/GuardianCapturePolicy.kt",
     f"{CORE}/guardian/GuardianCaptureStore.kt",
+    f"{CORE}/guardian/GuardianRetention89.kt",
     f"{CORE}/guardian/GuardianInboxPolicy.kt",
     f"{CORE}/guardian/GuardianLocalClassifier.kt",
     f"{CORE}/guardian/GuardianCallShield.kt",
@@ -152,8 +153,8 @@ for revision in (("HEAD",), ()):
     assert not unexpected, f"Unexpected protected-core changes: {sorted(unexpected)}"
 
 build_file = "app/build.gradle.kts"
-expected = original(build_file).replace("versionCode = 69", "versionCode = 88", 1).replace(
-    'versionName = "1.7.34"', 'versionName = "1.7.42"', 1,
+expected = original(build_file).replace("versionCode = 69", "versionCode = 89", 1).replace(
+    'versionName = "1.7.34"', 'versionName = "1.7.43"', 1,
 )
 debug_version = """
 // The isolated Fold preview advances independently of the production release.

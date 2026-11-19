@@ -47,7 +47,7 @@ import uk.co.traynor.privategallery.core.sanctuary.SanctuaryMode
 import uk.co.traynor.privategallery.core.sanctuary.SanctuaryPreset
 import uk.co.traynor.privategallery.core.sanctuary.SanctuaryStore
 
-/** Reviewed release-control instrumentation for original-key Build 87 to versionCode 88 upgrade.
+/** Reviewed release-control instrumentation for original-key Build 88 to versionCode 89 upgrade.
  * Captured and hash-checked before frozen application checkout; never modifies baseline app.
  */
 class UpgradeFixtureTest {
@@ -58,9 +58,9 @@ class UpgradeFixtureTest {
     private val candidateCode get() = checkNotNull(arguments.getString("candidateCode")).toInt()
     private fun guard() {
         check(context.packageName == "uk.co.traynor.privategallery.hiddenprototype")
-        check(baselineCode == 87 && candidateCode == 88)
+        check(baselineCode == 88 && candidateCode == 89)
     }
-    /** Disposable emulator only: exercise the immutable Build87 updater against controlled
+    /** Disposable emulator only: exercise the immutable Build88 updater against controlled
      * release responses and the real original-key candidate bytes. APK/signature validation,
      * FileProvider grants and Android PackageInstaller are the unmodified application paths.
      * The transport substitution lives only in this signed instrumentation process. */
@@ -70,7 +70,7 @@ class UpgradeFixtureTest {
         assertEquals(37,android.os.Build.VERSION.SDK_INT)
         val port=checkNotNull(arguments.getString("updateFixturePort")).toInt()
         check(port in 1024..65535)
-        val prefix="https://github.com/traynor1987/Private-gallery-/releases/download/v1.7.42/"
+        val prefix="https://github.com/traynor1987/Private-gallery-/releases/download/v1.7.43/"
         val routes=mapOf(
             "https://api.github.com/repos/traynor1987/Private-gallery-/releases/latest" to "/release.json",
             prefix+"private-gallery-release.apk" to "/candidate.apk",
@@ -120,23 +120,23 @@ class UpgradeFixtureTest {
         val available=updateState()
         assertEquals(uk.co.traynor.privategallery.core.update.UpdatePhase.AVAILABLE,available.phase)
         assertEquals(88L,available.release?.versionCode)
-        assertEquals("1.7.42",available.release?.version?.raw)
+        assertEquals("1.7.43",available.release?.version?.raw)
         invoke("downloadUpdate")
         val deadline=SystemClock.elapsedRealtime()+180_000
         while(SystemClock.elapsedRealtime()<deadline) {
             val state=updateState()
             if(state.phase==uk.co.traynor.privategallery.core.update.UpdatePhase.INSTALLATION_REQUESTED) {
-                instrumentation.sendStatus(0,android.os.Bundle().apply{putString(android.app.Instrumentation.REPORT_KEY_STREAMRESULT,"NOVA_UPDATE_HANDOFF_READY original=87 candidate=88 transport=controlled-loopback apkVerification=unmodified\n")})
+                instrumentation.sendStatus(0,android.os.Bundle().apply{putString(android.app.Instrumentation.REPORT_KEY_STREAMRESULT,"NOVA_UPDATE_HANDOFF_READY original=88 candidate=89 transport=controlled-loopback apkVerification=unmodified\n")})
                 while(SystemClock.elapsedRealtime()<deadline)Thread.sleep(1000)
                 fail("Android package installation was not confirmed in time")
             }
-            assertTrue("Build87 updater failed: ${state.message}",state.phase in setOf(
+            assertTrue("Build88 updater failed: ${state.message}",state.phase in setOf(
                 uk.co.traynor.privategallery.core.update.UpdatePhase.DOWNLOADING,
                 uk.co.traynor.privategallery.core.update.UpdatePhase.VERIFYING,
                 uk.co.traynor.privategallery.core.update.UpdatePhase.READY))
             Thread.sleep(100)
         }
-        fail("Build87 download timed out")
+        fail("Build88 download timed out")
     }
 
     private fun hash(bytes: ByteArray) = MessageDigest.getInstance("SHA-256").digest(bytes).joinToString("") { "%02x".format(it) }
@@ -934,24 +934,36 @@ class UpgradeFixtureTest {
     private fun seedGuardianArchive(): JSONObject {
         val store = GuardianCaptureStore(context)
         val now = guardianInboxClock(context)
+        check(context.getSharedPreferences("nova_guardian_capture", 0).edit().putInt("retention", 30).commit())
+        val capturedAt = now.wall - 10L * 86_400_000L
         val event = GuardianCaptureEvent(
-            0L, "upgrade-fixture-conversation", now.wall,
-            listOf(GuardianCaptureEntry(now.wall, "upgrade-fixture-sender", guardianFixtureText)),
+            0L, "upgrade-fixture-conversation", capturedAt,
+            listOf(GuardianCaptureEntry(capturedAt, "upgrade-fixture-sender", guardianFixtureText),
+                GuardianCaptureEntry(capturedAt - 1, "upgrade-fixture-sender", "Synthetic unlabelled retention upgrade original")),
         )
-        val result = store.append(event, 7, now.wall, assess = false, clock = now)
+        val result = store.append(event, 30, now.wall, assess = false, clock = now)
         assertTrue("Guardian fixture must be durably encrypted", result.allDurable)
-        val row = store.inboxRows(7, now).single()
-        assertEquals(guardianFixtureText, store.prepareInboxReview(row.id, 7, now)?.second)
-        assertTrue(store.labelConversationMessage(row.id, GuardianAssessment.LOW_RISK, 7, now))
-        assertEquals(GuardianAssessment.LOW_RISK, store.inboxRows(7, now).single().ownerLabel)
-        return JSONObject().put("id", row.id).put("ciphertext", guardianArchiveHash())
+        val row = store.inboxRows(30, now).first { store.revealInboxMessage(it.id, 30, now) == guardianFixtureText }
+        assertEquals(guardianFixtureText, store.prepareInboxReview(row.id, 30, now)?.second)
+        assertTrue(store.labelConversationMessage(row.id, GuardianAssessment.LOW_RISK, 30, now))
+        assertEquals(GuardianAssessment.LOW_RISK, store.inboxRows(30, now).first { it.id == row.id }.ownerLabel)
+        return JSONObject().put("id", row.id).put("capturedAt", capturedAt).put("ciphertext", guardianArchiveHash())
     }
 
     private fun verifyGuardianArchive(expected: JSONObject) {
         val store = GuardianCaptureStore(context)
         val now = guardianInboxClock(context)
         val id = expected.getString("id")
-        val row = store.inboxRows(7, now).single()
+        val all = store.inboxRows(7, now)
+        assertEquals(2, all.size)
+        val row = all.first { it.id == id }
+        val ordinary = all.single { it.id != id }
+        assertEquals(uk.co.traynor.privategallery.core.guardian.GuardianInboxSection.HISTORY, ordinary.section)
+        assertEquals("Synthetic unlabelled retention upgrade original", store.revealInboxMessage(ordinary.id, 7, now))
+        assertEquals(2, store.summary(30, now.wall + 365L * 86_400_000L))
+        assertEquals(2, store.summary(0, now.wall + 365L * 86_400_000L))
+        val checkpoint = File(context.noBackupFilesDir, "guardian-recovery89/capture-0.enc")
+        assertEquals("Original v1 ciphertext checkpoint must survive upgrade and restart", expected.getString("ciphertext"), hash(checkpoint.readBytes()))
         assertEquals(id, row.id)
         assertEquals(GuardianAssessment.LOW_RISK, row.ownerLabel)
         assertEquals(guardianFixtureText, store.revealInboxMessage(id, 7, now))

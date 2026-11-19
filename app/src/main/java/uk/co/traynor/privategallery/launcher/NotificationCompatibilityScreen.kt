@@ -37,6 +37,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import uk.co.traynor.privategallery.core.guardian.GuardianCallSource
 import uk.co.traynor.privategallery.core.guardian.GuardianCapture
+import uk.co.traynor.privategallery.core.guardian.GuardianRetention89
 import uk.co.traynor.privategallery.core.guardian.GuardianCaptureStore
 import uk.co.traynor.privategallery.core.guardian.GuardianNotificationListener
 import uk.co.traynor.privategallery.core.guardian.ProbeAccount
@@ -297,15 +298,15 @@ private fun GuardianCaptureControls(allowChanges: Boolean, listenerReady: Boolea
     if (health.enabled && allowChanges) {
         TextButton(enabled = listenerReady && !health.busy, onClick = { consent = true }) { Text("Change capture scope") }
     }
-    Text("Retention · ${health.retentionDays} days")
-    GuardianCaptureStore.RETENTION_DAYS.forEach { days ->
+    Text("Capture · ${GuardianRetention89.label(health.retentionDays)}")
+    GuardianRetention89.choices.forEach { days ->
         OutlinedButton(
             enabled = allowChanges && !health.busy && days != health.retentionDays,
             onClick = { GuardianCapture.setRetention(context, days) },
-        ) { Text("Keep for $days days") }
+        ) { Text(GuardianRetention89.label(days)) }
     }
     OutlinedButton(enabled = allowChanges && !health.busy, onClick = { confirmClear = true }) {
-        Text("Clear encrypted capture")
+        Text("Archive Inbox — keep all originals")
     }
     if (consent && allowChanges) GuardianAlertDialog(
         onDismissRequest = { consent = false },
@@ -328,12 +329,12 @@ private fun GuardianCaptureControls(allowChanges: Boolean, listenerReady: Boolea
     )
     if (confirmClear && allowChanges) GuardianAlertDialog(
         onDismissRequest = { confirmClear = false },
-        title = { Text("Clear encrypted capture?") },
-        text = { Text("This deletes the saved notification archive and its encryption key.") },
+        title = { Text("Move Inbox messages to History?") },
+        text = { Text("This archives messages without deleting any original, recovery copy, training evidence or encryption key. Active holds are skipped. Permanent individual or bulk deletion is a separate confirmed action in Guardian Settings → Messages, retention & recovery.") },
         confirmButton = { TextButton(onClick = {
             confirmClear = false
             GuardianCapture.clear(context)
-        }) { Text("Clear") } },
+        }) { Text("Archive Inbox") } },
         dismissButton = { TextButton(onClick = { confirmClear = false }) { Text("Cancel") } },
     )
 }

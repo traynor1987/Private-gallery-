@@ -97,6 +97,9 @@ internal fun GuardianHomeSettings(
                     TextButton(onClick = { GuardianInboxActivity.open(activity, GuardianInboxSection.PENDING) }) {
                         Text("Guardian Inbox")
                     }
+                    TextButton(onClick = { GuardianInboxActivity.openSettings(activity, "message-retention") }) {
+                        Text("Messages, retention & recovery")
+                    }
                     TextButton(onClick = { GuardianInboxActivity.openSettings(activity, "contacts") }) {
                         Text("Monitored Contacts")
                     }
