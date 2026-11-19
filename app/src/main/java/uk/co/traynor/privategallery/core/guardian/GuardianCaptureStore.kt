@@ -556,7 +556,7 @@ internal class GuardianCaptureStore private constructor(private val context: Con
             incoming.putIfAbsent(id, row)
         }
         val retained = (existing + incoming.filterKeys { it !in existing }).values
-            .sortedByDescending { it.getLong("capturedAt") }
+            .sortedByDescending { it.getLong("messageAt") }
         val ids = retained.mapTo(HashSet()) { it.getString("id") }
         val addedIds = incoming.keys.filterTo(linkedSetOf()) { it in ids && it !in existing }
         val added = addedIds.size
