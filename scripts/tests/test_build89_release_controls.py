@@ -51,10 +51,10 @@ class Build89ReleaseControls(unittest.TestCase):
             values[2]['head_branch'] = branch
             values[1] += ('Runtime branch: '+branch+'\n').encode()
             values[0]['review_sha256'] = gate.sha(values[1])
-            with patch.object(gate, 'runtime_cases', return_value=338) as reports:
+            with patch.object(gate, 'runtime_cases', return_value=339) as reports:
                 proof = gate.validate(*values)
             reports.assert_called_once()
-            self.assertEqual(338, proof['validated_case_count'])
+            self.assertEqual(339, proof['validated_case_count'])
             values[2]['head_sha'] = '2'*40
             with patch.object(gate, 'runtime_cases') as reports, self.assertRaisesRegex(ValueError, 'runtime source/branch/event'):
                 gate.validate(*values)

@@ -171,4 +171,28 @@ class GuardianRetention89RuntimeTest {
             assertEquals(1, store.summary(0, now.wall))
         } finally { store.clear() }
     }
+
+    @Test fun committedDeletionIntentSurvivesAtomicRollbackAndCannotBeRecovered() {
+        val store = GuardianCaptureStore(context)
+        store.clear()
+        try {
+            val now = guardianInboxClock(context)
+            store.append(event(now.wall), 30, now.wall, false, now)
+            val archive = File(context.noBackupFilesDir, GuardianCaptureStore.ARCHIVE_NAME)
+            val old = archive.readBytes()
+            val id = store.inboxRows(30, now).single().id
+            assertEquals(1, store.deleteInboxMessages(setOf(id), true, now).deleted)
+            val journal = File(context.noBackupFilesDir, "guardian-recovery89/deletions.enc")
+            assertTrue(journal.isFile)
+            assertFalse(journal.readBytes().toString(Charsets.UTF_8).contains(id))
+            // A rolled-back main archive must not reverse committed deletion intent.
+            File(archive.path + ".bak").writeBytes(old)
+            val reopened = GuardianCaptureStore(context)
+            assertEquals(0, reopened.summary(30, now.wall))
+            assertNull(reopened.revealInboxMessage(id, 30, now))
+            assertEquals(0, reopened.inspectRecovery().recoverable)
+            assertEquals(0, reopened.restoreRecovery())
+            assertEquals(0, GuardianCaptureStore(context).summary(0, now.wall))
+        } finally { store.clear() }
+    }
 }

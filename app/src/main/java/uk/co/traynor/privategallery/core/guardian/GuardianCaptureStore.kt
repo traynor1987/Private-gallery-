@@ -653,6 +653,7 @@ internal class GuardianCaptureStore private constructor(private val context: Con
                     if (savedForTraining(row)) row.put("review", "archived") else tombstone(row)
                 }
             }
+            if (action == GuardianInboxAction.DELETE && row.optBoolean("deleted")) recordDeletions(listOf(row))
             write(rows)
             if (action == GuardianInboxAction.DELETE && row.optBoolean("deleted")) scrubRecovery(setOf(id))
             true
@@ -778,7 +779,8 @@ internal class GuardianCaptureStore private constructor(private val context: Con
                 tombstone(row)
             }
         }
-        // Persist deletion intent before touching checkpoint copies, so a partial failure cannot resurrect data.
+        // Commit independent encrypted deletion intent before AtomicFile can roll a main write back.
+        recordDeletions(rows.filter { it.optBoolean("deleted") })
         write(rows)
         scrubRecovery(erased)
         GuardianDeletion89(erased.size, trainingPreserved, held)
@@ -826,9 +828,30 @@ internal class GuardianCaptureStore private constructor(private val context: Con
         }
     }
 
-    private fun snapshotTombstones(): Set<String> = recoveryCopies().flatMap { copy ->
-        runCatching { recoveryRows(copy).filter { it.optBoolean("deleted") }.map { it.getString("id") } }.getOrDefault(emptyList())
-    }.toSet()
+    private val deletionJournal get() = File(recoveryDirectory, "deletions.enc")
+    private fun journalRows(): List<JSONObject> {
+        val target = AtomicFile(deletionJournal)
+        val blob = try { target.openRead().use { it.readNBytes(MAX_BYTES + 1) } }
+        catch (missing: FileNotFoundException) {
+            if (deletionJournal.exists() || File(deletionJournal.path + ".bak").exists()) throw missing
+            return emptyList()
+        }
+        require(blob.size <= MAX_BYTES)
+        return decode(blob).also { rows -> check(rows.all { it.optBoolean("deleted") }) }
+    }
+
+    private fun recordDeletions(rows: List<JSONObject>) {
+        if (rows.isEmpty()) return
+        val records = (journalRows() + rows).associateBy { it.getString("id") }.values.toList()
+        check(records.size <= MAX_CAPTURE_RECORDS && fits(records))
+        writeBlob(AtomicFile(deletionJournal), encode(records))
+    }
+
+    private fun snapshotTombstones(): Set<String> = journalRows().mapTo(hashSetOf()) { it.getString("id") }.apply {
+        recoveryCopies().forEach { copy -> addAll(runCatching {
+            recoveryRows(copy).filter { it.optBoolean("deleted") }.map { it.getString("id") }
+        }.getOrDefault(emptyList())) }
+    }
 
     fun inspectRecovery(): GuardianRecoveryReport89 = synchronized(lock) {
         val current = read()
@@ -894,7 +917,19 @@ internal class GuardianCaptureStore private constructor(private val context: Con
 
     private fun read(): List<JSONObject> {
         val blob = readBlob() ?: return emptyList()
-        return decode(blob)
+        val rows = decode(blob)
+        if (alias == KEY_ALIAS) {
+            val deleted = snapshotTombstones()
+            val pending = rows.filter { !it.optBoolean("deleted") && it.optString("id") in deleted }
+            if (pending.isNotEmpty()) {
+                // Complete previously owner-approved deletion after a crash/AtomicFile rollback.
+                // This is never time-based cleanup and cannot resurrect a deleted capture.
+                pending.forEach(::tombstone)
+                write(rows)
+                scrubRecovery(deleted)
+            }
+        }
+        return rows
     }
 
     private fun decode(blob: ByteArray): List<JSONObject> {
@@ -961,7 +996,7 @@ internal class GuardianCaptureStore private constructor(private val context: Con
     private fun key(create: Boolean): SecretKey {
         val store = keyStore()
         if (store.containsAlias(alias)) return store.getKey(alias, null) as SecretKey
-        check(create && !destination.exists() && (alias != KEY_ALIAS || recoveryCopies().isEmpty()))
+        check(create && !destination.exists() && (alias != KEY_ALIAS || recoveryCopies().isEmpty() && !deletionJournal.exists()))
         return KeyGenerator.getInstance(KeyProperties.KEY_ALGORITHM_AES, "AndroidKeyStore").run {
             init(KeyGenParameterSpec.Builder(alias, KeyProperties.PURPOSE_ENCRYPT or KeyProperties.PURPOSE_DECRYPT)
                 .setBlockModes(KeyProperties.BLOCK_MODE_GCM)

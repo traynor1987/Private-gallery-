@@ -297,6 +297,7 @@ def runtime_cases(archive,matrix,source):
                 'activeHoldsCannotBeRevealedTaughtOrBulkDeleted',
                 'storageCapacityRefusesNewCaptureWithoutEvictingOldMessages',
                 'unreadableRecoveryCopyIsReportedWithoutInventingMessages',
+                'committedDeletionIntentSurvivesAtomicRollbackAndCannotBeRecovered',
             )],
             **{display: [('uk.co.traynor.privategallery.launcher.GuardianRetention89UiTest', name) for name in (
                 'retentionAndBulkDeletionRequireExplicitTrainingDeletion',
