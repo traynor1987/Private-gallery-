@@ -201,7 +201,7 @@ class GuardianInbox77UiTest {
             assertEquals(GuardianInboxSection.COOLING, store.inboxRows(7, receipt).single().section)
             assertEquals(GuardianInboxSection.PROTECTED,
                 store.inboxRows(7, GuardianInboxClock(now, 0L, -1)).single().section)
-            val ordinary = event.copy(observedAt = now, entries = listOf(
+            val ordinary = event.copy(conversation = "ordinary-conversation", observedAt = now, entries = listOf(
                 GuardianCaptureEntry(now - 1, "ordinary-fixture", "Hi", "Ordinary fixture contact"),
             ))
             val ordinaryClock = GuardianInboxClock(now, 0L, -1)
