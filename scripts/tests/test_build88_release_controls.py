@@ -1,5 +1,6 @@
 """Build88 identity and authentic Build87 upgrade contract; no signing or release claims."""
 from pathlib import Path
+import subprocess
 import unittest
 from unittest.mock import patch
 
@@ -10,6 +11,14 @@ ROOT = Path(__file__).resolve().parents[2]
 
 
 class Build88ReleaseControls(unittest.TestCase):
+    def test_protected_build_guard_changes_only_the_two_approved_identity_literals(self):
+        path = 'scripts/verify_sanctuary_browser_scope.py'
+        previous = subprocess.check_output(['git','show','95c1112baf1c02930a5085ecc7620a3bfb8875fa:'+path],cwd=ROOT,text=True)
+        expected = previous.replace('"versionCode = 87"', '"versionCode = 88"', 1).replace(
+            '\'versionName = "1.7.41"\'', '\'versionName = "1.7.42"\'', 1)
+        self.assertNotEqual(previous, expected)
+        self.assertEqual(expected, (ROOT/path).read_text())
+
     def test_current_candidate_and_baseline_are_consistent_across_existing_controls(self):
         build = (ROOT / 'app/build.gradle.kts').read_text()
         self.assertRegex(build, r'versionCode\s*=\s*88\b')

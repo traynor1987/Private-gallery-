@@ -152,8 +152,8 @@ for revision in (("HEAD",), ()):
     assert not unexpected, f"Unexpected protected-core changes: {sorted(unexpected)}"
 
 build_file = "app/build.gradle.kts"
-expected = original(build_file).replace("versionCode = 69", "versionCode = 87", 1).replace(
-    'versionName = "1.7.34"', 'versionName = "1.7.41"', 1,
+expected = original(build_file).replace("versionCode = 69", "versionCode = 88", 1).replace(
+    'versionName = "1.7.34"', 'versionName = "1.7.42"', 1,
 )
 debug_version = """
 // The isolated Fold preview advances independently of the production release.
