@@ -1,4 +1,9 @@
 {
+  "uk.co.traynor.privategallery.core.guardian.GuardianEvidence90RuntimeTest": [
+    "archiveRestoreAndRevocationKeepTheOriginalWithoutRequeuing",
+    "bundledNotificationHistoryNeverQueuesPastExcerpts",
+    "durableEvidenceAndQueueShareTheOriginalRecordAcrossReopenAndDeletion"
+  ],
   "uk.co.traynor.privategallery.core.guardian.GuardianRetention89RuntimeTest": [
     "activeHoldsCannotBeRevealedTaughtOrBulkDeleted",
     "committedDeletionIntentSurvivesAtomicRollbackAndCannotBeRecovered",
