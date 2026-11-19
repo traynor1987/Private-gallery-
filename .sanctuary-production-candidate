@@ -6,7 +6,7 @@
   "test_run": 44506338536,
   "test_artifact": 14523369208,
   "runtime_archive_sha256": "6e54a2354a0be59295720a643732bcd6ca13117affb82ef5135694d35a720bff",
-  "fixture_sha256": "e816ab6337ae12e3d1503b84e4f587fb9ac34217df23eaf90fdae6239b194705",
+  "fixture_sha256": "d8584eddca467b65657d40fc86273c6ef63638332bed7fe06a10274aaa4e5ff4",
   "matrix_sha256": "cae16dbf9c88ae07e7f2498027b94a900076d251c03917558a63b8e15414c4f2",
   "controls_sha256": {
     "compile_upgrade1711_fixture.sh": "4ebdbaf8d32136bd729fc2b6fd9aaf0a504d278726bf303462b647302995b5f8",
@@ -24,6 +24,6 @@
     "rehearse_in_app_update85.py": "6858b47a1530cca0b34d4a60937f9892d9fb3dbdb2edde8079c754fcc8a0a556"
   },
   "workflow_sha256": "0be1c139eb7b690013b365dc921df8e88ce686969964ee2f62123f7270727f41",
-  "review_sha256": "d0118ad5cda5c5598434fdd8de6466f4c26f2aa4a6a698afeea2a7af1a6ca5fa",
+  "review_sha256": "1e95c9f06ba24a64c55a8f410bb5a2bbe3d41d2333948c9779988e2f3c25fc8c",
   "runtime_branch": "feature/novaos-guardian-retention89"
 }

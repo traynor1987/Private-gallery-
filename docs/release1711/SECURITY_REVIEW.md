@@ -4,7 +4,7 @@ Source: 699bc866905c52c46dfca44a397ea36bb225c471
 Authorization: authenticated owner push
 Release scope: public stable after disposable upgrade verification
 Physical Fold acceptance: pending
-Upgrade fixture SHA-256: e816ab6337ae12e3d1503b84e4f587fb9ac34217df23eaf90fdae6239b194705
+Upgrade fixture SHA-256: d8584eddca467b65657d40fc86273c6ef63638332bed7fe06a10274aaa4e5ff4
 Upgrade controls SHA-256: 0b64164fe2c1c4f60dea592f309aaef25274ec3495d38b35563aa32c586e992d
 Runtime matrix SHA-256: cae16dbf9c88ae07e7f2498027b94a900076d251c03917558a63b8e15414c4f2
 Runtime workflow run: 44506338536
@@ -50,6 +50,15 @@ retention UI cases run at folded and unfolded resolutions. Existing Vault crypto
 manifest, update discovery/download/signature pin, paid-analysis gates and VPS
 configuration remain unchanged; no token request/rotation, paid API call or
 unrelated deployment is authorized.
+
+Production run44 verified the original key/certificate, candidate package/signature
+and populated Build88 seeding, then failed before download because the rehearsal
+fixture asserted release code88 although the immutable Build88 updater correctly
+discovered code89. Correct the fixture expectation to89; do not weaken the
+assertion. Application source699bc866905c52c46dfca44a397ea36bb225c471, signed APK
+build inputs and CI524 reports remain unchanged. Reuse their original evidence;
+the complete signed populated upgrade and public-feed gates remain required.
+No production signing or installation success is claimed for that failed run.
 
 The production signer must compile this fixture against authentic Build88 before
 signer credentials, verify baseline package/version/certificate/hash, then perform

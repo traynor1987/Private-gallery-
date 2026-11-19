@@ -42,7 +42,7 @@ class Build89ReleaseControls(unittest.TestCase):
         self.assertEqual('https://github.com/traynor1987/Private-gallery-/releases/download/v1.7.42/private-gallery-release.apk', baseline.BASELINE_URL)
         fixture = (ROOT / 'docs/release1711/UpgradeFixtureTest.kt').read_text()
         self.assertIn('baselineCode == 88 && candidateCode == 89', fixture)
-        self.assertIn('assertEquals(88L,available.release?.versionCode)', fixture)
+        self.assertIn('assertEquals(89L,available.release?.versionCode)', fixture)
         self.assertIn('original=88 candidate=89', fixture)
         live = (ROOT / 'docs/build85/verify_live_build84.py').read_text()
         for text in ("installed() == 88", "installed() != 89", "1.7.43 · Build 89 available", "1.7.43 · Up to date", 'baseline_code=88, installed_code=89'):

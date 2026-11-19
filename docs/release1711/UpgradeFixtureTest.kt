@@ -119,7 +119,7 @@ class UpgradeFixtureTest {
         while(updateState().phase==uk.co.traynor.privategallery.core.update.UpdatePhase.CHECKING && SystemClock.elapsedRealtime()<checkDeadline)Thread.sleep(100)
         val available=updateState()
         assertEquals(uk.co.traynor.privategallery.core.update.UpdatePhase.AVAILABLE,available.phase)
-        assertEquals(88L,available.release?.versionCode)
+        assertEquals(89L,available.release?.versionCode)
         assertEquals("1.7.43",available.release?.version?.raw)
         invoke("downloadUpdate")
         val deadline=SystemClock.elapsedRealtime()+180_000
