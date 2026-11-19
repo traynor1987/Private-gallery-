@@ -107,3 +107,11 @@ assert Zero Data Retention: provider abuse-monitoring retention may still apply 
 account policy. A local history deletion cannot delete provider records or erase
 the security-critical spending ledger. No WhatsApp/evidence/private feedback is
 automatically uploaded.
+
+
+Automatic Guardian requests also require `NOVA_CLOUD_AUTOMATIC_APPROVED=true`. Leave
+it unset while verifying the funded ledger, authentication, provider access and
+the approved initial live test. Staging always reports automatic analysis
+disabled. The existing `/guardian/analyze` endpoint validates the automatic
+excerpt and spends against the same SQLite ledger and request-ID reservation as
+manual requests.

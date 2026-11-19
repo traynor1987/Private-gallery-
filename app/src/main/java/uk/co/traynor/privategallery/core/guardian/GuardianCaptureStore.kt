@@ -2,6 +2,10 @@ package uk.co.traynor.privategallery.core.guardian
 
 import android.content.Context
 import android.os.SystemClock
+import uk.co.traynor.privategallery.core.brain.CloudLesson
+import uk.co.traynor.privategallery.core.brain.NovaBrainConfiguration
+import uk.co.traynor.privategallery.core.brain.NovaBrainConnectionStore
+import java.util.UUID
 import android.provider.Settings
 import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
@@ -30,6 +34,7 @@ internal data class GuardianCaptureEvent(
     val sensitivity: GuardianSensitivity = GuardianSensitivity.STANDARD,
     val holdUncertain: Boolean = false,
     val requiresContactConsent: Boolean = false,
+    val captureAccount: String? = null,
 )
 
 internal data class GuardianCaptureResult(val added: Int, val retained: Int, val partial: Boolean, val allDurable: Boolean = false, val addedIds: Set<String> = emptySet())
@@ -46,13 +51,18 @@ internal data class GuardianInboxRow(
     val originalAssessment: GuardianAssessment? = assessment,
     val reviewed: Boolean = false,
     val savedForTraining: Boolean = false,
+    val cloudState: GuardianCloudState? = null,
+    val captureAccount: String? = null,
+    val partialCapture: Boolean? = null,
+    val learningRevisions: Int = 0,
+    val localModelVersion: Int? = null,
 )
 
 /** The export only needs section membership and layout-local list keys. */
 internal fun guardianDiagnosticRows(rows: List<GuardianInboxRow>): List<GuardianInboxRow> =
     rows.mapIndexed { index, row -> GuardianInboxRow("preview-$index", 0, row.section, 0) }
 
-internal enum class GuardianInboxAction { READY, HOLD, ARCHIVE, DELETE }
+internal enum class GuardianInboxAction { READY, HOLD, ARCHIVE, RESTORE, DELETE }
 
 internal fun guardianInboxClock(context: Context) = GuardianInboxClock(
     System.currentTimeMillis(), SystemClock.elapsedRealtime(),
@@ -193,7 +203,9 @@ internal class GuardianCaptureStore private constructor(private val context: Con
 
     private fun readImpact(archive: GuardianCaptureStore, now: Long): List<JSONObject> {
         val rows = archive.read()
+        val deleted = journalRows().mapTo(hashSetOf()) { it.getString("id") }
         val retained = impactRows(rows, impactSettings(rows.firstOrNull()).days, now)
+            .filterNot { it.optString("messageId") in deleted }
         if (retained.size < rows.size - 1) archive.write(listOf(rows.first()) + retained)
         return rows.take(1) + retained
     }
@@ -459,7 +471,8 @@ internal class GuardianCaptureStore private constructor(private val context: Con
         val rows = read()
         if (rows.count { row ->
             if (ownerLabel(row) != null) row.put("savedForTraining", true)
-            row.remove("ownerLabel") != null
+            val hadHistory = row.remove("learningHistory") != null
+            row.remove("ownerLabel") != null || hadHistory
         } > 0) write(rows)
         GuardianCaptureStore(context, true).clear()
         validationArchive().clear()
@@ -510,10 +523,7 @@ internal class GuardianCaptureStore private constructor(private val context: Con
             val row = rows.firstOrNull { it.getString("id") == id && !it.optBoolean("deleted") } ?: return@synchronized false
             val state = inboxRow(row, now)
             if (state.assessment == null || state.section == GuardianInboxSection.COOLING) return@synchronized false
-            if (label == null) {
-                if (ownerLabel(row) != null) row.put("savedForTraining", true)
-                row.remove("ownerLabel")
-            } else row.put("ownerLabel", label.name).put("savedForTraining", true).put("trainedAt", now.wall)
+            recordOwnerLabel(row, label, now.wall)
             write(rows)
             true
         }
@@ -539,6 +549,7 @@ internal class GuardianCaptureStore private constructor(private val context: Con
             it.time in 0..event.observedAt && it.sender.length in 1..512 &&
                 it.sender.isNotBlank() && it.text.length in 1..2048 && it.text.isNotBlank()
         }
+        val partial = candidates.size != event.entries.size
         val examples by lazy { runCatching { examples(live) }.getOrDefault(emptyList()) }
         val incoming = LinkedHashMap<String, JSONObject>()
         for (entry in candidates.sortedBy { it.time }) {
@@ -547,6 +558,8 @@ internal class GuardianCaptureStore private constructor(private val context: Con
                 .put("conversation", event.conversation).put("sender", entry.sender)
                 .put("app", event.app).put("sensitivity", event.sensitivity.name).put("holdUncertain", event.holdUncertain)
                 .put("messageAt", entry.time).put("capturedAt", event.observedAt).put("text", entry.text)
+            row.put("partialCapture", partial)
+            event.captureAccount?.let { row.put("captureAccount", it) }
             row.put("patterns", JSONArray(recogniseNovaBrainPatterns(entry.text).map { it.name }))
             guardianSenderDisplayName(entry.displayName)?.let { row.put("displayName", it) }
             if (assess && id !in existing && id !in incoming && examples.isNotEmpty()) {
@@ -565,15 +578,25 @@ internal class GuardianCaptureStore private constructor(private val context: Con
         }
         if (added > 0) write(retained)
         val readable = retained.filterNot { it.optBoolean("deleted") }.mapTo(HashSet()) { it.getString("id") }
-        val partial = candidates.size != event.entries.size
         GuardianCaptureResult(added, readable.size, partial,
             incoming.isNotEmpty() && !partial && incoming.keys.all { it in readable }, addedIds)
     }
 
-    fun assessCaptured(event: GuardianCaptureEvent, days: Int, now: GuardianInboxClock) = synchronized(lock) {
+    fun assessCaptured(event: GuardianCaptureEvent, days: Int, now: GuardianInboxClock,
+        automaticIds: Set<String> = emptySet(), classifyWithoutExamples: Boolean = false): Boolean = synchronized(lock) {
         val rows = retainedRows(days, now.wall)
         val learned = examples(rows)
-        if (learned.isEmpty()) return@synchronized
+        if (learned.isEmpty() && !classifyWithoutExamples) return@synchronized false
+        // Android can bundle older messages in a single notification update. Preserve and
+        // classify all of them locally, but only the unambiguous newest fresh excerpt can queue.
+        val newestAt = event.entries.maxOfOrNull { it.time }
+        val automaticId = event.entries.singleOrNull { it.time == newestAt }
+            ?.takeIf { GuardianAutomaticCloudPolicy.validWindow(it.time, now.wall) }
+            ?.let { identity(event, it) }
+            ?.takeIf { it in automaticIds }
+        val consent = if (automaticId == null) null else runCatching { currentCloudConsent()?.second }.getOrNull()
+        var pending = if (consent == null) 0 else rows.count { pendingCloud(it, consent, now.wall) != null }
+        var queued = false
         val ids = event.entries.mapTo(HashSet()) { identity(event, it) }
         var changed = false
         for (row in rows) {
@@ -581,9 +604,18 @@ internal class GuardianCaptureStore private constructor(private val context: Con
                 inboxRow(row, now).section == GuardianInboxSection.COOLING) continue
             val assessment = classifyGuardian(row.getString("text"), learned, contextFor(row, rows), rowSensitivity(row))
             applyAssessment(row, assessment, now)
+            if (row.getString("id") == automaticId && assessment == GuardianAssessment.UNCERTAIN && consent != null &&
+                rowConversation(row) in consent.scopes && !row.optBoolean("partialCapture")) {
+                val eligible = pending < GuardianAutomaticCloudPolicy.MAX_PENDING && automaticExcerpt(row) != null
+                row.put("cloud", JSONObject().put("state", if (eligible) GuardianCloudState.QUEUED.name else GuardianCloudState.LOCAL_ONLY.name)
+                    .put("request", UUID.randomUUID().toString()).put("consent", consent.revision)
+                    .put("created", now.wall).put("attempts", 0).put("next", now.wall))
+                if (eligible) { pending++; queued = true }
+            }
             changed = true
         }
         if (changed) write(rows)
+        queued
     }
 
     fun summary(days: Int, now: Long): Int = synchronized(lock) { retainedRows(days, now).count { !it.optBoolean("deleted") } }
@@ -647,6 +679,10 @@ internal class GuardianCaptureStore private constructor(private val context: Con
             when (action) {
                 GuardianInboxAction.READY -> row.remove("hold").also { row.put("review", "ready").put("holdReviewed", true) }
                 GuardianInboxAction.HOLD -> startHold(row, now)
+                GuardianInboxAction.RESTORE -> {
+                    if (inboxRow(row, now, days).section != GuardianInboxSection.HISTORY) return@synchronized false
+                    row.put("review", "restored").put("holdReviewed", true).remove("hold")
+                }
                 GuardianInboxAction.ARCHIVE -> row.remove("hold").also { row.put("review", "archived").put("holdReviewed", true) }
                 GuardianInboxAction.DELETE -> {
                     // Deleting an Inbox copy must never delete independently saved training evidence.
@@ -655,7 +691,10 @@ internal class GuardianCaptureStore private constructor(private val context: Con
             }
             if (action == GuardianInboxAction.DELETE && row.optBoolean("deleted")) recordDeletions(listOf(row))
             write(rows)
-            if (action == GuardianInboxAction.DELETE && row.optBoolean("deleted")) scrubRecovery(setOf(id))
+            if (action == GuardianInboxAction.DELETE && row.optBoolean("deleted")) {
+                scrubRecovery(setOf(id))
+                readImpact(impactArchive(), now.wall)
+            }
             true
         }
 
@@ -715,7 +754,7 @@ internal class GuardianCaptureStore private constructor(private val context: Con
             GuardianInboxHold(row.getLong("capturedAt") + GUARDIAN_HOLD_MILLIS, 0L, -1)
         } else null
         val remaining = hold?.remaining(now) ?: 0L
-        val archived = review == "archived" || !savedForTraining(row) &&
+        val archived = review == "archived" || review != "restored" && !savedForTraining(row) &&
             GuardianRetention89.archiveAfter(days, row.getLong("capturedAt"), now.wall) == 0L
         val section = guardianInboxSection(hold?.takeIf { remaining > 0 || !archived },
             review == "ready" || assessment == GuardianAssessment.LOW_RISK, now, archived)
@@ -723,7 +762,7 @@ internal class GuardianCaptureStore private constructor(private val context: Con
             if (section == GuardianInboxSection.PENDING && assessment == GuardianAssessment.UNCERTAIN)
                 GuardianInboxSection.PROTECTED else section, remaining, assessment,
             guardianSenderDisplayName(row.optString("displayName")), row.getLong("capturedAt"),
-            GuardianConversationKey(row.optString("app", GUARDIAN_WHATSAPP), row.getLong("profile"), row.getString("conversation")),
+            rowConversation(row),
             if (remaining > 0) now.wall + remaining else null, ownerLabel(row),
             row.optJSONArray("patterns")?.let { stored ->
                 (0 until stored.length()).mapNotNull { index ->
@@ -731,17 +770,153 @@ internal class GuardianCaptureStore private constructor(private val context: Con
                 }.toSet()
             },
             GuardianAssessment.entries.firstOrNull { it.name == row.optString("originalAssessment") } ?: assessment,
-            row.optBoolean("explicitlyReviewed") || review == "ready" || review == "archived", savedForTraining(row))
+            row.optBoolean("explicitlyReviewed") || review == "ready" || review == "archived", savedForTraining(row),
+            cloudState(row, now.wall), row.optString("captureAccount").takeIf(String::isNotBlank),
+            if (row.has("partialCapture")) row.optBoolean("partialCapture") else null,
+            row.optJSONArray("learningHistory")?.length() ?: 0,
+            row.optInt("assessmentVersion").takeIf { it > 0 })
+    }
+
+    private fun rowConversation(row: JSONObject) = GuardianConversationKey(
+        row.optString("app", GUARDIAN_WHATSAPP), row.getLong("profile"), row.getString("conversation"),
+    )
+
+    private fun automaticExcerpt(row: JSONObject) = GuardianAutomaticCloudPolicy.excerpt(
+        row.getString("text"), listOf(row.optString("displayName"), row.optString("sender")),
+    )
+
+    private fun currentCloudConsent(): Pair<NovaBrainConfiguration, GuardianCloudConsent>? {
+        val consent = GuardianAutomaticCloudSettings(context).read() ?: return null
+        val config = NovaBrainConnectionStore(context).read()?.takeIf { it.origin == consent.origin } ?: return null
+        return config to consent
+    }
+
+    private fun cloudState(row: JSONObject, now: Long): GuardianCloudState? {
+        val cloud = row.optJSONObject("cloud") ?: return null
+        val state = GuardianCloudState.entries.firstOrNull { it.name == cloud.optString("state") } ?: return null
+        return when {
+            state == GuardianCloudState.QUEUED && !GuardianAutomaticCloudPolicy.validWindow(cloud.optLong("created"), now) ->
+                GuardianCloudState.LOCAL_ONLY
+            state == GuardianCloudState.SENDING -> GuardianCloudState.UNKNOWN
+            else -> state
+        }
+    }
+
+    fun evidenceStorageBytes() = synchronized(lock) {
+        destination.length() + recoveryCopies().sumOf(File::length) + deletionJournal.length()
+    }
+
+    fun cloudAdvisory(id: String, now: GuardianInboxClock): GuardianCloudAdvisory? = synchronized(lock) {
+        val row = read().firstOrNull { it.optString("id") == id && !it.optBoolean("deleted") } ?: return@synchronized null
+        if (inboxRow(row, now).section == GuardianInboxSection.COOLING) return@synchronized null
+        val cloud = row.optJSONObject("cloud") ?: return@synchronized null
+        val lesson = cloud.optJSONObject("lesson") ?: return@synchronized null
+        GuardianCloudAdvisory(CloudLesson.fromStored(lesson), cloud.getString("model"), cloud.getLong("completed"))
+    }
+
+    fun nextAutomaticCloudWake(now: Long): Long? = synchronized(lock) {
+        val (_, consent) = currentCloudConsent() ?: return@synchronized null
+        read().mapNotNull { row -> pendingCloud(row, consent, now)?.getLong("next") }.minOrNull()
+    }
+
+    private fun pendingCloud(row: JSONObject, consent: GuardianCloudConsent, now: Long): JSONObject? {
+        val cloud = row.optJSONObject("cloud") ?: return null
+        return cloud.takeIf {
+            !row.optBoolean("deleted") && !row.has("ownerLabel") &&
+                row.optString("assessment") == GuardianAssessment.UNCERTAIN.name &&
+                it.optString("state") == GuardianCloudState.QUEUED.name && it.optString("consent") == consent.revision &&
+                rowConversation(row) in consent.scopes && it.getInt("attempts") < GuardianAutomaticCloudPolicy.MAX_ATTEMPTS &&
+                GuardianAutomaticCloudPolicy.validWindow(it.getLong("created"), now)
+        }
+    }
+
+    fun nextAutomaticCloud(now: Long): GuardianCloudWork? = synchronized(lock) {
+        val (config, consent) = currentCloudConsent() ?: return@synchronized null
+        for (row in read().asReversed()) {
+            val cloud = pendingCloud(row, consent, now)?.takeIf { it.getLong("next") <= now } ?: continue
+            return@synchronized GuardianCloudWork(row.getString("id"), cloud.getString("request"), consent.revision,
+                cloud.getLong("created"), config)
+        }
+        null
+    }
+
+    fun deferAutomaticCloud(work: GuardianCloudWork, now: Long, retry: Boolean) = synchronized(lock) {
+        val (_, consent) = currentCloudConsent() ?: return@synchronized
+        if (consent.revision != work.revision) return@synchronized
+        val rows = read()
+        val row = rows.firstOrNull { it.optString("id") == work.evidenceId } ?: return@synchronized
+        val cloud = pendingCloud(row, consent, now) ?: return@synchronized
+        if (cloud.getString("request") != work.requestId) return@synchronized
+        val attempts = cloud.getInt("attempts") + 1
+        val next = now + GuardianAutomaticCloudPolicy.backoff(attempts)
+        if (retry && attempts < GuardianAutomaticCloudPolicy.MAX_ATTEMPTS &&
+            GuardianAutomaticCloudPolicy.validWindow(work.createdAt, next)) {
+            cloud.put("attempts", attempts).put("next", next)
+        } else {
+            cloud.put("state", GuardianCloudState.UNAVAILABLE.name)
+        }
+        write(rows)
+    }
+
+    fun claimAutomaticCloud(work: GuardianCloudWork, now: Long): String? = synchronized(lock) {
+        val (config, consent) = currentCloudConsent() ?: return@synchronized null
+        if (config != work.configuration || consent.revision != work.revision) return@synchronized null
+        val rows = read()
+        val row = rows.firstOrNull { it.optString("id") == work.evidenceId } ?: return@synchronized null
+        val cloud = pendingCloud(row, consent, now) ?: return@synchronized null
+        if (cloud.getString("request") != work.requestId) return@synchronized null
+        val excerpt = automaticExcerpt(row) ?: return@synchronized null
+        // A crash after this durable claim is ambiguous. Never issue another paid POST for it.
+        cloud.put("state", GuardianCloudState.SENDING.name)
+        write(rows)
+        excerpt
+    }
+
+    fun automaticCloudMaySend(work: GuardianCloudWork) = synchronized(lock) {
+        val (config, consent) = currentCloudConsent() ?: return@synchronized false
+        if (config != work.configuration || consent.revision != work.revision) return@synchronized false
+        val row = read().firstOrNull { it.optString("id") == work.evidenceId && !it.optBoolean("deleted") }
+            ?: return@synchronized false
+        val cloud = row.optJSONObject("cloud")
+        rowConversation(row) in consent.scopes && !row.has("ownerLabel") &&
+            row.optString("assessment") == GuardianAssessment.UNCERTAIN.name &&
+            cloud?.optString("request") == work.requestId && cloud.optString("state") == GuardianCloudState.SENDING.name
+    }
+
+    fun finishAutomaticCloud(work: GuardianCloudWork, state: GuardianCloudState, advisory: GuardianCloudAdvisory?) = synchronized(lock) {
+        val rows = read()
+        val row = rows.firstOrNull { it.optString("id") == work.evidenceId && !it.optBoolean("deleted") } ?: return@synchronized
+        val cloud = row.optJSONObject("cloud") ?: return@synchronized
+        if (cloud.getString("request") != work.requestId || cloud.getString("state") != GuardianCloudState.SENDING.name) return@synchronized
+        cloud.put("state", state.name)
+        if (advisory != null) cloud.put("lesson", advisory.lesson.json()).put("model", advisory.model).put("completed", advisory.at)
+        if (!fits(rows)) {
+            cloud.remove("lesson")
+            cloud.put("state", GuardianCloudState.UNKNOWN.name)
+        }
+        write(rows)
     }
 
     private fun savedForTraining(row: JSONObject) = row.optBoolean("savedForTraining") || ownerLabel(row) != null
+
+    private fun recordOwnerLabel(row: JSONObject, label: GuardianAssessment?, at: Long) {
+        val previous = ownerLabel(row)
+        if (previous == label) return
+        val history = row.optJSONArray("learningHistory")
+        val saved = if (history == null) emptyList() else List(history.length(), history::getJSONObject)
+        val correction = JSONObject().put("at", at).put("label", label?.name ?: JSONObject.NULL)
+        row.put("learningHistory", JSONArray((saved + correction).takeLast(8)))
+        row.put("savedForTraining", true)
+        if (label == null) row.remove("ownerLabel")
+        else row.put("ownerLabel", label.name).put("trainedAt", at)
+    }
 
     fun saveInboxForTraining(id: String, label: GuardianAssessment?, days: Int, now: GuardianInboxClock): Boolean = synchronized(lock) {
         val rows = retainedRows(days, now.wall)
         val row = rows.firstOrNull { it.optString("id") == id && !it.optBoolean("deleted") } ?: return@synchronized false
         if (inboxRow(row, now).section == GuardianInboxSection.COOLING) return@synchronized false
         row.put("savedForTraining", true)
-        if (label != null) row.put("ownerLabel", label.name).put("trainedAt", now.wall)
+        if (label != null) recordOwnerLabel(row, label, now.wall)
         write(rows)
         true
     }
@@ -751,8 +926,7 @@ internal class GuardianCaptureStore private constructor(private val context: Con
         val row = rows.firstOrNull { it.optString("id") == id && !it.optBoolean("deleted") } ?: return@synchronized false
         if (inboxRow(row, now).section == GuardianInboxSection.COOLING) return@synchronized false
         val labelled = ownerLabel(row) != null
-        if (labelled) row.put("savedForTraining", true)
-        row.remove("ownerLabel")
+        if (labelled) recordOwnerLabel(row, null, now.wall)
         val standalone = forgetExample(row.getString("text"))
         if (labelled) write(rows)
         labelled || standalone
@@ -783,6 +957,7 @@ internal class GuardianCaptureStore private constructor(private val context: Con
         recordDeletions(rows.filter { it.optBoolean("deleted") })
         write(rows)
         scrubRecovery(erased)
+        if (erased.isNotEmpty()) readImpact(impactArchive(), now.wall)
         GuardianDeletion89(erased.size, trainingPreserved, held)
     }
 
@@ -896,6 +1071,10 @@ internal class GuardianCaptureStore private constructor(private val context: Con
             val candidates = runCatching { recoveryRows(copy) }.getOrNull() ?: continue
             for (row in candidates) if (validCapture(row) && row.getString("id") !in known) {
                 row.put("review", "archived")
+                row.optJSONObject("cloud")?.let { cloud ->
+                    if (cloud.optString("state") in setOf(GuardianCloudState.QUEUED.name, GuardianCloudState.SENDING.name))
+                        cloud.put("state", GuardianCloudState.LOCAL_ONLY.name)
+                }
                 val revised = rows + row
                 check(revised.size <= MAX_CAPTURE_RECORDS && fits(revised))
                 rows += row

@@ -47,7 +47,7 @@ import uk.co.traynor.privategallery.core.sanctuary.SanctuaryMode
 import uk.co.traynor.privategallery.core.sanctuary.SanctuaryPreset
 import uk.co.traynor.privategallery.core.sanctuary.SanctuaryStore
 
-/** Reviewed release-control instrumentation for original-key Build 88 to versionCode 89 upgrade.
+/** Reviewed release-control instrumentation for original-key Build 89 to versionCode 90 upgrade.
  * Captured and hash-checked before frozen application checkout; never modifies baseline app.
  */
 class UpgradeFixtureTest {
@@ -58,9 +58,9 @@ class UpgradeFixtureTest {
     private val candidateCode get() = checkNotNull(arguments.getString("candidateCode")).toInt()
     private fun guard() {
         check(context.packageName == "uk.co.traynor.privategallery.hiddenprototype")
-        check(baselineCode == 88 && candidateCode == 89)
+        check(baselineCode == 89 && candidateCode == 90)
     }
-    /** Disposable emulator only: exercise the immutable Build88 updater against controlled
+    /** Disposable emulator only: exercise the immutable Build89 updater against controlled
      * release responses and the real original-key candidate bytes. APK/signature validation,
      * FileProvider grants and Android PackageInstaller are the unmodified application paths.
      * The transport substitution lives only in this signed instrumentation process. */
@@ -70,7 +70,7 @@ class UpgradeFixtureTest {
         assertEquals(37,android.os.Build.VERSION.SDK_INT)
         val port=checkNotNull(arguments.getString("updateFixturePort")).toInt()
         check(port in 1024..65535)
-        val prefix="https://github.com/traynor1987/Private-gallery-/releases/download/v1.7.43/"
+        val prefix="https://github.com/traynor1987/Private-gallery-/releases/download/v1.7.44/"
         val routes=mapOf(
             "https://api.github.com/repos/traynor1987/Private-gallery-/releases/latest" to "/release.json",
             prefix+"private-gallery-release.apk" to "/candidate.apk",
@@ -119,24 +119,24 @@ class UpgradeFixtureTest {
         while(updateState().phase==uk.co.traynor.privategallery.core.update.UpdatePhase.CHECKING && SystemClock.elapsedRealtime()<checkDeadline)Thread.sleep(100)
         val available=updateState()
         assertEquals(uk.co.traynor.privategallery.core.update.UpdatePhase.AVAILABLE,available.phase)
-        assertEquals(89L,available.release?.versionCode)
-        assertEquals("1.7.43",available.release?.version?.raw)
+        assertEquals(90L,available.release?.versionCode)
+        assertEquals("1.7.44",available.release?.version?.raw)
         invoke("downloadUpdate")
         val deadline=SystemClock.elapsedRealtime()+180_000
         while(SystemClock.elapsedRealtime()<deadline) {
             val state=updateState()
             if(state.phase==uk.co.traynor.privategallery.core.update.UpdatePhase.INSTALLATION_REQUESTED) {
-                instrumentation.sendStatus(0,android.os.Bundle().apply{putString(android.app.Instrumentation.REPORT_KEY_STREAMRESULT,"NOVA_UPDATE_HANDOFF_READY original=88 candidate=89 transport=controlled-loopback apkVerification=unmodified\n")})
+                instrumentation.sendStatus(0,android.os.Bundle().apply{putString(android.app.Instrumentation.REPORT_KEY_STREAMRESULT,"NOVA_UPDATE_HANDOFF_READY original=89 candidate=90 transport=controlled-loopback apkVerification=unmodified\n")})
                 while(SystemClock.elapsedRealtime()<deadline)Thread.sleep(1000)
                 fail("Android package installation was not confirmed in time")
             }
-            assertTrue("Build88 updater failed: ${state.message}",state.phase in setOf(
+            assertTrue("Build89 updater failed: ${state.message}",state.phase in setOf(
                 uk.co.traynor.privategallery.core.update.UpdatePhase.DOWNLOADING,
                 uk.co.traynor.privategallery.core.update.UpdatePhase.VERIFYING,
                 uk.co.traynor.privategallery.core.update.UpdatePhase.READY))
             Thread.sleep(100)
         }
-        fail("Build88 download timed out")
+        fail("Build89 download timed out")
     }
 
     private fun hash(bytes: ByteArray) = MessageDigest.getInstance("SHA-256").digest(bytes).joinToString("") { "%02x".format(it) }
@@ -947,6 +947,9 @@ class UpgradeFixtureTest {
         assertEquals(guardianFixtureText, store.prepareInboxReview(row.id, 30, now)?.second)
         assertTrue(store.labelConversationMessage(row.id, GuardianAssessment.LOW_RISK, 30, now))
         assertEquals(GuardianAssessment.LOW_RISK, store.inboxRows(30, now).first { it.id == row.id }.ownerLabel)
+        val fixtureBackup = File(context.noBackupFilesDir, "guardian-recovery89/capture-0.enc")
+        check(!fixtureBackup.exists()) { "Expected a freshly seeded reproduction" }
+        File(context.noBackupFilesDir, GuardianCaptureStore.ARCHIVE_NAME).copyTo(fixtureBackup)
         return JSONObject().put("id", row.id).put("capturedAt", capturedAt).put("ciphertext", guardianArchiveHash())
     }
 

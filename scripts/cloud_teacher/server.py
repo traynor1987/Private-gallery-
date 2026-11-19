@@ -4,6 +4,7 @@ import hmac
 import hashlib
 import json
 import os
+import re
 import sqlite3
 import sys
 from collections import deque
@@ -134,8 +135,12 @@ class Handler(BaseHTTPRequestHandler):
             self.send_json({"status": "authenticated", "model": self.server.model,
                             "analysis_enabled": self.server.analysis_enabled,
                             "budget": report,
-                            "cloud_teacher": {"manual_only": True, "automatic_uploads": False,
-                                "monthly_maximum_micro_usd": 100_000_000}})
+                            "cloud_teacher": {
+                                "manual_only": not getattr(self.server, "automatic_analysis_enabled", False),
+                                "automatic_uploads": getattr(self.server, "automatic_analysis_enabled", False),
+                                "automatic_analysis_enabled": getattr(self.server, "automatic_analysis_enabled", False),
+                                "monthly_maximum_micro_usd": 100_000_000,
+                            }})
 
     def send_failure(self, code, reason):
         body = json.dumps({'error': reason, 'local_processing_available': True}).encode()
@@ -168,10 +173,17 @@ class Handler(BaseHTTPRequestHandler):
                 raise ValueError()
             data = json.loads(self.rfile.read(size))
             text = data["message"]
-            if (not isinstance(data,dict) or set(data)-{'message','consent','request_id','protocol_version'} or
+            if (not isinstance(data,dict) or set(data)-{'message','consent','request_id','protocol_version','mode'} or
                 data.get("consent") is not True or not isinstance(text, str) or not text.strip() or
                 not 0 < len(text) <= 4096 or type(data.get('protocol_version',2)) is not int or
                 data.get('protocol_version',2) != 2):
+                raise ValueError()
+            automatic = 'mode' in data
+            if automatic and (data['mode'] != 'automatic' or data.get('protocol_version') != 2 or
+                              'request_id' not in data or len(text) > 320 or
+                              not re.fullmatch(r"[A-Za-z .,!?;:'’-]+", text.replace("[redacted]", " ")) or
+                              re.search(r"[A-Za-z]\.[A-Za-z]", text) or
+                              re.search(r"\b(password|passcode|pin|otp|verification code|account number|bank|postcode|address|passport|secret|https?|www)\b", text, re.I)):
                 raise ValueError()
             digest = hmac.new(self.server.owner_token.encode(), text.encode(), hashlib.sha256).hexdigest()
             # Older clients have no request UUID. Their identical approved excerpt
@@ -182,6 +194,9 @@ class Handler(BaseHTTPRequestHandler):
             return
         if not self.server.analysis_enabled:
             self.send_failure(503, 'analysis_disabled')
+            return
+        if automatic and not getattr(self.server, "automatic_analysis_enabled", False):
+            self.send_failure(503, 'automatic_analysis_disabled')
             return
         if not self.server.limiter.admit():
             self.send_failure(429, 'request_rate_limited')
@@ -255,6 +270,7 @@ def configure(server, *, staging):
     server.model = "staging" if staging else os.environ["NOVA_CLOUD_TEACHER_MODEL"]
     # No assumed credit renewal. Configuration is explicit for each funded cycle.
     server.analysis_enabled = False
+    server.automatic_analysis_enabled = False
     if not staging and os.environ.get("NOVA_CLOUD_CREDIT_CYCLE"):
         server.output_tokens = int(os.environ.get("NOVA_CLOUD_MAX_OUTPUT_TOKENS", "1000"))
         server.reasoning_effort = os.environ.get("NOVA_CLOUD_REASONING_EFFORT")
@@ -278,6 +294,7 @@ def configure(server, *, staging):
             if not server.openai_key:
                 raise ValueError("OpenAI credential is empty")
             server.analysis_enabled = True
+            server.automatic_analysis_enabled = os.environ.get("NOVA_CLOUD_AUTOMATIC_APPROVED") == 'true'
     server.limiter = RequestLimiter()
 
 

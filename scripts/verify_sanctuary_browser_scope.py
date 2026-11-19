@@ -27,6 +27,9 @@ ALLOWED_GUARDIAN = {
     f"{CORE}/guardian/GuardianCapturePolicy.kt",
     f"{CORE}/guardian/GuardianCaptureStore.kt",
     f"{CORE}/guardian/GuardianRetention89.kt",
+    f"{CORE}/guardian/GuardianAutomaticCloudPolicy.kt",
+    f"{CORE}/guardian/GuardianAutomaticCloudSettings.kt",
+    f"{CORE}/guardian/GuardianCloudJob.kt",
     f"{CORE}/guardian/GuardianInboxPolicy.kt",
     f"{CORE}/guardian/GuardianLocalClassifier.kt",
     f"{CORE}/guardian/GuardianCallShield.kt",
@@ -128,8 +131,8 @@ CODE81_EXACT_ADAPTERS = {
     f"{CORE}/update/NovaUpdateDownloadInterface.kt": "20c22bc603b92356a5c3c89b97807e147918397b4d4ae7a0719cb685b7342ddf",
     f"{CORE}/brain/NovaBrainConnection.kt": "f25b14108639d83ce0bc38b1b6632b3faafdd25bfc4ed98e750b1d24e93de0af",
     f"{CORE}/brain/NovaBrainConnectionStore.kt": "f176c3e1fbf1c9ef4e89930338632940f95d8667da016df8a61d6474c3fbf321",
-    f"{CORE}/brain/CloudTeacherProtocol.kt": "14d31b33d81233dae587c07794b12a35c8ff11d9e175b074ed182c5412241f4a",
-    f"{CORE}/brain/CloudTeacherClient.kt": "dc5c929d5b027bb79d419599a05f6c24b8f2908b987ef302a23379d3c6d92beb",
+    f"{CORE}/brain/CloudTeacherProtocol.kt": "0c1ce2e743cf487e97141b89f0e0c7f581d7a408fce06f428369a98e95ffb22a",
+    f"{CORE}/brain/CloudTeacherClient.kt": "54830b041b5cf532aa8ac25909d7ebb05d078c6930a03e12bbd7743633ef1db9",
     f"{CORE}/brain/CloudTeacherStore.kt": "dbf532602efa25692f063d87b7328db8c5c7284172b5e08907e8320fb9b9bcdd",
     # Build85 updater-only adaptations, reviewed independently of encrypted engines.
     f"{CORE}/update/ReleaseUpdate.kt": "810b3488c5b4ee8cdd22f1922265be35c50c123842fda17ed0e173d341468f67",
@@ -153,8 +156,8 @@ for revision in (("HEAD",), ()):
     assert not unexpected, f"Unexpected protected-core changes: {sorted(unexpected)}"
 
 build_file = "app/build.gradle.kts"
-expected = original(build_file).replace("versionCode = 69", "versionCode = 89", 1).replace(
-    'versionName = "1.7.34"', 'versionName = "1.7.43"', 1,
+expected = original(build_file).replace("versionCode = 69", "versionCode = 90", 1).replace(
+    'versionName = "1.7.34"', 'versionName = "1.7.44"', 1,
 )
 debug_version = """
 // The isolated Fold preview advances independently of the production release.
@@ -228,6 +231,14 @@ expected_listener = ET.fromstring(f"""
 """)
 assert structure(listener) == structure(expected_listener)
 application.remove(listener)
+cloud_job, = [node for node in application.findall("service")
+              if node.get(ANDROID + "name") == ".core.guardian.GuardianCloudJob"]
+assert structure(cloud_job) == structure(ET.fromstring(f"""
+    <service xmlns:android="{ANDROID[1:-1]}" android:name=".core.guardian.GuardianCloudJob"
+        android:permission="android.permission.BIND_JOB_SERVICE" android:exported="false" />
+"""))
+application.remove(cloud_job)
+
 inbox, = [activity for activity in application.findall("activity")
           if activity.get(ANDROID + "name") == ".launcher.GuardianInboxActivity"]
 assert structure(inbox) == structure(ET.fromstring(f"""

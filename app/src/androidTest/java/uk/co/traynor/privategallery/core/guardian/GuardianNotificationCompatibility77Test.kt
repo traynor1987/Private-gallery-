@@ -219,7 +219,7 @@ class GuardianNotificationCompatibility77Test {
         }
     }
 
-    @Test fun mainMessagingFixturesReachEncryptedAwaitingAnalysisWithDndOffAndOn() {
+    @Test fun mainMessagingFixturesReachEncryptedLocalAssessmentWithDndOffAndOn() {
         val instrumentation = InstrumentationRegistry.getInstrumentation()
         val context = instrumentation.targetContext
         val manager = checkNotNull(context.getSystemService(NotificationManager::class.java))
@@ -274,18 +274,25 @@ class GuardianNotificationCompatibility77Test {
                 assertEquals("A harmless incoming fixture $index", event.entries.single().text)
                 val conversation = GuardianConversationKey(event.app, event.profileSerial, event.conversation)
                 GuardianCapture.record(context, event, conversation)
-                await("The durable Inbox and Home counts show the unclassified fixture under $mode DND") {
+                await("The durable Inbox and Home counts show the uncertain local assessment under $mode DND") {
                     val capture = GuardianCapture.state.value
-                    capture.retained == index + 1 && capture.inbox?.pending == index + 1
+                    capture.retained == index + 1 && capture.inbox?.protected == index + 1
                 }
                 val rows = GuardianCaptureStore(context).inboxRows(7, guardianInboxClock(context))
                 assertEquals(index + 1, rows.size)
-                assertTrue(rows.all { it.assessment == null && it.section == GuardianInboxSection.PENDING })
+                assertTrue(rows.all {
+                    it.assessment == GuardianAssessment.UNCERTAIN && it.section == GuardianInboxSection.PROTECTED &&
+                        it.captureAccount == "MAIN_WHATSAPP" && it.cloudState == null
+                })
+                val newest = rows.first()
+                assertEquals(event.entries.single().text, store.revealInboxMessage(newest.id, 7, guardianInboxClock(context)))
+                assertFalse(java.io.File(context.noBackupFilesDir, GuardianCaptureStore.ARCHIVE_NAME).readBytes()
+                    .toString(Charsets.UTF_8).contains(event.entries.single().text))
                 GuardianCapture.record(context, event, conversation)
                 await("A repeated delivery is recognised without adding another Inbox row") {
                     GuardianCapture.mainCaptureStage.value == GuardianCaptureStage.DUPLICATE
                 }
-                assertEquals(index + 1, GuardianCapture.state.value.inbox?.pending)
+                assertEquals(index + 1, GuardianCapture.state.value.inbox?.protected)
                 assertEquals(filter, manager.currentInterruptionFilter)
             }
         } finally {

@@ -34,6 +34,7 @@ internal data class CloudTeacherStatus(
     val dailyRequests: Long? = null,
     val monthlyRequests: Long? = null,
     val expiresAt: Long? = null,
+    val automaticAllowed: Boolean = false,
 ) {
     val canAnalyze: Boolean get() = analysisEnabled && !staging && !expired && !halted &&
         model in setOf("gpt-5-mini", "gpt-5-mini-2025-08-07") &&
@@ -90,7 +91,8 @@ internal data class CloudTeacherStatus(
                 budget?.amount("usage_reported_cost_micro_usd"), budget?.amount("approved_requests_remaining"),
                 budget?.getBoolean("expired") ?: true, budget?.optBoolean("paid_requests_halted", false) ?: false,
                 budget != null, activity?.amount("daily_reserved_micro_usd"), activity?.amount("daily_requests"),
-                activity?.amount("monthly_requests"), budget?.amount("expires_at"))
+                activity?.amount("monthly_requests"), budget?.amount("expires_at"),
+                value.optJSONObject("cloud_teacher")?.opt("automatic_analysis_enabled") == true)
         }
     }
 }
@@ -132,9 +134,10 @@ internal data class CloudLesson(val assessment: String, val patterns: List<Strin
     }
 }
 
-internal fun approvedCloudPayload(message: String, approved: Boolean, requestId: String): ByteArray {
+internal fun approvedCloudPayload(message: String, approved: Boolean, requestId: String, automatic: Boolean = false): ByteArray {
     require(approved && message.length in 1..4096 && message.isNotBlank())
     val identity = UUID.fromString(requestId).toString()
     return JSONObject().put("message", message).put("consent", true).put("request_id", identity)
-        .put("protocol_version", 2).toString().toByteArray(Charsets.UTF_8)
+        .put("protocol_version", 2).apply { if (automatic) put("mode", "automatic") }
+        .toString().toByteArray(Charsets.UTF_8)
 }

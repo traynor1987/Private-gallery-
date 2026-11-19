@@ -61,7 +61,9 @@ internal object GuardianCapture {
 
     fun isEnabled(context: Context) = prefs(context).getBoolean("enabled", false)
 
-    fun refresh(context: Context) = manage(context) { _, _ -> }
+    fun refresh(context: Context) = manage(context) { app, _ ->
+        runCatching { GuardianCloudJob.schedule(app) }
+    }
 
     private fun includesMain(context: Context) = prefs(context).getBoolean("include_main_whatsapp", false)
 
@@ -128,7 +130,12 @@ internal object GuardianCapture {
                 val captured = result.getOrNull()
                 if (captured != null && captured.added > 0) {
                     // Classification may fail independently. A durable row remains Awaiting Analysis.
-                    runCatching { store.assessCaptured(event, days, now) }
+                    val queued = runCatching {
+                        store.assessCaptured(event, days, now,
+                            automaticIds = if (captured.allDurable) captured.addedIds else emptySet(),
+                            classifyWithoutExamples = true)
+                    }.getOrDefault(false)
+                    if (queued) runCatching { GuardianCloudJob.schedule(app) }
                     if (captured.allDurable && !quietCollection && generation.get() == expected) runCatching {
                         val added = store.inboxRows(days, now).filter { it.id in captured.addedIds }
                         val row = added.maxByOrNull { guardianNoticeKind(it.assessment, it.patterns.orEmpty()).let { kind ->

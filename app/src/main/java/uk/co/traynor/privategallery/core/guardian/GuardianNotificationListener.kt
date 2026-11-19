@@ -53,7 +53,7 @@ internal class GuardianNotificationListener : NotificationListenerService() {
             ?: guardianDirectMessageIdentity(notification) ?: return null
         val entries = guardianCaptureEntries(notification)
         if (entries.isEmpty()) return null
-        return GuardianCaptureEvent(serial, identity, observedAt, entries, requiresContactConsent = true)
+        return GuardianCaptureEvent(serial, identity, observedAt, entries, requiresContactConsent = true, captureAccount = "DUAL_MESSENGER")
     }
 
     private fun captureFriendsMessage(sbn: StatusBarNotification, serial: Long, enabled: Boolean, discovering: Boolean) {
@@ -877,7 +877,7 @@ internal fun guardianMainNotificationEvent(
         ?: guardianDirectMessageIdentity(notification)
         ?: "notification:$notificationKey".takeIf { notificationKey.isNotBlank() && it.length <= 512 }
         ?: return null
-    return GuardianCaptureEvent(profileSerial, conversation, now, messages)
+    return GuardianCaptureEvent(profileSerial, conversation, now, messages, captureAccount = "MAIN_WHATSAPP")
 }
 
 private fun guardianDirectMessageIdentity(notification: Notification): String? = runCatching {

@@ -32,18 +32,21 @@ internal fun interface CloudTeacherTransport {
     fun execute(endpoint: URI, token: String, payload: ByteArray?): BrainResponse
 }
 
-/** Only manual approved POSTs; no automatic paid retry, including after a timeout. */
-internal class CloudTeacherClient(private val transport: CloudTeacherTransport = CloudTeacherTransport(::cloudRequest)) {
+/** Approved requests use the same server ledger. The transport never retries a paid POST. */
+internal class CloudTeacherClient(private val transport: CloudTeacherTransport = CloudTeacherTransport { endpoint, token, payload ->
+    cloudRequest(endpoint, token, payload)
+}) {
     fun status(configuration: NovaBrainConfiguration): CloudTeacherStatus {
         val response = execute(configuration, null, false)
         return try { CloudTeacherStatus.parse(response) }
         catch (_: Exception) { throw CloudTeacherException(CloudFailure.INVALID_STATUS) }
     }
     fun analyze(configuration: NovaBrainConfiguration, message: String, approved: Boolean, requestId: String,
-        status: CloudTeacherStatus, permission: () -> Boolean, cancelled: () -> Boolean = { false }): CloudReply {
+        status: CloudTeacherStatus, permission: () -> Boolean, cancelled: () -> Boolean = { false },
+        automatic: Boolean = false): CloudReply {
         if (cancelled()) throw CancellationException()
-        if (!status.canAnalyze || !permission()) throw CloudTeacherException(CloudFailure.DISABLED)
-        val payload = approvedCloudPayload(message, approved, requestId)
+        if (!status.canAnalyze || automatic && !status.automaticAllowed || !permission()) throw CloudTeacherException(CloudFailure.DISABLED)
+        val payload = approvedCloudPayload(message, approved, requestId, automatic)
         try {
             if (cancelled()) throw CancellationException()
             if (!permission()) throw CloudTeacherException(CloudFailure.DISABLED)
@@ -73,7 +76,7 @@ internal class CloudTeacherClient(private val transport: CloudTeacherTransport =
                     response.code == 402 -> CloudFailure.BUDGET
                     response.code == 409 -> CloudFailure.ALREADY_RESERVED
                     response.code == 429 -> CloudFailure.RATE_LIMIT
-                    reason == "analysis_disabled" -> CloudFailure.DISABLED
+                    reason in setOf("analysis_disabled", "automatic_analysis_disabled") -> CloudFailure.DISABLED
                     reason in setOf("pricing_verification_required","budget_reconciliation_required") -> CloudFailure.PRICING_REVIEW
                     paid -> CloudFailure.UNKNOWN_OUTCOME
                     else -> CloudFailure.OFFLINE
@@ -86,12 +89,15 @@ internal class CloudTeacherClient(private val transport: CloudTeacherTransport =
     }
 }
 
-private fun cloudRequest(endpoint: URI, token: String, payload: ByteArray?): BrainResponse {
+internal fun cloudRequest(endpoint: URI, token: String, payload: ByteArray?,
+    open: (java.net.URL) -> java.net.URLConnection = { it.openConnection() },
+    beforeBody: () -> Unit = {},
+): BrainResponse {
     require(endpoint.scheme == "https" && endpoint.host != null && endpoint.rawUserInfo == null &&
         endpoint.rawQuery == null && endpoint.rawFragment == null &&
         endpoint.rawPath == (if (payload == null) "/guardian/status" else "/guardian/analyze"))
     require(payload == null || payload.size in 1..32768)
-    val connection = endpoint.toURL().openConnection() as HttpsURLConnection
+    val connection = open(endpoint.toURL()) as HttpsURLConnection
     try {
         connection.instanceFollowRedirects = false
         connection.connectTimeout = 8000
@@ -105,7 +111,10 @@ private fun cloudRequest(endpoint: URI, token: String, payload: ByteArray?): Bra
             connection.doOutput = true
             connection.setRequestProperty("Content-Type", "application/json; charset=utf-8")
             connection.setFixedLengthStreamingMode(payload.size)
-            connection.outputStream.use { it.write(payload) }
+            connection.outputStream.use {
+                beforeBody()
+                it.write(payload)
+            }
         }
         val code = connection.responseCode
         require(connection.contentLengthLong <= 32768)

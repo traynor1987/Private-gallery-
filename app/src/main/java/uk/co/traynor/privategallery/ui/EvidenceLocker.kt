@@ -217,6 +217,13 @@ internal fun EvidenceLocker(controller:EvidenceController,onClose:()->Unit,onImp
          onAi={query="";page="Nova AI"},onNewIncident={incidentForm()},onArchive=onOpenArchive,onRefresh={controller.refresh()},
          onConnect={choice="Connect collections"},onPhotos=onImportPhotos,onReview={choice="Review queue"})
        }
+       if(controller.access.owner==EvidenceCatalog.Owner.PRIMARY) {
+        item {
+         TextButton(onClick={
+          if(controller.current()) GuardianInboxActivity.openEvidence(context)
+         }) { Text("Guardian captured evidence") }
+        }
+       }
        item {
         EvidenceConnectedSummary(state,suggestionCount=incidentSuggestions.size,onRetry=controller::syncCollections,
          onPause=controller::cancelCollectionSync)

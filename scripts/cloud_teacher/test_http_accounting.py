@@ -58,6 +58,22 @@ class HttpAccountingTest(unittest.TestCase):
             upstream.assert_called_once()
         self.assertEqual(self.server.budget.status()['reserved_upper_bound_micro_usd'],338)
 
+    def test_automatic_mode_requires_separate_server_approval_and_uses_same_ledger(self):
+        identity = str(uuid4())
+        automatic = {'mode': 'automatic', 'protocol_version': 2}
+        with patch('server.analyze', return_value=AnalysisResult(LESSON, 338)) as upstream:
+            self.assertEqual(self.send(identity, **automatic)[0], 503)
+            self.assertEqual(self.server.budget.status()['reserved_upper_bound_micro_usd'], 0)
+            upstream.assert_not_called()
+            self.server.automatic_analysis_enabled = True
+            self.assertEqual(self.send(identity, message='My password is secret', **automatic)[0], 400)
+            self.assertEqual(self.send(identity, message='Call 07123456789', **automatic)[0], 400)
+            self.assertEqual(self.send(identity, message='Visit example.com please', **automatic)[0], 400)
+            self.assertEqual(self.send(identity, **automatic)[0], 200)
+            self.assertEqual(self.send(identity, **automatic)[0], 409)
+            upstream.assert_called_once()
+        self.assertEqual(self.server.budget.status()['reserved_upper_bound_micro_usd'], 338)
+
     def test_concurrent_duplicates_dispatch_exactly_one_paid_request(self):
         identity=str(uuid4())
         with patch('server.analyze',return_value=AnalysisResult(LESSON,338)) as upstream:
