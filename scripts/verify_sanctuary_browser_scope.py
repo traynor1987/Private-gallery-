@@ -125,8 +125,11 @@ CODE81_EXACT_ADAPTERS = {
     # Build86 reviewed connectivity/presentation adapters; encrypted engines remain pinned above.
     f"{CORE}/update/UpdateTransferMeter.kt": "aa36c46552d3e3b037457d6e5719fed323c215e0538b3fe3aa06d77f704090bb",
     f"{CORE}/update/NovaUpdateDownloadInterface.kt": "20c22bc603b92356a5c3c89b97807e147918397b4d4ae7a0719cb685b7342ddf",
-    f"{CORE}/brain/NovaBrainConnection.kt": "fa9ac8743138c2fabc32688ccb8316ee3859335f444d5dd2536935646ebff83e",
+    f"{CORE}/brain/NovaBrainConnection.kt": "f25b14108639d83ce0bc38b1b6632b3faafdd25bfc4ed98e750b1d24e93de0af",
     f"{CORE}/brain/NovaBrainConnectionStore.kt": "f176c3e1fbf1c9ef4e89930338632940f95d8667da016df8a61d6474c3fbf321",
+    f"{CORE}/brain/CloudTeacherProtocol.kt": "14d31b33d81233dae587c07794b12a35c8ff11d9e175b074ed182c5412241f4a",
+    f"{CORE}/brain/CloudTeacherClient.kt": "dc5c929d5b027bb79d419599a05f6c24b8f2908b987ef302a23379d3c6d92beb",
+    f"{CORE}/brain/CloudTeacherStore.kt": "dbf532602efa25692f063d87b7328db8c5c7284172b5e08907e8320fb9b9bcdd",
     # Build85 updater-only adaptations, reviewed independently of encrypted engines.
     f"{CORE}/update/ReleaseUpdate.kt": "810b3488c5b4ee8cdd22f1922265be35c50c123842fda17ed0e173d341468f67",
     f"{CORE}/update/UpdateInstallPolicy.kt": "480a2268b8326ab01c3775947811da8f6de201171a21c9f64ff6b58887956083",
@@ -149,8 +152,8 @@ for revision in (("HEAD",), ()):
     assert not unexpected, f"Unexpected protected-core changes: {sorted(unexpected)}"
 
 build_file = "app/build.gradle.kts"
-expected = original(build_file).replace("versionCode = 69", "versionCode = 87", 1).replace(
-    'versionName = "1.7.34"', 'versionName = "1.7.41"', 1,
+expected = original(build_file).replace("versionCode = 69", "versionCode = 88", 1).replace(
+    'versionName = "1.7.34"', 'versionName = "1.7.42"', 1,
 )
 debug_version = """
 // The isolated Fold preview advances independently of the production release.

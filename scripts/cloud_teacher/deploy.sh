@@ -2,7 +2,7 @@
 set -euo pipefail
 cd "$(dirname "$0")"
 tag=$(git rev-parse HEAD)
-[[ -z "$(git status --porcelain -- Dockerfile compose.yaml server.py budget.py)" ]]
+[[ -z "$(git status --porcelain -- Dockerfile compose.yaml server.py budget.py protocol.py)" ]]
 export NOVA_IMAGE_TAG="$tag"
 config=${NOVA_CONFIG_DIR:-/etc/nova-cloud-teacher}
 # Staging on the current host is loopback-only and must not enable API spending.

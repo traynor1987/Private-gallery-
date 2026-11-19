@@ -66,6 +66,7 @@ class GuardianInboxActivity : ComponentActivity() {
     private var busy by mutableStateOf(false)
     private var confirmDelete by mutableStateOf(false)
     private var settingsOpen by mutableStateOf(false)
+    private var cloudHistoryOpen by mutableStateOf(false)
     private var impactSettings by mutableStateOf(PersonalImpactSettings())
     private var impactSuggestions by mutableStateOf<List<String>>(emptyList())
     private var impactMessage by mutableStateOf<String?>(null)
@@ -127,6 +128,7 @@ class GuardianInboxActivity : ComponentActivity() {
                     loadArchive({ store, _, _ -> store.monitoredContacts() }) { contacts = it; contactsOpen = true }
                 }
                 "call-shield" -> callShieldOpen = true
+                "cloud-history" -> cloudHistoryOpen = true
             }
             intent.removeExtra(OPEN_SETTINGS)
             if (!busy) refresh()
@@ -264,6 +266,7 @@ class GuardianInboxActivity : ComponentActivity() {
         failure = null
         confirmDelete = false
         settingsOpen = false
+        cloudHistoryOpen = false
         impactSettings = PersonalImpactSettings()
         impactSuggestions = emptyList()
         impactMessage = null
@@ -482,6 +485,12 @@ class GuardianInboxActivity : ComponentActivity() {
                 }) { Text("Delete all feedback") }
             },
             dismissButton = { TextButton(onClick = { clearImpactOpen = false }) { Text("Cancel") } },
+        )
+
+        if (cloudHistoryOpen && canReview()) CloudTeacherHistory(
+            canUse = { cloudHistoryOpen && canReview() },
+            onClose = { cloudHistoryOpen = false },
+            onManageLearning = { cloudHistoryOpen = false; settingsOpen = true },
         )
 
         if (validationOpen && canReview()) {

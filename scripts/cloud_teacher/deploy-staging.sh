@@ -2,7 +2,7 @@
 set -euo pipefail
 cd "$(dirname "$0")"
 
-[[ -z "$(git status --porcelain -- Dockerfile compose.staging.yaml server.py budget.py deploy-staging.sh)" ]]
+[[ -z "$(git status --porcelain -- Dockerfile compose.staging.yaml server.py budget.py protocol.py deploy-staging.sh)" ]]
 export NOVA_STAGING_IMAGE_TAG="$(git rev-parse HEAD)"
 compose=(docker compose --project-name nova-cloud-teacher-staging --file compose.staging.yaml)
 
