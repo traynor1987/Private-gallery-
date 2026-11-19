@@ -21,6 +21,13 @@ class Build89ReleaseControls(unittest.TestCase):
         self.assertNotEqual(previous, expected)
         self.assertEqual(expected, (ROOT/path).read_text())
 
+    def test_single_bracket_shell_conditions_never_embed_boolean_operators(self):
+        import yaml
+        workflow = yaml.safe_load((ROOT / '.github/workflows/fast-development.yml').read_text())
+        for job in workflow['jobs'].values():
+            for step in job.get('steps', []):
+                self.assertNotRegex(step.get('run', ''), r'(?<!\[)\[[^\[\]\n]*(?:&&|\|\|)[^\[\]\n]*\](?!\])', step.get('name'))
+
     def test_current_candidate_and_baseline_are_consistent_across_existing_controls(self):
         build = (ROOT / 'app/build.gradle.kts').read_text()
         self.assertRegex(build, r'versionCode\s*=\s*89\b')
