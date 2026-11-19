@@ -65,8 +65,8 @@ internal class GuardianNotificationListener : NotificationListenerService() {
             GuardianCapture.offerContact(GuardianContact(key, name ?: "Dual Messenger conversation"))
         }
         if (enabled) {
-            GuardianCapture.record(this, event, key) {
-                if (friendsDismissalEnabled(this)) dismissStoredWhatsApp(sbn, event, null, false, friends = true)
+            GuardianCapture.record(this, event, key) { outcome ->
+                if (friendsDismissalEnabled(this)) dismissStoredWhatsApp(sbn, event, null, outcome, friends = true)
             }
         }
     }
@@ -153,7 +153,7 @@ internal class GuardianNotificationListener : NotificationListenerService() {
             !GuardianCapture.isEnabled(this)
         ) return
         GuardianCapture.record(this, event, GuardianConversationKey(event.app, event.profileSerial, event.conversation)) {
-            quiet -> dismissStoredWhatsApp(sbn, event, null, quiet)
+            outcome -> dismissStoredWhatsApp(sbn, event, null, outcome)
         }
     }
 
@@ -303,8 +303,8 @@ internal class GuardianNotificationListener : NotificationListenerService() {
                     val armed = currentMainTest(this, sbn.key)?.takeIf { test ->
                         guardianMatchesLatestTestMessage(received, test.message)
                     }
-                    val onDurable: ((Boolean) -> Unit)? = if (isWhatsApp && account == ProbeAccount.MAIN) {
-                        { quietCollection -> dismissStoredWhatsApp(sbn, received, armed, quietCollection) }
+                    val onDurable: ((GuardianDurableNotification) -> Unit)? = if (isWhatsApp && account == ProbeAccount.MAIN) {
+                        { outcome -> dismissStoredWhatsApp(sbn, received, armed, outcome) }
                     } else null
                     GuardianCapture.record(this, received, GuardianConversationKey(received.app, serial, received.conversation), onDurable)
                 } else if (isWhatsApp) GuardianCapture.noteMainCapture(GuardianCaptureStage.NO_MESSAGE)
@@ -325,7 +325,7 @@ internal class GuardianNotificationListener : NotificationListenerService() {
         original: StatusBarNotification,
         captured: GuardianCaptureEvent,
         armed: GuardianMainDismissalTest?,
-        quietCollection: Boolean,
+        outcome: GuardianDurableNotification,
         friends: Boolean = false,
     ) {
         if (connectedListener !== this || !hasAccess(this) ||
@@ -333,9 +333,14 @@ internal class GuardianNotificationListener : NotificationListenerService() {
         val test = armed != null
         if (armed != null) {
             if (currentMainTest(this, original.key) !== armed || !guardianMatchesLatestTestMessage(captured, armed.message)) return
-        } else if (friends) {
-            if (!friendsDismissalEnabled(this)) return
-        } else if (!quietCollection && !automaticDismissalEnabled(this)) return
+        } else {
+            val automatic = if (friends) friendsDismissalEnabled(this) else automaticDismissalEnabled(this)
+            if (!guardianDismissalAllowed(automatic, outcome.quietCollection, outcome.held != null)) {
+                reportMainDismissal(if (outcome.held == null) "No active hold · original notification kept"
+                    else "Dismissal is off · original notification kept")
+                return
+            }
+        }
         val current = runCatching { getActiveNotifications(arrayOf(original.key)).singleOrNull() }.getOrElse {
             reportMainDismissal("Android could not check the active notification")
             return
@@ -406,6 +411,10 @@ internal class GuardianNotificationListener : NotificationListenerService() {
             }
             reportMainDismissal(message)
             status.value = status.value.copy(mainTestRemoved = mainTestRemoved)
+            if (verified && !test && !outcome.quietCollection && outcome.added) outcome.held?.let { held ->
+                // The replacement is posted only after Android confirms removal of the exact original.
+                runCatching { uk.co.traynor.privategallery.launcher.GuardianSafeNotifications.post(this, held) }
+            }
             retry?.invoke()
         }
         if (runCatching { cancelNotification(current.key) }.isFailure) {

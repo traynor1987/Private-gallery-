@@ -39,6 +39,12 @@ internal data class GuardianCaptureEvent(
 
 internal data class GuardianCaptureResult(val added: Int, val retained: Int, val partial: Boolean, val allDurable: Boolean = false, val addedIds: Set<String> = emptySet())
 
+internal data class GuardianCaptureDiagnostics(
+    val lastCaptureAt: Long?,
+    val decision: String?,
+    val lastCloudAt: Long?,
+)
+
 internal data class GuardianInboxRow(
     val id: String, val time: Long, val section: GuardianInboxSection, val remainingMillis: Long,
     val assessment: GuardianAssessment? = null,
@@ -56,7 +62,12 @@ internal data class GuardianInboxRow(
     val partialCapture: Boolean? = null,
     val learningRevisions: Int = 0,
     val localModelVersion: Int? = null,
+    val assessmentReason: GuardianAssessmentReason? = null,
 )
+
+internal fun GuardianInboxRow.noticeKind(): GuardianNoticeKind =
+    guardianNoticeKind(assessment, if (assessmentReason != null && assessment != GuardianAssessment.UPSETTING)
+        emptySet() else patterns.orEmpty())
 
 /** The export only needs section membership and layout-local list keys. */
 internal fun guardianDiagnosticRows(rows: List<GuardianInboxRow>): List<GuardianInboxRow> =
@@ -533,10 +544,10 @@ internal class GuardianCaptureStore private constructor(private val context: Con
         val row = rows.firstOrNull { it.getString("id") == id && !it.optBoolean("deleted") }
             ?: return@synchronized null
         if (inboxRow(row, now).section == GuardianInboxSection.COOLING) return@synchronized null
-        val assessment = classifyGuardian(row.getString("text"), examples(rows), contextFor(row, rows), rowSensitivity(row))
-        applyAssessment(row, assessment, now)
+        val decision = guardianContentDecision(row.getString("text"), examples(rows), contextFor(row, rows), rowSensitivity(row))
+        applyAssessment(row, decision, now)
         write(rows)
-        assessment
+        decision.assessment
     }
 
     fun append(event: GuardianCaptureEvent, days: Int, now: Long, assess: Boolean = true, clock: GuardianInboxClock = GuardianInboxClock(now, 0L, -1)): GuardianCaptureResult = synchronized(lock) {
@@ -563,8 +574,8 @@ internal class GuardianCaptureStore private constructor(private val context: Con
             row.put("patterns", JSONArray(recogniseNovaBrainPatterns(entry.text).map { it.name }))
             guardianSenderDisplayName(entry.displayName)?.let { row.put("displayName", it) }
             if (assess && id !in existing && id !in incoming && examples.isNotEmpty()) {
-                val assessment = classifyGuardian(entry.text, examples, contextFor(row, live + incoming.values), event.sensitivity)
-                applyAssessment(row, assessment, clock)
+                val decision = guardianContentDecision(entry.text, examples, contextFor(row, live + incoming.values), event.sensitivity)
+                applyAssessment(row, decision, clock)
             }
             incoming.putIfAbsent(id, row)
         }
@@ -602,9 +613,9 @@ internal class GuardianCaptureStore private constructor(private val context: Con
         for (row in rows) {
             if (row.getString("id") !in ids || row.optBoolean("deleted") || row.has("assessment") ||
                 inboxRow(row, now).section == GuardianInboxSection.COOLING) continue
-            val assessment = classifyGuardian(row.getString("text"), learned, contextFor(row, rows), rowSensitivity(row))
-            applyAssessment(row, assessment, now)
-            if (row.getString("id") == automaticId && assessment == GuardianAssessment.UNCERTAIN && consent != null &&
+            val decision = guardianContentDecision(row.getString("text"), learned, contextFor(row, rows), rowSensitivity(row))
+            applyAssessment(row, decision, now)
+            if (row.getString("id") == automaticId && decision.assessment == GuardianAssessment.UNCERTAIN && consent != null &&
                 rowConversation(row) in consent.scopes && !row.optBoolean("partialCapture")) {
                 val eligible = pending < GuardianAutomaticCloudPolicy.MAX_PENDING && automaticExcerpt(row) != null
                 row.put("cloud", JSONObject().put("state", if (eligible) GuardianCloudState.QUEUED.name else GuardianCloudState.LOCAL_ONLY.name)
@@ -616,6 +627,30 @@ internal class GuardianCaptureStore private constructor(private val context: Con
         }
         if (changed) write(rows)
         queued
+    }
+
+    fun notificationRows(event: GuardianCaptureEvent, days: Int, now: GuardianInboxClock): List<GuardianInboxRow> =
+        synchronized(lock) {
+            val ids = event.entries.mapTo(HashSet()) { identity(event, it) }
+            retainedRows(days, now.wall).filter { it.getString("id") in ids && !it.optBoolean("deleted") }
+                .map { inboxRow(it, now, days) }
+        }
+
+    fun captureDiagnostics(now: GuardianInboxClock): GuardianCaptureDiagnostics = synchronized(lock) {
+        val rows = read().filterNot { it.optBoolean("deleted") }
+        val latest = rows.maxByOrNull { it.getLong("capturedAt") }
+        val state = latest?.let { inboxRow(it, now) }
+        GuardianCaptureDiagnostics(
+            state?.arrivedAt,
+            state?.let { row ->
+                val disposition = if (row.section == GuardianInboxSection.COOLING) "Held for review" else "No active content hold"
+                listOfNotNull(disposition, row.assessmentReason?.label ?: row.assessment?.label).joinToString(" · ")
+            },
+            rows.mapNotNull { row ->
+                row.optJSONObject("cloud")?.takeIf { it.optString("state") == GuardianCloudState.COMPLETE.name }
+                    ?.optLong("completed")?.takeIf { it > 0 }
+            }.maxOrNull(),
+        )
     }
 
     fun summary(days: Int, now: Long): Int = synchronized(lock) { retainedRows(days, now).count { !it.optBoolean("deleted") } }
@@ -651,8 +686,8 @@ internal class GuardianCaptureStore private constructor(private val context: Con
         val initial = inboxRow(stored, now)
         if (initial.section == GuardianInboxSection.COOLING) return@synchronized null
         if (initial.assessment == null) {
-            val assessment = classifyGuardian(stored.getString("text"), examples(rows), contextFor(stored, rows), rowSensitivity(stored))
-            applyAssessment(stored, assessment, now)
+            val decision = guardianContentDecision(stored.getString("text"), examples(rows), contextFor(stored, rows), rowSensitivity(stored))
+            applyAssessment(stored, decision, now)
             write(rows)
         }
         val revised = inboxRow(stored, now)
@@ -706,17 +741,18 @@ internal class GuardianCaptureStore private constructor(private val context: Con
             .edit().putBoolean("use_local_context", enabled).commit())
     }
 
-    private fun applyAssessment(row: JSONObject, assessment: GuardianAssessment, now: GuardianInboxClock) {
+    private fun applyAssessment(row: JSONObject, decision: GuardianContentDecision, now: GuardianInboxClock) {
+        val (assessment, reason) = decision
         if (!row.has("patterns")) {
             row.put("patterns", JSONArray(recogniseNovaBrainPatterns(row.getString("text")).map { it.name }))
         }
         if (!row.has("originalAssessment")) {
-            val previous = row.optString("assessment").takeIf { row.optInt("assessmentVersion") == 1 }
+            val previous = row.optString("assessment").takeIf { row.optInt("assessmentVersion") in 1..2 }
             row.put("originalAssessment", previous ?: assessment.name)
         }
-        row.put("assessment", assessment.name).put("assessmentVersion", 1)
-        if (!row.has("hold") && (assessment == GuardianAssessment.UPSETTING ||
-                assessment == GuardianAssessment.UNCERTAIN && row.optBoolean("holdUncertain"))) startHold(row, now)
+        row.put("assessment", assessment.name).put("assessmentVersion", 2).put("assessmentReason", reason.name)
+        if (!row.has("hold") && !row.optBoolean("holdReviewed") &&
+            guardianPolicyHolds(assessment, row.optBoolean("holdUncertain"))) startHold(row, now)
     }
 
     private fun startHold(row: JSONObject, now: GuardianInboxClock) {
@@ -745,9 +781,10 @@ internal class GuardianCaptureStore private constructor(private val context: Con
     }
 
     private fun inboxRow(row: JSONObject, now: GuardianInboxClock, days: Int = 0): GuardianInboxRow {
-        val assessment = if (row.optInt("assessmentVersion") == 1)
+        val assessment = if (row.optInt("assessmentVersion") in 1..2)
             GuardianAssessment.entries.firstOrNull { it.name == row.optString("assessment") } else null
         val review = row.optString("review")
+        val reason = GuardianAssessmentReason.entries.firstOrNull { it.name == row.optString("assessmentReason") }
         val hold = row.optJSONObject("hold")?.let {
             GuardianInboxHold(it.getLong("wall"), it.getLong("elapsed"), it.getInt("boot"))
         } ?: if (assessment == GuardianAssessment.UPSETTING && !row.optBoolean("holdReviewed")) {
@@ -757,7 +794,8 @@ internal class GuardianCaptureStore private constructor(private val context: Con
         val archived = review == "archived" || review != "restored" && !savedForTraining(row) &&
             GuardianRetention89.archiveAfter(days, row.getLong("capturedAt"), now.wall) == 0L
         val section = guardianInboxSection(hold?.takeIf { remaining > 0 || !archived },
-            review == "ready" || assessment == GuardianAssessment.LOW_RISK, now, archived)
+            review == "ready" || assessment == GuardianAssessment.LOW_RISK ||
+                (reason != null && assessment == GuardianAssessment.UNCERTAIN), now, archived)
         return GuardianInboxRow(row.getString("id"), row.getLong("messageAt"),
             if (section == GuardianInboxSection.PENDING && assessment == GuardianAssessment.UNCERTAIN)
                 GuardianInboxSection.PROTECTED else section, remaining, assessment,
@@ -774,7 +812,7 @@ internal class GuardianCaptureStore private constructor(private val context: Con
             cloudState(row, now.wall), row.optString("captureAccount").takeIf(String::isNotBlank),
             if (row.has("partialCapture")) row.optBoolean("partialCapture") else null,
             row.optJSONArray("learningHistory")?.length() ?: 0,
-            row.optInt("assessmentVersion").takeIf { it > 0 })
+            row.optInt("assessmentVersion").takeIf { it > 0 }, reason)
     }
 
     private fun rowConversation(row: JSONObject) = GuardianConversationKey(

@@ -249,13 +249,14 @@ class GuardianNotificationCompatibility77Test {
             val filters = listOf("all" to NotificationManager.INTERRUPTION_FILTER_ALL,
                 "priority" to NotificationManager.INTERRUPTION_FILTER_PRIORITY)
             filters.forEachIndexed { index, (mode, filter) ->
+                val incoming = if (index == 0) "Hi" else "An unfamiliar incoming fixture"
                 val command = shell("cmd notification set_dnd $mode")
                 await("Android applied $mode DND mode. $command") {
                     manager.currentInterruptionFilter == filter && GuardianNotificationListener.state.value.filter == filter
                 }
                 val now = System.currentTimeMillis()
                 val style = Notification.MessagingStyle(local)
-                    .addMessage("A harmless incoming fixture $index", now - 2, sender)
+                    .addMessage(incoming, now - 2, sender)
                     .addMessage("An outgoing fixture", now - 1, local)
                 // Some delivered MessagingStyle notifications omit both category and a stable conversation ID.
                 val builder = Notification.Builder(context, "fixture").setStyle(style)
@@ -271,20 +272,25 @@ class GuardianNotificationCompatibility77Test {
                 assertNull(guardianMainNotificationEvent(notification, main, GUARDIAN_WHATSAPP, false, 0, key, now))
                 val event = checkNotNull(guardianMainNotificationEvent(notification, main, GUARDIAN_WHATSAPP, true, 0, key, now))
                 assertEquals(if (index == 0) "notification:$key" else "shortcut:enrolled-by-app", event.conversation)
-                assertEquals("A harmless incoming fixture $index", event.entries.single().text)
+                assertEquals(incoming, event.entries.single().text)
                 val conversation = GuardianConversationKey(event.app, event.profileSerial, event.conversation)
-                GuardianCapture.record(context, event, conversation)
-                await("The durable Inbox and Home counts show the uncertain local assessment under $mode DND") {
+                val result = java.util.concurrent.atomic.AtomicReference<GuardianDurableNotification>()
+                GuardianCapture.record(context, event, conversation, result::set)
+                await("The durable Inbox and notification decision expose the message under $mode DND") {
                     val capture = GuardianCapture.state.value
-                    capture.retained == index + 1 && capture.inbox?.protected == index + 1
+                    capture.retained == index + 1 && capture.inbox?.ready == index + 1 && result.get() != null
                 }
+                assertNull(result.get().held)
+                assertFalse(guardianDismissalAllowed(automatic = true,
+                    quietCollection = result.get().quietCollection, held = false))
                 val rows = GuardianCaptureStore(context).inboxRows(7, guardianInboxClock(context))
                 assertEquals(index + 1, rows.size)
-                assertTrue(rows.all {
-                    it.assessment == GuardianAssessment.UNCERTAIN && it.section == GuardianInboxSection.PROTECTED &&
-                        it.captureAccount == "MAIN_WHATSAPP" && it.cloudState == null
-                })
+                assertTrue(rows.all { it.section == GuardianInboxSection.READY &&
+                    it.captureAccount == "MAIN_WHATSAPP" && it.cloudState == null })
                 val newest = rows.first()
+                assertEquals(if (index == 0) GuardianAssessment.LOW_RISK else GuardianAssessment.UNCERTAIN, newest.assessment)
+                assertEquals(if (index == 0) GuardianAssessmentReason.ROUTINE else GuardianAssessmentReason.INSUFFICIENT_CONTEXT,
+                    newest.assessmentReason)
                 assertEquals(event.entries.single().text, store.revealInboxMessage(newest.id, 7, guardianInboxClock(context)))
                 assertFalse(java.io.File(context.noBackupFilesDir, GuardianCaptureStore.ARCHIVE_NAME).readBytes()
                     .toString(Charsets.UTF_8).contains(event.entries.single().text))
@@ -292,7 +298,7 @@ class GuardianNotificationCompatibility77Test {
                 await("A repeated delivery is recognised without adding another Inbox row") {
                     GuardianCapture.mainCaptureStage.value == GuardianCaptureStage.DUPLICATE
                 }
-                assertEquals(index + 1, GuardianCapture.state.value.inbox?.protected)
+                assertEquals(index + 1, GuardianCapture.state.value.inbox?.ready)
                 assertEquals(filter, manager.currentInterruptionFilter)
             }
         } finally {

@@ -95,7 +95,7 @@ internal object GuardianSafeNotifications {
         }
         if (!settings.getBoolean(key, false) || !mayPost(context)) return
         val now = java.time.LocalTime.now()
-        val kind = guardianNoticeKind(row.assessment, row.patterns.orEmpty())
+        val kind = row.noticeKind()
         val quiet = settings.getBoolean("quiet", false) && guardianNoticeQuietMinute(
             now.hour * 60 + now.minute,
             settings.getInt("quiet_start_minute", settings.getInt("quiet_start", 22) * 60),

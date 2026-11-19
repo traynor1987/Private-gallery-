@@ -19,6 +19,13 @@ internal data class GuardianCaptureHealth(
     val inbox: GuardianInboxCounts? = null,
     val learningCount: Int? = null,
     val includesMain: Boolean = false,
+    val diagnostics: GuardianCaptureDiagnostics? = null,
+)
+
+internal data class GuardianDurableNotification(
+    val quietCollection: Boolean,
+    val held: GuardianInboxRow?,
+    val added: Boolean,
 )
 
 /** Serialises settings, archive writes and deletion without blocking Android's listener callbacks. */
@@ -90,7 +97,8 @@ internal object GuardianCapture {
         }
     }
 
-    fun record(context: Context, event: GuardianCaptureEvent, monitored: GuardianConversationKey, onDurable: ((Boolean) -> Unit)? = null) {
+    fun record(context: Context, event: GuardianCaptureEvent, monitored: GuardianConversationKey,
+        onDurable: ((GuardianDurableNotification) -> Unit)? = null) {
         val app = context.applicationContext
         val expected = generation.get()
         val isWhatsApp = event.app == GUARDIAN_WHATSAPP
@@ -128,7 +136,7 @@ internal object GuardianCapture {
                     store.append(selected, days, now.wall, assess = false, clock = now)
                 }
                 val captured = result.getOrNull()
-                if (captured != null && captured.added > 0) {
+                if (captured != null && (captured.added > 0 || captured.allDurable)) {
                     // Classification may fail independently. A durable row remains Awaiting Analysis.
                     val queued = runCatching {
                         store.assessCaptured(event, days, now,
@@ -136,22 +144,15 @@ internal object GuardianCapture {
                             classifyWithoutExamples = true)
                     }.getOrDefault(false)
                     if (queued) runCatching { GuardianCloudJob.schedule(app) }
-                    if (captured.allDurable && !quietCollection && generation.get() == expected) runCatching {
-                        val added = store.inboxRows(days, now).filter { it.id in captured.addedIds }
-                        val row = added.maxByOrNull { guardianNoticeKind(it.assessment, it.patterns.orEmpty()).let { kind ->
-                            when (kind) {
-                                GuardianNoticeKind.HIGH -> 3
-                                GuardianNoticeKind.UPSETTING -> 2
-                                GuardianNoticeKind.UNCERTAIN -> 1
-                                GuardianNoticeKind.LOW -> 0
-                            }
-                        } }
-                        if (row != null) uk.co.traynor.privategallery.launcher.GuardianSafeNotifications.post(app, row)
-                    }
                 }
                 if (captured?.allDurable == true && onDurable != null && generation.get() == expected) {
+                    val held = runCatching { store.notificationRows(event, days, now) }.getOrDefault(emptyList())
+                        .filter { it.section == GuardianInboxSection.COOLING }
+                        .maxWithOrNull(compareBy<GuardianInboxRow> { it.noticeKind() == GuardianNoticeKind.HIGH }
+                            .thenBy { it.time })
+                    val outcome = GuardianDurableNotification(quietCollection, held, held != null && held.id in captured.addedIds)
                     Handler(Looper.getMainLooper()).post {
-                        if (generation.get() == expected && isEnabled(app)) onDurable(quietCollection)
+                        if (generation.get() == expected && isEnabled(app)) onDurable(outcome)
                     }
                 }
                 val counts = runCatching { store.inboxCounts(days, now) }.getOrNull()
@@ -170,6 +171,7 @@ internal object GuardianCapture {
                     inbox = counts,
                     learningCount = runCatching { store.learningCount() }.getOrNull(),
                     includesMain = includeMain,
+                    diagnostics = runCatching { store.captureDiagnostics(now) }.getOrNull(),
                 )
             } finally {
                 pendingEvents.decrementAndGet()
@@ -197,7 +199,8 @@ internal object GuardianCapture {
             val counts = result.getOrNull()
             val retained = counts?.total
             status.value = GuardianCaptureHealth(isEnabled(app), retention(app), retained, result.isFailure, inbox = counts,
-                learningCount = runCatching { store.learningCount() }.getOrNull(), includesMain = includesMain(app))
+                learningCount = runCatching { store.learningCount() }.getOrNull(), includesMain = includesMain(app),
+                diagnostics = runCatching { store.captureDiagnostics(guardianInboxClock(app)) }.getOrNull())
         }
     }
 

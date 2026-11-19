@@ -9,10 +9,10 @@ internal enum class NovaBrainPattern(val label: String, expression: String) {
     PASSIVE_AGGRESSION("Passive aggression", "fine,? whatever you say"),
     COERCION("Coercion", "do as i say or else"),
     BOUNDARY_PRESSURE("Boundary pressure", "i don(?:'t| not) care if you said no|i won't take no for an answer"),
-    THREAT("Threat", "i(?:'ll| will) (?:hurt|hit|kill) you"),
-    INSULT("Insult", "you(?:'re| are) (?:a )?(?:worthless idiot|stupid idiot)");
+    THREAT("Threat", "i(?:'ll| will|'m going to| am going to) (?:hurt|hit|kill) you"),
+    INSULT("Insult", "you(?:'re| are) (?:(?:an? )?(?:(?:worthless|stupid) idiot|idiot)|worthless|pathetic)");
 
-    private val cue = Regex("(?:^|[.!?]\\s+)(?:$expression)\\b", RegexOption.IGNORE_CASE)
+    private val cue = Regex("(?:^|[.!?;,]\\s+)(?:$expression)\\b", RegexOption.IGNORE_CASE)
 
     fun matches(text: String): Boolean = cue.containsMatchIn(text)
 }

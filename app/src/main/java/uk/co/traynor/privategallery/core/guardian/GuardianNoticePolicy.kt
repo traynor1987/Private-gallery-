@@ -15,6 +15,12 @@ internal fun guardianNoticeKind(assessment: GuardianAssessment?, patterns: Set<N
         else -> GuardianNoticeKind.UNCERTAIN
     }
 
+internal fun guardianPolicyHolds(assessment: GuardianAssessment?, holdUncertain: Boolean): Boolean =
+    assessment == GuardianAssessment.UPSETTING || assessment == GuardianAssessment.UNCERTAIN && holdUncertain
+
+internal fun guardianDismissalAllowed(automatic: Boolean, quietCollection: Boolean, held: Boolean): Boolean =
+    quietCollection || (automatic && held)
+
 internal fun guardianNoticeProfile(profile: Long, own: Long?, friends: Long?): ProbeAccount {
     if (own == null || own < 0) return ProbeAccount.UNRESOLVED
     return probeAccount(profile == own, profile, friends)

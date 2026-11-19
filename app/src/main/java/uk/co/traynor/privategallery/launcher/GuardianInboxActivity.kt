@@ -663,7 +663,7 @@ class GuardianInboxActivity : ComponentActivity() {
     @Composable
     private fun ColumnScope.SafeCentre() {
         val filtered = rows.filter {
-            safeCategory == null || safeCategory == guardianNoticeKind(it.assessment, it.patterns.orEmpty())
+            safeCategory == null || safeCategory == it.noticeKind()
         }
         val date = remember { DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT) }
         LazyColumn(Modifier.fillMaxWidth().weight(1f).testTag("guardian-safe-centre"),
@@ -688,7 +688,7 @@ class GuardianInboxActivity : ComponentActivity() {
                 }
             }
             items(filtered, key = { it.id }) { row ->
-                val kind = guardianNoticeKind(row.assessment, row.patterns.orEmpty())
+                val kind = row.noticeKind()
                 val color = when (kind) {
                     GuardianNoticeKind.LOW -> GuardianMint
                     GuardianNoticeKind.UPSETTING, GuardianNoticeKind.HIGH -> androidx.compose.ui.graphics.Color(0xFFFFC879)
@@ -815,6 +815,8 @@ class GuardianInboxActivity : ComponentActivity() {
         val caption = when {
             redacted -> "Preview redacted"
             row.assessment == null -> "Awaiting analysis · preview hidden"
+            row.assessment == GuardianAssessment.UNCERTAIN && row.section == GuardianInboxSection.READY ->
+                "Uncertain · available to read"
             row.assessment == GuardianAssessment.UNCERTAIN -> "Uncertain · preview hidden until reviewed"
             else -> "Content hidden until reviewed"
         }
@@ -977,6 +979,7 @@ class GuardianInboxActivity : ComponentActivity() {
             row.captureAccount?.let { Text(if (it == "MAIN_WHATSAPP") "Main WhatsApp" else "Dual Messenger") }
             if (row.partialCapture == true) Text("Partial notification capture")
             Text("Local assessment · ${row.assessment?.label ?: "Pending"}")
+            row.assessmentReason?.let { Text(it.label) }
             if (row.learningRevisions > 0) {
                 Text("Owner label · ${row.ownerLabel?.label ?: "Cleared"} · ${row.learningRevisions} recent changes")
             }

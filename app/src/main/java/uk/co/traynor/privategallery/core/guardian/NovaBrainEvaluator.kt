@@ -9,7 +9,7 @@ internal data class NovaBrainValidationMessage(
     val evidenceId: String? = null,
 )
 
-internal const val NOVA_BRAIN_VALIDATION_VERSION = 2
+internal const val NOVA_BRAIN_VALIDATION_VERSION = 3
 
 internal data class NovaBrainCategoryResult(val truePositive: Int, val falsePositive: Int, val falseNegative: Int)
 
@@ -49,15 +49,13 @@ internal fun evaluateNovaBrain(
     }
 
     val predictions = holdout.map { it.expectedPatterns to recogniseNovaBrainPatterns(it.text) }
-    val flagged = holdout.mapIndexed { index, row ->
-        predictions[index].second.isNotEmpty() ||
-            classifyGuardian(row.text, examples) == GuardianAssessment.UPSETTING
-    }
+    val flagged = holdout.map { classifyGuardian(it.text, examples) == GuardianAssessment.UPSETTING }
     val truePositives = holdout.indices.count { holdout[it].expectedPatterns.isNotEmpty() && flagged[it] }
     val falsePositives = holdout.indices.count { holdout[it].expectedPatterns.isEmpty() && flagged[it] }
     val falseNegatives = positives - truePositives
-    val baselineTrue = predictions.count { (expected, actual) -> expected.isNotEmpty() && actual.isNotEmpty() }
-    val baselineFalse = predictions.count { (expected, actual) -> expected.isEmpty() && actual.isNotEmpty() }
+    val baseline = holdout.map { classifyGuardian(it.text, emptyList()) == GuardianAssessment.UPSETTING }
+    val baselineTrue = holdout.indices.count { holdout[it].expectedPatterns.isNotEmpty() && baseline[it] }
+    val baselineFalse = holdout.indices.count { holdout[it].expectedPatterns.isEmpty() && baseline[it] }
     fun f1(tp: Int, fp: Int) = 2.0 * tp / (tp + fp + positives)
     val categoryResults = NovaBrainPattern.entries.associateWith { category ->
         NovaBrainCategoryResult(
