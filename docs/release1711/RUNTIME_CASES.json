@@ -2,7 +2,8 @@
   "uk.co.traynor.privategallery.core.guardian.GuardianEvidence90RuntimeTest": [
     "archiveRestoreAndRevocationKeepTheOriginalWithoutRequeuing",
     "bundledNotificationHistoryNeverQueuesPastExcerpts",
-    "durableEvidenceAndQueueShareTheOriginalRecordAcrossReopenAndDeletion"
+    "durableEvidenceAndQueueShareTheOriginalRecordAcrossReopenAndDeletion",
+    "greetingsRemainVisibleAndEncryptedEvenWithCloudConsentAndUncertainHold"
   ],
   "uk.co.traynor.privategallery.core.guardian.GuardianRetention89RuntimeTest": [
     "activeHoldsCannotBeRevealedTaughtOrBulkDeleted",

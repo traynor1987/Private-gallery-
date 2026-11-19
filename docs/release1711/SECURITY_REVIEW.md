@@ -1,48 +1,51 @@
-# NovaOS 1.7.44 (Build 90) release review
+# NovaOS 1.7.45 (Build 91) release review
 
-Source: b7390f3717bdf4ecc7b905ff265232e0fba80618
+Source: 022061984debb59f69d917f225ac08f1bfedfe82
 Authorization: authenticated owner push
 Release scope: public stable after disposable upgrade verification
 Physical Fold acceptance: pending
-Upgrade fixture SHA-256: 7d6dab6b3aa68a2d1f74df6e1d1069d575faf46f8173f000adde27e2f0042cb9
-Upgrade controls SHA-256: bf5ba91741435d31594da0cface3a14a973c782a806c6328018062189a713210
-Runtime matrix SHA-256: e11825f5d7458d3683dd771fcf2e62421b11f84ee03b448129c419e3d00a8cb0
-Runtime workflow run: 44542743754
-Runtime branch: feature/novaos-guardian-evidence90
-Signing workflow SHA-256: 736b844822ee9b198140eefa82a5b0767225a17723bcfa1bc43e2c88bf950300
+Upgrade fixture SHA-256: a137143347bb9eb0b3b0dfed7e201db386418f4fe60b35c3b7df12830c76d348
+Upgrade controls SHA-256: 62054b8efa4f9c830f4c222221fb5cb474dab92d8514a56206b6f2a02018dc98
+Runtime matrix SHA-256: 5470a97cdfe0e2ce863c69122fab33bebed7dbbade6e07e1b04a3d4a95b441ac
+Runtime workflow run: 44587356051
+Runtime branch: feature/novaos-guardian-reliability91
+Signing workflow SHA-256: e3e429d603d10986d6003b5bf7adac924c9bed8504ae1e3d8c495d51798436a3
 
-Guardian and Primary Evidence Locker access the same authenticated encrypted
-notification capture by its existing stable ID. The app writes evidence before
-classification, dismissal or cloud work. Build 89 fixed destructive expiry and
-the 256-row limit. Existing encrypted captures, recovery copies and Android
-Keystore identity carry forward without a migration. Actual owner-message
-recovery depends on the authenticated on-device evidence scan. Inbox windows,
-archiving, restored visibility, saved originals and deliberate deletion are
-separate. Individual and bulk permanent deletion erase the capture, its local
-correction history, linked personal impact feedback and queued cloud state.
-The existing bounded archive refuses new capture before evicting existing data.
+Tagged Build 90 reversibly reproduced the owner-observed Hi defect. The local
+nearest-example model returned UNCERTAIN with zero features. WhatsApp automatic
+dismissal did not require a hold, and the Nova alert could replace the ordinary
+source notification with a privacy-only summary. Build 91 recognises routine
+greetings and requests before any delivery decision. Uncertainty is available
+immediately unless the owner has explicitly selected an uncertain-message hold.
+Direct threats and insults retain protection. Corrections use the single
+encrypted learning store. Short approved examples are exact matches, and the
+held-out evaluation uses the same classifier and invalidates prior metrics.
 
-Automatic Cloud Assistance is default-off, requires disclosure and conversation
-approval, and processes a single bounded uncertain WhatsApp excerpt. The queue
-shares the encrypted evidence record. Two authenticated checks on the same
-validated network are ten seconds apart. Preflight retry is bounded. A durable
-request claim, final scope check and existing server identity reservation prevent
-blind paid resubmission. Automatic advisories never set owner labels or alter
-Guardian protection. The backend uses its existing SQLite ledger and an explicit
-automatic-analysis server flag. The current deployment, any real provider credit
-and live authorized paid analysis remain unverified. No deployment or live paid
-request was made. The Shift Tracker Web 2.1.251 source snapshot at
-74407ea5fc3315eca571227f67b1275188b6d2be contains the actual uncached 204 probe,
-ten-second interval, five-minute deadline, and duplicate-probe protection.
-Its current probe passed all 80 synthetic offline, rejection, timeout and
-healthy checks, and the three original routing retry tests passed. The source handover identifies the first-request gate as Build 200 and
-its zero-cost manual recheck as Build 201. The newer archived web snapshot
-was the independently tested source.
+Only durable, exact, still-active originals can be dismissed for an active
+hold or an explicit quiet-collection rule, with the existing test-token path.
+A replacement is issued only after Android confirms removal. Secret source
+notifications are ineligible. Listener reconnection considers eligible recent
+default SMS as well as WhatsApp. All known source permissions, identity checks,
+Sanctuary and DND policy are preserved. UI decision diagnostics never record
+message text or credentials.
 
-CI passed 342 selected Android 17 cases, 63 focused report
-groups, 772 JVM tests, protected-core verification and real Backup
+Capture, Evidence Locker links, archive windows, encrypted retention and the
+recovery journal are preserved. The in-app test uses an authentic Build 90
+APK with populated synthetic encrypted Guardian, Evidence Locker, learning and
+Vault fixtures. Missing owner data can only be determined by an authenticated
+on-device scan of valid encrypted recovery copies.
+
+Backend tests cover the existing staging, authentication, two-step connectivity
+policy, opt-in, reservations, deduplication, and privacy limits. The public VPS
+health endpoint responded over valid TLS and anonymous status access returned
+401. No live production authentication, paid analysis or deployment change
+was performed. Physical Main and Dual Messenger notification acceptance on the
+owner's Fold remains pending.
+
+CI passed 343 selected Android 17 cases, 63 focused report
+groups, 775 JVM tests, protected-core verification and real Backup
 and launcher restart checks. The production gate requires an in-place upgrade
-from authentic original-key Build 89 into Build 90 using its existing updater
+from authentic original-key Build 90 into Build 91 using its existing updater
 and Android installer. Populated encrypted Guardian, Vault, Evidence and local
 learning fixtures must remain readable after restart. Public publication requires
 the same verified normal APK, integrity metadata and post-publication native
