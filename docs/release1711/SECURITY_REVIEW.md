@@ -9,7 +9,7 @@ Upgrade controls SHA-256: 62054b8efa4f9c830f4c222221fb5cb474dab92d8514a56206b6f2
 Runtime matrix SHA-256: 5470a97cdfe0e2ce863c69122fab33bebed7dbbade6e07e1b04a3d4a95b441ac
 Runtime workflow run: 44587356051
 Runtime branch: feature/novaos-guardian-reliability91
-Signing workflow SHA-256: e3e429d603d10986d6003b5bf7adac924c9bed8504ae1e3d8c495d51798436a3
+Signing workflow SHA-256: 6bf8116446826d92451e1c0147fd45fef96a3983e2ca49869d4f33e2380c8d81
 
 Tagged Build 90 reversibly reproduced the owner-observed Hi defect. The local
 nearest-example model returned UNCERTAIN with zero features. WhatsApp automatic
@@ -51,3 +51,12 @@ learning fixtures must remain readable after restart. Public publication require
 the same verified normal APK, integrity metadata and post-publication native
 update test. This review records implementation evidence and does not claim
 independent review or physical owner acceptance.
+
+The original signing run #47 authenticated the Build 90 baseline and passed the
+populated encrypted upgrade and restart. The staging verifier rejected the
+stale versionCode=90 metadata field before publication. The staging metadata
+now uses versionCode=91. A regression test executes the actual metadata
+generator and checks its result against the signing version configuration.
+The Android application tree and upgrade fixture remain byte-identical to the
+reviewed source. The existing protected signer will produce a fresh verified
+artifact and retain the signed APK only after staging checks pass.

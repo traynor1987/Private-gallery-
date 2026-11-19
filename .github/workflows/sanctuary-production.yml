@@ -288,7 +288,7 @@ jobs:
           root=Path(sys.argv[1])
           digest=(root/'private-gallery-release.apk.sha256').read_text().split()[0]
           (root/'private-gallery-release.metadata.json').write_text(json.dumps({
-            'package':'uk.co.traynor.privategallery','versionName':'1.7.45','versionCode':90,
+            'package':'uk.co.traynor.privategallery','versionName':'1.7.45','versionCode':91,
             'certificateSha256':'94f2bfc6567f26d067d29077111cfd0ce86d38263c642ad115e43365f05b0d17',
             'apkSha256':digest,
           },indent=2)+'\n')

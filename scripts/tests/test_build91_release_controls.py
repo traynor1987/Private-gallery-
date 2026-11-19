@@ -47,6 +47,29 @@ class Build91ReleaseControls(unittest.TestCase):
         for text in ("installed() == 90", "installed() != 91", "1.7.45 · Build 91 available", "1.7.45 · Up to date", 'baseline_code=90, installed_code=91'):
             self.assertIn(text, live)
 
+    def test_staging_metadata_uses_the_same_candidate_identity_as_signing(self):
+        import json
+        import sys
+        import tempfile
+        import yaml
+
+        workflow = yaml.safe_load((ROOT / '.github/workflows/sanctuary-production.yml').read_text())
+        stage = next(step['run'] for step in workflow['jobs']['sanctuary-production']['steps']
+                     if step.get('name') == 'Stage and verify stable update assets')
+        generator = stage.split('python3 - "$stage" <<\'PY\'\n', 1)[1].split('\nPY\n', 1)[0]
+        configuration = dict(line.split('=', 1) for line in
+                             (ROOT / 'scripts/release_configuration1711.sh').read_text().splitlines()
+                             if line.startswith(('release_version=', 'release_code=')))
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            digest = 'a' * 64
+            (root / 'private-gallery-release.apk.sha256').write_text(f'{digest}  private-gallery-release.apk\n')
+            subprocess.run([sys.executable, '-c', generator, directory], check=True)
+            metadata = json.loads((root / 'private-gallery-release.metadata.json').read_text())
+            self.assertEqual(configuration['release_version'], metadata['versionName'])
+            self.assertEqual(int(configuration['release_code']), metadata['versionCode'])
+            self.assertEqual(digest, metadata['apkSha256'])
+
     def test_retention_preparation_run_remains_bound_to_exact_source_and_main_ancestry(self):
         import tempfile
         from scripts.tests.test_code81_main_release_controls import gate
