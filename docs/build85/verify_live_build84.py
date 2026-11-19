@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Drive authentic production Build88's UI against the published public feed on disposable API37.
+"""Drive authentic production Build89's UI against the published public feed on disposable API37.
 
 No instrumentation, substituted transport, secondary test app, app data editing, uninstall,
 or replacement adb installation is used. The Android installer performs the update.
@@ -228,34 +228,34 @@ def main():
     wait_device_ready()
     require(installed() is None, 'Production package must be absent initially; never clear/uninstall')
     candidate = json.loads(args.candidate.read_text())
-    require(candidate['tag'] == 'v1.7.43' and candidate['version_code'] == 89, 'Wrong release candidate')
+    require(candidate['tag'] == 'v1.7.44' and candidate['version_code'] == 90, 'Wrong release candidate')
     release = public_release(args.output)
     require(release['tag_name'] == candidate['tag'] and not release['draft'] and not release['prerelease'], 'Not the actual latest stable release')
     apk = next(a for a in release['assets'] if a['name'] == 'private-gallery-release.apk')
     require(apk['digest'] == 'sha256:' + candidate['apk_sha256'], 'Live APK differs from the verified candidate')
     (args.output / 'live-release.json').write_text(json.dumps(release, indent=2)+'\n')
-    baseline = args.output.parent / 'authentic-build87.apk'
+    baseline = args.output.parent / 'authentic-build89.apk'
     fetch(baseline, Path(os.environ['ANDROID_HOME']) / 'build-tools/36.0.0')
     adb('install', '--no-streaming', baseline)
-    require(installed() == 88, 'Authentic Build88 installation not observed')
+    require(installed() == 89, 'Authentic Build89 installation not observed')
     adb('shell', 'svc', 'power', 'stayon', 'true')
     adb('shell', 'input', 'keyevent', 'KEYCODE_WAKEUP')
     adb('shell', 'wm', 'dismiss-keyguard')
     # This changes only the disposable emulator's ordinary install-source permission.
     adb('shell', 'appops', 'set', PACKAGE, 'REQUEST_INSTALL_PACKAGES', 'allow')
     before = open_updates(allow_setup=True)
-    require(has(before, '1.7.42 · Build 88'), 'Build88 screen does not identify its real installed version')
-    # Installed Build88 starts its first real check on About entry. Wait for
+    require(has(before, '1.7.43 · Build 89'), 'Build89 screen does not identify its real installed version')
+    # Installed Build89 starts its first real check on About entry. Wait for
     # that completed result before exercising the explicit check action.
-    before = wait_for(lambda t: has(t, '1.7.43 · Build 89 available'), 'Build88 automatic first check')
-    save_ui(before, args.output / 'build87-first-public-discovery.xml')
+    before = wait_for(lambda t: has(t, '1.7.44 · Build 90 available'), 'Build89 automatic first check')
+    save_ui(before, args.output / 'build89-first-public-discovery.xml')
     click(reveal_action('Check for updates'), 'Check for updates')
     updates_summary()
-    available = wait_for(lambda t: has(t, '1.7.43 · Build 89 available'), 'Build88 real public update discovery')
-    save_ui(available, args.output / 'build87-live-update-available.xml')
-    print('PASS: authentic installed Build88 discovers Build89 through its real UI and public GitHub feed', flush=True)
+    available = wait_for(lambda t: has(t, '1.7.44 · Build 90 available'), 'Build89 real public update discovery')
+    save_ui(available, args.output / 'build89-live-update-available.xml')
+    print('PASS: authentic installed Build89 discovers Build90 through its real UI and public GitHub feed', flush=True)
     download = reveal_action('Download update')
-    save_ui(download, args.output / 'build87-live-download-action.xml')
+    save_ui(download, args.output / 'build89-live-download-action.xml')
     click(download, 'Download update')
     installers = {'com.android.packageinstaller', 'com.google.android.packageinstaller', 'com.android.permissioncontroller'}
     installer = wait_for(lambda t: any(n.get('package') in installers and n.get('text') in ('Update', 'Install') for n in t.iter('node')), 'real verified download and Android installer', 240)
@@ -263,23 +263,23 @@ def main():
     action = next(n for n in installer.iter('node') if n.get('package') in installers and n.get('text') in ('Update', 'Install'))
     tap(action)
     deadline = time.monotonic() + 120
-    while installed() != 89:
-        require(time.monotonic() < deadline, 'Android did not report installed Build89')
+    while installed() != 90:
+        require(time.monotonic() < deadline, 'Android did not report installed Build90')
         time.sleep(1)
     (args.output / 'live-update-installed.json').write_text(json.dumps({'result': 'INSTALLED', 'installed_code': installed(), 'source': candidate['source'], 'apk_sha256': candidate['apk_sha256'], 'live_github_discovery': 'PASS', 'live_download': 'PASS', 'android_installer': 'confirmed', 'restart_review': 'pending'}, indent=2)+'\n')
     adb('shell', 'am', 'force-stop', PACKAGE)
     after = open_updates(allow_setup=False)
-    require(has(after, '1.7.43 · Build 89'), 'Restart did not show the installed Build89')
-    # PackageManager has already confirmed88. Explicitly refresh the real feed
+    require(has(after, '1.7.44 · Build 90'), 'Restart did not show the installed Build90')
+    # PackageManager has already confirmed89. Explicitly refresh the real feed
     # after restart as well as verifying the installed version.
-    after = wait_for(lambda t: has(t, '1.7.43 · Up to date'), 'installed-version confirmation')
+    after = wait_for(lambda t: has(t, '1.7.44 · Up to date'), 'installed-version confirmation')
     click(reveal_action('Check for updates'), 'Check for updates')
     updates_summary()
-    after = wait_for(lambda t: has(t, '1.7.43 · Build 89') and has(t, '1.7.43 · Up to date'), 'Build89 real up-to-date screen')
-    save_ui(after, args.output / 'build88-live-up-to-date.xml')
-    receipt = dict(schema=1, result='PASS', source=candidate['source'], apk_sha256=candidate['apk_sha256'], baseline_code=88, installed_code=89, live_github_discovery='PASS', live_download='PASS', android_installer='confirmed', restart_and_same_pin='PASS', up_to_date_screen='PASS', instrumentation='none', physical_fold='owner_confirmation_pending')
+    after = wait_for(lambda t: has(t, '1.7.44 · Build 90') and has(t, '1.7.44 · Up to date'), 'Build90 real up-to-date screen')
+    save_ui(after, args.output / 'build89-live-up-to-date.xml')
+    receipt = dict(schema=1, result='PASS', source=candidate['source'], apk_sha256=candidate['apk_sha256'], baseline_code=89, installed_code=90, live_github_discovery='PASS', live_download='PASS', android_installer='confirmed', restart_and_same_pin='PASS', up_to_date_screen='PASS', instrumentation='none', physical_fold='owner_confirmation_pending')
     (args.output / 'live-upgrade.json').write_text(json.dumps(receipt, indent=2)+'\n')
-    print('PASS: real public in-app Build88 -> Android installer -> installed Build89 -> restart -> Up to date', flush=True)
+    print('PASS: real public in-app Build89 -> Android installer -> installed Build90 -> restart -> Up to date', flush=True)
 
 if __name__ == '__main__':
     try:

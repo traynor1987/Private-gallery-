@@ -100,6 +100,11 @@ internal fun EvidenceLocker(controller:EvidenceController,onClose:()->Unit,onImp
      })
     Text(if(controller.access.owner==EvidenceCatalog.Owner.PRIMARY)"Primary · encrypted local evidence"else"Hidden · encrypted local evidence",style=MaterialTheme.typography.labelLarge)
     FlowRow(horizontalArrangement=Arrangement.spacedBy(4.dp)) {listOf("Home","Evidence","Timeline","Nova AI").forEach{target->FilterChip(selected=page==target,onClick={page=target;evidenceId=null;incidentId=null},label={Text(target)})}}
+    if(controller.access.owner==EvidenceCatalog.Owner.PRIMARY && page in setOf("Home","Evidence") && evidenceId==null) {
+     TextButton(onClick={
+      if(controller.current()) uk.co.traynor.privategallery.launcher.GuardianInboxActivity.openEvidence(context)
+     }) { Text("Guardian captured evidence") }
+    }
     if(state.busy)LinearProgressIndicator(Modifier.fillMaxWidth())
     if(catalog==null){Text("Opening encrypted catalogue…");return@Column}
     val busy=state.busy

@@ -21,6 +21,8 @@ internal fun GuardianRetentionScreen89(
     onRetention: (Int) -> Unit, onOpen: (GuardianInboxRow) -> Unit,
     onDelete: (Set<String>, Boolean) -> Unit, onArchive: (Set<String>) -> Unit,
     onInspect: () -> Unit, onRestore: () -> Unit,
+    title: String = "Messages, retention & recovery",
+    storageBytes: Long? = null,
 ) {
     var selected by remember { mutableStateOf(emptySet<String>()) }
     var trainingOnly by remember { mutableStateOf(false) }
@@ -30,7 +32,7 @@ internal fun GuardianRetentionScreen89(
     val visible = rows.filter { !trainingOnly || it.savedForTraining }
     LazyColumn(Modifier.fillMaxSize().testTag("guardian-retention89"), verticalArrangement = Arrangement.spacedBy(10.dp),
         contentPadding = PaddingValues(bottom = 20.dp)) {
-        item { GuardianCard("Messages, retention & recovery") {
+        item { GuardianCard(title) {
             Text("${rows.size} encrypted captures · ${rows.count { it.savedForTraining }} saved for training")
             Text("${GuardianRetention89.label(days)}. Timed messages move to History; no automatic permanent deletion.")
             Text("History keeps the encrypted original. Hiding notification previews does not delete it. Only a confirmed permanent deletion erases a capture.")
@@ -44,6 +46,7 @@ internal fun GuardianRetentionScreen89(
             Text("Capture retention is separate from Android alert timeout and Personal Impact feedback retention.")
         } }
         item { GuardianCard("Encrypted storage & recovery") {
+            storageBytes?.let { Text("Encrypted capture storage · " + android.text.format.Formatter.formatFileSize(androidx.compose.ui.platform.LocalContext.current, it)) }
             Text("Storage is bounded. If full, new captures fail visibly; existing messages are never evicted. Saved training originals survive Inbox clearing. Deleting learning labels does not delete originals.")
             TextButton(enabled = !busy, onClick = onInspect) { Text("Check encrypted storage & recovery") }
             report?.let {
@@ -77,7 +80,7 @@ internal fun GuardianRetentionScreen89(
     }
     if (deleting) GuardianAlertDialog(onDismissRequest = { deleting = false }, title = { Text("Permanently delete selected captures?") },
         text = { Column {
-            Text("Ordinary captures and their on-device recovery copies will be erased. Saved training originals are kept in History unless you explicitly include them. Active holds are skipped. Separate Evidence Locker items and external backups are unchanged.")
+            Text("Ordinary captures and their on-device recovery copies will be erased. Saved training originals are kept in History unless you explicitly include them. Active holds are skipped. Independent Evidence Locker files and external backups are separate. An excerpt already processed by the VPS or OpenAI cannot be recalled here.")
             Row { Checkbox(deleteTraining, { deleteTraining = it }); Text("Also permanently delete saved training originals and their Inbox learning labels") }
         } }, confirmButton = { TextButton(enabled = !busy, onClick = { deleting = false; onDelete(selected, deleteTraining); selected = emptySet() }) { Text("Permanently delete") } },
         dismissButton = { TextButton(onClick = { deleting = false }) { Text("Cancel") } })
@@ -85,4 +88,16 @@ internal fun GuardianRetentionScreen89(
         text = { Text("Restore only missing, authenticated originals from protected on-device copies into History. Known deletion tombstones are respected. Old copies may predate an earlier deletion whose tombstone no longer exists. Nothing is uploaded or invented.") },
         confirmButton = { TextButton(enabled = !busy, onClick = { restoring = false; onRestore() }) { Text("Restore to History") } },
         dismissButton = { TextButton(onClick = { restoring = false }) { Text("Cancel") } })
+}
+
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+internal fun GuardianEvidenceNavigation(inbox: () -> Unit, evidence: () -> Unit, teach: () -> Unit, learning: () -> Unit) {
+    FlowRow(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+        TextButton(onClick = inbox) { Text("Inbox") }
+        TextButton(onClick = evidence) { Text("Evidence") }
+        TextButton(onClick = teach) { Text("Teach Guardian") }
+        TextButton(onClick = learning) { Text("Learning") }
+    }
 }

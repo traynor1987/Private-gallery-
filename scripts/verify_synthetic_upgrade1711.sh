@@ -5,10 +5,10 @@ set -euo pipefail
 control_root=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 cd "${PRIVATE_GALLERY_1711_ROOT:-$control_root/..}"
 source "$control_root/release_configuration1711.sh"
-[[ "$baseline_code" == 88 && "$release_code" == 89 && "$baseline_sha" == 430774e549a86d5c0db159ec24230bc4ac05bbc3 ]]
-archived_baseline="${PRIVATE_GALLERY_1711_BASELINE_APK:?Exact published signed 1.7.42 Build 88 APK required}"
+[[ "$baseline_code" == 89 && "$release_code" == 90 && "$baseline_sha" == 699bc866905c52c46dfca44a397ea36bb225c471 ]]
+archived_baseline="${PRIVATE_GALLERY_1711_BASELINE_APK:?Exact published signed 1.7.43 Build 89 APK required}"
 [[ -f "$archived_baseline" && -s "$archived_baseline" ]] || { echo 'Archived baseline APK unavailable' >&2; exit 1; }
-printf '%s  %s\n' c13cd18c78246b77ea90fdfbe0c12fc82ffa6c66ad4a1c434fe0b27725e42f11 "$archived_baseline" | sha256sum -c -
+printf '%s  %s\n' 58fdf2ae00e3f58aa30a36120eed9e170a3dac8b234a97056ee3056e0cbe8340 "$archived_baseline" | sha256sum -c -
 readonly archived_baseline
 [[ "$(git rev-parse HEAD)" == "${FROZEN_SOURCE:?Exact tested source required}" ]]
 python3 "$control_root/verify_release1711_gate.py" --receipt "${PRIVATE_GALLERY_1711_GATE_RECEIPT:?Exact-source reviewed pre-signer gate required}" --source "$FROZEN_SOURCE"
@@ -103,4 +103,4 @@ python3 "$control_root/rehearse_in_app_update85.py" --apk "$candidate_apk" --out
 run_fixture verify verify
 adb shell am force-stop "$fixture_package"
 run_fixture verify after-restart
-printf '%s\n' 'PASS: original-key Build 88 with authenticated contents -> versionCode 89 in-place upgrade/restart; legacy encrypted data, owner-encrypted evidence, connected collections, chronology corrections, evidence AI credentials, Sanctuary policy, both launcher layouts and Android Home default preserved' > "$artifact_dir/upgrade-result.txt"
+printf '%s\n' 'PASS: original-key Build 89 with authenticated contents -> versionCode 90 in-place upgrade/restart; legacy encrypted data, owner-encrypted evidence, connected collections, chronology corrections, evidence AI credentials, Sanctuary policy, both launcher layouts and Android Home default preserved' > "$artifact_dir/upgrade-result.txt"
