@@ -65,6 +65,10 @@ class GuardianInboxActivity : ComponentActivity() {
     private var failure by mutableStateOf<String?>(null)
     private var busy by mutableStateOf(false)
     private var confirmDelete by mutableStateOf(false)
+    private var retentionOpen by mutableStateOf(false)
+    private var recoveryReport by mutableStateOf<GuardianRecoveryReport89?>(null)
+    private var retentionNotice by mutableStateOf<String?>(null)
+    private var teachOpen by mutableStateOf(false)
     private var settingsOpen by mutableStateOf(false)
     private var cloudHistoryOpen by mutableStateOf(false)
     private var impactSettings by mutableStateOf(PersonalImpactSettings())
@@ -129,6 +133,7 @@ class GuardianInboxActivity : ComponentActivity() {
                 }
                 "call-shield" -> callShieldOpen = true
                 "cloud-history" -> cloudHistoryOpen = true
+                "message-retention" -> retentionOpen = true
             }
             intent.removeExtra(OPEN_SETTINGS)
             if (!busy) refresh()
@@ -154,7 +159,7 @@ class GuardianInboxActivity : ComponentActivity() {
                             drawLayer(layer)
                         } else Modifier).background(GuardianNavy).padding(horizontal = 16.dp)) {
                             val thread = conversation.takeIf { authenticated && !deviceLocked() && !diagnostic && !contactsOpen }
-                            BackHandler(enabled = diagnostic || contactsOpen || conversationsOpen || detail != null) { navigateBack() }
+                            BackHandler(enabled = retentionOpen || diagnostic || contactsOpen || conversationsOpen || detail != null) { navigateBack() }
                             Row(Modifier.fillMaxWidth().padding(vertical = 12.dp),
                                 verticalAlignment = Alignment.CenterVertically) {
                                 IconButton(onClick = ::navigateBack) {
@@ -205,7 +210,8 @@ class GuardianInboxActivity : ComponentActivity() {
                                         }
                                     }) { Text("Share redacted image") }
                                 }
-                                if (contactsOpen && !diagnostic) MonitoredContacts()
+                                if (retentionOpen && !diagnostic) RetentionManagement89()
+                                else if (contactsOpen && !diagnostic) MonitoredContacts()
                                 else if (thread != null || detail != null) ConversationDetail(thread)
                                 else if (conversationsOpen && !diagnostic) Conversations()
                                 else if (safeCentre && !diagnostic) SafeCentre()
@@ -266,6 +272,10 @@ class GuardianInboxActivity : ComponentActivity() {
         failure = null
         confirmDelete = false
         settingsOpen = false
+        retentionOpen = false
+        recoveryReport = null
+        retentionNotice = null
+        teachOpen = false
         cloudHistoryOpen = false
         impactSettings = PersonalImpactSettings()
         impactSuggestions = emptyList()
@@ -292,6 +302,7 @@ class GuardianInboxActivity : ComponentActivity() {
 
     private fun navigateBack() {
         when {
+            retentionOpen -> retentionOpen = false
             diagnostic -> diagnostic = false
             contactsOpen -> { contactsOpen = false; GuardianCapture.stopContactDiscovery() }
             conversation != null || detail != null -> {
@@ -578,6 +589,9 @@ class GuardianInboxActivity : ComponentActivity() {
                     }
                     TextButton(onClick = { settingsOpen = false; alertPage = GuardianAlertPage.RETENTION }) {
                         Text("Alert retention")
+                    }
+                    TextButton(onClick = { settingsOpen = false; retentionOpen = true }) {
+                        Text("Messages, retention & recovery")
                     }
                     Text("Message details require authentication. Active holds always hide message text.")
                     TextButton(onClick = {
@@ -922,6 +936,19 @@ class GuardianInboxActivity : ComponentActivity() {
                     rows.any { it.id == row.id && it.section != GuardianInboxSection.COOLING }
             }
         }
+        if (teachOpen) GuardianAlertDialog(onDismissRequest = { teachOpen = false },
+            title = { Text("Teach Guardian locally") }, text = { Column(Modifier.heightIn(max = 300.dp).verticalScroll(rememberScrollState())) {
+                Text("This exact captured message will be saved as encrypted training evidence. Choose your assessment. Nothing is sent to the VPS or Cloud Teacher; Guardian rules and validation are unchanged.")
+                Text(preview)
+                GuardianAssessment.entries.forEach { label -> TextButton(enabled = !busy, onClick = {
+                    teachOpen = false
+                    loadArchive({ store, days, now -> store.saveInboxForTraining(row.id, label, days, now) }) { saved ->
+                        feedbackNotice = if (saved) "Saved encrypted original and owner label for the shared local Nova Brain." else "This message is held or unavailable."
+                        GuardianCapture.refresh(applicationContext)
+                        refresh()
+                    }
+                }) { Text(when (label) { GuardianAssessment.LOW_RISK -> "Low risk"; GuardianAssessment.UPSETTING -> "Potentially upsetting"; GuardianAssessment.UNCERTAIN -> "Uncertain" }) } }
+            } }, confirmButton = { TextButton(onClick = { teachOpen = false }) { Text("Cancel") } })
         GuardianCard("Message actions") {
             feedbackNotice?.let { Text(it, color = GuardianMuted) }
             if (cloudKey != null) TextButton(enabled = !busy, onClick = {
@@ -950,23 +977,17 @@ class GuardianInboxActivity : ComponentActivity() {
                         refresh()
                     }
                 }) { Text("Analyse on this device") }
+                TextButton(enabled = !busy, onClick = { teachOpen = true }) { Text("Teach Guardian") }
                 TextButton(enabled = !busy, onClick = {
-                    conversationPreview = null
-                    loadArchive({ store, days, now ->
-                        val text = store.revealInboxMessage(row.id, days, now) ?: return@loadArchive false
-                        store.teach(text, GuardianAssessment.UNCERTAIN) &&
-                            store.assessInboxMessage(row.id, days, now) != null
-                    }) { saved ->
-                        if (saved) {
-                            GuardianCapture.refresh(applicationContext)
-                            refresh()
-                        } else failure = "This message could not be saved as an uncertain example."
+                    loadArchive({ store, days, now -> store.saveInboxForTraining(row.id, null, days, now) }) { saved ->
+                        feedbackNotice = if (saved) "Encrypted original saved for training. No upload." else "This message is held or unavailable."
+                        refresh()
                     }
-                }) { Text("Teach as uncertain") }
+                }) { Text("Save original for training") }
                 TextButton(enabled = !busy, onClick = {
                     conversationPreview = null
                     loadArchive({ store, days, now ->
-                        store.revealInboxMessage(row.id, days, now)?.let(store::forgetExample) == true
+                        store.forgetInboxTeaching(row.id, days, now)
                     }) { removed ->
                         if (removed) {
                             GuardianCapture.refresh(applicationContext)
@@ -980,16 +1001,45 @@ class GuardianInboxActivity : ComponentActivity() {
                 TextButton(enabled = !busy, onClick = { confirmDelete = true }) { Text("Delete message") }
             }
             if (confirmDelete) {
-                Text("Delete this copy from the encrypted Guardian archive?")
+                Text("Permanently delete this ordinary capture and local recovery copies? A saved training original is kept in History. To delete training originals explicitly, use Messages, retention & recovery.")
                 TextButton(enabled = !busy, onClick = { review(row, GuardianInboxAction.DELETE) }) { Text("Delete copy") }
                 TextButton(onClick = { confirmDelete = false }) { Text("Cancel") }
             }
         }
     }
 
+    @Composable
+    private fun RetentionManagement89() {
+        val health by GuardianCapture.state.collectAsState()
+        LaunchedEffect(Unit) { GuardianCapture.refresh(applicationContext) }
+        LaunchedEffect(health.retentionDays) { refresh() }
+        GuardianRetentionScreen89(rows, health.retentionDays, busy || health.busy, recoveryReport,
+            retentionNotice ?: failure, showSenders,
+            onRetention = { GuardianCapture.setRetention(applicationContext, it); refresh() },
+            onOpen = { row -> retentionOpen = false; detail = row; conversation = null },
+            onDelete = { ids, training ->
+                loadArchive({ store, _, now -> store.deleteInboxMessages(ids, training, now) }) {
+                    retentionNotice = "${it.deleted} deleted · ${it.trainingPreserved} training originals kept in History · ${it.held} held messages skipped."
+                    recoveryReport = null
+                    GuardianCapture.refresh(applicationContext)
+                    refresh()
+                }
+            },
+            onArchive = { ids -> loadArchive({ store, days, now ->
+                ids.count { store.reviewInboxMessage(it, GuardianInboxAction.ARCHIVE, days, now) }
+            }) { retentionNotice = "$it moved to History. No permanent deletion."; refresh() } },
+            onInspect = { loadArchive({ store, _, _ -> store.inspectRecovery() }) { recoveryReport = it } },
+            onRestore = { loadArchive({ store, _, _ -> store.restoreRecovery() }) {
+                retentionNotice = "$it authenticated captures restored to History."
+                recoveryReport = null
+                refresh()
+            } })
+    }
+
     private fun reviewConversationMessage(thread: GuardianConversationKey?, row: GuardianInboxRow) {
         val openedDetail = detail
         confirmDelete = false
+        teachOpen = false
         feedbackNotice = null
         conversationPreview = null
         loadArchive({ store, days, now -> store.prepareInboxReview(row.id, days, now) }) { reviewed ->

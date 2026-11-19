@@ -297,15 +297,15 @@ private fun GuardianCaptureControls(allowChanges: Boolean, listenerReady: Boolea
     if (health.enabled && allowChanges) {
         TextButton(enabled = listenerReady && !health.busy, onClick = { consent = true }) { Text("Change capture scope") }
     }
-    Text("Retention · ${health.retentionDays} days")
-    GuardianCaptureStore.RETENTION_DAYS.forEach { days ->
+    Text("Capture · ${GuardianRetention89.label(health.retentionDays)}")
+    GuardianRetention89.choices.forEach { days ->
         OutlinedButton(
             enabled = allowChanges && !health.busy && days != health.retentionDays,
             onClick = { GuardianCapture.setRetention(context, days) },
-        ) { Text("Keep for $days days") }
+        ) { Text(GuardianRetention89.label(days)) }
     }
     OutlinedButton(enabled = allowChanges && !health.busy, onClick = { confirmClear = true }) {
-        Text("Clear encrypted capture")
+        Text("Clear Inbox — preserve training")
     }
     if (consent && allowChanges) GuardianAlertDialog(
         onDismissRequest = { consent = false },
@@ -328,8 +328,8 @@ private fun GuardianCaptureControls(allowChanges: Boolean, listenerReady: Boolea
     )
     if (confirmClear && allowChanges) GuardianAlertDialog(
         onDismissRequest = { confirmClear = false },
-        title = { Text("Clear encrypted capture?") },
-        text = { Text("This deletes the saved notification archive and its encryption key.") },
+        title = { Text("Clear ordinary Inbox captures?") },
+        text = { Text("Ordinary captures and their on-device recovery copies are permanently deleted. Saved training originals move to History. Active holds are skipped. The encryption key and local learning are preserved.") },
         confirmButton = { TextButton(onClick = {
             confirmClear = false
             GuardianCapture.clear(context)

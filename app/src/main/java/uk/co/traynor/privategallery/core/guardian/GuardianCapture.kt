@@ -75,7 +75,7 @@ internal object GuardianCapture {
     }
 
     fun setRetention(context: Context, days: Int) {
-        require(days in GuardianCaptureStore.RETENTION_DAYS)
+        require(days in GuardianRetention89.choices)
         generation.incrementAndGet()
         manage(context) { app, _ -> check(prefs(app).edit().putInt("retention", days).commit()) }
     }
@@ -83,7 +83,7 @@ internal object GuardianCapture {
     fun clear(context: Context) {
         generation.incrementAndGet()
         manage(context) { app, store ->
-            store.clear()
+            store.clearInboxPreservingTraining(guardianInboxClock(app))
             uk.co.traynor.privategallery.launcher.GuardianSafeNotifications.cancel(app)
         }
     }
