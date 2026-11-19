@@ -15,6 +15,7 @@ import android.app.KeyguardManager
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import org.junit.Assert.assertTrue
+import org.junit.Assert.assertEquals
 import kotlin.math.max
 import kotlin.math.min
 import org.junit.Rule
@@ -22,6 +23,9 @@ import org.junit.Test
 import uk.co.traynor.privategallery.core.guardian.GuardianCaptureEntry
 import uk.co.traynor.privategallery.core.guardian.GuardianCaptureEvent
 import uk.co.traynor.privategallery.core.guardian.GuardianCaptureStore
+import uk.co.traynor.privategallery.core.guardian.GUARDIAN_HOLD_MILLIS
+import uk.co.traynor.privategallery.core.guardian.GuardianInboxClock
+import uk.co.traynor.privategallery.core.guardian.GuardianInboxSection
 
 class GuardianInbox77UiTest {
     @get:Rule val compose = createAndroidComposeRule<GuardianInboxActivity>()
@@ -188,8 +192,15 @@ class GuardianInbox77UiTest {
             store.clear()
             val now = System.currentTimeMillis()
             val message = "After everything I have done for you. Synthetic fixture."
-            store.append(GuardianCaptureEvent(0, "conversation", now,
-                listOf(GuardianCaptureEntry(now - 1, "sender-key", message, "Fixture contact"))), 7, now)
+            val arrived = now - GUARDIAN_HOLD_MILLIS - 5_000
+            val receipt = GuardianInboxClock(arrived, 0L, -1)
+            val event = GuardianCaptureEvent(0, "conversation", arrived,
+                listOf(GuardianCaptureEntry(arrived - 1, "sender-key", message, "Fixture contact")))
+            assertTrue(store.append(event, 7, arrived, assess = false, clock = receipt).allDurable)
+            store.assessCaptured(event, 7, receipt, classifyWithoutExamples = true)
+            assertEquals(GuardianInboxSection.COOLING, store.inboxRows(7, receipt).single().section)
+            assertEquals(GuardianInboxSection.PROTECTED,
+                store.inboxRows(7, GuardianInboxClock(now, 0L, -1)).single().section)
             compose.onNodeWithText("Unlock Guardian Inbox").performClick()
             var focusedSince: Long? = null
             compose.waitUntil(15_000) {
