@@ -79,7 +79,7 @@ class LauncherHomeLibraryPager73UiTest {
         pager.performTouchInput { swipeRight() }
         compose.onNodeWithTag("launcher-guardian-home").assertIsDisplayed()
         dock.assertIsNotDisplayed()
-        compose.onNodeWithText("Analysis pending").assertIsDisplayed()
+        compose.onNodeWithText("Local estimates").assertIsDisplayed()
         val ready = compose.onNodeWithTag("guardian-ready-tile").assertIsDisplayed()
         val cooling = compose.onNodeWithTag("guardian-cooling-tile").assertIsDisplayed()
         compose.waitUntil(5_000) {

@@ -230,16 +230,16 @@ internal fun NotificationCompatibilityScreen(
                         Text("I saw the Main WhatsApp test disappear on my Fold")
                     }
                 }
-                LauncherToggle("Automatically dismiss eligible Main WhatsApp messages", automatic) { enabled ->
+                LauncherToggle("Automatically dismiss held Main WhatsApp notifications", automatic) { enabled ->
                     if (GuardianNotificationListener.setAutomaticDismissal(context, enabled)) automatic = enabled
                     else externalError = "Verify the Main WhatsApp test on your Fold before enabling automatic dismissal."
                 }
                 var friends by remember { mutableStateOf(GuardianNotificationListener.friendsDismissalEnabled(context)) }
-                LauncherToggle("Dismiss eligible Friends WhatsApp messages", friends) { enabled ->
+                LauncherToggle("Dismiss held Friends WhatsApp notifications", friends) { enabled ->
                     if (GuardianNotificationListener.setFriendsDismissal(context, enabled)) friends = enabled
                     else externalError = "The Friends WhatsApp setting could not be saved."
                 }
-                Text("Friends dismissal requires a verified Dual Messenger profile and permission to retain that conversation.")
+                Text("Ordinary alerts stay with WhatsApp. Explicit quiet-collection rules still apply. Friends dismissal requires a verified Dual Messenger profile and permission to retain that conversation.")
                 var recheck by remember { mutableStateOf<String?>(null) }
                 var confirmReconciliation by remember { mutableStateOf(false) }
                 OutlinedButton(enabled = status.connected, onClick = {

@@ -31,6 +31,10 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.repeatOnLifecycle
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import uk.co.traynor.privategallery.core.brain.NovaBrainConnectionStore
+import uk.co.traynor.privategallery.core.guardian.GuardianAutomaticCloudSettings
 import uk.co.traynor.privategallery.core.guardian.GuardianInboxSection
 import uk.co.traynor.privategallery.core.guardian.GuardianCapture
 import uk.co.traynor.privategallery.core.guardian.GuardianCaptureStore
@@ -144,6 +148,31 @@ internal fun GuardianHome(
     val access = GuardianNotificationListener.hasAccess(context)
     val dnd = context.getSystemService(NotificationManager::class.java)?.isNotificationPolicyAccessGranted == true
     val counts = capture.inbox
+    val cloudHealth by produceState<Pair<String, String>?>(null, context, options.health) {
+        if (options.health) lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
+            value = withContext(Dispatchers.IO) {
+                runCatching {
+                    val record = NovaBrainConnectionStore(context).readRecord()
+                    val check = record?.lastAuthenticated
+                    val optedIn = GuardianAutomaticCloudSettings(context).read()?.origin == record?.configuration?.origin &&
+                        record != null
+                    val connection = when {
+                        record == null -> "Not configured"
+                        check == null -> "Awaiting authenticated check"
+                        check.staging -> "Last authenticated · staging"
+                        else -> "Last authenticated · production"
+                    }
+                    val analysis = when {
+                        !optedIn -> "Automatic assistance off"
+                        check == null -> "Awaiting server status"
+                        !check.analysisEnabled -> "Disabled by server at last check"
+                        else -> "Server allowed analysis at last check"
+                    }
+                    connection to analysis
+                }.getOrDefault("Connection details unavailable" to "Availability unknown")
+            }
+        }
+    }
     LaunchedEffect(counts) {
         val remaining = counts?.refreshAfterMillis ?: return@LaunchedEffect
         delay(remaining)
@@ -233,7 +262,7 @@ internal fun GuardianHome(
                     }
 
                     val learning = capture.learningCount
-                    GuardianCard("Guardian assessment", badge = if ((learning ?: 0) > 0) "Local estimates" else "Analysis pending") {
+                    GuardianCard("Guardian assessment", badge = "Local estimates") {
                         if (counts == null) {
                             Text(if (capture.busy) "Checking archive…" else "Archive counts unavailable", color = GuardianMuted)
                         } else {
@@ -283,10 +312,15 @@ internal fun GuardianHome(
                             GuardianHealthLine("Nova Brain", when {
                                 capture.busy -> "Checking"
                                 learning == null -> "Local learning unavailable"
-                                learning == 0 -> "Local Only · awaiting examples"
+                                learning == 0 -> "Local rules · ready for examples"
                                 else -> "Local Only · $learning examples"
                             }, (learning ?: 0) > 0)
-                            GuardianHealthLine("Cloud analysis", "Unavailable")
+                            GuardianHealthLine("Retention", if (capture.retentionDays == 0) "Keep Forever" else "${capture.retentionDays} days in Inbox")
+                            GuardianHealthLine("Last retained capture", guardianHealthTime(capture.diagnostics?.lastCaptureAt))
+                            GuardianHealthLine("Latest Inbox decision", capture.diagnostics?.decision ?: "No retained capture")
+                            GuardianHealthLine("Cloud connection", cloudHealth?.first ?: "Checking")
+                            GuardianHealthLine("Cloud analysis", cloudHealth?.second ?: "Checking")
+                            GuardianHealthLine("Last retained cloud advisory", guardianHealthTime(capture.diagnostics?.lastCloudAt))
                             GuardianHealthLine("NovaOS test dismissal", when (listener.synthetic) {
                                 SyntheticResult.DISMISSED -> "Android confirmed removal"
                                 SyntheticResult.WAITING, SyntheticResult.DISMISSING -> "Testing"
@@ -319,6 +353,11 @@ internal fun GuardianHome(
 
     }
 }
+
+private fun guardianHealthTime(at: Long?): String = at?.let {
+    java.text.DateFormat.getDateTimeInstance(java.text.DateFormat.SHORT, java.text.DateFormat.SHORT)
+        .format(java.util.Date(it))
+} ?: "None"
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable

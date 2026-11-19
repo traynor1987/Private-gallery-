@@ -122,4 +122,47 @@ class GuardianEvidence90RuntimeTest {
         assertEquals("An old synthetic notification", store.revealInboxMessage(retained, 30, now))
     }
 
+    @Test fun greetingsRemainVisibleAndEncryptedEvenWithCloudConsentAndUncertainHold() = fixture { store, settings, now ->
+        settings.enable(configuration.origin)
+        assertTrue(settings.setScope(configuration.origin, key, true))
+        val message = capture(now).copy(entries = listOf(GuardianCaptureEntry(now.wall, "Taylor", "Hi")),
+            holdUncertain = true)
+        val result = store.append(message, 30, now.wall, assess = false, clock = now)
+        assertTrue(result.allDurable)
+        assertFalse(store.assessCaptured(message, 30, now, result.addedIds, classifyWithoutExamples = true))
+        val reopened = GuardianCaptureStore(context)
+        val row = reopened.notificationRows(message, 30, now).single()
+        assertEquals(GuardianAssessment.LOW_RISK, row.assessment)
+        assertEquals(GuardianInboxSection.READY, row.section)
+        assertEquals("Hi", reopened.revealInboxMessage(row.id, 30, now))
+        assertNull(row.cloudState)
+        assertNull(reopened.nextAutomaticCloud(now.wall))
+        assertEquals(0, reopened.append(message, 30, now.wall, clock = now).added)
+        assertTrue(reopened.saveInboxForTraining(row.id, GuardianAssessment.UPSETTING, 30, now))
+        val later = now.copy(wall = now.wall + 1_000, elapsed = now.elapsed + 1_000)
+        val repeat = message.copy(observedAt = later.wall, entries = listOf(message.entries.single().copy(time = later.wall)))
+        val afterReopen = GuardianCaptureStore(context)
+        val saved = afterReopen.append(repeat, 30, later.wall, false, later)
+        assertTrue(saved.allDurable)
+        assertFalse(afterReopen.assessCaptured(repeat, 30, later, saved.addedIds, classifyWithoutExamples = true))
+        val corrected = afterReopen.notificationRows(repeat, 30, later).single()
+        assertEquals(GuardianAssessment.UPSETTING, corrected.assessment)
+        assertEquals(GuardianAssessmentReason.OWNER_EXAMPLES, corrected.assessmentReason)
+        assertEquals(GuardianInboxSection.COOLING, corrected.section)
+        assertNull(afterReopen.revealInboxMessage(corrected.id, 30, later))
+        assertEquals(2, afterReopen.inboxRows(0, later).size)
+        val next = later.copy(wall = later.wall + 1_000, elapsed = later.elapsed + 1_000)
+        val ambiguous = message.copy(observedAt = next.wall,
+            entries = listOf(GuardianCaptureEntry(next.wall, "Taylor", "Come here after work")))
+        val held = afterReopen.append(ambiguous, 30, next.wall, false, next)
+        assertTrue(held.allDurable)
+        assertTrue(afterReopen.assessCaptured(ambiguous, 30, next, held.addedIds, classifyWithoutExamples = true))
+        val uncertain = afterReopen.notificationRows(ambiguous, 30, next).single()
+        assertEquals(GuardianAssessment.UNCERTAIN, uncertain.assessment)
+        assertEquals(GuardianInboxSection.COOLING, uncertain.section)
+        assertEquals(GuardianCloudState.QUEUED, uncertain.cloudState)
+        assertFalse(guardianDismissalAllowed(automatic = false, quietCollection = false, held = true))
+        assertTrue(guardianDismissalAllowed(automatic = true, quietCollection = false, held = true))
+    }
+
 }

@@ -26,7 +26,7 @@ class MainReleaseControls(unittest.TestCase):
                 executable=bins/command
                 executable.write_text('#!/bin/bash\nprintf "%s %s\\n" "'+command+'" "$*" >> "$NOVA_GUARD_TRACE"\n')
                 executable.chmod(0o755)
-            for branch in ('main','feature/novaos-build87-brain-status','feature/novaos-code83-cloud-teacher','feature/novaos-guardian-retention89','feature/novaos-guardian-evidence90'):
+            for branch in ('main','feature/novaos-build87-brain-status','feature/novaos-code83-cloud-teacher','feature/novaos-guardian-retention89','feature/novaos-guardian-reliability91'):
                 trace.write_text('')
                 subprocess.run(['/bin/bash','-ec',guard],cwd=root,check=True,
                     env=dict(os.environ,GITHUB_REF='refs/heads/'+branch,RUNNER_TEMP=directory,NOVA_GUARD_TRACE=str(trace),PATH=str(bins)+':'+os.environ['PATH']))
@@ -40,7 +40,7 @@ class MainReleaseControls(unittest.TestCase):
     def fixture(self, directory):
         values = historical.Upgrade1711Controls().gate_fixture(directory)
         marker = values[0]
-        marker.update(baseline_code=89, candidate_code=90)
+        marker.update(baseline_code=90, candidate_code=91)
         values[1] += (
             b"Authorization: authenticated owner push\n"
             b"Release scope: public stable after disposable upgrade verification\n"

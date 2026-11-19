@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Fetch and verify the public production Build 89 APK for Build 90 upgrade testing."""
+"""Fetch and verify the public production Build 90 APK for Build 91 upgrade testing."""
 
 import argparse
 from pathlib import Path
@@ -9,11 +9,11 @@ import tempfile
 from verify_code80_apk_identity import inspect
 
 BASELINE_URL = (
-    "https://github.com/traynor1987/Private-gallery-/releases/download/v1.7.43/"
+    "https://github.com/traynor1987/Private-gallery-/releases/download/v1.7.44/"
     "private-gallery-release.apk"
 )
-BASELINE_SIZE = 151_795_379
-BASELINE_SHA256 = "58fdf2ae00e3f58aa30a36120eed9e170a3dac8b234a97056ee3056e0cbe8340"
+BASELINE_SIZE = 151_893_703
+BASELINE_SHA256 = "6048d4025276998c2ae830bc21d3698343c48a4d3d861b3cfca7b3ffdec1b652"
 
 
 def fetch(destination: Path, build_tools: Path) -> None:
@@ -26,9 +26,9 @@ def fetch(destination: Path, build_tools: Path) -> None:
             "--max-filesize", str(BASELINE_SIZE), "--output", str(staged), BASELINE_URL,
         ], check=True)
         if staged.stat().st_size != BASELINE_SIZE:
-            raise ValueError("Build 89 APK length does not match the production receipt")
-        if inspect(staged, build_tools.resolve(), 89, "1.7.43") != BASELINE_SHA256:
-            raise ValueError("Build 89 APK SHA-256 does not match production run #45")
+            raise ValueError("Build 90 APK length does not match the production receipt")
+        if inspect(staged, build_tools.resolve(), 90, "1.7.44") != BASELINE_SHA256:
+            raise ValueError("Build 90 APK SHA-256 does not match production run #46")
         subprocess.run([str(build_tools.resolve() / "zipalign"), "-c", "-P", "16", "4", str(staged)],
                        check=True)
         staged.chmod(0o600)
@@ -43,8 +43,8 @@ def main() -> None:
     try:
         fetch(args.destination, args.build_tools)
     except (OSError, ValueError, subprocess.CalledProcessError) as error:
-        parser.exit(1, f"Build 89 baseline verification failed: {error}\n")
-    print(f"Verified production run #45 Build 89 baseline SHA-256: {BASELINE_SHA256}")
+        parser.exit(1, f"Build 90 baseline verification failed: {error}\n")
+    print(f"Verified production run #46 Build 90 baseline SHA-256: {BASELINE_SHA256}")
 
 
 if __name__ == "__main__":

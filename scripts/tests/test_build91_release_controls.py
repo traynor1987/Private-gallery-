@@ -1,4 +1,4 @@
-"""Build90 identity and authentic Build89 upgrade contract; no signing or release claims."""
+"""Build91 identity and authentic Build90 upgrade contract; no signing or release claims."""
 from pathlib import Path
 import subprocess
 import unittest
@@ -10,7 +10,7 @@ from scripts.tests import test_code81_main_release_controls as main_controls
 ROOT = Path(__file__).resolve().parents[2]
 
 
-class Build90ReleaseControls(unittest.TestCase):
+class Build91ReleaseControls(unittest.TestCase):
     def test_guardian_job_remains_private_and_requires_android_job_binding(self):
         import xml.etree.ElementTree as ET
         manifest = ET.parse(ROOT / 'app/src/main/AndroidManifest.xml').getroot()
@@ -29,22 +29,22 @@ class Build90ReleaseControls(unittest.TestCase):
 
     def test_current_candidate_and_baseline_are_consistent_across_existing_controls(self):
         build = (ROOT / 'app/build.gradle.kts').read_text()
-        self.assertRegex(build, r'versionCode\s*=\s*90\b')
-        self.assertIn('versionName = "1.7.44"', build)
+        self.assertRegex(build, r'versionCode\s*=\s*91\b')
+        self.assertIn('versionName = "1.7.45"', build)
         configuration = (ROOT / 'scripts/release_configuration1711.sh').read_text()
-        for line in ('release_version=1.7.44', 'release_code=90',
-                     'baseline_version=1.7.43', 'baseline_code=89',
-                     'baseline_sha=699bc866905c52c46dfca44a397ea36bb225c471'):
+        for line in ('release_version=1.7.45', 'release_code=91',
+                     'baseline_version=1.7.44', 'baseline_code=90',
+                     'baseline_sha=b7390f3717bdf4ecc7b905ff265232e0fba80618'):
             self.assertIn(line, configuration.splitlines())
-        self.assertEqual(151795379, baseline.BASELINE_SIZE)
-        self.assertEqual('58fdf2ae00e3f58aa30a36120eed9e170a3dac8b234a97056ee3056e0cbe8340', baseline.BASELINE_SHA256)
-        self.assertEqual('https://github.com/traynor1987/Private-gallery-/releases/download/v1.7.43/private-gallery-release.apk', baseline.BASELINE_URL)
+        self.assertEqual(151893703, baseline.BASELINE_SIZE)
+        self.assertEqual('6048d4025276998c2ae830bc21d3698343c48a4d3d861b3cfca7b3ffdec1b652', baseline.BASELINE_SHA256)
+        self.assertEqual('https://github.com/traynor1987/Private-gallery-/releases/download/v1.7.44/private-gallery-release.apk', baseline.BASELINE_URL)
         fixture = (ROOT / 'docs/release1711/UpgradeFixtureTest.kt').read_text()
-        self.assertIn('baselineCode == 89 && candidateCode == 90', fixture)
-        self.assertIn('assertEquals(90L,available.release?.versionCode)', fixture)
-        self.assertIn('original=89 candidate=90', fixture)
+        self.assertIn('baselineCode == 90 && candidateCode == 91', fixture)
+        self.assertIn('assertEquals(91L,available.release?.versionCode)', fixture)
+        self.assertIn('original=90 candidate=91', fixture)
         live = (ROOT / 'docs/build85/verify_live_build84.py').read_text()
-        for text in ("installed() == 89", "installed() != 90", "1.7.44 · Build 90 available", "1.7.44 · Up to date", 'baseline_code=89, installed_code=90'):
+        for text in ("installed() == 90", "installed() != 91", "1.7.45 · Build 91 available", "1.7.45 · Up to date", 'baseline_code=90, installed_code=91'):
             self.assertIn(text, live)
 
     def test_retention_preparation_run_remains_bound_to_exact_source_and_main_ancestry(self):
@@ -52,15 +52,15 @@ class Build90ReleaseControls(unittest.TestCase):
         from scripts.tests.test_code81_main_release_controls import gate
         with tempfile.TemporaryDirectory() as directory:
             values = main_controls.MainReleaseControls().fixture(directory)
-            branch = 'feature/novaos-guardian-evidence90'
+            branch = 'feature/novaos-guardian-reliability91'
             values[0]['runtime_branch'] = branch
             values[2]['head_branch'] = branch
             values[1] += ('Runtime branch: '+branch+'\n').encode()
             values[0]['review_sha256'] = gate.sha(values[1])
-            with patch.object(gate, 'runtime_cases', return_value=342) as reports:
+            with patch.object(gate, 'runtime_cases', return_value=343) as reports:
                 proof = gate.validate(*values)
             reports.assert_called_once()
-            self.assertEqual(342, proof['validated_case_count'])
+            self.assertEqual(343, proof['validated_case_count'])
             values[2]['head_sha'] = '2'*40
             with patch.object(gate, 'runtime_cases') as reports, self.assertRaisesRegex(ValueError, 'runtime source/branch/event'):
                 gate.validate(*values)
