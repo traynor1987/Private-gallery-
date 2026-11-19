@@ -26,7 +26,7 @@ class MainReleaseControls(unittest.TestCase):
                 executable=bins/command
                 executable.write_text('#!/bin/bash\nprintf "%s %s\\n" "'+command+'" "$*" >> "$NOVA_GUARD_TRACE"\n')
                 executable.chmod(0o755)
-            for branch in ('main','feature/novaos-build87-brain-status','feature/novaos-code83-cloud-teacher'):
+            for branch in ('main','feature/novaos-build87-brain-status','feature/novaos-code83-cloud-teacher','feature/novaos-guardian-retention89'):
                 trace.write_text('')
                 subprocess.run(['/bin/bash','-ec',guard],cwd=root,check=True,
                     env=dict(os.environ,GITHUB_REF='refs/heads/'+branch,RUNNER_TEMP=directory,NOVA_GUARD_TRACE=str(trace),PATH=str(bins)+':'+os.environ['PATH']))

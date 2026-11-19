@@ -494,7 +494,8 @@ internal class GuardianCaptureStore private constructor(private val context: Con
             GuardianExample(List(features.length(), features::getString).toSet(),
                 GuardianAssessment.valueOf(row.getString("label")))
         }
-        val conversation = rows.asSequence().filterNot { it.optBoolean("deleted") }.mapNotNull { row ->
+        val conversation = rows.asSequence().filterNot { it.optBoolean("deleted") }
+            .sortedByDescending { it.optLong("trainedAt", it.optLong("capturedAt")) }.mapNotNull { row ->
             val label = ownerLabel(row) ?: return@mapNotNull null
             val features = guardianFeatures(row.getString("text"))
             if (features.isEmpty()) null else GuardianExample(features, label)
@@ -512,7 +513,7 @@ internal class GuardianCaptureStore private constructor(private val context: Con
             if (label == null) {
                 if (ownerLabel(row) != null) row.put("savedForTraining", true)
                 row.remove("ownerLabel")
-            } else row.put("ownerLabel", label.name).put("savedForTraining", true)
+            } else row.put("ownerLabel", label.name).put("savedForTraining", true).put("trainedAt", now.wall)
             write(rows)
             true
         }
@@ -739,7 +740,7 @@ internal class GuardianCaptureStore private constructor(private val context: Con
         val row = rows.firstOrNull { it.optString("id") == id && !it.optBoolean("deleted") } ?: return@synchronized false
         if (inboxRow(row, now).section == GuardianInboxSection.COOLING) return@synchronized false
         row.put("savedForTraining", true)
-        if (label != null) row.put("ownerLabel", label.name)
+        if (label != null) row.put("ownerLabel", label.name).put("trainedAt", now.wall)
         write(rows)
         true
     }

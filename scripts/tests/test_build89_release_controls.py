@@ -41,20 +41,20 @@ class Build89ReleaseControls(unittest.TestCase):
         for text in ("installed() == 88", "installed() != 89", "1.7.43 · Build 89 available", "1.7.43 · Up to date", 'baseline_code=88, installed_code=89'):
             self.assertIn(text, live)
 
-    def test_code83_preparation_run_remains_bound_to_exact_source_and_main_ancestry(self):
+    def test_retention_preparation_run_remains_bound_to_exact_source_and_main_ancestry(self):
         import tempfile
         from scripts.tests.test_code81_main_release_controls import gate
         with tempfile.TemporaryDirectory() as directory:
             values = main_controls.MainReleaseControls().fixture(directory)
-            branch = 'feature/novaos-code83-cloud-teacher'
+            branch = 'feature/novaos-guardian-retention89'
             values[0]['runtime_branch'] = branch
             values[2]['head_branch'] = branch
             values[1] += ('Runtime branch: '+branch+'\n').encode()
             values[0]['review_sha256'] = gate.sha(values[1])
-            with patch.object(gate, 'runtime_cases', return_value=329) as reports:
+            with patch.object(gate, 'runtime_cases', return_value=338) as reports:
                 proof = gate.validate(*values)
             reports.assert_called_once()
-            self.assertEqual(329, proof['validated_case_count'])
+            self.assertEqual(338, proof['validated_case_count'])
             values[2]['head_sha'] = '2'*40
             with patch.object(gate, 'runtime_cases') as reports, self.assertRaisesRegex(ValueError, 'runtime source/branch/event'):
                 gate.validate(*values)
