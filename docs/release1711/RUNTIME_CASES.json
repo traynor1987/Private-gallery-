@@ -1,4 +1,18 @@
 {
+  "uk.co.traynor.privategallery.core.guardian.GuardianRetention89RuntimeTest": [
+    "activeHoldsCannotBeRevealedTaughtOrBulkDeleted",
+    "committedDeletionIntentSurvivesAtomicRollbackAndCannotBeRecovered",
+    "directTeachingAndInboxClearingPreserveEncryptedTrainingOriginals",
+    "foreverSurvivesMoreThan256CapturesAndBackgroundRefresh",
+    "recoveryPreservesRawAtomicBackupBeforeReadAndRespectsTombstones",
+    "storageCapacityRefusesNewCaptureWithoutEvictingOldMessages",
+    "thirtyDaysAndSevenDaysArchiveWithoutDeletingOrRewritingAfterRestart",
+    "unreadableRecoveryCopyIsReportedWithoutInventingMessages"
+  ],
+  "uk.co.traynor.privategallery.launcher.GuardianRetention89UiTest": [
+    "recoveryDoesNotRunUntilOwnerApprovesAndDirectReviewIsAccessible",
+    "retentionAndBulkDeletionRequireExplicitTrainingDeletion"
+  ],
   "uk.co.traynor.privategallery.core.brain.CloudTeacher83RuntimeTest": [
     "changedOrRemovedConnectionRejectsStaleReply",
     "clearedHistoryCannotBeResurrectedByLateResponseAndFreshPaidRequestNeedsNewIdentity",

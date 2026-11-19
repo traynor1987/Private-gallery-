@@ -1,62 +1,73 @@
-# NovaOS1.7.42 (Build88) production review
+# NovaOS 1.7.43 (Build 89) production review
 
-Source: 430774e549a86d5c0db159ec24230bc4ac05bbc3
+Source: 699bc866905c52c46dfca44a397ea36bb225c471
 Authorization: authenticated owner push
 Release scope: public stable after disposable upgrade verification
 Physical Fold acceptance: pending
-Upgrade fixture SHA-256: 21f4eccdd21ceaf78338624b3edfa7e8f1933372559e9b5b9bb30821cb4ad5ca
-Upgrade controls SHA-256: e04a78c5eb42acffefbfeea91d6e51197fc09c26565350c5183c932707979280
-Runtime matrix SHA-256: efa685acd15864a07d54677666310ffec899c866766f59d2a0ea1ed3a592db14
-Runtime workflow run: 44445871334
-Signing workflow SHA-256: 8b5a21b640b2ef59fde3dc99ab52a6c96ab56bcadbb85b84422ed0333f9e1c57
-Runtime branch: feature/novaos-code83-cloud-teacher
+Upgrade fixture SHA-256: e816ab6337ae12e3d1503b84e4f587fb9ac34217df23eaf90fdae6239b194705
+Upgrade controls SHA-256: 0b64164fe2c1c4f60dea592f309aaef25274ec3495d38b35563aa32c586e992d
+Runtime matrix SHA-256: cae16dbf9c88ae07e7f2498027b94a900076d251c03917558a63b8e15414c4f2
+Runtime workflow run: 44506338536
+Signing workflow SHA-256: 0be1c139eb7b690013b365dc921df8e88ce686969964ee2f62123f7270727f41
+Runtime branch: feature/novaos-guardian-retention89
 
-The owner explicitly authorized Build88 on19November2026, main integration,
-original-key signing, the existing stable publication workflow and normal in-app
-installation, with paid Cloud Teacher disabled until separate deployment, live
-budget and paid-test approval gates pass. This is implementation self-review,
-not a claim of independent reviewer approval or physical owner acceptance.
+The owner authorized this critical retention repair, main merge, original-key
+signing and the existing GitHub Releases/in-app publication workflow. This is
+implementation self-review, not independent review or physical owner acceptance.
 
-The frozen production source is present on main before signer access. Its original
-approved preparation-branch run and original archive/digest are verified by the
-existing gate, including all329 exact API37 identities, all focused groups and
-actual killed-process recovery receipts. CI508's source95c1112 is preserved as
-the completed feature baseline; its reports are not relabelled as this source.
+Build88 source430774e549a86d5c0db159ec24230bc4ac05bbc3 could silently discard
+capture rows above256 and permanently prune them on ordinary reads, considering
+both message and capture timestamps. Capture retention is a separate preference
+from30-day Personal Impact feedback and Android alert timeout. The owner's actual
+preferences and missing rows cannot be inspected from this environment.
 
-The application feature source/resources/manifests match CI508; only its release
-identity changes to1.7.42/code88. The existing release controls now bind the
-authentic published Build87 source9075b111a87e9dbcf39566b71c2763b380b58088 and APK
-SHA25605b1122c80e6746e242419d08f48882d516ac6730eda4a4befa57a8e83afd0d4.
-Package uk.co.traynor.privategallery, API37-only policy and certificate pin
-94f2bfc6567f26d067d29077111cfd0ce86d38263c642ad115e43365f05b0d17 remain.
+The repaired archive keeps the existing capture key, AES256-GCM format/AAD and
+private no-backup location. It preserves original base/bak/new ciphertext before
+AtomicFile reads; no destructive migration, key replacement or storage reset is
+performed. Seven/thirty-day policies archive from capture time; Keep Forever has
+no automatic expiry. Capacity refuses new captures without evicting older rows
+or dismissing unretained notifications. Legacy owner-labelled and newly saved
+training originals survive Inbox clearing. Direct authenticated local Teach
+Guardian uses the shared learning engine without requiring Evidence Locker or
+making a cloud request. Explicit individual/bulk deletion distinguishes ordinary
+captures from independently saved training originals, respects active holds,
+scrubs private recovery copies and commits encrypted deletion intent before main
+writes to prevent resurrection after a crash/rollback. Only such owner-approved
+pending deletion may finish during a later read; time alone never deletes rows.
 
-Manual Cloud Teacher is default-off and requires disclosure, read-only authenticated
-budget preflight, editable minimum excerpt and explicit approval for every request.
-Guardian, Primary Evidence and local learning share existing owner-confirmed
-learning; predictions cannot validate the Knowledge Meter or change protection.
-Encrypted advisory metadata excludes excerpts/model summaries and uses existing
-Guardian authentication. Hidden Vault/private feedback/complete files are not
-automatically transmitted. Local protection and Sanctuary remain independent of
-connectivity, provider availability and budget. The same SQLite backend now has a
-maximum$100 UTC monthly ceiling, conservative reservations, concurrency protection,
-idempotency and usage reconciliation. Backend code/tests are not deployment or
-provider billing evidence. The reported$37 is not treated as a verified balance.
+Actual recovery requires surviving authenticated ciphertext and its original key.
+Feature-only examples cannot reconstruct message bodies. No owner data has been
+accessed, uploaded or claimed recovered; no Evidence Locker copies are assumed.
+Ordinary Android/allowlisted Nova Backup does not contain the no-backup capture
+archive. The authenticated on-device check reports actual records/copies and
+explicit restore respects known deletion intent; older unknown deletion history
+is disclosed before an owner elects to restore.
 
-The production staging restriction, paid approval flag, server key isolation and
-supported-host gate remain. No token rotation, VPS service change, paid API request
-or OpenAI activation is authorized here. The public health/authentication-required
-checks are distinct from authenticated ledger or paid-analysis verification.
+The exact source's CI must pass all339 selected API37 identities, all62 focused
+report groups,770 JVM cases without skips, protected-core guards, backend mocked
+security/budget checks and actual Backup/launcher killed-process recovery. New
+retention UI cases run at folded and unfolded resolutions. Existing Vault crypto,
+manifest, update discovery/download/signature pin, paid-analysis gates and VPS
+configuration remain unchanged; no token request/rotation, paid API call or
+unrelated deployment is authorized.
 
-The signer must compile the reviewed fixture against authentic Build87 before
-credential access, verify baseline package/certificate/hash, then install the real
-candidate through Build87's existing download/verification/Android-installer path.
-Populated encrypted Vault/Guardian/Evidence/shared learning/Nova Brain credentials,
-launcher and Sanctuary data must survive reauthentication and a real restart.
-No uninstall, data clear or adb candidate replacement can satisfy this gate.
+The production signer must compile this fixture against authentic Build88 before
+signer credentials, verify baseline package/version/certificate/hash, then perform
+the original-key populated88-to89 in-app download/verification/Android installer
+upgrade. Aged synthetic Guardian originals, legacy owner-labelled training source,
+unchanged ciphertext checkpoint, populated Vault/Evidence/shared learning/Nova
+Brain configuration, launcher and Sanctuary must survive reauthentication and
+real process restart. No uninstall, data reset or adb candidate replacement can
+satisfy the test. Build88 APK SHA256:
+c13cd18c78246b77ea90fdfbe0c12fc82ffa6c66ad4a1c434fe0b27725e42f11.
+Original certificate SHA256:
+94f2bfc6567f26d067d29077111cfd0ce86d38263c642ad115e43365f05b0d17.
 
-After protected receipts pass, the existing publisher alone creates/verifies
-v1.7.42, publishes a normal APK with unchanged metadata schema and checks authentic
-Build87 against the actual latest-stable GitHub feed. Installed88/restart/Up-to-date
-must be observed. The already-published v1.7.41 tag/assets remain untouched. No
-signing, populated upgrade, public-update or physical install success is claimed
-before its own receipt exists.
+After protected receipts pass, only the existing publisher creates/verifies
+v1.7.43 and publishes a normal APK with the unchanged integrity metadata format.
+It must test authentic Build88 against the actual stable GitHub release feed,
+observe download/integrity/installer, installed89 and restart/Up-to-date. Existing
+Build88 release remains untouched. Physical Galaxy Z Fold installation and
+on-device recovery of the owner's own messages remain owner confirmation.
+Paid Cloud Teacher remains disabled pending separately verified safe deployment,
+live budget enforcement and explicit paid-test approval. Staging restrictions stay.
