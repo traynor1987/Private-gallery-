@@ -46,6 +46,10 @@ class GuardianCloudJob : JobService() {
     private var running: Job? = null
 
     override fun onStartJob(params: JobParameters): Boolean {
+        val initialRequest = synchronized(wakeLock) {
+            completing = false
+            requestVersion
+        }
         running = scope.launch {
             val wake = withContext(Dispatchers.IO) {
                 val store = GuardianCaptureStore(applicationContext)
@@ -62,8 +66,13 @@ class GuardianCloudJob : JobService() {
                     null
                 }
             }
-            jobFinished(params, false)
-            if (wake != null) schedule(applicationContext, wake)
+            synchronized(wakeLock) {
+                // JobScheduler still owns the active job while processing jobFinished.
+                // Ask Android to reschedule unfinished preflight work using that job.
+                val needsRetry = wake != null || requestVersion != initialRequest
+                completing = !needsRetry
+                jobFinished(params, needsRetry)
+            }
         }
         return true
     }
@@ -145,21 +154,33 @@ class GuardianCloudJob : JobService() {
     internal companion object {
         private const val ID = 0x4e434790
 
-        fun schedule(context: Context, wakeAt: Long? = null) {
+        private val wakeLock = Any()
+        private var requestVersion = 0L
+        private var completing = false
+
+        fun schedule(context: Context) {
             val scheduler = context.getSystemService(JobScheduler::class.java) ?: return
-            if (scheduler.getPendingJob(ID) != null) return
             val now = System.currentTimeMillis()
-            val wake = wakeAt ?: GuardianCaptureStore(context).nextAutomaticCloudWake(now) ?: return
-            val job = JobInfo.Builder(ID, ComponentName(context, GuardianCloudJob::class.java))
-                .setRequiredNetworkType(JobInfo.NETWORK_TYPE_ANY)
-                .setMinimumLatency((wake - now).coerceAtLeast(0))
-                .setPersisted(true)
-                .build()
-            check(scheduler.schedule(job) == JobScheduler.RESULT_SUCCESS)
+            val wake = GuardianCaptureStore(context).nextAutomaticCloudWake(now) ?: return
+            synchronized(wakeLock) {
+                requestVersion++
+                if (!completing && scheduler.getPendingJob(ID) != null) return
+                val job = JobInfo.Builder(ID, ComponentName(context, GuardianCloudJob::class.java))
+                    .setRequiredNetworkType(JobInfo.NETWORK_TYPE_ANY)
+                    .setMinimumLatency((wake - now).coerceAtLeast(0))
+                    .setBackoffCriteria(GuardianAutomaticCloudPolicy.STABILITY_MS, JobInfo.BACKOFF_POLICY_EXPONENTIAL)
+                    .setPersisted(true)
+                    .build()
+                check(scheduler.schedule(job) == JobScheduler.RESULT_SUCCESS)
+                completing = false
+            }
         }
 
         fun cancel(context: Context) {
-            context.getSystemService(JobScheduler::class.java)?.cancel(ID)
+            synchronized(wakeLock) {
+                context.getSystemService(JobScheduler::class.java)?.cancel(ID)
+                completing = false
+            }
         }
     }
 }
