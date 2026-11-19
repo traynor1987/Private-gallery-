@@ -16,13 +16,17 @@ internal object GuardianAutomaticCloudPolicy {
         RegexOption.IGNORE_CASE,
     )
 
+    private val domainLike = Regex("[A-Za-z]\\.[A-Za-z]")
+
     fun excerpt(text: String, identifiers: List<String>): String? {
         // Multiline, structured, numeric and ambiguous text stays local. Names supplied by
         // Android are removed before transmission; this is not a guarantee of anonymity.
-        if (text.length !in 1..MAX_EXCERPT || !sentence.matches(text) || sensitive.containsMatchIn(text)) return null
+        if (text.length !in 1..MAX_EXCERPT || !sentence.matches(text) ||
+            sensitive.containsMatchIn(text) || domainLike.containsMatchIn(text)) return null
         val known = identifiers.flatMap { value -> words.findAll(value).map { it.value.lowercase(Locale.ROOT) }.toList() }.toSet()
         val result = words.replace(text) { match ->
-            if (match.value.lowercase(Locale.ROOT) in known) "[redacted]" else match.value
+            val word = match.value.lowercase(Locale.ROOT).replace('’', '\'')
+            if (word in known || word.removeSuffix("'s") in known) "[redacted]" else match.value
         }.trim()
         return result.takeIf { it.length in 4..MAX_EXCERPT && words.findAll(it.replace("[redacted]", "")).count() >= 3 }
     }

@@ -977,6 +977,9 @@ class GuardianInboxActivity : ComponentActivity() {
             row.captureAccount?.let { Text(if (it == "MAIN_WHATSAPP") "Main WhatsApp" else "Dual Messenger") }
             if (row.partialCapture == true) Text("Partial notification capture")
             Text("Local assessment · ${row.assessment?.label ?: "Pending"}")
+            if (row.learningRevisions > 0) {
+                Text("Owner label · ${row.ownerLabel?.label ?: "Cleared"} · ${row.learningRevisions} recent changes")
+            }
             row.cloudState?.let { Text(it.label) }
             advisory?.let { result ->
                 Text("Cloud Teacher advisory · ${result.lesson.assessment}")

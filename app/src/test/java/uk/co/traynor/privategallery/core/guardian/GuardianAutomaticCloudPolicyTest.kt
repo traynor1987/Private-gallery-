@@ -8,7 +8,9 @@ class GuardianAutomaticCloudPolicyTest {
         val names = listOf("Taylor Smith")
         assertEquals("[redacted] please give me some space", GuardianAutomaticCloudPolicy.excerpt(
             "Taylor please give me some space", names))
-        for (text in listOf("My OTP is six four two", "Call me at 07123456789", "Open https://example.test",
+        assertEquals("[redacted] request needs more context", GuardianAutomaticCloudPolicy.excerpt(
+            "Taylor’s request needs more context", names))
+        for (text in listOf("My OTP is six four two", "Call me at 07123456789", "Open https://example.test", "Go to example.com please",
             "This is a\nconversation transcript", "Email me at name@example.test", "Please visit " + "a".repeat(320))) {
             assertNull(GuardianAutomaticCloudPolicy.excerpt(text, names))
         }

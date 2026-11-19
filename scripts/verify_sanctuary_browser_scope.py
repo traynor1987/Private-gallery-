@@ -132,7 +132,7 @@ CODE81_EXACT_ADAPTERS = {
     f"{CORE}/brain/NovaBrainConnection.kt": "f25b14108639d83ce0bc38b1b6632b3faafdd25bfc4ed98e750b1d24e93de0af",
     f"{CORE}/brain/NovaBrainConnectionStore.kt": "f176c3e1fbf1c9ef4e89930338632940f95d8667da016df8a61d6474c3fbf321",
     f"{CORE}/brain/CloudTeacherProtocol.kt": "0c1ce2e743cf487e97141b89f0e0c7f581d7a408fce06f428369a98e95ffb22a",
-    f"{CORE}/brain/CloudTeacherClient.kt": "86144e8e8a4ad735853eb1248430f8fbccff8a4801836dc7fde42d9d517c2776",
+    f"{CORE}/brain/CloudTeacherClient.kt": "54830b041b5cf532aa8ac25909d7ebb05d078c6930a03e12bbd7743633ef1db9",
     f"{CORE}/brain/CloudTeacherStore.kt": "dbf532602efa25692f063d87b7328db8c5c7284172b5e08907e8320fb9b9bcdd",
     # Build85 updater-only adaptations, reviewed independently of encrypted engines.
     f"{CORE}/update/ReleaseUpdate.kt": "810b3488c5b4ee8cdd22f1922265be35c50c123842fda17ed0e173d341468f67",

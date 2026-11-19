@@ -181,7 +181,8 @@ class Handler(BaseHTTPRequestHandler):
             automatic = 'mode' in data
             if automatic and (data['mode'] != 'automatic' or data.get('protocol_version') != 2 or
                               'request_id' not in data or len(text) > 320 or
-                              not re.fullmatch(r"[A-Za-z .,!?;:'’\[\]-]+", text) or
+                              not re.fullmatch(r"[A-Za-z .,!?;:'’-]+", text.replace("[redacted]", " ")) or
+                              re.search(r"[A-Za-z]\.[A-Za-z]", text) or
                               re.search(r"\b(password|passcode|pin|otp|verification code|account number|bank|postcode|address|passport|secret|https?|www)\b", text, re.I)):
                 raise ValueError()
             digest = hmac.new(self.server.owner_token.encode(), text.encode(), hashlib.sha256).hexdigest()

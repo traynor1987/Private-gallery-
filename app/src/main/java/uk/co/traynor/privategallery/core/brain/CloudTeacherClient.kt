@@ -90,7 +90,9 @@ internal class CloudTeacherClient(private val transport: CloudTeacherTransport =
 }
 
 internal fun cloudRequest(endpoint: URI, token: String, payload: ByteArray?,
-    open: (java.net.URL) -> java.net.URLConnection = { it.openConnection() }): BrainResponse {
+    open: (java.net.URL) -> java.net.URLConnection = { it.openConnection() },
+    beforeBody: () -> Unit = {},
+): BrainResponse {
     require(endpoint.scheme == "https" && endpoint.host != null && endpoint.rawUserInfo == null &&
         endpoint.rawQuery == null && endpoint.rawFragment == null &&
         endpoint.rawPath == (if (payload == null) "/guardian/status" else "/guardian/analyze"))
@@ -109,7 +111,10 @@ internal fun cloudRequest(endpoint: URI, token: String, payload: ByteArray?,
             connection.doOutput = true
             connection.setRequestProperty("Content-Type", "application/json; charset=utf-8")
             connection.setFixedLengthStreamingMode(payload.size)
-            connection.outputStream.use { it.write(payload) }
+            connection.outputStream.use {
+                beforeBody()
+                it.write(payload)
+            }
         }
         val code = connection.responseCode
         require(connection.contentLengthLong <= 32768)

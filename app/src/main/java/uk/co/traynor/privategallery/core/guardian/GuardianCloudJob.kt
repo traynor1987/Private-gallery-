@@ -85,8 +85,13 @@ class GuardianCloudJob : JobService() {
             store.deferAutomaticCloud(work, System.currentTimeMillis(), retry = true)
             return
         }
+        val parent = kotlinx.coroutines.currentCoroutineContext()
         val client = CloudTeacherClient(CloudTeacherTransport { endpoint, token, payload ->
-            cloudRequest(endpoint, token, payload, network::openConnection)
+            cloudRequest(endpoint, token, payload, network::openConnection, beforeBody = {
+                if (!parent.isActive || !validated(connectivity, network) ||
+                    !GuardianAutomaticCloudPolicy.validWindow(work.createdAt, System.currentTimeMillis()) ||
+                    !store.automaticCloudMaySend(work)) throw CancellationException()
+            })
         })
         val status = try {
             val initial = client.status(work.configuration)
@@ -111,7 +116,6 @@ class GuardianCloudJob : JobService() {
             store.deferAutomaticCloud(work, System.currentTimeMillis(), retry = false)
             return
         }
-        val parent = kotlinx.coroutines.currentCoroutineContext()
         if (!parent.isActive) return
         val excerpt = store.claimAutomaticCloud(work, System.currentTimeMillis()) ?: return
         try {
@@ -122,7 +126,9 @@ class GuardianCloudJob : JobService() {
             store.finishAutomaticCloud(work, GuardianCloudState.COMPLETE,
                 GuardianCloudAdvisory(reply.lesson, status.model, System.currentTimeMillis()))
         } catch (cancelled: CancellationException) {
-            throw cancelled
+            if (!parent.isActive) throw cancelled
+            // The transport opened a connection, but its last consent check stopped the body.
+            store.finishAutomaticCloud(work, GuardianCloudState.LOCAL_ONLY, null)
         } catch (error: CloudTeacherException) {
             store.finishAutomaticCloud(work,
                 if (error.failure.mayHaveCharged) GuardianCloudState.UNKNOWN else GuardianCloudState.UNAVAILABLE, null)

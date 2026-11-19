@@ -68,6 +68,7 @@ class HttpAccountingTest(unittest.TestCase):
             self.server.automatic_analysis_enabled = True
             self.assertEqual(self.send(identity, message='My password is secret', **automatic)[0], 400)
             self.assertEqual(self.send(identity, message='Call 07123456789', **automatic)[0], 400)
+            self.assertEqual(self.send(identity, message='Visit example.com please', **automatic)[0], 400)
             self.assertEqual(self.send(identity, **automatic)[0], 200)
             self.assertEqual(self.send(identity, **automatic)[0], 409)
             upstream.assert_called_once()

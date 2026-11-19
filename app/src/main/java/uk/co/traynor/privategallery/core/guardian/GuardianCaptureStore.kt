@@ -54,6 +54,8 @@ internal data class GuardianInboxRow(
     val cloudState: GuardianCloudState? = null,
     val captureAccount: String? = null,
     val partialCapture: Boolean? = null,
+    val learningRevisions: Int = 0,
+    val localModelVersion: Int? = null,
 )
 
 /** The export only needs section membership and layout-local list keys. */
@@ -469,7 +471,8 @@ internal class GuardianCaptureStore private constructor(private val context: Con
         val rows = read()
         if (rows.count { row ->
             if (ownerLabel(row) != null) row.put("savedForTraining", true)
-            row.remove("ownerLabel") != null
+            val hadHistory = row.remove("learningHistory") != null
+            row.remove("ownerLabel") != null || hadHistory
         } > 0) write(rows)
         GuardianCaptureStore(context, true).clear()
         validationArchive().clear()
@@ -520,10 +523,7 @@ internal class GuardianCaptureStore private constructor(private val context: Con
             val row = rows.firstOrNull { it.getString("id") == id && !it.optBoolean("deleted") } ?: return@synchronized false
             val state = inboxRow(row, now)
             if (state.assessment == null || state.section == GuardianInboxSection.COOLING) return@synchronized false
-            if (label == null) {
-                if (ownerLabel(row) != null) row.put("savedForTraining", true)
-                row.remove("ownerLabel")
-            } else row.put("ownerLabel", label.name).put("savedForTraining", true).put("trainedAt", now.wall)
+            recordOwnerLabel(row, label, now.wall)
             write(rows)
             true
         }
@@ -765,7 +765,9 @@ internal class GuardianCaptureStore private constructor(private val context: Con
             GuardianAssessment.entries.firstOrNull { it.name == row.optString("originalAssessment") } ?: assessment,
             row.optBoolean("explicitlyReviewed") || review == "ready" || review == "archived", savedForTraining(row),
             cloudState(row, now.wall), row.optString("captureAccount").takeIf(String::isNotBlank),
-            if (row.has("partialCapture")) row.optBoolean("partialCapture") else null)
+            if (row.has("partialCapture")) row.optBoolean("partialCapture") else null,
+            row.optJSONArray("learningHistory")?.length() ?: 0,
+            row.optInt("assessmentVersion").takeIf { it > 0 })
     }
 
     private fun rowConversation(row: JSONObject) = GuardianConversationKey(
@@ -890,12 +892,24 @@ internal class GuardianCaptureStore private constructor(private val context: Con
 
     private fun savedForTraining(row: JSONObject) = row.optBoolean("savedForTraining") || ownerLabel(row) != null
 
+    private fun recordOwnerLabel(row: JSONObject, label: GuardianAssessment?, at: Long) {
+        val previous = ownerLabel(row)
+        if (previous == label) return
+        val history = row.optJSONArray("learningHistory")
+        val saved = if (history == null) emptyList() else List(history.length(), history::getJSONObject)
+        val correction = JSONObject().put("at", at).put("label", label?.name ?: JSONObject.NULL)
+        row.put("learningHistory", JSONArray((saved + correction).takeLast(8)))
+        row.put("savedForTraining", true)
+        if (label == null) row.remove("ownerLabel")
+        else row.put("ownerLabel", label.name).put("trainedAt", at)
+    }
+
     fun saveInboxForTraining(id: String, label: GuardianAssessment?, days: Int, now: GuardianInboxClock): Boolean = synchronized(lock) {
         val rows = retainedRows(days, now.wall)
         val row = rows.firstOrNull { it.optString("id") == id && !it.optBoolean("deleted") } ?: return@synchronized false
         if (inboxRow(row, now).section == GuardianInboxSection.COOLING) return@synchronized false
         row.put("savedForTraining", true)
-        if (label != null) row.put("ownerLabel", label.name).put("trainedAt", now.wall)
+        if (label != null) recordOwnerLabel(row, label, now.wall)
         write(rows)
         true
     }
@@ -905,8 +919,7 @@ internal class GuardianCaptureStore private constructor(private val context: Con
         val row = rows.firstOrNull { it.optString("id") == id && !it.optBoolean("deleted") } ?: return@synchronized false
         if (inboxRow(row, now).section == GuardianInboxSection.COOLING) return@synchronized false
         val labelled = ownerLabel(row) != null
-        if (labelled) row.put("savedForTraining", true)
-        row.remove("ownerLabel")
+        if (labelled) recordOwnerLabel(row, null, now.wall)
         val standalone = forgetExample(row.getString("text"))
         if (labelled) write(rows)
         labelled || standalone

@@ -92,5 +92,10 @@ class GuardianEvidence90RuntimeTest {
         assertEquals(sentence, store.revealInboxMessage(id, 0, later))
         assertTrue(store.saveInboxForTraining(id, GuardianAssessment.LOW_RISK, 0, later))
         assertEquals(1, store.learningCount())
+        assertTrue(store.saveInboxForTraining(id, GuardianAssessment.UPSETTING, 0, later))
+        val corrected = GuardianCaptureStore(context).inboxRows(0, later).single()
+        assertEquals(2, corrected.learningRevisions)
+        assertEquals(GuardianAssessment.UNCERTAIN, corrected.originalAssessment)
+        assertEquals(GuardianAssessment.UPSETTING, corrected.ownerLabel)
     }
 }
