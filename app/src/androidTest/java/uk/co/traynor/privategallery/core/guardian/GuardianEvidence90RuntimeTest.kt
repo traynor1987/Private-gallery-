@@ -98,4 +98,28 @@ class GuardianEvidence90RuntimeTest {
         assertEquals(GuardianAssessment.UNCERTAIN, corrected.originalAssessment)
         assertEquals(GuardianAssessment.UPSETTING, corrected.ownerLabel)
     }
+
+    @Test fun bundledNotificationHistoryNeverQueuesPastExcerpts() = fixture { store, settings, now ->
+        settings.enable(configuration.origin)
+        assertTrue(settings.setScope(configuration.origin, key, true))
+        val event = capture(now).copy(entries = listOf(
+            GuardianCaptureEntry(now.wall - 30_000, "Taylor", "Earlier synthetic notification text"),
+            GuardianCaptureEntry(now.wall, "Taylor", sentence, "Taylor"),
+        ))
+        val ids = store.append(event, 30, now.wall, false, now).addedIds
+        assertEquals(2, ids.size)
+        assertTrue(store.assessCaptured(event, 30, now, ids, classifyWithoutExamples = true))
+        val rows = store.inboxRows(30, now)
+        assertTrue(rows.all { it.assessment == GuardianAssessment.UNCERTAIN })
+        assertNull(rows.single { it.time == now.wall - 30_000 }.cloudState)
+        val queued = checkNotNull(store.nextAutomaticCloud(now.wall))
+        assertEquals(rows.single { it.time == now.wall }.id, queued.evidenceId)
+        val stale = capture(now).copy(entries = listOf(
+            GuardianCaptureEntry(now.wall - GuardianAutomaticCloudPolicy.WINDOW_MS, "Taylor", "An old synthetic notification"),
+        ))
+        val retained = store.append(stale, 30, now.wall, false, now).addedIds.single()
+        assertFalse(store.assessCaptured(stale, 30, now, setOf(retained), classifyWithoutExamples = true))
+        assertEquals("An old synthetic notification", store.revealInboxMessage(retained, 30, now))
+    }
+
 }

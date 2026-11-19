@@ -292,6 +292,7 @@ def runtime_cases(archive,matrix,source):
             'guardian-evidence-90': [('uk.co.traynor.privategallery.core.guardian.GuardianEvidence90RuntimeTest', name) for name in (
                 'durableEvidenceAndQueueShareTheOriginalRecordAcrossReopenAndDeletion',
                 'archiveRestoreAndRevocationKeepTheOriginalWithoutRequeuing',
+                'bundledNotificationHistoryNeverQueuesPastExcerpts',
             )],
             'guardian-retention-89': [('uk.co.traynor.privategallery.core.guardian.GuardianRetention89RuntimeTest', name) for name in (
                 'thirtyDaysAndSevenDaysArchiveWithoutDeletingOrRewritingAfterRestart',

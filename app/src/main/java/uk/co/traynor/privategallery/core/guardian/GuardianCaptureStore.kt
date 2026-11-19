@@ -587,7 +587,14 @@ internal class GuardianCaptureStore private constructor(private val context: Con
         val rows = retainedRows(days, now.wall)
         val learned = examples(rows)
         if (learned.isEmpty() && !classifyWithoutExamples) return@synchronized false
-        val consent = if (automaticIds.isEmpty()) null else runCatching { currentCloudConsent()?.second }.getOrNull()
+        // Android can bundle older messages in a single notification update. Preserve and
+        // classify all of them locally, but only the unambiguous newest fresh excerpt can queue.
+        val newestAt = event.entries.maxOfOrNull { it.time }
+        val automaticId = event.entries.singleOrNull { it.time == newestAt }
+            ?.takeIf { GuardianAutomaticCloudPolicy.validWindow(it.time, now.wall) }
+            ?.let { identity(event, it) }
+            ?.takeIf { it in automaticIds }
+        val consent = if (automaticId == null) null else runCatching { currentCloudConsent()?.second }.getOrNull()
         var pending = if (consent == null) 0 else rows.count { pendingCloud(it, consent, now.wall) != null }
         var queued = false
         val ids = event.entries.mapTo(HashSet()) { identity(event, it) }
@@ -597,7 +604,7 @@ internal class GuardianCaptureStore private constructor(private val context: Con
                 inboxRow(row, now).section == GuardianInboxSection.COOLING) continue
             val assessment = classifyGuardian(row.getString("text"), learned, contextFor(row, rows), rowSensitivity(row))
             applyAssessment(row, assessment, now)
-            if (row.getString("id") in automaticIds && assessment == GuardianAssessment.UNCERTAIN && consent != null &&
+            if (row.getString("id") == automaticId && assessment == GuardianAssessment.UNCERTAIN && consent != null &&
                 rowConversation(row) in consent.scopes && !row.optBoolean("partialCapture")) {
                 val eligible = pending < GuardianAutomaticCloudPolicy.MAX_PENDING && automaticExcerpt(row) != null
                 row.put("cloud", JSONObject().put("state", if (eligible) GuardianCloudState.QUEUED.name else GuardianCloudState.LOCAL_ONLY.name)
