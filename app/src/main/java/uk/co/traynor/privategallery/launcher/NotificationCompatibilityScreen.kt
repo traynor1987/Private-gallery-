@@ -40,6 +40,8 @@ import uk.co.traynor.privategallery.core.guardian.GuardianCapture
 import uk.co.traynor.privategallery.core.guardian.GuardianRetention89
 import uk.co.traynor.privategallery.core.guardian.GuardianCaptureStore
 import uk.co.traynor.privategallery.core.guardian.GuardianNotificationListener
+import uk.co.traynor.privategallery.core.guardian.GuardianPipelineDiagnostics
+import uk.co.traynor.privategallery.core.guardian.GuardianPresentationAction
 import uk.co.traynor.privategallery.core.guardian.ProbeAccount
 import uk.co.traynor.privategallery.core.guardian.ProbeResult
 import uk.co.traynor.privategallery.core.guardian.SyntheticResult
@@ -120,6 +122,7 @@ internal fun NotificationCompatibilityScreen(
                 NotificationManager.INTERRUPTION_FILTER_NONE -> "No interruptions"
                 else -> "Unavailable"
             })
+            GuardianProcessingTrace()
             HorizontalDivider()
             Text(
                 "The five-minute test continues while you switch apps or lock the device. Use harmless messages from both accounts. " +
@@ -270,6 +273,35 @@ internal fun NotificationCompatibilityScreen(
 }
 
 @Composable
+private fun GuardianProcessingTrace() {
+    val context = LocalContext.current
+    var expanded by remember { mutableStateOf(false) }
+    OutlinedButton(onClick = { expanded = !expanded }) { Text(if (expanded) "Hide processing trace" else "WhatsApp processing trace") }
+    if (!expanded) return
+    val observations by GuardianPipelineDiagnostics.recent.collectAsState()
+    Text("Saved presentation · ${GuardianSafeNotifications.presentationMode(context).label}")
+    Text("This session records counts and outcomes only. Entries with the same slot are updates to the same Android notification.")
+    if (observations.isEmpty()) Text("No WhatsApp notification callbacks recorded.")
+    observations.takeLast(8).asReversed().forEach { event ->
+        val flags = listOfNotNull(if (event.grouped) "grouped" else null, if (event.summary) "summary" else null,
+            if (!event.clearable) "non-clearable" else null, if (event.locked) "locked" else null,
+            if (event.dnd) "Do Not Disturb" else null)
+        Text((listOf("Event ${event.sequence}", "Slot ${event.slot}", event.account.name) + flags).joinToString(" · "),
+            style = MaterialTheme.typography.titleSmall)
+        Text("${event.mode.label} · ${event.capture}" + (event.entries?.let { " · $it inbound entries" } ?: ""))
+        event.assessed?.let { Text("$it assessed · ${event.held ?: 0} held" + (event.latest?.let { latest -> " · ${latest.label}" } ?: "")) }
+        event.action?.let { Text(when (it) {
+            GuardianPresentationAction.KEEP_ORIGINAL -> "Keep the original"
+            GuardianPresentationAction.DISMISS_SILENTLY -> "Dismiss silently"
+            GuardianPresentationAction.REPLACE -> "Dismiss and replace"
+        }) }
+        event.removal?.let { Text(it) }
+        event.delivery?.let { Text(it) }
+    }
+    TextButton(onClick = GuardianPipelineDiagnostics::clear) { Text("Clear processing trace") }
+}
+
+@Composable
 private fun GuardianCaptureControls(allowChanges: Boolean, listenerReady: Boolean) {
     val context = LocalContext.current
     val health by GuardianCapture.state.collectAsState()
@@ -300,7 +332,7 @@ private fun GuardianCaptureControls(allowChanges: Boolean, listenerReady: Boolea
     if (!health.busy && health.enabled && health.learningCount == null) {
         Text("Local rules available · saved learning examples could not be read")
     }
-    Text("Ordinary messages normally keep their original app notification. Look for captured messages in Guardian Inbox → Ready to Read.")
+    Text("The presentation setting controls which original alerts Guardian keeps or replaces. Find captured messages in Guardian Inbox.")
     OutlinedButton(
         enabled = allowChanges && !health.busy && (health.enabled || listenerReady),
         onClick = {

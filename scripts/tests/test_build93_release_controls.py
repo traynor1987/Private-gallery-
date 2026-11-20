@@ -1,4 +1,4 @@
-"""Build93 identity and authentic Build91 upgrade contract; no signing or release claims."""
+"""Build94 identity and authentic Build93 upgrade contract; no signing or release claims."""
 from pathlib import Path
 import subprocess
 import unittest
@@ -10,7 +10,7 @@ from scripts.tests import test_code81_main_release_controls as main_controls
 ROOT = Path(__file__).resolve().parents[2]
 
 
-class Build93ReleaseControls(unittest.TestCase):
+class Build94ReleaseControls(unittest.TestCase):
     def test_guardian_job_remains_private_and_requires_android_job_binding(self):
         import xml.etree.ElementTree as ET
         manifest = ET.parse(ROOT / 'app/src/main/AndroidManifest.xml').getroot()
@@ -29,22 +29,22 @@ class Build93ReleaseControls(unittest.TestCase):
 
     def test_current_candidate_and_baseline_are_consistent_across_existing_controls(self):
         build = (ROOT / 'app/build.gradle.kts').read_text()
-        self.assertRegex(build, r'versionCode\s*=\s*93\b')
-        self.assertIn('versionName = "1.7.47"', build)
+        self.assertRegex(build, r'versionCode\s*=\s*94\b')
+        self.assertIn('versionName = "1.7.48"', build)
         configuration = (ROOT / 'scripts/release_configuration1711.sh').read_text()
-        for line in ('release_version=1.7.47', 'release_code=93',
-                     'baseline_version=1.7.45', 'baseline_code=91',
-                     'baseline_sha=022061984debb59f69d917f225ac08f1bfedfe82'):
+        for line in ('release_version=1.7.48', 'release_code=94',
+                     'baseline_version=1.7.47', 'baseline_code=93',
+                     'baseline_sha=39e29649ce961b251a9783e09731814f6e0ab30c'):
             self.assertIn(line, configuration.splitlines())
-        self.assertEqual(151926471, baseline.BASELINE_SIZE)
-        self.assertEqual('60f7ad3cde4580869803961a42c80c87f73d9ae1b2cd9192fdfcb6d9362bbc7b', baseline.BASELINE_SHA256)
-        self.assertEqual('https://github.com/traynor1987/Private-gallery-/releases/download/v1.7.45/private-gallery-release.apk', baseline.BASELINE_URL)
+        self.assertEqual(151942855, baseline.BASELINE_SIZE)
+        self.assertEqual('f56876d35fe174bcb7c85981e26401e3d3c97a48b94b8b2c605c7698f8d693b6', baseline.BASELINE_SHA256)
+        self.assertEqual('https://github.com/traynor1987/Private-gallery-/releases/download/v1.7.47/private-gallery-release.apk', baseline.BASELINE_URL)
         fixture = (ROOT / 'docs/release1711/UpgradeFixtureTest.kt').read_text()
-        self.assertIn('baselineCode == 91 && candidateCode == 93', fixture)
-        self.assertIn('assertEquals(93L,available.release?.versionCode)', fixture)
-        self.assertIn('original=91 candidate=93', fixture)
+        self.assertIn('baselineCode == 93 && candidateCode == 94', fixture)
+        self.assertIn('assertEquals(94L,available.release?.versionCode)', fixture)
+        self.assertIn('original=93 candidate=94', fixture)
         live = (ROOT / 'docs/build85/verify_live_build84.py').read_text()
-        for text in ("installed() == 91", "installed() != 93", "1.7.47 · Build 93 available", "1.7.47 · Up to date", 'baseline_code=91, installed_code=93'):
+        for text in ("installed() == 93", "installed() != 94", "1.7.48 · Build 94 available", "1.7.48 · Up to date", 'baseline_code=93, installed_code=94'):
             self.assertIn(text, live)
 
     def test_staging_metadata_uses_the_same_candidate_identity_as_signing(self):
@@ -75,7 +75,7 @@ class Build93ReleaseControls(unittest.TestCase):
         from scripts.tests.test_code81_main_release_controls import gate
         with tempfile.TemporaryDirectory() as directory:
             values = main_controls.MainReleaseControls().fixture(directory)
-            branch = 'feature/novaos-guardian-presentation93'
+            branch = 'feature/novaos-guardian-fold-acceptance'
             values[0]['runtime_branch'] = branch
             values[2]['head_branch'] = branch
             values[1] += ('Runtime branch: '+branch+'\n').encode()

@@ -31,12 +31,12 @@ internal enum class GuardianPresentationAction { KEEP_ORIGINAL, DISMISS_SILENTLY
 
 internal fun guardianPresentationAction(
     mode: GuardianPresentationMode, automatic: Boolean, quietCollection: Boolean,
-    held: Boolean, allLowRisk: Boolean, replacementAvailable: Boolean,
+    held: Boolean, assessedReplacement: Boolean, replacementAvailable: Boolean,
 ): GuardianPresentationAction = when {
     quietCollection -> GuardianPresentationAction.DISMISS_SILENTLY
     !automatic -> GuardianPresentationAction.KEEP_ORIGINAL
     held -> GuardianPresentationAction.REPLACE
-    mode == GuardianPresentationMode.GUARDIAN && allLowRisk && replacementAvailable -> GuardianPresentationAction.REPLACE
+    mode == GuardianPresentationMode.GUARDIAN && assessedReplacement && replacementAvailable -> GuardianPresentationAction.REPLACE
     else -> GuardianPresentationAction.KEEP_ORIGINAL
 }
 

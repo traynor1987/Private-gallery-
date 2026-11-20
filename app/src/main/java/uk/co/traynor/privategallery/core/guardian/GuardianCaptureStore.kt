@@ -596,7 +596,6 @@ internal class GuardianCaptureStore private constructor(private val context: Con
 
     fun assessCaptured(event: GuardianCaptureEvent, days: Int, now: GuardianInboxClock,
         automaticIds: Set<String> = emptySet(), classifyWithoutExamples: Boolean = false,
-        reassessedIds: MutableSet<String>? = null,
     ): Boolean = synchronized(lock) {
         val rows = retainedRows(days, now.wall)
         // A separate learning file can fail verification while the capture archive is healthy.
@@ -613,7 +612,6 @@ internal class GuardianCaptureStore private constructor(private val context: Con
         val consent = if (automaticId == null || evidence.isFailure) null else runCatching { currentCloudConsent()?.second }.getOrNull()
         var pending = if (consent == null) 0 else rows.count { pendingCloud(it, consent, now.wall) != null }
         var queued = false
-        val revised = mutableSetOf<String>()
         val ids = event.entries.mapTo(HashSet()) { identity(event, it) }
         var changed = false
         for (row in rows) {
@@ -626,9 +624,8 @@ internal class GuardianCaptureStore private constructor(private val context: Con
                     row.optString("review").isNotEmpty() || ownerLabel(row) != null ||
                     row.optBoolean("holdReviewed")) continue
                 val cues = recogniseNovaBrainPatterns(text)
-                if (NovaBrainPattern.HOSTILE_COMMAND !in cues) continue
+                if (NovaBrainPattern.HOSTILE_COMMAND !in cues && NovaBrainPattern.INSULT !in cues) continue
                 row.put("patterns", JSONArray(cues.map { it.name }))
-                revised += id
             } else if (inboxRow(row, now).section == GuardianInboxSection.COOLING) continue
             val decision = guardianContentDecision(text, learned, contextFor(row, rows), rowSensitivity(row))
             applyAssessment(row, decision, now)
@@ -643,7 +640,6 @@ internal class GuardianCaptureStore private constructor(private val context: Con
             changed = true
         }
         if (changed) write(rows)
-        reassessedIds?.addAll(revised)
         queued
     }
 
