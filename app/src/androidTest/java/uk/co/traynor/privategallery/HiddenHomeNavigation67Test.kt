@@ -38,7 +38,17 @@ class HiddenHomeNavigation67Test {
                 route.value = Route.VAULT
             }
             compose.onNodeWithTag("nova-home").assertIsDisplayed().performClick()
-            compose.waitUntil(5_000) { compose.onNodeWithTag("hidden-space-apps").isDisplayed() }
+            try {
+                compose.waitUntil(5_000) { compose.onNodeWithTag("hidden-space-apps").isDisplayed() }
+            } catch (failure: ComposeTimeoutException) {
+                val state = compose.runOnIdle {
+                    "selected=${owner.hidden.selected}, authenticated=${owner.hidden.authenticated}, " +
+                        "unlocked=${owner.hidden.session.isUnlocked}, homeVisible=${owner.homeVisible}, " +
+                        "cover=${compose.activity.privacyCoverVisible()}, windowFocus=${compose.activity.window.decorView.hasWindowFocus()}"
+                }
+                val tree = compose.onRoot(useUnmergedTree = true).printToString(maxDepth = 5)
+                throw AssertionError("Vault did not return to the Hidden dashboard. $state" + System.lineSeparator() + tree, failure)
+            }
             compose.onNodeWithTag("hidden-space-apps").assertIsDisplayed()
             compose.activityRule.scenario.moveToState(Lifecycle.State.CREATED)
             compose.activityRule.scenario.moveToState(Lifecycle.State.RESUMED)

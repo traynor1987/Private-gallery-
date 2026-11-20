@@ -11,9 +11,16 @@ classes+=",$package.core.browser.hidden.HiddenBrowserIsolationTest,$package.core
 classes+=",$package.core.browser.hidden.HiddenVpnBoundary1762Test,$package.core.browser.hidden.HiddenRuntimeFailureTest"
 classes+=",$package.core.hidden.HiddenRepositoryTest,$package.core.hidden.HiddenCredentialSeparationTest"
 classes+=",$package.core.browser.v2.PrivateAppBrowserSeparationTest,$package.core.camera.VaultCaptureAccessTest"
-./gradlew :app:connectedDebugAndroidTest "-Pandroid.testInstrumentationRunnerArguments.class=$classes" --stacktrace
-cp -R app/build/outputs/androidTest-results/connected app/build/hidden-space/cover
+cover_status=0
+./gradlew :app:connectedDebugAndroidTest "-Pandroid.testInstrumentationRunnerArguments.class=$classes" --stacktrace || cover_status=$?
+if [[ -d app/build/outputs/androidTest-results/connected ]]; then
+    cp -R app/build/outputs/androidTest-results/connected app/build/hidden-space/cover
+fi
 adb shell wm size 1768x2208
 adb shell wm density 320
-./gradlew :app:connectedDebugAndroidTest "-Pandroid.testInstrumentationRunnerArguments.class=$package.HiddenHomeNavigation67Test,$package.HiddenSpaceDashboardUiTest" --stacktrace
-cp -R app/build/outputs/androidTest-results/connected app/build/hidden-space/inner
+inner_status=0
+./gradlew :app:connectedDebugAndroidTest "-Pandroid.testInstrumentationRunnerArguments.class=$package.HiddenHomeNavigation67Test,$package.HiddenSpaceDashboardUiTest" --stacktrace || inner_status=$?
+if [[ -d app/build/outputs/androidTest-results/connected ]]; then
+    cp -R app/build/outputs/androidTest-results/connected app/build/hidden-space/inner
+fi
+(( cover_status == 0 && inner_status == 0 ))
