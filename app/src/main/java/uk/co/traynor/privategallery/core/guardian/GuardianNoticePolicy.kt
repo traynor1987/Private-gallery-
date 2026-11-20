@@ -18,8 +18,27 @@ internal fun guardianNoticeKind(assessment: GuardianAssessment?, patterns: Set<N
 internal fun guardianPolicyHolds(assessment: GuardianAssessment?, holdUncertain: Boolean): Boolean =
     assessment == GuardianAssessment.UPSETTING || assessment == GuardianAssessment.UNCERTAIN && holdUncertain
 
-internal fun guardianDismissalAllowed(automatic: Boolean, quietCollection: Boolean, held: Boolean): Boolean =
-    quietCollection || (automatic && held)
+internal enum class GuardianPresentationMode(val label: String) {
+    SMART("Smart Filtering"),
+    GUARDIAN("Nova Guardian Notifications");
+
+    companion object {
+        fun read(value: String?) = entries.firstOrNull { it.name == value } ?: SMART
+    }
+}
+
+internal enum class GuardianPresentationAction { KEEP_ORIGINAL, DISMISS_SILENTLY, REPLACE }
+
+internal fun guardianPresentationAction(
+    mode: GuardianPresentationMode, automatic: Boolean, quietCollection: Boolean,
+    held: Boolean, allLowRisk: Boolean, replacementAvailable: Boolean,
+): GuardianPresentationAction = when {
+    quietCollection -> GuardianPresentationAction.DISMISS_SILENTLY
+    !automatic -> GuardianPresentationAction.KEEP_ORIGINAL
+    held -> GuardianPresentationAction.REPLACE
+    mode == GuardianPresentationMode.GUARDIAN && allLowRisk && replacementAvailable -> GuardianPresentationAction.REPLACE
+    else -> GuardianPresentationAction.KEEP_ORIGINAL
+}
 
 internal fun guardianNoticeProfile(profile: Long, own: Long?, friends: Long?): ProbeAccount {
     if (own == null || own < 0) return ProbeAccount.UNRESOLVED

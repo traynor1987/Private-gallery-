@@ -161,8 +161,10 @@ class GuardianEvidence90RuntimeTest {
         assertEquals(GuardianAssessment.UNCERTAIN, uncertain.assessment)
         assertEquals(GuardianInboxSection.COOLING, uncertain.section)
         assertEquals(GuardianCloudState.QUEUED, uncertain.cloudState)
-        assertFalse(guardianDismissalAllowed(automatic = false, quietCollection = false, held = true))
-        assertTrue(guardianDismissalAllowed(automatic = true, quietCollection = false, held = true))
+        assertEquals(GuardianPresentationAction.KEEP_ORIGINAL,
+            guardianPresentationAction(GuardianPresentationMode.SMART, false, false, true, false, true))
+        assertEquals(GuardianPresentationAction.REPLACE,
+            guardianPresentationAction(GuardianPresentationMode.SMART, true, false, true, false, true))
     }
 
     @Test fun captureUsesLocalRulesIfSeparateLearningArchiveCannotBeRead() = fixture { store, settings, now ->

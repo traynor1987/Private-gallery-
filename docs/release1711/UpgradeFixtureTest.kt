@@ -47,7 +47,7 @@ import uk.co.traynor.privategallery.core.sanctuary.SanctuaryMode
 import uk.co.traynor.privategallery.core.sanctuary.SanctuaryPreset
 import uk.co.traynor.privategallery.core.sanctuary.SanctuaryStore
 
-/** Reviewed release-control instrumentation for original-key Build 91 to versionCode 92 upgrade.
+/** Reviewed release-control instrumentation for original-key Build 91 to versionCode 93 upgrade.
  * Captured and hash-checked before frozen application checkout; never modifies baseline app.
  */
 class UpgradeFixtureTest {
@@ -58,7 +58,7 @@ class UpgradeFixtureTest {
     private val candidateCode get() = checkNotNull(arguments.getString("candidateCode")).toInt()
     private fun guard() {
         check(context.packageName == "uk.co.traynor.privategallery.hiddenprototype")
-        check(baselineCode == 91 && candidateCode == 92)
+        check(baselineCode == 91 && candidateCode == 93)
     }
     /** Disposable emulator only: exercise the immutable Build91 updater against controlled
      * release responses and the real original-key candidate bytes. APK/signature validation,
@@ -70,7 +70,7 @@ class UpgradeFixtureTest {
         assertEquals(37,android.os.Build.VERSION.SDK_INT)
         val port=checkNotNull(arguments.getString("updateFixturePort")).toInt()
         check(port in 1024..65535)
-        val prefix="https://github.com/traynor1987/Private-gallery-/releases/download/v1.7.46/"
+        val prefix="https://github.com/traynor1987/Private-gallery-/releases/download/v1.7.47/"
         val routes=mapOf(
             "https://api.github.com/repos/traynor1987/Private-gallery-/releases/latest" to "/release.json",
             prefix+"private-gallery-release.apk" to "/candidate.apk",
@@ -119,14 +119,14 @@ class UpgradeFixtureTest {
         while(updateState().phase==uk.co.traynor.privategallery.core.update.UpdatePhase.CHECKING && SystemClock.elapsedRealtime()<checkDeadline)Thread.sleep(100)
         val available=updateState()
         assertEquals(uk.co.traynor.privategallery.core.update.UpdatePhase.AVAILABLE,available.phase)
-        assertEquals(92L,available.release?.versionCode)
-        assertEquals("1.7.46",available.release?.version?.raw)
+        assertEquals(93L,available.release?.versionCode)
+        assertEquals("1.7.47",available.release?.version?.raw)
         invoke("downloadUpdate")
         val deadline=SystemClock.elapsedRealtime()+180_000
         while(SystemClock.elapsedRealtime()<deadline) {
             val state=updateState()
             if(state.phase==uk.co.traynor.privategallery.core.update.UpdatePhase.INSTALLATION_REQUESTED) {
-                instrumentation.sendStatus(0,android.os.Bundle().apply{putString(android.app.Instrumentation.REPORT_KEY_STREAMRESULT,"NOVA_UPDATE_HANDOFF_READY original=91 candidate=92 transport=controlled-loopback apkVerification=unmodified\n")})
+                instrumentation.sendStatus(0,android.os.Bundle().apply{putString(android.app.Instrumentation.REPORT_KEY_STREAMRESULT,"NOVA_UPDATE_HANDOFF_READY original=91 candidate=93 transport=controlled-loopback apkVerification=unmodified\n")})
                 while(SystemClock.elapsedRealtime()<deadline)Thread.sleep(1000)
                 fail("Android package installation was not confirmed in time")
             }

@@ -57,7 +57,8 @@ internal fun guardianContentDecision(
 ): GuardianContentDecision {
     val cues = recogniseNovaBrainPatterns(text)
     val concerning = GuardianContentDecision(GuardianAssessment.UPSETTING, GuardianAssessmentReason.CONCERNING_CUE)
-    if (NovaBrainPattern.THREAT in cues || NovaBrainPattern.INSULT in cues) return concerning
+    if (NovaBrainPattern.THREAT in cues || NovaBrainPattern.INSULT in cues ||
+        NovaBrainPattern.HOSTILE_COMMAND in cues) return concerning
     val features = guardianFeatures(text)
     val exactLabels = if (features.isEmpty()) emptySet() else examples.asSequence()
         .filter { it.features == features }.map { it.assessment }.toSet()

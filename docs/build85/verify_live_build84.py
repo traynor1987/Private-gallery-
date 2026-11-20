@@ -228,7 +228,7 @@ def main():
     wait_device_ready()
     require(installed() is None, 'Production package must be absent initially; never clear/uninstall')
     candidate = json.loads(args.candidate.read_text())
-    require(candidate['tag'] == 'v1.7.46' and candidate['version_code'] == 92, 'Wrong release candidate')
+    require(candidate['tag'] == 'v1.7.47' and candidate['version_code'] == 93, 'Wrong release candidate')
     release = public_release(args.output)
     require(release['tag_name'] == candidate['tag'] and not release['draft'] and not release['prerelease'], 'Not the actual latest stable release')
     apk = next(a for a in release['assets'] if a['name'] == 'private-gallery-release.apk')
@@ -247,13 +247,13 @@ def main():
     require(has(before, '1.7.45 · Build 91'), 'Build91 screen does not identify its real installed version')
     # Installed Build91 starts its first real check on About entry. Wait for
     # that completed result before exercising the explicit check action.
-    before = wait_for(lambda t: has(t, '1.7.46 · Build 92 available'), 'Build91 automatic first check')
+    before = wait_for(lambda t: has(t, '1.7.47 · Build 93 available'), 'Build91 automatic first check')
     save_ui(before, args.output / 'build91-first-public-discovery.xml')
     click(reveal_action('Check for updates'), 'Check for updates')
     updates_summary()
-    available = wait_for(lambda t: has(t, '1.7.46 · Build 92 available'), 'Build91 real public update discovery')
+    available = wait_for(lambda t: has(t, '1.7.47 · Build 93 available'), 'Build91 real public update discovery')
     save_ui(available, args.output / 'build91-live-update-available.xml')
-    print('PASS: authentic installed Build91 discovers Build92 through its real UI and public GitHub feed', flush=True)
+    print('PASS: authentic installed Build91 discovers Build93 through its real UI and public GitHub feed', flush=True)
     download = reveal_action('Download update')
     save_ui(download, args.output / 'build91-live-download-action.xml')
     click(download, 'Download update')
@@ -263,23 +263,23 @@ def main():
     action = next(n for n in installer.iter('node') if n.get('package') in installers and n.get('text') in ('Update', 'Install'))
     tap(action)
     deadline = time.monotonic() + 120
-    while installed() != 92:
-        require(time.monotonic() < deadline, 'Android did not report installed Build92')
+    while installed() != 93:
+        require(time.monotonic() < deadline, 'Android did not report installed Build93')
         time.sleep(1)
     (args.output / 'live-update-installed.json').write_text(json.dumps({'result': 'INSTALLED', 'installed_code': installed(), 'source': candidate['source'], 'apk_sha256': candidate['apk_sha256'], 'live_github_discovery': 'PASS', 'live_download': 'PASS', 'android_installer': 'confirmed', 'restart_review': 'pending'}, indent=2)+'\n')
     adb('shell', 'am', 'force-stop', PACKAGE)
     after = open_updates(allow_setup=False)
-    require(has(after, '1.7.46 · Build 92'), 'Restart did not show the installed Build92')
+    require(has(after, '1.7.47 · Build 93'), 'Restart did not show the installed Build93')
     # PackageManager has already confirmed the upgrade. Explicitly refresh the real feed
     # after restart as well as verifying the installed version.
-    after = wait_for(lambda t: has(t, '1.7.46 · Up to date'), 'installed-version confirmation')
+    after = wait_for(lambda t: has(t, '1.7.47 · Up to date'), 'installed-version confirmation')
     click(reveal_action('Check for updates'), 'Check for updates')
     updates_summary()
-    after = wait_for(lambda t: has(t, '1.7.46 · Build 92') and has(t, '1.7.46 · Up to date'), 'Build92 real up-to-date screen')
+    after = wait_for(lambda t: has(t, '1.7.47 · Build 93') and has(t, '1.7.47 · Up to date'), 'Build93 real up-to-date screen')
     save_ui(after, args.output / 'build91-live-up-to-date.xml')
-    receipt = dict(schema=1, result='PASS', source=candidate['source'], apk_sha256=candidate['apk_sha256'], baseline_code=91, installed_code=92, live_github_discovery='PASS', live_download='PASS', android_installer='confirmed', restart_and_same_pin='PASS', up_to_date_screen='PASS', instrumentation='none', physical_fold='owner_confirmation_pending')
+    receipt = dict(schema=1, result='PASS', source=candidate['source'], apk_sha256=candidate['apk_sha256'], baseline_code=91, installed_code=93, live_github_discovery='PASS', live_download='PASS', android_installer='confirmed', restart_and_same_pin='PASS', up_to_date_screen='PASS', instrumentation='none', physical_fold='owner_confirmation_pending')
     (args.output / 'live-upgrade.json').write_text(json.dumps(receipt, indent=2)+'\n')
-    print('PASS: real public in-app Build91 -> Android installer -> installed Build92 -> restart -> Up to date', flush=True)
+    print('PASS: real public in-app Build91 -> Android installer -> installed Build93 -> restart -> Up to date', flush=True)
 
 if __name__ == '__main__':
     try:

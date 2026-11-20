@@ -21,6 +21,8 @@ internal object GuardianSafeNotifications {
 
     fun prefs(context: Context) = context.getSharedPreferences("guardian_safe_notices", Context.MODE_PRIVATE)
 
+    fun presentationMode(context: Context) = GuardianPresentationMode.read(prefs(context).getString("presentation_mode", null))
+
     fun retention(context: Context) = GuardianAlertRetention.read(prefs(context).getString("alert_retention", null))
 
     fun senderMode(context: Context) = GuardianAlertSender.entries.firstOrNull {
@@ -82,39 +84,53 @@ internal object GuardianSafeNotifications {
         context.getSystemService(NotificationManager::class.java)?.cancel(ROW_TAG + rowId, ID)
     }
 
-    @Synchronized
-    fun post(context: Context, row: GuardianInboxRow) {
+    fun canPostReplacement(context: Context, row: GuardianInboxRow): Boolean =
+        deliveryChannel(context, row) != null
+
+    private fun deliveryChannel(context: Context, row: GuardianInboxRow): String? {
         val settings = prefs(context)
-        if (!settings.getBoolean("enabled", false) || !GuardianNotificationListener.hasAccess(context)) return
-        val source = source(context, row.conversation)
-        val key = when (source) {
+        if (!settings.getBoolean("enabled", false) || !GuardianNotificationListener.hasAccess(context) ||
+            !mayPost(context)) return null
+        val key = when (source(context, row.conversation)) {
             "Main WhatsApp" -> "main"
             "Friends WhatsApp" -> "friends"
             "SMS/MMS" -> "sms"
-            else -> return
+            else -> return null
         }
-        if (!settings.getBoolean(key, false) || !mayPost(context)) return
+        if (!settings.getBoolean(key, false)) return null
         val now = java.time.LocalTime.now()
-        val kind = row.noticeKind()
         val quiet = settings.getBoolean("quiet", false) && guardianNoticeQuietMinute(
             now.hour * 60 + now.minute,
             settings.getInt("quiet_start_minute", settings.getInt("quiet_start", 22) * 60),
             settings.getInt("quiet_end_minute", settings.getInt("quiet_end", 7) * 60),
         )
         val quietRule = GuardianQuietRule.entries.firstOrNull {
-            it.name == settings.getString("quiet_rule_${kind.name}", null)
+            it.name == settings.getString("quiet_rule_${row.noticeKind().name}", null)
         } ?: GuardianQuietRule.HIDE
-        if (quiet && quietRule == GuardianQuietRule.HIDE) return
+        if (quiet && quietRule == GuardianQuietRule.HIDE) return null
         val silent = !settings.getBoolean("heads_up", true) || quiet && quietRule == GuardianQuietRule.SILENT
-        val manager = context.getSystemService(NotificationManager::class.java) ?: return
+        val manager = context.getSystemService(NotificationManager::class.java) ?: return null
         ensureChannels(manager)
+        val channel = manager.getNotificationChannel(if (silent) SILENT_CHANNEL else CHANNEL) ?: return null
+        if (channel.importance == NotificationManager.IMPORTANCE_NONE ||
+            channel.group?.let { manager.getNotificationChannelGroup(it)?.isBlocked } == true) return null
+        return channel.id
+    }
+
+    @Synchronized
+    fun post(context: Context, row: GuardianInboxRow): Boolean {
+        val channel = deliveryChannel(context, row) ?: return false
+        val manager = context.getSystemService(NotificationManager::class.java) ?: return false
+        val settings = prefs(context)
+        val kind = row.noticeKind()
+        val source = source(context, row.conversation)
         val store = GuardianCaptureStore(context)
         val contact = runCatching { store.monitoredContacts().singleOrNull { it.key == row.conversation } }
-            .getOrElse { return }
+            .getOrElse { return false }
         val sender = guardianAlertSender(contact?.alertSender ?: senderMode(context), row.senderName, contact?.alertAlias)
         val lockScreen = lockScreen(context)
         val optedIn = settings.getBoolean("alert_validated_preview", false)
-        val eligible = key != "sms" && row.section == GuardianInboxSection.READY &&
+        val eligible = source != "SMS/MMS" && row.section == GuardianInboxSection.READY &&
             row.ownerLabel != GuardianAssessment.UPSETTING
         val preview = if (optedIn && eligible && kind == GuardianNoticeKind.LOW &&
             uk.co.traynor.privategallery.core.sanctuary.SanctuaryStore.get(context).refresh() == null) {
@@ -135,7 +151,6 @@ internal object GuardianSafeNotifications {
             Intent(context, GuardianReviewLaterReceiver::class.java).setAction(DISMISS).setIdentifier(tag),
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_ONE_SHOT,
         )
-        val channel = if (silent) SILENT_CHANNEL else CHANNEL
         val publicVersion = Notification.Builder(context, channel)
             .setSmallIcon(android.R.drawable.ic_lock_lock)
             .setContentTitle("Nova Guardian")
@@ -148,7 +163,8 @@ internal object GuardianSafeNotifications {
             .setContentTitle("Nova Guardian")
             .setContentText(icon + text)
             .setStyle(Notification.BigTextStyle().bigText("$icon$text\n${kind.title}\n" +
-                (preview ?: "Message protected until Guardian review.")))
+                (preview ?: if (kind == GuardianNoticeKind.LOW) "New message · open Guardian to read."
+                    else "Message protected until Guardian review.")))
             .applyGuardianAlertPolicy(retention(context), lockScreen, publicVersion)
             .setLocalOnly(true)
             .setOnlyAlertOnce(true)
@@ -165,6 +181,7 @@ internal object GuardianSafeNotifications {
             .build()
         manager.cancel(TAG, ID)
         manager.notify(tag, ID, notification)
+        return true
     }
 }
 

@@ -14,6 +14,21 @@ class GuardianLocalClassifierTest {
         }
     }
 
+    @Test fun directedHostilityOutweighsAnIncompleteFollowingSentence() {
+        val message = "You need to shut the fuck up. When I was 17."
+        assertEquals(GuardianAssessment.UPSETTING, classifyGuardian(message, emptyList()))
+        val examples = listOf(GuardianExample(guardianFeatures(message), GuardianAssessment.LOW_RISK))
+        for (sensitivity in GuardianSensitivity.entries) {
+            val assessment = classifyGuardian(message, examples, listOf("Hi", "Hello"), sensitivity)
+            assertEquals(GuardianAssessment.UPSETTING, assessment)
+            assertTrue(guardianPolicyHolds(assessment, holdUncertain = false))
+        }
+        for (context in listOf("When I was 17.", "That was fucking brilliant.", "He told me to shut the fuck up.",
+            "You don't need to shut the fuck up.")) {
+            assertEquals(context, GuardianAssessment.UNCERTAIN, classifyGuardian(context, emptyList()))
+        }
+    }
+
     @Test fun shortLengthDoesNotOverrideThreatsOrTheOwnersHoldRule() {
         for (text in listOf("You're an idiot.", "Hi, you're worthless.", "I will hit you.",
             "I won't take no for an answer.", "After everything I've done for you.", "You made me do it.")) {
@@ -25,10 +40,18 @@ class GuardianLocalClassifierTest {
             assertFalse(guardianPolicyHolds(decision.assessment, holdUncertain = false))
             assertTrue(guardianPolicyHolds(decision.assessment, holdUncertain = true))
         }
-        assertFalse(guardianDismissalAllowed(automatic = true, quietCollection = false, held = false))
-        assertFalse(guardianDismissalAllowed(automatic = false, quietCollection = false, held = true))
-        assertTrue(guardianDismissalAllowed(automatic = true, quietCollection = false, held = true))
-        assertTrue(guardianDismissalAllowed(automatic = false, quietCollection = true, held = false))
+        val smart = GuardianPresentationMode.SMART
+        val nova = GuardianPresentationMode.GUARDIAN
+        val keep = GuardianPresentationAction.KEEP_ORIGINAL
+        val replace = GuardianPresentationAction.REPLACE
+        val silent = GuardianPresentationAction.DISMISS_SILENTLY
+        assertEquals(keep, guardianPresentationAction(smart, true, false, false, true, true))
+        assertEquals(keep, guardianPresentationAction(smart, false, false, true, false, true))
+        assertEquals(replace, guardianPresentationAction(smart, true, false, true, false, false))
+        assertEquals(silent, guardianPresentationAction(smart, false, true, false, false, false))
+        assertEquals(replace, guardianPresentationAction(nova, true, false, false, true, true))
+        assertEquals(keep, guardianPresentationAction(nova, true, false, false, true, false))
+        assertEquals(keep, guardianPresentationAction(nova, true, false, false, false, true))
     }
 
     @Test fun approvedShortCorrectionIsExactAndDirectThreatRemainsProtected() {
