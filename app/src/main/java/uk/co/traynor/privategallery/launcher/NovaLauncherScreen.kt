@@ -61,6 +61,7 @@ import androidx.compose.ui.unit.sp
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
 import java.util.Date
+import kotlin.math.abs
 import kotlin.math.roundToInt
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -71,6 +72,12 @@ import uk.co.traynor.privategallery.core.sanctuary.SanctuaryLauncherPolicy.Decis
 import uk.co.traynor.privategallery.core.ui.AppTheme
 import uk.co.traynor.privategallery.home2.Wallpaper
 import uk.co.traynor.privategallery.home2.WallpaperSurface
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import uk.co.traynor.privategallery.intelligence.IntelligenceApp
+import uk.co.traynor.privategallery.intelligence.IntelligenceConversation
+import uk.co.traynor.privategallery.intelligence.IntelligenceScreen
 import uk.co.traynor.privategallery.ui.PrivateGalleryTheme
 
 internal const val LauncherExpandedWidth = 600
@@ -97,6 +104,7 @@ internal fun NovaLauncherScreen(
     showNotificationBar: Boolean = true,
     onNotificationBarChange: (Boolean) -> Unit = {},
     onHomeSurfaceVisible: (Boolean) -> Unit = {},
+    intelligence: LauncherIntelligenceActions? = null,
 ) {
     val theme = when (state.appearance.theme) {
         LauncherTheme.SYSTEM -> AppTheme.SYSTEM
@@ -111,7 +119,7 @@ internal fun NovaLauncherScreen(
         } else {
             LauncherRuntime(state, apps, shortcuts, decisions, actions, isDefaultHome, outsideProtection,
                 launcherProtected, homeGeneration, sanctuaryStatus, smartState, smartSettings, defaultHomeUi, smartFolderPresentation, appVisibility,
-                showNotificationBar, onNotificationBarChange, onHomeSurfaceVisible)
+                showNotificationBar, onNotificationBarChange, onHomeSurfaceVisible, intelligence)
         }
     }
 }
@@ -163,11 +171,23 @@ private fun LauncherRuntime(
     showNotificationBar: Boolean,
     onNotificationBarChange: (Boolean) -> Unit,
     onHomeSurfaceVisible: (Boolean) -> Unit,
+    intelligence: LauncherIntelligenceActions?,
 ) {
+    val intelligenceConversation = remember(homeGeneration) { IntelligenceConversation() }
+    val lifecycle = LocalLifecycleOwner.current.lifecycle
+    DisposableEffect(lifecycle, intelligenceConversation) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_STOP) intelligenceConversation.clear()
+        }
+        lifecycle.addObserver(observer)
+        onDispose { lifecycle.removeObserver(observer); intelligenceConversation.clear() }
+    }
     val guardianContext = LocalContext.current
     var guardianOptions by remember(guardianContext) { mutableStateOf(GuardianHomeOptions.read(guardianContext)) }
     var coverGuardian by rememberSaveable(homeGeneration) { mutableStateOf(false) }
     var innerGuardian by rememberSaveable(homeGeneration) { mutableStateOf(false) }
+    var coverIntelligence by rememberSaveable(homeGeneration) { mutableStateOf(false) }
+    var innerIntelligence by rememberSaveable(homeGeneration) { mutableStateOf(false) }
     var surface by rememberSaveable(homeGeneration) { mutableStateOf(LauncherSurface.HOME) }
     var guardianSettingsFromHome by rememberSaveable(homeGeneration) { mutableStateOf(false) }
     var guardianDiagnosticsReturn by rememberSaveable(homeGeneration) { mutableStateOf(LauncherSurface.HOME) }
@@ -309,11 +329,15 @@ private fun LauncherRuntime(
         fun selectGuardian(selected: Boolean) {
             if (isInner) innerGuardian = selected else coverGuardian = selected
         }
+        val intelligenceSelected = intelligence != null && if (isInner) innerIntelligence else coverIntelligence
+        fun selectIntelligence(selected: Boolean) {
+            if (isInner) innerIntelligence = selected else coverIntelligence = selected
+        }
         val currentPage = (if (isInner) innerPage else coverPage).coerceIn(0, layout.pages.lastIndex.coerceAtLeast(0))
         val updatePage: (Int) -> Unit = { if (isInner) innerPage = it else coverPage = it }
         val libraryEntry = if (isInner) innerLibrary else coverLibrary
         val librarySelected = libraryEntry != null
-        val homeVisible = surface == LauncherSurface.HOME && !guardianSelected && !librarySelected
+        val homeVisible = surface == LauncherSurface.HOME && !guardianSelected && !librarySelected && !intelligenceSelected
         val reportHomeVisibility by rememberUpdatedState(onHomeSurfaceVisible)
         DisposableEffect(homeVisible) {
             reportHomeVisibility(homeVisible)
@@ -354,7 +378,7 @@ private fun LauncherRuntime(
         }
         var dragPageRequest by remember(gestures) { mutableStateOf<Int?>(null) }
         fun pageForDrop(): Int? = currentPage.takeIf {
-            !librarySelected && !guardianSelected && (dragPageRequest == null || dragPageRequest == it)
+            !librarySelected && !guardianSelected && !intelligenceSelected && (dragPageRequest == null || dragPageRequest == it)
         }
         val rowTolerance = with(LocalDensity.current) { 8.dp.toPx() }
         val edgeWidth = with(LocalDensity.current) { 34.dp.toPx() }
@@ -472,6 +496,40 @@ private fun LauncherRuntime(
                         sanctuaryStatus = sanctuaryStatus,
                         isAppVisible = { canDisplay(it) },
                         animateDockEntrance = animateDockOnReturn,
+                        intelligenceSelected = intelligenceSelected,
+                        onIntelligenceSelected = ::selectIntelligence,
+                        intelligencePage = intelligence?.let { bridge ->
+                            { active ->
+                                val nominated = (layout.pages.flatten() + layout.dock).flatMap { item ->
+                                    when (item) {
+                                        is LauncherItem.App -> listOf(item.component)
+                                        is LauncherItem.Folder -> item.apps
+                                        else -> emptyList()
+                                    }
+                                }.toSet()
+                                val approved = apps.filter {
+                                    it.component in nominated && !it.packageName.startsWith("nova:") && it.packageName != context.packageName &&
+                                        decisions.forLauncherApp(it)?.canLaunch == true
+                                }.map { IntelligenceApp(it.label, it.component) }
+                                IntelligenceScreen(
+                                    active = active,
+                                    guardianVisible = guardianOptions.showPage,
+                                    protectedBySanctuary = launcherProtected,
+                                    openPrivate = bridge.openPrivate,
+                                    openDestination = bridge.openDestination,
+                                    apps = approved,
+                                    openApp = { component ->
+                                        if (approved.none { it.component == component }) false
+                                        else {
+                                            actions.launchApp(component)
+                                            true
+                                        }
+                                    },
+                                    openEvidence = bridge.openEvidence,
+                                    conversation = intelligenceConversation,
+                                )
+                            }
+                        },
                         guardianSelected = guardianSelected,
                         onGuardianSelected = ::selectGuardian,
                         guardianPage = if (guardianOptions.showPage) {
@@ -708,13 +766,19 @@ internal fun LauncherHome(
     guardianSelected: Boolean = false,
     onGuardianSelected: (Boolean) -> Unit = {},
     guardianPage: (@Composable () -> Unit)? = null,
+    intelligenceSelected: Boolean = false,
+    onIntelligenceSelected: (Boolean) -> Unit = {},
+    intelligencePage: (@Composable (active: Boolean) -> Unit)? = null,
 ) {
     DisposableEffect(gestures) { onDispose { gestures.clearHome() } }
     val pages = layout.pages.ifEmpty { listOf(listOf(LauncherItem.Workspace)) }
-    val firstHome = if (guardianPage == null) 0 else 1
+    val intelligenceIndex = 0.takeIf { intelligencePage != null }
+    val guardianIndex = (if (intelligenceIndex == null) 0 else 1).takeIf { guardianPage != null }
+    val firstHome = listOfNotNull(intelligenceIndex, guardianIndex).size
     val libraryIndex = firstHome + pages.size
     val initialPage = when {
-        guardianSelected && firstHome == 1 -> 0
+        intelligenceSelected && intelligenceIndex != null -> intelligenceIndex
+        guardianSelected && guardianIndex != null -> guardianIndex
         librarySelected && libraryPage != null -> libraryIndex
         else -> firstHome + currentPage.coerceIn(0, pages.lastIndex)
     }
@@ -726,13 +790,14 @@ internal fun LauncherHome(
     }
     val focus = LocalFocusManager.current
     val atLibrary = libraryPage != null && pager.settledPage == libraryIndex
-    val atGuardian = firstHome == 1 && pager.settledPage == 0
+    val atGuardian = pager.settledPage == guardianIndex
+    val atIntelligence = pager.settledPage == intelligenceIndex
     val goBackFromLibrary: () -> Unit = {
         focus.clearFocus()
         if (!onLibraryBack()) scope.launch { pager.animateScrollToPage(libraryIndex - 1) }
     }
     BackHandler(enabled = atLibrary, onBack = goBackFromLibrary)
-    BackHandler(enabled = atGuardian) { scope.launch { pager.animateScrollToPage(firstHome) } }
+    BackHandler(enabled = atGuardian || atIntelligence) { scope.launch { pager.animateScrollToPage(firstHome) } }
     LaunchedEffect(dragPageRequest) {
         if (dragPageRequest != null && dragPageRequest in pages.indices) {
             // A search focus change can scroll the pager while the footer is being remeasured.
@@ -740,12 +805,13 @@ internal fun LauncherHome(
             pager.requestScrollToPage(firstHome + dragPageRequest)
         }
     }
-    LaunchedEffect(pager.settledPage, atLibrary, atGuardian) {
-        if (!atLibrary && !atGuardian) {
+    LaunchedEffect(pager.settledPage, atLibrary, atGuardian, atIntelligence) {
+        if (!atLibrary && !atGuardian && !atIntelligence) {
             if (librarySelected) focus.clearFocus()
             onPage((pager.settledPage - firstHome).coerceIn(0, pages.lastIndex))
         }
         onGuardianSelected(atGuardian)
+        onIntelligenceSelected(atIntelligence)
         onLibrarySelected(atLibrary)
     }
     val appearance = state.appearance
@@ -787,14 +853,19 @@ internal fun LauncherHome(
                     Modifier.fillMaxWidth().weight(1f).testTag("launcher-home-pages"),
                     key = {
                         when {
-                            it < firstHome -> "guardian"
+                            it == intelligenceIndex -> "intelligence"
+                            it == guardianIndex -> "guardian"
                             it == libraryIndex -> "app-library"
                             else -> "home-${it - firstHome}"
                         }
                     },
                     userScrollEnabled = gestures.drag == null,
                 ) { page ->
-                    if (page < firstHome) {
+                    if (page == intelligenceIndex) {
+                        intelligencePage?.invoke(atIntelligence)
+                        return@HorizontalPager
+                    }
+                    if (page == guardianIndex) {
                         guardianPage?.invoke()
                         return@HorizontalPager
                     }
@@ -905,7 +976,7 @@ internal fun LauncherHome(
                     Modifier.fillMaxWidth().clipToBounds().layout { measurable, constraints ->
                         val footer = measurable.measure(constraints.copy(minHeight = 0))
                         val position = pager.currentPage + pager.currentPageOffsetFraction
-                        val left = if (firstHome == 0) 1f else position.coerceIn(0f, 1f)
+                        val left = guardianIndex?.let { abs(position - it).coerceIn(0f, 1f) } ?: 1f
                         val right = if (libraryPage == null || state.dockOptions.showInLibrary) 1f
                             else (libraryIndex - position).coerceIn(0f, 1f)
                         val homeFraction = minOf(left, right)
@@ -919,7 +990,7 @@ internal fun LauncherHome(
                     }.padding(horizontal = if (wide) 26.dp else 14.dp),
                 ) {
                     LauncherDots(pager.pageCount, pager.currentPage, accent, libraryLast = libraryPage != null,
-                        guardianFirst = firstHome == 1) {
+                        guardianIndex = guardianIndex, intelligenceIndex = intelligenceIndex, firstHome = firstHome) {
                         scope.launch { pager.animateScrollToPage(it) }
                     }
                     if (appearance.dock != LauncherDock.HIDDEN &&
@@ -1015,7 +1086,9 @@ private fun LauncherDots(
     selected: Int,
     accent: Color,
     libraryLast: Boolean = false,
-    guardianFirst: Boolean = false,
+    guardianIndex: Int? = null,
+    intelligenceIndex: Int? = null,
+    firstHome: Int = 0,
     onPage: (Int) -> Unit,
 ) {
     Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.Center) {
@@ -1024,17 +1097,20 @@ private fun LauncherDots(
                 onClick = { onPage(index) },
                 modifier = Modifier.width(36.dp).height(42.dp).semantics { this.selected = index == selected },
             ) {
-                val isGuardian = guardianFirst && index == 0
+                val isGuardian = index == guardianIndex
+                val isIntelligence = index == intelligenceIndex
                 Icon(when {
                     isGuardian -> Icons.Default.Shield
+                    isIntelligence -> Icons.Default.AutoAwesome
                     index == selected -> Icons.Default.Circle
                     else -> Icons.Default.RadioButtonUnchecked
                 }, when {
-                        guardianFirst && index == 0 -> "Guardian page"
+                        isGuardian -> "Guardian page"
+                        isIntelligence -> "Nova Intelligence page"
                         libraryLast && index == count - 1 -> "App Library page"
-                        else -> "Home page ${index + if (guardianFirst) 0 else 1}"
+                        else -> "Home page ${index - firstHome + 1}"
                     },
-                    Modifier.size(if (isGuardian) 18.dp else 7.dp),
+                    Modifier.size(if (isGuardian || isIntelligence) 18.dp else 7.dp),
                     tint = if (index == selected) accent else LocalContentColor.current.copy(alpha = .75f))
             }
         }

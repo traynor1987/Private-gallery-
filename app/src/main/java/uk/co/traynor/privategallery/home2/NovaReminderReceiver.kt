@@ -29,6 +29,7 @@ import org.json.JSONArray
 import org.json.JSONObject
 import uk.co.traynor.privategallery.core.home2.NovaCoreApp
 import uk.co.traynor.privategallery.core.home2.SpaceContext
+import uk.co.traynor.privategallery.intelligence.IntelligenceBriefings
 
 internal object NovaReminders {
     private const val CHANNEL = "nova-core-reminders"
@@ -203,12 +204,18 @@ internal object NovaReminders {
 
 class NovaReminderReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
-        if (intent.action !in setOf(NovaReminders.ALARM, Intent.ACTION_BOOT_COMPLETED,
+        if (intent.action !in setOf(NovaReminders.ALARM, IntelligenceBriefings.ALARM,
+                Intent.ACTION_BOOT_COMPLETED,
                 Intent.ACTION_TIME_CHANGED, Intent.ACTION_TIMEZONE_CHANGED)) return
         val pending = goAsync()
         Thread {
             try {
-                runCatching { NovaReminders.dispatch(context, shouldNotify = true) }
+                if (intent.action != IntelligenceBriefings.ALARM) {
+                    runCatching { NovaReminders.dispatch(context, shouldNotify = true) }
+                }
+                if (intent.action != NovaReminders.ALARM) {
+                    runCatching { IntelligenceBriefings.refresh(context) }
+                }
             } finally {
                 pending.finish()
             }

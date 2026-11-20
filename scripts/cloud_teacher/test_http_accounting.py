@@ -35,13 +35,13 @@ class HttpAccountingTest(unittest.TestCase):
     def tearDown(self):
         self.server.shutdown();self.worker.join();self.server.server_close();self.directory.cleanup()
 
-    def send(self,identity,**extra):
+    def send(self,identity,*,route="/guardian/analyze",authorized=True,**extra):
         connection=HTTPConnection('127.0.0.1',self.server.server_port,timeout=5)
         payload={'message':'Synthetic approved excerpt','consent':True,'request_id':identity,**extra}
         if identity is None:
             payload.pop('request_id',None)
         try:
-            connection.request('POST','/guardian/analyze',json.dumps(payload),{'Authorization':'Bearer '+'t'*64})
+            connection.request('POST',route,json.dumps(payload),{'Authorization':'Bearer '+'t'*64} if authorized else {})
             result=connection.getresponse();return result.status,json.loads(result.read())
         finally:connection.close()
 
@@ -73,6 +73,29 @@ class HttpAccountingTest(unittest.TestCase):
             self.assertEqual(self.send(identity, **automatic)[0], 409)
             upstream.assert_called_once()
         self.assertEqual(self.server.budget.status()['reserved_upper_bound_micro_usd'], 338)
+
+    def test_assistant_shares_auth_consent_and_paid_request_ledger(self):
+        identity = str(uuid4())
+        request = {'route': '/assistant/ask', 'message': 'What is a haiku?'}
+        result = AnalysisResult({'summary': 'A short poetic form.'}, 321)
+        with patch('server.answer_question', return_value=result) as upstream:
+            self.assertEqual(self.send(identity, authorized=False, **request)[0], 401)
+            self.assertEqual(self.send(identity, consent=False, **request)[0], 400)
+            self.assertEqual(self.send(identity, mode='automatic', **request)[0], 400)
+            self.assertEqual(self.send(None, **request)[0], 400)
+            self.server.analysis_enabled = False
+            self.assertEqual(self.send(identity, **request)[0], 503)
+            upstream.assert_not_called()
+            self.server.analysis_enabled = True
+            code, body = self.send(identity, **request)
+            self.assertEqual(code, 200)
+            self.assertEqual(body['source'], 'assistant_prediction')
+            self.assertEqual(body['answer'], 'A short poetic form.')
+            self.assertNotIn('lesson', body)
+            self.assertEqual(self.send(identity, **request)[0], 409)
+            self.assertEqual(self.send(identity)[0], 409)
+            upstream.assert_called_once()
+        self.assertEqual(self.server.budget.status()['reserved_upper_bound_micro_usd'], 321)
 
     def test_concurrent_duplicates_dispatch_exactly_one_paid_request(self):
         identity=str(uuid4())
