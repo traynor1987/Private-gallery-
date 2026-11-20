@@ -41,7 +41,7 @@ sys.path.insert(0,sys.argv[1]);from verify_compiled_upgrade1711 import transform
 fixture,build=transform(Path(sys.argv[2]).read_bytes(),Path(sys.argv[4]).read_bytes())
 Path(sys.argv[3]).write_bytes(fixture);Path(sys.argv[4]).write_bytes(build)
 PY
-(cd "$baseline_dir" && ./gradlew assembleDebugAndroidTest --stacktrace) 2>&1 | tee "$output/compile.log"
+(cd "$baseline_dir" && ./gradlew assembleDebugAndroidTest --stacktrace -Pkotlin.incremental=false --no-daemon --console=plain) 2>&1 | tee "$output/compile.log"
 cp "$baseline_dir/app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk" "$output/instrumentation.apk"
 "$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging "$output/instrumentation.apk" > "$output/instrumentation-package.txt"
 grep -Fq "package: name='uk.co.traynor.privategallery.test'" "$output/instrumentation-package.txt"

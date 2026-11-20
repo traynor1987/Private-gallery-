@@ -5,7 +5,7 @@ Authorization: authenticated owner push
 Release scope: public stable after disposable upgrade verification
 Physical Fold acceptance: pending
 Upgrade fixture SHA-256: 69757813f2733c13ebab99c452b4d9065faee733d89ec8f55937437d8d4a3753
-Upgrade controls SHA-256: 35e3e2dae5e3ed2cfee0d8d508a3ae66da3e0b489cb6602f4b16017ff2e9e10b
+Upgrade controls SHA-256: 5d3428fc195b80e7f8f6cd61af131254a2d0589f56a51decf0324a53ed0c08a3
 Runtime matrix SHA-256: b3a221684edbd0e3462614ff8dbb402fb74d257823a6e9d5b7ea658ebf6242fa
 Runtime workflow run: 44726268958
 Runtime branch: feature/novaos-guardian-presentation93
