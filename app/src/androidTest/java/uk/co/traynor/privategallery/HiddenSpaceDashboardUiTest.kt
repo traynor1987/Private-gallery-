@@ -24,7 +24,7 @@ class HiddenSpaceDashboardUiTest {
                 preferences.allowScreenshots = true
                 state.session.lock()
                 state.key = null
-                assertTrue(state.hidden.session.complete(state.hidden.session.beginAuthentication(), ByteArray(32) { 59 }))
+                assertTrue(state.hidden.session.complete(state.hidden.session.beginAuthentication(), ByteArray(32) { HIDDEN_HOME_TEST_KEY_BYTE }))
                 state.hidden.select(Route.VAULT)
                 state.hidden.authenticated = true
                 state.homeVisible = true

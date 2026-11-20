@@ -2397,24 +2397,13 @@ class MainActivity : FragmentActivity() {
         // Hidden leases are revoked on Vault disposal and Activity stop. A quick stop
         // and resume can be coalesced by Compose, so observe each resume explicitly.
         val hiddenResumeRevision = if (hidden) activityResumeRevision else 0
-        var hiddenRetirementRevision by remember { mutableIntStateOf(0) }
-        val access = admittedAccess
-        DisposableEffect(access, hidden) {
-            // Vault disposal can retire a just-opened Home lease during the same transition.
-            // Reacquire using the current foreground authentication after retirement is delivered.
-            val subscription = if (hidden) access?.onRetire {
-                lifecycleScope.launch(Dispatchers.Main) {
-                    if (admittedAccess === access && homeVisible && activityResumed) hiddenRetirementRevision++
-                }
-            } else null
-            onDispose { subscription?.close() }
-        }
-        LaunchedEffect(activityResumed, homeVisible, homeRequestRevision, hiddenResumeRevision, hiddenRetirementRevision) {
+        LaunchedEffect(activityResumed, homeVisible, homeRequestRevision, hiddenResumeRevision) {
             if (activityResumed && homeVisible && admittedAccess?.current() != true) {
                 admittedAccess?.close()
                 homeAccess()?.let { admittedAccess = it }
             }
         }
+        val access = admittedAccess
         if (access?.current() != true) {
             if (homeVisible && activityResumed) {
                 androidx.compose.material3.Surface(Modifier.fillMaxSize()) {

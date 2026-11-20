@@ -11,6 +11,9 @@ import org.junit.Test
 import uk.co.traynor.privategallery.core.security.AutoLockTimeout
 import uk.co.traynor.privategallery.ui.HiddenPreferences
 
+// The two dashboard scenarios run against the same disposable, encrypted Hidden profile.
+internal const val HIDDEN_HOME_TEST_KEY_BYTE: Byte = 12
+
 class HiddenHomeNavigation67Test {
     @get:Rule val compose = createAndroidComposeRule<MainActivity>()
     private val owner get() = ViewModelProvider(compose.activity)[ProtectedSessionState::class.java]
@@ -26,7 +29,7 @@ class HiddenHomeNavigation67Test {
                 state.session.lock()
                 state.key = null
                 val hidden = state.hidden
-                assertTrue(hidden.session.complete(hidden.session.beginAuthentication(), ByteArray(32) { 12 }))
+                assertTrue(hidden.session.complete(hidden.session.beginAuthentication(), ByteArray(32) { HIDDEN_HOME_TEST_KEY_BYTE }))
                 hidden.select(Route.VAULT)
                 hidden.authenticated = true
                 state.homeVisible = false
