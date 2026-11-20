@@ -23,4 +23,6 @@ inner_status=0
 if [[ -d app/build/outputs/androidTest-results/connected ]]; then
     cp -R app/build/outputs/androidTest-results/connected app/build/hidden-space/inner
 fi
-(( cover_status == 0 && inner_status == 0 ))
+route_status=0
+bash scripts/run_hidden_space_routes.sh || route_status=$?
+(( cover_status == 0 && inner_status == 0 && route_status == 0 ))

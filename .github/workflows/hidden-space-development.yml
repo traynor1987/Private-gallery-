@@ -52,10 +52,26 @@ jobs:
         run: ./gradlew testDebugUnitTest assembleDebug assembleDebugAndroidTest --no-daemon --console=plain --stacktrace
       - name: Verify encrypted app adapters and concealed entry
         run: bash scripts/check_home2_host.sh
+      - name: Install disposable route fixture dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq wireguard-tools tcpdump iptables python3-cryptography tor
+      - name: Prepare independent WireGuard and onion fixtures
+        id: routes
+        run: |
+          if bash scripts/setup_hidden_vpn_fixture1762.sh; then
+            echo 'vpn=true' >> "$GITHUB_OUTPUT"
+          fi
+          if python3 scripts/ci_onion_probe.py; then
+            echo 'tor=true' >> "$GITHUB_OUTPUT"
+          fi
       - name: Enable emulator acceleration
         run: sudo chmod 666 /dev/kvm
       - name: Run Hidden and Primary regressions on Android 17
         uses: reactivecircus/android-emulator-runner@v2
+        env:
+          HIDDEN_SPACE_VPN_READY: ${{ steps.routes.outputs.vpn }}
+          HIDDEN_SPACE_TOR_READY: ${{ steps.routes.outputs.tor }}
         with:
           api-level: '37.0'
           target: google_apis
@@ -65,10 +81,20 @@ jobs:
           emulator-options: -no-window -gpu software -no-snapshot -noaudio -no-boot-anim -feature -HardwareDecoder -camera-back emulated -camera-front emulated
           script: |
             bash scripts/run_hidden_space_android17.sh
+      - name: Remove disposable route fixtures
+        if: always() && steps.routes.outcome != 'skipped'
+        run: |
+          status=0
+          python3 scripts/ci_onion_probe.py --stop || status=1
+          bash scripts/cleanup_hidden_vpn_fixture1762.sh || status=1
+          exit "$status"
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: hidden-space-android17-test-results
           path: |
             app/build/hidden-space/
+            app/build/hidden-vpn1762/
+            app/build/acceptance-diagnostics/onion-fixture/
+            app/build/acceptance-diagnostics/onion-server-evidence.txt
             app/build/test-results/testDebugUnitTest/
