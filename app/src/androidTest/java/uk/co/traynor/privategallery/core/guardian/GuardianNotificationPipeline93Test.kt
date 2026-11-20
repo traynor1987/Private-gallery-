@@ -5,6 +5,7 @@ import android.app.Notification
 import android.app.NotificationManager
 import android.content.ComponentName
 import android.os.ParcelFileDescriptor
+import android.os.PowerManager
 import android.os.Process
 import android.os.SystemClock
 import android.os.UserManager
@@ -19,6 +20,7 @@ class GuardianNotificationPipeline93Test {
         val context = instrumentation.targetContext
         val automation = instrumentation.uiAutomation
         val manager = checkNotNull(context.getSystemService(NotificationManager::class.java))
+        val power = checkNotNull(context.getSystemService(PowerManager::class.java))
         val component = ComponentName(context, GuardianNotificationListener::class.java).flattenToString()
         val preferences = GuardianSafeNotifications.prefs(context)
         val dismissal = context.getSharedPreferences("guardian_main_dismissal", 0)
@@ -44,6 +46,11 @@ class GuardianNotificationPipeline93Test {
         }
         fun rows() = store.inboxRows(0, guardianInboxClock(context))
         fun alerts() = manager.activeNotifications.filter { it.tag?.startsWith("guardian-safe:") == true }
+        fun alertText(notification: Notification) = listOf(
+            Notification.EXTRA_TITLE, Notification.EXTRA_TEXT, Notification.EXTRA_BIG_TEXT,
+            Notification.EXTRA_SUB_TEXT, Notification.EXTRA_SUMMARY_TEXT,
+        ).mapNotNull { notification.extras.getCharSequence(it)?.toString() }.joinToString("\n")
+        fun rowFor(id: Int) = rows().singleOrNull { it.conversation?.conversation == "shortcut:fixture-$id" }
         fun diagnostic(fragment: String) = GuardianNotificationListener.state.value.mainDismissal?.contains(fragment) == true
         fun await(label: String, condition: () -> Boolean) {
             val until = SystemClock.elapsedRealtime() + 20_000
@@ -71,6 +78,11 @@ class GuardianNotificationPipeline93Test {
             await("Encrypted capture enabled") { GuardianCapture.state.value.includesMain }
             assertTrue(GuardianNotificationListener.setAutomaticDismissal(context, true))
             shell("input keyevent KEYCODE_HOME")
+            await("NovaOS has no foreground window") {
+                shell("dumpsys window").lineSequence().any {
+                    "mCurrentFocus=" in it && "{" in it && context.packageName !in it
+                }
+            }
 
             send("hi")
             await("Smart Filtering kept the real source greeting") {
@@ -91,11 +103,10 @@ class GuardianNotificationPipeline93Test {
                 elapsed = currentClock.elapsed + GUARDIAN_HOLD_MILLIS + 1)
             assertEquals(hostile, GuardianCaptureStore(context).revealInboxMessage(held.id, 0, future))
             val replacement = alerts().single()
-            val fields = listOf(Notification.EXTRA_TITLE, Notification.EXTRA_TEXT, Notification.EXTRA_BIG_TEXT)
             assertEquals("Nova Guardian", replacement.notification.extras.getCharSequence(Notification.EXTRA_TITLE).toString())
             assertTrue(replacement.notification.extras.getCharSequence(Notification.EXTRA_BIG_TEXT).toString()
                 .contains("Message protected until Guardian review"))
-            assertFalse(fields.any { replacement.notification.extras.getCharSequence(it)?.contains(hostile) == true })
+            assertFalse(alertText(replacement.notification).contains(hostile))
             assertNull(replacement.notification.publicVersion)
             assertFalse(java.io.File(context.noBackupFilesDir, GuardianCaptureStore.ARCHIVE_NAME)
                 .readBytes().toString(Charsets.UTF_8).contains(hostile))
@@ -153,7 +164,40 @@ class GuardianNotificationPipeline93Test {
                 rows().size == 7 && diagnostic("Guardian alert unavailable") && sourceActive(23)
             }
             assertEquals(3, alerts().size)
+
+            val validation = checkNotNull(store.measureKnowledge(previewHoldout()))
+            assertTrue(guardianAlertMayPreview(true, true, GuardianNoticeKind.LOW, validation))
+            assertTrue(preferences.edit().putBoolean("main", true).putBoolean("alert_validated_preview", true).commit())
+            shell("input keyevent KEYCODE_SLEEP")
+            await("The emulator screen is off") { !power.isInteractive }
+
+            send("background")
+            await("The background listener replaced a safe alert and posted its opted-in preview") {
+                rowFor(24)?.assessment == GuardianAssessment.LOW_RISK && diagnostic("Guardian alert posted") &&
+                    !sourceActive(24) && alerts().size == 4 &&
+                    alerts().any { alertText(it.notification).contains("Good afternoon") }
+            }
+            val safe = alerts().single { alertText(it.notification).contains("Good afternoon") }.notification
+            assertEquals(Notification.VISIBILITY_SECRET, safe.visibility)
+            assertNull(safe.publicVersion)
+            assertFalse(power.isInteractive)
+
+            send("background-hostile")
+            await("Guardian replaced the hostile original in the background even with safe previews enabled") {
+                rowFor(25)?.section == GuardianInboxSection.COOLING && diagnostic("Guardian alert posted") &&
+                    !sourceActive(25) && alerts().size == 5
+            }
+            val backgroundHeld = checkNotNull(rowFor(25))
+            assertEquals(GuardianAssessment.UPSETTING, backgroundHeld.assessment)
+            val neutral = alerts().single { it.tag == "guardian-safe:${backgroundHeld.id}" }.notification
+            assertTrue(alertText(neutral).contains("Message protected until Guardian review"))
+            assertFalse(alertText(neutral).contains(hostile))
+            assertNull(neutral.publicVersion)
+            assertNull(GuardianCaptureStore(context).revealInboxMessage(backgroundHeld.id, 0, guardianInboxClock(context)))
+            assertFalse(power.isInteractive)
         } finally {
+            shell("input keyevent KEYCODE_WAKEUP")
+            shell("wm dismiss-keyguard")
             shell("cmd notification disallow_listener $component")
             await("Test listener stopped") { !GuardianCapture.isEnabled(context) }
             GuardianSafeNotifications.cancel(context)
@@ -161,7 +205,21 @@ class GuardianNotificationPipeline93Test {
             dismissal.edit().clear().commit()
             capturePrefs.edit().remove("hold_uncertain_unlisted").commit()
             store.monitoredContacts().forEach { store.saveContact(it.key, null) }
+            store.resetLearning()
             store.clear()
         }
+    }
+
+    private fun previewHoldout(): List<NovaBrainValidationMessage> = listOf(
+        "kitchen table", "garden path", "station ticket", "summer holiday", "school playground",
+        "office desk", "weekend market", "hospital entrance", "meeting room", "library shelf",
+    ).flatMapIndexed { group, context ->
+        val id = "preview-holdout-$group"
+        listOf(
+            NovaBrainValidationMessage(id, "I will hurt you. Context $context", setOf(NovaBrainPattern.THREAT)),
+            NovaBrainValidationMessage(id, "Do as I say or else. Context $context", setOf(NovaBrainPattern.COERCION)),
+            NovaBrainValidationMessage(id, "Can we meet for lunch? Context $context", emptySet()),
+            NovaBrainValidationMessage(id, "Fine, I guess. Context $context", emptySet()),
+        )
     }
 }

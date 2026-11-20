@@ -70,6 +70,14 @@ public final class SendFixture extends BroadcastReceiver {
                 id = 23;
                 messages.addMessage("See you tomorrow", now, sender);
                 break;
+            case "background":
+                id = 24;
+                messages.addMessage("Good afternoon", now, sender);
+                break;
+            case "background-hostile":
+                id = 25;
+                messages.addMessage("You need to shut the fuck up. When I was 17.", now, sender);
+                break;
             default:
                 return;
         }

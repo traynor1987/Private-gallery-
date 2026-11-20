@@ -170,8 +170,10 @@ jobs:
         ./scripts/no_secret_scan.sh
     - name: Verify supported transport dependency path and notices
       run: bash ./scripts/verify_production_vpn_path.sh
-    - run: ./gradlew compileDebugUnitTestKotlin compileDebugAndroidTestKotlin
-    - run: ./gradlew testDebugUnitTest lintDebug assembleDebug assembleDebugAndroidTest --stacktrace
+    - name: Prepare checksum-verified Gradle wrapper distribution
+      run: bash scripts/prime_gradle95_ci.sh
+    - run: ./gradlew compileDebugUnitTestKotlin compileDebugAndroidTestKotlin -Pkotlin.incremental=false --no-daemon --console=plain
+    - run: ./gradlew testDebugUnitTest lintDebug assembleDebug assembleDebugAndroidTest -Pkotlin.incremental=false --no-daemon --console=plain --stacktrace
     - name: Verify retired native runtime is absent from APK
       run: python3 scripts/verify_local_ai_distribution.py app/build/outputs/apk/debug/app-debug.apk
     - name: Inventory Hidden Tor native distribution
