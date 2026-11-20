@@ -1,6 +1,8 @@
 package uk.co.traynor.privategallery.launcher
 
+import android.os.Bundle
 import android.view.WindowManager
+import android.view.accessibility.AccessibilityNodeInfo
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.onAllNodesWithText
@@ -212,19 +214,28 @@ class GuardianInbox77UiTest {
             assertEquals(GuardianInboxSection.READY, store.notificationRows(ordinary, 7, ordinaryClock).single().section)
             compose.onNodeWithText("Ordinary fixture contact").assertDoesNotExist()
             compose.onNodeWithText("Unlock Guardian Inbox").performClick()
-            var focusedSince: Long? = null
+            var credentialField: AccessibilityNodeInfo? = null
+            var credentialPackage: String? = null
             compose.waitUntil(15_000) {
-                val focused = shell("dumpsys window").lineSequence().any {
-                    "mCurrentFocus=" in it && ("ConfirmLock" in it || "BiometricPrompt" in it)
+                val window = automation.rootInActiveWindow
+                credentialPackage = window?.packageName?.toString()
+                credentialField = window?.findFocus(AccessibilityNodeInfo.FOCUS_INPUT)?.takeIf {
+                    credentialPackage in setOf("com.android.settings", "com.android.systemui") &&
+                        it.isEditable && it.isPassword && it.isEnabled
                 }
-                val elapsed = android.os.SystemClock.elapsedRealtime()
-                focusedSince = if (focused) focusedSince ?: elapsed else null
-                focusedSince?.let { elapsed - it >= 1_000L } == true
+                credentialField != null
             }
-            shell("input keyevent ${pin.map { "KEYCODE_$it" }.joinToString(" ")} KEYCODE_ENTER")
-            compose.waitUntil(15_000) {
-                compose.activityRule.scenario.state == androidx.lifecycle.Lifecycle.State.RESUMED
+            // Wait for the actual system PIN field to accept input before submitting it.
+            val entered = checkNotNull(credentialField).performAction(AccessibilityNodeInfo.ACTION_SET_TEXT,
+                Bundle().apply { putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, pin) })
+            assertTrue("Android's credential field accepted the disposable PIN", entered)
+            val next = automation.rootInActiveWindow?.findAccessibilityNodeInfosByViewId(
+                "$credentialPackage:id/next_button",
+            )?.singleOrNull { it.isEnabled && it.isVisibleToUser }
+            if (next == null || !next.performAction(AccessibilityNodeInfo.ACTION_CLICK)) {
+                shell("input keyevent KEYCODE_ENTER")
             }
+            compose.waitUntil(15_000) { activity.hasWindowFocus() }
             compose.waitUntil(15_000) { compose.onAllNodesWithText("Ordinary fixture contact").fetchSemanticsNodes().isNotEmpty() }
             compose.onNodeWithText("Ordinary fixture contact").assertIsDisplayed()
             compose.onNodeWithText("Hi").assertDoesNotExist()
