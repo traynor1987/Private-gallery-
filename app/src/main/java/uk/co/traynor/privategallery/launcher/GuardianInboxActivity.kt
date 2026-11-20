@@ -130,6 +130,7 @@ class GuardianInboxActivity : ComponentActivity() {
             }
         } else {
             when (intent.getStringExtra(OPEN_SETTINGS)) {
+                GuardianAlertPage.PRESENTATION.name -> alertPage = GuardianAlertPage.PRESENTATION
                 GuardianAlertPage.PRIVACY.name -> alertPage = GuardianAlertPage.PRIVACY
                 GuardianAlertPage.RETENTION.name -> alertPage = GuardianAlertPage.RETENTION
                 "contacts" -> {

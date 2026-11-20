@@ -9,7 +9,7 @@ internal data class NovaBrainValidationMessage(
     val evidenceId: String? = null,
 )
 
-internal const val NOVA_BRAIN_VALIDATION_VERSION = 3
+internal const val NOVA_BRAIN_VALIDATION_VERSION = 4
 
 internal data class NovaBrainCategoryResult(val truePositive: Int, val falsePositive: Int, val falseNegative: Int)
 

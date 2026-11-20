@@ -29,6 +29,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import uk.co.traynor.privategallery.BuildConfig
 import uk.co.traynor.privategallery.core.sanctuary.SanctuaryStore
+import uk.co.traynor.privategallery.launcher.GuardianSafeNotifications
 import uk.co.traynor.privategallery.launcher.LauncherAppIdentity
 
 /** Owner-started diagnostics and separately authorised Main WhatsApp capture. */
@@ -36,6 +37,8 @@ internal class GuardianNotificationListener : NotificationListenerService() {
     private val changedRetries = LinkedHashMap<String, Pair<Long, Int>>()
     private val mainAttempts = mutableMapOf<String, ExternalAttempt>()
     private val mainRetries = LinkedHashMap<String, Pair<Long, Int>>()
+    private val pendingReplacement = LinkedHashMap<String, Pair<Long, String>>()
+    private val summaryPosts = LinkedHashMap<String, Long>()
     private val callWorker = ThreadPoolExecutor(1, 1, 0L, TimeUnit.MILLISECONDS,
         ArrayBlockingQueue(16), ThreadPoolExecutor.DiscardPolicy())
 
@@ -66,7 +69,7 @@ internal class GuardianNotificationListener : NotificationListenerService() {
         }
         if (enabled) {
             GuardianCapture.record(this, event, key) { outcome ->
-                if (friendsDismissalEnabled(this)) dismissStoredWhatsApp(sbn, event, null, outcome, friends = true)
+                dismissStoredWhatsApp(sbn, event, null, outcome, friends = true)
             }
         }
     }
@@ -125,8 +128,7 @@ internal class GuardianNotificationListener : NotificationListenerService() {
                     val messagingSource = it.packageName == GUARDIAN_WHATSAPP &&
                         (category == null || category == Notification.CATEGORY_MESSAGE) ||
                         it.packageName == sms && category == Notification.CATEGORY_MESSAGE
-                    messagingSource && it.postTime >= cutoff &&
-                        it.notification.flags and Notification.FLAG_GROUP_SUMMARY == 0
+                    messagingSource && !isSummary(it) && it.postTime >= cutoff
                 }.take(8).forEach { onNotificationPosted(it, ranking) }
             }.onFailure { reportMainDismissal("Android could not recover recent active notifications") }
             if (automaticDismissalEnabled(this)) runCatching {
@@ -161,8 +163,23 @@ internal class GuardianNotificationListener : NotificationListenerService() {
         }
     }
 
+    @Synchronized
+    private fun isSummary(sbn: StatusBarNotification): Boolean {
+        if (sbn.notification.flags and Notification.FLAG_GROUP_SUMMARY != 0) {
+            if (sbn.packageName == GUARDIAN_WHATSAPP) {
+                summaryPosts.remove(sbn.key)
+                summaryPosts[sbn.key] = sbn.postTime
+                if (summaryPosts.size > 128) summaryPosts.remove(summaryPosts.keys.first())
+            }
+            return true
+        }
+        // Android can redispatch the same post without the summary flag when it regroups notifications.
+        return summaryPosts[sbn.key] == sbn.postTime
+    }
+
     private fun staticIneligibility(sbn: StatusBarNotification): String? =
-        guardianOriginalIneligibility(sbn.notification, sbn.isClearable)
+        if (isSummary(sbn)) "Group summary excluded"
+        else guardianOriginalIneligibility(sbn.notification, sbn.isClearable)
 
     private fun retryChangedMain(key: String) {
         val now = SystemClock.elapsedRealtime()
@@ -227,7 +244,7 @@ internal class GuardianNotificationListener : NotificationListenerService() {
 
         val personal = user == Process.myUserHandle()
         val account = probeAccount(personal, serial, probeFriendsSerial)
-        val summary = notification.flags and Notification.FLAG_GROUP_SUMMARY != 0
+        val summary = isSummary(sbn)
         if (call) {
             if (isWhatsApp && !summary) screenWhatsAppCall(sbn, personal, serial)
             if (session != null && !summary) {
@@ -335,24 +352,48 @@ internal class GuardianNotificationListener : NotificationListenerService() {
         outcome: GuardianDurableNotification,
         friends: Boolean = false,
     ) {
-        if (connectedListener !== this || !hasAccess(this) ||
-            !GuardianCapture.isEnabled(this)) return
+        fun report(message: String) = reportDismissal(friends, message)
+        if (connectedListener !== this || !hasAccess(this) || !GuardianCapture.isEnabled(this)) {
+            report("Listener access or capture unavailable · original kept")
+            return
+        }
         val test = armed != null
+        val automatic = if (friends) friendsDismissalEnabled(this) else automaticDismissalEnabled(this)
+        val selectedNotice = outcome.held ?: outcome.safe
+        val mode = GuardianSafeNotifications.presentationMode(this)
+        val action = guardianPresentationAction(
+            mode, automatic, outcome.quietCollection && (!friends || automatic),
+            outcome.held != null, outcome.safe != null,
+            mode == GuardianPresentationMode.GUARDIAN && outcome.safe?.let {
+                runCatching { GuardianSafeNotifications.canPostReplacement(this, it) }.getOrDefault(false)
+            } == true,
+        )
         if (armed != null) {
             if (currentMainTest(this, original.key) !== armed || !guardianMatchesLatestTestMessage(captured, armed.message)) return
-        } else {
-            val automatic = if (friends) friendsDismissalEnabled(this) else automaticDismissalEnabled(this)
-            if (!guardianDismissalAllowed(automatic, outcome.quietCollection, outcome.held != null)) {
-                reportMainDismissal(if (outcome.held == null) "No active hold · original notification kept"
-                    else "Dismissal is off · original notification kept")
-                return
+        } else if (action == GuardianPresentationAction.KEEP_ORIGINAL) {
+            pendingReplacement.remove(original.key)
+            val reason = when {
+                !automatic -> "Automatic dismissal is off for this profile"
+                outcome.held == null && outcome.safe != null && mode == GuardianPresentationMode.GUARDIAN ->
+                    "Guardian alert unavailable for this profile, channel or quiet hours"
+                outcome.latestAssessment == GuardianAssessment.UNCERTAIN -> "Uncertain with no active hold"
+                outcome.latestAssessment == GuardianAssessment.LOW_RISK -> "Low risk with no active hold"
+                else -> "No active hold or eligible low-risk bundle"
             }
+            report("$reason · original kept")
+            return
+        }
+        val now = SystemClock.elapsedRealtime()
+        pendingReplacement.entries.removeAll { now - it.value.first >= 30_000 }
+        if (!test && action == GuardianPresentationAction.REPLACE && selectedNotice != null &&
+            selectedNotice.id in outcome.addedIds && pendingReplacement.size < 64) {
+            pendingReplacement[original.key] = now to selectedNotice.id
         }
         val current = runCatching { getActiveNotifications(arrayOf(original.key)).singleOrNull() }.getOrElse {
-            reportMainDismissal("Android could not check the active notification")
+            report("Android could not check the active notification")
             return
         } ?: run {
-            reportMainDismissal("Original key is no longer active")
+            report("Original key is no longer active")
             return
         }
         val uid = runCatching { packageManager.getApplicationInfo(GUARDIAN_WHATSAPP, 0).uid }.getOrNull()
@@ -377,20 +418,19 @@ internal class GuardianNotificationListener : NotificationListenerService() {
             else -> null
         }
         if (reason != null) {
-            reportMainDismissal(reason)
+            report(reason)
             if (identityMatches && changed && staticIneligibility(current) == null && !friends && !test) {
                 retryChangedMain(current.key)
             }
             return
         }
 
-        val now = SystemClock.elapsedRealtime()
         mainRetries.entries.removeAll { now - it.value.first >= 30_000 }
         val retries = mainRetries[current.key]
         if (mainAttempts.size >= 16 && current.key !in mainAttempts ||
             current.key !in mainRetries && mainRetries.size >= 64 ||
             (retries?.second ?: 0) >= 3) {
-            reportMainDismissal("Cancellation retry limit reached")
+            report("Cancellation retry limit reached")
             return
         }
         if (current.key in mainAttempts && retries != null) {
@@ -399,14 +439,14 @@ internal class GuardianNotificationListener : NotificationListenerService() {
                 val latest = runCatching { getActiveNotifications(arrayOf(current.key)).singleOrNull() }.getOrNull()
                 if (latest != null) onNotificationPosted(latest, currentRanking)
             }
-            reportMainDismissal("Another archived update is waiting for the active cancellation attempt")
+            report("Another archived update is waiting for the active cancellation attempt")
             return
         }
         if (armed != null && !armed.bind(current.key, now)) return
         mainRetries[current.key] = (retries?.first ?: now) to ((retries?.second ?: 0) + 1)
         val attempt = ExternalAttempt(current.key, current.postTime)
         mainAttempts[current.key] = attempt
-        reportMainDismissal("Cancellation requested after encrypted capture")
+        report("Cancellation requested after encrypted capture")
         if (test) status.value = status.value.copy(mainTestMessage = null)
         fun finish(message: String, verified: Boolean = false) {
             if (mainAttempts[attempt.key] !== attempt) return
@@ -416,12 +456,17 @@ internal class GuardianNotificationListener : NotificationListenerService() {
                 if (mainTest === armed) mainTest = null
                 mainTestRemoved = verified
             }
-            reportMainDismissal(message)
-            status.value = status.value.copy(mainTestRemoved = mainTestRemoved)
-            if (verified && !test && !outcome.quietCollection && outcome.added) outcome.held?.let { held ->
-                // The replacement is posted only after Android confirms removal of the exact original.
-                runCatching { uk.co.traynor.privategallery.launcher.GuardianSafeNotifications.post(this, held) }
+            var result = message
+            if (verified && !test) {
+                val pending = pendingReplacement.remove(attempt.key)
+                if (action == GuardianPresentationAction.REPLACE && selectedNotice != null && pending?.second == selectedNotice.id) {
+                    // Only confirmed removal of the verified original may produce a replacement.
+                    val posted = runCatching { GuardianSafeNotifications.post(this, selectedNotice) }.getOrDefault(false)
+                    result += if (posted) " · Guardian alert posted" else " · Guardian alert unavailable"
+                }
             }
+            report(result)
+            status.value = status.value.copy(mainTestRemoved = mainTestRemoved)
             retry?.invoke()
         }
         if (runCatching { cancelNotification(current.key) }.isFailure) {
@@ -453,9 +498,12 @@ internal class GuardianNotificationListener : NotificationListenerService() {
         handler.postDelayed({ verify() }, 150)
     }
 
-    private fun reportMainDismissal(message: String) {
+    private fun reportMainDismissal(message: String) = reportDismissal(false, message)
+
+    private fun reportDismissal(friends: Boolean, message: String) {
         android.util.Log.i("NovaGuardianDismissal", message)
-        status.value = status.value.copy(mainDismissal = message)
+        status.value = if (friends) status.value.copy(friendsDismissal = message)
+            else status.value.copy(mainDismissal = message)
     }
 
     private fun allNotificationMessagesRetained(notification: Notification, captured: GuardianCaptureEvent): Boolean =
@@ -842,6 +890,7 @@ internal data class ListenerProbeStatus(
     val dismissal: DismissalDiagnostic = DismissalDiagnostic(),
     val foldFixtureVerified: Boolean = false,
     val mainDismissal: String? = null,
+    val friendsDismissal: String? = null,
     val mainTestRemoved: Boolean = false,
     val mainTestMessage: String? = null,
     val observedProfiles: Set<ProbeAccount> = emptySet(),

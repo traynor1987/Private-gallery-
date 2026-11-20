@@ -16,13 +16,15 @@ import androidx.compose.ui.window.SecureFlagPolicy
 import uk.co.traynor.privategallery.core.guardian.*
 
 internal enum class GuardianAlertPage(val title: String) {
-    PRIVACY("Notification Privacy"), RETENTION("Alert retention"),
+    PRESENTATION("Notification Presentation"), PRIVACY("Notification Privacy"), RETENTION("Alert retention"),
 }
 
 @Composable
 internal fun GuardianAlertSettings(page: GuardianAlertPage, onBack: () -> Unit) {
     val context = LocalContext.current
     val preferences = remember(context) { GuardianSafeNotifications.prefs(context) }
+    var presentation by remember { mutableStateOf(GuardianSafeNotifications.presentationMode(context)) }
+    var holdUncertain by remember { mutableStateOf(GuardianCapture.holdUncertainByDefault(context)) }
     var retention by remember { mutableStateOf(GuardianSafeNotifications.retention(context)) }
     var sender by remember { mutableStateOf(GuardianSafeNotifications.senderMode(context)) }
     var lockScreen by remember { mutableStateOf(GuardianSafeNotifications.lockScreen(context)) }
@@ -40,6 +42,23 @@ internal fun GuardianAlertSettings(page: GuardianAlertPage, onBack: () -> Unit) 
             Column(Modifier.heightIn(max = 520.dp).verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 when (page) {
+                    GuardianAlertPage.PRESENTATION -> {
+                        GuardianPresentationMode.entries.forEach { option ->
+                            AlertOption(option.label, presentation == option) {
+                                preferences.edit().putString("presentation_mode", option.name).apply()
+                                presentation = option
+                            }
+                        }
+                        Text("Smart Filtering keeps ordinary WhatsApp alerts. Nova Guardian Notifications replaces eligible low-risk alerts when Guardian can post an alert.")
+                        Text("Both modes replace supported held notifications with a neutral alert, subject to your profile, channel and quiet-hours settings.")
+                        LauncherToggle("Hold uncertain messages by default", holdUncertain) {
+                            GuardianCapture.setHoldUncertainByDefault(context, it)
+                            holdUncertain = it
+                        }
+                        Text("Monitored Contacts can set their own uncertainty and quiet collection rules.")
+                        Text("Enable dismissal for your WhatsApp profile in Notification compatibility. Enable Guardian alerts for that profile in Safe Notifications settings.")
+                        Text("Notification Privacy controls safe previews. Android can show the original preview before Guardian receives and verifies the notification.")
+                    }
                     GuardianAlertPage.RETENTION -> {
                         Text("Choose how long new alerts stay in the Samsung notification shade. Android controls the brief heads-up banner.")
                         GuardianAlertRetention.entries.forEach { option ->

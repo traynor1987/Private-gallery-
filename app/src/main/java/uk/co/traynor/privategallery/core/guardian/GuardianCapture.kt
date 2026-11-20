@@ -25,7 +25,9 @@ internal data class GuardianCaptureHealth(
 internal data class GuardianDurableNotification(
     val quietCollection: Boolean,
     val held: GuardianInboxRow?,
-    val added: Boolean,
+    val safe: GuardianInboxRow?,
+    val addedIds: Set<String>,
+    val latestAssessment: GuardianAssessment?,
 )
 
 /** Serialises settings, archive writes and deletion without blocking Android's listener callbacks. */
@@ -73,6 +75,12 @@ internal object GuardianCapture {
 
     fun refresh(context: Context) = manage(context) { app, _ ->
         runCatching { GuardianCloudJob.schedule(app) }
+    }
+
+    fun holdUncertainByDefault(context: Context) = prefs(context).getBoolean("hold_uncertain_unlisted", false)
+
+    fun setHoldUncertainByDefault(context: Context, enabled: Boolean) {
+        prefs(context).edit().putBoolean("hold_uncertain_unlisted", enabled).apply()
     }
 
     private fun includesMain(context: Context) = prefs(context).getBoolean("include_main_whatsapp", false)
@@ -135,26 +143,36 @@ internal object GuardianCapture {
                         return@execute
                     }
                     quietCollection = contact?.quietCollection == true
-                    val selected = if (contact == null) event else event.copy(
-                        sensitivity = contact.sensitivity, holdUncertain = contact.holdUncertain)
+                    val selected = event.copy(
+                        sensitivity = contact?.sensitivity ?: event.sensitivity,
+                        holdUncertain = contact?.holdUncertain ?: (event.holdUncertain || holdUncertainByDefault(app)),
+                    )
                     store.append(selected, days, now.wall, assess = false, clock = now)
                 }
                 val captured = result.getOrNull()
+                val reassessed = mutableSetOf<String>()
                 if (captured != null && (captured.added > 0 || captured.allDurable)) {
                     // Classification may fail independently. A durable row remains Awaiting Analysis.
                     val queued = runCatching {
                         store.assessCaptured(event, days, now,
                             automaticIds = if (captured.allDurable) captured.addedIds else emptySet(),
-                            classifyWithoutExamples = true)
+                            classifyWithoutExamples = true, reassessedIds = reassessed)
                     }.getOrDefault(false)
                     if (queued) runCatching { GuardianCloudJob.schedule(app) }
                 }
                 if (captured?.allDurable == true && onDurable != null && generation.get() == expected) {
-                    val held = runCatching { store.notificationRows(event, days, now) }.getOrDefault(emptyList())
-                        .filter { it.section == GuardianInboxSection.COOLING }
+                    val rows = runCatching { store.notificationRows(event, days, now) }.getOrDefault(emptyList())
+                    val held = rows.filter { it.section == GuardianInboxSection.COOLING }
                         .maxWithOrNull(compareBy<GuardianInboxRow> { it.noticeKind() == GuardianNoticeKind.HIGH }
                             .thenBy { it.time })
-                    val outcome = GuardianDurableNotification(quietCollection, held, held != null && held.id in captured.addedIds)
+                    val latest = rows.maxByOrNull { it.time }
+                    val safe = latest?.takeIf {
+                        rows.size == event.entries.size && rows.all { row ->
+                            row.section == GuardianInboxSection.READY && row.assessment == GuardianAssessment.LOW_RISK &&
+                                row.ownerLabel != GuardianAssessment.UPSETTING
+                        }
+                    }
+                    val outcome = GuardianDurableNotification(quietCollection, held, safe, captured.addedIds + reassessed, latest?.assessment)
                     Handler(Looper.getMainLooper()).post {
                         if (generation.get() == expected && isEnabled(app)) onDurable(outcome)
                     }

@@ -336,6 +336,11 @@ internal fun GuardianHome(
                                 GuardianNotificationListener.mainDismissalAccepted(context) -> "Automatic dismissal off"
                                 else -> listener.mainDismissal ?: "Automatic dismissal requires Fold verification"
                             })
+                            GuardianHealthLine("Friends WhatsApp dismissal", when {
+                                !listener.connected -> "Listener disconnected"
+                                !GuardianNotificationListener.friendsDismissalEnabled(context) -> "Automatic dismissal off"
+                                else -> listener.friendsDismissal ?: "Automatic dismissal enabled"
+                            })
                             TextButton(onClick = onDiagnostics, contentPadding = PaddingValues(horizontal = 0.dp)) {
                                 Text("View Diagnostics")
                             }

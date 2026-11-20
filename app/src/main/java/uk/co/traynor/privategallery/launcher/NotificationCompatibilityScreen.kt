@@ -254,7 +254,8 @@ internal fun NotificationCompatibilityScreen(
                         confirmReconciliation = false
                     }) { Text("Confirm Main WhatsApp reconciliation") }
                 }
-                status.mainDismissal?.let { Text(it) }
+                status.mainDismissal?.let { Text("Main WhatsApp · $it") }
+                status.friendsDismissal?.let { Text("Friends WhatsApp · $it") }
                 Text("Samsung may briefly show a notification before Guardian can dismiss it.")
 
                 externalError?.let { Text(it, color = MaterialTheme.colorScheme.error) }
