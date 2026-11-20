@@ -1,7 +1,7 @@
 import importlib.util
 from pathlib import Path
 import unittest
-from unittest.mock import patch
+from unittest.mock import Mock, call, patch
 import xml.etree.ElementTree as ET
 
 path = Path(__file__).resolve().parents[2]/'docs/build85/verify_live_build84.py'
@@ -32,6 +32,37 @@ class RealUpdateActions(unittest.TestCase):
         with patch.object(driver, 'tree', side_effect=[controls, summary]), patch.object(driver, 'scroll') as scroll:
             self.assertIs(summary, driver.updates_summary())
             scroll.assert_called_once_with(controls, reverse=True)
+
+    def test_recovery_waits_for_acknowledgement_and_the_enabled_compose_button(self):
+        def page(checked, enabled):
+            return ET.fromstring(f'<hierarchy><node text="{synthetic_key}"/><node checkable="true" checked="{checked}"/>'
+                                 '<node class="android.widget.EditText"/><node text="Re-enter your saved recovery key"/>'
+                                 f'<node clickable="true" enabled="{enabled}"><node text="Continue" enabled="true"/></node>'
+                                 '</hierarchy>')
+
+        synthetic_key = 'A' * 43
+        before, checked, ready = page('false', 'false'), page('true', 'false'), page('true', 'true')
+        destination = ET.fromstring('<hierarchy><node text="Enter NovaOS"/></hierarchy>')
+        self.assertIsNone(driver.recovery_continue(checked))
+        expected = [(checked, 'checked recovery acknowledgement'), (ready, 'enabled recovery Continue'),
+                    (destination, 'completed recovery confirmation')]
+
+        def observe(predicate, label):
+            next_page, expected_label = expected.pop(0)
+            self.assertEqual(expected_label, label)
+            self.assertTrue(predicate(next_page))
+            return next_page
+
+        actions = Mock()
+        with patch.object(driver, 'wait_for', side_effect=observe), patch.object(driver, 'tap', actions.tap), \
+                patch.object(driver, 'enter', actions.enter):
+            driver.complete_recovery_setup(before)
+        self.assertEqual([], expected)
+        self.assertEqual(actions.mock_calls, [
+            call.tap(driver.recovery_checkbox(before)),
+            call.enter(driver.fields(checked)[0], synthetic_key),
+            call.tap(driver.recovery_continue(ready)),
+        ])
 
 
 if __name__ == '__main__':

@@ -130,6 +130,37 @@ def updates_summary():
         scroll(root, reverse=True)
     raise RuntimeError('Could not return to the real installed-version summary')
 
+def recovery_checkbox(root):
+    checks = [node for node in root.iter('node') if node.get('checkable') == 'true']
+    return checks[0] if len(checks) == 1 else None
+
+def recovery_continue(root):
+    checkbox = recovery_checkbox(root)
+    if checkbox is None or checkbox.get('checked') != 'true':
+        return None
+    return next((node for node in root.iter('node')
+                 if node.get('clickable') == 'true' and node.get('enabled') == 'true' and has(node, 'Continue')), None)
+
+def complete_recovery_setup(root):
+    keys = [re.sub(r'\s', '', s) for s in labels(root) if re.fullmatch(r'[A-Za-z0-9_\- ]{43,60}', s)]
+    keys = {key for key in keys if re.fullmatch(r'[A-Za-z0-9_-]{43}', key)}
+    require(len(keys) == 1, 'Synthetic recovery key was not visible')
+
+    # Acknowledge before opening the keyboard, which moves the checkbox. Read back
+    # its actual state and the enabled Compose click target before continuing.
+    checkbox = recovery_checkbox(root)
+    require(checkbox is not None, 'Expected recovery acknowledgement checkbox')
+    if checkbox.get('checked') != 'true':
+        tap(checkbox)
+        root = wait_for(lambda page: (check := recovery_checkbox(page)) is not None and
+                        check.get('checked') == 'true', 'checked recovery acknowledgement')
+    inputs = fields(root)
+    require(len(inputs) == 1, 'Expected one recovery confirmation field')
+    enter(inputs[0], next(iter(keys)))
+    root = wait_for(lambda page: recovery_continue(page) is not None, 'enabled recovery Continue')
+    tap(recovery_continue(root))
+    wait_for(lambda page: not has(page, 'Re-enter your saved recovery key'), 'completed recovery confirmation')
+
 def open_updates(allow_setup):
     authenticated = False
     adb('shell', 'am', 'start', '-n', PACKAGE + '/.LauncherActivity')
@@ -150,14 +181,7 @@ def open_updates(allow_setup):
             click(tree(), 'Create PIN')
         elif has(root, 'Re-enter your saved recovery key'):
             require(allow_setup, 'Unexpected recovery setup after upgrade')
-            keys = [re.sub(r'\s', '', s) for s in labels(root) if re.fullmatch(r'[A-Za-z0-9_\- ]{43,60}', s)]
-            keys = [k for k in keys if len(k) == 43 and re.fullmatch(r'[A-Za-z0-9_-]+', k)]
-            require(len(set(keys)) == 1, 'Synthetic recovery key was not visible')
-            enter(fields(root)[0], keys[0])
-            checks = [n for n in tree().iter('node') if n.get('checkable') == 'true']
-            require(len(checks) == 1, 'Expected recovery acknowledgement checkbox')
-            tap(checks[0])
-            click(tree(), 'Continue')
+            complete_recovery_setup(root)
         elif has(root, 'Enter NovaOS'):
             click(root, 'Enter NovaOS')
         elif has(root, 'Enter passcode'):
