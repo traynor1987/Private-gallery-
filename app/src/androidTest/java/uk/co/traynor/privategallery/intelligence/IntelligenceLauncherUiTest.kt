@@ -84,6 +84,7 @@ class IntelligenceLauncherUiTest {
         show(protected = true)
         compose.onNodeWithContentDescription("Nova Intelligence page").performClick()
         compose.onNodeWithText("Private briefing paused during Sanctuary").assertExists()
+        compose.onAllNodesWithText("Check cloud chat").assertCountEquals(0)
         compose.onNodeWithText("Ask Nova").performClick()
         send("What is a haiku?")
         compose.onNodeWithText("Cloud questions are paused during Sanctuary.", substring = true).assertExists()
@@ -93,6 +94,11 @@ class IntelligenceLauncherUiTest {
     @Test fun coverCloudDisconnectedLeavesOfflineCommandsAvailable() {
         show()
         compose.onNodeWithContentDescription("Nova Intelligence page").performClick()
+        compose.onNodeWithText("Check cloud chat").performScrollTo().performClick()
+        compose.waitUntil(10_000) {
+            compose.onAllNodesWithText("Cloud is disconnected. Configure Nova Brain in Settings.")
+                .fetchSemanticsNodes().isNotEmpty()
+        }
         compose.onNodeWithText("Ask Nova").performClick()
         send("What is a haiku?")
         compose.onNodeWithText("Send one question to Nova Brain?").assertIsDisplayed()

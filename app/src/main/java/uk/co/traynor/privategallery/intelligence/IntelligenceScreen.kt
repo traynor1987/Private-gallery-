@@ -227,6 +227,23 @@ private fun IntelligenceContent(
         if (!openDestination(destination)) feedback = "This destination is unavailable under the current protection settings."
     }
 
+    fun checkCloudChat() {
+        if (protectedBySanctuary) return
+        runWork("Nova Brain connection settings are unavailable.", work = {
+            val configuration = NovaBrainConnectionStore(context).read()
+            if (configuration == null) "Cloud is disconnected. Configure Nova Brain in Settings."
+            else if (!intelligencePrivateAllowed(context)) "Cloud chat is paused during Sanctuary."
+            else try {
+                IntelligenceCloud().status(configuration).unavailableMessage
+                    ?: "Cloud chat is authenticated and within the current spending limits."
+            } catch (missing: IntelligenceRouteUnavailable) {
+                checkNotNull(missing.message)
+            } catch (failure: CloudTeacherException) {
+                failure.failure.userMessage
+            }
+        }) { status -> connection = status }
+    }
+
     fun askCloud(question: String) {
         if (protectedBySanctuary) {
             respond(question, "Cloud questions are paused during Sanctuary. Local app shortcuts are available.")
@@ -240,18 +257,21 @@ private fun IntelligenceContent(
                 try {
                     val configuration = store.read()
                     if (configuration == null) "Cloud is disconnected. You can configure Nova Brain in Settings or use local commands." to false
-                    else {
+                    else if (!intelligencePrivateAllowed(context) || job?.isActive != true ||
+                        !lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) {
+                        "Cloud chat is paused. Local commands are available." to false
+                    } else {
                         val client = IntelligenceCloud()
                         val status = client.status(configuration)
-                        when {
-                            !status.assistantAvailable -> "This Nova Brain server has no assistant endpoint yet. Local commands are available." to false
-                            !status.budget.canAnalyze -> "The server currently disallows paid requests. Local commands are available." to false
-                            else -> client.ask(configuration, question, approved = true, requestId, status) {
-                                job?.isActive == true && lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED) &&
-                                    intelligencePrivateAllowed(context) && store.read() == configuration
-                            } to true
-                        }
+                        val unavailable = status.unavailableMessage
+                        if (unavailable != null) "$unavailable Local commands are available." to false
+                        else client.ask(configuration, question, approved = true, requestId, status) {
+                            job.isActive && lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED) &&
+                                intelligencePrivateAllowed(context) && store.read() == configuration
+                        } to true
                     }
+                } catch (missing: IntelligenceRouteUnavailable) {
+                    "${missing.message} Local commands are available." to false
                 } catch (failure: CloudTeacherException) {
                     failure.failure.userMessage to false
                 }
@@ -377,6 +397,9 @@ private fun IntelligenceContent(
                 Text(guardian?.let { "${it.newToday} Guardian captures today · ${it.importantToday} flagged for attention" }
                     ?: "Guardian activity · $guardianState")
                 Text(connection, color = GuardianMuted, modifier = Modifier.testTag("intelligence-connection"))
+                if (!protectedBySanctuary) {
+                    TextButton(enabled = !busy, onClick = ::checkCloudChat) { Text("Check cloud chat") }
+                }
                 Text(email ?: "Checking email connection…", color = GuardianMuted)
                 TextButton(enabled = !protectedBySanctuary, onClick = { navigate(IntelligenceDestination.NOTIFICATIONS) }) {
                     Text("Safe Notifications")

@@ -13,16 +13,24 @@ import uk.co.traynor.privategallery.core.brain.CloudTeacherException
 import uk.co.traynor.privategallery.core.brain.CloudTeacherStatus
 import uk.co.traynor.privategallery.core.brain.NovaBrainConfiguration
 import uk.co.traynor.privategallery.core.brain.approvedCloudPayload
-import uk.co.traynor.privategallery.core.brain.cloudRequest
 
-/** Manual Ask Nova uses the same authenticated status, consent format and server ledger as Nova Brain. */
+internal class IntelligenceRouteUnavailable : IOException("The assistant route is unavailable on the configured Nova Brain server.")
+
+ /** Manual Ask Nova uses the same authenticated status, consent format and server ledger as Nova Brain. */
 internal class IntelligenceCloud(
-    private val get: (NovaBrainConfiguration) -> BrainResponse = { configuration ->
-        cloudRequest(configuration.endpoint("/guardian/status"), configuration.token, null)
-    },
-    private val post: (NovaBrainConfiguration, ByteArray, () -> Unit) -> BrainResponse = ::postIntelligenceQuestion,
+    private val get: (NovaBrainConfiguration) -> BrainResponse = { requestIntelligence(it) },
+    private val post: (NovaBrainConfiguration, ByteArray, () -> Unit) -> BrainResponse = ::requestIntelligence,
 ) {
-    data class Status(val assistantAvailable: Boolean, val budget: CloudTeacherStatus)
+    data class Status(val assistantAvailable: Boolean, val budget: CloudTeacherStatus) {
+        val unavailableMessage: String?
+            get() = when {
+                !assistantAvailable -> "The Nova Brain VPS does not advertise cloud chat."
+                budget.staging -> "Nova Brain is in staging. Paid cloud chat is disabled."
+                !budget.analysisEnabled -> "Paid cloud analysis is disabled on the Nova Brain VPS."
+                !budget.canAnalyze -> "The Nova Brain budget currently blocks paid requests."
+                else -> null
+            }
+    }
 
     fun status(configuration: NovaBrainConfiguration): Status = withResponse(paid = false, { get(configuration) }) {
         Status(it.opt("assistant_available") == true, CloudTeacherStatus.parse(it))
@@ -37,7 +45,7 @@ internal class IntelligenceCloud(
         maySend: () -> Boolean,
     ): String {
         require(question.length in 1..600)
-        if (!status.assistantAvailable || !status.budget.canAnalyze || !maySend()) {
+        if (status.unavailableMessage != null || !maySend()) {
             throw CloudTeacherException(CloudFailure.DISABLED)
         }
         val payload = approvedCloudPayload(question, approved, requestId)
@@ -66,6 +74,7 @@ internal class IntelligenceCloud(
             throw CloudTeacherException(if (paid) CloudFailure.UNKNOWN_OUTCOME else CloudFailure.OFFLINE)
         }
         try {
+            if (response.code == 404 && !paid) throw IntelligenceRouteUnavailable()
             if (response.code != 200) {
                 val reason = runCatching { JSONObject(response.body.decodeToString()).optString("error") }.getOrNull()
                 val failure = when (response.code) {
@@ -91,10 +100,10 @@ internal class IntelligenceCloud(
     }
 }
 
-private fun postIntelligenceQuestion(
+private fun requestIntelligence(
     configuration: NovaBrainConfiguration,
-    payload: ByteArray,
-    assertMaySend: () -> Unit,
+    payload: ByteArray? = null,
+    assertMaySend: () -> Unit = {},
 ): BrainResponse {
     val connection = URI(configuration.origin).resolve("/assistant/ask").toURL().openConnection() as HttpsURLConnection
     try {
@@ -102,17 +111,19 @@ private fun postIntelligenceQuestion(
         connection.connectTimeout = 8000
         connection.readTimeout = 20000
         connection.useCaches = false
-        connection.requestMethod = "POST"
-        connection.doOutput = true
         connection.setRequestProperty("Authorization", "Bearer ${configuration.token}")
         connection.setRequestProperty("Accept", "application/json")
-        connection.setRequestProperty("Content-Type", "application/json; charset=utf-8")
         connection.setRequestProperty("Cache-Control", "no-store")
-        connection.setFixedLengthStreamingMode(payload.size)
-        assertMaySend()
-        connection.outputStream.use {
+        if (payload != null) {
+            connection.requestMethod = "POST"
+            connection.doOutput = true
+            connection.setRequestProperty("Content-Type", "application/json; charset=utf-8")
+            connection.setFixedLengthStreamingMode(payload.size)
             assertMaySend()
-            it.write(payload)
+            connection.outputStream.use {
+                assertMaySend()
+                it.write(payload)
+            }
         }
         val code = connection.responseCode
         if (connection.contentLengthLong > 32768) throw IOException("Oversized assistant response")

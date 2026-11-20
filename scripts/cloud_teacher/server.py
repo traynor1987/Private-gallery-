@@ -141,7 +141,7 @@ class Handler(BaseHTTPRequestHandler):
     def do_GET(self):
         if self.path == "/health":
             self.send_json({"status": "ok"})
-        elif self.path != "/guardian/status":
+        elif self.path not in ("/guardian/status", "/assistant/ask"):
             self.send_failure(404, 'not_found')
         elif not authorize(self.headers.get("Authorization", ""), self.server.owner_token):
             self.send_failure(401, 'authentication_required')

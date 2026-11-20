@@ -8,6 +8,7 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from threading import Thread
 from unittest.mock import Mock,patch
+from urllib.request import Request, urlopen
 from uuid import uuid4
 
 from budget import Budget
@@ -96,6 +97,38 @@ class HttpAccountingTest(unittest.TestCase):
             self.assertEqual(self.send(identity)[0], 409)
             upstream.assert_called_once()
         self.assertEqual(self.server.budget.status()['reserved_upper_bound_micro_usd'], 321)
+
+    def test_assistant_preflight_does_not_reserve_and_exact_question_reaches_provider(self):
+        identity = str(uuid4())
+        url = f'http://127.0.0.1:{self.server.server_port}/assistant/ask'
+        request = Request(url, headers={'Authorization': 'Bearer ' + self.server.owner_token})
+        reply = {
+            'status': 'completed', 'model': 'gpt-5-mini', 'service_tier': 'default',
+            'usage': {'input_tokens': 200, 'output_tokens': 50, 'total_tokens': 250,
+                      'input_tokens_details': {'cached_tokens': 0},
+                      'output_tokens_details': {'reasoning_tokens': 0}},
+            'output': [{'type': 'message', 'content': [{'type': 'output_text', 'text': 'A short poetic form.'}]}],
+        }
+        fake_opener = Mock()
+        fake_opener.open.return_value.__enter__ = Mock(return_value=Mock(read=Mock(return_value=json.dumps(reply).encode())))
+        fake_opener.open.return_value.__exit__ = Mock(return_value=False)
+        with patch('server.build_opener', return_value=fake_opener):
+            with urlopen(request, timeout=5) as response:
+                self.assertTrue(json.load(response)['assistant_available'])
+            fake_opener.open.assert_not_called()
+            self.assertEqual(0, self.server.budget.status()['reserved_upper_bound_micro_usd'])
+
+            route = {'route': '/assistant/ask', 'message': 'What is a haiku?'}
+            code, result = self.send(identity, **route)
+            self.assertEqual(200, code)
+            self.assertEqual('A short poetic form.', result['answer'])
+            self.assertEqual(150, result['usage_cost_micro_usd'])
+            self.assertEqual(409, self.send(identity, **route)[0])
+            fake_opener.open.assert_called_once()
+            sent = json.loads(fake_opener.open.call_args.args[0].data)
+            self.assertEqual(route['message'], sent['input'])
+            self.assertFalse(sent['store'])
+            self.assertEqual([], sent['tools'])
 
     def test_concurrent_duplicates_dispatch_exactly_one_paid_request(self):
         identity=str(uuid4())

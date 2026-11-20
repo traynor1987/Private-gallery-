@@ -59,6 +59,43 @@ Create `/etc/nova-cloud-teacher/secrets/openai-key` using a secure editor on the
 
 Run `sudo bash deploy.sh` again. Test authenticated status first. A successful health check does not call OpenAI. Use only a synthetic message for the first approved analysis. The SQLite volume retains reservations across restarts. Never remove it during routine deployment or rollback. NGINX access logs and container logs are disabled for this service.
 
+## Ask Nova on the existing Nova Brain VPS
+
+The same service handles `GET /assistant/ask` to check route availability, authentication
+and spending status, and `POST /assistant/ask` for a single owner-confirmed question.
+The app uses **Check cloud chat** on the Intelligence dashboard to run the GET.
+The GET carries no question and creates no reservation. Guardian keeps its existing routes.
+
+From the existing source checkout, use a clean worktree of the reviewed Intelligence
+commit. On staging, run `sudo bash deploy-staging.sh` from that worktree's
+`scripts/cloud_teacher` directory, then verify the private loopback port.
+
+```sh
+sudo python3 verify-assistant.py http://127.0.0.1:8788
+```
+
+For an authorised rollout on the supported funded host, use the existing `deploy.sh`
+from that same directory. Keep the current owner token, settings, host port and
+SQLite volume. Back up the existing Nova Brain NGINX site file outside
+`sites-enabled`. Extend its existing exact route allowlist to include
+`/assistant/ask` and keep the shared rate limit, authorization header, TLS and
+upstream. The checked-in `nginx-brain.conf` shows the route. Validate with
+`sudo nginx -t` before reloading NGINX. Use the existing rollback procedure and
+restore the backed-up site file if the route check fails and you need to undo the
+rollout. A backend update on its own cannot fix a proxy 404.
+
+```sh
+sudo python3 verify-assistant.py https://brain.jamestraynor.co.uk
+```
+
+The verifier uses the owner-token file on the VPS. It expects an unauthenticated
+GET rejection, an authenticated GET with the chat capability, and an authenticated
+POST rejected for lack of consent. It prints only readiness flags. A successful
+staging verification reports `staging: true` and `analysis_enabled: false` and
+spent no allowance. On a funded host, paid chat also requires the existing
+analysis approval and enough remaining budget. Confirm a single synthetic
+question in the app only after the owner approves that paid check.
+
 ## Rollback
 
 Run `sudo bash rollback.sh PREVIOUS_COMMIT_SHA` using the same config directory and host port. Use an image from this deployment series. Rollback keeps the SQLite volume and current configuration, including any existing spending reservations. To take the service offline, disable only its NGINX site, validate and reload NGINX, then stop only the Cloud Teacher Compose service.

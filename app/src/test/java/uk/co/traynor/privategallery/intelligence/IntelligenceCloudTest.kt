@@ -41,6 +41,22 @@ class IntelligenceCloudTest {
         assertTrue(checkNotNull(sent).all { it == 0.toByte() })
     }
 
+    @Test fun assistantPreflightDistinguishesMissingRouteStagingAndBudget() {
+        val missing = IntelligenceCloud(get = { BrainResponse(404, "<html>nginx</html>".encodeToByteArray()) },
+            post = { _, _, _ -> error("An unavailable route must never receive a paid request") })
+        assertThrows(IntelligenceRouteUnavailable::class.java) { missing.status(configuration) }
+
+        val staging = IntelligenceCloud(get = {
+            status().put("model", "staging").put("analysis_enabled", false).put("budget", JSONObject.NULL).http()
+        }).status(configuration)
+        assertTrue(staging.assistantAvailable)
+        assertTrue(staging.unavailableMessage.orEmpty().contains("staging"))
+
+        val ready = IntelligenceCloud(get = { status().http() }).status(configuration)
+        assertNull(ready.unavailableMessage)
+        assertTrue(ready.copy(budget = ready.budget.copy(remaining = 0)).unavailableMessage.orEmpty().contains("budget"))
+    }
+
     @Test fun deniedBudgetConsentRevocationAndUnavailableBackendFailClosed() {
         var sent = 0
         val client = IntelligenceCloud(get = { status().http() }, post = { _, _, authorise ->
