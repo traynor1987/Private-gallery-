@@ -26,7 +26,7 @@ internal data class GuardianDurableNotification(
     val quietCollection: Boolean,
     val held: GuardianInboxRow?,
     val safe: GuardianInboxRow?,
-    val addedIds: Set<String>,
+    val replacement: GuardianInboxRow?,
     val latestAssessment: GuardianAssessment?,
 )
 
@@ -108,22 +108,27 @@ internal object GuardianCapture {
         }
     }
 
-    fun record(context: Context, event: GuardianCaptureEvent, monitored: GuardianConversationKey,
+    fun record(context: Context, event: GuardianCaptureEvent, monitored: GuardianConversationKey, trace: Long? = null,
         onDurable: ((GuardianDurableNotification) -> Unit)? = null) {
         val app = context.applicationContext
         val expected = generation.get()
         val isWhatsApp = event.app == GUARDIAN_WHATSAPP
         val mainMessage = isWhatsApp && !event.requiresContactConsent
+        fun captureStage(stage: GuardianCaptureStage) {
+            if (mainMessage) noteMainCapture(stage)
+            GuardianPipelineDiagnostics.update(trace) { it.copy(capture = stage.label) }
+        }
         if (pendingEvents.incrementAndGet() > MAX_PENDING_NOTIFICATIONS) {
             pendingEvents.decrementAndGet()
             overflows.update { it + 1 }
             status.update { it.copy(limited = true) }
-            if (mainMessage) noteMainCapture(GuardianCaptureStage.QUEUE)
+            captureStage(GuardianCaptureStage.QUEUE)
             return
         }
         worker.execute {
             try {
                 if (generation.get() != expected || !isEnabled(app) || !GuardianNotificationListener.hasAccess(app)) {
+                    GuardianPipelineDiagnostics.update(trace) { it.copy(capture = "Capture settings or access changed") }
                     return@execute
                 }
                 val days = retention(app)
@@ -139,7 +144,7 @@ internal object GuardianCapture {
                         contacts.any { it.key.app == monitored.app && it.key.profile == monitored.profile &&
                             (!it.enabled || !it.retain) }
                     if (hasExclusion || !guardianCaptureAllowed(includeMain && !event.requiresContactConsent, monitored, contact)) {
-                        if (mainMessage) noteMainCapture(GuardianCaptureStage.CONSENT)
+                        captureStage(GuardianCaptureStage.CONSENT)
                         return@execute
                     }
                     quietCollection = contact?.quietCollection == true
@@ -150,13 +155,12 @@ internal object GuardianCapture {
                     store.append(selected, days, now.wall, assess = false, clock = now)
                 }
                 val captured = result.getOrNull()
-                val reassessed = mutableSetOf<String>()
                 if (captured != null && (captured.added > 0 || captured.allDurable)) {
                     // Classification may fail independently. A durable row remains Awaiting Analysis.
                     val queued = runCatching {
                         store.assessCaptured(event, days, now,
                             automaticIds = if (captured.allDurable) captured.addedIds else emptySet(),
-                            classifyWithoutExamples = true, reassessedIds = reassessed)
+                            classifyWithoutExamples = true)
                     }.getOrDefault(false)
                     if (queued) runCatching { GuardianCloudJob.schedule(app) }
                 }
@@ -166,13 +170,23 @@ internal object GuardianCapture {
                         .maxWithOrNull(compareBy<GuardianInboxRow> { it.noticeKind() == GuardianNoticeKind.HIGH }
                             .thenBy { it.time })
                     val latest = rows.maxByOrNull { it.time }
+                    val assessed = rows.count { it.assessment != null }
+                    val complete = rows.isNotEmpty() && assessed == rows.size
                     val safe = latest?.takeIf {
-                        rows.size == event.entries.size && rows.all { row ->
+                        complete && rows.all { row ->
                             row.section == GuardianInboxSection.READY && row.assessment == GuardianAssessment.LOW_RISK &&
                                 row.ownerLabel != GuardianAssessment.UPSETTING
                         }
                     }
-                    val outcome = GuardianDurableNotification(quietCollection, held, safe, captured.addedIds + reassessed, latest?.assessment)
+                    val replacement = if (complete) rows.firstOrNull { it.assessment == GuardianAssessment.UPSETTING ||
+                        it.ownerLabel == GuardianAssessment.UPSETTING }
+                        ?: rows.firstOrNull { it.assessment == GuardianAssessment.UNCERTAIN } ?: latest
+                        else null
+                    GuardianPipelineDiagnostics.update(trace) {
+                        it.copy(assessed = assessed, held = rows.count { row -> row.section == GuardianInboxSection.COOLING },
+                            latest = latest?.assessment)
+                    }
+                    val outcome = GuardianDurableNotification(quietCollection, held, safe, replacement, latest?.assessment)
                     Handler(Looper.getMainLooper()).post {
                         if (generation.get() == expected && isEnabled(app)) onDurable(outcome)
                     }
@@ -181,7 +195,7 @@ internal object GuardianCapture {
                 if (mainMessage && captured?.allDurable != true) {
                     android.util.Log.i("NovaGuardianDismissal", "No complete encrypted capture; cancellation withheld")
                 }
-                if (mainMessage) noteMainCapture(when {
+                captureStage(when {
                     captured == null || counts == null -> GuardianCaptureStage.STORAGE
                     captured.partial -> GuardianCaptureStage.PARTIAL
                     captured.added == 0 -> GuardianCaptureStage.DUPLICATE

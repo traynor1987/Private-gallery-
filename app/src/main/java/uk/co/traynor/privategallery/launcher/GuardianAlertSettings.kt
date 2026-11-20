@@ -28,7 +28,7 @@ internal fun GuardianAlertSettings(page: GuardianAlertPage, onBack: () -> Unit) 
     var retention by remember { mutableStateOf(GuardianSafeNotifications.retention(context)) }
     var sender by remember { mutableStateOf(GuardianSafeNotifications.senderMode(context)) }
     var lockScreen by remember { mutableStateOf(GuardianSafeNotifications.lockScreen(context)) }
-    var preview by remember { mutableStateOf(preferences.getBoolean("alert_validated_preview", false)) }
+    var preview by remember { mutableStateOf(GuardianSafeNotifications.previewsEnabled(context)) }
 
     fun changeVisibility(key: String, value: String) {
         preferences.edit().putString(key, value).apply()
@@ -45,11 +45,12 @@ internal fun GuardianAlertSettings(page: GuardianAlertPage, onBack: () -> Unit) 
                     GuardianAlertPage.PRESENTATION -> {
                         GuardianPresentationMode.entries.forEach { option ->
                             AlertOption(option.label, presentation == option) {
-                                preferences.edit().putString("presentation_mode", option.name).apply()
+                                GuardianSafeNotifications.setPresentationMode(context, option)
                                 presentation = option
+                                preview = GuardianSafeNotifications.previewsEnabled(context, option)
                             }
                         }
-                        Text("Smart Filtering keeps ordinary WhatsApp alerts. Nova Guardian Notifications replaces eligible low-risk alerts when Guardian can post an alert.")
+                        Text("Smart Filtering keeps ordinary WhatsApp alerts. Nova Guardian Notifications replaces eligible monitored WhatsApp alerts, including uncertain messages that your protection settings allow you to read.")
                         Text("Both modes replace supported held notifications with a neutral alert, subject to your profile, channel and quiet-hours settings.")
                         LauncherToggle("Hold uncertain messages by default", holdUncertain) {
                             GuardianCapture.setHoldUncertainByDefault(context, it)
@@ -78,12 +79,12 @@ internal fun GuardianAlertSettings(page: GuardianAlertPage, onBack: () -> Unit) 
                             }
                         }
                         Text("Set nicknames and individual overrides in Monitored Contacts.")
-                        LauncherToggle("Allow message previews after validation", preview) {
+                        LauncherToggle("Allow safe message previews", preview) {
                             preview = it
                             preferences.edit().putBoolean("alert_validated_preview", it).apply()
                             GuardianSafeNotifications.cancel(context)
                         }
-                        Text("Only eligible low-concern messages can appear after local validation. Android may retain visible previews in notification history.")
+                        Text("Nova Guardian Notifications can show ordinary messages such as greetings. Learned assessments require local validation before showing a preview. Android may retain visible previews in notification history.")
                         Text("Lock screen", style = MaterialTheme.typography.titleSmall)
                         GuardianAlertLockScreen.entries.forEach { option ->
                             AlertOption(option.label, lockScreen == option) {
