@@ -144,8 +144,8 @@ class HiddenBrowserIsolationTest {
                 seed(primary, "primary")
                 assertEquals("null", evaluate(hidden, "localStorage.getItem('scope')"))
                 seed(hidden, "hidden")
-                assertEquals(""primary"", evaluate(primary, "localStorage.getItem('scope')"))
-                assertEquals(""hidden"", evaluate(hidden, "localStorage.getItem('scope')"))
+                assertEquals(org.json.JSONObject.quote("primary"), evaluate(primary, "localStorage.getItem('scope')"))
+                assertEquals(org.json.JSONObject.quote("hidden"), evaluate(hidden, "localStorage.getItem('scope')"))
                 for ((view, marker) in listOf(primary to "primary", hidden to "hidden")) {
                     evaluate(view, """
                         window.fixture = '';
