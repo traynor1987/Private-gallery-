@@ -47,8 +47,8 @@ class HiddenSpaceAppsTest {
                                 it.readBytes().toString(Charsets.ISO_8859_1).contains("hidden marker")
                             })
                             assertTrue(NovaCoreApp.entries.none { BackupPolicy.allowed(it.namespace, "hidden") })
-                            session.onBackgroundAt(1000L, clock)
-                            clock = 1001L
+                            session.onBackgroundAt(30_000L, clock)
+                            clock = 30_001L
                             session.onForeground()
                             assertFalse(h.current())
                             assertTrue(runCatching { NovaNotesLibrary(h).read() }.isFailure)
