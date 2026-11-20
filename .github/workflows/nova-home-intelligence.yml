@@ -50,7 +50,8 @@ jobs:
           heap-size: 512M
           disk-size: 8G
           disable-animations: true
-          emulator-options: -no-window -gpu software -no-snapshot -noaudio -no-boot-anim -feature -HardwareDecoder -camera-back emulated -camera-front emulated
+          # Keep the real Android 17 compositor while avoiding the guest/host color-buffer DMA assertion.
+          emulator-options: -no-window -gpu swiftshader -no-snapshot -noaudio -no-boot-anim -feature -HardwareDecoder -feature -GLDMA -feature -GLDMA2 -camera-back emulated -camera-front emulated
           script: bash scripts/run_nova_intelligence_android17.sh
       - uses: actions/upload-artifact@v4
         if: always()

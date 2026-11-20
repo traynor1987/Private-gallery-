@@ -34,21 +34,26 @@ trap save_crash_log EXIT
 stable=0
 previous=''
 for attempt in {1..30}; do
+  compositor=$(adb shell pidof surfaceflinger | tr -d '\r' || true)
   server=$(adb shell pidof system_server | tr -d '\r' || true)
   system_ui=$(adb shell pidof com.android.systemui | tr -d '\r' || true)
   package_service=$(adb shell service check package | tr -d '\r' || true)
-  printf 'attempt=%s system_server=%s system_ui=%s package=%s\n' "$attempt" "$server" "$system_ui" "$package_service" >> "$out/emulator-health.txt"
-  if [[ -n "$server" && -n "$system_ui" && "$package_service" == "Service package: found" ]] &&
+  printf 'attempt=%s system_server=%s system_ui=%s surfaceflinger=%s package=%s\n' "$attempt" "$server" "$system_ui" "$compositor" "$package_service" >> "$out/emulator-health.txt"
+  processes="$server $system_ui $compositor"
+  if [[ -n "$server" && -n "$system_ui" && -n "$compositor" && "$package_service" == "Service package: found" ]] &&
      adb shell cmd package path android | grep -q '^package:'; then
-    if [[ "$server" == "$previous" ]]; then stable=$((stable + 1)); else stable=1; fi
+    if [[ "$processes" == "$previous" ]]; then stable=$((stable + 1)); else stable=1; fi
     if (( stable >= 10 )); then break; fi
   else
     stable=0
   fi
-  previous="$server"
+  previous="$processes"
   sleep 3
 done
-(( stable >= 10 ))
+if (( stable < 10 )); then
+  echo 'Android 17 did not stabilise before installation.' >&2
+  exit 1
+fi
 
 adb shell wm dismiss-keyguard
 adb install --no-streaming -r "$debug" | tee "$out/install-app.txt"
