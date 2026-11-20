@@ -25,7 +25,11 @@ javac --release 17 -classpath "$sdk" -d "$scratch/classes" "$fixture/SendFixture
 "$tools/aapt2" link -I "$sdk" --manifest "$fixture/AndroidManifest.xml" -o "$scratch/unsigned.apk"
 jar --update --file "$scratch/unsigned.apk" -C "$scratch/dex" classes.dex
 "$tools/zipalign" -f 4 "$scratch/unsigned.apk" "$scratch/aligned.apk"
-"$tools/apksigner" sign --ks "$HOME/.android/debug.keystore" --ks-pass pass:android --out "$scratch/fixture.apk" "$scratch/aligned.apk"
+keytool -genkeypair -keystore "$scratch/fixture.p12" -storetype PKCS12 -storepass android \
+    -alias guardian93-fixture -keyalg RSA -keysize 2048 -validity 1 -dname 'CN=NovaOS Guardian CI Fixture'
+"$tools/apksigner" sign --ks "$scratch/fixture.p12" --ks-key-alias guardian93-fixture \
+    --ks-pass pass:android --out "$scratch/fixture.apk" "$scratch/aligned.apk"
+"$tools/apksigner" verify "$scratch/fixture.apk"
 adb install "$scratch/fixture.apk"
 installed=true
 adb shell pm grant com.whatsapp android.permission.POST_NOTIFICATIONS
