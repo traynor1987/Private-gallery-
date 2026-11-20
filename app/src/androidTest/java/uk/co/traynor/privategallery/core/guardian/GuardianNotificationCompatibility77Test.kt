@@ -286,7 +286,7 @@ class GuardianNotificationCompatibility77Test {
                 assertNull(result.get().held)
                 assertEquals(GuardianPresentationAction.KEEP_ORIGINAL, guardianPresentationAction(
                     GuardianPresentationMode.SMART, automatic = true, quietCollection = result.get().quietCollection,
-                    held = false, allLowRisk = result.get().safe != null, replacementAvailable = true,
+                    held = false, assessedReplacement = result.get().replacement != null, replacementAvailable = true,
                 ))
                 val rows = GuardianCaptureStore(context).inboxRows(7, guardianInboxClock(context))
                 assertEquals(index + 1, rows.size)
