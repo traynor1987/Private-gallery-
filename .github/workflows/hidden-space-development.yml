@@ -24,6 +24,14 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v5
         with: { distribution: temurin, java-version: '17' }
+      - name: Restore existing Gradle dependency cache
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: privacy1751-${{ runner.os }}-${{ hashFiles('**/*.gradle*', 'gradle/libs.versions.toml', 'gradle/wrapper/gradle-wrapper.properties') }}
+          restore-keys: privacy1751-${{ runner.os }}-
       - name: Verify protected core and camera
         run: |
           bash scripts/check_hidden_foundation.sh
@@ -36,8 +44,10 @@ jobs:
           ln -s "$ANDROID_HOME/cmdline-tools/22.0" "$ANDROID_HOME/cmdline-tools/latest"
           "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-37.1" "build-tools;36.0.0" "emulator"
           python3 scripts/verify_android17_sdk.py "$ANDROID_HOME" app/build/hidden-space/android17-sdk.json
+      - name: Prepare checksum-verified Gradle and Kotlin
+        run: bash scripts/prime_gradle95_ci.sh
       - name: Compile and run JVM tests
-        run: ./gradlew testDebugUnitTest assembleDebug assembleDebugAndroidTest --stacktrace
+        run: ./gradlew testDebugUnitTest assembleDebug assembleDebugAndroidTest --no-daemon --console=plain --stacktrace
       - name: Enable emulator acceleration
         run: sudo chmod 666 /dev/kvm
       - name: Run Hidden and Primary regressions on Android 17
