@@ -55,7 +55,7 @@ class RealUpdateActions(unittest.TestCase):
 
         actions = Mock()
         with patch.object(driver, 'wait_for', side_effect=observe), patch.object(driver, 'tap', actions.tap), \
-                patch.object(driver, 'enter', actions.enter):
+                patch.object(driver, 'enter_recovery_key', actions.enter):
             driver.complete_recovery_setup(before)
         self.assertEqual([], expected)
         self.assertEqual(actions.mock_calls, [
@@ -63,6 +63,23 @@ class RealUpdateActions(unittest.TestCase):
             call.enter(driver.fields(checked)[0], synthetic_key),
             call.tap(driver.recovery_continue(ready)),
         ])
+
+    def test_recovery_key_uses_ordered_key_events_on_the_focused_field(self):
+        field = ET.fromstring('<node class="android.widget.EditText" focused="true" />')
+        page = ET.fromstring('<hierarchy><node class="android.widget.EditText" focused="true" /></hierarchy>')
+
+        def observe(predicate, label):
+            self.assertEqual('focused recovery confirmation field', label)
+            self.assertTrue(predicate(page))
+            return page
+
+        with patch.object(driver, 'wait_for', side_effect=observe), patch.object(driver, 'tap') as tap, \
+                patch.object(driver, 'adb') as adb, patch.object(driver.time, 'sleep'):
+            driver.enter_recovery_key(field, 'aZ-_0')
+        tap.assert_called_once_with(field)
+        expected = [call('shell', 'input', '-d', '0', 'text', character) for character in 'aZ-_0']
+        expected.append(call('shell', 'input', 'keyevent', 'KEYCODE_BACK'))
+        self.assertEqual(expected, adb.call_args_list)
 
 
 if __name__ == '__main__':

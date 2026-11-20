@@ -141,6 +141,19 @@ def recovery_continue(root):
     return next((node for node in root.iter('node')
                  if node.get('clickable') == 'true' and node.get('enabled') == 'true' and has(node, 'Continue')), None)
 
+def enter_recovery_key(node, key):
+    tap(node)
+    wait_for(lambda page: any(field.get('focused') == 'true' for field in fields(page)),
+             'focused recovery confirmation field')
+    try:
+        # Give the focused password field time to apply each key event before sending the next.
+        for character in key:
+            adb('shell', 'input', '-d', '0', 'text', character)
+            time.sleep(0.05)
+    except (subprocess.CalledProcessError, subprocess.TimeoutExpired):
+        raise RuntimeError('Synthetic recovery key input failed') from None
+    adb('shell', 'input', 'keyevent', 'KEYCODE_BACK')
+
 def complete_recovery_setup(root):
     keys = [re.sub(r'\s', '', s) for s in labels(root) if re.fullmatch(r'[A-Za-z0-9_\- ]{43,60}', s)]
     keys = {key for key in keys if re.fullmatch(r'[A-Za-z0-9_-]{43}', key)}
@@ -156,10 +169,13 @@ def complete_recovery_setup(root):
                         check.get('checked') == 'true', 'checked recovery acknowledgement')
     inputs = fields(root)
     require(len(inputs) == 1, 'Expected one recovery confirmation field')
-    enter(inputs[0], next(iter(keys)))
+    enter_recovery_key(inputs[0], next(iter(keys)))
     root = wait_for(lambda page: recovery_continue(page) is not None, 'enabled recovery Continue')
     tap(recovery_continue(root))
-    wait_for(lambda page: not has(page, 'Re-enter your saved recovery key'), 'completed recovery confirmation')
+    rejection = 'Recovery key could not be confirmed. Check the saved key and try again.'
+    result = wait_for(lambda page: has(page, rejection) or not has(page, 'Re-enter your saved recovery key'),
+                      'completed recovery confirmation')
+    require(not has(result, rejection), 'Build 91 rejected the re-entered synthetic recovery key')
 
 def open_updates(allow_setup):
     authenticated = False
