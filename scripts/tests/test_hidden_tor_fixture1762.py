@@ -64,7 +64,8 @@ class TorFixtureTest(unittest.TestCase):
     def test_slow_response_records_peer_eof_while_writes_can_still_succeed(self):
         with socket.create_connection(self.server.server_address, timeout=2) as connection:
             connection.sendall(b'GET /slow HTTP/1.1\r\nHost: fixture\r\n\r\n')
-            self.assertTrue(connection.recv(1024).startswith(b'HTTP/1.1 200'))
+            with connection.makefile('rb') as response:
+                self.assertTrue(response.readline().startswith(b'HTTP/1.1 200'))
             connection.shutdown(socket.SHUT_WR)
             deadline = time.monotonic() + 2
             while time.monotonic() < deadline:

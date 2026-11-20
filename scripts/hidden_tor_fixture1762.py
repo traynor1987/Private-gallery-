@@ -9,7 +9,6 @@ from email.parser import BytesParser
 from email import policy
 import json
 import select
-import socket
 import threading
 import time
 from urllib.parse import parse_qs
@@ -89,7 +88,7 @@ def handler_class(base, root, payload):
                     for _ in range(1024):
                         # Tor can close its backend socket before a buffered write fails.
                         if select.select([self.connection], [], [], 0)[0]:
-                            if self.connection.recv(1, socket.MSG_PEEK) == b'':
+                            if self.connection.recv(1) == b'':
                                 self.event(kind='slow-closed', close_evidence='peer_eof')
                             else:
                                 self.event(kind='slow-io-error', close_evidence='unexpected_peer_data')
