@@ -322,7 +322,8 @@ class HiddenVpnLive1762Test {
                             val fresh=count()>before
                             val reload=current.any {it.contentDescription?.toString()=="Reload" && it.isVisibleToUser}
                             val stop=current.any {it.contentDescription?.toString()=="Stop" && it.isVisibleToUser}
-                            val target=current.firstOrNull {it.text?.toString()==control && it.isEnabled}
+                            val candidates=current.filter {it.text?.toString()==control && it.isEnabled}
+                            val target=candidates.firstOrNull {it.isVisibleToUser} ?: candidates.firstOrNull()
                             val bounds=android.graphics.Rect();target?.getBoundsInScreen(bounds)
                             state=JSONObject().put("fresh_origin_get",fresh).put("reload_visible",reload)
                                 .put("stop_visible",stop).put("target_present",target!=null)
@@ -330,7 +331,7 @@ class HiddenVpnLive1762Test {
                                 .put("scroll_requested",scrollRequested)
                             // A reloaded document can restore scroll. Establish visibility before
                             // retaining the original ready assertion and subsequent single touch.
-                            if(fresh && reload && !stop && target!=null && !scrollRequested) {
+                            if(fresh && reload && !stop && target!=null && !target.isVisibleToUser && !scrollRequested) {
                                 scrollRequested=true
                                 state.put("scroll_accepted",target.performAction(AccessibilityNodeInfo.AccessibilityAction.ACTION_SHOW_ON_SCREEN.id))
                                 return@waitFor false
@@ -338,6 +339,7 @@ class HiddenVpnLive1762Test {
                             fresh && reload && !stop && target?.isVisibleToUser==true
                         }
                     } catch(failure:AssertionError) {
+                        android.util.Log.e("HiddenVpnLive1762", "Document readiness for $control: $state")
                         runCatching {
                             val output=java.io.File(checkNotNull(InstrumentationRegistry.getArguments().getString("additionalTestOutputDir")))
                             check(output.isDirectory || output.mkdirs())

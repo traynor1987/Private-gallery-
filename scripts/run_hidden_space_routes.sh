@@ -42,6 +42,10 @@ run_cases() {
     if [[ -d "$reports" ]]; then
         cp -R "$reports" "$evidence/$label"
     fi
+    local additional=app/build/outputs/connected_android_test_additional_output
+    if [[ -d "$additional" ]]; then
+        cp -R "$additional" "$evidence/$label-additional"
+    fi
     python3 scripts/verify_selected_android1762.py "$evidence/$label" "$selection" | tee "$evidence/$label-cases.txt" || status=1
     return "$status"
 }

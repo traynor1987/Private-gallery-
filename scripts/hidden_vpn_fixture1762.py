@@ -12,12 +12,14 @@ from urllib.parse import urlparse, parse_qs
 PNG = base64.b64decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+ip1sAAAAASUVORK5CYII=')
 DOCUMENT = b'Private Apps document download fixture 178\n'
 DOCUMENT_UPLOAD = b'Private Apps document upload fixture 178\n'
+FORM = b'<form method="POST" action="/form-result"><input name="value" value="fixture-form-body"><button>Submit form</button></form>'
+FORM_PAGE = b'<!doctype html><meta name="viewport" content="width=device-width"><title>VPN native form</title>' + FORM
 PAGE = b'''<!doctype html><title>Hidden VPN fixture</title><h1>VPN fixture ready</h1>
 <a href="/private-app-slow178.txt" download="slow.txt">Download slow app document</a>
 <a href="/private-app-document178.txt" download="private-app-document178.txt">Download app document</a>
 <form method="POST" action="/private-app-document-upload178" enctype="multipart/form-data"><label>Choose app document<input type="file" name="document" accept="text/plain"></label><button>Upload app document</button></form>
 <button id="post" onclick="fetch('/post',{method:'POST',body:'fixture-post-body'}).then(r=>r.text()).then(t=>{document.getElementById('result').textContent=t;document.title='POST_OK'})">Run JavaScript POST</button>
-<div id="result"></div><button onclick="navigator.serviceWorker.register('/worker.js').then(()=>navigator.serviceWorker.ready).then(r=>r.active.postMessage('go'))">Run worker POST</button><form method="POST" action="/form-result"><input name="value" value="fixture-form-body"><button>Submit form</button></form>
+<div id="result"></div><button onclick="navigator.serviceWorker.register('/worker.js').then(()=>navigator.serviceWorker.ready).then(r=>r.active.postMessage('go'))">Run worker POST</button>''' + FORM + b'''
 <form method="POST" action="/uploaded" enctype="multipart/form-data"><button type="button" onclick="fetch('/chooser-click',{method:'POST',body:'fixture-chooser-click'});document.getElementById('photo').click()">Choose Hidden upload</button><input id="photo" style="display:none" type="file" name="photo" accept=".png"><button>Upload media</button></form>
 <button onclick="const s=new WebSocket(location.origin.replace('https:','wss:').replace('http:','ws:')+'/socket');s.onopen=()=>s.send('fixture-websocket-body');s.onmessage=e=>{document.getElementById('result').textContent=e.data;s.close()}">Run WebSocket</button>
 <button onclick="const p=new RTCPeerConnection({iceServers:[{urls:'stun:stun-phase.fixture.invalid:3478'}]});p.createDataChannel('route-probe');fetch('/probe-start',{method:'POST',body:'webrtc-started'});p.onicegatheringstatechange=()=>{if(p.iceGatheringState==='complete'){p.close();fetch('/probe-complete',{method:'POST',body:'webrtc-complete'})}};p.createOffer().then(o=>p.setLocalDescription(o)).catch(()=>{p.close();fetch('/probe-error',{method:'POST',body:'webrtc-error'})})">Run RTC route probe</button>
@@ -118,6 +120,7 @@ class Fixture:
                     if self.headers.get('Authorization','')!='Basic '+base64.b64encode(b'fixture-user:fixture-pass').decode():return self.reply(b'Fixture sign in required',401,headers=[('WWW-Authenticate','Basic realm="Fixture website account"')])
                     return self.reply(b'Fixture website authenticated')
                 if self.path=='/frame':return self.reply(b"<!doctype html><button onclick=\"alert('Frame alert body')\">Frame alert</button>")
+                if self.path=='/form':return self.reply(FORM_PAGE)
                 if self.path=='/worker.js':return self.reply(b"self.addEventListener('install',e=>e.waitUntil(self.skipWaiting()));self.addEventListener('activate',e=>e.waitUntil(self.clients.claim()));self.addEventListener('message',e=>e.waitUntil(fetch('/worker-post',{method:'POST',body:'fixture-worker-body'})));",mime='application/javascript')
                 if self.path=='/redirect':return self.reply(b'',302,headers=[('Location','/')])
                 if self.path=='/parity-error':return self.reply(b'Fixture HTTP error',503)
