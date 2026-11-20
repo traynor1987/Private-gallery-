@@ -48,6 +48,14 @@ class TorFixtureTest(unittest.TestCase):
         self.assertIn(b'type="file"', body)
         self.assertEqual(self.request('GET', '/missing')[0], 404)
 
+    def test_image_upload_page_contains_one_accessible_native_picker(self):
+        status, _, body = self.request('GET', '/upload-image')
+        self.assertEqual(status, 200)
+        self.assertNotIn(b'<script', body)
+        self.assertEqual(body.count(b'type="file"'), 1)
+        self.assertIn(b'aria-label="Choose Tor upload"', body)
+        self.assertIn(b'action="/uploaded" enctype="multipart/form-data"', body)
+
     def test_script_cookie_and_redirect_probes_do_not_change_root_health(self):
         self.assertIn(b'/script-must-not-run', self.request('GET', '/script-probe')[2])
         status, headers, _ = self.request('GET', '/cookie')

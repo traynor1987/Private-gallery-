@@ -16,6 +16,9 @@ from urllib.parse import parse_qs
 PNG = base64.b64decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+ip1sAAAAASUVORK5CYII=')
 DOCUMENT = b'Private Apps document download fixture 178\n'
 DOCUMENT_UPLOAD = b'Private Apps document upload fixture 178\n'
+IMAGE_UPLOAD_PAGE = b'''<!doctype html><meta name="viewport" content="width=device-width"><title>Tor image upload</title>
+<h1>Tor fixture image upload</h1><form method="POST" action="/uploaded" enctype="multipart/form-data">
+<input aria-label="Choose Tor upload" type="file" name="file" accept="image/png"><button>Upload Tor image</button></form>'''
 HTML = b'''<!doctype html><meta name="viewport" content="width=device-width"><title>Tor native fixture</title>
 <link rel="manifest" href="/manifest178.json"><h1>Tor native fixture</h1>
 <a href="/private-app-document178.txt" download="private-app-document178.txt">Download app document</a>
@@ -55,6 +58,8 @@ def handler_class(base, root, payload):
                     hits.write('Controlled HTTP backend served response\n')
             elif self.path == '/interactive':
                 self.send_bytes(200, HTML, 'text/html; charset=utf-8')
+            elif self.path == '/upload-image':
+                self.send_bytes(200, IMAGE_UPLOAD_PAGE, 'text/html; charset=utf-8')
             elif self.path == '/manifest178.json':
                 self.send_bytes(200, json.dumps(dict(name='Owned launch fixture',start_url='/interactive',scope='/',display='standalone',icons=[dict(src='/media.png',type='image/png')])).encode(), 'application/manifest+json')
             elif self.path == '/private-app-document178.txt':
