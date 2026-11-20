@@ -22,7 +22,6 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.liveRegion
@@ -40,9 +39,8 @@ import uk.co.traynor.privategallery.core.hidden.HiddenSession
 
 @Composable
 internal fun HiddenBrowserHome(session:HiddenSession,onGallery:()->Unit,onVault:()->Unit,onFavourite:()->Unit,onSettings:()->Unit,modifier:Modifier=Modifier) {
- val context=LocalContext.current
- val activity=context as? MainActivity
- if(BrowserBetaNotice({activity?.returnPrivateHome() ?: onGallery()},modifier))return
+ val activity=androidx.activity.compose.LocalActivity.current as? MainActivity
+ if(BrowserBetaNotice({activity?.returnPrivateHome() ?: onGallery()},modifier,hidden=true))return
  // Launcher identity selects transport. A legacy preference can never turn Browser into Tor.
  val mode=activity?.novaHiddenBrowserMode ?: HiddenConnectionPolicy.Mode.VPN_ONLY
  var generation by remember(session,mode){mutableIntStateOf(0)}

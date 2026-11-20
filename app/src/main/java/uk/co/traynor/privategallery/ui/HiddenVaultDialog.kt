@@ -42,7 +42,7 @@ internal enum class HiddenMediaScope(val title: String) {
     fun includes(item: VaultItem): Boolean = when (this) {
         GALLERY -> true
         FILES -> uk.co.traynor.privategallery.core.vault.VaultDocumentPolicy.isDocument(item.mimeType)
-        DOWNLOADS -> item.origin == uk.co.traynor.privategallery.core.vault.MediaOrigin.HIDDEN_DOWNLOAD ||
+        DOWNLOADS -> item.sourceUri == HiddenRepository.BROWSER_DOWNLOAD_SOURCE ||
             (item.origin == uk.co.traynor.privategallery.core.vault.MediaOrigin.IMPORTED &&
                 item.sourceUri == null &&
                 (item.displayName == "Hidden download" || item.displayName.startsWith("Hidden download.")))

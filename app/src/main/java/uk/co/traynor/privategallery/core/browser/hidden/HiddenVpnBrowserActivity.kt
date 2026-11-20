@@ -213,12 +213,15 @@ class HiddenVpnBrowserActivity:ComponentActivity() {
     }
     /** App-owned library writes use the parent-held revocable Hidden capability; WebView manages separate disk profiles. */
     private fun library(action:Int=0,url:String="",enabled:Boolean=false,pageTitle:String=current?.takeIf {it.url==url}?.title.orEmpty()):org.json.JSONObject? = runCatching {
-        call(HiddenVpnBrowserBroker.LIBRARY,write={it.writeInt(action);it.writeString(url);if(action==4)it.writeInt(if(enabled)1 else 0);if(action==1 || action==2){
+        call(HiddenVpnBrowserBroker.LIBRARY,write={it.writeInt(action);it.writeString(url);if(action==4 || action==7)it.writeInt(if(enabled)1 else 0);if(action==1 || action==2){
             val title=pageTitle.codePoints().toArray().filter {point -> !Character.isISOControl(point) && point !in 0xD800..0xDFFF}.toIntArray()
             var text=String(title,0,title.size);if(text.length>256){text=text.take(256);if(text.lastOrNull()?.isHighSurrogate()==true)text=text.dropLast(1)}
             it.writeString(text);it.writeLong(System.currentTimeMillis())
         }},read={org.json.JSONObject(checkNotNull(it.readString()))})
-    }.onFailure {notice="Hidden library unavailable."}.getOrNull()?.also {saveHistory=it.getBoolean("saveHistory")}
+    }.onFailure {notice="Hidden library unavailable."}.getOrNull()?.also {
+        saveHistory=it.getBoolean("saveHistory")
+        searchEngine=if(it.optBoolean("googleSearch"))BrowserSearchEngine.GOOGLE else BrowserSearchEngine.DUCKDUCKGO
+    }
     private fun showLibrary(kind:String) {
         val state=library() ?: return
         val items=state.getJSONArray(if(kind=="Bookmarks")"bookmarks" else "history")
@@ -295,7 +298,7 @@ class HiddenVpnBrowserActivity:ComponentActivity() {
             val config=ProxyConfig.Builder().addProxyRule("http://127.0.0.1:$proxyPort").removeImplicitRules().build()
             ProxyController.getInstance().setProxyOverride(config,{command ->handler.post(command)}) {
                 if(!live()){terminate(reason=HiddenVpnBrowserBroker.BACKGROUND);return@setProxyOverride}
-                ready=true;if(homePrivateApps){homePrivateApps=false;openPrivateApps()};notice=if(mode==HiddenConnectionPolicy.Mode.TOR_ONLY)"Tor only · JavaScript off · isolated DNS/network boundary" else "VPN only · session data stays separate from Primary";newTab()
+                ready=true;library();if(homePrivateApps){homePrivateApps=false;openPrivateApps()};notice=if(mode==HiddenConnectionPolicy.Mode.TOR_ONLY)"Tor only · JavaScript off · isolated DNS/network boundary" else "VPN only · session data stays separate from Primary";newTab()
             }
         } catch(_:Exception) {terminate(reason=HiddenVpnBrowserBroker.BACKGROUND)}
     }
@@ -718,7 +721,7 @@ class HiddenVpnBrowserActivity:ComponentActivity() {
                 HiddenNativeSettingsContent(mode==HiddenConnectionPolicy.Mode.TOR_ONLY,mode.indicator,saveHistory,desktop,
             bookmark={current?.url?.let {library(2,it)};menu=false},bookmarks={showLibrary("Bookmarks");menu=false},history={showLibrary("History");menu=false},
             setHistory={library(4,enabled=it)},clearHistory={clearHistoryConfirm=true},toggleDesktop={desktop=!desktop;current?.let {desktopTabs[it]=desktop};current?.settings?.apply {useWideViewPort=desktop;loadWithOverviewMode=desktop;userAgentString=BrowserSecurityPolicy.userAgent(if(desktop)BrowserUserAgentMode.DESKTOP else BrowserUserAgentMode.MOBILE,WebSettings.getDefaultUserAgent(this@HiddenVpnBrowserActivity))};current?.reload()},
-            download={pendingDownload=downloadCandidate?.takeIf {downloadSelectionCurrent(it)} ?: current?.let {view ->view.url?.let {downloadSelection(view,it)}};menu=false},find={findOpen=true;menu=false;current?.setFindListener {active,count,done ->if(done)findResult=if(count==0)"No matches" else "${active+1} of $count matches"}},downloads={downloadsOpen=true;menu=false},searchEngine=searchEngine,setSearchEngine={searchEngine=it},setMode={requestedMode=it},clearClose={clearSessionConfirm=true},allowModeSwitch=false)
+            download={pendingDownload=downloadCandidate?.takeIf {downloadSelectionCurrent(it)} ?: current?.let {view ->view.url?.let {downloadSelection(view,it)}};menu=false},find={findOpen=true;menu=false;current?.setFindListener {active,count,done ->if(done)findResult=if(count==0)"No matches" else "${active+1} of $count matches"}},downloads={downloadsOpen=true;menu=false},searchEngine=searchEngine,setSearchEngine={library(7,enabled=it==BrowserSearchEngine.GOOGLE)},setMode={requestedMode=it},clearClose={clearSessionConfirm=true},allowModeSwitch=false)
                 if(mode==HiddenConnectionPolicy.Mode.TOR_ONLY)TextButton(onClick={newIdentityConfirm=true}){Text("New Identity")}
                 Text(notice,style=MaterialTheme.typography.bodySmall)
             }

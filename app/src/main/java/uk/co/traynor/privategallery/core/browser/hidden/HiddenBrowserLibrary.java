@@ -14,7 +14,7 @@ public final class HiddenBrowserLibrary {
  private final HiddenSession session;
  private final HiddenSession.Authority authority;
  private final HiddenRecordStore records;
- private final String id;
+ private final String id, preferencesId;
  private final boolean defaultHistory;
  public HiddenBrowserLibrary(File noBackup, HiddenSession session, HiddenSession.Authority authority, boolean vpn) {
   this(session,authority,vpn,new HiddenRecordStore(new File(noBackup,"hidden-browser-library-v1")));
@@ -23,6 +23,7 @@ public final class HiddenBrowserLibrary {
   this.session=session;this.authority=Objects.requireNonNull(authority);this.records=records;
   // Distinct authenticated record identities prevent swapping ciphertext between modes.
   id=vpn?"d39228ad-dc03-4875-9493-ea64192a3111":"d39228ad-dc03-4875-9493-ea64192a3222";
+  preferencesId=vpn?"d39228ad-dc03-4875-9493-ea64192a3112":"d39228ad-dc03-4875-9493-ea64192a3223";
   defaultHistory=vpn;
  }
  public static final class Entry {
@@ -121,6 +122,31 @@ public final class HiddenBrowserLibrary {
  /** Disabling history also removes previously saved history in this mode. */
  public void saveHistory(boolean enabled) {access(true,s->{s.save=enabled;if(!enabled)s.history.clear();return null;});}
  public void clearHistory() {access(true,s->{s.history.clear();return null;});}
+ /** Preferences use a separate encrypted record so existing library formats stay readable. */
+ public boolean usesGoogleSearch() {
+  synchronized(GATE) {
+   try(HiddenSession.Operation op=session.beginOperation(authority)) {
+    if(!records.file("metadata",preferencesId).exists())return false;
+    byte[] value=records.read("metadata",preferencesId,op.key());
+    try {
+     if(value.length!=1 || (value[0]!=0 && value[0]!=1))throw new IOException("Invalid Hidden browser preferences");
+     if(!session.isCurrent(op))throw new IllegalStateException("Hidden preferences revoked");
+     return value[0]==1;
+    } finally {Arrays.fill(value,(byte)0);}
+   } catch(IOException e) {throw new UncheckedIOException(e);} catch(Exception e) {throw new IllegalStateException("Hidden preferences unavailable",e);}
+  }
+ }
+ public void useGoogleSearch(boolean google) {
+  synchronized(GATE) {
+   try(HiddenSession.Operation op=session.beginOperation(authority)) {
+    File staged=records.stage("metadata",preferencesId,new byte[]{(byte)(google?1:0)},op.key());
+    try {
+     session.commit(op,()-> {try {records.promote(staged,"metadata",preferencesId);}catch(IOException e){throw new UncheckedIOException(e);}});
+     records.syncPromotions();
+    } finally {staged.delete();}
+   } catch(IOException e) {throw new UncheckedIOException(e);} catch(Exception e) {throw new IllegalStateException("Hidden preferences unavailable",e);}
+  }
+ }
  /** Explicit browsing-data clear retains intentional bookmarks and the independent preference. */
  public void clearBrowsingData() {clearHistory();}
 }
