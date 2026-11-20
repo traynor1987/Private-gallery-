@@ -69,7 +69,8 @@ class GuardianNotificationPipeline93Test {
         try {
             store.clear()
             store.resetLearning()
-            preferences.edit().clear().putBoolean("enabled", true).putBoolean("main", true).commit()
+            preferences.edit().clear().putBoolean("enabled", true).putBoolean("main", true)
+                .putBoolean("alert_validated_preview", false).commit()
             dismissal.edit().putBoolean("main_fold_accepted", true).commit()
             automation.grantRuntimePermission(context.packageName, Manifest.permission.POST_NOTIFICATIONS)
             shell("cmd notification allow_listener $component")
@@ -131,11 +132,13 @@ class GuardianNotificationPipeline93Test {
             assertTrue(alerts().any { it.notification.extras.getCharSequence(Notification.EXTRA_BIG_TEXT).toString()
                 .contains("New message · open Guardian to read") })
 
+            GuardianSafeNotifications.setPresentationMode(context, GuardianPresentationMode.SMART)
             send("uncertain")
             await("An unheld uncertain notification kept its original") {
                 rows().size == 4 && diagnostic("Uncertain with no active hold") && sourceActive(19)
             }
             assertEquals(2, alerts().size)
+            GuardianSafeNotifications.setPresentationMode(context, GuardianPresentationMode.GUARDIAN)
             GuardianCapture.setHoldUncertainByDefault(context, true)
             send("held-uncertain")
             await("The configured uncertainty hold removed the source and posted a neutral alert") {

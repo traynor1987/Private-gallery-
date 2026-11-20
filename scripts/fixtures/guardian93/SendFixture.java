@@ -93,6 +93,33 @@ public final class SendFixture extends BroadcastReceiver {
                 messages.addMessage("When I was 17.", foldMessageAt + 1, sender);
                 messages.addMessage("Fuck you", foldMessageAt + 2, sender);
                 break;
+            case "fold-summary":
+                manager.notify("guardian93-source", 39, notification.setGroup("fold-guardian-group")
+                        .setGroupSummary(true).setContentTitle("Fixture message count").build());
+                return;
+            case "fold-uncertain":
+                id = 41;
+                messages.addMessage("When I was 17.", now, sender);
+                break;
+            case "fold-safe":
+                id = 42;
+                notification.setGroup("fold-guardian-group");
+                messages.addMessage("I will call later.", now - 1, self);
+                messages.addMessage("Good afternoon", now, sender);
+                break;
+            case "fold-smart-greeting":
+                id = 43;
+                messages.addMessage("Good evening", now, sender);
+                break;
+            case "fold-smart-hostile":
+                if (foldMessageAt == 0L) return;
+                id = 40;
+                notification.setGroup("fold-guardian-group");
+                messages.addMessage("Hi", foldMessageAt, sender);
+                messages.addMessage("When I was 17.", foldMessageAt + 1, sender);
+                messages.addMessage("Fuck you", foldMessageAt + 2, sender);
+                messages.addMessage("Fuck you!", now, sender);
+                break;
             default:
                 return;
         }

@@ -52,6 +52,13 @@ jobs:
             adb shell wm density 160
             adb shell settings put secure show_ime_with_hard_keyboard 1
             bash scripts/run_guardian_notification_pipeline93.sh GuardianFoldNotificationTest guardian-fold-notification
+            bash scripts/run_guardian_notification_pipeline93.sh
+            bash scripts/run_visual_checkpoint.sh GuardianNotificationCompatibility77Test guardian-notification-compatibility-77 uk.co.traynor.privategallery.core.guardian
+            bash scripts/run_visual_checkpoint.sh GuardianCaptureStore77Test guardian-capture-store-77 uk.co.traynor.privategallery.core.guardian
+            bash scripts/run_visual_checkpoint.sh GuardianEvidence90RuntimeTest guardian-evidence-90 uk.co.traynor.privategallery.core.guardian
+            bash scripts/run_visual_checkpoint.sh GuardianInbox77UiTest guardian-inbox-77 uk.co.traynor.privategallery.launcher
+            bash scripts/run_visual_checkpoint.sh SanctuaryGuardianUiTest sanctuary-guardian
+            bash scripts/run_visual_checkpoint.sh SanctuaryDndUiTest sanctuary-dnd
       - name: Retain test reports
         if: always()
         uses: actions/upload-artifact@v4

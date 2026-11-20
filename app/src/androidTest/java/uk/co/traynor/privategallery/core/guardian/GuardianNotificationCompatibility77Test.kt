@@ -278,7 +278,7 @@ class GuardianNotificationCompatibility77Test {
                 assertEquals(incoming, event.entries.single().text)
                 val conversation = GuardianConversationKey(event.app, event.profileSerial, event.conversation)
                 val result = java.util.concurrent.atomic.AtomicReference<GuardianDurableNotification>()
-                GuardianCapture.record(context, event, conversation, result::set)
+                GuardianCapture.record(context, event, conversation, onDurable = result::set)
                 await("The durable Inbox and notification decision expose the message under $mode DND") {
                     val capture = GuardianCapture.state.value
                     capture.retained == index + 1 && capture.inbox?.ready == index + 1 && result.get() != null

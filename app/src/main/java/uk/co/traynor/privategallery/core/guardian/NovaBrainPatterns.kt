@@ -11,7 +11,8 @@ internal enum class NovaBrainPattern(val label: String, expression: String) {
     BOUNDARY_PRESSURE("Boundary pressure", "i don(?:'t| not) care if you said no|i won't take no for an answer"),
     HOSTILE_COMMAND("Hostile command", """(?:(?:you (?:need|have) to|can you(?: (?:just|please))?|just|please)\s+)?shut\s+the\s+fuck\s+up"""),
     THREAT("Threat", "i(?:'ll| will|'m going to| am going to) (?:hurt|hit|kill) you"),
-    INSULT("Insult", "you(?:'re| are) (?:(?:an? )?(?:(?:worthless|stupid) idiot|idiot)|worthless|pathetic)");
+    INSULT("Insult", "you(?:'re| are) (?:(?:an? )?(?:(?:worthless|stupid) idiot|idiot)|worthless|pathetic)|" +
+        "fuck\\s+you(?=\\s*(?:$|[.!?;,]))");
 
     private val cue = Regex("(?:^|[.!?;,]\\s+)(?:$expression)\\b", RegexOption.IGNORE_CASE)
 
