@@ -1,62 +1,50 @@
-# NovaOS 1.7.45 (Build 91) release review
+# NovaOS 1.7.46 (Build 92) release review
 
-Source: 022061984debb59f69d917f225ac08f1bfedfe82
+Source: cb99ab3831670f6881dea1d681df98da5ba3d497
 Authorization: authenticated owner push
 Release scope: public stable after disposable upgrade verification
 Physical Fold acceptance: pending
-Upgrade fixture SHA-256: a137143347bb9eb0b3b0dfed7e201db386418f4fe60b35c3b7df12830c76d348
-Upgrade controls SHA-256: 62054b8efa4f9c830f4c222221fb5cb474dab92d8514a56206b6f2a02018dc98
-Runtime matrix SHA-256: 5470a97cdfe0e2ce863c69122fab33bebed7dbbade6e07e1b04a3d4a95b441ac
-Runtime workflow run: 44587356051
-Runtime branch: feature/novaos-guardian-reliability91
-Signing workflow SHA-256: 6bf8116446826d92451e1c0147fd45fef96a3983e2ca49869d4f33e2380c8d81
+Upgrade fixture SHA-256: 9c980cf66a54e939940e2234066d3dedfc358b316f45b570e84c93543237f549
+Upgrade controls SHA-256: 6179fdb4e4294ff68116b57532ef34ee4377108eaff006a8a0e28853d8951b58
+Runtime matrix SHA-256: b3a221684edbd0e3462614ff8dbb402fb74d257823a6e9d5b7ea658ebf6242fa
+Runtime workflow run: 44647382628
+Runtime branch: feature/novaos-guardian-repair92
+Signing workflow SHA-256: 422464b0a34e6f2fcf99c55aefbd222a716a6578cf2874023a4fa34efd7744d1
 
-Tagged Build 90 reversibly reproduced the owner-observed Hi defect. The local
-nearest-example model returned UNCERTAIN with zero features. WhatsApp automatic
-dismissal did not require a hold, and the Nova alert could replace the ordinary
-source notification with a privacy-only summary. Build 91 recognises routine
-greetings and requests before any delivery decision. Uncertainty is available
-immediately unless the owner has explicitly selected an uncertain-message hold.
-Direct threats and insults retain protection. Corrections use the single
-encrypted learning store. Short approved examples are exact matches, and the
-held-out evaluation uses the same classifier and invalidates prior metrics.
+The authentic Build 91 app at 022061984debb59f69d917f225ac08f1bfedfe82
+classifies Hi and How are you? as low risk by default. Good morning with a
+smiling emoji remains uncertain and triggers a hold only
+when the owner explicitly chose that uncertainty policy. The synthetic
+direct threat triggers the active content hold. Build 91 deliberately
+keeps the native app alert for ordinary messages under default settings.
+Its default Guardian Inbox filter was Awaiting Analysis even when those
+retained rows were in Ready to Read.
 
-Only durable, exact, still-active originals can be dismissed for an active
-hold or an explicit quiet-collection rule, with the existing test-token path.
-A replacement is issued only after Android confirms removal. Secret source
-notifications are ineligible. Listener reconnection considers eligible recent
-default SMS as well as WhatsApp. All known source permissions, identity checks,
-Sanctuary and DND policy are preserved. UI decision diagnostics never record
-message text or credentials.
+Build 92 opens Ready to Read behind the same device-authentication gate.
+It increases the bounded capture queue from 16 to 64 and reports a
+session-level count when the queue reaches capacity. The regression
+exercises 24 simultaneous admissions while the encrypted archive is locked
+briefly, then verifies intact unique originals in the Inbox. The local
+assessment reads saved examples separately and can apply local rules and
+Guardian corrections when the separate Evidence Locker learning file fails
+verification. In that case automatic cloud submission remains off for the
+affected assessments. Tests use synthetic data and confirm that the
+unreadable file is left intact. Diagnostics distinguish a source notification
+marked secret from an unsupported message payload and show the last retained
+capture and assessment without message content or identifiers.
 
-Capture, Evidence Locker links, archive windows, encrypted retention and the
-recovery journal are preserved. The in-app test uses an authentic Build 90
-APK with populated synthetic encrypted Guardian, Evidence Locker, learning and
-Vault fixtures. Missing owner data can only be determined by an authenticated
-on-device scan of valid encrypted recovery copies.
+Source authentication, Android permissions, notification removal conditions,
+Sanctuary policy and the existing encrypted evidence and retention controls
+remain in place. No owner data was accessed. The public-source Android 17
+tests exercise Android notification listener authorisation and synthetic
+delivery, WhatsApp-format parsing, retention, and authenticated Inbox access.
+They do not establish which stage failed on the physical Galaxy Z Fold.
+No paid cloud analysis or infrastructure changes were made.
 
-Backend tests cover the existing staging, authentication, two-step connectivity
-policy, opt-in, reservations, deduplication, and privacy limits. The public VPS
-health endpoint responded over valid TLS and anonymous status access returned
-401. No live production authentication, paid analysis or deployment change
-was performed. Physical Main and Dual Messenger notification acceptance on the
-owner's Fold remains pending.
-
-CI passed 343 selected Android 17 cases, 63 focused report
-groups, 775 JVM tests, protected-core verification and real Backup
-and launcher restart checks. The production gate requires an in-place upgrade
-from authentic original-key Build 90 into Build 91 using its existing updater
-and Android installer. Populated encrypted Guardian, Vault, Evidence and local
-learning fixtures must remain readable after restart. Public publication requires
-the same verified normal APK, integrity metadata and post-publication native
-update test. This review records implementation evidence and does not claim
-independent review or physical owner acceptance.
-
-The original signing run #47 authenticated the Build 90 baseline and passed the
-populated encrypted upgrade and restart. The staging verifier rejected the
-stale versionCode=90 metadata field before publication. The staging metadata
-now uses versionCode=91. A regression test executes the actual metadata
-generator and checks its result against the signing version configuration.
-The Android application tree and upgrade fixture remain byte-identical to the
-reviewed source. The existing protected signer will produce a fresh verified
-artifact and retain the signed APK only after staging checks pass.
+CI passed 344 selected Android 17 cases, 63 focused report
+groups, 775 JVM tests, protected-core verification, and actual
+Backup and launcher process restart checks. Production signing requires a
+populated, original-key Build 91 to Build 92 in-place upgrade through the
+existing Android installer and verification that encrypted fixtures remain
+readable after restart. Public publication uses the same verified APK and
+integrity metadata, followed by a test of the public in-app path.
