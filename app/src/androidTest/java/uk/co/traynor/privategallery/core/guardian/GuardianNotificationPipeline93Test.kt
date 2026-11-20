@@ -172,12 +172,20 @@ class GuardianNotificationPipeline93Test {
             await("The emulator screen is off") { !power.isInteractive }
 
             send("background")
-            await("The background listener replaced a safe alert and posted its opted-in preview") {
-                rowFor(24)?.assessment == GuardianAssessment.LOW_RISK && diagnostic("Guardian alert posted") &&
-                    !sourceActive(24) && alerts().size == 4 &&
-                    alerts().any { alertText(it.notification).contains("Good afternoon") }
+            await("The background listener captured and assessed the safe message") {
+                rowFor(24)?.assessment == GuardianAssessment.LOW_RISK
             }
-            val safe = alerts().single { alertText(it.notification).contains("Good afternoon") }.notification
+            val backgroundSafe = checkNotNull(rowFor(24))
+            val safeTag = "guardian-safe:${backgroundSafe.id}"
+            await("The background listener removed the exact original and posted the matching alert") {
+                !sourceActive(24) && alerts().any { it.tag == safeTag }
+            }
+            assertNull("Android regrouping must never capture a source summary", rowFor(30))
+            assertEquals("Only one new message was retained", 8, rows().size)
+            assertEquals("Only the matching safe alert was added", 4, alerts().size)
+            val safe = alerts().single { it.tag == safeTag }.notification
+            assertTrue("The opted-in safe preview is visible in the posted notification",
+                alertText(safe).contains("Good afternoon"))
             assertEquals(Notification.VISIBILITY_SECRET, safe.visibility)
             assertNull(safe.publicVersion)
             assertFalse(power.isInteractive)
@@ -189,6 +197,7 @@ class GuardianNotificationPipeline93Test {
             }
             val backgroundHeld = checkNotNull(rowFor(25))
             assertEquals(GuardianAssessment.UPSETTING, backgroundHeld.assessment)
+            assertEquals(9, rows().size)
             val neutral = alerts().single { it.tag == "guardian-safe:${backgroundHeld.id}" }.notification
             assertTrue(alertText(neutral).contains("Message protected until Guardian review"))
             assertFalse(alertText(neutral).contains(hostile))

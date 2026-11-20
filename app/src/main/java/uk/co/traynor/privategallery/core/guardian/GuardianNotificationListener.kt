@@ -38,6 +38,7 @@ internal class GuardianNotificationListener : NotificationListenerService() {
     private val mainAttempts = mutableMapOf<String, ExternalAttempt>()
     private val mainRetries = LinkedHashMap<String, Pair<Long, Int>>()
     private val pendingReplacement = LinkedHashMap<String, Pair<Long, String>>()
+    private val summaryPosts = LinkedHashMap<String, Long>()
     private val callWorker = ThreadPoolExecutor(1, 1, 0L, TimeUnit.MILLISECONDS,
         ArrayBlockingQueue(16), ThreadPoolExecutor.DiscardPolicy())
 
@@ -127,8 +128,7 @@ internal class GuardianNotificationListener : NotificationListenerService() {
                     val messagingSource = it.packageName == GUARDIAN_WHATSAPP &&
                         (category == null || category == Notification.CATEGORY_MESSAGE) ||
                         it.packageName == sms && category == Notification.CATEGORY_MESSAGE
-                    messagingSource && it.postTime >= cutoff &&
-                        it.notification.flags and Notification.FLAG_GROUP_SUMMARY == 0
+                    messagingSource && !isSummary(it) && it.postTime >= cutoff
                 }.take(8).forEach { onNotificationPosted(it, ranking) }
             }.onFailure { reportMainDismissal("Android could not recover recent active notifications") }
             if (automaticDismissalEnabled(this)) runCatching {
@@ -163,8 +163,23 @@ internal class GuardianNotificationListener : NotificationListenerService() {
         }
     }
 
+    @Synchronized
+    private fun isSummary(sbn: StatusBarNotification): Boolean {
+        if (sbn.notification.flags and Notification.FLAG_GROUP_SUMMARY != 0) {
+            if (sbn.packageName == GUARDIAN_WHATSAPP) {
+                summaryPosts.remove(sbn.key)
+                summaryPosts[sbn.key] = sbn.postTime
+                if (summaryPosts.size > 128) summaryPosts.remove(summaryPosts.keys.first())
+            }
+            return true
+        }
+        // Android can redispatch the same post without the summary flag when it regroups notifications.
+        return summaryPosts[sbn.key] == sbn.postTime
+    }
+
     private fun staticIneligibility(sbn: StatusBarNotification): String? =
-        guardianOriginalIneligibility(sbn.notification, sbn.isClearable)
+        if (isSummary(sbn)) "Group summary excluded"
+        else guardianOriginalIneligibility(sbn.notification, sbn.isClearable)
 
     private fun retryChangedMain(key: String) {
         val now = SystemClock.elapsedRealtime()
@@ -229,7 +244,7 @@ internal class GuardianNotificationListener : NotificationListenerService() {
 
         val personal = user == Process.myUserHandle()
         val account = probeAccount(personal, serial, probeFriendsSerial)
-        val summary = notification.flags and Notification.FLAG_GROUP_SUMMARY != 0
+        val summary = isSummary(sbn)
         if (call) {
             if (isWhatsApp && !summary) screenWhatsAppCall(sbn, personal, serial)
             if (session != null && !summary) {
