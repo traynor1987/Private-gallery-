@@ -18,6 +18,8 @@ classes=(
 mkdir -p "$out"
 bash scripts/verify_android17_device.sh "$out"
 sha256sum "$debug" "$instrumentation" > "$out/command-inputs.sha256"
+cp "${ANDROID_AVD_HOME:-$HOME/.android/avd}/test.ini" "$out/avd.ini"
+grep -Fxq 'target=android-37.0' "$out/avd.ini"
 
 save_crash_log() {
   local result=$?
@@ -52,6 +54,12 @@ for attempt in {1..30}; do
 done
 if (( stable < 10 )); then
   echo 'Android 17 did not stabilise before installation.' >&2
+  exit 1
+fi
+
+adb logcat -d -b crash > "$out/emulator-crash-preflight.txt"
+if grep -Fq 'hasReadColorBufferDma' "$out/emulator-crash-preflight.txt"; then
+  echo 'The emulator hit the color-buffer DMA crash during startup.' >&2
   exit 1
 fi
 

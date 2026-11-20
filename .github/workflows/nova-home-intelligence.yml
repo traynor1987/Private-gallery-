@@ -28,7 +28,13 @@ jobs:
           restore-keys: privacy1751-${{ runner.os }}-
       - name: Install and verify Android 17 SDK
         run: |
-          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-37.1" "build-tools;36.0.0" "emulator"
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --install "cmdline-tools;22.0"
+          mv "$ANDROID_HOME/cmdline-tools/latest" "$RUNNER_TEMP/previous-android-command-tools-intelligence"
+          ln -s "$ANDROID_HOME/cmdline-tools/22.0" "$ANDROID_HOME/cmdline-tools/latest"
+          mkdir -p app/build/intelligence
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --version | tee app/build/intelligence/command-tools-version.txt
+          grep -Fxq '22.0' app/build/intelligence/command-tools-version.txt
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-37.1" "build-tools;36.0.0" "emulator"
           python3 scripts/verify_android17_sdk.py "$ANDROID_HOME" app/build/intelligence/android17-sdk.json
       - name: Verify Nova Brain authorization and accounting
         run: PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s scripts/cloud_teacher
@@ -50,8 +56,7 @@ jobs:
           heap-size: 512M
           disk-size: 8G
           disable-animations: true
-          # Keep the real Android 17 compositor while avoiding the guest/host color-buffer DMA assertion.
-          emulator-options: -no-window -gpu swiftshader -no-snapshot -noaudio -no-boot-anim -feature -HardwareDecoder -feature -GLDMA -feature -GLDMA2 -camera-back emulated -camera-front emulated
+          emulator-options: -no-window -gpu software -no-snapshot -noaudio -no-boot-anim -feature -HardwareDecoder -camera-back emulated -camera-front emulated
           script: bash scripts/run_nova_intelligence_android17.sh
       - uses: actions/upload-artifact@v4
         if: always()
