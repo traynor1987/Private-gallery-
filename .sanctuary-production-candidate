@@ -1,12 +1,12 @@
 {
-  "source": "cb99ab3831670f6881dea1d681df98da5ba3d497",
+  "source": "39e29649ce961b251a9783e09731814f6e0ab30c",
   "baseline_source": "022061984debb59f69d917f225ac08f1bfedfe82",
   "baseline_code": 91,
-  "candidate_code": 92,
-  "test_run": 44647382628,
-  "test_artifact": 14594340351,
-  "runtime_archive_sha256": "915632a07b7c74dc71f11fb631d13fb875fc673cf77801dce93a959a47036c60",
-  "fixture_sha256": "9c980cf66a54e939940e2234066d3dedfc358b316f45b570e84c93543237f549",
+  "candidate_code": 93,
+  "test_run": 44726268958,
+  "test_artifact": 14627498597,
+  "runtime_archive_sha256": "0a25dd2ac4edd4d72b96af5cdb66db0ec86d96957ec9ad10e4b73ff7e0b38de7",
+  "fixture_sha256": "69757813f2733c13ebab99c452b4d9065faee733d89ec8f55937437d8d4a3753",
   "matrix_sha256": "b3a221684edbd0e3462614ff8dbb402fb74d257823a6e9d5b7ea658ebf6242fa",
   "controls_sha256": {
     "compile_upgrade1711_fixture.sh": "7ad64329f24e4f3f8d20783bb827078bef92b6c384161449acd9bdbf3d225211",
@@ -16,14 +16,14 @@
     "verify_code79_baseline.py": "3cbc439cb6883d58f48068d111a4ba7a0cda7a359f8e1cc7e4eecba983668fce",
     "verify_novaos_release_assets.py": "eef24a21f94fb1b9704ce2053dab5a86b3665ed7071cde4876606e816de53177",
     "verify_production_candidate1711.sh": "a96058f489ac590fbbb5c259066ebf4321919a58022fbbc0fa9b86ddc4b8e176",
-    "verify_synthetic_upgrade1711.sh": "dc290d83608bb62ca4719b547115ded00ed966314f8e69c30e2be5ca2f157145",
+    "verify_synthetic_upgrade1711.sh": "91a421deea0ab154b26e9983d8f066379217f99e0f25d5e597b86db623d6db49",
     "verify_signed_upgrade1711.py": "3170680e165a6e571a953240246f4210906588b981ae0e4ca19e559512adbb62",
-    "release_configuration1711.sh": "061822a48527d6829505d30d266cea8553bd620c3b9eda9652e056eb8fd24c1d",
-    "verify_release1711_gate.py": "87412ddf031a718f21020f871a893712dbe83c324a6d9c99de08fdcdad76ff35",
+    "release_configuration1711.sh": "54532f5d396aec1653e90a2d120f31b513061dfe94d0147b64884f2f45869aba",
+    "verify_release1711_gate.py": "76eaf289a786a8a94f573366810a31f2e6bb14e3c585b8133da7c743918a08cc",
     "verify_backup_exclusions.py": "36c66427926d56f0862cb898722fcf68a08c3f3cbc8c6e3947f457b16f0911f6",
-    "rehearse_in_app_update85.py": "c9c7bb7c87cd73835d1f9df6af25988263d03ff5e65258d2b453ebc2ebdbe72c"
+    "rehearse_in_app_update85.py": "d266f8b61cadf44ff7e7f4f6732f843bf0bd7bcd11d1609bf5e4c53c31684901"
   },
-  "review_sha256": "1b1e2c6c340a09d6b8f1a8fee4aa2020f787e4bb3d23d4d9c18d35678e8ed12b",
-  "workflow_sha256": "422464b0a34e6f2fcf99c55aefbd222a716a6578cf2874023a4fa34efd7744d1",
-  "runtime_branch": "feature/novaos-guardian-repair92"
+  "workflow_sha256": "0c1ca8f81b956320dab524a8640fff44d819dd896b26b3332919e8ea683fbd16",
+  "runtime_branch": "feature/novaos-guardian-presentation93",
+  "review_sha256": "660d9b69447d07026cbef44ecd36e3654f2bffb8f7617cae185fe08a88dfa3a1"
 }
