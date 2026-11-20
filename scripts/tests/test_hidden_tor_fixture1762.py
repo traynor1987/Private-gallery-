@@ -3,7 +3,9 @@ import http.client
 import http.server
 import importlib.util
 import json
+import socket
 import struct
+import time
 import zlib
 from pathlib import Path
 import tempfile
@@ -58,6 +60,20 @@ class TorFixtureTest(unittest.TestCase):
         events=json.loads(self.request('GET', '/evidence')[2])['events']
         self.assertFalse(any(event['path']=='/script-must-not-run' for event in events))
         self.assertTrue(any(event['path']=='/cookie-echo' and event['cookie_present'] for event in events))
+
+    def test_slow_response_records_peer_eof_while_writes_can_still_succeed(self):
+        with socket.create_connection(self.server.server_address, timeout=2) as connection:
+            connection.sendall(b'GET /slow HTTP/1.1\r\nHost: fixture\r\n\r\n')
+            self.assertTrue(connection.recv(1024).startswith(b'HTTP/1.1 200'))
+            connection.shutdown(socket.SHUT_WR)
+            deadline = time.monotonic() + 2
+            while time.monotonic() < deadline:
+                events = json.loads(self.request('GET', '/evidence')[2])['events']
+                if {'kind': 'slow-closed', 'close_evidence': 'peer_eof'} in events:
+                    break
+                time.sleep(.05)
+            self.assertIn({'kind': 'slow-start'}, events)
+            self.assertIn({'kind': 'slow-closed', 'close_evidence': 'peer_eof'}, events)
 
     def test_real_post_bytes_and_download_are_recorded(self):
         body = b'value=fixture-form-body'

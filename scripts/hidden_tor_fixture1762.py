@@ -8,6 +8,8 @@ import hashlib
 from email.parser import BytesParser
 from email import policy
 import json
+import select
+import socket
 import threading
 import time
 from urllib.parse import parse_qs
@@ -77,17 +79,28 @@ def handler_class(base, root, payload):
                 self.send_bytes(200, json.dumps({'events': events, 'png_sha256': hashlib.sha256(PNG).hexdigest()}).encode(), 'application/json')
             elif self.path == '/slow':
                 self.event(kind='slow-start')
-                self.send_response(200)
-                self.send_header('Content-Type', 'text/plain')
-                self.send_header('Content-Length', '1048576')
-                self.end_headers()
+                self.close_connection = True
                 try:
+                    self.send_response(200)
+                    self.send_header('Content-Type', 'text/plain')
+                    self.send_header('Content-Length', '1048576')
+                    self.send_header('Connection', 'close')
+                    self.end_headers()
                     for _ in range(1024):
+                        # Tor can close its backend socket before a buffered write fails.
+                        if select.select([self.connection], [], [], 0)[0]:
+                            if self.connection.recv(1, socket.MSG_PEEK) == b'':
+                                self.event(kind='slow-closed', close_evidence='peer_eof')
+                            else:
+                                self.event(kind='slow-io-error', close_evidence='unexpected_peer_data')
+                            return
                         self.wfile.write(b'x' * 1024)
                         self.wfile.flush()
                         time.sleep(.1)
-                except (BrokenPipeError, ConnectionResetError, OSError):
-                    self.event(kind='slow-closed')
+                    self.event(kind='slow-complete')
+                except OSError as error:
+                    evidence = evidence179.peer_close(error)
+                    self.event(kind='slow-closed' if evidence else 'slow-io-error', close_evidence=evidence)
             else:
                 self.send_bytes(404, b'Not found')
 

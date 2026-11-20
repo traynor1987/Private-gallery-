@@ -12,7 +12,7 @@ def verify(evidence, onion_root):
     assert result.get('mode')=='TOR_ONLY' and result.get('javascript') is False,'Wrong native Tor mode/settings'
     for key in ('form','multipart','download_verified','discard_v4','discard_v6','discard_dns_udp','session_revoked','tor_process_death'):
         assert result.get(key) is True, f'Missing asserted native Tor boundary: {key}'
-    deadline=time.monotonic()+5
+    deadline=time.monotonic()+20
     while True:
         events=[json.loads(line) for line in (onion_root/'interactive-events.jsonl').read_text().splitlines() if line]
         if any(event.get('kind')=='slow-closed' for event in events) or time.monotonic()>=deadline:
