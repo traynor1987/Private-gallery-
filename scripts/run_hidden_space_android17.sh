@@ -8,6 +8,7 @@ adb shell wm density 320
 package=uk.co.traynor.privategallery
 classes="$package.HiddenSpaceAppsTest,$package.HiddenSpaceDashboardUiTest,$package.HiddenHomeNavigation67Test,$package.HiddenDiscoverabilityRegressionTest"
 classes+=",$package.core.browser.hidden.HiddenBrowserIsolationTest,$package.core.browser.hidden.HiddenDownloadTest,$package.core.browser.hidden.HiddenSessionLibrary1762Test"
+classes+=",$package.core.browser.hidden.HiddenVpnBoundary1762Test,$package.core.browser.hidden.HiddenRuntimeFailureTest"
 classes+=",$package.core.hidden.HiddenRepositoryTest,$package.core.hidden.HiddenCredentialSeparationTest"
 classes+=",$package.core.browser.v2.PrivateAppBrowserSeparationTest,$package.core.camera.VaultCaptureAccessTest"
 ./gradlew :app:connectedDebugAndroidTest "-Pandroid.testInstrumentationRunnerArguments.class=$classes" --stacktrace

@@ -1,7 +1,5 @@
 name: Hidden Space Android 17
 on:
-  push:
-    branches: [feature/novaos-hidden-space-apps]
   pull_request:
     branches: [main]
     paths:
@@ -12,16 +10,19 @@ permissions:
   contents: read
 
 concurrency:
-  group: hidden-space-${{ github.head_ref || github.ref }}
+  group: hidden-space-${{ github.event.pull_request.number }}
   cancel-in-progress: true
 
 jobs:
   android17:
-    if: github.event_name == 'push' || github.head_ref == 'feature/novaos-hidden-space-apps'
+    if: github.head_ref == 'feature/novaos-hidden-space-apps' && github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-24.04
     timeout-minutes: 65
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.sha }}
       - uses: actions/setup-java@v5
         with: { distribution: temurin, java-version: '17' }
       - name: Restore existing Gradle dependency cache
@@ -37,6 +38,7 @@ jobs:
           bash scripts/check_hidden_foundation.sh
           bash scripts/check_hidden_browser.sh
           bash scripts/check_camera.sh
+          python3 scripts/verify_sanctuary_browser_scope.py
       - name: Install Android 17 tools
         run: |
           "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --install "cmdline-tools;22.0"
@@ -48,6 +50,8 @@ jobs:
         run: bash scripts/prime_gradle95_ci.sh
       - name: Compile and run JVM tests
         run: ./gradlew testDebugUnitTest assembleDebug assembleDebugAndroidTest --no-daemon --console=plain --stacktrace
+      - name: Verify encrypted app adapters and concealed entry
+        run: bash scripts/check_home2_host.sh
       - name: Enable emulator acceleration
         run: sudo chmod 666 /dev/kvm
       - name: Run Hidden and Primary regressions on Android 17
