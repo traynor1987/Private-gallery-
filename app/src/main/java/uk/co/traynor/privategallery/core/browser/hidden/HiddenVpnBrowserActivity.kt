@@ -1,5 +1,6 @@
 package uk.co.traynor.privategallery.core.browser.hidden
 
+import uk.co.traynor.privategallery.core.browser.v2.applyV1SafetyDefaults
 import uk.co.traynor.privategallery.ui.*
 import android.annotation.SuppressLint
 import android.app.Application
@@ -258,6 +259,7 @@ class HiddenVpnBrowserActivity:ComponentActivity() {
     override fun onCreate(savedInstanceState:Bundle?) {
         super.onCreate(null)
         window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
+        setRecentsScreenshotEnabled(false)
         captureGuard.start()
         if(savedInstanceState!=null || !Application.getProcessName().endsWith(":hidden_vpn_browser")) {terminate(false);return}
         // A second Activity can briefly overlap a retiring one. Reject before even claiming
@@ -307,12 +309,13 @@ class HiddenVpnBrowserActivity:ComponentActivity() {
         view.settings.apply {
             blockNetworkLoads=true;javaScriptEnabled=mode==HiddenConnectionPolicy.Mode.VPN_ONLY;domStorageEnabled=true
             allowContentAccess=true // Only this app's narrowly scoped upload provider is ever supplied.
-            allowFileAccess=false;allowFileAccessFromFileURLs=false;allowUniversalAccessFromFileURLs=false
+            applyV1SafetyDefaults()
+            allowFileAccess=false
             cacheMode=WebSettings.LOAD_NO_CACHE;saveFormData=false;setGeolocationEnabled(false)
             userAgentString=BrowserSecurityPolicy.userAgent(if(desktop)BrowserUserAgentMode.DESKTOP else BrowserUserAgentMode.MOBILE,WebSettings.getDefaultUserAgent(this@HiddenVpnBrowserActivity))
             useWideViewPort=desktop;loadWithOverviewMode=desktop
             mixedContentMode=WebSettings.MIXED_CONTENT_NEVER_ALLOW;safeBrowsingEnabled=false
-            javaScriptCanOpenWindowsAutomatically=false;setSupportMultipleWindows(true);mediaPlaybackRequiresUserGesture=true
+            javaScriptCanOpenWindowsAutomatically=false;setSupportMultipleWindows(true)
         }
         view.importantForAutofill=android.view.View.IMPORTANT_FOR_AUTOFILL_NO_EXCLUDE_DESCENDANTS
         view.webViewClient=object:WebViewClient() {
@@ -655,7 +658,7 @@ class HiddenVpnBrowserActivity:ComponentActivity() {
                 views.firstOrNull {System.identityHashCode(it).toString()==id}?.let {closePrivateAppSession(it)}
             })
         if(!privateAppsOpen && privateAppSettingsId==null)Column(Modifier.fillMaxSize().systemBarsPadding().imePadding()) {
-            if(app==null)uk.co.traynor.privategallery.ui.NovaAppHeader(if(mode==HiddenConnectionPolicy.Mode.TOR_ONLY)"Tor — Beta"else"Browser — Beta","Hidden Space",
+            if(app==null)uk.co.traynor.privategallery.ui.NovaAppHeader(if(mode==HiddenConnectionPolicy.Mode.TOR_ONLY)"Tor — Beta"else"Browser V1","Hidden Space",
                 onHome={terminate()},onLock={runCatching{call(HiddenVpnBrowserBroker.LOCK_VAULT,read={Unit})};terminate()},onPanic={panic()},
                 actions={IconButton(onClick=::openPrivateApps,enabled=ready){Icon(Icons.Default.Apps,"Private Apps")}})
             val focus=LocalFocusManager.current;val keyboard=LocalSoftwareKeyboardController.current

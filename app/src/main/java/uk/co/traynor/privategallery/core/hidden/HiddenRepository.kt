@@ -93,6 +93,12 @@ internal class HiddenRepository(context: Context, private val session: HiddenSes
     fun addItemsToCollection(id:String,items:List<String>) = mutate {state -> state.addItems(id,items) to Unit}
     fun removeItemsFromCollection(id:String,items:List<String>) = mutate {state -> items.fold(state){s,item -> s.removeItem(id,item)} to Unit}
 
+    fun importBrowserDownload(
+        name: String, mime: String, input: InputStream,
+        validate: ((MediaDataSource, Long) -> Unit)? = null,
+    ): VaultItem = importMedia(name, mime, input, createDistinctCopy = true,
+        origin = MediaOrigin.HIDDEN_DOWNLOAD, validateDownloadedMedia = validate)
+
     fun findTransfer(reference:String):VaultItem? = operation {op -> snapshot(op).items.singleOrNull {it.sourceUri==reference}}
 
     fun import(uri:Uri):VaultItem = operation {op ->

@@ -1,0 +1,60 @@
+name: Hidden Space Android 17
+on:
+  push:
+    branches: [feature/novaos-hidden-space-apps]
+  pull_request:
+    branches: [main]
+    paths:
+      - 'app/src/**/Hidden*'
+      - '.github/workflows/hidden-space-development.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: hidden-space-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  android17:
+    if: github.event_name == 'push' || github.head_ref == 'feature/novaos-hidden-space-apps'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 65
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v5
+        with: { distribution: temurin, java-version: '17' }
+      - name: Verify protected core and camera
+        run: |
+          bash scripts/check_hidden_foundation.sh
+          bash scripts/check_hidden_browser.sh
+          bash scripts/check_camera.sh
+      - name: Install Android 17 tools
+        run: |
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --install "cmdline-tools;22.0"
+          mv "$ANDROID_HOME/cmdline-tools/latest" "$RUNNER_TEMP/previous-android-command-tools"
+          ln -s "$ANDROID_HOME/cmdline-tools/22.0" "$ANDROID_HOME/cmdline-tools/latest"
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-37.1" "build-tools;36.0.0" "emulator"
+          python3 scripts/verify_android17_sdk.py "$ANDROID_HOME" app/build/hidden-space/android17-sdk.json
+      - name: Compile and run JVM tests
+        run: ./gradlew testDebugUnitTest assembleDebug assembleDebugAndroidTest --stacktrace
+      - name: Enable emulator acceleration
+        run: sudo chmod 666 /dev/kvm
+      - name: Run Hidden and Primary regressions on Android 17
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: '37.0'
+          target: google_apis
+          arch: x86_64
+          profile: pixel_2
+          disable-animations: true
+          emulator-options: -no-window -gpu software -no-snapshot -noaudio -no-boot-anim -feature -HardwareDecoder -camera-back emulated -camera-front emulated
+          script: |
+            bash scripts/run_hidden_space_android17.sh
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: hidden-space-android17-test-results
+          path: |
+            app/build/hidden-space/
+            app/build/test-results/testDebugUnitTest/

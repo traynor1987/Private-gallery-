@@ -75,6 +75,7 @@ internal fun NovaCalendarScreen(
     sendToAndroidCalendar: ((NovaOccurrence) -> Boolean)? = null,
 ) {
     val scope = rememberCoroutineScope()
+    val hidden = space.spaceId == "hidden"
     val displayZone = ZoneId.systemDefault()
     var store by remember(space) { mutableStateOf<NovaCalendarLibrary?>(null) }
     var snapshot by remember(space) { mutableStateOf<NovaCalendarLibrary.Snapshot?>(null) }
@@ -98,7 +99,7 @@ internal fun NovaCalendarScreen(
                 runCatching { NovaTaskLibrary(space).read().tasks }
         }
         val reminderError = withContext(Dispatchers.IO) {
-            calendar.getOrNull()?.second?.let { runCatching { NovaReminders.syncCalendar(space, it.events) }.isFailure } ?: false
+            calendar.getOrNull()?.second?.let { !hidden && runCatching { NovaReminders.syncCalendar(space, it.events) }.isFailure } ?: false
         }
         if (!space.current()) return@LaunchedEffect
         calendar.onSuccess { (library, saved) ->
@@ -128,7 +129,7 @@ internal fun NovaCalendarScreen(
         scope.launch {
             val result = withContext(Dispatchers.IO) { runCatching {
                 library.save(previous, events)?.let { saved ->
-                    saved to runCatching { NovaReminders.syncCalendar(space, saved.events) }.isSuccess
+                    saved to (hidden || runCatching { NovaReminders.syncCalendar(space, saved.events) }.isSuccess)
                 }
             } }
             if (!space.current()) return@launch
@@ -258,7 +259,10 @@ internal fun NovaCalendarScreen(
                     supportingText = { if (current.allDay) Text("All-day reminders are based on 09:00 local time.") },
                     isError = current.reminder.isNotBlank() && current.reminder.trim().toIntOrNull() !in 0..1440,
                     singleLine = true, enabled = !busy)
-                if (current.reminder.isNotBlank()) NovaReminderPermission(space, !busy)
+                if (current.reminder.isNotBlank()) {
+                    if (hidden) Text("Due reminders appear in Hidden Space.")
+                    else NovaReminderPermission(space, !busy)
+                }
                 Row(Modifier.horizontalScroll(rememberScrollState())) {
                     TextButton(enabled = !busy, onClick = { pickNote = true }) {
                         Text(if (current.event.noteId == null) "Link a note" else "Change linked note")

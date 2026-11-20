@@ -22,10 +22,9 @@ internal enum class NovaCoreApp(val storageId: String, val route: String, val la
     val namespace: String get() = "nova-core-$storageId-v1"
 }
 
-/** Stores app documents through the authenticated, encrypted Primary Space preferences. */
+/** Stores app documents in the originating authenticated Space preferences. */
 internal class NovaCoreAppDocuments(space: SpaceContext, app: NovaCoreApp) {
-    private val prefs = space.also { require(it.spaceId == "primary") }
-        .getSharedPreferences(app.namespace, Context.MODE_PRIVATE)
+    private val prefs = space.getSharedPreferences(app.namespace, Context.MODE_PRIVATE)
 
     data class Document(val revision: Long, val json: String)
 

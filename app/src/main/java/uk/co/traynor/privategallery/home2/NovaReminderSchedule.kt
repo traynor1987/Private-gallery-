@@ -43,3 +43,16 @@ internal data class NovaReminderSchedule(
             .firstOrNull { it > after }
     }
 }
+
+
+internal fun taskReminderSchedule(task: NovaTask): NovaReminderSchedule? {
+    val date = task.due ?: return null
+    val time = task.remindAt ?: return null
+    return if (task.completed) null else NovaReminderSchedule(date, time)
+}
+
+internal fun calendarReminderSchedule(event: NovaCalendarEvent): NovaReminderSchedule? {
+    val lead = event.reminderMinutes ?: return null
+    return NovaReminderSchedule(event.firstDate, event.time ?: LocalTime.of(9, 0),
+        event.zone.takeIf { event.time != null }, event.repeat, event.skippedDates, lead)
+}

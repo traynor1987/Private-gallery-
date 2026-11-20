@@ -591,7 +591,7 @@ internal class HiddenVpnBrowserBroker(
                     override fun read(b:ByteArray,off:Int,len:Int):Int {check(active());val n=`in`.read(b,off,len);if(n>0){count+=n;require(count<=limit);downloadedBytes=count};check(active());if(n<0 && expected>=0)check(count==expected);return n}
                 }
                 val repo=repository(::active);val name=if(uk.co.traynor.privategallery.core.vault.VaultDocumentPolicy.isDocument(mime))"Hidden download."+uk.co.traynor.privategallery.core.vault.VaultDocumentPolicy.extension(mime) else "Hidden download"
-                val item=repo.importMedia(name,mime,input,validateDownloadedMedia=hiddenDownloadedMediaValidator(mime,{!active()}));repo.verify(item.id)
+                val item=repo.importBrowserDownload(name,mime,input,hiddenDownloadedMediaValidator(mime,{!active()}));repo.verify(item.id)
             }} finally {calls.remove(call);downloadCall=null}
         } finally {client.dispatcher.cancelAll();client.connectionPool.evictAll();client.dispatcher.executorService.shutdown()}
     }

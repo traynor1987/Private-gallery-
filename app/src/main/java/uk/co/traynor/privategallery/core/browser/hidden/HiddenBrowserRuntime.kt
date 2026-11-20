@@ -257,8 +257,8 @@ internal class HiddenBrowserRuntime(
                         scope.launch {if(authorized()){downloadedBytes=bytes;downloadTotal=total}}
                     }
                 }) {mime,input ->
-                    val item=repository.importMedia("Hidden download",mime,input,
-                        validateDownloadedMedia=hiddenDownloadedMediaValidator(mime,{ !authorized() }))
+                    val item=repository.importBrowserDownload("Hidden download",mime,input,
+                        validate=hiddenDownloadedMediaValidator(mime,{ !authorized() }))
                     repository.verify(item.id)
                 }
             }}
