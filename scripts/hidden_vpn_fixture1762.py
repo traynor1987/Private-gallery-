@@ -81,7 +81,8 @@ class Fixture:
                     with fixture.lock:events=list(fixture.events)
                     events+=evidence179.events(fixture.folder)
                     return self.reply(json.dumps(dict(events=events)).encode(),mime='application/json')
-                fixture.record(kind='http',source=self.client_address[0],method='GET',path=self.path,user_agent=self.headers.get('User-Agent',''),tls=isinstance(self.connection,ssl.SSLSocket),cookie_present='hiddenfixture=only' in self.headers.get('Cookie',''),basic_present=self.headers.get('Authorization','')=='Basic '+base64.b64encode(b'fixture-user:fixture-pass').decode())
+                cookies=self.headers.get('Cookie','')
+                fixture.record(kind='http',source=self.client_address[0],method='GET',path=self.path,user_agent=self.headers.get('User-Agent',''),tls=isinstance(self.connection,ssl.SSLSocket),cookie_present='hiddenfixture=only' in cookies,primary_cookie_present='primaryfixture=only' in cookies,basic_present=self.headers.get('Authorization','')=='Basic '+base64.b64encode(b'fixture-user:fixture-pass').decode())
                 if self.path.startswith('/manifest178.json?'):
                     start=parse_qs(urlparse(self.path).query).get('start',['/'])[0]
                     if not start.startswith('/private-apps178-'):return self.reply(b'invalid',400)

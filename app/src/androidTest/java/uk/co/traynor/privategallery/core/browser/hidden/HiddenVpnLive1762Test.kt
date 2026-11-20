@@ -24,6 +24,8 @@ import java.io.ByteArrayOutputStream
 import java.io.File
 import java.net.URL
 import java.util.UUID
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 import uk.co.traynor.privategallery.BuildConfig
 import uk.co.traynor.privategallery.core.hidden.HiddenRepository
@@ -214,9 +216,15 @@ class HiddenVpnLive1762Test {
         require(origin=="http://fixture.invalid")
         val displayOverride=shell("wm size").lineSequence().firstOrNull {it.startsWith("Override size:")}?.substringAfter(":")?.trim()
         val context=instrumentation.targetContext
-        // The later Primary-cookie isolation read initializes its WebView provider. Do that
-        // before opening the child, outside the live child accessibility traversal.
-        instrumentation.runOnMainSync {android.webkit.CookieManager.getInstance()}
+        val secureOrigin = "https://native-phase.fixture.invalid"
+        // Seed the real Primary default profile before a child visits the same origin.
+        val primaryCookieSet=CountDownLatch(1)
+        instrumentation.runOnMainSync {
+            android.webkit.CookieManager.getInstance().setCookie(secureOrigin, "primaryfixture=only; Secure; SameSite=Lax") {
+                if(it)primaryCookieSet.countDown()
+            }
+        }
+        assertTrue("Primary accepted the sentinel cookie", primaryCookieSet.await(5,TimeUnit.SECONDS))
         val info=automation.serviceInfo;info.flags=info.flags or AccessibilityServiceInfo.FLAG_REPORT_VIEW_IDS or AccessibilityServiceInfo.FLAG_RETRIEVE_INTERACTIVE_WINDOWS;automation.serviceInfo=info
         shell("appops set ${context.packageName} ACTIVATE_VPN allow")
         assertNull("CI must grant Android's VPN consent before backend startup",VpnService.prepare(context))
@@ -296,7 +304,6 @@ class HiddenVpnLive1762Test {
                     false
                 }
                 captureUi("initial-address-bar-after-real-touch")
-                val secureOrigin = "https://native-phase.fixture.invalid"
                 fun navigateDocument(url:String,control:String) {
                     val uri=java.net.URI(url);val path=uri.rawPath.orEmpty().ifEmpty {"/"}
                     val tls=uri.scheme=="https"
@@ -471,10 +478,15 @@ class HiddenVpnLive1762Test {
                 waitFor("Cookie-setting response is rendered") {nodes().any {it.text?.toString()=="cookie set"}}
                 navigate("$secureOrigin/cookie-echo")
                 waitFor("Cookie remains usable inside Hidden VPN profile",30) {
-                    observed(network,origin){it.optString("path")=="/cookie-echo" && it.optBoolean("cookie_present")}
+                    observed(network,origin){
+                        it.optString("path")=="/cookie-echo" && it.optBoolean("cookie_present") &&
+                            it.has("primary_cookie_present") && !it.getBoolean("primary_cookie_present")
+                    }
                 }
                 instrumentation.runOnMainSync {
-                    assertNull("Hidden child cookies must not enter Primary default profile",android.webkit.CookieManager.getInstance().getCookie(secureOrigin))
+                    val cookies=android.webkit.CookieManager.getInstance().getCookie(secureOrigin).orEmpty()
+                    assertTrue("Primary kept its own same-origin cookie",cookies.contains("primaryfixture=only"))
+                    assertFalse("Hidden child cookies must not enter Primary default profile",cookies.contains("hiddenfixture=only"))
                 }
                 navigateDocument(origin,"Run JavaScript POST");click("Run JavaScript POST",websiteTouch=true)
                 waitFor("Native JavaScript fetch transmits the exact POST body over VPN",30) {observed(network,origin){it.optString("path")=="/post" && it.optBoolean("javascript_body")}}
@@ -610,6 +622,9 @@ class HiddenVpnLive1762Test {
                 // Host fixture/captures assert the stalled request closes and no direct-origin/DNS packets occur.
             }
         } finally {
+            instrumentation.runOnMainSync {
+                android.webkit.CookieManager.getInstance().setCookie(secureOrigin, "primaryfixture=; Secure; Max-Age=0")
+            }
             shell(if(displayOverride==null)"wm size reset" else "wm size $displayOverride")
             allowed.set(false);broker?.close();session.lock();engine.disconnect()
             waitFor("CI VPN teardown",15){!engine.ownsTunnel}
