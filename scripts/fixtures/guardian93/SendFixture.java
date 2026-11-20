@@ -11,6 +11,7 @@ import android.content.Intent;
 public final class SendFixture extends BroadcastReceiver {
     private static final String CHANNEL = "synthetic-guardian-source";
     private static long firstMessageAt;
+    private static long foldMessageAt;
 
     @Override
     public void onReceive(Context context, Intent intent) {
@@ -77,6 +78,20 @@ public final class SendFixture extends BroadcastReceiver {
             case "background-hostile":
                 id = 25;
                 messages.addMessage("You need to shut the fuck up. When I was 17.", now, sender);
+                break;
+            case "fold-hi":
+                foldMessageAt = now - 5;
+                id = 40;
+                notification.setGroup("fold-guardian-group");
+                messages.addMessage("Hi", foldMessageAt, sender);
+                break;
+            case "fold-three":
+                if (foldMessageAt == 0L) return;
+                id = 40;
+                notification.setGroup("fold-guardian-group");
+                messages.addMessage("Hi", foldMessageAt, sender);
+                messages.addMessage("When I was 17.", foldMessageAt + 1, sender);
+                messages.addMessage("Fuck you", foldMessageAt + 2, sender);
                 break;
             default:
                 return;
