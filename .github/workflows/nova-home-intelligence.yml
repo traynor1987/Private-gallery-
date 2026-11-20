@@ -51,11 +51,7 @@ jobs:
           disk-size: 8G
           disable-animations: true
           emulator-options: -no-window -gpu software -no-snapshot -noaudio -no-boot-anim -feature -HardwareDecoder -camera-back emulated -camera-front emulated
-          script: |
-            bash scripts/verify_android17_device.sh app/build/intelligence
-            adb shell wm dismiss-keyguard
-            bash scripts/run_android17_checked_command.sh app/build/intelligence -- ./gradlew connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=uk.co.traynor.privategallery.intelligence.IntelligenceLauncherUiTest,uk.co.traynor.privategallery.intelligence.IntelligenceWorkspaceTest,uk.co.traynor.privategallery.launcher.LauncherHomeLibraryPager73UiTest,uk.co.traynor.privategallery.core.sanctuary.SanctuaryLauncherPolicy70Test -Pkotlin.incremental=false --no-daemon --console=plain
-            bash scripts/run_launcher70_restart.sh
+          script: bash scripts/run_nova_intelligence_android17.sh
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -64,4 +60,3 @@ jobs:
             app/build/intelligence
             app/build/home2-evidence/launcher-process-70
             app/build/test-results/testDebugUnitTest
-            app/build/outputs/androidTest-results/connected/debug
