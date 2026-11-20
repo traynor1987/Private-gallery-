@@ -67,7 +67,9 @@ internal fun HiddenSpaceDashboard(
                     }
                 }.getOrDefault(emptyList())
             }
-            space.publishIfCurrent { reminders = pending }
+            withContext(Dispatchers.Main.immediate) {
+                space.publishIfCurrent { reminders = pending }
+            }
             delay(60_000)
         }
     }

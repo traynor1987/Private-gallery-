@@ -53,9 +53,11 @@ internal fun HiddenSpaceSearch(space: SpaceContext, onBack: () -> Unit, onOpen: 
                 }.take(100)
             }
         }
-        space.publishIfCurrent {
-            results = outcome.getOrNull()
-            failed = outcome.isFailure
+        withContext(Dispatchers.Main.immediate) {
+            space.publishIfCurrent {
+                results = outcome.getOrNull()
+                failed = outcome.isFailure
+            }
         }
     }
     Column(Modifier.fillMaxSize().safeDrawingPadding().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
