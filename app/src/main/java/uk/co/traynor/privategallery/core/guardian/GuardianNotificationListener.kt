@@ -311,7 +311,10 @@ internal class GuardianNotificationListener : NotificationListenerService() {
                         { outcome -> dismissStoredWhatsApp(sbn, received, armed, outcome) }
                     } else null
                     GuardianCapture.record(this, received, GuardianConversationKey(received.app, serial, received.conversation), onDurable)
-                } else if (isWhatsApp) GuardianCapture.noteMainCapture(GuardianCaptureStage.NO_MESSAGE)
+                } else if (isWhatsApp) GuardianCapture.noteMainCapture(
+                    if (notification.visibility == Notification.VISIBILITY_SECRET) GuardianCaptureStage.PRIVATE
+                    else GuardianCaptureStage.NO_MESSAGE,
+                )
             } else if (isWhatsApp) GuardianCapture.noteMainCapture(GuardianCaptureStage.OFF)
         }
         if (session != null && isWhatsApp) {

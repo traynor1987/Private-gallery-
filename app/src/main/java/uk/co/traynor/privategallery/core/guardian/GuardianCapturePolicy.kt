@@ -71,6 +71,7 @@ internal fun guardianCaptureAllowed(includeMain: Boolean, key: GuardianConversat
 internal enum class GuardianCaptureStage(val label: String) {
     OFF("Main notification observed · capture off"),
     SOURCE("Main notification skipped · sender app or notification type could not be verified"),
+    PRIVATE("Main notification skipped · marked secret by Android or the source app"),
     NO_MESSAGE("Main notification skipped · Android did not supply supported incoming message text"),
     CONSENT("Main notification skipped · capture scope or contact rule excluded it"),
     DUPLICATE("Main notification already retained or explicitly removed"),

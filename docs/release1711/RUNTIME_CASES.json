@@ -2,6 +2,7 @@
   "uk.co.traynor.privategallery.core.guardian.GuardianEvidence90RuntimeTest": [
     "archiveRestoreAndRevocationKeepTheOriginalWithoutRequeuing",
     "bundledNotificationHistoryNeverQueuesPastExcerpts",
+    "captureUsesLocalRulesIfSeparateLearningArchiveCannotBeRead",
     "durableEvidenceAndQueueShareTheOriginalRecordAcrossReopenAndDeletion",
     "greetingsRemainVisibleAndEncryptedEvenWithCloudConsentAndUncertainHold"
   ],

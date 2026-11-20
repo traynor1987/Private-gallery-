@@ -1,6 +1,8 @@
 package uk.co.traynor.privategallery.launcher
 
+import android.os.SystemClock
 import android.view.WindowManager
+import androidx.compose.ui.test.ComposeTimeoutException
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.onAllNodesWithText
@@ -16,10 +18,12 @@ import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import org.junit.Assert.assertTrue
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import kotlin.math.max
 import kotlin.math.min
 import org.junit.Rule
 import org.junit.Test
+import uk.co.traynor.privategallery.core.guardian.GuardianAssessment
 import uk.co.traynor.privategallery.core.guardian.GuardianCaptureEntry
 import uk.co.traynor.privategallery.core.guardian.GuardianCaptureEvent
 import uk.co.traynor.privategallery.core.guardian.GuardianCaptureStore
@@ -201,20 +205,43 @@ class GuardianInbox77UiTest {
             assertEquals(GuardianInboxSection.COOLING, store.inboxRows(7, receipt).single().section)
             assertEquals(GuardianInboxSection.PROTECTED,
                 store.inboxRows(7, GuardianInboxClock(now, 0L, -1)).single().section)
+            val ordinary = event.copy(conversation = "ordinary-conversation", observedAt = now, entries = listOf(
+                GuardianCaptureEntry(now - 1, "ordinary-fixture", "Hi", "Ordinary fixture contact"),
+            ))
+            val ordinaryClock = GuardianInboxClock(now, 0L, -1)
+            assertTrue(store.append(ordinary, 7, now, assess = false, clock = ordinaryClock).allDurable)
+            store.assessCaptured(ordinary, 7, ordinaryClock, classifyWithoutExamples = true)
+            assertEquals(GuardianInboxSection.READY, store.notificationRows(ordinary, 7, ordinaryClock).single().section)
+            compose.onNodeWithText("Ordinary fixture contact").assertDoesNotExist()
             compose.onNodeWithText("Unlock Guardian Inbox").performClick()
-            var focusedSince: Long? = null
-            compose.waitUntil(15_000) {
-                val focused = shell("dumpsys window").lineSequence().any {
-                    "mCurrentFocus=" in it && ("ConfirmLock" in it || "BiometricPrompt" in it)
+            fun credentialWindowFocused() = shell("dumpsys window").lineSequence().any {
+                "mCurrentFocus=" in it && ("ConfirmLock" in it || "BiometricPrompt" in it)
+            }
+            compose.waitUntil(15_000) { credentialWindowFocused() }
+            SystemClock.sleep(1_000)
+            var returnedFromCredential = false
+            for (attempt in 1..2) {
+                if (!credentialWindowFocused()) break
+                // Secure system credential fields may withhold accessibility nodes. Use native
+                // keyboard input on the emulator display and retry only on the same system prompt.
+                if (attempt > 1) {
+                    shell("input -d 0 keyevent KEYCODE_MOVE_END ${"KEYCODE_DEL ".repeat(pin.length)}")
                 }
-                val elapsed = android.os.SystemClock.elapsedRealtime()
-                focusedSince = if (focused) focusedSince ?: elapsed else null
-                focusedSince?.let { elapsed - it >= 1_000L } == true
+                shell("input -d 0 text $pin")
+                SystemClock.sleep(250)
+                if (credentialWindowFocused()) shell("input -d 0 keyevent KEYCODE_ENTER")
+                try {
+                    compose.waitUntil(7_000) { activity.hasWindowFocus() }
+                    returnedFromCredential = true
+                    break
+                } catch (_: ComposeTimeoutException) {
+                    // The system still owns the prompt. The disposable PIN may be entered once more.
+                }
             }
-            shell("input keyevent ${pin.map { "KEYCODE_$it" }.joinToString(" ")} KEYCODE_ENTER")
-            compose.waitUntil(15_000) {
-                compose.activityRule.scenario.state == androidx.lifecycle.Lifecycle.State.RESUMED
-            }
+            assertTrue("Android returned to Guardian after system credential confirmation", returnedFromCredential)
+            compose.waitUntil(15_000) { compose.onAllNodesWithText("Ordinary fixture contact").fetchSemanticsNodes().isNotEmpty() }
+            compose.onNodeWithText("Ordinary fixture contact").assertIsDisplayed()
+            compose.onNodeWithText("Hi").assertDoesNotExist()
             compose.onNodeWithText(GuardianInboxSection.PROTECTED.label).performScrollTo().performClick()
             compose.waitUntil(15_000) { compose.onAllNodesWithText("Fixture contact").fetchSemanticsNodes().isNotEmpty() }
             compose.onNodeWithText("Fixture contact").performClick()
@@ -241,9 +268,11 @@ class GuardianInbox77UiTest {
             compose.onNodeWithText("Not Upsetting").performScrollTo().performClick()
             compose.onNodeWithText("Save learning example").performScrollTo().performClick()
             compose.waitUntil(10_000) { compose.onAllNodesWithText("Remove learning example").fetchSemanticsNodes().isNotEmpty() }
-            val saved = store.inboxRows(7, uk.co.traynor.privategallery.core.guardian.GuardianInboxClock(
-                System.currentTimeMillis(), android.os.SystemClock.elapsedRealtime(), -1)).single()
-            assertTrue(saved.ownerLabel == uk.co.traynor.privategallery.core.guardian.GuardianAssessment.LOW_RISK)
+            val finished = GuardianInboxClock(System.currentTimeMillis(), android.os.SystemClock.elapsedRealtime(), -1)
+            assertEquals(2, store.inboxRows(7, finished).size)
+            val saved = store.notificationRows(event, 7, finished).single()
+            assertEquals(GuardianAssessment.LOW_RISK, saved.ownerLabel)
+            assertNull(store.notificationRows(ordinary, 7, finished).single().ownerLabel)
         } finally {
             store.clear()
             shell("locksettings clear --old $pin")

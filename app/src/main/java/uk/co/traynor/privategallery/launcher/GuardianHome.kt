@@ -98,7 +98,7 @@ internal fun GuardianHomeSettings(
                     TextButton(onClick = onDiagnostics) { Text("Notification Compatibility") }
                 }
                 GuardianCard("Guardian tools") {
-                    TextButton(onClick = { GuardianInboxActivity.open(activity, GuardianInboxSection.PENDING) }) {
+                    TextButton(onClick = { GuardianInboxActivity.open(activity, GuardianInboxSection.READY) }) {
                         Text("Guardian Inbox")
                     }
                     TextButton(onClick = { GuardianInboxActivity.openSettings(activity, "message-retention") }) {
@@ -342,7 +342,7 @@ internal fun GuardianHome(
                         }
                     }
 
-                    OutlinedButton(onClick = { openInbox(GuardianInboxSection.PENDING) }, modifier = Modifier.fillMaxWidth()) {
+                    OutlinedButton(onClick = { openInbox(GuardianInboxSection.READY) }, modifier = Modifier.fillMaxWidth()) {
                         Icon(Icons.Outlined.Inbox, null, Modifier.size(18.dp))
                         Spacer(Modifier.width(8.dp))
                         Text("Guardian Inbox")

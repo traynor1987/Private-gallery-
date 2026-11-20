@@ -60,7 +60,7 @@ import java.util.Date
 class GuardianInboxActivity : ComponentActivity() {
     private var authenticated by mutableStateOf(false)
     private var rows by mutableStateOf<List<GuardianInboxRow>>(emptyList())
-    private var selected by mutableStateOf(GuardianInboxSection.PENDING)
+    private var selected by mutableStateOf(GuardianInboxSection.READY)
     private var detail by mutableStateOf<GuardianInboxRow?>(null)
     private var failure by mutableStateOf<String?>(null)
     private var busy by mutableStateOf(false)
@@ -155,7 +155,7 @@ class GuardianInboxActivity : ComponentActivity() {
         showSenders = privacy.getBoolean("authenticated_sender_names", true)
         window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
         selected = GuardianInboxSection.entries.firstOrNull { it.name == intent.getStringExtra(SECTION) }
-            ?: GuardianInboxSection.PENDING
+            ?: GuardianInboxSection.READY
         setContent {
             GuardianTheme {
                 Surface(Modifier.fillMaxSize(), color = GuardianNavy, contentColor = GuardianPrimary) {
