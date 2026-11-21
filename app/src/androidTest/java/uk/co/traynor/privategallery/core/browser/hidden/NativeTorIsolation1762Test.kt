@@ -169,11 +169,8 @@ class NativeTorIsolation1762Test {
                     assertTrue(state.hidden.session.complete(state.hidden.session.beginAuthentication(), ByteArray(32) { 53 }))
                     state.hidden.select(Route.BROWSER)
                     state.hidden.authenticated = true
-                    state.hidden.outside()
-                    state.homeFeatureRoot = "TOR_BROWSER"
-                    MainActivity::class.java.getDeclaredMethod("setRoute", Route::class.java)
-                        .apply { isAccessible = true }.invoke(activity, Route.BROWSER)
                 }
+                click("Tor Browser")
                 val brokerField = HiddenBrowserRuntime::class.java.getDeclaredField("interactiveBroker").apply { isAccessible = true }
                 val routeField = HiddenBrowserRuntime::class.java.getDeclaredField("torConfiguration").apply { isAccessible = true }
                 fun liveBroker() = main.hiddenBrowserOwner?.let { brokerField.get(it) as? HiddenVpnBrowserBroker }
