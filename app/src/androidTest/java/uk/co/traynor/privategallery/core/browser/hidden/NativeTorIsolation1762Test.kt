@@ -7,6 +7,7 @@ import android.net.VpnService
 import android.os.*
 import android.view.accessibility.AccessibilityNodeInfo
 import androidx.activity.ComponentActivity
+import androidx.lifecycle.ViewModelProvider
 import androidx.test.core.app.ActivityScenario
 import androidx.test.platform.app.InstrumentationRegistry
 import org.json.JSONObject
@@ -18,6 +19,10 @@ import java.net.*
 import java.util.UUID
 import java.util.concurrent.atomic.AtomicBoolean
 import uk.co.traynor.privategallery.BuildConfig
+import uk.co.traynor.privategallery.MainActivity
+import uk.co.traynor.privategallery.ProtectedSessionState
+import uk.co.traynor.privategallery.Route
+import uk.co.traynor.privategallery.ui.BrowserBetaAcknowledgement
 import uk.co.traynor.privategallery.core.hidden.HiddenRepository
 import uk.co.traynor.privategallery.core.hidden.HiddenSession
 
@@ -128,6 +133,93 @@ class NativeTorIsolation1762Test {
             try {socket.receive(DatagramPacket(ByteArray(1024),1024));fail("Sink returned network data")}catch(expected:SocketTimeoutException){}
         }
     }
+    private fun writeEvidence(name: String, result: JSONObject) {
+        val output = checkNotNull(InstrumentationRegistry.getArguments().getString("additionalTestOutputDir"))
+        File(output, name).writeText(result.toString())
+    }
+
+    // Use the same MainActivity, Compose entry and Runtime as the production Tor shortcut.
+    @Test(timeout=360_000) fun productionHiddenLockRetiresAnInFlightTorRequest() {
+        val url = InstrumentationRegistry.getArguments().getString("hiddenOnionProbeUrl")
+        assumeTrue("Controlled real onion required", url != null)
+        check(BuildConfig.DEBUG)
+        val host = checkNotNull(URI(checkNotNull(url)).host)
+        require(host.endsWith(".onion"))
+        val context = instrumentation.targetContext
+        val notice = context.getSharedPreferences("nova-hidden-browser-beta", 0)
+        val oldNotice = notice.getInt("notice-revision", -1)
+        val info = automation.serviceInfo
+        info.flags = info.flags or android.accessibilityservice.AccessibilityServiceInfo.FLAG_REPORT_VIEW_IDS
+        automation.serviceInfo = info
+        shell("appops set ${context.packageName} ACTIVATE_VPN allow")
+        assertNull(VpnService.prepare(context))
+        val caseId = "lock-${UUID.randomUUID()}"
+        try {
+            assertTrue(BrowserBetaAcknowledgement(context, hidden = true).accept())
+            waitFor("Previous Tor and browser lifetimes retired", 15) {
+                HiddenTorIsolationService.released() && !HiddenTorIsolationService.hasTorProcess(context) &&
+                    !HiddenVpnBrowserBroker.hasDedicatedProcess(context)
+            }
+            ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+                lateinit var state: ProtectedSessionState
+                lateinit var main: MainActivity
+                scenario.onActivity { activity ->
+                    main = activity
+                    state = ViewModelProvider(activity)[ProtectedSessionState::class.java]
+                    assertTrue(state.hidden.session.complete(state.hidden.session.beginAuthentication(), ByteArray(32) { 53 }))
+                    state.hidden.select(Route.BROWSER)
+                    state.hidden.authenticated = true
+                    state.hidden.outside()
+                    state.homeFeatureRoot = "TOR_BROWSER"
+                    MainActivity::class.java.getDeclaredMethod("setRoute", Route::class.java)
+                        .apply { isAccessible = true }.invoke(activity, Route.BROWSER)
+                }
+                val brokerField = HiddenBrowserRuntime::class.java.getDeclaredField("interactiveBroker").apply { isAccessible = true }
+                val routeField = HiddenBrowserRuntime::class.java.getDeclaredField("torConfiguration").apply { isAccessible = true }
+                fun liveBroker() = main.hiddenBrowserOwner?.let { brokerField.get(it) as? HiddenVpnBrowserBroker }
+                waitFor("Production Tor child and immutable sink", 135) {
+                    main.hiddenBrowserOwner?.mode == HiddenConnectionPolicy.Mode.TOR_ONLY &&
+                        liveBroker()?.let { it.valid() && it.childIsAlive() && it.childSecuritySnapshot() == (false to true) } == true
+                }
+                val owner = checkNotNull(main.hiddenBrowserOwner)
+                val broker = checkNotNull(liveBroker())
+                val route = routeField.get(owner) as HiddenTorConfiguration
+                navigate("http://$host/slow?case=$caseId")
+                // The fixture keeps a slow response in flight. Check both admission
+                // and absence of a prior close before triggering the actual session lock.
+                waitFor("Production Tor request is open at the server", 60) {
+                    val events = evidence(route.unixPath, host).getJSONArray("events")
+                    val matched = (0 until events.length()).map(events::getJSONObject).filter { it.optString("case") == caseId }
+                    matched.any { it.optString("kind") == "slow-start" } && matched.none { it.optString("kind") == "slow-closed" }
+                }
+                var triggeredAtMs = 0L
+                instrumentation.runOnMainSync {
+                    assertTrue(state.hidden.session.isUnlocked && broker.valid())
+                    triggeredAtMs = System.currentTimeMillis()
+                    state.hidden.session.lock()
+                    assertFalse(state.hidden.session.isUnlocked)
+                    assertFalse(broker.valid())
+                }
+                waitFor("Hidden lock retires the real browser, Tor process and sink", 15) {
+                    main.hiddenBrowserOwner !== owner && !broker.childIsAlive() &&
+                        !HiddenVpnBrowserBroker.hasDedicatedProcess(context) &&
+                        !HiddenTorIsolationService.hasTorProcess(context) && HiddenTorIsolationService.released()
+                }
+                assertFalse("The previous Tor socket cannot serve a new request", runCatching {
+                    HiddenTorSockets.open(route.unixPath, host, 80, handshakeTimeoutMs = 1_000).close()
+                }.isSuccess)
+                writeEvidence("native-tor1762-lock.json", JSONObject()
+                    .put("case", caseId).put("trigger_at_ms", triggeredAtMs)
+                    .put("session_locked", true).put("browser_retired", true)
+                    .put("tor_retired", true).put("sink_released", true).put("old_socket_denied", true))
+            }
+        } finally {
+            notice.edit().apply {
+                if (oldNotice == -1) remove("notice-revision") else putInt("notice-revision", oldNotice)
+            }.commit()
+        }
+    }
+
     @Test(timeout=360_000) fun packagedTorNativeFormsUploadsDownloadsAndNetworkSink() {
         val rootUrl=InstrumentationRegistry.getArguments().getString("hiddenOnionProbeUrl")
         assumeTrue("Controlled real onion required",rootUrl!=null)
@@ -281,8 +373,13 @@ class NativeTorIsolation1762Test {
                 val query=byteArrayOf(0x17,0x62,1,0,0,1,0,0,0,0,0,0,3,116,111,114,7,105,110,118,97,108,105,100,0,0,1,0,1)
                 udp(network,InetAddress.getByAddress(byteArrayOf(10,252.toByte(),0,2)),53,query)
                 waitFor("Direct v4/v6/UDP/DNS packets were discarded by owned TUN") {val after=isolation!!.dropCounters();after.first>before.first && after.second>before.second && after.third>=before.third+3}
-                navigate("$base/slow");waitFor("Active Tor request before revoke",60){observed(path,host){it.optString("kind")=="slow-start"}}
+                val lossCase = "loss-${UUID.randomUUID()}"
+                navigate("$base/slow?case=$lossCase")
+                waitFor("Active Tor request before transport loss",60) {
+                    observed(path,host){it.optString("case")==lossCase && it.optString("kind")=="slow-start"}
+                }
                 val native=context.getSystemService(android.app.ActivityManager::class.java).runningAppProcesses.single {it.uid==Process.myUid() && it.processName==context.packageName+":hidden_tor"}
+                val lossAtMs = System.currentTimeMillis()
                 Process.killProcess(native.pid)
                 waitFor("Abrupt Tor process death is observed",10){tor?.alive()!=true}
                 assertEquals("Sink remains owned until explicit lifetime retirement",network,isolation!!.network())
@@ -302,7 +399,7 @@ class NativeTorIsolation1762Test {
                     }
                     assertTrue("An independently duplicated open upload FD rejects actual rereads after revocation",denied.get(3,java.util.concurrent.TimeUnit.SECONDS))
                 } finally {probe.fill(0);retainedUpload?.close();retainedUpload=null;readWorker.shutdownNow()}
-                File(checkNotNull(InstrumentationRegistry.getArguments().getString("additionalTestOutputDir")),"native-tor1762-result.json").writeText(JSONObject().put("mode","TOR_ONLY").put("pid",Process.myPid()).put("javascript",false).put("form",true).put("multipart",true).put("download_verified",true).put("discard_v4",true).put("discard_v6",true).put("discard_dns_udp",true).put("session_revoked",true).put("tor_process_death",true).toString())
+                writeEvidence("native-tor1762-result.json", JSONObject().put("case",lossCase).put("trigger_at_ms",lossAtMs).put("mode","TOR_ONLY").put("pid",Process.myPid()).put("javascript",false).put("form",true).put("multipart",true).put("download_verified",true).put("discard_v4",true).put("discard_v6",true).put("discard_dns_udp",true).put("session_revoked",true).put("tor_process_death",true))
             }
         } finally {allowed.set(false);broker?.close();retainedUpload?.close();tor?.close();isolation?.close();session.lock();waitFor("Tor sink release",15){HiddenTorIsolationService.released()};storage.deleteRecursively()}
     }

@@ -148,8 +148,10 @@ CODE81_EXACT_ADAPTERS = {
 # Hidden Space exposes the existing protected process and adds encrypted browser preferences/download metadata.
 # Pin these exact adapters while continuing to reject other changes in the protected core.
 HIDDEN_SPACE_EXACT_ADAPTERS = {
+    f"{CORE}/browser/hidden/HiddenTorService.kt": "799ff8ea27ade2d8a5ff48b00d1759b75bea6f65e2879bb58bac2e7f48c67fcc",
+    f"{CORE}/browser/hidden/HiddenTorRelayBridge.kt": "985422a63b10e0c642eb6aaf0e904b6bcc41d9ca1a55437f687c96108c2ae9cf",
     f"{CORE}/browser/hidden/HiddenBrowserLibrary.java": "7e289978a890662f425fc894b56252a7b5b232b32614cc9f88d43a6b346c0fb4",
-    f"{CORE}/browser/hidden/HiddenBrowserRuntime.kt": "9abad94dc179175e04c8ae36ba27b19966f7617a37cd7bb73c6ab2e670bdef66",
+    f"{CORE}/browser/hidden/HiddenBrowserRuntime.kt": "33b1c2d38ceb9b1883a035b3a2ff6eb9a9af7a48a4a9bff83b521a4733b1d18d",
     f"{CORE}/browser/hidden/HiddenVpnBrowserActivity.kt": "06f4551a8a195b7754da744f852ee96054f56ae07bd9e2cbc099a883a1020883",
     f"{CORE}/browser/hidden/HiddenVpnBrowserBroker.kt": "2181e407655b01a898c6c505546c77ee73f82c28d7b926c682d011b6c62ad050",
     f"{CORE}/browser/hidden/HiddenWebViewFactory.kt": "bc2597ec4cad6a8f5b23f2e6042e42f43c4b17ee0c51cde5b16412658124502a",

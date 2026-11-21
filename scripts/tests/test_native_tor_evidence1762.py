@@ -25,6 +25,38 @@ class NativeTorEvidenceTest(unittest.TestCase):
             (root/'packets.txt').write_text('private-gallery-tor-sink-only')
             with self.assertRaisesRegex(AssertionError,'UDP marker'):v.verify(root,root)
 
+    def test_production_gate_binds_timely_peer_close_to_each_trigger(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            result, events = self.fixture(root)
+            events = [event for event in events if event.get('kind') is None]
+            result.update(case='loss-test', trigger_at_ms=1_000)
+            lock = dict(case='lock-test', trigger_at_ms=10_000, session_locked=True, browser_retired=True,
+                        tor_retired=True, sink_released=True, old_socket_denied=True)
+            (root/'native-tor1762-result.json').write_text(json.dumps(result))
+            (root/'native-tor1762-lock.json').write_text(json.dumps(lock))
+            for marker in (result, lock):
+                events += [
+                    dict(kind='slow-start', case=marker['case'], at_ms=marker['trigger_at_ms'] - 500),
+                    dict(kind='slow-closed', case=marker['case'], at_ms=marker['trigger_at_ms'] + 500,
+                         close_evidence='peer_eof'),
+                ]
+
+            def verify():
+                (root/'interactive-events.jsonl').write_text('\n'.join(map(json.dumps, events)))
+                return v.verify(root, root, require_production_lock=True)
+
+            self.assertIn('Hidden session lock closed upstream in 500 ms', verify())
+            events[-1]['at_ms'] = lock['trigger_at_ms'] - 1
+            with self.assertRaisesRegex(AssertionError, 'no peer closure'):
+                verify()
+            events[-1]['at_ms'] = lock['trigger_at_ms'] + v.CLOSE_WINDOW_MS + 1
+            with self.assertRaisesRegex(AssertionError, 'no peer closure'):
+                verify()
+            events[-1]['case'] = 'lock-unrelated'
+            with self.assertRaisesRegex(AssertionError, 'no peer closure'):
+                verify()
+
     def test_script_execution_or_missing_post_rejected(self):
         with tempfile.TemporaryDirectory() as directory:
             root=Path(directory);_,events=self.fixture(root)
