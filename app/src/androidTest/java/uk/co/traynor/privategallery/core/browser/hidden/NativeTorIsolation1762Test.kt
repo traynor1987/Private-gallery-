@@ -156,6 +156,7 @@ class NativeTorIsolation1762Test {
         shell("appops set ${context.packageName} ACTIVATE_VPN allow")
         assertNull(VpnService.prepare(context))
         val caseId = "lock-${UUID.randomUUID()}"
+        HiddenTorShutdownTrace.fixtureCase = caseId
         try {
             assertTrue(BrowserBetaAcknowledgement(context, hidden = true).accept())
             waitFor("Previous Tor and browser lifetimes retired", 15) {
@@ -190,10 +191,14 @@ class NativeTorIsolation1762Test {
                     matched.any { it.optString("kind") == "slow-start" } && matched.none { it.optString("kind") == "slow-closed" }
                 }
                 var triggeredAtMs = 0L
+                var triggerElapsedNs = 0L
+                var sessionRevokedNs = 0L
                 instrumentation.runOnMainSync {
                     assertTrue(state.hidden.session.isUnlocked && broker.valid())
                     triggeredAtMs = System.currentTimeMillis()
+                    triggerElapsedNs = SystemClock.elapsedRealtimeNanos()
                     state.hidden.session.lock()
+                    sessionRevokedNs = SystemClock.elapsedRealtimeNanos()
                     assertFalse(state.hidden.session.isUnlocked)
                     assertFalse(broker.valid())
                 }
@@ -202,6 +207,7 @@ class NativeTorIsolation1762Test {
                         !HiddenVpnBrowserBroker.hasDedicatedProcess(context) &&
                         !HiddenTorIsolationService.hasTorProcess(context) && HiddenTorIsolationService.released()
                 }
+                val localProcessesExitedNs = SystemClock.elapsedRealtimeNanos()
                 assertThrows("The retired Tor socket must reject a real connection", IOException::class.java) {
                     LocalSocket().use { probe ->
                         probe.connect(LocalSocketAddress(route.unixPath, LocalSocketAddress.Namespace.FILESYSTEM))
@@ -209,10 +215,14 @@ class NativeTorIsolation1762Test {
                 }
                 writeEvidence("native-tor1762-lock.json", JSONObject()
                     .put("case", caseId).put("trigger_at_ms", triggeredAtMs)
+                    .put("trigger_elapsed_ns", triggerElapsedNs).put("session_revoked_ns", sessionRevokedNs)
+                    .put("local_processes_exited_ns", localProcessesExitedNs)
+                    .put("socket_refused_ns", SystemClock.elapsedRealtimeNanos())
                     .put("session_locked", true).put("browser_retired", true)
                     .put("tor_retired", true).put("sink_released", true).put("old_socket_denied", true))
             }
         } finally {
+            HiddenTorShutdownTrace.fixtureCase = null
             notice.edit().apply {
                 if (oldNotice == -1) remove("notice-revision") else putInt("notice-revision", oldNotice)
             }.commit()
@@ -403,3 +413,4 @@ class NativeTorIsolation1762Test {
         } finally {allowed.set(false);broker?.close();retainedUpload?.close();tor?.close();isolation?.close();session.lock();waitFor("Tor sink release",15){HiddenTorIsolationService.released()};storage.deleteRecursively()}
     }
 }
+

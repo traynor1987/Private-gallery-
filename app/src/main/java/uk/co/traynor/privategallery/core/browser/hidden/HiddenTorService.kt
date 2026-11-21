@@ -79,7 +79,10 @@ class HiddenTorService : TorService() {
                     torControlConnection?.signal("NEWNYM")
                     reply?.writeNoException()
                 }
-                STOP -> { Process.killProcess(Process.myPid()) }
+                STOP -> {
+                    HiddenTorShutdownTrace.event("tor_process_kill_requested")
+                    Process.killProcess(Process.myPid())
+                }
                 else -> return super.onTransact(code, data, reply, flags)
             }
             return true
@@ -89,3 +92,4 @@ class HiddenTorService : TorService() {
     override fun onUnbind(intent: Intent): Boolean { Process.killProcess(Process.myPid()); return false }
     override fun onDestroy() { Process.killProcess(Process.myPid()) }
 }
+

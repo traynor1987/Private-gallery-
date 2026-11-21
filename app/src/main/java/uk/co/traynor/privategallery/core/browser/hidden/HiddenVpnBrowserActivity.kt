@@ -811,7 +811,13 @@ class HiddenVpnBrowserActivity:ComponentActivity() {
         screenshotReview=null
         pendingDownload=null;downloadCandidate=null;activeDownloadOwner=null
         privateAppsOpen=false;privateAppSettingsId=null;privateAppEditId=null;privateAppSwitcher=false;privateAppTabs.clear()
-        views.toList().forEach {runCatching {it.settings.blockNetworkLoads=true;it.stopLoading();it.destroy()}};views.clear();pageDeadlines.clear();current=null;libraryItems=emptyList();libraryKind=null
+        views.toList().forEach {view -> runCatching {
+            view.settings.blockNetworkLoads=true
+            view.stopLoading()
+            if(mode==HiddenConnectionPolicy.Mode.TOR_ONLY)HiddenTorShutdownTrace.event("navigation_stopped")
+            view.destroy()
+            if(mode==HiddenConnectionPolicy.Mode.TOR_ONLY)HiddenTorShutdownTrace.event("webview_destroyed")
+        }};views.clear();pageDeadlines.clear();current=null;libraryItems=emptyList();libraryKind=null
         profile?.serviceWorkerController?.serviceWorkerWebSettings?.blockNetworkLoads=true
         // Parent revokes transport before a single asynchronous deletion operation is started.
         if(notify)runCatching {call(HiddenVpnBrowserBroker.END,write={it.writeInt(reason);it.writeLong(stoppedAt);it.writeInt(if(manageDownloads)1 else 0);it.writeString(switchMode?.name)},read={Unit})}
@@ -852,3 +858,4 @@ class HiddenVpnBrowserActivity:ComponentActivity() {
     override fun onStop() {super.onStop();terminate(reason=HiddenVpnBrowserBroker.BACKGROUND)}
     override fun onDestroy() {captureGuard.close();if(!ended.get())terminate(reason=HiddenVpnBrowserBroker.BACKGROUND);super.onDestroy()}
 }
+

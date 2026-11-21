@@ -1,0 +1,55 @@
+name: Build 95 live Tor shutdown trace
+on:
+  push:
+    branches: [diagnostics/build95-tor-revocation]
+permissions:
+  contents: read
+jobs:
+  live-lock-trace:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v5
+        with: { distribution: temurin, java-version: '17' }
+      - uses: actions/cache/restore@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: privacy1751-${{ runner.os }}-${{ hashFiles('**/*.gradle*', 'gradle/libs.versions.toml', 'gradle/wrapper/gradle-wrapper.properties') }}
+          restore-keys: privacy1751-${{ runner.os }}-
+      - name: Prepare Android and Gradle
+        run: |
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --install "cmdline-tools;22.0"
+          mv "$ANDROID_HOME/cmdline-tools/latest" "$RUNNER_TEMP/previous-android-command-tools"
+          ln -s "$ANDROID_HOME/cmdline-tools/22.0" "$ANDROID_HOME/cmdline-tools/latest"
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-37.1" "build-tools;36.0.0" "emulator"
+          bash scripts/prime_gradle95_ci.sh
+          ./gradlew assembleDebug assembleDebugAndroidTest --no-daemon --console=plain --stacktrace
+      - name: Start the existing live onion fixture
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq tor tcpdump
+          python3 scripts/ci_onion_probe.py
+          sudo chmod 666 /dev/kvm
+      - name: Trace the real Hidden Space lock on Android 17
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: '37.0'
+          target: google_apis
+          arch: x86_64
+          profile: pixel_2
+          disable-animations: true
+          emulator-options: -no-window -gpu software -no-snapshot -noaudio -no-boot-anim -feature -HardwareDecoder -camera-back emulated -camera-front emulated
+          script: bash scripts/run_build95_tor_shutdown_trace.sh
+      - name: Remove disposable onion fixture
+        if: always()
+        run: python3 scripts/ci_onion_probe.py --stop
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: build95-tor-shutdown-trace
+          path: |
+            app/build/tor-shutdown-trace/
+            app/build/outputs/androidTest-results/connected/**/TEST-*.xml

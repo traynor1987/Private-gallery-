@@ -83,6 +83,7 @@ class HiddenTorIsolationService:VpnService() {
             sinkRead?.close();sinkRead=null;tun?.close();tun=null;reader?.interrupt();reader=null
             runCatching {getSystemService(ConnectivityManager::class.java).unregisterNetworkCallback(networkEvents)}
             unixPath?.let {path->val socket=File(path);socket.delete();socket.parentFile?.delete()};unixPath=null
+            HiddenTorShutdownTrace.event("processes_exited_and_socket_unlinked")
             if(instance===this@HiddenTorIsolationService)instance=null
             stopForeground(STOP_FOREGROUND_REMOVE);stopSelf()
         }}
@@ -120,3 +121,4 @@ internal class HiddenTorIsolationConnection(private val context:Context,private 
 }
 
 internal data class HiddenTorConfiguration(val unixPath:String,val relayPort:Int,val username:String,val password:String,val owner:IBinder)
+

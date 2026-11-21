@@ -301,9 +301,11 @@ internal class HiddenBrowserRuntime(
         library=null
         interactiveBroker?.close();interactiveBroker=null
         transport?.close();transport=null
+        if(mode==HiddenConnectionPolicy.Mode.TOR_ONLY)HiddenTorShutdownTrace.event("browser_requests_cancelled")
         // Retire the relay before stopping Tor. The isolation service keeps its sink
         // until both browser and Tor processes have been observed to exit.
         torIsolation?.close();torIsolation=null;torConfiguration=null
+        if(tor!=null)HiddenTorShutdownTrace.event("tor_shutdown_requested")
         tor?.close();tor=null
         tabs.toList().forEach(::closeTab)
     }
@@ -320,3 +322,4 @@ internal class HiddenBrowserRuntime(
         profile=null
     }
 }
+

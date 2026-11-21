@@ -81,7 +81,9 @@ internal class HiddenTorRelayBridge(private val protect:(Socket)->Boolean,privat
         synchronized(gate) {
             if(!closed.compareAndSet(false,true))return
             runCatching {server.close()}
+            val count=relaySockets.size
             relaySockets.forEach(::abortRelaySocket)
+            HiddenTorShutdownTrace.event("relay_sockets_closed", "count=$count")
             sockets.forEach {runCatching {it.close()}}
             relaySockets.clear()
             sockets.clear()
@@ -90,3 +92,4 @@ internal class HiddenTorRelayBridge(private val protect:(Socket)->Boolean,privat
         executor.shutdownNow()
     }
 }
+

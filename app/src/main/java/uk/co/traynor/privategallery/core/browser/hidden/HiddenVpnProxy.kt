@@ -59,6 +59,9 @@ internal class HiddenVpnProxy(
         val uri=if(connect)URI("https://${parts[1]}/") else URI(parts[1])
         require(HiddenConnectionPolicy.safeUrl(uri.toString(),mode))
         require(connect || uri.scheme=="http")
+        val fixtureCase=HiddenTorShutdownTrace.fixtureCase?.takeIf {
+            torUnixPath!=null && uri.rawPath=="/slow" && uri.rawQuery=="case=$it"
+        }
         val host=checkNotNull(uri.host)
         val port=if(uri.port<0)if(connect)443 else 80 else uri.port
         checkAllowed()
@@ -90,8 +93,8 @@ internal class HiddenVpnProxy(
                 output.write("Host: ${uri.rawAuthority}\r\nConnection: close\r\n\r\n".toByteArray(Charsets.ISO_8859_1))
             }
             output.flush();client.soTimeout=0
-            workers.execute {try {pump(input,output,torUnixPath!=null);runCatching {shutdown()}} catch(_:Exception) {runCatching {upstream.close()};runCatching {client.close()}}}
-            try {pump(upstreamInput,client.getOutputStream())}catch(failure:Exception) {
+            workers.execute {try {pump(input,output,torUnixPath!=null,fixtureCase,"to_tor");runCatching {shutdown()}} catch(_:Exception) {runCatching {upstream.close()};runCatching {client.close()}}}
+            try {pump(upstreamInput,client.getOutputStream(),fixtureCase=fixtureCase,direction="to_browser")}catch(failure:Exception) {
                 if(uk.co.traynor.privategallery.BuildConfig.DEBUG && torUnixPath!=null)runCatching {
                     android.util.Log.i("HiddenTorSocket","phase=upstream_response cause=${failure.javaClass.simpleName}")
                 }
@@ -99,12 +102,14 @@ internal class HiddenVpnProxy(
             }
         } finally {sockets.remove(upstream);runCatching {upstream.close()}}
     }
-    private fun pump(input:InputStream,output:java.io.OutputStream,requestBody:Boolean=false) {
+    private fun pump(input:InputStream,output:java.io.OutputStream,requestBody:Boolean=false,fixtureCase:String?=null,direction:String="") {
         var transferred=0L
+        var lastWriteNs=0L
         var complete=false
         val buffer=ByteArray(32*1024)
-        try {while(true) {checkAllowed();val n=input.read(buffer);if(n<0)break;checkAllowed();output.write(buffer,0,n);output.flush();transferred+=n};complete=true} finally {
+        try {while(true) {checkAllowed();val n=input.read(buffer);if(n<0)break;checkAllowed();output.write(buffer,0,n);output.flush();transferred+=n;if(fixtureCase!=null)lastWriteNs=android.os.SystemClock.elapsedRealtimeNanos()};complete=true} finally {
             buffer.fill(0)
+            if(fixtureCase!=null)HiddenTorShutdownTrace.event("proxy_flow_ended", "case=$fixtureCase direction=$direction bytes=$transferred last_write_ns=$lastWriteNs")
             if(requestBody && uk.co.traynor.privategallery.BuildConfig.DEBUG)runCatching {android.util.Log.i("HiddenTorSocket","phase=request_body bytes=$transferred complete=$complete")}
         }
     }
@@ -127,3 +132,4 @@ internal class HiddenVpnProxy(
         }
     }
 }
+

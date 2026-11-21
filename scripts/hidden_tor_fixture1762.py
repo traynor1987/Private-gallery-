@@ -87,7 +87,8 @@ def handler_class(base, root, payload):
 
                 def slow_event(kind, **details):
                     if case:
-                        details.update(case=case, at_ms=time.time_ns() // 1_000_000)
+                        details.update(case=case, at_ms=time.time_ns() // 1_000_000,
+                                       monotonic_ns=time.monotonic_ns(), peer_port=self.client_address[1])
                     self.event(kind=kind, **details)
 
                 slow_event('slow-start')
@@ -150,3 +151,4 @@ def handler_class(base, root, payload):
             pass
 
     return Handler
+
