@@ -1,42 +1,18 @@
-# NovaOS 1.7.48 (Build 94) release review
+# NovaOS 1.7.49 (Build 95) release review
 
-Source: 46b9c78c15bcbe18d129e28be8677d21c59ca838
+Source: b003dafbad69a46d7f83896738030200a0dd0df4
 Authorization: authenticated owner push
 Release scope: public stable after disposable upgrade verification
 Physical Fold acceptance: pending
-Upgrade fixture SHA-256: ff20be1dcf84324df149f3266651fec29caf0eefea23c825313bf4c0057c286e
-Upgrade controls SHA-256: f7a717ff4752b40b4c5e8773b4ca3bdf5f16c384fd04ac10c7e22912c8448a55
+Upgrade fixture SHA-256: 0fd1161956a4ae8fbd7b193e40c3574f5131b3fbe1e7bc421cf2a2610c55ebf8
+Upgrade controls SHA-256: f7c8134397aade44203932437fe67846f4ce71dea923e2eb386a7ff1a46087d4
 Runtime matrix SHA-256: b3a221684edbd0e3462614ff8dbb402fb74d257823a6e9d5b7ea658ebf6242fa
-Runtime workflow run: 44762015032
-Runtime branch: feature/novaos-guardian-fold-acceptance
-Signing workflow SHA-256: 3143b10b28eaaccbe0f743011dd025a877472aeebb2f1572131753ac47f0cd34
+Runtime workflow run: 44933923184
+Runtime branch: main
+Signing workflow SHA-256: f44463f0c6165d065471df0923d2acda7bf48a467b7cbcad554fb1b79abf08a0
 
-Guardian's Build 90 path supported eligible dismissal after encrypted
-capture without a content hold. Build 91 added a hold gate and Build 93
-only reopened the no-hold path for entirely low-risk bundles. The Build 93
-reproduction in run 44746309328 kept a three-entry original visible
-without requesting cancellation after the message was marked Uncertain.
+The Android 17 integration and Hidden Space suites passed at this source. The Hidden Space suite passed all 776 JVM tests and 134 Android cases. Live WireGuard and Tor routing passed with independent packet evidence. The Tor connection closed in 189 ms after Hidden Space locked, within the 20-second requirement. Tor remains enabled.
 
-Build 94 restores Guardian Only replacement for eligible assessed bundles
-without a content-hold requirement. Both modes use the same validated
-notification key and produce replacements after Android confirms removal.
-Smart Filtering keeps ordinary WhatsApp alerts. Eligible Guardian Only
-greetings may show a safe preview under the saved privacy settings.
-Hostile and held text stays out of the replacement notification. Existing
-encrypted evidence remains available in Guardian. The processing trace
-records counts and decisions without message text or sender identifiers.
+The previous integration attempt reached the CI runner time limit. The current source differs from the prior candidate only in the main-branch integration job time allowance. Protected-core, app storage and backup exclusion checks passed at source. The signed APK and populated Build 94 to 95 upgrade still require verification before publication.
 
-The full Android 17 run passed 344 reviewed matrix cases, 65
-focused report groups with 270 test executions,
-776 JVM tests and the original
-process-restart checks. The Guardian test includes both mode switches,
-grouped same-key updates, reposts, quiet handling, DND and screen-off
-delivery, Android-confirmed dismissal, and encrypted evidence access.
-The emulator uses a disposable synthetic WhatsApp sender. Galaxy Z Fold
-acceptance requires an owner test with the actual WhatsApp application.
-
-The signed upgrade uses published Build 93 as the baseline. The original
-production job verifies the certificate and populated upgrade and restart
-before stable publication. The existing live updater verification must
-discover, download and install Build 94 from Build 93 and confirm it is
-up to date after restart.
+The Galaxy Z Fold Guardian replacement-notification issue documented for Build 94 remains open. Physical Fold acceptance is pending.
