@@ -1,4 +1,4 @@
-"""Build95 identity and authentic Build94 upgrade contract; no signing or release claims."""
+"""Build96 identity and authentic Build95 upgrade contract; no signing or release claims."""
 from pathlib import Path
 import subprocess
 import unittest
@@ -10,7 +10,7 @@ from scripts.tests import test_code81_main_release_controls as main_controls
 ROOT = Path(__file__).resolve().parents[2]
 
 
-class Build94ReleaseControls(unittest.TestCase):
+class Build95ReleaseControls(unittest.TestCase):
     def test_guardian_job_remains_private_and_requires_android_job_binding(self):
         import xml.etree.ElementTree as ET
         manifest = ET.parse(ROOT / 'app/src/main/AndroidManifest.xml').getroot()
@@ -29,22 +29,22 @@ class Build94ReleaseControls(unittest.TestCase):
 
     def test_current_candidate_and_baseline_are_consistent_across_existing_controls(self):
         build = (ROOT / 'app/build.gradle.kts').read_text()
-        self.assertRegex(build, r'versionCode\s*=\s*95\b')
-        self.assertIn('versionName = "1.7.49"', build)
+        self.assertRegex(build, r'versionCode\s*=\s*96\b')
+        self.assertIn('versionName = "1.7.50"', build)
         configuration = (ROOT / 'scripts/release_configuration1711.sh').read_text()
-        for line in ('release_version=1.7.49', 'release_code=95',
-                     'baseline_version=1.7.48', 'baseline_code=94',
-                     'baseline_sha=46b9c78c15bcbe18d129e28be8677d21c59ca838'):
+        for line in ('release_version=1.7.50', 'release_code=96',
+                     'baseline_version=1.7.49', 'baseline_code=95',
+                     'baseline_sha=b003dafbad69a46d7f83896738030200a0dd0df4'):
             self.assertIn(line, configuration.splitlines())
-        self.assertEqual(151959239, baseline.BASELINE_SIZE)
-        self.assertEqual('165e49a35bafc1134b08116daf3fe62cfcbd7e85df4c433c50a4a0fe14351125', baseline.BASELINE_SHA256)
-        self.assertEqual('https://github.com/traynor1987/Private-gallery-/releases/download/v1.7.48/private-gallery-release.apk', baseline.BASELINE_URL)
+        self.assertEqual(152057539, baseline.BASELINE_SIZE)
+        self.assertEqual('27547f5630d5102bfd115db5fa96d598fb8d71ec4a3fc5425ce046eb1319087c', baseline.BASELINE_SHA256)
+        self.assertEqual('https://github.com/traynor1987/Private-gallery-/releases/download/v1.7.49/private-gallery-release.apk', baseline.BASELINE_URL)
         fixture = (ROOT / 'docs/release1711/UpgradeFixtureTest.kt').read_text()
-        self.assertIn('baselineCode == 94 && candidateCode == 95', fixture)
-        self.assertIn('assertEquals(95L,available.release?.versionCode)', fixture)
-        self.assertIn('original=94 candidate=95', fixture)
+        self.assertIn('baselineCode == 95 && candidateCode == 96', fixture)
+        self.assertIn('assertEquals(96L,available.release?.versionCode)', fixture)
+        self.assertIn('original=95 candidate=96', fixture)
         live = (ROOT / 'docs/build85/verify_live_build84.py').read_text()
-        for text in ("installed() == 94", "installed() != 95", "1.7.49 · Build 95 available", "1.7.49 · Up to date", 'baseline_code=94, installed_code=95'):
+        for text in ("installed() == 95", "installed() != 96", "1.7.50 · Build 96 available", "1.7.50 · Up to date", 'baseline_code=95, installed_code=96'):
             self.assertIn(text, live)
 
     def test_staging_metadata_uses_the_same_candidate_identity_as_signing(self):
