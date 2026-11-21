@@ -1,8 +1,16 @@
 package uk.co.traynor.privategallery.intelligence
 
 import androidx.activity.ComponentActivity
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.width
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
 import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
@@ -25,22 +33,24 @@ class IntelligenceLauncherUiTest {
     private val destinations = mutableListOf<IntelligenceDestination>()
     private var privateOpens = 0
 
-    private fun show(protected: Boolean = false) {
+    private fun show(protected: () -> Boolean = { false }, foldWidth: () -> Dp? = { null }) {
         compose.setContent {
-            NovaLauncherScreen(
-                NovaLauncherState(configured = true, cover = layout, inner = layout, separateDisplays = true),
-                listOf(app), emptyList(), mapOf(app.component to Decision.APPROVED), true, false,
-                LauncherUiActions(save = { true }, launchApp = {}, launchShortcut = {}, openWorkspace = {},
-                    selectHome = {}, continueWithCurrentHome = {}, emergencyPhone = {}, reviewSanctuary = {},
-                    setOutsideProtection = {}, chooseWallpaper = {}, addWidget = {}, removeWidget = {},
-                    exportLayout = {}, importLayout = {}, renderWidget = { _, _ -> }),
-                launcherProtected = protected,
-                intelligence = LauncherIntelligenceActions(
-                    openPrivate = { privateOpens++ },
-                    openDestination = { destinations += it; true },
-                    openEvidence = { false },
-                ),
-            )
+            Box(foldWidth()?.let { Modifier.width(it) } ?: Modifier) {
+                NovaLauncherScreen(
+                    NovaLauncherState(configured = true, cover = layout, inner = layout, separateDisplays = true),
+                    listOf(app), emptyList(), mapOf(app.component to Decision.APPROVED), true, false,
+                    LauncherUiActions(save = { true }, launchApp = {}, launchShortcut = {}, openWorkspace = {},
+                        selectHome = {}, continueWithCurrentHome = {}, emergencyPhone = {}, reviewSanctuary = {},
+                        setOutsideProtection = {}, chooseWallpaper = {}, addWidget = {}, removeWidget = {},
+                        exportLayout = {}, importLayout = {}, renderWidget = { _, _ -> }),
+                    launcherProtected = protected(),
+                    intelligence = LauncherIntelligenceActions(
+                        openPrivate = { privateOpens++ },
+                        openDestination = { destinations += it; true },
+                        openEvidence = { false },
+                    ),
+                )
+            }
         }
     }
 
@@ -81,7 +91,7 @@ class IntelligenceLauncherUiTest {
     }
 
     @Test fun coverSanctuaryPausesPrivateAndCloudQuestions() {
-        show(protected = true)
+        show(protected = { true })
         compose.onNodeWithContentDescription("Nova Intelligence page").performClick()
         compose.onNodeWithText("Private briefing paused during Sanctuary").assertExists()
         compose.onAllNodesWithText("Check cloud chat").assertCountEquals(0)
@@ -89,6 +99,44 @@ class IntelligenceLauncherUiTest {
         send("What is a haiku?")
         compose.onNodeWithText("Cloud questions are paused during Sanctuary.", substring = true).assertExists()
         compose.onAllNodesWithText("Send question").assertCountEquals(0)
+    }
+
+    @Test fun innerUnfoldAndRefoldKeepIntelligenceSelectedWithDock() {
+        var width by mutableStateOf(375.dp)
+        show(foldWidth = { width })
+        compose.onNodeWithContentDescription("Nova Intelligence page").performClick()
+        compose.onNodeWithTag("intelligence-cover").assertIsDisplayed()
+        compose.onNodeWithText("Ask Nova").performClick()
+        send("Open Hidden Vault")
+        compose.onNodeWithText("Open Hidden Vault").assertIsDisplayed()
+
+        compose.runOnIdle { width = 780.dp }
+        compose.onNodeWithTag("intelligence-inner").assertIsDisplayed()
+        compose.onNodeWithTag("launcher-dock-slot-0").assertIsDisplayed()
+        compose.onNodeWithText("Open Hidden Vault").assertIsDisplayed()
+
+        compose.runOnIdle { width = 375.dp }
+        compose.onNodeWithTag("intelligence-cover").assertIsDisplayed()
+        compose.onNodeWithTag("launcher-dock-slot-0").assertIsDisplayed()
+        compose.onNodeWithText("Open Hidden Vault").assertIsDisplayed()
+    }
+
+    @Test fun coverEnteringSanctuaryClearsChatAndDismissesCloudConsent() {
+        var protected by mutableStateOf(false)
+        show(protected = { protected })
+        compose.onNodeWithContentDescription("Nova Intelligence page").performClick()
+        compose.onNodeWithText("Ask Nova").performClick()
+        send("Open Hidden Vault")
+        compose.onNodeWithText("Open Hidden Vault").assertIsDisplayed()
+        send("Synthetic private question")
+        compose.onNodeWithText("Send one question to Nova Brain?").assertIsDisplayed()
+
+        compose.runOnIdle { protected = true }
+        compose.onNodeWithText("Send one question to Nova Brain?").assertDoesNotExist()
+        compose.onNodeWithText("Private briefing paused during Sanctuary").assertExists()
+        compose.onNodeWithText("Ask Nova").performClick()
+        compose.onNodeWithText("Open Hidden Vault").assertDoesNotExist()
+        compose.onNodeWithText("Synthetic private question", substring = true).assertDoesNotExist()
     }
 
     @Test fun coverCloudDisconnectedLeavesOfflineCommandsAvailable() {

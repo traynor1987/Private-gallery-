@@ -173,7 +173,7 @@ private fun LauncherRuntime(
     onHomeSurfaceVisible: (Boolean) -> Unit,
     intelligence: LauncherIntelligenceActions?,
 ) {
-    val intelligenceConversation = remember(homeGeneration) { IntelligenceConversation() }
+    val intelligenceConversation = remember(homeGeneration, launcherProtected) { IntelligenceConversation() }
     val lifecycle = LocalLifecycleOwner.current.lifecycle
     DisposableEffect(lifecycle, intelligenceConversation) {
         val observer = LifecycleEventObserver { _, event ->
@@ -186,8 +186,7 @@ private fun LauncherRuntime(
     var guardianOptions by remember(guardianContext) { mutableStateOf(GuardianHomeOptions.read(guardianContext)) }
     var coverGuardian by rememberSaveable(homeGeneration) { mutableStateOf(false) }
     var innerGuardian by rememberSaveable(homeGeneration) { mutableStateOf(false) }
-    var coverIntelligence by rememberSaveable(homeGeneration) { mutableStateOf(false) }
-    var innerIntelligence by rememberSaveable(homeGeneration) { mutableStateOf(false) }
+    var intelligenceSelectedAcrossDisplays by rememberSaveable(homeGeneration) { mutableStateOf(false) }
     var surface by rememberSaveable(homeGeneration) { mutableStateOf(LauncherSurface.HOME) }
     var guardianSettingsFromHome by rememberSaveable(homeGeneration) { mutableStateOf(false) }
     var guardianDiagnosticsReturn by rememberSaveable(homeGeneration) { mutableStateOf(LauncherSurface.HOME) }
@@ -329,10 +328,7 @@ private fun LauncherRuntime(
         fun selectGuardian(selected: Boolean) {
             if (isInner) innerGuardian = selected else coverGuardian = selected
         }
-        val intelligenceSelected = intelligence != null && if (isInner) innerIntelligence else coverIntelligence
-        fun selectIntelligence(selected: Boolean) {
-            if (isInner) innerIntelligence = selected else coverIntelligence = selected
-        }
+        val intelligenceSelected = intelligence != null && intelligenceSelectedAcrossDisplays
         val currentPage = (if (isInner) innerPage else coverPage).coerceIn(0, layout.pages.lastIndex.coerceAtLeast(0))
         val updatePage: (Int) -> Unit = { if (isInner) innerPage = it else coverPage = it }
         val libraryEntry = if (isInner) innerLibrary else coverLibrary
@@ -497,7 +493,7 @@ private fun LauncherRuntime(
                         isAppVisible = { canDisplay(it) },
                         animateDockEntrance = animateDockOnReturn,
                         intelligenceSelected = intelligenceSelected,
-                        onIntelligenceSelected = ::selectIntelligence,
+                        onIntelligenceSelected = { intelligenceSelectedAcrossDisplays = it },
                         intelligencePage = intelligence?.let { bridge ->
                             { active ->
                                 val nominated = (layout.pages.flatten() + layout.dock).flatMap { item ->

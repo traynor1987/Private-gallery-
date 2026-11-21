@@ -27,6 +27,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.repeatOnLifecycle
 import java.time.LocalDate
@@ -36,9 +37,13 @@ import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
 import java.util.UUID
 import kotlin.coroutines.cancellation.CancellationException
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.cancelChildren
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
+import kotlinx.coroutines.job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import uk.co.traynor.privategallery.core.brain.CloudTeacherException
@@ -57,6 +62,7 @@ internal class IntelligenceConversation {
     val history = mutableStateOf(emptyList<IntelligenceExchange>())
     val input = mutableStateOf("")
     val taskDate = mutableStateOf<LocalDate?>(null)
+    val showCoverChat = mutableStateOf(false)
 
     fun clear() {
         history.value = emptyList()
@@ -80,12 +86,14 @@ internal fun IntelligenceScreen(
     openEvidence: (String) -> Boolean = { false },
     onBack: (() -> Unit)? = null,
     emailProvider: IntelligenceEmailProvider = disconnectedIntelligenceEmail,
-    conversation: IntelligenceConversation = remember { IntelligenceConversation() },
+    conversation: IntelligenceConversation = remember(protectedBySanctuary) { IntelligenceConversation() },
 ) {
     GuardianTheme {
         Surface(Modifier.fillMaxSize().testTag("nova-home-intelligence"), color = GuardianNavy) {
-            if (active) IntelligenceContent(guardianVisible, protectedBySanctuary, openPrivate, openDestination,
-                workspace, apps, openApp, openEvidence, onBack, emailProvider, conversation)
+            if (active) key(protectedBySanctuary) {
+                IntelligenceContent(guardianVisible, protectedBySanctuary, openPrivate, openDestination,
+                    workspace, apps, openApp, openEvidence, onBack, emailProvider, conversation)
+            }
         }
     }
 }
@@ -133,6 +141,16 @@ private fun IntelligenceContent(
     val today = now.toLocalDate()
 
     BackHandler(enabled = onBack != null) { onBack?.invoke() }
+    DisposableEffect(lifecycle, ownerScope) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_PAUSE) {
+                confirmation = null
+                ownerScope.coroutineContext.cancelChildren()
+            }
+        }
+        lifecycle.addObserver(observer)
+        onDispose { lifecycle.removeObserver(observer) }
+    }
     LaunchedEffect(lifecycle, briefingRevision) {
         lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
             while (isActive) {
@@ -191,13 +209,14 @@ private fun IntelligenceContent(
         chat = (chat + IntelligenceExchange(question, answer, cloud)).takeLast(IntelligenceWorkspace.HISTORY_LIMIT)
     }
 
-    fun <T> runWork(error: String, work: () -> T, done: (T) -> Unit) {
-        if (busy) return
+    fun <T> runWork(error: String, work: (Job) -> T, done: (T) -> Unit) {
+        if (busy || !lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) return
         busy = true
         feedback = null
-        ownerScope.launch {
+        ownerScope.launch(start = CoroutineStart.UNDISPATCHED) {
             try {
-                val result = withContext(Dispatchers.IO) { work() }
+                val operation = coroutineContext.job
+                val result = withContext(Dispatchers.IO) { work(operation) }
                 if (lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) done(result)
             } catch (cancelled: CancellationException) {
                 throw cancelled
@@ -251,13 +270,12 @@ private fun IntelligenceContent(
         }
         confirm("Send one question to Nova Brain?", "This exact text goes to your configured VPS and OpenAI. The server’s paid-request limits apply.\n\n$question", "Send question") {
             val requestId = UUID.randomUUID().toString()
-            val job = ownerScope.coroutineContext[kotlinx.coroutines.Job]
-            runWork("Nova Brain is unavailable. Local commands are still available.", work = {
+            runWork("Nova Brain is unavailable. Local commands are still available.", work = { job ->
                 val store = NovaBrainConnectionStore(context)
                 try {
                     val configuration = store.read()
                     if (configuration == null) "Cloud is disconnected. You can configure Nova Brain in Settings or use local commands." to false
-                    else if (!intelligencePrivateAllowed(context) || job?.isActive != true ||
+                    else if (!intelligencePrivateAllowed(context) || !job.isActive ||
                         !lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) {
                         "Cloud chat is paused. Local commands are available." to false
                     } else {
@@ -474,7 +492,7 @@ private fun IntelligenceContent(
     BoxWithConstraints(Modifier.fillMaxSize().then(if (onBack != null) Modifier.safeDrawingPadding() else Modifier)
         .imePadding().padding(horizontal = 16.dp, vertical = 10.dp)) {
         val expanded = maxWidth >= (LauncherExpandedWidth - 32).dp
-        var showChat by remember { mutableStateOf(false) }
+        var showChat by chatSession.showCoverChat
         Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 if (onBack != null) IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back") }
