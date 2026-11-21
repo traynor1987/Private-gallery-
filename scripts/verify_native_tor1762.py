@@ -6,26 +6,40 @@ import sys
 import time
 from pathlib import Path
 
+try:
+    from tor_clock1762 import bounds
+except ModuleNotFoundError:
+    from scripts.tor_clock1762 import bounds
+
 
 CLOSE_WINDOW_MS = 20_000
 
 
-def close_observation(events, marker, label):
+def close_observation(events, marker, label, clock_bounds=None):
     token = marker['case']
-    trigger = marker['trigger_at_ms']
+    if clock_bounds is None:
+        earliest = latest = marker['trigger_at_ms']
+        timestamp = 'at_ms'
+        scale = 1
+    else:
+        minimum, maximum = clock_bounds
+        earliest = marker['trigger_elapsed_ns'] + minimum
+        latest = marker['trigger_elapsed_ns'] + maximum
+        timestamp = 'monotonic_ns'
+        scale = 1_000_000
     selected = [event for event in events if event.get('case') == token]
-    starts = [event['at_ms'] for event in selected if event.get('kind') == 'slow-start']
-    assert len(starts) == 1 and starts[0] <= trigger, f'{label}: request not independently open at trigger'
+    starts = [event[timestamp] for event in selected if event.get('kind') == 'slow-start']
+    assert len(starts) == 1 and starts[0] <= earliest, f'{label}: request not independently open at trigger'
     assert not any(event.get('kind') == 'slow-complete' for event in selected), f'{label}: request completed normally'
     closes = [event for event in selected if event.get('kind') == 'slow-closed']
-    timely = [event for event in closes if trigger <= event['at_ms'] <= trigger + CLOSE_WINDOW_MS]
+    timely = [event for event in closes if latest <= event[timestamp] <= earliest + CLOSE_WINDOW_MS * scale]
     assert len(timely) == 1 and timely[0].get('close_evidence') in ('peer_eof', 'connection_reset', 'broken_pipe'), (
         f'{label}: no peer closure within {CLOSE_WINDOW_MS} ms of trigger; observed={closes}'
     )
-    return timely[0]['at_ms'] - trigger
+    return (timely[0][timestamp] - earliest + scale - 1) // scale
 
 
-def verify(evidence, onion_root, *, require_production_lock=False):
+def verify(evidence, onion_root, *, require_production_lock=False, clock_directory=None):
     result=json.loads((evidence/'native-tor1762-result.json').read_text())
     assert result.get('mode')=='TOR_ONLY' and result.get('javascript') is False,'Wrong native Tor mode/settings'
     for key in ('form','multipart','download_verified','discard_v4','discard_v6','discard_dns_udp','session_revoked','tor_process_death'):
@@ -38,6 +52,8 @@ def verify(evidence, onion_root, *, require_production_lock=False):
             assert lock.get(key) is True, f'Missing production Hidden lock boundary: {key}'
         assert lock['case'].startswith('lock-') and result['case'].startswith('loss-'), 'Unexpected Tor evidence cases'
         transitions = {'Hidden session lock': lock, 'Abrupt Tor transport loss': result}
+    assert not require_production_lock or clock_directory is not None, 'Missing production Tor clock calibration'
+    clock_bounds = bounds(clock_directory, transitions.values()) if clock_directory is not None else None
 
     # This runs while the fixture is still live. Anchor the deadline to the cause,
     # since Gradle and the second test may finish well after the first request closed.
@@ -46,10 +62,15 @@ def verify(evidence, onion_root, *, require_production_lock=False):
         events = [json.loads(line) for line in (onion_root/'interactive-events.jsonl').read_text().splitlines() if line]
         closures = [event for event in events if event.get('kind') == 'slow-closed']
         if transitions:
-            now_ms = time.time_ns() // 1_000_000
-            if all(now_ms >= marker['trigger_at_ms'] + CLOSE_WINDOW_MS or
-                   any(event.get('case') == marker['case'] for event in closures)
-                   for marker in transitions.values()):
+            if clock_bounds is None:
+                now = time.time_ns() // 1_000_000
+                deadlines = [marker['trigger_at_ms'] + CLOSE_WINDOW_MS for marker in transitions.values()]
+            else:
+                now = time.monotonic_ns()
+                deadlines = [marker['trigger_elapsed_ns'] + clock_bounds[1] + CLOSE_WINDOW_MS * 1_000_000
+                             for marker in transitions.values()]
+            if all(now >= limit or any(event.get('case') == marker['case'] for event in closures)
+                   for marker, limit in zip(transitions.values(), deadlines)):
                 break
         elif closures:
             break
@@ -62,7 +83,7 @@ def verify(evidence, onion_root, *, require_production_lock=False):
         assert any(event.get('path')==path and event.get('method')=='GET' for event in events),f'Missing native Tor GET: {path}'
     assert any(event.get('path')=='/cookie-echo' and event.get('cookie_present') is True for event in events),'Tor cookies not exercised'
     assert not any(event.get('path')=='/script-must-not-run' for event in events),'Tor JavaScript unexpectedly executed'
-    delays = {label: close_observation(events, marker, label) for label, marker in transitions.items()}
+    delays = {label: close_observation(events, marker, label, clock_bounds) for label, marker in transitions.items()}
     if not transitions:
         assert any(event.get('kind')=='slow-start' for event in events),'Tor revocation not exercised in flight'
         assert any(event.get('kind')=='slow-closed' for event in events),'Tor revocation did not close upstream'
@@ -82,5 +103,6 @@ if __name__=='__main__':
     parser.add_argument('evidence', type=Path)
     parser.add_argument('onion_root', type=Path)
     parser.add_argument('--require-production-lock', action='store_true')
+    parser.add_argument('--clock-directory', type=Path)
     args = parser.parse_args()
-    print(verify(args.evidence, args.onion_root, require_production_lock=args.require_production_lock))
+    print(verify(args.evidence, args.onion_root, require_production_lock=args.require_production_lock, clock_directory=args.clock_directory))

@@ -79,18 +79,14 @@ else
 fi
 
 if [[ "${HIDDEN_SPACE_TOR_READY:-}" == true ]]; then
-    before=$(date +%s)
-    device_time=$(adb shell date +%s | tr -d '\r')
-    after=$(date +%s)
-    [[ "$device_time" =~ ^[0-9]+$ ]]
-    (( device_time >= before - 1 && device_time <= after + 1 ))
-    printf 'host_before=%s android=%s host_after=%s\n' "$before" "$device_time" "$after" > "$evidence/tor-clock.txt"
+    python3 scripts/tor_clock1762.py > "$evidence/tor-clock-before.json"
     if run_cases tor "$namespace.NativeTorIsolation1762Test" \
             "-Pandroid.testInstrumentationRunnerArguments.hiddenOnionProbeUrl=${HIDDEN_ONION_PROBE_URL:?}" \
             "-Pandroid.testInstrumentationRunnerArguments.hiddenOnionProbeExpected=${HIDDEN_ONION_PROBE_EXPECTED:?}" &&
-        copy_result native-tor1762-result.json && copy_result native-tor1762-lock.json && read_packets; then
+        copy_result native-tor1762-result.json && copy_result native-tor1762-lock.json &&
+        python3 scripts/tor_clock1762.py > "$evidence/tor-clock-after.json" && read_packets; then
         onion="$RUNNER_TEMP/private-gallery-onion-probe"
-        python3 scripts/verify_native_tor1762.py "$fixture_evidence" "$onion" --require-production-lock |
+        python3 scripts/verify_native_tor1762.py "$fixture_evidence" "$onion" --require-production-lock --clock-directory "$evidence" |
             tee "$evidence/tor-packet-result.txt" || status=1
         cp "$onion/interactive-events.jsonl" "$evidence/tor-live-server-events.jsonl"
     else
