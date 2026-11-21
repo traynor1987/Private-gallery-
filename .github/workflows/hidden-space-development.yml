@@ -7,6 +7,7 @@ on:
       - 'app/src/main/java/uk/co/traynor/privategallery/home2/HiddenSpaceDashboard.kt'
       - 'scripts/verify_sanctuary_browser_scope.py'
       - '.github/workflows/hidden-space-development.yml'
+      - '.github/workflows/fast-development.yml'
   pull_request:
     branches: [main]
     paths:
