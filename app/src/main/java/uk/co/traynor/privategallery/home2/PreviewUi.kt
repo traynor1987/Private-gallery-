@@ -454,7 +454,7 @@ private val lightColors=lightColorScheme(primary=Color(0xFF285F65),secondary=Col
          "photos"->LaunchedEffect(Unit){onNative("photos")}
          "guide"->LaunchedEffect(Unit){onNative("native-settings")}
          else->if(hidden && route=="home")(localContext as? uk.co.traynor.privategallery.core.home2.SpaceContext)?.let {
-          HiddenSpaceDashboard(it,launch,onLock,onPanic,data.onSwitch,openCoreLink)
+          HiddenSpaceDashboard(it,displayProfile.wallpaper,filesDir,launch,onLock,onPanic,data.onSwitch,openCoreLink)
          } else Home(data,displayProfile,filesDir,homePager,widgets,pool,audio,video,onWidgetEdit={selectedWidget=it},onResume=resumeTab,onLaunch=launch,onSelect={if(workspaceProjection==null)selected=it},onDrawer={drawer=true},onQuick={quick=true},onEdit={if(workspaceProjection==null)editing=true else screen="home-settings"})
         }}
        }

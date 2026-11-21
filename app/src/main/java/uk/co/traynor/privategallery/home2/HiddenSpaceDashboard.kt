@@ -7,14 +7,17 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Wallpaper
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
+import java.io.File
 import java.time.Duration
 import java.time.Instant
 import java.time.ZoneId
@@ -40,6 +43,8 @@ private val hiddenSpaceApps = listOf(
 @Composable
 internal fun HiddenSpaceDashboard(
     space: SpaceContext,
+    wallpaper: Wallpaper,
+    filesDir: File,
     onLaunch: (String) -> Unit,
     onLock: () -> Unit,
     onPanic: () -> Unit,
@@ -74,6 +79,7 @@ internal fun HiddenSpaceDashboard(
         }
     }
     Box(Modifier.fillMaxSize().testTag("preview-home")) {
+        WallpaperSurface(wallpaper, filesDir, Modifier.fillMaxSize())
         LazyVerticalGrid(
             columns = GridCells.Adaptive(132.dp),
             modifier = Modifier.fillMaxSize().statusBarsPadding().testTag("hidden-space-apps"),
@@ -84,10 +90,14 @@ internal fun HiddenSpaceDashboard(
             item(span = { GridItemSpan(maxLineSpan) }) {
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
-                        Text("Hidden Space", style = MaterialTheme.typography.headlineMedium)
-                        Text("Unlocked", color = MaterialTheme.colorScheme.primary)
+                        Text("Hidden Space", color = Color.White, style = MaterialTheme.typography.headlineMedium)
+                        Text("Unlocked", color = Color.White.copy(alpha = 0.8f))
                     }
-                    IconButton(onClick = onLock) { Icon(Icons.Default.Lock, "Lock Space") }
+                    IconButton(
+                        onClick = { onLaunch("wallpaper") },
+                        modifier = Modifier.testTag("app-wallpaper"),
+                    ) { Icon(Icons.Default.Wallpaper, "Choose wallpaper", tint = Color.White) }
+                    IconButton(onClick = onLock) { Icon(Icons.Default.Lock, "Lock Space", tint = Color.White) }
                 }
             }
             if (reminders.isNotEmpty()) item(span = { GridItemSpan(maxLineSpan) }) {
