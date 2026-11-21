@@ -24,7 +24,7 @@ class HiddenSpaceDashboardUiTest {
             compose.onNodeWithTag("hidden-space-apps").assertDoesNotExist()
             compose.runOnIdle {
                 preferences.allowScreenshots = true
-                openSyntheticDashboard(activity, state)
+                openHiddenSpaceFixtureDashboard(activity, state)
             }
             compose.waitUntil(5_000) { compose.onNodeWithTag("hidden-space-apps").isDisplayed() }
             compose.onNodeWithTag("hidden-app-nova-notes-draft").assertIsDisplayed().performClick()
@@ -55,7 +55,7 @@ class HiddenSpaceDashboardUiTest {
             compose.runOnIdle {
                 assertTrue(BrowserBetaAcknowledgement(activity).accept())
                 assertTrue(hiddenNotice.edit().remove("notice-revision").commit())
-                openSyntheticDashboard(activity, state)
+                openHiddenSpaceFixtureDashboard(activity, state)
             }
             val dashboard = compose.onNodeWithTag("hidden-space-apps")
             for ((tag, mode) in listOf(
@@ -84,19 +84,19 @@ class HiddenSpaceDashboardUiTest {
             }
         }
     }
+}
 
-    private fun openSyntheticDashboard(activity: MainActivity, state: ProtectedSessionState) {
-        state.session.lock()
-        state.key = null
-        assertTrue(state.hidden.session.complete(state.hidden.session.beginAuthentication(), ByteArray(32) { HIDDEN_HOME_TEST_KEY_BYTE }))
-        state.hidden.select(Route.VAULT)
-        state.hidden.authenticated = true
-        state.homeVisible = true
-        state.homeHiddenAuthentication = state.hidden.session.authentication()
-        state.route = Route.VAULT
-        @Suppress("UNCHECKED_CAST")
-        val route = MainActivity::class.java.getDeclaredField("route\$delegate")
-            .apply { isAccessible = true }.get(activity) as MutableState<Route>
-        route.value = Route.VAULT
-    }
+internal fun openHiddenSpaceFixtureDashboard(activity: MainActivity, state: ProtectedSessionState) {
+    state.session.lock()
+    state.key = null
+    assertTrue(state.hidden.session.complete(state.hidden.session.beginAuthentication(), ByteArray(32) { HIDDEN_HOME_TEST_KEY_BYTE }))
+    state.hidden.select(Route.VAULT)
+    state.hidden.authenticated = true
+    state.homeVisible = true
+    state.homeHiddenAuthentication = state.hidden.session.authentication()
+    state.route = Route.VAULT
+    @Suppress("UNCHECKED_CAST")
+    val route = MainActivity::class.java.getDeclaredField("route\$delegate")
+        .apply { isAccessible = true }.get(activity) as MutableState<Route>
+    route.value = Route.VAULT
 }

@@ -21,7 +21,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 import uk.co.traynor.privategallery.BuildConfig
 import uk.co.traynor.privategallery.MainActivity
 import uk.co.traynor.privategallery.ProtectedSessionState
-import uk.co.traynor.privategallery.Route
+import uk.co.traynor.privategallery.openHiddenSpaceFixtureDashboard
 import uk.co.traynor.privategallery.ui.BrowserBetaAcknowledgement
 import uk.co.traynor.privategallery.core.hidden.HiddenRepository
 import uk.co.traynor.privategallery.core.hidden.HiddenSession
@@ -166,9 +166,7 @@ class NativeTorIsolation1762Test {
                 scenario.onActivity { activity ->
                     main = activity
                     state = ViewModelProvider(activity)[ProtectedSessionState::class.java]
-                    assertTrue(state.hidden.session.complete(state.hidden.session.beginAuthentication(), ByteArray(32) { 53 }))
-                    state.hidden.select(Route.BROWSER)
-                    state.hidden.authenticated = true
+                    openHiddenSpaceFixtureDashboard(activity, state)
                 }
                 click("Tor Browser")
                 val brokerField = HiddenBrowserRuntime::class.java.getDeclaredField("interactiveBroker").apply { isAccessible = true }
