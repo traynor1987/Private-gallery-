@@ -166,7 +166,7 @@ private val lightColors=lightColorScheme(primary=Color(0xFF285F65),secondary=Col
    fun rememberCoreAppOrigin() {
     if (NovaCoreApp.entries.any { it.route == screen }) return
     coreReturnScreen = when (screen) {
-     "store", "search", "recents", "hidden-workspace", "hidden-search" -> screen
+     "store", "search", "recents", "hidden-overview", "hidden-search" -> screen
      else -> "home"
     }
     coreReturnDrawer = drawer && coreReturnScreen == "home"
@@ -184,6 +184,7 @@ private val lightColors=lightColorScheme(primary=Color(0xFF285F65),secondary=Col
      id.startsWith("resume-internal:")->{val route=id.removePrefix("resume-internal:");if(data.shell.internalRecents.any{it.first==state.current&&it.second==route}){if(route in nativeHomeApps)onNative(route)else screen=route}}
      id.startsWith("recent-tab:")->{pool.tabs.firstOrNull{it.id==id.removePrefix("recent-tab:")&&it.profile==state.current}?.let{pool.select(it);screen="home"}}
      NovaCoreApp.entries.any { it.route == id } && (!hidden || id != NovaCoreApp.FILES.route)->{screen=id}
+     id == NovaCoreApp.FILES.route && hidden -> onNative("hidden-files")
      id.startsWith("visual:") && state.current=="primary"->{
       val moduleId=id.removePrefix("visual:")
       if(visualModules.any{it.id==moduleId}){openVisual("home");visual.open(moduleId)}
@@ -199,7 +200,9 @@ private val lightColors=lightColorScheme(primary=Color(0xFF285F65),secondary=Col
       screen="home"
      }
      else->when(id){
-     "hidden-workspace"->if(hidden){screen=id}
+     "home"->screen=id
+     "hidden-overview"->if(hidden){screen=id}
+     "downloads"->onNative(id)
      "hidden-files","hidden-downloads","hidden-tor"->if(hidden)onNative(id)
      "chat"->{if(!hidden)screen="chat"}
      "widgets"->{
@@ -454,17 +457,18 @@ private val lightColors=lightColorScheme(primary=Color(0xFF285F65),secondary=Col
          "wallpaper"->LaunchedEffect(Unit){onPickImage();goHome()}
          "photos"->LaunchedEffect(Unit){onNative("photos")}
          "guide"->LaunchedEffect(Unit){onNative("native-settings")}
-         else->if(hidden && route=="home")(localContext as? uk.co.traynor.privategallery.core.home2.SpaceContext)?.let {
+         "hidden-overview"->if(hidden)(localContext as? uk.co.traynor.privategallery.core.home2.SpaceContext)?.let {
           HiddenSpaceDashboard(
            space=it, wallpaper=displayProfile.wallpaper, filesDir=filesDir, onLaunch=launch,
            onDrawer={drawer=true}, onQuick={quick=true}, onLock=onLock, onPanic=onPanic,
            onReturnToPrimary=data.onSwitch, onOpen=openCoreLink,
           )
-         } else Home(data,displayProfile,filesDir,homePager,widgets,pool,audio,video,onWidgetEdit={selectedWidget=it},onResume=resumeTab,onLaunch=launch,onSelect={if(workspaceProjection==null)selected=it},onDrawer={drawer=true},onQuick={quick=true},onEdit={if(workspaceProjection==null)editing=true else screen="home-settings"})
+         }
+         else->Home(data,displayProfile,filesDir,homePager,widgets,pool,audio,video,onWidgetEdit={selectedWidget=it},onResume=resumeTab,onLaunch=launch,onSelect={if(workspaceProjection==null)selected=it},onDrawer={drawer=true},onQuick={quick=true},onEdit={if(workspaceProjection==null)editing=true else screen="home-settings"})
         }}
        }
       }
-      if(!drawer && (!hidden || screen=="hidden-workspace"))NovaEdgeHandle(data.shell){edgePanel=true}
+      if(!drawer && (!hidden || screen=="home"))NovaEdgeHandle(data.shell){edgePanel=true}
       VideoMiniPlayer(video){if(permitSanctuaryRoute("video"))screen="video"}
      }
      if(audio.sound.isNotBlank())Surface(tonalElevation=3.dp){Row(Modifier.fillMaxWidth().padding(horizontal=16.dp),verticalAlignment=Alignment.CenterVertically){Text("Calm · ${audio.sound}",Modifier.weight(1f));IconButton(onClick={if(audio.playing)audio.pause()else audio.resume()}){Icon(if(audio.playing)Icons.Default.Pause else Icons.Default.PlayArrow,"Toggle calm sound")};TextButton(onClick={launch("mind:sounds")}){Text("Open")}}}
@@ -597,6 +601,7 @@ private val lightColors=lightColorScheme(primary=Color(0xFF285F65),secondary=Col
  // Lazy pager items can be remeasured after their enclosing Space has been retired.
  // Resolve the encrypted preference in the admitted parent, never from a retained item.
  val originalClockVisible=widgets.clockVisible(data.state.current)
+ val hidden = data.state.current == "hidden"
  BoxWithConstraints(Modifier.fillMaxSize().testTag("preview-home")){
   val compactHeight=maxHeight<500.dp
   val landscapeClock=compactHeight&&maxWidth>=600.dp
@@ -614,12 +619,12 @@ private val lightColors=lightColorScheme(primary=Color(0xFF285F65),secondary=Col
      IconButton(onClick={onLaunch("search")}){Icon(Icons.Default.Search,"Open Nova Search")}
      IconButton(onClick={onLaunch("calm")}){Icon(Icons.Default.Spa,"Calm Now")}
      IconButton(onClick=onQuick){Icon(Icons.Default.Tune,"Open Quick Panel")}
-     Box{var menu by remember{mutableStateOf(false)};IconButton(onClick={menu=true}){Icon(Icons.Default.MoreVert,"Home menu")};PanicHomeDropdownMenu(menu,{menu=false}){DropdownMenuItem(text={Text("Apps")},onClick={menu=false;onDrawer()});DropdownMenuItem(text={Text("Edit Home")},onClick={menu=false;onEdit()});DropdownMenuItem(text={Text("Widget Centre")},onClick={menu=false;onLaunch("widgets")});data.onSwitch?.takeIf{data.state.current=="hidden"}?.let{switch->DropdownMenuItem(text={Text("Return to Primary")},onClick={menu=false;switch()})}}}
+     Box{var menu by remember{mutableStateOf(false)};IconButton(onClick={menu=true}){Icon(Icons.Default.MoreVert,"Home menu")};PanicHomeDropdownMenu(menu,{menu=false}){DropdownMenuItem(text={Text("Apps")},onClick={menu=false;onDrawer()});DropdownMenuItem(text={Text("Edit Home")},onClick={menu=false;onEdit()});DropdownMenuItem(text={Text("Widget Centre")},onClick={menu=false;onLaunch("widgets")});data.onSwitch?.takeIf{data.state.current=="hidden"}?.let{switch->DropdownMenuItem(text={Text("Hidden overview")},onClick={menu=false;onLaunch("hidden-overview")});DropdownMenuItem(text={Text("Lock Space")},onClick={menu=false;onLaunch("lock-now")});DropdownMenuItem(text={Text("Panic Exit")},onClick={menu=false;onLaunch("panic")});DropdownMenuItem(text={Text("Return to Primary")},onClick={menu=false;switch()})}}}
     }
     }}
     widgets.recoveryNotice?.let{notice->Surface(color=MaterialTheme.colorScheme.secondaryContainer,contentColor=MaterialTheme.colorScheme.onSecondaryContainer){Column(Modifier.padding(12.dp)){Text(notice,style=MaterialTheme.typography.bodySmall);TextButton(onClick={widgets.dismissRecovery()}){Text("Dismiss recovery report")}}}}
     if(widgets.editingId!=null)Row(Modifier.fillMaxWidth().padding(horizontal=20.dp),verticalAlignment=Alignment.CenterVertically){Text("Edit widgets",Modifier.weight(1f),color=Color.White);TextButton(onClick={widgets.editingId=null},modifier=Modifier.testTag("widget-edit-done")){Text("Done",color=Color.White)}}
-    HorizontalPager(pager,Modifier.weight(1f).fillMaxWidth().testTag("home-pager").semantics{stateDescription="Home ${pager.currentPage+1}"},key={it}){page->
+    HorizontalPager(pager,Modifier.weight(1f).fillMaxWidth().testTag(if(hidden)"hidden-workspace-pager" else "home-pager").semantics{stateDescription="Home ${pager.currentPage+1}"},key={it}){page->
      if(space?.current()==false)return@HorizontalPager
      val content:@Composable (Modifier)->Unit={modifier->
       BoxWithConstraints(modifier){
@@ -735,4 +740,4 @@ private val lightColors=lightColorScheme(primary=Color(0xFF285F65),secondary=Col
  }
 }
 
-private val nativeHomeApps=setOf("photos","vault","camera","evidence","editor","ai-edit","collections","trash","favourites","native-settings","private-apps","browser-v1")
+private val nativeHomeApps=setOf("photos","vault","camera","evidence","editor","ai-edit","collections","trash","favourites","native-settings","private-apps","browser-v1","hidden-files","hidden-downloads","hidden-tor","downloads")

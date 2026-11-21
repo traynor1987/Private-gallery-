@@ -2062,6 +2062,8 @@ class MainActivity : FragmentActivity() {
         set(value){retained.homeHiddenAuthentication=value}
     internal val homeVaultMode:String
         get()=when(retained.homeFeatureRoot){"COLLECTIONS"->"COLLECTIONS";"RECENTLY_DELETED"->"TRASH";else->"MEDIA"}
+    internal val primaryDownloadsOpen: Boolean
+        get() = !retained.hidden.selected && retained.homeFeatureRoot == "primary-downloads"
     internal val hiddenMediaScope: uk.co.traynor.privategallery.ui.HiddenMediaScope
         get() = when (retained.homeFeatureRoot) {
             "hidden-files" -> uk.co.traynor.privategallery.ui.HiddenMediaScope.FILES
@@ -2326,7 +2328,7 @@ class MainActivity : FragmentActivity() {
         Route.FAVOURITE -> "Favourites"
         Route.BROWSER -> "Browser"
         Route.SETTINGS -> "Settings"
-        else -> retained.homeFeatureRoot?.let {name ->
+        else -> if (primaryDownloadsOpen) "Downloads" else retained.homeFeatureRoot?.let {name ->
             runCatching {uk.co.traynor.privategallery.core.home.HomeLayout.Shortcut.valueOf(name)}.getOrNull()
         }?.takeIf {uk.co.traynor.privategallery.core.home.NovaNavigation.route(it)=="VAULT"}?.label ?: "Vault"
     }
@@ -2466,12 +2468,21 @@ class MainActivity : FragmentActivity() {
     internal fun openHiddenDownloads() = launchHome2App("hidden-downloads")
 
     private fun launchHome2App(id:String) {
-        if (id == "hidden-files" || id == "hidden-downloads") {
+        if (id == "downloads" && !retained.hidden.selected) {
+            if (hideContent || !activityResumed || !session.isUnlocked || sessionKey == null) return
+            standalonePrimaryVaultChrome = false
+            retained.clearNovaNavigation()
+            retained.homeFeatureRoot = "primary-downloads"
+            homeVisible = false
+            openNonBrowser(Route.VAULT)
+            return
+        }
+        if (id == "hidden-files" || id == "hidden-downloads" || id == "downloads") {
             if (!retained.hidden.selected || !retained.hidden.authenticated ||
                 !retained.hidden.session.isUnlocked || hideContent || !activityResumed) return
             retained.clearNovaNavigation()
             homeVisible = false
-            retained.homeFeatureRoot = id
+            retained.homeFeatureRoot = if (id == "downloads") "hidden-downloads" else id
             openNonBrowser(Route.VAULT)
             retained.hidden.select(Route.VAULT)
             return
@@ -2486,7 +2497,9 @@ class MainActivity : FragmentActivity() {
             return
         }
         val item=when(id) {
-            "gallery","photos" -> uk.co.traynor.privategallery.core.home.HomeLayout.Shortcut.GALLERY
+            "gallery","photos" -> if (retained.hidden.selected) {
+                uk.co.traynor.privategallery.core.home.HomeLayout.Shortcut.VAULT
+            } else uk.co.traynor.privategallery.core.home.HomeLayout.Shortcut.GALLERY
             "vault","editor","ai-edit" -> uk.co.traynor.privategallery.core.home.HomeLayout.Shortcut.VAULT
             "camera" -> uk.co.traynor.privategallery.core.home.HomeLayout.Shortcut.CAMERA
             "evidence" -> uk.co.traynor.privategallery.core.home.HomeLayout.Shortcut.EVIDENCE_LOCKER
@@ -5531,6 +5544,10 @@ internal fun VaultHome(
 ) {
     val cameraActivity = androidx.activity.compose.LocalActivity.current as? MainActivity
     val cameraAction = onCamera ?: { cameraActivity?.openVaultCamera() }
+    val downloadsOnly = cameraActivity?.primaryDownloadsOpen == true
+    fun scopedItems(items: List<VaultItem>): List<VaultItem> = if (downloadsOnly) {
+        items.filter { it.sourceUri == uk.co.traynor.privategallery.core.vault.PRIMARY_BROWSER_DOWNLOAD_SOURCE }
+    } else items
     var pendingHiddenMove by remember { mutableStateOf<Pair<List<String>, Boolean>?>(null) }
     var transferCompleted by remember { mutableStateOf(0) }
     var transferTotal by remember { mutableStateOf(0) }
@@ -5573,14 +5590,14 @@ internal fun VaultHome(
     var managingCollection by remember { mutableStateOf<VaultCollection?>(null) }
     var choosingCover by remember(editingVaultLabel) { mutableStateOf<VaultCollection?>(null) }
     var coverItems by remember(editingVaultLabel) { mutableStateOf<List<VaultItem>>(emptyList()) }
-    val restoredCollectionId=remember(editingVaultLabel){cameraActivity?.novaCollectionPosition()}
+    val restoredCollectionId=remember(editingVaultLabel){if (downloadsOnly) null else cameraActivity?.novaCollectionPosition()}
     var restoringPosition by remember(editingVaultLabel){mutableStateOf(restoredCollectionId!=null)}
     var collectionsLoaded by remember{mutableStateOf(false)}
     var openCollection by remember { mutableStateOf<VaultCollection?>(null) }
     LaunchedEffect(collectionsLoaded,collections) {
         if(restoringPosition && collectionsLoaded){openCollection=collections.firstOrNull{it.id==restoredCollectionId};restoringPosition=false}
     }
-    SideEffect{if(!restoringPosition)cameraActivity?.rememberNovaCollectionPosition(openCollection?.id)}
+    SideEffect{if(!downloadsOnly && !restoringPosition)cameraActivity?.rememberNovaCollectionPosition(openCollection?.id)}
     var openCollectionItems by remember { mutableStateOf<List<VaultItem>>(emptyList()) }
     androidx.activity.compose.BackHandler(openCollection!=null || selectionMode) {
         if(selectionMode){selectionMode=false;selectedItemIds=emptySet()}else {openCollection=null;openCollectionItems=emptyList()}
@@ -5600,14 +5617,14 @@ internal fun VaultHome(
             status = "Importing selected media…"
             onImport(uris) {
                 status = it
-                onLoadItems { updated -> vaultItems = updated; loaded = true; refreshRevision++ }
+                onLoadItems { updated -> vaultItems = scopedItems(updated); loaded = true; refreshRevision++ }
             }
         }
     }
     val requestImport = onRequestImport ?: { picker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageAndVideo)) }
     fun refresh() {
         refreshRevision++
-        onLoadItems { items -> vaultItems = items; loaded = true }
+        onLoadItems { items -> vaultItems = scopedItems(items); loaded = true }
         onLoadCollections { collections = it;collectionsLoaded=true }
         onLoadRecentlyDeleted { recentlyDeleted = it }
     }
@@ -5625,7 +5642,7 @@ internal fun VaultHome(
         MediaHeader(
             title = openCollection?.name ?: if (contentMode == VaultContentMode.TRASH) "Recently Deleted" else vaultTitle,
             subtitle = (statusLabel?.let { "$it · " } ?: "") + if (contentMode == VaultContentMode.TRASH) "${recentlyDeleted.size} encrypted items" else if (openCollection == null) VaultSummary.from(vaultItems).let { "${it.photos} photos · ${it.videos} videos" } else "${openCollectionItems.size} items",
-            onAdd = { requestImport() },
+            onAdd = if(downloadsOnly) null else { { requestImport() } },
             onBack = when { contentMode == VaultContentMode.TRASH && cameraActivity?.homeVaultMode=="TRASH" -> ({ cameraActivity.returnPrivateHome() }); contentMode == VaultContentMode.TRASH -> ({ contentMode = VaultContentMode.MEDIA }); openCollection != null -> ({ openCollection = null }); else -> null },
             onLock = if(cameraActivity==null)onLock else null,
             showTitle = openCollection!=null || cameraActivity==null,
@@ -5633,8 +5650,8 @@ internal fun VaultHome(
             onSort=::chooseSort,
             onSearch = if (openCollection == null && contentMode == VaultContentMode.MEDIA && vaultItems.isNotEmpty()) ({ searchExpanded = !searchExpanded }) else null,
             searchActive = query.isNotBlank(),
-            onMenu = { menuOpen = true },
-            onGenerate = if (allowGeneration && openCollection == null) ({ creatingImage = true }) else null,
+            onMenu = if(downloadsOnly) null else { { menuOpen = true } },
+            onGenerate = if (!downloadsOnly && allowGeneration && openCollection == null) ({ creatingImage = true }) else null,
         )
         if (menuOpen) GalleryMenuSheet(vaultTitle, onDismiss = { menuOpen = false }) {
             SheetSection("Add and organise")
@@ -5660,7 +5677,7 @@ internal fun VaultHome(
             if (allowBiometrics && !biometricEnabled) SheetAction("Enable biometric unlock", Icons.Default.Fingerprint) { menuOpen = false; onEnrollBiometrics() }
             SheetAction("Lock Vault", Icons.Default.Lock) { menuOpen = false; onLock() }
         }
-        if (openCollection == null && contentMode != VaultContentMode.TRASH && cameraActivity?.homeVaultMode!="COLLECTIONS") {
+        if (!downloadsOnly && openCollection == null && contentMode != VaultContentMode.TRASH && cameraActivity?.homeVaultMode!="COLLECTIONS") {
             androidx.compose.material3.TabRow(selectedTabIndex = if (contentMode == VaultContentMode.MEDIA) 0 else 1) {
                 androidx.compose.material3.Tab(selected = contentMode == VaultContentMode.MEDIA, onClick = { contentMode = VaultContentMode.MEDIA }, text = { Text("Media") })
                 androidx.compose.material3.Tab(selected = contentMode == VaultContentMode.COLLECTIONS, onClick = { contentMode = VaultContentMode.COLLECTIONS; selectedItemIds = emptySet(); selectionMode = false }, text = { Text("Collections") })
@@ -5732,7 +5749,9 @@ internal fun VaultHome(
                 }
                 VaultMediaGrid(displayedItems, onLoadPreview, cropRevision, selectedItemIds, onSelection = { id -> selectionMode = true; selectedItemIds = selectedItemIds.toggle(id) }, onOpenViewer = onOpenViewer, modifier = Modifier.weight(1f), selectionMode = selectionMode, thumbnailMinSize = density.minSize, onDragSelection = { selectionMode = true; selectedItemIds = it })
             }
-            else -> GalleryEmptyState("Your vault is empty",
+            else -> if (downloadsOnly) GalleryEmptyState(
+                "No downloads yet", "New browser downloads are stored in your encrypted Primary Vault.", Icons.Default.Download
+            ) else GalleryEmptyState("Your vault is empty",
                 emptyDescription, Icons.Default.Lock, actionLabel = importLabel, onAction = requestImport)
         }
         if (status.isNotBlank()) GalleryFeedback(status)

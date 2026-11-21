@@ -1349,7 +1349,7 @@ private fun browserV2DownloadSource(
                 override fun close() {try {super.close()} finally {releaseDownload()}}
             }
         } catch(failure:Throwable) {releaseDownload();throw failure}
-    },isCancelled=cancelled,onConsumed=consumed)
+    },sourceReference=uk.co.traynor.privategallery.core.vault.PRIMARY_BROWSER_DOWNLOAD_SOURCE,isCancelled=cancelled,onConsumed=consumed)
 }
 
 /** Uses only WebView's exposed hit-test resource, never a guessed original or premium variant. */

@@ -3,7 +3,7 @@ set -euo pipefail
 [[ "${GITHUB_ACTIONS:-}" == true && ( "${GITHUB_REF:-}" == refs/heads/release/1.7.6.2-ui-browser-polish || "${GITHUB_REF:-}" == refs/heads/release/1.7.7-recently-deleted || "${GITHUB_REF:-}" == refs/heads/release/1.7.8-private-apps || "${GITHUB_REF:-}" == refs/heads/release/1.7.9-evidence-locker || "${GITHUB_REF:-}" == refs/heads/release/1.7.10-private-home ||
   ( "${GITHUB_REPOSITORY:-}" == traynor1987/Private-gallery- && "${GITHUB_EVENT_NAME:-}" == push &&
     "${GITHUB_WORKFLOW:-}" == "Hidden Space Android 17" && "${GITHUB_REF:-}" == refs/heads/main ) ||
-  ( "${GITHUB_EVENT_NAME:-}" == pull_request && "${GITHUB_HEAD_REF:-}" == feature/novaos-hidden-space-apps && "${GITHUB_BASE_REF:-}" == main ) ) ]]
+  ( "${GITHUB_EVENT_NAME:-}" == pull_request && ( "${GITHUB_HEAD_REF:-}" == feature/novaos-hidden-space-apps || "${GITHUB_HEAD_REF:-}" == feature/novaos-hidden-workspace-ux ) && "${GITHUB_BASE_REF:-}" == main ) ) ]]
 # Dedicated disposable runner only. No production VPN configuration or signing credentials.
 umask 077
 fixture_root="$RUNNER_TEMP/private-gallery-vpn1762"

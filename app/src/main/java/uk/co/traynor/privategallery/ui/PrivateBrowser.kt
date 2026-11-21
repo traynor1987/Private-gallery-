@@ -268,7 +268,7 @@ internal fun BrowserHome(
                             CookieManager.getInstance().getCookie(url)?.let { setRequestProperty("Cookie", it) }
                             require(BrowserDownloadPolicy.acceptsResponse(url, responseCode)) { "Download response was rejected" }
                         }.inputStream
-                    }, sourceReference = null)
+                    }, sourceReference = uk.co.traynor.privategallery.core.vault.PRIMARY_BROWSER_DOWNLOAD_SOURCE)
                 }
     }
     callbacks.onImageLongPress = { hit, value ->

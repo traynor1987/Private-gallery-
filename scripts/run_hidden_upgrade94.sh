@@ -5,15 +5,15 @@ if [[ "${GITHUB_EVENT_NAME:-}" == push ]]; then
     [[ "${GITHUB_REPOSITORY:-}" == traynor1987/Private-gallery- &&
         "${GITHUB_WORKFLOW:-}" == "Hidden Space Android 17" && "${GITHUB_REF:-}" == refs/heads/main ]]
 else
-    [[ "${GITHUB_EVENT_NAME:-}" == pull_request && "${GITHUB_HEAD_REF:-}" == feature/novaos-hidden-space-apps &&
+    [[ "${GITHUB_EVENT_NAME:-}" == pull_request && ( "${GITHUB_HEAD_REF:-}" == feature/novaos-hidden-space-apps || "${GITHUB_HEAD_REF:-}" == feature/novaos-hidden-workspace-ux ) &&
         "${GITHUB_BASE_REF:-}" == main ]]
 fi
 [[ "$(adb shell getprop ro.kernel.qemu | tr -d '\r')" == 1 ]]
 [[ "$(adb shell getprop ro.build.version.sdk | tr -d '\r')" == 37 ]]
-baseline=46b9c78c15bcbe18d129e28be8677d21c59ca838
+baseline=b003dafbad69a46d7f83896738030200a0dd0df4
 git merge-base --is-ancestor "$baseline" HEAD
 root=$PWD
-baseline_dir="$RUNNER_TEMP/hidden-space-build94"
+baseline_dir="$RUNNER_TEMP/hidden-space-build95"
 reports="$root/app/build/hidden-space/upgrade"
 mkdir -p "$reports"
 git worktree add --detach "$baseline_dir" "$baseline"

@@ -36,11 +36,11 @@ private val hiddenSpaceApps = listOf(
     LaunchApp(NovaCoreApp.NOTES.route, "Notes", "edit"),
     LaunchApp(NovaCoreApp.TASKS.route, "Tasks", "tasks"),
     LaunchApp(NovaCoreApp.CALENDAR.route, "Calendar", "calendar"),
-    LaunchApp("hidden-files", "Files", "folder"),
+    LaunchApp(NovaCoreApp.FILES.route, "Files", "folder"),
     LaunchApp(NovaCoreApp.CLIPBOARD.route, "Clipboard", "clipboard"),
     LaunchApp("vault", "Gallery", "photos"),
     LaunchApp("camera", "Camera", "camera"),
-    LaunchApp("hidden-downloads", "Downloads", "download"),
+    LaunchApp("downloads", "Downloads", "download"),
     LaunchApp("hidden-tor", "Tor Browser", "browser"),
 )
 
@@ -166,7 +166,7 @@ internal fun HiddenSpaceDashboard(
             item(span = { GridItemSpan(maxLineSpan) }) {
                 NovaCoreAppActions {
                     TextButton(onClick = { onLaunch("hidden-search") }) { Text("Search Hidden Space") }
-                    TextButton(onClick = { onLaunch("hidden-workspace") }) { Text("Workspace") }
+                    TextButton(onClick = { onLaunch("home") }) { Text("Back to workspace") }
                 }
             }
         }
