@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.ContextWrapper
 import androidx.test.platform.app.InstrumentationRegistry
 import java.io.File
+import java.security.KeyStore
 import java.util.UUID
 import org.junit.Assert.*
 import org.junit.Test
@@ -12,6 +13,7 @@ import uk.co.traynor.privategallery.home2.NovaNotesLibrary
 import uk.co.traynor.privategallery.home2.NovaReminders
 import uk.co.traynor.privategallery.home2.NovaTask
 import uk.co.traynor.privategallery.core.evidence.EvidenceAccess
+import uk.co.traynor.privategallery.core.hidden.HiddenCredentialStore
 import uk.co.traynor.privategallery.core.hidden.HiddenSession
 
 class SpacePreferencesTest {
@@ -158,7 +160,6 @@ class SpacePreferencesTest {
    val primary = f.space.getSharedPreferences("layout", 0)
    primary.edit().putString("private", "primary").apply()
    assertEquals("hidden", hidden.spaceId)
-   assertTrue(runCatching { NovaCoreAppDocuments(hidden, NovaCoreApp.NOTES) }.isFailure)
    assertFalse(hidden.getSharedPreferences("layout", 0).contains("private"))
    val original = File(f.primary.root, "home2").listFiles()!!.single { it.extension == "enc" }
    hidden.getSharedPreferences("layout", 0).edit().putString("private", "hidden").apply()
@@ -170,7 +171,64 @@ class SpacePreferencesTest {
    try { primary.edit().clear().commit(); fail("Corrupt preferences overwritten") } catch (_: Exception) {}
    assertArrayEquals(corrupt, original.readBytes())
   } finally { hidden.close(); hiddenAccess.close() }
+  verifyHiddenNotesAuthentication(f)
  }
+
+ private fun verifyHiddenNotesAuthentication(f: Fixture) {
+  val namespace = "notes-${UUID.randomUUID()}"
+  val credentials = HiddenCredentialStore(f.context, namespace)
+  val pin = "728491"
+  var clock = 0L
+  val session = HiddenSession { clock }
+  val primaryNotes = NovaNotesLibrary(f.space)
+  val primaryNote = NovaNote("same-id", "Primary example", "Primary notes fixture")
+  val hiddenNote = NovaNote("same-id", "Hidden example", "Hidden notes fixture")
+  try {
+   credentials.create(pin.toCharArray()).fill(0)
+   refused { EvidenceAccess.hidden(f.context, session) { true }.close() }
+   assertNull(credentials.unlockForComparison("123456".toCharArray()))
+   assertFalse(session.isUnlocked)
+   assertTrue(session.complete(session.beginAuthentication(), credentials.unlock(pin.toCharArray())))
+
+   EvidenceAccess.hidden(f.context, session) { true }.use { access ->
+    SpaceContext(f.context, access).use { hidden ->
+     val notes = NovaNotesLibrary(hidden)
+     val hiddenBefore = notes.read()
+     assertTrue(hiddenBefore.notes.isEmpty())
+     val saved = checkNotNull(notes.save(hiddenBefore, listOf(hiddenNote)))
+     assertEquals(listOf(hiddenNote), notes.read().notes)
+     assertTrue("Primary cannot see the Hidden note", primaryNotes.read().notes.isEmpty())
+     assertNotNull(primaryNotes.save(primaryNotes.read(), listOf(primaryNote)))
+     assertEquals(listOf(hiddenNote), notes.read().notes)
+     val hiddenFiles = access.root.walkTopDown().filter { it.isFile }.toList()
+     assertTrue(hiddenFiles.any { it.extension == "enc" })
+     assertFalse(hiddenFiles.any { it.readBytes().toString(Charsets.ISO_8859_1).contains(hiddenNote.body) })
+
+     session.onBackgroundAt(30_000L, clock)
+     clock = 30_001L
+     session.onForeground()
+     assertFalse(session.isUnlocked)
+     assertFalse(hidden.current())
+     refused { notes.read() }
+     refused { notes.save(saved, listOf(hiddenNote.copy(body = "expired write"))) }
+     assertEquals(listOf(primaryNote), primaryNotes.read().notes)
+
+     assertTrue(session.complete(session.beginAuthentication(), credentials.unlock(pin.toCharArray())))
+     refused { notes.read() }
+     EvidenceAccess.hidden(f.context, session) { true }.use { reopened ->
+      SpaceContext(f.context, reopened).use { fresh ->
+       assertEquals(listOf(hiddenNote), NovaNotesLibrary(fresh).read().notes)
+      }
+     }
+    }
+   }
+  } finally {
+   session.lock()
+   val alias = "${f.context.packageName}.hidden.v1.$namespace"
+   KeyStore.getInstance("AndroidKeyStore").apply { load(null); deleteEntry(alias) }
+  }
+ }
+
  @Test fun stale_handles_and_editors_never_reactivate_after_unlock_and_wrapper_close() = Fixture().use { f ->
   val prefs = f.space.getSharedPreferences("layout", 0)
   prefs.edit().putString("value", "saved").apply()

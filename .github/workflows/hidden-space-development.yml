@@ -6,6 +6,9 @@ on:
       - 'app/build.gradle.kts'
       - 'app/src/main/java/uk/co/traynor/privategallery/home2/HiddenSpaceDashboard.kt'
       - 'scripts/verify_sanctuary_browser_scope.py'
+      - 'scripts/*hidden*fixture1762.sh'
+      - 'scripts/run_hidden_*.sh'
+      - 'app/src/androidTest/java/uk/co/traynor/privategallery/core/home2/SpacePreferencesTest.kt'
       - '.github/workflows/hidden-space-development.yml'
       - '.github/workflows/fast-development.yml'
   pull_request:

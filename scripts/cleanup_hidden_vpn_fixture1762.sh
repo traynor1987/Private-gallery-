@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 set -u
 [[ "${GITHUB_ACTIONS:-}" == true && ( "${GITHUB_REF:-}" == refs/heads/release/1.7.6.2-ui-browser-polish || "${GITHUB_REF:-}" == refs/heads/release/1.7.7-recently-deleted || "${GITHUB_REF:-}" == refs/heads/release/1.7.8-private-apps || "${GITHUB_REF:-}" == refs/heads/release/1.7.9-evidence-locker || "${GITHUB_REF:-}" == refs/heads/release/1.7.10-private-home ||
+  ( "${GITHUB_REPOSITORY:-}" == traynor1987/Private-gallery- && "${GITHUB_EVENT_NAME:-}" == push &&
+    "${GITHUB_WORKFLOW:-}" == "Hidden Space Android 17" && "${GITHUB_REF:-}" == refs/heads/main ) ||
   ( "${GITHUB_EVENT_NAME:-}" == pull_request && "${GITHUB_HEAD_REF:-}" == feature/novaos-hidden-space-apps && "${GITHUB_BASE_REF:-}" == main ) ) ]] || exit 1
 fixture_root="$RUNNER_TEMP/private-gallery-vpn1762"
 evidence="$GITHUB_WORKSPACE/app/build/hidden-vpn1762"

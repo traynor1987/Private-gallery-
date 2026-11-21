@@ -15,6 +15,7 @@ classes+=",$package.core.hidden.HiddenRepositoryTest,$package.core.hidden.Hidden
 classes+=",$package.core.browser.v2.PrivateAppBrowserSeparationTest,$package.core.camera.VaultCaptureAccessTest"
 classes+=",$package.core.camera.CameraProcessRecoveryTest,$package.core.backup.BackupRuntimeTest,$package.core.backup.BackupAppsRoundtrip62Test"
 classes+=",$package.core.browser.v2.SanctuaryBrowserGateTest,$package.core.sanctuary.SanctuaryLauncherPolicy70Test"
+classes+=",$package.core.home2.SpacePreferencesTest"
 cover_status=0
 ./gradlew :app:connectedDebugAndroidTest "-Pandroid.testInstrumentationRunnerArguments.class=$classes" --stacktrace || cover_status=$?
 if [[ -d app/build/outputs/androidTest-results/connected ]]; then

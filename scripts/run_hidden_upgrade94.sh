@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
+[[ "${GITHUB_ACTIONS:-}" == true ]]
 if [[ "${GITHUB_EVENT_NAME:-}" == push ]]; then
-    [[ "${GITHUB_REPOSITORY:-}" == traynor1987/Private-gallery- && "${GITHUB_REF:-}" == refs/heads/main ]]
+    [[ "${GITHUB_REPOSITORY:-}" == traynor1987/Private-gallery- &&
+        "${GITHUB_WORKFLOW:-}" == "Hidden Space Android 17" && "${GITHUB_REF:-}" == refs/heads/main ]]
 else
     [[ "${GITHUB_EVENT_NAME:-}" == pull_request && "${GITHUB_HEAD_REF:-}" == feature/novaos-hidden-space-apps &&
         "${GITHUB_BASE_REF:-}" == main ]]
