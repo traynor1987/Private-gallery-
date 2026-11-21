@@ -1,5 +1,10 @@
 name: Hidden Space Android 17
 on:
+  push:
+    branches: [main]
+    paths:
+      - 'app/build.gradle.kts'
+      - '.github/workflows/hidden-space-development.yml'
   pull_request:
     branches: [main]
     paths:
@@ -10,19 +15,19 @@ permissions:
   contents: read
 
 concurrency:
-  group: hidden-space-${{ github.event.pull_request.number }}
+  group: hidden-space-${{ github.event.pull_request.number || github.sha }}
   cancel-in-progress: true
 
 jobs:
   android17:
-    if: github.head_ref == 'feature/novaos-hidden-space-apps' && github.event.pull_request.head.repo.full_name == github.repository
+    if: github.event_name == 'push' || (github.head_ref == 'feature/novaos-hidden-space-apps' && github.event.pull_request.head.repo.full_name == github.repository)
     runs-on: ubuntu-24.04
     timeout-minutes: 65
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          ref: ${{ github.event.pull_request.head.sha }}
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
       - uses: actions/setup-java@v5
         with: { distribution: temurin, java-version: '17' }
       - name: Restore existing Gradle dependency cache

@@ -19,10 +19,10 @@ ASSETS = {"private-gallery-release.apk", "private-gallery-release.apk.sha256",
           "private-gallery-release.metadata.json"}
 PRODUCTION_STEPS = {
     "Validate original runtime reports and authenticated owner authorization before signer access",
-    "Verify published Build 93 baseline before signer access",
+    "Verify published Build 94 baseline before signer access",
     "Verify the existing permanent private key and original certificate",
     "Verify frozen candidate package signature OCR distribution and 16KiB alignment",
-    "Original-key Build 93 to versionCode 94 upgrade and restart without uninstall or clear",
+    "Original-key Build 94 to versionCode 95 upgrade and restart without uninstall or clear",
     "Preserve verified upgrade receipts only", "Stage and verify stable update assets",
     "Retain verified publication inputs",
 }
@@ -95,7 +95,7 @@ def check_local_receipts(candidate, assets, receipts):
             "Signed APK differs from the immutable candidate")
     upgrade = receipts / "from80"
     require(read(upgrade / "upgrade-baseline-sha256.txt").split()[0] == candidate["baseline_sha256"],
-            "Upgrade used a different Build 93 baseline")
+            "Upgrade used a different Build 94 baseline")
     require(read(upgrade / "upgrade-candidate-sha256.txt").split()[0] == candidate["apk_sha256"],
             "Upgrade tested a different candidate")
     rehearsal=json.loads(read(upgrade / "in-app-update.json"))

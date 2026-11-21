@@ -1,6 +1,11 @@
 #!/usr/bin/env bash
 set -euo pipefail
-[[ ${GITHUB_EVENT_NAME:-} == pull_request && ${GITHUB_HEAD_REF:-} == feature/novaos-hidden-space-apps ]]
+if [[ "${GITHUB_EVENT_NAME:-}" == push ]]; then
+    [[ "${GITHUB_REPOSITORY:-}" == traynor1987/Private-gallery- && "${GITHUB_REF:-}" == refs/heads/main ]]
+else
+    [[ "${GITHUB_EVENT_NAME:-}" == pull_request && "${GITHUB_HEAD_REF:-}" == feature/novaos-hidden-space-apps &&
+        "${GITHUB_BASE_REF:-}" == main ]]
+fi
 [[ "$(adb shell getprop ro.kernel.qemu | tr -d '\r')" == 1 ]]
 [[ "$(adb shell getprop ro.build.version.sdk | tr -d '\r')" == 37 ]]
 baseline=46b9c78c15bcbe18d129e28be8677d21c59ca838

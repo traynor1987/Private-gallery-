@@ -1,8 +1,12 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-[[ "${GITHUB_ACTIONS:-}" == true && "${GITHUB_EVENT_NAME:-}" == pull_request &&
-    "${GITHUB_HEAD_REF:-}" == feature/novaos-hidden-space-apps && "${GITHUB_BASE_REF:-}" == main ]]
+if [[ "${GITHUB_EVENT_NAME:-}" == push ]]; then
+    [[ "${GITHUB_REPOSITORY:-}" == traynor1987/Private-gallery- && "${GITHUB_REF:-}" == refs/heads/main ]]
+else
+    [[ "${GITHUB_EVENT_NAME:-}" == pull_request && "${GITHUB_HEAD_REF:-}" == feature/novaos-hidden-space-apps &&
+        "${GITHUB_BASE_REF:-}" == main ]]
+fi
 [[ "$(adb shell getprop ro.kernel.qemu | tr -d '\r')" == 1 ]]
 evidence=app/build/hidden-space/routes
 fixture_evidence=app/build/hidden-vpn1762

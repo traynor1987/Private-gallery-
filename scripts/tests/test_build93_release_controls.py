@@ -1,4 +1,4 @@
-"""Build94 identity and authentic Build93 upgrade contract; no signing or release claims."""
+"""Build95 identity and authentic Build94 upgrade contract; no signing or release claims."""
 from pathlib import Path
 import subprocess
 import unittest
@@ -29,22 +29,22 @@ class Build94ReleaseControls(unittest.TestCase):
 
     def test_current_candidate_and_baseline_are_consistent_across_existing_controls(self):
         build = (ROOT / 'app/build.gradle.kts').read_text()
-        self.assertRegex(build, r'versionCode\s*=\s*94\b')
-        self.assertIn('versionName = "1.7.48"', build)
+        self.assertRegex(build, r'versionCode\s*=\s*95\b')
+        self.assertIn('versionName = "1.7.49"', build)
         configuration = (ROOT / 'scripts/release_configuration1711.sh').read_text()
-        for line in ('release_version=1.7.48', 'release_code=94',
-                     'baseline_version=1.7.47', 'baseline_code=93',
-                     'baseline_sha=39e29649ce961b251a9783e09731814f6e0ab30c'):
+        for line in ('release_version=1.7.49', 'release_code=95',
+                     'baseline_version=1.7.48', 'baseline_code=94',
+                     'baseline_sha=46b9c78c15bcbe18d129e28be8677d21c59ca838'):
             self.assertIn(line, configuration.splitlines())
-        self.assertEqual(151942855, baseline.BASELINE_SIZE)
-        self.assertEqual('f56876d35fe174bcb7c85981e26401e3d3c97a48b94b8b2c605c7698f8d693b6', baseline.BASELINE_SHA256)
-        self.assertEqual('https://github.com/traynor1987/Private-gallery-/releases/download/v1.7.47/private-gallery-release.apk', baseline.BASELINE_URL)
+        self.assertEqual(151959239, baseline.BASELINE_SIZE)
+        self.assertEqual('165e49a35bafc1134b08116daf3fe62cfcbd7e85df4c433c50a4a0fe14351125', baseline.BASELINE_SHA256)
+        self.assertEqual('https://github.com/traynor1987/Private-gallery-/releases/download/v1.7.48/private-gallery-release.apk', baseline.BASELINE_URL)
         fixture = (ROOT / 'docs/release1711/UpgradeFixtureTest.kt').read_text()
-        self.assertIn('baselineCode == 93 && candidateCode == 94', fixture)
-        self.assertIn('assertEquals(94L,available.release?.versionCode)', fixture)
-        self.assertIn('original=93 candidate=94', fixture)
+        self.assertIn('baselineCode == 94 && candidateCode == 95', fixture)
+        self.assertIn('assertEquals(95L,available.release?.versionCode)', fixture)
+        self.assertIn('original=94 candidate=95', fixture)
         live = (ROOT / 'docs/build85/verify_live_build84.py').read_text()
-        for text in ("installed() == 93", "installed() != 94", "1.7.48 · Build 94 available", "1.7.48 · Up to date", 'baseline_code=93, installed_code=94'):
+        for text in ("installed() == 94", "installed() != 95", "1.7.49 · Build 95 available", "1.7.49 · Up to date", 'baseline_code=94, installed_code=95'):
             self.assertIn(text, live)
 
     def test_staging_metadata_uses_the_same_candidate_identity_as_signing(self):
