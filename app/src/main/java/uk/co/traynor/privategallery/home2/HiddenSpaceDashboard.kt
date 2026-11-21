@@ -6,7 +6,11 @@ import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Apps
 import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.Wallpaper
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -46,12 +50,15 @@ internal fun HiddenSpaceDashboard(
     wallpaper: Wallpaper,
     filesDir: File,
     onLaunch: (String) -> Unit,
+    onDrawer: () -> Unit,
+    onQuick: () -> Unit,
     onLock: () -> Unit,
     onPanic: () -> Unit,
     onReturnToPrimary: (() -> Unit)?,
     onOpen: (NovaCoreLink) -> Unit,
 ) {
     val haptics = LocalHapticFeedback.current
+    var menuOpen by remember(space) { mutableStateOf(false) }
     var reminders by remember(space) { mutableStateOf<List<Pair<String, NovaCoreLink.Record>>>(emptyList()) }
     LaunchedEffect(space) {
         while (space.current()) {
@@ -98,6 +105,34 @@ internal fun HiddenSpaceDashboard(
                         modifier = Modifier.testTag("app-wallpaper"),
                     ) { Icon(Icons.Default.Wallpaper, "Choose wallpaper", tint = Color.White) }
                     IconButton(onClick = onLock) { Icon(Icons.Default.Lock, "Lock Space", tint = Color.White) }
+                    Box {
+                        IconButton(onClick = { menuOpen = true }) {
+                            Icon(Icons.Default.MoreVert, "Home menu", tint = Color.White)
+                        }
+                        PanicHomeDropdownMenu(menuOpen, { menuOpen = false }) {
+                            onReturnToPrimary?.let { returnToPrimary ->
+                                DropdownMenuItem(text = { Text("Return to Primary") }, onClick = {
+                                    menuOpen = false
+                                    returnToPrimary()
+                                })
+                            }
+                            DropdownMenuItem(text = { Text("Panic Exit") }, onClick = {
+                                menuOpen = false
+                                onPanic()
+                            })
+                        }
+                    }
+                }
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    IconButton(onClick = onDrawer, modifier = Modifier.testTag("open-apps")) {
+                        Icon(Icons.Default.Apps, "Open apps", tint = Color.White)
+                    }
+                    IconButton(onClick = { onLaunch("search") }) {
+                        Icon(Icons.Default.Search, "Open Nova Search", tint = Color.White)
+                    }
+                    IconButton(onClick = onQuick) {
+                        Icon(Icons.Default.Tune, "Open Quick Panel", tint = Color.White)
+                    }
                 }
             }
             if (reminders.isNotEmpty()) item(span = { GridItemSpan(maxLineSpan) }) {
@@ -130,10 +165,8 @@ internal fun HiddenSpaceDashboard(
             }
             item(span = { GridItemSpan(maxLineSpan) }) {
                 NovaCoreAppActions {
-                    TextButton(onClick = { onLaunch("search") }) { Text("Search Hidden Space") }
+                    TextButton(onClick = { onLaunch("hidden-search") }) { Text("Search Hidden Space") }
                     TextButton(onClick = { onLaunch("hidden-workspace") }) { Text("Workspace") }
-                    onReturnToPrimary?.let { TextButton(onClick = it) { Text("Return to Primary") } }
-                    TextButton(onClick = onPanic) { Text("Panic Exit") }
                 }
             }
         }

@@ -206,7 +206,8 @@ private val lightColors=lightColorScheme(primary=Color(0xFF285F65),secondary=Col
       widgetPage=homePager.currentPage.coerceIn(0,minOf(displayProfile.pages.lastIndex,profile.pages.lastIndex))
       screen="widgets"
      }
-     "search"->{screen=if(hidden)"hidden-search"else id}
+     "search"->{screen=id}
+     "hidden-search"->if(hidden){screen=id}
      "video"->{onNative("photos")}
      "backup"->{screen="backup"}
      "nova-calculator"->{screen="nova-calculator"}
@@ -340,7 +341,7 @@ private val lightColors=lightColorScheme(primary=Color(0xFF285F65),secondary=Col
          "hidden-search"->if(hidden) (localContext as? uk.co.traynor.privategallery.core.home2.SpaceContext)?.let {
           HiddenSpaceSearch(it, goHome, openCoreLink)
          }
-         "search"->NovaSearch(data,widgets,pool,searchHistory,onBack=goHome,onResult=launch,onWeb={query->if(permitSanctuaryRoute("browser-v1")){val tab=pool.open(standaloneBrowser,state.current);pool.setBrowserMode(tab,true);pool.navigate(tab,"https://www.google.com/search?q="+java.net.URLEncoder.encode(query,"UTF-8"));screen="home"}})
+         "search"->NovaSearch(data,widgets,pool,searchHistory,onBack=goHome,onResult=launch,onWeb={query->if(!hidden && permitSanctuaryRoute("browser-v1")){val tab=pool.open(standaloneBrowser,state.current);pool.setBrowserMode(tab,true);pool.navigate(tab,"https://www.google.com/search?q="+java.net.URLEncoder.encode(query,"UTF-8"));screen="home"}})
          "video"->VideoScreen(video,goHome)
          "backup"->LaunchedEffect(Unit){onBackup();goHome()}
          "nova-calculator"->CalculatorScreen(screen==route,onHome=goHome)
@@ -454,7 +455,11 @@ private val lightColors=lightColorScheme(primary=Color(0xFF285F65),secondary=Col
          "photos"->LaunchedEffect(Unit){onNative("photos")}
          "guide"->LaunchedEffect(Unit){onNative("native-settings")}
          else->if(hidden && route=="home")(localContext as? uk.co.traynor.privategallery.core.home2.SpaceContext)?.let {
-          HiddenSpaceDashboard(it,displayProfile.wallpaper,filesDir,launch,onLock,onPanic,data.onSwitch,openCoreLink)
+          HiddenSpaceDashboard(
+           space=it, wallpaper=displayProfile.wallpaper, filesDir=filesDir, onLaunch=launch,
+           onDrawer={drawer=true}, onQuick={quick=true}, onLock=onLock, onPanic=onPanic,
+           onReturnToPrimary=data.onSwitch, onOpen=openCoreLink,
+          )
          } else Home(data,displayProfile,filesDir,homePager,widgets,pool,audio,video,onWidgetEdit={selectedWidget=it},onResume=resumeTab,onLaunch=launch,onSelect={if(workspaceProjection==null)selected=it},onDrawer={drawer=true},onQuick={quick=true},onEdit={if(workspaceProjection==null)editing=true else screen="home-settings"})
         }}
        }
