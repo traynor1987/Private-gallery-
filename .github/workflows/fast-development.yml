@@ -26,6 +26,7 @@ name: Private Gallery fast development
     - '*.gradle.kts'
     - gradle.properties
     - .github/workflows/fast-development.yml
+    - .github/workflows/hidden-space-development.yml
   pull_request:
     paths:
     - app/**
