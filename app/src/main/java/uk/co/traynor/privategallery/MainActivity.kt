@@ -5546,7 +5546,7 @@ internal fun VaultHome(
     val cameraAction = onCamera ?: { cameraActivity?.openVaultCamera() }
     val downloadsOnly = cameraActivity?.primaryDownloadsOpen == true
     fun scopedItems(items: List<VaultItem>): List<VaultItem> = if (downloadsOnly) {
-        items.filter { it.sourceUri == uk.co.traynor.privategallery.core.vault.PRIMARY_BROWSER_DOWNLOAD_SOURCE }
+        items.filter { it.sourceUri == uk.co.traynor.privategallery.ui.PRIMARY_BROWSER_DOWNLOAD_SOURCE }
     } else items
     var pendingHiddenMove by remember { mutableStateOf<Pair<List<String>, Boolean>?>(null) }
     var transferCompleted by remember { mutableStateOf(0) }

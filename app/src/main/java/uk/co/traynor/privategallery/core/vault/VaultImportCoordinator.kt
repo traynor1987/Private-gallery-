@@ -3,8 +3,6 @@ package uk.co.traynor.privategallery.core.vault
 import java.io.InputStream
 import java.io.IOException
 
-internal const val PRIMARY_BROWSER_DOWNLOAD_SOURCE = "primary-browser-download-v1"
-
 /**
  * Shared acquisition boundary for device imports, Browser downloads and Browser screenshots.
  * Implementations stream directly into encrypted staging; no caller receives a public plaintext

@@ -268,7 +268,7 @@ internal fun BrowserHome(
                             CookieManager.getInstance().getCookie(url)?.let { setRequestProperty("Cookie", it) }
                             require(BrowserDownloadPolicy.acceptsResponse(url, responseCode)) { "Download response was rejected" }
                         }.inputStream
-                    }, sourceReference = uk.co.traynor.privategallery.core.vault.PRIMARY_BROWSER_DOWNLOAD_SOURCE)
+                    }, sourceReference = PRIMARY_BROWSER_DOWNLOAD_SOURCE)
                 }
     }
     callbacks.onImageLongPress = { hit, value ->
@@ -1049,4 +1049,5 @@ private fun secureBrowserWebView(context: android.content.Context, callbacks: Br
         }
     }
 
+internal const val PRIMARY_BROWSER_DOWNLOAD_SOURCE = "primary-browser-download-v1"
 private const val BROWSER_LOG_TAG = "PrivateGalleryBrowser"
