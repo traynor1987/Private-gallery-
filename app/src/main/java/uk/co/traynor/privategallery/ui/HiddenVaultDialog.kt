@@ -34,6 +34,21 @@ private class HiddenViewerSelection(val first:List<ViewerMediaEntry>,initialInde
     var second by mutableIntStateOf(initialIndex)
 }
 
+internal enum class HiddenMediaScope(val title: String) {
+    GALLERY("Hidden Space"),
+    FILES("Hidden Files"),
+    DOWNLOADS("Hidden Downloads");
+
+    fun includes(item: VaultItem): Boolean = when (this) {
+        GALLERY -> true
+        FILES -> uk.co.traynor.privategallery.core.vault.VaultDocumentPolicy.isDocument(item.mimeType)
+        DOWNLOADS -> item.sourceUri == HiddenRepository.BROWSER_DOWNLOAD_SOURCE ||
+            (item.origin == uk.co.traynor.privategallery.core.vault.MediaOrigin.IMPORTED &&
+                item.sourceUri == null &&
+                (item.displayName == "Hidden download" || item.displayName.startsWith("Hidden download.")))
+    }
+}
+
 @Composable
 internal fun HiddenVaultDialog(
     storageContext:Context=LocalContext.current.applicationContext,
@@ -42,6 +57,7 @@ internal fun HiddenVaultDialog(
     externalSession:HiddenSession?=null,
     showEntry:Boolean=true,
     initialDestination:Route=Route.VAULT,
+    mediaScope: HiddenMediaScope = HiddenMediaScope.GALLERY,
     onScopedDestinationChanged:(Route)->Unit={},
     onAuthenticationChanged:(Boolean)->Unit={},
     onNavigateOutside:(AppNavigationDestination)->Unit={},
@@ -73,16 +89,24 @@ internal fun HiddenVaultDialog(
         pickerActive.set(false);pickerChanged(false)
         if(alive.get())pending=uris
     }
+    val documentPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        pickerActive.set(false)
+        pickerChanged(false)
+        if (alive.get()) pending = listOfNotNull(uri)
+    }
     HiddenFoundationDialog(storageContext=storageContext,keepEntryOnStop=pickerActive::get,entryVisible=primaryAvailable,
         externalSession=externalSession,showEntry=showEntry,onAuthenticationChanged={authenticated ->
             if(!authenticated) {viewerState.value=null;requireReopen=false;failedViewerEntries.value=emptySet()}
             onAuthenticationChanged(authenticated)
         },
         unlockedContent={session,close,lockForPicker ->
-            HiddenVaultContent(storageContext,session,pending,initialDestination,viewerState,requireReopen,{requireReopen=false},failedViewerEntries,createPrimaryCopy,onBrowseDeviceGallery,onReturnToPrimary,onImportsConsumed={pending=emptyList()},onClose=close,onLock=lockForPicker,onScopedDestinationChanged=onScopedDestinationChanged,onNavigateOutside=onNavigateOutside,onPick={
+            HiddenVaultContent(storageContext,session,pending,initialDestination,mediaScope,viewerState,requireReopen,{requireReopen=false},failedViewerEntries,createPrimaryCopy,onBrowseDeviceGallery,onReturnToPrimary,onImportsConsumed={pending=emptyList()},onClose=close,onLock=lockForPicker,onScopedDestinationChanged=onScopedDestinationChanged,onNavigateOutside=onNavigateOutside,onPick={
                 // The picker lives above authenticated content so its result survives session revocation.
                 pickerActive.set(true);pickerChanged(true);lockForPicker()
-                try {picker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageAndVideo))}
+                try {
+                    if (mediaScope == HiddenMediaScope.FILES) documentPicker.launch(arrayOf("application/pdf", "text/plain", "text/csv"))
+                    else picker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageAndVideo))
+                }
                 catch(_:Exception) {pickerActive.set(false);pickerChanged(false)}
             })
         },onDismiss=onDismiss)
@@ -90,7 +114,7 @@ internal fun HiddenVaultDialog(
 
 @Composable
 private fun HiddenVaultContent(
-    context:Context,session:HiddenSession,pending:List<Uri>,initialDestination:Route,viewerState:MutableState<HiddenViewerSelection?>,requireReopen:Boolean,onReopened:()->Unit,failedViewerEntries:MutableState<Set<String>>,createPrimaryCopy:((HiddenSession)->uk.co.traynor.privategallery.core.hidden.PrimaryCopyAccess?)?,onBrowseDeviceGallery:(()->Unit)?,onReturnToPrimary:(()->Unit)?,onImportsConsumed:()->Unit,onClose:()->Unit,onLock:()->Unit,onScopedDestinationChanged:(Route)->Unit,onNavigateOutside:(AppNavigationDestination)->Unit,onPick:()->Unit,
+    context:Context,session:HiddenSession,pending:List<Uri>,initialDestination:Route,mediaScope:HiddenMediaScope,viewerState:MutableState<HiddenViewerSelection?>,requireReopen:Boolean,onReopened:()->Unit,failedViewerEntries:MutableState<Set<String>>,createPrimaryCopy:((HiddenSession)->uk.co.traynor.privategallery.core.hidden.PrimaryCopyAccess?)?,onBrowseDeviceGallery:(()->Unit)?,onReturnToPrimary:(()->Unit)?,onImportsConsumed:()->Unit,onClose:()->Unit,onLock:()->Unit,onScopedDestinationChanged:(Route)->Unit,onNavigateOutside:(AppNavigationDestination)->Unit,onPick:()->Unit,
 ) {
     val cameraActivity=androidx.activity.compose.LocalActivity.current as? uk.co.traynor.privategallery.MainActivity
     val repository=remember(context,session) {runCatching {HiddenRepository(context,session)}.getOrNull()}
@@ -201,14 +225,14 @@ private fun HiddenVaultContent(
                             }) {padding ->
                             key(route) {VaultHome(
                                 onLock={viewer=null;onLock()},onImport={_,done ->done("Use Add media to choose Hidden imports.")},
-                                onLoadItems={done ->request({repository.items()}) {result ->result.onSuccess {items ->done(if(route==Route.FAVOURITE)items.filter {it.id in favouriteIds} else items)}}},
+                                onLoadItems={done ->request({repository.items()}) {result ->result.onSuccess {items ->done(if(route==Route.FAVOURITE)items.filter {it.id in favouriteIds && mediaScope.includes(it)} else items.filter(mediaScope::includes))}}},
                                 onLoadCollections={done ->request({repository.collections()}) {it.onSuccess(done)}},
                                 onCreateCollection={name,done ->request({repository.createCollection(name)}) {result ->done(result);if(result.isSuccess){revision++;refreshFavourite()}}},
                                 onAddItemsToCollection={id,ids,done ->change({repository.addItemsToCollection(id,ids)},done)},
                                 onRemoveItemsFromCollection={id,ids,done ->change({repository.removeItemsFromCollection(id,ids)},done)},
                                 onRenameCollection={id,name,done ->change({repository.renameCollection(id,name)},done)},
                                 onDeleteCollection={id,done ->change({repository.deleteCollection(id)},done)},
-                                onLoadCollectionItems={id,done ->request({repository.itemsInCollection(id)}) {it.onSuccess(done)}},
+                                onLoadCollectionItems={id,done ->request({repository.itemsInCollection(id).filter(mediaScope::includes)}) {it.onSuccess(done)}},
                                 onLoadPreview={item,done ->presentationRequest({repository.preview(item.id)},done)},
                                 cropRevision=revision+favouriteIds.hashCode()+previewEpoch.toInt(),biometricEnabled=false,onEnrollBiometrics={},
                                 onSetFavouriteCollection={id,done ->change({repository.setFavouriteCollection(id)},done)},
@@ -220,7 +244,7 @@ private fun HiddenVaultContent(
                                     onReopened() // An explicit fresh selection must not inherit an old preview's latch.
                                     failedViewerEntries.value=emptySet();viewer=HiddenViewerSelection(entries,index)
                                 },modifier=Modifier.padding(padding),
-                                onLoadRecentlyDeleted={done ->presentationRequest({repository.deleteExpiredRecentlyDeleted();repository.recentlyDeleted()}) {it.onSuccess(done)}},
+                                onLoadRecentlyDeleted={done ->presentationRequest({repository.deleteExpiredRecentlyDeleted();repository.recentlyDeleted().filter(mediaScope::includes)}) {it.onSuccess(done)}},
                                 onLoadTrashPreview={item,done ->presentationRequest({repository.preview(item.id,true)},done)},
                                 onLoadTrashRetention={done ->request({repository.retentionDays()}) {it.onSuccess(done)}},
                                 onSaveTrashRetention={days,done ->change({repository.retentionDays(days);repository.deleteExpiredRecentlyDeleted()},done)},
@@ -229,7 +253,7 @@ private fun HiddenVaultContent(
                                 }) {result ->done(result.fold({"$it/${items.size} items ${if(delete)"permanently deleted" else "restored to Hidden Space"}."},{"Hidden update failed; retained records preserved."}));revision++;refreshFavourite()}},
                                 onMoveItemsToRecentlyDeleted={ids,done ->change({repository.trash(ids)},done)},
                                 onChangeRecentlyDeleted={item,delete,done ->change({if(delete)repository.deletePermanently(item.id) else repository.restore(item.id)},done)},
-                                vaultTitle=if(route==Route.FAVOURITE)favouriteName ?: "Favourite" else "Hidden Space",
+                                vaultTitle=if(route==Route.FAVOURITE)favouriteName ?: "Favourite" else mediaScope.title,
                                 statusLabel=if(BuildConfig.DEBUG) "Hidden · TEST ONLY" else "Hidden · v${BuildConfig.VERSION_NAME}",
                                 allowGeneration=true,allowBiometrics=false,allowRestore=false,
                                 onGenerateImage=::generate,editingVaultLabel="Hidden Space",
@@ -238,7 +262,21 @@ private fun HiddenVaultContent(
                                 onRecoverCamera={cameraActivity?.recoverVaultCamera(session)},
                                 onLoadSort={done->request({uk.co.traynor.privategallery.core.ui.MediaSort.decode(repository.presentationSort())}) {it.onSuccess(done)}},
                                 onSaveSort={value->request({repository.presentationSort(value.name)}) { }},
-                                onRequestImport={ (onBrowseDeviceGallery ?: onPick).invoke() },
+                                importLabel=when(mediaScope) {
+                                    HiddenMediaScope.GALLERY -> "Add media"
+                                    HiddenMediaScope.FILES -> "Import document"
+                                    HiddenMediaScope.DOWNLOADS -> null
+                                },
+                                emptyDescription=when(mediaScope) {
+                                    HiddenMediaScope.GALLERY -> "Photos and videos you add here are stored privately and encrypted on this device."
+                                    HiddenMediaScope.FILES -> "Import a PDF, text or CSV document into encrypted Hidden storage."
+                                    HiddenMediaScope.DOWNLOADS -> "Files saved by Hidden Browser appear here."
+                                },
+                                onRequestImport=when(mediaScope) {
+                                    HiddenMediaScope.GALLERY -> ({ (onBrowseDeviceGallery ?: onPick).invoke() })
+                                    HiddenMediaScope.FILES -> onPick
+                                    HiddenMediaScope.DOWNLOADS -> null
+                                },
                                 onReturnToPrimary=onReturnToPrimary?.let { action -> { viewer=null; primaryCopy?.close(); session.revokeOperations(); action() } },
                                 onRestoreFromHidden={ids ->
                                     restoreRequest?.first?.close()

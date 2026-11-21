@@ -38,6 +38,7 @@ internal fun NovaTasksScreen(
     onOpenLink: ((NovaCoreLink) -> Unit)? = null,
 ) {
     val scope = rememberCoroutineScope()
+    val hidden = space.spaceId == "hidden"
     var store by remember(space) { mutableStateOf<NovaTaskLibrary?>(null) }
     var snapshot by remember(space) { mutableStateOf<NovaTaskLibrary.Snapshot?>(null) }
     var editor by remember(space) { mutableStateOf<TaskEditor?>(null) }
@@ -57,7 +58,7 @@ internal fun NovaTasksScreen(
             runCatching { NovaTaskLibrary(space).let { it to it.read() } }
         }
         val reminderError = withContext(Dispatchers.IO) {
-            result.getOrNull()?.second?.let { runCatching { NovaReminders.syncTasks(space, it.tasks) }.isFailure } ?: false
+            result.getOrNull()?.second?.let { !hidden && runCatching { NovaReminders.syncTasks(space, it.tasks) }.isFailure } ?: false
         }
         if (!space.current()) return@LaunchedEffect
         result.onSuccess { (opened, saved) ->
@@ -81,7 +82,7 @@ internal fun NovaTasksScreen(
         scope.launch {
             val result = withContext(Dispatchers.IO) { runCatching {
                 library.save(previous, tasks)?.let { saved ->
-                    saved to runCatching { NovaReminders.syncTasks(space, saved.tasks) }.isSuccess
+                    saved to (hidden || runCatching { NovaReminders.syncTasks(space, saved.tasks) }.isSuccess)
                 }
             } }
             if (!space.current()) return@launch
@@ -242,7 +243,10 @@ internal fun NovaTasksScreen(
                     modifier = Modifier.fillMaxWidth(), label = { Text("Reminder time (HH:MM, optional)") },
                     supportingText = { if (invalidReminder) Text("Enter a valid time and set a due date.") },
                     isError = invalidReminder, singleLine = true, enabled = !loading)
-                if (reminder != null) NovaReminderPermission(space, !loading)
+                if (reminder != null) {
+                    if (hidden) Text("Due reminders appear in Hidden Space.")
+                    else NovaReminderPermission(space, !loading)
+                }
                 OutlinedTextField(task.tags, { editor = current.copy(task = task.copy(tags = it.take(200))) },
                     modifier = Modifier.fillMaxWidth(), label = { Text("Tags") }, singleLine = true, enabled = !loading)
                 Row(Modifier.horizontalScroll(rememberScrollState())) {

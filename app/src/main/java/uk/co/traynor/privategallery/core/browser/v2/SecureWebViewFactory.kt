@@ -18,6 +18,15 @@ import android.webkit.WebView.HitTestResult
 import android.webkit.ConsoleMessage
 import android.webkit.GeolocationPermissions
 
+/** Defaults shared by NovaOS Browser V1's Primary and protected Hidden renderers. */
+@Suppress("DEPRECATION")
+internal fun WebSettings.applyV1SafetyDefaults() {
+    databaseEnabled = false
+    allowFileAccessFromFileURLs = false
+    allowUniversalAccessFromFileURLs = false
+    mediaPlaybackRequiresUserGesture = true
+}
+
 /**
  * The only constructor for V2 tab WebViews. Known ad hosts receive an empty local response;
  * all other resources stay inside WebView's network stack. No JavaScript bridge is exposed.
@@ -46,17 +55,14 @@ class SecureWebViewFactory(
             domStorageEnabled = configuration.domStorage
             // IndexedDB and service workers use the WebView profile; there is no app-created
             // database or bridge involved here.
-            databaseEnabled = false
+            applyV1SafetyDefaults()
             allowFileAccess = configuration.fileAccess
             allowContentAccess = configuration.contentAccess
-            allowFileAccessFromFileURLs = false
-            allowUniversalAccessFromFileURLs = false
             mixedContentMode = if (configuration.mixedContent) WebSettings.MIXED_CONTENT_COMPATIBILITY_MODE else WebSettings.MIXED_CONTENT_NEVER_ALLOW
             useWideViewPort = configuration.responsiveViewport
             loadWithOverviewMode = false
             javaScriptCanOpenWindowsAutomatically = configuration.multipleWindows
             setSupportMultipleWindows(configuration.multipleWindows)
-            mediaPlaybackRequiresUserGesture = true
             userAgentString = BrowserSecurityPolicy.userAgent(if (desktopSite) BrowserUserAgentMode.DESKTOP else BrowserUserAgentMode.MOBILE, WebSettings.getDefaultUserAgent(context))
             if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) safeBrowsingEnabled = true
         }

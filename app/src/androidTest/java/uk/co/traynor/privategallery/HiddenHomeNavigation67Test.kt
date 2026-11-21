@@ -11,6 +11,9 @@ import org.junit.Test
 import uk.co.traynor.privategallery.core.security.AutoLockTimeout
 import uk.co.traynor.privategallery.ui.HiddenPreferences
 
+// The two dashboard scenarios run against the same disposable, encrypted Hidden profile.
+internal const val HIDDEN_HOME_TEST_KEY_BYTE: Byte = 12
+
 class HiddenHomeNavigation67Test {
     @get:Rule val compose = createAndroidComposeRule<MainActivity>()
     private val owner get() = ViewModelProvider(compose.activity)[ProtectedSessionState::class.java]
@@ -26,7 +29,7 @@ class HiddenHomeNavigation67Test {
                 state.session.lock()
                 state.key = null
                 val hidden = state.hidden
-                assertTrue(hidden.session.complete(hidden.session.beginAuthentication(), ByteArray(32) { 12 }))
+                assertTrue(hidden.session.complete(hidden.session.beginAuthentication(), ByteArray(32) { HIDDEN_HOME_TEST_KEY_BYTE }))
                 hidden.select(Route.VAULT)
                 hidden.authenticated = true
                 state.homeVisible = false
@@ -38,7 +41,18 @@ class HiddenHomeNavigation67Test {
                 route.value = Route.VAULT
             }
             compose.onNodeWithTag("nova-home").assertIsDisplayed().performClick()
-            compose.onNodeWithTag("preview-home").assertIsDisplayed()
+            try {
+                compose.waitUntil(5_000) { compose.onNodeWithTag("hidden-space-apps").isDisplayed() }
+            } catch (failure: ComposeTimeoutException) {
+                val state = compose.runOnIdle {
+                    "selected=${owner.hidden.selected}, authenticated=${owner.hidden.authenticated}, " +
+                        "unlocked=${owner.hidden.session.isUnlocked}, homeVisible=${owner.homeVisible}, " +
+                        "cover=${compose.activity.privacyCoverVisible()}, windowFocus=${compose.activity.window.decorView.hasWindowFocus()}"
+                }
+                val tree = compose.onRoot(useUnmergedTree = true).printToString(maxDepth = 5)
+                throw AssertionError("Vault did not return to the Hidden dashboard. $state" + System.lineSeparator() + tree, failure)
+            }
+            compose.onNodeWithTag("hidden-space-apps").assertIsDisplayed()
             compose.activityRule.scenario.moveToState(Lifecycle.State.CREATED)
             compose.activityRule.scenario.moveToState(Lifecycle.State.RESUMED)
             // RESUMED can arrive before the window regains focus and draws uncovered content.
@@ -46,9 +60,9 @@ class HiddenHomeNavigation67Test {
                 val foreground = compose.runOnIdle {
                     compose.activity.window.decorView.hasWindowFocus() && !compose.activity.privacyCoverVisible()
                 }
-                foreground && compose.onNodeWithTag("preview-home").isDisplayed()
+                foreground && compose.onNodeWithTag("hidden-space-apps").isDisplayed()
             }
-            compose.onNodeWithTag("preview-home").assertIsDisplayed()
+            compose.onNodeWithTag("hidden-space-apps").assertIsDisplayed()
             compose.runOnIdle {
                 assertTrue(owner.hidden.selected && owner.hidden.session.isUnlocked)
                 assertFalse(owner.session.isUnlocked)

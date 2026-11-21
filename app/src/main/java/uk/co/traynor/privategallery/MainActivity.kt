@@ -1502,7 +1502,7 @@ class MainActivity : FragmentActivity() {
         pendingHiddenDownloads=null
         if(isDestroyed || hideContent || route!=Route.BROWSER || owner.generation!=hiddenPresentationGeneration || !retained.hidden.selected || retained.hidden.destination!=Route.BROWSER ||
             !retained.hidden.session.isAuthenticationCurrent(owner.hidden))return
-        retained.homeFeatureRoot=null;homeVisible=false
+        retained.homeFeatureRoot="hidden-downloads";homeVisible=false
         retained.hidden.select(Route.VAULT)
         openNonBrowser(Route.VAULT)
     }
@@ -2045,8 +2045,9 @@ class MainActivity : FragmentActivity() {
         resumePrivateAppProfileClear()
     }
 
-    // Home2 exposes only offline Hidden features; no browser or remote-analysis authority is granted.
-    internal val hiddenHomeNetworkingAvailable:Boolean get()=false
+    internal val hiddenHomeNetworkingAvailable: Boolean
+        get() = uk.co.traynor.privategallery.core.browser.hidden.HiddenVpnActivationGate.INTERACTIVE_VERIFIED ||
+            uk.co.traynor.privategallery.core.browser.hidden.HiddenVpnActivationGate.TOR_NATIVE_VERIFIED
     private var homeVisible:Boolean
         get()=retained.homeVisible
         set(value){retained.homeVisible=value}
@@ -2061,6 +2062,12 @@ class MainActivity : FragmentActivity() {
         set(value){retained.homeHiddenAuthentication=value}
     internal val homeVaultMode:String
         get()=when(retained.homeFeatureRoot){"COLLECTIONS"->"COLLECTIONS";"RECENTLY_DELETED"->"TRASH";else->"MEDIA"}
+    internal val hiddenMediaScope: uk.co.traynor.privategallery.ui.HiddenMediaScope
+        get() = when (retained.homeFeatureRoot) {
+            "hidden-files" -> uk.co.traynor.privategallery.ui.HiddenMediaScope.FILES
+            "hidden-downloads" -> uk.co.traynor.privategallery.ui.HiddenMediaScope.DOWNLOADS
+            else -> uk.co.traynor.privategallery.ui.HiddenMediaScope.GALLERY
+        }
     internal var homePrivateAppsRequested by mutableStateOf(false)
     /** Presentation-only launch intent: no renderer or networking authority is granted here. */
     private class PendingNovaPrivateApp(val app:uk.co.traynor.privategallery.core.privateapps.PrivateAppCatalog.App,
@@ -2199,11 +2206,6 @@ class MainActivity : FragmentActivity() {
         val hidden=retained.hidden.selected
         if(!uk.co.traynor.privategallery.core.home.NovaNavigation.available(item,hidden)||hideContent||!activityResumed||(if(hidden)!retained.hidden.session.isUnlocked else !session.isUnlocked||sessionKey==null))return
         standalonePrimaryVaultChrome = false
-        if(hidden && item in setOf(uk.co.traynor.privategallery.core.home.HomeLayout.Shortcut.BROWSER,
-                uk.co.traynor.privategallery.core.home.HomeLayout.Shortcut.TOR_BROWSER,
-                uk.co.traynor.privategallery.core.home.HomeLayout.Shortcut.PRIVATE_APPS)) {
-            homeNotice("Networking is unavailable in Hidden Space.");return
-        }
         retained.clearNovaNavigation()
         homeVisible=false;retained.homeFeatureRoot=item.name
         when(item) {
@@ -2461,7 +2463,19 @@ class MainActivity : FragmentActivity() {
     }
 
     private fun homeNotice(message:String) = android.widget.Toast.makeText(this,message,android.widget.Toast.LENGTH_SHORT).show()
+    internal fun openHiddenDownloads() = launchHome2App("hidden-downloads")
+
     private fun launchHome2App(id:String) {
+        if (id == "hidden-files" || id == "hidden-downloads") {
+            if (!retained.hidden.selected || !retained.hidden.authenticated ||
+                !retained.hidden.session.isUnlocked || hideContent || !activityResumed) return
+            retained.clearNovaNavigation()
+            homeVisible = false
+            retained.homeFeatureRoot = id
+            openNonBrowser(Route.VAULT)
+            retained.hidden.select(Route.VAULT)
+            return
+        }
         if(id=="close-browser") {
             if(!primarySessionRetainedForNova())return
             novaPrimaryBrowserClosed=true
@@ -2481,6 +2495,7 @@ class MainActivity : FragmentActivity() {
             "favourites","favorites" -> uk.co.traynor.privategallery.core.home.HomeLayout.Shortcut.FAVOURITES
             "native-settings","settings" -> uk.co.traynor.privategallery.core.home.HomeLayout.Shortcut.SETTINGS
             "private-apps" -> uk.co.traynor.privategallery.core.home.HomeLayout.Shortcut.PRIVATE_APPS
+            "hidden-tor" -> uk.co.traynor.privategallery.core.home.HomeLayout.Shortcut.TOR_BROWSER
             "browser-v1","browser" -> uk.co.traynor.privategallery.core.home.HomeLayout.Shortcut.BROWSER
             else -> {homeNotice("This app is unavailable.");return}
         }
@@ -2570,7 +2585,7 @@ class MainActivity : FragmentActivity() {
                         {admitted()&&phoneTransferGeneration==epoch},{checkNotNull(sessionKey).copyOf()},phoneTransferGate)
                 }
             },
-            routeFactory={access->if(access.owner==uk.co.traynor.privategallery.core.evidence.EvidenceCatalog.Owner.HIDDEN && !hiddenHomeNetworkingAvailable)
+            routeFactory={access->if(access.owner==uk.co.traynor.privategallery.core.evidence.EvidenceCatalog.Owner.HIDDEN)
                 object:uk.co.traynor.privategallery.core.evidence.EvidenceRouteConnection {
                     override suspend fun connect(mode:String):uk.co.traynor.privategallery.core.evidence.EvidenceRoute =
                         error("Networking is unavailable in Hidden Space. Offline evidence tools remain available.")
@@ -2589,7 +2604,7 @@ class MainActivity : FragmentActivity() {
     }
     private suspend fun prepareEvidenceVpn(access:uk.co.traynor.privategallery.core.evidence.EvidenceAccess) {
         check(android.os.Looper.myLooper()===android.os.Looper.getMainLooper());access.checkCurrent()
-        check(access.owner!=uk.co.traynor.privategallery.core.evidence.EvidenceCatalog.Owner.HIDDEN || hiddenHomeNetworkingAvailable){"Networking is unavailable in Hidden Space."}
+        check(access.owner!=uk.co.traynor.privategallery.core.evidence.EvidenceCatalog.Owner.HIDDEN){"Networking is unavailable in Hidden Space."}
         check(android.net.VpnService.prepare(this)==null){"Android VPN permission is required"}
         browserVpnDisconnectJob?.cancel()
         if(hiddenOwnedVpnNetwork()!=null)return
@@ -2837,7 +2852,12 @@ class MainActivity : FragmentActivity() {
 
     private fun openBrowser() {
         if (retained.hidden.selected) {
-            homeNotice("Networking is unavailable in Hidden Space.")
+            if (!hiddenHomeNetworkingAvailable || !retained.hidden.authenticated ||
+                !retained.hidden.session.isUnlocked || hideContent || !activityResumed) return
+            invalidatePrimaryBrowserPresentation()
+            retained.hidden.outside()
+            retained.hidden.destination = Route.BROWSER
+            route = Route.BROWSER
             return
         }
         novaPrimaryBrowserClosed=false
@@ -3218,7 +3238,8 @@ class MainActivity : FragmentActivity() {
     }
 
     private fun currentScreenshotPreference(): Boolean =
-        if(retained.hidden.selected && (homeVisible || !(route==Route.GALLERY && retained.primaryGallery && !retained.hidden.visible))) hiddenAllowScreenshots else allowScreenshots
+        if (retained.hidden.selected && homeVisible) false
+        else if(retained.hidden.selected && !(route==Route.GALLERY && retained.primaryGallery && !retained.hidden.visible)) hiddenAllowScreenshots else allowScreenshots
 
     private fun applyScreenPrivacy(allowed: Boolean = currentScreenshotPreference()) {
         if (allowed && activityResumed && !privacyCoverVisible() && privacyWindows.hasFocus() && permissionWindows.isEmpty() && protectedPages.isEmpty()) {
@@ -4249,9 +4270,16 @@ private fun PrivateGalleryApp(
             Route.VAULT -> VaultHome(onLock, onImport, onLoadItems, onLoadCollections, onCreateCollection, onAddItemsToCollection, onRemoveItemsFromCollection, onRenameCollection, onDeleteCollection, onLoadCollectionItems, onLoadPreview, cropRevision, biometricEnabled, onEnrollBiometrics, onSetFavouriteCollection, onFavouriteStateChanged = { onLoadFavouriteCollection { favouriteLabel = it?.name } }, onOpenViewer = { entries, items, index -> viewerRequest = ViewerRequest.Vault(entries, items, index, onCapturePrimaryEditorAuthority()) }, modifier = Modifier.padding(contentPadding), onGenerateImage = onGenerateImage, onLoadRecentlyDeleted = onLoadRecentlyDeleted, onMoveItemsToRecentlyDeleted = onMoveItemsToRecentlyDeleted, onChangeRecentlyDeleted = onChangeRecentlyDeleted, onRestoreSelectedVaultCopies = onRestoreSelectedVaultCopies, onLoadFavouriteIds = { done -> onLoadFavouriteCollection { collection -> if(collection == null) done(emptySet()) else onLoadCollectionItems(collection.id) { items -> done(items.mapTo(mutableSetOf()) { it.id }) } } })
             Route.FAVOURITE -> FavouriteHome(onLoadFavouriteCollection, onLoadItems, onLoadCollectionItems, onAddItemsToCollection, onRemoveItemsFromCollection, onLoadPreview, cropRevision, onOpenVault, onOpenViewer = { entries, items, index -> viewerRequest = ViewerRequest.Vault(entries, items, index, onCapturePrimaryEditorAuthority()) }, modifier = Modifier.padding(contentPadding))
             Route.BROWSER -> if (hiddenState.selected) {
-                Column(Modifier.padding(contentPadding).padding(16.dp)) {
-                    Text("Networking is unavailable in Hidden Space.")
-                    TextButton(onClick={metadataActivity?.returnPrivateHome()}) {Text("Home")}
+                if (hiddenState.authenticated && hiddenState.session.isUnlocked &&
+                    metadataActivity?.hiddenHomeNetworkingAvailable == true) {
+                    uk.co.traynor.privategallery.ui.HiddenBrowserHome(
+                        hiddenState.session,
+                        onGallery = { metadataActivity.returnPrivateHome() },
+                        onVault = { metadataActivity.openHiddenDownloads() },
+                        onFavourite = { metadataActivity.returnPrivateHome() },
+                        onSettings = { metadataActivity.returnPrivateHome() },
+                        modifier = Modifier.padding(contentPadding),
+                    )
                 }
             } else BrowserV2ProductionDestination(
                 session = browserV2Session,
@@ -4435,7 +4463,7 @@ private fun PrivateGalleryApp(
         primaryAvailable = primaryAvailable, onDismiss = onReturnToPrimary, onReturnToPrimary = onReturnToPrimary, createPrimaryCopy = createPrimaryCopy,
         onBrowseDeviceGallery = { onGallerySourceSelected(false); hiddenState.outside(); onLeaveHidden(AppNavigationDestination.GALLERY) },
         externalSession = hiddenState.session, showEntry = hiddenState.visible,
-        initialDestination = hiddenState.destination, onScopedDestinationChanged = {hiddenState.destination=it},
+        initialDestination = hiddenState.destination, mediaScope = metadataActivity?.hiddenMediaScope ?: uk.co.traynor.privategallery.ui.HiddenMediaScope.GALLERY, onScopedDestinationChanged = {hiddenState.destination=it},
         onAuthenticationChanged = { hiddenState.authenticated = it },
         onNavigateOutside = { destination -> hiddenState.outside(); onLeaveHidden(destination) },
     )
@@ -5498,6 +5526,8 @@ internal fun VaultHome(
     onSaveTrashRetention: ((Int,(String)->Unit)->Unit)? = null,
     onChangeTrashItems: ((List<VaultItem>,Boolean,(String)->Unit)->Unit)? = null,
     onOpenEvidence: (() -> Unit)? = null,
+    importLabel: String? = "Add media",
+    emptyDescription: String = "Photos and videos you add here are stored privately and encrypted on this device.",
 ) {
     val cameraActivity = androidx.activity.compose.LocalActivity.current as? MainActivity
     val cameraAction = onCamera ?: { cameraActivity?.openVaultCamera() }
@@ -5612,7 +5642,7 @@ internal fun VaultHome(
             SheetAction("Camera", Icons.Default.PhotoCamera) { menuOpen = false; cameraAction() }
             onReturnToPrimary?.let { action -> SheetAction("Return to Primary Space", Icons.Default.Lock) { menuOpen = false; action() } }
             onCopyFromPrimary?.let { action -> SheetAction("Copy from Primary Space", Icons.Default.PhotoLibrary) { menuOpen = false; action() } }
-            SheetAction("Add media", Icons.Default.AddPhotoAlternate) { menuOpen = false; requestImport() }
+            importLabel?.let { label -> SheetAction(label, Icons.Default.AddPhotoAlternate) { menuOpen = false; requestImport() } }
             if (allowGeneration) SheetAction("Create image", Icons.Default.AutoAwesome) { menuOpen = false; creatingImage = true }
             if (openCollection == null && contentMode == VaultContentMode.MEDIA) SheetAction("Select items", Icons.Default.CheckCircle, enabled = vaultItems.isNotEmpty()) {
                 selectionMode = true; menuOpen = false
@@ -5703,8 +5733,7 @@ internal fun VaultHome(
                 VaultMediaGrid(displayedItems, onLoadPreview, cropRevision, selectedItemIds, onSelection = { id -> selectionMode = true; selectedItemIds = selectedItemIds.toggle(id) }, onOpenViewer = onOpenViewer, modifier = Modifier.weight(1f), selectionMode = selectionMode, thumbnailMinSize = density.minSize, onDragSelection = { selectionMode = true; selectedItemIds = it })
             }
             else -> GalleryEmptyState("Your vault is empty",
-                "Photos and videos you add here are stored privately and encrypted on this device.",
-                Icons.Default.Lock, actionLabel = "Add media", onAction = { requestImport() })
+                emptyDescription, Icons.Default.Lock, actionLabel = importLabel, onAction = requestImport)
         }
         if (status.isNotBlank()) GalleryFeedback(status)
         pendingHiddenMove?.let { (ids, move) ->

@@ -32,7 +32,7 @@ def host_fixture_adb_multicast(record):
  if len(names)!=1:return False
  name=next(iter(names))
  if not service:return name=='Android.local.'
- return len(service)==1 and re.fullmatch(r'adb-EMULATOR37X2X13X0-[A-Za-z0-9]{6}\._adb\._tcp\.local\.',service[0]) is not None and re.fullmatch(r'Android_[A-Z0-9]{8}\.local\.',name) is not None
+ return len(service)==1 and re.fullmatch(r'adb-EMULATOR37X(?:2X13|3X10)X0-[A-Za-z0-9]{6}\._adb\._tcp\.local\.',service[0]) is not None and re.fullmatch(r'Android_[A-Z0-9]{8}\.local\.',name) is not None
 
 
 

@@ -49,10 +49,13 @@ class NativeTorIsolation1762Test {
     }}
     /** WebView virtual ACTION_CLICK can accept a container action without activating HTML.
      * Tap the exact visible virtual node, as a user does; server/body assertions prove effect. */
-    private fun clickWeb(text:String) {
+    private fun clickWeb(text:String,alternateText:String?=null) {
+        val labels=setOfNotNull(text,alternateText)
+        fun matches(node:AccessibilityNodeInfo) = node.isVisibleToUser && node.isEnabled &&
+            (node.text?.toString() in labels || node.contentDescription?.toString() in labels)
         var target:AccessibilityNodeInfo?=null
         waitFor("Visible web control $text") {
-            target=nodes().firstOrNull {it.isVisibleToUser && it.isEnabled && (it.text?.toString()==text || it.contentDescription?.toString()==text)}
+            target=nodes().firstOrNull(::matches)
             target?.performAction(AccessibilityNodeInfo.AccessibilityAction.ACTION_SHOW_ON_SCREEN.id)
             target!=null
         }
@@ -62,7 +65,7 @@ class NativeTorIsolation1762Test {
         waitFor("Fresh visible web touch target $text") {
             val root=automation.rootInActiveWindow ?: return@waitFor false
             if(root.windowId!=window)return@waitFor false
-            val fresh=nodes().firstOrNull {it.windowId==window && it.isVisibleToUser && it.isEnabled && (it.text?.toString()==text || it.contentDescription?.toString()==text)} ?: return@waitFor false
+            val fresh=nodes().firstOrNull {it.windowId==window && matches(it)} ?: return@waitFor false
             fresh.getBoundsInScreen(bounds)
             val visible=android.graphics.Rect();root.getBoundsInScreen(visible)
             val inWindow=!bounds.isEmpty && bounds.intersect(visible)
@@ -226,7 +229,13 @@ class NativeTorIsolation1762Test {
                 assertFalse("Native Tor JS is disabled",broker!!.childSecuritySnapshot().first)
                 navigate("$base/interactive");clickWeb("Submit Tor form")
                 waitFor("Native JS-free form body",60){observed(path,host){it.optString("path")=="/form-result" && it.optBoolean("form_ok")}}
-                navigate("$base/interactive");clickWeb("Choose Tor upload")
+                navigate("$base/upload-image")
+                waitFor("Dedicated native Tor image upload page",65) {
+                    nodes().any {it.text?.toString()=="Tor fixture image upload" && it.isVisibleToUser} &&
+                        observed(path,host){it.optString("path")=="/upload-image" && it.optString("method")=="GET"}
+                }
+                // Chromium can expose a native file input by its current selection instead of its aria-label.
+                clickWeb("Choose Tor upload", alternateText="No file chosen")
                 waitFor("Actual JS-off child renders its upload chooser") {nodes().any {it.text?.toString()=="Choose from Hidden Space"}}
                 click("Tor eligible fixture.png");click("Allow upload")
                 // Inspect only the grant already minted by the real separate owner confirmation.

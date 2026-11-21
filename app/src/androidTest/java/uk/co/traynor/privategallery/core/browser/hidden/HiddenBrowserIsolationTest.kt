@@ -65,6 +65,7 @@ class HiddenBrowserIsolationTest {
             scenario.onActivity {activity ->
                 val profile=ProfileStore.getInstance().getOrCreateProfile(name)
                 assertTrue(profile.cookieManager.getCookie(url).contains("hidden_secret=1"))
+                assertFalse(profile.cookieManager.getCookie(url).orEmpty().contains("primary_retained"))
                 assertFalse(CookieManager.getInstance().getCookie(url).orEmpty().contains("hidden_secret"))
                 val view=HiddenWebViewFactory.create(activity,name);view.destroy()
                 HiddenProfileCleanup.clear(profile) {cleared.countDown()}
@@ -80,6 +81,103 @@ class HiddenBrowserIsolationTest {
             }
         }
     }
+    @Test fun sameOriginLocalStorageAndIndexedDbStayScopedToEachProfile() {
+        assertTrue("Hidden Browser requires WebView profiles", WebViewFeature.isFeatureSupported(WebViewFeature.MULTI_PROFILE))
+        assertTrue(WebViewFeature.isFeatureSupported(WebViewFeature.DELETE_BROWSING_DATA))
+        ActivityScenario.launch(ComponentActivity::class.java).use { scenario ->
+            val unique = UUID.randomUUID().toString()
+            val name = "hidden16-test-$unique"
+            val origin = "https://$unique.invalid/"
+            lateinit var primary: WebView
+            lateinit var hidden: WebView
+            lateinit var hiddenProfile: androidx.webkit.Profile
+            val loaded = CountDownLatch(2)
+            scenario.onActivity { activity ->
+                primary = WebView(activity)
+                hiddenProfile = ProfileStore.getInstance().getOrCreateProfile(name)
+                hidden = HiddenWebViewFactory.create(activity, name)
+                val group = android.widget.LinearLayout(activity).apply { orientation = android.widget.LinearLayout.VERTICAL }
+                listOf(primary, hidden).forEach { view ->
+                    view.settings.blockNetworkLoads = true
+                    view.settings.javaScriptEnabled = true
+                    view.settings.domStorageEnabled = true
+                    view.webViewClient = object : WebViewClient() {
+                        override fun onPageFinished(view: WebView, url: String) { loaded.countDown() }
+                    }
+                    group.addView(view, android.widget.LinearLayout.LayoutParams(-1, 0, 1f))
+                }
+                activity.setContentView(group)
+                listOf(primary, hidden).forEach {
+                    it.loadDataWithBaseURL(origin, "<html><head><title>Fixture</title></head><body>Fixture</body></html>", "text/html", "utf-8", null)
+                }
+            }
+            try {
+                assertTrue("Local fixture pages loaded", loaded.await(15, TimeUnit.SECONDS))
+                fun evaluate(view: WebView, script: String): String? {
+                    val done = CountDownLatch(1)
+                    var result: String? = null
+                    scenario.onActivity { view.evaluateJavascript(script) { result = it; done.countDown() } }
+                    assertTrue(done.await(5, TimeUnit.SECONDS))
+                    return result
+                }
+                fun awaitStorage(view: WebView, value: String) {
+                    val deadline = android.os.SystemClock.elapsedRealtime() + 10_000
+                    while (android.os.SystemClock.elapsedRealtime() < deadline) {
+                        if (evaluate(view, "window.fixture") == org.json.JSONObject.quote(value)) return
+                        Thread.sleep(100)
+                    }
+                    fail("The expected IndexedDB value did not become visible in this profile")
+                }
+                fun seed(view: WebView, marker: String) {
+                    evaluate(view, """
+                        localStorage.setItem('scope', '$marker');
+                        const open = indexedDB.open('fixture', 1);
+                        open.onupgradeneeded = () => open.result.createObjectStore('items');
+                        open.onsuccess = () => {
+                            const tx = open.result.transaction('items', 'readwrite');
+                            tx.objectStore('items').put('$marker', 'scope');
+                            tx.oncomplete = () => { window.fixture = '$marker'; open.result.close(); };
+                        };
+                    """.trimIndent())
+                    awaitStorage(view, marker)
+                }
+                seed(primary, "primary")
+                assertEquals("null", evaluate(hidden, "localStorage.getItem('scope')"))
+                seed(hidden, "hidden")
+                assertEquals(org.json.JSONObject.quote("primary"), evaluate(primary, "localStorage.getItem('scope')"))
+                assertEquals(org.json.JSONObject.quote("hidden"), evaluate(hidden, "localStorage.getItem('scope')"))
+                for ((view, marker) in listOf(primary to "primary", hidden to "hidden")) {
+                    evaluate(view, """
+                        window.fixture = '';
+                        (() => {
+                            const read = indexedDB.open('fixture', 1);
+                            read.onsuccess = () => {
+                                const value = read.result.transaction('items').objectStore('items').get('scope');
+                                value.onsuccess = () => { window.fixture = value.result; read.result.close(); };
+                            };
+                        })();
+                    """.trimIndent())
+                    awaitStorage(view, marker)
+                }
+            } finally {
+                val cleared = CountDownLatch(1)
+                scenario.onActivity {
+                    evaluateCleanup(primary)
+                    listOf(primary, hidden).forEach { view ->
+                        (view.parent as? android.view.ViewGroup)?.removeView(view)
+                        view.destroy()
+                    }
+                    HiddenProfileCleanup.clear(hiddenProfile) { cleared.countDown() }
+                }
+                assertTrue("Hidden test profile cleared", cleared.await(10, TimeUnit.SECONDS))
+            }
+        }
+    }
+
+    private fun evaluateCleanup(view: WebView) {
+        view.evaluateJavascript("localStorage.clear(); indexedDB.deleteDatabase('fixture');", null)
+    }
+
     /** Script invokes this test in two distinct app processes; ordinary suite uses the test above. */
     private fun processFixture(phase:String) {
         val instrumentation=InstrumentationRegistry.getInstrumentation()

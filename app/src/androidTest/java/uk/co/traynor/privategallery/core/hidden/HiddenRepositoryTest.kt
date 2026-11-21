@@ -200,6 +200,9 @@ class HiddenRepositoryTest {
         val isolated=object:ContextWrapper(context){override fun getFilesDir()=primaryFolder}
         val key=ByteArray(32){9}
         try {
+            // A real Primary setup publishes an encrypted index before its first import.
+            uk.co.traynor.privategallery.core.vault.EncryptedIndexStore(File(primaryFolder, "vault"))
+                .saveSnapshot(uk.co.traynor.privategallery.core.vault.VaultIndexSnapshot(emptyList()), key)
             val primary=uk.co.traynor.privategallery.core.vault.AndroidVaultRepository(isolated,key)
             val source=uk.co.traynor.privategallery.core.vault.VaultImportSource("primary.png","image/png",{ByteArrayInputStream(fixture())})
             val item=(primary.importVerified(source) as uk.co.traynor.privategallery.core.vault.ImportResult.Imported).item

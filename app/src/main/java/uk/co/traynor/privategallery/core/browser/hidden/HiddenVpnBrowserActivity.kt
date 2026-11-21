@@ -1,5 +1,6 @@
 package uk.co.traynor.privategallery.core.browser.hidden
 
+import uk.co.traynor.privategallery.core.browser.v2.applyV1SafetyDefaults
 import uk.co.traynor.privategallery.ui.*
 import android.annotation.SuppressLint
 import android.app.Application
@@ -212,12 +213,15 @@ class HiddenVpnBrowserActivity:ComponentActivity() {
     }
     /** App-owned library writes use the parent-held revocable Hidden capability; WebView manages separate disk profiles. */
     private fun library(action:Int=0,url:String="",enabled:Boolean=false,pageTitle:String=current?.takeIf {it.url==url}?.title.orEmpty()):org.json.JSONObject? = runCatching {
-        call(HiddenVpnBrowserBroker.LIBRARY,write={it.writeInt(action);it.writeString(url);if(action==4)it.writeInt(if(enabled)1 else 0);if(action==1 || action==2){
+        call(HiddenVpnBrowserBroker.LIBRARY,write={it.writeInt(action);it.writeString(url);if(action==4 || action==7)it.writeInt(if(enabled)1 else 0);if(action==1 || action==2){
             val title=pageTitle.codePoints().toArray().filter {point -> !Character.isISOControl(point) && point !in 0xD800..0xDFFF}.toIntArray()
             var text=String(title,0,title.size);if(text.length>256){text=text.take(256);if(text.lastOrNull()?.isHighSurrogate()==true)text=text.dropLast(1)}
             it.writeString(text);it.writeLong(System.currentTimeMillis())
         }},read={org.json.JSONObject(checkNotNull(it.readString()))})
-    }.onFailure {notice="Hidden library unavailable."}.getOrNull()?.also {saveHistory=it.getBoolean("saveHistory")}
+    }.onFailure {notice="Hidden library unavailable."}.getOrNull()?.also {
+        saveHistory=it.getBoolean("saveHistory")
+        searchEngine=if(it.optBoolean("googleSearch"))BrowserSearchEngine.GOOGLE else BrowserSearchEngine.DUCKDUCKGO
+    }
     private fun showLibrary(kind:String) {
         val state=library() ?: return
         val items=state.getJSONArray(if(kind=="Bookmarks")"bookmarks" else "history")
@@ -258,6 +262,7 @@ class HiddenVpnBrowserActivity:ComponentActivity() {
     override fun onCreate(savedInstanceState:Bundle?) {
         super.onCreate(null)
         window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
+        setRecentsScreenshotEnabled(false)
         captureGuard.start()
         if(savedInstanceState!=null || !Application.getProcessName().endsWith(":hidden_vpn_browser")) {terminate(false);return}
         // A second Activity can briefly overlap a retiring one. Reject before even claiming
@@ -293,7 +298,7 @@ class HiddenVpnBrowserActivity:ComponentActivity() {
             val config=ProxyConfig.Builder().addProxyRule("http://127.0.0.1:$proxyPort").removeImplicitRules().build()
             ProxyController.getInstance().setProxyOverride(config,{command ->handler.post(command)}) {
                 if(!live()){terminate(reason=HiddenVpnBrowserBroker.BACKGROUND);return@setProxyOverride}
-                ready=true;if(homePrivateApps){homePrivateApps=false;openPrivateApps()};notice=if(mode==HiddenConnectionPolicy.Mode.TOR_ONLY)"Tor only · JavaScript off · isolated DNS/network boundary" else "VPN only · session data stays separate from Primary";newTab()
+                ready=true;library();if(homePrivateApps){homePrivateApps=false;openPrivateApps()};notice=if(mode==HiddenConnectionPolicy.Mode.TOR_ONLY)"Tor only · JavaScript off · isolated DNS/network boundary" else "VPN only · session data stays separate from Primary";newTab()
             }
         } catch(_:Exception) {terminate(reason=HiddenVpnBrowserBroker.BACKGROUND)}
     }
@@ -307,12 +312,13 @@ class HiddenVpnBrowserActivity:ComponentActivity() {
         view.settings.apply {
             blockNetworkLoads=true;javaScriptEnabled=mode==HiddenConnectionPolicy.Mode.VPN_ONLY;domStorageEnabled=true
             allowContentAccess=true // Only this app's narrowly scoped upload provider is ever supplied.
-            allowFileAccess=false;allowFileAccessFromFileURLs=false;allowUniversalAccessFromFileURLs=false
+            applyV1SafetyDefaults()
+            allowFileAccess=false
             cacheMode=WebSettings.LOAD_NO_CACHE;saveFormData=false;setGeolocationEnabled(false)
             userAgentString=BrowserSecurityPolicy.userAgent(if(desktop)BrowserUserAgentMode.DESKTOP else BrowserUserAgentMode.MOBILE,WebSettings.getDefaultUserAgent(this@HiddenVpnBrowserActivity))
             useWideViewPort=desktop;loadWithOverviewMode=desktop
             mixedContentMode=WebSettings.MIXED_CONTENT_NEVER_ALLOW;safeBrowsingEnabled=false
-            javaScriptCanOpenWindowsAutomatically=false;setSupportMultipleWindows(true);mediaPlaybackRequiresUserGesture=true
+            javaScriptCanOpenWindowsAutomatically=false;setSupportMultipleWindows(true)
         }
         view.importantForAutofill=android.view.View.IMPORTANT_FOR_AUTOFILL_NO_EXCLUDE_DESCENDANTS
         view.webViewClient=object:WebViewClient() {
@@ -655,7 +661,7 @@ class HiddenVpnBrowserActivity:ComponentActivity() {
                 views.firstOrNull {System.identityHashCode(it).toString()==id}?.let {closePrivateAppSession(it)}
             })
         if(!privateAppsOpen && privateAppSettingsId==null)Column(Modifier.fillMaxSize().systemBarsPadding().imePadding()) {
-            if(app==null)uk.co.traynor.privategallery.ui.NovaAppHeader(if(mode==HiddenConnectionPolicy.Mode.TOR_ONLY)"Tor — Beta"else"Browser — Beta","Hidden Space",
+            if(app==null)uk.co.traynor.privategallery.ui.NovaAppHeader(if(mode==HiddenConnectionPolicy.Mode.TOR_ONLY)"Tor — Beta"else"Browser V1","Hidden Space",
                 onHome={terminate()},onLock={runCatching{call(HiddenVpnBrowserBroker.LOCK_VAULT,read={Unit})};terminate()},onPanic={panic()},
                 actions={IconButton(onClick=::openPrivateApps,enabled=ready){Icon(Icons.Default.Apps,"Private Apps")}})
             val focus=LocalFocusManager.current;val keyboard=LocalSoftwareKeyboardController.current
@@ -715,7 +721,7 @@ class HiddenVpnBrowserActivity:ComponentActivity() {
                 HiddenNativeSettingsContent(mode==HiddenConnectionPolicy.Mode.TOR_ONLY,mode.indicator,saveHistory,desktop,
             bookmark={current?.url?.let {library(2,it)};menu=false},bookmarks={showLibrary("Bookmarks");menu=false},history={showLibrary("History");menu=false},
             setHistory={library(4,enabled=it)},clearHistory={clearHistoryConfirm=true},toggleDesktop={desktop=!desktop;current?.let {desktopTabs[it]=desktop};current?.settings?.apply {useWideViewPort=desktop;loadWithOverviewMode=desktop;userAgentString=BrowserSecurityPolicy.userAgent(if(desktop)BrowserUserAgentMode.DESKTOP else BrowserUserAgentMode.MOBILE,WebSettings.getDefaultUserAgent(this@HiddenVpnBrowserActivity))};current?.reload()},
-            download={pendingDownload=downloadCandidate?.takeIf {downloadSelectionCurrent(it)} ?: current?.let {view ->view.url?.let {downloadSelection(view,it)}};menu=false},find={findOpen=true;menu=false;current?.setFindListener {active,count,done ->if(done)findResult=if(count==0)"No matches" else "${active+1} of $count matches"}},downloads={downloadsOpen=true;menu=false},searchEngine=searchEngine,setSearchEngine={searchEngine=it},setMode={requestedMode=it},clearClose={clearSessionConfirm=true},allowModeSwitch=false)
+            download={pendingDownload=downloadCandidate?.takeIf {downloadSelectionCurrent(it)} ?: current?.let {view ->view.url?.let {downloadSelection(view,it)}};menu=false},find={findOpen=true;menu=false;current?.setFindListener {active,count,done ->if(done)findResult=if(count==0)"No matches" else "${active+1} of $count matches"}},downloads={downloadsOpen=true;menu=false},searchEngine=searchEngine,setSearchEngine={library(7,enabled=it==BrowserSearchEngine.GOOGLE)},setMode={requestedMode=it},clearClose={clearSessionConfirm=true},allowModeSwitch=false)
                 if(mode==HiddenConnectionPolicy.Mode.TOR_ONLY)TextButton(onClick={newIdentityConfirm=true}){Text("New Identity")}
                 Text(notice,style=MaterialTheme.typography.bodySmall)
             }

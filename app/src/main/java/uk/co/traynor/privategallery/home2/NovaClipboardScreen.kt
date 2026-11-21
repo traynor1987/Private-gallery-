@@ -30,9 +30,12 @@ import uk.co.traynor.privategallery.core.home2.SpaceContext
 private enum class ClipboardConfirmation { DELETE, CLEAR, DISCARD, RETENTION }
 
 @Composable
-internal fun NovaClipboardScreen(space: SpaceContext, onBack: () -> Unit) {
+internal fun NovaClipboardScreen(space: SpaceContext, onBack: () -> Unit, openSnippetId: String? = null) {
     val scope = rememberCoroutineScope()
-    val clipboard = remember(space) { space.getSystemService(ClipboardManager::class.java) }
+    val hidden = space.spaceId == "hidden"
+    val clipboard = remember(space) {
+        if (hidden) null else space.getSystemService(ClipboardManager::class.java)
+    }
     var store by remember(space) { mutableStateOf<NovaClipboardLibrary?>(null) }
     var snapshot by remember(space) { mutableStateOf<NovaClipboardLibrary.Snapshot?>(null) }
     var editor by remember(space) { mutableStateOf<NovaSnippet?>(null) }
@@ -55,6 +58,7 @@ internal fun NovaClipboardScreen(space: SpaceContext, onBack: () -> Unit) {
         opened.onSuccess { (library, saved) ->
             store = library
             snapshot = saved
+            if (editor == null) editor = saved.snippets.firstOrNull { it.id == openSnippetId }
             status = null
         }.onFailure { status = "Encrypted snippets could not be opened." }
         busy = false
@@ -156,7 +160,7 @@ internal fun NovaClipboardScreen(space: SpaceContext, onBack: () -> Unit) {
                 enabled = !busy && snapshot != null)
             if (snapshot != null) {
                 val privacyEnabled = snapshot?.protectAllCopies == true
-                FilterChip(privacyEnabled, {
+                if (!hidden) FilterChip(privacyEnabled, {
                     persist(snippets, "Clipboard privacy updated", protectAllCopies = !privacyEnabled)
                 }, { Text("Protect all snippet copies") }, enabled = !busy)
                 Text("Retention for unpinned snippets")
@@ -217,7 +221,7 @@ internal fun NovaClipboardScreen(space: SpaceContext, onBack: () -> Unit) {
                 OutlinedTextField(current.text, { editor = current.copy(text = it.take(16_000)) },
                     modifier = Modifier.fillMaxWidth(), label = { Text("Snippet") }, minLines = 3,
                     enabled = !busy && (!current.sensitive || reveal),
-                    keyboardOptions = if (protectedEditing) KeyboardOptions(
+                    keyboardOptions = if (hidden || protectedEditing) KeyboardOptions(
                         keyboardType = KeyboardType.Password, autoCorrectEnabled = false) else KeyboardOptions.Default,
                     visualTransformation = if (protectedEditing) PasswordVisualTransformation()
                         else VisualTransformation.None)
@@ -231,7 +235,7 @@ internal fun NovaClipboardScreen(space: SpaceContext, onBack: () -> Unit) {
                     FilterChip(current.pinned, { editor = current.copy(pinned = !current.pinned) },
                         { Text("Pinned") }, enabled = !busy)
                 }
-                if (!current.sensitive || reveal) {
+                if (!hidden && (!current.sensitive || reveal)) {
                     TextButton(enabled = !busy, onClick = { paste(current) }) { Text("Paste Android clipboard text") }
                     if (current.text.isNotBlank()) {
                         TextButton(enabled = !busy, onClick = { copy(current) }) { Text("Copy to Android clipboard") }
