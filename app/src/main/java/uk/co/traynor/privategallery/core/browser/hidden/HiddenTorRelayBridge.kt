@@ -82,8 +82,11 @@ internal class HiddenTorRelayBridge(private val protect:(Socket)->Boolean,privat
             if(!closed.compareAndSet(false,true))return
             runCatching {server.close()}
             val count=relaySockets.size
+            val ports=if(uk.co.traynor.privategallery.BuildConfig.DEBUG)
+                relaySockets.map {it.localPort}.filter {it>0}.joinToString(",")
+                else ""
             relaySockets.forEach(::abortRelaySocket)
-            HiddenTorShutdownTrace.event("relay_sockets_closed", "count=$count")
+            HiddenTorShutdownTrace.event("relay_sockets_closed", "count=$count ports=$ports")
             sockets.forEach {runCatching {it.close()}}
             relaySockets.clear()
             sockets.clear()

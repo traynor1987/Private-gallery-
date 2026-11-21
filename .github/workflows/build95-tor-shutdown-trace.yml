@@ -8,6 +8,10 @@ jobs:
   live-lock-trace:
     runs-on: ubuntu-24.04
     timeout-minutes: 35
+    strategy:
+      fail-fast: false
+      matrix:
+        sample: [1, 2, 3]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v5
@@ -41,15 +45,26 @@ jobs:
           arch: x86_64
           profile: pixel_2
           disable-animations: true
-          emulator-options: -no-window -gpu software -no-snapshot -noaudio -no-boot-anim -feature -HardwareDecoder -camera-back emulated -camera-front emulated
-          script: bash scripts/run_build95_tor_shutdown_trace.sh
+          emulator-options: -tcpdump ${{ runner.temp }}/android-tor.pcap -no-window -gpu software -no-snapshot -noaudio -no-boot-anim -feature -HardwareDecoder -camera-back emulated -camera-front emulated
+          script: bash scripts/run_build95_tor_shutdown_trace.sh --paired
+      - name: Retain guest TCP headers for the retired relay sockets
+        if: always()
+        run: |
+          evidence=app/build/tor-shutdown-trace
+          if [[ -s "$RUNNER_TEMP/android-tor.pcap" && -f "$evidence/device-timeline.txt" ]]; then
+            ports=$(sed -n 's/.*relay_sockets_closed.* ports=\([0-9,]*\).*/\1/p' "$evidence/device-timeline.txt" | tr ',' '\n' | awk '/^[0-9]+$/' | sort -nu)
+            if [[ -n "$ports" ]]; then
+              filter=$(printf '%s\n' "$ports" | awk '{printf "%s port %s", separator, $1;separator=" or"}')
+              tcpdump -tt -nn -r "$RUNNER_TEMP/android-tor.pcap" "tcp and ($filter)" > "$evidence/guest-relay-headers.txt" 2> "$evidence/guest-relay-decode.log"
+            fi
+          fi
       - name: Remove disposable onion fixture
         if: always()
         run: python3 scripts/ci_onion_probe.py --stop
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: build95-tor-shutdown-trace
+          name: build95-tor-shutdown-trace-${{ matrix.sample }}
           path: |
             app/build/tor-shutdown-trace/
             app/build/outputs/androidTest-results/connected/**/TEST-*.xml

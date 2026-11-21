@@ -33,6 +33,9 @@ adb shell wm size 1200x1800
 adb shell wm density 160
 python3 scripts/trace_build95_tor_shutdown.py --sample > "$evidence/clock-before.json"
 selection=uk.co.traynor.privategallery.core.browser.hidden.NativeTorIsolation1762Test#productionHiddenLockRetiresAnInFlightTorRequest
+if [[ "${1:-}" == --paired ]]; then
+    selection="${selection%%#*}"
+fi
 status=0
 ./gradlew :app:connectedDebugAndroidTest \
     "-Pandroid.testInstrumentationRunnerArguments.class=$selection" \
