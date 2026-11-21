@@ -2,6 +2,8 @@ package uk.co.traynor.privategallery.core.browser.hidden
 
 import android.content.ContextWrapper
 import android.graphics.Bitmap
+import android.net.LocalSocket
+import android.net.LocalSocketAddress
 import android.net.Network
 import android.net.VpnService
 import android.os.*
@@ -200,9 +202,11 @@ class NativeTorIsolation1762Test {
                         !HiddenVpnBrowserBroker.hasDedicatedProcess(context) &&
                         !HiddenTorIsolationService.hasTorProcess(context) && HiddenTorIsolationService.released()
                 }
-                assertFalse("The previous Tor socket cannot serve a new request", runCatching {
-                    HiddenTorSockets.open(route.unixPath, host, 80, handshakeTimeoutMs = 1_000).close()
-                }.isSuccess)
+                assertThrows("The retired Tor socket must reject a real connection", IOException::class.java) {
+                    LocalSocket().use { probe ->
+                        probe.connect(LocalSocketAddress(route.unixPath, LocalSocketAddress.Namespace.FILESYSTEM))
+                    }
+                }
                 writeEvidence("native-tor1762-lock.json", JSONObject()
                     .put("case", caseId).put("trigger_at_ms", triggeredAtMs)
                     .put("session_locked", true).put("browser_retired", true)
