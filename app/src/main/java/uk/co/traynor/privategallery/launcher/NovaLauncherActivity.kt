@@ -64,6 +64,10 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import uk.co.traynor.privategallery.BuildConfig
+import uk.co.traynor.privategallery.intelligence.IntelligenceDestination
+import uk.co.traynor.privategallery.intelligence.intelligenceDeviceReady
+import uk.co.traynor.privategallery.intelligence.intelligencePrivateAllowed
+import uk.co.traynor.privategallery.privateIntelligenceEntryIntent
 import uk.co.traynor.privategallery.core.sanctuary.SanctuaryAppVisibility
 import uk.co.traynor.privategallery.core.sanctuary.SanctuaryDnd
 import uk.co.traynor.privategallery.core.sanctuary.SanctuaryGuardian
@@ -295,6 +299,15 @@ class NovaLauncherActivity : ComponentActivity() {
                 else message("The smart folder presentation could not be saved.")
             },
         )
+        val intelligence = LauncherIntelligenceActions(
+            openPrivate = {
+                if (intelligenceResumed() && intelligencePrivateAllowed(this)) {
+                    startActivity(privateIntelligenceEntryIntent(this))
+                } else message("The private briefing is unavailable during Sanctuary.")
+            },
+            openDestination = ::openIntelligenceDestination,
+            openEvidence = { id -> openIntelligenceEvidence(id) },
+        )
         setContent {
             val smart by tracking.state.collectAsState()
             LaunchedEffect(smart.excluded) {
@@ -306,6 +319,7 @@ class NovaLauncherActivity : ComponentActivity() {
             if (!utilityAllowed) {
                 NovaLauncherScreen(model, apps, if (launcherProtected) emptyList() else shortcuts, decisions,
                     defaultHome == true, outsideProtection, actions, homeGeneration, launcherProtected, sanctuaryStatus,
+                    intelligence = intelligence,
                     defaultHomeUi = LauncherDefaultHomeUi(defaultHome, askDefaultHome,
                         canShowDefaultHomePrompt(), homeWindowFocused, defaultHomeOpening),
                     showNotificationBar = showNotificationBar,
@@ -598,6 +612,23 @@ class NovaLauncherActivity : ComponentActivity() {
             window.clearFlags(WindowManager.LayoutParams.FLAG_SHOW_WALLPAPER)
             window.setBackgroundDrawable(ColorDrawable(Color.rgb(7, 17, 31)))
         }
+    }
+
+    private fun openIntelligenceDestination(destination: IntelligenceDestination): Boolean {
+        if (!intelligenceResumed() || !intelligenceDeviceReady(this)) return false
+        val builtIn = when (destination) {
+            IntelligenceDestination.NOTES -> LauncherBuiltIn.NOTES
+            IntelligenceDestination.TASKS -> LauncherBuiltIn.TASKS
+            IntelligenceDestination.CALENDAR -> LauncherBuiltIn.CALENDAR
+            IntelligenceDestination.NOTIFICATIONS -> LauncherBuiltIn.SAFE_NOTIFICATIONS
+            IntelligenceDestination.SANCTUARY -> LauncherBuiltIn.SANCTUARY
+            IntelligenceDestination.GUARDIAN, IntelligenceDestination.HELD -> return openIntelligenceGuardian(destination)
+        }
+        if (!runCatching { builtIn.decision(sanctuary.refresh()).canLaunch }.getOrDefault(false)) return false
+        val component = builtIn.app(packageName).component
+        if (apps.none { it.component == component }) return false
+        launchApp(component)
+        return true
     }
 
     private fun launchApp(component: String) {

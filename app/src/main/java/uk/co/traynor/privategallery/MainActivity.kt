@@ -1,6 +1,16 @@
 package uk.co.traynor.privategallery
 
 import uk.co.traynor.privategallery.core.home2.NovaCoreApp
+import uk.co.traynor.privategallery.core.home2.SpaceContext
+import uk.co.traynor.privategallery.intelligence.IntelligenceDestination
+import uk.co.traynor.privategallery.intelligence.IntelligenceScreen
+import uk.co.traynor.privategallery.intelligence.IntelligenceWorkspace
+import uk.co.traynor.privategallery.intelligence.intelligencePrivateAllowed
+import uk.co.traynor.privategallery.launcher.GuardianHomeOptions
+import uk.co.traynor.privategallery.launcher.GuardianInboxActivity
+import uk.co.traynor.privategallery.launcher.coreApp
+import uk.co.traynor.privategallery.launcher.openIntelligenceEvidence
+import uk.co.traynor.privategallery.launcher.openIntelligenceGuardian
 
 import androidx.compose.ui.platform.testTag
 
@@ -246,6 +256,7 @@ private class ByteArrayMediaDataSource(private val bytes: ByteArray) : MediaData
 internal const val ACTION_OPEN_PRIVATE_WORKSPACE = "uk.co.traynor.privategallery.action.OPEN_PRIVATE_WORKSPACE"
 
 internal const val ACTION_OPEN_PRIMARY_GALLERY = "uk.co.traynor.privategallery.action.OPEN_PRIMARY_GALLERY"
+private const val ACTION_OPEN_INTELLIGENCE = "uk.co.traynor.privategallery.action.OPEN_INTELLIGENCE"
 private const val STATE_LAUNCHER_ENTRY = "launcher.workspace.entry"
 private const val STATE_CORE_APP_ENTRY = "launcher.workspace.coreApp"
 private const val ACTION_CORE_APP_PREFIX = "uk.co.traynor.privategallery.action.CORE_APP."
@@ -255,6 +266,9 @@ private fun coreAppForAction(action: String?): NovaCoreApp? =
 
 internal fun privateCoreAppEntryIntent(context: android.content.Context, app: NovaCoreApp): Intent =
     privateWorkspaceEntryIntent(context).setAction(ACTION_CORE_APP_PREFIX + app.name)
+internal fun privateIntelligenceEntryIntent(context: android.content.Context): Intent =
+    privateWorkspaceEntryIntent(context).setAction(ACTION_OPEN_INTELLIGENCE)
+
 private const val STATE_STANDALONE_VAULT_CHROME = "launcher.workspace.standaloneVaultChrome"
 
 internal fun privateWorkspaceEntryIntent(context: android.content.Context, primaryGallery: Boolean = false): Intent =
@@ -1308,7 +1322,8 @@ class MainActivity : FragmentActivity() {
     private fun enterPrivateWorkspaceFromLauncher(request: Intent) {
         val action = request.action
         val coreApp = coreAppForAction(action)
-        if (coreApp == null && action != ACTION_OPEN_PRIVATE_WORKSPACE && action != ACTION_OPEN_PRIMARY_GALLERY) return
+        if (coreApp == null && action != ACTION_OPEN_PRIVATE_WORKSPACE &&
+            action != ACTION_OPEN_PRIMARY_GALLERY && action != ACTION_OPEN_INTELLIGENCE) return
         // Consume the one-shot request. Only the caller's explicit destination is supported.
         setIntent(Intent(this, MainActivity::class.java))
         if (request.data != null || request.extras?.isEmpty == false || request.clipData != null ||
@@ -1420,7 +1435,7 @@ class MainActivity : FragmentActivity() {
         }
         workspaceActivities.add(this)
         launcherEntry = savedInstanceState?.getString(STATE_LAUNCHER_ENTRY)
-            ?.takeIf { it == ACTION_OPEN_PRIVATE_WORKSPACE || it == ACTION_OPEN_PRIMARY_GALLERY || coreAppForAction(it) != null }
+            ?.takeIf { it == ACTION_OPEN_PRIVATE_WORKSPACE || it == ACTION_OPEN_PRIMARY_GALLERY || it == ACTION_OPEN_INTELLIGENCE || coreAppForAction(it) != null }
         pendingCoreApp = coreAppForAction(launcherEntry)?.takeIf {
             savedInstanceState?.getString(STATE_CORE_APP_ENTRY) == it.name
         }
@@ -1792,6 +1807,12 @@ class MainActivity : FragmentActivity() {
     }
 
     private fun finishPrimaryAuthenticationRoute() {
+        if (launcherEntry == ACTION_OPEN_INTELLIGENCE) {
+            retained.hidden.leave()
+            retained.primaryGallery = false
+            retained.afterAuthentication = Route.VAULT
+            homeVisible = true
+        }
         if (launcherEntry == ACTION_OPEN_PRIMARY_GALLERY) {
             retained.hidden.leave()
             retained.primaryGallery = false
@@ -2421,6 +2442,10 @@ class MainActivity : FragmentActivity() {
         // Keep the host composed while its access is revoked. Backup and Wallpaper
         // retain picker metadata there and reacquire their own authenticated access.
         if (access == null) return
+        if (!hidden && launcherEntry == ACTION_OPEN_INTELLIGENCE) {
+            if (activityResumed && access.current()) PrivateIntelligence(access)
+            return
+        }
         val apps=remember(access){homeNativeApps(access)}
         uk.co.traynor.privategallery.home2.IntegratedHome(access,homeVisible&&activityResumed,
             {id->if(access.current())launchHome2App(id)},::lockNovaSpace,::panicExit,
@@ -2460,6 +2485,45 @@ class MainActivity : FragmentActivity() {
                     }
                 } else if(homeThemeAccess===access) {homeThemeData=null;homeThemeAccess=null}
             })
+    }
+
+    @Composable
+    private fun PrivateIntelligence(access: uk.co.traynor.privategallery.core.evidence.EvidenceAccess) {
+        val sanctuary = uk.co.traynor.privategallery.core.sanctuary.SanctuaryStore.get(applicationContext)
+        val sessionState by sanctuary.current.collectAsState()
+        val policyRevision by uk.co.traynor.privategallery.core.sanctuary.SanctuaryLauncherPolicy.state().collectAsState()
+        val allowed = remember(sessionState, policyRevision, activityResumeRevision) {
+            intelligencePrivateAllowed(applicationContext)
+        }
+        val space = remember(access, allowed) {
+            if (allowed) runCatching { SpaceContext(this, access) }.getOrNull() else null
+        }
+        DisposableEffect(space) { onDispose { space?.close() } }
+        val workspace = remember(space) {
+            space?.let {
+                IntelligenceWorkspace(it) { lifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.RESUMED) }
+            }
+        }
+        IntelligenceScreen(
+            active = true, guardianVisible = GuardianHomeOptions.read(this).showPage,
+            protectedBySanctuary = !allowed, openPrivate = null, workspace = workspace,
+            onBack = { retireWorkspaceForLauncherEntry(); finish() },
+            openDestination = { destination ->
+                if (!access.current() || !activityResumed || !intelligencePrivateAllowed(this)) false
+                else when (destination) {
+                    IntelligenceDestination.GUARDIAN, IntelligenceDestination.HELD -> openIntelligenceGuardian(destination)
+                    IntelligenceDestination.NOTIFICATIONS -> {
+                        startActivity(GuardianInboxActivity.safeNotificationsIntent(this)); true
+                    }
+                    else -> destination.coreApp?.let { app ->
+                        pendingCoreApp = app
+                        launcherEntry = ACTION_OPEN_PRIVATE_WORKSPACE
+                        true
+                    } ?: false
+                }
+            },
+            openEvidence = { id -> access.current() && activityResumed && openIntelligenceEvidence(id) },
+        )
     }
 
     private fun homeNotice(message:String) = android.widget.Toast.makeText(this,message,android.widget.Toast.LENGTH_SHORT).show()
