@@ -10,6 +10,7 @@ on:
       - 'scripts/run_hidden_*.sh'
       - 'app/src/androidTest/java/uk/co/traynor/privategallery/core/home2/SpacePreferencesTest.kt'
       - 'app/src/androidTest/java/uk/co/traynor/privategallery/core/browser/hidden/NativeTorIsolation1762Test.kt'
+      - 'app/src/androidTest/java/uk/co/traynor/privategallery/core/browser/hidden/HiddenBrowserIsolationTest.kt'
       - '.github/workflows/hidden-space-development.yml'
       - '.github/workflows/fast-development.yml'
   pull_request:

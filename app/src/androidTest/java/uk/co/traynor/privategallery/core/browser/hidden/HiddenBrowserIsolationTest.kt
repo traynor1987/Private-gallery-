@@ -1,5 +1,8 @@
 package uk.co.traynor.privategallery.core.browser.hidden
 
+import android.net.VpnService
+import android.os.ParcelFileDescriptor
+import android.os.SystemClock
 import android.webkit.*
 import androidx.activity.ComponentActivity
 import androidx.test.core.app.ActivityScenario
@@ -15,40 +18,76 @@ import java.io.ByteArrayInputStream
 import java.util.UUID
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicBoolean
+import uk.co.traynor.privategallery.BuildConfig
 
 @RunWith(AndroidJUnit4::class)
 class HiddenBrowserIsolationTest {
     @Test fun nativeResponsesRenderWithNetworkAndScriptingDisabled() {
         assumeTrue(WebViewFeature.isFeatureSupported(WebViewFeature.MULTI_PROFILE) && WebViewFeature.isFeatureSupported(WebViewFeature.DELETE_BROWSING_DATA))
         val page=CountDownLatch(1);val css=CountDownLatch(1)
-        ActivityScenario.launch(ComponentActivity::class.java).use {scenario ->
-            val name="hidden16-test-"+UUID.randomUUID()
-            lateinit var view:WebView
-            scenario.onActivity {activity ->
-                ProfileStore.getInstance().getOrCreateProfile(name)
-                view=HiddenWebViewFactory.create(activity,name)
-                view.webViewClient=object:WebViewClient() {
-                    override fun shouldInterceptRequest(view:WebView,request:WebResourceRequest):WebResourceResponse {
-                        if(request.url.path=="/style.css") {css.countDown();return WebResourceResponse("text/css","UTF-8",ByteArrayInputStream("body{color:blue}".toByteArray()))}
-                        return WebResourceResponse("text/html","UTF-8",ByteArrayInputStream("<html><head><title>Safe fixture</title><link rel='stylesheet' href='/style.css'></head><body>Hidden<script>document.title='UNSAFE';fetch('https://leak.invalid')</script></body></html>".toByteArray()))
+        // WebView may resolve an intercepted HTTPS hostname speculatively even
+        // with blockNetworkLoads. Keep this renderer fixture behind the same
+        // deny-all boundary as a real Tor child from before its first navigation.
+        check(BuildConfig.DEBUG)
+        val instrumentation = InstrumentationRegistry.getInstrumentation()
+        val context = instrumentation.targetContext
+        val automation = FixtureAccessibility178.automation(instrumentation)
+        ParcelFileDescriptor.AutoCloseInputStream(
+            automation.executeShellCommand("appops set ${context.packageName} ACTIVATE_VPN allow")
+        ).use { it.readBytes() }
+        assertNull(VpnService.prepare(context))
+        val admitted = AtomicBoolean(true)
+        val isolation = HiddenTorIsolationConnection(context, admitted::get) { admitted.set(false) }
+        try {
+            instrumentation.runOnMainSync { isolation.start() }
+            awaitRendererFixture("The offline WebView has a live deny-all network") {
+                var ready = false
+                instrumentation.runOnMainSync { ready = admitted.get() && isolation.network() != null }
+                ready
+            }
+            ActivityScenario.launch(ComponentActivity::class.java).use {scenario ->
+                val name="hidden16-test-"+UUID.randomUUID()
+                lateinit var view:WebView
+                scenario.onActivity {activity ->
+                    ProfileStore.getInstance().getOrCreateProfile(name)
+                    view=HiddenWebViewFactory.create(activity,name)
+                    view.webViewClient=object:WebViewClient() {
+                        override fun shouldInterceptRequest(view:WebView,request:WebResourceRequest):WebResourceResponse {
+                            if(request.url.path=="/style.css") {css.countDown();return WebResourceResponse("text/css","UTF-8",ByteArrayInputStream("body{color:blue}".toByteArray()))}
+                            return WebResourceResponse("text/html","UTF-8",ByteArrayInputStream("<html><head><title>Safe fixture</title><link rel='stylesheet' href='/style.css'></head><body>Hidden<script>document.title='UNSAFE';fetch('https://leak.invalid')</script></body></html>".toByteArray()))
+                        }
+                        override fun onPageFinished(view:WebView,url:String) {page.countDown()}
                     }
-                    override fun onPageFinished(view:WebView,url:String) {page.countDown()}
+                    activity.setContentView(view)
+                    view.loadUrl("https://hidden-fixture.invalid/page")
                 }
-                activity.setContentView(view)
-                view.loadUrl("https://hidden-fixture.invalid/page")
+                assertTrue("Page callback",page.await(15,TimeUnit.SECONDS))
+                assertTrue("CSS must use interception while network disabled",css.await(5,TimeUnit.SECONDS))
+                val cleared=CountDownLatch(1)
+                scenario.onActivity {
+                    assertTrue(view.settings.blockNetworkLoads);assertFalse(view.settings.javaScriptEnabled)
+                    assertFalse(view.settings.allowFileAccess);assertFalse(view.settings.allowContentAccess)
+                    assertFalse(view.settings.safeBrowsingEnabled);assertEquals("Safe fixture",view.title)
+                    view.destroy();HiddenProfileCleanup.clear(ProfileStore.getInstance().getOrCreateProfile(name)) {cleared.countDown()}
+                }
+                assertTrue("Profile data cleanup callback",cleared.await(10,TimeUnit.SECONDS))
             }
-            assertTrue("Page callback",page.await(15,TimeUnit.SECONDS))
-            assertTrue("CSS must use interception while network disabled",css.await(5,TimeUnit.SECONDS))
-            val cleared=CountDownLatch(1)
-            scenario.onActivity {
-                assertTrue(view.settings.blockNetworkLoads);assertFalse(view.settings.javaScriptEnabled)
-                assertFalse(view.settings.allowFileAccess);assertFalse(view.settings.allowContentAccess)
-                assertFalse(view.settings.safeBrowsingEnabled);assertEquals("Safe fixture",view.title)
-                view.destroy();HiddenProfileCleanup.clear(ProfileStore.getInstance().getOrCreateProfile(name)) {cleared.countDown()}
+        } finally {
+            admitted.set(false)
+            instrumentation.runOnMainSync { isolation.close() }
+            awaitRendererFixture("The offline WebView fixture released its deny-all network") {
+                HiddenTorIsolationService.released()
             }
-            assertTrue("Profile data cleanup callback",cleared.await(10,TimeUnit.SECONDS))
         }
     }
+
+    private fun awaitRendererFixture(message: String, ready: () -> Boolean) {
+        val start = SystemClock.elapsedRealtime()
+        while (!ready() && SystemClock.elapsedRealtime() - start < 10_000) SystemClock.sleep(50)
+        assertTrue(message, ready())
+    }
+
     @Test fun primaryAndHiddenProfilesKeepCookiesIndependentAndClearOnlyHiddenData() {
         InstrumentationRegistry.getArguments().getString("hiddenProfilePhase")?.let {processFixture(it);return}
         assumeTrue(WebViewFeature.isFeatureSupported(WebViewFeature.MULTI_PROFILE) && WebViewFeature.isFeatureSupported(WebViewFeature.DELETE_BROWSING_DATA))
