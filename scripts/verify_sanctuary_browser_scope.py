@@ -148,7 +148,7 @@ CODE81_EXACT_ADAPTERS = {
 # Hidden Space exposes the existing protected process and adds encrypted browser preferences/download metadata.
 # Pin these exact adapters while continuing to reject other changes in the protected core.
 HIDDEN_SPACE_EXACT_ADAPTERS = {
-    f"{CORE}/browser/hidden/HiddenTorService.kt": "799ff8ea27ade2d8a5ff48b00d1759b75bea6f65e2879bb58bac2e7f48c67fcc",
+    f"{CORE}/browser/hidden/HiddenTorService.kt": "dcf18efe3cdb4707e2aae2331e17e371d67b283d94172d13178b6294107a1dee",
     f"{CORE}/browser/hidden/HiddenTorRelayBridge.kt": "985422a63b10e0c642eb6aaf0e904b6bcc41d9ca1a55437f687c96108c2ae9cf",
     f"{CORE}/browser/hidden/HiddenBrowserLibrary.java": "7e289978a890662f425fc894b56252a7b5b232b32614cc9f88d43a6b346c0fb4",
     f"{CORE}/browser/hidden/HiddenBrowserRuntime.kt": "33b1c2d38ceb9b1883a035b3a2ff6eb9a9af7a48a4a9bff83b521a4733b1d18d",

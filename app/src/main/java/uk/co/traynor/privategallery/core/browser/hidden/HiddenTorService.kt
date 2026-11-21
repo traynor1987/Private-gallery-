@@ -47,7 +47,7 @@ class HiddenTorService : TorService() {
         val control=java.io.File(directory,"ControlSocket")
         try {
             check(android.system.OsConstants.S_ISSOCK(android.system.Os.lstat(control.path).st_mode))
-            android.system.Os.unlink(control.path)
+            check(control.delete()) {"Stale Tor control socket could not be removed"}
         } catch(error:android.system.ErrnoException) {
             if(error.errno!=android.system.OsConstants.ENOENT)throw error
         }
