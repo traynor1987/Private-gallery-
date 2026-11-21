@@ -170,6 +170,17 @@ class NativeTorIsolation1762Test {
                     state = ViewModelProvider(activity)[ProtectedSessionState::class.java]
                     openHiddenSpaceFixtureDashboard(activity, state)
                 }
+                click("Apps")
+                waitFor("Hidden Workspace app drawer can search for Tor Browser") {
+                    val search = nodes().singleOrNull { it.isEditable && it.isEnabled && it.isVisibleToUser }
+                        ?: return@waitFor false
+                    search.performAction(
+                        AccessibilityNodeInfo.ACTION_SET_TEXT,
+                        Bundle().apply {
+                            putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, "Tor Brow")
+                        },
+                    )
+                }
                 click("Tor Browser")
                 val brokerField = HiddenBrowserRuntime::class.java.getDeclaredField("interactiveBroker").apply { isAccessible = true }
                 val routeField = HiddenBrowserRuntime::class.java.getDeclaredField("torConfiguration").apply { isAccessible = true }
