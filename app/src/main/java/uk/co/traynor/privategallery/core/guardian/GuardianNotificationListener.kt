@@ -560,9 +560,13 @@ internal class GuardianNotificationListener : NotificationListenerService() {
                 ?: return@runCatching false
             val entries = Notification.MessagingStyle.Message.getMessagesFromBundleArray(bundles)
             val self = notification.extras.getParcelable(Notification.EXTRA_MESSAGING_PERSON, Person::class.java)
+            // A MessagingStyle entry without a sender is an outgoing reply by the style's owner.
+            val hasMessagingOwner = notification.extras.getString(Notification.EXTRA_TEMPLATE) ==
+                Notification.MessagingStyle::class.java.name && !self?.name.isNullOrBlank()
             entries.size == bundles.size &&
-                entries.all { entry -> entry.senderPerson != null && !entry.text.isNullOrBlank() && entry.dataUri == null } &&
-                entries.count { !guardianIsOwnMessage(self, it.senderPerson) } == captured.entries.size
+                entries.all { entry -> (entry.senderPerson != null || hasMessagingOwner) &&
+                    !entry.text.isNullOrBlank() && entry.dataUri == null } &&
+                entries.count { it.senderPerson != null && !guardianIsOwnMessage(self, it.senderPerson) } == captured.entries.size
         }.getOrDefault(false)
 
     private fun receiveSynthetic(sbn: StatusBarNotification, rankingMap: RankingMap) {

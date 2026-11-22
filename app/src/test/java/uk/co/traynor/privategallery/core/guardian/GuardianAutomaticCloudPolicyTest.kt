@@ -16,6 +16,13 @@ class GuardianAutomaticCloudPolicyTest {
         }
     }
 
+    @Test fun redactsSenderNamesAcrossApostropheStyles() {
+        assertEquals("[redacted] asked for more time", GuardianAutomaticCloudPolicy.excerpt(
+            "O'Connor asked for more time", listOf("Avery O’Connor")))
+        assertEquals("[redacted] asked for more time", GuardianAutomaticCloudPolicy.excerpt(
+            "O’Connor asked for more time", listOf("Avery O'Connor")))
+    }
+
     @Test fun stableNetworkNeedsTwoChecksTenSecondsApartAndFiveMinuteWindow() {
         val policy = GuardianAutomaticCloudPolicy
         assertFalse(policy.ready(100, 10_099, true))
