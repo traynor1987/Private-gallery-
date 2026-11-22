@@ -1,13 +1,13 @@
 name: Guardian Fold notification regression
 on:
   push:
-    branches: [feature/novaos-guardian-fold-acceptance]
+    branches: [feature/novaos-guardian-fold-acceptance, feature/nova-guardian-production-readiness]
   workflow_dispatch:
 permissions:
   contents: read
 jobs:
   guardian-api37:
-    if: github.ref == 'refs/heads/feature/novaos-guardian-fold-acceptance'
+    if: github.ref == 'refs/heads/feature/novaos-guardian-fold-acceptance' || github.ref == 'refs/heads/feature/nova-guardian-production-readiness'
     runs-on: ubuntu-24.04
     timeout-minutes: 45
     steps:

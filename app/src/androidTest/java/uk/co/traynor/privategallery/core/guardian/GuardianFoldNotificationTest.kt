@@ -133,11 +133,12 @@ class GuardianFoldNotificationTest {
             shell("input keyevent KEYCODE_SLEEP")
             await("Screen is off") { !power.isInteractive }
             send("fold-safe")
-            await("Screen-off safe replacement under DND preserves the inbound greeting") {
+            await("Screen-off safe replacement under DND preserves the greeting with both outgoing encodings") {
                 val safe = rows().maxBy { it.time }
                 rows().size == 5 && safe.assessment == GuardianAssessment.LOW_RISK && !active(42) &&
                     posted(safe)?.let { alertText(it).contains("Good afternoon") &&
-                        !alertText(it).contains("I will call later.") && it.publicVersion == null &&
+                        !alertText(it).contains("I will call later.") && !alertText(it).contains("My earlier reply.") &&
+                        it.publicVersion == null &&
                         it.visibility == Notification.VISIBILITY_SECRET } == true
             }
             assertFalse(power.isInteractive)

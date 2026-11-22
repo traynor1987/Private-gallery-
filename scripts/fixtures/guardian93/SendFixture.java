@@ -104,6 +104,7 @@ public final class SendFixture extends BroadcastReceiver {
             case "fold-safe":
                 id = 42;
                 notification.setGroup("fold-guardian-group");
+                messages.addMessage("My earlier reply.", now - 2, (Person) null);
                 messages.addMessage("I will call later.", now - 1, self);
                 messages.addMessage("Good afternoon", now, sender);
                 break;
