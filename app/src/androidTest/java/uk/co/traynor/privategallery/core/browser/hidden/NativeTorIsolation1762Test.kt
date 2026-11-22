@@ -394,6 +394,7 @@ class NativeTorIsolation1762Test {
                 val native=context.getSystemService(android.app.ActivityManager::class.java).runningAppProcesses.single {it.uid==Process.myUid() && it.processName==context.packageName+":hidden_tor"}
                 val lossAtMs = System.currentTimeMillis()
                 val lossElapsedNs = SystemClock.elapsedRealtimeNanos()
+                HiddenTorShutdownTrace.event("abrupt_kill", "case=$lossCase trigger_ns=$lossElapsedNs")
                 Process.killProcess(native.pid)
                 waitFor("Abrupt Tor process death is observed",10){tor?.alive()!=true}
                 assertEquals("Sink remains owned until explicit lifetime retirement",network,isolation!!.network())

@@ -54,8 +54,12 @@ internal class HiddenTorRelayBridge(private val protect:(Socket)->Boolean,privat
             upstream.bind(InetSocketAddress(0))
             synchronized(gate){allowed();check(protect(upstream));allowed()}
             upstream.connect(InetSocketAddress(address,port),30_000);allowed()
+            HiddenTorShutdownTrace.event("relay_connected", "port=${upstream.localPort}")
             output.write(byteArrayOf(5,0,0,1,0,0,0,0,0,0));output.flush();client.soTimeout=0
-            executor.execute {try{copy(input,upstream.getOutputStream());runCatching{upstream.shutdownOutput()}}catch(_:Exception){closeRelaySocket(upstream)}}
+            executor.execute {try{copy(input,upstream.getOutputStream());runCatching{
+                HiddenTorShutdownTrace.event("relay_local_eof", "port=${upstream.localPort}")
+                upstream.shutdownOutput()
+            }}catch(_:Exception){closeRelaySocket(upstream)}}
             copy(upstream.getInputStream(),output)
         }finally{closeRelaySocket(upstream)}
     }
@@ -66,7 +70,9 @@ internal class HiddenTorRelayBridge(private val protect:(Socket)->Boolean,privat
     private fun closeRelaySocket(socket: Socket) {
         // When revoking the route, discard queued transport bytes and notify the relay
         // immediately. A normal stream ending keeps its ordinary TCP close semantics.
-        if(closed.get() || !authorized()) abortRelaySocket(socket)
+        val revoked = closed.get() || !authorized()
+        HiddenTorShutdownTrace.event("relay_finished", "port=${socket.localPort} abort=$revoked")
+        if(revoked) abortRelaySocket(socket)
         else runCatching {socket.close()}
         relaySockets.remove(socket)
         sockets.remove(socket)
@@ -81,7 +87,10 @@ internal class HiddenTorRelayBridge(private val protect:(Socket)->Boolean,privat
         synchronized(gate) {
             if(!closed.compareAndSet(false,true))return
             runCatching {server.close()}
-            relaySockets.forEach(::abortRelaySocket)
+            relaySockets.forEach { socket ->
+                HiddenTorShutdownTrace.event("relay_retired", "port=${socket.localPort}")
+                abortRelaySocket(socket)
+            }
             sockets.forEach {runCatching {it.close()}}
             relaySockets.clear()
             sockets.clear()

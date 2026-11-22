@@ -1,0 +1,70 @@
+name: Build 96 abrupt Tor loss diagnosis only
+on:
+  push:
+    branches: [diagnostics/build96-abrupt-tor]
+permissions:
+  contents: read
+jobs:
+  transport-loss-trace:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      matrix:
+        sample: [1, 2, 3]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v5
+        with: { distribution: temurin, java-version: '17' }
+      - uses: actions/cache/restore@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: privacy1751-${{ runner.os }}-${{ hashFiles('**/*.gradle*', 'gradle/libs.versions.toml', 'gradle/wrapper/gradle-wrapper.properties') }}
+          restore-keys: privacy1751-${{ runner.os }}-
+      - name: Prepare Android and Gradle
+        run: |
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --install "cmdline-tools;22.0"
+          mv "$ANDROID_HOME/cmdline-tools/latest" "$RUNNER_TEMP/previous-android-command-tools"
+          ln -s "$ANDROID_HOME/cmdline-tools/22.0" "$ANDROID_HOME/cmdline-tools/latest"
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-37.1" "build-tools;36.0.0" "emulator"
+          bash scripts/prime_gradle95_ci.sh
+          ./gradlew assembleDebug assembleDebugAndroidTest --no-daemon --console=plain --stacktrace
+      - name: Start the existing live onion fixture
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq tor tcpdump
+          python3 scripts/ci_onion_probe.py
+          sudo chmod 666 /dev/kvm
+      - name: Trace real abrupt Tor process loss on Android 17
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: '37.0'
+          target: google_apis
+          arch: x86_64
+          profile: pixel_2
+          disable-animations: true
+          emulator-options: -tcpdump ${{ runner.temp }}/android-tor.pcap -no-window -gpu software -no-snapshot -noaudio -no-boot-anim -feature -HardwareDecoder -camera-back emulated -camera-front emulated
+          script: bash scripts/run_build96_abrupt_tor_trace.sh
+      - name: Retain guest TCP headers for the retired relay sockets
+        if: always()
+        run: |
+          evidence=app/build/tor-shutdown-trace
+          if [[ -s "$RUNNER_TEMP/android-tor.pcap" && -f "$evidence/device-timeline.txt" ]]; then
+            ports=$(sed -n 's/.*relay_connected.* port=\([0-9]*\).*/\1/p' "$evidence/device-timeline.txt" | tr ',' '\n' | awk '/^[0-9]+$/' | sort -nu)
+            if [[ -n "$ports" ]]; then
+              filter=$(printf '%s\n' "$ports" | awk '{printf "%s port %s", separator, $1;separator=" or"}')
+              tcpdump -tt -nn -r "$RUNNER_TEMP/android-tor.pcap" "tcp and ($filter)" > "$evidence/guest-relay-headers.txt" 2> "$evidence/guest-relay-decode.log"
+            fi
+          fi
+      - name: Remove disposable onion fixture
+        if: always()
+        run: python3 scripts/ci_onion_probe.py --stop
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: build96-abrupt-tor-trace-${{ matrix.sample }}
+          path: |
+            app/build/tor-shutdown-trace/
+            app/build/outputs/androidTest-results/connected/**/TEST-*.xml
