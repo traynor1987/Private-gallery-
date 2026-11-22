@@ -14,6 +14,15 @@ DOCUMENT = b'Private Apps document download fixture 178\n'
 DOCUMENT_UPLOAD = b'Private Apps document upload fixture 178\n'
 FORM = b'<form method="POST" action="/form-result"><input name="value" value="fixture-form-body"><button>Submit form</button></form>'
 FORM_PAGE = b'<!doctype html><meta name="viewport" content="width=device-width"><title>VPN native form</title>' + FORM
+DIALOG_PAGE = b'''<!doctype html><meta name="viewport" content="width=device-width"><title>VPN dialog parity</title>
+<p>Before dialog frame</p>
+<iframe title="Dialog origin fixture" style="display:block;width:100%;height:96px;border:0"
+    src="https://dialog-frame.fixture.invalid/dialog-parity-frame"></iframe>
+<p>After dialog frame</p>'''
+DIALOG_FRAME = b'''<!doctype html><meta name="viewport" content="width=device-width">
+<style>body{margin:0}button{width:100%;height:100vh}</style>
+<button onclick="alert('Frame alert body')">Frame alert</button>'''
+
 PAGE = b'''<!doctype html><title>Hidden VPN fixture</title><h1>VPN fixture ready</h1>
 <a href="/private-app-slow178.txt" download="slow.txt">Download slow app document</a>
 <a href="/private-app-document178.txt" download="private-app-document178.txt">Download app document</a>
@@ -119,6 +128,8 @@ class Fixture:
                 if self.path=='/basic':
                     if self.headers.get('Authorization','')!='Basic '+base64.b64encode(b'fixture-user:fixture-pass').decode():return self.reply(b'Fixture sign in required',401,headers=[('WWW-Authenticate','Basic realm="Fixture website account"')])
                     return self.reply(b'Fixture website authenticated')
+                if self.path=='/dialog-parity':return self.reply(DIALOG_PAGE)
+                if self.path=='/dialog-parity-frame':return self.reply(DIALOG_FRAME)
                 if self.path=='/frame':return self.reply(b"<!doctype html><button onclick=\"alert('Frame alert body')\">Frame alert</button>")
                 if self.path=='/form':return self.reply(FORM_PAGE)
                 if self.path=='/worker.js':return self.reply(b"self.addEventListener('install',e=>e.waitUntil(self.skipWaiting()));self.addEventListener('activate',e=>e.waitUntil(self.clients.claim()));self.addEventListener('message',e=>e.waitUntil(fetch('/worker-post',{method:'POST',body:'fixture-worker-body'})));",mime='application/javascript')

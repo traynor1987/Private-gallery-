@@ -144,6 +144,43 @@ class HiddenVpnLive1762Test {
             try {assertTrue("Web touch delivered",automation.injectInputEvent(event,true))}finally{event.recycle()}
         }
     }
+    /** The test-owned cross-origin frame contains a full-frame HTML button.
+     * Android WebView may omit its accessibility subtree. Use visible page landmarks
+     * to touch inside the real frame without invoking JavaScript from the test. */
+    private fun tapDialogFrame() {
+        var target: android.graphics.Point? = null
+        var previous: android.graphics.Point? = null
+        waitFor("Visible and stable dialog frame landmarks") {
+            val visible = nodes()
+            fun landmark(text: String) = visible.firstOrNull {
+                it.text?.toString() == text && it.isVisibleToUser
+            }
+            val before = landmark("Before dialog frame") ?: return@waitFor false
+            val after = landmark("After dialog frame") ?: return@waitFor false
+            if (before.windowId != after.windowId) return@waitFor false
+            val top = android.graphics.Rect().also(before::getBoundsInScreen)
+            val bottom = android.graphics.Rect().also(after::getBoundsInScreen)
+            if (top.isEmpty || bottom.isEmpty || bottom.top <= top.bottom) return@waitFor false
+            val point = android.graphics.Point(top.centerX(), (top.bottom + bottom.top) / 2)
+            val window = automation.rootInActiveWindow ?: return@waitFor false
+            val bounds = android.graphics.Rect().also(window::getBoundsInScreen)
+            if (window.windowId != before.windowId || !bounds.contains(point.x, point.y)) return@waitFor false
+            target = point
+            val stable = previous == point
+            previous = point
+            stable
+        }
+        val point = checkNotNull(target)
+        val time = android.os.SystemClock.uptimeMillis()
+        for (action in intArrayOf(android.view.MotionEvent.ACTION_DOWN, android.view.MotionEvent.ACTION_UP)) {
+            val event = android.view.MotionEvent.obtain(time, android.os.SystemClock.uptimeMillis(), action,
+                point.x.toFloat(), point.y.toFloat(), 0)
+            event.source = android.view.InputDevice.SOURCE_TOUCHSCREEN
+            try { assertTrue("Frame button touch delivered", automation.injectInputEvent(event, true)) }
+            finally { event.recycle() }
+        }
+    }
+
     /** Compose controls export a real click action; HTML controls continue to use exact touch. */
     private fun clickNative(text:String,selectedTab:Boolean=false,index:Int=0) {
         waitFor("Native production action $text") {
@@ -437,11 +474,21 @@ class HiddenVpnLive1762Test {
                 waitFor("Service worker sends POST over the same authenticated VPN proxy",30) {
                     observed(network,origin){it.optString("path")=="/worker-post" && it.optBoolean("worker_body") && it.optBoolean("tls")}
                 }
-                click("Frame alert",websiteTouch=true)
-                waitFor("Website modal names the actual iframe origin") {
-                    nodes().any {it.text?.toString()=="https://dialog-frame.fixture.invalid"}
+                navigateDocument("$secureOrigin/dialog-parity", "Before dialog frame")
+                waitFor("Cross-origin dialog frame fetched through WireGuard") {
+                    observed(network, origin) {
+                        it.optString("path") == "/dialog-parity-frame" && it.optBoolean("tls") &&
+                            it.optString("source") == "10.91.0.2"
+                    }
+                }
+                tapDialogFrame()
+                waitFor("Website modal names the actual iframe origin and message") {
+                    val dialog = nodes()
+                    dialog.any { it.text?.toString() == "https://dialog-frame.fixture.invalid" } &&
+                        dialog.any { it.text?.toString() == "Frame alert body" }
                 }
                 click("OK")
+                navigateDocument(secureOrigin, "Confirm")
                 click("Confirm",websiteTouch=true)
                 waitFor("Native website confirmation names the request") {nodes().any {it.text?.toString()=="Fixture confirm"}}
                 click("Cancel")
