@@ -8,6 +8,8 @@ import hashlib
 from email.parser import BytesParser
 from email import policy
 import json
+import re
+import select
 import threading
 import time
 from urllib.parse import parse_qs
@@ -15,6 +17,9 @@ from urllib.parse import parse_qs
 PNG = base64.b64decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+ip1sAAAAASUVORK5CYII=')
 DOCUMENT = b'Private Apps document download fixture 178\n'
 DOCUMENT_UPLOAD = b'Private Apps document upload fixture 178\n'
+IMAGE_UPLOAD_PAGE = b'''<!doctype html><meta name="viewport" content="width=device-width"><title>Tor image upload</title>
+<h1>Tor fixture image upload</h1><form method="POST" action="/uploaded" enctype="multipart/form-data">
+<input aria-label="Choose Tor upload" type="file" name="file" accept="image/png"><button>Upload Tor image</button></form>'''
 HTML = b'''<!doctype html><meta name="viewport" content="width=device-width"><title>Tor native fixture</title>
 <link rel="manifest" href="/manifest178.json"><h1>Tor native fixture</h1>
 <a href="/private-app-document178.txt" download="private-app-document178.txt">Download app document</a>
@@ -54,6 +59,8 @@ def handler_class(base, root, payload):
                     hits.write('Controlled HTTP backend served response\n')
             elif self.path == '/interactive':
                 self.send_bytes(200, HTML, 'text/html; charset=utf-8')
+            elif self.path == '/upload-image':
+                self.send_bytes(200, IMAGE_UPLOAD_PAGE, 'text/html; charset=utf-8')
             elif self.path == '/manifest178.json':
                 self.send_bytes(200, json.dumps(dict(name='Owned launch fixture',start_url='/interactive',scope='/',display='standalone',icons=[dict(src='/media.png',type='image/png')])).encode(), 'application/manifest+json')
             elif self.path == '/private-app-document178.txt':
@@ -75,19 +82,38 @@ def handler_class(base, root, payload):
                     events = [json.loads(line) for line in events_path.read_text().splitlines()]
                 events += evidence179.events(root)
                 self.send_bytes(200, json.dumps({'events': events, 'png_sha256': hashlib.sha256(PNG).hexdigest()}).encode(), 'application/json')
-            elif self.path == '/slow':
-                self.event(kind='slow-start')
-                self.send_response(200)
-                self.send_header('Content-Type', 'text/plain')
-                self.send_header('Content-Length', '1048576')
-                self.end_headers()
+            elif self.path == '/slow' or re.fullmatch(r'/slow\?case=(?:lock|loss)-[a-f0-9-]{36}', self.path):
+                case = self.path.partition('?case=')[2]
+
+                def slow_event(kind, **details):
+                    if case:
+                        details.update(case=case, at_ms=time.time_ns() // 1_000_000,
+                                       monotonic_ns=time.monotonic_ns())
+                    self.event(kind=kind, **details)
+
+                slow_event('slow-start')
+                self.close_connection = True
                 try:
+                    self.send_response(200)
+                    self.send_header('Content-Type', 'text/plain')
+                    self.send_header('Content-Length', '1048576')
+                    self.send_header('Connection', 'close')
+                    self.end_headers()
                     for _ in range(1024):
+                        # Tor can close its backend socket before a buffered write fails.
+                        if select.select([self.connection], [], [], 0)[0]:
+                            if self.connection.recv(1) == b'':
+                                slow_event('slow-closed', close_evidence='peer_eof')
+                            else:
+                                slow_event('slow-io-error', close_evidence='unexpected_peer_data')
+                            return
                         self.wfile.write(b'x' * 1024)
                         self.wfile.flush()
                         time.sleep(.1)
-                except (BrokenPipeError, ConnectionResetError, OSError):
-                    self.event(kind='slow-closed')
+                    slow_event('slow-complete')
+                except OSError as error:
+                    evidence = evidence179.peer_close(error)
+                    slow_event('slow-closed' if evidence else 'slow-io-error', close_evidence=evidence)
             else:
                 self.send_bytes(404, b'Not found')
 

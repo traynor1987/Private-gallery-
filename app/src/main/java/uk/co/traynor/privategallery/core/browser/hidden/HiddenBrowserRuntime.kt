@@ -25,6 +25,8 @@ internal class HiddenBrowserRuntime(
     @Volatile private var authority: HiddenSession.Authority? = null
     private val closed = AtomicBoolean(false)
     private val started = AtomicBoolean(false)
+    private val revocationHandler = android.os.Handler(android.os.Looper.getMainLooper())
+    private var revocation: HiddenSession.RevocationRegistration? = null
     private val policy = HiddenConnectionPolicy()
     private val scope = CoroutineScope(SupervisorJob()+Dispatchers.Main.immediate)
     private val profileName = "hidden16-"+UUID.randomUUID().toString()
@@ -64,7 +66,13 @@ internal class HiddenBrowserRuntime(
         // Capture after prior Compose owners have disposed/revoked their presentation epoch.
         authority=runCatching {session.authority()}.getOrNull()
         if(!authorized()) {status="Disconnected";return}
-        library=HiddenBrowserLibrary(activity.noBackupFilesDir,session,checkNotNull(authority),mode==HiddenConnectionPolicy.Mode.VPN_ONLY)
+        val currentAuthority=checkNotNull(authority)
+        // Session callbacks execute under the session monitor. Queue resource teardown
+        // on Main while the session authority and broker already reject browser traffic.
+        if(mode==HiddenConnectionPolicy.Mode.TOR_ONLY)
+            revocation=session.onRevoked(currentAuthority) { revocationHandler.post { close() } }
+        if(!authorized()) {close();return}
+        library=HiddenBrowserLibrary(activity.noBackupFilesDir,session,currentAuthority,mode==HiddenConnectionPolicy.Mode.VPN_ONLY)
         activity.hiddenBrowserOwner?.close();activity.hiddenBrowserOwner=this
         if(mode==HiddenConnectionPolicy.Mode.VPN_TOR) {
             status="Connection failed";detail="VPN + Tor unavailable: Tor's outbound route through WireGuard has not been enforced and verified. No alternative route was started.";return
@@ -257,8 +265,8 @@ internal class HiddenBrowserRuntime(
                         scope.launch {if(authorized()){downloadedBytes=bytes;downloadTotal=total}}
                     }
                 }) {mime,input ->
-                    val item=repository.importMedia("Hidden download",mime,input,
-                        validateDownloadedMedia=hiddenDownloadedMediaValidator(mime,{ !authorized() }))
+                    val item=repository.importBrowserDownload("Hidden download",mime,input,
+                        validate=hiddenDownloadedMediaValidator(mime,{ !authorized() }))
                     repository.verify(item.id)
                 }
             }}
@@ -292,13 +300,17 @@ internal class HiddenBrowserRuntime(
         policy.disconnect();connected=false;downloading=false;showingPage=false;status=state;detail=reason
         library=null
         interactiveBroker?.close();interactiveBroker=null
-        transport?.close();transport=null;tor?.close();tor=null
+        transport?.close();transport=null
+        // Retire the relay before stopping Tor. The isolation service keeps its sink
+        // until both browser and Tor processes have been observed to exit.
         torIsolation?.close();torIsolation=null;torConfiguration=null
+        tor?.close();tor=null
         tabs.toList().forEach(::closeTab)
     }
     fun deliverPendingPresentationLoss() {interactiveBroker?.deliverPendingPresentationLoss()}
     override fun close() {
         if(!closed.compareAndSet(false,true))return
+        revocation?.close();revocation=null
         activity.cancelHiddenTorPermission(this)
         if(activity.hiddenBrowserOwner===this)activity.hiddenBrowserOwner=null
         scope.cancel();disconnect("Disconnected","Browsing stopped. Retry to create a fresh private session.")

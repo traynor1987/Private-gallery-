@@ -15,7 +15,7 @@ import zipfile
 
 ROOT=Path(__file__).resolve().parents[1]
 BRANCH='main'
-BASELINE='022061984debb59f69d917f225ac08f1bfedfe82'
+BASELINE='b003dafbad69a46d7f83896738030200a0dd0df4'
 CONTROLS=('compile_upgrade1711_fixture.sh','verify_compiled_upgrade1711.py',
           'fetch_code81_upgrade_baseline.py','verify_code80_apk_identity.py','verify_code79_baseline.py',
           'verify_novaos_release_assets.py','verify_production_candidate1711.sh',
@@ -78,6 +78,10 @@ def runtime_cases(archive,matrix,source):
                 'evidence-locker-68':2,'evidence-sanctuary-68':2,
                 'evidence-legacy-locker':7,'evidence-legacy-ai':1,'evidence-legacy-reports':2}
         exact = {
+            'guardian-fold-notification': [
+                ('uk.co.traynor.privategallery.core.guardian.GuardianFoldNotificationTest',
+                 'switchesModeAndReplacesTheThreeMessageWhatsAppGroup'),
+            ],
             'guardian-notification-pipeline-93': [
                 ('uk.co.traynor.privategallery.core.guardian.GuardianNotificationPipeline93Test',
                  'syntheticWhatsAppUsesTheAndroidListenerAndBothPresentationModes'),
@@ -381,7 +385,7 @@ def runtime_cases(archive,matrix,source):
 
 def validate(marker,review,run,jobs,artifact,archive,matrix_raw,current_controls,fixture):
     source=marker.get('source');require(source_ok(source),'Unfrozen candidate source')
-    require(marker.get('baseline_source')==BASELINE and marker.get('baseline_code')==91 and marker.get('candidate_code')==93,'Wrong upgrade identity')
+    require(marker.get('baseline_source')==BASELINE and marker.get('baseline_code')==95 and marker.get('candidate_code')==96,'Wrong upgrade identity')
     require(marker.get('controls_sha256')==current_controls,'Release controls changed after review')
     require(marker.get('review_sha256')==sha(review),'Release policy changed')
     require(marker.get('fixture_sha256')==sha(fixture),'Upgrade fixture changed')
@@ -396,7 +400,7 @@ def validate(marker,review,run,jobs,artifact,archive,matrix_raw,current_controls
         require(line in text.splitlines(),'Missing exact release policy line: '+line)
     require(type(marker.get('test_run')) is int and marker['test_run']>0 and run.get('id')==marker['test_run'],'Wrong runtime run')
     runtime_branch = marker.get('runtime_branch', BRANCH)
-    require(runtime_branch in ('main', 'feature/novaos-code81-core-apps', 'feature/novaos-code83-cloud-teacher', 'feature/novaos-guardian-retention89', 'feature/novaos-guardian-evidence90', 'feature/novaos-guardian-reliability91', 'feature/novaos-guardian-presentation93'), 'Unapproved runtime branch')
+    require(runtime_branch in ('main', 'feature/novaos-code81-core-apps', 'feature/novaos-code83-cloud-teacher', 'feature/novaos-guardian-retention89', 'feature/novaos-guardian-evidence90', 'feature/novaos-guardian-reliability91', 'feature/novaos-guardian-presentation93', 'feature/novaos-guardian-fold-acceptance'), 'Unapproved runtime branch')
     if 'runtime_branch' in marker:
         require('Runtime branch: '+runtime_branch in text.splitlines(), 'Missing approved runtime branch')
     require(run.get('event')=='push' and run.get('head_sha')==source and run.get('head_branch')==runtime_branch,'Wrong runtime source/branch/event')
@@ -413,13 +417,13 @@ def validate(marker,review,run,jobs,artifact,archive,matrix_raw,current_controls
     require(REQUIRED_STEPS<=passed,'Required runtime/build/identity step did not run')
     count=runtime_cases(archive,json.loads(matrix_raw),source)
     return dict(schema=1,decision='READY_FOR_GATED_SIGNER',source=source,baseline_source=BASELINE,
-                baseline_code=91,candidate_code=93,test_run=marker['test_run'],test_artifact=marker['test_artifact'],review_sha256=sha(review),
+                baseline_code=95,candidate_code=96,test_run=marker['test_run'],test_artifact=marker['test_artifact'],review_sha256=sha(review),
                 fixture_sha256=sha(fixture),controls_sha256=current_controls,matrix_sha256=sha(matrix_raw),
                 runtime_archive_sha256=marker['runtime_archive_sha256'],validated_case_count=count,validated_restart_count=8,validated_launcher_restart_count=1)
 
 def check_receipt(proof,source,current_controls,fixture):
     require(source_ok(source) and proof.get('schema')==1 and proof.get('decision')=='READY_FOR_GATED_SIGNER','Missing reviewed signer gate')
-    require(proof.get('source')==source and proof.get('baseline_source')==BASELINE and proof.get('baseline_code')==91 and proof.get('candidate_code')==93,'Signer gate source/identity differs')
+    require(proof.get('source')==source and proof.get('baseline_source')==BASELINE and proof.get('baseline_code')==95 and proof.get('candidate_code')==96,'Signer gate source/identity differs')
     require(proof.get('controls_sha256')==current_controls and proof.get('fixture_sha256')==sha(fixture),'Signer gate controls/fixture differ')
     require(type(proof.get('test_run')) is int and proof['test_run']>0 and type(proof.get('validated_case_count')) is int and proof['validated_case_count']>0,'Missing original runtime accounting')
     require(proof.get('validated_restart_count')==8,'Missing actual restart phase accounting')

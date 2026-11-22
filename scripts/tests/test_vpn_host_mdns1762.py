@@ -39,6 +39,10 @@ class HostMdnsClassificationTest(unittest.TestCase):
                  'A ANY (QM)? Android_D4U1E2V7.local.']
         for questions in (parts, parts[::-1]):
             self.assertTrue(classify(packet(' '.join(questions), 4, 146)))
+        updated = packet(' '.join(parts).replace('37X2X13X0', '37X3X10X0'), 4, 146)
+        self.assertTrue(classify(updated))
+        self.assertFalse(classify(updated.replace('37X3X10X0', '37X3X11X0')))
+        self.assertFalse(classify(updated.replace(' lo ', ' eth0 ')))
 
     def test_existing_exact_adb_service_browse_is_retained(self):
         q = 'ANY ANY (QM)? _adb-tls-pairing._tcp.local. ANY ANY (QM)? _adb._tcp.local. ANY ANY (QM)? _adb-tls-connect._tcp.local.'

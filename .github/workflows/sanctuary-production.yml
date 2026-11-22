@@ -53,7 +53,7 @@ jobs:
           marker=json.loads((control/'.sanctuary-production-candidate').read_bytes())
           assert re.fullmatch('[a-f0-9]{40}', marker['source']) and marker['source'] != '0'*40
           assert type(marker['test_run']) is int and marker['test_run'] > 0
-          assert marker.get('runtime_branch', 'main') in ('main', 'feature/novaos-code81-core-apps', 'feature/novaos-code83-cloud-teacher', 'feature/novaos-guardian-retention89', 'feature/novaos-guardian-evidence90', 'feature/novaos-guardian-reliability91', 'feature/novaos-guardian-presentation93')
+          assert marker.get('runtime_branch', 'main') in ('main', 'feature/novaos-code81-core-apps', 'feature/novaos-code83-cloud-teacher', 'feature/novaos-guardian-retention89', 'feature/novaos-guardian-evidence90', 'feature/novaos-guardian-reliability91', 'feature/novaos-guardian-presentation93', 'feature/novaos-guardian-fold-acceptance')
           subprocess.run(['git','merge-base','--is-ancestor',marker['source'],head],check=True)
           assert re.fullmatch('[a-f0-9]{64}',marker['fixture_sha256'])
           workflow=hashlib.sha256((control/'.github/workflows/sanctuary-production.yml').read_bytes()).hexdigest()
@@ -63,7 +63,7 @@ jobs:
           (inputs/'owner-approval.json').write_text(json.dumps({
               'approving_login':event['sender']['login'],'approving_id':event['sender']['id'],
               'approved_revision':approved_revision,'approval_commit':head,
-              'source':marker['source'],'version':'1.7.47','version_code':93,
+              'source':marker['source'],'version':'1.7.50','version_code':96,
               'workflow_sha256':workflow,'regression_run':marker['test_run'],
           },indent=2)+'\n')
           (inputs/'release-control-sha.txt').write_text(subprocess.check_output(['git','rev-parse','HEAD'],text=True))
@@ -121,9 +121,16 @@ jobs:
             const runtime=Buffer.from((await github.rest.actions.downloadArtifact({...context.repo,artifact_id:artifact.id,archive_format:'zip'})).data);
             if(hash(runtime)!==marker.runtime_archive_sha256)throw Error('Original runtime archive changed');
             fs.writeFileSync(path.join(root,'original-runtime.zip'),runtime);
-            const baselineRun=(await github.rest.actions.getWorkflowRun({...context.repo,run_id:44603556692})).data;
+            const hidden=(await github.rest.actions.getWorkflowRun({...context.repo,run_id:marker.hidden_test_run})).data;
+            const hiddenJob=(await github.rest.actions.listJobsForWorkflowRun({...context.repo,run_id:hidden.id,per_page:100})).data.jobs;
+            if(hidden.event!=='push'||hidden.head_branch!=='main'||hidden.head_sha!==marker.source||hidden.head_repository?.full_name!=='traynor1987/Private-gallery-'||hidden.path.split('@')[0]!=='.github/workflows/hidden-space-development.yml'||hidden.status!=='completed'||hidden.conclusion!=='success'||hiddenJob.length!==1||hiddenJob[0].conclusion!=='success'||hiddenJob[0].run_attempt!==hidden.run_attempt)throw Error('Missing successful exact-source Hidden Space suite');
+            const mandatory=['Verify protected core and camera','Compile and run JVM tests','Verify encrypted app adapters and concealed entry','Run Hidden and Primary regressions on Android 17'];
+            if(mandatory.some(name=>!hiddenJob[0].steps.some(step=>step.name===name&&step.conclusion==='success')))throw Error('Mandatory Hidden Space test did not run');
+            write('hidden-github-run.json',hidden);
+            write('hidden-github-jobs.json',hiddenJob);
+            const baselineRun=(await github.rest.actions.getWorkflowRun({...context.repo,run_id:44942493458})).data;
             write('baseline-github-run.json',baselineRun);
-            if(baselineRun.event!=='push'||baselineRun.head_branch!=='main'||baselineRun.head_repository?.full_name!=='traynor1987/Private-gallery-'||baselineRun.status!=='completed'||baselineRun.conclusion!=='success'||baselineRun.head_sha!=='54dd90a58e130821c21f808ec0eee12e15af31b5'||baselineRun.path.split('@')[0]!=='.github/workflows/sanctuary-production.yml')throw Error('Pinned Build 91 production run differs');
+            if(baselineRun.event!=='push'||baselineRun.head_branch!=='main'||baselineRun.head_repository?.full_name!=='traynor1987/Private-gallery-'||baselineRun.status!=='completed'||baselineRun.conclusion!=='success'||baselineRun.head_sha!=='ae79d321bbfbda77472d75710fb22bf73bd1e955'||baselineRun.path.split('@')[0]!=='.github/workflows/sanctuary-production.yml')throw Error('Pinned Build 95 production run differs');
       - name: Validate original runtime reports and authenticated owner authorization before signer access
         run: |
           controls="$RUNNER_TEMP/release1711-controls"
@@ -163,7 +170,7 @@ jobs:
           bash "$controls/compile_upgrade1711_fixture.sh"
           python3 "$controls/verify_compiled_upgrade1711.py" --directory "$PRIVATE_GALLERY_1711_COMPILED_DIR" --source "$FROZEN_SOURCE" --fixture "$PRIVATE_GALLERY_1711_UPGRADE_FIXTURE" --compiler "$controls/compile_upgrade1711_fixture.sh"
           chmod -R a-w "$PRIVATE_GALLERY_1711_COMPILED_DIR"
-      - name: Verify published Build 91 baseline before signer access
+      - name: Verify published Build 95 baseline before signer access
         run: |
           controls="$RUNNER_TEMP/release1711-controls/scripts"
           python3 "$controls/fetch_code81_upgrade_baseline.py" "$PRIVATE_GALLERY_1711_BASELINE_APK" "$ANDROID_HOME/build-tools/36.0.0" | tee app/build/production-evidence/baseline-archive-validation.txt
@@ -192,7 +199,7 @@ jobs:
           jarsigner -verify "$probe/probe.jar" > "$probe/verification.txt"
           grep -q 'jar verified' "$probe/verification.txt"
           printf 'PASS: existing permanent private key; original certificate SHA256 94f2bfc6567f26d067d29077111cfd0ce86d38263c642ad115e43365f05b0d17\n' > app/build/production-evidence/permanent-signer.txt
-      - name: Build the frozen original-key NovaOS 1.7.47 candidate
+      - name: Build the frozen original-key NovaOS 1.7.50 candidate
         env:
           ORG_GRADLE_PROJECT_PRIVATE_GALLERY_STORE_FILE: ${{ runner.temp }}/private-gallery-release.jks
           ORG_GRADLE_PROJECT_PRIVATE_GALLERY_STORE_PASSWORD: ${{ secrets.PRIVATE_GALLERY_SIGNING_STORE_PASSWORD }}
@@ -223,7 +230,7 @@ jobs:
           "$ANDROID_HOME/build-tools/36.0.0/zipalign" -c -P 16 -v 4 app/build/outputs/apk/release/app-release.apk > app/build/production-evidence/alignment.txt
       - name: Enable emulator acceleration
         run: sudo chmod 666 /dev/kvm
-      - name: Original-key Build 91 to versionCode 93 upgrade and restart without uninstall or clear
+      - name: Original-key Build 95 to versionCode 96 upgrade and restart without uninstall or clear
         uses: reactivecircus/android-emulator-runner@v2
         env:
           PRODUCTION_UPGRADE: '1'
@@ -277,10 +284,9 @@ jobs:
           (cd "$stage" && sha256sum private-gallery-release.apk > private-gallery-release.apk.sha256)
           install -m 0600 /dev/null "$stage/notes.md"
           cat > "$stage/notes.md" <<'NOTES'
-          NovaOS 1.7.47 (Build 93), Android 17.
-          Guardian recognises directly hostile commands and preserves ordinary greetings.
-          Choose Smart Filtering or Nova Guardian Notifications under Guardian Settings → Notification Presentation.
-          Guardian can post an eligible replacement after Android confirms that the original was removed.
+          NovaOS 1.7.50 (Build 96), Android 17.
+          Hidden Space opens directly into the full workspace after PIN unlock. Primary and Hidden use the existing Labs apps with separate authenticated data.
+          The known Galaxy Z Fold Guardian replacement-notification issue from Build 95 remains open.
           NOTES
           python3 - "$stage" <<'PY'
           import json,sys
@@ -288,16 +294,16 @@ jobs:
           root=Path(sys.argv[1])
           digest=(root/'private-gallery-release.apk.sha256').read_text().split()[0]
           (root/'private-gallery-release.metadata.json').write_text(json.dumps({
-            'package':'uk.co.traynor.privategallery','versionName':'1.7.47','versionCode':93,
+            'package':'uk.co.traynor.privategallery','versionName':'1.7.50','versionCode':96,
             'certificateSha256':'94f2bfc6567f26d067d29077111cfd0ce86d38263c642ad115e43365f05b0d17',
             'apkSha256':digest,
           },indent=2)+'\n')
           PY
-          if ! git show-ref --verify --quiet refs/tags/v1.7.47; then
-            git tag v1.7.47 "$FROZEN_SOURCE"
+          if ! git show-ref --verify --quiet refs/tags/v1.7.50; then
+            git tag v1.7.50 "$FROZEN_SOURCE"
           fi
           python3 "$RUNNER_TEMP/release1711-controls/scripts/verify_novaos_release_assets.py" \
-            --tag v1.7.47 --source "$FROZEN_SOURCE" --baseline-code 91 \
+            --tag v1.7.50 --source "$FROZEN_SOURCE" --baseline-code 95 \
             --assets "$stage" --notes "$stage/notes.md" --tools "$ANDROID_HOME/build-tools/36.0.0" \
             --evidence app/build/production-evidence/from80
       - name: Retain verified publication inputs
@@ -322,7 +328,7 @@ jobs:
           from pathlib import Path
           temporary=Path(os.environ['RUNNER_TEMP']);destination=temporary/'release1711-failure';destination.mkdir(exist_ok=True)
           evidence=Path('app/build/production-evidence');inputs=temporary/'release1711-inputs'
-          for name in ('github-run.json','github-jobs.json','github-artifact.json','baseline-github-run.json','gate.json','release-control-sha.txt','preserved-inputs-sha256.json'):
+          for name in ('github-run.json','github-jobs.json','github-artifact.json','baseline-github-run.json','hidden-github-run.json','hidden-github-jobs.json','gate.json','release-control-sha.txt','preserved-inputs-sha256.json'):
               original=inputs/name
               if original.is_file() and not original.is_symlink(): shutil.copyfile(original,destination/name)
           for name in ('baseline-signature.txt','baseline-package.txt','baseline-archive-validation.txt','signature.txt','package.txt','source-sha.txt','apk-sha256.txt','ocr-distribution.json','alignment.txt','instrumentation-payload-validation.txt','release-summary.json'):

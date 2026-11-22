@@ -71,7 +71,7 @@ import uk.co.traynor.privategallery.core.home2.SpaceContext
      maxWidth >= uk.co.traynor.privategallery.launcher.LauncherExpandedWidth.dp)
     renderHome(sharedLayout)
    }
-  }else renderHome(null)
+  }else HiddenWorkspacePrivacy(context) { renderHome(null) }
   message?.let{PanicHomeAlertDialog(onDismissRequest={message=null},title={Text("NovaOS")},text={Text(it)},confirmButton={TextButton(onClick={message=null}){Text("OK")}})}
  }
 }

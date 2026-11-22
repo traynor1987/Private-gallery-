@@ -1,5 +1,8 @@
 package uk.co.traynor.privategallery.core.browser.hidden
 
+import android.net.VpnService
+import android.os.ParcelFileDescriptor
+import android.os.SystemClock
 import android.webkit.*
 import androidx.activity.ComponentActivity
 import androidx.test.core.app.ActivityScenario
@@ -15,40 +18,76 @@ import java.io.ByteArrayInputStream
 import java.util.UUID
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicBoolean
+import uk.co.traynor.privategallery.BuildConfig
 
 @RunWith(AndroidJUnit4::class)
 class HiddenBrowserIsolationTest {
     @Test fun nativeResponsesRenderWithNetworkAndScriptingDisabled() {
         assumeTrue(WebViewFeature.isFeatureSupported(WebViewFeature.MULTI_PROFILE) && WebViewFeature.isFeatureSupported(WebViewFeature.DELETE_BROWSING_DATA))
         val page=CountDownLatch(1);val css=CountDownLatch(1)
-        ActivityScenario.launch(ComponentActivity::class.java).use {scenario ->
-            val name="hidden16-test-"+UUID.randomUUID()
-            lateinit var view:WebView
-            scenario.onActivity {activity ->
-                ProfileStore.getInstance().getOrCreateProfile(name)
-                view=HiddenWebViewFactory.create(activity,name)
-                view.webViewClient=object:WebViewClient() {
-                    override fun shouldInterceptRequest(view:WebView,request:WebResourceRequest):WebResourceResponse {
-                        if(request.url.path=="/style.css") {css.countDown();return WebResourceResponse("text/css","UTF-8",ByteArrayInputStream("body{color:blue}".toByteArray()))}
-                        return WebResourceResponse("text/html","UTF-8",ByteArrayInputStream("<html><head><title>Safe fixture</title><link rel='stylesheet' href='/style.css'></head><body>Hidden<script>document.title='UNSAFE';fetch('https://leak.invalid')</script></body></html>".toByteArray()))
+        // WebView may resolve an intercepted HTTPS hostname speculatively even
+        // with blockNetworkLoads. Keep this renderer fixture behind the same
+        // deny-all boundary as a real Tor child from before its first navigation.
+        check(BuildConfig.DEBUG)
+        val instrumentation = InstrumentationRegistry.getInstrumentation()
+        val context = instrumentation.targetContext
+        val automation = FixtureAccessibility178.automation(instrumentation)
+        ParcelFileDescriptor.AutoCloseInputStream(
+            automation.executeShellCommand("appops set ${context.packageName} ACTIVATE_VPN allow")
+        ).use { it.readBytes() }
+        assertNull(VpnService.prepare(context))
+        val admitted = AtomicBoolean(true)
+        val isolation = HiddenTorIsolationConnection(context, admitted::get) { admitted.set(false) }
+        try {
+            instrumentation.runOnMainSync { isolation.start() }
+            awaitRendererFixture("The offline WebView has a live deny-all network") {
+                var ready = false
+                instrumentation.runOnMainSync { ready = admitted.get() && isolation.network() != null }
+                ready
+            }
+            ActivityScenario.launch(ComponentActivity::class.java).use {scenario ->
+                val name="hidden16-test-"+UUID.randomUUID()
+                lateinit var view:WebView
+                scenario.onActivity {activity ->
+                    ProfileStore.getInstance().getOrCreateProfile(name)
+                    view=HiddenWebViewFactory.create(activity,name)
+                    view.webViewClient=object:WebViewClient() {
+                        override fun shouldInterceptRequest(view:WebView,request:WebResourceRequest):WebResourceResponse {
+                            if(request.url.path=="/style.css") {css.countDown();return WebResourceResponse("text/css","UTF-8",ByteArrayInputStream("body{color:blue}".toByteArray()))}
+                            return WebResourceResponse("text/html","UTF-8",ByteArrayInputStream("<html><head><title>Safe fixture</title><link rel='stylesheet' href='/style.css'></head><body>Hidden<script>document.title='UNSAFE';fetch('https://leak.invalid')</script></body></html>".toByteArray()))
+                        }
+                        override fun onPageFinished(view:WebView,url:String) {page.countDown()}
                     }
-                    override fun onPageFinished(view:WebView,url:String) {page.countDown()}
+                    activity.setContentView(view)
+                    view.loadUrl("https://hidden-fixture.invalid/page")
                 }
-                activity.setContentView(view)
-                view.loadUrl("https://hidden-fixture.invalid/page")
+                assertTrue("Page callback",page.await(15,TimeUnit.SECONDS))
+                assertTrue("CSS must use interception while network disabled",css.await(5,TimeUnit.SECONDS))
+                val cleared=CountDownLatch(1)
+                scenario.onActivity {
+                    assertTrue(view.settings.blockNetworkLoads);assertFalse(view.settings.javaScriptEnabled)
+                    assertFalse(view.settings.allowFileAccess);assertFalse(view.settings.allowContentAccess)
+                    assertFalse(view.settings.safeBrowsingEnabled);assertEquals("Safe fixture",view.title)
+                    view.destroy();HiddenProfileCleanup.clear(ProfileStore.getInstance().getOrCreateProfile(name)) {cleared.countDown()}
+                }
+                assertTrue("Profile data cleanup callback",cleared.await(10,TimeUnit.SECONDS))
             }
-            assertTrue("Page callback",page.await(15,TimeUnit.SECONDS))
-            assertTrue("CSS must use interception while network disabled",css.await(5,TimeUnit.SECONDS))
-            val cleared=CountDownLatch(1)
-            scenario.onActivity {
-                assertTrue(view.settings.blockNetworkLoads);assertFalse(view.settings.javaScriptEnabled)
-                assertFalse(view.settings.allowFileAccess);assertFalse(view.settings.allowContentAccess)
-                assertFalse(view.settings.safeBrowsingEnabled);assertEquals("Safe fixture",view.title)
-                view.destroy();HiddenProfileCleanup.clear(ProfileStore.getInstance().getOrCreateProfile(name)) {cleared.countDown()}
+        } finally {
+            admitted.set(false)
+            instrumentation.runOnMainSync { isolation.close() }
+            awaitRendererFixture("The offline WebView fixture released its deny-all network") {
+                HiddenTorIsolationService.released()
             }
-            assertTrue("Profile data cleanup callback",cleared.await(10,TimeUnit.SECONDS))
         }
     }
+
+    private fun awaitRendererFixture(message: String, ready: () -> Boolean) {
+        val start = SystemClock.elapsedRealtime()
+        while (!ready() && SystemClock.elapsedRealtime() - start < 10_000) SystemClock.sleep(50)
+        assertTrue(message, ready())
+    }
+
     @Test fun primaryAndHiddenProfilesKeepCookiesIndependentAndClearOnlyHiddenData() {
         InstrumentationRegistry.getArguments().getString("hiddenProfilePhase")?.let {processFixture(it);return}
         assumeTrue(WebViewFeature.isFeatureSupported(WebViewFeature.MULTI_PROFILE) && WebViewFeature.isFeatureSupported(WebViewFeature.DELETE_BROWSING_DATA))
@@ -65,6 +104,7 @@ class HiddenBrowserIsolationTest {
             scenario.onActivity {activity ->
                 val profile=ProfileStore.getInstance().getOrCreateProfile(name)
                 assertTrue(profile.cookieManager.getCookie(url).contains("hidden_secret=1"))
+                assertFalse(profile.cookieManager.getCookie(url).orEmpty().contains("primary_retained"))
                 assertFalse(CookieManager.getInstance().getCookie(url).orEmpty().contains("hidden_secret"))
                 val view=HiddenWebViewFactory.create(activity,name);view.destroy()
                 HiddenProfileCleanup.clear(profile) {cleared.countDown()}
@@ -80,6 +120,103 @@ class HiddenBrowserIsolationTest {
             }
         }
     }
+    @Test fun sameOriginLocalStorageAndIndexedDbStayScopedToEachProfile() {
+        assertTrue("Hidden Browser requires WebView profiles", WebViewFeature.isFeatureSupported(WebViewFeature.MULTI_PROFILE))
+        assertTrue(WebViewFeature.isFeatureSupported(WebViewFeature.DELETE_BROWSING_DATA))
+        ActivityScenario.launch(ComponentActivity::class.java).use { scenario ->
+            val unique = UUID.randomUUID().toString()
+            val name = "hidden16-test-$unique"
+            val origin = "https://$unique.invalid/"
+            lateinit var primary: WebView
+            lateinit var hidden: WebView
+            lateinit var hiddenProfile: androidx.webkit.Profile
+            val loaded = CountDownLatch(2)
+            scenario.onActivity { activity ->
+                primary = WebView(activity)
+                hiddenProfile = ProfileStore.getInstance().getOrCreateProfile(name)
+                hidden = HiddenWebViewFactory.create(activity, name)
+                val group = android.widget.LinearLayout(activity).apply { orientation = android.widget.LinearLayout.VERTICAL }
+                listOf(primary, hidden).forEach { view ->
+                    view.settings.blockNetworkLoads = true
+                    view.settings.javaScriptEnabled = true
+                    view.settings.domStorageEnabled = true
+                    view.webViewClient = object : WebViewClient() {
+                        override fun onPageFinished(view: WebView, url: String) { loaded.countDown() }
+                    }
+                    group.addView(view, android.widget.LinearLayout.LayoutParams(-1, 0, 1f))
+                }
+                activity.setContentView(group)
+                listOf(primary, hidden).forEach {
+                    it.loadDataWithBaseURL(origin, "<html><head><title>Fixture</title></head><body>Fixture</body></html>", "text/html", "utf-8", null)
+                }
+            }
+            try {
+                assertTrue("Local fixture pages loaded", loaded.await(15, TimeUnit.SECONDS))
+                fun evaluate(view: WebView, script: String): String? {
+                    val done = CountDownLatch(1)
+                    var result: String? = null
+                    scenario.onActivity { view.evaluateJavascript(script) { result = it; done.countDown() } }
+                    assertTrue(done.await(5, TimeUnit.SECONDS))
+                    return result
+                }
+                fun awaitStorage(view: WebView, value: String) {
+                    val deadline = android.os.SystemClock.elapsedRealtime() + 10_000
+                    while (android.os.SystemClock.elapsedRealtime() < deadline) {
+                        if (evaluate(view, "window.fixture") == org.json.JSONObject.quote(value)) return
+                        Thread.sleep(100)
+                    }
+                    fail("The expected IndexedDB value did not become visible in this profile")
+                }
+                fun seed(view: WebView, marker: String) {
+                    evaluate(view, """
+                        localStorage.setItem('scope', '$marker');
+                        const open = indexedDB.open('fixture', 1);
+                        open.onupgradeneeded = () => open.result.createObjectStore('items');
+                        open.onsuccess = () => {
+                            const tx = open.result.transaction('items', 'readwrite');
+                            tx.objectStore('items').put('$marker', 'scope');
+                            tx.oncomplete = () => { window.fixture = '$marker'; open.result.close(); };
+                        };
+                    """.trimIndent())
+                    awaitStorage(view, marker)
+                }
+                seed(primary, "primary")
+                assertEquals("null", evaluate(hidden, "localStorage.getItem('scope')"))
+                seed(hidden, "hidden")
+                assertEquals(org.json.JSONObject.quote("primary"), evaluate(primary, "localStorage.getItem('scope')"))
+                assertEquals(org.json.JSONObject.quote("hidden"), evaluate(hidden, "localStorage.getItem('scope')"))
+                for ((view, marker) in listOf(primary to "primary", hidden to "hidden")) {
+                    evaluate(view, """
+                        window.fixture = '';
+                        (() => {
+                            const read = indexedDB.open('fixture', 1);
+                            read.onsuccess = () => {
+                                const value = read.result.transaction('items').objectStore('items').get('scope');
+                                value.onsuccess = () => { window.fixture = value.result; read.result.close(); };
+                            };
+                        })();
+                    """.trimIndent())
+                    awaitStorage(view, marker)
+                }
+            } finally {
+                val cleared = CountDownLatch(1)
+                scenario.onActivity {
+                    evaluateCleanup(primary)
+                    listOf(primary, hidden).forEach { view ->
+                        (view.parent as? android.view.ViewGroup)?.removeView(view)
+                        view.destroy()
+                    }
+                    HiddenProfileCleanup.clear(hiddenProfile) { cleared.countDown() }
+                }
+                assertTrue("Hidden test profile cleared", cleared.await(10, TimeUnit.SECONDS))
+            }
+        }
+    }
+
+    private fun evaluateCleanup(view: WebView) {
+        view.evaluateJavascript("localStorage.clear(); indexedDB.deleteDatabase('fixture');", null)
+    }
+
     /** Script invokes this test in two distinct app processes; ordinary suite uses the test above. */
     private fun processFixture(phase:String) {
         val instrumentation=InstrumentationRegistry.getInstrumentation()

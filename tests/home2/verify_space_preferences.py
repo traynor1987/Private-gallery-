@@ -298,9 +298,25 @@ fun main(args:Array<String>){
   check(notes.read().notes==listOf(note,updatedWide))
  }
  check(code81Access.root.walkTopDown().filter{it.isFile}.none{it.readBytes().toString(Charsets.ISO_8859_1).contains(note.body)})
- SpaceContext(base,EvidenceAccess(File(root,"code81-hidden"),EvidenceAccess.Owner.HIDDEN)).use { hiddenOwner ->
-  check(runCatching{NovaNotesLibrary(hiddenOwner)}.isFailure)
+ val hiddenCoreAccess=EvidenceAccess(File(root,"hidden-core-apps"),EvidenceAccess.Owner.HIDDEN)
+ val hiddenDraft=note.copy(body="SYNTHETIC_HIDDEN_ONLY_NOTE")
+ SpaceContext(base,hiddenCoreAccess).use { hiddenOwner ->
+  val notes=NovaNotesLibrary(hiddenOwner)
+  check(notes.read().notes.isEmpty())
+  check(notes.save(notes.read(),listOf(hiddenDraft))!=null)
+  check(hiddenOwner.backupValues().keys.none { it.startsWith("preferences:nova-core-") })
  }
+ check(hiddenCoreAccess.root.walkTopDown().filter{it.isFile}.none{it.readBytes().toString(Charsets.ISO_8859_1).contains(hiddenDraft.body)})
+ SpaceContext(base,code81Access).use { owner ->
+  check(NovaNotesLibrary(owner).read().notes.none { it.body==hiddenDraft.body })
+ }
+ SpaceContext(base,hiddenCoreAccess).use { hiddenOwner ->
+  val notes=NovaNotesLibrary(hiddenOwner)
+  check(notes.read().notes==listOf(hiddenDraft))
+  hiddenCoreAccess.retire()
+  check(runCatching{notes.read()}.isFailure)
+ }
+ println("PASS: Hidden Notes use separate encrypted records, stay outside portable settings, and retire with Hidden authority")
  println("PASS: Code 81 draft recovery, atomic save, stale writes, corruption and owner isolation, recurrence, retention and scoped backup restore")
  root.deleteRecursively();println("PASS: encrypted types, copies, merge, listeners, owner/name AAD, corruption preservation, wallpaper, commit revocation, stale handles, lease closure")
 }

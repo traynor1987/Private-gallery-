@@ -22,7 +22,6 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.liveRegion
@@ -40,9 +39,8 @@ import uk.co.traynor.privategallery.core.hidden.HiddenSession
 
 @Composable
 internal fun HiddenBrowserHome(session:HiddenSession,onGallery:()->Unit,onVault:()->Unit,onFavourite:()->Unit,onSettings:()->Unit,modifier:Modifier=Modifier) {
- val context=LocalContext.current
- val activity=context as? MainActivity
- if(BrowserBetaNotice({activity?.returnPrivateHome() ?: onGallery()},modifier))return
+ val activity=androidx.activity.compose.LocalActivity.current as? MainActivity
+ if(BrowserBetaNotice({activity?.returnPrivateHome() ?: onGallery()},modifier,hidden=true))return
  // Launcher identity selects transport. A legacy preference can never turn Browser into Tor.
  val mode=activity?.novaHiddenBrowserMode ?: HiddenConnectionPolicy.Mode.VPN_ONLY
  var generation by remember(session,mode){mutableIntStateOf(0)}
@@ -65,7 +63,7 @@ internal fun HiddenBrowserHome(session:HiddenSession,onGallery:()->Unit,onVault:
  val tor=mode==HiddenConnectionPolicy.Mode.TOR_ONLY
  Surface(modifier.fillMaxSize(),color=MaterialTheme.colorScheme.background) {
   Column(Modifier.fillMaxSize().imePadding()) {
-   NovaAppHeader(if(activity?.homePrivateAppsRequested==true)"Private Apps"else if(tor)"Tor — Beta"else"Browser — Beta","Hidden Space",
+   NovaAppHeader(if(activity?.homePrivateAppsRequested==true)"Private Apps"else if(tor)"Tor — Beta"else"Browser V1","Hidden Space",
     onHome={runtime?.close();activity?.returnPrivateHome()},onLock={activity?.lockNovaSpace()},onPanic={activity?.panicExit()})
    BrowserAddressBar("",{},false,runtime?.connected!=true,{},{},{})
    NovaBrowserStatus(tor,false,runtime?.detail.orEmpty(),{settings=true})
@@ -73,7 +71,7 @@ internal fun HiddenBrowserHome(session:HiddenSession,onGallery:()->Unit,onVault:
    BrowserNavigationToolbar(false,false,0,{},{},{settings=true},{settings=true},{settings=true},{settings=true})
   }
  }
- if(settings)BrowserPanel("Connection settings",if(tor)"Tor — Beta"else"Browser — Beta",{settings=false}) {
+ if(settings)BrowserPanel("Connection settings",if(tor)"Tor — Beta"else"Browser V1",{settings=false}) {
   Column(Modifier.testTag("hidden-browser-settings").verticalScroll(rememberScrollState()).padding(16.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
    Text(if(tor)"Tor only"else"VPN only",style=MaterialTheme.typography.titleMedium)
    Text(runtime?.status?:"Disconnected")

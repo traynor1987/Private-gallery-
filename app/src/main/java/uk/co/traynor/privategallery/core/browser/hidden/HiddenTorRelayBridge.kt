@@ -13,6 +13,7 @@ internal class HiddenTorRelayBridge(private val protect:(Socket)->Boolean,privat
     private val closed=AtomicBoolean()
     private val gate=Any()
     private val sockets=ConcurrentHashMap.newKeySet<Socket>()
+    private val relaySockets=ConcurrentHashMap.newKeySet<Socket>()
     private val capacity=Semaphore(32)
     private val executor=Executors.newCachedThreadPool()
     private val authorityWatch=Executors.newSingleThreadScheduledExecutor()
@@ -47,20 +48,52 @@ internal class HiddenTorRelayBridge(private val protect:(Socket)->Boolean,privat
         require(port in 1..65535 && HiddenVpnProxy.publicAddress(address))
         val upstream=Socket()
         try {
-            track(upstream)
+            synchronized(gate) {track(upstream);relaySockets.add(upstream)}
             // Public bind creates the OS descriptor without sending a SYN. protect(Socket)
             // must mark that descriptor successfully before any remote connect can occur.
             upstream.bind(InetSocketAddress(0))
             synchronized(gate){allowed();check(protect(upstream));allowed()}
             upstream.connect(InetSocketAddress(address,port),30_000);allowed()
             output.write(byteArrayOf(5,0,0,1,0,0,0,0,0,0));output.flush();client.soTimeout=0
-            executor.execute {try{copy(input,upstream.getOutputStream());runCatching{upstream.shutdownOutput()}}catch(_:Exception){runCatching{upstream.close()}}}
+            executor.execute {
+                try {
+                    copy(input, upstream.getOutputStream())
+                } catch (_: Exception) {
+                } finally {
+                    closeRelaySocket(upstream)
+                }
+            }
             copy(upstream.getInputStream(),output)
-        }finally{sockets.remove(upstream);runCatching{upstream.close()}}
+        }finally{closeRelaySocket(upstream)}
     }
     private fun copy(input:java.io.InputStream,output:java.io.OutputStream) {
         val bytes=ByteArray(32*1024)
         try{while(true){allowed();val n=input.read(bytes);if(n<0)return;allowed();output.write(bytes,0,n);output.flush()}}finally{bytes.fill(0)}
     }
-    override fun close(){synchronized(gate){if(!closed.compareAndSet(false,true))return;runCatching{server.close()};sockets.forEach{runCatching{it.close()}};sockets.clear()};authorityWatch.shutdownNow();executor.shutdownNow()}
+    private fun closeRelaySocket(socket: Socket) {
+        // An authenticated Tor relay channel is full duplex for its whole lifetime.
+        // Either pump ending must abort the channel before it leaves revocation tracking.
+        // Tor can exit before the isolation service learns that its authority is gone.
+        abortRelaySocket(socket)
+        relaySockets.remove(socket)
+        sockets.remove(socket)
+    }
+
+    private fun abortRelaySocket(socket: Socket) {
+        runCatching { socket.setSoLinger(true, 0) }
+        runCatching { socket.close() }
+    }
+
+    override fun close() {
+        synchronized(gate) {
+            if(!closed.compareAndSet(false,true))return
+            runCatching {server.close()}
+            relaySockets.forEach(::abortRelaySocket)
+            sockets.forEach {runCatching {it.close()}}
+            relaySockets.clear()
+            sockets.clear()
+        }
+        authorityWatch.shutdownNow()
+        executor.shutdownNow()
+    }
 }

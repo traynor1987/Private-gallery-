@@ -70,6 +70,7 @@ private val lightColors=lightColorScheme(primary=Color(0xFF285F65),secondary=Col
 @OptIn(ExperimentalMaterial3Api::class,ExperimentalFoundationApi::class)
 @Composable internal fun NovaPreview(data:PreviewData,pool:PreviewBrowserModel,mind:MindData,audio:MindAudio,widgets:WidgetData,searchHistory:NovaSearchHistory,video:NovaVideoModel,onPickImage:()->Unit,onOpen:(String)->Unit,filesDir:File,onNative:(String)->Unit,onLock:()->Unit,onPanic:()->Unit,externalRecentsRequest:Int=0,onRecentsConsumed:()->Unit={},onBackup:()->Unit={},workspaceProjection:Profile?=null,filesPicker:NovaFilesPicker?=null,coreAppRequest:NovaCoreApp?=null,onCoreAppRequestConsumed:()->Unit={},onImportPrimaryFile:((android.net.Uri,(String)->Unit)->Unit)?=null,verifyNotebookPin:((CharArray)->Boolean)?=null){
  val state=data.state
+ val hidden=state.current=="hidden"
  val dark=when(state.theme){"light"->false;"system"->isSystemInDarkTheme();else->true}
  MaterialTheme(colorScheme=if(dark)darkColors else lightColors){
   key(state.current){
@@ -165,7 +166,7 @@ private val lightColors=lightColorScheme(primary=Color(0xFF285F65),secondary=Col
    fun rememberCoreAppOrigin() {
     if (NovaCoreApp.entries.any { it.route == screen }) return
     coreReturnScreen = when (screen) {
-     "store", "search", "recents" -> screen
+     "store", "search", "recents", "hidden-overview", "hidden-search" -> screen
      else -> "home"
     }
     coreReturnDrawer = drawer && coreReturnScreen == "home"
@@ -176,13 +177,14 @@ private val lightColors=lightColorScheme(primary=Color(0xFF285F65),secondary=Col
       ?: return@launch
     } else null
     if (!permitSanctuaryRoute(recent?.id ?: id, recent?.url)) return@launch
-    if (state.current == "primary" && NovaCoreApp.entries.any { it.route == id }) rememberCoreAppOrigin()
+    if (NovaCoreApp.entries.any { it.route == id }) rememberCoreAppOrigin()
     openedCoreLink = null
     drawer=false;quick=false;editing=false;edgePanel=false
     when{
      id.startsWith("resume-internal:")->{val route=id.removePrefix("resume-internal:");if(data.shell.internalRecents.any{it.first==state.current&&it.second==route}){if(route in nativeHomeApps)onNative(route)else screen=route}}
      id.startsWith("recent-tab:")->{pool.tabs.firstOrNull{it.id==id.removePrefix("recent-tab:")&&it.profile==state.current}?.let{pool.select(it);screen="home"}}
-     state.current=="primary" && NovaCoreApp.entries.any { it.route == id }->{screen=id}
+     NovaCoreApp.entries.any { it.route == id } && (!hidden || id != NovaCoreApp.FILES.route)->{screen=id}
+     id == NovaCoreApp.FILES.route && hidden -> onNative("hidden-files")
      id.startsWith("visual:") && state.current=="primary"->{
       val moduleId=id.removePrefix("visual:")
       if(visualModules.any{it.id==moduleId}){openVisual("home");visual.open(moduleId)}
@@ -198,12 +200,17 @@ private val lightColors=lightColorScheme(primary=Color(0xFF285F65),secondary=Col
       screen="home"
      }
      else->when(id){
-     "chat"->{screen="chat"}
+     "home"->screen=id
+     "hidden-overview"->if(hidden){screen=id}
+     "downloads"->onNative(id)
+     "hidden-files","hidden-downloads","hidden-tor"->if(hidden)onNative(id)
+     "chat"->{if(!hidden)screen="chat"}
      "widgets"->{
       widgetPage=homePager.currentPage.coerceIn(0,minOf(displayProfile.pages.lastIndex,profile.pages.lastIndex))
       screen="widgets"
      }
      "search"->{screen=id}
+     "hidden-search"->if(hidden){screen=id}
      "video"->{onNative("photos")}
      "backup"->{screen="backup"}
      "nova-calculator"->{screen="nova-calculator"}
@@ -214,7 +221,7 @@ private val lightColors=lightColorScheme(primary=Color(0xFF285F65),secondary=Col
      "panic"->{onPanic()}
      "mind","calm"->{mindPage=if(id=="calm")mind.preferred else "home";mindLaunch++;screen="mind";drawer=false}
      "sanctuary"->{sanctuary=sanctuaryStore==null;screen="sanctuary";drawer=false}
-     "browser-v1"->{pool.open(standaloneBrowser,data.state.current).let{pool.setBrowserMode(it,true)};screen="home";drawer=false}
+     "browser-v1"->{if(hidden)onNative(id)else pool.open(standaloneBrowser,data.state.current).let{pool.setBrowserMode(it,true)};screen="home";drawer=false}
      "store"->{screen="store";drawer=false}
      "settings"->{editing=true;drawer=false}
      "wallpaper"->{screen="wallpaper";drawer=false}
@@ -230,7 +237,7 @@ private val lightColors=lightColorScheme(primary=Color(0xFF285F65),secondary=Col
     }
    }
    val openCoreLink: (NovaCoreLink) -> Unit = { link ->
-    if (state.current == "primary" && permitSanctuaryRoute(link.app.route)) {
+    if ((!hidden || link.app != NovaCoreApp.FILES) && permitSanctuaryRoute(link.app.route)) {
      rememberCoreAppOrigin()
      openedCoreLink = link
      drawer=false;quick=false;editing=false;edgePanel=false
@@ -260,7 +267,7 @@ private val lightColors=lightColorScheme(primary=Color(0xFF285F65),secondary=Col
     val destination = coreReturnScreen
     val reopenDrawer = coreReturnDrawer
     goHome()
-    if (state.current == "primary" && !sanctuary && permitSanctuaryRoute(destination)) {
+    if (!sanctuary && permitSanctuaryRoute(destination)) {
      screen = destination
      drawer = reopenDrawer
     }
@@ -334,7 +341,10 @@ private val lightColors=lightColorScheme(primary=Color(0xFF285F65),secondary=Col
           onBack={screen="sanctuary"},
          )
          "widgets"->WidgetCentre(data,widgets,widgetPage,onBack=goHome)
-         "search"->NovaSearch(data,widgets,pool,searchHistory,onBack=goHome,onResult=launch,onWeb={query->if(permitSanctuaryRoute("browser-v1")){val tab=pool.open(standaloneBrowser,state.current);pool.setBrowserMode(tab,true);pool.navigate(tab,"https://www.google.com/search?q="+java.net.URLEncoder.encode(query,"UTF-8"));screen="home"}})
+         "hidden-search"->if(hidden) (localContext as? uk.co.traynor.privategallery.core.home2.SpaceContext)?.let {
+          HiddenSpaceSearch(it, goHome, openCoreLink)
+         }
+         "search"->NovaSearch(data,widgets,pool,searchHistory,onBack=goHome,onResult=launch,onWeb={query->if(!hidden && permitSanctuaryRoute("browser-v1")){val tab=pool.open(standaloneBrowser,state.current);pool.setBrowserMode(tab,true);pool.navigate(tab,"https://www.google.com/search?q="+java.net.URLEncoder.encode(query,"UTF-8"));screen="home"}})
          "video"->VideoScreen(video,goHome)
          "backup"->LaunchedEffect(Unit){onBackup();goHome()}
          "nova-calculator"->CalculatorScreen(screen==route,onHome=goHome)
@@ -393,7 +403,7 @@ private val lightColors=lightColorScheme(primary=Color(0xFF285F65),secondary=Col
           )
          }
          "recents"->NovaRecents(data,pool,onHome=goHome,onResume=resumeTab,onInternal={id->if(permitSanctuaryRoute(id)){if(id in nativeHomeApps)onNative(id)else screen=id}},onCloseInternal={id->if(id=="browser-v1")onNative("close-browser");data.shell.closeInternal(state.current,id);if(id=="mind")audio.pause();if(id=="video")video.close()})
-         "nova-notes-draft"->if(state.current=="primary" && permitSanctuaryRoute("nova-notes-draft")) {
+         "nova-notes-draft"->if(permitSanctuaryRoute("nova-notes-draft")) {
           (localContext as? uk.co.traynor.privategallery.core.home2.SpaceContext)?.let { space ->
            key(notesPickerRevision) {
             NovaNotesDraft(space, onBack=closeCoreApp,
@@ -401,22 +411,22 @@ private val lightColors=lightColorScheme(primary=Color(0xFF285F65),secondary=Col
              chooseAttachment=filesPicker?.chooseAttachment, attachmentMessage=notesPickerMessage,
              consumeAttachmentMessage={ notesPickerMessage=null },
              exportAttachment=filesPicker?.exportAttachment,
-             openFiles={ launch("nova-files") }, verifyNotebookPin=verifyNotebookPin)
+             openFiles={ launch(if(hidden)"hidden-files" else "nova-files") }, verifyNotebookPin=verifyNotebookPin)
            }
           }
          }
-         "nova-tasks"->if(state.current=="primary" && permitSanctuaryRoute("nova-tasks")) {
+         "nova-tasks"->if(permitSanctuaryRoute("nova-tasks")) {
           (localContext as? uk.co.traynor.privategallery.core.home2.SpaceContext)?.let { space ->
            NovaTasksScreen(space, onBack=closeCoreApp,
             openTaskId=linkedRecord?.takeIf { it.app == NovaCoreApp.TASKS }?.id, onOpenLink=openCoreLink)
           }
          }
-         "nova-calendar"->if(state.current=="primary" && permitSanctuaryRoute("nova-calendar")) {
+         "nova-calendar"->if(permitSanctuaryRoute("nova-calendar")) {
           (localContext as? uk.co.traynor.privategallery.core.home2.SpaceContext)?.let { space ->
            NovaCalendarScreen(space, onBack=closeCoreApp,
             openEventId=linkedRecord?.takeIf { it.app == NovaCoreApp.CALENDAR }?.id,
             openDay=(openedCoreLink as? NovaCoreLink.DueDay)?.date, onOpenLink=openCoreLink,
-            sendToAndroidCalendar={ occurrence ->
+            sendToAndroidCalendar=if(hidden)null else { occurrence ->
              space.current() && sanctuaryStore?.refresh()==null &&
               runCatching { localContext.startActivity(occurrence.calendarInsertIntent()) }.isSuccess
             })
@@ -431,9 +441,10 @@ private val lightColors=lightColorScheme(primary=Color(0xFF285F65),secondary=Col
            }
           }
          }
-         "nova-clipboard"->if(state.current=="primary" && permitSanctuaryRoute("nova-clipboard")) {
+         "nova-clipboard"->if(permitSanctuaryRoute("nova-clipboard")) {
           (localContext as? uk.co.traynor.privategallery.core.home2.SpaceContext)?.let { space ->
-           NovaClipboardScreen(space, onBack=closeCoreApp)
+           NovaClipboardScreen(space, onBack=closeCoreApp,
+            openSnippetId=linkedRecord?.takeIf { it.app == NovaCoreApp.CLIPBOARD }?.id)
           }
          }
          "visual-foundation"->if(state.current=="primary")VisualFoundation(
@@ -446,11 +457,18 @@ private val lightColors=lightColorScheme(primary=Color(0xFF285F65),secondary=Col
          "wallpaper"->LaunchedEffect(Unit){onPickImage();goHome()}
          "photos"->LaunchedEffect(Unit){onNative("photos")}
          "guide"->LaunchedEffect(Unit){onNative("native-settings")}
+         "hidden-overview"->if(hidden)(localContext as? uk.co.traynor.privategallery.core.home2.SpaceContext)?.let {
+          HiddenSpaceDashboard(
+           space=it, wallpaper=displayProfile.wallpaper, filesDir=filesDir, onLaunch=launch,
+           onDrawer={drawer=true}, onQuick={quick=true}, onLock=onLock, onPanic=onPanic,
+           onReturnToPrimary=data.onSwitch, onOpen=openCoreLink,
+          )
+         }
          else->Home(data,displayProfile,filesDir,homePager,widgets,pool,audio,video,onWidgetEdit={selectedWidget=it},onResume=resumeTab,onLaunch=launch,onSelect={if(workspaceProjection==null)selected=it},onDrawer={drawer=true},onQuick={quick=true},onEdit={if(workspaceProjection==null)editing=true else screen="home-settings"})
         }}
        }
       }
-      if(!drawer)NovaEdgeHandle(data.shell){edgePanel=true}
+      if(!drawer && (!hidden || screen=="home"))NovaEdgeHandle(data.shell){edgePanel=true}
       VideoMiniPlayer(video){if(permitSanctuaryRoute("video"))screen="video"}
      }
      if(audio.sound.isNotBlank())Surface(tonalElevation=3.dp){Row(Modifier.fillMaxWidth().padding(horizontal=16.dp),verticalAlignment=Alignment.CenterVertically){Text("Calm · ${audio.sound}",Modifier.weight(1f));IconButton(onClick={if(audio.playing)audio.pause()else audio.resume()}){Icon(if(audio.playing)Icons.Default.Pause else Icons.Default.PlayArrow,"Toggle calm sound")};TextButton(onClick={launch("mind:sounds")}){Text("Open")}}}
@@ -583,6 +601,7 @@ private val lightColors=lightColorScheme(primary=Color(0xFF285F65),secondary=Col
  // Lazy pager items can be remeasured after their enclosing Space has been retired.
  // Resolve the encrypted preference in the admitted parent, never from a retained item.
  val originalClockVisible=widgets.clockVisible(data.state.current)
+ val hidden = data.state.current == "hidden"
  BoxWithConstraints(Modifier.fillMaxSize().testTag("preview-home")){
   val compactHeight=maxHeight<500.dp
   val landscapeClock=compactHeight&&maxWidth>=600.dp
@@ -600,12 +619,12 @@ private val lightColors=lightColorScheme(primary=Color(0xFF285F65),secondary=Col
      IconButton(onClick={onLaunch("search")}){Icon(Icons.Default.Search,"Open Nova Search")}
      IconButton(onClick={onLaunch("calm")}){Icon(Icons.Default.Spa,"Calm Now")}
      IconButton(onClick=onQuick){Icon(Icons.Default.Tune,"Open Quick Panel")}
-     Box{var menu by remember{mutableStateOf(false)};IconButton(onClick={menu=true}){Icon(Icons.Default.MoreVert,"Home menu")};PanicHomeDropdownMenu(menu,{menu=false}){DropdownMenuItem(text={Text("Apps")},onClick={menu=false;onDrawer()});DropdownMenuItem(text={Text("Edit Home")},onClick={menu=false;onEdit()});DropdownMenuItem(text={Text("Widget Centre")},onClick={menu=false;onLaunch("widgets")});data.onSwitch?.takeIf{data.state.current=="hidden"}?.let{switch->DropdownMenuItem(text={Text("Return to Primary")},onClick={menu=false;switch()})}}}
+     Box{var menu by remember{mutableStateOf(false)};IconButton(onClick={menu=true}){Icon(Icons.Default.MoreVert,"Home menu")};PanicHomeDropdownMenu(menu,{menu=false}){DropdownMenuItem(text={Text("Apps")},onClick={menu=false;onDrawer()});DropdownMenuItem(text={Text("Edit Home")},onClick={menu=false;onEdit()});DropdownMenuItem(text={Text("Widget Centre")},onClick={menu=false;onLaunch("widgets")});data.onSwitch?.takeIf{data.state.current=="hidden"}?.let{switch->DropdownMenuItem(text={Text("Hidden overview")},onClick={menu=false;onLaunch("hidden-overview")});DropdownMenuItem(text={Text("Lock Space")},onClick={menu=false;onLaunch("lock-now")});DropdownMenuItem(text={Text("Panic Exit")},onClick={menu=false;onLaunch("panic")});DropdownMenuItem(text={Text("Return to Primary")},onClick={menu=false;switch()})}}}
     }
     }}
     widgets.recoveryNotice?.let{notice->Surface(color=MaterialTheme.colorScheme.secondaryContainer,contentColor=MaterialTheme.colorScheme.onSecondaryContainer){Column(Modifier.padding(12.dp)){Text(notice,style=MaterialTheme.typography.bodySmall);TextButton(onClick={widgets.dismissRecovery()}){Text("Dismiss recovery report")}}}}
     if(widgets.editingId!=null)Row(Modifier.fillMaxWidth().padding(horizontal=20.dp),verticalAlignment=Alignment.CenterVertically){Text("Edit widgets",Modifier.weight(1f),color=Color.White);TextButton(onClick={widgets.editingId=null},modifier=Modifier.testTag("widget-edit-done")){Text("Done",color=Color.White)}}
-    HorizontalPager(pager,Modifier.weight(1f).fillMaxWidth().testTag("home-pager").semantics{stateDescription="Home ${pager.currentPage+1}"},key={it}){page->
+    HorizontalPager(pager,Modifier.weight(1f).fillMaxWidth().testTag(if(hidden)"hidden-workspace-pager" else "home-pager").semantics{stateDescription="Home ${pager.currentPage+1}"},key={it}){page->
      if(space?.current()==false)return@HorizontalPager
      val content:@Composable (Modifier)->Unit={modifier->
       BoxWithConstraints(modifier){
@@ -717,8 +736,8 @@ private val lightColors=lightColorScheme(primary=Color(0xFF285F65),secondary=Col
  Box(Modifier.size(size).clip(RoundedCornerShape(size*.30f)).background(Brush.linearGradient(colors)),contentAlignment=Alignment.Center){
   if(bitmap!=null)Image(bitmap,null,Modifier.fillMaxSize().padding(size*.13f),contentScale=ContentScale.Fit,filterQuality=androidx.compose.ui.graphics.FilterQuality.High)
   else if(app.website!=null)Text(app.name.take(2).uppercase(),fontSize=(size.value*.29f).sp,color=Color.White,fontWeight=FontWeight.SemiBold)
-  else Icon(when(app.symbol){"chat"->Icons.Default.ChatBubbleOutline;"widgets"->Icons.Default.Widgets;"search"->Icons.Default.Search;"video"->Icons.Default.PlayCircle;"backup"->Icons.Default.Save;"arcade"->Icons.Default.SportsEsports;"calculator"->Icons.Default.Calculate;"lock"->Icons.Default.Lock;"mind"->Icons.Default.Spa;"browser"->Icons.Default.Language;"store"->Icons.Default.ShoppingBag;"photos"->Icons.Default.PhotoLibrary;"wallpaper"->Icons.Default.Wallpaper;"settings"->Icons.Default.Settings;"camera"->Icons.Default.PhotoCamera;"evidence"->Icons.Default.FolderSpecial;"edit"->Icons.Default.Edit;"apps"->Icons.Default.Apps;"trash"->Icons.Default.DeleteOutline;"folder"->Icons.Default.Folder;"heart"->Icons.Default.Favorite;else->Icons.Default.AutoAwesome},null,Modifier.size(size*.49f),tint=Color.White)
+  else Icon(when(app.symbol){"chat"->Icons.Default.ChatBubbleOutline;"widgets"->Icons.Default.Widgets;"search"->Icons.Default.Search;"video"->Icons.Default.PlayCircle;"backup"->Icons.Default.Save;"arcade"->Icons.Default.SportsEsports;"calculator"->Icons.Default.Calculate;"lock"->Icons.Default.Lock;"mind"->Icons.Default.Spa;"browser"->Icons.Default.Language;"store"->Icons.Default.ShoppingBag;"photos"->Icons.Default.PhotoLibrary;"wallpaper"->Icons.Default.Wallpaper;"settings"->Icons.Default.Settings;"camera"->Icons.Default.PhotoCamera;"evidence"->Icons.Default.FolderSpecial;"edit"->Icons.Default.Edit;"apps"->Icons.Default.Apps;"trash"->Icons.Default.DeleteOutline;"folder"->Icons.Default.Folder;"download"->Icons.Default.Download;"clipboard"->Icons.Default.ContentPaste;"calendar"->Icons.Default.CalendarMonth;"tasks"->Icons.Default.TaskAlt;"heart"->Icons.Default.Favorite;else->Icons.Default.AutoAwesome},null,Modifier.size(size*.49f),tint=Color.White)
  }
 }
 
-private val nativeHomeApps=setOf("photos","vault","camera","evidence","editor","ai-edit","collections","trash","favourites","native-settings","private-apps","browser-v1")
+private val nativeHomeApps=setOf("photos","vault","camera","evidence","editor","ai-edit","collections","trash","favourites","native-settings","private-apps","browser-v1","hidden-files","hidden-downloads","hidden-tor","downloads")

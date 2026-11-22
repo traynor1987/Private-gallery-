@@ -46,20 +46,10 @@ internal object NovaReminders {
             context.getSystemService(NotificationManager::class.java).areNotificationsEnabled()
 
     fun syncTasks(space: SpaceContext, tasks: List<NovaTask>) = update(space, NovaCoreApp.TASKS,
-        tasks.mapNotNull { task ->
-            val due = task.due
-            val time = task.remindAt
-            if (task.completed || due == null || time == null) null
-            else task.id to NovaReminderSchedule(due, time)
-        }.toMap())
+        tasks.mapNotNull { task -> taskReminderSchedule(task)?.let { task.id to it } }.toMap())
 
     fun syncCalendar(space: SpaceContext, events: List<NovaCalendarEvent>) = update(space, NovaCoreApp.CALENDAR,
-        events.mapNotNull { event ->
-            event.reminderMinutes?.let { lead ->
-                event.id to NovaReminderSchedule(event.firstDate, event.time ?: LocalTime.of(9, 0),
-                    event.zone.takeIf { event.time != null }, event.repeat, event.skippedDates, lead)
-            }
-        }.toMap())
+        events.mapNotNull { event -> calendarReminderSchedule(event)?.let { event.id to it } }.toMap())
 
     fun update(space: SpaceContext, app: NovaCoreApp, schedules: Map<String, NovaReminderSchedule>) =
         synchronized(lock) {

@@ -12,16 +12,16 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 
 /** Nonsecret acknowledgement only: never stores an origin, cookie or Space identity. */
-internal class BrowserBetaAcknowledgement(context:android.content.Context) {
-    private val preferences=context.applicationContext.getSharedPreferences("nova-browser-beta",android.content.Context.MODE_PRIVATE)
+internal class BrowserBetaAcknowledgement(context:android.content.Context, hidden:Boolean=false) {
+    private val preferences=context.applicationContext.getSharedPreferences(if(hidden) "nova-hidden-browser-beta" else "nova-browser-beta",android.content.Context.MODE_PRIVATE)
     fun accepted()=preferences.getInt("notice-revision",0)==1
     fun accept()=preferences.edit().putInt("notice-revision",1).commit()
 }
 
 /** Returns true while notice owns presentation. Call before composing browser/runtime effects. */
-@Composable internal fun BrowserBetaNotice(onExit:()->Unit,modifier:Modifier=Modifier,appName:String?=null):Boolean {
+@Composable internal fun BrowserBetaNotice(onExit:()->Unit,modifier:Modifier=Modifier,appName:String?=null,hidden:Boolean=false):Boolean {
     val context=LocalContext.current
-    val store=remember(context){BrowserBetaAcknowledgement(context)}
+    val store=remember(context,hidden){BrowserBetaAcknowledgement(context,hidden)}
     var accepted by remember(store){mutableStateOf(store.accepted())}
     var failed by remember{mutableStateOf(false)}
     if(accepted)return false

@@ -3,7 +3,9 @@ import http.client
 import http.server
 import importlib.util
 import json
+import socket
 import struct
+import time
 import zlib
 from pathlib import Path
 import tempfile
@@ -46,6 +48,14 @@ class TorFixtureTest(unittest.TestCase):
         self.assertIn(b'type="file"', body)
         self.assertEqual(self.request('GET', '/missing')[0], 404)
 
+    def test_image_upload_page_contains_one_accessible_native_picker(self):
+        status, _, body = self.request('GET', '/upload-image')
+        self.assertEqual(status, 200)
+        self.assertNotIn(b'<script', body)
+        self.assertEqual(body.count(b'type="file"'), 1)
+        self.assertIn(b'aria-label="Choose Tor upload"', body)
+        self.assertIn(b'action="/uploaded" enctype="multipart/form-data"', body)
+
     def test_script_cookie_and_redirect_probes_do_not_change_root_health(self):
         self.assertIn(b'/script-must-not-run', self.request('GET', '/script-probe')[2])
         status, headers, _ = self.request('GET', '/cookie')
@@ -58,6 +68,21 @@ class TorFixtureTest(unittest.TestCase):
         events=json.loads(self.request('GET', '/evidence')[2])['events']
         self.assertFalse(any(event['path']=='/script-must-not-run' for event in events))
         self.assertTrue(any(event['path']=='/cookie-echo' and event['cookie_present'] for event in events))
+
+    def test_slow_response_records_peer_eof_while_writes_can_still_succeed(self):
+        with socket.create_connection(self.server.server_address, timeout=2) as connection:
+            connection.sendall(b'GET /slow HTTP/1.1\r\nHost: fixture\r\n\r\n')
+            with connection.makefile('rb') as response:
+                self.assertTrue(response.readline().startswith(b'HTTP/1.1 200'))
+            connection.shutdown(socket.SHUT_WR)
+            deadline = time.monotonic() + 2
+            while time.monotonic() < deadline:
+                events = json.loads(self.request('GET', '/evidence')[2])['events']
+                if {'kind': 'slow-closed', 'close_evidence': 'peer_eof'} in events:
+                    break
+                time.sleep(.05)
+            self.assertIn({'kind': 'slow-start'}, events)
+            self.assertIn({'kind': 'slow-closed', 'close_evidence': 'peer_eof'}, events)
 
     def test_real_post_bytes_and_download_are_recorded(self):
         body = b'value=fixture-form-body'

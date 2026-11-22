@@ -39,7 +39,19 @@ class HiddenTorService : TorService() {
             isolatedSocketPath=path
             config="SocksPort unix:$path\nHTTPTunnelPort 0\nSafeSocks 1\nSafeLogging 1\nClientOnly 1\nAvoidDiskWrites 1\nLog err stdout\nSocks5Proxy 127.0.0.1:$port\nSocks5ProxyUsername $user\nSocks5ProxyPassword $password\n"
         }
-        getTorrc(this).writeText(config)
+        val torrc=getTorrc(this)
+        // The preceding dedicated process can be killed before libtor unlinks its
+        // control socket. Remove only that transient socket before Tor starts watching it.
+        val directory=java.io.File(torrc.parentFile!!.canonicalFile,"data")
+        check(directory.canonicalFile==directory)
+        val control=java.io.File(directory,"ControlSocket")
+        try {
+            check(android.system.OsConstants.S_ISSOCK(android.system.Os.lstat(control.path).st_mode))
+            check(control.delete()) {"Stale Tor control socket could not be removed"}
+        } catch(error:android.system.ErrnoException) {
+            if(error.errno!=android.system.OsConstants.ENOENT)throw error
+        }
+        torrc.writeText(config)
         super.onCreate()
     }
     /** tor-android0.4.9.14 parses this virtual GETINFO as a TCP port during startup.

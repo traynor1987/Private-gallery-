@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Drive authentic production Build91's UI against the published public feed on disposable API37.
+"""Drive authentic production Build95's UI against the published public feed on disposable API37.
 
 No instrumentation, substituted transport, secondary test app, app data editing, uninstall,
 or replacement adb installation is used. The Android installer performs the update.
@@ -175,7 +175,7 @@ def complete_recovery_setup(root):
     rejection = 'Recovery key could not be confirmed. Check the saved key and try again.'
     result = wait_for(lambda page: has(page, rejection) or not has(page, 'Re-enter your saved recovery key'),
                       'completed recovery confirmation')
-    require(not has(result, rejection), 'Build 91 rejected the re-entered synthetic recovery key')
+    require(not has(result, rejection), 'Build 94 rejected the re-entered synthetic recovery key')
 
 def open_updates(allow_setup):
     authenticated = False
@@ -268,34 +268,34 @@ def main():
     wait_device_ready()
     require(installed() is None, 'Production package must be absent initially; never clear/uninstall')
     candidate = json.loads(args.candidate.read_text())
-    require(candidate['tag'] == 'v1.7.47' and candidate['version_code'] == 93, 'Wrong release candidate')
+    require(candidate['tag'] == 'v1.7.50' and candidate['version_code'] == 96, 'Wrong release candidate')
     release = public_release(args.output)
     require(release['tag_name'] == candidate['tag'] and not release['draft'] and not release['prerelease'], 'Not the actual latest stable release')
     apk = next(a for a in release['assets'] if a['name'] == 'private-gallery-release.apk')
     require(apk['digest'] == 'sha256:' + candidate['apk_sha256'], 'Live APK differs from the verified candidate')
     (args.output / 'live-release.json').write_text(json.dumps(release, indent=2)+'\n')
-    baseline = args.output.parent / 'authentic-build91.apk'
+    baseline = args.output.parent / 'authentic-build95.apk'
     fetch(baseline, Path(os.environ['ANDROID_HOME']) / 'build-tools/36.0.0')
     adb('install', '--no-streaming', baseline)
-    require(installed() == 91, 'Authentic Build91 installation not observed')
+    require(installed() == 95, 'Authentic Build95 installation not observed')
     adb('shell', 'svc', 'power', 'stayon', 'true')
     adb('shell', 'input', 'keyevent', 'KEYCODE_WAKEUP')
     adb('shell', 'wm', 'dismiss-keyguard')
     # This changes only the disposable emulator's ordinary install-source permission.
     adb('shell', 'appops', 'set', PACKAGE, 'REQUEST_INSTALL_PACKAGES', 'allow')
     before = open_updates(allow_setup=True)
-    require(has(before, '1.7.45 · Build 91'), 'Build91 screen does not identify its real installed version')
-    # Installed Build91 starts its first real check on About entry. Wait for
+    require(has(before, '1.7.49 · Build 95'), 'Build95 screen does not identify its real installed version')
+    # Installed Build95 starts its first real check on About entry. Wait for
     # that completed result before exercising the explicit check action.
-    before = wait_for(lambda t: has(t, '1.7.47 · Build 93 available'), 'Build91 automatic first check')
-    save_ui(before, args.output / 'build91-first-public-discovery.xml')
+    before = wait_for(lambda t: has(t, '1.7.50 · Build 96 available'), 'Build95 automatic first check')
+    save_ui(before, args.output / 'build95-first-public-discovery.xml')
     click(reveal_action('Check for updates'), 'Check for updates')
     updates_summary()
-    available = wait_for(lambda t: has(t, '1.7.47 · Build 93 available'), 'Build91 real public update discovery')
-    save_ui(available, args.output / 'build91-live-update-available.xml')
-    print('PASS: authentic installed Build91 discovers Build93 through its real UI and public GitHub feed', flush=True)
+    available = wait_for(lambda t: has(t, '1.7.50 · Build 96 available'), 'Build95 real public update discovery')
+    save_ui(available, args.output / 'build95-live-update-available.xml')
+    print('PASS: authentic installed Build95 discovers Build96 through its real UI and public GitHub feed', flush=True)
     download = reveal_action('Download update')
-    save_ui(download, args.output / 'build91-live-download-action.xml')
+    save_ui(download, args.output / 'build95-live-download-action.xml')
     click(download, 'Download update')
     installers = {'com.android.packageinstaller', 'com.google.android.packageinstaller', 'com.android.permissioncontroller'}
     installer = wait_for(lambda t: any(n.get('package') in installers and n.get('text') in ('Update', 'Install') for n in t.iter('node')), 'real verified download and Android installer', 240)
@@ -303,23 +303,23 @@ def main():
     action = next(n for n in installer.iter('node') if n.get('package') in installers and n.get('text') in ('Update', 'Install'))
     tap(action)
     deadline = time.monotonic() + 120
-    while installed() != 93:
-        require(time.monotonic() < deadline, 'Android did not report installed Build93')
+    while installed() != 96:
+        require(time.monotonic() < deadline, 'Android did not report installed Build96')
         time.sleep(1)
     (args.output / 'live-update-installed.json').write_text(json.dumps({'result': 'INSTALLED', 'installed_code': installed(), 'source': candidate['source'], 'apk_sha256': candidate['apk_sha256'], 'live_github_discovery': 'PASS', 'live_download': 'PASS', 'android_installer': 'confirmed', 'restart_review': 'pending'}, indent=2)+'\n')
     adb('shell', 'am', 'force-stop', PACKAGE)
     after = open_updates(allow_setup=False)
-    require(has(after, '1.7.47 · Build 93'), 'Restart did not show the installed Build93')
+    require(has(after, '1.7.50 · Build 96'), 'Restart did not show the installed Build96')
     # PackageManager has already confirmed the upgrade. Explicitly refresh the real feed
     # after restart as well as verifying the installed version.
-    after = wait_for(lambda t: has(t, '1.7.47 · Up to date'), 'installed-version confirmation')
+    after = wait_for(lambda t: has(t, '1.7.50 · Up to date'), 'installed-version confirmation')
     click(reveal_action('Check for updates'), 'Check for updates')
     updates_summary()
-    after = wait_for(lambda t: has(t, '1.7.47 · Build 93') and has(t, '1.7.47 · Up to date'), 'Build93 real up-to-date screen')
-    save_ui(after, args.output / 'build91-live-up-to-date.xml')
-    receipt = dict(schema=1, result='PASS', source=candidate['source'], apk_sha256=candidate['apk_sha256'], baseline_code=91, installed_code=93, live_github_discovery='PASS', live_download='PASS', android_installer='confirmed', restart_and_same_pin='PASS', up_to_date_screen='PASS', instrumentation='none', physical_fold='owner_confirmation_pending')
+    after = wait_for(lambda t: has(t, '1.7.50 · Build 96') and has(t, '1.7.50 · Up to date'), 'Build96 real up-to-date screen')
+    save_ui(after, args.output / 'build95-live-up-to-date.xml')
+    receipt = dict(schema=1, result='PASS', source=candidate['source'], apk_sha256=candidate['apk_sha256'], baseline_code=95, installed_code=96, live_github_discovery='PASS', live_download='PASS', android_installer='confirmed', restart_and_same_pin='PASS', up_to_date_screen='PASS', instrumentation='none', physical_fold='owner_confirmation_pending')
     (args.output / 'live-upgrade.json').write_text(json.dumps(receipt, indent=2)+'\n')
-    print('PASS: real public in-app Build91 -> Android installer -> installed Build93 -> restart -> Up to date', flush=True)
+    print('PASS: real public in-app Build95 -> Android installer -> installed Build96 -> restart -> Up to date', flush=True)
 
 if __name__ == '__main__':
     try:

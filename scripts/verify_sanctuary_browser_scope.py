@@ -22,6 +22,7 @@ ALLOWED_GUARDIAN = {
     f"{CORE}/evidence/EvidenceController.kt",
     f"{CORE}/evidence/EvidenceAccess.kt",
     f"{CORE}/guardian/GuardianNotificationListener.kt",
+    f"{CORE}/guardian/GuardianPipelineDiagnostics.kt",
     f"{CORE}/guardian/NotificationProbe.kt",
     f"{CORE}/guardian/GuardianCapture.kt",
     f"{CORE}/guardian/GuardianCapturePolicy.kt",
@@ -144,7 +145,20 @@ CODE81_EXACT_ADAPTERS = {
     f"{CORE}/backup/BackupCoordinator.kt": "fa2dedf1d88865e0bee5e9362109f5c1e6a921909fb00bb6ab168474f8d5b8fa",
     f"{CORE}/vault/PhoneVaultTransfer.kt": "8fe53b2491622958d4c8d59322ffee3e2a4d12041a6d88f926e12a59ed8ec604",
 }
-for path, checksum in CODE81_EXACT_ADAPTERS.items():
+# Hidden Space exposes the existing protected process and adds encrypted browser preferences/download metadata.
+# Pin these exact adapters while continuing to reject other changes in the protected core.
+HIDDEN_SPACE_EXACT_ADAPTERS = {
+    f"{CORE}/browser/hidden/HiddenTorService.kt": "dcf18efe3cdb4707e2aae2331e17e371d67b283d94172d13178b6294107a1dee",
+    f"{CORE}/browser/hidden/HiddenTorRelayBridge.kt": "aa7bd3cdb6e600ffa106f279c6931a8da363e6f41ab7c62292d45786a216e484",
+    f"{CORE}/browser/hidden/HiddenBrowserLibrary.java": "7e289978a890662f425fc894b56252a7b5b232b32614cc9f88d43a6b346c0fb4",
+    f"{CORE}/browser/hidden/HiddenBrowserRuntime.kt": "33b1c2d38ceb9b1883a035b3a2ff6eb9a9af7a48a4a9bff83b521a4733b1d18d",
+    f"{CORE}/browser/hidden/HiddenVpnBrowserActivity.kt": "06f4551a8a195b7754da744f852ee96054f56ae07bd9e2cbc099a883a1020883",
+    f"{CORE}/browser/hidden/HiddenVpnBrowserBroker.kt": "2181e407655b01a898c6c505546c77ee73f82c28d7b926c682d011b6c62ad050",
+    f"{CORE}/browser/hidden/HiddenWebViewFactory.kt": "bc2597ec4cad6a8f5b23f2e6042e42f43c4b17ee0c51cde5b16412658124502a",
+    f"{CORE}/browser/v2/SecureWebViewFactory.kt": "e8ce63a4d13cafa71388757f2daacb7c18cd1a79753a959938d206649fbec437",
+    f"{CORE}/hidden/HiddenRepository.kt": "ea5b2767c5f37de9bc81432d84ba6e79342d81111531648a3ad7d316041b9ef2",
+}
+for path, checksum in (CODE81_EXACT_ADAPTERS | HIDDEN_SPACE_EXACT_ADAPTERS).items():
     assert hashlib.sha256((ROOT / path).read_bytes()).hexdigest() == checksum, f"Unexpected protected adapter changes: {path}"
 
 for revision in (("HEAD",), ()):
@@ -152,12 +166,13 @@ for revision in (("HEAD",), ()):
         ["git", "diff", "--name-only", BASE, *revision, "--", CORE], cwd=ROOT, text=True,
     )
     unexpected = (set(raw.splitlines()) - ALLOWED_SANCTUARY - ALLOWED_GUARDIAN
-                  - ALLOWED_CORE_APP_ADAPTERS - CODE81_BACKUP_WIRING.keys() - CODE81_EXACT_ADAPTERS.keys())
+                  - ALLOWED_CORE_APP_ADAPTERS - CODE81_BACKUP_WIRING.keys() - CODE81_EXACT_ADAPTERS.keys()
+                  - HIDDEN_SPACE_EXACT_ADAPTERS.keys())
     assert not unexpected, f"Unexpected protected-core changes: {sorted(unexpected)}"
 
 build_file = "app/build.gradle.kts"
-expected = original(build_file).replace("versionCode = 69", "versionCode = 93", 1).replace(
-    'versionName = "1.7.34"', 'versionName = "1.7.47"', 1,
+expected = original(build_file).replace("versionCode = 69", "versionCode = 96", 1).replace(
+    'versionName = "1.7.34"', 'versionName = "1.7.50"', 1,
 )
 debug_version = """
 // The isolated Fold preview advances independently of the production release.
@@ -304,6 +319,13 @@ installer_query = ET.fromstring(f"""
 """)
 installer_visibility, = [node for node in queries.findall("intent") if structure(node) == structure(installer_query)]
 queries.remove(installer_visibility)
+
+# Only enable the three existing, private components. Their process, exposure, intent filters and
+# permission declarations must remain identical to the protected baseline.
+for name in ("HiddenVpnBrowserActivity", "HiddenTorIsolationService", "HiddenTorService"):
+    component, = [node for node in application if node.get(ANDROID + "name") == ".core.browser.hidden." + name]
+    assert component.get(ANDROID + "exported") == "false" and component.get(ANDROID + "enabled") is None
+    component.set(ANDROID + "enabled", "false")
 
 assert structure(before) == structure(after), "The existing manifest or permission set changed"
 print("PASS: Code 69 protected engines, original package and other permissions preserved; Home and call screening are additive")

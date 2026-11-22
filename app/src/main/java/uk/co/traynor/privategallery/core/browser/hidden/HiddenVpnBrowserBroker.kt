@@ -251,7 +251,7 @@ internal class HiddenVpnBrowserBroker(
                         val supplied=action in 1..2 && data.dataAvail()>0
                         val title=if(supplied)checkNotNull(data.readString()) else ""
                         val timestamp=if(supplied)data.readLong() else 0L
-                        val enabled=if(action==4)data.readInt().also {require(it in 0..1)}==1 else false
+                        val enabled=if(action==4 || action==7)data.readInt().also {require(it in 0..1)}==1 else false
                         require(data.dataAvail()==0)
                         require(HiddenBrowserLibrary.validTitle(title) && timestamp in 0..System.currentTimeMillis())
                         synchronized(gate) {
@@ -264,6 +264,7 @@ internal class HiddenVpnBrowserBroker(
                                 4 -> library.saveHistory(enabled)
                                 5 -> library.clearHistory()
                                 6 -> library.clearBrowsingData()
+                                7 -> library.useGoogleSearch(enabled)
                                 else -> error("Unsupported Hidden library request")
                             }
                             val state=librarySnapshot(library)
@@ -591,7 +592,7 @@ internal class HiddenVpnBrowserBroker(
                     override fun read(b:ByteArray,off:Int,len:Int):Int {check(active());val n=`in`.read(b,off,len);if(n>0){count+=n;require(count<=limit);downloadedBytes=count};check(active());if(n<0 && expected>=0)check(count==expected);return n}
                 }
                 val repo=repository(::active);val name=if(uk.co.traynor.privategallery.core.vault.VaultDocumentPolicy.isDocument(mime))"Hidden download."+uk.co.traynor.privategallery.core.vault.VaultDocumentPolicy.extension(mime) else "Hidden download"
-                val item=repo.importMedia(name,mime,input,validateDownloadedMedia=hiddenDownloadedMediaValidator(mime,{!active()}));repo.verify(item.id)
+                val item=repo.importBrowserDownload(name,mime,input,hiddenDownloadedMediaValidator(mime,{!active()}));repo.verify(item.id)
             }} finally {calls.remove(call);downloadCall=null}
         } finally {client.dispatcher.cancelAll();client.connectionPool.evictAll();client.dispatcher.executorService.shutdown()}
     }
@@ -652,7 +653,7 @@ internal class HiddenVpnBrowserBroker(
             return JSONObject().put("bookmarks",JSONArray(state.bookmarks.map {it.url})).put("history",JSONArray(state.history.map {it.url}))
                 .put("bookmarkTitles",JSONArray(state.bookmarks.map {it.title})).put("bookmarkTimes",JSONArray(state.bookmarks.map {it.timestamp}))
                 .put("historyTitles",JSONArray(state.history.map {it.title})).put("historyTimes",JSONArray(state.history.map {it.timestamp}))
-                .put("saveHistory",state.saveHistory).toString().replace("\\/","/")
+                .put("saveHistory",state.saveHistory).put("googleSearch",library.usesGoogleSearch()).toString().replace("\\/","/")
         }
         const val EXTRA="hidden_vpn_capability"
         const val DESCRIPTOR="uk.co.traynor.privategallery.HiddenVpnSession"

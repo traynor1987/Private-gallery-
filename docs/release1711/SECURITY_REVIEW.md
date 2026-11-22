@@ -1,41 +1,18 @@
-# NovaOS 1.7.47 (Build 93) release review
+# NovaOS 1.7.50 (Build 96) release review
 
-Source: 39e29649ce961b251a9783e09731814f6e0ab30c
+Source: 6d91450aac55c805df5d6f0bac20164b09697ab2
 Authorization: authenticated owner push
 Release scope: public stable after disposable upgrade verification
 Physical Fold acceptance: pending
-Upgrade fixture SHA-256: 69757813f2733c13ebab99c452b4d9065faee733d89ec8f55937437d8d4a3753
-Upgrade controls SHA-256: 5d3428fc195b80e7f8f6cd61af131254a2d0589f56a51decf0324a53ed0c08a3
+Upgrade fixture SHA-256: 0d1c2207aeab2ef68fe29f10b0a868914521c0d49aaea79a9e79d9b3996c6e7e
+Upgrade controls SHA-256: ed353777c909100c9df1e341f23d60f9e40108ec444b602ab79d8ad705065ea3
 Runtime matrix SHA-256: b3a221684edbd0e3462614ff8dbb402fb74d257823a6e9d5b7ea658ebf6242fa
-Runtime workflow run: 44726268958
-Runtime branch: feature/novaos-guardian-presentation93
-Signing workflow SHA-256: 0c1ca8f81b956320dab524a8640fff44d819dd896b26b3332919e8ea683fbd16
+Runtime workflow run: 45012948591
+Runtime branch: main
+Signing workflow SHA-256: b74ea12110ca0255e1586f9a1fb86a65906af67f9fb0b3442082ff52c4e2d58b
 
-Build 93 recognises the reported hostile command even when the message ends
-with incomplete context. The Android listener captures and encrypts the
-supported source payload before requesting cancellation. Guardian posts the
-replacement after Android confirms removal of the original. The listener
-excludes notification posts it observed as summaries when Android regroups
-them and redispatches the same post.
+Build 96 includes the Hidden Workspace and shared Labs changes from PR #75 and the Tor relay repair from PR #76. The final merge tree matches PR #76 head `7a7fb6bf972f654a0bbdd32ca432c5d006d36ea0`, verified by Hidden Space Android 17 run 45008824556. Nova Home Intelligence PR #73 is separate.
 
-Smart Filtering keeps the original low-risk WhatsApp alert and replaces
-held originals with neutral Guardian alerts when delivery is enabled.
-Nova Guardian Notifications also replaces eligible low-risk originals when
-it can deliver the new alert. Eligible safe previews require local validation
-and opt-in. Held text stays behind review. Android can show a source alert
-before its listener callback reaches Guardian.
+Hidden Space Android 17 run 45012948628 passed on the final main commit with 776 JVM tests, 136 Android test executions and all three isolated upgrade phases. Live WireGuard routing and revocation passed. The independent Tor origin observed closure after 399 ms on lock and 2,560 ms after abrupt process loss, within the 20-second limit. Source backup exclusions and the protected-core checks passed. The exact-source integration suite covers Guardian, Sanctuary and backup process restart.
 
-The Android 17 run passed 344 regression cases, 64 focused
-report groups and 776 JVM tests. A synthetic source APK on the
-disposable emulator exercised the system listener with both modes, exact
-cancellation, duplicate delivery, encrypted recovery, contact exclusions,
-source summaries, unavailable alerts, and safe and held messages with the
-screen off. The Inbox tests verified Android credential confirmation and
-protected review. No real WhatsApp account or owner data was used. Physical
-Samsung notification timing and delivery, including Dual Messenger, require
-owner verification.
-
-The production workflow must sign with the original key and verify an
-in-place upgrade from populated Build 91 data before stable publication.
-The existing updater workflow must then verify discovery, download and
-installation from the public feed, restart, and the Up to date screen.
+Production publication requires the original signing certificate, a populated Build 95 to Build 96 in-app upgrade and verified restart. The existing Guardian replacement-notification issue on Galaxy Z Fold remains open. Owner acceptance is pending on both physical Fold displays.

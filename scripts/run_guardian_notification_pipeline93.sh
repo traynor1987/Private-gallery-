@@ -33,4 +33,5 @@ keytool -genkeypair -keystore "$scratch/fixture.p12" -storetype PKCS12 -storepas
 adb install "$scratch/fixture.apk"
 installed=true
 adb shell pm grant com.whatsapp android.permission.POST_NOTIFICATIONS
-bash scripts/run_visual_checkpoint.sh GuardianNotificationPipeline93Test guardian-notification-pipeline-93 uk.co.traynor.privategallery.core.guardian
+bash scripts/run_visual_checkpoint.sh "${1:-GuardianNotificationPipeline93Test}" \
+    "${2:-guardian-notification-pipeline-93}" uk.co.traynor.privategallery.core.guardian

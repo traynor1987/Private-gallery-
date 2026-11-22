@@ -19,10 +19,10 @@ ASSETS = {"private-gallery-release.apk", "private-gallery-release.apk.sha256",
           "private-gallery-release.metadata.json"}
 PRODUCTION_STEPS = {
     "Validate original runtime reports and authenticated owner authorization before signer access",
-    "Verify published Build 91 baseline before signer access",
+    "Verify published Build 95 baseline before signer access",
     "Verify the existing permanent private key and original certificate",
     "Verify frozen candidate package signature OCR distribution and 16KiB alignment",
-    "Original-key Build 91 to versionCode 93 upgrade and restart without uninstall or clear",
+    "Original-key Build 95 to versionCode 96 upgrade and restart without uninstall or clear",
     "Preserve verified upgrade receipts only", "Stage and verify stable update assets",
     "Retain verified publication inputs",
 }
@@ -55,7 +55,7 @@ def check_provenance(candidate, regression, regression_jobs, production, product
     # reviewed preparation-branch run; the protected signer still runs on main
     # and binds that immutable run ID to the original upgrade/owner receipt.
     regression_branch = candidate.get("regression_branch", BRANCH)
-    require(regression_branch in (BRANCH, "feature/novaos-code81-core-apps", "feature/novaos-code83-cloud-teacher", "feature/novaos-guardian-retention89", "feature/novaos-guardian-evidence90", "feature/novaos-guardian-reliability91", "feature/novaos-guardian-presentation93"),
+    require(regression_branch in (BRANCH, "feature/novaos-code81-core-apps", "feature/novaos-code83-cloud-teacher", "feature/novaos-guardian-retention89", "feature/novaos-guardian-evidence90", "feature/novaos-guardian-reliability91", "feature/novaos-guardian-presentation93", "feature/novaos-guardian-fold-acceptance"),
             "Unreviewed regression evidence branch")
     for record, run_id, source, workflow, branch in (
         (regression, candidate["regression_run"], candidate["source"], "fast-development.yml", regression_branch),
@@ -95,7 +95,7 @@ def check_local_receipts(candidate, assets, receipts):
             "Signed APK differs from the immutable candidate")
     upgrade = receipts / "from80"
     require(read(upgrade / "upgrade-baseline-sha256.txt").split()[0] == candidate["baseline_sha256"],
-            "Upgrade used a different Build 91 baseline")
+            "Upgrade used a different Build 95 baseline")
     require(read(upgrade / "upgrade-candidate-sha256.txt").split()[0] == candidate["apk_sha256"],
             "Upgrade tested a different candidate")
     rehearsal=json.loads(read(upgrade / "in-app-update.json"))
