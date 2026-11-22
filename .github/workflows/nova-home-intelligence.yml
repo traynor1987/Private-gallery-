@@ -38,6 +38,10 @@ jobs:
           python3 scripts/verify_android17_sdk.py "$ANDROID_HOME" app/build/intelligence/android17-sdk.json
       - name: Verify Nova Brain authorization and accounting
         run: PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s scripts/cloud_teacher
+      - name: Build and check the Cloud Teacher image
+        run: |
+          docker build -t nova-cloud-teacher:pr-check scripts/cloud_teacher
+          docker run --rm --network none nova-cloud-teacher:pr-check python server.py --help
       - name: Compile and test the isolated debug build
         run: |
           bash scripts/prime_gradle95_ci.sh
