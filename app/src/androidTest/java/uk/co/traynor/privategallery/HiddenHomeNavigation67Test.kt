@@ -42,7 +42,7 @@ class HiddenHomeNavigation67Test {
             }
             compose.onNodeWithTag("nova-home").assertIsDisplayed().performClick()
             try {
-                compose.waitUntil(5_000) { compose.onNodeWithTag("hidden-space-apps").isDisplayed() }
+                compose.waitUntil(5_000) { compose.onNodeWithTag("hidden-workspace-pager").isDisplayed() }
             } catch (failure: ComposeTimeoutException) {
                 val state = compose.runOnIdle {
                     "selected=${owner.hidden.selected}, authenticated=${owner.hidden.authenticated}, " +
@@ -50,9 +50,9 @@ class HiddenHomeNavigation67Test {
                         "cover=${compose.activity.privacyCoverVisible()}, windowFocus=${compose.activity.window.decorView.hasWindowFocus()}"
                 }
                 val tree = compose.onRoot(useUnmergedTree = true).printToString(maxDepth = 5)
-                throw AssertionError("Vault did not return to the Hidden dashboard. $state" + System.lineSeparator() + tree, failure)
+                throw AssertionError("Vault did not return to the full Hidden Workspace. $state" + System.lineSeparator() + tree, failure)
             }
-            compose.onNodeWithTag("hidden-space-apps").assertIsDisplayed()
+            compose.onNodeWithTag("hidden-workspace-pager").assertIsDisplayed()
             compose.activityRule.scenario.moveToState(Lifecycle.State.CREATED)
             compose.activityRule.scenario.moveToState(Lifecycle.State.RESUMED)
             // RESUMED can arrive before the window regains focus and draws uncovered content.
@@ -60,9 +60,9 @@ class HiddenHomeNavigation67Test {
                 val foreground = compose.runOnIdle {
                     compose.activity.window.decorView.hasWindowFocus() && !compose.activity.privacyCoverVisible()
                 }
-                foreground && compose.onNodeWithTag("hidden-space-apps").isDisplayed()
+                foreground && compose.onNodeWithTag("hidden-workspace-pager").isDisplayed()
             }
-            compose.onNodeWithTag("hidden-space-apps").assertIsDisplayed()
+            compose.onNodeWithTag("hidden-workspace-pager").assertIsDisplayed()
             compose.runOnIdle {
                 assertTrue(owner.hidden.selected && owner.hidden.session.isUnlocked)
                 assertFalse(owner.session.isUnlocked)

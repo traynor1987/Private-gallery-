@@ -43,6 +43,15 @@ class HiddenSpaceAppsTest {
                             writeFixture(h, "hidden marker")
                             assertFixture(p, "primary marker")
                             assertFixture(h, "hidden marker")
+                            val primaryIds = PreviewData(p, null).allApps().map { it.id }
+                            val hiddenIds = PreviewData(h, null).allApps().map { it.id }
+                            val sharedIds = NovaCoreApp.entries.map { it.route } + listOf("photos", "camera", "downloads")
+                            sharedIds.forEach { id ->
+                                assertEquals("Primary drawer entry for $id", 1, primaryIds.count { it == id })
+                                assertEquals("Hidden drawer entry for $id", 1, hiddenIds.count { it == id })
+                            }
+                            assertFalse("Tor cannot appear in Primary", "hidden-tor" in primaryIds)
+                            assertTrue("Tor is available in Hidden", "hidden-tor" in hiddenIds)
                             assertTrue(root.walkTopDown().filter { it.isFile }.none {
                                 it.readBytes().toString(Charsets.ISO_8859_1).contains("hidden marker")
                             })

@@ -26,7 +26,7 @@ class HiddenSpaceDashboardUiTest {
                 preferences.allowScreenshots = true
                 openHiddenSpaceFixtureDashboard(activity, state)
             }
-            compose.waitUntil(5_000) { compose.onNodeWithTag("hidden-space-apps").isDisplayed() }
+            openOverviewFromWorkspace()
             compose.onNodeWithTag("hidden-app-nova-notes-draft").assertIsDisplayed().performClick()
             compose.onNodeWithText("Nova Notes").assertIsDisplayed()
             compose.runOnIdle {
@@ -45,6 +45,38 @@ class HiddenSpaceDashboardUiTest {
         }
     }
 
+    private fun openOverviewFromWorkspace() {
+        compose.waitUntil(5_000) { compose.onNodeWithTag("hidden-workspace-pager").isDisplayed() }
+        compose.onNodeWithTag("hidden-space-apps").assertDoesNotExist()
+        compose.onNodeWithContentDescription("Home menu").performClick()
+        compose.onNodeWithText("Hidden overview").performClick()
+        compose.onNodeWithTag("hidden-space-apps").assertIsDisplayed()
+    }
+
+    @Test fun workspaceDrawerOpensLabsAndHomeReturnsToTheWorkspace() {
+        val activity = compose.activity
+        val state = ViewModelProvider(activity)[ProtectedSessionState::class.java]
+        try {
+            compose.onNodeWithTag("hidden-workspace-pager").assertDoesNotExist()
+            compose.runOnIdle { openHiddenSpaceFixtureDashboard(activity, state) }
+            compose.onNodeWithTag("hidden-workspace-pager").assertIsDisplayed()
+            compose.onNodeWithTag("open-apps").performClick()
+            compose.onNodeWithTag("drawer-search").performTextInput("Nova Notes")
+            compose.onNodeWithTag("app-nova-notes-draft").performClick()
+            compose.onNodeWithText("Nova Notes").assertIsDisplayed()
+            compose.onNodeWithContentDescription("Back").performClick()
+            compose.onNodeWithTag("drawer-sheet").assertIsDisplayed()
+            compose.onNodeWithContentDescription("Close app drawer").performClick()
+            compose.onNodeWithTag("hidden-workspace-pager").assertIsDisplayed()
+            compose.onNodeWithContentDescription("Home menu").performClick()
+            compose.onNodeWithText("Lock Space").performClick()
+            compose.onNodeWithTag("hidden-workspace-pager").assertDoesNotExist()
+            compose.runOnIdle { assertFalse(state.hidden.session.isUnlocked) }
+        } finally {
+            compose.runOnIdle { activity.panicExit() }
+        }
+    }
+
     @Test fun dashboardRoutesBuiltInBrowserAndTorThroughSeparateAdmissions() {
         val activity = compose.activity
         val state = ViewModelProvider(activity)[ProtectedSessionState::class.java]
@@ -57,6 +89,7 @@ class HiddenSpaceDashboardUiTest {
                 assertTrue(hiddenNotice.edit().remove("notice-revision").commit())
                 openHiddenSpaceFixtureDashboard(activity, state)
             }
+            openOverviewFromWorkspace()
             val dashboard = compose.onNodeWithTag("hidden-space-apps")
             for ((tag, mode) in listOf(
                 "hidden-app-browser-v1" to HiddenConnectionPolicy.Mode.VPN_ONLY,
@@ -71,6 +104,8 @@ class HiddenSpaceDashboardUiTest {
                     assertNull("Hidden requires its own acknowledgement before network admission", activity.hiddenBrowserOwner)
                 }
                 compose.onNodeWithText("Return Home").performClick()
+                compose.onNodeWithTag("hidden-workspace-pager").assertIsDisplayed()
+                openOverviewFromWorkspace()
                 dashboard.assertIsDisplayed()
             }
         } finally {

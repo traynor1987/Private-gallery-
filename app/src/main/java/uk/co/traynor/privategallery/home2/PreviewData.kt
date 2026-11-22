@@ -16,12 +16,18 @@ data class Profile(val installed:List<StoreEntry> = emptyList(),val pages:List<L
 data class PreviewState(val current:String="primary",val theme:String="dark",val primary:Profile=Profile(),val hidden:Profile=Profile(wallpaper=Wallpaper(builtin="Midnight")))
 data class LaunchApp(val id:String,val name:String,val symbol:String,val website:StoreEntry?=null)
 val builtinApps = listOf(
- LaunchApp("photos","Gallery","photos"),LaunchApp("vault","Vault","lock"),LaunchApp("camera","Camera","camera"),LaunchApp("evidence","Evidence Locker","evidence"),LaunchApp("editor","Photo Editor","edit"),LaunchApp("ai-edit","AI Edit","edit"),LaunchApp("browser-v1","Browser V1","browser"),LaunchApp("private-apps","Private Apps","apps"),LaunchApp("trash","Recently Deleted","trash"),LaunchApp("collections","Collections","folder"),LaunchApp("favourites","Favourites","heart"),LaunchApp("native-settings","Settings","settings"),
+ LaunchApp("photos","Gallery","photos"),LaunchApp("downloads","Downloads","download"),LaunchApp("vault","Vault","lock"),LaunchApp("camera","Camera","camera"),LaunchApp("evidence","Evidence Locker","evidence"),LaunchApp("editor","Photo Editor","edit"),LaunchApp("ai-edit","AI Edit","edit"),LaunchApp("browser-v1","Browser V1","browser"),LaunchApp("private-apps","Private Apps","apps"),LaunchApp("trash","Recently Deleted","trash"),LaunchApp("collections","Collections","folder"),LaunchApp("favourites","Favourites","heart"),LaunchApp("native-settings","Settings","settings"),
  LaunchApp("backup","Nova Backup","backup"),LaunchApp("nova-calculator","Nova Calculator","calculator"),LaunchApp("arcade","Nova Arcade","arcade"),LaunchApp("arcade-2048","2048 · Arcade","arcade"),LaunchApp("arcade-sudoku","Sudoku · Arcade","arcade"),LaunchApp("arcade-snake","Snake · Arcade","arcade"),LaunchApp("chat","Nova Chat Lite · Beta","chat"),LaunchApp("widgets","Widget Centre","widgets"),LaunchApp("search","Nova Search","search"),LaunchApp("mind","Nova Mind","mind"),LaunchApp("calm","Calm Now","mind"),LaunchApp("sanctuary","Nova Sanctuary","mind"),LaunchApp("store","Nova Store","store"),LaunchApp("wallpaper","Wallpapers","wallpaper"),LaunchApp("settings","Home settings","settings"))
 
 
 internal fun readBundledStoreCatalogue(assets: android.content.res.AssetManager): List<StoreEntry> =
     PreviewData.parseCatalogue(assets.open("catalogue-v1.json").bufferedReader().use { it.readText() })
+
+private val coreApps = NovaCoreApp.entries.map { LaunchApp(it.route, it.label, it.symbol) }
+private val hiddenTorApp = LaunchApp("hidden-tor", "Tor Browser", "browser")
+
+private fun workspaceApps(hidden: Boolean): List<LaunchApp> =
+    builtinApps + coreApps + listOfNotNull(hiddenTorApp.takeIf { hidden })
 
 class PreviewData(private val context:Context,private val apps:uk.co.traynor.privategallery.core.home2.NativeAppsBridge?,onSwitch:(()->Unit)?,private val legacyOrder:List<String>?,private val nativeThemeFallback:String?,private val onThemeCommitted:((String)->Unit)?) {
  constructor(context:Context,apps:uk.co.traynor.privategallery.core.home2.NativeAppsBridge?,onSwitch:(()->Unit)?=null,legacyOrder:List<String>?=null):this(context,apps,onSwitch,legacyOrder,null,null)
@@ -73,7 +79,7 @@ class PreviewData(private val context:Context,private val apps:uk.co.traynor.pri
   return runCatching {
    val raw=prefs.getString(WORKSPACE_PREVIOUS,null)?:return@runCatching false
    val json=JSONObject(raw).put("installed",JSONArray().apply{profile.installed.forEach{put(entryJson(it))}})
-   val stored=readProfile(json, includeCoreApps = true)
+   val stored=readProfile(json, hidden = false)
    val pageCount=maxOf(stored.pages.size,lastWidgetPage+1).coerceIn(1,8)
    val previousWallpaper=if(stored.wallpaper.image==null && profile.wallpaper.image==null)stored.wallpaper else profile.wallpaper
    val restored=stored.copy(pages=stored.pages+List(pageCount-stored.pages.size){emptyList()},wallpaper=previousWallpaper)
@@ -102,11 +108,10 @@ class PreviewData(private val context:Context,private val apps:uk.co.traynor.pri
   val ids=layout.getJSONArray("installedIds");val restored=(0 until ids.length()).mapNotNull{i->val id=ids.getString(i);old.firstOrNull{it.id==id}?:catalogue.firstOrNull{entryKey(it)==id}?.copy(id=id)}
   val o=JSONObject(layout.toString());o.remove("installedIds");o.put("installed",JSONArray().apply{(old+restored).distinctBy{it.id}.forEach{put(entryJson(it))}})
   val wall=o.getJSONObject("wallpaper");val image=wall.optString("image");if(image.isBlank()||!java.io.File(context.filesDir,image).isFile)wall.remove("image")
-  val next=readProfile(o, includeCoreApps = owner=="primary");change{next};return error==null
+  val next=readProfile(o, hidden = owner=="hidden");change{next};return error==null
  }
  fun profile(id:String):Profile {require(id==owner);return if(owner=="hidden")state.hidden else state.primary}
- fun allApps(p:Profile=profile)=builtinApps+
-  (if(owner=="primary") NovaCoreApp.entries.map { LaunchApp(it.route, it.label, it.symbol) } else emptyList())+
+ fun allApps(p:Profile=profile)=workspaceApps(owner=="hidden")+
   p.installed.map{entry->val artwork=catalogue.firstOrNull{StoreUrl.key(it.url)==StoreUrl.key(entry.url)};LaunchApp(entry.id,entry.name,"website",if(artwork!=null)entry.copy(icon=artwork.icon)else entry)}
  fun app(id:String)=allApps().firstOrNull{it.id==id}
  fun drawerIds(p:Profile=profile):List<String> {
@@ -220,11 +225,10 @@ class PreviewData(private val context:Context,private val apps:uk.co.traynor.pri
   private fun array(v:List<*>)=JSONArray(v)
   private fun profileJson(p:Profile)=JSONObject().put("installed",JSONArray().apply{p.installed.forEach{put(entryJson(it))}}).put("pages",JSONArray().apply{p.pages.forEach{put(array(it))}}).put("dock",array(p.dock)).put("drawer",array(p.drawerOrder)).put("folders",JSONArray().apply{p.folders.forEach{put(JSONObject().put("id",it.id).put("name",it.name).put("apps",array(it.apps)))}}).put("columns",p.columns).put("iconSize",p.iconSize).put("wallpaper",JSONObject().put("builtin",p.wallpaper.builtin).put("image",p.wallpaper.image).put("imageRevision",p.wallpaper.imageRevision).put("zoom",p.wallpaper.zoom).put("x",p.wallpaper.x).put("y",p.wallpaper.y).put("blur",p.wallpaper.blur).put("dim",p.wallpaper.dim))
   private fun encode(s:PreviewState)=JSONObject().put("schema",1).put("current",s.current).put("theme",s.theme).put("primary",profileJson(s.primary)).put("hidden",profileJson(s.hidden))
-  private fun readProfile(o:JSONObject, includeCoreApps:Boolean):Profile {
+  private fun readProfile(o:JSONObject, hidden:Boolean):Profile {
    val installed=o.getJSONArray("installed");require(installed.length()<=200)
    val apps=(0 until installed.length()).map{entry(installed.getJSONObject(it),true)}.distinctBy{it.id}
-   val coreRoutes=if(includeCoreApps)NovaCoreApp.entries.map{it.route}else emptyList()
-   val available=(builtinApps.map{it.id}+coreRoutes+apps.map{it.id}).toSet()
+   val available=(workspaceApps(hidden).map{it.id}+apps.map{it.id}).toSet()
    val folders=o.getJSONArray("folders");require(folders.length()<=64)
    val groups=(0 until folders.length()).map{val f=folders.getJSONObject(it);AppFolder(f.getString("id"),f.getString("name").take(32),strings(f.getJSONArray("apps")).filter{it in available}.distinct())}.filter{it.id.startsWith("folder:")&&it.apps.isNotEmpty()}.distinctBy{it.id}
    val valid=available+groups.map{it.id};val pages=o.getJSONArray("pages");require(pages.length() in 1..8)
@@ -233,6 +237,6 @@ class PreviewData(private val context:Context,private val apps:uk.co.traynor.pri
    fun number(name:String,default:Double,low:Float,high:Float)=w.optDouble(name,default).toFloat().let{if(it.isFinite())it.coerceIn(low,high)else default.toFloat()}
    return Profile(apps,home,strings(o.getJSONArray("dock")).filter{it in available}.distinct().take(5),groups,strings(o.optJSONArray("drawer")?:JSONArray()).filter{it in valid}.distinct(),Wallpaper(w.optString("builtin","Aurora").takeIf{it in listOf("Aurora","Midnight","Dusk")}?:"Aurora",file,number("zoom",1.0,1f,3f),number("x",0.0,-1f,1f),number("y",0.0,-1f,1f),number("blur",0.0,0f,24f),number("dim",.12,0f,.8f),w.optLong("imageRevision",0L).coerceAtLeast(0)),o.optInt("columns",4).coerceIn(3,6),o.optInt("iconSize",60).coerceIn(44,76))
   }
-  private fun decode(o:JSONObject):PreviewState {require(o.getInt("schema")==1);return PreviewState(o.optString("current").takeIf{it in listOf("primary","hidden")}?:"primary",o.optString("theme").takeIf{it in listOf("dark","light","system")}?:"dark",readProfile(o.getJSONObject("primary"), includeCoreApps = true),readProfile(o.getJSONObject("hidden"), includeCoreApps = false))}
+  private fun decode(o:JSONObject):PreviewState {require(o.getInt("schema")==1);return PreviewState(o.optString("current").takeIf{it in listOf("primary","hidden")}?:"primary",o.optString("theme").takeIf{it in listOf("dark","light","system")}?:"dark",readProfile(o.getJSONObject("primary"), hidden = false),readProfile(o.getJSONObject("hidden"), hidden = true))}
  }
 }
