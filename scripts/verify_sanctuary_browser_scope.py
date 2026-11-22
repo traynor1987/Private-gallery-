@@ -149,7 +149,7 @@ CODE81_EXACT_ADAPTERS = {
 # Pin these exact adapters while continuing to reject other changes in the protected core.
 HIDDEN_SPACE_EXACT_ADAPTERS = {
     f"{CORE}/browser/hidden/HiddenTorService.kt": "dcf18efe3cdb4707e2aae2331e17e371d67b283d94172d13178b6294107a1dee",
-    f"{CORE}/browser/hidden/HiddenTorRelayBridge.kt": "985422a63b10e0c642eb6aaf0e904b6bcc41d9ca1a55437f687c96108c2ae9cf",
+    f"{CORE}/browser/hidden/HiddenTorRelayBridge.kt": "aa7bd3cdb6e600ffa106f279c6931a8da363e6f41ab7c62292d45786a216e484",
     f"{CORE}/browser/hidden/HiddenBrowserLibrary.java": "7e289978a890662f425fc894b56252a7b5b232b32614cc9f88d43a6b346c0fb4",
     f"{CORE}/browser/hidden/HiddenBrowserRuntime.kt": "33b1c2d38ceb9b1883a035b3a2ff6eb9a9af7a48a4a9bff83b521a4733b1d18d",
     f"{CORE}/browser/hidden/HiddenVpnBrowserActivity.kt": "06f4551a8a195b7754da744f852ee96054f56ae07bd9e2cbc099a883a1020883",

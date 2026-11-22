@@ -55,7 +55,14 @@ internal class HiddenTorRelayBridge(private val protect:(Socket)->Boolean,privat
             synchronized(gate){allowed();check(protect(upstream));allowed()}
             upstream.connect(InetSocketAddress(address,port),30_000);allowed()
             output.write(byteArrayOf(5,0,0,1,0,0,0,0,0,0));output.flush();client.soTimeout=0
-            executor.execute {try{copy(input,upstream.getOutputStream());runCatching{upstream.shutdownOutput()}}catch(_:Exception){closeRelaySocket(upstream)}}
+            executor.execute {
+                try {
+                    copy(input, upstream.getOutputStream())
+                } catch (_: Exception) {
+                } finally {
+                    closeRelaySocket(upstream)
+                }
+            }
             copy(upstream.getInputStream(),output)
         }finally{closeRelaySocket(upstream)}
     }
@@ -64,10 +71,10 @@ internal class HiddenTorRelayBridge(private val protect:(Socket)->Boolean,privat
         try{while(true){allowed();val n=input.read(bytes);if(n<0)return;allowed();output.write(bytes,0,n);output.flush()}}finally{bytes.fill(0)}
     }
     private fun closeRelaySocket(socket: Socket) {
-        // When revoking the route, discard queued transport bytes and notify the relay
-        // immediately. A normal stream ending keeps its ordinary TCP close semantics.
-        if(closed.get() || !authorized()) abortRelaySocket(socket)
-        else runCatching {socket.close()}
+        // An authenticated Tor relay channel is full duplex for its whole lifetime.
+        // Either pump ending must abort the channel before it leaves revocation tracking.
+        // Tor can exit before the isolation service learns that its authority is gone.
+        abortRelaySocket(socket)
         relaySockets.remove(socket)
         sockets.remove(socket)
     }
