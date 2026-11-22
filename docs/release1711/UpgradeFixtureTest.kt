@@ -661,6 +661,21 @@ class UpgradeFixtureTest {
         assertNull(uk.co.traynor.privategallery.home2.NovaFilesSelection(space).read().tree)
     }
 
+    private fun hiddenNotes96(space: uk.co.traynor.privategallery.core.home2.SpaceContext, seed: Boolean) {
+        assertEquals("hidden", space.spaceId)
+        val notes = uk.co.traynor.privategallery.home2.NovaNotesLibrary(space)
+        val note = uk.co.traynor.privategallery.home2.NovaNote("upgrade-hidden-note", "Existing Hidden note", "Hidden note body")
+        val draft = note.copy(body = "Existing encrypted Hidden draft")
+        if (seed) {
+            val before = notes.read()
+            assertTrue(before.notes.isEmpty())
+            assertNotNull(notes.save(before, listOf(note)))
+            assertNotNull(notes.writeDraft(notes.readDraft(), note, draft))
+        }
+        assertEquals(listOf(note), notes.read().notes)
+        assertEquals(draft, notes.readDraft().note)
+    }
+
     private fun novaBrainConfiguration86(seed:Boolean) {
         val expected=uk.co.traynor.privategallery.core.brain.NovaBrainConfiguration(
             "https://synthetic-upgrade.example","synthetic-upgrade-owner-token-".repeat(2))
@@ -678,6 +693,7 @@ class UpgradeFixtureTest {
             for((owner,access) in listOf("primary" to primary,"hidden" to secret)) {
                 uk.co.traynor.privategallery.core.home2.SpaceContext(context,access).use { space ->
                     if(owner=="primary") { coreApplicationState85(space,seed);novaBrainConfiguration86(seed) }
+                    else hiddenNotes96(space, seed)
                     val prefs=space.getSharedPreferences("nova_preview_v1",0)
                     val widgets=uk.co.traynor.privategallery.home2.WidgetData(space)
                     val mind=uk.co.traynor.privategallery.home2.MindData(space)
