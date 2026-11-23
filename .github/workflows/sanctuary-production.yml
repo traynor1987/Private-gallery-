@@ -452,15 +452,16 @@ jobs:
             ./gradlew lintRelease assembleRelease --stacktrace --no-daemon --console=plain
           )
           install -m 0400 "$root/source/app/build/outputs/apk/release/app-release.apk" "$root/candidate.apk"
+          # Match the Build 96 v2/v3 signing range for the disposable fixture only.
           "$tools/apksigner" sign --ks "$signer/original.jks" --ks-pass env:STORE_PASSWORD --ks-key-alias "$KEY_ALIAS" \
-            --key-pass env:KEY_PASSWORD --min-sdk-version 37 --out "$root/instrumentation.apk" "$root/compiled-instrumentation.apk"
+            --key-pass env:KEY_PASSWORD --min-sdk-version 24 --out "$root/instrumentation.apk" "$root/compiled-instrumentation.apk"
       - name: Verify the signed Build 97 APK and protected packaging
         run: |
           root="$RUNNER_TEMP/novaos97"
           tools="$ANDROID_HOME/build-tools/36.0.0"
           python3 scripts/novaos_build97_gate.py candidate "$root/candidate.apk" "$tools" > "$root/receipts/candidate-sha256.txt"
           python3 scripts/verify_signed_upgrade1711.py "$root/compiled-instrumentation.apk" "$root/instrumentation.apk"
-          "$tools/apksigner" verify --verbose --print-certs "$root/instrumentation.apk" > "$root/receipts/instrumentation-signature.txt"
+          "$tools/apksigner" verify --min-sdk-version 24 --verbose --print-certs "$root/instrumentation.apk" > "$root/receipts/instrumentation-signature.txt"
           grep -Fx 'Number of signers: 1' "$root/receipts/instrumentation-signature.txt"
           grep -Fx 'Verified using v2 scheme (APK Signature Scheme v2): true' "$root/receipts/instrumentation-signature.txt"
           grep -Fx 'Signer #1 certificate SHA-256 digest: 94f2bfc6567f26d067d29077111cfd0ce86d38263c642ad115e43365f05b0d17' "$root/receipts/instrumentation-signature.txt"

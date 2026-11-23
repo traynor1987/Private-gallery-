@@ -32,6 +32,8 @@ APP_ARTIFACT = 14817007032
 APP_DIGEST = "efdb7c2890865408cd2181d0fce1c4335e13b942cfa99906db3ff093359e7afe"
 PREVIEW_RUN = 45169968138
 PREVIEW = "39df141a046ed960b733cf1147cde2a4a3238ca7"
+FAILED_REHEARSAL_RUN = 45206731755
+FAILED_REHEARSAL_HEAD = "8187d7b1fbdf90717f17d3988caf5742a764f920"
 MARKER = ".novaos-build97-authorization"
 WORKFLOW = ".github/workflows/sanctuary-production.yml"
 FIXTURE = "docs/release1711/UpgradeFixtureTest.kt"
@@ -160,6 +162,35 @@ def ensure_source_unchanged(source, baseline):
     require(difference <= MAIN_ONLY_CHANGES, f"Source drift outside release controls: {sorted(difference - MAIN_ONLY_CHANGES)}")
 
 
+def verify_fixture_retry(parent):
+    require(git("rev-list", "--parents", "-n", "1", parent).split() == [parent, FAILED_REHEARSAL_HEAD]
+            and set(git("diff", "--name-only", FAILED_REHEARSAL_HEAD, parent).splitlines())
+            == {WORKFLOW, "scripts/novaos_build97_gate.py"},
+            "The fixture retry must directly follow the narrowly scoped repair on main")
+    previous = api(f"actions/runs/{FAILED_REHEARSAL_RUN}")
+    require(previous["id"] == FAILED_REHEARSAL_RUN and previous["head_sha"] == FAILED_REHEARSAL_HEAD
+            and previous["head_branch"] == "main" and previous["head_repository"]["full_name"] == REPO
+            and previous["event"] == "push" and previous["path"].split("@")[0] == WORKFLOW
+            and previous["run_attempt"] == 1 and previous["actor"]["id"] == OWNER
+            and previous["triggering_actor"]["id"] == OWNER
+            and previous["status"] == "completed" and previous["conclusion"] == "failure",
+            "The fixture retry requires the reviewed failed owner rehearsal")
+    result = api(f"actions/runs/{FAILED_REHEARSAL_RUN}/attempts/1/jobs?per_page=100")
+    matching = [job for job in result["jobs"] if job["name"] == "build97-protected"]
+    require(len(matching) == 1 and result["total_count"] == len(result["jobs"]),
+            "Missing complete failed rehearsal job evidence")
+    job, = matching
+    states = {step["name"]: step["conclusion"] for step in job["steps"]}
+    require(job["conclusion"] == "failure"
+            and {step for step, state in states.items() if state == "failure"}
+            == {"Verify the signed Build 97 APK and protected packaging"}
+            and states["Verify original production identity and sign the frozen Build 97 source"] == "success"
+            and states["Rehearse populated Build 96 to 97 upgrade and restart through the in-app updater"] == "skipped"
+            and states["Retain only non-sensitive Build 97 verification receipts"] == "skipped"
+            and states["Remove all Build 97 key and APK material"] == "success",
+            "The failed rehearsal did not stop at fixture verification and clean up")
+
+
 def authorize(output):
     env = os.environ
     require(env["GITHUB_REPOSITORY"] == REPO and env["GITHUB_REF"] == "refs/heads/main"
@@ -184,9 +215,9 @@ def authorize(output):
             and pr["head"]["repo"]["full_name"] == REPO and pr["base"]["ref"] == "main",
             "PR #73 does not match the frozen, same-repository candidate")
     if mode == "rehearsal":
-        require(source == CANDIDATE and pr["state"] == "open" and not pr["merged"]
-                and MARKER not in git("ls-tree", "--name-only", parent).splitlines(),
-                "The one-time rehearsal requires the exact unmerged PR #73")
+        require(source == CANDIDATE and pr["state"] == "open" and not pr["merged"],
+                "The fixture retry requires the exact unmerged PR #73")
+        verify_fixture_retry(parent)
         ensure_source_unchanged(parent, STABLE_MAIN)
     elif mode == "production":
         require(pr["merged"] and pr["merge_commit_sha"] == source, "Production requires the verified PR #73 merge")
