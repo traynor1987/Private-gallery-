@@ -34,7 +34,15 @@ import org.junit.Assert.assertNull
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.RuleChain
+import uk.co.traynor.privategallery.core.sanctuary.SanctuaryLauncherPolicy.Decision
 import uk.co.traynor.privategallery.launcher.GuardianTheme
+import uk.co.traynor.privategallery.launcher.LauncherApp
+import uk.co.traynor.privategallery.launcher.LauncherIntelligenceActions
+import uk.co.traynor.privategallery.launcher.LauncherItem
+import uk.co.traynor.privategallery.launcher.LauncherLayout
+import uk.co.traynor.privategallery.launcher.LauncherUiActions
+import uk.co.traynor.privategallery.launcher.NovaLauncherScreen
+import uk.co.traynor.privategallery.launcher.NovaLauncherState
 import uk.co.traynor.privategallery.ui.BrowserViewportRule
 
 /** Widget and keyboard screenshots from an API 37 emulator using synthetic UI state only. */
@@ -79,7 +87,25 @@ class IntelligenceBuild98VisualTest {
     }
 
     @Test fun coverComposerRemainsVisibleWithKeyboard() {
-        show(chat = true)
+        val app = LauncherApp("example.maps/.Main", "example.maps", "Maps")
+        val layout = LauncherLayout(pages = listOf(listOf(LauncherItem.Workspace), emptyList()),
+            dock = listOf(LauncherItem.App(app.component)))
+        compose.runOnUiThread {
+            compose.activity.window.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
+        }
+        compose.setContent {
+            NovaLauncherScreen(
+                NovaLauncherState(configured = true, cover = layout, inner = layout, separateDisplays = true),
+                listOf(app), emptyList(), mapOf(app.component to Decision.APPROVED), true, false,
+                LauncherUiActions(save = { true }, launchApp = {}, launchShortcut = {}, openWorkspace = {},
+                    selectHome = {}, continueWithCurrentHome = {}, emergencyPhone = {}, reviewSanctuary = {},
+                    setOutsideProtection = {}, chooseWallpaper = {}, addWidget = {}, removeWidget = {},
+                    exportLayout = {}, importLayout = {}, renderWidget = { _, _ -> }),
+                intelligence = LauncherIntelligenceActions(openPrivate = {}, openDestination = { false }, openEvidence = { false }),
+            )
+        }
+        compose.onNodeWithContentDescription("Nova Intelligence page").performClick()
+        compose.onNodeWithText("Ask Nova").performClick()
         compose.onNodeWithTag("intelligence-input").performClick().performTextInput("Show my tasks")
         val instrumentation = InstrumentationRegistry.getInstrumentation()
         compose.waitUntil(10_000) {
@@ -158,15 +184,9 @@ class IntelligenceBuild98VisualTest {
         }
     }
 
-    private fun show(
-        chat: Boolean = false,
-        exchanges: List<IntelligenceExchange> = listOf(localExchange),
-    ) {
-        compose.runOnUiThread {
-            compose.activity.window.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
-        }
+    private fun show(exchanges: List<IntelligenceExchange> = listOf(localExchange)) {
         compose.setContent {
-            var showChat by remember { mutableStateOf(chat) }
+            var showChat by remember { mutableStateOf(false) }
             var input by remember { mutableStateOf("") }
             GuardianTheme {
                 IntelligenceExperience(
