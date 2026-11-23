@@ -75,10 +75,8 @@ jobs:
             adb shell wm size 1200x1800
             adb shell wm density 160
             bash scripts/run_guardian_notification_pipeline93.sh GuardianFoldNotificationTest guardian-fold-notification
-            if [ "$NOVA_INTELLIGENCE_VISUALS" = true ]; then
-              bash scripts/run_visual_checkpoint.sh GuardianEvidence90RuntimeTest guardian-evidence-90 uk.co.traynor.privategallery.core.guardian
-              bash scripts/run_visual_checkpoint.sh SanctuaryAccessibilityUiTest intelligence-sanctuary-accessibility uk.co.traynor.privategallery.home2 blockedAppMovesToHomeAndIsNotRestoredAtNaturalExpiry
-            fi
+            if [ "$NOVA_INTELLIGENCE_VISUALS" = true ]; then bash scripts/run_visual_checkpoint.sh GuardianEvidence90RuntimeTest guardian-evidence-90 uk.co.traynor.privategallery.core.guardian; fi
+            if [ "$NOVA_INTELLIGENCE_VISUALS" = true ]; then bash scripts/run_visual_checkpoint.sh SanctuaryAccessibilityUiTest intelligence-sanctuary-accessibility uk.co.traynor.privategallery.home2 blockedAppMovesToHomeAndIsNotRestoredAtNaturalExpiry; fi
       - uses: actions/upload-artifact@v4
         if: always()
         with:
