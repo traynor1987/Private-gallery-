@@ -32,8 +32,10 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.repeatOnLifecycle
+import java.math.BigDecimal
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancelChildren
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
@@ -51,6 +53,8 @@ internal fun OwnerPreviewSettings() {
     var configuring by remember { mutableStateOf(false) }
     var token by remember { mutableStateOf("") }
     var busy by remember { mutableStateOf(false) }
+    var operation by remember { mutableStateOf<Job?>(null) }
+    var generation by remember { mutableStateOf(0) }
     var pending by remember { mutableStateOf<OwnerPreviewTest?>(null) }
     var status by remember { mutableStateOf<OwnerPreviewStatus?>(null) }
     var replies by remember { mutableStateOf(emptyMap<OwnerPreviewTest, OwnerPreviewReply>()) }
@@ -61,7 +65,10 @@ internal fun OwnerPreviewSettings() {
 
     LaunchedEffect(lifecycle, store) {
         lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
-            enabled = withContext(Dispatchers.IO) { store.isEnabled() }
+            OwnerPreviewStore.changes.collect {
+                enabled = withContext(Dispatchers.IO) { store.isEnabled() }
+                status = null
+            }
         }
     }
     DisposableEffect(lifecycle, scope) {
@@ -80,16 +87,18 @@ internal fun OwnerPreviewSettings() {
         onDispose { lifecycle.removeObserver(observer) }
     }
 
-    fun act(failure: String, action: suspend () -> Unit) {
-        if (!foreground() || busy) return
+    fun act(failure: String, replace: Boolean = false, action: suspend () -> Unit) {
+        if (!foreground() || busy && !replace) return
+        val ticket = ++generation
+        if (replace) operation?.cancel()
         busy = true
         message = null
-        scope.launch {
+        operation = scope.launch {
             try { action() }
             catch (cancelled: CancellationException) { throw cancelled }
             catch (error: CloudTeacherException) { message = error.failure.userMessage }
             catch (_: Exception) { message = failure }
-            finally { busy = false }
+            finally { if (ticket == generation) busy = false }
         }
     }
 
@@ -106,8 +115,8 @@ internal fun OwnerPreviewSettings() {
 
     fun send(test: OwnerPreviewTest) {
         if (!allowed() || status?.allowed != true) return
+        status = null
         act("Owner Preview could not complete the request. Check the remaining allowance before continuing.") {
-            status = status?.let { it.copy(remaining = (it.remaining - 1).coerceAtLeast(0), allowed = it.remaining > 1) }
             replies = replies + (test to withContext(Dispatchers.IO) {
                 val connection = checkNotNull(store.read())
                 client.send(connection, test, approved = true) { isActive && allowed() && store.isCurrent(connection) }
@@ -127,12 +136,16 @@ internal fun OwnerPreviewSettings() {
                 }) { Text("Set up Owner Preview") }
             } else {
                 Text(OWNER_PREVIEW_ORIGIN)
+                if (status == null) Text("Connection and shared allowance need a fresh check.")
                 TextButton(enabled = !busy, onClick = {
                     if (allowed()) checkConnection() else message = "Unlock NovaOS and end Sanctuary to check the preview."
                 }) { Text("Check preview connection") }
-                status?.let {
-                    Text(if (!it.armed) "Authenticated · paid analysis off"
-                        else "Authenticated · ${it.remaining} approved requests left")
+                status?.let { verified ->
+                    Text(if (verified.armed) "Authenticated · funded preview"
+                        else "Authenticated · read-only preview, paid analysis off")
+                    Text("${verified.remaining} approved requests left")
+                    Text("Available budget US$ ${previewDollars(verified.availableMicroUsd)} of US$ ${previewDollars(verified.ceilingMicroUsd)}")
+                    if (verified.armed && !verified.allowed) Text("The shared ledger does not currently allow another paid request.")
                 }
                 OwnerPreviewTest.entries.forEach { test ->
                     TextButton(enabled = !busy && status?.allowed == true && test !in replies, onClick = {
@@ -143,13 +156,13 @@ internal fun OwnerPreviewSettings() {
                         Text(reply.text)
                     }
                 }
-                TextButton(enabled = !busy, onClick = {
-                    act("Could not remove the preview configuration.") {
+                TextButton(onClick = {
+                    pending = null
+                    status = null
+                    replies = emptyMap()
+                    act("Could not remove the preview configuration.", replace = true) {
                         withContext(Dispatchers.IO) { store.disable() }
                         enabled = false
-                        pending = null
-                        status = null
-                        replies = emptyMap()
                     }
                 }) { Text("Disable Owner Preview") }
             }
@@ -196,3 +209,6 @@ internal fun OwnerPreviewSettings() {
         )
     }
 }
+
+private fun previewDollars(microUsd: Long): String =
+    BigDecimal.valueOf(microUsd, 6).stripTrailingZeros().toPlainString()

@@ -16,12 +16,16 @@ import uk.co.traynor.privategallery.core.brain.approvedCloudPayload
 
 internal class IntelligenceRouteUnavailable : IOException("The assistant route is unavailable on the configured Nova Brain server.")
 
- /** Manual Ask Nova uses the same authenticated status, consent format and server ledger as Nova Brain. */
+/** Manual Ask Nova uses the same authenticated status, consent format and server ledger as Nova Brain. */
 internal class IntelligenceCloud(
     private val get: (NovaBrainConfiguration) -> BrainResponse = { requestIntelligence(it) },
     private val post: (NovaBrainConfiguration, ByteArray, () -> Unit) -> BrainResponse = ::requestIntelligence,
 ) {
-    data class Status(val assistantAvailable: Boolean, val budget: CloudTeacherStatus) {
+    data class Status(
+        val assistantAvailable: Boolean,
+        val budget: CloudTeacherStatus,
+        val contextMaxChars: Int = IntelligenceCloudRequest.QUESTION_LIMIT,
+    ) {
         val unavailableMessage: String?
             get() = when {
                 !assistantAvailable -> "The Nova Brain VPS does not advertise cloud chat."
@@ -33,7 +37,14 @@ internal class IntelligenceCloud(
     }
 
     fun status(configuration: NovaBrainConfiguration): Status = withResponse(paid = false, { get(configuration) }) {
-        Status(it.opt("assistant_available") == true, CloudTeacherStatus.parse(it))
+        val contextLimit = when (val advertised = it.opt("assistant_context_max_chars")) {
+            null -> IntelligenceCloudRequest.QUESTION_LIMIT
+            is Int -> advertised.also { limit ->
+                require(limit in IntelligenceCloudRequest.QUESTION_LIMIT..IntelligenceCloudRequest.PAYLOAD_LIMIT)
+            }
+            else -> error("Invalid assistant context limit")
+        }
+        Status(it.opt("assistant_available") == true, CloudTeacherStatus.parse(it), contextLimit)
     }
 
     fun ask(
@@ -44,7 +55,7 @@ internal class IntelligenceCloud(
         status: Status,
         maySend: () -> Boolean,
     ): String {
-        require(question.length in 1..600)
+        require(question.length in 1..status.contextMaxChars)
         if (status.unavailableMessage != null || !maySend()) {
             throw CloudTeacherException(CloudFailure.DISABLED)
         }
@@ -77,17 +88,18 @@ internal class IntelligenceCloud(
             if (response.code == 404 && !paid) throw IntelligenceRouteUnavailable()
             if (response.code != 200) {
                 val reason = runCatching { JSONObject(response.body.decodeToString()).optString("error") }.getOrNull()
-                val failure = when (response.code) {
-                    401, 403 -> CloudFailure.AUTHENTICATION
-                    402 -> CloudFailure.BUDGET
-                    404 -> if (paid) CloudFailure.DISABLED else CloudFailure.INVALID_STATUS
-                    409 -> CloudFailure.ALREADY_RESERVED
-                    429 -> CloudFailure.RATE_LIMIT
-                    else -> when (reason) {
-                        "analysis_disabled" -> CloudFailure.DISABLED
-                        "halted", "pricing_verification_required", "budget_reconciliation_required" -> CloudFailure.PRICING_REVIEW
-                        else -> if (paid) CloudFailure.UNKNOWN_OUTCOME else CloudFailure.OFFLINE
-                    }
+                val failure = when {
+                    response.code in setOf(401, 403) -> CloudFailure.AUTHENTICATION
+                    response.code == 402 && reason == "monthly_limit_exhausted" -> CloudFailure.MONTHLY_LIMIT
+                    response.code == 402 && reason == "approved_request_limit_exhausted" -> CloudFailure.APPROVED_LIMIT
+                    response.code == 402 && reason == "expired" -> CloudFailure.EXPIRED
+                    reason in setOf("halted", "pricing_verification_required", "budget_reconciliation_required") -> CloudFailure.PRICING_REVIEW
+                    response.code == 402 -> CloudFailure.BUDGET
+                    response.code == 404 && reason == "not_found" -> CloudFailure.DISABLED
+                    response.code == 409 -> CloudFailure.ALREADY_RESERVED
+                    response.code == 429 -> CloudFailure.RATE_LIMIT
+                    reason == "analysis_disabled" -> CloudFailure.DISABLED
+                    else -> if (paid) CloudFailure.UNKNOWN_OUTCOME else CloudFailure.OFFLINE
                 }
                 throw CloudTeacherException(failure)
             }
@@ -114,7 +126,10 @@ internal fun requestIntelligence(
         connection.setRequestProperty("Authorization", "Bearer ${configuration.token}")
         connection.setRequestProperty("Accept", "application/json")
         connection.setRequestProperty("Cache-Control", "no-store")
-        if (payload != null) {
+        if (payload == null) {
+            connection.readTimeout = 8000
+            assertMaySend()
+        } else {
             connection.requestMethod = "POST"
             connection.doOutput = true
             connection.setRequestProperty("Content-Type", "application/json; charset=utf-8")
@@ -125,6 +140,7 @@ internal fun requestIntelligence(
                 it.write(payload)
             }
         }
+        assertMaySend()
         val code = connection.responseCode
         if (connection.contentLengthLong > 32768) throw IOException("Oversized assistant response")
         val body = (if (code == 200) connection.inputStream else connection.errorStream)?.use {

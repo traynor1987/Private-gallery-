@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.ContextWrapper
 import androidx.test.platform.app.InstrumentationRegistry
 import java.io.File
+import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.ZoneId
@@ -32,6 +33,7 @@ class IntelligenceWorkspaceTest {
         val zone = ZoneId.of("Europe/London")
         val id = UUID.randomUUID().toString()
         val privateText = "Synthetic private intelligence memory marker"
+        val briefingName = "Synthetic greeting marker"
         val exchange = IntelligenceExchange(privateText, "An encrypted response")
         val memory = IntelligenceMemory(true, listOf(exchange))
         val identity = Any()
@@ -59,6 +61,10 @@ class IntelligenceWorkspaceTest {
                     assertTrue(tomorrow.tasks.single().contains("Fixture task"))
                     assertTrue(tomorrow.events.single().contains("Fixture appointment"))
                     assertTrue(tomorrow.reminders.single().contains("Fixture appointment"))
+                    assertNull(workspace.briefingName())
+                    workspace.saveBriefingName("  $briefingName  ")
+                    assertTrue(runCatching { workspace.saveBriefingName("Invalid\nname") }.isFailure)
+                    assertTrue(runCatching { IntelligenceWorkspace(space) { false }.briefingName() }.isFailure)
                     workspace.saveMemory(memory)
                     assertTrue(runCatching { IntelligenceWorkspace(space) { false }.createTask(id, "Blocked", day) }.isFailure)
                 }
@@ -66,10 +72,23 @@ class IntelligenceWorkspaceTest {
             val files = root.walkTopDown().filter(File::isFile).toList()
             assertTrue(files.any { it.extension == "enc" })
             assertFalse(files.any { it.readBytes().decodeToString().contains(privateText) })
+            assertFalse(files.any { it.readBytes().decodeToString().contains(briefingName) })
             reopen().use { access ->
                 SpaceContext(isolated, access).use { space ->
                     val restarted = IntelligenceWorkspace(space)
+                    assertEquals(briefingName, restarted.briefingName())
+                    restarted.saveBriefingName(null)
+                    assertNull(restarted.briefingName())
                     assertEquals(memory, restarted.memory())
+                    assertFalse(restarted.saveAutomaticMemory(listOf(exchange), restarted.memoryGeneration()) { true })
+                    val stamped = exchange.copy(timestamp = Instant.parse("2026-11-23T12:01:02.123456Z"))
+                    restarted.saveMemory(memory.copy(autoSave = true))
+                    val oldGeneration = restarted.memoryGeneration()
+                    assertTrue(restarted.saveAutomaticMemory(listOf(stamped), oldGeneration) { true })
+                    assertEquals(stamped, restarted.memory().exchanges.single())
+                    restarted.saveMemory(IntelligenceMemory(true, emptyList(), autoSave = true))
+                    assertFalse(restarted.saveAutomaticMemory(listOf(stamped), oldGeneration) { true })
+                    assertTrue(restarted.memory().exchanges.isEmpty())
                     restarted.saveMemory(IntelligenceMemory(false, emptyList()))
                     assertFalse(restarted.memory().enabled)
                 }

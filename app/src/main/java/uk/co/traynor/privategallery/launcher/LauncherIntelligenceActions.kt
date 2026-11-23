@@ -12,7 +12,17 @@ internal data class LauncherIntelligenceActions(
     val openPrivate: () -> Unit,
     val openDestination: (IntelligenceDestination) -> Boolean,
     val openEvidence: (String) -> Boolean,
+    val openApp: (String) -> Boolean = { false },
 )
+
+internal fun LauncherLayout.intelligenceNominations(): Set<String> =
+    (pages.asSequence().flatten() + dock.asSequence()).flatMap { item ->
+        when (item) {
+            is LauncherItem.App -> sequenceOf(item.component)
+            is LauncherItem.Folder -> item.apps.asSequence()
+            else -> emptySequence()
+        }
+    }.toSet()
 
 internal val IntelligenceDestination.coreApp: NovaCoreApp?
     get() = when (this) {
@@ -24,18 +34,17 @@ internal val IntelligenceDestination.coreApp: NovaCoreApp?
 
 internal fun Activity.openIntelligenceGuardian(destination: IntelligenceDestination): Boolean {
     if (!intelligencePrivateAllowed(this) || !intelligenceResumed()) return false
-    when (destination) {
-        IntelligenceDestination.GUARDIAN -> GuardianInboxActivity.open(this, GuardianInboxSection.PENDING)
-        IntelligenceDestination.HELD -> GuardianInboxActivity.open(this, GuardianInboxSection.COOLING)
+    val section = when (destination) {
+        IntelligenceDestination.GUARDIAN -> GuardianInboxSection.PENDING
+        IntelligenceDestination.HELD -> GuardianInboxSection.COOLING
         else -> return false
     }
-    return true
+    return runCatching { GuardianInboxActivity.open(this, section) }.isSuccess
 }
 
 internal fun Activity.openIntelligenceEvidence(id: String): Boolean {
     if (!intelligencePrivateAllowed(this) || !intelligenceResumed() || !id.matches(Regex("[a-fA-F0-9]{64}"))) return false
-    GuardianInboxActivity.openEvidenceSource(this, id.lowercase())
-    return true
+    return runCatching { GuardianInboxActivity.openEvidenceSource(this, id.lowercase()) }.isSuccess
 }
 
 internal fun Activity.intelligenceResumed() =

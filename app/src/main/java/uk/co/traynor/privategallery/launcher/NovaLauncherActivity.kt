@@ -266,7 +266,7 @@ class NovaLauncherActivity : ComponentActivity() {
                 save(next.copy(launchCounts = model.launchCounts)).also { if (it) offerSmartTemplate() }
             },
             reloadWorkspaceLayout = ::reloadWorkspaceLayout,
-            launchApp = ::launchApp,
+            launchApp = { launchApp(it) },
             launchShortcut = ::launchShortcut,
             openWorkspace = ::openWorkspace,
             selectHome = ::openHomeSettings,
@@ -307,6 +307,7 @@ class NovaLauncherActivity : ComponentActivity() {
             },
             openDestination = ::openIntelligenceDestination,
             openEvidence = { id -> openIntelligenceEvidence(id) },
+            openApp = ::openIntelligenceApp,
         )
         setContent {
             val smart by tracking.state.collectAsState()
@@ -624,15 +625,17 @@ class NovaLauncherActivity : ComponentActivity() {
             IntelligenceDestination.SANCTUARY -> LauncherBuiltIn.SANCTUARY
             IntelligenceDestination.GUARDIAN, IntelligenceDestination.HELD -> return openIntelligenceGuardian(destination)
         }
-        if (!runCatching { builtIn.decision(sanctuary.refresh()).canLaunch }.getOrDefault(false)) return false
-        val component = builtIn.app(packageName).component
-        if (apps.none { it.component == component }) return false
-        launchApp(component)
-        return true
+        return launchApp(builtIn.app(packageName).component)
     }
 
-    private fun launchApp(component: String) {
-        val target = apps.firstOrNull { it.component == component } ?: return
+    private fun openIntelligenceApp(component: String): Boolean {
+        if (!intelligenceResumed() || !intelligenceDeviceReady(this)) return false
+        val layout = model.layout(resources.configuration.screenWidthDp >= LauncherExpandedWidth)
+        return component in layout.intelligenceNominations() && launchApp(component)
+    }
+
+    private fun launchApp(component: String): Boolean {
+        val target = apps.firstOrNull { it.component == component } ?: return false
         val builtIn = LauncherBuiltIn.find(packageName, component)
         val allowed = runCatching {
             builtIn?.decision(sanctuary.refresh())?.canLaunch
@@ -640,28 +643,33 @@ class NovaLauncherActivity : ComponentActivity() {
         }.getOrNull()
         if (allowed == null) {
             message("Sanctuary could not verify this app. Use Android Settings for recovery.")
-            return
+            return false
         }
         if (!allowed) {
             blocked = target
-            return
+            return false
         }
         if (builtIn != null) {
-            when (builtIn) {
-                LauncherBuiltIn.SANCTUARY -> openSanctuary()
-                LauncherBuiltIn.SAFE_NOTIFICATIONS -> startActivity(GuardianInboxActivity.safeNotificationsIntent(this))
-                LauncherBuiltIn.PRIMARY_GALLERY -> startActivity(privateWorkspaceEntryIntent(this, primaryGallery = true))
-                else -> {
-                    val coreApp = builtIn.coreApp
-                    if (coreApp != null) startActivity(privateCoreAppEntryIntent(this, coreApp))
-                    else activeUtility = builtIn
+            return runCatching {
+                when (builtIn) {
+                    LauncherBuiltIn.SANCTUARY -> openSanctuary()
+                    LauncherBuiltIn.SAFE_NOTIFICATIONS -> startActivity(GuardianInboxActivity.safeNotificationsIntent(this))
+                    LauncherBuiltIn.PRIMARY_GALLERY -> startActivity(privateWorkspaceEntryIntent(this, primaryGallery = true))
+                    else -> {
+                        val coreApp = builtIn.coreApp
+                        if (coreApp != null) startActivity(privateCoreAppEntryIntent(this, coreApp))
+                        else activeUtility = builtIn
+                    }
                 }
-            }
-        } else if (directory.start(target)) recordLauncherSuccess(target)
-        else {
-            message("This app is no longer available.")
-            refreshCatalogue()
+            }.onFailure { message("This app could not open.") }.isSuccess
         }
+        if (directory.start(target)) {
+            recordLauncherSuccess(target)
+            return true
+        }
+        message("This app is no longer available.")
+        refreshCatalogue()
+        return false
     }
 
     private fun launchShortcut(shortcut: LauncherShortcut) {

@@ -8,6 +8,7 @@ import org.junit.Test
 import uk.co.traynor.privategallery.core.guardian.GuardianAssessment
 import uk.co.traynor.privategallery.core.guardian.GuardianInboxRow
 import uk.co.traynor.privategallery.core.guardian.GuardianInboxSection
+import uk.co.traynor.privategallery.core.sanctuary.SanctuaryMode
 
 class IntelligenceCommandsTest {
     private val today = LocalDate.of(2026, 11, 20)
@@ -15,9 +16,12 @@ class IntelligenceCommandsTest {
     @Test fun agendaAndGuardianRequestsStayLocal() {
         assertEquals(IntelligenceCommand.Briefing(today), intelligenceCommand("Summarise my day.", today))
         assertEquals(IntelligenceCommand.Briefing(today.plusDays(1)), intelligenceCommand("What’s on tomorrow?", today))
+        assertEquals(IntelligenceCommand.Briefing(today.plusDays(1)), intelligenceCommand("What do I have tomorrow?", today))
+        assertEquals(IntelligenceCommand.Reminders, intelligenceCommand("What reminders do I have?", today))
         assertEquals(IntelligenceCommand.Notifications, intelligenceCommand("Any important messages?", today))
         assertEquals(IntelligenceCommand.Held, intelligenceCommand("Show my held messages.", today))
         assertEquals(IntelligenceDestination.NOTES, intelligenceDestination("Nova Notes"))
+        assertEquals(IntelligenceDestination.TASKS, intelligenceDestination("Reminders"))
     }
 
     @Test fun taskAndNotePayloadsRequireContentsAndPreserveDates() {
@@ -52,9 +56,16 @@ class IntelligenceCommandsTest {
             GuardianInboxRow("held", time, GuardianInboxSection.COOLING, 100, GuardianAssessment.UPSETTING),
             GuardianInboxRow("pending", time, GuardianInboxSection.PENDING, 0, null),
             GuardianInboxRow("old", time - 86_400_000, GuardianInboxSection.PROTECTED, 0, GuardianAssessment.UPSETTING),
+            GuardianInboxRow("protected after correction", time - 86_400_000, GuardianInboxSection.PROTECTED, 0, GuardianAssessment.LOW_RISK),
         )
-        assertEquals(IntelligenceGuardian(4, 1, 2, 1, 2, 3, 1, true),
+        assertEquals(IntelligenceGuardian(5, 1, 3, 1, 3, 3, 1, true),
             summarizeIntelligenceGuardian(rows, today, zone, evidencePresent = true))
         assertEquals(LocalTime.of(18, 30), IntelligenceBriefingTimes(afterWork = LocalTime.of(18, 30)).windows().single().second)
+    }
+
+    @Test fun sanctuaryBriefingReflectsModeAndRoundsRemainingTimeUp() {
+        assertEquals("Work Mode · Active · 1m left", intelligenceSanctuaryStatus(SanctuaryMode.WORK, false, 1L))
+        assertEquals("Panic Mode · Launcher protection paused · 2h 1m left",
+            intelligenceSanctuaryStatus(SanctuaryMode.PANIC, true, 7_200_001L))
     }
 }

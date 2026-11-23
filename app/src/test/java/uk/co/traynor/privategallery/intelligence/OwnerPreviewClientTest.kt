@@ -17,6 +17,8 @@ class OwnerPreviewClientTest {
     private var includePreviewIdentity = true
     private var limit = 250_000
     private var automatic = false
+    private var askBalance = 250_000
+    private var guardianMonthlyBalance = 250_000
 
     private val client = OwnerPreviewClient(
         assistantRequest = { configuration, payload, beforeBody ->
@@ -38,8 +40,8 @@ class OwnerPreviewClientTest {
             "assistant_available":true,"analysis_enabled":$armed,
             "cloud_teacher":{"automatic_analysis_enabled":$automatic},
             "budget":{"funded_allowance_micro_usd":250000,"configured_spending_limit_micro_usd":250000,
-            "configured_ceiling_micro_usd":$limit,"remaining_micro_usd":250000,"request_reservation_micro_usd":102000,
-            "monthly_spending_limit_micro_usd":250000,"monthly_exposure_micro_usd":0,"monthly_remaining_micro_usd":250000,
+            "configured_ceiling_micro_usd":$limit,"remaining_micro_usd":${if (path == "/assistant/ask") askBalance else 250_000},"request_reservation_micro_usd":102000,
+            "monthly_spending_limit_micro_usd":250000,"monthly_exposure_micro_usd":0,"monthly_remaining_micro_usd":${if (path == "/assistant/ask") 250_000 else guardianMonthlyBalance},
             "approved_request_limit":2,"approved_requests_remaining":2,"expired":false,"paid_requests_halted":false}
         }""")
         if (includePreviewIdentity) status.put("fold_owner_preview", JSONObject().put("phone_checked", armed))
@@ -62,9 +64,18 @@ class OwnerPreviewClientTest {
     }
 
     @Test fun checkOnlyAuthenticatesBothPreviewRoutesWhenDisarmed() {
-        assertEquals(OwnerPreviewStatus(false, 2, false), client.check(connection) { true })
+        assertEquals(OwnerPreviewStatus(false, 2, false, 250_000, 250_000), client.check(connection) { true })
         assertEquals(listOf("/assistant/ask", "/guardian/status"), paths)
         assertThrows(CloudTeacherException::class.java) { client.send(connection, OwnerPreviewTest.ASK_NOVA, true) { true } }
+        assertTrue(submitted.isEmpty())
+    }
+
+    @Test fun availableBalanceUsesTheTightestAuthenticatedLedgerValue() {
+        armed = true
+        askBalance = 190_000
+        guardianMonthlyBalance = 80_000
+
+        assertEquals(OwnerPreviewStatus(true, 2, false, 250_000, 80_000), client.check(connection) { true })
         assertTrue(submitted.isEmpty())
     }
 

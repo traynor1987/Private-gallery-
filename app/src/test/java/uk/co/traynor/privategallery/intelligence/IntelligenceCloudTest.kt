@@ -78,4 +78,76 @@ class IntelligenceCloudTest {
         }.failure)
         assertEquals(1, sent)
     }
+
+    @Test fun contextualRequestShowsExactBoundedPayloadAndExcludesLocalAndPreviewTurns() {
+        val history = listOf(
+            IntelligenceExchange("Very old cloud question", "Very old cloud answer", cloud = true),
+            IntelligenceExchange("Earlier cloud question", "Earlier cloud answer", cloud = true),
+            IntelligenceExchange("Local calendar", "Private event fixture"),
+            IntelligenceExchange("Preview question", "Preview answer", cloud = true, ownerPreview = true),
+            IntelligenceExchange("Recent cloud question", "a".repeat(649) + "💬", cloud = true),
+            IntelligenceExchange("Most recent cloud question", "Most recent cloud answer", cloud = true),
+        )
+        val request = IntelligenceCloudRequest.prepare("Can you expand on that?", history, IntelligenceCloudMode.CONFIGURED_BRAIN)
+        assertTrue(request.includesContext)
+        assertTrue(request.payload.length in 1..IntelligenceCloudRequest.PAYLOAD_LIMIT)
+        assertTrue(request.payload.indexOf("Earlier cloud question") < request.payload.indexOf("Recent cloud question"))
+        assertTrue(request.payload.contains("Most recent cloud answer"))
+        assertTrue(request.payload.endsWith("Can you expand on that?"))
+        assertFalse(request.payload.contains("Very old cloud"))
+        assertFalse(request.payload.contains("Private event fixture"))
+        assertFalse(request.payload.contains("Preview answer"))
+        assertFalse(request.payload.any(Char::isHighSurrogate))
+
+        val preview = IntelligenceCloudRequest.prepare("What is a haiku?", history, IntelligenceCloudMode.OWNER_PREVIEW)
+        assertEquals(preview.question, preview.payload)
+        assertFalse(preview.includesContext)
+        assertTrue(request.bind(configuration))
+        assertTrue(request.bind(configuration.copy()))
+        assertFalse(request.bind(configuration.copy(origin = "https://other.example")))
+        assertFalse(request.bind(configuration.copy(token = "other-test-token-".repeat(3))))
+    }
+
+    @Test fun legacyAssistantCannotSendLongContextAndCurrentAssistantReceivesExactConsentAndIdentity() {
+        val context = "Past cloud exchange. ".repeat(35) + "Follow-up question"
+        val client = IntelligenceCloud(get = { status().put("assistant_context_max_chars", 4096).http() }, post = { _, bytes, verify ->
+            verify()
+            val payload = JSONObject(bytes.decodeToString())
+            assertEquals(context, payload.getString("message"))
+            assertEquals(id, payload.getString("request_id"))
+            assertTrue(payload.getBoolean("consent"))
+            status().put("source", "assistant_prediction").put("request_id", id)
+                .put("provider_billing_verified", false).put("answer", "Contextual reply").http()
+        })
+        val ready = client.status(configuration)
+        assertEquals(4096, ready.contextMaxChars)
+        assertEquals("Contextual reply", client.ask(configuration, context, true, id, ready) { true })
+
+        val legacy = IntelligenceCloud(get = { status().http() },
+            post = { _, _, _ -> error("Unsupported context must remain on device") })
+        val legacyStatus = legacy.status(configuration)
+        assertEquals(600, legacyStatus.contextMaxChars)
+        assertThrows(IllegalArgumentException::class.java) {
+            legacy.ask(configuration, context, true, id, legacyStatus) { true }
+        }
+    }
+
+    @Test fun paidServerRejectionsDistinguishSharedBudgetLimitsAndReconciliation() {
+        val reasons = mapOf(
+            "monthly_limit_exhausted" to CloudFailure.MONTHLY_LIMIT,
+            "approved_request_limit_exhausted" to CloudFailure.APPROVED_LIMIT,
+            "expired" to CloudFailure.EXPIRED,
+            "funded_allowance_exhausted" to CloudFailure.BUDGET,
+            "halted" to CloudFailure.PRICING_REVIEW,
+        )
+        reasons.forEach { (reason, expected) ->
+            val client = IntelligenceCloud(get = { status().http() }, post = { _, _, _ ->
+                BrainResponse(402, JSONObject().put("error", reason).toString().encodeToByteArray())
+            })
+            val ready = client.status(configuration)
+            assertEquals(expected, assertThrows(CloudTeacherException::class.java) {
+                client.ask(configuration, "Question", true, id, ready) { true }
+            }.failure)
+        }
+    }
 }

@@ -4,6 +4,8 @@ import android.content.Context
 import java.net.URI
 import java.util.UUID
 import java.util.concurrent.CancellationException
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import org.json.JSONObject
 import uk.co.traynor.privategallery.core.brain.BrainResponse
 import uk.co.traynor.privategallery.core.brain.CloudTeacherClient
@@ -46,19 +48,25 @@ internal class OwnerPreviewStore(context: Context) {
         val bytes = JSONObject().put("token", connection.token).put("revision", connection.revision.toString())
             .toString().toByteArray()
         try { credentials.save(ID, bytes) } finally { bytes.fill(0) }
+        revision.value++
     }
 
     fun isCurrent(connection: OwnerPreviewConnection): Boolean =
         synchronized(LOCK) { read() == connection && isSeparate(connection) }
 
-    fun disable() = synchronized(LOCK) { credentials.clear(ID) }
+    fun disable() = synchronized(LOCK) {
+        credentials.clear(ID)
+        revision.value++
+    }
 
     private fun isSeparate(connection: OwnerPreviewConnection) =
         NovaBrainConnectionStore(context).read()?.token != connection.token
 
-    private companion object {
-        const val ID = "nova-brain-owner-preview"
-        val LOCK = Any()
+    companion object {
+        private const val ID = "nova-brain-owner-preview"
+        private val LOCK = Any()
+        private val revision = MutableStateFlow(0L)
+        val changes = revision.asStateFlow()
     }
 }
 
@@ -67,7 +75,13 @@ internal enum class OwnerPreviewTest(val title: String, val fixture: String) {
     GUARDIAN("Guardian second opinion", "Please reply right away or I will be upset."),
 }
 
-internal data class OwnerPreviewStatus(val armed: Boolean, val remaining: Long, val allowed: Boolean)
+internal data class OwnerPreviewStatus(
+    val armed: Boolean,
+    val remaining: Long,
+    val allowed: Boolean,
+    val ceilingMicroUsd: Long,
+    val availableMicroUsd: Long,
+)
 
 internal data class OwnerPreviewReply(val test: OwnerPreviewTest, val text: String, val assessment: String? = null)
 
@@ -86,14 +100,21 @@ internal class OwnerPreviewClient(
             armed = ask.budget.analysisEnabled && guardian.analysisEnabled,
             remaining = minOf(checkNotNull(ask.budget.approvedRequestsRemaining), checkNotNull(guardian.approvedRequestsRemaining)),
             allowed = ask.budget.canAnalyze && guardian.canAnalyze,
+            ceilingMicroUsd = CEILING,
+            availableMicroUsd = minOf(
+                checkNotNull(ask.budget.remaining),
+                checkNotNull(ask.budget.monthlyRemaining),
+                checkNotNull(guardian.remaining),
+                checkNotNull(guardian.monthlyRemaining),
+            ),
         )
     }
 
     fun send(connection: OwnerPreviewConnection, test: OwnerPreviewTest, approved: Boolean,
+        requestId: String = UUID.randomUUID().toString(),
         mayContinue: () -> Boolean): OwnerPreviewReply {
         require(approved)
         val configuration = connection.configuration()
-        val requestId = UUID.randomUUID().toString()
         return when (test) {
             OwnerPreviewTest.ASK_NOVA -> {
                 val client = assistant(mayContinue)
@@ -143,6 +164,8 @@ internal class OwnerPreviewClient(
             require(status.model == "gpt-5-mini-2025-08-07" &&
                 status.fundedAllowance == CEILING && status.cycleLimit == CEILING && status.cycleCeiling == CEILING &&
                 status.monthlyLimit == CEILING && status.reservation == RESERVATION &&
+                status.remaining?.let { it in 0L..CEILING } == true &&
+                status.monthlyRemaining?.let { it in 0L..CEILING } == true &&
                 budget.get("approved_request_limit").let { it == REQUEST_LIMIT.toInt() || it == REQUEST_LIMIT } &&
                 status.approvedRequestsRemaining?.let { it in 0L..REQUEST_LIMIT } == true)
             return response

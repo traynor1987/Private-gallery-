@@ -114,7 +114,9 @@ class HttpAccountingTest(unittest.TestCase):
         fake_opener.open.return_value.__exit__ = Mock(return_value=False)
         with patch('server.build_opener', return_value=fake_opener):
             with urlopen(request, timeout=5) as response:
-                self.assertTrue(json.load(response)['assistant_available'])
+                status = json.load(response)
+                self.assertTrue(status['assistant_available'])
+                self.assertEqual(status['assistant_context_max_chars'], 4096)
             fake_opener.open.assert_not_called()
             self.assertEqual(0, self.server.budget.status()['reserved_upper_bound_micro_usd'])
 
@@ -129,6 +131,26 @@ class HttpAccountingTest(unittest.TestCase):
             self.assertEqual(route['message'], sent['input'])
             self.assertFalse(sent['store'])
             self.assertEqual([], sent['tools'])
+
+    def test_approved_follow_up_uses_exact_context_with_one_reservation(self):
+        identity = str(uuid4())
+        route = '/assistant/ask'
+        transcript = (
+            'Earlier turns for context:\nOwner: Tell me about clouds.\nNova: '
+            + 'Cloud droplets form when air cools. ' * 20
+            + '\nLatest question: Where does fog fit?'
+        )
+        self.assertGreater(len(transcript), 600)
+        with patch('server.answer_question', return_value=AnalysisResult({'summary': 'Fog is a cloud.'}, 321)) as upstream:
+            self.assertEqual(self.send(identity, route=route, message='x' * 4097)[0], 400)
+            self.assertEqual(self.send(identity, route=route, message=transcript, consent=False)[0], 400)
+            upstream.assert_not_called()
+            self.assertEqual(self.send(identity, route=route, message=transcript)[0], 200)
+            self.assertEqual(self.send(identity, route=route, message=transcript)[0], 409)
+            self.assertEqual(self.send(identity, route=route, message=transcript + '?')[0], 409)
+            upstream.assert_called_once_with(transcript, self.server.openai_key, self.server.model,
+                                             output_tokens=1000, reasoning_effort='low')
+        self.assertEqual(self.server.budget.status()['reserved_upper_bound_micro_usd'], 321)
 
     def test_concurrent_duplicates_dispatch_exactly_one_paid_request(self):
         identity=str(uuid4())

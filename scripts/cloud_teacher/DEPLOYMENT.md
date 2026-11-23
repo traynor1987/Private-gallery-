@@ -65,6 +65,10 @@ The same service handles `GET /assistant/ask` to check route availability, authe
 and spending status, and `POST /assistant/ask` for a single owner-confirmed question.
 The app uses **Check cloud chat** on the Intelligence dashboard to run the GET.
 The GET carries no question and creates no reservation. Guardian keeps its existing routes.
+The authenticated GET advertises `assistant_context_max_chars` on builds supporting
+follow-up context. The app sends only the approved question and any transcript shown
+in its confirmation. The existing request UUID and keyed digest cover that full
+input. The service does not persist the transcript or use provider conversation storage.
 
 From the existing source checkout, use a clean worktree of the reviewed Intelligence
 commit. On staging, run `sudo bash deploy-staging.sh` from that worktree's
@@ -95,6 +99,55 @@ staging verification reports `staging: true` and `analysis_enabled: false` and
 spent no allowance. On a funded host, paid chat also requires the existing
 analysis approval and enough remaining budget. Confirm a single synthetic
 question in the app only after the owner approves that paid check.
+
+### Existing Fold trial on Ubuntu 24.10
+
+Use the reviewed, isolated HTTPS trial at `https://brain.jamestraynor.co.uk:18443`
+while the production host remains on Ubuntu 24.10. The default public listener on
+port 443, the Guardian service on port 8787, and staging on port 8788 retain their
+existing configuration. The temporary preview uses both routes behind the same
+owner-only TLS listener, separate credentials, and the single persistent preview
+ledger. It supports the two approved synthetic fixtures only.
+
+From the Build 98 checkout on the VPS, first read the ledger without starting the
+preview. This command does not read the OpenAI key or make a network request.
+
+```sh
+sudo python3 scripts/cloud_teacher/verify_fold_preview_ledger.py
+```
+
+A reservation in `pending`, `uncertain` or `settled` state consumes that fixture's
+original approval. If the ledger is unverifiable, halted, or has no remaining
+allowance, leave the trial closed and obtain fresh explicit owner authorisation
+before attempting paid analysis. Keep the persisted approval directory and token.
+
+To use a verified remaining slot, run the exact reviewed preview from the Fold's
+existing IPv4 SSH session, on the same network as the NovaOS app. Run these from the
+existing source repository. Reuse its detached `nova-fold-owner-preview` worktree if
+it already points at the reviewed commit.
+
+```sh
+git fetch origin refs/heads/verification/nova-brain-fold-owner-preview
+git worktree add --detach "$HOME/nova-fold-owner-preview" 39df141a046ed960b733cf1147cde2a4a3238ca7
+cd "$HOME/nova-fold-owner-preview/scripts/cloud_teacher"
+sudo bash fold-owner-preview.sh "$SSH_CONNECTION"
+```
+
+Enter the separate token from the private SSH console in NovaOS → Settings → Nova
+Brain → Owner Preview. Use **Check preview connection** with analysis off. Type
+`ARM` into that SSH session only after both authenticated Fold checks succeed.
+Check preview status again and confirm only an available synthetic fixture in the
+app. Keep the credential out of chat, screenshots and captured terminal output.
+Close with `Ctrl-C` when finished. The temporary listener also expires after 30
+minutes. Re-run the read-only ledger check for the resulting reservation states.
+
+For a later authorised production cutover, back up the existing Docker volume and
+active NGINX site, and verify the reviewed version on a separate loopback port
+before changing NGINX. Route `/assistant/ask`, `/guardian/status` and
+`/guardian/analyze` to the same approved authoritative upstream. Verify the
+authenticated status of both routes with analysis off before enabling any funded
+mode. Revert to the previous site and upstream if either check fails. Leave
+`deploy.sh` and its supported-host guard in force.
 
 ## Rollback
 
