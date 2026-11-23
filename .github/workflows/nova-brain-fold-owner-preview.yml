@@ -1,0 +1,95 @@
+name: Assemble the NovaOS Fold owner preview
+on:
+  push:
+    branches: [verification/nova-brain-fold-owner-preview]
+    paths: [.github/workflows/nova-brain-fold-owner-preview.yml]
+permissions:
+  contents: read
+jobs:
+  assemble:
+    if: github.repository == 'traynor1987/Private-gallery-' && github.ref == 'refs/heads/verification/nova-brain-fold-owner-preview'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    env:
+      REVIEWED_SOURCE: 53235901fa5dfdc5b4b5f3ab518b510028de28a9
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.REVIEWED_SOURCE }}
+          persist-credentials: false
+      - uses: actions/setup-java@v5
+        with: { distribution: temurin, java-version: '17' }
+      - uses: actions/cache/restore@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: privacy1751-${{ runner.os }}-${{ hashFiles('**/*.gradle*', 'gradle/libs.versions.toml', 'gradle/wrapper/gradle-wrapper.properties') }}
+          restore-keys: privacy1751-${{ runner.os }}-
+      - name: Set up the reviewed Android 17 toolchain
+        run: |
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --install "cmdline-tools;22.0"
+          mv "$ANDROID_HOME/cmdline-tools/latest" "$RUNNER_TEMP/previous-android-command-tools-intelligence"
+          ln -s "$ANDROID_HOME/cmdline-tools/22.0" "$ANDROID_HOME/cmdline-tools/latest"
+          test "$("$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --version)" = 22.0
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-37.1" "build-tools;36.0.0"
+          python3 scripts/verify_android17_sdk.py "$ANDROID_HOME" "$RUNNER_TEMP/preview-sdk.json"
+          bash scripts/prime_gradle95_ci.sh
+      - name: Assemble only the isolated preview package
+        run: |
+          test "$(git rev-parse HEAD)" = "$REVIEWED_SOURCE"
+          ./gradlew assembleDebug -Pkotlin.incremental=false --no-daemon --console=plain
+      - name: Verify identity and encrypt the APK for private delivery
+        run: |
+          umask 077
+          apk=app/build/outputs/apk/debug/app-debug.apk
+          tools="$ANDROID_HOME/build-tools/36.0.0"
+          out="$RUNNER_TEMP/nova-brain-fold-preview"
+          mkdir "$out"
+          "$tools/aapt" dump badging "$apk" > "$RUNNER_TEMP/preview-badging.txt"
+          grep -Eq "^package: name='uk.co.traynor.privategallery.hiddenprototype' versionCode='[0-9]+' versionName='[^']+-TEST-ONLY'" "$RUNNER_TEMP/preview-badging.txt"
+          grep -Fx "sdkVersion:'37'" "$RUNNER_TEMP/preview-badging.txt"
+          grep -Fx "targetSdkVersion:'37'" "$RUNNER_TEMP/preview-badging.txt"
+          "$tools/apksigner" verify --print-certs "$apk" > "$RUNNER_TEMP/preview-signature.txt"
+          "$tools/zipalign" -c -P 16 4 "$apk"
+          cat > "$RUNNER_TEMP/preview-transfer.pem" <<'PUBLIC_CERTIFICATE'
+          -----BEGIN CERTIFICATE-----
+          MIIEKzCCApOgAwIBAgIUTYwRUYCnz0A19nPHzk3ooVNvAiowDQYJKoZIhvcNAQEL
+          BQAwJTEjMCEGA1UEAwwaTm92YU9TIEZvbGQgYnVpbGQgdHJhbnNmZXIwHhcNMjYx
+          MTIzMTEwNTEzWhcNMjYxMTI2MTEwNTEzWjAlMSMwIQYDVQQDDBpOb3ZhT1MgRm9s
+          ZCBidWlsZCB0cmFuc2ZlcjCCAaIwDQYJKoZIhvcNAQEBBQADggGPADCCAYoCggGB
+          AIR6v54N74tKVjLTLTmfrWIvDwvK9iumkpvYfnQhW/82ALlptb0RdfrAtcai0hN+
+          ePX9TqON/tVeY2ggJfwXDirLqRlRDncYedKZbFzLaaYwyr8c9Zo81dgKh4rXoN3h
+          U1x9cUWCkAfJYsurHXKc1O7wLqcjURxCNGgQXeDS0UuFGskWwhgJ8HTsqDBlR+Li
+          RQU2RRNjVUvI/nsTDdGGqiggKTYwO0PiQql7aJ5zKIkcxHxXzkppt10OAIUo8Dqp
+          5bf+c3fDT7ys2DfWIBbxs9QJTrrdZsd0AZ9F8MpzPX2+HabR9bzITKJxqDyPECJa
+          e0wc6UjdYre26v4b2T3um39eNxtKjFZxVMBehvfP6cdAdYwUcA3hSXnSAQpVzfFS
+          W9h6GMQL3r6A45FTb3DrOee5MNgAfa6B3zbKHzErPzICiWiGKmO6n+POVUOgb4fb
+          v9XBM9QftbT6MCxfYkiEJWyGpj3bTXcXpIOXTyHnOvCj0sDPmeMdb0K+V1FDK/My
+          xwIDAQABo1MwUTAdBgNVHQ4EFgQUd2RHM0+2FLpkayH69V5u3If9BSkwHwYDVR0j
+          BBgwFoAUd2RHM0+2FLpkayH69V5u3If9BSkwDwYDVR0TAQH/BAUwAwEB/zANBgkq
+          hkiG9w0BAQsFAAOCAYEADqc5iOMu/zG5q2BExxddZlN1/Rka8P8mWFe5GoV1vCbT
+          4MM0O6/u3KXfNgS4ngRupViyylvxfg2YLV75TfRsfO/4XsEexWSadk+MQEwSENzG
+          TnM+8M4JAidsYE0oR97QOk61e62cm9eALTYsBFxtt/qofVaAXOJlhzri9kzos1sS
+          ttjMsd42pgZPujDkdv9c8nv+yNnsL0NKffBkiBWVxfKZe+SZ+pyAeo6LdKBvXiKx
+          ObWyW78ekNx2zj6MQepn5CA+U1I0VZ/IOG2j2L7uP524yPwyBIEVbusQOWYPCFt9
+          XmnRWxWcEbSVeAs5XYC5JZBZVWkZTpl4DZc8mwSPDYjiAPdR2kjjZjzf7ToXTcph
+          q5jNL4tuKXkHO0k0iYWBvGW0wxcuGp9qhVhDTcFG6qkMKxHFVDPT3nZtIuUV5FH6
+          jhQFObJVFxqT/ZOFxHxjmgECpT9vbJxTDyqVHD/IIqx2fCaNmOyIi2FcZLIoeqwk
+          aKairQrGPa7GgaNdrZhH
+          -----END CERTIFICATE-----
+          PUBLIC_CERTIFICATE
+          openssl cms -encrypt -binary -aes-256-gcm -outform DER -in "$apk" \
+            -out "$out/preview.apk.cms" "$RUNNER_TEMP/preview-transfer.pem"
+          {
+            printf 'source=%s\n' "$REVIEWED_SOURCE"
+            printf 'sha256=%s\n' "$(sha256sum "$apk" | cut -d' ' -f1)"
+            grep -E "^(package: |sdkVersion:|targetSdkVersion:)" "$RUNNER_TEMP/preview-badging.txt"
+            grep -F 'Signer #1 certificate SHA-256 digest:' "$RUNNER_TEMP/preview-signature.txt"
+          } > "$out/receipt.txt"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: nova-brain-fold-preview-encrypted
+          path: ${{ runner.temp }}/nova-brain-fold-preview
+          if-no-files-found: error
+          retention-days: 1
