@@ -14,13 +14,16 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotEnabled
+import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.isDisplayed
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.unit.dp
@@ -136,13 +139,13 @@ class IntelligenceBuild98VisualTest {
         compose.onNodeWithText("Waiting for Nova Brain…").assertIsDisplayed()
         compose.onNodeWithContentDescription("Cancel Nova Brain request").assertIsDisplayed()
         assertEquals("What is a haiku?", approved.get()?.question)
-        capture("cover-cloud-loading")
+        capture("cover-cloud-loading", composed = true)
 
         val sample = "Synthetic reply: a haiku is a short form of Japanese poetry."
         reply.complete(IntelligenceCloudAnswer(sample, cloud = true))
         compose.waitUntil(10_000) { compose.onNodeWithText(sample).isDisplayed() }
         compose.onNodeWithText("Nova Brain · cloud").assertIsDisplayed()
-        capture("cover-synthetic-cloud-reply")
+        capture("cover-synthetic-cloud-reply", composed = true)
     }
 
     @Test fun coverOfflineFallback() {
@@ -178,7 +181,7 @@ class IntelligenceBuild98VisualTest {
             val secondOpinion = compose.onNodeWithText("Test Guardian second opinion")
             compose.waitUntil(10_000) { secondOpinion.isDisplayed() }
             secondOpinion.assertIsNotEnabled()
-            capture("guardian-owner-preview-disconnected")
+            capture("guardian-owner-preview-disconnected", composed = true)
         } finally {
             preview.disable()
         }
@@ -234,7 +237,7 @@ class IntelligenceBuild98VisualTest {
         compose.setContent {
             IntelligenceScreen(
                 active = true, guardianVisible = false, protectedBySanctuary = false, openPrivate = {},
-                openDestination = openDestination, assistant = assistant,
+                openDestination = openDestination, onBack = {}, assistant = assistant,
             )
         }
         compose.onNodeWithText("Ask Nova").performClick()
@@ -245,11 +248,14 @@ class IntelligenceBuild98VisualTest {
         compose.onNodeWithContentDescription("Send message").performClick()
     }
 
-    private fun capture(name: String) {
+    private fun capture(name: String, composed: Boolean = false) {
         compose.waitForIdle()
         val instrumentation = InstrumentationRegistry.getInstrumentation()
         val directory = File(instrumentation.targetContext.cacheDir, "nova-intelligence-build98").apply { mkdirs() }
-        val screenshot = checkNotNull(instrumentation.uiAutomation.takeScreenshot())
+        // Compose captures synchronize with the displayed root. Use the full display when
+        // the system IME or launcher chrome needs to be visible in the evidence.
+        val screenshot = if (composed) compose.onRoot().captureToImage().asAndroidBitmap()
+        else checkNotNull(instrumentation.uiAutomation.takeScreenshot())
         try {
             File(directory, "$name.png").outputStream().use {
                 check(screenshot.compress(Bitmap.CompressFormat.PNG, 100, it))

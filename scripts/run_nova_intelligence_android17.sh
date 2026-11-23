@@ -115,14 +115,19 @@ if [[ ${NOVA_INTELLIGENCE_VISUALS:-false} == true ]]; then
     adb exec-out run-as "$app_id" cat "cache/nova-intelligence-build98/$name.png" > "$out/screenshots/$name.png"
   done
   python3 - "$out/screenshots" "${screenshots[@]}" <<'PY'
+from hashlib import sha256
 from pathlib import Path
 import sys
 
 root = Path(sys.argv[1])
+captured = {}
 for name in sys.argv[2:]:
     image = root / f"{name}.png"
-    with image.open("rb") as handle:
-        assert handle.read(8) == b"\x89PNG\r\n\x1a\n", f"Missing valid emulator screenshot: {name}"
+    pixels = image.read_bytes()
+    assert pixels.startswith(b"\x89PNG\r\n\x1a\n"), f"Missing valid emulator screenshot: {name}"
+    digest = sha256(pixels).digest()
+    assert digest not in captured, f"Emulator frames are identical: {captured.get(digest)} and {name}"
+    captured[digest] = name
 PY
 fi
 

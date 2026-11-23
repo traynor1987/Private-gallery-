@@ -74,7 +74,7 @@ internal fun IntelligenceExperience(
     dashboard: @Composable (Modifier) -> Unit,
     conversation: @Composable (Modifier, Boolean) -> Unit,
     feedback: String? = null,
-) {
+) = CompositionLocalProvider(LocalContentColor provides GuardianPrimary) {
     BoxWithConstraints(
         Modifier.fillMaxSize()
             .background(Brush.verticalGradient(listOf(Color(0xFF142439), GuardianNavy, Color(0xFF0C192A))))
@@ -313,12 +313,12 @@ internal fun IntelligenceChat(
                     Modifier.fillMaxSize(),
                     state = scroll,
                     contentPadding = PaddingValues(top = 4.dp, bottom = 8.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp, Alignment.Bottom),
                 ) {
                     if (isEmpty) item {
                         Column(
                             Modifier.fillParentMaxHeight().padding(vertical = 8.dp, horizontal = 10.dp),
-                            verticalArrangement = Arrangement.Center,
+                            verticalArrangement = Arrangement.Bottom,
                         ) {
                             Text("How can I help?", style = MaterialTheme.typography.headlineSmall,
                                 fontWeight = FontWeight.SemiBold)
