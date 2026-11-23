@@ -42,6 +42,11 @@ jobs:
         run: |
           docker build -t nova-cloud-teacher:pr-check scripts/cloud_teacher
           docker run --rm --network none nova-cloud-teacher:pr-check python server.py --help
+      - name: Check protected Hidden and Sanctuary scope
+        run: |
+          bash scripts/check_hidden_foundation.sh
+          bash scripts/check_hidden_browser.sh
+          python3 scripts/verify_sanctuary_browser_scope.py
       - name: Compile and test the isolated debug build
         run: |
           bash scripts/prime_gradle95_ci.sh
@@ -61,12 +66,19 @@ jobs:
           disk-size: 8G
           disable-animations: true
           emulator-options: -no-window -gpu software -no-snapshot -noaudio -no-boot-anim -feature -HardwareDecoder -camera-back emulated -camera-front emulated
-          script: bash scripts/run_nova_intelligence_android17.sh
+          script: |
+            bash scripts/run_nova_intelligence_android17.sh
+            bash scripts/run_guardian_notification_pipeline93.sh
+            adb shell wm size 1200x1800
+            adb shell wm density 160
+            bash scripts/run_guardian_notification_pipeline93.sh GuardianFoldNotificationTest guardian-fold-notification
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: nova-intelligence-android17
           path: |
             app/build/intelligence
+            app/build/home2-evidence/guardian-notification-pipeline-93
+            app/build/home2-evidence/guardian-fold-notification
             app/build/home2-evidence/launcher-process-70
             app/build/test-results/testDebugUnitTest

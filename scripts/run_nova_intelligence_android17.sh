@@ -11,6 +11,9 @@ runner="$app_id.test/androidx.test.runner.AndroidJUnitRunner"
 classes=(
   "$package.intelligence.IntelligenceLauncherUiTest"
   "$package.intelligence.IntelligenceWorkspaceTest"
+  "$package.intelligence.OwnerPreviewIsolationTest"
+  "$package.core.hidden.HiddenCredentialSeparationTest"
+  "$package.core.hidden.HiddenRestoreAccessTest"
   "$package.launcher.LauncherHomeLibraryPager73UiTest"
   "$package.core.sanctuary.SanctuaryLauncherPolicy70Test"
 )

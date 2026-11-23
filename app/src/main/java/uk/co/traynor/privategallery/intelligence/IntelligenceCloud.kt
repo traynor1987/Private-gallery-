@@ -100,7 +100,7 @@ internal class IntelligenceCloud(
     }
 }
 
-private fun requestIntelligence(
+internal fun requestIntelligence(
     configuration: NovaBrainConfiguration,
     payload: ByteArray? = null,
     assertMaySend: () -> Unit = {},

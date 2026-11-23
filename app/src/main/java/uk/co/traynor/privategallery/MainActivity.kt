@@ -5382,6 +5382,7 @@ internal fun SettingsHome(
         if (category == SettingsCategory.NOVA_BRAIN) {
             uk.co.traynor.privategallery.launcher.NovaBrainConnectionSettings()
             uk.co.traynor.privategallery.launcher.CloudTeacherSettings()
+            if (!hideContent && !hiddenOpen) uk.co.traynor.privategallery.intelligence.OwnerPreviewSettings()
         }
         if (category == SettingsCategory.AI) {
             uk.co.traynor.privategallery.ui.AiEditingSettings()
