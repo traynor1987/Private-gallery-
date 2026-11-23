@@ -2,11 +2,11 @@
   "candidate": "25305c69992565f5e91185f0c7362f93d092ef02",
   "source": "6b7f1bbe40db3f213ff087833f37e05954e1c792",
   "mode": "production",
-  "main_parent": "6b7f1bbe40db3f213ff087833f37e05954e1c792",
+  "main_parent": "ace9c6f04e01861e2dd13c1e08653b641cc4a4d9",
   "inputs_sha256": {
     ".github/workflows/sanctuary-production.yml": "dc6701b920c44488fcc8ed333b00b61cf7820c64153f22813e04b31b5a5d1ad8",
     "docs/release1711/UpgradeFixtureTest.kt": "0d1c2207aeab2ef68fe29f10b0a868914521c0d49aaea79a9e79d9b3996c6e7e",
-    "scripts/novaos_build97_gate.py": "9affe7d11111f9846ffe9367d89f5b727a00118d43253cc2947b345c4d0490f4",
+    "scripts/novaos_build97_gate.py": "1550032877463a87bdfc784690fa08d88daf1c379419b9c40d9ed5fdb280634d",
     "scripts/prime_gradle95_ci.sh": "bb50abd57bdb768e964edd59e31f8ed71f45ad447dc0b884d48562980010e377",
     "scripts/rehearse_in_app_update85.py": "f5cdcc0cc3a9eaf1157a2226440efee6c48be047e480dd081206fa8fe7fc03b8",
     "scripts/run_build97_upgrade.sh": "fa26a25423dd6fcf65783189d68bebfe1663d03bc0205c45675591601593bf9d",
