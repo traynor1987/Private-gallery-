@@ -46,7 +46,10 @@ class Build95ReleaseControls(unittest.TestCase):
         self.assertIn('baselineCode == 95 && candidateCode == 96', fixture)
         self.assertIn('assertEquals(96L,available.release?.versionCode)', fixture)
         self.assertIn('original=95 candidate=96', fixture)
-        live = (ROOT / 'docs/build85/verify_live_build84.py').read_text()
+        live = subprocess.check_output(
+            ['git', 'show', '1588c76d1573dc2098f1f5402c16026a1ca70e2f:docs/build85/verify_live_build84.py'],
+            cwd=ROOT, text=True,
+        )
         for text in ("installed() == 95", "installed() != 96", "1.7.50 · Build 96 available", "1.7.50 · Up to date", 'baseline_code=95, installed_code=96'):
             self.assertIn(text, live)
 

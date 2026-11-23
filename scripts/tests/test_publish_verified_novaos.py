@@ -1,17 +1,99 @@
 import json
 from pathlib import Path
+import subprocess
 import tempfile
 import unittest
 from unittest.mock import patch
 
 import publish_verified_novaos as release
 
-CANDIDATE = json.loads((Path(__file__).parents[2] / ".novaos-stable-candidate.json").read_text())
+ROOT = Path(__file__).resolve().parents[2]
+CANDIDATE = json.loads(subprocess.check_output([
+    "git", "show", "1588c76d1573dc2098f1f5402c16026a1ca70e2f:.novaos-stable-candidate.json"
+], cwd=ROOT))
 CANDIDATE.pop("release_id", None)  # Publication scenario tests select their own draft state.
 URL = f"https://github.com/{release.REPO}/releases/tag/{CANDIDATE['tag']}"
 
 
 class ReleaseChecks(unittest.TestCase):
+    def test_build97_requires_exact_pr_evidence_and_production_staging(self):
+        policy = release.build97
+        candidate = dict(tag="v1.7.51", version_code=97, baseline_code=96,
+                         baseline_sha256=policy.BASELINE_DIGEST, regression_run=policy.APP_RUN,
+                         regression_branch=policy.FEATURE, source=policy.MERGED_SOURCE, production_run=123,
+                         production_head="a" * 40)
+
+        def result(run, head, branch, path, event):
+            return dict(id=run, head_sha=head, head_branch=branch, path=path, event=event,
+                        head_repository={"full_name": release.REPO}, run_attempt=1,
+                        status="completed", conclusion="success")
+
+        def job(name, steps):
+            return dict(name=name, conclusion="success",
+                        steps=[dict(name=step, conclusion="success") for step in steps])
+
+        regression = result(policy.APP_RUN, policy.CANDIDATE, policy.FEATURE,
+                            ".github/workflows/nova-home-intelligence.yml", "pull_request")
+        regression["pull_requests"] = []
+        production = result(123, candidate["production_head"], "main", policy.WORKFLOW, "push")
+        production.update(actor={"id": policy.OWNER}, triggering_actor={"id": policy.OWNER})
+        regression_jobs = [job("verify", policy.APP_STEPS)]
+        production_job = job("build97-protected", policy.SIGNING_STEPS | {
+            "Stage verified Build 97 stable assets", "Retain verified Build 97 production publication inputs",
+            "Remove all Build 97 key and APK material",
+        })
+        release.check_provenance(candidate, regression, regression_jobs, production, [production_job])
+        with self.assertRaisesRegex(ValueError, "Wrong Build 97 publication identity"):
+            release.check_provenance(dict(candidate, source="1" * 40), regression, regression_jobs,
+                                     production, [production_job])
+        regression["head_sha"] = "b" * 40
+        with self.assertRaisesRegex(ValueError, "source provenance"):
+            release.check_provenance(candidate, regression, regression_jobs, production, [production_job])
+        regression["head_sha"] = policy.CANDIDATE
+        with self.assertRaisesRegex(ValueError, "lacks successful"):
+            release.check_provenance(candidate, regression, regression_jobs, production,
+                                     [job("build97-protected", policy.SIGNING_STEPS)])
+
+    def test_build97_production_receipts_bind_the_signed_apk_and_updater(self):
+        policy = release.build97
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            receipts = root / "receipts"
+            upgrade = receipts / "from96"
+            upgrade.mkdir(parents=True)
+            (root / "private-gallery-release.apk").write_bytes(b"synthetic APK bytes")
+            apk_digest = release.digest(root / "private-gallery-release.apk")
+            source, production_head = "a" * 40, "b" * 40
+            candidate = dict(
+                source=source, tag="v1.7.51", version_code=97, baseline_code=96,
+                apk_sha256=apk_digest, baseline_sha256=policy.BASELINE_DIGEST,
+                regression_run=policy.APP_RUN, production_run=123, production_head=production_head,
+            )
+            controls = {"test-control": "f" * 64}
+            approval = dict(
+                source=source, mode="production", candidate=policy.CANDIDATE, approving_id=policy.OWNER,
+                version="1.7.51", version_code=97, approval_run=123, approval_commit=production_head,
+                regression_run=policy.APP_RUN, regression_sha256=policy.APP_DIGEST, inputs_sha256=controls,
+            )
+            update = dict(
+                result="PASS", source=source, baseline_code=96, candidate_code=97, installed_code=97,
+                apk_sha256=apk_digest, discovery="PASS", download_and_verification="PASS",
+                android_installer="confirmed",
+            )
+            proof = dict(update, certificate_sha256=policy.CERTIFICATE, baseline_sha256=policy.BASELINE_DIGEST,
+                         seed="PASS", verify="PASS", after_restart="PASS", transport="controlled-loopback")
+            (receipts / "owner-approval.json").write_text(json.dumps(approval))
+            (receipts / "build97-upgrade.json").write_text(json.dumps(proof))
+            (upgrade / "in-app-update.json").write_text(json.dumps(update))
+            (upgrade / "upgrade-baseline-sha256.txt").write_text(policy.BASELINE_DIGEST)
+            (upgrade / "upgrade-candidate-sha256.txt").write_text(apk_digest)
+            with patch.object(policy, "checksums", return_value=controls):
+                self.assertEqual(upgrade, release.check_local_receipts(candidate, root, receipts))
+                proof["apk_sha256"] = "0" * 64
+                (receipts / "build97-upgrade.json").write_text(json.dumps(proof))
+                with self.assertRaisesRegex(ValueError, "different signed APK"):
+                    release.check_local_receipts(candidate, root, receipts)
+
     def test_promoted_source_reuses_only_explicit_exact_commit_regression_evidence(self):
         candidate = dict(CANDIDATE)
         candidate.pop("regression_branch", None)

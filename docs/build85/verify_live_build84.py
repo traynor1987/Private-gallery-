@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Drive authentic production Build95's UI against the published public feed on disposable API37.
+"""Drive the authentic previous production build's UI against the public feed on disposable API37.
 
 No instrumentation, substituted transport, secondary test app, app data editing, uninstall,
 or replacement adb installation is used. The Android installer performs the update.
@@ -20,6 +20,7 @@ import xml.etree.ElementTree as ET
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / 'scripts'))
 from fetch_code81_upgrade_baseline import fetch
+from novaos_build97_gate import BASELINE_DIGEST, fetch_build96
 
 PACKAGE = 'uk.co.traynor.privategallery'
 PIN = '738291'  # Synthetic disposable owner, never a real owner credential.
@@ -268,34 +269,43 @@ def main():
     wait_device_ready()
     require(installed() is None, 'Production package must be absent initially; never clear/uninstall')
     candidate = json.loads(args.candidate.read_text())
-    require(candidate['tag'] == 'v1.7.50' and candidate['version_code'] == 96, 'Wrong release candidate')
+    identity = candidate['tag'], candidate['version_code'], candidate['baseline_code']
+    require(identity in (('v1.7.50', 96, 95), ('v1.7.51', 97, 96)), 'Wrong release candidate')
+    tag, code, prior = identity
+    if prior == 96:
+        require(candidate['baseline_sha256'] == BASELINE_DIGEST, 'Wrong Build 96 baseline digest')
+    version = tag[1:]
+    prior_version, fetch_baseline = ('1.7.50', fetch_build96) if prior == 96 else ('1.7.49', fetch)
+    installed_label = f'{version} · Build {code}'
+    available_label = installed_label + ' available'
+    up_to_date = version + ' · Up to date'
     release = public_release(args.output)
     require(release['tag_name'] == candidate['tag'] and not release['draft'] and not release['prerelease'], 'Not the actual latest stable release')
     apk = next(a for a in release['assets'] if a['name'] == 'private-gallery-release.apk')
     require(apk['digest'] == 'sha256:' + candidate['apk_sha256'], 'Live APK differs from the verified candidate')
     (args.output / 'live-release.json').write_text(json.dumps(release, indent=2)+'\n')
-    baseline = args.output.parent / 'authentic-build95.apk'
-    fetch(baseline, Path(os.environ['ANDROID_HOME']) / 'build-tools/36.0.0')
+    baseline = args.output.parent / f'authentic-build{prior}.apk'
+    fetch_baseline(baseline, Path(os.environ['ANDROID_HOME']) / 'build-tools/36.0.0')
     adb('install', '--no-streaming', baseline)
-    require(installed() == 95, 'Authentic Build95 installation not observed')
+    require(installed() == prior, f'Authentic Build {prior} installation not observed')
     adb('shell', 'svc', 'power', 'stayon', 'true')
     adb('shell', 'input', 'keyevent', 'KEYCODE_WAKEUP')
     adb('shell', 'wm', 'dismiss-keyguard')
     # This changes only the disposable emulator's ordinary install-source permission.
     adb('shell', 'appops', 'set', PACKAGE, 'REQUEST_INSTALL_PACKAGES', 'allow')
     before = open_updates(allow_setup=True)
-    require(has(before, '1.7.49 · Build 95'), 'Build95 screen does not identify its real installed version')
-    # Installed Build95 starts its first real check on About entry. Wait for
+    require(has(before, f'{prior_version} · Build {prior}'), 'Baseline screen does not identify its real installed version')
+    # The installed build starts its first real check on About entry. Wait for
     # that completed result before exercising the explicit check action.
-    before = wait_for(lambda t: has(t, '1.7.50 · Build 96 available'), 'Build95 automatic first check')
-    save_ui(before, args.output / 'build95-first-public-discovery.xml')
+    before = wait_for(lambda t: has(t, available_label), f'Build {prior} automatic first check')
+    save_ui(before, args.output / f'build{prior}-first-public-discovery.xml')
     click(reveal_action('Check for updates'), 'Check for updates')
     updates_summary()
-    available = wait_for(lambda t: has(t, '1.7.50 · Build 96 available'), 'Build95 real public update discovery')
-    save_ui(available, args.output / 'build95-live-update-available.xml')
-    print('PASS: authentic installed Build95 discovers Build96 through its real UI and public GitHub feed', flush=True)
+    available = wait_for(lambda t: has(t, available_label), f'Build {prior} real public update discovery')
+    save_ui(available, args.output / f'build{prior}-live-update-available.xml')
+    print(f'PASS: authentic installed Build {prior} discovers Build {code} through its real UI and public GitHub feed', flush=True)
     download = reveal_action('Download update')
-    save_ui(download, args.output / 'build95-live-download-action.xml')
+    save_ui(download, args.output / f'build{prior}-live-download-action.xml')
     click(download, 'Download update')
     installers = {'com.android.packageinstaller', 'com.google.android.packageinstaller', 'com.android.permissioncontroller'}
     installer = wait_for(lambda t: any(n.get('package') in installers and n.get('text') in ('Update', 'Install') for n in t.iter('node')), 'real verified download and Android installer', 240)
@@ -303,23 +313,23 @@ def main():
     action = next(n for n in installer.iter('node') if n.get('package') in installers and n.get('text') in ('Update', 'Install'))
     tap(action)
     deadline = time.monotonic() + 120
-    while installed() != 96:
-        require(time.monotonic() < deadline, 'Android did not report installed Build96')
+    while installed() != code:
+        require(time.monotonic() < deadline, f'Android did not report installed Build {code}')
         time.sleep(1)
     (args.output / 'live-update-installed.json').write_text(json.dumps({'result': 'INSTALLED', 'installed_code': installed(), 'source': candidate['source'], 'apk_sha256': candidate['apk_sha256'], 'live_github_discovery': 'PASS', 'live_download': 'PASS', 'android_installer': 'confirmed', 'restart_review': 'pending'}, indent=2)+'\n')
     adb('shell', 'am', 'force-stop', PACKAGE)
     after = open_updates(allow_setup=False)
-    require(has(after, '1.7.50 · Build 96'), 'Restart did not show the installed Build96')
+    require(has(after, installed_label), f'Restart did not show the installed Build {code}')
     # PackageManager has already confirmed the upgrade. Explicitly refresh the real feed
     # after restart as well as verifying the installed version.
-    after = wait_for(lambda t: has(t, '1.7.50 · Up to date'), 'installed-version confirmation')
+    after = wait_for(lambda t: has(t, up_to_date), 'installed-version confirmation')
     click(reveal_action('Check for updates'), 'Check for updates')
     updates_summary()
-    after = wait_for(lambda t: has(t, '1.7.50 · Build 96') and has(t, '1.7.50 · Up to date'), 'Build96 real up-to-date screen')
-    save_ui(after, args.output / 'build95-live-up-to-date.xml')
-    receipt = dict(schema=1, result='PASS', source=candidate['source'], apk_sha256=candidate['apk_sha256'], baseline_code=95, installed_code=96, live_github_discovery='PASS', live_download='PASS', android_installer='confirmed', restart_and_same_pin='PASS', up_to_date_screen='PASS', instrumentation='none', physical_fold='owner_confirmation_pending')
+    after = wait_for(lambda t: has(t, installed_label) and has(t, up_to_date), f'Build {code} real up-to-date screen')
+    save_ui(after, args.output / f'build{prior}-live-up-to-date.xml')
+    receipt = dict(schema=1, result='PASS', source=candidate['source'], apk_sha256=candidate['apk_sha256'], baseline_code=prior, installed_code=code, live_github_discovery='PASS', live_download='PASS', android_installer='confirmed', restart_and_same_pin='PASS', up_to_date_screen='PASS', instrumentation='none', physical_fold='owner_confirmation_pending')
     (args.output / 'live-upgrade.json').write_text(json.dumps(receipt, indent=2)+'\n')
-    print('PASS: real public in-app Build95 -> Android installer -> installed Build96 -> restart -> Up to date', flush=True)
+    print(f'PASS: real public in-app update from Build {prior} to Build {code}, restart and Up to date', flush=True)
 
 if __name__ == '__main__':
     try:

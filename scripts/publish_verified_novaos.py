@@ -11,6 +11,7 @@ import time
 from types import SimpleNamespace
 import zipfile
 
+import novaos_build97_gate as build97
 from verify_novaos_release_assets import verify
 
 REPO = "traynor1987/Private-gallery-"
@@ -51,6 +52,9 @@ def check_job(jobs, name, mandatory):
 
 
 def check_provenance(candidate, regression, regression_jobs, production, production_jobs):
+    if candidate["version_code"] == 97 or candidate["tag"] == "v1.7.51":
+        check_build97_provenance(candidate, regression, regression_jobs, production, production_jobs)
+        return
     # Promotion preserves the exact already-tested commit. Reuse its explicitly
     # reviewed preparation-branch run; the protected signer still runs on main
     # and binds that immutable run ID to the original upgrade/owner receipt.
@@ -76,6 +80,34 @@ def check_provenance(candidate, regression, regression_jobs, production, product
             "Production workflow failed outside publication")
 
 
+def check_build97_provenance(candidate, regression, regression_jobs, production, production_jobs):
+    require(all(candidate.get(key) == value for key, value in {
+        "tag": "v1.7.51", "version_code": 97, "baseline_code": 96,
+        "baseline_sha256": build97.BASELINE_DIGEST, "regression_run": build97.APP_RUN,
+        "regression_branch": build97.FEATURE, "source": build97.MERGED_SOURCE,
+    }.items()), "Wrong Build 97 publication identity")
+    for record, run_id, source, branch, workflow, event in (
+        (regression, build97.APP_RUN, build97.CANDIDATE, build97.FEATURE,
+         ".github/workflows/nova-home-intelligence.yml", "pull_request"),
+        (production, candidate["production_run"], candidate["production_head"], BRANCH,
+         build97.WORKFLOW, "push"),
+    ):
+        require(record["id"] == run_id and record["head_sha"] == source and record["head_branch"] == branch
+                and record["path"].split("@")[0] == workflow and record["event"] == event
+                and record["head_repository"]["full_name"] == REPO and record["run_attempt"] == 1
+                and record["status"] == "completed" and record["conclusion"] == "success",
+                f"Build 97 run {run_id} lacks exact, successful source provenance")
+    require(production["actor"]["id"] == build97.OWNER and production["triggering_actor"]["id"] == build97.OWNER,
+            "Build 97 lacks original owner production authorization")
+    regression_job = check_job(regression_jobs, "verify", build97.APP_STEPS)
+    production_job = check_job(production_jobs, "build97-protected", build97.SIGNING_STEPS | {
+        "Stage verified Build 97 stable assets", "Retain verified Build 97 production publication inputs",
+        "Remove all Build 97 key and APK material",
+    })
+    require(regression_job["conclusion"] == production_job["conclusion"] == "success",
+            "Build 97 Android or protected production job did not pass")
+
+
 def digest(path):
     with path.open("rb") as file:
         return hashlib.file_digest(file, "sha256").hexdigest()
@@ -93,9 +125,19 @@ def check_local_receipts(candidate, assets, receipts):
     }.items()), "Production receipt belongs to another release")
     require(digest(assets / "private-gallery-release.apk") == candidate["apk_sha256"],
             "Signed APK differs from the immutable candidate")
-    upgrade = receipts / "from80"
+    is_build97 = candidate["version_code"] == 97
+    upgrade = receipts / ("from96" if is_build97 else "from80")
+    if is_build97:
+        require(approval["mode"] == "production" and approval["candidate"] == build97.CANDIDATE
+                and approval["approving_id"] == build97.OWNER
+                and approval["regression_sha256"] == build97.APP_DIGEST
+                and approval["inputs_sha256"] == build97.checksums(),
+                "Build 97 production authorization differs from the reviewed signing controls")
+        proof = json.loads(read(receipts / "build97-upgrade.json"))
+        build97.require_upgrade(proof, candidate["source"])
+        require(proof["apk_sha256"] == candidate["apk_sha256"], "Build 97 proof tested a different signed APK")
     require(read(upgrade / "upgrade-baseline-sha256.txt").split()[0] == candidate["baseline_sha256"],
-            "Upgrade used a different Build 95 baseline")
+            f"Upgrade used a different Build {candidate['baseline_code']} baseline")
     require(read(upgrade / "upgrade-candidate-sha256.txt").split()[0] == candidate["apk_sha256"],
             "Upgrade tested a different candidate")
     rehearsal=json.loads(read(upgrade / "in-app-update.json"))
@@ -287,6 +329,9 @@ def main():
         production = f"actions/runs/{candidate['production_run']}"
         check_provenance(candidate, api(regression), api(regression + "/jobs?per_page=100")["jobs"],
                          api(production), api(production + "/jobs?per_page=100")["jobs"])
+        if candidate["version_code"] == 97:
+            build97.verify_release_tree(candidate["source"])
+            subprocess.run(["git", "merge-base", "--is-ancestor", candidate["source"], "HEAD"], check=True)
         if args.preflight:
             ensure_tag(candidate)
             print("PASS: exact remote stable tag")
@@ -295,8 +340,13 @@ def main():
         subprocess.run(["git", "fetch", "--no-tags", f"https://github.com/{REPO}.git",
                         f"refs/tags/{candidate['tag']}:refs/tags/{candidate['tag']}"], check=True)
         args.work.mkdir(mode=0o700)
-        assets = archive(candidate, "assets", "novaos-code81-verified-stable-assets", args.work)
-        receipts = archive(candidate, "receipts", "novaos-code81-production-upgrade-receipts", args.work)
+        assets_name, receipts_name = (
+            ("novaos-build97-verified-stable-assets", "novaos-build97-production-receipts")
+            if candidate["version_code"] == 97 else
+            ("novaos-code81-verified-stable-assets", "novaos-code81-production-upgrade-receipts")
+        )
+        assets = archive(candidate, "assets", assets_name, args.work)
+        receipts = archive(candidate, "receipts", receipts_name, args.work)
         upgrade = check_local_receipts(candidate, assets, receipts)
         apk_digest = verify(SimpleNamespace(
             source=candidate["source"], tag=candidate["tag"], baseline_code=candidate["baseline_code"],
