@@ -1,0 +1,102 @@
+name: Verify temporary Fold preview isolation
+on:
+  push:
+    branches: [verification/nova-brain-fold-owner-preview]
+    paths:
+      - .github/workflows/nova-brain-fold-preview-checks.yml
+      - scripts/cloud_teacher/fold-owner-preview.sh
+      - scripts/cloud_teacher/fold_owner_preview.py
+      - scripts/cloud_teacher/test_fold_owner_preview.py
+permissions:
+  contents: read
+jobs:
+  isolate:
+    if: github.repository == 'traynor1987/Private-gallery-' && github.ref == 'refs/heads/verification/nova-brain-fold-owner-preview'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with: { persist-credentials: false }
+      - name: Check default-off TLS arming and simulated provider dispatch policy
+        run: |
+          bash -n scripts/cloud_teacher/fold-owner-preview.sh
+          PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s scripts/cloud_teacher -p test_fold_owner_preview.py -v
+      - name: Apply the reviewed firewall inside a disposable network and restrict the preview port
+        run: |
+          if ! command -v nft >/dev/null; then
+            sudo apt-get update -qq
+            sudo apt-get install -y nftables
+          fi
+          export NOVA_WRAPPER="$PWD/scripts/cloud_teacher/fold-owner-preview.sh"
+          sudo --preserve-env=NOVA_WRAPPER unshare -n bash -euo pipefail <<'NS'
+          ip link set lo up
+          unshare -n sleep 30 &
+          phone=$!
+          listener=''
+          trap 'kill "$phone" ${listener:+"$listener"} 2>/dev/null || true' EXIT
+          for attempt in {1..20}; do
+            if ! test "/proc/$phone/ns/net" -ef /proc/self/ns/net; then break; fi
+            sleep .1
+          done
+          test -e "/proc/$phone/ns/net"
+          ! test "/proc/$phone/ns/net" -ef /proc/self/ns/net
+          ip link add fold-host type veth peer name fold-phone
+          ip address add 192.0.2.10/24 dev fold-host
+          ip link set fold-host up
+          ip link set fold-phone netns "$phone"
+          nsenter -t "$phone" -n ip address add 192.0.2.11/24 dev fold-phone
+          nsenter -t "$phone" -n ip address add 192.0.2.12/24 dev fold-phone
+          nsenter -t "$phone" -n ip link set fold-phone up
+          export nova_owner=192.0.2.11 nova_port=18443 nova_backend=172.28.0.2
+          python3 - <<'PY' | nft -f -
+          from pathlib import Path
+          from string import Template
+          import os
+          import re
+
+          source = Path(os.environ['NOVA_WRAPPER']).read_text()
+          rules = re.search(r'^nft -f - <<NFT\n(.*?)^NFT$', source, re.M | re.S)[1]
+          print(Template(rules).substitute(os.environ))
+          PY
+          nft list table inet nova_fold_owner_preview
+          python3 -m http.server 18443 --bind 192.0.2.10 --directory /tmp >/dev/null 2>&1 &
+          listener=$!
+          nsenter -t "$phone" -n curl --fail --silent --noproxy '*' --retry 3 --retry-connrefused \
+            --interface 192.0.2.11 --max-time 3 http://192.0.2.10:18443/ >/dev/null
+          if nsenter -t "$phone" -n curl --fail --silent --noproxy '*' \
+            --interface 192.0.2.12 --max-time 2 http://192.0.2.10:18443/ >/dev/null; then
+            echo 'Unexpected access from the other source address.' >&2
+            exit 1
+          fi
+          nft delete table inet nova_fold_owner_preview
+          nsenter -t "$phone" -n curl --fail --silent --noproxy '*' \
+            --interface 192.0.2.12 --max-time 3 http://192.0.2.10:18443/ >/dev/null
+          NS
+      - name: Verify the preview container contract without an OpenAI or TLS key
+        run: |
+          set -euo pipefail
+          root=$(mktemp -d "$RUNNER_TEMP/nova-preview-it.XXXXXXXX")
+          network=''
+          container=''
+          trap 'if [[ -n "$container" ]]; then docker rm -f "$container" >/dev/null; fi; if [[ -n "$network" ]]; then docker network rm "$network" >/dev/null; fi; sudo rm -rf -- "$root"' EXIT
+          sudo install -d -m 0710 -o root -g 10001 "$root/control"
+          sudo install -d -m 0700 -o 10001 -g 10001 "$root/ledger"
+          test_token=$(openssl rand -hex 32)
+          printf '%s\n' "$test_token" | sudo tee "$root/control/owner-token" >/dev/null
+          sudo chown 10001:10001 "$root/control/owner-token"
+          sudo chmod 0400 "$root/control/owner-token"
+          docker build --tag nova-cloud-teacher-preview-check scripts/cloud_teacher
+          network=$(docker network create --driver bridge --internal --ipv6=false nova-fold-check)
+          container=$(docker run --detach --init --network "$network" --user 10001:10001 \
+            --read-only --cap-drop ALL --security-opt no-new-privileges:true --memory 128m --pids-limit 80 \
+            -e "NOVA_FOLD_PREVIEW_END=$(( $(date +%s) + 120 ))" \
+            --mount "type=bind,src=$PWD/scripts/cloud_teacher/fold_owner_preview.py,dst=/app/fold_owner_preview.py,readonly" \
+            --mount "type=bind,src=$root/control,dst=/preview-control,readonly" \
+            --mount "type=bind,src=$root/ledger,dst=/state" \
+            --entrypoint python nova-cloud-teacher-preview-check /app/fold_owner_preview.py)
+          test -z "$(docker port "$container")"
+          backend=$(docker inspect --format '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' "$container")
+          curl --silent --show-error --fail --retry 3 --retry-connrefused --max-time 3 --noproxy '*' "http://$backend:8787/health" >/dev/null
+          printf 'Authorization: Bearer %s\n' "$test_token" |
+            curl --silent --show-error --fail --noproxy '*' --header @- "http://$backend:8787/assistant/ask" |
+            python3 -c 'import json,sys; s=json.load(sys.stdin); assert s["analysis_enabled"] is False and s["budget"]["approved_request_limit"] == 2 and s["budget"]["configured_ceiling_micro_usd"] == 250000'
