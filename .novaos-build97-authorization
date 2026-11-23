@@ -1,0 +1,21 @@
+{
+  "candidate": "25305c69992565f5e91185f0c7362f93d092ef02",
+  "source": "25305c69992565f5e91185f0c7362f93d092ef02",
+  "mode": "rehearsal",
+  "main_parent": "9d36a90a0e0458ad1bd1ef6b2753e81da95d0602",
+  "inputs_sha256": {
+    ".github/workflows/sanctuary-production.yml": "d4004160170b2f86e64d7787bf8d967807a6e9ebb095073d76ffbe4de9cbb76d",
+    "docs/release1711/UpgradeFixtureTest.kt": "0d1c2207aeab2ef68fe29f10b0a868914521c0d49aaea79a9e79d9b3996c6e7e",
+    "scripts/novaos_build97_gate.py": "7cfc546cfe5e42f0598e5612cd4af3869d815c073f2303829c185bc457a1fc94",
+    "scripts/prime_gradle95_ci.sh": "bb50abd57bdb768e964edd59e31f8ed71f45ad447dc0b884d48562980010e377",
+    "scripts/rehearse_in_app_update85.py": "f5cdcc0cc3a9eaf1157a2226440efee6c48be047e480dd081206fa8fe7fc03b8",
+    "scripts/run_build97_upgrade.sh": "fa26a25423dd6fcf65783189d68bebfe1663d03bc0205c45675591601593bf9d",
+    "scripts/verify_android17_sdk.py": "7a7dbb25be39b7d9760cda0944e960aaffb661c330a91348f9e019316a747659",
+    "scripts/verify_backup_exclusions.py": "36c66427926d56f0862cb898722fcf68a08c3f3cbc8c6e3947f457b16f0911f6",
+    "scripts/verify_code79_baseline.py": "3cbc439cb6883d58f48068d111a4ba7a0cda7a359f8e1cc7e4eecba983668fce",
+    "scripts/verify_code80_apk_identity.py": "a3424927bb9f0ca87ab2464c20c3ae7262d34245ba9573ebd557dbe322da0835",
+    "scripts/verify_compiled_upgrade1711.py": "2c4ea4cddd4bda55844523c8d6055cc5a3caa18b93e0ac4d005f1cc10bd0ae15",
+    "scripts/verify_evidence179_distribution.py": "ecf0f924c939fb60d5d6aa12e586394414b542c7a7fb988f5ee5fbd723d32e22",
+    "scripts/verify_signed_upgrade1711.py": "3170680e165a6e571a953240246f4210906588b981ae0e4ca19e559512adbb62"
+  }
+}
