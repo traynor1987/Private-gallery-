@@ -52,21 +52,23 @@ def installed():
     match = re.search(r'versionCode=(\d+)\b',adb('shell','dumpsys','package',PACKAGE))
     return int(match[1]) if match else None
 
-def rehearsal(apk, output, source):
+def rehearsal(apk, output, source, candidate_code=96):
+    version = {96: "1.7.50", 97: "1.7.51"}[candidate_code]
+    baseline_code = candidate_code - 1
     assert os.environ.get('GITHUB_ACTIONS')=='true' and os.environ.get('PRODUCTION_UPGRADE')=='1'
     assert adb('shell','getprop','ro.kernel.qemu').strip()=='1'
     assert adb('shell','getprop','ro.build.version.sdk').strip()=='37'
-    assert installed()==95, 'Authentic populated Build95 must already be installed'
+    assert installed()==baseline_code, f'Authentic populated Build {baseline_code} must already be installed'
     output.mkdir(parents=True,exist_ok=True)
     with tempfile.TemporaryDirectory(prefix='nova85-controlled-update-') as temporary:
         root=Path(temporary)
         digest=hashlib.file_digest(apk.open('rb'),'sha256').hexdigest()
         shutil.copyfile(apk,root/'candidate.apk')
         (root/'candidate.sha256').write_text(digest+'  private-gallery-release.apk\n')
-        (root/'metadata.json').write_text(json.dumps(dict(package=PACKAGE,versionName='1.7.50',versionCode=96,certificateSha256=CERTIFICATE,apkSha256=digest)))
-        prefix='https://github.com/traynor1987/Private-gallery-/releases/download/v1.7.50/'
+        (root/'metadata.json').write_text(json.dumps(dict(package=PACKAGE,versionName=version,versionCode=candidate_code,certificateSha256=CERTIFICATE,apkSha256=digest)))
+        prefix=f'https://github.com/traynor1987/Private-gallery-/releases/download/v{version}/'
         assets=[dict(name=name,browser_download_url=prefix+name,**({'digest':'sha256:'+digest,'size':apk.stat().st_size} if name.endswith('.apk') else {})) for name in ('private-gallery-release.apk','private-gallery-release.apk.sha256','private-gallery-release.metadata.json')]
-        (root/'release.json').write_text(json.dumps(dict(tag_name='v1.7.50',draft=False,prerelease=False,body='Controlled Build96 release rehearsal',assets=assets)))
+        (root/'release.json').write_text(json.dumps(dict(tag_name=f'v{version}',draft=False,prerelease=False,body=f'Controlled Build {candidate_code} release rehearsal',assets=assets)))
         class Handler(SimpleHTTPRequestHandler):
             def __init__(self,*args,**kwargs):super().__init__(*args,directory=str(root),**kwargs)
             def log_message(self,*args):pass
@@ -83,11 +85,12 @@ def rehearsal(apk, output, source):
             adb('reverse',f'tcp:{port}',f'tcp:{port}')
             adb('shell','appops','set',PACKAGE,'REQUEST_INSTALL_PACKAGES','allow')
             with log.open('w') as transcript:
-                process=subprocess.Popen(['adb','shell','am','instrument','-w','-e','baselineCode','95','-e','candidateCode','96','-e','updateFixturePort',str(port),'-e','class',PACKAGE+'.upgrade.UpgradeFixtureTest#prepareInAppUpdate',PACKAGE+'.test/androidx.test.runner.AndroidJUnitRunner'],stdout=transcript,stderr=subprocess.STDOUT)
+                process=subprocess.Popen(['adb','shell','am','instrument','-w','-e','baselineCode',str(baseline_code),'-e','candidateCode',str(candidate_code),'-e','updateFixturePort',str(port),'-e','class',PACKAGE+'.upgrade.UpgradeFixtureTest#prepareInAppUpdate',PACKAGE+'.test/androidx.test.runner.AndroidJUnitRunner'],stdout=transcript,stderr=subprocess.STDOUT)
                 deadline=time.monotonic()+240
                 while 'NOVA_UPDATE_HANDOFF_READY' not in log.read_text():
-                    if process.poll() is not None:raise RuntimeError('Build95 in-app discovery/download/installer failed; inspect in-app-update-instrumentation.txt')
-                    if time.monotonic()>deadline:raise RuntimeError('Build95 in-app update handoff timed out')
+                    if process.poll() is not None:
+                        raise RuntimeError(f'Build {baseline_code} in-app discovery/download/installer failed')
+                    if time.monotonic()>deadline:raise RuntimeError('In-app update handoff timed out')
                     time.sleep(1)
                 clicked=False
                 for _ in range(20):
@@ -103,10 +106,10 @@ def rehearsal(apk, output, source):
                     time.sleep(1)
                 assert clicked, 'Android installer confirmation was not available'
                 deadline=time.monotonic()+90
-                while installed()!=96:
-                    if time.monotonic()>deadline:raise RuntimeError('Android did not report installed Build96')
+                while installed()!=candidate_code:
+                    if time.monotonic()>deadline:raise RuntimeError(f'Android did not report installed Build {candidate_code}')
                     time.sleep(1)
-                (output/'in-app-update.json').write_text(json.dumps(dict(schema=1,result='PASS',source=source,baseline_code=95,candidate_code=96,installed_code=96,apk_sha256=digest,transport='controlled-loopback',baseline_application='authentic-unmodified',discovery='PASS',download_and_verification='PASS',android_installer='confirmed',live_github_discovery='requires_postpublication_confirmation'),indent=2)+'\n')
+                (output/'in-app-update.json').write_text(json.dumps(dict(schema=1,result='PASS',source=source,baseline_code=baseline_code,candidate_code=candidate_code,installed_code=candidate_code,apk_sha256=digest,transport='controlled-loopback',baseline_application='authentic-unmodified',discovery='PASS',download_and_verification='PASS',android_installer='confirmed',live_github_discovery='requires_postpublication_confirmation'),indent=2)+'\n')
         finally:
             if process is not None and process.poll() is None:
                 process.terminate()
@@ -118,8 +121,9 @@ def rehearsal(apk, output, source):
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--apk',required=True,type=Path);parser.add_argument('--output',required=True,type=Path);parser.add_argument('--source',required=True)
+    parser.add_argument('--candidate-code', type=int, choices=(96, 97), default=96)
     args=parser.parse_args()
     assert re.fullmatch(r'[a-f0-9]{40}',args.source)
-    rehearsal(args.apk,args.output,args.source)
+    rehearsal(args.apk,args.output,args.source,args.candidate_code)
 
 if __name__=='__main__':main()
