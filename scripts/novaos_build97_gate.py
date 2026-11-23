@@ -21,6 +21,8 @@ PR = 73
 CANDIDATE = "25305c69992565f5e91185f0c7362f93d092ef02"
 CANDIDATE_TREE = "64934ba88fe651016e27e0b16ad196a0b8bf608e"
 FEATURE = "feature/nova-home-intelligence"
+MERGED_SOURCE = "6b7f1bbe40db3f213ff087833f37e05954e1c792"
+MERGED_TREE = "d2cf2fa61be9dc604de43ff6a3cd941a8c558427"
 STABLE_MAIN = "1588c76d1573dc2098f1f5402c16026a1ca70e2f"
 BASELINE = "6d91450aac55c805df5d6f0bac20164b09697ab2"
 BASELINE_DIGEST = "beb2c7eb52f43f2bd0ead66eecdc6ffa509ef254e778e0624496c648f0c3707b"
@@ -34,12 +36,20 @@ PREVIEW_RUN = 45169968138
 PREVIEW = "39df141a046ed960b733cf1147cde2a4a3238ca7"
 FAILED_REHEARSAL_RUN = 45206731755
 FAILED_REHEARSAL_HEAD = "8187d7b1fbdf90717f17d3988caf5742a764f920"
+REHEARSAL_HEAD = "af90a494af0a56dce973c664d1c81e22380c755c"
+REHEARSAL_EVIDENCE = {
+    "head": REHEARSAL_HEAD,
+    "run": 45212815039,
+    "artifact": 14838263630,
+    "sha256": "534a4c011e46cffc42c2c507c55d88fcd46569f1a741da5645abe47156edf53a",
+}
 MARKER = ".novaos-build97-authorization"
 WORKFLOW = ".github/workflows/sanctuary-production.yml"
+GATE = "scripts/novaos_build97_gate.py"
 FIXTURE = "docs/release1711/UpgradeFixtureTest.kt"
 FIXTURE_DIGEST = "0d1c2207aeab2ef68fe29f10b0a868914521c0d49aaea79a9e79d9b3996c6e7e"
 CONTROLS = {
-    WORKFLOW, FIXTURE, "scripts/novaos_build97_gate.py", "scripts/run_build97_upgrade.sh",
+    WORKFLOW, FIXTURE, GATE, "scripts/run_build97_upgrade.sh",
     "scripts/rehearse_in_app_update85.py", "scripts/verify_backup_exclusions.py",
     "scripts/verify_evidence179_distribution.py", "scripts/verify_code80_apk_identity.py",
     "scripts/verify_code79_baseline.py", "scripts/verify_compiled_upgrade1711.py",
@@ -162,10 +172,52 @@ def ensure_source_unchanged(source, baseline):
     require(difference <= MAIN_ONLY_CHANGES, f"Source drift outside release controls: {sorted(difference - MAIN_ONLY_CHANGES)}")
 
 
+def verify_release_tree(source):
+    require(source == MERGED_SOURCE and git("rev-parse", source + "^{tree}") == MERGED_TREE
+            and git("rev-parse", CANDIDATE + "^{tree}") == CANDIDATE_TREE
+            and git("rev-list", "--parents", "-n", "1", source).split() == [source, REHEARSAL_HEAD, CANDIDATE],
+            "Production source is not the exact audited merge of the rehearsed candidate")
+    ensure_source_unchanged(source, CANDIDATE)
+
+
+def verify_merged_source(pr, source):
+    require(pr["merged"] and pr["state"] == "closed" and pr["merge_commit_sha"] == source,
+            "Production requires the verified PR #73 merge")
+    verify_release_tree(source)
+    # Actions can clear its PR association after merge. GitHub's commit-to-PR
+    # endpoint identifies the merged PR that actually introduced the exact CI SHA.
+    associated = [item for item in api(f"commits/{CANDIDATE}/pulls") if item["number"] == PR]
+    require(len(associated) == 1 and associated[0]["state"] == "closed"
+            and associated[0]["merged_at"] and associated[0]["merge_commit_sha"] == source
+            and associated[0]["head"]["sha"] == CANDIDATE and associated[0]["base"]["ref"] == "main",
+            "GitHub does not tie the exact tested commit to the verified PR #73 merge")
+
+
+def verify_rehearsal_controls(rehearsed, current):
+    authorization = json.loads(git("show", f"{REHEARSAL_HEAD}:{MARKER}"))
+    require(authorization["mode"] == "rehearsal" and authorization["source"] == CANDIDATE
+            and authorization["candidate"] == CANDIDATE and authorization["inputs_sha256"] == rehearsed,
+            "Rehearsal receipt differs from its original owner authorization")
+    require(rehearsed.keys() == current.keys() == CONTROLS
+            and all(rehearsed[name] == current[name] for name in CONTROLS - {GATE}),
+            "Controls outside the authorized post-merge lookup changed since the protected rehearsal")
+    archived = subprocess.check_output(["git", "show", f"{REHEARSAL_HEAD}:{GATE}"])
+    require(hashlib.sha256(archived).hexdigest() == rehearsed[GATE],
+            "Original rehearsed lookup differs from the reviewed source")
+
+
+def verify_app_run(mode):
+    app = run_record(APP_RUN, CANDIDATE, FEATURE, ".github/workflows/nova-home-intelligence.yml", "pull_request")
+    require(app["run_attempt"] == 1, "App CI is not the reviewed attempt")
+    if mode == "rehearsal":
+        require([pull["number"] for pull in app["pull_requests"]] == [PR], "App CI is not associated with PR #73")
+    check_steps(app, "verify", APP_STEPS)
+
+
 def verify_fixture_retry(parent):
     require(git("rev-list", "--parents", "-n", "1", parent).split() == [parent, FAILED_REHEARSAL_HEAD]
             and set(git("diff", "--name-only", FAILED_REHEARSAL_HEAD, parent).splitlines())
-            == {WORKFLOW, "scripts/novaos_build97_gate.py"},
+            == {WORKFLOW, GATE},
             "The fixture retry must directly follow the narrowly scoped repair on main")
     previous = api(f"actions/runs/{FAILED_REHEARSAL_RUN}")
     require(previous["id"] == FAILED_REHEARSAL_RUN and previous["head_sha"] == FAILED_REHEARSAL_HEAD
@@ -220,10 +272,9 @@ def authorize(output):
         verify_fixture_retry(parent)
         ensure_source_unchanged(parent, STABLE_MAIN)
     elif mode == "production":
-        require(pr["merged"] and pr["merge_commit_sha"] == source, "Production requires the verified PR #73 merge")
-        subprocess.run(["git", "merge-base", "--is-ancestor", CANDIDATE, source], check=True)
+        verify_merged_source(pr, source)
         subprocess.run(["git", "merge-base", "--is-ancestor", source, parent], check=True)
-        ensure_source_unchanged(source, CANDIDATE)
+        ensure_source_unchanged(parent, source)
         verify_rehearsal(marker, output)
     else:
         raise ValueError("Unknown Build 97 signing mode")
@@ -235,9 +286,7 @@ def authorize(output):
     require(api("releases/latest")["tag_name"] == "v1.7.50"
             and not any(item["ref"] == "refs/tags/v1.7.51" for item in api("git/matching-refs/tags/v1.7.51")),
             "Build 96 is no longer stable or the Build 97 tag is already in use")
-    app = run_record(APP_RUN, CANDIDATE, FEATURE, ".github/workflows/nova-home-intelligence.yml", "pull_request")
-    require([pull["number"] for pull in app["pull_requests"]] == [PR], "App CI is not associated with PR #73")
-    check_steps(app, "verify", APP_STEPS)
+    verify_app_run(mode)
     with tempfile.TemporaryDirectory(dir=output.parent) as scratch:
         evidence = Path(scratch) / "app-evidence.zip"
         artifact(APP_RUN, CANDIDATE, APP_ARTIFACT, APP_DIGEST, "nova-intelligence-android17", evidence)
@@ -261,9 +310,11 @@ def authorize(output):
 
 def verify_rehearsal(marker, output):
     rehearsal = marker["rehearsal"]
+    require(rehearsal == REHEARSAL_EVIDENCE, "Production requires the exact passing rehearsal and receipt archive")
     record = run_record(rehearsal["run"], rehearsal["head"], "main", WORKFLOW, "push")
-    require(record["actor"]["id"] == OWNER and record["run_attempt"] == 1, "Rehearsal lacks original owner authorization")
-    check_steps(record, "build97-protected", SIGNING_STEPS)
+    require(record["actor"]["id"] == OWNER and record["triggering_actor"]["id"] == OWNER
+            and record["run_attempt"] == 1, "Rehearsal lacks original owner authorization")
+    check_steps(record, "build97-protected", SIGNING_STEPS | {"Remove all Build 97 key and APK material"})
     with tempfile.TemporaryDirectory(dir=output.parent) as scratch:
         target = Path(scratch) / "verified-rehearsal.zip"
         artifact(record["id"], record["head_sha"], rehearsal["artifact"], rehearsal["sha256"],
@@ -271,10 +322,13 @@ def verify_rehearsal(marker, output):
         with zipfile.ZipFile(target) as archive:
             approval = json.loads(report_from(archive, "owner-approval.json"))
             upgrade = json.loads(report_from(archive, "build97-upgrade.json"))
-    require(approval["mode"] == "rehearsal" and approval["source"] == CANDIDATE
-            and approval["approval_commit"] == rehearsal["head"] and approval["approval_run"] == rehearsal["run"]
-            and approval["approving_id"] == OWNER and approval["inputs_sha256"] == marker["inputs_sha256"],
+    require(all(approval.get(key) == value for key, value in {
+        "mode": "rehearsal", "source": CANDIDATE, "candidate": CANDIDATE,
+        "approval_commit": rehearsal["head"], "approval_run": rehearsal["run"], "approving_id": OWNER,
+        "regression_run": APP_RUN, "regression_artifact": APP_ARTIFACT, "regression_sha256": APP_DIGEST,
+    }.items()),
             "Rehearsal receipts belong to different reviewed controls or source")
+    verify_rehearsal_controls(approval["inputs_sha256"], marker["inputs_sha256"])
     require_upgrade(upgrade, CANDIDATE)
 
 
