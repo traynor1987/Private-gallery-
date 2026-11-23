@@ -1,5 +1,6 @@
 """HTTPS integration against the real existing backend handler; isolated owner token only."""
 import json
+import os
 from http.server import ThreadingHTTPServer
 from pathlib import Path
 import ssl
@@ -24,7 +25,11 @@ class Connection86Test(unittest.TestCase):
                             '-subj', '/CN=localhost', '-addext', 'subjectAltName=DNS:localhost'],
                            check=True, capture_output=True)
             with ThreadingHTTPServer(('127.0.0.1', 0), Handler) as server:
-                with patch('server.secret', return_value='synthetic-owner-token-' * 3), patch('server.analyze') as analysis:
+                token = 'synthetic-owner-token-' * 3
+                token_file = root / 'owner-token'
+                token_file.write_text(token)
+                with patch('server.secret', return_value=token), patch('server.analyze') as analysis, \
+                     patch('server.answer_question') as answer:
                     configure(server, staging=True)
                     tls = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
                     tls.load_cert_chain(cert, key)
@@ -49,7 +54,24 @@ class Connection86Test(unittest.TestCase):
                             self.assertEqual('staging', status['model'])
                             self.assertFalse(status['analysis_enabled'])
                             self.assertIsNone(status['budget'])
+                        verification = subprocess.run(
+                            ['python3', str(Path(__file__).with_name('verify-assistant.py')), origin,
+                             '--token-file', str(token_file)],
+                            env={**os.environ, 'SSL_CERT_FILE': str(cert), 'PYTHONDONTWRITEBYTECODE': '1'},
+                            check=True, capture_output=True, text=True, timeout=15,
+                        )
+                        self.assertEqual({'authenticated': True, 'assistant_available': True, 'staging': True,
+                                          'analysis_enabled': False, 'budget_reported': False, 'consent_denied': True},
+                                         json.loads(verification.stdout))
+                        question = Request(origin + '/assistant/ask',
+                                           data=b'{"message":"Synthetic question","consent":true,"request_id":"8a7f1c99-5aaa-41a0-ae1f-cb092c39e2ca","protocol_version":2}',
+                                           headers={'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json'})
+                        with self.assertRaises(HTTPError) as denied:
+                            urlopen(question, context=trust, timeout=3)
+                        self.assertEqual(503, denied.exception.code)
+                        self.assertEqual('analysis_disabled', json.load(denied.exception)['error'])
                         analysis.assert_not_called()
+                        answer.assert_not_called()
                     finally:
                         server.shutdown()
                         worker.join()
