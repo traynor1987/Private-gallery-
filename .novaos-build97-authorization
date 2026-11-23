@@ -1,8 +1,8 @@
 {
   "candidate": "25305c69992565f5e91185f0c7362f93d092ef02",
-  "source": "25305c69992565f5e91185f0c7362f93d092ef02",
-  "mode": "rehearsal",
-  "main_parent": "c767f3086ece649f87c81e7bf998787f0db06df1",
+  "source": "6b7f1bbe40db3f213ff087833f37e05954e1c792",
+  "mode": "production",
+  "main_parent": "6b7f1bbe40db3f213ff087833f37e05954e1c792",
   "inputs_sha256": {
     ".github/workflows/sanctuary-production.yml": "dc6701b920c44488fcc8ed333b00b61cf7820c64153f22813e04b31b5a5d1ad8",
     "docs/release1711/UpgradeFixtureTest.kt": "0d1c2207aeab2ef68fe29f10b0a868914521c0d49aaea79a9e79d9b3996c6e7e",
@@ -17,5 +17,11 @@
     "scripts/verify_compiled_upgrade1711.py": "2c4ea4cddd4bda55844523c8d6055cc5a3caa18b93e0ac4d005f1cc10bd0ae15",
     "scripts/verify_evidence179_distribution.py": "ecf0f924c939fb60d5d6aa12e586394414b542c7a7fb988f5ee5fbd723d32e22",
     "scripts/verify_signed_upgrade1711.py": "3170680e165a6e571a953240246f4210906588b981ae0e4ca19e559512adbb62"
+  },
+  "rehearsal": {
+    "run": 45212815039,
+    "head": "af90a494af0a56dce973c664d1c81e22380c755c",
+    "artifact": 14838263630,
+    "sha256": "534a4c011e46cffc42c2c507c55d88fcd46569f1a741da5645abe47156edf53a"
   }
 }
