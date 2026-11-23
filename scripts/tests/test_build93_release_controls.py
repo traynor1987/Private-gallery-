@@ -27,8 +27,11 @@ class Build95ReleaseControls(unittest.TestCase):
             for step in job.get('steps', []):
                 self.assertNotRegex(step.get('run', ''), r'(?<!\[)\[[^\[\]\n]*(?:&&|\|\|)[^\[\]\n]*\](?!\])', step.get('name'))
 
-    def test_current_candidate_and_baseline_are_consistent_across_existing_controls(self):
-        build = (ROOT / 'app/build.gradle.kts').read_text()
+    def test_published_build96_and_its_baseline_are_consistent_across_existing_controls(self):
+        build = subprocess.check_output(
+            ['git', 'show', '6d91450aac55c805df5d6f0bac20164b09697ab2:app/build.gradle.kts'],
+            cwd=ROOT, text=True,
+        )
         self.assertRegex(build, r'versionCode\s*=\s*96\b')
         self.assertIn('versionName = "1.7.50"', build)
         configuration = (ROOT / 'scripts/release_configuration1711.sh').read_text()
