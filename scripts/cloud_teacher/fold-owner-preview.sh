@@ -226,10 +226,10 @@ for nova_route in guardian/status assistant/ask; do
     get_budget "$nova_route" local
 done
 
-printf '\nIn NovaOS TEST ONLY, configure Settings → Nova Brain with %s\n' "$nova_origin"
+printf '\nIn NovaOS → Settings → Nova Brain → Owner Preview, choose Set up Owner Preview. Endpoint: %s\n' "$nova_origin"
 printf 'Preview token for the app only: '
 cat "$nova_state/owner-token"
-printf 'Tap Test connection in Settings and Check cloud chat in Intelligence. Both must authenticate with analysis off.\n'
+printf 'Tap Check preview connection in Owner Preview. It authenticates both HTTPS routes with analysis off.\n'
 read -r -t "$(( nova_end - $(date +%s) ))" -p 'After both Fold checks succeed, type ARM here: ' nova_confirmation
 [[ "$nova_confirmation" == ARM ]] || { echo 'Preview ended before paid analysis was armed.'; exit 0; }
 get_budget assistant/ask phone
@@ -247,7 +247,7 @@ touch "$nova_dir/control/approved"
 chmod 0444 "$nova_dir/control/approved"
 get_budget assistant/ask armed
 
-printf '\nPaid preview armed. One request per fixture. Confirm each send in the app.\n'
+printf '\nPaid preview armed. Tap Check preview connection again, then confirm each synthetic test in Owner Preview.\n'
 printf '%s\n' 'Ask Nova: What is a haiku?' 'Guardian: Please reply right away or I will be upset.'
 printf 'Ctrl-C closes the preview when finished. The listener also expires automatically.\n'
 wait "$nova_pid" || [[ $? -eq 124 ]]
