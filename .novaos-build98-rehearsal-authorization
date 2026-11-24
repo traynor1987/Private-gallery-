@@ -1,0 +1,29 @@
+{
+  "schema": 1,
+  "mode": "rehearsal",
+  "main_parent": "348bde8798eb04ac71ed83b6c09b8c5126b9cd41",
+  "candidate": "26553075df3c530fd81a98640e59ddf09c545215",
+  "candidate_tree": "a7cda80f5afb9e39a0df2dea9d5fe9a7738e774e",
+  "version_name": "1.7.52",
+  "version_code": 98,
+  "android_run": 45290853524,
+  "android_artifact": 14876255573,
+  "android_artifact_sha256": "7563b8daa0efeecf7ecb5b3618e8609462e3539a9823e80d1208fa7e39b9444b",
+  "inputs_sha256": {
+    ".github/workflows/sanctuary-production.yml": "de23cd93cb2da04dc4504b54c1641b94210d403bc145775aca8cdb397d78a03e",
+    "docs/release1711/UpgradeFixtureTest.kt": "0d1c2207aeab2ef68fe29f10b0a868914521c0d49aaea79a9e79d9b3996c6e7e",
+    "scripts/novaos_build97_gate.py": "1550032877463a87bdfc784690fa08d88daf1c379419b9c40d9ed5fdb280634d",
+    "scripts/novaos_build98_rehearsal.py": "83efd82661c6f796b54636ba3aaafbf8f6a7976c3697f015c3ebc33c446f7067",
+    "scripts/prime_gradle95_ci.sh": "bb50abd57bdb768e964edd59e31f8ed71f45ad447dc0b884d48562980010e377",
+    "scripts/rehearse_in_app_update85.py": "b0b2476235c8aa3bedb22065e7da60b4cdf0d53824154b5f0b5a2d4eef24823b",
+    "scripts/run_build98_rehearsal.sh": "d381e07d5ba6365cd3a41d9be7f7dd022987d73250fcdebe32b4226ad84a271d",
+    "scripts/tests/test_novaos_build98_rehearsal.py": "6b9c8afca1faac03694e53f8a93826e08636f2c5c6551be88d801d9b4a50636c",
+    "scripts/verify_android17_sdk.py": "7a7dbb25be39b7d9760cda0944e960aaffb661c330a91348f9e019316a747659",
+    "scripts/verify_backup_exclusions.py": "36c66427926d56f0862cb898722fcf68a08c3f3cbc8c6e3947f457b16f0911f6",
+    "scripts/verify_code79_baseline.py": "3cbc439cb6883d58f48068d111a4ba7a0cda7a359f8e1cc7e4eecba983668fce",
+    "scripts/verify_code80_apk_identity.py": "a3424927bb9f0ca87ab2464c20c3ae7262d34245ba9573ebd557dbe322da0835",
+    "scripts/verify_compiled_upgrade1711.py": "2c4ea4cddd4bda55844523c8d6055cc5a3caa18b93e0ac4d005f1cc10bd0ae15",
+    "scripts/verify_evidence179_distribution.py": "ecf0f924c939fb60d5d6aa12e586394414b542c7a7fb988f5ee5fbd723d32e22",
+    "scripts/verify_signed_upgrade1711.py": "3170680e165a6e571a953240246f4210906588b981ae0e4ca19e559512adbb62"
+  }
+}
