@@ -6,6 +6,7 @@ import uk.co.traynor.privategallery.intelligence.IntelligenceDestination
 import uk.co.traynor.privategallery.intelligence.IntelligenceScreen
 import uk.co.traynor.privategallery.intelligence.IntelligenceWorkspace
 import uk.co.traynor.privategallery.intelligence.intelligencePrivateAllowed
+import uk.co.traynor.privategallery.intelligence.intelligenceSanctuaryStatus
 import uk.co.traynor.privategallery.launcher.GuardianHomeOptions
 import uk.co.traynor.privategallery.launcher.GuardianInboxActivity
 import uk.co.traynor.privategallery.launcher.coreApp
@@ -1305,6 +1306,7 @@ class MainActivity : FragmentActivity() {
     }
     private var launcherEntry by mutableStateOf<String?>(null)
     private var pendingCoreApp by mutableStateOf<NovaCoreApp?>(null)
+    private var pendingIntelligenceSanctuary by mutableStateOf(false)
     private var standalonePrimaryVaultChrome by mutableStateOf(false)
 
     override fun onNewIntent(intent: Intent) {
@@ -1343,6 +1345,7 @@ class MainActivity : FragmentActivity() {
 
     private fun retireWorkspaceForLauncherEntry() {
         pendingCoreApp = null
+        pendingIntelligenceSanctuary = false
         standalonePrimaryVaultChrome = false
         if (session.isUnlocked || sessionKey != null || retained.hidden.session.isUnlocked || retained.hidden.selected) {
             panicCoverPending = true
@@ -1465,9 +1468,9 @@ class MainActivity : FragmentActivity() {
                 val foregroundFocus = privacyWindowRevision
                 val resumed = activityResumed
                 val neutralPanicReady = !panicCoverPending || route==Route.LOCK || route==Route.SETUP
-                val captureAllowed = currentScreenshotPreference()
+                val captureAllowed = currentForegroundCapturePolicy()
                 androidx.compose.runtime.SideEffect {
-                    applyScreenPrivacy(captureAllowed)
+                    applyScreenPrivacy(captureAllowed && currentForegroundCapturePolicy())
                     if(resumed && neutralPanicReady) privacyCompositionCommitted(foregroundEpoch,foregroundFocus)
                 }
                 val privacyPrefs = remember(panicPreferencesRevision) { uk.co.traynor.privategallery.ui.PrivacyShieldPreferences(this) }
@@ -1871,6 +1874,7 @@ class MainActivity : FragmentActivity() {
     private fun lock() = lockPrimary(revokeHidden = true)
 
     private fun lockPrimary(revokeHidden: Boolean) {
+        pendingIntelligenceSanctuary = false
         dismissNovaBlackScreen()
         cancelPendingNovaPrivateApp()
         novaRecentsRequested=0
@@ -2464,6 +2468,8 @@ class MainActivity : FragmentActivity() {
             activityFilesTicket=if(hidden)null else novaFilesPickerTicket,
             coreAppRequest=if(hidden)null else pendingCoreApp,
             onCoreAppRequestConsumed={pendingCoreApp=null},
+            sanctuaryRequest = !hidden && pendingIntelligenceSanctuary,
+            onSanctuaryRequestConsumed = { pendingIntelligenceSanctuary = false },
             activityFilesLaunch=if(hidden)null else { request -> novaFilesFolderPicker.launch(request) },
             verifyNotebookPin=if(hidden)null else { pin ->
                 try {
@@ -2509,13 +2515,21 @@ class MainActivity : FragmentActivity() {
         IntelligenceScreen(
             active = true, guardianVisible = GuardianHomeOptions.read(this).showPage,
             protectedBySanctuary = !allowed, openPrivate = null, workspace = workspace,
+            sanctuaryStatus = sessionState?.let {
+                intelligenceSanctuaryStatus(it.mode,
+                    uk.co.traynor.privategallery.core.sanctuary.SanctuaryLauncherPolicy.isPaused(it))
+            },
             onBack = { retireWorkspaceForLauncherEntry(); finish() },
             openDestination = { destination ->
                 if (!access.current() || !activityResumed || !intelligencePrivateAllowed(this)) false
                 else when (destination) {
                     IntelligenceDestination.GUARDIAN, IntelligenceDestination.HELD -> openIntelligenceGuardian(destination)
-                    IntelligenceDestination.NOTIFICATIONS -> {
-                        startActivity(GuardianInboxActivity.safeNotificationsIntent(this)); true
+                    IntelligenceDestination.NOTIFICATIONS ->
+                        runCatching { startActivity(GuardianInboxActivity.safeNotificationsIntent(this)) }.isSuccess
+                    IntelligenceDestination.SANCTUARY -> {
+                        pendingIntelligenceSanctuary = true
+                        launcherEntry = ACTION_OPEN_PRIVATE_WORKSPACE
+                        true
                     }
                     else -> destination.coreApp?.let { app ->
                         pendingCoreApp = app
@@ -3314,11 +3328,45 @@ class MainActivity : FragmentActivity() {
         applyScreenPrivacy()
     }
 
+    private var screenshotSafeSettingsFrame: Any? = null
+
+    internal fun permitSettingsCapture(): () -> Unit {
+        val scope = Any()
+        val decor = window.decorView
+        val observer = decor.viewTreeObserver
+        var active = true
+        val committed = Runnable {
+            decor.post {
+                if (active && !isDestroyed && !isFinishing) {
+                    screenshotSafeSettingsFrame = scope
+                    applyScreenPrivacy()
+                }
+            }
+        }
+        // Wait until the safe page is drawn so the previous secure frame stays covered.
+        if (decor.isHardwareAccelerated) {
+            observer.registerFrameCommitCallback(committed)
+            decor.invalidate()
+        }
+        return {
+            active = false
+            if (observer.isAlive) observer.unregisterFrameCommitCallback(committed)
+            if (screenshotSafeSettingsFrame === scope) {
+                screenshotSafeSettingsFrame = null
+                if (!isDestroyed && !isChangingConfigurations && !isFinishing) applyScreenPrivacy()
+            }
+        }
+    }
+
     private fun currentScreenshotPreference(): Boolean =
         if (retained.hidden.selected && homeVisible) false
         else if(retained.hidden.selected && !(route==Route.GALLERY && retained.primaryGallery && !retained.hidden.visible)) hiddenAllowScreenshots else allowScreenshots
 
-    private fun applyScreenPrivacy(allowed: Boolean = currentScreenshotPreference()) {
+    private fun currentForegroundCapturePolicy(): Boolean = currentScreenshotPreference() ||
+        (screenshotSafeSettingsFrame != null && route == Route.SETTINGS && !retained.hidden.selected &&
+            !displayPrivateHome() && evidenceOwner == null && vaultCamera == null)
+
+    private fun applyScreenPrivacy(allowed: Boolean = currentForegroundCapturePolicy()) {
         if (allowed && activityResumed && !privacyCoverVisible() && privacyWindows.hasFocus() && permissionWindows.isEmpty() && protectedPages.isEmpty()) {
             if(!privacyWindows.restore(true)) {lock();return}
             window.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)
@@ -5108,6 +5156,12 @@ internal fun SettingsHome(
     val versionPresentation = uk.co.traynor.privategallery.core.ui.InAppVersionPresentation(hideContent,BuildConfig.VERSION_NAME,BuildConfig.VERSION_CODE)
     val showHiddenSettings = !hideContent && hiddenBrowserSettings != null
     var category by remember { mutableStateOf<SettingsCategory?>(null) }
+    val permitsCapture = !hideContent && !showHiddenSettings &&
+        (category == null || category == SettingsCategory.NOVA_BRAIN)
+    DisposableEffect(updateOwner, permitsCapture) {
+        val releaseCapture = if (permitsCapture) updateOwner?.permitSettingsCapture() else null
+        onDispose { releaseCapture?.invoke() }
+    }
     RefreshUpdatesOnAboutEntry(category == SettingsCategory.ABOUT, liveUpdater)
     val diagnosticsGate = remember { uk.co.traynor.privategallery.core.browser.hidden.OwnerDiagnosticsGate(android.os.SystemClock::elapsedRealtime) }
     var diagnosticsAuthenticated by remember { mutableStateOf(false) }
@@ -5171,7 +5225,7 @@ internal fun SettingsHome(
                                 val summary = when (destination) {
                                     SettingsCategory.SECURITY -> "Panic Exit, PIN, biometrics and auto-lock"
                                     SettingsCategory.BROWSER -> if (showHiddenSettings) "Connection mode and private browsing data" else "${browserSearchEngine.label} · History ${if (browserSaveHistory) "on" else "off"}"
-                                    SettingsCategory.VPN -> uk.co.traynor.privategallery.core.vpn.VpnProfilePresentation.from(vpnProfiles, vpnConnectionState).let { "${it.selectedProfileName} · ${it.connectionLabel}" }
+                                    SettingsCategory.VPN -> uk.co.traynor.privategallery.core.vpn.VpnProfilePresentation.from(vpnProfiles, vpnConnectionState).connectionLabel
                                     SettingsCategory.AI -> uk.co.traynor.privategallery.core.editor.AiProviderRegistry.choice.label
                                     SettingsCategory.ABOUT -> versionPresentation.installed()
                                     else -> destination.summary
@@ -5298,7 +5352,7 @@ internal fun SettingsHome(
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
                 Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
                     Text("Allow screenshots", style = MaterialTheme.typography.titleMedium)
-                    Text("Allows capture on eligible app screens. PIN/password entry, AI credentials, export passwords, Recents and background privacy covers remain protected. Android or protected website content may still block capture.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text("Controls capture on eligible private screens. General settings and redacted Nova Brain status can be captured. PIN entry, credential dialogs, export passwords, Recents and background privacy covers remain protected.", color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 androidx.compose.material3.Switch(
                     modifier = Modifier.testTag("privacy-allow-screenshots"),

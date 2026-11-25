@@ -9,9 +9,11 @@ concurrency:
   cancel-in-progress: true
 jobs:
   verify:
-    if: github.head_ref == 'feature/nova-home-intelligence'
+    if: github.head_ref == 'feature/nova-home-intelligence' || github.head_ref == 'repair/build-98-nova-intelligence'
     runs-on: ubuntu-24.04
     timeout-minutes: 45
+    env:
+      NOVA_INTELLIGENCE_VISUALS: ${{ github.head_ref == 'repair/build-98-nova-intelligence' }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -73,6 +75,8 @@ jobs:
             adb shell wm size 1200x1800
             adb shell wm density 160
             bash scripts/run_guardian_notification_pipeline93.sh GuardianFoldNotificationTest guardian-fold-notification
+            if [ "$NOVA_INTELLIGENCE_VISUALS" = true ]; then bash scripts/run_visual_checkpoint.sh GuardianEvidence90RuntimeTest guardian-evidence-90 uk.co.traynor.privategallery.core.guardian; fi
+            if [ "$NOVA_INTELLIGENCE_VISUALS" = true ]; then bash scripts/run_visual_checkpoint.sh SanctuaryAccessibilityUiTest intelligence-sanctuary-accessibility uk.co.traynor.privategallery.home2 blockedAppMovesToHomeAndIsNotRestoredAtNaturalExpiry; fi
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -82,4 +86,6 @@ jobs:
             app/build/home2-evidence/guardian-notification-pipeline-93
             app/build/home2-evidence/guardian-fold-notification
             app/build/home2-evidence/launcher-process-70
+            app/build/home2-evidence/guardian-evidence-90
+            app/build/home2-evidence/intelligence-sanctuary-accessibility
             app/build/test-results/testDebugUnitTest

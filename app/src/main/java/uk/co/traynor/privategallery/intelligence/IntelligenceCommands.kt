@@ -5,6 +5,7 @@ import java.util.Locale
 
 internal sealed interface IntelligenceCommand {
     data class Briefing(val day: LocalDate) : IntelligenceCommand
+    data object Reminders : IntelligenceCommand
     data object Notifications : IntelligenceCommand
     data object Held : IntelligenceCommand
     data object Inbox : IntelligenceCommand
@@ -32,10 +33,13 @@ internal fun intelligenceCommand(input: String, today: LocalDate): IntelligenceC
         else -> null
     }
     return when {
-        normal in setOf("what have i missed today", "what's on today", "whats on today", "summarise my day", "summarize my day", "today", "briefing") ->
+        normal in setOf("what have i missed today", "what's on today", "whats on today", "what is on today",
+            "what do i have today", "summarise my day", "summarize my day", "today", "briefing", "daily summary") ->
             IntelligenceCommand.Briefing(today)
-        normal in setOf("what's on tomorrow", "whats on tomorrow", "what is on tomorrow", "tomorrow") ->
+        normal in setOf("what's on tomorrow", "whats on tomorrow", "what is on tomorrow", "what do i have tomorrow", "tomorrow") ->
             IntelligenceCommand.Briefing(today.plusDays(1))
+        normal in setOf("reminders", "my reminders", "upcoming reminders", "show my reminders", "what reminders do i have") ->
+            IntelligenceCommand.Reminders
         normal in setOf("any important messages", "important messages", "notifications", "safe notifications") ->
             IntelligenceCommand.Notifications
         normal in setOf("show my held messages", "held messages", "show held messages") -> IntelligenceCommand.Held
@@ -72,7 +76,7 @@ internal enum class IntelligenceDestination { NOTES, TASKS, CALENDAR, GUARDIAN, 
 
 internal fun intelligenceDestination(name: String): IntelligenceDestination? = when (name.lowercase(Locale.ROOT)) {
     "notes", "nova notes" -> IntelligenceDestination.NOTES
-    "tasks", "nova tasks" -> IntelligenceDestination.TASKS
+    "tasks", "nova tasks", "reminders", "my reminders" -> IntelligenceDestination.TASKS
     "calendar", "nova calendar" -> IntelligenceDestination.CALENDAR
     "guardian", "guardian inbox", "nova guardian" -> IntelligenceDestination.GUARDIAN
     "safe notifications", "notifications" -> IntelligenceDestination.NOTIFICATIONS
@@ -83,5 +87,3 @@ internal fun intelligenceDestination(name: String): IntelligenceDestination? = w
 internal data class IntelligenceApp(val label: String, val component: String)
 internal fun intelligenceApp(name: String, approved: List<IntelligenceApp>) =
     approved.singleOrNull { it.label.equals(name, ignoreCase = true) }
-
-internal data class IntelligenceExchange(val question: String, val answer: String, val cloud: Boolean = false)

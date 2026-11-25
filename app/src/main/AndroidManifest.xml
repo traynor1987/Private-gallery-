@@ -116,6 +116,7 @@
     <activity
         android:name=".MainActivity"
         android:configChanges="orientation|screenSize|smallestScreenSize|screenLayout|keyboardHidden|density"
+        android:windowSoftInputMode="adjustResize"
         android:exported="false">
       <property android:name="android.window.PROPERTY_COMPAT_ALLOW_RESTRICTED_RESIZABILITY" android:value="true" />
     </activity>
@@ -129,10 +130,12 @@
     </activity>
     <activity
         android:name=".launcher.NovaLauncherActivity"
+        android:configChanges="orientation|screenSize|smallestScreenSize|screenLayout|keyboardHidden|density"
         android:label="@string/nova_launcher_name"
         android:exported="true"
         android:excludeFromRecents="true"
         android:launchMode="singleTask"
+        android:windowSoftInputMode="adjustResize"
         android:taskAffinity="${applicationId}.novalauncher">
       <intent-filter>
         <action android:name="android.intent.action.MAIN" />

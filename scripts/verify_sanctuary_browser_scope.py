@@ -171,8 +171,8 @@ for revision in (("HEAD",), ()):
     assert not unexpected, f"Unexpected protected-core changes: {sorted(unexpected)}"
 
 build_file = "app/build.gradle.kts"
-expected = original(build_file).replace("versionCode = 69", "versionCode = 97", 1).replace(
-    'versionName = "1.7.34"', 'versionName = "1.7.51"', 1,
+expected = original(build_file).replace("versionCode = 69", "versionCode = 98", 1).replace(
+    'versionName = "1.7.34"', 'versionName = "1.7.52"', 1,
 )
 debug_version = """
 // The isolated Fold preview advances independently of the production release.
@@ -203,12 +203,16 @@ after = ET.parse(ROOT / MANIFEST).getroot()
 application = after.find("application")
 launcher, = [node for node in application.findall("activity")
              if node.get(ANDROID + "name") == ".launcher.NovaLauncherActivity"]
-assert launcher.get(ANDROID + "exported") == "true", "Android must be able to start Home"
-assert launcher.get(ANDROID + "launchMode") == "singleTask"
-assert launcher.get(ANDROID + "excludeFromRecents") == "true"
-assert launcher.get(ANDROID + "taskAffinity") not in (
-    None, "", "${applicationId}", "uk.co.traynor.privategallery"
-), "The launcher and private workspace must have independent tasks"
+assert launcher.attrib == {
+    ANDROID + "name": ".launcher.NovaLauncherActivity",
+    ANDROID + "configChanges": "orientation|screenSize|smallestScreenSize|screenLayout|keyboardHidden|density",
+    ANDROID + "label": "@string/nova_launcher_name",
+    ANDROID + "exported": "true",
+    ANDROID + "excludeFromRecents": "true",
+    ANDROID + "launchMode": "singleTask",
+    ANDROID + "windowSoftInputMode": "adjustResize",
+    ANDROID + "taskAffinity": "${applicationId}.novalauncher",
+}, "Unexpected launcher component, task isolation or window change"
 intent_filter, = launcher.findall("intent-filter")
 assert [node.get(ANDROID + "name") for node in intent_filter.findall("action")] == ["android.intent.action.MAIN"]
 assert {node.get(ANDROID + "name") for node in intent_filter.findall("category")} == {
@@ -216,6 +220,14 @@ assert {node.get(ANDROID + "name") for node in intent_filter.findall("category")
 }
 assert len(launcher) == 1 and len(intent_filter) == 3
 application.remove(launcher)
+
+# Ask Nova also opens in the private workspace. Only permit the input resize flag there;
+# all existing workspace attributes and descendants remain compared to the protected baseline.
+baseline_workspace, = [node for node in before.find("application").findall("activity")
+                       if node.get(ANDROID + "name") == ".MainActivity"]
+assert ANDROID + "windowSoftInputMode" not in baseline_workspace.attrib
+baseline_workspace.set(ANDROID + "windowSoftInputMode", "adjustResize")
+
 queries = after.find("queries")
 widget_bind, = [intent for intent in queries.findall("intent") if
                 [node.get(ANDROID + "name") for node in intent.findall("action")] ==

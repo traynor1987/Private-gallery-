@@ -2,40 +2,25 @@ package uk.co.traynor.privategallery.intelligence
 
 import android.content.Context
 import androidx.activity.compose.BackHandler
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.text.KeyboardActions
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.Send
-import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.FocusManager
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.semantics.heading
-import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.repeatOnLifecycle
-import java.time.LocalDate
 import java.time.LocalTime
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
-import java.time.format.FormatStyle
-import java.util.UUID
 import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
@@ -46,30 +31,11 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import uk.co.traynor.privategallery.core.brain.CloudTeacherException
-import uk.co.traynor.privategallery.core.brain.NovaBrainConnectionStore
 import uk.co.traynor.privategallery.core.guardian.GuardianCaptureStore
 import uk.co.traynor.privategallery.launcher.GuardianAlertDialog
-import uk.co.traynor.privategallery.launcher.GuardianBorder
-import uk.co.traynor.privategallery.launcher.GuardianMint
 import uk.co.traynor.privategallery.launcher.GuardianMuted
 import uk.co.traynor.privategallery.launcher.GuardianNavy
 import uk.co.traynor.privategallery.launcher.GuardianTheme
-import uk.co.traynor.privategallery.launcher.LauncherExpandedWidth
-import uk.co.traynor.privategallery.launcher.guardianCardColors
-
-internal class IntelligenceConversation {
-    val history = mutableStateOf(emptyList<IntelligenceExchange>())
-    val input = mutableStateOf("")
-    val taskDate = mutableStateOf<LocalDate?>(null)
-    val showCoverChat = mutableStateOf(false)
-
-    fun clear() {
-        history.value = emptyList()
-        input.value = ""
-        taskDate.value = null
-    }
-}
 
 private data class IntelligenceConfirmation(val title: String, val detail: String, val label: String, val action: () -> Unit)
 
@@ -87,12 +53,14 @@ internal fun IntelligenceScreen(
     onBack: (() -> Unit)? = null,
     emailProvider: IntelligenceEmailProvider = disconnectedIntelligenceEmail,
     conversation: IntelligenceConversation = remember(protectedBySanctuary) { IntelligenceConversation() },
+    sanctuaryStatus: String? = null,
+    assistant: IntelligenceAssistant? = null,
 ) {
     GuardianTheme {
         Surface(Modifier.fillMaxSize().testTag("nova-home-intelligence"), color = GuardianNavy) {
             if (active) key(protectedBySanctuary) {
                 IntelligenceContent(guardianVisible, protectedBySanctuary, openPrivate, openDestination,
-                    workspace, apps, openApp, openEvidence, onBack, emailProvider, conversation)
+                    workspace, apps, openApp, openEvidence, onBack, emailProvider, conversation, sanctuaryStatus, assistant)
             }
         }
     }
@@ -112,9 +80,13 @@ private fun IntelligenceContent(
     onBack: (() -> Unit)?,
     emailProvider: IntelligenceEmailProvider,
     chatSession: IntelligenceConversation,
+    sanctuaryStatus: String?,
+    assistantOverride: IntelligenceAssistant?,
 ) {
     val context = LocalContext.current.applicationContext
     val lifecycle = LocalLifecycleOwner.current.lifecycle
+    val assistant = remember(context, assistantOverride) { assistantOverride ?: NovaIntelligenceAssistant(context) }
+    val previewRevision by OwnerPreviewStore.changes.collectAsState()
     val archiveRevision by GuardianCaptureStore.archiveChanges.collectAsState()
     val briefingRevision by IntelligenceBriefings.revision.collectAsState()
     val ownerScope = rememberCoroutineScope()
@@ -128,10 +100,15 @@ private fun IntelligenceContent(
     var agenda by remember { mutableStateOf<Result<IntelligenceAgenda>?>(null) }
     var agendaRevision by remember { mutableIntStateOf(0) }
     var chat by chatSession.history
-    var memory by remember { mutableStateOf<IntelligenceMemory?>(null) }
+    var memory by remember(workspace) { mutableStateOf<IntelligenceMemory?>(null) }
+    var briefingName by remember(workspace) { mutableStateOf<String?>(null) }
     var input by chatSession.input
-    var busy by remember { mutableStateOf(false) }
-    var feedback by remember { mutableStateOf<String?>(null) }
+    var workBusy by remember { mutableStateOf(false) }
+    val activeCloud by chatSession.activeCloud
+    val activeCloudQuestion = activeCloud?.question
+    val retryCloud by chatSession.retryCloud
+    val busy = workBusy || activeCloud != null
+    var feedback by chatSession.feedback
     var confirmation by remember { mutableStateOf<IntelligenceConfirmation?>(null) }
     var manageMemory by remember { mutableStateOf(false) }
     var scheduleOpen by remember { mutableStateOf(false) }
@@ -141,11 +118,17 @@ private fun IntelligenceContent(
     val today = now.toLocalDate()
 
     BackHandler(enabled = onBack != null) { onBack?.invoke() }
-    DisposableEffect(lifecycle, ownerScope) {
+    DisposableEffect(lifecycle, ownerScope, chatSession) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_PAUSE) {
                 confirmation = null
+                chatSession.cancelCloud()
                 ownerScope.coroutineContext.cancelChildren()
+            }
+            if (event == Lifecycle.Event.ON_STOP && openPrivate == null) {
+                chatSession.clear()
+                memory = null
+                briefingName = null
             }
         }
         lifecycle.addObserver(observer)
@@ -173,10 +156,16 @@ private fun IntelligenceContent(
             }
         }
     }
-    LaunchedEffect(lifecycle, privateAllowed) {
+    LaunchedEffect(lifecycle, protectedBySanctuary, previewRevision, emailProvider, assistant) {
         lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
             connection = withContext(Dispatchers.IO) {
-                runCatching { intelligenceConnection(context) }.getOrDefault("Connection settings unavailable · local commands available")
+                runCatching {
+                    when {
+                        protectedBySanctuary -> "Cloud chat paused during Sanctuary"
+                        assistant.previewEnabled() -> "Owner Preview enabled · approved synthetic test only"
+                        else -> intelligenceConnection(context)
+                    }
+                }.getOrDefault("Connection settings unavailable · local commands available")
             }
             email = withContext(Dispatchers.IO) {
                 runCatching {
@@ -189,29 +178,57 @@ private fun IntelligenceContent(
     LaunchedEffect(workspace, privateAllowed, today, agendaRevision, lifecycle) {
         if (privateAllowed) lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
             agenda = withContext(Dispatchers.IO) {
-                runCatching { checkNotNull(workspace).agenda(today, today.plusDays(7), now.zone, includeOverdue = true) }
+                runCatching { checkNotNull(workspace).agenda(today, today.plusDays(7), now.zone,
+                    includeOverdue = true, upcomingFrom = now.toInstant()) }
             }
         } else agenda = null
     }
-    LaunchedEffect(workspace, privateAllowed) {
+    LaunchedEffect(workspace, privateAllowed, lifecycle) {
         if (!privateAllowed) {
             memory = null
+            briefingName = null
             if (openPrivate == null) {
-                chat = emptyList()
-                input = ""
+                chatSession.clear()
                 confirmation = null
             }
         }
-        if (privateAllowed) memory = withContext(Dispatchers.IO) { runCatching { workspace?.memory() }.getOrNull() }
+        if (privateAllowed) lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
+            val (stored, name) = withContext(Dispatchers.IO) {
+                runCatching { workspace?.memory() }.getOrNull() to
+                    runCatching { workspace?.briefingName() }.getOrNull()
+            }
+            if (memory == null && stored?.autoSave == true) {
+                chat = (stored.exchanges + chat).takeLast(IntelligenceWorkspace.HISTORY_LIMIT)
+            }
+            memory = stored
+            briefingName = name
+        }
     }
 
-    fun respond(question: String, answer: String, cloud: Boolean = false) {
-        chat = (chat + IntelligenceExchange(question, answer, cloud)).takeLast(IntelligenceWorkspace.HISTORY_LIMIT)
+    LaunchedEffect(workspace, privateAllowed, chat, memory?.autoSave) {
+        val saved = memory
+        if (!privateAllowed || saved?.autoSave != true || chat == saved.exchanges) return@LaunchedEffect
+        val ownerWorkspace = workspace ?: return@LaunchedEffect
+        val history = chat
+        val generation = ownerWorkspace.memoryGeneration()
+        val result = withContext(Dispatchers.IO) {
+            val operation = coroutineContext.job
+            runCatching { ownerWorkspace.saveAutomaticMemory(history, generation) { operation.isActive } }
+        }
+        if (result.isSuccess && result.getOrThrow() && memory?.autoSave == true) {
+            memory = saved.copy(exchanges = history)
+        } else if (result.isFailure && lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) {
+            feedback = "The latest messages could not be saved in encrypted assistant memory."
+        }
     }
 
-    fun <T> runWork(error: String, work: (Job) -> T, done: (T) -> Unit) {
-        if (busy || !lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) return
-        busy = true
+    fun respond(question: String, answer: String) {
+        chatSession.append(question, answer)
+    }
+
+    fun <T> runWork(error: String, work: suspend (Job) -> T, done: (T) -> Unit) {
+        if (workBusy || chatSession.activeCloud.value != null || !lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) return
+        workBusy = true
         feedback = null
         ownerScope.launch(start = CoroutineStart.UNDISPATCHED) {
             try {
@@ -223,7 +240,7 @@ private fun IntelligenceContent(
             } catch (_: Exception) {
                 feedback = error
             } finally {
-                busy = false
+                workBusy = false
             }
         }
     }
@@ -248,19 +265,23 @@ private fun IntelligenceContent(
 
     fun checkCloudChat() {
         if (protectedBySanctuary) return
-        runWork("Nova Brain connection settings are unavailable.", work = {
-            val configuration = NovaBrainConnectionStore(context).read()
-            if (configuration == null) "Cloud is disconnected. Configure Nova Brain in Settings."
-            else if (!intelligencePrivateAllowed(context)) "Cloud chat is paused during Sanctuary."
-            else try {
-                IntelligenceCloud().status(configuration).unavailableMessage
-                    ?: "Cloud chat is authenticated and within the current spending limits."
-            } catch (missing: IntelligenceRouteUnavailable) {
-                checkNotNull(missing.message)
-            } catch (failure: CloudTeacherException) {
-                failure.failure.userMessage
+        connection = "Checking Nova Brain connection…"
+        runWork("Nova Brain connection settings are unavailable.", work = { job ->
+            assistant.check {
+                job.isActive && lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)
             }
         }) { status -> connection = status }
+    }
+
+    fun confirmCloud(request: IntelligenceCloudRequest) {
+        val preview = request.mode == IntelligenceCloudMode.OWNER_PREVIEW
+        val title = if (preview) "Send synthetic question to Owner Preview?" else "Send one question to Nova Brain?"
+        val destination = if (preview) "your separate Owner Preview on the Nova Brain VPS" else "your configured Nova Brain VPS"
+        confirm(title, "This exact text goes to $destination and OpenAI. The server’s paid-request limits apply.\n\n${request.payload}", "Send question") {
+            chatSession.sendCloud(request, ownerScope, assistant) {
+                !protectedBySanctuary && lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)
+            }
+        }
     }
 
     fun askCloud(question: String) {
@@ -268,38 +289,45 @@ private fun IntelligenceContent(
             respond(question, "Cloud questions are paused during Sanctuary. Local app shortcuts are available.")
             return
         }
-        confirm("Send one question to Nova Brain?", "This exact text goes to your configured VPS and OpenAI. The server’s paid-request limits apply.\n\n$question", "Send question") {
-            val requestId = UUID.randomUUID().toString()
-            runWork("Nova Brain is unavailable. Local commands are still available.", work = { job ->
-                val store = NovaBrainConnectionStore(context)
-                try {
-                    val configuration = store.read()
-                    if (configuration == null) "Cloud is disconnected. You can configure Nova Brain in Settings or use local commands." to false
-                    else if (!intelligencePrivateAllowed(context) || !job.isActive ||
-                        !lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) {
-                        "Cloud chat is paused. Local commands are available." to false
-                    } else {
-                        val client = IntelligenceCloud()
-                        val status = client.status(configuration)
-                        val unavailable = status.unavailableMessage
-                        if (unavailable != null) "$unavailable Local commands are available." to false
-                        else client.ask(configuration, question, approved = true, requestId, status) {
-                            job.isActive && lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED) &&
-                                intelligencePrivateAllowed(context) && store.read() == configuration
-                        } to true
-                    }
-                } catch (missing: IntelligenceRouteUnavailable) {
-                    "${missing.message} Local commands are available." to false
-                } catch (failure: CloudTeacherException) {
-                    failure.failure.userMessage to false
+        val preview = assistant.previewEnabled()
+        val mode = if (preview) IntelligenceCloudMode.OWNER_PREVIEW else IntelligenceCloudMode.CONFIGURED_BRAIN
+        val fixture = OwnerPreviewTest.ASK_NOVA.fixture
+        if (preview && !question.equals(fixture, ignoreCase = true)) {
+            respond(question, "Owner Preview accepts one approved Ask Nova question. Try “$fixture” or use a local command.")
+            return
+        }
+        val allowedQuestion = if (preview) fixture else question
+        val request = chatSession.retainedRequest(allowedQuestion, mode)
+            ?: IntelligenceCloudRequest.prepare(allowedQuestion, chat, mode)
+        confirmCloud(request)
+    }
+
+    fun retryCloudQuestion() {
+        if (!busy && confirmation == null) retryCloud?.let(::confirmCloud)
+    }
+
+    fun cancelCloudQuestion() = chatSession.cancelCloud()
+
+    fun clearConversation() {
+        if (busy || confirmation != null) return
+        val detail = if (privateAllowed) "This clears the chat here and in encrypted assistant memory."
+            else "This clears the chat on this launcher screen."
+        confirm("Clear conversation?", detail, "Clear conversation") {
+            if (!privateAllowed) chatSession.clear()
+            else {
+                val autoSave = memory?.autoSave == true
+                val empty = IntelligenceMemory(autoSave, emptyList(), autoSave = autoSave)
+                runWork("Could not clear encrypted assistant memory.", { checkNotNull(workspace).saveMemory(empty) }) {
+                    memory = empty
+                    chatSession.clear()
                 }
-            }) { (answer, cloud) -> respond(question, answer, cloud) }
+            }
         }
     }
 
     fun send() {
         val question = input.trim()
-        if (question.isEmpty() || busy || confirmation != null) return
+        if (question.isEmpty() || busy || confirmation != null || chatSession.activeCloud.value != null) return
         input = ""
         focus.clearFocus()
         privatePrompt = false
@@ -322,9 +350,16 @@ private fun IntelligenceContent(
                     }) { brief ->
                         respond(question, listOfNotNull(message.takeIf(String::isNotEmpty),
                             agendaLine("Tasks", brief.tasks), agendaLine("Calendar", brief.events),
-                            agendaLine("Reminders", brief.reminders)).joinToString("\n"))
+                            agendaLine("Reminders", brief.reminders), brief.unscheduledTasks.takeIf { command.day == today && it.isNotEmpty() }
+                                ?.let { agendaLine("Open tasks without a due date", it) }).joinToString("\n"))
                     }
                 }
+            }
+            IntelligenceCommand.Reminders -> if (!privateAllowed) requirePrivate(question) else {
+                runWork("Could not read upcoming reminders.", work = {
+                    checkNotNull(workspace).agenda(today, today.plusDays(7), now.zone,
+                        includeOverdue = false, upcomingFrom = now.toInstant())
+                }) { brief -> respond(question, agendaLine("Upcoming reminders", brief.reminders)) }
             }
             IntelligenceCommand.Notifications -> respond(question, guardian?.let {
                 "${it.newToday} messages captured today. ${it.importantToday} flagged for attention. Open Safe Notifications for the approved list."
@@ -400,120 +435,70 @@ private fun IntelligenceContent(
     val briefing = remember(briefingRevision, now, protectedBySanctuary) {
         if (protectedBySanctuary) null else IntelligenceBriefings.ready(context, now)
     }
-    val layout: @Composable (Modifier) -> Unit = { modifier ->
-        Column(modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Text(now.format(DateTimeFormatter.ofLocalizedDate(FormatStyle.FULL)), color = GuardianMuted,
-                style = MaterialTheme.typography.labelLarge)
-            val greeting = when (now.hour) {
-                in 0..11 -> "Good morning"
-                in 12..17 -> "Good afternoon"
-                else -> "Good evening"
-            }
-            Text(greeting, style = MaterialTheme.typography.headlineMedium, modifier = Modifier.semantics { heading() })
-            briefing?.let { Text("$it briefing ready", color = GuardianMint) }
-            IntelligenceCard("Daily briefing") {
-                Text(guardian?.let { "${it.newToday} Guardian captures today · ${it.importantToday} flagged for attention" }
-                    ?: "Guardian activity · $guardianState")
-                Text(connection, color = GuardianMuted, modifier = Modifier.testTag("intelligence-connection"))
-                if (!protectedBySanctuary) {
-                    TextButton(enabled = !busy, onClick = ::checkCloudChat) { Text("Check cloud chat") }
-                }
-                Text(email ?: "Checking email connection…", color = GuardianMuted)
-                TextButton(enabled = !protectedBySanctuary, onClick = { navigate(IntelligenceDestination.NOTIFICATIONS) }) {
-                    Text("Safe Notifications")
-                }
-            }
-            IntelligenceCard("Guardian") {
-                Text(guardianState)
-                guardian?.let {
-                    Text("${it.retained} captured  ·  ${it.safe} safe  ·  ${it.held} held", style = MaterialTheme.typography.titleMedium)
-                    Text("${it.pending} awaiting analysis · ${it.reviewable} ready for review", color = GuardianMuted)
-                    Text(if (it.evidencePresent) "Encrypted archive on this device" else "No preserved captures", color = GuardianMuted)
-                }
-                TextButton(enabled = guardianVisible && !protectedBySanctuary, onClick = {
+    var showChat by chatSession.showCoverChat
+    var manageName by remember { mutableStateOf(false) }
+    IntelligenceExperience(
+        onBack = onBack,
+        showChat = showChat,
+        onShowChat = { next ->
+            if (!next) focus.clearFocus()
+            showChat = next
+        },
+        protected = protectedBySanctuary,
+        feedback = feedback,
+        dashboard = { modifier ->
+            IntelligenceDashboard(
+                modifier = modifier,
+                now = now,
+                briefingName = briefingName,
+                readyBriefing = briefing,
+                guardian = guardian,
+                guardianState = guardianState,
+                sanctuaryStatus = sanctuaryStatus,
+                protected = protectedBySanctuary,
+                guardianVisible = guardianVisible,
+                connection = connection,
+                email = email,
+                agenda = agenda,
+                primaryUnlocked = privateAllowed,
+                busy = busy,
+                onUnlock = openPrivate,
+                onCloudCheck = ::checkCloudChat,
+                onShortcut = ::navigate,
+                onInbox = {
                     confirm("Open Guardian Inbox?", "Guardian will apply its own authentication and review rules.",
                         "Open Guardian") { navigate(IntelligenceDestination.GUARDIAN) }
-                }) { Text("Open Guardian Inbox") }
-            }
-            IntelligenceCard("Tasks & calendar") {
-                val upcoming = agenda?.getOrNull()
-                when {
-                    protectedBySanctuary -> Text("Private briefing paused during Sanctuary")
-                    workspace == null -> {
-                        Text("Unlock Primary Space to see upcoming tasks, events and reminders.")
-                        TextButton(onClick = { openPrivate?.invoke() }, enabled = openPrivate != null) { Text("Unlock private briefing") }
-                    }
-                    agenda == null -> LinearProgressIndicator(Modifier.fillMaxWidth())
-                    upcoming == null -> Text("Tasks and calendar unavailable")
-                    else -> {
-                        AgendaItems("Tasks", upcoming.tasks, "No tasks due in the next seven days")
-                        AgendaItems("Calendar", upcoming.events, "No events in the next seven days")
-                        AgendaItems("Reminders", upcoming.reminders, "No reminders on this agenda")
-                    }
-                }
-                FlowRow {
-                    TextButton(onClick = { navigate(IntelligenceDestination.TASKS) }) { Text("Nova Tasks") }
-                    TextButton(onClick = { navigate(IntelligenceDestination.CALENDAR) }) { Text("Nova Calendar") }
-                }
-            }
-            if (workspace != null && privateAllowed) {
-                TextButton(onClick = { scheduleOpen = true }) { Text("Briefing schedule") }
-            }
-        }
-    }
+                },
+                onSchedule = { scheduleOpen = true },
+                onName = { manageName = true },
+            )
+        },
+        conversation = { modifier, expanded ->
+            IntelligenceChat(
+                modifier = modifier,
+                expanded = expanded,
+                exchanges = chat,
+                zone = now.zone,
+                input = input,
+                onInput = { input = it.take(IntelligenceCloudRequest.QUESTION_LIMIT).dropLastWhile(Char::isHighSurrogate) },
+                onSend = ::send,
+                busy = busy,
+                pendingQuestion = activeCloudQuestion,
+                retryAvailable = retryCloud != null,
+                onCancel = ::cancelCloudQuestion,
+                onRetry = ::retryCloudQuestion,
+                privatePrompt = privatePrompt,
+                onUnlock = openPrivate,
+                onMemory = if (privateAllowed) ({ manageMemory = true }) else null,
+                onClear = ::clearConversation,
+            )
+        },
+    )
 
-    val conversation: @Composable (Modifier) -> Unit = { modifier ->
-        Column(modifier, verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            IntelligenceCard("Ask Nova") {
-                Text("Try “Summarise my day”, “What’s on tomorrow?” or “Open Nova Notes”.", color = GuardianMuted)
-                if (workspace != null && privateAllowed) {
-                    TextButton(onClick = { manageMemory = true }, enabled = !busy) { Text("Assistant memory") }
-                }
-            }
-            val scroll = rememberScrollState()
-            LaunchedEffect(chat.size, busy) { scroll.scrollTo(scroll.maxValue) }
-            Column(Modifier.weight(1f).fillMaxWidth().verticalScroll(scroll),
-                verticalArrangement = Arrangement.spacedBy(9.dp)) {
-                chat.forEach { message ->
-                    Surface(color = MaterialTheme.colorScheme.secondaryContainer, shape = MaterialTheme.shapes.medium,
-                        modifier = Modifier.align(Alignment.End)) {
-                        Text(message.question, Modifier.padding(12.dp))
-                    }
-                    IntelligenceCard(if (message.cloud) "Nova Brain · cloud" else "Nova · local") { Text(message.answer) }
-                }
-                if (privatePrompt) TextButton(onClick = { openPrivate?.invoke() }) { Text("Continue in private briefing") }
-                if (busy) LinearProgressIndicator(Modifier.fillMaxWidth())
-            }
-            IntelligenceInput(input, { input = it.take(600) }, busy, focus) { send() }
-        }
-    }
-
-    // The cover uses tabs. The inner screen keeps the briefing and chat in sight.
-    BoxWithConstraints(Modifier.fillMaxSize().then(if (onBack != null) Modifier.safeDrawingPadding() else Modifier)
-        .imePadding().padding(horizontal = 16.dp, vertical = 10.dp)) {
-        val expanded = maxWidth >= (LauncherExpandedWidth - 32).dp
-        var showChat by chatSession.showCoverChat
-        Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                if (onBack != null) IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back") }
-                Icon(Icons.Filled.AutoAwesome, null, tint = GuardianMint, modifier = Modifier.size(20.dp))
-                Text("Nova Intelligence", style = MaterialTheme.typography.titleLarge,
-                    modifier = Modifier.weight(1f).semantics { heading() })
-            }
-            feedback?.let { Text(it, color = MaterialTheme.colorScheme.error) }
-            if (expanded) {
-                Row(Modifier.weight(1f).testTag("intelligence-inner"), horizontalArrangement = Arrangement.spacedBy(18.dp)) {
-                    layout(Modifier.weight(1f).fillMaxHeight())
-                    conversation(Modifier.weight(1f).fillMaxHeight())
-                }
-            } else {
-                Row(Modifier.testTag("intelligence-cover"), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    FilterChip(!showChat, onClick = { showChat = false }, label = { Text("Briefing") })
-                    FilterChip(showChat, onClick = { showChat = true }, label = { Text("Ask Nova") })
-                }
-                if (showChat) conversation(Modifier.weight(1f).fillMaxWidth())
-                else layout(Modifier.weight(1f).fillMaxWidth())
-            }
+    if (manageName && privateAllowed) IntelligenceNameDialog(briefingName, onClose = { manageName = false }) { name ->
+        manageName = false
+        runWork("Could not save the greeting name.", work = { checkNotNull(workspace).saveBriefingName(name) }) {
+            briefingName = name
         }
     }
 
@@ -530,39 +515,53 @@ private fun IntelligenceContent(
             dismissButton = { TextButton(onClick = { confirmation = null }) { Text("Cancel") } })
     }
     if (manageMemory && privateAllowed) {
+        val autoSave = memory?.autoSave == true
+        fun setAutomaticSave(enable: Boolean) {
+            val stored = memory?.exchanges.orEmpty()
+            val snapshot = IntelligenceMemory(true, if (enable) chat.ifEmpty { stored } else stored, autoSave = enable)
+            manageMemory = false
+            runWork("Could not change encrypted assistant memory.", { checkNotNull(workspace).saveMemory(snapshot) }) {
+                if (snapshot.autoSave && chat.isEmpty()) chat = snapshot.exchanges
+                memory = snapshot
+            }
+        }
         GuardianAlertDialog(onDismissRequest = { manageMemory = false }, title = { Text("Assistant memory") },
             text = {
                 Column(Modifier.heightIn(max = 320.dp).verticalScroll(rememberScrollState())) {
-                    Text("Save this conversation in encrypted Primary Space. Recalls stay on this device.")
-                    if (memory?.enabled == true) memory?.exchanges.orEmpty().forEach {
-                        HorizontalDivider(Modifier.padding(vertical = 8.dp))
-                        Text(it.question, style = MaterialTheme.typography.titleSmall)
-                        Text(it.answer, color = GuardianMuted)
-                    } else Text("No saved conversation", color = GuardianMuted, modifier = Modifier.padding(top = 8.dp))
-                    if (memory?.enabled == true) {
+                    Text("Encrypted history stays in Primary Space. Each cloud send shows the exact text it will share for your approval.")
+                    Text(if (autoSave) "Automatic history is on" else "Automatic history is off", color = GuardianMuted)
+                    if (memory?.exchanges.orEmpty().isEmpty()) Text("No saved conversation", color = GuardianMuted)
+                    if (!autoSave && !memory?.exchanges.isNullOrEmpty()) {
                         TextButton(onClick = {
                             chat = memory?.exchanges.orEmpty()
                             manageMemory = false
                         }) { Text("Load saved conversation") }
+                    }
+                    if (memory?.enabled == true) {
                         TextButton(onClick = {
                             manageMemory = false
-                            confirm("Delete saved conversation?", "This removes the saved assistant memory from Primary Space.", "Delete memory") {
+                            confirm("Delete saved conversation?", "This clears the conversation in Primary Space and switches off automatic history.", "Delete memory") {
                                 val empty = IntelligenceMemory(false, emptyList())
                                 runWork("Could not delete assistant memory.", { checkNotNull(workspace).saveMemory(empty) }) {
                                     memory = empty
-                                    chat = emptyList()
+                                    chatSession.clear()
                                 }
                             }
                         }) { Text("Delete saved conversation") }
                     }
+                    if (!autoSave && chat.isNotEmpty()) {
+                        TextButton(onClick = {
+                            val snapshot = IntelligenceMemory(true, chat)
+                            manageMemory = false
+                            runWork("Could not save this conversation.", { checkNotNull(workspace).saveMemory(snapshot) }) { memory = snapshot }
+                        }) { Text("Save current conversation") }
+                    }
                 }
             },
             confirmButton = {
-                TextButton(enabled = chat.isNotEmpty(), onClick = {
-                    val snapshot = IntelligenceMemory(true, chat)
-                    manageMemory = false
-                    runWork("Could not save this conversation.", { checkNotNull(workspace).saveMemory(snapshot) }) { memory = snapshot }
-                }) { Text("Save current conversation") }
+                TextButton(onClick = { setAutomaticSave(!autoSave) }) {
+                    Text(if (autoSave) "Turn off auto-save" else "Enable encrypted history")
+                }
             }, dismissButton = { TextButton(onClick = { manageMemory = false }) { Text("Close") } })
     }
     if (scheduleOpen && privateAllowed) IntelligenceScheduleDialog(context, onClose = { scheduleOpen = false }) { times ->
@@ -574,37 +573,31 @@ private fun IntelligenceContent(
     }
 }
 
-@Composable
-private fun IntelligenceCard(title: String, content: @Composable ColumnScope.() -> Unit) {
-    Card(shape = MaterialTheme.shapes.large, colors = guardianCardColors(), border = BorderStroke(1.dp, GuardianBorder)) {
-        Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            Text(title, style = MaterialTheme.typography.titleMedium, modifier = Modifier.semantics { heading() })
-            content()
-        }
-    }
-}
-
-@Composable
-private fun AgendaItems(title: String, items: List<String>, empty: String) {
-    Text(title, style = MaterialTheme.typography.labelLarge)
-    if (items.isEmpty()) Text(empty, color = GuardianMuted)
-    else items.take(4).forEach { Text(it, style = MaterialTheme.typography.bodyMedium) }
-}
-
 private fun agendaLine(label: String, entries: List<String>) =
     "$label · " + entries.joinToString("; ").ifEmpty { "None scheduled" }
 
 @Composable
-private fun IntelligenceInput(input: String, onText: (String) -> Unit, busy: Boolean, focus: FocusManager, send: () -> Unit) {
-    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-        OutlinedTextField(value = input, onValueChange = onText, label = { Text("Message Nova") },
-            modifier = Modifier.weight(1f).testTag("intelligence-input"), singleLine = true,
-            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
-            keyboardActions = KeyboardActions(onSend = { if (!busy) { focus.clearFocus(); send() } }))
-        IconButton(onClick = send, enabled = input.isNotBlank() && !busy) {
-            Icon(Icons.AutoMirrored.Filled.Send, "Send message")
-        }
-    }
+private fun IntelligenceNameDialog(current: String?, onClose: () -> Unit, onSave: (String?) -> Unit) {
+    var name by remember { mutableStateOf(current.orEmpty()) }
+    GuardianAlertDialog(
+        onDismissRequest = onClose,
+        title = { Text("Greeting name") },
+        text = {
+            OutlinedTextField(
+                value = name,
+                onValueChange = { value ->
+                    name = value.filterNot(Char::isISOControl).take(IntelligenceWorkspace.BRIEFING_NAME_LIMIT)
+                },
+                label = { Text("Name shown in private briefing") },
+                supportingText = { Text("Leave blank to use the default greeting.") },
+                singleLine = true,
+            )
+        },
+        confirmButton = {
+            TextButton(onClick = { onSave(name.trim().ifBlank { null }) }) { Text("Save") }
+        },
+        dismissButton = { TextButton(onClick = onClose) { Text("Cancel") } },
+    )
 }
 
 @Composable

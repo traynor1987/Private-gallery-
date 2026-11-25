@@ -18,6 +18,14 @@ classes=(
   "$package.core.sanctuary.SanctuaryLauncherPolicy70Test"
 )
 
+if [[ ${NOVA_INTELLIGENCE_VISUALS:-false} == true ]]; then
+  classes+=(
+    "$package.intelligence.IntelligenceBuild98VisualTest"
+    "$package.CapturePolicy98Test"
+    "$package.intelligence.OwnerPreviewSetup98Test"
+  )
+fi
+
 mkdir -p "$out"
 bash scripts/verify_android17_device.sh "$out"
 sha256sum "$debug" "$instrumentation" > "$out/command-inputs.sha256"
@@ -26,6 +34,13 @@ grep -Fxq 'target=android-37.0' "$out/avd.ini"
 
 save_crash_log() {
   local result=$?
+  if [[ -v previous_ime_setting ]]; then
+    if [[ $previous_ime_setting == null ]]; then
+      adb shell settings delete secure show_ime_with_hard_keyboard || true
+    else
+      adb shell settings put secure show_ime_with_hard_keyboard "$previous_ime_setting" || true
+    fi
+  fi
   if (( result != 0 )); then
     adb logcat -d -b crash > "$out/emulator-crashes.txt" || true
     adb shell service check package > "$out/package-service.txt" || true
@@ -72,6 +87,12 @@ adb install --no-streaming -r "$instrumentation" | tee "$out/install-instrumenta
 grep -Fxq 'Success' "$out/install-app.txt"
 grep -Fxq 'Success' "$out/install-instrumentation.txt"
 
+if [[ ${NOVA_INTELLIGENCE_VISUALS:-false} == true ]]; then
+  previous_ime_setting=$(adb shell settings get secure show_ime_with_hard_keyboard | tr -d '\r')
+  adb shell settings put secure show_ime_with_hard_keyboard 1
+  adb shell run-as "$app_id" rm -rf cache/nova-intelligence-build98
+fi
+
 # Read expectations from source so missing classes, crashes and skipped methods all fail.
 expected=0
 for class in "${classes[@]}"; do
@@ -87,5 +108,32 @@ if grep -Eq '^INSTRUMENTATION_STATUS_CODE: -[1-4][[:space:]]*$' "$out/instrument
   exit 1
 fi
 sha256sum --check "$out/command-inputs.sha256"
+
+if [[ ${NOVA_INTELLIGENCE_VISUALS:-false} == true ]]; then
+  mkdir -p "$out/screenshots"
+  screenshots=(
+    cover-dashboard cover-chat inner-dashboard inner-chat cover-keyboard-open cover-cloud-loading
+    cover-synthetic-cloud-reply cover-offline-fallback guardian-owner-preview-disconnected
+    owner-preview-cover-setup owner-preview-inner-diagnostics
+  )
+  for name in "${screenshots[@]}"; do
+    adb exec-out run-as "$app_id" cat "cache/nova-intelligence-build98/$name.png" > "$out/screenshots/$name.png"
+  done
+  python3 - "$out/screenshots" "${screenshots[@]}" <<'PY'
+from hashlib import sha256
+from pathlib import Path
+import sys
+
+root = Path(sys.argv[1])
+captured = {}
+for name in sys.argv[2:]:
+    image = root / f"{name}.png"
+    pixels = image.read_bytes()
+    assert pixels.startswith(b"\x89PNG\r\n\x1a\n"), f"Missing valid emulator screenshot: {name}"
+    digest = sha256(pixels).digest()
+    assert digest not in captured, f"Emulator frames are identical: {captured.get(digest)} and {name}"
+    captured[digest] = name
+PY
+fi
 
 bash scripts/run_launcher70_restart.sh

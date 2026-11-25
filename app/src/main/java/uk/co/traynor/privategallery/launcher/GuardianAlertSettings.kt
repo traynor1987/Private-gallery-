@@ -108,7 +108,8 @@ internal fun GuardianAlertSettings(page: GuardianAlertPage, onBack: () -> Unit) 
             }
         },
         confirmButton = { TextButton(onClick = onBack) { Text("Done") } },
-        properties = DialogProperties(securePolicy = SecureFlagPolicy.SecureOn),
+        // Settings and the synthetic example are safe; the Inbox behind this window stays secure.
+        properties = DialogProperties(securePolicy = SecureFlagPolicy.SecureOff),
     )
 }
 

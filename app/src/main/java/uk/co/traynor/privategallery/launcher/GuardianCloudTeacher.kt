@@ -24,7 +24,7 @@ import uk.co.traynor.privategallery.core.brain.*
 
 @Composable
 internal fun GuardianCloudTeacher(message: String? = null, historicalEvidence: Boolean = false,
-    client: CloudTeacherClient = CloudTeacherClient(), canSend: () -> Boolean) {
+    client: CloudTeacherClient? = null, canSend: () -> Boolean) {
     var open by remember(message) { mutableStateOf(false) }
     TextButton(onClick = { if (canSend()) open = true }) { Text(when {
         historicalEvidence -> "Review OCR excerpt for cloud analysis"
@@ -35,6 +35,8 @@ internal fun GuardianCloudTeacher(message: String? = null, historicalEvidence: B
     val context = LocalContext.current.applicationContext
     val store = remember(context) { CloudTeacherStore(context) }
     val connectionStore = remember(context) { NovaBrainConnectionStore(context) }
+    val statusClient = remember(client) { client ?: CloudTeacherClient() }
+    val currentPermission by rememberUpdatedState(canSend)
     val revision by CloudTeacherStore.changes.collectAsState()
     val scope = rememberCoroutineScope()
     var configuration by remember { mutableStateOf<NovaBrainConfiguration?>(null) }
@@ -94,7 +96,7 @@ internal fun GuardianCloudTeacher(message: String? = null, historicalEvidence: B
                     busy = true; feedback = null; server = null; approved = false
                     scope.launch {
                         try {
-                            val response = withContext(Dispatchers.IO) { client.status(saved) }
+                            val response = withContext(Dispatchers.IO) { statusClient.status(saved) }
                             if (canSend()) { server = response; checkedAt = Instant.now() }
                         } catch (cancelled: CancellationException) { throw cancelled }
                         catch (error: CloudTeacherException) { feedback = error.failure.userMessage }
@@ -145,8 +147,17 @@ internal fun GuardianCloudTeacher(message: String? = null, historicalEvidence: B
                             val plan = store.prepare(saved, excerpt, if (historicalEvidence) CloudExampleSource.EVIDENCE else CloudExampleSource.GUARDIAN, newRequest)
                             if (plan.cached != null) Triple(plan.cached, true, status)
                             else {
-                                val reply = client.analyze(saved, excerpt, true, plan.id, status,
-                                    permission = { canSend() && store.enabled() && connectionStore.read() == saved }, cancelled = { !isActive })
+                                val permitted = {
+                                    isActive && open && currentPermission() && store.enabled() && connectionStore.read() == saved
+                                }
+                                val analysisClient = client ?: CloudTeacherClient { endpoint, token, payload ->
+                                    cloudRequest(endpoint, token, payload, beforeBody = {
+                                        if (!permitted()) throw CancellationException()
+                                    })
+                                }
+                                val reply = analysisClient.analyze(saved, excerpt, true, plan.id, status,
+                                    permission = permitted, cancelled = { !isActive || !open })
+                                if (!permitted()) throw CancellationException()
                                 if (!store.recordSuccess(plan.id, saved, reply.lesson)) error("Configuration or permission changed")
                                 Triple(reply.lesson, false, reply.status)
                             }

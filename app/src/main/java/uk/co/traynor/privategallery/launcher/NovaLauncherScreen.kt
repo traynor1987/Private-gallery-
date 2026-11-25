@@ -78,6 +78,7 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import uk.co.traynor.privategallery.intelligence.IntelligenceApp
 import uk.co.traynor.privategallery.intelligence.IntelligenceConversation
 import uk.co.traynor.privategallery.intelligence.IntelligenceScreen
+import uk.co.traynor.privategallery.intelligence.intelligenceSanctuaryStatus
 import uk.co.traynor.privategallery.ui.PrivateGalleryTheme
 
 internal const val LauncherExpandedWidth = 600
@@ -173,10 +174,12 @@ private fun LauncherRuntime(
     onHomeSurfaceVisible: (Boolean) -> Unit,
     intelligence: LauncherIntelligenceActions?,
 ) {
-    val intelligenceConversation = remember(homeGeneration, launcherProtected) { IntelligenceConversation() }
+    val intelligenceScope = rememberCoroutineScope()
+    val intelligenceConversation = remember(homeGeneration, launcherProtected) { IntelligenceConversation(intelligenceScope) }
     val lifecycle = LocalLifecycleOwner.current.lifecycle
     DisposableEffect(lifecycle, intelligenceConversation) {
         val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_PAUSE) intelligenceConversation.cancelCloud()
             if (event == Lifecycle.Event.ON_STOP) intelligenceConversation.clear()
         }
         lifecycle.addObserver(observer)
@@ -496,13 +499,7 @@ private fun LauncherRuntime(
                         onIntelligenceSelected = { intelligenceSelectedAcrossDisplays = it },
                         intelligencePage = intelligence?.let { bridge ->
                             { active ->
-                                val nominated = (layout.pages.flatten() + layout.dock).flatMap { item ->
-                                    when (item) {
-                                        is LauncherItem.App -> listOf(item.component)
-                                        is LauncherItem.Folder -> item.apps
-                                        else -> emptyList()
-                                    }
-                                }.toSet()
+                                val nominated = layout.intelligenceNominations()
                                 val approved = apps.filter {
                                     it.component in nominated && !it.packageName.startsWith("nova:") && it.packageName != context.packageName &&
                                         decisions.forLauncherApp(it)?.canLaunch == true
@@ -515,14 +512,13 @@ private fun LauncherRuntime(
                                     openDestination = bridge.openDestination,
                                     apps = approved,
                                     openApp = { component ->
-                                        if (approved.none { it.component == component }) false
-                                        else {
-                                            actions.launchApp(component)
-                                            true
-                                        }
+                                        approved.any { it.component == component } && bridge.openApp(component)
                                     },
                                     openEvidence = bridge.openEvidence,
                                     conversation = intelligenceConversation,
+                                    sanctuaryStatus = sanctuaryStatus?.let {
+                                        intelligenceSanctuaryStatus(it.mode, it.paused, it.remainingMillis)
+                                    },
                                 )
                             }
                         },
@@ -788,6 +784,7 @@ internal fun LauncherHome(
     val atLibrary = libraryPage != null && pager.settledPage == libraryIndex
     val atGuardian = pager.settledPage == guardianIndex
     val atIntelligence = pager.settledPage == intelligenceIndex
+    val hideFooterForComposer = atIntelligence && WindowInsets.ime.getBottom(LocalDensity.current) > 0
     val goBackFromLibrary: () -> Unit = {
         focus.clearFocus()
         if (!onLibraryBack()) scope.launch { pager.animateScrollToPage(libraryIndex - 1) }
@@ -975,7 +972,7 @@ internal fun LauncherHome(
                         val left = guardianIndex?.let { abs(position - it).coerceIn(0f, 1f) } ?: 1f
                         val right = if (libraryPage == null || state.dockOptions.showInLibrary) 1f
                             else (libraryIndex - position).coerceIn(0f, 1f)
-                        val homeFraction = minOf(left, right)
+                        val homeFraction = if (hideFooterForComposer) 0f else minOf(left, right)
                         val height = (footer.height * homeFraction).roundToInt()
                         layout(footer.width, height) {
                             if (height > 0) {

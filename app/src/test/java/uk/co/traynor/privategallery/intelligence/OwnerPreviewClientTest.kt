@@ -1,7 +1,12 @@
 package uk.co.traynor.privategallery.intelligence
 
+import java.net.ConnectException
+import java.net.SocketTimeoutException
+import java.net.UnknownHostException
+import java.time.Instant
 import java.util.UUID
 import java.util.concurrent.CancellationException
+import javax.net.ssl.SSLHandshakeException
 import org.json.JSONArray
 import org.json.JSONObject
 import org.junit.Assert.*
@@ -17,6 +22,8 @@ class OwnerPreviewClientTest {
     private var includePreviewIdentity = true
     private var limit = 250_000
     private var automatic = false
+    private var askBalance = 250_000
+    private var guardianMonthlyBalance = 250_000
 
     private val client = OwnerPreviewClient(
         assistantRequest = { configuration, payload, beforeBody ->
@@ -38,9 +45,9 @@ class OwnerPreviewClientTest {
             "assistant_available":true,"analysis_enabled":$armed,
             "cloud_teacher":{"automatic_analysis_enabled":$automatic},
             "budget":{"funded_allowance_micro_usd":250000,"configured_spending_limit_micro_usd":250000,
-            "configured_ceiling_micro_usd":$limit,"remaining_micro_usd":250000,"request_reservation_micro_usd":102000,
-            "monthly_spending_limit_micro_usd":250000,"monthly_exposure_micro_usd":0,"monthly_remaining_micro_usd":250000,
-            "approved_request_limit":2,"approved_requests_remaining":2,"expired":false,"paid_requests_halted":false}
+            "configured_ceiling_micro_usd":$limit,"remaining_micro_usd":${if (path == "/assistant/ask") askBalance else 250_000},"request_reservation_micro_usd":102000,
+            "monthly_spending_limit_micro_usd":250000,"monthly_exposure_micro_usd":0,"monthly_remaining_micro_usd":${if (path == "/assistant/ask") 250_000 else guardianMonthlyBalance},
+            "approved_request_limit":2,"approved_requests_remaining":2,"expired":false,"expires_at":1800000000,"paid_requests_halted":false}
         }""")
         if (includePreviewIdentity) status.put("fold_owner_preview", JSONObject().put("phone_checked", armed))
         if (payload != null) {
@@ -62,9 +69,97 @@ class OwnerPreviewClientTest {
     }
 
     @Test fun checkOnlyAuthenticatesBothPreviewRoutesWhenDisarmed() {
-        assertEquals(OwnerPreviewStatus(false, 2, false), client.check(connection) { true })
+        assertEquals(OwnerPreviewStatus(false, 2, false, 250_000, 250_000), client.check(connection) { true })
         assertEquals(listOf("/assistant/ask", "/guardian/status"), paths)
         assertThrows(CloudTeacherException::class.java) { client.send(connection, OwnerPreviewTest.ASK_NOVA, true) { true } }
+        assertTrue(submitted.isEmpty())
+    }
+
+    @Test fun diagnosticsCheckBothFixedHttpsRoutesWithoutSendingAnyPaidRequest() {
+        val result = client.diagnose(connection) { true }
+
+        assertTrue(result.authenticated)
+        assertEquals(200, result.httpStatus)
+        assertEquals(OwnerPreviewTls.VERIFIED, result.tls)
+        assertEquals(OwnerPreviewExpiration.ACTIVE, result.expiration)
+        assertEquals(Instant.ofEpochSecond(1800000000), result.expiresAt)
+        assertEquals(OwnerPreviewStatus(false, 2, false, 250_000, 250_000), result.status)
+        assertEquals(listOf("/assistant/ask", "/guardian/status"), paths)
+        assertTrue(submitted.isEmpty())
+        assertTrue(result.asText().contains(OWNER_PREVIEW_ORIGIN))
+        assertTrue(result.asText().contains("Paid analysis: Disabled"))
+        assertFalse(result.asText().contains(connection.token))
+    }
+
+    @Test fun diagnosticsDistinguishNoNetworkServerStoppedDnsTimeoutAndTlsWithoutLeakingExceptions() {
+        val offline = OwnerPreviewClient(
+            assistantRequest = { _, _, _ -> error("No request without an active network") },
+            networkAvailable = { false },
+        ).diagnose(connection) { true }
+        assertEquals(OwnerPreviewFailure.OFFLINE, offline.failure)
+        assertNull(offline.httpStatus)
+        assertFalse(offline.authenticated)
+
+        val sensitive = "credential ${connection.token} and example private message"
+        val failures = listOf(
+            ConnectException(sensitive) to OwnerPreviewFailure.SERVER_UNAVAILABLE,
+            UnknownHostException(sensitive) to OwnerPreviewFailure.HOST_LOOKUP,
+            SocketTimeoutException(sensitive) to OwnerPreviewFailure.TIMEOUT,
+            SSLHandshakeException(sensitive) to OwnerPreviewFailure.TLS,
+        )
+        for ((error, expected) in failures) {
+            val client = OwnerPreviewClient(assistantRequest = { _, payload, _ ->
+                assertNull(payload)
+                throw error
+            })
+            val result = client.diagnose(connection) { true }
+            assertEquals(expected, result.failure)
+            assertEquals(if (expected == OwnerPreviewFailure.TLS) OwnerPreviewTls.FAILED else OwnerPreviewTls.NOT_VERIFIED,
+                result.tls)
+            assertNull(result.httpStatus)
+            assertEquals(OwnerPreviewExpiration.UNKNOWN, result.expiration)
+            assertFalse(result.authenticated)
+            assertFalse(result.asText().contains(connection.token))
+            assertFalse(result.asText().contains("private message"))
+            assertFalse(result.toString().contains(connection.token))
+        }
+    }
+
+    @Test fun diagnosticsNeverTreatARejectedOrMismatchedSecondRouteAsAuthenticated() {
+        for ((code, reason, expected) in listOf(
+            Triple(401, "authentication_required", OwnerPreviewFailure.AUTHENTICATION),
+            Triple(404, "not_found", OwnerPreviewFailure.ROUTE_UNAVAILABLE),
+            Triple(503, "preview_expired", OwnerPreviewFailure.EXPIRED),
+            Triple(200, "not_a_preview", OwnerPreviewFailure.INVALID_RESPONSE),
+        )) {
+            val rejected = """{"error":"$reason","private":"${connection.token}"}""".encodeToByteArray()
+            val client = OwnerPreviewClient(
+                assistantRequest = { _, payload, beforeBody -> respond("/assistant/ask", payload, beforeBody) },
+                guardianRequest = { endpoint, _, payload, _ ->
+                    assertEquals("$OWNER_PREVIEW_ORIGIN/guardian/status", endpoint.toString())
+                    assertNull(payload)
+                    BrainResponse(code, rejected)
+                },
+            )
+            val result = client.diagnose(connection) { true }
+            assertFalse(result.authenticated)
+            assertEquals(code, result.httpStatus)
+            assertEquals(expected, result.failure)
+            assertEquals(OwnerPreviewTls.VERIFIED, result.tls)
+            assertEquals(if (expected == OwnerPreviewFailure.EXPIRED) OwnerPreviewExpiration.EXPIRED
+                else OwnerPreviewExpiration.UNKNOWN, result.expiration)
+            assertFalse(result.asText().contains(connection.token))
+            assertTrue(rejected.all { it == 0.toByte() })
+        }
+        assertTrue(submitted.isEmpty())
+    }
+
+    @Test fun availableBalanceUsesTheTightestAuthenticatedLedgerValue() {
+        armed = true
+        askBalance = 190_000
+        guardianMonthlyBalance = 80_000
+
+        assertEquals(OwnerPreviewStatus(true, 2, false, 250_000, 80_000), client.check(connection) { true })
         assertTrue(submitted.isEmpty())
     }
 

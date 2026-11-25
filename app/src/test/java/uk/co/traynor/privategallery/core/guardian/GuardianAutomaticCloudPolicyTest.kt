@@ -16,6 +16,14 @@ class GuardianAutomaticCloudPolicyTest {
         }
     }
 
+    @Test fun removesKnownNamesWithEitherApostropheForm() {
+        val names = listOf("D’Angelo", "O'Connor")
+        assertEquals("[redacted] needs more context", GuardianAutomaticCloudPolicy.excerpt(
+            "D'Angelo needs more context", names))
+        assertEquals("[redacted] needs more context", GuardianAutomaticCloudPolicy.excerpt(
+            "O’Connor needs more context", names))
+    }
+
     @Test fun stableNetworkNeedsTwoChecksTenSecondsApartAndFiveMinuteWindow() {
         val policy = GuardianAutomaticCloudPolicy
         assertFalse(policy.ready(100, 10_099, true))
