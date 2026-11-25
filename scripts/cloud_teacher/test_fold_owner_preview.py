@@ -1,34 +1,30 @@
-from concurrent.futures import ThreadPoolExecutor
+import hmac
+import json
+from hashlib import sha256
 from http.client import HTTPConnection
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from threading import Lock, Thread
+from threading import Thread
 from time import time
 from unittest import TestCase
 from unittest.mock import patch
 from uuid import uuid4
-import io
-import json
 
-from fold_owner_preview import CEILING, FIXTURES, MODEL, PreviewServer
+from budget import Budget
+from fold_owner_preview import APPROVAL, CEILING, FIXTURES, MODEL, PreviewServer
 
 
 class FoldOwnerPreviewTest(TestCase):
     def setUp(self):
-        directory = self.enterContext(TemporaryDirectory())
-        self.root = Path(directory)
+        self.root = Path(self.enterContext(TemporaryDirectory()))
         self.token = 'a' * 64
         (self.root / 'owner-token').write_text(self.token)
-        self.calls = []
-        self.call_lock = Lock()
-        self.failure = None
-        provider = self.enterContext(patch('server.build_opener'))
-        provider.return_value.open.side_effect = self.simulate_provider
+        self.ledger = self.root / 'budget.db'
         self.start_server()
         self.addCleanup(self.stop_server)
 
     def start_server(self):
-        self.server = PreviewServer(('127.0.0.1', 0), self.root, self.root / 'budget.db', int(time()) + 120)
+        self.server = PreviewServer(('127.0.0.1', 0), self.root, self.ledger, int(time()) + 120)
         self.thread = Thread(target=self.server.serve_forever)
         self.thread.start()
 
@@ -36,31 +32,6 @@ class FoldOwnerPreviewTest(TestCase):
         self.server.shutdown()
         self.thread.join()
         self.server.server_close()
-
-    def simulate_provider(self, request, **_):
-        self.assertEqual(request.full_url, 'https://api.openai.com/v1/responses')
-        data = json.loads(request.data)
-        self.assertEqual(data['model'], MODEL)
-        self.assertEqual(data['service_tier'], 'default')
-        self.assertEqual(data['tools'], [])
-        self.assertFalse(data['store'])
-        self.assertLessEqual(data['max_output_tokens'], 1000)
-        fixture = data['input']
-        self.assertIn(fixture, FIXTURES.values())
-        with self.call_lock:
-            self.calls.append(fixture)
-        if self.failure:
-            raise self.failure
-        reply = ('A short poetic form.' if 'text' not in data else json.dumps({
-            'assessment': 'UNCERTAIN', 'patterns': ['EMOTIONAL_PRESSURE'],
-            'uncertainty': 'HIGH', 'summary': 'Context could affect the reading.',
-        }))
-        return io.BytesIO(json.dumps({
-            'status': 'completed', 'model': MODEL, 'service_tier': 'default',
-            'usage': {'input_tokens': 100, 'output_tokens': 50, 'total_tokens': 150,
-                      'input_tokens_details': {'cached_tokens': 0}, 'output_tokens_details': {'reasoning_tokens': 0}},
-            'output': [{'type': 'message', 'content': [{'type': 'output_text', 'text': reply}]}],
-        }).encode())
 
     def request(self, route, payload=None, *, authenticated=True, phone=False):
         headers = {'X-Nova-Fold-Client': '1' if phone else '0'}
@@ -79,60 +50,92 @@ class FoldOwnerPreviewTest(TestCase):
         return self.request(route, {'message': FIXTURES[route], 'consent': True,
                                     'request_id': str(uuid4()), 'protocol_version': 2, **fields})
 
-    def arm(self):
+    def test_status_routes_require_auth_and_report_the_same_disarmed_shared_ledger(self):
+        for route in ('/assistant/ask', '/guardian/status'):
+            self.assertEqual(self.request(route, authenticated=False, phone=True)[0], 401)
+            self.assertFalse(self.request(route)[1]['fold_owner_preview']['phone_checked'])
+
+        ask = self.request('/assistant/ask', phone=True)[1]
+        self.assertFalse(ask['fold_owner_preview']['phone_checked'])
+        guardian = self.request('/guardian/status', phone=True)[1]
+        self.assertTrue(guardian['fold_owner_preview']['phone_checked'])
+        self.assertTrue(self.request('/assistant/ask')[1]['fold_owner_preview']['phone_checked'])
+        self.assertEqual(ask['budget'], guardian['budget'])
+        for status in (ask, guardian):
+            self.assertEqual(status['status'], 'authenticated')
+            self.assertEqual(status['model'], MODEL)
+            self.assertTrue(status['assistant_available'])
+            self.assertFalse(status['analysis_enabled'])
+            self.assertFalse(status['cloud_teacher']['automatic_analysis_enabled'])
+            self.assertEqual(status['budget']['cycle'], APPROVAL)
+            self.assertEqual(status['budget']['funded_allowance_micro_usd'], CEILING)
+            self.assertEqual(status['budget']['configured_spending_limit_micro_usd'], CEILING)
+            self.assertEqual(status['budget']['configured_ceiling_micro_usd'], CEILING)
+            self.assertEqual(status['budget']['monthly_spending_limit_micro_usd'], CEILING)
+            self.assertEqual(status['budget']['remaining_micro_usd'], CEILING)
+            self.assertEqual(status['budget']['monthly_remaining_micro_usd'], CEILING)
+            self.assertEqual(status['budget']['approved_request_limit'], 2)
+            self.assertEqual(status['budget']['approved_requests_remaining'], 2)
+            self.assertEqual(status['budget']['request_reservation_micro_usd'], 102_000)
+
+    def test_both_approved_fixtures_stay_disarmed_even_with_legacy_arming_markers(self):
         for route in ('/assistant/ask', '/guardian/status'):
             self.assertEqual(self.request(route, phone=True)[0], 200)
-        (self.root / 'openai-key').write_text('sk-synthetic-preview-test-only')
         (self.root / 'approved').touch()
+        fake_key = 'sk-synthetic-preview-test-only'
+        (self.root / 'openai-key').write_text(fake_key)
+        with patch.dict('os.environ', {'OPENAI_API_KEY': fake_key, 'NOVA_CLOUD_ANALYSIS_APPROVED': 'true'}), \
+             patch('server.provider_reply') as provider:
+            for route in FIXTURES:
+                code, body = self.submit(route)
+                self.assertEqual((code, body['error']), (503, 'analysis_disabled'))
+            provider.assert_not_called()
+        self.assertEqual(self.server.budget.status()['approved_requests_remaining'], 2)
+        self.assertEqual(self.server.budget.status()['reserved_upper_bound_micro_usd'], 0)
 
-    def test_paid_requires_server_arming_and_both_authenticated_phone_checks(self):
-        self.assertEqual(self.request('/assistant/ask', authenticated=False, phone=True)[0], 401)
-        (self.root / 'openai-key').write_text('sk-synthetic-preview-test-only')
-        (self.root / 'approved').touch()
-        self.assertEqual(self.request('/assistant/ask')[0], 200)
-        self.assertEqual(self.request('/guardian/status', phone=True)[0], 200)
-        self.assertEqual(self.submit('/assistant/ask')[0], 503)
-        self.assertFalse(self.calls)
-        self.assertEqual(self.request('/assistant/ask', phone=True)[0], 200)
-        status = self.request('/guardian/status')[1]
-        self.assertTrue(status['analysis_enabled'])
-        self.assertTrue(status['fold_owner_preview']['phone_checked'])
-        self.assertFalse(status['cloud_teacher']['automatic_analysis_enabled'])
-        self.assertEqual(status['budget']['configured_ceiling_micro_usd'], CEILING)
-        self.assertEqual(status['budget']['approved_requests_remaining'], 2)
-
-    def test_exact_fixtures_manual_approval_and_lifetime_cap_under_concurrency(self):
-        self.arm()
+    def test_posts_require_auth_valid_approval_shape_and_the_exact_fixture(self):
         for route in FIXTURES:
-            self.assertEqual(self.submit(route, message='A different text.')[0], 400)
-            self.assertEqual(self.submit(route, consent=False)[0], 400)
-            self.assertEqual(self.submit(route, mode='automatic')[0], 400)
-        self.assertFalse(self.calls)
-        with ThreadPoolExecutor(max_workers=6) as workers:
-            results = list(workers.map(self.submit, list(FIXTURES) * 3))
-        self.assertEqual(sum(code == 200 for code, _ in results), 2)
-        self.assertCountEqual(self.calls, FIXTURES.values())
-        status = self.request('/assistant/ask')[1]['budget']
-        self.assertEqual(status['approved_requests_remaining'], 0)
-        self.assertLessEqual(status['request_reservation_micro_usd'] * len(self.calls), CEILING)
+            self.assertEqual(self.request(route, {'consent': True}, authenticated=False)[0], 401)
+            for fields in ({'message': 'Different text.'}, {'consent': False}, {'mode': 'automatic'},
+                           {'request_id': 'invalid'}, {'protocol_version': '2'}, {'message': 'x' * 2050}):
+                with self.subTest(route=route, fields=fields.keys()):
+                    code, body = self.submit(route, **fields)
+                    self.assertEqual((code, body['error']), (400, 'unapproved_preview_fixture_or_consent'))
+        self.assertEqual(self.server.budget.status()['approved_requests_remaining'], 2)
 
-    def test_restart_and_timeout_cannot_open_another_ask_slot(self):
-        self.arm()
-        self.failure = TimeoutError()
-        self.assertEqual(self.submit('/assistant/ask')[0], 504)
+    def test_ledger_keeps_one_slot_per_fixture_across_restarts(self):
+        digest = hmac.new(self.token.encode(), b'assistant\x00What is a haiku?', sha256).hexdigest()
+        budget = self.server.budget
+        self.assertEqual(budget.begin_request(str(uuid4()), digest)['decision'], 'reserved')
         self.stop_server()
         self.start_server()
-        self.assertEqual(self.submit('/guardian/analyze')[0], 503)
-        self.arm()
-        self.failure = None
-        self.assertEqual(self.submit('/assistant/ask')[0], 409)
-        code, result = self.submit('/guardian/analyze')
-        self.assertEqual(code, 200)
-        self.assertEqual(result['lesson']['uncertainty'], 'HIGH')
-        self.assertCountEqual(self.calls, FIXTURES.values())
 
-    def test_expired_preview_disarms_provider_dispatch(self):
-        self.arm()
+        self.assertEqual(self.server.budget.begin_request(str(uuid4()), digest)['decision'], 'duplicate')
+        budget = self.request('/guardian/status')[1]['budget']
+        self.assertEqual(budget['approved_requests_remaining'], 1)
+        self.assertEqual(budget['reserved_upper_bound_micro_usd'], 102_000)
+        self.assertEqual(self.submit('/guardian/analyze')[0], 503)
+
+    def test_rejects_a_ledger_that_belongs_to_an_earlier_approval(self):
+        historical_path = self.root / 'historical.db'
+        Budget(historical_path, 'fold-owner-20261123', int(time()) + 120, CEILING, 102_000)
+        before = historical_path.read_bytes()
+        with self.assertRaisesRegex(ValueError, 'different approval or token'):
+            PreviewServer(('127.0.0.1', 0), self.root, historical_path, int(time()) + 120)
+        self.assertEqual(historical_path.read_bytes(), before)
+
+    def test_rejects_new_token_even_when_the_existing_ledger_has_no_reservations(self):
+        before = self.ledger.read_bytes()
+        (self.root / 'owner-token').write_text('b' * 64)
+        with self.assertRaisesRegex(ValueError, 'different approval or token'):
+            PreviewServer(('127.0.0.1', 0), self.root, self.ledger, int(time()) + 120)
+        self.assertEqual(self.ledger.read_bytes(), before)
+
+    def test_expired_server_closes_health_status_and_post_routes(self):
         self.server.expires_at = int(time()) - 1
-        self.assertEqual(self.submit('/assistant/ask')[0], 503)
-        self.assertFalse(self.calls)
+        for route in ('/health', '/assistant/ask', '/guardian/status'):
+            code, body = self.request(route)
+            self.assertEqual((code, body['error']), (503, 'preview_expired'))
+        for route in FIXTURES:
+            code, body = self.submit(route)
+            self.assertEqual((code, body['error']), (503, 'preview_expired'))

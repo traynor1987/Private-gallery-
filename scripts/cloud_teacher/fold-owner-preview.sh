@@ -1,17 +1,18 @@
 #!/usr/bin/env bash
-# Temporary owner approval dated 2026-11-23. This path never invokes or changes deploy.sh.
+# Owner-only 2026-11-25 deployment preparation. The container cannot enable paid analysis.
 set -euo pipefail
 cd "$(dirname "$0")"
 
-if [[ $# -ne 1 || $EUID -ne 0 || ! -t 0 ]]; then
+if [[ $# -ne 1 || $EUID -ne 0 || ! -t 0 || ! -t 1 ]]; then
     echo 'Run from your existing Fold Termux SSH session: sudo bash fold-owner-preview.sh "$SSH_CONNECTION"' >&2
     exit 2
 fi
 
-nova_reviewed=53235901fa5dfdc5b4b5f3ab518b510028de28a9
+nova_reviewed=26553075df3c530fd81a98640e59ddf09c545215
 git diff --exit-code "$nova_reviewed" -- server.py budget.py protocol.py Dockerfile .dockerignore deploy.sh
-test -z "$(git status --porcelain --untracked-files=all)"
-for nova_tool in curl docker flock nginx nft openssl python3 ss timeout; do
+nova_git_status=$(git status --porcelain=v1 --untracked-files=all --ignored=matching)
+test -z "$nova_git_status"
+for nova_tool in curl docker flock nginx nft openssl python3 ss stat timeout; do
     command -v "$nova_tool" >/dev/null || { echo "Required for the temporary preview: $nova_tool" >&2; exit 1; }
 done
 
@@ -36,10 +37,8 @@ nova_port=18443
 nova_cert="/etc/letsencrypt/live/$nova_host/fullchain.pem"
 nova_tls_key="/etc/letsencrypt/live/$nova_host/privkey.pem"
 nova_incumbent=/etc/nova-cloud-teacher/secrets
-nova_provider_key="$nova_incumbent/openai-key"
 test -s "$nova_cert" && test -s "$nova_tls_key" || { echo 'Existing Nova Brain TLS files were not found.' >&2; exit 1; }
 openssl x509 -in "$nova_cert" -noout -checkhost "$nova_host" -checkend 1800 >/dev/null
-test -s "$nova_provider_key" || { echo 'The existing server-side OpenAI credential file is missing or empty.' >&2; exit 1; }
 
 verify_incumbent() {
     python3 - "$nova_incumbent/owner-token" <<'PY'
@@ -75,23 +74,43 @@ verify_incumbent
 
 exec 9>/run/lock/nova-fold-owner-preview.lock
 flock -n 9 || { echo 'A Fold preview is already running.' >&2; exit 1; }
-[[ -z "$(ss -H -ltn "sport = :$nova_port")" ]] || { echo "Port $nova_port is already in use." >&2; exit 1; }
-if docker ps --format '{{.Ports}}' | grep -Eq ":$nova_port->"; then
+nova_listeners=$(ss -H -ltn "sport = :$nova_port")
+[[ -z "$nova_listeners" ]] || { echo "Port $nova_port is already in use." >&2; exit 1; }
+nova_published=$(docker ps --format '{{.Ports}}')
+if [[ "$nova_published" == *":$nova_port->"* ]]; then
     echo "Docker already has a binding for port $nova_port." >&2
     exit 1
 fi
-
-umask 077
-nova_state=/var/lib/nova-fold-owner-preview/approval-20261123
-install -d -m 0700 -o root -g root /var/lib/nova-fold-owner-preview "$nova_state"
-install -d -m 0700 -o 10001 -g 10001 "$nova_state/ledger"
-if [[ ! -f "$nova_state/owner-token" ]]; then
-    if [[ -e "$nova_state/ledger/budget.db" ]]; then
-        echo 'The token for the existing preview ledger is missing. Its allowance will not be reset.' >&2
+nova_networks=$(docker network ls --format '{{.Name}}')
+nova_volumes=$(docker volume ls --format '{{.Name}}')
+if grep -Eqi 'nova.*preview|fold.*preview|approval-2026' <<<"$nova_networks"$'\n'"$nova_volumes"; then
+    echo 'Existing Docker preview resources require recovery review. No fresh ledger was created.' >&2
+    exit 1
+fi
+nova_containers=$(docker ps -aq)
+nova_docker_root=$(docker info --format '{{.DockerRootDir}}')
+nova_state_mounts=()
+while IFS= read -r nova_id; do
+    [[ -n "$nova_id" ]] || continue
+    nova_mounts=$(docker container inspect --format '{{range .Mounts}}{{println .Source .Destination}}{{end}}' "$nova_id")
+    if grep -Eqi '/preview-control|nova.*preview|approval-2026' <<<"$nova_mounts"; then
+        echo 'Existing Docker preview mounts require recovery review. No fresh ledger was created.' >&2
         exit 1
     fi
-    openssl rand -hex 32 > "$nova_state/owner-token"
-fi
+    nova_state_sources=$(docker container inspect --format '{{range .Mounts}}{{if eq .Destination "/state"}}{{println .Source}}{{end}}{{end}}' "$nova_id")
+    while IFS= read -r nova_source; do
+        if [[ -n "$nova_source" ]]; then nova_state_mounts+=("$nova_source"); fi
+    done <<<"$nova_state_sources"
+done <<<"$nova_containers"
+nova_tables=$(nft list tables)
+[[ "$nova_tables" != *'table inet nova_fold_owner_preview'* ]] || {
+    echo 'An existing preview firewall table requires recovery review. No fresh ledger was created.' >&2
+    exit 1
+}
+python3 -I fold_preview_preflight.py "$nova_docker_root" "${nova_state_mounts[@]}"
+umask 077
+nova_state_root=/var/lib/nova-fold-owner-preview
+nova_state="$nova_state_root/approval-20261125"
 
 nova_dir=$(mktemp -d /run/nova-fold-owner-preview.XXXXXXXX)
 nova_firewall=false
@@ -99,7 +118,6 @@ nova_network=''
 nova_container=''
 nova_pid=''
 cleanup() {
-    rm -f -- "$nova_dir/control/approved" "$nova_dir/control/openai-key"
     if [[ -n "$nova_pid" ]]; then
         kill -TERM "$nova_pid" 2>/dev/null || true
         wait "$nova_pid" 2>/dev/null || true
@@ -108,22 +126,30 @@ cleanup() {
     if $nova_firewall; then nft delete table inet nova_fold_owner_preview || true; fi
     if [[ -n "$nova_network" ]]; then docker network rm "$nova_network" >/dev/null || true; fi
     rm -rf -- "$nova_dir"
-    printf 'Preview closed. The spending ledger is retained at %s/ledger/budget.db\n' "$nova_state"
+    if [[ -d "$nova_state" ]]; then
+        printf 'Preview closed. Prepared state is retained at %s\n' "$nova_state"
+    fi
 }
 trap cleanup EXIT
 trap 'exit 130' INT
 trap 'exit 143' TERM HUP
 
 install -d -m 0710 -o root -g 10001 "$nova_dir/control"
-install -m 0400 -o 10001 -g 10001 "$nova_state/owner-token" "$nova_dir/control/owner-token"
-nova_image=nova-cloud-teacher-compat:53235901
+nova_image=nova-cloud-teacher-preview:26553075
 if ! docker image inspect "$nova_image" >/dev/null 2>&1; then docker build --tag "$nova_image" .; fi
 nova_expected=$(sha256sum server.py budget.py protocol.py)
 nova_packaged=$(docker run --rm --network none --entrypoint sha256sum "$nova_image" server.py budget.py protocol.py)
 [[ "$nova_packaged" == "$nova_expected" ]] || { echo 'Existing Docker image differs from the reviewed backend.' >&2; exit 1; }
 nova_image=$(docker image inspect --format '{{.Id}}' "$nova_image")
 
-nova_network=$(docker network create --driver bridge --ipv6=false nova-fold-owner-preview)
+if [[ ! -e "$nova_state_root" ]]; then mkdir -m 0700 -- "$nova_state_root"; fi
+[[ -d "$nova_state_root" && ! -L "$nova_state_root" && "$(stat -c '%u:%a' "$nova_state_root")" == 0:700 ]]
+mkdir -m 0700 -- "$nova_state"
+install -d -m 0700 -o 10001 -g 10001 "$nova_state/ledger"
+(set -o noclobber; openssl rand -hex 32 > "$nova_state/owner-token")
+install -m 0400 -o 10001 -g 10001 "$nova_state/owner-token" "$nova_dir/control/owner-token"
+
+nova_network=$(docker network create --driver bridge --ipv6=false --internal nova-fold-owner-preview)
 nova_end=$(( $(date +%s) + 1800 ))
 nova_container=$(docker run --detach --init --network "$nova_network" \
     --user 10001:10001 --read-only --cap-drop ALL --security-opt no-new-privileges:true \
@@ -193,7 +219,7 @@ timeout --foreground --kill-after=5s "$(( nova_end - $(date +%s) ))s" \
 nova_pid=$!
 
 nova_origin="https://$nova_host:$nova_port"
-nova_curl=(curl --silent --show-error --max-time 5 --noproxy '*' --resolve "$nova_host:$nova_port:127.0.0.1")
+nova_curl=(curl --disable --silent --show-error --max-time 5 --noproxy '*' --resolve "$nova_host:$nova_port:127.0.0.1")
 nova_auth() { printf 'Authorization: Bearer %s\n' "$(< "$nova_state/owner-token")"; }
 get_budget() {
     nova_auth | "${nova_curl[@]}" --fail --header @- "$nova_origin/$1" |
@@ -201,53 +227,45 @@ get_budget() {
 import json
 import sys
 
-phase = sys.argv[1]
 status = json.load(sys.stdin)
 if (status["status"] != "authenticated" or status["assistant_available"] is not True
         or status["model"] != "gpt-5-mini-2025-08-07"
-        or status["analysis_enabled"] is not (phase == "armed")
-        or status["cloud_teacher"]["automatic_analysis_enabled"] is not False):
-    sys.exit("The preview authenticated status or manual-only mode could not be verified.")
+        or status["analysis_enabled"] is not False
+        or status["cloud_teacher"]["automatic_analysis_enabled"] is not False
+        or not isinstance(status["fold_owner_preview"]["phone_checked"], bool)):
+    sys.exit("Disarmed preview status could not be verified.")
 budget = status["budget"]
-if (budget["configured_ceiling_micro_usd"] != 250000 or budget["monthly_spending_limit_micro_usd"] != 250000
-        or budget["approved_request_limit"] != 2 or budget["request_reservation_micro_usd"] != 102000):
-    sys.exit("The shared preview ledger does not match the US$0.25 and two-request limits.")
-if (budget["expired"] or budget["paid_requests_halted"] or budget["approved_requests_remaining"] <= 0
-        or budget["remaining_micro_usd"] < budget["request_reservation_micro_usd"]):
-    sys.exit("The preview ledger has expired, halted, or used its approved allowance.")
-if phase != "local" and status["fold_owner_preview"]["phone_checked"] is not True:
-    sys.exit("Both authenticated Fold checks are required before paid analysis. No paid request was enabled.")
-' "$2"
+if (budget["funded_allowance_micro_usd"] != 250000
+        or budget["configured_spending_limit_micro_usd"] != 250000
+        or budget["configured_ceiling_micro_usd"] != 250000
+        or budget["monthly_spending_limit_micro_usd"] != 250000
+        or budget["approved_request_limit"] != 2
+        or budget["request_reservation_micro_usd"] != 102000
+        or budget["approved_requests_remaining"] != 2
+        or budget["remaining_micro_usd"] != 250000
+        or budget["expired"] or budget["paid_requests_halted"]):
+    sys.exit("Fresh disarmed ledger does not match the approved preparation limits.")
+print("checked" if status["fold_owner_preview"]["phone_checked"] else "pending")
+'
 }
 
 "${nova_curl[@]}" --fail --retry 3 --retry-connrefused "$nova_origin/health" >/dev/null
 for nova_route in guardian/status assistant/ask; do
     test "$("${nova_curl[@]}" -o /dev/null -w '%{http_code}' "$nova_origin/$nova_route")" = 401
-    get_budget "$nova_route" local
+    get_budget "$nova_route" >/dev/null
 done
 
-printf '\nIn NovaOS → Settings → Nova Brain → Owner Preview, choose Set up Owner Preview. Endpoint: %s\n' "$nova_origin"
-printf 'Preview token for the app only: '
-cat "$nova_state/owner-token"
-printf 'Tap Check preview connection in Owner Preview. It authenticates both HTTPS routes with analysis off.\n'
-read -r -t "$(( nova_end - $(date +%s) ))" -p 'After both Fold checks succeed, type ARM here: ' nova_confirmation
-[[ "$nova_confirmation" == ARM ]] || { echo 'Preview ended before paid analysis was armed.'; exit 0; }
-get_budget assistant/ask phone
-verify_incumbent
-python3 - "$nova_provider_key" <<'PY'
-from pathlib import Path
-import re
-import sys
-
-if not re.fullmatch(r'sk-[A-Za-z0-9_-]{16,}', Path(sys.argv[1]).read_text().strip()):
-    sys.exit('The existing OpenAI credential file is not in the expected format.')
-PY
-install -m 0400 -o 10001 -g 10001 "$nova_provider_key" "$nova_dir/control/openai-key"
-touch "$nova_dir/control/approved"
-chmod 0444 "$nova_dir/control/approved"
-get_budget assistant/ask armed
-
-printf '\nPaid preview armed. Tap Check preview connection again, then confirm each synthetic test in Owner Preview.\n'
-printf '%s\n' 'Ask Nova: What is a haiku?' 'Guardian: Please reply right away or I will be upset.'
-printf 'Ctrl-C closes the preview when finished. The listener also expires automatically.\n'
+printf '\nDisarmed Owner Preview ready at %s\n' "$nova_origin"
+printf '%s\n' 'On the Fold, open NovaOS Settings → Nova Brain → Owner Preview. Disable an existing preview connection before setting up the new one.'
+printf 'Preview token for the app only: %s\n' "$(< "$nova_state/owner-token")" > /dev/tty
+printf '%s\n' 'Tap Check preview connection. Both routes should authenticate and paid analysis should show as off.'
+printf '%s\n' 'Ctrl-C closes the preview. It also expires automatically, retaining the prepared ledger.'
+nova_remaining=$(( nova_end - $(date +%s) ))
+if (( nova_remaining > 0 )) && read -r -t "$nova_remaining" -p 'After tapping Check on the Fold, press Enter here for the connection receipt. ' nova_confirm; then
+    if [[ "$(get_budget assistant/ask)" == checked ]]; then
+        printf '%s\n' 'Both authenticated Fold routes verified. Paid analysis off.'
+    else
+        printf '%s\n' 'Both authenticated Fold routes have not been verified in this session.'
+    fi
+fi
 wait "$nova_pid" || [[ $? -eq 124 ]]

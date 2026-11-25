@@ -1,4 +1,4 @@
-name: Verify temporary Fold preview isolation
+name: Verify disarmed Fold preview isolation
 on:
   push:
     branches: [verification/nova-brain-fold-owner-preview]
@@ -6,7 +6,15 @@ on:
       - .github/workflows/nova-brain-fold-preview-checks.yml
       - scripts/cloud_teacher/fold-owner-preview.sh
       - scripts/cloud_teacher/fold_owner_preview.py
+      - scripts/cloud_teacher/fold_preview_preflight.py
       - scripts/cloud_teacher/test_fold_owner_preview.py
+      - scripts/cloud_teacher/test_fold_preview_preflight.py
+      - scripts/cloud_teacher/server.py
+      - scripts/cloud_teacher/budget.py
+      - scripts/cloud_teacher/protocol.py
+      - scripts/cloud_teacher/Dockerfile
+      - scripts/cloud_teacher/.dockerignore
+      - scripts/cloud_teacher/deploy.sh
 permissions:
   contents: read
 jobs:
@@ -14,13 +22,24 @@ jobs:
     if: github.repository == 'traynor1987/Private-gallery-' && github.ref == 'refs/heads/verification/nova-brain-fold-owner-preview'
     runs-on: ubuntu-24.04
     timeout-minutes: 10
+    env:
+      REVIEWED_BUILD_98_BACKEND: 26553075df3c530fd81a98640e59ddf09c545215
     steps:
       - uses: actions/checkout@v4
         with: { persist-credentials: false }
-      - name: Check default-off TLS arming and simulated provider dispatch policy
+      - name: Verify exact Build 98 backend files and the collision preflight
         run: |
-          bash -n scripts/cloud_teacher/fold-owner-preview.sh
-          PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s scripts/cloud_teacher -p test_fold_owner_preview.py -v
+          set -euo pipefail
+          backend=scripts/cloud_teacher
+          git fetch --no-tags --depth=1 origin "$REVIEWED_BUILD_98_BACKEND"
+          test "$(git rev-parse FETCH_HEAD)" = "$REVIEWED_BUILD_98_BACKEND"
+          grep -Fx "nova_reviewed=$REVIEWED_BUILD_98_BACKEND" "$backend/fold-owner-preview.sh"
+          git diff --exit-code "$REVIEWED_BUILD_98_BACKEND" -- "$backend"/{server.py,budget.py,protocol.py,Dockerfile,.dockerignore,deploy.sh}
+          bash -n "$backend/fold-owner-preview.sh"
+          (
+            cd "$backend"
+            PYTHONDONTWRITEBYTECODE=1 python3 -m unittest -v test_fold_owner_preview test_fold_preview_preflight
+          )
       - name: Apply the reviewed firewall inside a disposable network and restrict the preview port
         run: |
           if ! command -v nft >/dev/null; then
@@ -72,31 +91,126 @@ jobs:
           nsenter -t "$phone" -n curl --fail --silent --noproxy '*' \
             --interface 192.0.2.12 --max-time 3 http://192.0.2.10:18443/ >/dev/null
           NS
-      - name: Verify the preview container contract without an OpenAI or TLS key
+      - name: Verify isolated disarmed HTTPS with synthetic credentials
         run: |
           set -euo pipefail
+          umask 077
           root=$(mktemp -d "$RUNNER_TEMP/nova-preview-it.XXXXXXXX")
           network=''
           container=''
-          trap 'if [[ -n "$container" ]]; then docker rm -f "$container" >/dev/null; fi; if [[ -n "$network" ]]; then docker network rm "$network" >/dev/null; fi; sudo rm -rf -- "$root"' EXIT
+          nginx=''
+          cleanup() {
+            if [[ -s "$root/nginx.pid" ]]; then
+              sudo "$nginx" -p "$root/" -c "$root/nginx.conf" -s quit >/dev/null 2>&1 || true
+            fi
+            if [[ -n "$container" ]]; then docker rm -f "$container" >/dev/null || true; fi
+            if [[ -n "$network" ]]; then docker network rm "$network" >/dev/null || true; fi
+            sudo rm -rf -- "$root"
+          }
+          trap cleanup EXIT
+          if ! nginx=$(command -v nginx); then
+            sudo apt-get update -qq
+            mkdir "$root/nginx-package"
+            (
+              cd "$root/nginx-package"
+              apt-get download nginx
+              dpkg-deb --extract nginx_*.deb .
+            )
+            nginx="$root/nginx-package/usr/sbin/nginx"
+          fi
           sudo install -d -m 0710 -o root -g 10001 "$root/control"
           sudo install -d -m 0700 -o 10001 -g 10001 "$root/ledger"
-          test_token=$(openssl rand -hex 32)
-          printf '%s\n' "$test_token" | sudo tee "$root/control/owner-token" >/dev/null
+          fixture_token=$(openssl rand -hex 32)
+          printf '%s\n' "$fixture_token" | sudo tee "$root/control/owner-token" >/dev/null
           sudo chown 10001:10001 "$root/control/owner-token"
           sudo chmod 0400 "$root/control/owner-token"
-          docker build --tag nova-cloud-teacher-preview-check scripts/cloud_teacher
+          image=nova-cloud-teacher-preview-check
+          docker build --tag "$image" scripts/cloud_teacher
+          expected=$(cd scripts/cloud_teacher && sha256sum server.py budget.py protocol.py)
+          packaged=$(docker run --rm --network none --entrypoint sha256sum "$image" server.py budget.py protocol.py)
+          test "$expected" = "$packaged"
           network=$(docker network create --driver bridge --internal --ipv6=false nova-fold-check)
+          test "$(docker network inspect --format '{{.Internal}}' "$network")" = true
           container=$(docker run --detach --init --network "$network" --user 10001:10001 \
             --read-only --cap-drop ALL --security-opt no-new-privileges:true --memory 128m --pids-limit 80 \
-            -e "NOVA_FOLD_PREVIEW_END=$(( $(date +%s) + 120 ))" \
+            --log-driver none -e "NOVA_FOLD_PREVIEW_END=$(( $(date +%s) + 120 ))" \
             --mount "type=bind,src=$PWD/scripts/cloud_teacher/fold_owner_preview.py,dst=/app/fold_owner_preview.py,readonly" \
             --mount "type=bind,src=$root/control,dst=/preview-control,readonly" \
             --mount "type=bind,src=$root/ledger,dst=/state" \
-            --entrypoint python nova-cloud-teacher-preview-check /app/fold_owner_preview.py)
+            --entrypoint python "$image" /app/fold_owner_preview.py)
           test -z "$(docker port "$container")"
-          backend=$(docker inspect --format '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' "$container")
-          curl --silent --show-error --fail --retry 3 --retry-connrefused --max-time 3 --noproxy '*' "http://$backend:8787/health" >/dev/null
-          printf 'Authorization: Bearer %s\n' "$test_token" |
-            curl --silent --show-error --fail --noproxy '*' --header @- "http://$backend:8787/assistant/ask" |
-            python3 -c 'import json,sys; s=json.load(sys.stdin); assert s["analysis_enabled"] is False and s["budget"]["approved_request_limit"] == 2 and s["budget"]["configured_ceiling_micro_usd"] == 250000'
+          export nova_backend
+          nova_backend=$(docker inspect --format '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' "$container")
+          curl --silent --show-error --fail --retry 3 --retry-connrefused --max-time 3 --noproxy '*' \
+            "http://$nova_backend:8787/health" >/dev/null
+
+          export nova_dir="$root" nova_owner=192.0.2.11 nova_port=18443 nova_host=brain.jamestraynor.co.uk
+          export nova_cert="$root/certificate.pem" nova_tls_key="$root/key.pem"
+          openssl req -x509 -newkey rsa:2048 -sha256 -nodes -days 1 -subj "/CN=$nova_host" \
+            -addext "subjectAltName=DNS:$nova_host" -out "$nova_cert" -keyout "$nova_tls_key" 2>/dev/null
+          python3 - <<'PY'
+          from pathlib import Path
+          import os
+          import re
+
+          source = Path("scripts/cloud_teacher/fold-owner-preview.sh").read_text()
+          contents = re.search(r"^[^\n]*<<NGINX\n(.*?)^NGINX$", source, re.M | re.S)[1]
+          config = re.sub(r"(?<!\\)\$([a-z_][a-z0-9_]*)", lambda match: os.environ[match[1]], contents)
+          config = config.replace(r"\$", "$")
+          # This fixture uses the wrapper configuration with a loopback-only listener on the runner.
+          assert config.count("listen 0.0.0.0:18443 ssl;") == 1
+          config = config.replace("listen 0.0.0.0:18443 ssl;", "listen 127.0.0.1:18443 ssl;")
+          (Path(os.environ["nova_dir"]) / "nginx.conf").write_text(config)
+          PY
+          sudo "$nginx" -t -p "$root/" -c "$root/nginx.conf"
+          sudo "$nginx" -p "$root/" -c "$root/nginx.conf"
+          origin="https://$nova_host:$nova_port"
+          gateway=(curl --silent --show-error --max-time 5 --noproxy '*' \
+            --cacert "$nova_cert" --resolve "$nova_host:$nova_port:127.0.0.1")
+          authorize_fixture() { printf 'Authorization: Bearer %s\n' "$fixture_token"; }
+          "${gateway[@]}" --fail --tlsv1.2 --tls-max 1.2 "$origin/health" >/dev/null
+          for route in guardian/status assistant/ask; do
+            test "$("${gateway[@]}" -o /dev/null -w '%{http_code}' "$origin/$route")" = 401
+            authorize_fixture |
+              "${gateway[@]}" --fail --tlsv1.3 --header @- --header 'X-Nova-Fold-Client: 1' "$origin/$route" |
+              python3 -c '
+          import json, sys
+
+          status = json.load(sys.stdin)
+          assert status["status"] == "authenticated" and status["assistant_available"] is True
+          assert status["analysis_enabled"] is False and status["cloud_teacher"]["automatic_analysis_enabled"] is False
+          assert status["fold_owner_preview"]["phone_checked"] is False
+          budget = status["budget"]
+          assert budget["cycle"] == "fold-owner-20261125"
+          assert budget["configured_ceiling_micro_usd"] == budget["monthly_spending_limit_micro_usd"] == 250000
+          assert budget["approved_request_limit"] == budget["approved_requests_remaining"] == 2
+          assert budget["reserved_upper_bound_micro_usd"] == 0
+          '
+          done
+          verify_disarmed_fixture() {
+            local code
+            code=$(authorize_fixture |
+              "${gateway[@]}" --header @- --header 'Content-Type: application/json' \
+              --data-binary "$2" -o "$root/disarmed.json" -w '%{http_code}' "$origin/$1")
+            test "$code" = 503
+            python3 -c 'import json, sys; assert json.load(open(sys.argv[1]))["error"] == "analysis_disabled"' "$root/disarmed.json"
+          }
+          verify_disarmed_fixture assistant/ask \
+            '{"message":"What is a haiku?","consent":true,"request_id":"01234567-89ab-4cde-8fab-0123456789ab","protocol_version":2}'
+          verify_disarmed_fixture guardian/analyze \
+            '{"message":"Please reply right away or I will be upset.","consent":true,"request_id":"01234567-89ab-4cde-8fab-0123456789ac","protocol_version":2}'
+          head -c 2049 /dev/zero > "$root/oversized"
+          test "$("${gateway[@]}" --data-binary @"$root/oversized" -o /dev/null -w '%{http_code}' "$origin/assistant/ask")" = 413
+          for retry in {1..4}; do
+            if [[ "$("${gateway[@]}" -o /dev/null -w '%{http_code}' "$origin/health")" == 429 ]]; then break; fi
+            test "$retry" != 4
+          done
+          docker exec --user 10001:10001 "$container" python -c '
+          import sqlite3
+          from pathlib import Path
+
+          assert not Path("/preview-control/openai-key").exists()
+          assert not Path("/preview-control/approved").exists()
+          with sqlite3.connect("file:/state/budget.db?mode=ro", uri=True) as ledger:
+              assert ledger.execute("SELECT COUNT(*) FROM request_reservations").fetchone() == (0,)
+          '
