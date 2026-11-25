@@ -40,6 +40,7 @@ import androidx.core.content.FileProvider
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.window.SecureFlagPolicy
 import androidx.compose.ui.unit.dp
@@ -161,11 +162,8 @@ class GuardianInboxActivity : ComponentActivity() {
             GuardianTheme {
                 Surface(Modifier.fillMaxSize(), color = GuardianNavy, contentColor = GuardianPrimary) {
                     Box(Modifier.fillMaxSize().safeDrawingPadding(), contentAlignment = Alignment.TopCenter) {
-                        val layer = rememberGraphicsLayer()
-                        Column(Modifier.widthIn(max = 720.dp).fillMaxSize().then(if (diagnostic) Modifier.drawWithContent {
-                            layer.record { this@drawWithContent.drawContent() }
-                            drawLayer(layer)
-                        } else Modifier).background(GuardianNavy).padding(horizontal = 16.dp)) {
+                        Column(Modifier.widthIn(max = 720.dp).fillMaxSize()
+                            .background(GuardianNavy).padding(horizontal = 16.dp)) {
                             val thread = conversation.takeIf { authenticated && !deviceLocked() && !diagnostic && !contactsOpen }
                             BackHandler(enabled = retentionOpen || diagnostic || contactsOpen || conversationsOpen || detail != null) { navigateBack() }
                             Row(Modifier.fillMaxWidth().padding(vertical = 12.dp),
@@ -199,40 +197,14 @@ class GuardianInboxActivity : ComponentActivity() {
                                         learning = { validationOpen = true },
                                     )
                                 }
-                                if (diagnostic) {
-                                    Text("Safe diagnostic preview · names, dates and messages omitted", color = GuardianMuted)
-                                    TextButton(enabled = !busy, onClick = {
-                                        if (canReview() && !busy) {
-                                            busy = true
-                                            operation = lifecycleScope.launch {
-                                                val result = runCatching {
-                                                    val bitmap = layer.toImageBitmap().asAndroidBitmap()
-                                                    withContext(Dispatchers.IO) { diagnosticImage(bitmap) }
-                                                }
-                                                if (!canReview() || !diagnostic) return@launch
-                                                busy = false
-                                                result.onSuccess { file ->
-                                                    val uri = FileProvider.getUriForFile(this@GuardianInboxActivity,
-                                                        "$packageName.fileprovider", file)
-                                                    val send = Intent(Intent.ACTION_SEND).setType("image/png")
-                                                        .putExtra(Intent.EXTRA_STREAM, uri)
-                                                        .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                                                    send.clipData = ClipData.newUri(contentResolver, "Guardian diagnostic", uri)
-                                                    if (runCatching { startActivity(Intent.createChooser(send, "Share safe diagnostic view")) }.isFailure) {
-                                                        failure = "Android could not open the share menu."
-                                                    }
-                                                }.onFailure { failure = "The safe diagnostic image could not be created." }
-                                            }
-                                        }
-                                    }) { Text("Share redacted image") }
-                                }
-                                if (retentionOpen && !diagnostic) RetentionManagement89()
-                                else if (contactsOpen && !diagnostic) MonitoredContacts()
+                                if (diagnostic) DiagnosticView()
+                                else if (retentionOpen) RetentionManagement89()
+                                else if (contactsOpen) MonitoredContacts()
                                 else if (thread != null || detail != null) ConversationDetail(thread)
-                                else if (conversationsOpen && !diagnostic) Conversations()
-                                else if (safeCentre && !diagnostic) SafeCentre()
-                                else InboxContent(redacted = diagnostic)
-                                InboxDialogs()
+                                else if (conversationsOpen) Conversations()
+                                else if (safeCentre) SafeCentre()
+                                else InboxContent(redacted = false)
+                                if (!diagnostic) InboxDialogs()
                             }
                             else Column(Modifier.weight(1f).verticalScroll(rememberScrollState())) {
                                 GuardianCard("Inbox locked") {
@@ -423,6 +395,54 @@ class GuardianInboxActivity : ComponentActivity() {
             throw failure
         }
         return output
+    }
+
+    @Composable
+    private fun DiagnosticView() {
+        // A separate capturable window can only render redacted rows. The archive window stays secure.
+        Dialog(onDismissRequest = { diagnostic = false }, properties = DialogProperties(
+            securePolicy = SecureFlagPolicy.SecureOff, usePlatformDefaultWidth = false,
+        )) {
+            Surface(Modifier.fillMaxSize(), color = GuardianNavy) {
+                val layer = rememberGraphicsLayer()
+                Column(Modifier.fillMaxSize().safeDrawingPadding().drawWithContent {
+                    layer.record { this@drawWithContent.drawContent() }
+                    drawLayer(layer)
+                }.padding(horizontal = 16.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        IconButton(onClick = { diagnostic = false }) {
+                            Icon(Icons.AutoMirrored.Outlined.ArrowBack, "Back")
+                        }
+                        Text("Guardian diagnostics", style = MaterialTheme.typography.headlineSmall)
+                    }
+                    Text("Safe diagnostic preview · names, dates and messages omitted", color = GuardianMuted)
+                    TextButton(enabled = !busy, onClick = {
+                        if (!canReview() || !diagnostic || busy) return@TextButton
+                        busy = true
+                        operation = lifecycleScope.launch {
+                            val result = runCatching {
+                                val bitmap = layer.toImageBitmap().asAndroidBitmap()
+                                withContext(Dispatchers.IO) { diagnosticImage(bitmap) }
+                            }
+                            if (!canReview()) return@launch
+                            busy = false
+                            if (!diagnostic) return@launch
+                            result.onSuccess { file ->
+                                val uri = FileProvider.getUriForFile(this@GuardianInboxActivity,
+                                    "$packageName.fileprovider", file)
+                                val send = Intent(Intent.ACTION_SEND).setType("image/png")
+                                    .putExtra(Intent.EXTRA_STREAM, uri).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                send.clipData = ClipData.newUri(contentResolver, "Guardian diagnostic", uri)
+                                if (runCatching { startActivity(Intent.createChooser(send, "Share safe diagnostic view")) }.isFailure) {
+                                    failure = "Android could not open the share menu."
+                                }
+                            }.onFailure { failure = "The safe diagnostic image could not be created." }
+                        }
+                    }) { Text("Share redacted image") }
+                    InboxContent(redacted = true)
+                }
+            }
+        }
     }
 
     @OptIn(ExperimentalLayoutApi::class)
@@ -653,7 +673,7 @@ class GuardianInboxActivity : ComponentActivity() {
                 }
             }) { Text("Reset local learning") } },
             dismissButton = { TextButton(onClick = { settingsOpen = false }) { Text("Cancel") } },
-            properties = DialogProperties(securePolicy = SecureFlagPolicy.SecureOn),
+            properties = DialogProperties(securePolicy = SecureFlagPolicy.SecureOff),
         )
     }
 
@@ -799,7 +819,7 @@ class GuardianInboxActivity : ComponentActivity() {
                     }
                 },
                 confirmButton = { TextButton(onClick = { safeSettings = false }) { Text("Done") } },
-                properties = DialogProperties(securePolicy = SecureFlagPolicy.SecureOn),
+                properties = DialogProperties(securePolicy = SecureFlagPolicy.SecureOff),
             )
         }
     }

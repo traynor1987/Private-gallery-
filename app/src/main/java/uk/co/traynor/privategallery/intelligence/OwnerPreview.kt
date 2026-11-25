@@ -1,9 +1,16 @@
 package uk.co.traynor.privategallery.intelligence
 
 import android.content.Context
+import java.io.IOException
+import java.net.ConnectException
+import java.net.NoRouteToHostException
+import java.net.SocketTimeoutException
 import java.net.URI
+import java.net.UnknownHostException
+import java.time.Instant
 import java.util.UUID
 import java.util.concurrent.CancellationException
+import javax.net.ssl.SSLException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import org.json.JSONObject
@@ -90,20 +97,95 @@ internal class OwnerPreviewClient(
     private val assistantRequest: (NovaBrainConfiguration, ByteArray?, () -> Unit) -> BrainResponse = ::requestIntelligence,
     private val guardianRequest: (URI, String, ByteArray?, () -> Unit) -> BrainResponse =
         { endpoint, token, payload, beforeBody -> cloudRequest(endpoint, token, payload, beforeBody = beforeBody) },
+    private val networkAvailable: () -> Boolean = { true },
 ) {
     fun check(connection: OwnerPreviewConnection, mayContinue: () -> Boolean): OwnerPreviewStatus {
         val configuration = connection.configuration()
         val ask = assistant(mayContinue).status(configuration)
         require(ask.assistantAvailable)
         val guardian = guardian(mayContinue).status(configuration)
+        return combinedStatus(ask.budget, guardian)
+    }
+
+    /** Sends exactly two HTTPS GETs and reports outcomes without retaining tokens, payloads or exception details. */
+    fun diagnose(connection: OwnerPreviewConnection, mayContinue: () -> Boolean): OwnerPreviewDiagnostics {
+        val attemptedAt = Instant.now()
+        requireCurrent(mayContinue)
+        if (!networkAvailable()) return OwnerPreviewDiagnostics(attemptedAt, failure = OwnerPreviewFailure.OFFLINE)
+        var httpStatus: Int? = null
+        var tls = OwnerPreviewTls.NOT_VERIFIED
+
+        fun readStatus(request: () -> BrainResponse): VerifiedPreviewStatus {
+            requireCurrent(mayContinue)
+            httpStatus = null
+            tls = OwnerPreviewTls.NOT_VERIFIED
+            val response = request()
+            try {
+                requireCurrent(mayContinue)
+                httpStatus = response.code
+                tls = OwnerPreviewTls.VERIFIED
+                require(response.body.size <= 32768)
+                if (response.code != 200) throw PreviewRejected(httpFailure(response))
+                return verifiedStatus(response)
+            } finally { response.body.fill(0) }
+        }
+
+        return try {
+            val configuration = connection.configuration()
+            val ask = readStatus { assistantRequest(configuration, null) { requireCurrent(mayContinue) } }
+            require(ask.assistantAvailable)
+            val guardian = readStatus {
+                guardianRequest(configuration.endpoint("/guardian/status"), configuration.token, null) {
+                    requireCurrent(mayContinue)
+                }
+            }
+            val expiresAt = listOfNotNull(ask.budget.expiresAt, guardian.budget.expiresAt).minOrNull()
+            OwnerPreviewDiagnostics(
+                attemptedAt = attemptedAt,
+                status = combinedStatus(ask.budget, guardian.budget),
+                httpStatus = httpStatus,
+                tls = tls,
+                expiration = if (ask.budget.expired || guardian.budget.expired) OwnerPreviewExpiration.EXPIRED
+                    else OwnerPreviewExpiration.ACTIVE,
+                expiresAt = expiresAt?.let(Instant::ofEpochSecond),
+            )
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (error: Exception) {
+            requireCurrent(mayContinue)
+            val failure = when (error) {
+                is PreviewRejected -> error.failure
+                is SSLException -> OwnerPreviewFailure.TLS
+                is IOException -> when {
+                    !networkAvailable() -> OwnerPreviewFailure.OFFLINE
+                    error is UnknownHostException -> OwnerPreviewFailure.HOST_LOOKUP
+                    error is NoRouteToHostException -> OwnerPreviewFailure.NETWORK_ROUTE
+                    error is SocketTimeoutException -> OwnerPreviewFailure.TIMEOUT
+                    error is ConnectException -> OwnerPreviewFailure.SERVER_UNAVAILABLE
+                    else -> OwnerPreviewFailure.NETWORK_ROUTE
+                }
+                else -> OwnerPreviewFailure.INVALID_RESPONSE
+            }
+            OwnerPreviewDiagnostics(
+                attemptedAt = attemptedAt,
+                httpStatus = httpStatus,
+                tls = if (failure == OwnerPreviewFailure.TLS) OwnerPreviewTls.FAILED else tls,
+                failure = failure,
+                expiration = if (failure == OwnerPreviewFailure.EXPIRED) OwnerPreviewExpiration.EXPIRED
+                    else OwnerPreviewExpiration.UNKNOWN,
+            )
+        }
+    }
+
+    private fun combinedStatus(ask: CloudTeacherStatus, guardian: CloudTeacherStatus): OwnerPreviewStatus {
         return OwnerPreviewStatus(
-            armed = ask.budget.analysisEnabled && guardian.analysisEnabled,
-            remaining = minOf(checkNotNull(ask.budget.approvedRequestsRemaining), checkNotNull(guardian.approvedRequestsRemaining)),
-            allowed = ask.budget.canAnalyze && guardian.canAnalyze,
+            armed = ask.analysisEnabled && guardian.analysisEnabled,
+            remaining = minOf(checkNotNull(ask.approvedRequestsRemaining), checkNotNull(guardian.approvedRequestsRemaining)),
+            allowed = ask.canAnalyze && guardian.canAnalyze,
             ceilingMicroUsd = CEILING,
             availableMicroUsd = minOf(
-                checkNotNull(ask.budget.remaining),
-                checkNotNull(ask.budget.monthlyRemaining),
+                checkNotNull(ask.remaining),
+                checkNotNull(ask.monthlyRemaining),
                 checkNotNull(guardian.remaining),
                 checkNotNull(guardian.monthlyRemaining),
             ),
@@ -155,23 +237,49 @@ internal class OwnerPreviewClient(
     private fun checkStatus(response: BrainResponse): BrainResponse {
         if (response.code != 200) return response
         try {
-            val json = JSONObject(response.body.decodeToString())
-            val status = CloudTeacherStatus.parse(json)
-            val preview = json.getJSONObject("fold_owner_preview")
-            val budget = json.getJSONObject("budget")
-            require(preview.get("phone_checked") is Boolean && (!status.analysisEnabled || preview.getBoolean("phone_checked")))
-            require(json.getJSONObject("cloud_teacher").get("automatic_analysis_enabled") == false)
-            require(status.model == "gpt-5-mini-2025-08-07" &&
-                status.fundedAllowance == CEILING && status.cycleLimit == CEILING && status.cycleCeiling == CEILING &&
-                status.monthlyLimit == CEILING && status.reservation == RESERVATION &&
-                status.remaining?.let { it in 0L..CEILING } == true &&
-                status.monthlyRemaining?.let { it in 0L..CEILING } == true &&
-                budget.get("approved_request_limit").let { it == REQUEST_LIMIT.toInt() || it == REQUEST_LIMIT } &&
-                status.approvedRequestsRemaining?.let { it in 0L..REQUEST_LIMIT } == true)
+            verifiedStatus(response)
             return response
-        } catch (error: Exception) {
+        } catch (_: Exception) {
             response.body.fill(0)
-            throw IllegalStateException("Owner Preview identity or spending limits could not be verified.", error)
+            throw IllegalStateException("Owner Preview identity or spending limits could not be verified.")
         }
     }
+
+    private fun verifiedStatus(response: BrainResponse): VerifiedPreviewStatus {
+        require(response.body.size <= 32768)
+        val json = JSONObject(response.body.decodeToString())
+        val status = CloudTeacherStatus.parse(json)
+        val preview = json.getJSONObject("fold_owner_preview")
+        val budget = json.getJSONObject("budget")
+        require(preview.get("phone_checked") is Boolean && (!status.analysisEnabled || preview.getBoolean("phone_checked")))
+        require(json.getJSONObject("cloud_teacher").get("automatic_analysis_enabled") == false)
+        require(status.model == "gpt-5-mini-2025-08-07" &&
+            status.fundedAllowance == CEILING && status.cycleLimit == CEILING && status.cycleCeiling == CEILING &&
+            status.monthlyLimit == CEILING && status.reservation == RESERVATION &&
+            status.remaining?.let { it in 0L..CEILING } == true &&
+            status.monthlyRemaining?.let { it in 0L..CEILING } == true &&
+            budget.get("approved_request_limit").let { it == REQUEST_LIMIT.toInt() || it == REQUEST_LIMIT } &&
+            status.approvedRequestsRemaining?.let { it in 0L..REQUEST_LIMIT } == true)
+        return VerifiedPreviewStatus(json.opt("assistant_available") == true, status)
+    }
+
+    private fun httpFailure(response: BrainResponse): OwnerPreviewFailure = when (response.code) {
+        401, 403 -> OwnerPreviewFailure.AUTHENTICATION
+        404 -> OwnerPreviewFailure.ROUTE_UNAVAILABLE
+        429 -> OwnerPreviewFailure.RATE_LIMITED
+        402, 503 -> {
+            val reason = runCatching { JSONObject(response.body.decodeToString()).optString("error") }.getOrNull()
+            when {
+                response.code == 503 && reason == "preview_expired" ||
+                    response.code == 402 && reason == "expired" -> OwnerPreviewFailure.EXPIRED
+                response.code == 503 -> OwnerPreviewFailure.SERVER_UNAVAILABLE
+                else -> OwnerPreviewFailure.INVALID_RESPONSE
+            }
+        }
+        in 500..599 -> OwnerPreviewFailure.SERVER_UNAVAILABLE
+        else -> OwnerPreviewFailure.INVALID_RESPONSE
+    }
+
+    private data class VerifiedPreviewStatus(val assistantAvailable: Boolean, val budget: CloudTeacherStatus)
+    private class PreviewRejected(val failure: OwnerPreviewFailure) : IOException()
 }

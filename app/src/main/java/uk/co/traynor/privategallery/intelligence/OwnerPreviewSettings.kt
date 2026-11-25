@@ -1,10 +1,16 @@
 package uk.co.traynor.privategallery.intelligence
 
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
+import android.view.inputmethod.EditorInfo
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.LinearProgressIndicator
@@ -19,10 +25,16 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.InterceptPlatformTextInput
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.PlatformTextInputInterceptor
+import androidx.compose.ui.platform.PlatformTextInputMethodRequest
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
@@ -37,37 +49,45 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancelChildren
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.isActive
+import kotlinx.coroutines.job
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runInterruptible
 import kotlinx.coroutines.withContext
 import uk.co.traynor.privategallery.core.brain.CloudTeacherException
 
 @Composable
-internal fun OwnerPreviewSettings() {
+internal fun OwnerPreviewSettings(
+    canUsePreview: (Context) -> Boolean = ::intelligencePrivateAllowed,
+    checkPreview: ((OwnerPreviewConnection, () -> Boolean) -> OwnerPreviewDiagnostics)? = null,
+) {
     val context = LocalContext.current.applicationContext
     val lifecycle = LocalLifecycleOwner.current.lifecycle
     val store = remember(context) { OwnerPreviewStore(context) }
-    val client = remember { OwnerPreviewClient() }
+    val client = remember(context) { OwnerPreviewClient(networkAvailable = { ownerPreviewNetworkAvailable(context) }) }
     val scope = rememberCoroutineScope()
     var enabled by remember { mutableStateOf(false) }
-    var configuring by remember { mutableStateOf(false) }
+    var configuring by rememberSaveable { mutableStateOf(false) }
     var token by remember { mutableStateOf("") }
     var busy by remember { mutableStateOf(false) }
     var operation by remember { mutableStateOf<Job?>(null) }
     var generation by remember { mutableStateOf(0) }
     var pending by remember { mutableStateOf<OwnerPreviewTest?>(null) }
     var status by remember { mutableStateOf<OwnerPreviewStatus?>(null) }
+    var diagnostics by remember { mutableStateOf<OwnerPreviewDiagnostics?>(null) }
+    var diagnosticsOpen by rememberSaveable { mutableStateOf(false) }
     var replies by remember { mutableStateOf(emptyMap<OwnerPreviewTest, OwnerPreviewReply>()) }
     var message by remember { mutableStateOf<String?>(null) }
+    val endpointError = remember { ownerPreviewEndpointError(OWNER_PREVIEW_ORIGIN) }
 
     fun foreground() = lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)
-    fun allowed() = foreground() && intelligencePrivateAllowed(context)
+    fun allowed() = foreground() && canUsePreview(context)
 
     LaunchedEffect(lifecycle, store) {
         lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
             OwnerPreviewStore.changes.collect {
                 enabled = withContext(Dispatchers.IO) { store.isEnabled() }
-                status = null
             }
         }
     }
@@ -75,7 +95,6 @@ internal fun OwnerPreviewSettings() {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_PAUSE) {
                 scope.coroutineContext.cancelChildren()
-                configuring = false
                 token = ""
                 pending = null
                 status = null
@@ -102,14 +121,26 @@ internal fun OwnerPreviewSettings() {
         }
     }
 
+    suspend fun verifyConnection() {
+        val job = currentCoroutineContext().job
+        val outcome = runInterruptible(Dispatchers.IO) {
+            val connection = checkNotNull(store.read())
+            val current = { job.isActive && allowed() && store.isCurrent(connection) }
+            (checkPreview ?: client::diagnose)(connection, current)
+        }
+        diagnostics = outcome
+        status = outcome.status
+    }
+
     fun checkConnection() {
         if (!allowed()) return
+        if (endpointError != null) {
+            message = endpointError
+            return
+        }
         status = null
         act("Owner Preview check failed. Verify the current preview session and its token.") {
-            status = withContext(Dispatchers.IO) {
-                val connection = checkNotNull(store.read())
-                client.check(connection) { isActive && allowed() && store.isCurrent(connection) }
-            }
+            verifyConnection()
         }
     }
 
@@ -129,13 +160,14 @@ internal fun OwnerPreviewSettings() {
             Text("Owner Preview", style = MaterialTheme.typography.titleLarge)
             Text(if (enabled) "Enabled · temporary connection" else "Off",
                 Modifier.testTag("nova-owner-preview-status"))
+            Text(OWNER_PREVIEW_ORIGIN, style = MaterialTheme.typography.bodyMedium)
+            endpointError?.let { Text(it, color = MaterialTheme.colorScheme.error) }
             Text("Two synthetic tests share a US$0.25 server ceiling. Each send needs your confirmation.")
             if (!enabled) {
                 TextButton(enabled = !busy, onClick = {
                     if (allowed()) configuring = true else message = "Unlock NovaOS and end Sanctuary to set up the preview."
                 }) { Text("Set up Owner Preview") }
             } else {
-                Text(OWNER_PREVIEW_ORIGIN)
                 if (status == null) Text("Connection and shared allowance need a fresh check.")
                 TextButton(enabled = !busy, onClick = {
                     if (allowed()) checkConnection() else message = "Unlock NovaOS and end Sanctuary to check the preview."
@@ -146,6 +178,9 @@ internal fun OwnerPreviewSettings() {
                     Text("${verified.remaining} approved requests left")
                     Text("Available budget US$ ${previewDollars(verified.availableMicroUsd)} of US$ ${previewDollars(verified.ceilingMicroUsd)}")
                     if (verified.armed && !verified.allowed) Text("The shared ledger does not currently allow another paid request.")
+                }
+                diagnostics?.failure?.let { failure ->
+                    Text(failure.message, color = MaterialTheme.colorScheme.error)
                 }
                 OwnerPreviewTest.entries.forEach { test ->
                     TextButton(enabled = !busy && status?.allowed == true && test !in replies, onClick = {
@@ -159,6 +194,7 @@ internal fun OwnerPreviewSettings() {
                 TextButton(onClick = {
                     pending = null
                     status = null
+                    diagnostics = null
                     replies = emptyMap()
                     act("Could not remove the preview configuration.", replace = true) {
                         withContext(Dispatchers.IO) { store.disable() }
@@ -166,37 +202,44 @@ internal fun OwnerPreviewSettings() {
                     }
                 }) { Text("Disable Owner Preview") }
             }
+            TextButton(onClick = { diagnosticsOpen = !diagnosticsOpen }) {
+                Text(if (diagnosticsOpen) "Hide diagnostics" else "Connection diagnostics")
+            }
+            if (diagnosticsOpen) {
+                val report = previewDiagnosticsReport(enabled, endpointError, diagnostics)
+                Text(report, Modifier.testTag("nova-owner-preview-diagnostics"), style = MaterialTheme.typography.bodySmall)
+                TextButton(onClick = {
+                    context.getSystemService(ClipboardManager::class.java)
+                        .setPrimaryClip(ClipData.newPlainText("Nova Brain connection diagnostics", report))
+                    message = "Diagnostics copied."
+                }) { Text("Copy diagnostics") }
+            }
             if (busy) LinearProgressIndicator(Modifier.fillMaxWidth())
             message?.let { Text(it) }
         }
     }
 
-    if (configuring) AlertDialog(
-        onDismissRequest = { configuring = false; token = "" },
-        title = { Text("Enable Owner Preview?") },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("Enter the separate token from the temporary Nova Brain session. The preview sends only the two fixed synthetic texts you approve.")
-                OutlinedTextField(token, { token = it.take(80) }, label = { Text("Preview token") }, singleLine = true,
-                    visualTransformation = PasswordVisualTransformation(),
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password))
-            }
-        },
-        confirmButton = {
-            TextButton(enabled = token.trim().matches(Regex("[a-f0-9]{64}")), onClick = {
-                if (!allowed()) return@TextButton
-                val previewToken = token.trim()
+    if (configuring) {
+        OwnerPreviewSetupDialog(token, { token = it }, endpointError, onDismiss = {
+            configuring = false
+            token = ""
+        }, onSave = { previewToken ->
+            if (!allowed()) {
                 configuring = false
                 token = ""
+                message = "Unlock NovaOS and end Sanctuary to enable the preview."
+            } else {
+                configuring = false
+                token = ""
+                diagnostics = null
                 act("Could not save the preview. Use its separate 64-character token.") {
                     withContext(Dispatchers.IO) { store.enable(previewToken) }
                     enabled = true
+                    verifyConnection()
                 }
-            }) { Text("Save and enable") }
-        },
-        dismissButton = { TextButton(onClick = { configuring = false; token = "" }) { Text("Cancel") } },
-        properties = DialogProperties(securePolicy = SecureFlagPolicy.SecureOn),
-    )
+            }
+        })
+    }
 
     pending?.let { test ->
         AlertDialog(
@@ -207,6 +250,86 @@ internal fun OwnerPreviewSettings() {
             dismissButton = { TextButton(onClick = { pending = null }) { Text("Cancel") } },
             properties = DialogProperties(securePolicy = SecureFlagPolicy.SecureOn),
         )
+    }
+}
+
+@OptIn(ExperimentalComposeUiApi::class)
+@Composable
+private fun OwnerPreviewSetupDialog(
+    token: String,
+    onTokenChange: (String) -> Unit,
+    endpointError: String?,
+    onDismiss: () -> Unit,
+    onSave: (String) -> Unit,
+) {
+    val context = LocalContext.current
+    val input = remember(token) { OwnerPreviewTokenInput.parse(token) }
+    val noLearning = remember {
+        PlatformTextInputInterceptor { request, next ->
+            next.startInputMethod(PlatformTextInputMethodRequest { attrs ->
+                request.createInputConnection(attrs).also {
+                    attrs.imeOptions = attrs.imeOptions or EditorInfo.IME_FLAG_NO_PERSONALIZED_LEARNING
+                }
+            })
+        }
+    }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Enable Owner Preview?") },
+        text = {
+            Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("Preview address")
+                Text(OWNER_PREVIEW_ORIGIN, style = MaterialTheme.typography.bodySmall)
+                Text("Use the token shown in your temporary Nova Brain session.")
+                InterceptPlatformTextInput(interceptor = noLearning) {
+                    OutlinedTextField(
+                        value = token,
+                        onValueChange = onTokenChange,
+                        modifier = Modifier.fillMaxWidth().testTag("owner-preview-token"),
+                        label = { Text("Preview token") },
+                        singleLine = true,
+                        visualTransformation = PasswordVisualTransformation(),
+                        isError = token.isNotBlank() && input.canonical == null,
+                        keyboardOptions = KeyboardOptions(
+                            capitalization = KeyboardCapitalization.None,
+                            autoCorrectEnabled = false,
+                            keyboardType = KeyboardType.Password,
+                        ),
+                    )
+                }
+                TextButton(onClick = {
+                    val text = context.getSystemService(ClipboardManager::class.java)
+                        .primaryClip?.takeIf { it.itemCount == 1 }?.getItemAt(0)?.text
+                    onTokenChange(text?.toString().orEmpty())
+                }) { Text("Paste token") }
+                Text(endpointError ?: input.validation.message, Modifier.testTag("owner-preview-validation"))
+            }
+        },
+        confirmButton = {
+            TextButton(enabled = endpointError == null && input.canonical != null, onClick = {
+                input.canonical?.let(onSave)
+            }) { Text("Save and enable") }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+        properties = DialogProperties(securePolicy = SecureFlagPolicy.SecureOff),
+    )
+}
+
+private fun previewDiagnosticsReport(
+    enabled: Boolean,
+    endpointError: String?,
+    diagnostics: OwnerPreviewDiagnostics?,
+): String = buildString {
+    appendLine("Local validation: ${endpointError ?: if (enabled) "Preview address and token format verified" else "Preview token not configured"}")
+    if (diagnostics != null) {
+        append(diagnostics.asText())
+    } else {
+        appendLine("Endpoint: $OWNER_PREVIEW_ORIGIN")
+        appendLine("Connection mode: ${if (enabled) "Owner Preview" else "Owner Preview off"}")
+        appendLine("Last connection attempt: none since opening settings")
+        appendLine("HTTP and TLS: not checked")
+        appendLine("Authentication: not checked")
+        append("Staging, paid analysis and expiration: not checked")
     }
 }
 
