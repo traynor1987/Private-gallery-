@@ -61,8 +61,28 @@ def verify_canonical_root(root):
     if (not stat.S_ISDIR(info.st_mode) or info.st_uid != os.geteuid() or info.st_mode & 0o077):
         raise PreflightRefused('The canonical preview directory is not private or has uncertain identity.')
     with os.scandir(root) as entries:
-        if next(entries, None) is not None:
-            raise PreflightRefused('Prior or partial state exists in the canonical preview directory.')
+        for entry in entries:
+            if entry.name != 'approval-20261123' or not empty_historical_directories(Path(entry.path)):
+                raise PreflightRefused('Prior or partial state exists in the canonical preview directory.')
+
+
+def empty_historical_directories(path):
+    directory = path.lstat()
+    if (not stat.S_ISDIR(directory.st_mode) or directory.st_uid != os.geteuid()
+            or directory.st_mode & 0o077):
+        return False
+    with os.scandir(path) as entries:
+        child = next(entries, None)
+        if child is None:
+            return True
+        if child.name != 'ledger' or next(entries, None) is not None:
+            return False
+        ledger = child.stat(follow_symlinks=False)
+        if (not stat.S_ISDIR(ledger.st_mode) or ledger.st_uid not in (os.geteuid(), 10001)
+                or ledger.st_mode & 0o077):
+            return False
+        with os.scandir(child.path) as ledger_entries:
+            return next(ledger_entries, None) is None
 
 
 def standard_compose_volume(path):

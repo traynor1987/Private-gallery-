@@ -8,7 +8,8 @@ with the Build 98 candidate commit available in the same Git repository.
 The launcher checks for older preview traces and conflicting mounts or
 listeners before it creates a new approval directory. An existing destination,
 suspected ledger, or unclassifiable database stops preparation for recovery
-review. Preserve those files, including SQLite sidecars.
+review. Empty private directories left at the original approval path are
+allowed and retained. Preserve any recovered files, including SQLite sidecars.
 
 Run from the existing IPv4 SSH session on the same network as the Fold.
 

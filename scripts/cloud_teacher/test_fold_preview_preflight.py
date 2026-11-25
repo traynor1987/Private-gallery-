@@ -39,7 +39,7 @@ class FoldPreviewPreflightTest(TestCase):
 
     def test_old_or_partial_preparation_blocks_even_without_ledger(self):
         self.preview.mkdir(mode=0o700)
-        for name in ('approval-20261123', 'approval-20261125', 'unidentified-backup'):
+        for name in ('approval-20261125', 'unidentified-backup'):
             with self.subTest(name=name):
                 approval = self.preview / name
                 approval.mkdir()
@@ -47,6 +47,25 @@ class FoldPreviewPreflightTest(TestCase):
                     self.verify()
                 self.assertTrue(approval.is_dir())
                 approval.rmdir()
+
+    def test_only_empty_private_original_directories_are_allowed(self):
+        original = self.preview / 'approval-20261123'
+        self.preview.mkdir(mode=0o700)
+        original.mkdir(mode=0o700)
+        self.verify()
+        ledger = original / 'ledger'
+        ledger.mkdir(mode=0o700)
+        self.verify()
+        marker = ledger / 'budget.db-wal'
+        marker.touch()
+        with self.assertRaisesRegex(PreflightRefused, 'Prior or partial state'):
+            self.verify()
+        self.assertTrue(marker.is_file())
+        marker.unlink()
+        ledger.rmdir()
+        ledger.symlink_to(self.relocations, target_is_directory=True)
+        with self.assertRaisesRegex(PreflightRefused, 'Prior or partial state'):
+            self.verify()
 
     def test_case_insensitive_relocation_marker_or_link_blocks(self):
         path = self.relocations / 'move'
