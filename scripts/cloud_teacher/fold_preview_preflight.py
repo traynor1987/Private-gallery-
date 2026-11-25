@@ -47,6 +47,12 @@ TABLES = {
 PRODUCTION_SCHEMAS = ({'reservations'}, {'reservations', 'daily_reservations'}, set(TABLES))
 PRODUCTION_METADATA_KEYS = {'legacy_unattributed', 'latest_request_time', 'halted'}
 COMPOSE_VOLUMES = {'nova-cloud-teacher_state', 'nova-cloud-teacher-staging_state'}
+DEFAULT_DOCKER_ROOT = Path('/var/lib/docker')
+DOCKER_IMAGE_DIRECTORIES = {
+    'aufs', 'btrfs', 'buildkit', 'containerd', 'containers', 'devicemapper', 'fuse-overlayfs',
+    'image', 'network', 'overlay2', 'overlayfs', 'plugins', 'vfs', 'zfs',
+}
+DOCKER_SCAN_LABEL = 'Docker volume or mounted state'
 
 
 class PreflightRefused(Exception):
@@ -85,10 +91,10 @@ def empty_historical_directories(path):
             return next(ledger_entries, None) is None
 
 
-def standard_compose_volume(path):
+def standard_compose_volume(path, docker_volumes=DEFAULT_DOCKER_ROOT / 'volumes'):
     return (path.name == 'budget.db' and path.parent.name == '_data' and
             path.parent.parent.name in COMPOSE_VOLUMES and
-            path.parent.parent.parent == Path('/var/lib/docker/volumes'))
+            path.parent.parent.parent == docker_volumes)
 
 
 def ledger_identity(path):
@@ -110,7 +116,7 @@ def verify_sidecars(path):
                 raise PreflightRefused('A budget database has an active or unreadable SQLite sidecar.')
 
 
-def verify_normal_ledger(path):
+def verify_normal_ledger(path, docker_volumes):
     before = ledger_identity(path)
     verify_sidecars(path)
     with closing(sqlite3.connect(path.as_uri() + '?mode=ro&immutable=1', uri=True, timeout=1)) as db:
@@ -145,19 +151,17 @@ def verify_normal_ledger(path):
             metadata = {key for (key,) in db.execute('SELECT key FROM budget_metadata LIMIT 4')}
             if 'legacy_unattributed' not in metadata or not metadata <= PRODUCTION_METADATA_KEYS:
                 raise PreflightRefused('A SQLite budget contains unrecognised approval or accounting metadata.')
-        if not has_cycle and not standard_compose_volume(path):
+        if not has_cycle and not standard_compose_volume(path, docker_volumes):
             raise PreflightRefused('An empty budget outside the known production volumes has no verifiable origin.')
     verify_sidecars(path)
     if before != ledger_identity(path):
         raise PreflightRefused('A SQLite budget changed while its identity was being checked.')
 
 
-def excluded_directory(path):
+def excluded_directory(path, docker_root):
     if path.name in {'.git', '.cache', 'node_modules', '__pycache__'}:
         return True
-    if path.parent.name == 'docker' and path.name in {
-        'overlay2', 'overlayfs', 'image', 'buildkit', 'containerd', 'containers', 'network', 'plugins',
-    }:
+    if (path.parent == docker_root or path.parent.name == 'docker') and path.name in DOCKER_IMAGE_DIRECTORIES:
         return True
     return path.parent.name == 'containerd' and path.name.startswith(('io.containerd.snapshotter.', 'io.containerd.content.'))
 
@@ -176,21 +180,27 @@ def reviewed_source(path):
     return False
 
 
-def scan_relocations(roots, preview_root):
+def scan_relocations(roots, preview_root, docker_root, docker_volumes, required_roots):
     pending = []
-    for root in roots:
+    for root, scope in roots.items():
         try:
             info = root.lstat()
-        except FileNotFoundError:
+        except FileNotFoundError as exc:
+            if root in required_roots:
+                raise PreflightRefused(f'Mounted state could not be read reliably. Search location: {scope}.') from exc
             continue
         except OSError as exc:
-            raise PreflightRefused(f'State under {root} could not be read reliably.') from exc
+            raise PreflightRefused(f'State could not be read reliably. Search location: {scope}.') from exc
         if not stat.S_ISDIR(info.st_mode):
-            raise PreflightRefused('A relocation search root has uncertain identity.')
-        pending.append((root, 0, root))
+            raise PreflightRefused(f'A relocation search root has uncertain identity. Search location: {scope}.')
+        pending.append((root, 0, scope))
     scanned = 0
+    visited = set()
     while pending:
-        directory, depth, root = pending.pop()
+        directory, depth, scope = pending.pop()
+        if directory in visited:
+            continue
+        visited.add(directory)
         try:
             with os.scandir(directory) as entries:
                 for entry in entries:
@@ -208,24 +218,50 @@ def scan_relocations(roots, preview_root):
                         raise PreflightRefused('A prior preview marker was found outside the canonical directory.')
                     if BUDGET_NAME.search(entry.name):
                         suffix = next((suffix for suffix in SIDECAR_SUFFIXES if entry.name.casefold().endswith(suffix)), None)
-                        if suffix is None:
-                            verify_normal_ledger(path)
-                        else:
-                            verify_normal_ledger(path.with_name(entry.name[:-len(suffix)]))
-                    if is_directory and not excluded_directory(path):
+                        candidate = path if suffix is None else path.with_name(entry.name[:-len(suffix)])
+                        verify_normal_ledger(candidate, docker_volumes)
+                    if is_directory and path not in visited and not excluded_directory(path, docker_root):
                         if depth >= MAX_DEPTH:
                             raise PreflightRefused('The relocation search exceeded its safe directory depth.')
-                        pending.append((path, depth + 1, root))
+                        pending.append((path, depth + 1, scope))
         except (OSError, sqlite3.Error, UnicodeError) as exc:
-            raise PreflightRefused(f'State under {root} could not be read reliably.') from exc
+            raise PreflightRefused(f'State could not be read reliably. Search location: {scope}.') from exc
         except PreflightRefused as exc:
-            raise PreflightRefused(f'{exc} Search location: {root}.') from exc
+            raise PreflightRefused(f'{exc} Search location: {scope}.') from exc
 
 
-def verify_fresh_preview(preview_root=PREVIEW_ROOT, search_roots=SEARCH_ROOTS):
+def verify_fresh_preview(preview_root=PREVIEW_ROOT, search_roots=SEARCH_ROOTS, *, docker_root=None, state_mounts=()):
+    roots = {path: str(path) for path in search_roots}
+    if docker_root is None:
+        docker_root, docker_volumes = DEFAULT_DOCKER_ROOT, DEFAULT_DOCKER_ROOT / 'volumes'
+        mounts = ()
+    else:
+        docker_root, docker_volumes, mounts = resolve_docker_locations(docker_root, state_mounts)
+        for path in (docker_volumes, *mounts):
+            # Always add these roots. The enclosing host traversal may skip caches,
+            # container layers, or parent paths reached through a symlink.
+            roots.setdefault(path, DOCKER_SCAN_LABEL)
     verify_canonical_root(preview_root)
-    scan_relocations(search_roots, preview_root)
+    scan_relocations(roots, preview_root, docker_root, docker_volumes, set(mounts))
     verify_canonical_root(preview_root)
+
+
+def resolve_docker_locations(docker_root, state_mounts):
+    reported_paths = (docker_root, *state_mounts)
+    if not all(path.is_absolute() for path in reported_paths):
+        raise PreflightRefused('A Docker state location has uncertain identity.')
+    try:
+        docker_root = docker_root.resolve(strict=True)
+        docker_volumes = (docker_root / 'volumes').resolve()
+        mounts = tuple(path.resolve(strict=True) for path in reported_paths[1:])
+    except (OSError, RuntimeError) as exc:
+        raise PreflightRefused(f'State could not be read reliably. Search location: {DOCKER_SCAN_LABEL}.') from exc
+    if Path('/') in (docker_root, docker_volumes, *mounts):
+        raise PreflightRefused('Docker reports a state location too broad to verify safely.')
+    if any(PREVIEW_NAME.search(part) for path in (*reported_paths, docker_root, docker_volumes, *mounts)
+           for part in path.parts):
+        raise PreflightRefused('A prior preview marker was found in a Docker state location.')
+    return docker_root, docker_volumes, mounts
 
 
 def main():
@@ -233,16 +269,7 @@ def main():
         sys.exit('Run this preflight only through the root preview deployment script.')
     try:
         docker_root, *mounts = map(Path, sys.argv[1:])
-        if not all(path.is_absolute() for path in (docker_root, *mounts)):
-            raise PreflightRefused('A Docker state location has uncertain identity.')
-        docker_root = docker_root.resolve(strict=True)
-        paths = ((docker_root / 'volumes').resolve(), *(path.resolve(strict=True) for path in mounts))
-        if docker_root == Path('/') or Path('/') in paths:
-            raise PreflightRefused('Docker reports a state location too broad to verify safely.')
-        search_roots = SEARCH_ROOTS + tuple(dict.fromkeys(
-            path for path in paths if not any(path.is_relative_to(root) for root in SEARCH_ROOTS)
-        ))
-        verify_fresh_preview(search_roots=search_roots)
+        verify_fresh_preview(docker_root=docker_root, state_mounts=mounts)
     except PreflightRefused as exc:
         sys.exit(f'Preview preparation refused. {exc}')
     except (OSError, sqlite3.Error, UnicodeError):

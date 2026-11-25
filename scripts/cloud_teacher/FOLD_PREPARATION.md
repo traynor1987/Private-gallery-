@@ -24,16 +24,25 @@ necessary. Tap **Check preview connection**. Both HTTPS routes must authenticate
 with paid analysis off. The two synthetic send controls should be disabled.
 Return to SSH and press Enter to print the token-free connection receipt.
 
+On Build 97 the Owner Preview settings card is the Fold connection check.
+The regular Nova Intelligence launcher still uses the saved production
+connection. Build 98 adds launcher routing for the approved synthetic question
+while Owner Preview is enabled.
+
 The temporary HTTPS listener uses port 18443, the existing TLS certificate and
 an allowlist for the Fold's address. Its private container has no published
 port, outbound network route, provider credential or paid execution path.
+The disarmed launcher does not query incumbent Guardian status or read its
+owner token. Check the incumbent's spending status separately before any
+later paid authorisation.
 The new SQLite ledger is bound to the new approval and preview token. It
 records a two-request maximum and a shared US$0.25 ceiling. Both limits apply
 to the two fixed synthetic inputs under any later, separately authorised paid
 phase.
 
-Ctrl-C or the 30-minute expiry removes the temporary listener, firewall table,
-network and container. The new token and ledger remain under
+Ctrl-C or the 30-minute expiry stops the temporary listener. Cleanup scopes
+container, Docker network and firewall removal to the current attempt's
+ownership marks. The new token and ledger remain under
 `/var/lib/nova-fold-owner-preview/approval-20261125` for later verification.
 Guardian production, its port, TLS files, NGINX sites and SQLite data are
 outside this launcher's writes. This is a one-time preparation. A restart or

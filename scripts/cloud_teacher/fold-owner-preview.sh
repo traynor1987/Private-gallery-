@@ -1,16 +1,28 @@
 #!/usr/bin/env bash
 # Owner-only 2026-11-25 deployment preparation. The container cannot enable paid analysis.
 set -euo pipefail
+set +x
+unset SSLKEYLOGFILE
 cd "$(dirname "$0")"
 
-if [[ $# -ne 1 || $EUID -ne 0 || ! -t 0 || ! -t 1 ]]; then
+if [[ $EUID -ne 0 || ! -t 0 || ! -t 1 ]]; then
     echo 'Run from your existing Fold Termux SSH session: sudo bash fold-owner-preview.sh "$SSH_CONNECTION"' >&2
     exit 2
 fi
+if [[ $# -eq 1 ]]; then exec python3 -I fold_preview_lock.py "$1"; fi
+nova_lock=/run/lock/nova-fold-owner-preview.lock
+if [[ $# -ne 2 || $2 != --lock-held || -L "$nova_lock" || ! -f /proc/$$/fd/9 ||
+      ! "$nova_lock" -ef /proc/$$/fd/9 || "$(stat -Lc '%u:%h' /proc/$$/fd/9)" != 0:1 ]]; then
+    echo 'Start the preview with the shared execution lock.' >&2
+    exit 2
+fi
+flock -n 9 || { echo 'A Fold preview is already running.' >&2; exit 1; }
 
 nova_reviewed=26553075df3c530fd81a98640e59ddf09c545215
-git diff --exit-code "$nova_reviewed" -- server.py budget.py protocol.py Dockerfile .dockerignore deploy.sh
-nova_git_status=$(git status --porcelain=v1 --untracked-files=all --ignored=matching)
+nova_worktree=$(cd ../.. && pwd -P)
+nova_git=(git -c "safe.directory=$nova_worktree")
+"${nova_git[@]}" diff --exit-code "$nova_reviewed" -- server.py budget.py protocol.py Dockerfile .dockerignore deploy.sh
+nova_git_status=$("${nova_git[@]}" status --porcelain=v1 --untracked-files=all --ignored=matching)
 test -z "$nova_git_status"
 for nova_tool in curl docker flock nginx nft openssl python3 ss stat timeout; do
     command -v "$nova_tool" >/dev/null || { echo "Required for the temporary preview: $nova_tool" >&2; exit 1; }
@@ -36,44 +48,9 @@ nova_host=brain.jamestraynor.co.uk
 nova_port=18443
 nova_cert="/etc/letsencrypt/live/$nova_host/fullchain.pem"
 nova_tls_key="/etc/letsencrypt/live/$nova_host/privkey.pem"
-nova_incumbent=/etc/nova-cloud-teacher/secrets
 test -s "$nova_cert" && test -s "$nova_tls_key" || { echo 'Existing Nova Brain TLS files were not found.' >&2; exit 1; }
 openssl x509 -in "$nova_cert" -noout -checkhost "$nova_host" -checkend 1800 >/dev/null
 
-verify_incumbent() {
-    python3 - "$nova_incumbent/owner-token" <<'PY'
-from http.client import HTTPConnection
-from pathlib import Path
-import json
-import sys
-
-try:
-    token = Path(sys.argv[1]).read_text().strip()
-    conn = HTTPConnection('127.0.0.1', 8787, timeout=5)
-    try:
-        conn.request('GET', '/guardian/status', headers={'Authorization': 'Bearer ' + token})
-        reply = conn.getresponse()
-        if reply.status != 200:
-            raise ValueError
-        status = json.loads(reply.read(32769))
-    finally:
-        conn.close()
-    if status.get('status') != 'authenticated':
-        raise ValueError
-    if status.get('analysis_enabled') is not False:
-        sys.exit('Incumbent Cloud Teacher is funded or its paid status cannot be verified. Preview stays off.')
-    budget = status.get('budget')
-    if budget is not None and (type(budget.get('monthly_remaining_micro_usd')) is not int
-                               or budget['monthly_remaining_micro_usd'] < 250_000):
-        sys.exit('The incumbent monthly ledger did not establish US$0.25 of room. Preview stays off.')
-except (AttributeError, OSError, TypeError, ValueError):
-    sys.exit('Could not verify the incumbent authenticated Guardian status on port 8787.')
-PY
-}
-verify_incumbent
-
-exec 9>/run/lock/nova-fold-owner-preview.lock
-flock -n 9 || { echo 'A Fold preview is already running.' >&2; exit 1; }
 nova_listeners=$(ss -H -ltn "sport = :$nova_port")
 [[ -z "$nova_listeners" ]] || { echo "Port $nova_port is already in use." >&2; exit 1; }
 nova_published=$(docker ps --format '{{.Ports}}')
@@ -112,22 +89,46 @@ umask 077
 nova_state_root=/var/lib/nova-fold-owner-preview
 nova_state="$nova_state_root/approval-20261125"
 
+nova_attempt=$(openssl rand -hex 6)
+[[ "$nova_attempt" =~ ^[a-f0-9]{12}$ ]]
+nova_docker_label="uk.co.traynor.nova-fold-preview-attempt=$nova_attempt"
+nova_network="nova-fold-owner-preview-net-$nova_attempt"
+nova_container="nova-fold-owner-preview-app-$nova_attempt"
+nova_probe_container="nova-fold-owner-preview-check-$nova_attempt"
+nova_bridge="nfp$nova_attempt"
+nova_table="nova_fold_owner_preview_$nova_attempt"
+[[ ! -e "/sys/class/net/$nova_bridge" ]] || { echo 'The temporary preview bridge name is occupied.' >&2; exit 1; }
+
 nova_dir=$(mktemp -d /run/nova-fold-owner-preview.XXXXXXXX)
-nova_firewall=false
-nova_network=''
-nova_container=''
 nova_pid=''
-cleanup() {
-    if [[ -n "$nova_pid" ]]; then
-        kill -TERM "$nova_pid" 2>/dev/null || true
-        wait "$nova_pid" 2>/dev/null || true
+cleanup_preview_firewall() {
+    local table
+    if table=$(nft list table inet "$nova_table" 2>/dev/null) &&
+        [[ "$table" == *"comment \"nova-fold-owner-preview:$nova_attempt\""* ]]; then
+        nft delete table inet "$nova_table"
     fi
-    if [[ -n "$nova_container" ]]; then docker rm -f "$nova_container" >/dev/null || true; fi
-    if $nova_firewall; then nft delete table inet nova_fold_owner_preview || true; fi
-    if [[ -n "$nova_network" ]]; then docker network rm "$nova_network" >/dev/null || true; fi
+}
+cleanup() {
+    trap '' INT TERM HUP
+    local preview_pid="${nova_pid:-${!:-}}" container container_owner network_owner
+    if [[ -n "$preview_pid" && "$(jobs -p)" == "$preview_pid" ]]; then
+        kill -TERM "$preview_pid" 2>/dev/null || true
+        wait "$preview_pid" 2>/dev/null || true
+    fi
+    for container in "$nova_container" "$nova_probe_container"; do
+        if container_owner=$(docker container inspect --format '{{index .Config.Labels "uk.co.traynor.nova-fold-preview-attempt"}}' "$container" 2>/dev/null) &&
+            [[ "$container_owner" == "$nova_attempt" ]]; then
+            docker rm -f "$container" >/dev/null || echo 'Could not remove a temporary preview container.' >&2
+        fi
+    done
+    cleanup_preview_firewall || echo 'Could not remove the temporary preview firewall table.' >&2
+    if network_owner=$(docker network inspect --format '{{index .Labels "uk.co.traynor.nova-fold-preview-attempt"}}' "$nova_network" 2>/dev/null) &&
+        [[ "$network_owner" == "$nova_attempt" ]]; then
+        docker network rm "$nova_network" >/dev/null || echo 'Could not remove the temporary preview network.' >&2
+    fi
     rm -rf -- "$nova_dir"
     if [[ -d "$nova_state" ]]; then
-        printf 'Preview closed. Prepared state is retained at %s\n' "$nova_state"
+        printf 'Prepared preview state is retained at %s\n' "$nova_state"
     fi
 }
 trap cleanup EXIT
@@ -138,7 +139,8 @@ install -d -m 0710 -o root -g 10001 "$nova_dir/control"
 nova_image=nova-cloud-teacher-preview:26553075
 if ! docker image inspect "$nova_image" >/dev/null 2>&1; then docker build --tag "$nova_image" .; fi
 nova_expected=$(sha256sum server.py budget.py protocol.py)
-nova_packaged=$(docker run --rm --network none --entrypoint sha256sum "$nova_image" server.py budget.py protocol.py)
+nova_packaged=$(docker run --rm --name "$nova_probe_container" --label "$nova_docker_label" \
+    --network none --entrypoint sha256sum "$nova_image" server.py budget.py protocol.py)
 [[ "$nova_packaged" == "$nova_expected" ]] || { echo 'Existing Docker image differs from the reviewed backend.' >&2; exit 1; }
 nova_image=$(docker image inspect --format '{{.Id}}' "$nova_image")
 
@@ -149,16 +151,23 @@ install -d -m 0700 -o 10001 -g 10001 "$nova_state/ledger"
 (set -o noclobber; openssl rand -hex 32 > "$nova_state/owner-token")
 install -m 0400 -o 10001 -g 10001 "$nova_state/owner-token" "$nova_dir/control/owner-token"
 
-nova_network=$(docker network create --driver bridge --ipv6=false --internal nova-fold-owner-preview)
+docker network create --driver bridge --ipv6=false --internal --label "$nova_docker_label" \
+    --opt "com.docker.network.bridge.name=$nova_bridge" "$nova_network" >/dev/null
+nova_network_status=$(docker network inspect --format '{{.Driver}}:{{.Internal}}:{{index .Options "com.docker.network.bridge.name"}}' "$nova_network")
+[[ "$nova_network_status" == "bridge:true:$nova_bridge" && -d "/sys/class/net/$nova_bridge/bridge" ]] || {
+    echo 'Docker did not create the dedicated internal preview bridge.' >&2
+    exit 1
+}
 nova_end=$(( $(date +%s) + 1800 ))
-nova_container=$(docker run --detach --init --network "$nova_network" \
+docker run --detach --init --network "$nova_network" --name "$nova_container" --label "$nova_docker_label" \
     --user 10001:10001 --read-only --cap-drop ALL --security-opt no-new-privileges:true \
     --memory 128m --pids-limit 80 --log-driver none -e "NOVA_FOLD_PREVIEW_END=$nova_end" \
     --mount "type=bind,src=$(pwd)/fold_owner_preview.py,dst=/app/fold_owner_preview.py,readonly" \
     --mount "type=bind,src=$nova_dir/control,dst=/preview-control,readonly" \
     --mount "type=bind,src=$nova_state/ledger,dst=/state" \
-    --entrypoint python "$nova_image" /app/fold_owner_preview.py)
-[[ -z "$(docker port "$nova_container")" ]] || { echo 'Preview container has an unexpected published port.' >&2; exit 1; }
+    --entrypoint python "$nova_image" /app/fold_owner_preview.py >/dev/null
+nova_preview_ports=$(docker port "$nova_container")
+[[ -z "$nova_preview_ports" ]] || { echo 'Preview container has an unexpected published port.' >&2; exit 1; }
 nova_backend=$(docker inspect --format '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' "$nova_container")
 python3 -c 'from ipaddress import IPv4Address; import sys
 if not IPv4Address(sys.argv[1]).is_private:
@@ -206,16 +215,15 @@ NGINX
 
 nginx -t -p "$nova_dir/" -c "$nova_dir/nginx.conf"
 nft -f - <<NFT
-create table inet nova_fold_owner_preview
-add chain inet nova_fold_owner_preview input { type filter hook input priority -300; policy accept; }
-add chain inet nova_fold_owner_preview private_backend { type filter hook forward priority -300; policy accept; }
-add rule inet nova_fold_owner_preview input iifname != "lo" ip saddr != $nova_owner tcp dport $nova_port drop
-add rule inet nova_fold_owner_preview input meta nfproto ipv6 tcp dport $nova_port drop
-add rule inet nova_fold_owner_preview private_backend ip daddr $nova_backend tcp dport 8787 drop
+create table inet $nova_table { comment "nova-fold-owner-preview:$nova_attempt"; }
+add chain inet $nova_table input { type filter hook input priority -300; policy accept; }
+add chain inet $nova_table private_backend { type filter hook forward priority -300; policy accept; }
+add rule inet $nova_table input iifname != "lo" ip saddr != $nova_owner tcp dport $nova_port drop
+add rule inet $nova_table input meta nfproto ipv6 tcp dport $nova_port drop
+add rule inet $nova_table private_backend oifname "$nova_bridge" ip daddr $nova_backend tcp dport 8787 drop
 NFT
-nova_firewall=true
-timeout --foreground --kill-after=5s "$(( nova_end - $(date +%s) ))s" \
-    nginx -p "$nova_dir/" -c "$nova_dir/nginx.conf" -g 'daemon off;' &
+timeout --kill-after=5s "$(( nova_end - $(date +%s) ))s" \
+    nginx -p "$nova_dir/" -c "$nova_dir/nginx.conf" -g 'daemon off;' 9>&- &
 nova_pid=$!
 
 nova_origin="https://$nova_host:$nova_port"

@@ -7,7 +7,7 @@ import os
 import sqlite3
 
 from budget import Budget
-from fold_preview_preflight import PreflightRefused, standard_compose_volume, verify_fresh_preview
+from fold_preview_preflight import PreflightRefused, standard_compose_volume, verify_fresh_preview, verify_normal_ledger
 
 
 class FoldPreviewPreflightTest(TestCase):
@@ -21,8 +21,8 @@ class FoldPreviewPreflightTest(TestCase):
         self.relocations = self.root / 'relocations'
         self.relocations.mkdir()
 
-    def verify(self):
-        verify_fresh_preview(self.preview, (self.state, self.relocations))
+    def verify(self, **options):
+        verify_fresh_preview(self.preview, (self.state, self.relocations), **options)
 
     def ledger(self, cycle='normal-funded-cycle'):
         storage = self.relocations / 'docker' / 'volumes' / 'copied-volume' / '_data'
@@ -129,6 +129,50 @@ class FoldPreviewPreflightTest(TestCase):
             self.verify()
         with patch('fold_preview_preflight.standard_compose_volume', return_value=True):
             self.verify()
+
+    def test_real_custom_docker_volumes_are_searched_below_skipped_ancestors(self):
+        docker_root = self.relocations / '.cache' / 'custom-engine-store'
+        snapshot = docker_root / 'volumes' / 'unrelated-name' / '_data'
+        snapshot.mkdir(parents=True)
+        (snapshot / 'Budget.DB').write_bytes(b'unclassifiable SQLite')
+        self.verify()
+        with self.assertRaisesRegex(PreflightRefused, 'Search location: Docker volume or mounted state'):
+            self.verify(docker_root=docker_root)
+
+    def test_empty_production_ledger_is_recognised_at_actual_docker_location_once(self):
+        docker_root = self.relocations / 'custom-engine-store'
+        volume = docker_root / 'volumes' / 'nova-cloud-teacher_state' / '_data'
+        volume.mkdir(parents=True)
+        ledger = volume / 'budget.db'
+        Budget(ledger, 'normal-funded-cycle', 1_000, 100, 10, clock=lambda: 99)
+        before = ledger.read_bytes()
+        with patch('fold_preview_preflight.verify_normal_ledger', wraps=verify_normal_ledger) as check:
+            self.verify(docker_root=docker_root, state_mounts=(volume,))
+            check.assert_called_once_with(ledger, docker_root / 'volumes')
+        self.assertEqual(before, ledger.read_bytes())
+
+    def test_explicit_mount_inside_skipped_custom_docker_layers_is_checked_privately(self):
+        docker_root = self.relocations / 'custom-engine-store'
+        hidden_mount = docker_root / 'overlay2' / 'unprinted-mount-name' / 'state'
+        hidden_mount.mkdir(parents=True)
+        ledger = hidden_mount / 'budget.db'
+        budget = Budget(ledger, 'FoLd-Owner-20261123', 1_000, 100, 10, clock=lambda: 99)
+        self.assertTrue(budget.reserve())
+        self.verify(docker_root=docker_root)
+        with self.assertRaisesRegex(PreflightRefused, 'possible Fold preview approval') as refused:
+            self.verify(docker_root=docker_root, state_mounts=(hidden_mount,))
+        self.assertIn('Search location: Docker volume or mounted state', str(refused.exception))
+        self.assertNotIn('unprinted-mount-name', str(refused.exception))
+
+    def test_mount_alias_to_old_approval_is_refused_even_when_empty(self):
+        docker_root = self.relocations / 'custom-engine-store'
+        old_state = docker_root / 'overlay2' / 'Approval-20261123' / 'ledger'
+        old_state.mkdir(parents=True)
+        alias = self.relocations / 'unprinted-mount-name'
+        alias.symlink_to(old_state, target_is_directory=True)
+        with self.assertRaisesRegex(PreflightRefused, 'prior preview marker was found in a Docker state location') as refused:
+            self.verify(docker_root=docker_root, state_mounts=(alias,))
+        self.assertNotIn('unprinted-mount-name', str(refused.exception))
 
     def test_unparseable_or_linked_candidate_is_never_treated_as_production(self):
         marker = self.relocations / 'budget-ledger.sqlite3.bak'

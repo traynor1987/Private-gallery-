@@ -6,8 +6,10 @@ on:
       - .github/workflows/nova-brain-fold-preview-checks.yml
       - scripts/cloud_teacher/fold-owner-preview.sh
       - scripts/cloud_teacher/fold_owner_preview.py
+      - scripts/cloud_teacher/fold_preview_lock.py
       - scripts/cloud_teacher/fold_preview_preflight.py
       - scripts/cloud_teacher/test_fold_owner_preview.py
+      - scripts/cloud_teacher/test_fold_preview_lock.py
       - scripts/cloud_teacher/test_fold_preview_preflight.py
       - scripts/cloud_teacher/server.py
       - scripts/cloud_teacher/budget.py
@@ -27,7 +29,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with: { persist-credentials: false }
-      - name: Verify exact Build 98 backend files and the collision preflight
+      - name: Verify the Build 98 backend, preview lock and collision preflight
         run: |
           set -euo pipefail
           backend=scripts/cloud_teacher
@@ -38,9 +40,10 @@ jobs:
           bash -n "$backend/fold-owner-preview.sh"
           (
             cd "$backend"
-            PYTHONDONTWRITEBYTECODE=1 python3 -m unittest -v test_fold_owner_preview test_fold_preview_preflight
+            PYTHONDONTWRITEBYTECODE=1 python3 -m unittest -v \
+              test_fold_owner_preview test_fold_preview_lock test_fold_preview_preflight
           )
-      - name: Apply the reviewed firewall inside a disposable network and restrict the preview port
+      - name: Prove preview firewall routing and ownership-aware cleanup
         run: |
           if ! command -v nft >/dev/null; then
             sudo apt-get update -qq
@@ -49,16 +52,24 @@ jobs:
           export NOVA_WRAPPER="$PWD/scripts/cloud_teacher/fold-owner-preview.sh"
           sudo --preserve-env=NOVA_WRAPPER unshare -n bash -euo pipefail <<'NS'
           ip link set lo up
-          unshare -n sleep 30 &
+          sysctl -qw net.ipv4.ip_forward=1
+          pids=()
+          trap 'kill "${pids[@]}" 2>/dev/null || true' EXIT
+          unshare -n sleep 90 &
           phone=$!
-          listener=''
-          trap 'kill "$phone" ${listener:+"$listener"} 2>/dev/null || true' EXIT
-          for attempt in {1..20}; do
-            if ! test "/proc/$phone/ns/net" -ef /proc/self/ns/net; then break; fi
-            sleep .1
+          pids+=("$phone")
+          unshare -n sleep 90 &
+          target=$!
+          pids+=("$target")
+          for namespace in "$phone" "$target"; do
+            for attempt in {1..20}; do
+              if ! test "/proc/$namespace/ns/net" -ef /proc/self/ns/net; then break; fi
+              sleep .1
+            done
+            test -e "/proc/$namespace/ns/net"
+            if test "/proc/$namespace/ns/net" -ef /proc/self/ns/net; then exit 1; fi
+            nsenter -t "$namespace" -n ip link set lo up
           done
-          test -e "/proc/$phone/ns/net"
-          ! test "/proc/$phone/ns/net" -ef /proc/self/ns/net
           ip link add fold-host type veth peer name fold-phone
           ip address add 192.0.2.10/24 dev fold-host
           ip link set fold-host up
@@ -67,6 +78,28 @@ jobs:
           nsenter -t "$phone" -n ip address add 192.0.2.12/24 dev fold-phone
           nsenter -t "$phone" -n ip link set fold-phone up
           export nova_owner=192.0.2.11 nova_port=18443 nova_backend=172.28.0.2
+          export nova_attempt=0123456789ab nova_table=nova_fold_owner_preview_0123456789ab nova_bridge=nfp0123456789ab
+          nsenter -t "$phone" -n ip route add "$nova_backend/32" via 192.0.2.10
+          nsenter -t "$target" -n ip address add "$nova_backend/32" dev lo
+          connect_bridge() {
+            local bridge="$1" index="$2" here="$3" peer="$4"
+            ip link add "$bridge" type bridge
+            ip address add "$here/30" dev "$bridge"
+            ip link set "$bridge" up
+            ip link add "fold-hop$index" type veth peer name "fold-target$index"
+            ip link set "fold-hop$index" master "$bridge"
+            ip link set "fold-hop$index" up
+            ip link set "fold-target$index" netns "$target"
+            nsenter -t "$target" -n ip address add "$peer/30" dev "fold-target$index"
+            nsenter -t "$target" -n ip link set "fold-target$index" up
+          }
+          connect_bridge "$nova_bridge" 0 198.51.100.1 198.51.100.2
+          connect_bridge fold-other-br 1 198.51.100.5 198.51.100.6
+          route_backend() {
+            ip route replace "$nova_backend/32" via "$1" dev "$2"
+            nsenter -t "$target" -n ip route replace 192.0.2.0/24 via "$3"
+          }
+          route_backend 198.51.100.2 "$nova_bridge" 198.51.100.1
           python3 - <<'PY' | nft -f -
           from pathlib import Path
           from string import Template
@@ -77,19 +110,54 @@ jobs:
           rules = re.search(r'^nft -f - <<NFT\n(.*?)^NFT$', source, re.M | re.S)[1]
           print(Template(rules).substitute(os.environ))
           PY
-          nft list table inet nova_fold_owner_preview
+          nft list table inet "$nova_table"
           python3 -m http.server 18443 --bind 192.0.2.10 --directory /tmp >/dev/null 2>&1 &
-          listener=$!
-          nsenter -t "$phone" -n curl --fail --silent --noproxy '*' --retry 3 --retry-connrefused \
-            --interface 192.0.2.11 --max-time 3 http://192.0.2.10:18443/ >/dev/null
-          if nsenter -t "$phone" -n curl --fail --silent --noproxy '*' \
-            --interface 192.0.2.12 --max-time 2 http://192.0.2.10:18443/ >/dev/null; then
-            echo 'Unexpected access from the other source address.' >&2
-            exit 1
-          fi
-          nft delete table inet nova_fold_owner_preview
-          nsenter -t "$phone" -n curl --fail --silent --noproxy '*' \
-            --interface 192.0.2.12 --max-time 3 http://192.0.2.10:18443/ >/dev/null
+          pids+=("$!")
+          for port in 8787 8788; do
+            nsenter -t "$target" -n python3 -m http.server "$port" --bind "$nova_backend" --directory /tmp >/dev/null 2>&1 &
+            pids+=("$!")
+          done
+          probe=(curl --disable --fail --silent --show-error --noproxy '*' --connect-timeout 2 --max-time 3)
+          from_phone() {
+            nsenter -t "$phone" -n "${probe[@]}" --interface "$1" "${@:2}" >/dev/null
+          }
+          blocked_phone_probe() {
+            local result=0
+            from_phone "$@" 2>/dev/null || result=$?
+            if [[ "$result" != 28 ]]; then
+              printf 'Expected a dropped TCP connection for %s (curl status %s).\n' "$*" "$result" >&2
+              exit 1
+            fi
+          }
+          from_phone 192.0.2.11 --retry 3 --retry-connrefused http://192.0.2.10:18443/
+          blocked_phone_probe 192.0.2.12 http://192.0.2.10:18443/
+          # Host-originated proxy requests bypass the forward chain. Other forwarded ports pass.
+          "${probe[@]}" --retry 3 --retry-connrefused "http://$nova_backend:8787/" >/dev/null
+          from_phone 192.0.2.11 --retry 3 --retry-connrefused "http://$nova_backend:8788/"
+          blocked_phone_probe 192.0.2.11 "http://$nova_backend:8787/"
+          route_backend 198.51.100.6 fold-other-br 198.51.100.5
+          from_phone 192.0.2.11 "http://$nova_backend:8787/"
+          source <(python3 - <<'PY'
+          from pathlib import Path
+          import os
+          import re
+
+          source = Path(os.environ['NOVA_WRAPPER']).read_text()
+          print(re.search(r'^cleanup_preview_firewall\(\) \{\n.*?^\}$', source, re.M | re.S)[0])
+          PY
+          )
+          nft add table inet unrelated_fixture
+          cleanup_preview_firewall
+          if nft list table inet "$nova_table" >/dev/null 2>&1; then exit 1; fi
+          nft list table inet unrelated_fixture >/dev/null
+          route_backend 198.51.100.2 "$nova_bridge" 198.51.100.1
+          from_phone 192.0.2.11 "http://$nova_backend:8787/"
+          from_phone 192.0.2.12 http://192.0.2.10:18443/
+          nft -f - <<REPLACEMENT
+          create table inet $nova_table { comment "nova-fold-owner-preview:9876543210fe"; }
+          REPLACEMENT
+          cleanup_preview_firewall
+          nft list table inet "$nova_table" | grep -F 'nova-fold-owner-preview:9876543210fe'
           NS
       - name: Verify isolated disarmed HTTPS with synthetic credentials
         run: |
@@ -98,12 +166,16 @@ jobs:
           root=$(mktemp -d "$RUNNER_TEMP/nova-preview-it.XXXXXXXX")
           network=''
           container=''
+          probe_container=''
+          foreign_pid=''
           nginx=''
           cleanup() {
             if [[ -s "$root/nginx.pid" ]]; then
               sudo "$nginx" -p "$root/" -c "$root/nginx.conf" -s quit >/dev/null 2>&1 || true
             fi
+            if [[ -n "$foreign_pid" ]]; then kill "$foreign_pid" 2>/dev/null || true; fi
             if [[ -n "$container" ]]; then docker rm -f "$container" >/dev/null || true; fi
+            if [[ -n "$probe_container" ]]; then docker rm -f "$probe_container" >/dev/null || true; fi
             if [[ -n "$network" ]]; then docker network rm "$network" >/dev/null || true; fi
             sudo rm -rf -- "$root"
           }
@@ -129,9 +201,21 @@ jobs:
           expected=$(cd scripts/cloud_teacher && sha256sum server.py budget.py protocol.py)
           packaged=$(docker run --rm --network none --entrypoint sha256sum "$image" server.py budget.py protocol.py)
           test "$expected" = "$packaged"
-          network=$(docker network create --driver bridge --internal --ipv6=false nova-fold-check)
-          test "$(docker network inspect --format '{{.Internal}}' "$network")" = true
+          nova_attempt=$(openssl rand -hex 6)
+          nova_bridge="nfp$nova_attempt"
+          nova_network="nova-fold-owner-preview-net-$nova_attempt"
+          nova_container="nova-fold-owner-preview-app-$nova_attempt"
+          nova_probe_container="nova-fold-owner-preview-check-$nova_attempt"
+          label_key=uk.co.traynor.nova-fold-preview-attempt
+          create_fixture_network() {
+            docker network create --driver bridge --internal --ipv6=false --label "$label_key=$1" \
+              --opt "com.docker.network.bridge.name=$nova_bridge" "$nova_network"
+          }
+          network=$(create_fixture_network "$nova_attempt")
+          test "$(docker network inspect --format '{{.Driver}}:{{.Internal}}:{{index .Options "com.docker.network.bridge.name"}}' "$network")" = "bridge:true:$nova_bridge"
+          test -d "/sys/class/net/$nova_bridge/bridge"
           container=$(docker run --detach --init --network "$network" --user 10001:10001 \
+            --name "$nova_container" --label "$label_key=$nova_attempt" \
             --read-only --cap-drop ALL --security-opt no-new-privileges:true --memory 128m --pids-limit 80 \
             --log-driver none -e "NOVA_FOLD_PREVIEW_END=$(( $(date +%s) + 120 ))" \
             --mount "type=bind,src=$PWD/scripts/cloud_teacher/fold_owner_preview.py,dst=/app/fold_owner_preview.py,readonly" \
@@ -214,3 +298,51 @@ jobs:
           with sqlite3.connect("file:/state/budget.db?mode=ro", uri=True) as ledger:
               assert ledger.execute("SELECT COUNT(*) FROM request_reservations").fetchone() == (0,)
           '
+
+          python3 - <<'PY' > "$root/reviewed-cleanup.sh"
+          from pathlib import Path
+          import re
+
+          source = Path("scripts/cloud_teacher/fold-owner-preview.sh").read_text()
+          print(re.search(r"^cleanup\(\) \{\n.*?^\}$", source, re.M | re.S)[0])
+          PY
+          # The exact nft cleanup function was tested in the disposable namespace above.
+          run_reviewed_cleanup() {
+            sudo env nova_attempt="$nova_attempt" nova_network="$nova_network" nova_container="$nova_container" \
+              nova_probe_container="$nova_probe_container" nova_pid="$1" nova_dir="$root/attempt-runtime" \
+              nova_state="$root/ledger" bash -euo pipefail -c '
+                source "$1"
+                cleanup_preview_firewall() { :; }
+                if [[ -n "$nova_pid" ]]; then
+                  cleanup
+                else
+                  sleep 30 &
+                  nova_pid=$!
+                  cleanup
+                  if kill -0 "$nova_pid" 2>/dev/null; then
+                    kill -TERM "$nova_pid"
+                    exit 1
+                  fi
+                fi
+              ' bash "$root/reviewed-cleanup.sh"
+          }
+          mkdir "$root/attempt-runtime"
+          probe_container=$(docker create --network none --name "$nova_probe_container" --label "$label_key=$nova_attempt" "$image")
+          run_reviewed_cleanup ''
+          test ! -e "$root/attempt-runtime"
+          sudo test -s "$root/ledger/budget.db"
+          if docker container inspect "$container" >/dev/null 2>&1; then exit 1; fi
+          if docker container inspect "$probe_container" >/dev/null 2>&1; then exit 1; fi
+          if docker network inspect "$network" >/dev/null 2>&1; then exit 1; fi
+
+          # Reused names with a different ownership label and an unrelated process are preserved.
+          foreign_attempt=$(openssl rand -hex 6)
+          network=$(create_fixture_network "$foreign_attempt")
+          container=$(docker create --network none --name "$nova_container" --label "$label_key=$foreign_attempt" "$image")
+          probe_container=$(docker create --network none --name "$nova_probe_container" --label "$label_key=$foreign_attempt" "$image")
+          sleep 30 &
+          foreign_pid=$!
+          run_reviewed_cleanup "$foreign_pid"
+          kill -0 "$foreign_pid"
+          docker container inspect "$container" "$probe_container" >/dev/null
+          docker network inspect "$network" >/dev/null
