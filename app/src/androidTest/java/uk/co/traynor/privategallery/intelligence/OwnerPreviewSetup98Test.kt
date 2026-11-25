@@ -27,6 +27,7 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
 import androidx.test.platform.app.InstrumentationRegistry
 import java.io.File
 import java.time.Instant
@@ -70,6 +71,10 @@ class OwnerPreviewSetup98Test {
         paste("not a preview token")
         save.assertIsNotEnabled()
         compose.onNodeWithText(OwnerPreviewTokenValidation.INVALID_CHARACTERS.message).assertIsDisplayed()
+        compose.activityRule.scenario.moveToState(Lifecycle.State.STARTED)
+        compose.activityRule.scenario.moveToState(Lifecycle.State.RESUMED)
+        save.assertIsNotEnabled()
+        compose.onNodeWithText(OwnerPreviewTokenValidation.MISSING.message).assertIsDisplayed()
         paste(" ".repeat(20) + "Preview token for the app only: ${token.uppercase()}\r\n")
         save.assertIsEnabled().assertIsDisplayed()
         compose.onNodeWithText(OwnerPreviewTokenValidation.VALID.message).assertIsDisplayed()

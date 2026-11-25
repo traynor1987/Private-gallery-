@@ -5225,7 +5225,7 @@ internal fun SettingsHome(
                                 val summary = when (destination) {
                                     SettingsCategory.SECURITY -> "Panic Exit, PIN, biometrics and auto-lock"
                                     SettingsCategory.BROWSER -> if (showHiddenSettings) "Connection mode and private browsing data" else "${browserSearchEngine.label} · History ${if (browserSaveHistory) "on" else "off"}"
-                                    SettingsCategory.VPN -> uk.co.traynor.privategallery.core.vpn.VpnProfilePresentation.from(vpnProfiles, vpnConnectionState).let { "${it.selectedProfileName} · ${it.connectionLabel}" }
+                                    SettingsCategory.VPN -> uk.co.traynor.privategallery.core.vpn.VpnProfilePresentation.from(vpnProfiles, vpnConnectionState).connectionLabel
                                     SettingsCategory.AI -> uk.co.traynor.privategallery.core.editor.AiProviderRegistry.choice.label
                                     SettingsCategory.ABOUT -> versionPresentation.installed()
                                     else -> destination.summary

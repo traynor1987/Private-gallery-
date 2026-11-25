@@ -9,6 +9,7 @@ import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import androidx.lifecycle.ViewModelProvider
 import androidx.test.core.app.ActivityScenario
 import org.junit.Assert.assertTrue
@@ -38,14 +39,14 @@ class CapturePolicy98Test {
                     session.homeVisible = false
                     owner.openNovaSettings()
                 }
-                compose.onNodeWithText("Nova Brain").assertIsDisplayed()
+                compose.onNodeWithText("Nova Brain").performScrollTo().assertIsDisplayed()
                 compose.waitUntil(8_000) { activity.window.attributes.flags and secureFlag == 0 }
                 compose.onNodeWithText("Nova Brain").performClick()
                 compose.onNodeWithText("Nova Brain connection").assertIsDisplayed()
                 compose.runOnIdle { assertTrue(activity.window.attributes.flags and secureFlag == 0) }
 
                 compose.onNodeWithContentDescription("Back to Settings").performClick()
-                compose.onNodeWithText("Privacy & Security").performClick()
+                compose.onNodeWithText("Privacy & Security").performScrollTo().performClick()
                 compose.waitUntil(8_000) { activity.window.attributes.flags and secureFlag != 0 }
 
                 scenario.onActivity { openHiddenSpaceFixtureDashboard(it, session) }
