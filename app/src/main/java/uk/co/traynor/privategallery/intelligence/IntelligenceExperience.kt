@@ -286,7 +286,8 @@ internal fun IntelligenceChat(
     val latestIndex = (exchanges.size * 2 + (if (pendingQuestion != null) 1 else 0) - 1).coerceAtLeast(0)
     val timestampFormat = remember { DateTimeFormatter.ofLocalizedDateTime(FormatStyle.SHORT) }
     LaunchedEffect(latestIndex, isEmpty) {
-        if (!isEmpty) scroll.scrollToItem(latestIndex)
+        // The chat pane may be subcomposed during measurement when its Fold layout changes.
+        if (!isEmpty) scroll.requestScrollToItem(latestIndex)
     }
 
     Surface(
