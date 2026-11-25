@@ -177,7 +177,7 @@ class OwnerPreviewSetup98Test {
 
     private fun capture(name: String) {
         compose.waitForIdle()
-        val directory = checkNotNull(context.getExternalFilesDir("intelligence"))
+        val directory = File(context.cacheDir, "nova-intelligence-build98").apply { mkdirs() }
         val image = checkNotNull(instrumentation.uiAutomation.takeScreenshot())
         try {
             File(directory, "$name.png").outputStream().use {

@@ -24,8 +24,6 @@ if [[ ${NOVA_INTELLIGENCE_VISUALS:-false} == true ]]; then
     "$package.CapturePolicy98Test"
     "$package.intelligence.OwnerPreviewSetup98Test"
   )
-  preview_screenshots=(owner-preview-cover-setup owner-preview-inner-diagnostics)
-  preview_screenshot_dir="/sdcard/Android/data/$app_id/files/intelligence"
 fi
 
 mkdir -p "$out"
@@ -93,9 +91,6 @@ if [[ ${NOVA_INTELLIGENCE_VISUALS:-false} == true ]]; then
   previous_ime_setting=$(adb shell settings get secure show_ime_with_hard_keyboard | tr -d '\r')
   adb shell settings put secure show_ime_with_hard_keyboard 1
   adb shell run-as "$app_id" rm -rf cache/nova-intelligence-build98
-  for name in "${preview_screenshots[@]}"; do
-    adb shell run-as "$app_id" rm -f "$preview_screenshot_dir/$name.png"
-  done
 fi
 
 # Read expectations from source so missing classes, crashes and skipped methods all fail.
@@ -119,14 +114,12 @@ if [[ ${NOVA_INTELLIGENCE_VISUALS:-false} == true ]]; then
   screenshots=(
     cover-dashboard cover-chat inner-dashboard inner-chat cover-keyboard-open cover-cloud-loading
     cover-synthetic-cloud-reply cover-offline-fallback guardian-owner-preview-disconnected
+    owner-preview-cover-setup owner-preview-inner-diagnostics
   )
   for name in "${screenshots[@]}"; do
     adb exec-out run-as "$app_id" cat "cache/nova-intelligence-build98/$name.png" > "$out/screenshots/$name.png"
   done
-  for name in "${preview_screenshots[@]}"; do
-    adb exec-out run-as "$app_id" cat "$preview_screenshot_dir/$name.png" > "$out/screenshots/$name.png"
-  done
-  python3 - "$out/screenshots" "${screenshots[@]}" "${preview_screenshots[@]}" <<'PY'
+  python3 - "$out/screenshots" "${screenshots[@]}" <<'PY'
 from hashlib import sha256
 from pathlib import Path
 import sys
