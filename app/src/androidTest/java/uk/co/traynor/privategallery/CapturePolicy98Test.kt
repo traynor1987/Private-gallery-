@@ -1,5 +1,8 @@
 package uk.co.traynor.privategallery
 
+import android.view.View
+import android.view.ViewGroup
+import android.view.Window
 import android.view.WindowManager
 import android.view.inspector.WindowInspector
 import androidx.compose.runtime.MutableState
@@ -10,6 +13,7 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.window.DialogWindowProvider
 import androidx.lifecycle.ViewModelProvider
 import androidx.test.core.app.ActivityScenario
 import org.junit.Assert.assertTrue
@@ -91,13 +95,26 @@ class CapturePolicy98Test {
     }
 
     private fun assertCapturableGuardianDialog(activity: GuardianInboxActivity) {
-        compose.runOnIdle {
-            val dialog = WindowInspector.getGlobalWindowViews().single {
-                it !== activity.window.decorView && it.hasWindowFocus()
+        var dialogFlags: Int? = null
+        compose.waitUntil(8_000) {
+            dialogFlags = compose.runOnUiThread {
+                WindowInspector.getGlobalWindowViews().filter { view ->
+                    view !== activity.window.decorView && view.isAttachedToWindow &&
+                        view.windowVisibility == View.VISIBLE
+                }.mapNotNull { it.composeDialogWindow() }.singleOrNull()?.attributes?.flags
             }
-            assertTrue((dialog.layoutParams as WindowManager.LayoutParams).flags and secureFlag == 0)
+            dialogFlags != null
+        }
+        assertTrue(checkNotNull(dialogFlags) and secureFlag == 0)
+        compose.runOnIdle {
             assertTrue(activity.window.attributes.flags and secureFlag != 0)
         }
+    }
+
+    private fun View.composeDialogWindow(): Window? {
+        if (this is DialogWindowProvider) return window
+        if (this !is ViewGroup) return null
+        return (0 until childCount).firstNotNullOfOrNull { getChildAt(it).composeDialogWindow() }
     }
 
     @Suppress("UNCHECKED_CAST")
