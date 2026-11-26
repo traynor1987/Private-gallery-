@@ -79,6 +79,11 @@ import uk.co.traynor.privategallery.intelligence.IntelligenceApp
 import uk.co.traynor.privategallery.intelligence.IntelligenceConversation
 import uk.co.traynor.privategallery.intelligence.IntelligenceScreen
 import uk.co.traynor.privategallery.ui.PrivateGalleryTheme
+import uk.co.traynor.privategallery.novaos2.LauncherNovaSystemsActions
+import uk.co.traynor.privategallery.novaos2.NovaSystemHost
+import uk.co.traynor.privategallery.novaos2.NovaSystemId
+import uk.co.traynor.privategallery.novaos2.NovaSystemsPanel
+import uk.co.traynor.privategallery.novaos2.novaSystemFeatures
 
 internal const val LauncherExpandedWidth = 600
 
@@ -105,6 +110,7 @@ internal fun NovaLauncherScreen(
     onNotificationBarChange: (Boolean) -> Unit = {},
     onHomeSurfaceVisible: (Boolean) -> Unit = {},
     intelligence: LauncherIntelligenceActions? = null,
+    novaSystems: LauncherNovaSystemsActions? = null,
 ) {
     val theme = when (state.appearance.theme) {
         LauncherTheme.SYSTEM -> AppTheme.SYSTEM
@@ -119,12 +125,12 @@ internal fun NovaLauncherScreen(
         } else {
             LauncherRuntime(state, apps, shortcuts, decisions, actions, isDefaultHome, outsideProtection,
                 launcherProtected, homeGeneration, sanctuaryStatus, smartState, smartSettings, defaultHomeUi, smartFolderPresentation, appVisibility,
-                showNotificationBar, onNotificationBarChange, onHomeSurfaceVisible, intelligence)
+                showNotificationBar, onNotificationBarChange, onHomeSurfaceVisible, intelligence, novaSystems)
         }
     }
 }
 
-private enum class LauncherSurface { HOME, DRAWER, LIBRARY, SETTINGS, GUARDIAN_SETTINGS, GUARDIAN_DIAGNOSTICS, LIBRARY_SETTINGS, EDIT }
+private enum class LauncherSurface { HOME, DRAWER, LIBRARY, SETTINGS, GUARDIAN_SETTINGS, GUARDIAN_DIAGNOSTICS, LIBRARY_SETTINGS, EDIT, SYSTEMS }
 private enum class LauncherLibraryEntry { PAGER, DRAWER }
 
 private data class OpenLauncherFolder(val item: LauncherItem.Folder, val slot: LauncherSlot?, val inner: Boolean)
@@ -172,6 +178,7 @@ private fun LauncherRuntime(
     onNotificationBarChange: (Boolean) -> Unit,
     onHomeSurfaceVisible: (Boolean) -> Unit,
     intelligence: LauncherIntelligenceActions?,
+    novaSystems: LauncherNovaSystemsActions?,
 ) {
     val intelligenceConversation = remember(homeGeneration, launcherProtected) { IntelligenceConversation() }
     val lifecycle = LocalLifecycleOwner.current.lifecycle
@@ -188,6 +195,26 @@ private fun LauncherRuntime(
     var innerGuardian by rememberSaveable(homeGeneration) { mutableStateOf(false) }
     var intelligenceSelectedAcrossDisplays by rememberSaveable(homeGeneration) { mutableStateOf(false) }
     var surface by rememberSaveable(homeGeneration) { mutableStateOf(LauncherSurface.HOME) }
+    var systemPage by rememberSaveable(homeGeneration) { mutableStateOf<NovaSystemId?>(null) }
+    var systemsReturn by rememberSaveable(homeGeneration) { mutableStateOf(LauncherSurface.SETTINGS) }
+    val availableSystems = remember { novaSystemFeatures.map { it.id }.toSet() }
+    val showSystems = novaSystems != null && !launcherProtected && availableSystems.isNotEmpty()
+    fun openSystems(id: NovaSystemId?): Boolean {
+        if (!showSystems || novaSystems?.foregroundAllowed() != true || (id != null && id !in availableSystems)) return false
+        if (surface != LauncherSurface.SYSTEMS) systemsReturn = surface
+        systemPage = id
+        surface = LauncherSurface.SYSTEMS
+        return true
+    }
+    fun closeSystems() {
+        if (systemPage == null) surface = systemsReturn else systemPage = null
+    }
+    LaunchedEffect(showSystems, surface) {
+        if (!showSystems && surface == LauncherSurface.SYSTEMS) {
+            systemPage = null
+            surface = LauncherSurface.HOME
+        }
+    }
     var guardianSettingsFromHome by rememberSaveable(homeGeneration) { mutableStateOf(false) }
     var guardianDiagnosticsReturn by rememberSaveable(homeGeneration) { mutableStateOf(LauncherSurface.HOME) }
     fun closeGuardianSettings() {
@@ -317,6 +344,7 @@ private fun LauncherRuntime(
                 if (launcherSettingsCategory == null) showHome() else launcherSettingsCategory = null
             }
             LauncherSurface.EDIT -> closeEditor()
+            LauncherSurface.SYSTEMS -> closeSystems()
             else -> { showHome(animateDock = surface == LauncherSurface.DRAWER); query = "" }
         }
     }
@@ -459,6 +487,9 @@ private fun LauncherRuntime(
                         state, layout, wide, currentPage, appsByComponent, decisions, actions, launcherProtected,
                         onPage = updatePage, onDrawer = ::openDrawer,
                         onSettings = { surface = LauncherSurface.SETTINGS },
+                        onControlCentre = if (showSystems && NovaSystemId.CONTROL in availableSystems) {
+                            { openSystems(NovaSystemId.CONTROL); Unit }
+                        } else null,
                         onEdit = { surface = LauncherSurface.EDIT },
                         onItem = { open(it) },
                         onFolder = { item, slot -> open(item, slot, isInner) },
@@ -635,8 +666,14 @@ private fun LauncherRuntime(
                         defaultHomeUi = defaultHomeUi,
                         showNotificationBar = showNotificationBar,
                         onNotificationBarChange = onNotificationBarChange,
+                        onNovaSystems = if (showSystems) ({ openSystems(null); Unit }) else null,
                         wide = wide,
                     )
+                }
+                LauncherSurface.SYSTEMS -> if (showSystems && novaSystems != null) {
+                    NovaSystemsPanel(novaSystemFeatures, systemPage, NovaSystemHost(
+                        state, apps, decisions, actions, wide, availableSystems, ::closeSystems, ::openSystems, novaSystems,
+                    ))
                 }
                 LauncherSurface.EDIT -> LauncherLayoutEditor(
                     state, layout, wide, currentPage, apps.filter { canDisplay(it.component) }, decisions,
@@ -765,6 +802,7 @@ internal fun LauncherHome(
     intelligenceSelected: Boolean = false,
     onIntelligenceSelected: (Boolean) -> Unit = {},
     intelligencePage: (@Composable (active: Boolean) -> Unit)? = null,
+    onControlCentre: (() -> Unit)? = null,
 ) {
     DisposableEffect(gestures) { onDispose { gestures.clearHome() } }
     val pages = layout.pages.ifEmpty { listOf(listOf(LauncherItem.Workspace)) }
@@ -872,7 +910,7 @@ internal fun LauncherHome(
                     val index = page - firstHome
                     val activePage = pager.settledPage == page
                     Column(Modifier.fillMaxSize().padding(horizontal = if (wide) 26.dp else 14.dp)) {
-                        LauncherHeader(protectedBySanctuary, actions, { onDrawer(true) }, onSettings, onEdit)
+                        LauncherHeader(protectedBySanctuary, actions, { onDrawer(true) }, onSettings, onEdit, onControlCentre)
                         LauncherSanctuaryStatusCard(sanctuaryStatus, expanded = wide && !compact, onOpen = actions.openSanctuary)
                         if (state.drawer.search != LauncherSearchPlacement.DRAWER) {
                             OutlinedButton(
@@ -1022,9 +1060,20 @@ private fun LauncherHeader(
     onSearch: () -> Unit,
     onSettings: () -> Unit,
     onEdit: () -> Unit,
+    onControlCentre: (() -> Unit)?,
 ) {
     var menu by remember { mutableStateOf(false) }
-    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+    val openControls by rememberUpdatedState(onControlCentre)
+    val swipe = if (onControlCentre == null) Modifier else Modifier.pointerInput(Unit) {
+        val threshold = 36.dp.toPx()
+        var offset = 0f
+        detectVerticalDragGestures(
+            onDragStart = { offset = 0f },
+            onDragEnd = { if (offset >= threshold) openControls?.invoke() },
+            onVerticalDrag = { change, distance -> change.consume(); offset += distance },
+        )
+    }
+    Row(Modifier.fillMaxWidth().then(swipe), verticalAlignment = Alignment.CenterVertically) {
         IconButton(onClick = actions.openWorkspace) {
             Image(painterResource(R.drawable.nova_identity), "Open NovaOS workspace", Modifier.size(28.dp))
         }
@@ -1033,6 +1082,9 @@ private fun LauncherHeader(
                 maxLines = 1, overflow = TextOverflow.Ellipsis)
             Text(if (protectedBySanctuary) "Sanctuary active" else "Home", color = Color.White.copy(alpha = .77f),
                 style = MaterialTheme.typography.labelMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        }
+        if (onControlCentre != null) {
+            IconButton(onClick = onControlCentre) { Icon(Icons.Default.Dashboard, "Open Control Centre") }
         }
         IconButton(onClick = onSearch) { Icon(Icons.Default.Search, "Search apps") }
         IconButton(onClick = onSettings) { Icon(Icons.Default.Tune, "Launcher settings") }

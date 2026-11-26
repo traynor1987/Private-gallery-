@@ -327,5 +327,45 @@ for name in ("HiddenVpnBrowserActivity", "HiddenTorIsolationService", "HiddenTor
     assert component.get(ANDROID + "exported") == "false" and component.get(ANDROID + "enabled") is None
     component.set(ANDROID + "enabled", "false")
 
+def require_novaos2_manifest_nodes(feature_file, target, expected_nodes):
+    if not (ROOT / f"app/src/main/java/uk/co/traynor/privategallery/novaos2/{feature_file}.kt").is_file():
+        return
+    for expected_node in expected_nodes:
+        expected = ET.fromstring(expected_node.replace("ANDROID_NAMESPACE", ANDROID[1:-1]))
+        name = expected.get(ANDROID + "name")
+        matching = [node for node in target.findall(expected.tag) if node.get(ANDROID + "name") == name]
+        assert len(matching) == 1 and structure(matching[0]) == structure(expected), f"Invalid NovaOS declaration: {name}"
+        target.remove(matching[0])
+
+
+# Reviewed additive feature declarations. The original exact-comparison gate covers every other node.
+require_novaos2_manifest_nodes("NovaLockScreenStudio", after, [
+    '<uses-permission xmlns:android="ANDROID_NAMESPACE" android:name="android.permission.SET_WALLPAPER" />',
+])
+require_novaos2_manifest_nodes("HealthConnectSteps", after, [
+    '<uses-permission xmlns:android="ANDROID_NAMESPACE" android:name="android.permission.health.READ_STEPS" />',
+])
+require_novaos2_manifest_nodes("HealthConnectSteps", application, [
+    '<activity xmlns:android="ANDROID_NAMESPACE" android:name=".novaos2.HealthConnectRationaleActivity" android:exported="false" />',
+    '''<activity-alias xmlns:android="ANDROID_NAMESPACE" android:name=".novaos2.HealthConnectPermissionUsage"
+        android:targetActivity=".novaos2.HealthConnectRationaleActivity" android:exported="true"
+        android:permission="android.permission.START_VIEW_PERMISSION_USAGE">
+      <intent-filter>
+        <action android:name="android.intent.action.VIEW_PERMISSION_USAGE" />
+        <category android:name="android.intent.category.HEALTH_PERMISSIONS" />
+      </intent-filter>
+    </activity-alias>''',
+])
+require_novaos2_manifest_nodes("NovaShareHub", application, [
+    '''<activity xmlns:android="ANDROID_NAMESPACE" android:name=".novaos2.NovaShareTargetActivity" android:label="Nova Share Hub"
+        android:exported="true" android:excludeFromRecents="true" android:noHistory="true">
+      <intent-filter>
+        <action android:name="android.intent.action.SEND" />
+        <category android:name="android.intent.category.DEFAULT" />
+        <data android:mimeType="text/plain" />
+      </intent-filter>
+    </activity>''',
+])
+
 assert structure(before) == structure(after), "The existing manifest or permission set changed"
 print("PASS: Code 69 protected engines, original package and other permissions preserved; Home and call screening are additive")

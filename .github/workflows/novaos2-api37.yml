@@ -1,0 +1,65 @@
+name: NovaOS 2.0 API 37
+on:
+  push:
+    branches: ['feature/novaos2-*']
+permissions:
+  contents: read
+concurrency:
+  group: novaos2-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with: { persist-credentials: false, fetch-depth: 0 }
+      - uses: actions/setup-java@v5
+        with: { distribution: temurin, java-version: '17' }
+      - uses: actions/cache/restore@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: privacy1751-${{ runner.os }}-${{ hashFiles('**/*.gradle*', 'gradle/libs.versions.toml', 'gradle/wrapper/gradle-wrapper.properties') }}
+          restore-keys: privacy1751-${{ runner.os }}-
+      - name: Set up Android 17 and record source
+        run: |
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --install "cmdline-tools;22.0"
+          mv "$ANDROID_HOME/cmdline-tools/latest" "$RUNNER_TEMP/previous-android-tools-novaos2"
+          ln -s "$ANDROID_HOME/cmdline-tools/22.0" "$ANDROID_HOME/cmdline-tools/latest"
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-37.1" "build-tools;36.0.0" "emulator"
+          mkdir -p app/build/novaos2
+          git rev-parse HEAD HEAD^{tree} | tee app/build/novaos2/source.txt
+          python3 scripts/verify_android17_sdk.py "$ANDROID_HOME" app/build/novaos2/android17-sdk.json
+      - name: Check Sanctuary and protected storage boundaries
+        run: |
+          bash scripts/check_hidden_foundation.sh
+          python3 scripts/verify_sanctuary_browser_scope.py
+      - name: Compile the debug app and run JVM tests
+        run: |
+          bash scripts/prime_gradle95_ci.sh
+          ./gradlew testDebugUnitTest assembleDebug assembleDebugAndroidTest -Pkotlin.incremental=false --no-daemon --console=plain
+      - name: Enable emulator hardware acceleration
+        run: sudo chmod 666 /dev/kvm
+      - name: Run API 37 feature regressions
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: '37.0'
+          target: google_apis
+          arch: x86_64
+          profile: pixel_2
+          cores: 4
+          ram-size: 4096M
+          heap-size: 512M
+          disk-size: 8G
+          disable-animations: true
+          emulator-options: -no-window -gpu software -no-snapshot -noaudio -no-boot-anim -feature -HardwareDecoder -camera-back emulated -camera-front emulated
+          script: bash scripts/run_novaos2_api37.sh
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: novaos2-api37-evidence
+          path: |
+            app/build/novaos2
+            app/build/test-results/testDebugUnitTest
