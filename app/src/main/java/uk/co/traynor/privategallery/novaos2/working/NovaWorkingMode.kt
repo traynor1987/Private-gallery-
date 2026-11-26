@@ -72,10 +72,15 @@ import uk.co.traynor.privategallery.novaos2.working.WorkingLocationStatus
 import uk.co.traynor.privategallery.novaos2.working.WorkingSchedule
 import uk.co.traynor.privategallery.novaos2.working.WorkingShortcut
 import uk.co.traynor.privategallery.novaos2.working.WorkingState
+import uk.co.traynor.privategallery.novaos2.working.WorkingVehicleSignal
+import uk.co.traynor.privategallery.novaos2.working.WorkingVehicleSettings
+import uk.co.traynor.privategallery.novaos2.working.WorkingVehiclePicker
 import uk.co.traynor.privategallery.novaos2.working.scaledWorkNumber
 import uk.co.traynor.privategallery.novaos2.working.workingLocation
 import uk.co.traynor.privategallery.novaos2.working.workingScheduleMinute
 import uk.co.traynor.privategallery.novaos2.working.workingTimeLabel
+import uk.co.traynor.privategallery.novaos2.working.workingVehiclePermission
+import uk.co.traynor.privategallery.novaos2.working.workingVehicleSignal
 
 @Composable
 internal fun NovaWorkingMode(host: NovaSystemHost) {
@@ -88,9 +93,14 @@ internal fun NovaWorkingMode(host: NovaSystemHost) {
     var choosingShortcut by remember { mutableStateOf<WorkingShortcut?>(null) }
     var editingTotals by remember { mutableStateOf(false) }
     var editingSchedule by remember { mutableStateOf(false) }
+    var editingVehicle by remember { mutableStateOf(false) }
+    var vehiclePermissionRevision by remember { mutableIntStateOf(0) }
     var permissionRevision by remember { mutableIntStateOf(0) }
     val permission = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {
         permissionRevision++
+    }
+    val vehiclePermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {
+        vehiclePermissionRevision++
     }
 
     LaunchedEffect(config) {
@@ -121,30 +131,47 @@ internal fun NovaWorkingMode(host: NovaSystemHost) {
         return
     }
     val session = current.active
-    val clock = key(session?.startedElapsedMillis) { workingClock(session != null, current.schedule != null) }
+    val foreground = host.foregroundAllowed()
+    val clock = key(session?.startedElapsedMillis) { workingClock(session != null, current.schedule != null, foreground) }
     val lifecycleState by LocalLifecycleOwner.current.lifecycle.currentStateFlow.collectAsState()
     val localNow = Instant.ofEpochMilli(clock.wallMillis).atZone(ZoneId.systemDefault())
     val occurrence = current.schedule?.occurrence(localNow)?.toEpochDay()
     val scheduledDay = current.eligibleSchedule(localNow)
     val duration = session?.duration(clock.wallMillis, clock.elapsedMillis)
     val driving = session?.driving == true
+    val monitoredVehicle = current.vehicle?.identifier?.takeUnless { driving }
+    val vehicleSignal by key(monitoredVehicle, foreground, vehiclePermissionRevision, lifecycleState) {
+        workingVehicleSignal(monitoredVehicle, vehiclePermissionRevision, host.foregroundAllowed)
+    }
+    fun markObservedVehicle(next: WorkingState) = if (vehicleSignal == WorkingVehicleSignal.CONNECTED) next.handleVehicle() else next
     val scroll = rememberScrollState()
     LaunchedEffect(session != null, driving) { scroll.scrollTo(0) }
     val location by workingLocation(driving && duration != MAX_SHIFT_MILLIS && duration != null, permissionRevision, host.foregroundAllowed)
-    LaunchedEffect(current, duration == MAX_SHIFT_MILLIS, session != null && duration == null) {
-        if (session != null && (duration == MAX_SHIFT_MILLIS || duration == null)) {
-            save(current.finish(clock.wallMillis, clock.elapsedMillis).skipScheduledDay(occurrence)) {
+    LaunchedEffect(current, duration == MAX_SHIFT_MILLIS, session != null && duration == null, foreground) {
+        if (foreground && session != null && (duration == MAX_SHIFT_MILLIS || duration == null)) {
+            save(markObservedVehicle(current.finish(clock.wallMillis, clock.elapsedMillis).skipScheduledDay(occurrence))) {
                 message = if (duration == null) "The previous shift ended after the device clock changed."
                 else "The 18-hour shift limit ended this session."
             }
         }
     }
-    LaunchedEffect(scheduledDay, editingSchedule, choosingShortcut, lifecycleState) {
-        if (scheduledDay != null && !editingSchedule && choosingShortcut == null && lifecycleState == Lifecycle.State.RESUMED) {
+    LaunchedEffect(scheduledDay, editingSchedule, editingVehicle, choosingShortcut, lifecycleState, foreground) {
+        if (scheduledDay != null && !editingSchedule && !editingVehicle && choosingShortcut == null &&
+            foreground && lifecycleState == Lifecycle.State.RESUMED) {
             val now = workClock()
-            save(current.start(now.wallMillis, now.elapsedMillis, scheduledDay)) {
+            save(markObservedVehicle(current.start(now.wallMillis, now.elapsedMillis, scheduledDay))) {
                 message = "Scheduled shift started."
             }
+        }
+    }
+    LaunchedEffect(vehicleSignal, current.vehicle, session != null, foreground, editingVehicle, editingSchedule, choosingShortcut) {
+        if (!foreground || editingVehicle || editingSchedule || choosingShortcut != null || !workingVehiclePermission(context)) {
+            return@LaunchedEffect
+        }
+        val now = workClock()
+        val next = current.syncVehicle(vehicleSignal, now.wallMillis, now.elapsedMillis, occurrence)
+        if (next != current) save(next) {
+            if (session == null && next.active != null) message = "Shift started from the paired vehicle."
         }
     }
 
@@ -161,6 +188,16 @@ internal fun NovaWorkingMode(host: NovaSystemHost) {
         val app = target(slot)
         if (app == null || !host.launch(app)) message = "${slot.label} is unavailable here."
     }
+    val quickActions: @Composable () -> Unit = {
+        WorkingActions(host.wide,
+            canNavigate = target(WorkingShortcut.NAVIGATION) != null,
+            onNavigate = { open(WorkingShortcut.NAVIGATION) },
+            onPlayPause = {
+                if (host.foregroundAllowed() && !playPause(context)) message = "Android media controls are unavailable."
+            },
+            onPhone = { if (host.foregroundAllowed()) host.actions.emergencyPhone() },
+        )
+    }
 
     Column(Modifier.fillMaxWidth().verticalScroll(scroll).padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -169,7 +206,7 @@ internal fun NovaWorkingMode(host: NovaSystemHost) {
                 Text("Track a shift and open your work apps. Driving Mode has a separate, simplified dashboard.")
                 Button(onClick = {
                     val now = workClock()
-                    save(current.start(now.wallMillis, now.elapsedMillis, occurrence))
+                    save(markObservedVehicle(current.start(now.wallMillis, now.elapsedMillis, occurrence)))
                 }, enabled = !busy, modifier = Modifier.heightIn(min = 56.dp).testTag("start-working-shift")) {
                     Text("Start shift")
                 }
@@ -179,7 +216,10 @@ internal fun NovaWorkingMode(host: NovaSystemHost) {
             }
         } else {
             NovaSystemSection(if (driving) "Driving" else "Current shift") {
-                if (driving) DrivingReadout(location, SystemClock.elapsedRealtime())
+                if (driving) {
+                    DrivingReadout(location, SystemClock.elapsedRealtime())
+                    quickActions()
+                }
                 ShiftSummary(duration, session.totals)
                 Text("Delivery status  ${session.deliveryStatus.label}")
                 if (driving) {
@@ -209,21 +249,13 @@ internal fun NovaWorkingMode(host: NovaSystemHost) {
                     TextButton(enabled = !busy, onClick = { editingTotals = true }) { Text("Record shift totals") }
                     TextButton(enabled = !busy, onClick = {
                         val now = workClock()
-                        save(current.finish(now.wallMillis, now.elapsedMillis).skipScheduledDay(occurrence))
+                        save(current.finish(now.wallMillis, now.elapsedMillis).skipScheduledDay(occurrence)
+                            .manualStopVehicle(vehicleSignal))
                     }) { Text("End shift") }
                 }
             }
         }
-        NovaSystemSection("Quick actions") {
-            WorkingActions(host.wide,
-                canNavigate = target(WorkingShortcut.NAVIGATION) != null,
-                onNavigate = { open(WorkingShortcut.NAVIGATION) },
-                onPlayPause = {
-                    if (host.foregroundAllowed() && !playPause(context)) message = "Android media controls are unavailable."
-                },
-                onPhone = { if (host.foregroundAllowed()) host.actions.emergencyPhone() },
-            )
-        }
+        if (!driving) NovaSystemSection("Quick actions") { quickActions() }
         if (!driving) NovaSystemSection("Work apps") {
             WorkingShortcut.entries.forEach { slot ->
                 val app = target(slot)
@@ -251,6 +283,17 @@ internal fun NovaWorkingMode(host: NovaSystemHost) {
             }
             if (schedule != null) TextButton(enabled = !busy, onClick = { save(current.copy(schedule = null)) }) { Text("Turn schedule off") }
         }
+        if (!driving) WorkingVehicleSettings(current.vehicle, vehicleSignal, busy, session == null,
+            onSetUp = { editingVehicle = true },
+            onDisable = { save(current.copy(vehicle = null)) },
+            onDismissOffer = { save(current.handleVehicle()) },
+            onStart = {
+                if (vehicleSignal == WorkingVehicleSignal.CONNECTED && workingVehiclePermission(context)) {
+                    val now = workClock()
+                    val next = current.syncVehicle(vehicleSignal, now.wallMillis, now.elapsedMillis, occurrence, acceptOffer = true)
+                    if (next != current) save(next)
+                }
+            })
         message?.let { Text(it, color = MaterialTheme.colorScheme.secondary) }
     }
     if (!driving) choosingShortcut?.let { slot ->
@@ -270,6 +313,13 @@ internal fun NovaWorkingMode(host: NovaSystemHost) {
     if (editingSchedule && !driving) EditWorkingSchedule(current.schedule, busy, onDismiss = { editingSchedule = false }) { next ->
         save(current.copy(schedule = next)) { editingSchedule = false }
     }
+    if (editingVehicle && !driving) WorkingVehiclePicker(current.vehicle, vehiclePermissionRevision, busy,
+        allowed = host.foregroundAllowed,
+        onPermission = { if (host.foregroundAllowed()) vehiclePermission.launch(Manifest.permission.BLUETOOTH_CONNECT) },
+        onSettings = { host.openSystemSettings(Settings.ACTION_APPLICATION_DETAILS_SETTINGS) },
+        onDismiss = { editingVehicle = false },
+        onSave = { identifier, automatic -> save(current.setVehicle(identifier, automatic)) { editingVehicle = false } },
+    )
 }
 
 @Composable
@@ -303,13 +353,13 @@ private fun WorkingActions(wide: Boolean, canNavigate: Boolean, onNavigate: () -
     BoxWithConstraints(Modifier.fillMaxWidth()) {
         val horizontal = wide && maxWidth >= 420.dp
         if (horizontal) Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            DrivingAction("Emergency phone", onPhone)
             DrivingAction("Navigation", onNavigate, canNavigate)
             DrivingAction("Play / pause", onPlayPause)
-            DrivingAction("Emergency phone", onPhone)
         } else Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            DrivingAction("Emergency phone", onPhone, modifier = Modifier.fillMaxWidth())
             DrivingAction("Navigation", onNavigate, canNavigate, Modifier.fillMaxWidth())
             DrivingAction("Play / pause", onPlayPause, modifier = Modifier.fillMaxWidth())
-            DrivingAction("Emergency phone", onPhone, modifier = Modifier.fillMaxWidth())
         }
     }
     if (!canNavigate) Text("Choose a navigation app from Work apps while parked.", style = MaterialTheme.typography.bodySmall)
@@ -383,9 +433,10 @@ private data class WorkingClock(val wallMillis: Long, val elapsedMillis: Long)
 private fun workClock() = WorkingClock(System.currentTimeMillis(), SystemClock.elapsedRealtime())
 
 @Composable
-private fun workingClock(active: Boolean, scheduled: Boolean): WorkingClock {
+private fun workingClock(active: Boolean, scheduled: Boolean, foreground: Boolean): WorkingClock {
     val lifecycle = LocalLifecycleOwner.current.lifecycle
-    val clock by produceState(workClock(), active, scheduled, lifecycle) {
+    val clock by produceState(workClock(), active, scheduled, lifecycle, foreground) {
+        if (!foreground) return@produceState
         lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
             value = workClock()
             if (active || scheduled) while (true) {

@@ -342,6 +342,9 @@ def require_novaos2_manifest_nodes(feature_file, target, expected_nodes):
 require_novaos2_manifest_nodes("NovaLockScreenStudio", after, [
     '<uses-permission xmlns:android="ANDROID_NAMESPACE" android:name="android.permission.SET_WALLPAPER" />',
 ])
+require_novaos2_manifest_nodes("working/WorkingVehicleBluetooth", after, [
+    '<uses-permission xmlns:android="ANDROID_NAMESPACE" android:name="android.permission.BLUETOOTH_CONNECT" />',
+])
 require_novaos2_manifest_nodes("HealthConnectSteps", after, [
     '<uses-permission xmlns:android="ANDROID_NAMESPACE" android:name="android.permission.health.READ_STEPS" />',
 ])

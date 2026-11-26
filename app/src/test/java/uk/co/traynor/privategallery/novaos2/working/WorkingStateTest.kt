@@ -73,4 +73,35 @@ class WorkingStateTest {
         assertNull(workingScheduleMinute("24:00"))
         assertEquals(60, workingScheduleMinute("01:00"))
     }
+
+    @Test fun vehicleRequiresVerifiedProfilesAndAnExplicitOfferAcceptanceByDefault() {
+        val initial = WorkingState().setVehicle("02:01:02:03:04:05", automatic = false)
+        assertEquals(WorkingVehicleSignal.UNAVAILABLE, verifiedVehicleSignal(false, null))
+        assertEquals(WorkingVehicleSignal.DISCONNECTED, verifiedVehicleSignal(false, false))
+        assertEquals(WorkingVehicleSignal.CONNECTED, verifiedVehicleSignal(null, true))
+        assertEquals(initial, initial.syncVehicle(WorkingVehicleSignal.UNAVAILABLE, 1, 1, null, acceptOffer = true))
+        assertNull(initial.syncVehicle(WorkingVehicleSignal.CONNECTED, 1, 1, null).active)
+        val accepted = initial.syncVehicle(WorkingVehicleSignal.CONNECTED, 1, 1, null, acceptOffer = true)
+        assertFalse(checkNotNull(accepted.active).driving)
+        assertFalse(accepted.toString().contains("02:01:02:03:04:05"))
+        assertEquals(accepted, WorkingState.decode(accepted.encode()))
+    }
+
+    @Test fun manuallyEndedAutomaticShiftWaitsForVerifiedDisconnectBeforeStartingAgain() {
+        val initial = WorkingState().setVehicle("02:01:02:03:04:05", automatic = true)
+        val start = initial.syncVehicle(WorkingVehicleSignal.CONNECTED, 1_000, 1_000, 10L)
+        assertFalse(checkNotNull(start.active).driving)
+        assertNull(initial.handleVehicle().syncVehicle(WorkingVehicleSignal.CONNECTED, 1_000, 1_000, null).active)
+        val stopped = start.finish(2_000, 2_000)
+        val restored = WorkingState.decode(stopped.encode())
+        assertEquals(restored, restored.syncVehicle(WorkingVehicleSignal.CONNECTED, 3_000, 3_000, null))
+        assertEquals(restored, restored.syncVehicle(WorkingVehicleSignal.UNAVAILABLE, 3_000, 3_000, null))
+        val disconnected = restored.syncVehicle(WorkingVehicleSignal.DISCONNECTED, 3_000, 3_000, null)
+        val resumed = disconnected.syncVehicle(WorkingVehicleSignal.CONNECTED, 4_000, 4_000, null)
+        assertEquals(4_000L, resumed.active?.startedElapsedMillis)
+        assertEquals(start.active, start.syncVehicle(WorkingVehicleSignal.DISCONNECTED, 3_000, 3_000, null).active)
+        val stoppedWithAnUncertainSignal = initial.start(1_000, 1_000, null)
+            .finish(2_000, 2_000).manualStopVehicle(WorkingVehicleSignal.UNAVAILABLE)
+        assertNull(stoppedWithAnUncertainSignal.syncVehicle(WorkingVehicleSignal.CONNECTED, 3_000, 3_000, null).active)
+    }
 }

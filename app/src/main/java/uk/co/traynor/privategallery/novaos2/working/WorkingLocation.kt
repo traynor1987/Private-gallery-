@@ -36,9 +36,11 @@ internal fun workingLocation(active: Boolean, permissionRevision: Int, allowed: 
     val context = LocalContext.current
     val lifecycle = LocalLifecycleOwner.current.lifecycle
     val latestAllowed = androidx.compose.runtime.rememberUpdatedState(allowed)
-    return produceState(WorkingLocation(WorkingLocationStatus.OFF), active, permissionRevision, lifecycle) {
+    // Home can lose its top-resumed position on a Fold while Android still reports RESUMED.
+    val foreground = allowed()
+    return produceState(WorkingLocation(WorkingLocationStatus.OFF), active, foreground, permissionRevision, lifecycle) {
         value = WorkingLocation(WorkingLocationStatus.OFF)
-        if (!active) return@produceState
+        if (!active || !foreground) return@produceState
         lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
             if (!latestAllowed.value()) return@repeatOnLifecycle
             if (!hasWorkingLocation(context)) {
@@ -80,7 +82,7 @@ internal fun workingLocation(active: Boolean, permissionRevision: Int, allowed: 
                 value = WorkingLocation(WorkingLocationStatus.WAITING)
                 try { awaitCancellation() } finally {
                     subscribed = false
-                    manager.removeUpdates(listener)
+                    runCatching { manager.removeUpdates(listener) }
                     value = WorkingLocation(WorkingLocationStatus.OFF)
                 }
             } else value = WorkingLocation(WorkingLocationStatus.UNAVAILABLE)
