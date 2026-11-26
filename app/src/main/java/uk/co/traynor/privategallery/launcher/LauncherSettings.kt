@@ -152,8 +152,11 @@ internal fun LauncherSettings(
                                 actions.save(state.copy(separateDisplays = it))
                             }
                             OutlinedButton(onClick = onEdit) { Text("Edit Home pages, dock and widgets") }
-                            LauncherOptions("Grid density", LauncherGrid.entries, state.appearance.grid, {
-                                actions.save(state.copy(appearance = state.appearance.copy(grid = it)))
+                            LauncherOptions("Grid density", LauncherGrid.entries, state.appearance.gridFor(wide), {
+                                val appearance = state.appearance
+                                val next = if (wide) appearance.copy(studio = appearance.studio.copy(innerGrid = it))
+                                    else appearance.copy(grid = it)
+                                actions.save(state.copy(appearance = next))
                             })
                             if (!protectedBySanctuary) actions.reloadWorkspaceLayout?.let { reload ->
                                 WorkspaceLayoutOptions(actions.openWorkspace, reload)
@@ -198,16 +201,28 @@ internal fun LauncherSettings(
                         }
                         item {
                             HorizontalDivider(Modifier.padding(bottom = 12.dp))
-                            LauncherAppearanceOptions(
-                                state.appearance, { actions.save(state.copy(appearance = it)) }, actions.chooseWallpaper,
-                                showDock = false, showGrid = false,
+                            LauncherThemesStudio(
+                                appearance = state.appearance,
+                                previewApps = apps.filter { decisions.forLauncherApp(it)?.canLaunch == true }.take(5),
+                                onApply = { actions.save(state.copy(appearance = it)) },
+                                onDeviceWallpaper = actions.chooseWallpaper,
+                                enableDocuments = !protectedBySanctuary,
+                                ownScroll = false,
                             )
                         }
                     }
 
                     LauncherSettingsCategory.FOLDERS -> {
                         item { OutlinedButton(onClick = onLibrarySettings) { Text("App Library") } }
-                        item { LauncherFolderAppearanceSettings() }
+                        item {
+                            val context = LocalContext.current
+                            val legacy = remember(context) { LauncherFolderAppearance.read(context) }
+                            LauncherFolderAppearanceSettings(state.appearance.studio.folder ?: legacy) { next ->
+                                actions.save(state.copy(appearance = state.appearance.copy(
+                                    studio = state.appearance.studio.copy(folder = next),
+                                )))
+                            }
+                        }
                         item {
                             Text("New apps", style = MaterialTheme.typography.titleMedium)
                             LauncherToggle("Add to Home automatically", state.newAppPlacement == LauncherNewAppPlacement.HOME) {

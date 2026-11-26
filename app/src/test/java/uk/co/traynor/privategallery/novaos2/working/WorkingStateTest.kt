@@ -1,0 +1,76 @@
+package uk.co.traynor.privategallery.novaos2.working
+
+import java.time.DayOfWeek
+import java.time.ZonedDateTime
+import org.json.JSONObject
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertThrows
+import org.junit.Test
+
+class WorkingStateTest {
+    @Test fun speedUsesOnlyFreshFiniteSensorValues() {
+        val fix = WorkingSpeed(10_000L, 13.41f, 8.8f, 0.85f)
+        assertEquals(30, fix.mph(10_000L))
+        assertEquals(9, fix.positionAccuracy(10_000L))
+        assertEquals(2, fix.accuracy(10_000L))
+        assertNull(fix.mph(15_001L))
+        assertNull(fix.mph(9_999L))
+        assertNull(fix.copy(metersPerSecond = Float.NaN).mph(10_000L))
+        assertNull(fix.copy(metersPerSecond = null).mph(10_000L))
+        assertEquals(0, fix.copy(metersPerSecond = 0f).mph(10_000L))
+    }
+
+    @Test fun shiftSurvivesRoundTripAndRetainsTotalsWhenClockCannotBeValidated() {
+        val totals = WorkTotals(3, earningsPence = 1250, fuelPence = 300, mileageTenths = 92)
+        val active = WorkingSession(100_000L, 10_000L, true, DeliveryStatus.DELIVERING, totals)
+        val restored = WorkingState.decode(WorkingState(active).encode())
+        assertEquals(active, restored.active)
+        assertEquals(60_000L, active.duration(160_000L, 70_000L))
+
+        val endedAfterReboot = restored.finish(160_000L, 5_000L)
+        assertNull(endedAfterReboot.active)
+        assertNull(endedAfterReboot.previous?.durationMillis)
+        assertEquals(totals, endedAfterReboot.previous?.totals)
+        assertEquals(endedAfterReboot, WorkingState.decode(JSONObject(endedAfterReboot.encode().toString())))
+    }
+
+    @Test fun shiftDurationCapsAndMoneyKeepsExactDecimalPrecision() {
+        val active = WorkingSession(10_000L, 1_000L)
+        val afterLimit = MAX_SHIFT_MILLIS + 1000L
+        assertEquals(MAX_SHIFT_MILLIS, active.duration(10_000L + afterLimit, 1_000L + afterLimit))
+        assertEquals(1230, scaledWorkNumber("12.30", 2))
+        assertNull(scaledWorkNumber(" ", 1))
+        assertThrows(IllegalArgumentException::class.java) { scaledWorkNumber("2.999", 2) }
+        assertThrows(IllegalArgumentException::class.java) { WorkTotals(1, fuelPence = -1) }
+    }
+
+    @Test fun configuredShortcutsPersistWithoutAProfileBypass() {
+        val state = WorkingState(shortcuts = mapOf(WorkingShortcut.NAVIGATION to "com.example.maps/.Maps"))
+        assertEquals(state, WorkingState.decode(state.encode()))
+        val corrupted = state.encode().apply {
+            getJSONObject("shortcuts").put("NAVIGATION", "com.example.maps/.Maps#99")
+        }
+        assertThrows(IllegalArgumentException::class.java) { WorkingState.decode(corrupted) }
+        assertFalse(state.encode().has("location"))
+    }
+
+    @Test fun overnightScheduleStartsOnceOnTheConfiguredDayAndNeverEntersDriving() {
+        val monday = WorkingSchedule(22 * 60, 2 * 60, setOf(DayOfWeek.MONDAY))
+        val before = ZonedDateTime.parse("2026-11-23T21:59:00Z[Europe/London]")
+        val during = before.plusHours(3)
+        val initial = WorkingState(schedule = monday)
+        assertNull(initial.eligibleSchedule(before))
+        val day = initial.eligibleSchedule(during)
+        assertEquals(before.toLocalDate().toEpochDay(), day)
+        val active = initial.start(1_000L, 10L, day)
+        assertFalse(checkNotNull(active.active).driving)
+        val ended = active.finish(2_000L, 1_010L)
+        assertNull(ended.eligibleSchedule(during))
+        assertNull(initial.eligibleSchedule(during.plusHours(2)))
+        assertEquals(monday, WorkingState.decode(ended.encode()).schedule)
+        assertNull(workingScheduleMinute("24:00"))
+        assertEquals(60, workingScheduleMinute("01:00"))
+    }
+}
