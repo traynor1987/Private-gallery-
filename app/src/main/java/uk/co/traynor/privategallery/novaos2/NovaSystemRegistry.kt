@@ -16,5 +16,5 @@ internal val novaSystemFeatures: List<NovaSystemFeature> = buildList {
 
     // PRIVACY
 
-    // UTILITIES
+    add(NovaSystemFeature(NovaSystemId.UTILITIES, "Nova Utilities", "Notes, Tasks, Calendar, Files and everyday tools.") { NovaUtilities(it) })
 }

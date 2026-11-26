@@ -172,6 +172,11 @@ internal fun NovaCalendarScreen(
                     editor = CalendarEdit(NovaCalendarEvent(UUID.randomUUID().toString(), "", "", focus,
                         null, displayZone, 30, NovaEventRepeat.NONE))
                 }) { Text("New event") }
+                if (!hidden) OutlinedButton(enabled = !busy && snapshot != null, onClick = {
+                    status = null
+                    editor = CalendarEdit(NovaCalendarEvent(UUID.randomUUID().toString(), "Work shift", "", focus,
+                        null, displayZone, 30, NovaEventRepeat.NONE), minutes = "", allDay = false)
+                }) { Text("Schedule shift") }
             }
             Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 CalendarView.entries.forEach { view ->
