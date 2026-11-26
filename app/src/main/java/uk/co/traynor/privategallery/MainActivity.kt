@@ -1161,6 +1161,11 @@ class MainActivity : FragmentActivity() {
     }
     internal fun cancelNovaCredentials() {
         pendingCoreApp = null
+        if (uk.co.traynor.privategallery.novaos2.NovaPrimaryPresentation.identifies(launcherEntry)) {
+            retireWorkspaceForLauncherEntry()
+            finish()
+            return
+        }
         closeNovaCredentials()
     }
 
@@ -2527,6 +2532,7 @@ class MainActivity : FragmentActivity() {
         val close = { retireWorkspaceForLauncherEntry(); finish() }
         androidx.activity.compose.BackHandler(onBack = close)
         uk.co.traynor.privategallery.ui.CredentialCaptureProtection()
+        LaunchedEffect(allowed) { if (!allowed) close() }
         if (space != null) {
             content(space, close) {
                 access.current() && space.current() && activityResumed && !retained.hidden.selected &&
