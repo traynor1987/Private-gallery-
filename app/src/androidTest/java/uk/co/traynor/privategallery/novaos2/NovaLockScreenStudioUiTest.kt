@@ -1,10 +1,10 @@
 package uk.co.traynor.privategallery.novaos2
 
 import androidx.activity.ComponentActivity
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -35,7 +35,7 @@ class NovaLockScreenStudioUiTest {
             var style by remember { mutableStateOf(NovaLockStyle()) }
             var pending by remember { mutableStateOf<NovaLockWallpaper?>(null) }
             MaterialTheme {
-                Box(Modifier.fillMaxSize().safeDrawingPadding()) {
+                Surface(Modifier.fillMaxSize().safeDrawingPadding()) {
                     NovaLockStudioLayout(false, { NovaLockPreview(style, "17:45", 64) }, {
                         NovaLockControls(style, true, { style = it }, onSave = {}, onApply = { pending = style.wallpaper })
                     })
@@ -67,7 +67,7 @@ class NovaLockScreenStudioUiTest {
         compose.setContent {
             val style = NovaLockStyle(ambientPreview = true, showNotificationExample = true)
             MaterialTheme {
-                Box(Modifier.fillMaxSize().safeDrawingPadding()) {
+                Surface(Modifier.fillMaxSize().safeDrawingPadding()) {
                     NovaLockStudioLayout(true, { NovaLockPreview(style, "17:45", null) }, {
                         NovaLockControls(style, true, onChange = {}, onSave = {}, onApply = {})
                     })
