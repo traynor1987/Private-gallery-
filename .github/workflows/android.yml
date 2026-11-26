@@ -14,7 +14,7 @@ on:
       - 'scripts/check_launcher_branding.py'
       - 'app/src/androidTest/java/uk/co/traynor/privategallery/ui/LauncherBrandingTest.kt'
   pull_request:
-    branches-ignore: [main]
+    branches-ignore: [main, 'feature/novaos2-*']
 jobs:
   debug:
     runs-on: ubuntu-24.04

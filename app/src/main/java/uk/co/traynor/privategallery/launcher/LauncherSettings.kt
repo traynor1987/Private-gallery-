@@ -76,6 +76,7 @@ internal fun LauncherSettings(
     wide: Boolean = false,
     showNotificationBar: Boolean = true,
     onNotificationBarChange: (Boolean) -> Unit = {},
+    onNovaSystems: (() -> Unit)? = null,
 ) {
     var confirmDockReset by remember { mutableStateOf(false) }
     val tap = navigationHaptic()
@@ -93,6 +94,11 @@ internal fun LauncherSettings(
                 contentPadding = PaddingValues(bottom = 18.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
+                if (category == null && onNovaSystems != null) item(key = "novaos2-systems") {
+                    androidx.compose.material3.OutlinedButton(onClick = onNovaSystems, modifier = Modifier.fillMaxWidth()) {
+                        Text("NovaOS systems")
+                    }
+                }
                 when (category) {
                     null -> items(LauncherSettingsCategory.entries, key = { it.route }) { entry ->
                         Surface(

@@ -257,6 +257,7 @@ internal const val ACTION_OPEN_PRIVATE_WORKSPACE = "uk.co.traynor.privategallery
 
 internal const val ACTION_OPEN_PRIMARY_GALLERY = "uk.co.traynor.privategallery.action.OPEN_PRIMARY_GALLERY"
 private const val ACTION_OPEN_INTELLIGENCE = "uk.co.traynor.privategallery.action.OPEN_INTELLIGENCE"
+private const val ACTION_OPEN_NOVA_UPDATES = "uk.co.traynor.privategallery.action.OPEN_NOVA_UPDATES"
 private const val STATE_LAUNCHER_ENTRY = "launcher.workspace.entry"
 private const val STATE_CORE_APP_ENTRY = "launcher.workspace.coreApp"
 private const val ACTION_CORE_APP_PREFIX = "uk.co.traynor.privategallery.action.CORE_APP."
@@ -268,6 +269,8 @@ internal fun privateCoreAppEntryIntent(context: android.content.Context, app: No
     privateWorkspaceEntryIntent(context).setAction(ACTION_CORE_APP_PREFIX + app.name)
 internal fun privateIntelligenceEntryIntent(context: android.content.Context): Intent =
     privateWorkspaceEntryIntent(context).setAction(ACTION_OPEN_INTELLIGENCE)
+internal fun privateNovaUpdatesIntent(context: android.content.Context): Intent =
+    privateWorkspaceEntryIntent(context).setAction(ACTION_OPEN_NOVA_UPDATES)
 
 private const val STATE_STANDALONE_VAULT_CHROME = "launcher.workspace.standaloneVaultChrome"
 
@@ -1305,6 +1308,7 @@ class MainActivity : FragmentActivity() {
     }
     private var launcherEntry by mutableStateOf<String?>(null)
     private var pendingCoreApp by mutableStateOf<NovaCoreApp?>(null)
+    private var pendingNovaPrimary by mutableStateOf<uk.co.traynor.privategallery.novaos2.NovaPrimaryContent?>(null)
     private var standalonePrimaryVaultChrome by mutableStateOf(false)
 
     override fun onNewIntent(intent: Intent) {
@@ -1314,7 +1318,7 @@ class MainActivity : FragmentActivity() {
 
     override fun onSaveInstanceState(outState: Bundle) {
         super.onSaveInstanceState(outState)
-        outState.putString(STATE_LAUNCHER_ENTRY, launcherEntry)
+        outState.putString(STATE_LAUNCHER_ENTRY, launcherEntry?.takeUnless(uk.co.traynor.privategallery.novaos2.NovaPrimaryPresentation::identifies))
         outState.putString(STATE_CORE_APP_ENTRY, pendingCoreApp?.name)
         outState.putBoolean(STATE_STANDALONE_VAULT_CHROME, standalonePrimaryVaultChrome)
     }
@@ -1322,8 +1326,10 @@ class MainActivity : FragmentActivity() {
     private fun enterPrivateWorkspaceFromLauncher(request: Intent) {
         val action = request.action
         val coreApp = coreAppForAction(action)
+        val novaPrimary = uk.co.traynor.privategallery.novaos2.NovaPrimaryPresentation.identifies(action)
         if (coreApp == null && action != ACTION_OPEN_PRIVATE_WORKSPACE &&
-            action != ACTION_OPEN_PRIMARY_GALLERY && action != ACTION_OPEN_INTELLIGENCE) return
+            action != ACTION_OPEN_PRIMARY_GALLERY && action != ACTION_OPEN_INTELLIGENCE &&
+            action != ACTION_OPEN_NOVA_UPDATES && !novaPrimary) return
         // Consume the one-shot request. Only the caller's explicit destination is supported.
         setIntent(Intent(this, MainActivity::class.java))
         if (request.data != null || request.extras?.isEmpty == false || request.clipData != null ||
@@ -1333,16 +1339,21 @@ class MainActivity : FragmentActivity() {
             finish()
             return
         }
+        val primaryContent = if (novaPrimary) {
+            uk.co.traynor.privategallery.novaos2.NovaPrimaryPresentation.take(action) ?: return
+        } else null
         // A new Android task must not reuse authentication from any existing workspace owner.
         for (owner in workspaceActivities.toList()) owner.retireWorkspaceForLauncherEntry()
         launcherEntry = action
         pendingCoreApp = coreApp
+        pendingNovaPrimary = primaryContent
         standalonePrimaryVaultChrome = action == ACTION_OPEN_PRIMARY_GALLERY
         if (route == Route.LOCK) requestNovaCredentials()
     }
 
     private fun retireWorkspaceForLauncherEntry() {
         pendingCoreApp = null
+        pendingNovaPrimary = null
         standalonePrimaryVaultChrome = false
         if (session.isUnlocked || sessionKey != null || retained.hidden.session.isUnlocked || retained.hidden.selected) {
             panicCoverPending = true
@@ -1435,7 +1446,7 @@ class MainActivity : FragmentActivity() {
         }
         workspaceActivities.add(this)
         launcherEntry = savedInstanceState?.getString(STATE_LAUNCHER_ENTRY)
-            ?.takeIf { it == ACTION_OPEN_PRIVATE_WORKSPACE || it == ACTION_OPEN_PRIMARY_GALLERY || it == ACTION_OPEN_INTELLIGENCE || coreAppForAction(it) != null }
+            ?.takeIf { it == ACTION_OPEN_PRIVATE_WORKSPACE || it == ACTION_OPEN_PRIMARY_GALLERY || it == ACTION_OPEN_INTELLIGENCE || it == ACTION_OPEN_NOVA_UPDATES || coreAppForAction(it) != null }
         pendingCoreApp = coreAppForAction(launcherEntry)?.takeIf {
             savedInstanceState?.getString(STATE_CORE_APP_ENTRY) == it.name
         }
@@ -1807,16 +1818,16 @@ class MainActivity : FragmentActivity() {
     }
 
     private fun finishPrimaryAuthenticationRoute() {
-        if (launcherEntry == ACTION_OPEN_INTELLIGENCE) {
+        if (launcherEntry == ACTION_OPEN_INTELLIGENCE || pendingNovaPrimary != null) {
             retained.hidden.leave()
             retained.primaryGallery = false
             retained.afterAuthentication = Route.VAULT
             homeVisible = true
         }
-        if (launcherEntry == ACTION_OPEN_PRIMARY_GALLERY) {
+        if (launcherEntry == ACTION_OPEN_PRIMARY_GALLERY || launcherEntry == ACTION_OPEN_NOVA_UPDATES) {
             retained.hidden.leave()
             retained.primaryGallery = false
-            retained.afterAuthentication = Route.VAULT
+            retained.afterAuthentication = if (launcherEntry == ACTION_OPEN_NOVA_UPDATES) Route.SETTINGS else Route.VAULT
             homePrimaryAuthentication = session.captureAuthenticationEpoch()
             homeVisible = false
         }
@@ -1871,6 +1882,10 @@ class MainActivity : FragmentActivity() {
     private fun lock() = lockPrimary(revokeHidden = true)
 
     private fun lockPrimary(revokeHidden: Boolean) {
+        pendingNovaPrimary = null
+        if (uk.co.traynor.privategallery.novaos2.NovaPrimaryPresentation.identifies(launcherEntry)) {
+            launcherEntry = ACTION_OPEN_PRIVATE_WORKSPACE
+        }
         dismissNovaBlackScreen()
         cancelPendingNovaPrivateApp()
         novaRecentsRequested=0
@@ -2343,6 +2358,7 @@ class MainActivity : FragmentActivity() {
         if(if(retained.hidden.selected)!retained.hidden.session.isUnlocked else !session.isUnlocked||sessionKey==null)return
         openSettings()
     }
+    internal val openedFromNovaUpdates: Boolean get() = launcherEntry == ACTION_OPEN_NOVA_UPDATES
     internal fun novaSpaceLabel():String? = uk.co.traynor.privategallery.core.home.NovaNavigation.ownerLabel(retained.hidden.selected,hideContent)
     internal fun novaApplicationTitle(selected:Route):String = if(hideContent)"NovaOS"else when(selected) {
         Route.GALLERY -> "Gallery"
@@ -2448,6 +2464,10 @@ class MainActivity : FragmentActivity() {
             if (activityResumed && access.current()) PrivateIntelligence(access)
             return
         }
+        if (!hidden && uk.co.traynor.privategallery.novaos2.NovaPrimaryPresentation.identifies(launcherEntry)) {
+            if (access.current()) pendingNovaPrimary?.let { PrivateNovaSystem(access, it) }
+            return
+        }
         val apps=remember(access){homeNativeApps(access)}
         uk.co.traynor.privategallery.home2.IntegratedHome(access,homeVisible&&activityResumed,
             {id->if(access.current())launchHome2App(id)},::lockNovaSpace,::panicExit,
@@ -2487,6 +2507,38 @@ class MainActivity : FragmentActivity() {
                     }
                 } else if(homeThemeAccess===access) {homeThemeData=null;homeThemeAccess=null}
             })
+    }
+
+    @Composable
+    private fun PrivateNovaSystem(
+        access: uk.co.traynor.privategallery.core.evidence.EvidenceAccess,
+        content: uk.co.traynor.privategallery.novaos2.NovaPrimaryContent,
+    ) {
+        val sanctuary = uk.co.traynor.privategallery.core.sanctuary.SanctuaryStore.get(applicationContext)
+        val sessionState by sanctuary.current.collectAsState()
+        val policyRevision by uk.co.traynor.privategallery.core.sanctuary.SanctuaryLauncherPolicy.state().collectAsState()
+        val allowed = remember(sessionState, policyRevision, activityResumeRevision) {
+            intelligencePrivateAllowed(applicationContext)
+        }
+        val space = remember(access, allowed) {
+            if (allowed) runCatching { SpaceContext(this, access) }.getOrNull() else null
+        }
+        DisposableEffect(space) { onDispose { space?.close() } }
+        val close = { retireWorkspaceForLauncherEntry(); finish() }
+        androidx.activity.compose.BackHandler(onBack = close)
+        uk.co.traynor.privategallery.ui.CredentialCaptureProtection()
+        if (space != null) {
+            content(space, close) {
+                access.current() && space.current() && activityResumed && !retained.hidden.selected &&
+                    lifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.RESUMED) && intelligencePrivateAllowed(this)
+            }
+        } else {
+            Column(Modifier.fillMaxSize().safeDrawingPadding().padding(24.dp),
+                verticalArrangement = Arrangement.Center, horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally) {
+                Text("This private workspace is unavailable while protection is active.")
+                TextButton(onClick = close) { Text("Close") }
+            }
+        }
     }
 
     @Composable
@@ -5107,7 +5159,9 @@ internal fun SettingsHome(
     val aiStatus by aiConfiguration.status.collectAsState()
     val versionPresentation = uk.co.traynor.privategallery.core.ui.InAppVersionPresentation(hideContent,BuildConfig.VERSION_NAME,BuildConfig.VERSION_CODE)
     val showHiddenSettings = !hideContent && hiddenBrowserSettings != null
-    var category by remember { mutableStateOf<SettingsCategory?>(null) }
+    var category by remember(updateOwner?.openedFromNovaUpdates) {
+        mutableStateOf(if (!showHiddenSettings && updateOwner?.openedFromNovaUpdates == true) SettingsCategory.ABOUT else null)
+    }
     RefreshUpdatesOnAboutEntry(category == SettingsCategory.ABOUT, liveUpdater)
     val diagnosticsGate = remember { uk.co.traynor.privategallery.core.browser.hidden.OwnerDiagnosticsGate(android.os.SystemClock::elapsedRealtime) }
     var diagnosticsAuthenticated by remember { mutableStateOf(false) }
