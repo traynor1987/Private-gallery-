@@ -1,11 +1,15 @@
 package uk.co.traynor.privategallery.novaos2
 
 import androidx.activity.ComponentActivity
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
@@ -31,9 +35,11 @@ class NovaLockScreenStudioUiTest {
             var style by remember { mutableStateOf(NovaLockStyle()) }
             var pending by remember { mutableStateOf<NovaLockWallpaper?>(null) }
             MaterialTheme {
-                NovaLockStudioLayout(false, { NovaLockPreview(style, "17:45", 64) }, {
-                    NovaLockControls(style, true, { style = it }, onSave = {}, onApply = { pending = style.wallpaper })
-                })
+                Box(Modifier.fillMaxSize().safeDrawingPadding()) {
+                    NovaLockStudioLayout(false, { NovaLockPreview(style, "17:45", 64) }, {
+                        NovaLockControls(style, true, { style = it }, onSave = {}, onApply = { pending = style.wallpaper })
+                    })
+                }
                 pending?.let { wallpaper ->
                     NovaLockWallpaperConfirmation(wallpaper, onDismiss = { pending = null }, onConfirm = {
                         applied = wallpaper
@@ -61,9 +67,11 @@ class NovaLockScreenStudioUiTest {
         compose.setContent {
             val style = NovaLockStyle(ambientPreview = true, showNotificationExample = true)
             MaterialTheme {
-                NovaLockStudioLayout(true, { NovaLockPreview(style, "17:45", null) }, {
-                    NovaLockControls(style, true, onChange = {}, onSave = {}, onApply = {})
-                })
+                Box(Modifier.fillMaxSize().safeDrawingPadding()) {
+                    NovaLockStudioLayout(true, { NovaLockPreview(style, "17:45", null) }, {
+                        NovaLockControls(style, true, onChange = {}, onSave = {}, onApply = {})
+                    })
+                }
             }
         }
         compose.onNodeWithText("Ambient preview").assertIsDisplayed()

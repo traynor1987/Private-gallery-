@@ -3,6 +3,7 @@ package uk.co.traynor.privategallery.launcher
 import androidx.activity.ComponentActivity
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Modifier
@@ -71,7 +72,7 @@ class LauncherThemesStudioUiTest {
         compose.setContent {
             LauncherStudioTheme(state.value.appearance) {
                 Surface(Modifier.fillMaxSize()) {
-                    Box(Modifier.fillMaxSize()) {
+                    Box(Modifier.fillMaxSize().safeDrawingPadding()) {
                         LauncherThemesStudio(state.value.appearance, apps, {
                             state.value = state.value.copy(appearance = it)
                             true

@@ -1,7 +1,16 @@
 package uk.co.traynor.privategallery.novaos2.working
 
+import android.view.View
+import android.view.ViewGroup
+import android.view.Window
+import android.view.WindowManager
+import android.view.inspector.WindowInspector
 import androidx.activity.ComponentActivity
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.isDisplayed
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
@@ -9,10 +18,13 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.window.DialogWindowProvider
+import java.io.File
 import java.time.ZonedDateTime
 import org.json.JSONObject
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.RuleChain
@@ -37,7 +49,7 @@ class WorkingModeUiTest {
         val persisted = NovaSystemConfig(compose.activity, "working-mode")
         persisted.clear()
         try {
-            compose.setContent { MaterialTheme { NovaWorkingMode(drivingHost()) } }
+            show()
             val start = compose.onNodeWithTag("start-working-shift")
             compose.waitUntil(10_000) { start.isDisplayed() }
             start.performClick()
@@ -51,7 +63,7 @@ class WorkingModeUiTest {
             compose.onNodeWithText("Record shift totals").assertDoesNotExist()
             compose.onNodeWithText("Work apps").assertDoesNotExist()
             captureNovaSystem("working-cover-driving")
-            compose.onNodeWithText("Emergency phone").performScrollTo().assertIsDisplayed()
+            compose.onNodeWithText("Emergency phone").assertIsDisplayed()
 
             compose.onNodeWithText("Leave Driving Mode").performScrollTo().performClick()
             compose.waitUntil(10_000) { enter.isDisplayed() }
@@ -71,7 +83,7 @@ class WorkingModeUiTest {
         try {
             persisted.write(WorkingState(schedule = WorkingSchedule(start.hour * 60 + start.minute,
                 end.hour * 60 + end.minute, setOf(start.dayOfWeek))).encode().toString())
-            compose.setContent { MaterialTheme { NovaWorkingMode(drivingHost(wide = true)) } }
+            show(wide = true)
             val enter = compose.onNodeWithTag("enter-driving-mode")
             compose.waitUntil(10_000) { enter.isDisplayed() }
             compose.onNodeWithTag("driving-speed").assertDoesNotExist()
@@ -82,6 +94,50 @@ class WorkingModeUiTest {
             assertNotNull(state.lastScheduledDay)
             assertFalse(state.active != null)
         } finally { persisted.clear() }
+    }
+
+    @Test fun coverVehicleSettingsMaskIdentifierAndUseAProtectedChooser() {
+        val persisted = NovaSystemConfig(compose.activity, "working-mode")
+        val syntheticIdentifier = "02:01:02:03:04:05"
+        persisted.clear()
+        try {
+            persisted.write(WorkingState().setVehicle(syntheticIdentifier, automatic = false).encode().toString())
+            show()
+            compose.waitUntil(10_000) { compose.onNodeWithTag("start-working-shift").isDisplayed() }
+            val change = compose.onNodeWithText("Change vehicle activation")
+            change.performScrollTo().assertIsDisplayed()
+            compose.onNodeWithText(syntheticIdentifier, substring = true).assertDoesNotExist()
+            val stored = File(compose.activity.noBackupFilesDir, "ai-provider-novaos2-working-mode.enc")
+            assertTrue(stored.isFile)
+            assertFalse(stored.readBytes().decodeToString().contains(syntheticIdentifier))
+            captureNovaSystem("working-cover-vehicle-redacted")
+
+            change.performClick()
+            compose.onNodeWithText("Choose a paired vehicle").assertIsDisplayed()
+            var flags: Int? = null
+            compose.waitUntil(8_000) {
+                flags = compose.runOnUiThread {
+                    WindowInspector.getGlobalWindowViews().filter { it.isAttachedToWindow && it.windowVisibility == View.VISIBLE }
+                        .mapNotNull { it.dialogWindow() }.singleOrNull()?.attributes?.flags
+                }
+                flags != null
+            }
+            assertTrue(checkNotNull(flags) and WindowManager.LayoutParams.FLAG_SECURE != 0)
+        } finally { persisted.clear() }
+    }
+
+    private fun View.dialogWindow(): Window? {
+        if (this is DialogWindowProvider) return window
+        if (this !is ViewGroup) return null
+        return (0 until childCount).firstNotNullOfOrNull { getChildAt(it).dialogWindow() }
+    }
+
+    private fun show(wide: Boolean = false) {
+        compose.setContent {
+            MaterialTheme {
+                Surface(Modifier.fillMaxSize().safeDrawingPadding()) { NovaWorkingMode(drivingHost(wide)) }
+            }
+        }
     }
 
     private fun drivingHost(wide: Boolean = false) = NovaSystemHost(NovaLauncherState(), emptyList(), emptyMap(),

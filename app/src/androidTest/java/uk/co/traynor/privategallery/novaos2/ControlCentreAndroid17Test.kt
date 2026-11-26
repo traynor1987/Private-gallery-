@@ -10,6 +10,7 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
+import androidx.lifecycle.Lifecycle
 import androidx.test.platform.app.InstrumentationRegistry
 import java.io.File
 import org.junit.Assert.assertEquals
@@ -68,7 +69,9 @@ class ControlCentreAndroid17Test {
 
     @Test fun innerGuardianSummaryOnlyExpandsCategoryExplanations() {
         compose.setContent {
-            ControlNoticeCards(IntelligenceGuardian(8, 4, 2, 1, 7, 8, 3, true))
+            NovaSystemSection("Notification categories") {
+                ControlNoticeCards(IntelligenceGuardian(8, 4, 2, 1, 7, 8, 3, true))
+            }
         }
         compose.onNodeWithText("Held · 2").performClick()
         compose.onNodeWithText("Guardian keeps held notifications in protected review.").assertIsDisplayed()
@@ -91,7 +94,38 @@ class ControlCentreAndroid17Test {
         captureNovaSystem("control-inner")
     }
 
-    private fun host(wide: Boolean) = NovaSystemHost(
+    @Test fun innerOptedInMediaPausesWithoutLeavingResumedState() {
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        check(context.packageName.endsWith(".hiddenprototype"))
+        val store = NovaSystemConfig(context, "control-centre")
+        val previous = store.read()
+        val topResumed = mutableStateOf(true)
+        val lifecycle = compose.activity.lifecycle
+        val paused = compose.onNodeWithText("Media controls pause when NovaOS is out of focus.")
+        try {
+            store.write(ControlCentreLayout(mediaEnabled = true).encode())
+            compose.setContent {
+                NovaSystemsPanel(listOf(feature), feature.id, host(true) { topResumed.value })
+            }
+            compose.waitUntil(10_000) { compose.onAllNodes(
+                androidx.compose.ui.test.hasTestTag("control-tile-internet")).fetchSemanticsNodes().isNotEmpty() }
+            paused.assertDoesNotExist()
+            compose.runOnIdle {
+                assertEquals(Lifecycle.State.RESUMED, lifecycle.currentState)
+                topResumed.value = false
+            }
+            paused.performScrollTo().assertIsDisplayed()
+            compose.runOnIdle {
+                assertEquals(Lifecycle.State.RESUMED, lifecycle.currentState)
+                topResumed.value = true
+            }
+            paused.assertDoesNotExist()
+        } finally {
+            if (previous == null) store.clear() else store.write(previous)
+        }
+    }
+
+    private fun host(wide: Boolean, foregroundAllowed: () -> Boolean = { true }) = NovaSystemHost(
         state = NovaLauncherState(),
         apps = emptyList(),
         decisions = emptyMap(),
@@ -106,7 +140,7 @@ class ControlCentreAndroid17Test {
         onBack = {},
         open = { false },
         platform = LauncherNovaSystemsActions(
-            foregroundAllowed = { true }, launch = { false }, openCoreApp = { false },
+            foregroundAllowed = foregroundAllowed, launch = { false }, openCoreApp = { false },
             openSystemSettings = { false }, openUpdates = { false },
         ),
     )

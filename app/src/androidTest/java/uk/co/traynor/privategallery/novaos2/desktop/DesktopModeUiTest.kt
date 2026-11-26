@@ -1,9 +1,10 @@
 package uk.co.traynor.privategallery.novaos2.desktop
 
 import androidx.activity.ComponentActivity
-import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -44,7 +45,7 @@ class DesktopModeUiTest {
         try {
             compose.setContent {
                 MaterialTheme {
-                    Box(Modifier.width(if (wide) 820.dp else 375.dp)) {
+                    Surface(Modifier.width(if (wide) 820.dp else 375.dp).safeDrawingPadding()) {
                         NovaDesktopMode(desktopHost(wide) { opened = it })
                     }
                 }

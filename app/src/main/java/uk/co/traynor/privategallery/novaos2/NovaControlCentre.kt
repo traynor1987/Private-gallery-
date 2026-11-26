@@ -39,6 +39,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -76,14 +77,13 @@ internal fun NovaControlCentre(host: NovaSystemHost) {
     val media = remember(context) { ControlCentreMedia(context) }
     val store = remember(context) { NovaSystemConfig(context, "control-centre") }
     val lifecycle = LocalLifecycleOwner.current.lifecycle
+    val lifecycleState by lifecycle.currentStateFlow.collectAsState()
     val scope = rememberCoroutineScope()
     val window = LocalActivity.current?.window
     var layout by remember { mutableStateOf<ControlCentreLayout?>(null) }
     var loading by remember { mutableStateOf(true) }
     var saving by remember { mutableStateOf(false) }
     var status by remember { mutableStateOf<ControlDeviceStatus?>(null) }
-    var playback by remember { mutableStateOf<ControlPlayback?>(null) }
-    var mediaAccess by remember { mutableStateOf(false) }
     var summary by remember { mutableStateOf<IntelligenceGuardian?>(null) }
     var summaryLoading by remember { mutableStateOf(false) }
     var refresh by remember { mutableIntStateOf(0) }
@@ -93,6 +93,10 @@ internal fun NovaControlCentre(host: NovaSystemHost) {
     var brightness by remember(window) { mutableStateOf<Float?>(null) }
     var restoredBrightness by remember(window) { mutableStateOf<Float?>(null) }
     val enabled = layout?.mediaEnabled == true
+    // Fold multi-window can keep this lifecycle resumed after the launcher loses top-resume.
+    val mediaForeground = lifecycleState.isAtLeast(Lifecycle.State.RESUMED) && host.foregroundAllowed()
+    var playback by remember(mediaForeground, enabled) { mutableStateOf<ControlPlayback?>(null) }
+    var mediaAccess by remember(mediaForeground, enabled) { mutableStateOf(false) }
     val available = ControlTile.entries.filter {
         when (it) {
             ControlTile.WORKING -> NovaSystemId.WORKING in host.available
@@ -117,12 +121,16 @@ internal fun NovaControlCentre(host: NovaSystemHost) {
             device.watch().collect { status = it }
         }
     }
-    LaunchedEffect(lifecycle, media, enabled) {
+    LaunchedEffect(lifecycle, media, enabled, mediaForeground) {
+        if (!enabled || !mediaForeground) return@LaunchedEffect
         lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
-            mediaAccess = media.permissionAvailable()
             try {
-                if (enabled && mediaAccess && permitted()) media.watch().collect { playback = it }
-            } finally { playback = null }
+                mediaAccess = permitted() && media.permissionAvailable()
+                if (mediaAccess) media.watch().collect { state -> playback = state.takeIf { permitted() } }
+            } finally {
+                playback = null
+                mediaAccess = false
+            }
         }
     }
     LaunchedEffect(lifecycle, context, refresh) {
@@ -303,7 +311,8 @@ internal fun NovaControlCentre(host: NovaSystemHost) {
                         save(current.copy(mediaEnabled = it))
                     }, modifier = Modifier.semantics { contentDescription = "Enable media controls" })
                 }
-                if (enabled) {
+                if (enabled && !mediaForeground) Text("Media controls pause when NovaOS is out of focus.")
+                if (enabled && mediaForeground) {
                     if (!mediaAccess) Text("Media controls need Android notification access.")
                     else ControlPlaybackControls(playback) { session, command ->
                         if (permitted() && !media.send(session, command)) {
@@ -311,7 +320,7 @@ internal fun NovaControlCentre(host: NovaSystemHost) {
                         }
                     }
                 }
-                if (enabled && !mediaAccess) TextButton(onClick = {
+                if (enabled && mediaForeground && !mediaAccess) TextButton(onClick = {
                     launchSettings(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)
                 }) { Text("Open notification access settings") }
                 TextButton(onClick = {

@@ -103,12 +103,39 @@ internal fun workingScheduleMinute(text: String): Int? {
     return if (hour in 0..23 && minute in 0..59) hour * 60 + minute else null
 }
 
+internal data class WorkingVehicle(val identifier: String, val automatic: Boolean, val handled: Boolean = false) {
+    init { require(isWorkingVehicleIdentifier(identifier)) }
+
+    override fun toString() = "WorkingVehicle(<redacted>)"
+}
+
+private val vehicleIdentifierPattern = Regex("(?:[0-9A-F]{2}:){5}[0-9A-F]{2}")
+internal fun isWorkingVehicleIdentifier(identifier: String) = vehicleIdentifierPattern.matches(identifier)
+
+internal enum class WorkingVehicleSignal(val description: String) {
+    OFF("Vehicle activation is off."),
+    PERMISSION("Allow Nearby devices to use the paired vehicle."),
+    RADIO_OFF("Bluetooth is off."),
+    CHECKING("Checking the paired vehicle’s audio connection…"),
+    UNAVAILABLE("Android cannot verify the paired vehicle’s audio connection."),
+    UNPAIRED("The selected vehicle is no longer paired."),
+    CONNECTED("Android confirmed the paired vehicle’s audio connection."),
+    DISCONNECTED("The paired vehicle’s audio is disconnected."),
+}
+
+internal fun verifiedVehicleSignal(a2dp: Boolean?, headset: Boolean?): WorkingVehicleSignal = when {
+    a2dp == true || headset == true -> WorkingVehicleSignal.CONNECTED
+    a2dp == false && headset == false -> WorkingVehicleSignal.DISCONNECTED
+    else -> WorkingVehicleSignal.UNAVAILABLE
+}
+
 internal data class WorkingState(
     val active: WorkingSession? = null,
     val previous: FinishedShift? = null,
     val shortcuts: Map<WorkingShortcut, String> = emptyMap(),
     val schedule: WorkingSchedule? = null,
     val lastScheduledDay: Long? = null,
+    val vehicle: WorkingVehicle? = null,
 ) {
     fun eligibleSchedule(now: ZonedDateTime): Long? = schedule?.occurrence(now)?.toEpochDay()?.takeIf {
         active == null && (lastScheduledDay == null || it > lastScheduledDay)
@@ -120,6 +147,33 @@ internal data class WorkingState(
     }
 
     fun skipScheduledDay(day: Long?) = copy(lastScheduledDay = laterDay(day))
+
+    fun setVehicle(identifier: String, automatic: Boolean): WorkingState = copy(vehicle = WorkingVehicle(
+        identifier, automatic, handled = vehicle?.takeIf { it.identifier == identifier }?.handled ?: false,
+    ))
+
+    fun handleVehicle() = if (vehicle == null || vehicle.handled) this else copy(vehicle = vehicle.copy(handled = true))
+
+    fun manualStopVehicle(signal: WorkingVehicleSignal): WorkingState = when (signal) {
+        WorkingVehicleSignal.DISCONNECTED, WorkingVehicleSignal.RADIO_OFF -> this
+        else -> handleVehicle()
+    }
+
+    fun syncVehicle(signal: WorkingVehicleSignal, wallMillis: Long, elapsedMillis: Long, day: Long?,
+                    acceptOffer: Boolean = false): WorkingState {
+        val selected = vehicle ?: return this
+        return when (signal) {
+            WorkingVehicleSignal.DISCONNECTED, WorkingVehicleSignal.RADIO_OFF ->
+                if (selected.handled) copy(vehicle = selected.copy(handled = false)) else this
+            WorkingVehicleSignal.CONNECTED -> when {
+                selected.handled -> this
+                active != null -> handleVehicle()
+                selected.automatic || acceptOffer -> start(wallMillis, elapsedMillis, day).handleVehicle()
+                else -> this
+            }
+            else -> this
+        }
+    }
 
     private fun laterDay(day: Long?): Long? = when {
         day == null -> lastScheduledDay
@@ -142,6 +196,9 @@ internal data class WorkingState(
         put("shortcuts", JSONObject().apply { shortcuts.forEach { (slot, component) -> put(slot.name, component) } })
         schedule?.let { put("schedule", it.encode()) }
         lastScheduledDay?.let { put("lastScheduledDay", it) }
+        vehicle?.let {
+            put("vehicle", JSONObject().put("identifier", it.identifier).put("automatic", it.automatic).put("handled", it.handled))
+        }
     }
 
     companion object {
@@ -166,6 +223,9 @@ internal data class WorkingState(
                 }.toMap(),
                 schedule = json.optJSONObject("schedule")?.let { WorkingSchedule.decode(it) },
                 lastScheduledDay = if (json.isNull("lastScheduledDay")) null else json.getLong("lastScheduledDay"),
+                vehicle = json.optJSONObject("vehicle")?.let {
+                    WorkingVehicle(it.getString("identifier"), it.getBoolean("automatic"), it.getBoolean("handled"))
+                },
             )
         }
     }
