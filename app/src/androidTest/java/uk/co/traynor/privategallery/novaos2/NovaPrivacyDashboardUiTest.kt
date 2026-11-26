@@ -2,7 +2,11 @@ package uk.co.traynor.privategallery.novaos2
 
 import android.provider.Settings
 import androidx.activity.ComponentActivity
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
@@ -25,7 +29,9 @@ class NovaPrivacyDashboardUiTest {
         var requestedSettings: String? = null
         compose.setContent {
             MaterialTheme {
-                NovaPrivacyContent(fixture(), false, null, {}, { requestedSettings = it }, {})
+                Box(Modifier.fillMaxSize().safeDrawingPadding()) {
+                    NovaPrivacyContent(fixture(), false, null, {}, { requestedSettings = it }, {})
+                }
             }
         }
         compose.onNodeWithTag("nova-privacy-dashboard").assertIsDisplayed()
@@ -38,7 +44,9 @@ class NovaPrivacyDashboardUiTest {
 
     @Test fun innerReadOnlyStatusKeepsUnknownSignalsExplicit() {
         compose.setContent {
-            MaterialTheme { NovaPrivacyContent(fixture(), true, null, {}, {}, {}) }
+            MaterialTheme {
+                Box(Modifier.fillMaxSize().safeDrawingPadding()) { NovaPrivacyContent(fixture(), true, null, {}, {}, {}) }
+            }
         }
         compose.onNodeWithText("NovaOS app permissions").assertIsDisplayed()
         compose.onNodeWithText("Protection").assertIsDisplayed()
