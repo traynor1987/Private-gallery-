@@ -231,7 +231,7 @@ private fun LauncherLookPreview(
                 letterSpacing = 1.7.sp, fontWeight = FontWeight.SemiBold)
             Text("09:41", color = Color.White, fontSize = if (compact) 36.sp else 49.sp,
                 lineHeight = if (compact) 38.sp else 51.sp, fontWeight = FontWeight.SemiBold)
-            val count = state.appearance.grid.columns(wide)
+            val count = state.appearance.gridFor(wide).columns(wide)
             val items = layout.pages.firstOrNull().orEmpty().take(if (compact) count else count * 2)
             if (items.isNotEmpty()) CompositionLocalProvider(LocalContentColor provides Color.White) {
                 LauncherHomeGrid(items, count, state.appearance, byComponent, decisions, {}, interactive = false)
@@ -328,6 +328,7 @@ internal fun <T : Enum<T>> LauncherOptions(
                     label = {
                         Text(when (choice) {
                             is LauncherIconStyle -> choice.label
+                            is LauncherLook -> choice.label
                             is LauncherExitMode -> choice.toString()
                             else -> choice.name.lowercase().replace('_', ' ').replaceFirstChar { it.uppercase() }
                         })
