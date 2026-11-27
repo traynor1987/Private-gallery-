@@ -10,7 +10,7 @@ internal val novaSystemFeatures: List<NovaSystemFeature> = buildList {
 
     // LOCK
 
-    // DESKTOP
+    add(NovaSystemFeature(NovaSystemId.DESKTOP, "Nova Desktop", "Open a workspace with resizable Nova panels.") { NovaDesktopMode(it) })
 
     // HEALTH
 

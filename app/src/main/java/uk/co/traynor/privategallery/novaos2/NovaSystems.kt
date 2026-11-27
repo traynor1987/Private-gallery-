@@ -43,6 +43,8 @@ import uk.co.traynor.privategallery.launcher.LauncherApp
 import uk.co.traynor.privategallery.launcher.LauncherUiActions
 import uk.co.traynor.privategallery.launcher.NovaLauncherState
 
+import uk.co.traynor.privategallery.novaos2.desktop.DesktopPlacement
+
 internal enum class NovaSystemId { THEMES, WORKING, CONTROL, LOCK, DESKTOP, HEALTH, PRIVACY, UTILITIES }
 
 private val systemPanels = setOf(
@@ -74,6 +76,7 @@ internal class LauncherNovaSystemsActions(
     val openCoreApp: (NovaCoreApp) -> Boolean,
     val openSystemSettings: (String) -> Boolean,
     val openUpdates: () -> Boolean,
+    val launchPlaced: (LauncherApp, DesktopPlacement) -> Boolean = { _, _ -> false },
 )
 
 internal class NovaSystemHost(
@@ -89,6 +92,8 @@ internal class NovaSystemHost(
 ) {
     val foregroundAllowed: () -> Boolean = platform.foregroundAllowed
     fun launch(app: LauncherApp) = foregroundAllowed() && app in apps && platform.launch(app)
+    fun launchPlaced(app: LauncherApp, placement: DesktopPlacement) =
+        foregroundAllowed() && app in apps && platform.launchPlaced(app, placement)
     fun openCoreApp(app: NovaCoreApp) = foregroundAllowed() && platform.openCoreApp(app)
     fun openSystemSettings(action: String) = foregroundAllowed() && platform.openSystemSettings(action)
     fun openUpdates() = foregroundAllowed() && platform.openUpdates()

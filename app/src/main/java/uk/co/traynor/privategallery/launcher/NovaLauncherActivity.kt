@@ -82,6 +82,8 @@ import uk.co.traynor.privategallery.privateNovaUpdatesIntent
 import uk.co.traynor.privategallery.privateWorkspaceEntryIntent
 import uk.co.traynor.privategallery.ui.PrivateGalleryTheme
 import uk.co.traynor.privategallery.novaos2.LauncherNovaSystemsActions
+import uk.co.traynor.privategallery.novaos2.desktop.DesktopPlacement
+import uk.co.traynor.privategallery.novaos2.desktop.startDesktopApp
 import uk.co.traynor.privategallery.novaos2.novaSystemSettingsIntent
 
 /** Android Home task. Protected launcher changes verify the Primary PIN without starting a vault session. */
@@ -314,6 +316,7 @@ class NovaLauncherActivity : ComponentActivity() {
         val systems = LauncherNovaSystemsActions(
             foregroundAllowed = ::novaSystemForegroundAllowed,
             launch = { app -> novaSystemForegroundAllowed() && launchApp(app.component) },
+            launchPlaced = { app, placement -> novaSystemForegroundAllowed() && launchApp(app.component, placement) },
             openCoreApp = { app ->
                 val entry = LauncherBuiltIn.entries.firstOrNull { it.coreApp == app }
                 novaSystemForegroundAllowed() && entry != null && launchApp(entry.app(packageName).component)
@@ -647,7 +650,7 @@ class NovaLauncherActivity : ComponentActivity() {
         return true
     }
 
-    private fun launchApp(component: String): Boolean {
+    private fun launchApp(component: String, placement: DesktopPlacement? = null): Boolean {
         val target = apps.firstOrNull { it.component == component } ?: return false
         val builtIn = LauncherBuiltIn.find(packageName, component)
         val allowed = runCatching {
@@ -661,6 +664,11 @@ class NovaLauncherActivity : ComponentActivity() {
         if (!allowed) {
             blocked = target
             return false
+        }
+        if (placement != null) {
+            if (builtIn != null || !startDesktopApp(target, placement)) return false
+            recordLauncherSuccess(target)
+            return true
         }
         if (builtIn != null) {
             when (builtIn) {
