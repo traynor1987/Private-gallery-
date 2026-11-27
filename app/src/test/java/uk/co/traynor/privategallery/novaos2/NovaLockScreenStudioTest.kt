@@ -9,8 +9,13 @@ import org.junit.Test
 class NovaLockScreenStudioTest {
     @Test fun encryptedConfigurationPayloadRoundTripsEveryPreviewChoice() {
         val saved = NovaLockStyle(NovaLockWallpaper.EMBER_DUSK, NovaLockClock.EDITORIAL, NovaLockColour.MINT,
-            showNotificationExample = true, showBattery = false, ambientPreview = true)
+            showNotificationExample = true, showBattery = false, ambientPreview = true, showCalendarDate = true, showMediaStatus = true)
         assertEquals(saved, NovaLockStyle.decode(saved.encode()))
+    }
+
+    @Test fun olderSavedStylesKeepOptionalWidgetsOff() {
+        val old = org.json.JSONObject(NovaLockStyle().encode()).apply { remove("date"); remove("media") }
+        assertEquals(NovaLockStyle(), NovaLockStyle.decode(old.toString()))
     }
 
     @Test fun invalidOrFutureStyleDoesNotSilentlyChangeWallpaper() {

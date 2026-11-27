@@ -57,7 +57,10 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.repeatOnLifecycle
 import java.io.IOException
-import java.time.LocalTime
+import android.media.AudioManager
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
+import java.time.format.FormatStyle
 import java.util.Locale
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -113,7 +116,8 @@ internal fun NovaLockScreenStudio(host: NovaSystemHost) {
     val config = remember(context) { NovaSystemConfig(context.applicationContext, "lock-screen-studio") }
     var style by remember { mutableStateOf(NovaLockStyle()) }
     var ready by remember { mutableStateOf(false) }
-    var now by remember { mutableStateOf(LocalTime.now()) }
+    var now by remember { mutableStateOf(LocalDateTime.now()) }
+    var musicActive by remember { mutableStateOf<Boolean?>(null) }
     var battery by remember { mutableStateOf<Int?>(null) }
     var busy by remember { mutableStateOf(false) }
     var message by remember { mutableStateOf<String?>(null) }
@@ -131,10 +135,11 @@ internal fun NovaLockScreenStudio(host: NovaSystemHost) {
             ready = true
         }
     }
-    LaunchedEffect(lifecycle, context) {
+    LaunchedEffect(lifecycle, context, style.showMediaStatus) {
         lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
             while (true) {
-                now = LocalTime.now()
+                now = LocalDateTime.now()
+                musicActive = if (style.showMediaStatus) context.getSystemService(AudioManager::class.java)?.isMusicActive else null
                 battery = context.getSystemService(BatteryManager::class.java)
                     ?.getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY)?.takeIf { it in 0..100 }
                 delay((60 - now.second) * 1000L - now.nano / 1_000_000)
@@ -146,8 +151,9 @@ internal fun NovaLockScreenStudio(host: NovaSystemHost) {
         if (!host.openSystemSettings(action)) message = "This Android settings page is unavailable."
     }
 
-    val preview = @Composable { NovaLockPreview(style, lockPreviewTime(now, DateFormat.is24HourFormat(context),
-        Locale.getDefault()), battery) }
+    val preview = @Composable { NovaLockPreview(style, lockPreviewTime(now.toLocalTime(), DateFormat.is24HourFormat(context),
+        Locale.getDefault()), battery, calendarDate = now.format(DateTimeFormatter.ofLocalizedDate(FormatStyle.FULL)),
+        musicActive = musicActive) }
     val controls = @Composable {
         NovaLockControls(style, ready && !busy, onChange = { style = it }, onSave = {
             val draft = style
@@ -168,6 +174,8 @@ internal fun NovaLockScreenStudio(host: NovaSystemHost) {
         NovaSystemSection("Android lock screen") {
             Text("Samsung and Android manage the system clock, always-on display, calendar and media widgets.",
                 style = MaterialTheme.typography.bodyMedium)
+            Text("To add available Weather or Calendar widgets on Galaxy, open Settings → Wallpaper and style → current lock screen → Add widgets.", style = MaterialTheme.typography.bodyMedium)
+            TextButton(onClick = { openSettings(Settings.ACTION_SETTINGS) }) { Text("Open Galaxy settings") }
             TextButton(onClick = { openSettings(Settings.ACTION_SECURITY_SETTINGS) }) { Text("Open Android lock settings") }
             TextButton(onClick = { openSettings(Settings.ACTION_APP_NOTIFICATION_SETTINGS) }) { Text("Open NovaOS notification settings") }
         }
@@ -220,7 +228,8 @@ internal fun NovaLockWallpaperConfirmation(wallpaper: NovaLockWallpaper, onDismi
 }
 
 @Composable
-internal fun NovaLockPreview(style: NovaLockStyle, time: String, battery: Int?, modifier: Modifier = Modifier) {
+internal fun NovaLockPreview(style: NovaLockStyle, time: String, battery: Int?, modifier: Modifier = Modifier,
+    calendarDate: String = "", musicActive: Boolean? = null) {
     val shades = if (style.ambientPreview) listOf(Color.Black, Color(0xFF0B1120))
         else style.wallpaper.shades.map(::Color)
     val foreground = Color(style.colour.argb)
@@ -237,6 +246,13 @@ internal fun NovaLockPreview(style: NovaLockStyle, time: String, battery: Int?, 
             verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(time, color = foreground, fontFamily = clockFont, fontWeight = FontWeight.Medium,
                 fontSize = 43.sp, lineHeight = 49.sp)
+            if (style.showCalendarDate && calendarDate.isNotEmpty()) Text(calendarDate, color = foreground,
+                style = MaterialTheme.typography.bodyMedium)
+            if (style.showMediaStatus && !style.ambientPreview) Text(when (musicActive) {
+                true -> "Audio playing at $time"
+                false -> "Audio idle at $time"
+                null -> "Audio status unavailable"
+            }, color = foreground, style = MaterialTheme.typography.bodyMedium)
             if (style.showBattery) Text(battery?.let { "Battery $it%" } ?: "Battery unavailable",
                 color = foreground, style = MaterialTheme.typography.bodyMedium)
             if (style.showNotificationExample && !style.ambientPreview) {
@@ -262,6 +278,8 @@ internal fun NovaLockControls(style: NovaLockStyle, enabled: Boolean, onChange: 
         NovaLockChoices("Clock colour", NovaLockColour.entries, style.colour, NovaLockColour::title, enabled) {
             onChange(style.copy(colour = it))
         }
+        NovaLockSwitch("Calendar date", style.showCalendarDate, enabled) { onChange(style.copy(showCalendarDate = it)) }
+        NovaLockSwitch("Media status", style.showMediaStatus, enabled) { onChange(style.copy(showMediaStatus = it)) }
         NovaLockSwitch("Battery widget", style.showBattery, enabled) { onChange(style.copy(showBattery = it)) }
         NovaLockSwitch("Redacted notification example", style.showNotificationExample, enabled) {
             onChange(style.copy(showNotificationExample = it))

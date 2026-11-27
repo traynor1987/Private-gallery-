@@ -36,7 +36,7 @@ class NovaLockScreenStudioUiTest {
             var pending by remember { mutableStateOf<NovaLockWallpaper?>(null) }
             MaterialTheme {
                 Surface(Modifier.fillMaxSize().safeDrawingPadding()) {
-                    NovaLockStudioLayout(false, { NovaLockPreview(style, "17:45", 64) }, {
+                    NovaLockStudioLayout(false, { NovaLockPreview(style, "17:45", 64, calendarDate = "Friday 27 November", musicActive = true) }, {
                         NovaLockControls(style, true, { style = it }, onSave = {}, onApply = { pending = style.wallpaper })
                     })
                 }
@@ -50,6 +50,10 @@ class NovaLockScreenStudioUiTest {
         }
         compose.onNodeWithTag("nova-lock-preview").assertIsDisplayed()
         compose.onNodeWithText("Battery 64%").assertIsDisplayed()
+        compose.onNodeWithText("Calendar date").performScrollTo().performClick()
+        compose.onNodeWithText("Friday 27 November").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("Media status").performScrollTo().performClick()
+        compose.onNodeWithText("Audio playing at 17:45").performScrollTo().assertIsDisplayed()
         compose.onNodeWithText("Ember Dusk").performScrollTo().performClick()
         compose.runOnIdle { assertNull(applied) }
         compose.onNodeWithText("Apply wallpaper").performScrollTo().performClick()

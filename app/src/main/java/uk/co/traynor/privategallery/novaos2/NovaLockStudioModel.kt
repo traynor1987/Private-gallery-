@@ -30,10 +30,12 @@ internal data class NovaLockStyle(
     val showNotificationExample: Boolean = false,
     val showBattery: Boolean = true,
     val ambientPreview: Boolean = false,
+    val showCalendarDate: Boolean = false,
+    val showMediaStatus: Boolean = false,
 ) {
     fun encode() = JSONObject().put("version", 1).put("wallpaper", wallpaper.name).put("clock", clock.name)
         .put("colour", colour.name).put("notifications", showNotificationExample).put("battery", showBattery)
-        .put("ambient", ambientPreview).toString()
+        .put("ambient", ambientPreview).put("date", showCalendarDate).put("media", showMediaStatus).toString()
 
     companion object {
         fun decode(encoded: String): NovaLockStyle {
@@ -46,6 +48,8 @@ internal data class NovaLockStyle(
                 json.getBoolean("notifications"),
                 json.getBoolean("battery"),
                 json.getBoolean("ambient"),
+                if (json.has("date")) json.getBoolean("date") else false,
+                if (json.has("media")) json.getBoolean("media") else false,
             )
         }
     }
