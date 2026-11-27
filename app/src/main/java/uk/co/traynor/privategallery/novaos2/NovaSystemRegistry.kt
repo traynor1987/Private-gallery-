@@ -4,13 +4,13 @@ package uk.co.traynor.privategallery.novaos2
 internal val novaSystemFeatures: List<NovaSystemFeature> = buildList {
     // THEMES
 
-    // WORKING
+    add(NovaSystemFeature(NovaSystemId.WORKING, "Working Mode", "Start a shift or open the driving dashboard.") { NovaWorkingMode(it) })
 
     // CONTROL
 
     // LOCK
 
-    // DESKTOP
+    add(NovaSystemFeature(NovaSystemId.DESKTOP, "Nova Desktop", "Open a workspace with resizable Nova panels.") { NovaDesktopMode(it) })
 
     // HEALTH
 
