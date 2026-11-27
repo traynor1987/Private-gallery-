@@ -157,6 +157,13 @@ internal data class WorkingState(
 
     fun handleVehicle() = if (vehicle == null || vehicle.handled) this else copy(vehicle = vehicle.copy(handled = true))
 
+    fun leaveDriving(): WorkingState {
+        val session = active ?: return this
+        val parked = copy(active = session.copy(driving = false))
+        // Monitoring is paused in Driving Mode. A vehicle might have connected since manual entry.
+        return if (vehicle?.driveOnConnect == true) parked.handleVehicle() else parked
+    }
+
     fun manualStopVehicle(signal: WorkingVehicleSignal): WorkingState = when (signal) {
         WorkingVehicleSignal.DISCONNECTED, WorkingVehicleSignal.RADIO_OFF -> this
         else -> handleVehicle()
