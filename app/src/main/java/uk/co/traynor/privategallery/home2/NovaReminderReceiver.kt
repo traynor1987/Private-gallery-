@@ -69,9 +69,9 @@ internal object NovaReminders {
             }
         }
 
-    fun dispatch(context: Context, shouldNotify: Boolean) = synchronized(lock) {
+    fun dispatch(context: Context, shouldNotify: Boolean, clock: java.time.Clock = java.time.Clock.systemUTC()) = synchronized(lock) {
         val records = read(context)
-        val now = Instant.now()
+        val now = clock.instant()
         val zone = ZoneId.systemDefault()
         val due = records.filterValues { it.schedule.nextAfter(it.cursor, zone)?.let { next -> next <= now } == true }
         if (due.isEmpty()) {

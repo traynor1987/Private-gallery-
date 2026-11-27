@@ -1,5 +1,7 @@
 package uk.co.traynor.privategallery.home2
 
+import android.app.DownloadManager
+import android.content.Intent
 import android.net.Uri
 import android.provider.DocumentsContract.Document
 import android.text.format.Formatter
@@ -64,6 +66,7 @@ internal fun NovaFilesScreen(
     pickerMessage: String?,
     onImportPrimaryFile: ((Uri, (String) -> Unit) -> Unit)? = null,
     onOpenNote: ((String) -> Unit)? = null,
+    openExternal: ((Intent) -> Boolean)? = null,
 ) {
     val scope = rememberCoroutineScope()
     var selection by remember(space) { mutableStateOf<NovaFilesSelection.Selection?>(null) }
@@ -200,6 +203,11 @@ internal fun NovaFilesScreen(
         NovaCoreAppActions {
             Button(enabled = active && selection != null && onChooseFolder != null,
                 onClick = { onChooseFolder?.invoke() }) { Text("Choose folder") }
+            if (openExternal != null) TextButton(enabled = !working, onClick = {
+                if (!openExternal(Intent(DownloadManager.ACTION_VIEW_DOWNLOADS))) {
+                    status = "Android Downloads could not be opened."
+                }
+            }) { Text("Android Downloads") }
             if (path.isNotEmpty()) {
                 TextButton(enabled = !working, onClick = { navigateUp() }) { Text("Up") }
             }
@@ -349,6 +357,24 @@ internal fun NovaFilesScreen(
                         }
                     }
                     if (provider != null && !file.directory) {
+                        if (openExternal != null && !file.supports(Document.FLAG_VIRTUAL_DOCUMENT)) {
+                            TextButton(enabled = active, onClick = {
+                                working = true
+                                scope.launch {
+                                    val share = withContext(Dispatchers.IO) {
+                                        runCatching { novaFileShareIntent(provider.authorizedFileUri(file), file) }.getOrNull()
+                                    }
+                                    if (!space.current()) return@launch
+                                    working = false
+                                    if (detail?.id == file.id) {
+                                        detail = null
+                                        if (share == null || !openExternal(Intent.createChooser(share, "Share file"))) {
+                                            status = "The selected document could not be shared."
+                                        }
+                                    }
+                                }
+                            }) { Text("Share file…") }
+                        }
                         if (file.mimeType.startsWith("text/") || file.mimeType == "application/json") {
                             TextButton(enabled = active, onClick = {
                                 working = true

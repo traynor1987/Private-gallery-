@@ -123,6 +123,52 @@ class SpacePreferencesTest {
   assertNull(registered())
  }
 
+ @Test fun due_task_dispatch_honours_android_permission_and_posts_only_once() = Fixture().use { f ->
+  val context = f.context
+  check(uk.co.traynor.privategallery.BuildConfig.DEBUG && context.packageName.endsWith(".hiddenprototype"))
+  val zone = java.time.ZoneId.systemDefault()
+  val day = java.time.LocalDate.now(zone).plusDays(2)
+  val task = NovaTask("utility-delivery", "Synthetic private reminder title", due = day,
+   remindAt = java.time.LocalTime.NOON)
+  val clock = java.time.Clock.fixed(day.atTime(java.time.LocalTime.NOON).atZone(zone).toInstant(), zone)
+  val manager = context.getSystemService(android.app.NotificationManager::class.java)
+  val expected = when (InstrumentationRegistry.getArguments().getString("novaReminderPermission")) {
+   "granted" -> true
+   "denied" -> false
+   null -> NovaReminders.canNotify(context)
+   else -> error("Unknown reminder permission fixture")
+  }
+  assertEquals(expected, NovaReminders.canNotify(context))
+  fun own() = manager.activeNotifications.firstOrNull { it.id == 81001 && it.notification.channelId == "nova-core-reminders" }
+  fun awaitNotification(present: Boolean) {
+   val deadline = android.os.SystemClock.elapsedRealtime() + 3_000L
+   while ((own() != null) != present && android.os.SystemClock.elapsedRealtime() < deadline) {
+    android.os.SystemClock.sleep(40)
+   }
+   assertEquals(present, own() != null)
+  }
+  try {
+   manager.cancel(81001)
+   awaitNotification(false)
+   NovaReminders.syncTasks(f.space, listOf(task))
+   NovaReminders.dispatch(context, shouldNotify = true, clock = clock)
+   awaitNotification(expected)
+   if (expected) {
+    val notice = checkNotNull(own()).notification
+    assertEquals("NovaOS reminder", notice.extras.getCharSequence(android.app.Notification.EXTRA_TITLE))
+    assertEquals("Open NovaOS to check your tasks and calendar.",
+     notice.extras.getCharSequence(android.app.Notification.EXTRA_TEXT))
+   }
+   manager.cancel(81001)
+   awaitNotification(false)
+   NovaReminders.dispatch(context, shouldNotify = true, clock = clock)
+   assertNull(own())
+   assertNull(NovaReminders.nextScheduledAt(context, zone))
+  } finally {
+   NovaReminders.syncTasks(f.space, emptyList())
+   manager.cancel(81001)
+  }
+ }
  @Test fun standard_types_are_encrypted_round_trip_with_defensive_copies_and_merge() = Fixture().use { f ->
   assertSame(f.space, f.space.applicationContext)
   assertEquals("primary", f.space.spaceId)

@@ -187,7 +187,9 @@ private val lightColors=lightColorScheme(primary=Color(0xFF285F65),secondary=Col
      id == NovaCoreApp.FILES.route && hidden -> onNative("hidden-files")
      id.startsWith("visual:") && state.current=="primary"->{
       val moduleId=id.removePrefix("visual:")
-      if(visualModules.any{it.id==moduleId}){openVisual("home");visual.open(moduleId)}
+      val healthSpace=localContext as? uk.co.traynor.privategallery.core.home2.SpaceContext
+      if(moduleId=="health" && healthSpace?.current()==true) screen="health-mind"
+      else if(visualModules.any{it.id==moduleId}){openVisual("home");visual.open(moduleId)}
      }
      id.startsWith("mind:")->{mindPage=id.removePrefix("mind:");mindLaunch++;screen="mind"}
      id.startsWith("store:")->{screen="store";detailId=id.removePrefix("store:")}
@@ -353,6 +355,9 @@ private val lightColors=lightColorScheme(primary=Color(0xFF285F65),secondary=Col
          "mind"->{
           MindScreen(mind,state.current,audio,mindPage,mindLaunch,onHome=goHome,onSanctuary={sanctuary=sanctuaryStore==null;screen="sanctuary"})
          }
+         "health-mind"->(localContext as? uk.co.traynor.privategallery.core.home2.SpaceContext)?.let { space ->
+          if (!hidden && space.current()) uk.co.traynor.privategallery.novaos2.HealthMindScreen(space, onBack=goHome, onBackup=onBackup)
+         }
          "chat","chat-inspector","chat-settings"->Column(Modifier.fillMaxSize().safeDrawingPadding().padding(24.dp)){PreviewHeader("Nova Chat Lite · Beta","Not enabled in this integration",goHome);Text("Native Favourites integration remains disabled pending production session and privacy verification. Normal WhatsApp is available through Nova Store in Primary Space.")}
          "sanctuary"->if(sanctuaryStore==null) {
           SanctuaryScreen(data,audio,onMind={mindPage="home";mindLaunch++;screen="mind"},
@@ -437,6 +442,11 @@ private val lightColors=lightColorScheme(primary=Color(0xFF285F65),secondary=Col
            key(filesPickerRevision) {
             NovaFilesScreen(space, onBack=closeCoreApp, onChooseFolder=filesPicker?.chooseFolder,
              pickerMessage=filesPickerMessage,onImportPrimaryFile=onImportPrimaryFile,
+             openExternal={ intent ->
+              lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED) && space.current() &&
+               uk.co.traynor.privategallery.intelligence.intelligencePrivateAllowed(application) &&
+               runCatching { localContext.startActivity(intent) }.isSuccess
+             },
              onOpenNote={ id -> openCoreLink(NovaCoreLink.Record(NovaCoreApp.NOTES,id)) })
            }
           }

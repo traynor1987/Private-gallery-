@@ -27,4 +27,7 @@ class MindData(context:Context){
   return save(profile,(listOf(entry)+old.filterNot{it.id==entry.id}).sortedByDescending{it.time})
  }
  fun delete(profile:String,id:String):Boolean {val old=entries(profile);if(error?.startsWith("Unable to read")==true)return false;return save(profile,old.filterNot{it.id==id})}
+ internal fun deletePrimaryEntries():Boolean {
+  return prefs.edit().remove("primary").commit().also{if(it){revision++;error=null}else error="Unable to delete entries."}
+ }
 }

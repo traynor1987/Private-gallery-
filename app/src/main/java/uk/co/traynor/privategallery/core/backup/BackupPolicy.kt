@@ -2,11 +2,12 @@ package uk.co.traynor.privategallery.core.backup
 
 internal object BackupPolicy {
  val preferences=setOf("nova_preview_v1","nova_mind_v1","nova_shell_v1","nova_widgets_v1","nova_arcade_v1","nova_calculator_v1")
- fun preferencesFor(owner:String)=if(owner=="primary")preferences+uk.co.traynor.privategallery.core.home2.NovaCoreAppBackup.namespaces else preferences
+ fun preferencesFor(owner:String)=if(owner=="primary")preferences+uk.co.traynor.privategallery.core.home2.NovaCoreAppBackup.namespaces+uk.co.traynor.privategallery.novaos2.HealthRecordStore.NAMESPACE else preferences
  fun allowed(name:String,owner:String="primary")=name in preferencesFor(owner)
- fun readerFor(entries:Set<String>)=if(entries.any{it.startsWith("preferences:")&&
+ fun readerFor(entries:Set<String>)=if("preferences:${uk.co.traynor.privategallery.novaos2.HealthRecordStore.NAMESPACE}" in entries)3 else if(entries.any{it.startsWith("preferences:")&&
   it.removePrefix("preferences:") in uk.co.traynor.privategallery.core.home2.NovaCoreAppBackup.namespaces})2 else 1
- fun minimumVersion(reader:Int)=when(reader){1->"1.7.11.6";2->"1.7.38.7";else->error("Unsupported backup reader")}
+ fun minimumVersion(reader:Int)=when(reader){1->"1.7.11.6";2->"1.7.38.7";3->"2.0";else->error("Unsupported backup reader")}
+ fun maximumVersion(reader:Int)=when(reader){1,2->"1.7.*";3->"2.*";else->error("Unsupported backup reader")}
  fun requireOwner(actual:String,expected:String){require(actual==expected){"This archive is not eligible for the current Space"}}
  fun mediaEditDescription(owner:String)=when(owner){"primary"->"crop/undo edits";"hidden"->"edited media copies";else->throw IllegalArgumentException("Unsupported Space")}
  fun scheduledStatus()="Needs unlock"

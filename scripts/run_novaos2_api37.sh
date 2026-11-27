@@ -48,6 +48,24 @@ done < <(
     theme_test="app/src/androidTest/java/${namespace//./\/}/launcher/LauncherThemesStudioUiTest.kt"
     if [[ -f "$theme_test" ]]; then printf '%s\n' "$theme_test"; fi
 )
+# Verify the actual encrypted utilities reused by this branch alongside its new entry points.
+if [[ -f "$fixture_root/NovaUtilitiesApi37Test.kt" ]]; then
+    core="$namespace.core.home2"
+    for method in \
+        clipboard_privacy_setting_survives_reopen_and_retention_updates \
+        files_history_and_favourites_are_encrypted_and_bound_to_the_selected_tree \
+        files_remember_only_the_explicit_tree_and_reject_path_like_names \
+        recurring_calendar_event_keeps_one_skipped_occurrence_across_reopen \
+        calendar_preserves_recurring_wall_time_across_dst_and_reopens_events \
+        recurring_tasks_keep_the_monthly_anchor_without_duplicate_successors \
+        tasks_keep_due_date_completion_and_project_after_reopen \
+        notes_publish_draft_and_clear_recovery_in_the_same_transaction; do
+        classes+=("$core.Home2IntegrationTest#$method")
+        ((expected+=1))
+    done
+    classes+=("$core.SpacePreferencesTest#reminders_persist_reschedule_and_cancel_through_the_android_alarm")
+    ((expected+=1))
+fi
 ((expected > 0))
 selection=$(IFS=,; printf '%s' "${classes[*]}")
 printf '%s\n' "${classes[@]}" > "$out/test-selection.txt"
@@ -64,3 +82,23 @@ fi
 grep -Eq "^OK \(${expected} tests?\)[[:space:]]*$" "$out/instrumentation.txt"
 ! grep -Eq '^INSTRUMENTATION_STATUS_CODE: -[1-4][[:space:]]*$' "$out/instrumentation.txt"
 sha256sum --check "$out/debug-inputs.sha256"
+
+if [[ -f "$fixture_root/NovaUtilitiesApi37Test.kt" ]]; then
+    [[ "$(adb shell getprop ro.kernel.qemu | tr -d '\r')" == 1 ]]
+    permission=android.permission.POST_NOTIFICATIONS
+    # This debug app was freshly installed on this disposable emulator above.
+    # Keep grant/deny in separate instrumentation processes; Android kills an app on revocation.
+    for state in granted denied; do
+        if [[ "$state" == granted ]]; then
+            adb shell pm grant "$app_id" "$permission"
+        else
+            adb shell pm revoke "$app_id" "$permission"
+        fi
+        result="$out/reminder-$state.txt"
+        adb shell am instrument -w -r -e novaReminderPermission "$state" \
+            -e class "$namespace.core.home2.SpacePreferencesTest#due_task_dispatch_honours_android_permission_and_posts_only_once" \
+            "$app_id.test/androidx.test.runner.AndroidJUnitRunner" | tee "$result"
+        grep -Eq '^OK \(1 test\)[[:space:]]*$' "$result"
+        ! grep -Eq '^INSTRUMENTATION_STATUS_CODE: -[1-4][[:space:]]*$' "$result"
+    done
+fi

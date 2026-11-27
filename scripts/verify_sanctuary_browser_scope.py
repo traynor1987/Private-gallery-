@@ -85,14 +85,16 @@ CODE81_BACKUP_WIRING = {
         (
             " fun allowed(name:String)=name in preferences",
             ' fun preferencesFor(owner:String)=if(owner=="primary")preferences+'
-            'uk.co.traynor.privategallery.core.home2.NovaCoreAppBackup.namespaces else preferences\n'
+            'uk.co.traynor.privategallery.core.home2.NovaCoreAppBackup.namespaces+uk.co.traynor.privategallery.novaos2.HealthRecordStore.NAMESPACE else preferences\n'
             ' fun allowed(name:String,owner:String="primary")=name in preferencesFor(owner)\n'
-            ' fun readerFor(entries:Set<String>)=if(entries.any{it.startsWith("preferences:")&&\n'
+            ' fun readerFor(entries:Set<String>)=if("preferences:${uk.co.traynor.privategallery.novaos2.HealthRecordStore.NAMESPACE}" in entries)3 else if(entries.any{it.startsWith("preferences:")&&\n'
             '  it.removePrefix("preferences:") in uk.co.traynor.privategallery.core.home2.NovaCoreAppBackup.namespaces})2 else 1\n'
-            ' fun minimumVersion(reader:Int)=when(reader){1->"1.7.11.6";2->"1.7.38.7";else->error("Unsupported backup reader")}',
+            ' fun minimumVersion(reader:Int)=when(reader){1->"1.7.11.6";2->"1.7.38.7";3->"2.0";else->error("Unsupported backup reader")}\n'
+            ' fun maximumVersion(reader:Int)=when(reader){1,2->"1.7.*";3->"2.*";else->error("Unsupported backup reader")}',
         ),
     ),
     f"{CORE}/backup/PortablePreferenceSchema.kt": (
+        ('   "nova_mind_v1"->{', '   uk.co.traynor.privategallery.novaos2.HealthRecordStore.NAMESPACE->{\n    require(owner=="primary")\n    val key=uk.co.traynor.privategallery.novaos2.HealthRecordStore.KEY\n    keys(key)\n    text(key){uk.co.traynor.privategallery.novaos2.HealthRecordCodec.decode(it)}\n   }\n   "nova_mind_v1"->{'),
         (
             '   else->error("Unsupported preference namespace")',
             '   in uk.co.traynor.privategallery.core.home2.NovaCoreAppBackup.namespaces ->\n'
@@ -142,7 +144,7 @@ CODE81_EXACT_ADAPTERS = {
     f"{CORE}/update/NovaUpdateModel.kt": "aa45b54c579ea3009afdfd1b32e7413c7e959952b4f90f5d1dc5f75dd076e7fb",
     f"{CORE}/update/VerifiedUpdateTransfer.kt": "d9f813cc1d855eed8f0299b04c86c1ea01594601a9da784d3da2874b54e23889",
     f"{CORE}/media/ExpiringShareProvider.kt": "42a7c51bc7fe69079c0deff07663bceb65aafcb0bc253c9709fb19045892a409",
-    f"{CORE}/backup/BackupCoordinator.kt": "fa2dedf1d88865e0bee5e9362109f5c1e6a921909fb00bb6ab168474f8d5b8fa",
+    f"{CORE}/backup/BackupCoordinator.kt": "3082904c17ced8a5d2913050fe44ce7087d40d2a531b1a914fb479edafcda3c3",
     f"{CORE}/vault/PhoneVaultTransfer.kt": "8fe53b2491622958d4c8d59322ffee3e2a4d12041a6d88f926e12a59ed8ec604",
 }
 # Hidden Space exposes the existing protected process and adds encrypted browser preferences/download metadata.
@@ -290,6 +292,10 @@ contacts, = [permission for permission in after.findall("uses-permission")
              if permission.get(ANDROID + "name") == "android.permission.READ_CONTACTS"]
 assert contacts.attrib == {ANDROID + "name": "android.permission.READ_CONTACTS"} and len(contacts) == 0
 after.remove(contacts)
+calendar_read, = [permission for permission in after.findall("uses-permission")
+                  if permission.get(ANDROID + "name") == "android.permission.READ_CALENDAR"]
+assert calendar_read.attrib == {ANDROID + "name": "android.permission.READ_CALENDAR"} and len(calendar_read) == 0
+after.remove(calendar_read)
 
 review_later, = [node for node in application.findall("receiver")
                  if node.get(ANDROID + "name") == ".launcher.GuardianReviewLaterReceiver"]
@@ -344,6 +350,10 @@ require_novaos2_manifest_nodes("NovaLockScreenStudio", after, [
 ])
 require_novaos2_manifest_nodes("HealthConnectSteps", after, [
     '<uses-permission xmlns:android="ANDROID_NAMESPACE" android:name="android.permission.health.READ_STEPS" />',
+    '<uses-permission xmlns:android="ANDROID_NAMESPACE" android:name="android.permission.health.READ_EXERCISE" />',
+    '<uses-permission xmlns:android="ANDROID_NAMESPACE" android:name="android.permission.health.READ_SLEEP" />',
+    '<uses-permission xmlns:android="ANDROID_NAMESPACE" android:name="android.permission.health.READ_HEART_RATE" />',
+    '<uses-permission xmlns:android="ANDROID_NAMESPACE" android:name="android.permission.health.READ_RESTING_HEART_RATE" />',
 ])
 require_novaos2_manifest_nodes("HealthConnectSteps", application, [
     '<activity xmlns:android="ANDROID_NAMESPACE" android:name=".novaos2.HealthConnectRationaleActivity" android:exported="false" />',

@@ -172,6 +172,11 @@ internal fun NovaCalendarScreen(
                     editor = CalendarEdit(NovaCalendarEvent(UUID.randomUUID().toString(), "", "", focus,
                         null, displayZone, 30, NovaEventRepeat.NONE))
                 }) { Text("New event") }
+                if (!hidden) OutlinedButton(enabled = !busy && snapshot != null, onClick = {
+                    status = null
+                    editor = CalendarEdit(NovaCalendarEvent(UUID.randomUUID().toString(), "Work shift", "", focus,
+                        null, displayZone, 30, NovaEventRepeat.NONE), minutes = "", allDay = false)
+                }) { Text("Schedule shift") }
             }
             Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 CalendarView.entries.forEach { view ->
@@ -189,6 +194,7 @@ internal fun NovaCalendarScreen(
                         CalendarDates(focus, mode, onDate = { focus = it })
                     }
                 }
+                if (!hidden && sendToAndroidCalendar != null) NovaAndroidCalendarDay(space, focus, displayZone)
                 val weekStart = focus.with(TemporalAdjusters.previousOrSame(WeekFields.of(Locale.getDefault()).firstDayOfWeek))
                 val dates = when (mode) {
                     CalendarView.MONTH, CalendarView.DAY -> listOf(focus)
