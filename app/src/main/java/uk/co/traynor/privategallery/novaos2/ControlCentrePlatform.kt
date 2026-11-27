@@ -1,10 +1,12 @@
 package uk.co.traynor.privategallery.novaos2
 
+import android.Manifest
 import android.content.BroadcastReceiver
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.content.pm.PackageManager
 import android.hardware.camera2.CameraCharacteristics
 import android.hardware.camera2.CameraManager
 import android.media.session.MediaController
@@ -30,6 +32,22 @@ internal data class ControlDeviceStatus(
     val autoRotate: Boolean?,
     val torchOn: Boolean?,
 )
+
+internal data class ControlPrivacyPermissions(val camera: Boolean, val microphone: Boolean, val location: String)
+
+/** Reports NovaOS permission grants. Android manages the device-wide activity indicators and dashboard. */
+internal fun controlPrivacyPermissions(context: Context): ControlPrivacyPermissions {
+    fun granted(permission: String) = context.checkSelfPermission(permission) == PackageManager.PERMISSION_GRANTED
+    return ControlPrivacyPermissions(
+        camera = granted(Manifest.permission.CAMERA),
+        microphone = granted(Manifest.permission.RECORD_AUDIO),
+        location = when {
+            granted(Manifest.permission.ACCESS_FINE_LOCATION) -> "Precise allowed"
+            granted(Manifest.permission.ACCESS_COARSE_LOCATION) -> "Approximate allowed"
+            else -> "Denied"
+        },
+    )
+}
 
 internal class ControlCentreDevice(context: Context) {
     private val context = context.applicationContext

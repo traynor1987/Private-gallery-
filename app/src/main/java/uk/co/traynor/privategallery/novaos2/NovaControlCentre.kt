@@ -16,6 +16,8 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.BatteryStd
+import androidx.compose.material.icons.filled.ExpandLess
+import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.FlashlightOn
 import androidx.compose.material.icons.filled.NightsStay
 import androidx.compose.material.icons.filled.Palette
@@ -52,6 +54,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -83,30 +86,34 @@ internal fun NovaControlCentre(host: NovaSystemHost) {
     var layout by remember { mutableStateOf<ControlCentreLayout?>(null) }
     var loading by remember { mutableStateOf(true) }
     var saving by remember { mutableStateOf(false) }
-    var status by remember { mutableStateOf<ControlDeviceStatus?>(null) }
-    var summary by remember { mutableStateOf<IntelligenceGuardian?>(null) }
-    var summaryLoading by remember { mutableStateOf(false) }
     var refresh by remember { mutableIntStateOf(0) }
     var message by remember { mutableStateOf<String?>(null) }
+    var expanded by rememberSaveable { mutableStateOf(true) }
     var editing by rememberSaveable { mutableStateOf(false) }
     var selectingApps by rememberSaveable { mutableStateOf(false) }
     var brightness by remember(window) { mutableStateOf<Float?>(null) }
     var restoredBrightness by remember(window) { mutableStateOf<Float?>(null) }
     val enabled = layout?.mediaEnabled == true
     // Fold multi-window can keep this lifecycle resumed after the launcher loses top-resume.
-    val mediaForeground = lifecycleState.isAtLeast(Lifecycle.State.RESUMED) && host.foregroundAllowed()
+    val foreground = lifecycleState.isAtLeast(Lifecycle.State.RESUMED) && host.foregroundAllowed()
+    val mediaForeground = foreground && expanded
+    var status by remember(foreground) { mutableStateOf<ControlDeviceStatus?>(null) }
+    var summary by remember(mediaForeground) { mutableStateOf<IntelligenceGuardian?>(null) }
+    var summaryLoading by remember(mediaForeground) { mutableStateOf(false) }
     var playback by remember(mediaForeground, enabled) { mutableStateOf<ControlPlayback?>(null) }
-    var mediaAccess by remember(mediaForeground, enabled) { mutableStateOf(false) }
+    var mediaAccess by remember(mediaForeground, enabled) { mutableStateOf<Boolean?>(null) }
+    val privacy = remember(context, mediaForeground) {
+        if (mediaForeground) controlPrivacyPermissions(context) else null
+    }
     val available = ControlTile.entries.filter {
-        when (it) {
-            ControlTile.WORKING -> NovaSystemId.WORKING in host.available
-            ControlTile.PRIVACY -> NovaSystemId.PRIVACY in host.available
-            else -> true
-        }
+        it != ControlTile.WORKING || NovaSystemId.WORKING in host.available
     }.toSet()
 
     fun permitted() = lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED) &&
         host.foregroundAllowed() && intelligencePrivateAllowed(context)
+
+    fun currentBrightness() = window?.attributes?.screenBrightness?.takeIf { it in 0f..1f }
+        ?: device.windowBrightness()
 
     LaunchedEffect(lifecycle, store) {
         lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
@@ -115,9 +122,10 @@ internal fun NovaControlCentre(host: NovaSystemHost) {
             loading = false
         }
     }
-    LaunchedEffect(lifecycle, device) {
+    LaunchedEffect(lifecycle, device, foreground) {
+        if (!foreground) return@LaunchedEffect
         lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
-            brightness = device.windowBrightness()
+            brightness = currentBrightness()
             device.watch().collect { status = it }
         }
     }
@@ -126,14 +134,15 @@ internal fun NovaControlCentre(host: NovaSystemHost) {
         lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
             try {
                 mediaAccess = permitted() && media.permissionAvailable()
-                if (mediaAccess) media.watch().collect { state -> playback = state.takeIf { permitted() } }
+                if (mediaAccess == true) media.watch().collect { state -> playback = state.takeIf { permitted() } }
             } finally {
                 playback = null
-                mediaAccess = false
+                mediaAccess = null
             }
         }
     }
-    LaunchedEffect(lifecycle, context, refresh) {
+    LaunchedEffect(lifecycle, context, refresh, mediaForeground) {
+        if (!mediaForeground) return@LaunchedEffect
         lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
             summaryLoading = true
             try {
@@ -153,7 +162,10 @@ internal fun NovaControlCentre(host: NovaSystemHost) {
         val current = window ?: return
         current.attributes = current.attributes.apply { screenBrightness = original }
         restoredBrightness = null
-        brightness = device.windowBrightness()
+        brightness = currentBrightness()
+    }
+    LaunchedEffect(foreground, expanded, window) {
+        if (!foreground || !expanded) resetBrightness()
     }
     DisposableEffect(lifecycle, window) {
         val listener = androidx.lifecycle.LifecycleEventObserver { _, event ->
@@ -197,7 +209,11 @@ internal fun NovaControlCentre(host: NovaSystemHost) {
             }
             ControlTile.SANCTUARY -> host.actions.openSanctuary()
             ControlTile.WORKING -> if (!host.open(NovaSystemId.WORKING)) message = "Working Mode could not be opened."
-            ControlTile.PRIVACY -> if (!host.open(NovaSystemId.PRIVACY)) message = "Privacy Dashboard could not be opened."
+            ControlTile.PRIVACY -> {
+                if (NovaSystemId.PRIVACY !in host.available || !host.open(NovaSystemId.PRIVACY)) {
+                    launchSettings(Settings.ACTION_PRIVACY_SETTINGS, Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
+                }
+            }
             ControlTile.THEME -> {
                 if (NovaSystemId.THEMES in host.available) {
                     if (!host.open(NovaSystemId.THEMES)) message = "Themes Studio could not be opened."
@@ -225,132 +241,173 @@ internal fun NovaControlCentre(host: NovaSystemHost) {
             LauncherBuiltIn.SAFE_NOTIFICATIONS && host.decisions.forLauncherApp(app)?.canLaunch == true }
     }
 
-    Column(
-        Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 12.dp)
-            .testTag(if (host.wide) "control-centre-inner" else "control-centre-cover"),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        if (loading || saving) LinearProgressIndicator(Modifier.fillMaxWidth())
-        message?.let { Text(it, color = MaterialTheme.colorScheme.error) }
-        if (current == null) {
-            if (!loading) Text("Control Centre could not read its saved settings.")
-            return@Column
+    val scroll = rememberScrollState()
+    Column(Modifier.fillMaxWidth().testTag(if (host.wide) "control-centre-inner" else "control-centre-cover")) {
+        TextButton(
+            onClick = {
+                expanded = !expanded
+                editing = false
+                selectingApps = false
+                scope.launch { scroll.scrollTo(0) }
+            },
+            modifier = Modifier.padding(horizontal = 16.dp).testTag("control-panel-expansion").semantics {
+                stateDescription = if (expanded) "Expanded" else "Collapsed"
+            },
+        ) {
+            Icon(if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore, contentDescription = null)
+            Text(if (expanded) "Collapse controls" else "Expand controls", Modifier.padding(start = 6.dp))
         }
-        val placement = current.placement(host.wide)
-        val deviceControls: @Composable () -> Unit = {
-            NovaSystemSection("Device") {
-                ControlSystemStatus(status) { launchSettings(Settings.Panel.ACTION_INTERNET_CONNECTIVITY) }
-                if (window != null && brightness != null) {
-                    Text("NovaOS window brightness")
-                    Slider(
-                        value = (brightness ?: .04f).coerceAtLeast(.04f),
-                        valueRange = .04f..1f,
-                        onValueChange = { requested ->
-                            if (permitted()) {
-                                if (restoredBrightness == null) restoredBrightness = window.attributes.screenBrightness
-                                brightness = requested
-                                window.attributes = window.attributes.apply { screenBrightness = requested }
-                            }
+        Column(
+            Modifier.fillMaxWidth().weight(1f, fill = false).verticalScroll(scroll)
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) body@{
+            if (loading || saving) LinearProgressIndicator(Modifier.fillMaxWidth())
+            message?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+            if (current == null) {
+                if (!loading) Text("Control Centre could not read its saved settings.")
+                return@body
+            }
+            val placement = current.placement(host.wide)
+            val deviceControls: @Composable () -> Unit = {
+                NovaSystemSection("Device") {
+                    ControlSystemStatus(status) { launchSettings(Settings.Panel.ACTION_INTERNET_CONNECTIVITY) }
+                    if (expanded && window != null && brightness != null) {
+                        Text("NovaOS window brightness")
+                        Slider(
+                            value = (brightness ?: .04f).coerceAtLeast(.04f),
+                            valueRange = .04f..1f,
+                            enabled = foreground,
+                            onValueChange = { requested ->
+                                if (permitted()) {
+                                    if (restoredBrightness == null) restoredBrightness = window.attributes.screenBrightness
+                                    brightness = requested
+                                    window.attributes = window.attributes.apply { screenBrightness = requested }
+                                }
+                            },
+                            modifier = Modifier.testTag("control-window-brightness"),
+                        )
+                        if (restoredBrightness != null) TextButton(onClick = ::resetBrightness) {
+                            Text("Restore previous brightness")
+                        }
+                    } else if (expanded) {
+                        TextButton(onClick = { launchSettings(Settings.ACTION_DISPLAY_SETTINGS) }) { Text("Display settings") }
+                    }
+                }
+                NovaSystemSection("Quick actions") {
+                    if (expanded) Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        TextButton(enabled = !saving && foreground, onClick = {
+                            editing = !editing
+                            if (!editing) selectingApps = false
+                        }) { Text(if (editing) "Done" else "Arrange quick actions") }
+                    }
+                    if (expanded && editing) ControlLayoutEditor(
+                        placement, available, host.wide, !saving, { change ->
+                            save(current.changePlacement(host.wide, change))
                         },
-                        modifier = Modifier.testTag("control-window-brightness"),
                     )
-                    if (restoredBrightness != null) TextButton(onClick = ::resetBrightness) { Text("Use system brightness") }
-                } else TextButton(onClick = { launchSettings(Settings.ACTION_DISPLAY_SETTINGS) }) { Text("Display settings") }
-            }
-            NovaSystemSection("Quick actions") {
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    TextButton(enabled = !saving, onClick = {
-                        editing = !editing
-                        if (!editing) selectingApps = false
-                    }) { Text(if (editing) "Done" else "Arrange quick actions") }
-                }
-                if (editing) ControlLayoutEditor(
-                    placement, available, host.wide, !saving, { change ->
-                        save(current.changePlacement(host.wide, change))
-                    },
-                )
-                else {
-                    val shown = placement.visible(available)
-                    ControlTileGrid(shown, status, host, ::act)
-                    if (ControlTile.FLASHLIGHT in shown && status != null && status?.torchOn == null) {
-                        Text("The flashlight is unavailable.", style = MaterialTheme.typography.bodySmall)
-                    }
-                }
-            }
-            NovaSystemSection("Quick launch") {
-                val pinned = placement.pinnedApps.mapNotNull { id -> allowedApps.firstOrNull { it.component == id } }
-                if (pinned.isEmpty()) Text("No apps pinned for this display.")
-                pinned.forEach { app ->
-                    TextButton(onClick = {
-                        if (permitted() && !host.launch(app)) message = "The selected app is unavailable."
-                    }) { Text(app.controlName()) }
-                }
-                val unavailable = placement.pinnedApps.filter { id -> pinned.none { it.component == id } }
-                unavailable.forEach { id ->
-                    TextButton(enabled = !saving, onClick = {
-                        save(current.changePlacement(host.wide) { it.toggleApp(id) })
-                    }) { Text("Remove unavailable pin") }
-                }
-                TextButton(enabled = !saving, onClick = { selectingApps = !selectingApps }) {
-                    Text(if (selectingApps) "Close app picker" else "Choose pinned apps")
-                }
-                if (selectingApps) {
-                    if (allowedApps.isEmpty()) Text("No approved apps are available.")
-                    else ControlAppPicker(allowedApps, placement, saving) { app ->
-                        save(current.changePlacement(host.wide) { it.toggleApp(app.component) })
-                    }
-                }
-            }
-        }
-
-        val otherControls: @Composable () -> Unit = {
-            NovaSystemSection("Media") {
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    Text("Media controls", Modifier.weight(1f).padding(top = 12.dp))
-                    Switch(checked = current.mediaEnabled, enabled = !saving, onCheckedChange = {
-                        save(current.copy(mediaEnabled = it))
-                    }, modifier = Modifier.semantics { contentDescription = "Enable media controls" })
-                }
-                if (enabled && !mediaForeground) Text("Media controls pause when NovaOS is out of focus.")
-                if (enabled && mediaForeground) {
-                    if (!mediaAccess) Text("Media controls need Android notification access.")
-                    else ControlPlaybackControls(playback) { session, command ->
-                        if (permitted() && !media.send(session, command)) {
-                            message = "The audio app could not perform that action."
+                    else {
+                        val shown = placement.visible(available)
+                        ControlTileGrid(shown, status, host, foreground, ::act)
+                        if (ControlTile.FLASHLIGHT in shown && status != null && status?.torchOn == null) {
+                            Text("The flashlight is unavailable.", style = MaterialTheme.typography.bodySmall)
                         }
                     }
                 }
-                if (enabled && mediaForeground && !mediaAccess) TextButton(onClick = {
-                    launchSettings(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)
-                }) { Text("Open notification access settings") }
-                TextButton(onClick = {
-                    launchSettings(Settings.Panel.ACTION_VOLUME, Settings.ACTION_SOUND_SETTINGS)
-                }) { Text("Sound settings") }
-            }
-            NovaSystemSection("Notifications") {
-                when {
-                    summaryLoading -> Text("Checking Guardian…")
-                    summary == null -> Text("Guardian summary is unavailable.")
-                    else -> summary?.let { ControlNoticeCards(it) }
+                if (expanded) NovaSystemSection("Quick launch") {
+                    val pinned = placement.pinnedApps.mapNotNull { id -> allowedApps.firstOrNull { it.component == id } }
+                    if (pinned.isEmpty()) Text("No apps pinned for this display.")
+                    pinned.forEach { app ->
+                        TextButton(onClick = {
+                            if (permitted() && !host.launch(app)) message = "The selected app is unavailable."
+                        }) { Text(app.controlName()) }
+                    }
+                    val unavailable = placement.pinnedApps.filter { id -> pinned.none { it.component == id } }
+                    unavailable.forEach { id ->
+                        TextButton(enabled = !saving, onClick = {
+                            save(current.changePlacement(host.wide) { it.toggleApp(id) })
+                        }) { Text("Remove unavailable pin") }
+                    }
+                    TextButton(enabled = !saving, onClick = { selectingApps = !selectingApps }) {
+                        Text(if (selectingApps) "Close app picker" else "Choose pinned apps")
+                    }
+                    if (selectingApps) {
+                        if (allowedApps.isEmpty()) Text("No approved apps are available.")
+                        else ControlAppPicker(allowedApps, placement, saving) { app ->
+                            save(current.changePlacement(host.wide) { it.toggleApp(app.component) })
+                        }
+                    }
                 }
-                TextButton(enabled = !summaryLoading, onClick = { if (permitted()) refresh++ }) { Text("Refresh summary") }
-                notifications?.let { app ->
+            }
+
+            val otherControls: @Composable () -> Unit = {
+                NovaSystemSection("Media") {
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                        Text("Media controls", Modifier.weight(1f).padding(top = 12.dp))
+                        Switch(checked = current.mediaEnabled, enabled = !saving && foreground, onCheckedChange = {
+                            save(current.copy(mediaEnabled = it))
+                        }, modifier = Modifier.semantics { contentDescription = "Enable media controls" })
+                    }
+                    if (enabled && !mediaForeground) Text("Media controls pause when NovaOS is out of focus.")
+                    if (enabled && mediaForeground) {
+                        when (mediaAccess) {
+                            null -> Text("Checking media access…")
+                            false -> Text("Media controls need Android notification access.")
+                            true -> ControlPlaybackControls(playback) { session, command ->
+                                if (permitted() && !media.send(session, command)) {
+                                    message = "The audio app could not perform that action."
+                                }
+                            }
+                        }
+                    }
+                    if (enabled && mediaForeground && mediaAccess == false) TextButton(onClick = {
+                        launchSettings(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)
+                    }) { Text("Open notification access settings") }
                     TextButton(onClick = {
-                        if (permitted() && !host.launch(app)) message = "Safe Notifications could not be opened."
-                    }) { Text("Open Safe Notifications history") }
+                        launchSettings(Settings.Panel.ACTION_VOLUME, Settings.ACTION_SOUND_SETTINGS)
+                    }) { Text("Sound settings") }
+                }
+                NovaSystemSection("Privacy") {
+                    ControlPrivacyStatus(privacy)
+                    TextButton(enabled = foreground, onClick = { act(ControlTile.PRIVACY) }) { Text("Open privacy settings") }
+                }
+                NovaSystemSection("Notifications") {
+                    when {
+                        summaryLoading -> Text("Checking Guardian…")
+                        summary == null -> Text("Guardian summary is unavailable.")
+                        else -> summary?.let { ControlNoticeCards(it) }
+                    }
+                    TextButton(enabled = !summaryLoading, onClick = { if (permitted()) refresh++ }) { Text("Refresh summary") }
+                    notifications?.let { app ->
+                        TextButton(onClick = {
+                            if (permitted() && !host.launch(app)) message = "Safe Notifications could not be opened."
+                        }) { Text("Open Safe Notifications history") }
+                    }
                 }
             }
-        }
-        if (host.wide) {
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(12.dp)) { deviceControls() }
-                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(12.dp)) { otherControls() }
+            if (host.wide && expanded) {
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(12.dp)) { deviceControls() }
+                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(12.dp)) { otherControls() }
+                }
+            } else {
+                deviceControls()
+                if (expanded) otherControls()
             }
-        } else {
-            deviceControls()
-            otherControls()
         }
     }
+}
+
+@Composable
+private fun ControlPrivacyStatus(permissions: ControlPrivacyPermissions?) {
+    if (permissions == null) {
+        Text("NovaOS permissions unavailable")
+        return
+    }
+    Text("NovaOS permission grants", style = MaterialTheme.typography.labelMedium)
+    Text("Camera · ${if (permissions.camera) "Allowed" else "Denied"}")
+    Text("Microphone · ${if (permissions.microphone) "Allowed" else "Denied"}")
+    Text("Location · ${permissions.location}")
 }
 
 @Composable
@@ -363,15 +420,27 @@ private fun ControlSystemStatus(status: ControlDeviceStatus?, onInternet: () -> 
 }
 
 @Composable
-private fun ControlTileGrid(order: List<ControlTile>, status: ControlDeviceStatus?, host: NovaSystemHost, onAction: (ControlTile) -> Unit) {
+private fun ControlTileGrid(order: List<ControlTile>, status: ControlDeviceStatus?, host: NovaSystemHost,
+    enabled: Boolean, onAction: (ControlTile) -> Unit) {
     if (order.isEmpty()) Text("No quick actions shown. Use Arrange quick actions to add one.")
     order.chunked(2).forEach { tiles ->
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             tiles.forEach { tile ->
                 FilledTonalButton(
                     onClick = { onAction(tile) },
-                    enabled = tile != ControlTile.FLASHLIGHT || status?.torchOn != null,
-                    modifier = Modifier.weight(1f).heightIn(min = 58.dp).testTag("control-tile-${tile.name.lowercase()}"),
+                    enabled = enabled && (tile != ControlTile.FLASHLIGHT || status?.torchOn != null),
+                    modifier = Modifier.weight(1f).heightIn(min = 58.dp).testTag("control-tile-${tile.name.lowercase()}")
+                        .semantics {
+                            when (tile) {
+                                ControlTile.ROTATION -> contentDescription = "Open Android display settings"
+                                ControlTile.FLASHLIGHT -> stateDescription = when (status?.torchOn) {
+                                    true -> "On"
+                                    false -> "Off"
+                                    null -> "Unavailable"
+                                }
+                                else -> Unit
+                            }
+                        },
                 ) {
                     Icon(tile.icon(), null, Modifier.size(18.dp))
                     Text(tile.label(status, host), Modifier.padding(start = 6.dp))
@@ -465,7 +534,9 @@ internal fun ControlNoticeCards(summary: IntelligenceGuardian) {
     )
     var expanded by rememberSaveable { mutableStateOf<String?>(null) }
     categories.forEach { (label, count, explanation) ->
-        TextButton(onClick = { expanded = if (expanded == label) null else label }) { Text("$label · $count") }
+        TextButton(onClick = { expanded = if (expanded == label) null else label },
+            modifier = Modifier.semantics { stateDescription = if (expanded == label) "Expanded" else "Collapsed" },
+        ) { Text("$label · $count") }
         if (expanded == label) Text(explanation, style = MaterialTheme.typography.bodySmall)
     }
 }

@@ -1,15 +1,24 @@
 package uk.co.traynor.privategallery.novaos2
 
+import android.Manifest
+import android.content.pm.PackageManager
+import android.provider.Settings
 import androidx.activity.ComponentActivity
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.performSemanticsAction
 import androidx.lifecycle.Lifecycle
 import androidx.test.platform.app.InstrumentationRegistry
 import java.io.File
@@ -125,7 +134,90 @@ class ControlCentreAndroid17Test {
         }
     }
 
-    private fun host(wide: Boolean, foregroundAllowed: () -> Boolean = { true }) = NovaSystemHost(
+    @Test fun coverCollapsePreservesEssentialActionsAndSurvivesInnerTransition() {
+        val wide = mutableStateOf(false)
+        compose.setContent { NovaSystemsPanel(listOf(feature), feature.id, host(wide.value)) }
+        val toggle = compose.onNodeWithTag("control-panel-expansion")
+        val internet = compose.onNodeWithTag("control-tile-internet")
+        compose.waitUntil(10_000) {
+            compose.onAllNodes(hasTestTag("control-tile-internet")).fetchSemanticsNodes().isNotEmpty()
+        }
+
+        toggle.assert(SemanticsMatcher.expectValue(SemanticsProperties.StateDescription, "Expanded")).performClick()
+        val collapsed = SemanticsMatcher.expectValue(SemanticsProperties.StateDescription, "Collapsed")
+        toggle.assert(collapsed)
+        internet.performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("Media").assertDoesNotExist()
+        compose.onNodeWithText("Notifications").assertDoesNotExist()
+        compose.onNodeWithTag("control-window-brightness").assertDoesNotExist()
+        captureNovaSystem("control-cover-collapsed")
+
+        compose.runOnIdle { wide.value = true }
+        compose.onNodeWithTag("control-centre-inner").assertIsDisplayed()
+        toggle.assert(collapsed).performClick()
+        compose.onNodeWithText("Notifications").performScrollTo().assertIsDisplayed()
+    }
+
+    @Test fun coverPrivacyReportsNovaOsGrantsAndUsesNativeFallback() {
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        val actions = mutableListOf<String>()
+        compose.setContent {
+            NovaSystemsPanel(listOf(feature), feature.id, host(false, openSettings = { action ->
+                actions += action
+                action == Settings.ACTION_APPLICATION_DETAILS_SETTINGS
+            }))
+        }
+        compose.waitUntil(10_000) {
+            compose.onAllNodes(hasTestTag("control-tile-privacy")).fetchSemanticsNodes().isNotEmpty()
+        }
+        compose.onNodeWithTag("control-tile-privacy").performScrollTo().performClick()
+        compose.runOnIdle {
+            assertEquals(listOf(Settings.ACTION_PRIVACY_SETTINGS, Settings.ACTION_APPLICATION_DETAILS_SETTINGS), actions)
+        }
+        compose.onNodeWithTag("control-tile-working").assertDoesNotExist()
+        compose.onNodeWithText("NovaOS permission grants").performScrollTo().assertIsDisplayed()
+        val camera = if (context.checkSelfPermission(Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) {
+            "Allowed"
+        } else {
+            "Denied"
+        }
+        compose.onNodeWithText("Camera · $camera").performScrollTo().assertIsDisplayed()
+    }
+
+    @Test fun innerBrightnessRestoresWhenTopResumeIsLost() {
+        val activity = compose.activity
+        val window = activity.window
+        val topResumed = mutableStateOf(true)
+        val original = window.attributes.screenBrightness
+        val previous = .25f
+        val requested = .65f
+        try {
+            compose.runOnIdle { window.attributes = window.attributes.apply { screenBrightness = previous } }
+            compose.setContent { NovaSystemsPanel(listOf(feature), feature.id, host(true) { topResumed.value }) }
+            compose.waitUntil(10_000) {
+                compose.onAllNodes(hasTestTag("control-window-brightness")).fetchSemanticsNodes().isNotEmpty()
+            }
+            compose.onNodeWithTag("control-window-brightness").performScrollTo()
+                .performSemanticsAction(SemanticsActions.SetProgress) { it(requested) }
+            compose.runOnIdle {
+                assertEquals(requested, window.attributes.screenBrightness, .01f)
+                assertEquals(Lifecycle.State.RESUMED, activity.lifecycle.currentState)
+                topResumed.value = false
+            }
+            compose.runOnIdle {
+                assertEquals(Lifecycle.State.RESUMED, activity.lifecycle.currentState)
+                assertEquals(previous, window.attributes.screenBrightness, .01f)
+            }
+        } finally {
+            compose.runOnIdle { window.attributes = window.attributes.apply { screenBrightness = original } }
+        }
+    }
+
+    private fun host(
+        wide: Boolean,
+        openSettings: (String) -> Boolean = { false },
+        foregroundAllowed: () -> Boolean = { true },
+    ) = NovaSystemHost(
         state = NovaLauncherState(),
         apps = emptyList(),
         decisions = emptyMap(),
@@ -141,7 +233,7 @@ class ControlCentreAndroid17Test {
         open = { false },
         platform = LauncherNovaSystemsActions(
             foregroundAllowed = foregroundAllowed, launch = { false }, openCoreApp = { false },
-            openSystemSettings = { false }, openUpdates = { false },
+            openSystemSettings = openSettings, openUpdates = { false },
         ),
     )
 }
