@@ -11,7 +11,7 @@ import org.junit.Test
 class VaultDocumentRepositoryTest {
     @Test fun textRoundTripDuplicateTrashAndDownloadsRestore() {
         val base=InstrumentationRegistry.getInstrumentation().targetContext
-        val root=File(base.noBackupFilesDir,"primary-documents-${UUID.randomUUID()}")
+        val root=File(base.noBackupFilesDir,"primary-documents-${UUID.randomUUID()}").apply { check(mkdir()) }
         val context=object:ContextWrapper(base){override fun getFilesDir()=root}
         val key=ByteArray(32){41}
         val bytes="synthetic-private-document-marker\n=literal formula".toByteArray()
@@ -33,7 +33,7 @@ class VaultDocumentRepositoryTest {
     }
     @Test fun cancelledOrInvalidDocumentCannotBecomeComplete() {
         val base=InstrumentationRegistry.getInstrumentation().targetContext
-        val root=File(base.noBackupFilesDir,"primary-documents-${UUID.randomUUID()}")
+        val root=File(base.noBackupFilesDir,"primary-documents-${UUID.randomUUID()}").apply { check(mkdir()) }
         val context=object:ContextWrapper(base){override fun getFilesDir()=root}
         val key=ByteArray(32){42}
         try {

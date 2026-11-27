@@ -13,7 +13,7 @@ class HiddenRecentlyDeleted177Test {
     @Test fun independentRetentionRestoreMembershipAndThumbnailRecovery() {
         val base=InstrumentationRegistry.getInstrumentation().targetContext
         val root=File(base.cacheDir,"trash-isolation177-${UUID.randomUUID()}")
-        val context=object:ContextWrapper(base){override fun getNoBackupFilesDir()=File(root,"no-backup");override fun getFilesDir()=File(root,"files")}
+        val context=object:ContextWrapper(base){override fun getNoBackupFilesDir()=File(root,"no-backup");override fun getFilesDir()=File(root,"files").apply { check(isDirectory || mkdirs()) }}
         val session=HiddenSession(android.os.SystemClock::elapsedRealtime)
         session.complete(session.beginAuthentication(),ByteArray(32){29})
         val primaryKey=ByteArray(32){17}

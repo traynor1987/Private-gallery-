@@ -10,10 +10,19 @@ import java.util.UUID
 class RecentlyDeleted177Test {
     private fun fixture(block:(AndroidVaultRepository,android.content.Context,ByteArray,File)->Unit) {
         val base=InstrumentationRegistry.getInstrumentation().targetContext
-        val root=File(base.cacheDir,"trash-fault177-${UUID.randomUUID()}")
+        val root=File(base.cacheDir,"trash-fault177-${UUID.randomUUID()}").apply { check(mkdir()) }
         val context=object:ContextWrapper(base){override fun getFilesDir()=root}
         val key=ByteArray(32){17}
         try {block(AndroidVaultRepository(context,key),context,key,root)}finally{key.fill(0);root.deleteRecursively()}
+    }
+    @Test fun firstPresentationWriteKeepsVaultReadableAndRejectsAnOrphanedIndex() = fixture { repo, context, key, root ->
+        repo.retentionDays(7)
+        assertTrue(File(root, "vault/vault-index.enc").isFile)
+        assertTrue(AndroidVaultRepository(context, key).items().isEmpty())
+        val index = File(root, "vault/vault-index.enc")
+        assertTrue(index.delete())
+        assertThrows(IllegalStateException::class.java) { repo.presentationSort("date") }
+        assertFalse(index.exists())
     }
     @Test fun restoreStopsWhenAuthorityEndsDuringPayloadVerification() = fixture {repo,context,key,_ ->
         val item=(repo.importVerified(VaultImportSource("large.png","image/png",{ByteArray(200_000){it.toByte()}.inputStream()})) as ImportResult.Imported).item
@@ -65,7 +74,7 @@ class RecentlyDeleted177Test {
     }
     @Test fun interruptedPrimaryDeletionRestoresRetainedRecordAndRestoreIsIdempotent() {
         val base=InstrumentationRegistry.getInstrumentation().targetContext
-        val root=File(base.cacheDir,"trash-restart177-${UUID.randomUUID()}")
+        val root=File(base.cacheDir,"trash-restart177-${UUID.randomUUID()}").apply { check(mkdir()) }
         val context=object:ContextWrapper(base){override fun getFilesDir()=root}
         val key=ByteArray(32){17}
         try {
@@ -89,7 +98,7 @@ class RecentlyDeleted177Test {
 
     @Test fun corruptPrimaryRestoreRetainsTrashAndCiphertext() {
         val base=InstrumentationRegistry.getInstrumentation().targetContext
-        val root=File(base.cacheDir,"trash177-${UUID.randomUUID()}")
+        val root=File(base.cacheDir,"trash177-${UUID.randomUUID()}").apply { check(mkdir()) }
         val context=object:ContextWrapper(base){override fun getFilesDir()=root}
         val key=ByteArray(32){17}
         try {

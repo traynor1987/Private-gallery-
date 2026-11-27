@@ -1,0 +1,77 @@
+name: Build 99 focused security comparison
+on:
+  push:
+    branches: [feature/novaos2-wave-a]
+permissions:
+  contents: read
+jobs:
+  compare:
+    if: contains(github.event.head_commit.message, '[build99-compare]')
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - label: main-original
+            source: b19610a7efb3df53edcec2610402c69ea8e1199c
+            prepare: 'false'
+          - label: candidate-original
+            source: 2cd669b2cbff6d04ef3d5dda6c555843208ab8e0
+            prepare: 'false'
+          - label: candidate-prepared
+            source: ${{ github.sha }}
+            prepare: 'true'
+    name: API 37 ${{ matrix.label }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 55
+    env:
+      PREPARE_FULLSCREEN: ${{ matrix.prepare }}
+    steps:
+      - uses: actions/checkout@v4
+        with: { persist-credentials: false }
+      - name: Keep identical comparison driver
+        run: cp scripts/run_build99_focus_comparison.sh "$RUNNER_TEMP/build99-compare.sh"
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ matrix.source }}
+          persist-credentials: false
+      - uses: actions/setup-java@v5
+        with: { distribution: temurin, java-version: '17' }
+      - uses: actions/cache/restore@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: privacy1751-${{ runner.os }}-${{ hashFiles('**/*.gradle*', 'gradle/libs.versions.toml', 'gradle/wrapper/gradle-wrapper.properties') }}
+          restore-keys: privacy1751-${{ runner.os }}-
+      - name: Prepare SDK and build
+        run: |
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --install "cmdline-tools;22.0"
+          mv "$ANDROID_HOME/cmdline-tools/latest" "$RUNNER_TEMP/original-command-tools"
+          ln -s "$ANDROID_HOME/cmdline-tools/22.0" "$ANDROID_HOME/cmdline-tools/latest"
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-37.1" "build-tools;36.0.0" "emulator"
+          bash scripts/prime_gradle95_ci.sh
+          ./gradlew assembleDebug assembleDebugAndroidTest -Pkotlin.incremental=false --no-daemon --console=plain
+          sudo chmod 666 /dev/kvm
+      - name: Run same isolated cases
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: '37.0'
+          target: google_apis
+          arch: x86_64
+          profile: pixel_2
+          avd-name: build99-full
+          cores: 4
+          ram-size: 4096M
+          heap-size: 512M
+          disk-size: 8G
+          emulator-boot-timeout: 1200
+          disable-animations: false
+          emulator-options: -no-window -gpu software -no-snapshot -noaudio -no-boot-anim -feature -HardwareDecoder -camera-back emulated -camera-front emulated
+          script: bash "$RUNNER_TEMP/build99-compare.sh"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: build99-comparison-${{ matrix.label }}
+          path: |
+            app/build/build99-comparison
+            app/build/outputs/androidTest-results/connected
