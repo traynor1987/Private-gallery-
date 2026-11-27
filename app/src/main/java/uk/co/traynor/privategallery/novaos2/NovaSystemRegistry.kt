@@ -12,7 +12,7 @@ internal val novaSystemFeatures: List<NovaSystemFeature> = buildList {
 
     // DESKTOP
 
-    // HEALTH
+    add(NovaSystemFeature(NovaSystemId.HEALTH, "Nova Health & Mind", "Private check-ins, health records and reflections.") { NovaHealthMind(it) })
 
     // PRIVACY
 
