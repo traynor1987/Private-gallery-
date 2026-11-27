@@ -39,6 +39,7 @@ run_cases() {
 }
 failed=0
 if [[ ${VERIFY_FRESH_FIXTURES:-false} == true ]]; then
+    run_cases diagnostics "$ns.ui.BrowserRuntimeDiagnosticsTest#clearingCurrentTraceRetainsClearlySeparatedPreviousFatalEvidence" || failed=1
     run_cases launcher "$ns.LauncherWorkspace70Test#directPrimaryVaultHidesOnlyInternalNavigationUntilReturningHome" || failed=1
     run_cases gallery "$ns.PrimaryGalleryDeviceRepair1762Test" || failed=1
     run_cases theme "$ns.ui.HiddenBrowserCapturePolicy1762Test#parentSelectedThemeIsAuthoritativeAndIndependentOfHiddenCaptureOptIn" || failed=1

@@ -8,6 +8,8 @@ The first failure was Hidden encrypted video continuity. The activity reported o
 
 The exception groups below describe observations. Several can be symptoms of the same upstream fault. A test files directory that has never been created cannot satisfy the existing storage inventory. A second ordering fault allows an encrypted presentation preference to become the first file in an otherwise empty Primary vault. The repair initializes the index through the existing guarded inventory path before writing those preferences.
 
+The historical crash-report test wrote an unstructured exception message into the legacy report file. The existing privacy reader deliberately deletes that file unless it has the current fixed-category format. The repaired fixture verifies rejection and deletion of the raw message, then round-trips a report from the real privacy-safe serializer through the session console and verifies the retained bytes.
+
 | Observation | Cases |
 |---|---:|
 | Player never ready | 5 |
