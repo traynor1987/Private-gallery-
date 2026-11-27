@@ -15,7 +15,9 @@ jobs:
     name: Full Android 17 security
     if: github.repository == 'traynor1987/Private-gallery-' && contains(github.event.head_commit.message, '[novaos-build99-full]')
     runs-on: ubuntu-24.04
-    timeout-minutes: 150
+    # At 150 minutes the last run had executed 986/1151 broad cases;
+    # reserve time for the remaining cases, isolated installs and owner-route gates.
+    timeout-minutes: 270
     steps:
       - uses: actions/checkout@v4
         with: { persist-credentials: false, fetch-depth: 0 }
@@ -73,6 +75,7 @@ jobs:
             python3 scripts/verify_backup_exclusions.py
             python3 scripts/verify_sanctuary_browser_scope.py
             PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s scripts/tests -p test_novaos99_full_evidence.py
+            PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s scripts/tests -p test_build99_broad_batches.py
             node --test scripts/tests/*.test.cjs
           } 2>&1 | tee app/build/full99/host-security.txt
       - name: Start disposable security fixtures

@@ -6,25 +6,17 @@ permissions:
   contents: read
 jobs:
   compare:
-    if: contains(github.event.head_commit.message, '[build99-compare]')
+    if: contains(github.event.head_commit.message, '[build99-compare]') || contains(github.event.head_commit.message, '[build99-repair-tests]')
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - label: main-original
-            source: b19610a7efb3df53edcec2610402c69ea8e1199c
-            prepare: 'false'
-          - label: candidate-original
-            source: 2cd669b2cbff6d04ef3d5dda6c555843208ab8e0
-            prepare: 'false'
-          - label: candidate-prepared
-            source: ${{ github.sha }}
-            prepare: 'true'
+        label: ${{ fromJSON(contains(github.event.head_commit.message, '[build99-compare]') && '["main-original","candidate-original","candidate-prepared"]' || '["candidate-prepared"]') }}
     name: API 37 ${{ matrix.label }}
     runs-on: ubuntu-24.04
     timeout-minutes: 55
     env:
-      PREPARE_FULLSCREEN: ${{ matrix.prepare }}
+      PREPARE_FULLSCREEN: ${{ matrix.label == 'candidate-prepared' }}
+      VERIFY_FRESH_FIXTURES: ${{ contains(github.event.head_commit.message, '[build99-repair-tests]') }}
     steps:
       - uses: actions/checkout@v4
         with: { persist-credentials: false }
@@ -32,7 +24,7 @@ jobs:
         run: cp scripts/run_build99_focus_comparison.sh "$RUNNER_TEMP/build99-compare.sh"
       - uses: actions/checkout@v4
         with:
-          ref: ${{ matrix.source }}
+          ref: ${{ matrix.label == 'main-original' && 'b19610a7efb3df53edcec2610402c69ea8e1199c' || matrix.label == 'candidate-original' && '2cd669b2cbff6d04ef3d5dda6c555843208ab8e0' || github.sha }}
           persist-credentials: false
       - uses: actions/setup-java@v5
         with: { distribution: temurin, java-version: '17' }

@@ -23,5 +23,25 @@ observer=$!
 trap 'kill "$observer" 2>/dev/null || true' EXIT
 ns=uk.co.traynor.privategallery
 cases="$ns.EncryptedVideoContinuity1751Test,$ns.core.vault.RecentlyDeleted177Test,$ns.core.vault.VaultDocumentRepositoryTest,$ns.core.hidden.HiddenRecentlyDeleted177Test#independentRetentionRestoreMembershipAndThumbnailRecovery,$ns.ui.BrowserProfessionalUiTest"
-./gradlew :app:connectedDebugAndroidTest "-Pandroid.testInstrumentationRunnerArguments.class=$cases" --console=plain
-python3 scripts/verify_selected_android1762.py app/build/outputs/androidTest-results/connected "$cases"
+run_cases() {
+    local label=$1 selection=$2 result=0
+    local reports=app/build/outputs/androidTest-results/connected
+    rm -rf "$reports"
+    ./gradlew :app:connectedDebugAndroidTest "-Pandroid.testInstrumentationRunnerArguments.class=$selection" --console=plain || result=$?
+    if [[ -d "$reports" ]]; then
+        mkdir -p "$out/$label"
+        cp -a "$reports/." "$out/$label/"
+        python3 scripts/verify_selected_android1762.py "$out/$label" "$selection" || result=1
+    else
+        result=1
+    fi
+    return "$result"
+}
+failed=0
+if [[ ${VERIFY_FRESH_FIXTURES:-false} == true ]]; then
+    run_cases launcher "$ns.LauncherWorkspace70Test#directPrimaryVaultHidesOnlyInternalNavigationUntilReturningHome" || failed=1
+    run_cases gallery "$ns.PrimaryGalleryDeviceRepair1762Test" || failed=1
+    run_cases theme "$ns.ui.HiddenBrowserCapturePolicy1762Test#parentSelectedThemeIsAuthoritativeAndIndependentOfHiddenCaptureOptIn" || failed=1
+fi
+run_cases common "$cases" || failed=1
+exit "$failed"

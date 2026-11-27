@@ -2,6 +2,8 @@
 
 Run [46043469375](https://github.com/traynor1987/Private-gallery-/actions/runs/46043469375), job 140656768912, source `2cd669b2cbff6d04ef3d5dda6c555843208ab8e0`. Last progress line showed 986 of 1,151 broad tests completed, 83 failed, zero skipped. The job ended before the full release verifier. Native WireGuard and Tor suites ran separately. No passing full-security receipt exists for this run.
 
+Artifact 15228612638 has SHA-256 `6a4ea1019332adcdc262bdb98925fe1635410c273099877b478d120a370a71a3`. It contains the API fingerprint, native route reports, two native VPN screenshots and the JVM XML. Cancellation prevented the broad XML and screenshots from being copied. The per-case records below come from the chronological job log. The first failure was reported at 18:08:28 UTC. The test ran on a Google APIs x86_64 Pixel 2 AVD at API 37.0 with four cores, 4096 MiB RAM, 512 MiB heap, an 8 GiB disk, software graphics and animations enabled.
+
 The first failure was Hidden encrypted video continuity. The activity reported one focus loss, regained focus, a concealment epoch of 1, a resumed lifecycle and no attached player. The log does not identify the window that took focus. The focused comparison records native window ownership and compares the original main and candidate under identical emulator settings.
 
 The exception groups below describe observations. Several can be symptoms of the same upstream fault. A test files directory that has never been created cannot satisfy the existing storage inventory. A second ordering fault allows an encrypted presentation preference to become the first file in an otherwise empty Primary vault. The repair initializes the index through the existing guarded inventory path before writing those preferences.

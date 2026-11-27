@@ -46,15 +46,30 @@ adb shell chmod 600 "$config"
 rm -rf "$reports" "$additional"
 python3 scripts/ci_emulator_storage.py "$out/storage-before-broad.json" --avd build99-full --require-budget
 python3 scripts/ci_onion_probe.py --verify full
-exclusions=$(python3 scripts/verify_novaos99_full_evidence.py --exclusions)
+python3 scripts/build99_broad_batches.py "$out/discovery.txt" > "$out/broad-batches.txt"
+[[ -s "$out/broad-batches.txt" && "$app_id" == uk.co.traynor.privategallery.hiddenprototype ]]
 broad_status=0
-bash scripts/run_android_instrumentation_with_diagnostics.sh \
-    "-Pandroid.testInstrumentationRunnerArguments.notClass=$exclusions" \
-    "-Pandroid.testInstrumentationRunnerArguments.hiddenVpnConfig=$config" \
-    -Pandroid.testInstrumentationRunnerArguments.hiddenVpnOrigin=http://fixture.invalid \
-    -Pandroid.testInstrumentationRunnerArguments.hiddenTorControlDiagnostics=true \
-    -Pandroid.enableAdditionalTestOutput=true || broad_status=$?
-if [[ -d "$reports" ]]; then cp -a "$reports" "$out/broad-results"; fi
+batch=0
+while IFS= read -r selection; do
+    batch=$((batch + 1))
+    dest="$out/broad-results/batch-$batch"
+    mkdir -p "$dest"
+    # AGP uninstalls its packages after a connected run. Prove a fresh debug
+    # sandbox even after interrupted or previously installed fixture sessions.
+    adb install --no-streaming -r "$debug"
+    [[ $(adb shell pm clear "$app_id" | tr -d '\r') == Success ]]
+    rm -rf "$reports" "$additional"
+    status=0
+    bash scripts/run_android_instrumentation_with_diagnostics.sh \
+        "-Pandroid.testInstrumentationRunnerArguments.class=$selection" \
+        "-Pandroid.testInstrumentationRunnerArguments.hiddenVpnConfig=$config" \
+        -Pandroid.testInstrumentationRunnerArguments.hiddenVpnOrigin=http://fixture.invalid \
+        -Pandroid.testInstrumentationRunnerArguments.hiddenTorControlDiagnostics=true \
+        -Pandroid.enableAdditionalTestOutput=true || status=$?
+    if [[ -d "$reports" ]]; then cp -a "$reports/." "$dest/"; else status=1; fi
+    printf '%s\n' "$status" > "$dest/gradle-status.txt"
+    if ((status != 0)); then broad_status=1; fi
+done < "$out/broad-batches.txt"
 ((broad_status == 0))
 
 # Evidence Locker's packet proof must start with a fresh owned WireGuard

@@ -24,6 +24,22 @@ class RecentlyDeleted177Test {
         assertThrows(IllegalStateException::class.java) { repo.presentationSort("date") }
         assertFalse(index.exists())
     }
+    @Test fun firstSortAuthenticatesIndexAndRefusesRevokedOrWrongKeyChanges() = fixture { repo, context, key, root ->
+        val index = File(root, "vault/vault-index.enc")
+        val revoked = AndroidVaultRepository(context, key, authorized = { false })
+        assertThrows(IllegalStateException::class.java) { revoked.presentationSort("date") }
+        assertFalse(index.exists())
+        repo.presentationSort("date")
+        assertTrue(repo.items().isEmpty())
+        val committedIndex = index.readBytes()
+        val metadata = File(root, "vault/presentation-v1/state.enc")
+        val committedMetadata = metadata.readBytes()
+        val other = AndroidVaultRepository(context, ByteArray(32) { 23 })
+        assertTrue(runCatching { other.retentionDays(7) }.isFailure)
+        assertArrayEquals(committedIndex, index.readBytes())
+        assertArrayEquals(committedMetadata, metadata.readBytes())
+        assertEquals("date", AndroidVaultRepository(context, key).presentationSort())
+    }
     @Test fun restoreStopsWhenAuthorityEndsDuringPayloadVerification() = fixture {repo,context,key,_ ->
         val item=(repo.importVerified(VaultImportSource("large.png","image/png",{ByteArray(200_000){it.toByte()}.inputStream()})) as ImportResult.Imported).item
         repo.moveToRecentlyDeleted(item.id)
