@@ -346,6 +346,10 @@ require_novaos2_manifest_nodes("NovaLockScreenStudio", after, [
 ])
 require_novaos2_manifest_nodes("HealthConnectSteps", after, [
     '<uses-permission xmlns:android="ANDROID_NAMESPACE" android:name="android.permission.health.READ_STEPS" />',
+    '<uses-permission xmlns:android="ANDROID_NAMESPACE" android:name="android.permission.health.READ_EXERCISE" />',
+    '<uses-permission xmlns:android="ANDROID_NAMESPACE" android:name="android.permission.health.READ_SLEEP" />',
+    '<uses-permission xmlns:android="ANDROID_NAMESPACE" android:name="android.permission.health.READ_HEART_RATE" />',
+    '<uses-permission xmlns:android="ANDROID_NAMESPACE" android:name="android.permission.health.READ_RESTING_HEART_RATE" />',
 ])
 require_novaos2_manifest_nodes("HealthConnectSteps", application, [
     '<activity xmlns:android="ANDROID_NAMESPACE" android:name=".novaos2.HealthConnectRationaleActivity" android:exported="false" />',

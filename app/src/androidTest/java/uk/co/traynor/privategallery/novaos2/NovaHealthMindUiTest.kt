@@ -134,14 +134,16 @@ class NovaHealthMindUiTest {
 
     @Test fun deniedHealthPermissionStopsBeforeProviderQuery() = runBlocking {
         val app = InstrumentationRegistry.getInstrumentation().targetContext
+        for (metric in ConnectedMetric.entries) {
         val denied = object : ContextWrapper(app) {
             override fun checkSelfPermission(permission: String): Int {
-                assertEquals(HEALTH_READ_STEPS, permission)
+                assertEquals(metric.permission, permission)
                 return PackageManager.PERMISSION_DENIED
             }
             override fun getSystemService(name: String): Any? = error("Health Connect was queried without consent")
         }
-        assertEquals(HealthStepsResult.PermissionDenied, readHealthSteps(denied))
+        assertEquals(HealthReadResult.PermissionDenied, readHealthMetric(denied, metric))
+        }
     }
 
     private fun withSpace(run: (SpaceContext, File, () -> SpaceContext) -> Unit) {

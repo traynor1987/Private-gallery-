@@ -151,10 +151,11 @@ internal fun HealthMindScreen(
     var resumed by remember { mutableStateOf(lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) }
     var error by remember { mutableStateOf<String?>(null) }
     var busy by remember { mutableStateOf(false) }
-    var steps by remember { mutableStateOf<HealthStepsResult?>(null) }
-    var stepJob by remember { mutableStateOf<Job?>(null) }
+    var selectedMetric by rememberSaveable { mutableStateOf(ConnectedMetric.STEPS) }
+    var reading by remember { mutableStateOf<HealthReadResult?>(null) }
+    var metricJob by remember { mutableStateOf<Job?>(null) }
     val healthConnectAvailable = remember(base) { base.getSystemService(HealthConnectManager::class.java) != null }
-    var stepPermission by remember { mutableStateOf(healthStepsPermissionGranted(base)) }
+    var metricPermission by remember { mutableStateOf(metricPermissionGranted(base, selectedMetric)) }
     var exportUri by remember { mutableStateOf<Uri?>(null) }
     var confirmation by remember { mutableStateOf<HealthConfirmation?>(null) }
     var metricDialog by remember { mutableStateOf(false) }
@@ -163,9 +164,9 @@ internal fun HealthMindScreen(
     var routineDialog by remember { mutableStateOf(false) }
     var habitToDelete by remember { mutableStateOf<HealthHabit?>(null) }
 
-    val requestStepsPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
-        stepPermission = granted && healthStepsPermissionGranted(base)
-        if (!stepPermission) steps = HealthStepsResult.PermissionDenied
+    val requestMetricPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        metricPermission = granted && metricPermissionGranted(base, selectedMetric)
+        if (!metricPermission) reading = HealthReadResult.PermissionDenied
     }
     val requestNotificationPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {
         notifications = NovaReminders.canNotify(base)
@@ -179,14 +180,14 @@ internal fun HealthMindScreen(
             when (event) {
                 Lifecycle.Event.ON_RESUME -> {
                     today = LocalDate.now()
-                    stepPermission = healthStepsPermissionGranted(base)
+                    metricPermission = metricPermissionGranted(base, selectedMetric)
                     notifications = NovaReminders.canNotify(base)
                     resumed = true
                 }
                 Lifecycle.Event.ON_PAUSE -> {
                     resumed = false
-                    stepJob?.cancel()
-                    steps = null
+                    metricJob?.cancel()
+                    reading = null
                     confirmation = null
                     metricDialog = false
                     goalDialog = false
@@ -200,7 +201,7 @@ internal fun HealthMindScreen(
         lifecycle.addObserver(observer)
         onDispose {
             lifecycle.removeObserver(observer)
-            stepJob?.cancel()
+            metricJob?.cancel()
         }
     }
     LaunchedEffect(space, resumed) {
@@ -234,18 +235,18 @@ internal fun HealthMindScreen(
         }
     }
 
-    fun readSteps() {
-        if (!authorized() || !healthConnectAvailable || stepJob?.isActive == true) return
-        if (!healthStepsPermissionGranted(base)) {
-            requestStepsPermission.launch(HEALTH_READ_STEPS)
+    fun readMetric() {
+        if (!authorized() || !healthConnectAvailable || metricJob?.isActive == true) return
+        if (!metricPermissionGranted(base, selectedMetric)) {
+            requestMetricPermission.launch(selectedMetric.permission)
             return
         }
-        stepJob = scope.launch {
+        metricJob = scope.launch {
             try {
-                val result = withTimeoutOrNull(8000) { readHealthSteps(base) } ?: HealthStepsResult.Unavailable
-                if (authorized()) steps = result
+                val result = withTimeoutOrNull(8000) { readHealthMetric(base, selectedMetric) } ?: HealthReadResult.Unavailable
+                if (authorized()) reading = result
             } finally {
-                stepJob = null
+                metricJob = null
             }
         }
     }
@@ -367,18 +368,27 @@ internal fun HealthMindScreen(
                         NovaSystemSection("Health Connect") {
                             if (!healthConnectAvailable) Text("Health Connect is unavailable on this device.")
                             else {
-                                Text(if (stepPermission) "Step access granted. NovaOS reads today’s aggregate when you tap Read."
-                                else "Step access is off. You can grant read-only access in Android.")
-                                steps?.let { result ->
+                                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    ConnectedMetric.entries.forEach { metric ->
+                                        FilterChip(selected = selectedMetric == metric, enabled = metricJob?.isActive != true,
+                                            onClick = {
+                                                selectedMetric = metric
+                                                reading = null
+                                                metricPermission = metricPermissionGranted(base, metric)
+                                            }, label = { Text(metric.label) })
+                                    }
+                                }
+                                Text("Today's total or average covers midnight to now. Access is requested separately for each measurement.")
+                                reading?.let { result ->
                                     Text(when (result) {
-                                        is HealthStepsResult.Available -> "${result.steps} steps today · Health Connect"
-                                        HealthStepsResult.None -> "Health Connect has no step records for today."
-                                        HealthStepsResult.PermissionDenied -> "Step access was denied. Manual entry is still available."
-                                        HealthStepsResult.Unavailable -> "Health Connect couldn’t read steps. Try again when the service is available."
+                                        is HealthReadResult.Available -> "${selectedMetric.label}: ${selectedMetric.format(result.value)} today · Health Connect"
+                                        HealthReadResult.None -> "Health Connect has no records for this measurement today."
+                                        HealthReadResult.PermissionDenied -> "Permission denied. Manual entry is available."
+                                        HealthReadResult.Unavailable -> "Health Connect could not read this measurement."
                                     }, Modifier.testTag("health-steps-status"))
                                 }
-                                Button(onClick = ::readSteps, enabled = stepJob?.isActive != true, modifier = Modifier.testTag("health-steps-connect")) {
-                                    Text(if (stepPermission) "Read today’s steps" else "Allow step access")
+                                Button(onClick = ::readMetric, enabled = metricJob?.isActive != true, modifier = Modifier.testTag("health-steps-connect")) {
+                                    Text(if (metricPermission) "Read ${selectedMetric.label.lowercase()}" else "Allow ${selectedMetric.label.lowercase()} access")
                                 }
                                 TextButton(onClick = {
                                     if (!runCatching { base.startActivity(Intent(HEALTH_CONNECT_SETTINGS)) }.isSuccess) {
@@ -386,10 +396,10 @@ internal fun HealthMindScreen(
                                     }
                                 }) { Text("Health Connect settings") }
                             }
-                            Text("Samsung Health and Galaxy Watch steps can appear here if they’re shared with Health Connect. WHOOP data can be entered manually.")
+                            Text("Samsung Health and Galaxy Watch measurements can appear here when Samsung Health shares them with Health Connect. WHOOP data can be entered manually.")
                         }
                         NovaSystemSection("Your data") {
-                            Text("Your manual measurements, goals and habits are encrypted in Primary Space. Imported steps stay on this screen and aren’t included in exports.")
+                            Text("Your manual measurements, goals and habits are encrypted in Primary Space. Imported measurements stay on this screen and aren’t included in exports.")
                             OutlinedButton(onClick = { confirmation = HealthConfirmation.EXPORT }, enabled = !busy && log != null && mind != null) { Text("Export local data") }
                             onBackup?.let { TextButton(onClick = it) { Text("Open Nova Backup") } }
                             TextButton(onClick = { confirmation = HealthConfirmation.ERASE_HEALTH }, enabled = !busy) { Text("Delete health log") }
