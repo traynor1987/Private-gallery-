@@ -20,6 +20,12 @@ internal object PortablePreferenceSchema {
     text("state"){raw->val state=JSONObject(raw);keys(state,setOf("schema","current","theme","profile"));require(integer(state,"schema",1,1)==1L&&string(state,"current",1,10)==owner);require(string(state,"theme",1,10) in setOf("light","dark","system"));profile(state.getJSONObject("profile"))}
    }
    "nova_widgets_v1"->{keys("reduced","clock:$owner","layout:$owner");boolean("reduced");boolean("clock:$owner");text("layout:$owner"){PortableWidgets.sanitize(it)}}
+   uk.co.traynor.privategallery.novaos2.HealthRecordStore.NAMESPACE->{
+    require(owner=="primary")
+    val key=uk.co.traynor.privategallery.novaos2.HealthRecordStore.KEY
+    keys(key)
+    text(key){uk.co.traynor.privategallery.novaos2.HealthRecordCodec.decode(it)}
+   }
    "nova_mind_v1"->{
     keys(owner,"preferred");text("preferred"){require(it in setOf("breathing","grounding"))}
     text(owner){raw->val entries=JSONArray(raw);require(entries.length()<=1000);val ids=hashSetOf<String>();repeat(entries.length()){i->
