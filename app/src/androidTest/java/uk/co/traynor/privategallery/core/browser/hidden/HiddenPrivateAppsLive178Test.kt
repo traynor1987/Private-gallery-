@@ -6,7 +6,6 @@ import android.net.ConnectivityManager
 import android.net.Network
 import android.net.NetworkCapabilities
 import android.net.VpnService
-import android.os.Binder
 import android.os.Bundle
 import android.os.Parcel
 import android.os.ParcelFileDescriptor
@@ -710,9 +709,7 @@ class HiddenPrivateAppsLive178Test {
                 scenario.onActivity {
                     isolation = HiddenTorIsolationConnection(context, { allowed.get() }, { allowed.set(false) }).also { it.start() }
                 }
-                waitFor("Owned Tor IPv4 and IPv6 sink") { isolation?.network() != null }
-                val network = checkNotNull(isolation!!.network())
-                val config = isolation!!.configuration(Binder())
+                val (network, config) = checkNotNull(isolation).awaitFixtureRoute(allowed::get)
                 scenario.onActivity { tor = HiddenTorConnection(context, config).also { it.start() } }
                 waitFor("Packaged Tor reaches authenticated app-private Unix SOCKS", 120) { tor?.unixReady() == true }
                 exercise(scenario, network, HiddenConnectionPolicy.Mode.TOR_ONLY, {

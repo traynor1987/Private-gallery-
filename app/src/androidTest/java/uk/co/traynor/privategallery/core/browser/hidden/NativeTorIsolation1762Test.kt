@@ -233,6 +233,29 @@ class NativeTorIsolation1762Test {
         }
     }
 
+    @Test fun fixtureReadsConfigurationAfterTheServiceCallbackReturns() {
+        val networkVisible = java.util.concurrent.CountDownLatch(1)
+        val finishSetup = java.util.concurrent.CountDownLatch(1)
+        val main = android.os.Handler(android.os.Looper.getMainLooper())
+        var relayReady = false
+        // Hold the callback between publishing its network and finishing relay setup.
+        check(main.post {
+            networkVisible.countDown()
+            if (finishSetup.await(5, java.util.concurrent.TimeUnit.SECONDS)) relayReady = true
+        })
+        try {
+            assertTrue(networkVisible.await(5, java.util.concurrent.TimeUnit.SECONDS))
+            assertFalse(relayReady)
+        } finally {
+            finishSetup.countDown()
+        }
+        assertTrue(awaitTorFixtureSnapshot {
+            check(android.os.Looper.myLooper() === main.looper)
+            check(relayReady) { "Fixture sampled an incomplete service callback" }
+            relayReady
+        })
+    }
+
     @Test(timeout=360_000) fun packagedTorNativeFormsUploadsDownloadsAndNetworkSink() {
         val rootUrl=InstrumentationRegistry.getArguments().getString("hiddenOnionProbeUrl")
         assumeTrue("Controlled real onion required",rootUrl!=null)
@@ -252,9 +275,7 @@ class NativeTorIsolation1762Test {
             waitFor("Previous native mode fully retired",15){HiddenTorIsolationService.released() && !HiddenTorIsolationService.hasTorProcess(context) && !HiddenVpnBrowserBroker.hasDedicatedProcess(context)}
             ActivityScenario.launch(ComponentActivity::class.java).use {scenario ->
                 scenario.onActivity {isolation=HiddenTorIsolationConnection(context,{allowed.get()},{allowed.set(false)}).also {it.start()}}
-                waitFor("Owned IPv4+IPv6 DNS sink Network"){isolation?.network()!=null}
-                val network=checkNotNull(isolation!!.network())
-                val config=isolation!!.configuration(Binder())
+                val (network, config) = checkNotNull(isolation).awaitFixtureRoute(allowed::get)
                 assertTrue("Tor SOCKS is app-private Unix",config.unixPath.startsWith(File(context.applicationInfo.dataDir,"ts").canonicalPath+"/"))
                 scenario.onActivity {tor=HiddenTorConnection(context,config).also {it.start()}}
                 var reportedProgress=-1
