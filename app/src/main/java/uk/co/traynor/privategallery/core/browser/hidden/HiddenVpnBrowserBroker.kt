@@ -555,7 +555,12 @@ internal class HiddenVpnBrowserBroker(
         val call=client.newCall(Request.Builder().url("https://example.com/").build())
         try {
             synchronized(gate){check(valid());calls.add(call)}
-            call.execute().use {response->check(response.code==200);check(checkNotNull(response.body).byteStream().read()!=-1);check(valid())}
+            call.execute().use { response ->
+                check(response.code == 200) { "Tor readiness HTTP status ${response.code}" }
+                val body = checkNotNull(response.body) { "Tor readiness response has no body" }
+                check(body.byteStream().read() != -1) { "Tor readiness response is empty" }
+                check(valid()) { "Tor readiness authority expired during probe" }
+            }
         } finally {calls.remove(call);client.dispatcher.cancelAll();client.connectionPool.evictAll();client.dispatcher.executorService.shutdown()}
     }
     private fun download(url:String,cookie:String,agent:String) {
