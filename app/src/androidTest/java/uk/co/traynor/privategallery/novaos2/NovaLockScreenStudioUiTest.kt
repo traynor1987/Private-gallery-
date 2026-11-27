@@ -9,6 +9,12 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import android.graphics.Bitmap
+import androidx.compose.ui.graphics.asAndroidBitmap
+import androidx.compose.ui.test.captureToImage
+import androidx.compose.ui.test.onRoot
+import androidx.test.platform.app.InstrumentationRegistry
+import java.io.File
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
@@ -61,7 +67,7 @@ class NovaLockScreenStudioUiTest {
         compose.onNodeWithText("Cancel").performClick()
         compose.runOnIdle { assertNull(applied) }
         compose.onNodeWithTag("nova-lock-preview").performScrollTo().assertIsDisplayed()
-        captureNovaSystem("lock-cover")
+        captureStudio("lock-cover")
         compose.onNodeWithText("Apply wallpaper").performScrollTo().performClick()
         compose.onNodeWithText("Apply lock wallpaper").performClick()
         compose.runOnIdle { assertEquals(NovaLockWallpaper.EMBER_DUSK, applied) }
@@ -82,6 +88,32 @@ class NovaLockScreenStudioUiTest {
         compose.onNodeWithText("17:45").assertIsDisplayed()
         compose.onNodeWithText("Battery unavailable").assertIsDisplayed()
         compose.onNodeWithText("Notification hidden").assertDoesNotExist()
-        captureNovaSystem("lock-inner")
+        captureStudio("lock-inner")
+    }
+
+    /** Require the clock glyphs and wallpaper in the same app-window image saved for review. */
+    private fun captureStudio(name: String) {
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        check(context.packageName.endsWith(".hiddenprototype"))
+        val directory = File(context.cacheDir, "novaos2-captures").apply { mkdirs() }
+        val clock = compose.onNodeWithText("17:45").fetchSemanticsNode().boundsInRoot
+        compose.waitUntil(timeoutMillis = 5_000) {
+            val bitmap = compose.onRoot().captureToImage().asAndroidBitmap()
+            try {
+                var glyphPixels = 0
+                var backgroundPixels = 0
+                for (y in clock.top.toInt().coerceAtLeast(0) until clock.bottom.toInt().coerceAtMost(bitmap.height)) {
+                    for (x in clock.left.toInt().coerceAtLeast(0) until clock.right.toInt().coerceAtMost(bitmap.width)) {
+                        val red = android.graphics.Color.red(bitmap.getPixel(x, y))
+                        if (red > 200) glyphPixels++
+                        if (red < 140) backgroundPixels++
+                    }
+                }
+                if (glyphPixels < 24 || backgroundPixels < 24) false else {
+                    File(directory, "$name.png").outputStream().use { check(bitmap.compress(Bitmap.CompressFormat.PNG, 100, it)) }
+                    true
+                }
+            } finally { bitmap.recycle() }
+        }
     }
 }
