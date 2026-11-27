@@ -30,6 +30,8 @@ import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
+import uk.co.traynor.privategallery.core.backup.BackupFixture62
+import uk.co.traynor.privategallery.core.backup.BackupFile62
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.RuleChain
@@ -98,6 +100,35 @@ class NovaHealthMindUiTest {
             assertEquals(HealthRecords(), restarted.read())
             assertEquals("Only journal", MindData(fresh).entries("primary").single().text)
             assertTrue(restarted.read().days[day] == null)
+        }
+    }
+
+    @Test fun portableHealthArchiveReencryptsForPrimaryAndRejectsHiddenRestore() {
+        val root = BackupFixture62.temporary("health-archive")
+        val passphrase = "synthetic health archive".toCharArray()
+        try {
+            val file = BackupFile62(File(root, "archive"))
+            val expected = HealthRecords(goal = "Synthetic recovery goal")
+                .withMeasurement(LocalDate.of(2026, 1, 12), HealthMetric.SLEEP, checkNotNull(HealthMetric.SLEEP.parse("400")))
+            BackupFixture62(File(root, "source"), key = ByteArray(32) { 11 }).use { source ->
+                HealthRecordStore(source.coordinator.space).update { expected }
+                source.coordinator.export(file, passphrase.copyOf())
+            }
+            assertFalse(file.file.readBytes().decodeToString().contains(expected.goal))
+            BackupFixture62(File(root, "destination"), key = ByteArray(32) { 33 }).use { destination ->
+                destination.coordinator.preview(file, passphrase.copyOf()).use { plan ->
+                    destination.coordinator.restoreSettings(plan)
+                }
+                assertEquals(expected, HealthRecordStore(destination.coordinator.space).read())
+            }
+            BackupFixture62(File(root, "hidden"), hidden = true).use { hidden ->
+                org.junit.Assert.assertThrows(IllegalArgumentException::class.java) {
+                    hidden.coordinator.preview(file, passphrase.copyOf()).close()
+                }
+            }
+        } finally {
+            passphrase.fill('\u0000')
+            root.deleteRecursively()
         }
     }
 

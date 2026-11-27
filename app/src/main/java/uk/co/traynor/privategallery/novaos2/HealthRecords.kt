@@ -149,15 +149,15 @@ internal object HealthRecordCodec {
         val root = JSONObject(raw)
         root.requireKeys("version", "goal", "habits", "days")
         require(root.get("version") == 1)
-        val goals = root.getString("goal").also { require(it.length <= HealthRecords.MAX_GOAL_LENGTH) }
+        val goals = root.strictString("goal").also { require(it.length <= HealthRecords.MAX_GOAL_LENGTH) }
         val habitArray = root.getJSONArray("habits")
         require(habitArray.length() <= HealthRecords.MAX_HABITS)
         val habits = List(habitArray.length()) { index ->
             val item = habitArray.getJSONObject(index)
             item.requireKeys("id", "name")
-            val name = item.getString("name")
+            val name = item.strictString("name")
             require(name.isNotBlank() && name == name.trim() && name.length <= HealthRecords.MAX_HABIT_LENGTH)
-            HealthHabit(parseId(item.getString("id")), name)
+            HealthHabit(parseId(item.strictString("id")), name)
         }
         val uniqueIds = habits.mapTo(hashSetOf()) { it.id }
         require(uniqueIds.size == habits.size && habits.map { it.name.lowercase(Locale.ROOT) }.distinct().size == habits.size)
@@ -167,18 +167,18 @@ internal object HealthRecordCodec {
             for (index in 0 until dayArray.length()) {
                 val item = dayArray.getJSONObject(index)
                 item.requireKeys("date", "measurements", "habits")
-                val date = LocalDate.parse(item.getString("date"))
+                val date = LocalDate.parse(item.strictString("date"))
                 require(date.year in 1..9999 && !containsKey(date))
                 val data = item.getJSONObject("measurements")
                 val measurements = data.keys().asSequence().associate { key ->
                     val metric = HealthMetric.valueOf(key)
-                    metric to checkNotNull(metric.parse(data.getString(key)))
+                    metric to checkNotNull(metric.parse(data.strictString(key)))
                 }
                 val completed = item.getJSONArray("habits")
                 require(completed.length() <= uniqueIds.size)
                 val completedIds = buildSet {
                     for (habit in 0 until completed.length()) {
-                        val id = parseId(completed.getString(habit))
+                        val id = parseId(completed.get(habit) as String)
                         require(id in uniqueIds && add(id))
                     }
                 }
@@ -187,6 +187,9 @@ internal object HealthRecordCodec {
         }
         return HealthRecords(days, habits, goals)
     }
+
+    private fun JSONObject.strictString(key: String): String = get(key) as? String
+        ?: throw IllegalArgumentException("Expected a health record string")
 
     private fun JSONObject.requireKeys(vararg keys: String) {
         require(this.keys().asSequence().toSet() == keys.toSet())
