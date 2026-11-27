@@ -1,6 +1,12 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+wave_a=false
+if (($#)); then
+    [[ "$#" == 1 && "$1" == --wave-a ]]
+    wave_a=true
+fi
+
 out=app/build/novaos2
 debug=app/build/outputs/apk/debug/app-debug.apk
 tests=app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
@@ -34,6 +40,7 @@ adb install --no-streaming -r "$tests" | tee "$out/install-tests.txt"
 grep -Fxq Success "$out/install-app.txt"
 grep -Fxq Success "$out/install-tests.txt"
 adb shell run-as "$app_id" rm -rf cache/novaos2-captures
+if $wave_a; then adb shell run-as "$app_id" rm -f cache/novaos2-wave-a-timings.txt; fi
 
 classes=()
 expected=0
@@ -47,6 +54,13 @@ done < <(
     find "$fixture_root" -type f -name '*Test.kt' | sort
     theme_test="app/src/androidTest/java/${namespace//./\/}/launcher/LauncherThemesStudioUiTest.kt"
     if [[ -f "$theme_test" ]]; then printf '%s\n' "$theme_test"; fi
+    if $wave_a; then
+        fixtures="app/src/androidTest/java/${namespace//./\/}"
+        printf '%s\n' "$fixtures/HiddenDiscoverabilityRegressionTest.kt" \
+            "$fixtures/core/hidden/HiddenCredentialSeparationTest.kt" \
+            "$fixtures/core/sanctuary/SanctuaryLauncherPolicy70Test.kt" \
+            "$fixtures/core/update/Updater85RuntimeTest.kt" "$fixtures/core/update/Updater86UiTest.kt"
+    fi
 )
 ((expected > 0))
 selection=$(IFS=,; printf '%s' "${classes[*]}")

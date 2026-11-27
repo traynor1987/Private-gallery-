@@ -55,7 +55,7 @@ jobs:
           disk-size: 8G
           disable-animations: true
           emulator-options: -no-window -gpu software -no-snapshot -noaudio -no-boot-anim -feature -HardwareDecoder -camera-back emulated -camera-front emulated
-          script: bash scripts/run_novaos2_api37.sh
+          script: bash scripts/run_novaos2_wave_a.sh
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -63,3 +63,6 @@ jobs:
           path: |
             app/build/novaos2
             app/build/test-results/testDebugUnitTest
+            app/build/home2-evidence/launcher-process-70
+            app/build/home2-evidence/guardian-notification-pipeline-93
+            app/build/home2-evidence/guardian-fold-notification

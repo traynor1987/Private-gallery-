@@ -1082,7 +1082,7 @@ private fun LauncherHeader(
 ) {
     var menu by remember { mutableStateOf(false) }
     val openControls by rememberUpdatedState(onControlCentre)
-    val swipe = if (onControlCentre == null) Modifier else Modifier.pointerInput(Unit) {
+    val swipe = if (onControlCentre == null) Modifier else Modifier.testTag("launcher-control-gesture").pointerInput(Unit) {
         val threshold = 36.dp.toPx()
         var offset = 0f
         detectVerticalDragGestures(

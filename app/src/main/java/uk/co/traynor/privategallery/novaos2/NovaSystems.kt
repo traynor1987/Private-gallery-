@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.provider.Settings
+import androidx.activity.compose.LocalActivity
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -30,12 +31,17 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import androidx.core.view.WindowCompat
 import uk.co.traynor.privategallery.core.editor.AiCredentialStore
 import uk.co.traynor.privategallery.core.home2.NovaCoreApp
 import uk.co.traynor.privategallery.core.sanctuary.SanctuaryLauncherPolicy.Decision
@@ -120,6 +126,7 @@ internal class NovaSystemConfig(context: Context, key: String) {
 @Composable
 internal fun NovaSystemsPanel(features: List<NovaSystemFeature>, selected: NovaSystemId?, host: NovaSystemHost) {
     val current = features.firstOrNull { it.id == selected }
+    NovaSystemsBarAppearance()
     Surface(Modifier.fillMaxSize().testTag("novaos2-panel")) {
         Column(Modifier.fillMaxSize().safeDrawingPadding(), horizontalAlignment = Alignment.CenterHorizontally) {
             Row(
@@ -155,6 +162,26 @@ internal fun NovaSystemsPanel(features: List<NovaSystemFeature>, selected: NovaS
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun NovaSystemsBarAppearance() {
+    val window = LocalActivity.current?.window ?: return
+    val view = LocalView.current
+    val darkIcons = MaterialTheme.colorScheme.surface.luminance() > 0.179f
+    val controller = WindowCompat.getInsetsController(window, view)
+    DisposableEffect(window, view) {
+        val status = controller.isAppearanceLightStatusBars
+        val navigation = controller.isAppearanceLightNavigationBars
+        onDispose {
+            controller.isAppearanceLightStatusBars = status
+            controller.isAppearanceLightNavigationBars = navigation
+        }
+    }
+    SideEffect {
+        controller.isAppearanceLightStatusBars = darkIcons
+        controller.isAppearanceLightNavigationBars = darkIcons
     }
 }
 
