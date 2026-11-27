@@ -20,6 +20,8 @@ import xml.etree.ElementTree as ET
 
 PACKAGE = 'uk.co.traynor.privategallery'
 CERTIFICATE = '94f2bfc6567f26d067d29077111cfd0ce86d38263c642ad115e43365f05b0d17'
+# Production never published Build 98. Wave A must exercise the installed Build 97 updater.
+UPGRADE_IDENTITIES = {96: (95, "1.7.50"), 97: (96, "1.7.51"), 98: (97, "1.7.52"), 99: (97, "2.0.0")}
 
 def adb(*args):
     return subprocess.run(['adb', *args], check=True, capture_output=True, text=True, timeout=35).stdout
@@ -53,8 +55,7 @@ def installed():
     return int(match[1]) if match else None
 
 def rehearsal(apk, output, source, candidate_code=96):
-    version = {96: "1.7.50", 97: "1.7.51", 98: "1.7.52"}[candidate_code]
-    baseline_code = candidate_code - 1
+    baseline_code, version = UPGRADE_IDENTITIES[candidate_code]
     assert os.environ.get('GITHUB_ACTIONS')=='true' and os.environ.get('PRODUCTION_UPGRADE')=='1'
     assert adb('shell','getprop','ro.kernel.qemu').strip()=='1'
     assert adb('shell','getprop','ro.build.version.sdk').strip()=='37'
@@ -121,7 +122,7 @@ def rehearsal(apk, output, source, candidate_code=96):
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--apk',required=True,type=Path);parser.add_argument('--output',required=True,type=Path);parser.add_argument('--source',required=True)
-    parser.add_argument('--candidate-code', type=int, choices=(96, 97, 98), default=96)
+    parser.add_argument('--candidate-code', type=int, choices=UPGRADE_IDENTITIES, default=96)
     args=parser.parse_args()
     assert re.fullmatch(r'[a-f0-9]{40}',args.source)
     rehearsal(args.apk,args.output,args.source,args.candidate_code)

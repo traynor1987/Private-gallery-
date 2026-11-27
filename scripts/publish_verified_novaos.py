@@ -12,7 +12,8 @@ from types import SimpleNamespace
 import zipfile
 
 import novaos_build97_gate as build97
-from verify_novaos_release_assets import verify
+import novaos_build99_publication as build99
+from verify_novaos_release_assets import verify, verify_payload
 
 REPO = "traynor1987/Private-gallery-"
 BRANCH = "main"
@@ -126,7 +127,12 @@ def check_local_receipts(candidate, assets, receipts):
     require(digest(assets / "private-gallery-release.apk") == candidate["apk_sha256"],
             "Signed APK differs from the immutable candidate")
     is_build97 = candidate["version_code"] == 97
-    upgrade = receipts / ("from96" if is_build97 else "from80")
+    is_build99 = build99.selected(candidate)
+    if is_build99:
+        build99.require_receipts(candidate, approval, json.loads(read(receipts / "build99-upgrade.json")))
+    upgrade = receipts / ("from97" if is_build99 else "from96" if is_build97 else "from80")
+    if is_build99:
+        build99.verify_default_and_downgrade_receipts(upgrade)
     if is_build97:
         require(approval["mode"] == "production" and approval["candidate"] == build97.CANDIDATE
                 and approval["approving_id"] == build97.OWNER
@@ -296,6 +302,9 @@ def publish(candidate, assets, attempts=3):
                     gh("release", "upload", tag, *missing, "--repo", REPO)
                 confirmed_release(tag, expected, release_id=release.get("id"))
                 verify_tag(candidate)
+                if build99.selected(candidate):
+                    build99.verify_owner_marker(Path(build99.MANIFEST), api)
+                    build99.verify_latest(candidate, api, verify_tag, check_remote_assets)
                 gh("release", "edit", tag, "--draft=false", "--latest", "--repo", REPO)
             latest = confirmed_release(tag, expected, stable=True)
             require(not latest["draft"] and not latest["prerelease"] and latest["tag_name"] == tag,
@@ -323,36 +332,57 @@ def main():
     args = parser.parse_args()
     candidate = json.loads(args.candidate.read_text())
     try:
-        for key in ("regression_run", "production_run"):
-            require(type(candidate[key]) is int, "Invalid workflow run")
-        regression = f"actions/runs/{candidate['regression_run']}"
-        production = f"actions/runs/{candidate['production_run']}"
-        check_provenance(candidate, api(regression), api(regression + "/jobs?per_page=100")["jobs"],
-                         api(production), api(production + "/jobs?per_page=100")["jobs"])
-        if candidate["version_code"] == 97:
-            build97.verify_release_tree(candidate["source"])
-            subprocess.run(["git", "merge-base", "--is-ancestor", candidate["source"], "HEAD"], check=True)
+        is_build99 = build99.selected(candidate)
+        if is_build99:
+            build99.validate_identity(candidate)
+            parent = build99.verify_owner_marker(args.candidate, api)
+            build99.verify_source(candidate, parent, api)
+            build99.verify_workflows(candidate, api)
+            build99.verify_latest(candidate, api, verify_tag, check_remote_assets)
+        else:
+            for key in ("regression_run", "production_run"):
+                require(type(candidate[key]) is int, "Invalid workflow run")
+            regression = f"actions/runs/{candidate['regression_run']}"
+            production = f"actions/runs/{candidate['production_run']}"
+            check_provenance(candidate, api(regression), api(regression + "/jobs?per_page=100")["jobs"],
+                             api(production), api(production + "/jobs?per_page=100")["jobs"])
+            if candidate["version_code"] == 97:
+                build97.verify_release_tree(candidate["source"])
+                subprocess.run(["git", "merge-base", "--is-ancestor", candidate["source"], "HEAD"], check=True)
         if args.preflight:
-            ensure_tag(candidate)
-            print("PASS: exact remote stable tag")
+            if is_build99:
+                verify_tag(candidate, allow_missing=True)
+                print("PASS: Build 99 exact source and workflow provenance")
+            else:
+                ensure_tag(candidate)
+                print("PASS: exact remote stable tag")
             return
-        verify_tag(candidate)
-        subprocess.run(["git", "fetch", "--no-tags", f"https://github.com/{REPO}.git",
-                        f"refs/tags/{candidate['tag']}:refs/tags/{candidate['tag']}"], check=True)
+        require(args.work is not None and args.tools is not None, "An isolated work directory and APK tools are required")
+        if not is_build99:
+            verify_tag(candidate)
+            subprocess.run(["git", "fetch", "--no-tags", f"https://github.com/{REPO}.git",
+                            f"refs/tags/{candidate['tag']}:refs/tags/{candidate['tag']}"], check=True)
         args.work.mkdir(mode=0o700)
-        assets_name, receipts_name = (
-            ("novaos-build97-verified-stable-assets", "novaos-build97-production-receipts")
-            if candidate["version_code"] == 97 else
-            ("novaos-code81-verified-stable-assets", "novaos-code81-production-upgrade-receipts")
-        )
+        if is_build99:
+            assets_name, receipts_name = build99.ASSETS, build99.RECEIPTS
+        elif candidate["version_code"] == 97:
+            assets_name, receipts_name = "novaos-build97-verified-stable-assets", "novaos-build97-production-receipts"
+        else:
+            assets_name, receipts_name = "novaos-code81-verified-stable-assets", "novaos-code81-production-upgrade-receipts"
         assets = archive(candidate, "assets", assets_name, args.work)
         receipts = archive(candidate, "receipts", receipts_name, args.work)
         upgrade = check_local_receipts(candidate, assets, receipts)
-        apk_digest = verify(SimpleNamespace(
+        check = verify_payload if is_build99 else verify
+        apk_digest = check(SimpleNamespace(
             source=candidate["source"], tag=candidate["tag"], baseline_code=candidate["baseline_code"],
-            assets=assets, evidence=upgrade, notes=assets / "notes.md", tools=args.tools,
+            version_code=candidate["version_code"], assets=assets, evidence=upgrade,
+            notes=assets / "notes.md", tools=args.tools,
         ))
         require(apk_digest == candidate["apk_sha256"], "Verified APK does not match the approved source")
+        if is_build99:
+            build99.verify_owner_marker(args.candidate, api)
+            build99.verify_latest(candidate, api, verify_tag, check_remote_assets)
+            ensure_tag(candidate)
         print(publish(candidate, assets))
     except (ValueError, RuntimeError, OSError, KeyError, subprocess.CalledProcessError) as error:
         parser.exit(1, f"Stable release failed: {error}\n")
