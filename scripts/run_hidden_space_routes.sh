@@ -2,7 +2,9 @@
 set -euo pipefail
 
 [[ "${GITHUB_ACTIONS:-}" == true ]]
-if [[ "${GITHUB_EVENT_NAME:-}" == push ]]; then
+if [[ "${GITHUB_WORKFLOW:-}" == "NovaOS Build 99 full Android 17 security" ]]; then
+    bash scripts/verify_novaos99_full_context.sh
+elif [[ "${GITHUB_EVENT_NAME:-}" == push ]]; then
     [[ "${GITHUB_REPOSITORY:-}" == traynor1987/Private-gallery- &&
         "${GITHUB_WORKFLOW:-}" == "Hidden Space Android 17" && "${GITHUB_REF:-}" == refs/heads/main ]]
 else
