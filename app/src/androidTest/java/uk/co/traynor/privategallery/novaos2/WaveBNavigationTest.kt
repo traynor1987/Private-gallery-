@@ -75,7 +75,7 @@ class WaveBNavigationTest {
             compose.onNodeWithText("Nova Desktop").performClick()
             val split = compose.onNodeWithTag("desktop-split")
             compose.waitUntil(10_000) { split.isDisplayed() }
-            if (phase == null) captureNovaSystem("wave-b-desktop-landscape")
+            if (phase == null) captureNovaSystem("wave-b-desktop-landscape", compose)
             val gaming = compose.onNodeWithText("Gaming")
             compose.waitUntil(10_000) { gaming.isDisplayed() }
             if (phase != "verify") gaming.performClick()

@@ -6,11 +6,9 @@ import android.view.Window
 import android.view.WindowManager
 import android.view.inspector.WindowInspector
 import androidx.activity.ComponentActivity
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.safeDrawingPadding
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
-import androidx.compose.ui.Modifier
+import androidx.activity.enableEdgeToEdge
+import uk.co.traynor.privategallery.core.ui.AppTheme
+import uk.co.traynor.privategallery.ui.PrivateGalleryTheme
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.isDisplayed
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
@@ -34,7 +32,8 @@ import uk.co.traynor.privategallery.novaos2.LauncherNovaSystemsActions
 import uk.co.traynor.privategallery.novaos2.NovaSystemConfig
 import uk.co.traynor.privategallery.novaos2.NovaSystemHost
 import uk.co.traynor.privategallery.novaos2.NovaSystemId
-import uk.co.traynor.privategallery.novaos2.NovaWorkingMode
+import uk.co.traynor.privategallery.novaos2.NovaSystemsPanel
+import uk.co.traynor.privategallery.novaos2.novaSystemFeatures
 import uk.co.traynor.privategallery.novaos2.captureNovaSystem
 import uk.co.traynor.privategallery.ui.BrowserViewportRule
 
@@ -63,7 +62,7 @@ class WorkingModeUiTest {
             compose.onNodeWithText("Record shift totals").assertDoesNotExist()
             compose.onNodeWithText("Work apps").assertDoesNotExist()
             compose.onNodeWithText("Shift Tracker summary").assertDoesNotExist()
-            captureNovaSystem("working-cover-driving")
+            captureNovaSystem("working-cover-driving", compose)
             compose.onNodeWithText("Emergency phone").assertIsDisplayed()
 
             compose.onNodeWithText("Leave Driving Mode").performScrollTo().performClick()
@@ -101,7 +100,7 @@ class WorkingModeUiTest {
             val enter = compose.onNodeWithTag("enter-driving-mode")
             compose.waitUntil(10_000) { enter.isDisplayed() }
             compose.onNodeWithTag("driving-speed").assertDoesNotExist()
-            captureNovaSystem("working-inner-scheduled")
+            captureNovaSystem("working-inner-scheduled", compose)
             compose.onNodeWithText("End shift").performClick()
             compose.waitUntil(10_000) { compose.onNodeWithTag("start-working-shift").isDisplayed() }
             val state = WorkingState.decode(persisted.read()?.let(::JSONObject))
@@ -124,7 +123,7 @@ class WorkingModeUiTest {
             val stored = File(compose.activity.noBackupFilesDir, "ai-provider-novaos2-working-mode.enc")
             assertTrue(stored.isFile)
             assertFalse(stored.readBytes().decodeToString().contains(syntheticIdentifier))
-            captureNovaSystem("working-cover-vehicle-redacted")
+            captureNovaSystem("working-cover-vehicle-redacted", compose)
 
             change.performClick()
             compose.onNodeWithText("Choose a paired vehicle").assertIsDisplayed()
@@ -147,9 +146,10 @@ class WorkingModeUiTest {
     }
 
     private fun show(wide: Boolean = false) {
+        compose.runOnUiThread { compose.activity.enableEdgeToEdge() }
         compose.setContent {
-            MaterialTheme {
-                Surface(Modifier.fillMaxSize().safeDrawingPadding()) { NovaWorkingMode(drivingHost(wide)) }
+            PrivateGalleryTheme(if (wide) AppTheme.LIGHT else AppTheme.DARK) {
+                NovaSystemsPanel(novaSystemFeatures, NovaSystemId.WORKING, drivingHost(wide))
             }
         }
     }

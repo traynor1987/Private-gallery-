@@ -69,7 +69,7 @@ class DesktopModeUiTest {
             compose.onNodeWithText("Widen left").performScrollTo().performClick()
             compose.waitUntil(10_000) { compose.onNodeWithText("55 / 45").isDisplayed() }
             assertEquals(55, DesktopSettings.decode(persisted.read()).current.splitPercent)
-            captureNovaSystem("desktop-inner-split")
+            captureNovaSystem("desktop-inner-split", compose)
 
             compose.runOnIdle { wide = false }
             compose.onNodeWithTag("desktop-compact").performScrollTo().assertIsDisplayed()
@@ -100,7 +100,7 @@ class DesktopModeUiTest {
             }
             compose.waitUntil(10_000) { DesktopSettings.decode(config.read()).preset == DesktopPreset.GAMING }
             compose.onNodeWithText("Pin app").performScrollTo().assertIsDisplayed()
-            captureNovaSystem("desktop-cover-compact")
+            captureNovaSystem("desktop-cover-compact", compose)
         } finally { config.clear() }
     }
 
