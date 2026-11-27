@@ -14,7 +14,7 @@ internal val novaSystemFeatures: List<NovaSystemFeature> = buildList {
 
     // HEALTH
 
-    // PRIVACY
+    add(NovaSystemFeature(NovaSystemId.PRIVACY, "Privacy Dashboard", "Permissions, protection and cloud-consent status.") { NovaPrivacyDashboard(it) })
 
     // UTILITIES
 }
