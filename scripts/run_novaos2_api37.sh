@@ -64,3 +64,32 @@ fi
 grep -Eq "^OK \(${expected} tests?\)[[:space:]]*$" "$out/instrumentation.txt"
 ! grep -Eq '^INSTRUMENTATION_STATUS_CODE: -[1-4][[:space:]]*$' "$out/instrumentation.txt"
 sha256sum --check "$out/debug-inputs.sha256"
+
+# Wave B has a stateful cross-feature case. The ordinary run above always exercises it.
+# Seed and reopen the same two actual encrypted records in distinct emulator processes.
+if [[ -f "$fixture_root/WaveBNavigationTest.kt" ]]; then
+    [[ $(adb shell getprop ro.kernel.qemu | tr -d '\r') == 1 ]]
+    method="$namespace.novaos2.WaveBNavigationTest#desktopWorkspaceAndActiveShiftKeepIndependentStateDuringNavigation"
+    restart="$out/wave-b-restart"
+    mkdir -p "$restart"
+    for phase in seed verify; do
+        adb shell am force-stop "$app_id"
+        [[ -z "$(adb shell pidof "$app_id" | tr -d '\r' || true)" ]]
+        adb shell am instrument -w -r -e waveBProcess "$phase" -e class "$method" \
+            "$app_id.test/androidx.test.runner.AndroidJUnitRunner" | tee "$restart/$phase.txt"
+        grep -Eq '^OK \(1 test\)[[:space:]]*$' "$restart/$phase.txt"
+        if grep -Eq '^INSTRUMENTATION_STATUS_CODE: -[1-4][[:space:]]*$' "$restart/$phase.txt"; then exit 1; fi
+        marker=$(sed -n 's/^INSTRUMENTATION_STATUS: waveBMarker=//p' "$restart/$phase.txt" | tr -d '\r')
+        [[ "$marker" =~ ^([1-9][0-9]*):([0-9a-f]{64})$ ]]
+        if [[ "$phase" == seed ]]; then
+            seed_pid=${BASH_REMATCH[1]}
+            seed_digest=${BASH_REMATCH[2]}
+        else
+            verify_pid=${BASH_REMATCH[1]}
+            verify_digest=${BASH_REMATCH[2]}
+            [[ "$verify_pid" != "$seed_pid" && "$verify_digest" == "$seed_digest" ]]
+        fi
+    done
+    printf 'source=%s\napi=37\nseed_pid=%s\nverify_pid=%s\nrecords_sha256=%s\nresult=PASS\n' \
+        "$(git rev-parse HEAD)" "$seed_pid" "$verify_pid" "$seed_digest" > "$restart/receipt.txt"
+fi

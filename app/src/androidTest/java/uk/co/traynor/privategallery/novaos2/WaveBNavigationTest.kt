@@ -1,6 +1,9 @@
 package uk.co.traynor.privategallery.novaos2
 
+import android.os.Bundle
+import android.os.Process
 import androidx.activity.ComponentActivity
+import androidx.activity.enableEdgeToEdge
 import uk.co.traynor.privategallery.core.ui.AppTheme
 import uk.co.traynor.privategallery.ui.PrivateGalleryTheme
 import androidx.compose.runtime.getValue
@@ -14,7 +17,10 @@ import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.test.platform.app.InstrumentationRegistry
+import java.security.MessageDigest
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.RuleChain
@@ -31,9 +37,15 @@ class WaveBNavigationTest {
     @Test fun desktopWorkspaceAndActiveShiftKeepIndependentStateDuringNavigation() {
         val desktop = NovaSystemConfig(compose.activity, "desktop-mode")
         val working = NovaSystemConfig(compose.activity, "working-mode")
-        desktop.clear()
-        working.clear()
+        val phase = InstrumentationRegistry.getArguments().getString("waveBProcess")
+        require(phase == null || phase == "seed" || phase == "verify")
+        if (phase != "verify") {
+            assertNull(desktop.read())
+            assertNull(working.read())
+        }
+        var keepSeed = false
         try {
+            compose.runOnUiThread { compose.activity.enableEdgeToEdge() }
             val actions = LauncherUiActions(save = { true }, launchApp = {}, launchShortcut = {}, openWorkspace = {},
                 selectHome = {}, continueWithCurrentHome = {}, emergencyPhone = {}, reviewSanctuary = {},
                 setOutsideProtection = {}, chooseWallpaper = {}, addWidget = {}, removeWidget = {},
@@ -51,8 +63,10 @@ class WaveBNavigationTest {
             }
             compose.onNodeWithText("Working Mode").performClick()
             val start = compose.onNodeWithTag("start-working-shift")
-            compose.waitUntil(10_000) { start.isDisplayed() }
-            start.performClick()
+            if (phase != "verify") {
+                compose.waitUntil(10_000) { start.isDisplayed() }
+                start.performClick()
+            }
             val driving = compose.onNodeWithTag("enter-driving-mode")
             compose.waitUntil(10_000) { driving.isDisplayed() }
             val shiftRecord = working.read()
@@ -61,19 +75,30 @@ class WaveBNavigationTest {
             compose.onNodeWithText("Nova Desktop").performClick()
             val split = compose.onNodeWithTag("desktop-split")
             compose.waitUntil(10_000) { split.isDisplayed() }
-            captureNovaSystem("wave-b-desktop-landscape")
+            if (phase == null) captureNovaSystem("wave-b-desktop-landscape")
             val gaming = compose.onNodeWithText("Gaming")
             compose.waitUntil(10_000) { gaming.isDisplayed() }
-            gaming.performClick()
+            if (phase != "verify") gaming.performClick()
             compose.waitUntil(10_000) { DesktopSettings.decode(desktop.read()).preset == DesktopPreset.GAMING }
             compose.onNodeWithContentDescription("Back").performClick()
             compose.onNodeWithText("Working Mode").performClick()
             compose.waitUntil(10_000) { driving.isDisplayed() }
             driving.assertIsDisplayed()
             assertEquals(shiftRecord, working.read())
+            if (phase != null) {
+                val records = requireNotNull(shiftRecord) + "\u0000" + requireNotNull(desktop.read())
+                val digest = MessageDigest.getInstance("SHA-256").digest(records.toByteArray())
+                    .joinToString("") { "%02x".format(it) }
+                InstrumentationRegistry.getInstrumentation().sendStatus(0, Bundle().apply {
+                    putString("waveBMarker", "${Process.myPid()}:$digest")
+                })
+                keepSeed = phase == "seed"
+            }
         } finally {
-            desktop.clear()
-            working.clear()
+            if (!keepSeed) {
+                desktop.clear()
+                working.clear()
+            }
         }
     }
 }
