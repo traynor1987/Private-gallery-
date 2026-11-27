@@ -6,7 +6,7 @@ internal val novaSystemFeatures: List<NovaSystemFeature> = buildList {
 
     // WORKING
 
-    // CONTROL
+    add(NovaSystemFeature(NovaSystemId.CONTROL, "Control Centre", "Device controls and safe notification status.") { NovaControlCentre(it) })
 
     // LOCK
 
