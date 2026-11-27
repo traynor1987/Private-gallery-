@@ -1,3 +1,4 @@
+import os
 import subprocess
 import tempfile
 import unittest
@@ -39,6 +40,15 @@ class InstallerHandoff(unittest.TestCase):
                 rehearsal.installer_tree(output)
             self.assertEqual('window', (output/'in-app-installer-window.txt').read_text())
             self.assertFalse(any('tap' in call.args for call in adb.call_args_list))
+
+
+    def test_build99_requires_authentic_build97_already_installed(self):
+        with patch.dict(os.environ, {'GITHUB_ACTIONS': 'true', 'PRODUCTION_UPGRADE': '1'}), \
+             patch.object(rehearsal, 'installed', return_value=98), \
+             patch.object(rehearsal, 'adb', side_effect=['1', '37']) as adb:
+            with self.assertRaisesRegex(AssertionError, 'Authentic populated Build 97'):
+                rehearsal.rehearsal(Path('unopened.apk'), Path('unused'), 'a' * 40, 99)
+            self.assertEqual(2, adb.call_count)
 
 
 if __name__ == '__main__':

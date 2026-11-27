@@ -37,7 +37,7 @@ jobs:
           private-key: ${{ secrets.NOVAOS_RELEASE_APP_PRIVATE_KEY }}
           permission-contents: write
           permission-workflows: write
-      - name: Create or verify the exact stable tag
+      - name: Validate exact candidate provenance and stable tag
         env:
           GH_TOKEN: ${{ github.token }}
           NOVAOS_TAG_TOKEN: ${{ steps.release-app.outputs.token }}
@@ -55,6 +55,7 @@ jobs:
       - name: Verify retained artifacts, publish, and confirm stable updater feed
         env:
           GH_TOKEN: ${{ github.token }}
+          NOVAOS_TAG_TOKEN: ${{ steps.release-app.outputs.token }}
         run: |
           PYTHONDONTWRITEBYTECODE=1 python3 scripts/publish_verified_novaos.py \
             --candidate .novaos-stable-candidate.json --work "$RUNNER_TEMP/novaos-stable-publication" \

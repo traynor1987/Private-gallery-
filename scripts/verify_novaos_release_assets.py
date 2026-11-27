@@ -17,22 +17,19 @@ def text(path):
     return path.read_text().strip()
 
 
-def verify(args):
+def verify_payload(args):
     if not re.fullmatch(r"v\d+(?:\.\d+){2,3}", args.tag):
         raise ValueError("A numbered stable release tag is required")
     if not re.fullmatch(r"[a-f0-9]{40}", args.source):
         raise ValueError("A frozen source commit is required")
-    resolved = subprocess.check_output(
-        ["git", "rev-parse", "--verify", f"refs/tags/{args.tag}^{{commit}}"], text=True,
-    ).strip()
-    if resolved != args.source:
-        raise ValueError("Release tag does not resolve to verified source")
     manifest = json.loads(text(args.assets / f"{APK_NAME.removesuffix('.apk')}.metadata.json"))
     apk = args.assets / APK_NAME
     version = args.tag[1:]
     code = manifest.get("versionCode")
     if type(code) is not int or code <= args.baseline_code:
         raise ValueError("Production versionCode must advance")
+    if getattr(args, "version_code", code) != code:
+        raise ValueError("Production versionCode differs from the approved release")
     expected = inspect(apk, args.tools.resolve(), code, version)
     if manifest != {
         "package": RECEIPT["package"], "versionName": version, "versionCode": code,
@@ -57,6 +54,17 @@ def verify(args):
         raise ValueError("Release notes are required")
     subprocess.run([str(args.tools.resolve() / "zipalign"), "-c", "-P", "16", "4", str(apk)], check=True)
     return expected
+
+
+def verify(args):
+    if not re.fullmatch(r"v\d+(?:\.\d+){2,3}", args.tag):
+        raise ValueError("A numbered stable release tag is required")
+    resolved = subprocess.check_output(
+        ["git", "rev-parse", "--verify", f"refs/tags/{args.tag}^{{commit}}"], text=True,
+    ).strip()
+    if resolved != args.source:
+        raise ValueError("Release tag does not resolve to verified source")
+    return verify_payload(args)
 
 
 def main():
