@@ -31,6 +31,8 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import uk.co.traynor.privategallery.core.backup.BackupFixture62
+import org.json.JSONObject
+import uk.co.traynor.privategallery.core.backup.PortableArchive
 import uk.co.traynor.privategallery.core.backup.BackupFile62
 import org.junit.Rule
 import org.junit.Test
@@ -111,9 +113,19 @@ class NovaHealthMindUiTest {
             val expected = HealthRecords(goal = "Synthetic recovery goal")
                 .withMeasurement(LocalDate.of(2026, 1, 12), HealthMetric.SLEEP, checkNotNull(HealthMetric.SLEEP.parse("400")))
             BackupFixture62(File(root, "source"), key = ByteArray(32) { 11 }).use { source ->
+                val legacy = BackupFile62(File(root, "legacy"))
+                source.coordinator.export(legacy, passphrase.copyOf())
+                assertTrue(archiveMinimumReader(legacy, passphrase) in 1..2)
+                BackupFixture62(File(root, "legacy-target"), key = ByteArray(32) { 17 }).use { target ->
+                    target.coordinator.preview(legacy, passphrase.copyOf()).use { target.coordinator.restoreSettings(it) }
+                }
                 HealthRecordStore(source.coordinator.space).update { expected }
                 source.coordinator.export(file, passphrase.copyOf())
             }
+            // Build 97's preview accepts only 1..2. Check the encrypted writer's actual manifest.
+            val minimum = archiveMinimumReader(file, passphrase)
+            assertEquals(3, minimum)
+            assertFalse(minimum in 1..2)
             assertFalse(file.file.readBytes().decodeToString().contains(expected.goal))
             BackupFixture62(File(root, "destination"), key = ByteArray(32) { 33 }).use { destination ->
                 destination.coordinator.preview(file, passphrase.copyOf()).use { plan ->
@@ -144,6 +156,19 @@ class NovaHealthMindUiTest {
         }
         assertEquals(HealthReadResult.PermissionDenied, readHealthMetric(denied, metric))
         }
+    }
+
+    private fun archiveMinimumReader(file: BackupFile62, passphrase: CharArray): Int {
+        var minimum: Int? = null
+        file.read().use { input ->
+            PortableArchive.read(input, passphrase.copyOf()) { metadata, payload ->
+                if (JSONObject(metadata.decodeToString()).getString("category") == "manifest") {
+                    check(minimum == null)
+                    minimum = JSONObject(payload.readBytes().decodeToString()).getInt("minReader")
+                }
+            }
+        }
+        return checkNotNull(minimum)
     }
 
     private fun withSpace(run: (SpaceContext, File, () -> SpaceContext) -> Unit) {
