@@ -5,6 +5,7 @@ import android.content.ContextWrapper
 import android.content.Intent
 import android.content.pm.PackageInfo
 import android.net.Uri
+import android.database.MatrixCursor
 import android.provider.DocumentsContract
 import android.provider.DocumentsContract.Document
 import androidx.activity.ComponentActivity
@@ -27,6 +28,8 @@ import androidx.compose.ui.unit.dp
 import androidx.test.platform.app.InstrumentationRegistry
 import java.io.File
 import java.time.LocalDate
+import java.time.ZoneId
+import java.time.ZoneOffset
 import java.util.UUID
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -40,6 +43,8 @@ import uk.co.traynor.privategallery.core.home2.SpaceContext
 import uk.co.traynor.privategallery.home2.NovaNotesLibrary
 import uk.co.traynor.privategallery.home2.NovaTaskLibrary
 import uk.co.traynor.privategallery.home2.NovaFile
+import uk.co.traynor.privategallery.home2.androidCalendarRows
+import uk.co.traynor.privategallery.home2.calendarDayWindow
 import uk.co.traynor.privategallery.home2.novaFileShareIntent
 import uk.co.traynor.privategallery.ui.BrowserViewportRule
 
@@ -102,6 +107,28 @@ class NovaUtilitiesApi37Test {
                 assertEquals(privateText, NovaTaskLibrary(space).read().tasks.single().description)
             } }
         } finally { root.deleteRecursively() }
+    }
+
+    @Test fun calendarLimitsTransientDeviceEventsAndUsesUtcForAllDay() {
+        val day = LocalDate.of(2026, 3, 29)
+        val zone = ZoneId.of("Europe/London")
+        val local = calendarDayWindow(day, zone)
+        val utc = calendarDayWindow(day, ZoneOffset.UTC)
+        assertEquals(23L * 3_600_000, local.end - local.begin)
+        MatrixCursor(arrayOf("begin", "end", "allDay", "title")).use { rows ->
+            rows.addRow(arrayOf(local.begin - 1L, local.begin, 0, "Yesterday"))
+            rows.addRow(arrayOf(utc.begin, utc.end, 1, "All day event"))
+            rows.addRow(arrayOf(local.end, local.end + 1L, 0, "Tomorrow"))
+            rows.addRow(arrayOf(local.end, utc.end, 1, "UTC-only overlap"))
+            repeat(40) { rows.addRow(arrayOf(local.begin, local.begin + 1L, 0, "Timed event")) }
+            val result = androidCalendarRows(rows, local, utc, zone) { true }
+            assertTrue(result.truncated)
+            assertEquals(32, result.events.size)
+            assertEquals(listOf("All day event", "UTC-only overlap"), result.events.take(2).map { it.title })
+            assertTrue(result.events.drop(2).all { it.title == "Timed event" })
+            rows.moveToPosition(-1)
+            assertTrue(runCatching { androidCalendarRows(rows, local, utc, zone) { false } }.isFailure)
+        }
     }
 
     @Test fun selectedDocumentSharesOnlyItsReadGrant() {

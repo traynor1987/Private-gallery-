@@ -194,6 +194,7 @@ internal fun NovaCalendarScreen(
                         CalendarDates(focus, mode, onDate = { focus = it })
                     }
                 }
+                if (!hidden && sendToAndroidCalendar != null) NovaAndroidCalendarDay(space, focus, displayZone)
                 val weekStart = focus.with(TemporalAdjusters.previousOrSame(WeekFields.of(Locale.getDefault()).firstDayOfWeek))
                 val dates = when (mode) {
                     CalendarView.MONTH, CalendarView.DAY -> listOf(focus)

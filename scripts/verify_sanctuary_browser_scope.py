@@ -290,6 +290,10 @@ contacts, = [permission for permission in after.findall("uses-permission")
              if permission.get(ANDROID + "name") == "android.permission.READ_CONTACTS"]
 assert contacts.attrib == {ANDROID + "name": "android.permission.READ_CONTACTS"} and len(contacts) == 0
 after.remove(contacts)
+calendar_read, = [permission for permission in after.findall("uses-permission")
+                  if permission.get(ANDROID + "name") == "android.permission.READ_CALENDAR"]
+assert calendar_read.attrib == {ANDROID + "name": "android.permission.READ_CALENDAR"} and len(calendar_read) == 0
+after.remove(calendar_read)
 
 review_later, = [node for node in application.findall("receiver")
                  if node.get(ANDROID + "name") == ".launcher.GuardianReviewLaterReceiver"]
