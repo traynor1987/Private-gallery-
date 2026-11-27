@@ -2,7 +2,9 @@ package uk.co.traynor.privategallery.novaos2
 
 import android.os.Debug
 import android.os.SystemClock
+import android.view.WindowInsets
 import androidx.activity.ComponentActivity
+import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.MutableState
@@ -21,6 +23,7 @@ import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.swipe
 import androidx.compose.ui.unit.dp
+import androidx.core.graphics.ColorUtils
 import androidx.core.view.WindowCompat
 import java.io.File
 import org.junit.Assert.assertEquals
@@ -69,7 +72,7 @@ class NovaWaveAIntegrationTest {
         sample("cover_swipe_to_control_ms", SystemClock.elapsedRealtime() - inputStart)
         sample("cover_control_debug_proportional_kib", Debug.getPss())
         assertBarIcons(darkIcons = true)
-        captureNovaSystem("wave-a-control-cover-swiped")
+        captureControlGesture("wave-a-control-cover-swiped")
 
         compose.runOnIdle {
             launcher.value = launcher.value.copy(appearance = launcher.value.appearance.copy(theme = LauncherTheme.DARK))
@@ -92,7 +95,7 @@ class NovaWaveAIntegrationTest {
         compose.onNodeWithContentDescription("Open Control Centre").performClick()
         awaitControl(wide = true)
         sample("inner_tap_to_control_ms", SystemClock.elapsedRealtime() - inputStart)
-        captureNovaSystem("wave-a-control-inner-from-home")
+        captureControlGesture("wave-a-control-inner-from-home")
 
         compose.runOnIdle { width.value = 375 }
         awaitControl(wide = false)
@@ -135,7 +138,21 @@ class NovaWaveAIntegrationTest {
         }
     }
 
+    private fun captureControlGesture(name: String) {
+        val bottomInset = compose.runOnIdle {
+            val insets = checkNotNull(compose.activity.window.decorView.rootWindowInsets)
+            insets.getInsets(WindowInsets.Type.navigationBars()).bottom
+        }
+        check(bottomInset > 0) { "The visible Android navigation inset is required for contrast evidence" }
+        captureNovaSystem(name) { image ->
+            (image.height - bottomInset until image.height).maxOf { y ->
+                ColorUtils.calculateContrast(image.getPixel(image.width / 2, y), image.getPixel(image.width / 4, y))
+            }
+        }
+    }
+
     private fun show(width: MutableState<Int>, launcher: MutableState<NovaLauncherState>, protected: MutableState<Boolean>) {
+        compose.runOnUiThread { compose.activity.enableEdgeToEdge() }
         val actions = LauncherUiActions(save = { launcher.value = it; true }, launchApp = {}, launchShortcut = {},
             openWorkspace = {}, selectHome = {}, continueWithCurrentHome = {}, emergencyPhone = {}, reviewSanctuary = {},
             setOutsideProtection = {}, chooseWallpaper = {}, addWidget = {}, removeWidget = {}, exportLayout = {},

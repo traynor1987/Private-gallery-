@@ -43,7 +43,7 @@ Once the owner approves the protected release process and the verified productio
 
 ## Protected release preparation
 
-The proposed identity is `2.0.0`, versionCode `99`, subject to the release order and a fresh availability check. The development candidate retains the existing version fields. Build 98 reserves code 98 in PR #77. If Wave A reaches the owner first, the owner must decide the sequence or give the later Build 98 work a code above 99.
+Wave A targets `2.0.0`, versionCode `99`. Build 97 is the published upgrade baseline. PR #77 retains its Build 98 history. A future Nova Intelligence release must use both a versionCode above 99 and a semantic version above `2.0.0` for the production updater to offer it.
 
 The stable Build 97 APK SHA-256 is `75760970c6dcc00f560cbb5493b67a6bbc190397948dabb32e50e4753e12c988` and the original signing certificate SHA-256 is `94f2bfc6567f26d067d29077111cfd0ce86d38263c642ad115e43365f05b0d17`.
 
