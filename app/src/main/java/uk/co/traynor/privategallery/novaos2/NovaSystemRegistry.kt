@@ -4,7 +4,7 @@ package uk.co.traynor.privategallery.novaos2
 internal val novaSystemFeatures: List<NovaSystemFeature> = buildList {
     // THEMES
 
-    // WORKING
+    add(NovaSystemFeature(NovaSystemId.WORKING, "Working Mode", "Start a shift or open the driving dashboard.") { NovaWorkingMode(it) })
 
     // CONTROL
 
