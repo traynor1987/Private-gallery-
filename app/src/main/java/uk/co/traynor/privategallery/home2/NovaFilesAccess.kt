@@ -1,5 +1,7 @@
 package uk.co.traynor.privategallery.home2
 
+import android.content.ClipData
+import android.content.Intent
 import android.content.ContentResolver
 import android.net.Uri
 import android.provider.DocumentsContract
@@ -29,6 +31,19 @@ internal fun acceptsPrimaryVaultFile(mime: String): Boolean =
     mime.length in 1..120 &&
         (mime.startsWith("image/") || mime.startsWith("video/") ||
             uk.co.traynor.privategallery.core.vault.VaultDocumentPolicy.isDocument(mime))
+
+/** Grants the chosen app temporary read access to precisely one selected SAF document. */
+internal fun novaFileShareIntent(uri: Uri, file: NovaFile): Intent {
+    require(uri.scheme == ContentResolver.SCHEME_CONTENT && DocumentsContract.isTreeUri(uri))
+    require(!file.directory && !file.supports(Document.FLAG_VIRTUAL_DOCUMENT))
+    require(DocumentsContract.getDocumentId(uri) == file.id)
+    return Intent(Intent.ACTION_SEND).apply {
+        type = file.mimeType.ifBlank { "application/octet-stream" }
+        putExtra(Intent.EXTRA_STREAM, uri)
+        clipData = ClipData.newRawUri("Selected document", uri)
+        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+    }
+}
 
 internal class NovaFileCleanupException : IOException("The provider retained an incomplete temporary file")
 

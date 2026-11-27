@@ -15,6 +15,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.FilterChip
@@ -29,6 +30,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -39,13 +41,16 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.currentStateAsState
+import java.time.LocalDate
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
+import uk.co.traynor.privategallery.core.home2.SpaceContext
 import uk.co.traynor.privategallery.core.home2.NovaCoreApp
 import uk.co.traynor.privategallery.core.sanctuary.SanctuaryGuardian
 import uk.co.traynor.privategallery.core.sanctuary.SanctuaryStore
@@ -103,7 +108,7 @@ internal fun NovaUtilities(host: NovaSystemHost) {
                         host.decisions[app.component]?.canLaunch != false
                 }.associate { it.packageName to it.label }
                 val workingEnabled = NovaSystemId.WORKING in host.available
-                openNovaPrimaryPresentation(context) { _, back, canUse -> NovaAppUsage(eligible, workingEnabled, back, canUse) }
+                openNovaPrimaryPresentation(context) { space, back, canUse -> NovaAppUsage(space, eligible, workingEnabled, back, canUse) }
             }
         },
         UtilityItem("Nova Update Centre", "Installed versions and verified updater") {
@@ -192,7 +197,7 @@ internal fun novaLastShiftMillis(value: String?): Long? = runCatching {
 }.getOrNull()
 
 @Composable
-private fun NovaAppUsage(apps: Map<String, String>, workingEnabled: Boolean, onBack: () -> Unit, canUse: () -> Boolean) {
+private fun NovaAppUsage(space: SpaceContext, apps: Map<String, String>, workingEnabled: Boolean, onBack: () -> Unit, canUse: () -> Boolean) {
     val context = LocalContext.current
     val lifecycle by LocalLifecycleOwner.current.lifecycle.currentStateAsState()
     val resumed = lifecycle.isAtLeast(Lifecycle.State.RESUMED)
@@ -243,7 +248,7 @@ private fun NovaAppUsage(apps: Map<String, String>, workingEnabled: Boolean, onB
         .testTag("nova-app-usage"), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         CoreWorkspaceHeader("Nova App Usage", true, onBack)
         NovaSystemSection("On-device activity") {
-            Text("Read recent Android foreground events on request. The report stays in memory while this screen is open.")
+            Text("Read Android foreground events on request. You can save daily totals to Primary Space.")
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 FilterChip(selected = days == 1, onClick = { days = 1 }, label = { Text("Today") })
                 FilterChip(selected = days == 7, onClick = { days = 7 }, label = { Text("Last 7 days") })
@@ -260,6 +265,7 @@ private fun NovaAppUsage(apps: Map<String, String>, workingEnabled: Boolean, onB
             if (failed) Text("Activity could not be read.")
             message?.let { Text(it) }
         }
+        if (showDetails) SavedUsageTotals(space, report?.usage?.dailyMillis.orEmpty(), canUse)
         report?.takeIf { showDetails }?.let { snapshot ->
             NovaSystemSection("Screen time") {
                 when {
@@ -287,4 +293,65 @@ private fun NovaAppUsage(apps: Map<String, String>, workingEnabled: Boolean, onB
             }
         }
     }
+}
+
+@Composable
+private fun SavedUsageTotals(space: SpaceContext, daily: Map<LocalDate, Long>, canUse: () -> Boolean) {
+    val scope = rememberCoroutineScope()
+    var history by remember(space) { mutableStateOf<Map<LocalDate, Long>?>(null) }
+    var busy by remember(space) { mutableStateOf(true) }
+    var confirmClear by remember(space) { mutableStateOf(false) }
+    var message by remember(space) { mutableStateOf<String?>(null) }
+    LaunchedEffect(space) {
+        val result = withContext(Dispatchers.IO) { runCatching { NovaUsageHistory.read(space) } }
+        if (canUse()) {
+            history = result.getOrNull()
+            if (result.isFailure) message = "Saved activity history is unavailable."
+            busy = false
+        }
+    }
+    fun update(clear: Boolean) {
+        if (busy || !canUse()) return
+        busy = true
+        scope.launch {
+            val result = withContext(Dispatchers.IO) { runCatching {
+                if (clear) {
+                    NovaUsageHistory.clear(space, canUse)
+                    emptyMap()
+                } else {
+                    NovaUsageHistory.save(space, daily, allowed = {
+                        canUse() && SanctuaryGuardian.hasUsageAccess(space.baseContext)
+                    })
+                }
+            } }
+            if (canUse()) {
+                result.onSuccess { history = it }
+                message = when {
+                    result.isFailure -> "Saved activity history could not be updated."
+                    clear -> "Saved totals deleted."
+                    else -> "Daily totals saved."
+                }
+                busy = false
+            }
+        }
+    }
+    NovaSystemSection("Saved daily totals") {
+        Text("Save up to 31 observed dates on this device. Saving again replaces the totals for those dates.")
+        OutlinedButton(onClick = { update(false) }, enabled = !busy && history != null && daily.isNotEmpty()) {
+            Text("Save observed totals")
+        }
+        history?.entries?.sortedByDescending { it.key }?.forEach { (day, millis) ->
+            Text("${day.format(DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM))} · ${utilityDuration(millis)}")
+        }
+        if (history?.isEmpty() == true) Text("No saved totals.")
+        if (!history.isNullOrEmpty()) TextButton(onClick = { confirmClear = true }, enabled = !busy) {
+            Text("Delete saved totals")
+        }
+        message?.let { Text(it) }
+    }
+    if (confirmClear) AlertDialog(onDismissRequest = { confirmClear = false },
+        title = { Text("Delete saved daily totals?") },
+        text = { Text("This clears the activity history you saved in NovaOS.") },
+        confirmButton = { TextButton({ confirmClear = false; update(true) }) { Text("Delete") } },
+        dismissButton = { TextButton({ confirmClear = false }) { Text("Cancel") } })
 }

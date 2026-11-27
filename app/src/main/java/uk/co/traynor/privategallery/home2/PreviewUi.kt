@@ -437,6 +437,11 @@ private val lightColors=lightColorScheme(primary=Color(0xFF285F65),secondary=Col
            key(filesPickerRevision) {
             NovaFilesScreen(space, onBack=closeCoreApp, onChooseFolder=filesPicker?.chooseFolder,
              pickerMessage=filesPickerMessage,onImportPrimaryFile=onImportPrimaryFile,
+             openExternal={ intent ->
+              lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED) && space.current() &&
+               uk.co.traynor.privategallery.intelligence.intelligencePrivateAllowed(application) &&
+               runCatching { localContext.startActivity(intent) }.isSuccess
+             },
              onOpenNote={ id -> openCoreLink(NovaCoreLink.Record(NovaCoreApp.NOTES,id)) })
            }
           }
