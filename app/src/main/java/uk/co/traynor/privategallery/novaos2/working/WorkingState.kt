@@ -14,6 +14,7 @@ private const val MPH_PER_MPS = 2.23693629
 
 internal enum class WorkingShortcut(val label: String, val knownPackages: Set<String> = emptySet()) {
     NAVIGATION("Navigation", setOf("com.google.android.apps.maps")),
+    ROAD_INFORMATION("Road information", setOf("uk.co.traynor.speedbuddy")),
     DOMINOS("Domino’s delivery"),
     SHIFT_TRACKER("Shift Tracker", setOf(SHIFT_TRACKER_PACKAGE)),
     UBER("Uber Driver", setOf("com.ubercab.driver")),

@@ -39,6 +39,8 @@ class WorkingStateTest {
         assertEquals(large, trackerSummaryWidget(listOf(medium, large), wide = true))
         assertNull(trackerSummaryWidget(listOf(medium.copy(provider = medium.provider.replace(".stable/", ".stable.debug/")),
             medium.copy(provider = medium.provider.replace("MediumShiftWidget", "SmallShiftWidget"))), wide = false))
+        assertEquals(setOf("uk.co.traynor.speedbuddy"), WorkingShortcut.ROAD_INFORMATION.knownPackages)
+        assertEquals(setOf("com.google.android.apps.maps"), WorkingShortcut.NAVIGATION.knownPackages)
         assertEquals(setOf(SHIFT_TRACKER_PACKAGE), WorkingShortcut.SHIFT_TRACKER.knownPackages)
     }
 

@@ -33,3 +33,7 @@ On the Fold, while parked:
 4. Check the vehicle driving option both with a manually started shift and with a scheduled shift. Verify one clock, continuous totals, manual override and no automatic switch from a different device.
 
 Reviewed Tracker source: [ShiftWidgets.kt](https://github.com/traynor1987/shift-tracker-android/blob/2a731182da1ca488bab274c8e87712b3808c95e7/android-shell/app/src/main/java/site/chatgpt/traynor1987/dominosshifttracker/ShiftWidgets.kt). Release APK SHA-256: `8000f661c149a2cd7e33b8230d32d52d85cd12a1a23c1f190ec916fb94b7c620`. Signing-certificate SHA-256: `fdfd0db43b2d1ef9a7516aad5c78f62a16c1f6ae048eccb8c7024f3ceda5d4e1`.
+
+## Road information
+
+The installed Speed Buddy app can display its own road information through a large Driving Mode shortcut. Navigation remains assigned independently to Google Maps or the owner's chosen app. Both shortcuts pass through Nova's usual launcher and Sanctuary admission. Select a different road-information app while parked if desired. The Speed Buddy manifest at [6584c5a](https://github.com/traynor1987/Speedbuddy/blob/6584c5a7575fd72e7fd8d7d4b9f4d2cb551d25b1/app/src/main/AndroidManifest.xml) exposes a launcher entry and keeps its DrivingService and update FileProvider private. It supplies no cross-app road-limit or camera observation feed. Nova shows its own source as unavailable and does not upload location or copy Speed Buddy’s databases.

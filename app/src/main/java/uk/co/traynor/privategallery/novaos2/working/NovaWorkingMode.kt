@@ -234,7 +234,10 @@ internal fun NovaWorkingMode(host: NovaSystemHost) {
                         OutlinedButton(onClick = { host.openSystemSettings(Settings.ACTION_LOCATION_SOURCE_SETTINGS) },
                             modifier = Modifier.heightIn(min = 56.dp)) { Text("Location settings") }
                     }
-                    Text("Speed limits and camera alerts require a supported data source.", style = MaterialTheme.typography.bodySmall)
+                    val roadApp = target(WorkingShortcut.ROAD_INFORMATION)
+                    Text("NovaOS has no verified road-limit or camera feed.", style = MaterialTheme.typography.bodySmall)
+                    if (roadApp != null) DrivingAction("Road information · ${roadApp.label}",
+                        action = { open(WorkingShortcut.ROAD_INFORMATION) }, modifier = Modifier.fillMaxWidth())
                     OutlinedButton(onClick = { save(current.copy(active = session.copy(driving = false))) }, enabled = !busy,
                         modifier = Modifier.heightIn(min = 56.dp)) { Text("Leave Driving Mode") }
                 } else {
