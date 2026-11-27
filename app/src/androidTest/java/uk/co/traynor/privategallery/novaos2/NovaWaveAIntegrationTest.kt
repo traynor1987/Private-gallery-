@@ -31,6 +31,7 @@ import uk.co.traynor.privategallery.core.sanctuary.SanctuaryLauncherPolicy.Decis
 import uk.co.traynor.privategallery.launcher.LauncherApp
 import uk.co.traynor.privategallery.launcher.LauncherItem
 import uk.co.traynor.privategallery.launcher.LauncherLayout
+import uk.co.traynor.privategallery.launcher.LauncherLook
 import uk.co.traynor.privategallery.launcher.LauncherTheme
 import uk.co.traynor.privategallery.launcher.LauncherUiActions
 import uk.co.traynor.privategallery.launcher.NovaLauncherScreen
@@ -84,7 +85,8 @@ class NovaWaveAIntegrationTest {
 
     @Test fun innerControlSurvivesWidthChangeAndOpensRegisteredThemes() = withDefaultControls {
         val width = mutableStateOf(820)
-        val launcher = mutableStateOf(initial)
+        val light = initial.copy(appearance = initial.appearance.copy(theme = LauncherTheme.LIGHT))
+        val launcher = mutableStateOf(light)
         show(width, launcher, mutableStateOf(false))
         val inputStart = SystemClock.elapsedRealtime()
         compose.onNodeWithContentDescription("Open Control Centre").performClick()
@@ -106,8 +108,12 @@ class NovaWaveAIntegrationTest {
         apply.performClick()
         compose.onNodeWithText("Theme applied.").performScrollTo().assertIsDisplayed()
         sample("inner_apply_theme_ms", SystemClock.elapsedRealtime() - applyStart)
+        assertBarIcons(darkIcons = true)
+        compose.onNodeWithText("Appearance preset").performScrollTo()
+        captureNovaSystem("wave-a-studio-inner-from-home")
         compose.runOnIdle {
-            assertEquals(initial, launcher.value.copy(appearance = initial.appearance))
+            assertEquals(LauncherLook.ROUNDED, launcher.value.appearance.studio.look)
+            assertEquals(light, launcher.value.copy(appearance = light.appearance))
         }
     }
 

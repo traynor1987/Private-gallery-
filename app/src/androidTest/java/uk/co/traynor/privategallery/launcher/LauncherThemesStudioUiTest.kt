@@ -32,6 +32,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.RuleChain
+import uk.co.traynor.privategallery.novaos2.NovaSurfaceBarAppearance
 import uk.co.traynor.privategallery.novaos2.captureNovaSystem
 import uk.co.traynor.privategallery.ui.BrowserViewportRule
 
@@ -213,6 +214,7 @@ class LauncherThemesStudioUiTest {
         val apps = previewApps()
         compose.setContent {
             LauncherStudioTheme(state.value.appearance) {
+                NovaSurfaceBarAppearance()
                 Surface(Modifier.fillMaxSize()) {
                     Box(Modifier.fillMaxSize().safeDrawingPadding()) {
                         LauncherThemesStudio(state.value.appearance, apps, {

@@ -126,7 +126,7 @@ internal class NovaSystemConfig(context: Context, key: String) {
 @Composable
 internal fun NovaSystemsPanel(features: List<NovaSystemFeature>, selected: NovaSystemId?, host: NovaSystemHost) {
     val current = features.firstOrNull { it.id == selected }
-    NovaSystemsBarAppearance()
+    NovaSurfaceBarAppearance()
     Surface(Modifier.fillMaxSize().testTag("novaos2-panel")) {
         Column(Modifier.fillMaxSize().safeDrawingPadding(), horizontalAlignment = Alignment.CenterHorizontally) {
             Row(
@@ -166,7 +166,7 @@ internal fun NovaSystemsPanel(features: List<NovaSystemFeature>, selected: NovaS
 }
 
 @Composable
-private fun NovaSystemsBarAppearance() {
+internal fun NovaSurfaceBarAppearance() {
     val window = LocalActivity.current?.window ?: return
     val view = LocalView.current
     val darkIcons = MaterialTheme.colorScheme.surface.luminance() > 0.179f

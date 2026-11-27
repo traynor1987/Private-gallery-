@@ -37,6 +37,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import uk.co.traynor.privategallery.core.sanctuary.SanctuaryLauncherPolicy.Decision
+import uk.co.traynor.privategallery.novaos2.NovaSurfaceBarAppearance
 import uk.co.traynor.privategallery.ui.NovaNavigationHapticsSetting
 import uk.co.traynor.privategallery.ui.navigationHaptic
 import kotlin.math.abs
@@ -85,6 +86,7 @@ internal fun LauncherSettings(
         tap()
         if (category == null) onBack() else onCategory(null)
     }
+    if (category == LauncherSettingsCategory.APPEARANCE) NovaSurfaceBarAppearance()
     LauncherPanel(category?.title ?: "Launcher settings", ::goBack) {
         key(category) {
             LazyColumn(
