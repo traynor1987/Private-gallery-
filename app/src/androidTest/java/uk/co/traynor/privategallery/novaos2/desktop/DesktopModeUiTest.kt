@@ -1,5 +1,7 @@
 package uk.co.traynor.privategallery.novaos2.desktop
 
+import android.content.ComponentName
+import android.content.Intent
 import androidx.activity.ComponentActivity
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.width
@@ -11,6 +13,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.isDisplayed
+import androidx.compose.ui.test.junit4.StateRestorationTester
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
@@ -18,10 +21,13 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.unit.dp
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.RuleChain
 import uk.co.traynor.privategallery.core.home2.NovaCoreApp
+import uk.co.traynor.privategallery.launcher.LauncherApp
 import uk.co.traynor.privategallery.launcher.LauncherUiActions
 import uk.co.traynor.privategallery.launcher.NovaLauncherState
 import uk.co.traynor.privategallery.novaos2.LauncherNovaSystemsActions
@@ -67,13 +73,79 @@ class DesktopModeUiTest {
         } finally { persisted.clear() }
     }
 
-    private fun desktopHost(wide: Boolean, openApp: (NovaCoreApp) -> Unit) = NovaSystemHost(
-        NovaLauncherState(), emptyList(), emptyMap(),
+    @Test fun AndroidPlacementUsesLauncherIntentAndDeniesUnavailableOrPrivateTargets() {
+        val component = ComponentName("example.desktop", "example.desktop.Main")
+        val adjacent = desktopLauncherIntent(component, adjacent = true)
+        assertEquals(component, adjacent.component)
+        assertTrue(adjacent.hasCategory(Intent.CATEGORY_LAUNCHER))
+        assertEquals(Intent.ACTION_MAIN, adjacent.action)
+        assertTrue(adjacent.flags and Intent.FLAG_ACTIVITY_NEW_TASK != 0)
+        assertTrue(adjacent.flags and Intent.FLAG_ACTIVITY_LAUNCH_ADJACENT != 0)
+        assertFalse(desktopLauncherIntent(component, adjacent = false).flags and Intent.FLAG_ACTIVITY_LAUNCH_ADJACENT != 0)
+        val activity = compose.activity
+        val synthetic = LauncherApp(component.flattenToString(), component.packageName, "Unavailable")
+        assertFalse(activity.startDesktopApp(synthetic, DesktopPlacement.Adjacent))
+        assertFalse(activity.startDesktopApp(synthetic.copy(packageName = activity.packageName), DesktopPlacement.External(9)))
+    }
+
+    @Test fun taskbarChecksForegroundAndReportsRejectedPlacement() {
+        val app = LauncherApp("demo.desktop/.Viewer", "demo.desktop", "Pinned viewer")
+        var active = true
+        var requests = 0
+        val host = desktopHost(wide = true, apps = listOf(app), foreground = { active }, placed = { target, placement ->
+            assertEquals(app, target)
+            assertEquals(DesktopPlacement.Adjacent, placement)
+            requests++
+            false
+        }) { }
+        compose.setContent { MaterialTheme { NovaDesktopMode(host) } }
+        val beside = compose.onNodeWithText("Open beside Nova")
+        compose.waitUntil(10_000) { beside.isDisplayed() }
+        beside.performClick()
+        compose.onNodeWithText("Pinned viewer").performClick()
+        compose.onNodeWithText("Could not open Pinned viewer in that location.").assertIsDisplayed()
+        compose.runOnIdle {
+            assertEquals(1, requests)
+            active = false
+            assertFalse(host.launchPlaced(app, DesktopPlacement.Adjacent))
+            assertEquals(1, requests)
+        }
+    }
+
+    @Test fun savedPresetAndCoverPanelSurviveStateRestoration() {
+        val config = NovaSystemConfig(compose.activity, "desktop-mode")
+        config.clear()
+        try {
+            val restore = StateRestorationTester(compose)
+            restore.setContent {
+                MaterialTheme { NovaDesktopMode(desktopHost(false) {}) }
+            }
+            val gaming = compose.onNodeWithText("Gaming")
+            compose.waitUntil(10_000) { gaming.isDisplayed() }
+            gaming.performClick()
+            compose.waitUntil(10_000) { DesktopSettings.decode(config.read()).preset == DesktopPreset.GAMING }
+            compose.onNodeWithText("Nova apps").performClick()
+            val notes = compose.onNodeWithText("Nova Notes")
+            notes.performScrollTo().assertIsDisplayed()
+            restore.emulateSavedInstanceStateRestore()
+            compose.waitUntil(10_000) { compose.onNodeWithText("Gaming").isDisplayed() }
+            notes.performScrollTo().assertIsDisplayed()
+        } finally { config.clear() }
+    }
+
+    private fun desktopHost(
+        wide: Boolean,
+        apps: List<LauncherApp> = emptyList(),
+        foreground: () -> Boolean = { true },
+        placed: (LauncherApp, DesktopPlacement) -> Boolean = { _, _ -> false },
+        openApp: (NovaCoreApp) -> Unit,
+    ) = NovaSystemHost(
+        NovaLauncherState(), apps, emptyMap(),
         LauncherUiActions(save = { true }, launchApp = {}, launchShortcut = {}, openWorkspace = {},
             selectHome = {}, continueWithCurrentHome = {}, emergencyPhone = {}, reviewSanctuary = {},
             setOutsideProtection = {}, chooseWallpaper = {}, addWidget = {}, removeWidget = {},
             exportLayout = {}, importLayout = {}, renderWidget = { _, _ -> }),
         wide = wide, available = setOf(NovaSystemId.DESKTOP), onBack = {}, open = { false },
-        platform = LauncherNovaSystemsActions({ true }, { false }, { app -> openApp(app); true }, { false }, { false }),
+        platform = LauncherNovaSystemsActions(foreground, { false }, { app -> openApp(app); true }, { false }, { false }, placed),
     )
 }

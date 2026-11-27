@@ -1,13 +1,11 @@
 package uk.co.traynor.privategallery.novaos2
 
 import android.content.Context
-import android.content.pm.PackageManager
 import android.hardware.display.DisplayManager
 import android.net.Uri
 import android.os.Handler
 import android.os.Looper
 import android.provider.OpenableColumns
-import android.view.Display
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -21,6 +19,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
@@ -93,7 +92,8 @@ import uk.co.traynor.privategallery.novaos2.desktop.DESKTOP_MAX_COMPONENT_LENGTH
 import uk.co.traynor.privategallery.novaos2.desktop.DESKTOP_MAX_PINS
 import uk.co.traynor.privategallery.novaos2.desktop.DESKTOP_MAX_RATIO
 import uk.co.traynor.privategallery.novaos2.desktop.DESKTOP_MIN_RATIO
-import uk.co.traynor.privategallery.novaos2.desktop.DesktopLayout
+import uk.co.traynor.privategallery.novaos2.desktop.DesktopPlacement
+import uk.co.traynor.privategallery.novaos2.desktop.publicDesktopDisplays
 import uk.co.traynor.privategallery.novaos2.desktop.DesktopPanel
 import uk.co.traynor.privategallery.novaos2.desktop.DesktopPreset
 import uk.co.traynor.privategallery.novaos2.desktop.DesktopSettings
@@ -107,6 +107,8 @@ internal fun NovaDesktopMode(host: NovaSystemHost) {
     var settings by remember { mutableStateOf<DesktopSettings?>(null) }
     var busy by remember { mutableStateOf(false) }
     var notice by remember { mutableStateOf<String?>(null) }
+    var launchDestination by remember { mutableStateOf<DesktopPlacement?>(null) }
+    val externalDisplays = desktopDisplays()
     var pinning by remember { mutableStateOf(false) }
     var changePanel by remember { mutableStateOf<Boolean?>(null) }
     var coverLeft by rememberSaveable { mutableStateOf(true) }
@@ -196,7 +198,7 @@ internal fun NovaDesktopMode(host: NovaSystemHost) {
         }
     }
 
-    Column(Modifier.fillMaxWidth().focusRequester(focus).onPreviewKeyEvent { event ->
+    Column(Modifier.fillMaxSize().focusRequester(focus).onPreviewKeyEvent { event ->
         if (event.type != KeyEventType.KeyUp || !event.isAltPressed || !host.foregroundAllowed()) return@onPreviewKeyEvent false
         val preset = when (event.key) {
             Key.One -> DesktopPreset.PRODUCTIVITY
@@ -206,57 +208,91 @@ internal fun NovaDesktopMode(host: NovaSystemHost) {
         }
         save(current.copy(preset = preset))
         true
-    }.focusable().verticalScroll(rememberScrollState()).padding(16.dp).testTag("desktop-workspace"),
-        verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        NovaSystemSection("Workspaces") {
-            Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                DesktopPreset.entries.forEach { preset ->
-                    FilterChip(selected = current.preset == preset, enabled = !busy,
-                        onClick = { save(current.copy(preset = preset)) }, label = { Text(preset.label) })
-                }
-            }
-            Text("Keyboard  Alt+1, Alt+2 or Alt+3", style = MaterialTheme.typography.bodySmall)
-        }
-
-        BoxWithConstraints(Modifier.fillMaxWidth()) {
-            if (host.wide && maxWidth >= 640.dp) {
-                val usablePx = with(LocalDensity.current) { (maxWidth - 48.dp).toPx() }
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Row(Modifier.fillMaxWidth().testTag("desktop-split"), verticalAlignment = Alignment.Top) {
-                        Box(Modifier.weight(previewRatio / 100f)) { openSection(true) }
-                        DesktopResizeHandle(usablePx, previewRatio, layout.splitPercent, !busy,
-                            onResize = { next -> previewRatio = next },
-                            onSave = { next -> save(current.update(layout.resize(next))) })
-                        Box(Modifier.weight((100 - previewRatio) / 100f)) { openSection(false) }
-                    }
-                    Row(Modifier.fillMaxWidth(), Arrangement.Center, Alignment.CenterVertically) {
-                        TextButton(enabled = !busy && layout.splitPercent > DESKTOP_MIN_RATIO,
-                            onClick = { save(current.update(layout.resize(layout.splitPercent - 5))) }) { Text("Narrow left") }
-                        Text("${layout.splitPercent} / ${100 - layout.splitPercent}", Modifier.testTag("desktop-split-ratio"))
-                        TextButton(enabled = !busy && layout.splitPercent < DESKTOP_MAX_RATIO,
-                            onClick = { save(current.update(layout.resize(layout.splitPercent + 5))) }) { Text("Widen left") }
-                    }
-                }
-            } else Column(verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.testTag("desktop-compact")) {
+    }.focusable().testTag("desktop-workspace")) {
+        Column(Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()).padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            NovaSystemSection("Workspaces") {
                 Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    FilterChip(selected = coverLeft, onClick = { coverLeft = true }, label = { Text(layout.left.label) })
-                    FilterChip(selected = !coverLeft, onClick = { coverLeft = false }, label = { Text(layout.right.label) })
+                    DesktopPreset.entries.forEach { preset ->
+                        FilterChip(selected = current.preset == preset, enabled = !busy,
+                            onClick = { save(current.copy(preset = preset)) }, label = { Text(preset.label) })
+                    }
                 }
-                openSection(coverLeft)
+                Text("Keyboard  Alt+1, Alt+2 or Alt+3", style = MaterialTheme.typography.bodySmall)
+            }
+
+            BoxWithConstraints(Modifier.fillMaxWidth()) {
+                if (host.wide && maxWidth >= 640.dp) {
+                    val usablePx = with(LocalDensity.current) { (maxWidth - 48.dp).toPx() }
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Row(Modifier.fillMaxWidth().testTag("desktop-split"), verticalAlignment = Alignment.Top) {
+                            Box(Modifier.weight(previewRatio / 100f)) { openSection(true) }
+                            DesktopResizeHandle(usablePx, previewRatio, layout.splitPercent, !busy,
+                                onResize = { next -> previewRatio = next },
+                                onSave = { next -> save(current.update(layout.resize(next))) })
+                            Box(Modifier.weight((100 - previewRatio) / 100f)) { openSection(false) }
+                        }
+                        Row(Modifier.fillMaxWidth(), Arrangement.Center, Alignment.CenterVertically) {
+                            TextButton(enabled = !busy && layout.splitPercent > DESKTOP_MIN_RATIO,
+                                onClick = { save(current.update(layout.resize(layout.splitPercent - 5))) }) { Text("Narrow left") }
+                            Text("${layout.splitPercent} / ${100 - layout.splitPercent}", Modifier.testTag("desktop-split-ratio"))
+                            TextButton(enabled = !busy && layout.splitPercent < DESKTOP_MAX_RATIO,
+                                onClick = { save(current.update(layout.resize(layout.splitPercent + 5))) }) { Text("Widen left") }
+                        }
+                    }
+                } else Column(verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.testTag("desktop-compact")) {
+                    Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        FilterChip(selected = coverLeft, onClick = { coverLeft = true }, label = { Text(layout.left.label) })
+                        FilterChip(selected = !coverLeft, onClick = { coverLeft = false }, label = { Text(layout.right.label) })
+                    }
+                    openSection(coverLeft)
+                }
             }
         }
-        NovaSystemSection("Taskbar") {
-            Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Button(onClick = { launchCore(NovaCoreApp.NOTES) }) { Text("Notes") }
-                Button(onClick = { launchCore(NovaCoreApp.FILES) }) { Text("Files") }
-                pinnedApps.mapNotNull { it.second }.forEach { app ->
-                    Button(onClick = { launchPinned(app) }) { Text(app.label, maxLines = 1) }
+        Surface(color = MaterialTheme.colorScheme.surfaceContainerHigh, modifier = Modifier.fillMaxWidth()) {
+            Column(Modifier.padding(horizontal = 12.dp, vertical = 4.dp)) {
+                Text("Taskbar", style = MaterialTheme.typography.labelLarge)
+                Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Button(onClick = { launchCore(NovaCoreApp.NOTES) }) { Text("Notes") }
+                    Button(onClick = { launchCore(NovaCoreApp.FILES) }) { Text("Files") }
+                    pinnedApps.mapNotNull { it.second }.forEach { app ->
+                        Button(onClick = { launchPinned(app) }) { Text(app.label, maxLines = 1) }
+                    }
+                }
+                Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    TextButton(enabled = personalApps.isNotEmpty(), onClick = { launchDestination = DesktopPlacement.Adjacent }) {
+                        Text("Open beside Nova")
+                    }
+                    externalDisplays.forEach { (id, name) ->
+                        TextButton(enabled = personalApps.isNotEmpty(), onClick = { launchDestination = DesktopPlacement.External(id) }) {
+                            Text("Open on $name")
+                        }
+                    }
+                }
+                notice?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.secondary) }
+            }
+        }
+    }
+
+    launchDestination?.let { destination ->
+        val destinationPresent = destination !is DesktopPlacement.External || externalDisplays.any { it.first == destination.displayId }
+        AlertDialog(onDismissRequest = { launchDestination = null }, title = { Text("Choose an app") }, text = {
+            Column {
+                Text(when {
+                    !destinationPresent -> "The selected display disconnected."
+                    destination == DesktopPlacement.Adjacent -> "Android chooses the final layout when you request split screen."
+                    else -> "Android checks whether this app can open on the selected display."
+                })
+                if (destinationPresent) LazyColumn(Modifier.heightIn(max = 320.dp)) {
+                    items(personalApps, key = LauncherApp::component) { app ->
+                        TextButton(onClick = {
+                            launchDestination = null
+                            notice = if (host.launchPlaced(app, destination)) null else "Could not open ${app.label} in that location."
+                        }, modifier = Modifier.fillMaxWidth()) { Text(app.label) }
+                    }
                 }
             }
-            val displays = desktopDisplayStatus()
-            Text(displays, style = MaterialTheme.typography.bodySmall)
-        }
-        notice?.let { Text(it, color = MaterialTheme.colorScheme.secondary) }
+        }, confirmButton = { TextButton(onClick = { launchDestination = null }) { Text("Close") } })
     }
 
     if (pinning) {
@@ -406,29 +442,24 @@ private fun describeDesktopFile(context: Context, uri: Uri): DesktopFileSelectio
 }.getOrNull()
 
 @Composable
-private fun desktopDisplayStatus(): String {
+private fun desktopDisplays(): List<Pair<Int, String>> {
     val context = LocalContext.current
     val lifecycle = LocalLifecycleOwner.current.lifecycle
-    if (!context.packageManager.hasSystemFeature(PackageManager.FEATURE_ACTIVITIES_ON_SECONDARY_DISPLAYS)) {
-        return "Android does not support launching activities on a second display here."
-    }
-    val manager = context.getSystemService(DisplayManager::class.java)
-        ?: return "Android display status unavailable."
-    fun status(): String = if (manager.displays.none {
-            it.displayId != Display.DEFAULT_DISPLAY && it.isValid && (it.flags and Display.FLAG_PRIVATE) == 0
-        }) "No public secondary display detected."
-        else "Secondary display available. Use Android’s window controls to move apps."
-    val result by produceState(status(), manager, lifecycle) {
+    val manager = context.getSystemService(DisplayManager::class.java) ?: return emptyList()
+    fun current() = publicDesktopDisplays(context).map { it.displayId to it.name }
+    val displays by produceState(emptyList<Pair<Int, String>>(), context, manager, lifecycle) {
         lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
-            value = status()
             val listener = object : DisplayManager.DisplayListener {
-                override fun onDisplayAdded(displayId: Int) { value = status() }
-                override fun onDisplayChanged(displayId: Int) { value = status() }
-                override fun onDisplayRemoved(displayId: Int) { value = status() }
+                override fun onDisplayAdded(displayId: Int) { value = current() }
+                override fun onDisplayChanged(displayId: Int) { value = current() }
+                override fun onDisplayRemoved(displayId: Int) { value = current() }
             }
             manager.registerDisplayListener(listener, Handler(Looper.getMainLooper()))
-            try { awaitCancellation() } finally { manager.unregisterDisplayListener(listener) }
+            try {
+                value = current()
+                awaitCancellation()
+            } finally { manager.unregisterDisplayListener(listener) }
         }
     }
-    return result
+    return displays
 }
