@@ -71,6 +71,7 @@ import uk.co.traynor.privategallery.novaos2.working.WorkingLocation
 import uk.co.traynor.privategallery.novaos2.working.WorkingLocationStatus
 import uk.co.traynor.privategallery.novaos2.working.WorkingSchedule
 import uk.co.traynor.privategallery.novaos2.working.WorkingShortcut
+import uk.co.traynor.privategallery.novaos2.working.WorkingTracker
 import uk.co.traynor.privategallery.novaos2.working.WorkingState
 import uk.co.traynor.privategallery.novaos2.working.WorkingVehicleSignal
 import uk.co.traynor.privategallery.novaos2.working.WorkingVehicleSettings
@@ -155,23 +156,23 @@ internal fun NovaWorkingMode(host: NovaSystemHost) {
             }
         }
     }
-    LaunchedEffect(scheduledDay, editingSchedule, editingVehicle, choosingShortcut, lifecycleState, foreground) {
-        if (scheduledDay != null && !editingSchedule && !editingVehicle && choosingShortcut == null &&
-            foreground && lifecycleState == Lifecycle.State.RESUMED) {
-            val now = workClock()
-            save(markObservedVehicle(current.start(now.wallMillis, now.elapsedMillis, scheduledDay))) {
-                message = "Scheduled shift started."
-            }
-        }
-    }
-    LaunchedEffect(vehicleSignal, current.vehicle, session != null, foreground, editingVehicle, editingSchedule, choosingShortcut) {
-        if (!foreground || editingVehicle || editingSchedule || choosingShortcut != null || !workingVehiclePermission(context)) {
-            return@LaunchedEffect
-        }
+    LaunchedEffect(current, scheduledDay, editingSchedule, editingVehicle, choosingShortcut,
+        lifecycleState, vehicleSignal, foreground) {
+        if (!foreground || lifecycleState != Lifecycle.State.RESUMED ||
+            editingSchedule || editingVehicle || choosingShortcut != null ||
+            (session != null && (duration == null || duration == MAX_SHIFT_MILLIS))) return@LaunchedEffect
         val now = workClock()
-        val next = current.syncVehicle(vehicleSignal, now.wallMillis, now.elapsedMillis, occurrence)
+        val scheduled = if (scheduledDay != null) current.start(now.wallMillis, now.elapsedMillis, scheduledDay) else current
+        val next = if (workingVehiclePermission(context)) {
+            scheduled.syncVehicle(vehicleSignal, now.wallMillis, now.elapsedMillis, occurrence)
+        } else scheduled
         if (next != current) save(next) {
-            if (session == null && next.active != null) message = "Shift started from the paired vehicle."
+            when {
+                !driving && next.active?.driving == true -> message = "Driving Mode opened for the paired vehicle."
+                scheduled != current -> message = "Scheduled shift started."
+                session == null && next.active != null -> message = "Shift started from the paired vehicle."
+                else -> Unit
+            }
         }
     }
 
@@ -268,9 +269,8 @@ internal fun NovaWorkingMode(host: NovaSystemHost) {
                     TextButton(enabled = !busy, onClick = { choosingShortcut = slot }) { Text("Choose") }
                 }
             }
-            Text("Shift totals are entered here. No verified Shift Tracker connection is configured.",
-                style = MaterialTheme.typography.bodySmall)
         }
+        if (!driving) WorkingTracker(host)
         if (!driving) NovaSystemSection("Shift schedule") {
             val schedule = current.schedule
             if (schedule == null) Text("Automatic shift start is off.") else {
@@ -318,7 +318,7 @@ internal fun NovaWorkingMode(host: NovaSystemHost) {
         onPermission = { if (host.foregroundAllowed()) vehiclePermission.launch(Manifest.permission.BLUETOOTH_CONNECT) },
         onSettings = { host.openSystemSettings(Settings.ACTION_APPLICATION_DETAILS_SETTINGS) },
         onDismiss = { editingVehicle = false },
-        onSave = { identifier, automatic -> save(current.setVehicle(identifier, automatic)) { editingVehicle = false } },
+        onSave = { identifier, automatic, driveOnConnect -> save(current.setVehicle(identifier, automatic, driveOnConnect)) { editingVehicle = false } },
     )
 }
 
@@ -411,7 +411,7 @@ private fun EditWorkingSchedule(schedule: WorkingSchedule?, busy: Boolean, onDis
     } else null
     AlertDialog(onDismissRequest = onDismiss, title = { Text("Shift schedule") }, text = {
         Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text("Enter local times as HH:mm and choose the days your shift starts. Driving Mode starts manually.")
+            Text("Enter local times as HH:mm and choose the days your shift starts. A schedule starts a working shift.")
             OutlinedTextField(start, { if (it.length <= 5) start = it }, label = { Text("Start time") }, singleLine = true,
                 modifier = Modifier.fillMaxWidth())
             OutlinedTextField(end, { if (it.length <= 5) end = it }, label = { Text("End time") }, singleLine = true,

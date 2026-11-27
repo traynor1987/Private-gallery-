@@ -62,6 +62,7 @@ class WorkingModeUiTest {
             speed.assertIsDisplayed()
             compose.onNodeWithText("Record shift totals").assertDoesNotExist()
             compose.onNodeWithText("Work apps").assertDoesNotExist()
+            compose.onNodeWithText("Shift Tracker summary").assertDoesNotExist()
             captureNovaSystem("working-cover-driving")
             compose.onNodeWithText("Emergency phone").assertIsDisplayed()
 
@@ -72,6 +73,19 @@ class WorkingModeUiTest {
             val state = WorkingState.decode(persisted.read()?.let(::JSONObject))
             assertNotNull(state.previous)
             assertFalse(state.active?.driving ?: false)
+        } finally { persisted.clear() }
+    }
+
+    @Test fun coverMissingTrackerExplainsUnavailableSourceAndOffersNoUnboundWidget() {
+        val persisted = NovaSystemConfig(compose.activity, "working-mode")
+        persisted.clear()
+        try {
+            show()
+            compose.waitUntil(10_000) { compose.onNodeWithTag("start-working-shift").isDisplayed() }
+            compose.onNodeWithText("The stable Shift Tracker app is unavailable in this profile.")
+                .performScrollTo().assertIsDisplayed()
+            compose.onNodeWithText("Show shift summary").assertDoesNotExist()
+            compose.onNodeWithText("Choose a Home widget").assertDoesNotExist()
         } finally { persisted.clear() }
     }
 

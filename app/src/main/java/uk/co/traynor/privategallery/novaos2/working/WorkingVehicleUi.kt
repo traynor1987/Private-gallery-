@@ -7,6 +7,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -44,8 +46,11 @@ internal fun WorkingVehicleSettings(vehicle: WorkingVehicle?, signal: WorkingVeh
             Text("Optionally use a paired vehicle’s audio connection to start a working shift.")
         } else {
             Text(signal.description)
-            Text(if (vehicle.automatic) "Start a shift automatically while Working Mode is open."
-            else "Ask before starting a shift while Working Mode is open.", style = MaterialTheme.typography.bodySmall)
+            Text(when {
+                vehicle.driveOnConnect -> "Open Driving Mode when this vehicle connects while Working Mode is visible."
+                vehicle.automatic -> "Start a shift automatically while Working Mode is open."
+                else -> "Ask before starting a shift while Working Mode is open."
+            }, style = MaterialTheme.typography.bodySmall)
             if (signal == WorkingVehicleSignal.CONNECTED && !vehicle.handled && !vehicle.automatic && noActiveShift) {
                 Button(enabled = !busy, onClick = onStart) { Text("Start with connected vehicle") }
                 TextButton(enabled = !busy, onClick = onDismissOffer) { Text("Skip this connection") }
@@ -59,7 +64,7 @@ internal fun WorkingVehicleSettings(vehicle: WorkingVehicle?, signal: WorkingVeh
 @Composable
 internal fun WorkingVehiclePicker(vehicle: WorkingVehicle?, permissionRevision: Int, busy: Boolean,
                                   allowed: () -> Boolean, onPermission: () -> Unit, onSettings: () -> Unit,
-                                  onDismiss: () -> Unit, onSave: (String, Boolean) -> Unit) {
+                                  onDismiss: () -> Unit, onSave: (String, Boolean, Boolean) -> Unit) {
     val context = LocalContext.current
     val lifecycle by LocalLifecycleOwner.current.lifecycle.currentStateFlow.collectAsState()
     val foreground = allowed() && lifecycle == Lifecycle.State.RESUMED
@@ -68,6 +73,7 @@ internal fun WorkingVehiclePicker(vehicle: WorkingVehicle?, permissionRevision: 
     var loading by remember { mutableStateOf(false) }
     var selected by remember(vehicle) { mutableStateOf(vehicle?.identifier) }
     var automatic by remember(vehicle) { mutableStateOf(vehicle?.automatic ?: false) }
+    var driveOnConnect by remember(vehicle) { mutableStateOf(vehicle?.driveOnConnect ?: false) }
     LaunchedEffect(context, permissionRevision, permission, foreground) {
         paired = null
         if (foreground && permission) {
@@ -80,8 +86,8 @@ internal fun WorkingVehiclePicker(vehicle: WorkingVehicle?, permissionRevision: 
     AlertDialog(onDismissRequest = onDismiss, title = { Text("Choose a paired vehicle") },
         properties = DialogProperties(securePolicy = SecureFlagPolicy.SecureOn),
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("Choose a vehicle you already paired in Android. A connection can start Working Mode. Driving Mode still starts manually.")
+            Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("Choose a vehicle you already paired in Android.")
                 val devices = paired
                 when {
                     !permission -> {
@@ -105,14 +111,21 @@ internal fun WorkingVehiclePicker(vehicle: WorkingVehicle?, permissionRevision: 
                     }
                 }
                 if (permission && !paired.isNullOrEmpty()) Row(verticalAlignment = Alignment.CenterVertically) {
-                    Checkbox(automatic, { automatic = it }, enabled = !busy)
+                    Checkbox(automatic, { enabled ->
+                        automatic = enabled
+                        if (!enabled) driveOnConnect = false
+                    }, enabled = !busy)
                     Text("Start the shift automatically", style = MaterialTheme.typography.bodyMedium)
+                }
+                if (automatic && permission && !paired.isNullOrEmpty()) Row(verticalAlignment = Alignment.CenterVertically) {
+                    Checkbox(driveOnConnect, { driveOnConnect = it }, enabled = !busy)
+                    Text("Also open Driving Mode", style = MaterialTheme.typography.bodyMedium)
                 }
             }
         },
         confirmButton = {
             val choice = selected?.takeIf { id -> paired?.any { it.identifier == id } == true }
-            TextButton(onClick = { choice?.let { onSave(it, automatic) } }, enabled = choice != null && foreground && !busy) {
+            TextButton(onClick = { choice?.let { onSave(it, automatic, automatic && driveOnConnect) } }, enabled = choice != null && foreground && !busy) {
                 Text("Use paired vehicle")
             }
         },

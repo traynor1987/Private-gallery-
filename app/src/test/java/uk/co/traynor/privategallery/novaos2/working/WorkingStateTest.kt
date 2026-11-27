@@ -8,8 +8,40 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertThrows
 import org.junit.Test
+import uk.co.traynor.privategallery.launcher.LauncherWidget
 
 class WorkingStateTest {
+    @Test fun verifiedVehicleCanOpenDrivingOnlyWithSeparateConsentAndRespectsManualExit() {
+        val now = 1_000L
+        val legacy = WorkingState().setVehicle("02:01:02:03:04:05", automatic = true)
+        val encodedLegacy = legacy.encode().also { it.getJSONObject("vehicle").remove("driveOnConnect") }
+        assertFalse(checkNotNull(WorkingState.decode(encodedLegacy).vehicle).driveOnConnect)
+        val configured = legacy.setVehicle("02:01:02:03:04:05", automatic = true, driveOnConnect = true)
+        assertEquals(configured, WorkingState.decode(configured.encode()))
+        assertEquals(configured, configured.syncVehicle(WorkingVehicleSignal.CHECKING, now, now, null))
+        val started = configured.syncVehicle(WorkingVehicleSignal.CONNECTED, now, now, null)
+        assertEquals(true, started.active?.driving)
+        val manualExit = started.copy(active = checkNotNull(started.active).copy(driving = false))
+        assertEquals(manualExit, manualExit.syncVehicle(WorkingVehicleSignal.CONNECTED, now + 1, now + 1, null))
+        val rearmed = manualExit.syncVehicle(WorkingVehicleSignal.DISCONNECTED, now + 2, now + 2, null)
+        assertEquals(true, rearmed.syncVehicle(WorkingVehicleSignal.CONNECTED, now + 3, now + 3, null).active?.driving)
+        assertEquals(now, rearmed.active?.startedAtMillis)
+        assertThrows(IllegalArgumentException::class.java) {
+            configured.setVehicle("02:01:02:03:04:05", automatic = false, driveOnConnect = true)
+        }
+    }
+
+    @Test fun trackerSummaryUsesOnlyExactSupportedProvidersAndPrefersTheActiveDisplay() {
+        val namespace = "site.chatgpt.traynor1987.dominosshifttracker"
+        val medium = LauncherWidget(1, "$namespace.stable/$namespace.MediumShiftWidget", wide = false)
+        val large = LauncherWidget(2, "$namespace.stable/$namespace.LargeShiftWidget", wide = true)
+        assertEquals(medium, trackerSummaryWidget(listOf(large, medium), wide = false))
+        assertEquals(large, trackerSummaryWidget(listOf(medium, large), wide = true))
+        assertNull(trackerSummaryWidget(listOf(medium.copy(provider = medium.provider.replace(".stable/", ".stable.debug/")),
+            medium.copy(provider = medium.provider.replace("MediumShiftWidget", "SmallShiftWidget"))), wide = false))
+        assertEquals(setOf(SHIFT_TRACKER_PACKAGE), WorkingShortcut.SHIFT_TRACKER.knownPackages)
+    }
+
     @Test fun speedUsesOnlyFreshFiniteSensorValues() {
         val fix = WorkingSpeed(10_000L, 13.41f, 8.8f, 0.85f)
         assertEquals(30, fix.mph(10_000L))

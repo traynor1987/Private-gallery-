@@ -15,7 +15,7 @@ private const val MPH_PER_MPS = 2.23693629
 internal enum class WorkingShortcut(val label: String, val knownPackages: Set<String> = emptySet()) {
     NAVIGATION("Navigation", setOf("com.google.android.apps.maps")),
     DOMINOS("Domino’s delivery"),
-    SHIFT_TRACKER("Shift Tracker"),
+    SHIFT_TRACKER("Shift Tracker", setOf(SHIFT_TRACKER_PACKAGE)),
     UBER("Uber Driver", setOf("com.ubercab.driver")),
     DELIVEROO("Deliveroo"),
     JUST_EAT("Just Eat"),
@@ -103,8 +103,9 @@ internal fun workingScheduleMinute(text: String): Int? {
     return if (hour in 0..23 && minute in 0..59) hour * 60 + minute else null
 }
 
-internal data class WorkingVehicle(val identifier: String, val automatic: Boolean, val handled: Boolean = false) {
-    init { require(isWorkingVehicleIdentifier(identifier)) }
+internal data class WorkingVehicle(val identifier: String, val automatic: Boolean, val handled: Boolean = false,
+                                  val driveOnConnect: Boolean = false) {
+    init { require(isWorkingVehicleIdentifier(identifier) && (!driveOnConnect || automatic)) }
 
     override fun toString() = "WorkingVehicle(<redacted>)"
 }
@@ -148,8 +149,9 @@ internal data class WorkingState(
 
     fun skipScheduledDay(day: Long?) = copy(lastScheduledDay = laterDay(day))
 
-    fun setVehicle(identifier: String, automatic: Boolean): WorkingState = copy(vehicle = WorkingVehicle(
+    fun setVehicle(identifier: String, automatic: Boolean, driveOnConnect: Boolean = false): WorkingState = copy(vehicle = WorkingVehicle(
         identifier, automatic, handled = vehicle?.takeIf { it.identifier == identifier }?.handled ?: false,
+        driveOnConnect = driveOnConnect,
     ))
 
     fun handleVehicle() = if (vehicle == null || vehicle.handled) this else copy(vehicle = vehicle.copy(handled = true))
@@ -167,6 +169,10 @@ internal data class WorkingState(
                 if (selected.handled) copy(vehicle = selected.copy(handled = false)) else this
             WorkingVehicleSignal.CONNECTED -> when {
                 selected.handled -> this
+                selected.driveOnConnect -> {
+                    val shift = start(wallMillis, elapsedMillis, day)
+                    shift.copy(active = checkNotNull(shift.active).copy(driving = true)).handleVehicle()
+                }
                 active != null -> handleVehicle()
                 selected.automatic || acceptOffer -> start(wallMillis, elapsedMillis, day).handleVehicle()
                 else -> this
@@ -197,7 +203,8 @@ internal data class WorkingState(
         schedule?.let { put("schedule", it.encode()) }
         lastScheduledDay?.let { put("lastScheduledDay", it) }
         vehicle?.let {
-            put("vehicle", JSONObject().put("identifier", it.identifier).put("automatic", it.automatic).put("handled", it.handled))
+            put("vehicle", JSONObject().put("identifier", it.identifier).put("automatic", it.automatic).put("handled", it.handled)
+                .put("driveOnConnect", it.driveOnConnect))
         }
     }
 
@@ -224,7 +231,8 @@ internal data class WorkingState(
                 schedule = json.optJSONObject("schedule")?.let { WorkingSchedule.decode(it) },
                 lastScheduledDay = if (json.isNull("lastScheduledDay")) null else json.getLong("lastScheduledDay"),
                 vehicle = json.optJSONObject("vehicle")?.let {
-                    WorkingVehicle(it.getString("identifier"), it.getBoolean("automatic"), it.getBoolean("handled"))
+                    WorkingVehicle(it.getString("identifier"), it.getBoolean("automatic"), it.getBoolean("handled"),
+                        it.optBoolean("driveOnConnect", false))
                 },
             )
         }
