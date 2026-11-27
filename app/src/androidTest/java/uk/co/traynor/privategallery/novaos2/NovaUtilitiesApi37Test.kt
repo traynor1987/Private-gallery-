@@ -114,11 +114,11 @@ class NovaUtilitiesApi37Test {
         val utc = calendarDayWindow(day, ZoneOffset.UTC)
         assertEquals(23L * 3_600_000, local.end - local.begin)
         MatrixCursor(arrayOf("begin", "end", "allDay", "title")).use { rows ->
-            rows.addRow(arrayOf(local.begin - 1L, local.begin, 0, "Yesterday"))
-            rows.addRow(arrayOf(utc.begin, utc.end, 1, "All day event"))
-            rows.addRow(arrayOf(local.end, local.end + 1L, 0, "Tomorrow"))
-            rows.addRow(arrayOf(local.end, utc.end, 1, "UTC-only overlap"))
-            repeat(40) { rows.addRow(arrayOf(local.begin, local.begin + 1L, 0, "Timed event")) }
+            rows.addRow(arrayOf<Any>(local.begin - 1L, local.begin, 0, "Yesterday"))
+            rows.addRow(arrayOf<Any>(utc.begin, utc.end, 1, "All day event"))
+            rows.addRow(arrayOf<Any>(local.end, local.end + 1L, 0, "Tomorrow"))
+            rows.addRow(arrayOf<Any>(local.end, utc.end, 1, "UTC-only overlap"))
+            repeat(40) { rows.addRow(arrayOf<Any>(local.begin, local.begin + 1L, 0, "Timed event")) }
             val result = androidCalendarRows(rows, local, utc, zone) { true }
             assertTrue(result.truncated)
             assertEquals(32, result.events.size)
