@@ -58,16 +58,6 @@ class BrowserV2HomeRenderTest {
         compose.onNodeWithText("Load local WebView test page").assertDoesNotExist()
     }
 
-    @Test fun browserMenuCanReturnToGalleryWithoutAppBottomBar() {
-        var returned = false
-        compose.setContent { BrowserV2Fixture(392.dp, 840.dp, onOpenGallery = { returned = true }) }
-        browserNotice.enter(compose)
-        compose.onNodeWithContentDescription("More").performClick()
-        compose.onNodeWithText("Gallery").performScrollTo().performClick()
-        compose.runOnIdle { assertTrue(returned) }
-        compose.onNodeWithTag("browser-v2-toolbar").assertIsDisplayed()
-    }
-
     @Test fun browserToolbarSitsBelowThePageAndOpensBookmarks() {
         compose.setContent { BrowserV2Fixture(392.dp, 840.dp) }
         browserNotice.enter(compose)
@@ -271,7 +261,6 @@ class BrowserV2HomeRenderTest {
         width: androidx.compose.ui.unit.Dp,
         height: androidx.compose.ui.unit.Dp,
         staticContentHost: Boolean = true,
-        onOpenGallery: (() -> Unit)? = null,
     ) {
         val session = androidx.compose.runtime.remember {
             BrowserV2Session(
@@ -286,7 +275,6 @@ class BrowserV2HomeRenderTest {
         PrivateGalleryTheme {
             BrowserV2ProductionDestination(
                 session = session,
-                onOpenGallery = onOpenGallery,
                 searchEngine = BrowserSearchEngine.GOOGLE,
                 onSaveToVault = { _, done -> done("Saved") },
                 onHistoryVisited = { _, _ -> },

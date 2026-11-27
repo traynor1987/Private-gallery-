@@ -42,6 +42,33 @@ class HomeOwnedWindowPanicTest {
     @Suppress("UNCHECKED_CAST") private fun <T> state(name:String)=MainActivity::class.java.getDeclaredField(name+"\$delegate").apply {isAccessible=true}.get(activity) as MutableState<T>
     @Suppress("UNCHECKED_CAST") private fun bindings()=MainActivity::class.java.getDeclaredField("ownedPanicWindows").apply {isAccessible=true}.get(activity) as Map<Window,*>
 
+    @Test fun browserMenuReturnsToAuthenticatedNovaHome() = withHiddenHome(hidden = false) {
+        val preferences = activity.getSharedPreferences("nova-browser-beta", Context.MODE_PRIVATE)
+        val revision = preferences.all["notice-revision"] as? Int
+        try {
+            compose.runOnIdle {
+                val shortcut = uk.co.traynor.privategallery.core.home.HomeLayout.Shortcut.BROWSER
+                MainActivity::class.java.getDeclaredMethod("launchHomeShortcut", shortcut.javaClass)
+                    .apply { isAccessible = true }.invoke(activity, shortcut)
+            }
+            if (!uk.co.traynor.privategallery.ui.BrowserBetaAcknowledgement(activity).accepted()) {
+                compose.onNodeWithTag("browser-beta-continue").performScrollTo().performClick()
+            }
+            compose.onNodeWithTag("browser-v2-toolbar").assertIsDisplayed()
+            compose.onNodeWithContentDescription("More").performClick()
+            compose.onNodeWithText("Nova Home").performScrollTo().assertIsDisplayed().performClick()
+            compose.onNodeWithTag("preview-home").assertIsDisplayed()
+            compose.runOnIdle {
+                assertTrue(owner.session.isUnlocked)
+                assertTrue(activity.primaryBrowserCoveredByNovaHome())
+            }
+        } finally {
+            val edit = preferences.edit()
+            if (revision == null) edit.remove("notice-revision") else edit.putInt("notice-revision", revision)
+            check(edit.commit())
+        }
+    }
+
     @Test fun systemThreeFingerTouchInHiddenQuickPanelLocksBothSpacesAndRequiresPrimaryPin()=withHiddenHome {
         compose.onNodeWithContentDescription("Open Quick Panel").performClick()
         compose.onNodeWithTag("quick-overlay").assertIsDisplayed()
