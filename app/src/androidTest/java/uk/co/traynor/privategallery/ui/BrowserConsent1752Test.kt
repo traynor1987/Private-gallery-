@@ -27,6 +27,8 @@ import java.util.concurrent.TimeUnit
 
 /** Harmless local HTML through the active Primary renderer. No network or owner media. */
 class BrowserConsent1752Test {
+    private val browserNotice = BrowserNoticeFixture()
+    @get:Rule val notice: org.junit.rules.TestRule get() = browserNotice
     @get:Rule val compose = createAndroidComposeRule<ComponentActivity>()
     private lateinit var session: BrowserV2Session
     private val narrow=androidx.compose.runtime.mutableStateOf(false)
@@ -104,6 +106,7 @@ class BrowserConsent1752Test {
             },
             onClearVaultUpload={uploadDirectory?.deleteRecursively()},
         ) } } }
+        browserNotice.enter(compose)
         compose.waitForIdle()
         compose.runOnIdle {
             android.util.Log.i("PG1752", "provider=${WebView.getCurrentWebViewPackage()?.versionName} hardware=${session.activeWebView().isHardwareAccelerated}")

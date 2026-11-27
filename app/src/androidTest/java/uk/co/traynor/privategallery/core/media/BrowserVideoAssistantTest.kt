@@ -1,5 +1,6 @@
 package uk.co.traynor.privategallery.core.media
 
+import uk.co.traynor.privategallery.ui.BrowserNoticeFixture
 import android.content.pm.ActivityInfo
 import android.webkit.WebView
 import androidx.activity.ComponentActivity
@@ -16,6 +17,8 @@ import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 
 class BrowserVideoAssistantTest {
+    private val browserNotice = BrowserNoticeFixture()
+    @get:Rule val notice: org.junit.rules.TestRule get() = browserNotice
     @get:Rule val compose = createAndroidComposeRule<ComponentActivity>()
     private lateinit var session: BrowserV2Session
     private fun mount() {
@@ -23,6 +26,7 @@ class BrowserVideoAssistantTest {
         compose.setContent { PrivateGalleryTheme {
             BrowserV2ProductionDestination(session, BrowserSearchEngine.GOOGLE, { _, _ -> }, { _, _ -> }, false, {}, emptyList(), { _, _, _ -> }, {}, { it(emptyList()) }, { it() }, {})
         } }
+        browserNotice.enter(compose)
     }
     private fun js(source: String): String {
         val latch = CountDownLatch(1)

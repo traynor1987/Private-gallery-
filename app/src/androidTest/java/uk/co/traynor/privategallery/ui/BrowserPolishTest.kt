@@ -20,6 +20,8 @@ import uk.co.traynor.privategallery.core.browser.v2.*
 
 @RunWith(AndroidJUnit4::class)
 class BrowserPolishTest {
+    private val browserNotice = BrowserNoticeFixture()
+    @get:Rule val notice: org.junit.rules.TestRule get() = browserNotice
     @get:Rule val compose = createAndroidComposeRule<ComponentActivity>()
 
     @Test fun chromeSlidesThroughIntermediateHeightWithoutRemovingContentEarly() {
@@ -44,6 +46,7 @@ class BrowserPolishTest {
             BrowserV2ProductionDestination(session, BrowserSearchEngine.GOOGLE, { _, _ -> }, { _, _ -> }, false, {},
                 emptyList(), { _, _, _ -> }, {}, { it(emptyList()) }, { it() }, {}, onOpenGallery = { returned = true })
         } }
+        browserNotice.enter(compose)
         compose.runOnIdle { compose.activity.onBackPressedDispatcher.onBackPressed() }
         compose.runOnIdle { assertTrue(returned); assertFalse(compose.activity.isFinishing); session.destroyAll() }
     }
@@ -57,6 +60,7 @@ class BrowserPolishTest {
                 emptyList(), { _, _, _ -> }, {}, { it(emptyList()) }, { it() }, { globalSettingsOpened = true },
                 browserSettings = { BrowserSettingsContent(BrowserSearchEngine.GOOGLE, {}, saveHistory, { saveHistory = it }, false, {}, false, {}, false, {}, {}) })
         } }
+        browserNotice.enter(compose)
         lateinit var original: WebView
         compose.runOnIdle { original = session.activeWebView() }
         val parent = original.parent
@@ -103,6 +107,7 @@ class BrowserPolishTest {
             BrowserV2ProductionDestination(session, BrowserSearchEngine.GOOGLE, { _, _ -> }, { _, _ -> }, false, {},
                 emptyList(), { _, _, _ -> }, {}, { it(emptyList()) }, { it() }, {})
         } }
+        browserNotice.enter(compose)
         lateinit var view: WebView
         compose.runOnIdle {
             view = session.activeWebView()

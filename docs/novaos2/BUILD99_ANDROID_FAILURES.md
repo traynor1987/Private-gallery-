@@ -10,6 +10,8 @@ The exception groups below describe observations. Several can be symptoms of the
 
 The historical crash-report test wrote an unstructured exception message into the legacy report file. The existing privacy reader deliberately deletes that file unless it has the current fixed-category format. The repaired fixture verifies rejection and deletion of the raw message, then round-trips a report from the real privacy-safe serializer through the session console and verifies the retained bytes.
 
+Fresh Primary and Hidden browser routes render their respective privacy acknowledgement before mounting the browser. Older toolbar, page and consent fixtures invoked controls behind that notice without acknowledging it. Six Primary screen/media fixture classes and the Hidden layout fixture now use the actual tagged Continue control before testing the downstream UI. Each restores its original nonsecret revision. First-use notice tests remain independent. The Hidden parent header is now “Browser V1”. Two restore-dialog cases still used the old “Phone Gallery” destination label; the current “Phone storage” covers both downloads and media. The move confirmation and fresh PIN assertions remain.
+
 | Observation | Cases |
 |---|---:|
 | Player never ready | 5 |

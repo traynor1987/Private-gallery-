@@ -22,6 +22,8 @@ import uk.co.traynor.privategallery.core.hidden.HiddenSession
 import uk.co.traynor.privategallery.core.ui.AppTheme
 
 class HiddenBrowser17LayoutTest {
+    private val browserNotice = BrowserNoticeFixture(hidden = true)
+    @get:Rule val notice: org.junit.rules.TestRule get() = browserNotice
     val compose=createAndroidComposeRule<MainActivity>()
     private val viewportRule = BrowserViewportRule { method -> when (method) {
         "foldCoverLight" -> 392 to 840
@@ -45,13 +47,14 @@ class HiddenBrowser17LayoutTest {
                     }
                 }
             }}
+            browserNotice.enter(compose)
             compose.runOnIdle {
                 val bounds = compose.activity.windowManager.currentWindowMetrics.bounds
                 assertEquals("Actual dialog/window viewport width",width,bounds.width())
                 assertEquals("Actual dialog/window viewport height",height,bounds.height())
                 assertEquals("Viewport fixtures use 1px per dp",1f,compose.density.density,.01f)
             }
-            compose.onNodeWithText("Browser").assertIsDisplayed()
+            compose.onNodeWithText("Browser V1").assertIsDisplayed()
             listOf("Browser settings","Back","Forward","Tabs","More").forEach {label->
                 val node=compose.onNodeWithContentDescription(label);node.assertIsDisplayed()
                 val bounds=node.fetchSemanticsNode().boundsInRoot

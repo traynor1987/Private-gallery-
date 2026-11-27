@@ -32,10 +32,13 @@ import android.webkit.WebView
 /** Exercises the V2 composable used by the production Browser destination, not the retired V1 UI. */
 @RunWith(AndroidJUnit4::class)
 class BrowserV2HomeRenderTest {
+    private val browserNotice = BrowserNoticeFixture()
+    @get:Rule val notice: org.junit.rules.TestRule get() = browserNotice
     @get:Rule val compose = createAndroidComposeRule<ComponentActivity>()
 
     @Test fun browserV2ChromeSurvivesAnUnavailableWebViewProvider() {
         compose.setContent { BrowserV2Fixture(360.dp, 720.dp, staticContentHost = false) }
+        browserNotice.enter(compose)
 
         compose.onNodeWithTag("browser-v2-root").assertIsDisplayed()
         compose.onNodeWithTag("browser-v2-toolbar").assertIsDisplayed()
@@ -48,6 +51,7 @@ class BrowserV2HomeRenderTest {
 
     @Test fun browserOverflowDoesNotExposeHostOrLocalFixtureControls() {
         compose.setContent { BrowserV2Fixture(392.dp, 840.dp) }
+        browserNotice.enter(compose)
         compose.onNodeWithContentDescription("More").performClick()
         compose.onNodeWithText("Switch to REAL WebView").assertDoesNotExist()
         compose.onNodeWithText("Switch to STATIC host").assertDoesNotExist()
@@ -57,6 +61,7 @@ class BrowserV2HomeRenderTest {
     @Test fun browserMenuCanReturnToGalleryWithoutAppBottomBar() {
         var returned = false
         compose.setContent { BrowserV2Fixture(392.dp, 840.dp, onOpenGallery = { returned = true }) }
+        browserNotice.enter(compose)
         compose.onNodeWithContentDescription("More").performClick()
         compose.onNodeWithText("Gallery").performScrollTo().performClick()
         compose.runOnIdle { assertTrue(returned) }
@@ -65,6 +70,7 @@ class BrowserV2HomeRenderTest {
 
     @Test fun browserToolbarSitsBelowThePageAndOpensBookmarks() {
         compose.setContent { BrowserV2Fixture(392.dp, 840.dp) }
+        browserNotice.enter(compose)
         val page = compose.onNodeWithTag("browser-v2-page-region").fetchSemanticsNode().boundsInRoot
         val toolbar = compose.onNodeWithTag("browser-v2-toolbar").fetchSemanticsNode().boundsInRoot
         assertTrue(toolbar.top >= page.bottom)
@@ -74,6 +80,7 @@ class BrowserV2HomeRenderTest {
 
     @Test fun tabCardsShowCurrentTabAndCloseControl() {
         compose.setContent { BrowserV2Fixture(392.dp, 840.dp) }
+        browserNotice.enter(compose)
         compose.onNodeWithTag("browser-v2-tabs").performClick()
         compose.onNodeWithText("Current").assertIsDisplayed()
         compose.onNodeWithContentDescription("Close tab").assertIsDisplayed()
@@ -81,6 +88,7 @@ class BrowserV2HomeRenderTest {
 
     @Test fun browserV2ChromeFitsFoldOuterWidth() {
         compose.setContent { BrowserV2Fixture(392.dp, 840.dp) }
+        browserNotice.enter(compose)
         compose.onNodeWithTag("browser-v2-address").assertIsDisplayed()
         compose.onNodeWithTag("browser-v2-page-region").assertIsDisplayed()
 
@@ -88,6 +96,7 @@ class BrowserV2HomeRenderTest {
 
     @Test fun browserV2ChromeFitsFoldInnerWidth() {
         compose.setContent { BrowserV2Fixture(840.dp, 900.dp) }
+        browserNotice.enter(compose)
         compose.onNodeWithTag("browser-v2-address").assertIsDisplayed()
         compose.onNodeWithTag("browser-v2-page-region").assertIsDisplayed()
     }
@@ -100,6 +109,7 @@ class BrowserV2HomeRenderTest {
 
     private fun assertAcceptanceLayers(width: androidx.compose.ui.unit.Dp, height: androidx.compose.ui.unit.Dp) {
             compose.setContent { BrowserV2Fixture(width, height) }
+            browserNotice.enter(compose)
 
             listOf("BROWSER_ROUTE", "BROWSER_V2_ROOT", "BROWSER_CHROME", "CONTENT_HOST", "BROWSER CONTENT HOST")
                 .forEach { compose.onNodeWithText(it).assertIsDisplayed() }
@@ -138,6 +148,7 @@ class BrowserV2HomeRenderTest {
                 )
             }
         }
+        browserNotice.enter(compose)
         compose.waitForIdle()
 
         listOf("BROWSER_ROUTE", "BROWSER_V2_ROOT", "BROWSER_CHROME", "CONTENT_HOST", "BROWSER CONTENT HOST")
@@ -195,6 +206,7 @@ class BrowserV2HomeRenderTest {
                 )
             }
         }
+        browserNotice.enter(compose)
         compose.waitForIdle()
         lateinit var retainedWebView: WebView
         compose.runOnIdle { retainedWebView = session.activeWebView() }
@@ -242,6 +254,7 @@ class BrowserV2HomeRenderTest {
                 )
             }
         }
+        browserNotice.enter(compose)
         compose.onNodeWithTag("browser-v2-address").performClick()
         compose.onNodeWithTag("browser-v2-address").performTextInput("bbc.co.uk")
         compose.onNodeWithTag("browser-v2-address").performImeAction()

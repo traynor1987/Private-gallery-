@@ -25,6 +25,8 @@ import java.io.File
 
 /** UI fixtures never navigate remotely. The unavailable provider exercises the real recovery UI. */
 class BrowserProfessionalUiTest {
+    private val browserNotice = BrowserNoticeFixture()
+    @get:Rule val notice: org.junit.rules.TestRule get() = browserNotice
     val compose = createAndroidComposeRule<ComponentActivity>()
     private val viewportRule = BrowserViewportRule { method -> when (method) {
         "coverLight" -> 392 to 840
@@ -59,6 +61,7 @@ class BrowserProfessionalUiTest {
                     }
                 }
             }
+            browserNotice.enter(compose)
             compose.runOnIdle {
                 val bounds = compose.activity.windowManager.currentWindowMetrics.bounds
                 assertEquals("Actual dialog/window viewport width", width, bounds.width())

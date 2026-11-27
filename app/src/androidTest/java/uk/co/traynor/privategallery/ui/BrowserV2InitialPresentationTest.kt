@@ -31,6 +31,8 @@ import java.util.concurrent.atomic.AtomicBoolean
 /** PixelCopy-backed captures are essential: semantics still pass when WebView paints over chrome. */
 @RunWith(AndroidJUnit4::class)
 class BrowserV2InitialPresentationTest {
+    private val browserNotice = BrowserNoticeFixture()
+    @get:Rule val notice: org.junit.rules.TestRule get() = browserNotice
     @get:Rule val compose = createAndroidComposeRule<ComponentActivity>()
 
     @Test fun staticToRealKeepsChromePixelsBeforeNavigationAndAfterLocalPage() =
@@ -130,6 +132,7 @@ class BrowserV2InitialPresentationTest {
                 )
             }
         }
+        browserNotice.enter(compose)
         compose.waitForIdle()
         return session
     }
