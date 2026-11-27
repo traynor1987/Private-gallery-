@@ -270,7 +270,7 @@ internal fun LauncherArtworkIcon(app: LauncherApp, appearance: LauncherAppearanc
         LauncherIconShape.SQUIRCLE -> RoundedCornerShape(41)
     }
     Box(
-        modifier.clip(shape).background(launcherAccent(appearance.accent).copy(alpha = .29f)),
+        modifier.clip(shape).background(launcherAccent(appearance).copy(alpha = .29f)),
         contentAlignment = Alignment.Center,
     ) {
         LauncherAppIcon(app, Modifier.fillMaxSize(.69f))

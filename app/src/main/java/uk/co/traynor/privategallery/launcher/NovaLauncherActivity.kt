@@ -76,11 +76,9 @@ import uk.co.traynor.privategallery.core.sanctuary.SanctuaryMode
 import uk.co.traynor.privategallery.core.sanctuary.SanctuarySession
 import uk.co.traynor.privategallery.core.sanctuary.SanctuaryStore
 import uk.co.traynor.privategallery.core.sanctuary.panicSanctuaryPersonalApps
-import uk.co.traynor.privategallery.core.ui.AppTheme
 import uk.co.traynor.privategallery.privateCoreAppEntryIntent
 import uk.co.traynor.privategallery.privateNovaUpdatesIntent
 import uk.co.traynor.privategallery.privateWorkspaceEntryIntent
-import uk.co.traynor.privategallery.ui.PrivateGalleryTheme
 import uk.co.traynor.privategallery.novaos2.LauncherNovaSystemsActions
 import uk.co.traynor.privategallery.novaos2.novaSystemSettingsIntent
 
@@ -356,12 +354,7 @@ class NovaLauncherActivity : ComponentActivity() {
                         }, onRequestUsageAccess = ::openUsageAccess)
                     })
             }
-            val theme = when (model.appearance.theme) {
-                LauncherTheme.SYSTEM -> AppTheme.SYSTEM
-                LauncherTheme.LIGHT -> AppTheme.LIGHT
-                LauncherTheme.DARK -> AppTheme.DARK
-            }
-            PrivateGalleryTheme(theme) {
+            LauncherStudioTheme(model.appearance) {
                 if (utilityAllowed && utility != null) {
                     LauncherUtilityScreen(
                         checkNotNull(utility.utility),
@@ -764,7 +757,7 @@ class NovaLauncherActivity : ComponentActivity() {
             val layout = model.layout(inner)
             val next = if (model.widgets.any { it.wide == inner && it.page == 1 }) layout else
                 layout.withSmartFolderTemplate(onlyIfEmpty = true,
-                    capacity = model.appearance.grid.columns(inner) * model.appearance.grid.rows)
+                    capacity = model.appearance.gridFor(inner).let { it.columns(inner) * it.rows })
             if (next == layout || save(model.withLayout(inner, next))) identitySettings.markTemplateHandled(inner)
         }
     }

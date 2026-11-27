@@ -2,6 +2,7 @@ package uk.co.traynor.privategallery.launcher
 
 import android.content.Context
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
@@ -63,11 +64,6 @@ internal data class LauncherFolderAppearance(
     val labels: Boolean = true,
     val opaque: Boolean = true,
 ) {
-    fun save(context: Context) {
-        prefs(context).edit().putString("mode", mode.name).putString("icon_size", iconSize?.name)
-            .putBoolean("labels", labels).putBoolean("opaque", opaque).apply()
-    }
-
     companion object {
         private fun prefs(context: Context) =
             context.getSharedPreferences("nova_launcher_folder_appearance", Context.MODE_PRIVATE)
@@ -86,14 +82,7 @@ internal data class LauncherFolderAppearance(
 }
 
 @Composable
-internal fun LauncherFolderAppearanceSettings() {
-    val context = LocalContext.current
-    var appearance by remember(context) { mutableStateOf(LauncherFolderAppearance.read(context)) }
-    fun update(next: LauncherFolderAppearance) {
-        appearance = next
-        next.save(context)
-    }
-
+internal fun LauncherFolderAppearanceSettings(appearance: LauncherFolderAppearance, update: (LauncherFolderAppearance) -> Unit) {
     Text("Folder appearance", style = MaterialTheme.typography.titleMedium)
     FolderChoice("Folder layout", appearance.mode, LauncherFolderMode.entries, LauncherFolderMode::label) {
         update(appearance.copy(mode = it))
@@ -147,8 +136,10 @@ internal fun LauncherFolderPanel(
             keys = ArrayList(folder.apps)
         }
     }
-    val scale by animateFloatAsState(if (entering) 1f else .96f, label = "Folder open")
-    val alpha by animateFloatAsState(if (entering) 1f else .65f, label = "Folder opacity")
+    val motion = appearance.studio.motion
+    val animate = motion != LauncherMotion.REDUCED && !entering
+    val scale by animateFloatAsState(if (animate) .96f else 1f, tween(motion.milliseconds), label = "Folder open")
+    val alpha by animateFloatAsState(if (animate) .65f else 1f, tween(motion.milliseconds), label = "Folder opacity")
     val iconAppearance = appearance.copy(
         iconStyle = LauncherIconStyle.FULL_ICONS,
         iconSize = preferences.iconSize ?: appearance.iconSize,
@@ -175,7 +166,11 @@ internal fun LauncherFolderPanel(
                     .fillMaxWidth().heightIn(max = panelHeight)
                     .graphicsLayer { scaleX = scale; scaleY = scale; this.alpha = alpha }
                     .testTag("launcher-folder-panel"),
-                shape = RoundedCornerShape(28.dp),
+                shape = RoundedCornerShape(when (appearance.studio.look) {
+                    LauncherLook.NOVA -> 28.dp
+                    LauncherLook.ROUNDED -> 34.dp
+                    LauncherLook.FLOATING -> 30.dp
+                }),
                 color = color,
                 contentColor = MaterialTheme.colorScheme.onSurface,
                 border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
