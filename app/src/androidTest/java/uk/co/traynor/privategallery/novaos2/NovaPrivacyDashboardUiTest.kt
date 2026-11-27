@@ -55,6 +55,21 @@ class NovaPrivacyDashboardUiTest {
         captureNovaSystem("privacy-inner")
     }
 
+    @Test fun coverDiagnosticsCopiesOnlyPublicStatusAndMasksClipboardPreview() {
+        val sample = fixture().copy(sanctuary = "private session detail", backupSchedule = "private archive detail")
+        compose.setContent { MaterialTheme { NovaPrivacyContent(sample, false, null, {}, {}, {}) } }
+        compose.onNodeWithText("Copy privacy diagnostics").performScrollTo().performClick()
+        compose.onNodeWithText("Privacy status copied.").assertExists()
+        compose.runOnIdle {
+            val clipboard = compose.activity.getSystemService(android.content.ClipboardManager::class.java)
+            val clip = checkNotNull(clipboard.primaryClip)
+            val report = clip.getItemAt(0).text.toString()
+            assertEquals(sample.diagnostics(), report)
+            org.junit.Assert.assertFalse(report.contains("private"))
+            org.junit.Assert.assertTrue(clip.description.extras?.getBoolean(android.content.ClipDescription.EXTRA_IS_SENSITIVE) == true)
+        }
+    }
+
     private fun fixture() = NovaPrivacySnapshot(NovaPrivacyAccess.OFF, NovaPrivacyAccess.OFF, NovaPrivacyAccess.OFF,
         NovaPrivacyLocation.APPROXIMATE, NovaPrivacyAccess.ALLOWED, NovaPrivacyGuardian.ACCESS_OFF,
         NovaPrivacyAccess.OFF, NovaPrivacyAccess.OFF, NovaPrivacyAccess.OFF, NovaPrivacyVpn.UNAVAILABLE,

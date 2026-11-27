@@ -70,3 +70,19 @@ internal data class NovaPrivacySnapshot(
 )
 
 internal data class NovaPrivacyStorage(val appDataBytes: Long, val cacheBytes: Long)
+
+/** Export only enum-backed status. Workspace descriptions and storage details stay on device. */
+internal fun NovaPrivacySnapshot.diagnostics(): String = listOf(
+    "NovaOS privacy diagnostics",
+    "Camera permission: ${camera.label}",
+    "Microphone permission: ${microphone.label}",
+    "Contacts permission: ${contacts.label}",
+    "Location permission: ${location.label}",
+    "Post notifications: ${notifications.label}",
+    "Guardian: ${guardian.label}",
+    "Sanctuary accessibility: ${accessibility.label}",
+    "Usage access: ${usageAccess.label}",
+    "Overlay access: ${overlay.label}",
+    "Network: ${vpn.label}",
+    "Manual Cloud Teacher consent: ${manualCloudConsent.label}",
+).joinToString("\n")

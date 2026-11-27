@@ -3,6 +3,10 @@ package uk.co.traynor.privategallery.novaos2
 import android.Manifest
 import android.app.NotificationManager
 import android.app.usage.StorageStatsManager
+import android.content.ClipData
+import android.content.ClipDescription
+import android.content.ClipboardManager
+import android.os.PersistableBundle
 import android.content.Context
 import android.content.pm.PackageManager
 import android.net.ConnectivityManager
@@ -110,6 +114,7 @@ internal fun NovaPrivacyDashboard(host: NovaSystemHost) {
 internal fun NovaPrivacyContent(snapshot: NovaPrivacySnapshot?, wide: Boolean, message: String?,
     onRefresh: () -> Unit, onSettings: (String) -> Unit, openWorkspace: () -> Unit) {
     val context = LocalContext.current
+    var copied by remember(snapshot) { mutableStateOf<String?>(null) }
     val permissions = @Composable {
         NovaSystemSection("NovaOS app permissions") {
             NovaPrivacyRow("Camera", snapshot?.camera?.label)
@@ -138,6 +143,11 @@ internal fun NovaPrivacyContent(snapshot: NovaPrivacySnapshot?, wide: Boolean, m
                 Text("Enable notification access in Android if you want Guardian to monitor notifications.",
                     style = MaterialTheme.typography.bodySmall)
             }
+            if (snapshot?.notifications == NovaPrivacyAccess.OFF &&
+                snapshot.guardian == NovaPrivacyGuardian.CAPTURE_ACTIVE) {
+                Text("Guardian capture is enabled. To receive replacement notifications, allow NovaOS to post notifications.",
+                    style = MaterialTheme.typography.bodySmall)
+            }
             NovaPrivacyRow("Sanctuary", snapshot?.sanctuary)
             NovaPrivacyRow("Network privacy", snapshot?.vpn?.label)
             Text("Android provides no device-wide Tor connection status.", style = MaterialTheme.typography.bodySmall)
@@ -150,6 +160,21 @@ internal fun NovaPrivacyContent(snapshot: NovaPrivacySnapshot?, wide: Boolean, m
             NovaPrivacyRow("NovaOS cache", snapshot?.storage?.cacheBytes?.let { Formatter.formatFileSize(context, it) })
             NovaPrivacyRow("Encrypted backup schedule", snapshot?.backupSchedule)
             Text("Open Nova Backup in the workspace to review verified archives.", style = MaterialTheme.typography.bodySmall)
+            TextButton(enabled = snapshot != null, onClick = {
+                val report = snapshot?.diagnostics() ?: return@TextButton
+                copied = try {
+                    val clipboard = checkNotNull(context.getSystemService(ClipboardManager::class.java))
+                    val clip = ClipData.newPlainText("NovaOS privacy diagnostics", report)
+                    clip.description.extras = PersistableBundle().apply {
+                        putBoolean(ClipDescription.EXTRA_IS_SENSITIVE, true)
+                    }
+                    clipboard.setPrimaryClip(clip)
+                    "Privacy status copied."
+                } catch (_: RuntimeException) {
+                    "Clipboard unavailable."
+                }
+            }) { Text("Copy privacy diagnostics") }
+            copied?.let { Text(it, style = MaterialTheme.typography.bodySmall) }
             TextButton(onClick = openWorkspace) { Text("Open NovaOS workspace") }
         }
     }
