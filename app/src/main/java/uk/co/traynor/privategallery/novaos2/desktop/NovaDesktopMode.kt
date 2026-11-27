@@ -17,6 +17,8 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -98,7 +100,7 @@ import uk.co.traynor.privategallery.novaos2.desktop.DesktopPanel
 import uk.co.traynor.privategallery.novaos2.desktop.DesktopPreset
 import uk.co.traynor.privategallery.novaos2.desktop.DesktopSettings
 
-@OptIn(ExperimentalFoundationApi::class)
+@OptIn(ExperimentalFoundationApi::class, ExperimentalLayoutApi::class)
 @Composable
 internal fun NovaDesktopMode(host: NovaSystemHost) {
     val context = LocalContext.current
@@ -212,7 +214,7 @@ internal fun NovaDesktopMode(host: NovaSystemHost) {
         Column(Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()).padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)) {
             NovaSystemSection("Workspaces") {
-                Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                FlowRow(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     DesktopPreset.entries.forEach { preset ->
                         FilterChip(selected = current.preset == preset, enabled = !busy,
                             onClick = { save(current.copy(preset = preset)) }, label = { Text(preset.label) })

@@ -1,7 +1,8 @@
 package uk.co.traynor.privategallery.novaos2
 
 import androidx.activity.ComponentActivity
-import androidx.compose.material3.MaterialTheme
+import uk.co.traynor.privategallery.core.ui.AppTheme
+import uk.co.traynor.privategallery.ui.PrivateGalleryTheme
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -40,7 +41,7 @@ class WaveBNavigationTest {
             val available = novaSystemFeatures.mapTo(mutableSetOf()) { it.id }
             compose.setContent {
                 var selected by remember { mutableStateOf<NovaSystemId?>(null) }
-                MaterialTheme {
+                PrivateGalleryTheme(AppTheme.DARK) {
                     NovaSystemsPanel(novaSystemFeatures, selected, NovaSystemHost(
                         NovaLauncherState(), emptyList(), emptyMap(), actions, true, available,
                         { selected = null }, { id -> (id in available).also { if (it) selected = id } },
