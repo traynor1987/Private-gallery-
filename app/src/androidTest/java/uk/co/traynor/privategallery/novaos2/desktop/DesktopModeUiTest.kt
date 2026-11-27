@@ -2,8 +2,9 @@ package uk.co.traynor.privategallery.novaos2.desktop
 
 import android.content.ComponentName
 import android.content.Intent
+import android.view.KeyEvent
 import androidx.activity.ComponentActivity
-import androidx.compose.foundation.layout.safeDrawingPadding
+import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -27,6 +28,10 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.RuleChain
 import uk.co.traynor.privategallery.core.home2.NovaCoreApp
+import uk.co.traynor.privategallery.core.ui.AppTheme
+import uk.co.traynor.privategallery.ui.PrivateGalleryTheme
+import uk.co.traynor.privategallery.novaos2.NovaSystemsPanel
+import uk.co.traynor.privategallery.novaos2.novaSystemFeatures
 import uk.co.traynor.privategallery.launcher.LauncherApp
 import uk.co.traynor.privategallery.launcher.LauncherUiActions
 import uk.co.traynor.privategallery.launcher.NovaLauncherState
@@ -41,7 +46,9 @@ import uk.co.traynor.privategallery.ui.BrowserViewportRule
 class DesktopModeUiTest {
     private val compose = createAndroidComposeRule<ComponentActivity>()
 
-    @get:Rule val rule = RuleChain.outerRule(BrowserViewportRule { 820 to 920 }).around(compose)
+    @get:Rule val rule = RuleChain.outerRule(BrowserViewportRule {
+        if (it.startsWith("cover")) 375 to 850 else 820 to 920
+    }).around(compose)
 
     @Test fun innerSplitPersistsAcrossCoverTransitionAndUsesNativeAppRoute() {
         val persisted = NovaSystemConfig(compose.activity, "desktop-mode")
@@ -49,10 +56,11 @@ class DesktopModeUiTest {
         var wide by mutableStateOf(true)
         var opened: NovaCoreApp? = null
         try {
+            compose.runOnUiThread { compose.activity.enableEdgeToEdge() }
             compose.setContent {
-                MaterialTheme {
-                    Surface(Modifier.width(if (wide) 820.dp else 375.dp).safeDrawingPadding()) {
-                        NovaDesktopMode(desktopHost(wide) { opened = it })
+                PrivateGalleryTheme(AppTheme.LIGHT) {
+                    Surface(Modifier.width(if (wide) 820.dp else 375.dp)) {
+                        NovaSystemsPanel(novaSystemFeatures, NovaSystemId.DESKTOP, desktopHost(wide) { opened = it })
                     }
                 }
             }
@@ -65,12 +73,35 @@ class DesktopModeUiTest {
 
             compose.runOnIdle { wide = false }
             compose.onNodeWithTag("desktop-compact").performScrollTo().assertIsDisplayed()
-            captureNovaSystem("desktop-cover-compact")
             compose.onNodeWithText("Nova Notes").performScrollTo().performClick()
             compose.runOnIdle { assertEquals(NovaCoreApp.NOTES, opened) }
             compose.runOnIdle { wide = true }
             compose.onNodeWithText("55 / 45").performScrollTo().assertIsDisplayed()
         } finally { persisted.clear() }
+    }
+
+    @Test fun coverKeyboardShortcutSelectsGamingInTheProductionShell() {
+        val config = NovaSystemConfig(compose.activity, "desktop-mode")
+        config.clear()
+        try {
+            compose.runOnUiThread { compose.activity.enableEdgeToEdge() }
+            compose.setContent {
+                PrivateGalleryTheme(AppTheme.DARK) {
+                    NovaSystemsPanel(novaSystemFeatures, NovaSystemId.DESKTOP, desktopHost(false) {})
+                }
+            }
+            val compact = compose.onNodeWithTag("desktop-compact")
+            compose.waitUntil(10_000) { compact.isDisplayed() }
+            compose.runOnIdle {
+                val now = android.os.SystemClock.uptimeMillis()
+                for (action in listOf(KeyEvent.ACTION_DOWN, KeyEvent.ACTION_UP)) {
+                    compose.activity.dispatchKeyEvent(KeyEvent(now, now, action, KeyEvent.KEYCODE_3, 0, KeyEvent.META_ALT_ON))
+                }
+            }
+            compose.waitUntil(10_000) { DesktopSettings.decode(config.read()).preset == DesktopPreset.GAMING }
+            compose.onNodeWithText("Pin app").performScrollTo().assertIsDisplayed()
+            captureNovaSystem("desktop-cover-compact")
+        } finally { config.clear() }
     }
 
     @Test fun AndroidPlacementUsesLauncherIntentAndDeniesUnavailableOrPrivateTargets() {
