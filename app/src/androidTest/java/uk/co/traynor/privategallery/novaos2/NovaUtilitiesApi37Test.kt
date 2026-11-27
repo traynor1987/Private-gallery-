@@ -9,22 +9,13 @@ import android.database.MatrixCursor
 import android.provider.DocumentsContract
 import android.provider.DocumentsContract.Document
 import androidx.activity.ComponentActivity
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
-import androidx.compose.ui.unit.dp
 import androidx.test.platform.app.InstrumentationRegistry
 import java.io.File
 import java.time.LocalDate
@@ -46,6 +37,8 @@ import uk.co.traynor.privategallery.home2.NovaFile
 import uk.co.traynor.privategallery.home2.androidCalendarRows
 import uk.co.traynor.privategallery.home2.calendarDayWindow
 import uk.co.traynor.privategallery.home2.novaFileShareIntent
+import uk.co.traynor.privategallery.launcher.LauncherUiActions
+import uk.co.traynor.privategallery.launcher.NovaLauncherState
 import uk.co.traynor.privategallery.ui.BrowserViewportRule
 
 class NovaUtilitiesApi37Test {
@@ -57,7 +50,8 @@ class NovaUtilitiesApi37Test {
 
     @Test fun coverUtilityCardsDispatchExistingEntry() {
         val opened = mutableListOf<String>()
-        showGrid(false, opened)
+        showUtilities(false, opened)
+        compose.onNodeWithText("Notebooks, checklists and private notes").assertIsDisplayed()
         compose.onNodeWithText("Nova Notes").assertIsDisplayed().performClick()
         compose.runOnIdle { assertEquals(listOf("Nova Notes"), opened) }
         captureNovaSystem("utilities-cover")
@@ -65,11 +59,15 @@ class NovaUtilitiesApi37Test {
 
     @Test fun innerUtilityCardsKeepBothColumnsAccessible() {
         val opened = mutableListOf<String>()
-        showGrid(true, opened)
+        showUtilities(true, opened)
         compose.onNodeWithText("Nova Tasks").assertIsDisplayed().performClick()
         compose.onNodeWithText("Nova Update Centre").assertIsDisplayed()
         compose.runOnIdle { assertEquals(listOf("Nova Tasks"), opened) }
         captureNovaSystem("utilities-inner")
+        compose.onNodeWithText("Nova Update Centre").performClick()
+        compose.onNodeWithText("Installed NovaOS").assertIsDisplayed()
+        compose.onNodeWithText("Open Updates & About").performClick()
+        compose.runOnIdle { assertEquals(listOf("Nova Tasks", "Updates & About"), opened) }
     }
 
     @Test fun shareTargetRejectsStreamsBeforeIssuingAnyHandoff() {
@@ -205,19 +203,22 @@ class NovaUtilitiesApi37Test {
         } finally { history.clear() }
     }
 
-    private fun showGrid(wide: Boolean, opened: MutableList<String>) {
-        val labels = listOf("Nova Notes", "Nova Tasks", "Nova Calendar", "Nova Files", "Nova Clipboard", "Nova Contacts",
-            "Nova Share Hub", "Nova App Usage", "Nova Update Centre")
+    private fun showUtilities(wide: Boolean, opened: MutableList<String>) {
+        val actions = LauncherUiActions(save = { true }, launchApp = {}, launchShortcut = {}, openWorkspace = {},
+            selectHome = {}, continueWithCurrentHome = {}, emergencyPhone = {}, reviewSanctuary = {},
+            setOutsideProtection = {}, chooseWallpaper = {}, addWidget = {}, removeWidget = {},
+            exportLayout = {}, importLayout = {}, renderWidget = { _, _ -> })
+        val host = NovaSystemHost(
+            NovaLauncherState(), emptyList(), emptyMap(), actions, wide, setOf(NovaSystemId.UTILITIES),
+            onBack = {}, open = { false },
+            platform = LauncherNovaSystemsActions({ true }, { false }, { opened.add(it.label) },
+                { false }, { opened.add("Updates & About") }),
+        )
         compose.setContent {
             MaterialTheme(colorScheme = if (wide) lightColorScheme() else darkColorScheme()) {
-                Surface(Modifier.fillMaxSize()) {
-                    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                        UtilitiesGrid(labels.map { label -> UtilityItem(label, "Open $label") { opened.add(label) } },
-                            wide, onUnavailable = { error("The fixture action must be available") })
-                    }
-                }
+                NovaSystemsPanel(novaSystemFeatures, NovaSystemId.UTILITIES, host)
             }
         }
+        compose.onNodeWithText("Nova Utilities").assertIsDisplayed()
     }
 }
