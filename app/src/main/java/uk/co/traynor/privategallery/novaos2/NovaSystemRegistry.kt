@@ -8,13 +8,13 @@ internal val novaSystemFeatures: List<NovaSystemFeature> = buildList {
 
     // CONTROL
 
-    // LOCK
+    add(NovaSystemFeature(NovaSystemId.LOCK, "Lock Screen Studio", "Preview styles and choose a supported lock wallpaper.") { NovaLockScreenStudio(it) })
 
     // DESKTOP
 
     // HEALTH
 
-    // PRIVACY
+    add(NovaSystemFeature(NovaSystemId.PRIVACY, "Privacy Dashboard", "Permissions, protection and cloud-consent status.") { NovaPrivacyDashboard(it) })
 
     // UTILITIES
 }
