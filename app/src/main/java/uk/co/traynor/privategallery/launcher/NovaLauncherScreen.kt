@@ -1,6 +1,5 @@
 package uk.co.traynor.privategallery.launcher
 
-import android.text.format.DateFormat
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
@@ -59,9 +58,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import java.time.ZonedDateTime
-import java.time.format.DateTimeFormatter
-import java.util.Date
 import kotlin.math.abs
 import kotlin.math.roundToInt
 import kotlinx.coroutines.delay
@@ -1010,13 +1006,15 @@ internal fun LauncherHome(
                             }
                             if (largeLandscape && showClock) {
                                 Row(pageModifier) {
-                                    LauncherClock(true, Modifier.widthIn(min = 180.dp).padding(top = 14.dp, end = 20.dp))
+                                    LauncherThemeClock(appearance, compact = true,
+                                        modifier = Modifier.width(220.dp).padding(top = 14.dp, end = 16.dp))
                                     content(Modifier.weight(1f).fillMaxHeight())
                                 }
                             } else {
                                 Column(pageModifier) {
-                                    if (showClock) LauncherClock(compact, Modifier.padding(top = if (compact) 6.dp else 18.dp,
-                                        bottom = if (compact) 10.dp else 24.dp))
+                                    if (showClock) LauncherThemeClock(appearance, compact, Modifier.padding(
+                                        top = if (compact) 6.dp else 18.dp, bottom = if (compact) 10.dp else 20.dp,
+                                    ))
                                     content(Modifier.weight(1f))
                                 }
                             }
@@ -1123,28 +1121,6 @@ private fun LauncherHeader(
                 }
             }
         }
-    }
-}
-
-@Composable
-private fun LauncherClock(compact: Boolean, modifier: Modifier = Modifier) {
-    val context = LocalContext.current
-    val timeFormat = DateFormat.getTimeFormat(context)
-    val dateFormat = remember { DateTimeFormatter.ofPattern("EEEE, d MMMM") }
-    var now by remember { mutableStateOf(System.currentTimeMillis()) }
-    LaunchedEffect(Unit) {
-        while (true) {
-            val next = System.currentTimeMillis()
-            now = next
-            delay(60_000 - next % 60_000)
-        }
-    }
-    Column(modifier) {
-        Text(timeFormat.format(Date(now)), fontSize = if (compact) 36.sp else 59.sp,
-            lineHeight = if (compact) 40.sp else 65.sp, fontWeight = FontWeight.SemiBold,
-            maxLines = 1, overflow = TextOverflow.Ellipsis)
-        Text(ZonedDateTime.ofInstant(java.time.Instant.ofEpochMilli(now), java.time.ZoneId.systemDefault()).format(dateFormat),
-            style = MaterialTheme.typography.bodyLarge, color = Color.White.copy(alpha = .8f), maxLines = 1)
     }
 }
 
@@ -1315,7 +1291,9 @@ internal fun LauncherTile(
                     )
                     is LauncherItem.Folder -> {
                         val members = folderMembers(item)
-                        if (members.isEmpty() || appearance.iconStyle == LauncherIconStyle.NOVA_TILES) {
+                        val showMembers = appearance.iconStyle == LauncherIconStyle.FULL_ICONS ||
+                            appearance.studio.look == LauncherLook.FLOATING
+                        if (members.isEmpty() || !showMembers) {
                             Icon(Icons.Default.Folder, null, Modifier.size(size * .53f), tint = Color.White)
                         } else LauncherFolderPreview(members, Modifier.size(size * .88f), decisions, appearance = appearance)
                     }

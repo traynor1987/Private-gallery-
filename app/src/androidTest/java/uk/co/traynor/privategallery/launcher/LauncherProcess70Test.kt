@@ -24,13 +24,19 @@ class LauncherProcess70Test {
             ),
             dock = emptyList(),
         ),
-        appearance = LauncherAppearance(wallpaper = LauncherWallpaper.MIDNIGHT, grid = LauncherGrid.COMPACT),
+        appearance = LauncherLook.FLOATING.preset(LauncherAppearance(grid = LauncherGrid.COMPACT)).let {
+            it.copy(studio = it.studio.copy(
+                innerGrid = LauncherGrid.SPACIOUS,
+                customAccent = 0x8659C9,
+                folder = LauncherFolderAppearance(LauncherFolderMode.LIST),
+            ))
+        },
     )
 
     private val savedSeparate = expected.copy(
         cover = expected.cover.copy(pages = expected.cover.pages.reversed()),
         inner = expected.inner.copy(pages = expected.inner.pages.reversed()),
-        appearance = expected.appearance.copy(wallpaper = LauncherWallpaper.PLUM),
+        appearance = expected.appearance.copy(wallpaper = LauncherWallpaper.MIDNIGHT),
     )
 
     @Test fun seedConfiguredLauncher() {

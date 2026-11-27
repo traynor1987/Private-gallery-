@@ -41,7 +41,7 @@ internal fun LauncherLook.preset(current: LauncherAppearance): LauncherAppearanc
         LauncherLook.NOVA -> current.copy(
             wallpaper = LauncherWallpaper.MIDNIGHT, accent = LauncherAccent.SKY,
             iconShape = LauncherIconShape.SQUIRCLE, iconStyle = LauncherIconStyle.NOVA_TILES,
-            dock = LauncherDock.GLASS, studio = shared.copy(widgetFrame = LauncherWidgetFrame.GLASS,
+            iconSize = LauncherIconSize.MEDIUM, dock = LauncherDock.GLASS, studio = shared.copy(widgetFrame = LauncherWidgetFrame.GLASS,
                 typeface = LauncherTypeface.SYSTEM, motion = LauncherMotion.STANDARD),
         )
         LauncherLook.ROUNDED -> current.copy(

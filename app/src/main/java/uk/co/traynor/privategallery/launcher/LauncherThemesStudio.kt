@@ -5,14 +5,17 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
@@ -44,13 +47,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import java.time.LocalTime
-import java.time.format.DateTimeFormatter
 import java.util.Locale
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -78,7 +80,9 @@ internal fun LauncherThemesStudio(
     val documentsAllowed by rememberUpdatedState(enableDocuments)
     val legacyFolder = remember(context) { LauncherFolderAppearance.read(context) }
     var draft by rememberSaveable(stateSaver = appearanceDraftSaver) { mutableStateOf(appearance) }
-    var inner by rememberSaveable { mutableStateOf(false) }
+    val expanded = LocalConfiguration.current.screenWidthDp >= LauncherExpandedWidth
+    var previewSelection by rememberSaveable { mutableStateOf<Boolean?>(null) }
+    val inner = previewSelection ?: expanded
     var notice by rememberSaveable { mutableStateOf<String?>(null) }
     var pendingExport by rememberSaveable { mutableStateOf<String?>(null) }
     val folder = draft.studio.folder ?: appearance.studio.folder ?: legacyFolder
@@ -117,19 +121,15 @@ internal fun LauncherThemesStudio(
         draft = draft.copy(studio = draft.studio.update())
     }
 
-    Column(
-        Modifier.fillMaxWidth().then(if (ownScroll) Modifier.verticalScroll(rememberScrollState()).padding(horizontal = 16.dp) else Modifier)
-            .padding(bottom = 20.dp).testTag("nova-themes-studio"),
-        verticalArrangement = Arrangement.spacedBy(14.dp),
-    ) {
+    val preview: @Composable () -> Unit = {
         if (!ownScroll) Text("Themes Studio", style = MaterialTheme.typography.headlineSmall)
         LauncherOptions("Appearance preset", LauncherLook.entries, draft.studio.look, {
             draft = it.preset(draft)
             notice = null
         })
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            FilterChip(!inner, onClick = { inner = false }, label = { Text("Cover preview") })
-            FilterChip(inner, onClick = { inner = true }, label = { Text("Inner preview") })
+            FilterChip(!inner, onClick = { previewSelection = false }, label = { Text("Cover preview") })
+            FilterChip(inner, onClick = { previewSelection = true }, label = { Text("Inner preview") })
         }
         LauncherThemePreview(draft, folder, previewApps, inner)
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -143,8 +143,8 @@ internal fun LauncherThemesStudio(
             }) { Text("Restore default") }
         }
         notice?.let { Text(it, style = MaterialTheme.typography.bodyMedium) }
-
-        HorizontalDivider()
+    }
+    val editor: @Composable () -> Unit = {
         LauncherOptions("Wallpaper preset", LauncherWallpaper.entries, draft.wallpaper, { draft = draft.copy(wallpaper = it) })
         if (draft.wallpaper == LauncherWallpaper.DEVICE) TextButton(onClick = onDeviceWallpaper, enabled = enableDocuments) {
             Text("Android wallpaper settings")
@@ -208,6 +208,47 @@ internal fun LauncherThemesStudio(
             }) { Text("Export theme preset") }
         }
     }
+
+    val arrangement = Arrangement.spacedBy(14.dp)
+    if (ownScroll) {
+        val previewScroll = rememberScrollState()
+        val editorScroll = rememberScrollState()
+        val combinedScroll = rememberScrollState()
+        BoxWithConstraints(Modifier.fillMaxSize().testTag("nova-themes-studio")) {
+            if (maxWidth >= 680.dp) {
+                Row(
+                    Modifier.fillMaxSize().padding(horizontal = 16.dp).testTag("theme-studio-two-pane"),
+                    horizontalArrangement = Arrangement.spacedBy(20.dp),
+                ) {
+                    Column(Modifier.weight(1f).verticalScroll(previewScroll).padding(bottom = 20.dp), arrangement) {
+                        preview()
+                    }
+                    Column(Modifier.weight(1f).verticalScroll(editorScroll).padding(bottom = 20.dp), arrangement) {
+                        editor()
+                    }
+                }
+            } else {
+                Column(
+                    Modifier.fillMaxSize().verticalScroll(combinedScroll).padding(horizontal = 16.dp)
+                        .padding(bottom = 20.dp),
+                    arrangement,
+                ) {
+                    preview()
+                    HorizontalDivider()
+                    editor()
+                }
+            }
+        }
+    } else {
+        Column(
+            Modifier.fillMaxWidth().padding(bottom = 20.dp).testTag("nova-themes-studio"),
+            arrangement,
+        ) {
+            preview()
+            HorizontalDivider()
+            editor()
+        }
+    }
 }
 
 @Composable
@@ -257,51 +298,62 @@ private fun LauncherThemePreview(
         LauncherWallpaper.PLUM -> "Dusk"
         LauncherWallpaper.DEVICE -> null
     }
-    val timeLabel = remember { LocalTime.now().format(DateTimeFormatter.ofPattern("HH:mm")) }
     val grid = appearance.gridFor(inner)
     LauncherStudioTheme(appearance) {
-        Box(Modifier.fillMaxWidth().clip(shape).testTag(if (inner) "theme-preview-inner" else "theme-preview-cover")) {
-            if (selectedWallpaper == null) Box(Modifier.matchParentSize().background(Color(0xFF172638)))
-            else WallpaperSurface(Wallpaper(builtin = selectedWallpaper), context.filesDir, Modifier.matchParentSize())
-            Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text(timeLabel, style = MaterialTheme.typography.displaySmall, color = Color.White)
-                LauncherStyledWidget(appearance.studio.widgetFrame, minHeight = 48) { modifier ->
-                    Surface(modifier, shape = RoundedCornerShape(15.dp), color = MaterialTheme.colorScheme.surfaceContainer) {
-                        Text(appearance.studio.look.label, Modifier.padding(12.dp),
-                            style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    }
-                }
-                val shown = apps.take(grid.columns(inner).coerceAtMost(5)).distinctBy(LauncherApp::component)
-                if (shown.isNotEmpty()) Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                    shown.forEach { app ->
-                        Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
-                            LauncherArtworkIcon(app, appearance, Modifier.size((44 * appearance.iconSize.previewScale).dp))
-                            if (appearance.labels) Text(app.label, color = Color.White, maxLines = 1,
-                                overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.labelSmall)
+        Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+            Box(Modifier.then(if (inner) Modifier else Modifier.widthIn(max = 350.dp))
+                .fillMaxWidth().clip(shape).testTag(if (inner) "theme-preview-inner" else "theme-preview-cover")) {
+                if (selectedWallpaper == null) Box(Modifier.matchParentSize().background(Color(0xFF172638)))
+                else WallpaperSurface(Wallpaper(builtin = selectedWallpaper), context.filesDir, Modifier.matchParentSize())
+                Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    LauncherThemeClock(appearance, compact = true)
+                    LauncherStyledWidget(appearance.studio.widgetFrame, minHeight = 48) { modifier ->
+                        Surface(modifier, shape = RoundedCornerShape(15.dp), color = MaterialTheme.colorScheme.surfaceContainer) {
+                            val widgetLabel = if (appearance.studio.look == LauncherLook.FLOATING) "Widget stack" else "Widget preview"
+                            Text(widgetLabel, Modifier.padding(12.dp),
+                                style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         }
                     }
-                }
-                val floating = appearance.studio.look == LauncherLook.FLOATING
-                Surface(
-                    Modifier.align(Alignment.CenterHorizontally).fillMaxWidth(if (floating) .87f else 1f),
-                    color = when (appearance.dock) {
-                        LauncherDock.GLASS -> Color.White.copy(alpha = .19f)
-                        LauncherDock.SOLID -> Color(0xFF273550)
-                        LauncherDock.TRANSPARENT, LauncherDock.HIDDEN -> Color.Transparent
-                    },
-                    shape = RoundedCornerShape(if (floating) 29.dp else 18.dp),
-                ) {
-                    Row(Modifier.padding(8.dp), verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Surface(color = if (folder.opaque) MaterialTheme.colorScheme.surfaceContainerHigh
-                            else MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = .73f), shape = RoundedCornerShape(12.dp)) {
-                            Icon(Icons.Default.Folder, "Folder preview", Modifier.padding(7.dp).size(21.dp), tint = launcherAccent(appearance))
+                    val shown = apps.take(grid.columns(inner).coerceAtMost(5)).distinctBy(LauncherApp::component)
+                    if (shown.isNotEmpty()) Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                        shown.forEach { app ->
+                            Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
+                                LauncherArtworkIcon(app, appearance, Modifier.size((44 * appearance.iconSize.previewScale).dp))
+                                if (appearance.labels) Text(app.label, color = Color.White, maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.labelSmall)
+                            }
                         }
-                        if (folder.labels) Text(folder.mode.label, color = Color.White, style = MaterialTheme.typography.labelMedium)
                     }
+                    val floating = appearance.studio.look == LauncherLook.FLOATING
+                    Surface(
+                        Modifier.align(Alignment.CenterHorizontally).fillMaxWidth(if (floating) .87f else 1f),
+                        color = when (appearance.dock) {
+                            LauncherDock.GLASS -> Color.White.copy(alpha = .19f)
+                            LauncherDock.SOLID -> Color(0xFF273550)
+                            LauncherDock.TRANSPARENT, LauncherDock.HIDDEN -> Color.Transparent
+                        },
+                        shape = RoundedCornerShape(if (floating) 29.dp else 18.dp),
+                    ) {
+                        Row(Modifier.padding(8.dp), verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Surface(color = if (folder.opaque) MaterialTheme.colorScheme.surfaceContainerHigh
+                                else MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = .73f), shape = RoundedCornerShape(12.dp)) {
+                                val folderIconSize = (32 * (folder.iconSize ?: appearance.iconSize).previewScale).dp
+                                Box(Modifier.padding(6.dp), contentAlignment = Alignment.Center) {
+                                    if (floating && shown.isNotEmpty()) {
+                                        LauncherFolderPreview(shown, Modifier.size(folderIconSize), appearance = appearance)
+                                    } else {
+                                        Icon(Icons.Default.Folder, "Folder preview", Modifier.size(folderIconSize),
+                                            tint = MaterialTheme.colorScheme.primary)
+                                    }
+                                }
+                            }
+                            if (folder.labels) Text(folder.mode.label, color = Color.White, style = MaterialTheme.typography.labelMedium)
+                        }
+                    }
+                    if (selectedWallpaper == null) Text("Home will use the Android wallpaper", color = Color.White,
+                        style = MaterialTheme.typography.labelSmall)
                 }
-                if (selectedWallpaper == null) Text("Home will use the Android wallpaper", color = Color.White,
-                    style = MaterialTheme.typography.labelSmall)
             }
         }
     }
