@@ -12,6 +12,12 @@ The historical crash-report test wrote an unstructured exception message into th
 
 Fresh Primary and Hidden browser routes render their respective privacy acknowledgement before mounting the browser. Older toolbar, page and consent fixtures invoked controls behind that notice without acknowledging it. Six Primary screen/media fixture classes and the Hidden layout fixture now use the actual tagged Continue control before testing the downstream UI. Each restores its original nonsecret revision. First-use notice tests remain independent. The Hidden parent header is now “Browser V1”. Two restore-dialog cases still used the old “Phone Gallery” destination label; the current “Phone storage” covers both downloads and media. The move confirmation and fresh PIN assertions remain.
 
+[Same-image comparison](https://github.com/traynor1987/Private-gallery-/actions/runs/46067842669) recorded SystemUI creating ImmersiveModeConfirmation on main. The resumed encrypted player lost window focus, retired audio focus and was detached when the app regained focus. With the disposable emulator’s first-use tutorial acknowledged, all four playback cases and the nine storage cases passed on the initial repair, leaving the four browser-layout failures. The full preflight now sets and reads back only that emulator setting. Application concealment remains active on real window focus loss.
+
+The native child catalogue and library fixtures used retired Close/Done labels. The actual Nova Home action ends the authorized child. The library fixture checks the same profile clear and disk retirement. The catalogue fixture now proves the old child was retired and uses a freshly admitted child to reopen the same encrypted catalogue. The native layout case explicitly navigates to the owned WireGuard fixture before measuring WebView geometry. An unused tab renders the native start surface.
+
+The picker fixture also attempted to serve a PNG through the updater-only APK provider path. It now opens an expiring synthetic image through the designated share path before exercising the original lock and reauthentication assertions. The website confirmation regression now clicks OK inside the themed website dialog and still verifies the actual JavaScript result and surviving tab.
+
 | Observation | Cases |
 |---|---:|
 | Player never ready | 5 |

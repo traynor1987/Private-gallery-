@@ -367,8 +367,14 @@ class HiddenPrivateAppsLive178Test {
             selected.update {catalog ->val saved=catalog.apps.single()
                 catalog.upsert(PrivateAppCatalog.App(saved.id(),saved.name(),saved.startUrl(),saved.scope(),saved.display(),saved.icon(),saved.pinned(),saved.addressBar(),true))
             }
-            click("Close")
-            click("Private Apps")
+            val firstChild = checkNotNull(broker)
+            click("Nova Home")
+            waitFor("Catalogue Home clears the profile and retires the claimed child") {
+                ended.get() && firstChild.profileClearAcknowledged && !firstChild.valid() &&
+                    !HiddenVpnBrowserBroker.hasDedicatedProcess(context) && HiddenVpnBrowserBroker.admissionRetired()
+            }
+            assertTrue("Returning Home retains independent Hidden authentication",session.isUnlocked)
+            openChild()
             waitFor("Reopened cross-process catalogue loads encrypted edited entry") { visible("Renamed owned fixture") }
             val requestPath = URI(launchUrl).rawPath
             val before = requestCount(events(), requestPath)

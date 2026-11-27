@@ -29,6 +29,10 @@ bash scripts/verify_android17_device.sh "$out"
 adb shell wm size 1200x1800
 adb shell wm density 160
 adb shell wm dismiss-keyguard
+# The Android SystemUI fullscreen tutorial legitimately revokes protected playback focus.
+# Match the acknowledged first-use state of the API 37 comparison on this disposable AVD.
+adb shell settings put secure immersive_mode_confirmations confirmed
+[[ $(adb shell settings get secure immersive_mode_confirmations | tr -d '\r') == confirmed ]]
 python3 scripts/verify_android17_media_environment.py "$out/media-before.json"
 python3 scripts/ci_emulator_storage.py "$out/storage-before.json" --avd build99-full --require-budget
 sha256sum --check "$out/debug-inputs.sha256"

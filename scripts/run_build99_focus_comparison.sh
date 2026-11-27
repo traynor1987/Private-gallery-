@@ -16,7 +16,7 @@ fi
 adb shell settings get secure immersive_mode_confirmations > "$out/tutorial-state.txt"
 # Observe window ownership on a disposable device without recording UI contents.
 while true; do
-  adb shell dumpsys window windows | grep -E 'mCurrentFocus=|mFocusedApp=' >> "$out/focus.txt" || true
+  adb shell dumpsys window displays | grep -E 'mCurrentFocus=|mFocusedApp=' >> "$out/focus.txt" || true
   sleep 1
 done &
 observer=$!
@@ -39,7 +39,8 @@ run_cases() {
 }
 failed=0
 if [[ ${VERIFY_FRESH_FIXTURES:-false} == true ]]; then
-    run_cases notices "$ns.ui.BrowserBetaNoticeTest,$ns.ui.HiddenBrowser17LayoutTest,$ns.ui.HiddenRestoreDialogTest,$ns.ui.BrowserV2HomeRenderTest,$ns.ui.BrowserV2InitialPresentationTest,$ns.ui.BrowserPolishTest,$ns.ui.BrowserConsent1752Test,$ns.core.media.BrowserVideoAssistantTest" || failed=1
+    run_cases notices "$ns.ui.BrowserV2ModernWebTest#nativeConfirmDialogCompletesWithoutReplacingParentPage,$ns.ui.BrowserBetaNoticeTest,$ns.ui.HiddenBrowser17LayoutTest,$ns.ui.HiddenRestoreDialogTest,$ns.ui.BrowserV2HomeRenderTest,$ns.ui.BrowserV2InitialPresentationTest,$ns.ui.BrowserPolishTest,$ns.ui.BrowserConsent1752Test,$ns.core.media.BrowserVideoAssistantTest" || failed=1
+    run_cases hidden_vault "$ns.ui.HiddenVaultIntegrationTest#hiddenBottomNavigationFitsActualActivityWindowNotItsOwnLayoutBounds,$ns.ui.HiddenVaultIntegrationTest#normalVaultGridViewerAndFavouriteUsePersistedHiddenData,$ns.ui.HiddenVaultIntegrationTest#pickerResultSurvivesPrimaryLockButImportRequiresFreshHiddenPin" || failed=1
     run_cases diagnostics "$ns.ui.BrowserRuntimeDiagnosticsTest#clearingCurrentTraceRetainsClearlySeparatedPreviousFatalEvidence" || failed=1
     run_cases launcher "$ns.LauncherWorkspace70Test#directPrimaryVaultHidesOnlyInternalNavigationUntilReturningHome" || failed=1
     run_cases gallery "$ns.PrimaryGalleryDeviceRepair1762Test" || failed=1

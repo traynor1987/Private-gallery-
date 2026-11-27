@@ -118,9 +118,15 @@ class HiddenVaultIntegrationTest {
     @Test fun defaultScreenshotBlockingAppliesToHiddenGridViewerAndPin() = verifyCapturePreference(false)
     @Test fun hiddenBottomNavigationFitsActualActivityWindowNotItsOwnLayoutBounds() {
         seedPhoto()
-        compose.setContent {MaterialTheme {HiddenVaultDialog(context,onDismiss={})}}
+        // Supply the same app navigation context as MainActivity while retaining the isolated PIN store.
+        compose.setContent {
+            val security = NovaSecurityActions({}, {}, {}, "Hidden Space")
+            androidx.compose.runtime.CompositionLocalProvider(LocalNovaSecurityActions provides security) {
+                MaterialTheme { HiddenVaultDialog(context, onDismiss = {}) }
+            }
+        }
         unlock()
-        compose.waitUntil(30_000){compose.onAllNodesWithText("Test favourites",substring=false).fetchSemanticsNodes().isNotEmpty()}
+        compose.onNodeWithTag("nova-navigation").assertIsDisplayed()
         var safeBottom=0f
         var width=0f
         compose.runOnIdle {
@@ -132,9 +138,9 @@ class HiddenVaultIntegrationTest {
                 .filter {it !== compose.activity.window.decorView && it.isShown}
             assertTrue("Unlocked Hidden must use the Activity window, not a separate full-screen dialog",dialogs.isEmpty())
         }
-        listOf("Gallery","Vault","Test favourites","Browser","Settings").forEach {label ->
-            compose.onNode(hasText(label) and hasAnyAncestor(isSelectable()),useUnmergedTree=true).assertIsDisplayed()
-            val target=compose.onNode(hasText(label) and isSelectable())
+        listOf("Recents", "Home", "Back").forEach { label ->
+            val target = compose.onNode(hasContentDescription(label) and hasAnyAncestor(hasTestTag("nova-navigation")))
+            target.assertIsDisplayed().assertHasClickAction()
             val node=target.fetchSemanticsNode()
             val item=target.getUnclippedBoundsInRoot()
             val density=compose.activity.resources.displayMetrics.density
@@ -157,9 +163,19 @@ class HiddenVaultIntegrationTest {
         compose.onNodeWithTag("viewer-image").assertIsDisplayed()
         // Exercise the viewer toolbar inside the shared Activity viewport.
         compose.onNodeWithContentDescription("Back").performClick()
-        compose.waitUntil(30_000){compose.onAllNodesWithText("Test favourites",substring=false).fetchSemanticsNodes().isNotEmpty()}
-        compose.onNodeWithText("Test favourites",substring=false).performClick()
+        compose.onNodeWithText("Collections").performClick()
+        compose.onNodeWithText("Test favourites").assertIsDisplayed()
+        compose.onNodeWithContentDescription("disposable.png").performClick()
+        compose.onNodeWithContentDescription("Back to collections").assertIsDisplayed()
         compose.onNodeWithContentDescription("disposable.png").assertIsDisplayed()
+        val verifySession = HiddenSession(android.os.SystemClock::elapsedRealtime)
+        try {
+            assertTrue(verifySession.complete(verifySession.beginAuthentication(), HiddenCredentialStore(context).unlock("728491".toCharArray())))
+            val repository = HiddenRepository(context, verifySession)
+            val favourite = requireNotNull(repository.favouriteCollection())
+            assertEquals("Test favourites", favourite.name)
+            assertEquals(listOf("disposable.png"), repository.itemsInCollection(favourite.id).map { it.displayName })
+        } finally { verifySession.lock() }
         compose.onNodeWithContentDescription("Lock Vault").performClick()
         compose.runOnIdle {assertTrue(shown.value)}
         compose.onNodeWithTag("passcode-indicator").assertIsDisplayed()
@@ -215,10 +231,11 @@ class HiddenVaultIntegrationTest {
 
     @Test fun pickerResultSurvivesPrimaryLockButImportRequiresFreshHiddenPin() {
         seedPhoto()
-        val fixture=File(base.cacheDir,"updates/picker-fixture-$id.png").apply {parentFile!!.mkdirs()}
+        val fixture=File(base.cacheDir,"share-copies/$id.png").apply {parentFile!!.mkdirs()}
         val bitmap=Bitmap.createBitmap(24,24,Bitmap.Config.ARGB_8888).apply {eraseColor(android.graphics.Color.RED)}
         try {fixture.outputStream().use {bitmap.compress(Bitmap.CompressFormat.PNG,100,it)}} finally {bitmap.recycle()}
         val uri=androidx.core.content.FileProvider.getUriForFile(base,"${base.packageName}.fileprovider",fixture)
+        base.contentResolver.openInputStream(uri)!!.use { assertTrue("The provider must serve the synthetic image", it.read() >= 0) }
         var requestCode=-1
         val registry=object:androidx.activity.result.ActivityResultRegistry() {
             override fun <I,O> onLaunch(code:Int,contract:androidx.activity.result.contract.ActivityResultContract<I,O>,input:I,options:androidx.core.app.ActivityOptionsCompat?) {requestCode=code}

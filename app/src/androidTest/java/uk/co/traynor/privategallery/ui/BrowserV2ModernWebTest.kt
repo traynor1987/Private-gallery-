@@ -3,16 +3,15 @@ package uk.co.traynor.privategallery.ui
 import android.webkit.WebView
 import androidx.activity.ComponentActivity
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.test.hasAnyAncestor
+import androidx.compose.ui.test.hasTestTag
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import androidx.test.espresso.Espresso.onView
-import androidx.test.espresso.matcher.ViewMatchers.withId
-import androidx.test.espresso.matcher.RootMatchers.isDialog
-import androidx.test.espresso.action.ViewActions.click
 import org.junit.After
 import org.junit.Assert.*
 import org.junit.Rule
@@ -96,10 +95,9 @@ class BrowserV2ModernWebTest {
         load("<main>Native dialog fixture</main>")
         compose.runOnIdle { session.activeWebView().evaluateJavascript("window.answer=confirm('Local fixture');", null) }
         compose.waitUntil(10_000) { compose.runOnIdle { callbackEvents.contains("JS_DIALOG_CONFIRM") } }
-        // Android17 can expose the dialog node before its entrance surface accepts input.
-        // Baseline InputDispatcher rejected the original tap at opacity0.364502.
-        androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().uiAutomation.waitForIdle(500,5000)
-        onView(withId(android.R.id.button1)).inRoot(isDialog()).perform(click())
+        val dialog = hasAnyAncestor(hasTestTag("website-script-dialog"))
+        compose.onNode(hasText("Local fixture") and dialog).assertIsDisplayed()
+        compose.onNode(hasText("OK") and dialog).assertIsDisplayed().performClick()
         assertEquals("true", js("window.answer"))
         assertTrue(callbackEvents.contains("JS_DIALOG_CONFIRM"))
         compose.runOnIdle { assertEquals(1, session.tabs.tabs.size) }

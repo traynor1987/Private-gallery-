@@ -1,12 +1,17 @@
 name: Build 99 focused security comparison
 on:
+  workflow_call:
+    inputs:
+      release_preflight:
+        type: boolean
+        required: true
   push:
     branches: [feature/novaos2-wave-a]
 permissions:
   contents: read
 jobs:
   compare:
-    if: contains(github.event.head_commit.message, '[build99-compare]') || contains(github.event.head_commit.message, '[build99-repair-tests]')
+    if: inputs.release_preflight || (!contains(github.event.head_commit.message, '[novaos-build99-full]') && (contains(github.event.head_commit.message, '[build99-compare]') || contains(github.event.head_commit.message, '[build99-repair-tests]')))
     strategy:
       fail-fast: false
       matrix:
@@ -16,7 +21,7 @@ jobs:
     timeout-minutes: 55
     env:
       PREPARE_FULLSCREEN: ${{ matrix.label == 'candidate-prepared' }}
-      VERIFY_FRESH_FIXTURES: ${{ contains(github.event.head_commit.message, '[build99-repair-tests]') }}
+      VERIFY_FRESH_FIXTURES: ${{ inputs.release_preflight || contains(github.event.head_commit.message, '[build99-repair-tests]') }}
     steps:
       - uses: actions/checkout@v4
         with: { persist-credentials: false }

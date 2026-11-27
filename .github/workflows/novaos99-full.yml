@@ -11,7 +11,13 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  focused_regressions:
+    if: github.repository == 'traynor1987/Private-gallery-' && contains(github.event.head_commit.message, '[novaos-build99-full]')
+    uses: ./.github/workflows/novaos99-compare.yml
+    with:
+      release_preflight: true
   full_security:
+    needs: focused_regressions
     name: Full Android 17 security
     if: github.repository == 'traynor1987/Private-gallery-' && contains(github.event.head_commit.message, '[novaos-build99-full]')
     runs-on: ubuntu-24.04
