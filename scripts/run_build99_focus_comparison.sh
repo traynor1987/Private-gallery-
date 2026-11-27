@@ -27,7 +27,7 @@ run_cases() {
     local label=$1 selection=$2 result=0
     local reports=app/build/outputs/androidTest-results/connected
     rm -rf "$reports"
-    ./gradlew :app:connectedDebugAndroidTest "-Pandroid.testInstrumentationRunnerArguments.class=$selection" --console=plain || result=$?
+    bash scripts/run_android17_checked_command.sh "$out/$label-recovery" -- ./gradlew :app:connectedDebugAndroidTest "-Pandroid.testInstrumentationRunnerArguments.class=$selection" --console=plain || result=$?
     if [[ -d "$reports" ]]; then
         mkdir -p "$out/$label"
         cp -a "$reports/." "$out/$label/"
