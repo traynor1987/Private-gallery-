@@ -40,6 +40,7 @@ run_cases() {
 failed=0
 if [[ ${VERIFY_FRESH_FIXTURES:-false} == true ]]; then
     run_cases browser_repair "$ns.HomeOwnedWindowPanicTest#browserMenuReturnsToAuthenticatedNovaHome,$ns.ui.BrowserProfessionalUiTest" || exit 1
+    run_cases route_reporting "$ns.core.evidence.EvidenceRouteCleanupReportingTest" || exit 1
     run_cases notices "$ns.ui.BrowserV2ModernWebTest#nativeConfirmDialogCompletesWithoutReplacingParentPage,$ns.ui.BrowserBetaNoticeTest,$ns.ui.HiddenBrowser17LayoutTest,$ns.ui.HiddenRestoreDialogTest,$ns.ui.BrowserV2HomeRenderTest,$ns.ui.BrowserV2InitialPresentationTest,$ns.ui.BrowserPolishTest,$ns.ui.BrowserConsent1752Test,$ns.core.media.BrowserVideoAssistantTest" || failed=1
     run_cases hidden_vault "$ns.ui.HiddenVaultIntegrationTest#hiddenBottomNavigationFitsActualActivityWindowNotItsOwnLayoutBounds,$ns.ui.HiddenVaultIntegrationTest#normalVaultGridViewerAndFavouriteUsePersistedHiddenData,$ns.ui.HiddenVaultIntegrationTest#pickerResultSurvivesPrimaryLockButImportRequiresFreshHiddenPin" || failed=1
     run_cases diagnostics "$ns.ui.BrowserRuntimeDiagnosticsTest#clearingCurrentTraceRetainsClearlySeparatedPreviousFatalEvidence" || failed=1

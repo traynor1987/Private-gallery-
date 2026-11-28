@@ -95,6 +95,7 @@ class EvidenceOwnedRoute179Test {
   var coordinator:EvidenceRouteCoordinator?=null;var route:EvidenceRoute?=null
   val operations=JSONArray()
   val result=JSONObject().put("schema",1).put("case",case).put("method",method).put("classname",EvidenceOwnedRoute179Test::class.java.name).put("nonce",nonce).put("source_sha",source).put("mode",if(isTor)"Tor" else "VPN").put("uid",Process.myUid())
+  var routeFailure:Throwable?=null
   var clock:EvidenceRouteClock179?=null
   try {
    if(case=="vpn_revoke")EvidenceRouteClockLifecycle179(instrumentation,arguments,nonce,source).run(output)
@@ -206,8 +207,11 @@ class EvidenceOwnedRoute179Test {
    // Observe a quiet bounded interval after denial, without starting a replacement route/process.
    repeat(10){assertFalse(connected.current());if(isTor)assertTrue(processes().isEmpty());delay(100)}
    assertNull(manager.boundNetworkForProcess);result.put("operations",operations)
+  }catch(failure:Throwable){
+   routeFailure=failure
+   throw failure
   }finally{
-   val clockReceipt=retireRouteClock179(clock){
+   val clockReceipt=retireRouteClock179(clock,routeFailure){
    route?.close();coordinator?.close();access.close();session.lock();engine.disconnect()
    until("All owned services/Networks released",30){!engine.ownsTunnel&&networks().isEmpty()&&HiddenTorIsolationService.released()&&!HiddenTorIsolationService.hasTorProcess(app)&&!HiddenVpnBrowserBroker.hasDedicatedProcess(app)}
    assertNull(manager.boundNetworkForProcess);storage.deleteRecursively();activity.close()

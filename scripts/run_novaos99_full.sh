@@ -54,7 +54,8 @@ python3 scripts/build99_broad_batches.py "$out/discovery.txt" > "$out/broad-batc
 [[ -s "$out/broad-batches.txt" && "$app_id" == uk.co.traynor.privategallery.hiddenprototype ]]
 broad_status=0
 batch=0
-while IFS= read -r selection; do
+mapfile -t selections < "$out/broad-batches.txt"
+for selection in "${selections[@]}"; do
     batch=$((batch + 1))
     dest="$out/broad-results/batch-$batch"
     mkdir -p "$dest"
@@ -73,7 +74,7 @@ while IFS= read -r selection; do
     if [[ -d "$reports" ]]; then cp -a "$reports/." "$dest/"; else status=1; fi
     printf '%s\n' "$status" > "$dest/gradle-status.txt"
     if ((status != 0)); then broad_status=1; fi
-done < "$out/broad-batches.txt"
+done
 ((broad_status == 0))
 
 # Evidence Locker's packet proof must start with a fresh owned WireGuard
