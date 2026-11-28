@@ -29,6 +29,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 
 class ProfessionalUiTest {
+    private val browserNotice = BrowserNoticeFixture()
+    @get:Rule val notice: org.junit.rules.TestRule get() = browserNotice
     @get:Rule val compose = createAndroidComposeRule<ComponentActivity>()
 
     // Only neutral synthetic-fixture preferences are scoped here; vault data and keys are untouched.
@@ -353,6 +355,7 @@ class ProfessionalUiTest {
             BrowserV2ProductionDestination(session, BrowserSearchEngine.GOOGLE, { _, _ -> }, { _, _ -> }, false, {}, emptyList(), { _, _, _ -> }, {}, { it(emptyList()) }, { it() }, {},
                 connectionPresentation = BrowserConnectionPresentation.from(true, vpn))
         } }
+        browserNotice.enter(compose)
         compose.onNodeWithTag("browser-v2-webview-host").assertDoesNotExist()
         compose.runOnIdle {
             session.navigateActive("https://example.invalid/blocked")
@@ -379,6 +382,7 @@ class ProfessionalUiTest {
                     connectionPresentation = BrowserConnectionPresentation.from(true, vpn), onFullscreenChanged = { fullscreen = it })
             }
         } } }
+        browserNotice.enter(compose)
         compose.onNodeWithContentDescription("Nova Home").assertIsDisplayed()
         compose.runOnIdle { session.onShowCustomView(session.tabs.activeTab.id, android.view.View(compose.activity), android.webkit.WebChromeClient.CustomViewCallback { exits++ }) }
         compose.onNodeWithContentDescription("Nova Home").assertDoesNotExist()
@@ -411,6 +415,7 @@ class ProfessionalUiTest {
                 connectionPresentation = BrowserConnectionPresentation.from(true, vpn),
                 onConnectVpn = { attempts++; vpn = VpnConnectionState.CONNECTING })
         } }
+        browserNotice.enter(compose)
         compose.onNodeWithText("VPN not connected").assertIsDisplayed()
         val page = compose.onNodeWithTag("browser-v2-page-region").fetchSemanticsNode().boundsInRoot
         compose.onNodeWithText("Connect securely").performClick()

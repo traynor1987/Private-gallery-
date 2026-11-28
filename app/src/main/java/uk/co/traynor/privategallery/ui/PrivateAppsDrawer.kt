@@ -53,7 +53,7 @@ internal fun PrivateAppsDrawerTile(
             Icon(Icons.Default.MoreVert,"App actions for ${app.name()}",Modifier.size(18.dp),tint=MaterialTheme.colorScheme.onSurfaceVariant)
         }
         DropdownMenu(expanded=menuExpanded,onDismissRequest=onDismissMenu,
-            properties=PopupProperties(focusable=true,securePolicy=SecureFlagPolicy.Inherit)) {
+            properties=PopupProperties(focusable=true,securePolicy=SecureFlagPolicy.SecureOn)) {
             for(label in listOf("Edit",if(app.pinned())"Unpin"else"Pin","Reorder","App Settings","Remove")) {
                 DropdownMenuItem(text={Text(label)},onClick={onAction(label)},enabled=enabled)
             }
