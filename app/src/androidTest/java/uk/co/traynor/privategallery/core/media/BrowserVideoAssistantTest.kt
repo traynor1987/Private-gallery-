@@ -63,6 +63,10 @@ class BrowserVideoAssistantTest {
             compose.onNodeWithContentDescription("More").performClick()
             compose.onNodeWithText("Play in NovaOS").performClick()
             compose.onNodeWithContentDescription("Exit video view").assertIsDisplayed().performClick()
+            compose.waitUntil(5000) {
+                compose.onAllNodesWithContentDescription("Exit video view").fetchSemanticsNodes().isEmpty() &&
+                    compose.runOnIdle { compose.activity.requestedOrientation == ActivityInfo.SCREEN_ORIENTATION_PORTRAIT }
+            }
             compose.runOnIdle {
                 assertSame(original, session.activeWebView())
                 assertEquals(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT, compose.activity.requestedOrientation)
