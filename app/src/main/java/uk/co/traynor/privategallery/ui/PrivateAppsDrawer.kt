@@ -70,7 +70,9 @@ internal fun PrivateAppsDrawerGrid(
     onAction:(PrivateAppCatalog.App,String)->Unit,modifier:Modifier=Modifier,
 ) {
     BoxWithConstraints(modifier.fillMaxSize()) {
-        val columns=uk.co.traynor.privategallery.core.home.NovaNavigation.columns(maxWidth.value.toInt(),LocalDensity.current.fontScale)
+        val minimumTileWidth = 72.dp * LocalDensity.current.fontScale.coerceAtLeast(1f)
+        val cellAllowance = 8.dp
+        val columns = ((maxWidth + cellAllowance) / (minimumTileWidth + cellAllowance)).toInt().coerceIn(1, 8)
         LazyVerticalGrid(columns=GridCells.Fixed(columns),modifier=Modifier.fillMaxSize().testTag("private-app-grid"),
             horizontalArrangement=Arrangement.spacedBy(0.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
             items(visibleApps,key={it.id()}) {app ->

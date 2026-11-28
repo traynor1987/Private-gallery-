@@ -46,7 +46,13 @@ class PrivateAppScreenshot49Test {
   try {
    compose.setContent{PrivateGalleryTheme{request?.let{owned ->PrivateAppScreenshotReview(owned){if(request===owned)request=null}}}}
    compose.runOnIdle{request=capture()}
+   try {
    compose.waitUntil(5000){compose.onAllNodesWithContentDescription("Protected screenshot preview").fetchSemanticsNodes().isNotEmpty()}
+  } catch (timeout: androidx.compose.ui.test.ComposeTimeoutException) {
+   val mounted = compose.onAllNodesWithText("Review screenshot").fetchSemanticsNodes().size
+   val invalid = compose.onAllNodesWithText("The captured image could not be validated. Cancel and try again.").fetchSemanticsNodes().size
+   throw AssertionError("Missing synthetic preview: mounted=$mounted invalidImage=$invalid consumed=$consumed", timeout)
+  }
    compose.onNodeWithText("Review screenshot").assertIsDisplayed()
    assertProtectedDialog()
    assertEquals(listOf(original.id),repo.items().map{it.id})
