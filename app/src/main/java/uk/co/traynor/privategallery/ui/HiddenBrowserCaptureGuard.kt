@@ -16,6 +16,21 @@ internal class HiddenBrowserCaptureGuard(
     private val failed:()->Unit,
 ) {
     private val decor get()=activity.window.decorView
+    private val protectedPages = mutableSetOf<Any>()
+
+    companion object {
+        fun forActivity(activity: Activity): HiddenBrowserCaptureGuard? =
+            activity.window.decorView.getTag(uk.co.traynor.privategallery.R.id.hidden_browser_capture_guard) as? HiddenBrowserCaptureGuard
+    }
+
+    fun protectPage(): AutoCloseable {
+        check(!closed)
+        val owner = Any()
+        protectedPages.add(owner)
+        protect()
+        return AutoCloseable { if (protectedPages.remove(owner)) requestFrame() }
+    }
+
     private var resumed=false
     private var closed=false
     private var allowed=false
@@ -29,7 +44,11 @@ internal class HiddenBrowserCaptureGuard(
         if(!focused)protect()
         requestFrame()
     }
-    fun start() {activity.setRecentsScreenshotEnabled(false);conceal()}
+    fun start() {
+        decor.setTag(uk.co.traynor.privategallery.R.id.hidden_browser_capture_guard, this)
+        activity.setRecentsScreenshotEnabled(false)
+        conceal()
+    }
     fun updatePolicy(value:Boolean) {
         if(allowed==value)return
         allowed=value
@@ -89,7 +108,7 @@ internal class HiddenBrowserCaptureGuard(
                 if(epoch!=revision)return true
                 previousAccessibility?.let {decor.importantForAccessibility=it};previousAccessibility=null
                 windows.uncoverSecondaryWindows();curtain?.visibility=View.GONE
-                if(allowed) {
+                if(allowed && protectedPages.isEmpty()) {
                     if(!windows.restore(true)){failed();return true}
                     activity.window.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)
                 } else protect()
@@ -102,6 +121,8 @@ internal class HiddenBrowserCaptureGuard(
     fun close(){
         if(closed)return
         resumed=false;conceal();closed=true
+        decor.setTag(uk.co.traynor.privategallery.R.id.hidden_browser_capture_guard, null)
+        protectedPages.clear()
         // This single-use browser process is about to die. Keep every curtain/secure flag
         // until its windows detach; closing a tracker here would uncover a still-live Dialog.
     }

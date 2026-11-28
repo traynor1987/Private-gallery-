@@ -78,6 +78,18 @@ internal fun PrivateAppsLibrary(controller:PrivateAppsController,onClose:()->Uni
  }
  LaunchedEffect(controller){while(isActive && !revoked){delay(250);withContext(Dispatchers.Main.immediate){if(!current())revoke()}}}
  if(revoked)return
+ val activity = checkNotNull(androidx.activity.compose.LocalActivity.current)
+ DisposableEffect(activity) {
+  val protection = when (activity) {
+   is uk.co.traynor.privategallery.MainActivity -> {
+    val token = activity.beginProtectedPage()
+    AutoCloseable { activity.endProtectedPage(token) }
+   }
+   else -> HiddenBrowserCaptureGuard.forActivity(activity)?.protectPage()
+    ?: EvidenceSensitiveWindowProtection.acquire(activity.window)
+  }
+  onDispose { protection.close() }
+ }
  Box(Modifier.fillMaxSize()) {
   BackHandler {when{editing->editing=false;settingsId!=null->settingsId=null;else->dismiss(true)}}
   if(!editing && settingsId==null)Surface(Modifier.fillMaxSize().systemBarsPadding().imePadding(),color=MaterialTheme.colorScheme.background) {
