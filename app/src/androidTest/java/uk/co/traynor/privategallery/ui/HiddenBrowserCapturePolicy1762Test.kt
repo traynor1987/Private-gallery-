@@ -43,6 +43,39 @@ class HiddenBrowserCapturePolicy1762Test {
             scenario.onActivity{guard.close()}
         }
     }
+    @Test fun overlappingDrawerOwnersKeepCaptureProtectedUntilAFreshEligibleFrame() {
+        ActivityScenario.launch(ComponentActivity::class.java).use { scenario ->
+            lateinit var activity: ComponentActivity
+            lateinit var guard: HiddenBrowserCaptureGuard
+            scenario.onActivity { a ->
+                activity = a
+                a.setContentView(TextView(a))
+                guard = HiddenBrowserCaptureGuard(a, { true }, { fail("Window protection failed") })
+                guard.start()
+                guard.updatePolicy(true)
+                guard.resume()
+            }
+            waitFor("Ordinary authenticated frame allows capture") { frame(guard); !secure(activity) }
+            lateinit var second: AutoCloseable
+            scenario.onActivity { a ->
+                val owner = checkNotNull(HiddenBrowserCaptureGuard.forActivity(a))
+                val first = owner.protectPage()
+                second = owner.protectPage()
+                first.close()
+                first.close()
+                assertTrue(secure(a))
+            }
+            frame(guard)
+            instrumentation.waitForIdleSync()
+            scenario.onActivity { a ->
+                assertTrue("Second owner still protects the drawer", secure(a))
+                second.close()
+                assertTrue("Release alone cannot enable capture", secure(a))
+            }
+            waitFor("Only a fresh eligible frame restores capture") { frame(guard); !secure(activity) }
+            scenario.onActivity { guard.close() }
+        }
+    }
     @Test fun pauseCoversActivityAndOwnedDialogAndResumeNeedsAnotherFrame() {
         ActivityScenario.launch(ComponentActivity::class.java).use {scenario ->
             lateinit var activity:ComponentActivity;lateinit var guard:HiddenBrowserCaptureGuard;lateinit var dialog:AlertDialog
@@ -91,18 +124,47 @@ class HiddenBrowserCapturePolicy1762Test {
         }}
     }
     @Test fun parentSelectedThemeIsAuthoritativeAndIndependentOfHiddenCaptureOptIn() {
-        ActivityScenario.launch(MainActivity::class.java).use {scenario ->scenario.onActivity {activity ->
-            val settings=activity.getSharedPreferences("private-gallery-settings",0)
-            val prior=settings.getString("app-theme",null)
-            val apply=MainActivity::class.java.getDeclaredMethod("applyTheme",uk.co.traynor.privategallery.core.ui.AppTheme::class.java).apply{isAccessible=true}
-            try {
-                for(theme in listOf(uk.co.traynor.privategallery.core.ui.AppTheme.DARK,uk.co.traynor.privategallery.core.ui.AppTheme.LIGHT)) {
-                    apply.invoke(activity,theme)
-                    assertEquals(theme,activity.hiddenBrowserTheme())
-                    assertFalse("Theme selection grants no capture authority",activity.hiddenBrowserCaptureAllowed())
+        val context = instrumentation.targetContext
+        val preferences = HiddenPreferences(context)
+        val oldCapture = preferences.allowScreenshots
+        preferences.allowScreenshots = false
+        try {
+            ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+                val model = MainActivity::class.java.getDeclaredField("homeThemeData").apply { isAccessible = true }
+                val apply = MainActivity::class.java.getDeclaredMethod(
+                    "applyTheme", uk.co.traynor.privategallery.core.ui.AppTheme::class.java
+                ).apply { isAccessible = true }
+                val primarySettings = context.getSharedPreferences("private-gallery-settings", 0)
+                val primaryTheme = primarySettings.getString("app-theme", null)
+                scenario.onActivity { activity ->
+                    uk.co.traynor.privategallery.openHiddenSpaceFixtureDashboard(
+                        activity, ViewModelProvider(activity)[ProtectedSessionState::class.java]
+                    )
                 }
-            }finally{apply.invoke(activity,uk.co.traynor.privategallery.core.ui.ThemePreference.decode(prior))}
-        }}
+                waitFor("Authenticated Hidden theme model is connected") {
+                    var connected = false
+                    scenario.onActivity { connected = model.get(it) != null }
+                    connected
+                }
+                scenario.onActivity { activity ->
+                    val prior = activity.hiddenBrowserTheme()
+                    try {
+                        for (theme in listOf(uk.co.traynor.privategallery.core.ui.AppTheme.DARK,
+                                             uk.co.traynor.privategallery.core.ui.AppTheme.LIGHT)) {
+                            apply.invoke(activity, theme)
+                            assertEquals(theme, activity.hiddenBrowserTheme())
+                            assertEquals(primaryTheme, primarySettings.getString("app-theme", null))
+                            assertFalse("Theme selection grants no capture authority", activity.hiddenBrowserCaptureAllowed())
+                        }
+                    } finally {
+                        apply.invoke(activity, prior)
+                        activity.panicExit()
+                    }
+                }
+            }
+        } finally {
+            preferences.allowScreenshots = oldCapture
+        }
     }
 
     @Test fun hiddenOptInNeverClearsAnExplicitSecureCredentialWindow() {

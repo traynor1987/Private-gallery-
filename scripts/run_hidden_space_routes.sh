@@ -2,7 +2,9 @@
 set -euo pipefail
 
 [[ "${GITHUB_ACTIONS:-}" == true ]]
-if [[ "${GITHUB_EVENT_NAME:-}" == push ]]; then
+if [[ "${GITHUB_WORKFLOW:-}" == "NovaOS Build 99 full Android 17 security" ]]; then
+    bash scripts/verify_novaos99_full_context.sh
+elif [[ "${GITHUB_EVENT_NAME:-}" == push ]]; then
     [[ "${GITHUB_REPOSITORY:-}" == traynor1987/Private-gallery- &&
         "${GITHUB_WORKFLOW:-}" == "Hidden Space Android 17" && "${GITHUB_REF:-}" == refs/heads/main ]]
 else
@@ -18,8 +20,15 @@ bash scripts/verify_android17_device.sh "$evidence"
 apk=app/build/outputs/apk/debug/app-debug.apk
 package=$(python3 scripts/debug_apk_identity1762.py "$apk")
 sha256sum "$apk" > "$evidence/apk-sha256.txt"
-adb shell wm size 1200x1800
-adb shell wm density 160
+# The Build 99 driver already set this viewport. Avoid restarting launcher
+# layout immediately before the live-route tests on that same emulator.
+if [[ ${GITHUB_WORKFLOW:-} == "NovaOS Build 99 full Android 17 security" ]]; then
+    [[ $(adb shell wm size | tr -d '\r' | awk 'END {print $NF}') == 1200x1800 ]]
+    [[ $(adb shell wm density | tr -d '\r' | awk 'END {print $NF}') == 160 ]]
+else
+    adb shell wm size 1200x1800
+    adb shell wm density 160
+fi
 bash scripts/reset_native_browser_evidence1762.sh "$package"
 
 adb_cfg=/data/local/tmp/hidden-vpn1762.conf
@@ -43,6 +52,24 @@ run_cases() {
     local reports=app/build/outputs/androidTest-results/connected
     # Only discard previous generated test reports, after the layout suite has archived its results.
     rm -rf "$reports" app/build/outputs/connected_android_test_additional_output
+    # A system launcher ANR covered the app during the Build 99 VPN and Tor cases.
+    # Recover only that exact focused dialog, before collecting fresh packet evidence.
+    if [[ ${GITHUB_WORKFLOW:-} == "NovaOS Build 99 full Android 17 security" ]]; then
+        local launcher_anr='mCurrentFocus=.*Application Not Responding: com\.google\.android\.apps\.nexuslauncher[}]'
+        local focus
+        focus=$(adb shell dumpsys window displays) || return 1
+        if grep -Eq "$launcher_anr" <<< "$focus"; then
+            grep -E "$launcher_anr" <<< "$focus" > "$evidence/$label-launcher-anr.txt"
+            adb shell am force-stop com.google.android.apps.nexuslauncher || return 1
+            adb shell wm dismiss-keyguard || return 1
+            for observation in {1..15}; do
+                focus=$(adb shell dumpsys window displays) || return 1
+                if ! grep -Eq "$launcher_anr" <<< "$focus"; then break; fi
+                [[ $observation != 15 ]] || return 1
+                sleep 1
+            done
+        fi
+    fi
     ./gradlew :app:connectedDebugAndroidTest "-Pandroid.testInstrumentationRunnerArguments.class=$selection" \
         -Pandroid.enableAdditionalTestOutput=true "$@" --stacktrace || status=$?
     if [[ -d "$reports" ]]; then

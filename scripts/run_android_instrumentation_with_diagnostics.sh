@@ -17,7 +17,7 @@ if [[ "${GITHUB_ACTIONS:-}" == true || -n "${HIDDEN_ONION_PROBE_URL:-}" || -n "$
   probe_arguments+=("-Pandroid.testInstrumentationRunnerArguments.hiddenOnionProbeUrl=${HIDDEN_ONION_PROBE_URL:?}")
   probe_arguments+=("-Pandroid.testInstrumentationRunnerArguments.hiddenOnionProbeExpected=${HIDDEN_ONION_PROBE_EXPECTED:?}")
 fi
-./gradlew connectedDebugAndroidTest "${probe_arguments[@]}" --stacktrace --info || test_status=$?
+./gradlew connectedDebugAndroidTest "${probe_arguments[@]}" "$@" --stacktrace --info || test_status=$?
 
 if [[ "$test_status" -ne 0 ]]; then
   raw_log="$diagnostics_dir/android-crash-buffer.raw"

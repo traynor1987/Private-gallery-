@@ -11,6 +11,15 @@ spec.loader.exec_module(driver)
 
 
 class RealUpdateActions(unittest.TestCase):
+    def test_build99_starts_from_the_published_original_key_build97(self):
+        candidate = {"tag": "v2.0.0", "version_code": 99, "baseline_code": 97,
+                     "baseline_sha256": driver.BUILD97_DIGEST}
+        self.assertEqual(("1.7.51", driver.fetch_build97), driver.baseline_for(candidate))
+        with self.assertRaisesRegex(RuntimeError, "Wrong Build 97 baseline digest"):
+            driver.baseline_for(dict(candidate, baseline_sha256="0" * 64))
+        with self.assertRaisesRegex(RuntimeError, "Wrong release candidate"):
+            driver.baseline_for(dict(candidate, baseline_code=98))
+
     def test_available_version_with_long_notes_scrolls_to_actual_download_action(self):
         summary = ET.fromstring('<hierarchy><node text="Installed"/><node text="1.7.41 · Build 87 available"/><node text="Long release notes"/></hierarchy>')
         action = ET.fromstring('<hierarchy><node text="Download update" enabled="true"/></hierarchy>')

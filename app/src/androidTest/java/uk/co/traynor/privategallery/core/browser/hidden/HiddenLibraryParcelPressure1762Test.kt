@@ -179,15 +179,15 @@ class HiddenLibraryParcelPressure1762Test {
                 waitFor("Maximum history response reaches actual child") { texts().contains(url("history", 99)) }
                 assertFalse(texts().contains("Hidden library unavailable."))
                 click("Back to Browser") // Close History, then explicitly finish the still-authorized child.
-                waitFor("History dialog removed before browser Done") {texts().contains("Browser settings") && !texts().contains(url("history",99))}
-                click("Done")
-                waitFor("Explicit authorized Done acknowledges supported profile clearing",10) {broker!!.profileClearAcknowledged}
-                waitFor("Ordinary Done exits the isolated process",10) {!HiddenVpnBrowserBroker.hasDedicatedProcess(context)}
-                waitFor("Ordinary Done removes owned browser roots",15) {
+                waitFor("History dialog removed before browser Home") {texts().contains("Browser settings") && !texts().contains(url("history",99))}
+                click("Nova Home")
+                waitFor("Explicit authorized Home acknowledges supported profile clearing",10) {broker!!.profileClearAcknowledged}
+                waitFor("Ordinary Home exits the isolated process",10) {!HiddenVpnBrowserBroker.hasDedicatedProcess(context)}
+                waitFor("Ordinary Home removes owned browser roots",15) {
                     !File(context.noBackupFilesDir,"hidden-vpn-webview-v1/${broker!!.token}").exists() &&
                         !File(context.cacheDir,"hidden-vpn-webview-v1/${broker!!.token}").exists()
                 }
-                assertTrue("Ordinary browser Done must not replace independent Hidden credentials",session.isUnlocked)
+                assertTrue("Ordinary browser Home must not replace independent Hidden credentials",session.isUnlocked)
                 session.lock(); allowed.set(false); broker!!.close()
                 waitFor("Claimed child is revoked") { !broker!!.valid() }
             }

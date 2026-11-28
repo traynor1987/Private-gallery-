@@ -80,7 +80,7 @@ class RemainingMediaModals1762Test {
         val width=popupBounds.width.roundToInt()
         val height=popupBounds.height.roundToInt()
         val bitmap=try {
-            assertTrue("Popup crop belongs to the actual display",left>=0 && top>=0 && left+width<=screen.width && top+height<=screen.height)
+            assertTrue("Popup crop belongs to the actual display: crop=($left,$top,$width,$height), screenshot=${screen.width}x${screen.height}, window=$bounds, popup=$popupBounds, viewport=$viewport; ${state.description}",left>=0 && top>=0 && left+width<=screen.width && top+height<=screen.height)
             android.graphics.Bitmap.createBitmap(screen,left,top,width,height)
         } finally { screen.recycle() }
         try {

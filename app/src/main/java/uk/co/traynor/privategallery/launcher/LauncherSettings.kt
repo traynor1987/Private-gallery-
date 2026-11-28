@@ -37,6 +37,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import uk.co.traynor.privategallery.core.sanctuary.SanctuaryLauncherPolicy.Decision
+import uk.co.traynor.privategallery.novaos2.NovaSurfaceBarAppearance
 import uk.co.traynor.privategallery.ui.NovaNavigationHapticsSetting
 import uk.co.traynor.privategallery.ui.navigationHaptic
 import kotlin.math.abs
@@ -76,6 +77,7 @@ internal fun LauncherSettings(
     wide: Boolean = false,
     showNotificationBar: Boolean = true,
     onNotificationBarChange: (Boolean) -> Unit = {},
+    onNovaSystems: (() -> Unit)? = null,
 ) {
     var confirmDockReset by remember { mutableStateOf(false) }
     val tap = navigationHaptic()
@@ -84,6 +86,7 @@ internal fun LauncherSettings(
         tap()
         if (category == null) onBack() else onCategory(null)
     }
+    if (category == LauncherSettingsCategory.APPEARANCE) NovaSurfaceBarAppearance()
     LauncherPanel(category?.title ?: "Launcher settings", ::goBack) {
         key(category) {
             LazyColumn(
@@ -93,6 +96,11 @@ internal fun LauncherSettings(
                 contentPadding = PaddingValues(bottom = 18.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
+                if (category == null && onNovaSystems != null) item(key = "novaos2-systems") {
+                    androidx.compose.material3.OutlinedButton(onClick = onNovaSystems, modifier = Modifier.fillMaxWidth()) {
+                        Text("NovaOS systems")
+                    }
+                }
                 when (category) {
                     null -> items(LauncherSettingsCategory.entries, key = { it.route }) { entry ->
                         Surface(
@@ -146,8 +154,11 @@ internal fun LauncherSettings(
                                 actions.save(state.copy(separateDisplays = it))
                             }
                             OutlinedButton(onClick = onEdit) { Text("Edit Home pages, dock and widgets") }
-                            LauncherOptions("Grid density", LauncherGrid.entries, state.appearance.grid, {
-                                actions.save(state.copy(appearance = state.appearance.copy(grid = it)))
+                            LauncherOptions("Grid density", LauncherGrid.entries, state.appearance.gridFor(wide), {
+                                val appearance = state.appearance
+                                val next = if (wide) appearance.copy(studio = appearance.studio.copy(innerGrid = it))
+                                    else appearance.copy(grid = it)
+                                actions.save(state.copy(appearance = next))
                             })
                             if (!protectedBySanctuary) actions.reloadWorkspaceLayout?.let { reload ->
                                 WorkspaceLayoutOptions(actions.openWorkspace, reload)
@@ -192,16 +203,28 @@ internal fun LauncherSettings(
                         }
                         item {
                             HorizontalDivider(Modifier.padding(bottom = 12.dp))
-                            LauncherAppearanceOptions(
-                                state.appearance, { actions.save(state.copy(appearance = it)) }, actions.chooseWallpaper,
-                                showDock = false, showGrid = false,
+                            LauncherThemesStudio(
+                                appearance = state.appearance,
+                                previewApps = apps.filter { decisions.forLauncherApp(it)?.canLaunch == true }.take(5),
+                                onApply = { actions.save(state.copy(appearance = it)) },
+                                onDeviceWallpaper = actions.chooseWallpaper,
+                                enableDocuments = !protectedBySanctuary,
+                                ownScroll = false,
                             )
                         }
                     }
 
                     LauncherSettingsCategory.FOLDERS -> {
                         item { OutlinedButton(onClick = onLibrarySettings) { Text("App Library") } }
-                        item { LauncherFolderAppearanceSettings() }
+                        item {
+                            val context = LocalContext.current
+                            val legacy = remember(context) { LauncherFolderAppearance.read(context) }
+                            LauncherFolderAppearanceSettings(state.appearance.studio.folder ?: legacy) { next ->
+                                actions.save(state.copy(appearance = state.appearance.copy(
+                                    studio = state.appearance.studio.copy(folder = next),
+                                )))
+                            }
+                        }
                         item {
                             Text("New apps", style = MaterialTheme.typography.titleMedium)
                             LauncherToggle("Add to Home automatically", state.newAppPlacement == LauncherNewAppPlacement.HOME) {

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 set -u
-[[ "${GITHUB_ACTIONS:-}" == true && "${GITHUB_REF:-}" == refs/heads/release/1.7.9-evidence-locker ]] || exit 1
+[[ "${GITHUB_ACTIONS:-}" == true && "${GITHUB_REF:-}" == refs/heads/release/1.7.9-evidence-locker ]] || bash scripts/verify_novaos99_full_context.sh || exit 1
 status=0
 python3 scripts/archive_evidence179_routes.py || status=$?
 python3 scripts/ci_onion_probe.py --stop || status=$?

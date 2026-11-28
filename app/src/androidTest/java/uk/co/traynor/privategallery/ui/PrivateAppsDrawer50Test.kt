@@ -37,12 +37,14 @@ class PrivateAppsDrawer50Test {
   }
  }
  private fun assertProtectedDrawer() {
-  androidx.test.espresso.Espresso.onView(androidx.test.espresso.matcher.ViewMatchers.isRoot())
-   .inRoot(androidx.test.espresso.matcher.RootMatchers.isDialog()).check {view,failure ->
-    if(failure!=null)throw failure
-    val flags=(view.rootView.layoutParams as android.view.WindowManager.LayoutParams).flags
-    assertTrue(flags and android.view.WindowManager.LayoutParams.FLAG_SECURE != 0)
-   }
+  val drawer = compose.onNodeWithTag("private-app-grid").assertIsDisplayed()
+  val node = drawer.fetchSemanticsNode()
+  compose.runOnIdle {
+   val root = (node.root as androidx.compose.ui.platform.ViewRootForTest).view.rootView
+   assertTrue("Drawer belongs to a visible attached window", root.isShown && root.isAttachedToWindow)
+   val flags = (root.layoutParams as android.view.WindowManager.LayoutParams).flags
+   assertTrue("The window displaying the drawer is secure", flags and android.view.WindowManager.LayoutParams.FLAG_SECURE != 0)
+  }
  }
  private fun action(name:String,action:String) {
   val before=windowRoots()

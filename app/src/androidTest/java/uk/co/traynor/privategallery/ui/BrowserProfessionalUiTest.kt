@@ -25,6 +25,8 @@ import java.io.File
 
 /** UI fixtures never navigate remotely. The unavailable provider exercises the real recovery UI. */
 class BrowserProfessionalUiTest {
+    private val browserNotice = BrowserNoticeFixture()
+    @get:Rule val notice: org.junit.rules.TestRule get() = browserNotice
     val compose = createAndroidComposeRule<ComponentActivity>()
     private val viewportRule = BrowserViewportRule { method -> when (method) {
         "coverLight" -> 392 to 840
@@ -59,6 +61,7 @@ class BrowserProfessionalUiTest {
                     }
                 }
             }
+            browserNotice.enter(compose)
             compose.runOnIdle {
                 val bounds = compose.activity.windowManager.currentWindowMetrics.bounds
                 assertEquals("Actual dialog/window viewport width", width, bounds.width())
@@ -79,13 +82,25 @@ class BrowserProfessionalUiTest {
             compose.onNodeWithContentDescription("Browser settings").performClick()
             compose.onNodeWithText("Save browsing history").performScrollTo().performClick()
             compose.runOnIdle { assertTrue(history) }
-            compose.onNodeWithText("Clear browsing data").performScrollTo().assertIsDisplayed()
+            val viewport = compose.onNode(hasScrollAction() and hasAnyAncestor(hasTestTag("browser-panel")))
+            val clear = compose.onNodeWithText("Clear browsing data")
+            // Scroll the settings dialog itself and prove the control can be tapped on screen.
+            val axis = androidx.compose.ui.semantics.SemanticsProperties.VerticalScrollAxisRange
+            while (!clear.isDisplayed()) {
+                val before = viewport.fetchSemanticsNode().config[axis].value()
+                viewport.performTouchInput { swipeUp() }
+                compose.waitForIdle()
+                val after = viewport.fetchSemanticsNode().config[axis].value()
+                assertTrue("Clear control must become visible or the viewport advance ($before to $after)",
+                    clear.isDisplayed() || after > before)
+            }
+            clear.assertIsDisplayed().assertHasClickAction()
             capture("primary-settings-$width-$height-$theme-$fontScale", width, height, "browser-panel")
-            compose.onNodeWithText("Clear browsing data").performClick()
+            clear.performTouchInput { click() }
             compose.runOnIdle { assertEquals(0, clearCount) }
             compose.onNodeWithText("Cancel").performClick()
             compose.runOnIdle { assertEquals(0, clearCount) }
-            compose.onNodeWithText("Clear browsing data").performClick()
+            clear.performTouchInput { click() }
             compose.onNodeWithText("Clear", substring = false).performClick()
             compose.runOnIdle { assertEquals(1, clearCount) }
             compose.onNodeWithContentDescription("Back to Browser").assertIsDisplayed().performClick()

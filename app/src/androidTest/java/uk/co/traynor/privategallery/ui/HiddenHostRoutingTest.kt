@@ -163,6 +163,9 @@ class HiddenHostRoutingTest {
                 assertFalse(biometric.isCurrent(pendingBiometric))
                 assertNull(state.key);assertFalse(state.session.isUnlocked);assertTrue(state.hidden.selected);assertTrue(state.hidden.session.isUnlocked)
                 state.hidden.outside();state.primaryGallery=true;state.key=ByteArray(32){9};state.session.unlock();route.value=Route.GALLERY
+                state.homeVisible = false
+                state.hidden.authenticated = true
+                state.homeHiddenAuthentication = state.hidden.session.authentication()
             }
             compose.onNodeWithContentDescription("Vault menu").assertIsDisplayed()
             compose.runOnIdle {assertTrue(state.hidden.selected);assertFalse(state.hidden.visible);route.value=Route.VAULT}
@@ -176,6 +179,8 @@ class HiddenHostRoutingTest {
         try {
             compose.runOnIdle {
                 state.key=ByteArray(32){9};state.session.unlock();state.hidden.leave();state.primaryGallery=true
+                state.homeVisible = false
+                state.homePrimaryAuthentication = state.session.captureAuthenticationEpoch()
                 @Suppress("UNCHECKED_CAST")
                 val route=MainActivity::class.java.getDeclaredField("route\$delegate").apply {isAccessible=true}.get(compose.activity) as MutableState<Route>
                 route.value=Route.GALLERY
@@ -196,6 +201,9 @@ class HiddenHostRoutingTest {
                 state.key?.fill(0);state.key=null;state.session.lock();state.hidden.select()
                 state.hidden.session.complete(state.hidden.session.beginAuthentication(),ByteArray(32){7})
                 state.hidden.outside();state.primaryGallery=false;route.value=Route.GALLERY
+                state.homeVisible = false
+                state.hidden.authenticated = true
+                state.homeHiddenAuthentication = state.hidden.session.authentication()
             }
             compose.onNodeWithText("Phone Gallery").assertIsSelected()
             compose.onNodeWithText("Primary Space").performClick()

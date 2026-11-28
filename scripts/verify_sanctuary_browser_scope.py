@@ -121,7 +121,8 @@ CODE81_EXACT_ADAPTERS = {
     f"{CORE}/security/RecoveryVaultKeyStore.kt": "155cb9855e8ac253598f00adecb2d569b1d785ff03c63679cebcf423319c976b",
     f"{CORE}/security/RecoveryKeySetupPolicy.kt": "8696e66b15e2f44e8d6f6b8fb8eaec730a8248a2c1360bdced1656f29f06205d",
     f"{CORE}/security/PinVaultKeyStore.kt": "e7f2f8eadf36f50c2e881752407ae9a9106a1acebff43b041fcf45d2aeeb2ece",
-    f"{CORE}/vault/AndroidVaultRepository.kt": "2a820fba2e75b48c126d0c5908a863dc696dca978a78f90c51f5e7f7eeea12ad",
+    # Build 99 authenticates or initializes the index before the first presentation preference write.
+    f"{CORE}/vault/AndroidVaultRepository.kt": "964d74c471f9c4ad456a0efd81f169c1c82cded717a5e4c4de70292658a5883e",
     f"{CORE}/vault/EncryptedIndexStore.kt": "64b1ff89e0d6ca96eb1a56652af6deed1631680714d0f961fd80fe3136520783",
     f"{CORE}/security/PrimaryStorageInventory.kt": "41187c425f3139258e23cdfeeb8b41f0d6a93712480b95616df8958c10390ab3",
     # Build87 reviewed ordinary Settings navigation; no authentication/encryption engine change.
@@ -171,8 +172,8 @@ for revision in (("HEAD",), ()):
     assert not unexpected, f"Unexpected protected-core changes: {sorted(unexpected)}"
 
 build_file = "app/build.gradle.kts"
-expected = original(build_file).replace("versionCode = 69", "versionCode = 97", 1).replace(
-    'versionName = "1.7.34"', 'versionName = "1.7.51"', 1,
+expected = original(build_file).replace("versionCode = 69", "versionCode = 99", 1).replace(
+    'versionName = "1.7.34"', 'versionName = "2.0.0"', 1,
 )
 debug_version = """
 // The isolated Fold preview advances independently of the production release.
@@ -326,6 +327,46 @@ for name in ("HiddenVpnBrowserActivity", "HiddenTorIsolationService", "HiddenTor
     component, = [node for node in application if node.get(ANDROID + "name") == ".core.browser.hidden." + name]
     assert component.get(ANDROID + "exported") == "false" and component.get(ANDROID + "enabled") is None
     component.set(ANDROID + "enabled", "false")
+
+def require_novaos2_manifest_nodes(feature_file, target, expected_nodes):
+    if not (ROOT / f"app/src/main/java/uk/co/traynor/privategallery/novaos2/{feature_file}.kt").is_file():
+        return
+    for expected_node in expected_nodes:
+        expected = ET.fromstring(expected_node.replace("ANDROID_NAMESPACE", ANDROID[1:-1]))
+        name = expected.get(ANDROID + "name")
+        matching = [node for node in target.findall(expected.tag) if node.get(ANDROID + "name") == name]
+        assert len(matching) == 1 and structure(matching[0]) == structure(expected), f"Invalid NovaOS declaration: {name}"
+        target.remove(matching[0])
+
+
+# Reviewed additive feature declarations. The original exact-comparison gate covers every other node.
+require_novaos2_manifest_nodes("NovaLockScreenStudio", after, [
+    '<uses-permission xmlns:android="ANDROID_NAMESPACE" android:name="android.permission.SET_WALLPAPER" />',
+])
+require_novaos2_manifest_nodes("HealthConnectSteps", after, [
+    '<uses-permission xmlns:android="ANDROID_NAMESPACE" android:name="android.permission.health.READ_STEPS" />',
+])
+require_novaos2_manifest_nodes("HealthConnectSteps", application, [
+    '<activity xmlns:android="ANDROID_NAMESPACE" android:name=".novaos2.HealthConnectRationaleActivity" android:exported="false" />',
+    '''<activity-alias xmlns:android="ANDROID_NAMESPACE" android:name=".novaos2.HealthConnectPermissionUsage"
+        android:targetActivity=".novaos2.HealthConnectRationaleActivity" android:exported="true"
+        android:permission="android.permission.START_VIEW_PERMISSION_USAGE">
+      <intent-filter>
+        <action android:name="android.intent.action.VIEW_PERMISSION_USAGE" />
+        <category android:name="android.intent.category.HEALTH_PERMISSIONS" />
+      </intent-filter>
+    </activity-alias>''',
+])
+require_novaos2_manifest_nodes("NovaShareHub", application, [
+    '''<activity xmlns:android="ANDROID_NAMESPACE" android:name=".novaos2.NovaShareTargetActivity" android:label="Nova Share Hub"
+        android:exported="true" android:excludeFromRecents="true" android:noHistory="true">
+      <intent-filter>
+        <action android:name="android.intent.action.SEND" />
+        <category android:name="android.intent.category.DEFAULT" />
+        <data android:mimeType="text/plain" />
+      </intent-filter>
+    </activity>''',
+])
 
 assert structure(before) == structure(after), "The existing manifest or permission set changed"
 print("PASS: Code 69 protected engines, original package and other permissions preserved; Home and call screening are additive")

@@ -21,7 +21,7 @@ class HiddenRestoreDialogTest {
         try {block(session,access){deliveries}}finally{compose.runOnIdle {access.close();session.lock()}}
     }
     @Test fun choicesAreExplicitAndPrimaryRequiresFreshPinWithoutChangingHidden()=fixture {session,access,count ->
-        listOf("Copy to Phone Gallery","Move to Phone Gallery","Copy to Primary Space","Move to Primary Space").forEach {compose.onNodeWithText(it).performScrollTo().assertIsDisplayed()}
+        listOf("Copy to Phone storage","Move to Phone storage","Copy to Primary Space","Move to Primary Space").forEach {compose.onNodeWithText(it).performScrollTo().assertIsDisplayed()}
         compose.onNodeWithText("Copy to Primary Space").performScrollTo().performClick()
         compose.onNodeWithText("Enter passcode").assertIsDisplayed()
         compose.onNodeWithText("Restore to Primary Space").assertIsDisplayed()
@@ -31,8 +31,8 @@ class HiddenRestoreDialogTest {
         compose.runOnIdle {assertFalse(access.isActive());assertEquals(1,count());assertTrue(session.isUnlocked)}
     }
     @Test fun moveRequiresSeparateConfirmationAndLockRevokesDialogOnce()=fixture {session,access,count ->
-        compose.onNodeWithText("Move to Phone Gallery").performScrollTo().performClick()
-        compose.onNodeWithText("Confirm Move to Phone Gallery").assertIsDisplayed()
+        compose.onNodeWithText("Move to Phone storage").performScrollTo().performClick()
+        compose.onNodeWithText("Confirm Move to Phone storage").assertIsDisplayed()
         compose.runOnIdle {session.lock()}
         compose.waitUntil(3000){count()==1}
         compose.runOnIdle {assertFalse(access.isActive());assertEquals(1,count())}

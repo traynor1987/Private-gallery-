@@ -21,6 +21,7 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / 'scripts'))
 from fetch_code81_upgrade_baseline import fetch
 from novaos_build97_gate import BASELINE_DIGEST, fetch_build96
+from novaos_build98_rehearsal import BASELINE_DIGEST as BUILD97_DIGEST, fetch_baseline as fetch_build97
 
 PACKAGE = 'uk.co.traynor.privategallery'
 PIN = '738291'  # Synthetic disposable owner, never a real owner credential.
@@ -253,6 +254,18 @@ def public_release(output):
             while time.time() < retry_at:
                 time.sleep(max(0.05, min(30, retry_at - time.time())))
 
+def baseline_for(candidate):
+    identity = candidate['tag'], candidate['version_code'], candidate['baseline_code']
+    if identity == ('v2.0.0', 99, 97):
+        require(candidate['baseline_sha256'] == BUILD97_DIGEST, 'Wrong Build 97 baseline digest')
+        return '1.7.51', fetch_build97
+    if identity == ('v1.7.51', 97, 96):
+        require(candidate['baseline_sha256'] == BASELINE_DIGEST, 'Wrong Build 96 baseline digest')
+        return '1.7.50', fetch_build96
+    require(identity == ('v1.7.50', 96, 95), 'Wrong release candidate')
+    return '1.7.49', fetch
+
+
 def main():
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument('--candidate', type=Path, required=True)
@@ -269,13 +282,9 @@ def main():
     wait_device_ready()
     require(installed() is None, 'Production package must be absent initially; never clear/uninstall')
     candidate = json.loads(args.candidate.read_text())
-    identity = candidate['tag'], candidate['version_code'], candidate['baseline_code']
-    require(identity in (('v1.7.50', 96, 95), ('v1.7.51', 97, 96)), 'Wrong release candidate')
-    tag, code, prior = identity
-    if prior == 96:
-        require(candidate['baseline_sha256'] == BASELINE_DIGEST, 'Wrong Build 96 baseline digest')
+    tag, code, prior = candidate['tag'], candidate['version_code'], candidate['baseline_code']
+    prior_version, fetch_baseline = baseline_for(candidate)
     version = tag[1:]
-    prior_version, fetch_baseline = ('1.7.50', fetch_build96) if prior == 96 else ('1.7.49', fetch)
     installed_label = f'{version} · Build {code}'
     available_label = installed_label + ' available'
     up_to_date = version + ' · Up to date'

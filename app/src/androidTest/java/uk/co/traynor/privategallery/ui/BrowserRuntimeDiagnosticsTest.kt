@@ -226,13 +226,25 @@ class BrowserRuntimeDiagnosticsTest {
         val file = java.io.File(compose.activity.filesDir, "browser-v2-fatal-report.txt")
         val prior = file.takeIf { it.exists() }?.readBytes()
         try {
-            file.writeText("Historical fixture exception")
+            val privateMarker = "synthetic-private-fatal-message"
             val session = BrowserV2Session(compose.activity, BrowserVpnGate { false }, NoopBrowserV2Listener)
+            file.writeText(privateMarker)
+            val rejected = session.acceptanceReport()
+            assertFalse(rejected.contains(privateMarker))
+            assertFalse(rejected.contains("PREVIOUS PROCESS FATAL REPORT"))
+            assertFalse("Legacy free-text reports are removed", file.exists())
+
+            val safeReport = BrowserV2FatalCrashCapture.formatReport(
+                privateMarker, IllegalStateException(privateMarker), BrowserV2CrashContext()
+            )
+            file.writeText(safeReport)
             session.clearAcceptanceReport()
             val report = session.acceptanceReport()
             assertTrue(report.indexOf("CURRENT SESSION") < report.indexOf("PREVIOUS PROCESS FATAL REPORT"))
             assertTrue(report.contains("HISTORICAL EVIDENCE"))
-            assertTrue(report.contains("Historical fixture exception"))
+            assertTrue(report.endsWith(safeReport))
+            assertFalse(report.contains(privateMarker))
+            assertEquals(safeReport, file.readText())
             assertTrue(file.exists())
         } finally { if (prior == null) file.delete() else file.writeBytes(prior) }
     }

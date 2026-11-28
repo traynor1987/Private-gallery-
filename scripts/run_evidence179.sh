@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
-[[ "${GITHUB_ACTIONS:-}" == true && "${GITHUB_REF:-}" == refs/heads/release/1.7.9-evidence-locker ]]
+[[ "${GITHUB_ACTIONS:-}" == true && "${GITHUB_REF:-}" == refs/heads/release/1.7.9-evidence-locker ]] || bash scripts/verify_novaos99_full_context.sh
 [[ "${GITHUB_SHA:-}" =~ ^[a-f0-9]{40}$ ]]
 [[ "${EVIDENCE179_ONION_HTTPS_URL:-}" =~ ^https://[a-z2-7]{56}\.onion$ ]]
 [[ "$(adb shell getprop ro.kernel.qemu | tr -d '\r')" == 1 ]]

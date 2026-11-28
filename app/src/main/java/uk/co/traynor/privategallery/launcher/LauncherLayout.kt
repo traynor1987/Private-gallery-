@@ -33,6 +33,7 @@ internal data class LauncherAppearance(
     val grid: LauncherGrid = LauncherGrid.STANDARD,
     val dock: LauncherDock = LauncherDock.GLASS,
     val iconStyle: LauncherIconStyle = LauncherIconStyle.FULL_ICONS,
+    val studio: LauncherStudioStyle = LauncherStudioStyle(),
 )
 
 internal data class LauncherDrawerOptions(
@@ -230,7 +231,8 @@ internal data class NovaLauncherState(
         var next = this
         for (wide in if (separateDisplays) listOf(false, true) else listOf(false)) {
             val layout = next.layout(wide)
-            val capacity = appearance.grid.columns(wide) * appearance.grid.rows
+            val grid = appearance.gridFor(wide)
+            val capacity = grid.columns(wide) * grid.rows
             val placed = layout.withNewlyInstalledApps(valid, capacity)
             if (placed != layout) next = next.withLayout(wide, placed)
         }

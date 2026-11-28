@@ -113,16 +113,7 @@ internal object LauncherLayoutCodec {
             .put("separateDisplays", state.separateDisplays)
             .put("cover", layout(state.cover))
             .put("inner", layout(state.inner))
-            .put("appearance", JSONObject()
-                .put("wallpaper", appearance.wallpaper.name)
-                .put("theme", appearance.theme.name)
-                .put("accent", appearance.accent.name)
-                .put("iconShape", appearance.iconShape.name)
-                .put("iconSize", appearance.iconSize.name)
-                .put("iconStyle", appearance.iconStyle.name)
-                .put("labels", appearance.labels)
-                .put("grid", appearance.grid.name)
-                .put("dock", appearance.dock.name))
+            .put("appearance", appearanceJson(appearance))
             .put("drawer", JSONObject()
                 .put("orientation", drawer.orientation.name)
                 .put("search", drawer.search.name)
@@ -173,8 +164,6 @@ internal object LauncherLayoutCodec {
         require(root.string("type") == TYPE && root.number("schema") == SCHEMA)
 
         val appearance = root.getJSONObject("appearance")
-        val appearanceKeys = setOf("wallpaper", "theme", "accent", "iconShape", "iconSize", "labels", "grid", "dock")
-        appearance.requireKeys(if (appearance.has("iconStyle")) appearanceKeys + "iconStyle" else appearanceKeys)
         val drawer = root.getJSONObject("drawer")
         drawer.requireKeys(setOf("orientation", "search", "sort", "folders", "frequent", "shortcutSearch"))
 
@@ -207,18 +196,7 @@ internal object LauncherLayoutCodec {
             separateDisplays = root.boolean("separateDisplays"),
             cover = cover,
             inner = inner,
-            appearance = LauncherAppearance(
-                wallpaper = LauncherWallpaper.valueOf(appearance.string("wallpaper")),
-                theme = LauncherTheme.valueOf(appearance.string("theme")),
-                accent = LauncherAccent.valueOf(appearance.string("accent")),
-                iconShape = LauncherIconShape.valueOf(appearance.string("iconShape")),
-                iconSize = LauncherIconSize.valueOf(appearance.string("iconSize")),
-                labels = appearance.boolean("labels"),
-                grid = LauncherGrid.valueOf(appearance.string("grid")),
-                dock = LauncherDock.valueOf(appearance.string("dock")),
-                iconStyle = if (appearance.has("iconStyle")) LauncherIconStyle.valueOf(appearance.string("iconStyle"))
-                    else LauncherIconStyle.FULL_ICONS,
-            ),
+            appearance = readAppearance(appearance, recoverOptional = !portable),
             drawer = LauncherDrawerOptions(
                 orientation = LauncherDrawerOrientation.valueOf(drawer.string("orientation")),
                 search = LauncherSearchPlacement.valueOf(drawer.string("search")),
@@ -244,6 +222,82 @@ internal object LauncherLayoutCodec {
         // Local Code 73 state predates the dock options. Preserve intentional duplicates in
         // portable imports and in layouts saved after this upgrade.
         return if (!portable && !root.has("dockOptions")) state.withoutRedundantSmartFolderPages() else state
+    }
+
+    internal fun appearanceJson(appearance: LauncherAppearance): JSONObject = JSONObject()
+        .put("wallpaper", appearance.wallpaper.name)
+        .put("theme", appearance.theme.name)
+        .put("accent", appearance.accent.name)
+        .put("iconShape", appearance.iconShape.name)
+        .put("iconSize", appearance.iconSize.name)
+        .put("iconStyle", appearance.iconStyle.name)
+        .put("labels", appearance.labels)
+        .put("grid", appearance.grid.name)
+        .put("dock", appearance.dock.name)
+        .apply {
+            val style = appearance.studio
+            if (style != LauncherStudioStyle()) put("studio", JSONObject()
+                .put("look", style.look.name)
+                .put("typeface", style.typeface.name)
+                .put("widgetFrame", style.widgetFrame.name)
+                .put("motion", style.motion.name)
+                .apply {
+                    style.innerGrid?.let { put("innerGrid", it.name) }
+                    style.customAccent?.let { put("customAccent", it) }
+                    style.schedule?.let { put("schedule", JSONObject().put("light", it.lightHour).put("dark", it.darkHour)) }
+                    style.folder?.let { folder -> put("folder", JSONObject()
+                        .put("mode", folder.mode.name).put("labels", folder.labels).put("opaque", folder.opaque)
+                        .apply { folder.iconSize?.let { put("iconSize", it.name) } }) }
+                })
+        }
+
+    internal fun readAppearance(appearance: JSONObject, recoverOptional: Boolean = false): LauncherAppearance {
+        val required = setOf("wallpaper", "theme", "accent", "iconShape", "iconSize", "labels", "grid", "dock")
+        appearance.requireKeys(required + setOf("iconStyle", "studio").filter(appearance::has))
+        return LauncherAppearance(
+            wallpaper = LauncherWallpaper.valueOf(appearance.string("wallpaper")),
+            theme = LauncherTheme.valueOf(appearance.string("theme")),
+            accent = LauncherAccent.valueOf(appearance.string("accent")),
+            iconShape = LauncherIconShape.valueOf(appearance.string("iconShape")),
+            iconSize = LauncherIconSize.valueOf(appearance.string("iconSize")),
+            labels = appearance.boolean("labels"),
+            grid = LauncherGrid.valueOf(appearance.string("grid")),
+            dock = LauncherDock.valueOf(appearance.string("dock")),
+            iconStyle = if (appearance.has("iconStyle")) LauncherIconStyle.valueOf(appearance.string("iconStyle"))
+                else LauncherIconStyle.FULL_ICONS,
+            studio = when {
+                !appearance.has("studio") -> LauncherStudioStyle()
+                recoverOptional -> runCatching { readStudioStyle(appearance.getJSONObject("studio")) }
+                    .getOrDefault(LauncherStudioStyle())
+                else -> readStudioStyle(appearance.getJSONObject("studio"))
+            },
+        )
+    }
+
+    private fun readStudioStyle(style: JSONObject): LauncherStudioStyle {
+        val required = setOf("look", "typeface", "widgetFrame", "motion")
+        style.requireKeys(required + setOf("innerGrid", "customAccent", "schedule", "folder").filter(style::has))
+        return LauncherStudioStyle(
+            look = LauncherLook.valueOf(style.string("look")),
+            typeface = LauncherTypeface.valueOf(style.string("typeface")),
+            widgetFrame = LauncherWidgetFrame.valueOf(style.string("widgetFrame")),
+            motion = LauncherMotion.valueOf(style.string("motion")),
+            innerGrid = if (style.has("innerGrid")) LauncherGrid.valueOf(style.string("innerGrid")) else null,
+            customAccent = if (style.has("customAccent")) style.number("customAccent") else null,
+            schedule = if (style.has("schedule")) style.getJSONObject("schedule").let {
+                it.requireKeys(setOf("light", "dark"))
+                LauncherColourSchedule(it.number("light"), it.number("dark"))
+            } else null,
+            folder = if (style.has("folder")) style.getJSONObject("folder").let {
+                val keys = setOf("mode", "labels", "opaque")
+                it.requireKeys(if (it.has("iconSize")) keys + "iconSize" else keys)
+                LauncherFolderAppearance(
+                    mode = LauncherFolderMode.valueOf(it.string("mode")),
+                    iconSize = if (it.has("iconSize")) LauncherIconSize.valueOf(it.string("iconSize")) else null,
+                    labels = it.boolean("labels"), opaque = it.boolean("opaque"),
+                )
+            } else null,
+        )
     }
 
     private fun layout(value: LauncherLayout): JSONObject {
@@ -349,7 +403,7 @@ internal object LauncherLayoutCodec {
     private fun JSONObject.number(key: String): Int = get(key) as Int
 
     /** Bound nesting before asking the platform JSON reader to descend into an imported document. */
-    private fun checkDepth(raw: String) {
+    internal fun checkDepth(raw: String) {
         var inString = false
         var escaped = false
         var depth = 0

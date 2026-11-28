@@ -233,6 +233,29 @@ class NativeTorIsolation1762Test {
         }
     }
 
+    @Test fun fixtureReadsConfigurationAfterTheServiceCallbackReturns() {
+        val networkVisible = java.util.concurrent.CountDownLatch(1)
+        val finishSetup = java.util.concurrent.CountDownLatch(1)
+        val main = android.os.Handler(android.os.Looper.getMainLooper())
+        var relayReady = false
+        // Hold the callback between publishing its network and finishing relay setup.
+        check(main.post {
+            networkVisible.countDown()
+            if (finishSetup.await(5, java.util.concurrent.TimeUnit.SECONDS)) relayReady = true
+        })
+        try {
+            assertTrue(networkVisible.await(5, java.util.concurrent.TimeUnit.SECONDS))
+            assertFalse(relayReady)
+        } finally {
+            finishSetup.countDown()
+        }
+        assertTrue(awaitTorFixtureSnapshot {
+            check(android.os.Looper.myLooper() === main.looper)
+            check(relayReady) { "Fixture sampled an incomplete service callback" }
+            relayReady
+        })
+    }
+
     @Test(timeout=360_000) fun packagedTorNativeFormsUploadsDownloadsAndNetworkSink() {
         val rootUrl=InstrumentationRegistry.getArguments().getString("hiddenOnionProbeUrl")
         assumeTrue("Controlled real onion required",rootUrl!=null)
@@ -252,9 +275,7 @@ class NativeTorIsolation1762Test {
             waitFor("Previous native mode fully retired",15){HiddenTorIsolationService.released() && !HiddenTorIsolationService.hasTorProcess(context) && !HiddenVpnBrowserBroker.hasDedicatedProcess(context)}
             ActivityScenario.launch(ComponentActivity::class.java).use {scenario ->
                 scenario.onActivity {isolation=HiddenTorIsolationConnection(context,{allowed.get()},{allowed.set(false)}).also {it.start()}}
-                waitFor("Owned IPv4+IPv6 DNS sink Network"){isolation?.network()!=null}
-                val network=checkNotNull(isolation!!.network())
-                val config=isolation!!.configuration(Binder())
+                val (network, config) = checkNotNull(isolation).awaitFixtureRoute(allowed::get)
                 assertTrue("Tor SOCKS is app-private Unix",config.unixPath.startsWith(File(context.applicationInfo.dataDir,"ts").canonicalPath+"/"))
                 scenario.onActivity {tor=HiddenTorConnection(context,config).also {it.start()}}
                 var reportedProgress=-1
@@ -396,9 +417,11 @@ class NativeTorIsolation1762Test {
                 val lossElapsedNs = SystemClock.elapsedRealtimeNanos()
                 Process.killProcess(native.pid)
                 waitFor("Abrupt Tor process death is observed",10){tor?.alive()!=true}
+                val deathObservedNs = SystemClock.elapsedRealtimeNanos()
                 assertEquals("Sink remains owned until explicit lifetime retirement",network,isolation!!.network())
                 isolation!!.close()
                 waitFor("No Tor/native browser remains before sink retirement",15){ended.get() && HiddenTorIsolationService.released() && !HiddenTorIsolationService.hasTorProcess(context) && !HiddenVpnBrowserBroker.hasDedicatedProcess(context)}
+                val retirementObservedNs = SystemClock.elapsedRealtimeNanos()
                 assertFalse(broker!!.valid());session.lock();allowed.set(false);broker!!.close();tor!!.close()
                 val probe=ByteArray(1)
                 val readWorker=java.util.concurrent.Executors.newSingleThreadExecutor()
@@ -413,7 +436,8 @@ class NativeTorIsolation1762Test {
                     }
                     assertTrue("An independently duplicated open upload FD rejects actual rereads after revocation",denied.get(3,java.util.concurrent.TimeUnit.SECONDS))
                 } finally {probe.fill(0);retainedUpload?.close();retainedUpload=null;readWorker.shutdownNow()}
-                writeEvidence("native-tor1762-result.json", JSONObject().put("case",lossCase).put("trigger_at_ms",lossAtMs).put("trigger_elapsed_ns",lossElapsedNs).put("mode","TOR_ONLY").put("pid",Process.myPid()).put("javascript",false).put("form",true).put("multipart",true).put("download_verified",true).put("discard_v4",true).put("discard_v6",true).put("discard_dns_udp",true).put("session_revoked",true).put("tor_process_death",true))
+                writeEvidence("native-tor1762-result.json", JSONObject().put("case",lossCase).put("trigger_at_ms",lossAtMs).put("trigger_elapsed_ns",lossElapsedNs).put("tor_pid",native.pid).put("tor_death_observed_ns",deathObservedNs)
+                    .put("retirement_observed_ns",retirementObservedNs).put("mode","TOR_ONLY").put("pid",Process.myPid()).put("javascript",false).put("form",true).put("multipart",true).put("download_verified",true).put("discard_v4",true).put("discard_v6",true).put("discard_dns_udp",true).put("session_revoked",true).put("tor_process_death",true))
             }
         } finally {allowed.set(false);broker?.close();retainedUpload?.close();tor?.close();isolation?.close();session.lock();waitFor("Tor sink release",15){HiddenTorIsolationService.released()};storage.deleteRecursively()}
     }

@@ -86,6 +86,23 @@ class HiddenNativePresentation1762Test {
                     broker!!.launch()
                 }
                 waitFor("Default-off actual native window, authoritative dark theme") {broker!!.childPresentationSnapshot().let{!it.covered&&it.secure&&it.theme==AppTheme.DARK}}
+                // A new tab intentionally displays the native start surface until navigation.
+                // Load the owned WireGuard fixture before measuring a real, visible WebView.
+                val origin = InstrumentationRegistry.getArguments().getString("hiddenVpnOrigin")
+                require(origin == "http://fixture.invalid")
+                val target = "$origin/form"
+                val args = android.os.Bundle().apply {
+                    putCharSequence(android.view.accessibility.AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, target)
+                }
+                waitFor("Native child address is enabled") { nodes().any { it.isEditable && it.isEnabled && it.isVisibleToUser } }
+                val address = nodes().first { it.isEditable && it.isEnabled && it.isVisibleToUser }
+                assertTrue(address.performAction(android.view.accessibility.AccessibilityNodeInfo.ACTION_SET_TEXT, args))
+                waitFor("Controlled URL is present in the actual address field") {
+                    nodes().any { it.isEditable && it.text?.toString() == target }
+                }
+                var submit = checkNotNull(nodes().firstOrNull { it.contentDescription?.toString() == "Go" && it.isVisibleToUser })
+                while (!submit.isClickable) submit = checkNotNull(submit.parent)
+                assertTrue(submit.performAction(android.view.accessibility.AccessibilityNodeInfo.ACTION_CLICK))
                 actualChrome(320,640)
                 policy.set(true)
                 waitFor("Authenticated Hidden opt-in reaches actual child") {broker!!.childPresentationSnapshot().let{!it.covered&&!it.secure&&it.theme==AppTheme.DARK}}

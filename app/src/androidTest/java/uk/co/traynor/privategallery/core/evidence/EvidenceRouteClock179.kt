@@ -192,7 +192,7 @@ internal class EvidenceRouteClock179(
 
 
 /** Used by the real route finally AND injected cleanup-failure/cancellation controls. */
-internal suspend fun retireRouteClock179(clock:EvidenceRouteClock179?,cleanup:suspend ()->Unit):JSONObject? {
+internal suspend fun retireRouteClock179(clock:EvidenceRouteClock179?,routeFailure:Throwable?=null,cleanup:suspend ()->Unit):JSONObject? {
  var failure:Throwable?=null
  try{cleanup()}catch(caught:Throwable){failure=caught}
  var receipt:JSONObject?=null
@@ -200,6 +200,9 @@ internal suspend fun retireRouteClock179(clock:EvidenceRouteClock179?,cleanup:su
   val primary=failure
   if(primary==null)failure=caught else primary.addSuppressed(caught)
  }
- failure?.let{throw it}
+ failure?.let{cleanupFailure ->
+  if(routeFailure==null)throw cleanupFailure
+  if(routeFailure!==cleanupFailure)routeFailure.addSuppressed(cleanupFailure)
+ }
  return receipt
 }

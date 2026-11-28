@@ -1,0 +1,148 @@
+name: NovaOS Build 99 full Android 17 security
+on:
+  push:
+    branches: [feature/novaos2-wave-a]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: novaos99-full-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  focused_regressions:
+    if: github.repository == 'traynor1987/Private-gallery-' && contains(github.event.head_commit.message, '[novaos-build99-full]')
+    uses: ./.github/workflows/novaos99-compare.yml
+    with:
+      release_preflight: true
+  full_security:
+    needs: focused_regressions
+    name: Full Android 17 security
+    if: github.repository == 'traynor1987/Private-gallery-' && contains(github.event.head_commit.message, '[novaos-build99-full]')
+    runs-on: ubuntu-24.04
+    # At 150 minutes the last run had executed 986/1151 broad cases;
+    # reserve time for the remaining cases, isolated installs and owner-route gates.
+    timeout-minutes: 270
+    steps:
+      - uses: actions/checkout@v4
+        with: { persist-credentials: false, fetch-depth: 0 }
+      - uses: actions/setup-java@v5
+        with: { distribution: temurin, java-version: '17' }
+      - uses: actions/cache/restore@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: privacy1751-${{ runner.os }}-${{ hashFiles('**/*.gradle*', 'gradle/libs.versions.toml', 'gradle/wrapper/gradle-wrapper.properties') }}
+          restore-keys: privacy1751-${{ runner.os }}-
+      - name: Validate frozen Build 99 source
+        run: |
+          bash scripts/verify_novaos99_full_context.sh
+          mkdir -p app/build/full99
+          git rev-parse HEAD > app/build/full99/source-sha.txt
+          git rev-parse HEAD^{tree} > app/build/full99/source-tree.txt
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --install "cmdline-tools;22.0"
+          mv "$ANDROID_HOME/cmdline-tools/latest" "$RUNNER_TEMP/previous-build99-command-tools"
+          ln -s "$ANDROID_HOME/cmdline-tools/22.0" "$ANDROID_HOME/cmdline-tools/latest"
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-37.1" "build-tools;36.0.0" "emulator"
+          python3 scripts/verify_android17_sdk.py "$ANDROID_HOME" app/build/full99/android17-sdk.json
+      - name: Build and check exact-source debug artifacts
+        run: |
+          bash scripts/prime_gradle95_ci.sh
+          ./gradlew testDebugUnitTest lintDebug assembleDebug assembleDebugAndroidTest -Pkotlin.incremental=false --no-daemon --console=plain
+          apk=app/build/outputs/apk/debug/app-debug.apk
+          python3 scripts/debug_apk_identity1762.py "$apk" > app/build/full99/debug-package.txt
+          python3 scripts/verify_backup_exclusions.py --apk "$apk" --aapt2 "$ANDROID_HOME/build-tools/36.0.0/aapt2"
+          python3 scripts/verify_local_ai_distribution.py "$apk"
+          python3 scripts/verify_hidden_tor_distribution.py "$apk" app/build/full99/tor-distribution.json
+          python3 scripts/verify_evidence179_distribution.py "$apk" x86_64 app/build/full99/ocr-distribution.json
+          "$ANDROID_HOME/build-tools/36.0.0/zipalign" -c -P 16 -v 4 "$apk" > app/build/full99/debug-alignment.txt
+          sha256sum "$apk" app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk > app/build/full99/debug-inputs.sha256
+      - name: Run host security gates
+        run: |
+          set -euo pipefail
+          {
+            bash scripts/check_camera.sh
+            bash scripts/check_hidden_foundation.sh
+            bash scripts/check_hidden_browser.sh
+            bash scripts/check_video_container.sh
+            bash scripts/check_home2_host.sh
+            bash scripts/check_private_apps178.sh
+            bash scripts/check_backup_schedule_host.sh
+            bash scripts/check_evidence179.sh
+            bash scripts/check_evidence179_ai_json.sh
+            bash scripts/check_evidence179_archive.sh
+            bash scripts/verify_production_vpn_path.sh
+            bash scripts/verify_socks_stage_diagnostics.sh
+            bash scripts/verify_tor_control_events.sh
+            bash scripts/verify_controlled_onion_readiness.sh
+            bash scripts/no_secret_scan.sh
+            python3 scripts/verify_backup_exclusions.py
+            python3 scripts/verify_sanctuary_browser_scope.py
+            PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s scripts/tests -p test_novaos99_full_evidence.py
+            PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s scripts/tests -p test_build99_broad_batches.py
+            node --test scripts/tests/*.test.cjs
+          } 2>&1 | tee app/build/full99/host-security.txt
+      - name: Start disposable security fixtures
+        id: fixtures
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq wireguard-tools tcpdump iptables python3-cryptography python3-venv tor curl
+          python3 -m venv "$RUNNER_TEMP/build99-fixture-python"
+          "$RUNNER_TEMP/build99-fixture-python/bin/python" -m pip install --disable-pip-version-check cryptography==50.0.2
+          echo "$RUNNER_TEMP/build99-fixture-python/bin" >> "$GITHUB_PATH"
+          export PATH="$RUNNER_TEMP/build99-fixture-python/bin:$PATH"
+          bash scripts/setup_hidden_vpn_fixture1762.sh
+          python3 scripts/ci_onion_probe.py --evidence179
+          sudo chmod 666 /dev/kvm
+          "$ANDROID_HOME/emulator/emulator" -accel-check
+      - name: Run complete Android 17 security regression
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: '37.0'
+          target: google_apis
+          arch: x86_64
+          profile: pixel_2
+          avd-name: build99-full
+          cores: 4
+          ram-size: 4096M
+          heap-size: 512M
+          disk-size: 8G
+          emulator-boot-timeout: 1200
+          disable-animations: false
+          emulator-options: -no-window -gpu software -no-snapshot -noaudio -no-boot-anim -feature -HardwareDecoder -camera-back emulated -camera-front emulated
+          script: bash scripts/run_novaos99_full.sh
+      - name: Remove disposable security fixtures
+        if: always() && steps.fixtures.outcome != 'skipped'
+        run: |
+          if [[ -f app/build/evidence179/capture-start.json ]]; then
+            bash scripts/cleanup_evidence179_routes.sh
+          else
+            status=0
+            python3 scripts/ci_onion_probe.py --stop || status=1
+            bash scripts/cleanup_hidden_vpn_fixture1762.sh || status=1
+            exit "$status"
+          fi
+      - name: Verify complete Build 99 evidence
+        run: |
+          bash scripts/verify_novaos99_full_context.sh
+          sha256sum --check app/build/full99/debug-inputs.sha256
+          python3 scripts/verify_novaos99_full_evidence.py app/build "$GITHUB_SHA" "$(git rev-parse HEAD^{tree})"
+      - name: Upload Build 99 full security evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: novaos99-full-evidence
+          if-no-files-found: error
+          path: |
+            app/build/full99
+            app/build/hidden-space/routes
+            app/build/hidden-vpn1762
+            app/build/evidence179
+            app/build/acceptance-diagnostics
+            app/build/home2-evidence/guardian-notification-pipeline-93
+            app/build/home2-evidence/guardian-fold-notification
+            app/build/home2-evidence/launcher-process-70
+            app/build/home2-evidence/backup-restart62
+            app/build/test-results/testDebugUnitTest

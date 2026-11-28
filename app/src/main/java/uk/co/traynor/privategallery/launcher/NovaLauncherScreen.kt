@@ -1,6 +1,5 @@
 package uk.co.traynor.privategallery.launcher
 
-import android.text.format.DateFormat
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
@@ -17,6 +16,7 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -58,9 +58,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import java.time.ZonedDateTime
-import java.time.format.DateTimeFormatter
-import java.util.Date
 import kotlin.math.abs
 import kotlin.math.roundToInt
 import kotlinx.coroutines.delay
@@ -69,7 +66,6 @@ import uk.co.traynor.privategallery.R
 import uk.co.traynor.privategallery.core.sanctuary.SanctuaryAppVisibility
 import uk.co.traynor.privategallery.core.sanctuary.SanctuaryMode
 import uk.co.traynor.privategallery.core.sanctuary.SanctuaryLauncherPolicy.Decision
-import uk.co.traynor.privategallery.core.ui.AppTheme
 import uk.co.traynor.privategallery.home2.Wallpaper
 import uk.co.traynor.privategallery.home2.WallpaperSurface
 import androidx.lifecycle.Lifecycle
@@ -78,7 +74,11 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import uk.co.traynor.privategallery.intelligence.IntelligenceApp
 import uk.co.traynor.privategallery.intelligence.IntelligenceConversation
 import uk.co.traynor.privategallery.intelligence.IntelligenceScreen
-import uk.co.traynor.privategallery.ui.PrivateGalleryTheme
+import uk.co.traynor.privategallery.novaos2.LauncherNovaSystemsActions
+import uk.co.traynor.privategallery.novaos2.NovaSystemHost
+import uk.co.traynor.privategallery.novaos2.NovaSystemId
+import uk.co.traynor.privategallery.novaos2.NovaSystemsPanel
+import uk.co.traynor.privategallery.novaos2.novaSystemFeatures
 
 internal const val LauncherExpandedWidth = 600
 
@@ -105,13 +105,9 @@ internal fun NovaLauncherScreen(
     onNotificationBarChange: (Boolean) -> Unit = {},
     onHomeSurfaceVisible: (Boolean) -> Unit = {},
     intelligence: LauncherIntelligenceActions? = null,
+    novaSystems: LauncherNovaSystemsActions? = null,
 ) {
-    val theme = when (state.appearance.theme) {
-        LauncherTheme.SYSTEM -> AppTheme.SYSTEM
-        LauncherTheme.LIGHT -> AppTheme.LIGHT
-        LauncherTheme.DARK -> AppTheme.DARK
-    }
-    PrivateGalleryTheme(theme) {
+    LauncherStudioTheme(state.appearance) {
         if (!state.configured) {
             val eligible = if (launcherProtected && appVisibility.hideBlockedApps)
                 apps.filter { decisions.forLauncherApp(it)?.canLaunch == true } else apps
@@ -119,12 +115,12 @@ internal fun NovaLauncherScreen(
         } else {
             LauncherRuntime(state, apps, shortcuts, decisions, actions, isDefaultHome, outsideProtection,
                 launcherProtected, homeGeneration, sanctuaryStatus, smartState, smartSettings, defaultHomeUi, smartFolderPresentation, appVisibility,
-                showNotificationBar, onNotificationBarChange, onHomeSurfaceVisible, intelligence)
+                showNotificationBar, onNotificationBarChange, onHomeSurfaceVisible, intelligence, novaSystems)
         }
     }
 }
 
-private enum class LauncherSurface { HOME, DRAWER, LIBRARY, SETTINGS, GUARDIAN_SETTINGS, GUARDIAN_DIAGNOSTICS, LIBRARY_SETTINGS, EDIT }
+private enum class LauncherSurface { HOME, DRAWER, LIBRARY, SETTINGS, GUARDIAN_SETTINGS, GUARDIAN_DIAGNOSTICS, LIBRARY_SETTINGS, EDIT, SYSTEMS }
 private enum class LauncherLibraryEntry { PAGER, DRAWER }
 
 private data class OpenLauncherFolder(val item: LauncherItem.Folder, val slot: LauncherSlot?, val inner: Boolean)
@@ -172,6 +168,7 @@ private fun LauncherRuntime(
     onNotificationBarChange: (Boolean) -> Unit,
     onHomeSurfaceVisible: (Boolean) -> Unit,
     intelligence: LauncherIntelligenceActions?,
+    novaSystems: LauncherNovaSystemsActions?,
 ) {
     val intelligenceConversation = remember(homeGeneration, launcherProtected) { IntelligenceConversation() }
     val lifecycle = LocalLifecycleOwner.current.lifecycle
@@ -188,6 +185,26 @@ private fun LauncherRuntime(
     var innerGuardian by rememberSaveable(homeGeneration) { mutableStateOf(false) }
     var intelligenceSelectedAcrossDisplays by rememberSaveable(homeGeneration) { mutableStateOf(false) }
     var surface by rememberSaveable(homeGeneration) { mutableStateOf(LauncherSurface.HOME) }
+    var systemPage by rememberSaveable(homeGeneration) { mutableStateOf<NovaSystemId?>(null) }
+    var systemsReturn by rememberSaveable(homeGeneration) { mutableStateOf(LauncherSurface.SETTINGS) }
+    val availableSystems = remember { novaSystemFeatures.map { it.id }.toSet() }
+    val showSystems = novaSystems != null && !launcherProtected && availableSystems.isNotEmpty()
+    fun openSystems(id: NovaSystemId?): Boolean {
+        if (!showSystems || novaSystems?.foregroundAllowed() != true || (id != null && id !in availableSystems)) return false
+        if (surface != LauncherSurface.SYSTEMS) systemsReturn = surface
+        systemPage = id
+        surface = LauncherSurface.SYSTEMS
+        return true
+    }
+    fun closeSystems() {
+        if (systemPage == null) surface = systemsReturn else systemPage = null
+    }
+    LaunchedEffect(showSystems, surface) {
+        if (!showSystems && surface == LauncherSurface.SYSTEMS) {
+            systemPage = null
+            surface = LauncherSurface.HOME
+        }
+    }
     var guardianSettingsFromHome by rememberSaveable(homeGeneration) { mutableStateOf(false) }
     var guardianDiagnosticsReturn by rememberSaveable(homeGeneration) { mutableStateOf(LauncherSurface.HOME) }
     fun closeGuardianSettings() {
@@ -317,6 +334,7 @@ private fun LauncherRuntime(
                 if (launcherSettingsCategory == null) showHome() else launcherSettingsCategory = null
             }
             LauncherSurface.EDIT -> closeEditor()
+            LauncherSurface.SYSTEMS -> closeSystems()
             else -> { showHome(animateDock = surface == LauncherSurface.DRAWER); query = "" }
         }
     }
@@ -459,6 +477,9 @@ private fun LauncherRuntime(
                         state, layout, wide, currentPage, appsByComponent, decisions, actions, launcherProtected,
                         onPage = updatePage, onDrawer = ::openDrawer,
                         onSettings = { surface = LauncherSurface.SETTINGS },
+                        onControlCentre = if (showSystems && NovaSystemId.CONTROL in availableSystems) {
+                            { openSystems(NovaSystemId.CONTROL); Unit }
+                        } else null,
                         onEdit = { surface = LauncherSurface.EDIT },
                         onItem = { open(it) },
                         onFolder = { item, slot -> open(item, slot, isInner) },
@@ -588,7 +609,7 @@ private fun LauncherRuntime(
                             }
                             val next = layout.withSmartFolderTemplate(
                                 onlyIfEmpty = false,
-                                capacity = state.appearance.grid.columns(wide) * state.appearance.grid.rows,
+                                capacity = state.appearance.gridFor(wide).let { it.columns(wide) * it.rows },
                             )
                             OutlinedButton(enabled = next != layout, onClick = { edit(next) }) {
                                 Text("Add or restore smart folders on Home page two")
@@ -635,8 +656,14 @@ private fun LauncherRuntime(
                         defaultHomeUi = defaultHomeUi,
                         showNotificationBar = showNotificationBar,
                         onNotificationBarChange = onNotificationBarChange,
+                        onNovaSystems = if (showSystems) ({ openSystems(null); Unit }) else null,
                         wide = wide,
                     )
+                }
+                LauncherSurface.SYSTEMS -> if (showSystems && novaSystems != null) {
+                    NovaSystemsPanel(novaSystemFeatures, systemPage, NovaSystemHost(
+                        state, apps, decisions, actions, wide, availableSystems, ::closeSystems, ::openSystems, novaSystems,
+                    ))
                 }
                 LauncherSurface.EDIT -> LauncherLayoutEditor(
                     state, layout, wide, currentPage, apps.filter { canDisplay(it.component) }, decisions,
@@ -652,7 +679,9 @@ private fun LauncherRuntime(
                 val slot = opened.slot
                 val mayEdit = !launcherProtected && slot != null && (slot.page != null || !state.dockOptions.locked) &&
                     sourceLayout.itemsAt(slot.page)?.getOrNull(slot.index) == selected
-                val preferences = remember(context, opened) { LauncherFolderAppearance.read(context) }
+                val preferences = remember(context, opened, state.appearance.studio.folder) {
+                    state.appearance.studio.folder ?: LauncherFolderAppearance.read(context)
+                }
                 LauncherFolderPanel(
                     selected, appsByComponent, { canDisplay(it) }, decisions, state.appearance, preferences,
                     onLaunch = { component ->
@@ -722,7 +751,7 @@ private fun LauncherRuntime(
                 val app = (activeDrag.origin.item as? LauncherItem.App)?.let { appsByComponent[it.component] }
                 val preview = gestures.targetAt(layout, pageForDrop(), activeDrag.position, rowTolerance)
                     ?.takeIf { layout.dropLauncherItem(activeDrag.origin.item, activeDrag.origin.slot, it.drop) != layout }
-                LauncherDragOverlay(activeDrag, preview, app, launcherAccent(state.appearance.accent),
+                LauncherDragOverlay(activeDrag, preview, app, launcherAccent(state.appearance),
                     app?.let { decisions.forLauncherApp(it)?.canLaunch == false } == true)
             }
         }
@@ -765,6 +794,7 @@ internal fun LauncherHome(
     intelligenceSelected: Boolean = false,
     onIntelligenceSelected: (Boolean) -> Unit = {},
     intelligencePage: (@Composable (active: Boolean) -> Unit)? = null,
+    onControlCentre: (() -> Unit)? = null,
 ) {
     DisposableEffect(gestures) { onDispose { gestures.clearHome() } }
     val pages = layout.pages.ifEmpty { listOf(listOf(LauncherItem.Workspace)) }
@@ -780,9 +810,11 @@ internal fun LauncherHome(
     }
     val pager = rememberPagerState(initialPage = initialPage) { libraryIndex + if (libraryPage == null) 0 else 1 }
     val scope = rememberCoroutineScope()
-    val footerEntrance = remember { Animatable(if (animateDockEntrance) 0f else 1f) }
-    LaunchedEffect(footerEntrance) {
-        if (footerEntrance.value == 0f) footerEntrance.animateTo(1f, tween(durationMillis = 210))
+    val motion = state.appearance.studio.motion
+    val footerEntrance = remember { Animatable(if (animateDockEntrance && motion != LauncherMotion.REDUCED) 0f else 1f) }
+    LaunchedEffect(footerEntrance, motion) {
+        if (motion == LauncherMotion.REDUCED) footerEntrance.snapTo(1f)
+        else if (footerEntrance.value < 1f) footerEntrance.animateTo(1f, tween(durationMillis = motion.milliseconds))
     }
     val focus = LocalFocusManager.current
     val atLibrary = libraryPage != null && pager.settledPage == libraryIndex
@@ -790,10 +822,10 @@ internal fun LauncherHome(
     val atIntelligence = pager.settledPage == intelligenceIndex
     val goBackFromLibrary: () -> Unit = {
         focus.clearFocus()
-        if (!onLibraryBack()) scope.launch { pager.animateScrollToPage(libraryIndex - 1) }
+        if (!onLibraryBack()) scope.launch { pager.moveForTheme(libraryIndex - 1, motion) }
     }
     BackHandler(enabled = atLibrary, onBack = goBackFromLibrary)
-    BackHandler(enabled = atGuardian || atIntelligence) { scope.launch { pager.animateScrollToPage(firstHome) } }
+    BackHandler(enabled = atGuardian || atIntelligence) { scope.launch { pager.moveForTheme(firstHome, motion) } }
     LaunchedEffect(dragPageRequest) {
         if (dragPageRequest != null && dragPageRequest in pages.indices) {
             // A search focus change can scroll the pager while the footer is being remeasured.
@@ -811,7 +843,7 @@ internal fun LauncherHome(
         onLibrarySelected(atLibrary)
     }
     val appearance = state.appearance
-    val accent = launcherAccent(appearance.accent)
+    val accent = launcherAccent(appearance)
     val context = LocalContext.current
     val activeGesture by rememberUpdatedState(state.workspaceGesture)
     val openWorkspace by rememberUpdatedState(actions.openWorkspace)
@@ -872,7 +904,7 @@ internal fun LauncherHome(
                     val index = page - firstHome
                     val activePage = pager.settledPage == page
                     Column(Modifier.fillMaxSize().padding(horizontal = if (wide) 26.dp else 14.dp)) {
-                        LauncherHeader(protectedBySanctuary, actions, { onDrawer(true) }, onSettings, onEdit)
+                        LauncherHeader(protectedBySanctuary, actions, { onDrawer(true) }, onSettings, onEdit, onControlCentre)
                         LauncherSanctuaryStatusCard(sanctuaryStatus, expanded = wide && !compact, onOpen = actions.openSanctuary)
                         if (state.drawer.search != LauncherSearchPlacement.DRAWER) {
                             OutlinedButton(
@@ -902,19 +934,39 @@ internal fun LauncherHome(
                             val showClock = index == 0
                             val content: @Composable (Modifier) -> Unit = { modifier ->
                                 Column(modifier.fillMaxWidth().verticalScroll(rememberScrollState())) {
-                                    widgets.forEach { widget ->
+                                    val drawWidget: @Composable (LauncherWidget) -> Unit = { widget ->
                                         key(widget.id) {
                                             val permitted = !protectedBySanctuary || apps.values.any { app ->
                                                 app.profileSerial == null && app.packageName == widget.provider.substringBefore('/') &&
                                                     decisions.forLauncherApp(app)?.canLaunch == true
                                             }
-                                            if (permitted) actions.renderWidget(widget,
-                                                Modifier.fillMaxWidth().heightIn(min = 104.dp).padding(bottom = 8.dp))
-                                            else Spacer(Modifier.height(104.dp))
+                                            if (permitted) LauncherStyledWidget(appearance.studio.widgetFrame) { modifier ->
+                                                actions.renderWidget(widget, modifier)
+                                            } else Spacer(Modifier.height(104.dp))
                                         }
                                     }
+                                    if (appearance.studio.look == LauncherLook.FLOATING && widgets.size > 1) {
+                                        val widgetPager = rememberPagerState { widgets.size }
+                                        HorizontalPager(widgetPager, Modifier.fillMaxWidth().testTag("launcher-widget-stack"),
+                                            key = { widgets[it].id }) { widgetPage ->
+                                            drawWidget(widgets[widgetPage])
+                                        }
+                                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center,
+                                            verticalAlignment = Alignment.CenterVertically) {
+                                            val selectedWidget = widgetPager.currentPage
+                                            IconButton(onClick = { scope.launch { widgetPager.moveForTheme(selectedWidget - 1, motion) } },
+                                                enabled = selectedWidget > 0) {
+                                                Icon(Icons.Default.KeyboardArrowLeft, "Previous widget")
+                                            }
+                                            Text("${selectedWidget + 1} of ${widgets.size}", style = MaterialTheme.typography.labelMedium)
+                                            IconButton(onClick = { scope.launch { widgetPager.moveForTheme(selectedWidget + 1, motion) } },
+                                                enabled = selectedWidget + 1 < widgets.size) {
+                                                Icon(Icons.Default.KeyboardArrowRight, "Next widget")
+                                            }
+                                        }
+                                    } else widgets.forEach { drawWidget(it) }
                                     LauncherHomeGrid(
-                                        items, appearance.grid.columns(wide), appearance, apps, decisions, onItem,
+                                        items, appearance.gridFor(wide).columns(wide), appearance, apps, decisions, onItem,
                                         gestures = gestures, slots = items.indices.map { LauncherSlot(index, it) },
                                         smartMembers = smartMembers, visible = ::visible, onFolder = onFolder,
                                         expandedSmartFolders = smartFolderPresentation.expands(
@@ -954,13 +1006,15 @@ internal fun LauncherHome(
                             }
                             if (largeLandscape && showClock) {
                                 Row(pageModifier) {
-                                    LauncherClock(true, Modifier.widthIn(min = 180.dp).padding(top = 14.dp, end = 20.dp))
+                                    LauncherThemeClock(appearance, compact = true,
+                                        modifier = Modifier.width(220.dp).padding(top = 14.dp, end = 16.dp))
                                     content(Modifier.weight(1f).fillMaxHeight())
                                 }
                             } else {
                                 Column(pageModifier) {
-                                    if (showClock) LauncherClock(compact, Modifier.padding(top = if (compact) 6.dp else 18.dp,
-                                        bottom = if (compact) 10.dp else 24.dp))
+                                    if (showClock) LauncherThemeClock(appearance, compact, Modifier.padding(
+                                        top = if (compact) 6.dp else 18.dp, bottom = if (compact) 10.dp else 20.dp,
+                                    ))
                                     content(Modifier.weight(1f))
                                 }
                             }
@@ -987,16 +1041,18 @@ internal fun LauncherHome(
                 ) {
                     LauncherDots(pager.pageCount, pager.currentPage, accent, libraryLast = libraryPage != null,
                         guardianIndex = guardianIndex, intelligenceIndex = intelligenceIndex, firstHome = firstHome) {
-                        scope.launch { pager.animateScrollToPage(it) }
+                        scope.launch { pager.moveForTheme(it, motion) }
                     }
                     if (appearance.dock != LauncherDock.HIDDEN &&
                         (layout.dock.isNotEmpty() || gestures.drag != null && !state.dockOptions.locked)
                     ) {
-                        LauncherSharedDock(
-                            layout.dock, appearance, state.dockOptions, apps, decisions, compact, gestures,
-                            onItem, ::visible, smartMembers, active = !atGuardian && (!atLibrary || state.dockOptions.showInLibrary),
-                            onFolder = onFolder,
-                        )
+                        Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                            LauncherSharedDock(
+                                layout.dock, appearance, state.dockOptions, apps, decisions, compact, gestures,
+                                onItem, ::visible, smartMembers, active = !atGuardian && (!atLibrary || state.dockOptions.showInLibrary),
+                                onFolder = onFolder,
+                            )
+                        }
                     }
                     Box(Modifier.fillMaxWidth().height(46.dp), contentAlignment = Alignment.Center) {
                         if (!atLibrary && !atGuardian) TextButton(
@@ -1022,9 +1078,20 @@ private fun LauncherHeader(
     onSearch: () -> Unit,
     onSettings: () -> Unit,
     onEdit: () -> Unit,
+    onControlCentre: (() -> Unit)?,
 ) {
     var menu by remember { mutableStateOf(false) }
-    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+    val openControls by rememberUpdatedState(onControlCentre)
+    val swipe = if (onControlCentre == null) Modifier else Modifier.testTag("launcher-control-gesture").pointerInput(Unit) {
+        val threshold = 36.dp.toPx()
+        var offset = 0f
+        detectVerticalDragGestures(
+            onDragStart = { offset = 0f },
+            onDragEnd = { if (offset >= threshold) openControls?.invoke() },
+            onVerticalDrag = { change, distance -> change.consume(); offset += distance },
+        )
+    }
+    Row(Modifier.fillMaxWidth().then(swipe), verticalAlignment = Alignment.CenterVertically) {
         IconButton(onClick = actions.openWorkspace) {
             Image(painterResource(R.drawable.nova_identity), "Open NovaOS workspace", Modifier.size(28.dp))
         }
@@ -1033,6 +1100,9 @@ private fun LauncherHeader(
                 maxLines = 1, overflow = TextOverflow.Ellipsis)
             Text(if (protectedBySanctuary) "Sanctuary active" else "Home", color = Color.White.copy(alpha = .77f),
                 style = MaterialTheme.typography.labelMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        }
+        if (onControlCentre != null) {
+            IconButton(onClick = onControlCentre) { Icon(Icons.Default.Dashboard, "Open Control Centre") }
         }
         IconButton(onClick = onSearch) { Icon(Icons.Default.Search, "Search apps") }
         IconButton(onClick = onSettings) { Icon(Icons.Default.Tune, "Launcher settings") }
@@ -1051,28 +1121,6 @@ private fun LauncherHeader(
                 }
             }
         }
-    }
-}
-
-@Composable
-private fun LauncherClock(compact: Boolean, modifier: Modifier = Modifier) {
-    val context = LocalContext.current
-    val timeFormat = DateFormat.getTimeFormat(context)
-    val dateFormat = remember { DateTimeFormatter.ofPattern("EEEE, d MMMM") }
-    var now by remember { mutableStateOf(System.currentTimeMillis()) }
-    LaunchedEffect(Unit) {
-        while (true) {
-            val next = System.currentTimeMillis()
-            now = next
-            delay(60_000 - next % 60_000)
-        }
-    }
-    Column(modifier) {
-        Text(timeFormat.format(Date(now)), fontSize = if (compact) 36.sp else 59.sp,
-            lineHeight = if (compact) 40.sp else 65.sp, fontWeight = FontWeight.SemiBold,
-            maxLines = 1, overflow = TextOverflow.Ellipsis)
-        Text(ZonedDateTime.ofInstant(java.time.Instant.ofEpochMilli(now), java.time.ZoneId.systemDefault()).format(dateFormat),
-            style = MaterialTheme.typography.bodyLarge, color = Color.White.copy(alpha = .8f), maxLines = 1)
     }
 }
 
@@ -1230,7 +1278,7 @@ internal fun LauncherTile(
                 LauncherIconShape.SQUIRCLE -> RoundedCornerShape(size * .41f)
             }
             val nativeArtwork = app != null && appearance.iconStyle == LauncherIconStyle.FULL_ICONS
-            val background = launcherAccent(appearance.accent).copy(alpha = if (blocked) .19f else .29f)
+            val background = launcherAccent(appearance).copy(alpha = if (blocked) .19f else .29f)
             Box(
                 Modifier.size(size).then(if (nativeArtwork) Modifier else Modifier.clip(shape).background(background)),
                 contentAlignment = Alignment.Center,
@@ -1243,7 +1291,9 @@ internal fun LauncherTile(
                     )
                     is LauncherItem.Folder -> {
                         val members = folderMembers(item)
-                        if (members.isEmpty() || appearance.iconStyle == LauncherIconStyle.NOVA_TILES) {
+                        val showMembers = appearance.iconStyle == LauncherIconStyle.FULL_ICONS ||
+                            appearance.studio.look == LauncherLook.FLOATING
+                        if (members.isEmpty() || !showMembers) {
                             Icon(Icons.Default.Folder, null, Modifier.size(size * .53f), tint = Color.White)
                         } else LauncherFolderPreview(members, Modifier.size(size * .88f), decisions, appearance = appearance)
                     }
@@ -1316,7 +1366,7 @@ private fun LauncherDrawer(
         catalog.filter { (state.launchCounts[it.component] ?: 0) > 0 }
             .sortedByDescending { state.launchCounts[it.component] }.take(4)
     else emptyList()
-    val accent = launcherAccent(state.appearance.accent)
+    val accent = launcherAccent(state.appearance)
 
     LauncherPanel("Apps", onBack) {
         OutlinedButton(onClick = onLibrary, modifier = Modifier.testTag("launcher-open-library")) {
@@ -1357,7 +1407,8 @@ private fun LauncherDrawer(
                 }
             }
         }
-        val columns = state.appearance.grid.columns(wide)
+        val grid = state.appearance.gridFor(wide)
+        val columns = grid.columns(wide)
         val drawTile: @Composable (LauncherItem) -> Unit = { item ->
             LauncherTile(item, state.appearance, appsByComponent, decisions,
                 onClick = {
@@ -1378,7 +1429,7 @@ private fun LauncherDrawer(
                 verticalArrangement = Arrangement.spacedBy(12.dp), contentPadding = PaddingValues(bottom = 12.dp),
             ) { items(matches) { drawTile(it) } }
         } else {
-            val pages = matches.chunked(columns * state.appearance.grid.rows).ifEmpty { listOf(emptyList()) }
+            val pages = matches.chunked(columns * grid.rows).ifEmpty { listOf(emptyList()) }
             val pager = rememberPagerState { pages.size }
             val scope = rememberCoroutineScope()
             HorizontalPager(pager, Modifier.weight(1f).fillMaxWidth().testTag("launcher-drawer-horizontal")) { page ->
@@ -1386,7 +1437,7 @@ private fun LauncherDrawer(
                     verticalArrangement = Arrangement.spacedBy(12.dp), contentPadding = PaddingValues(bottom = 12.dp),
                 ) { items(pages[page]) { drawTile(it) } }
             }
-            LauncherDots(pages.size, pager.currentPage, accent) { scope.launch { pager.animateScrollToPage(it) } }
+            LauncherDots(pages.size, pager.currentPage, accent) { scope.launch { pager.moveForTheme(it, state.appearance.studio.motion) } }
         }
     }
 }
@@ -1409,4 +1460,13 @@ internal fun launcherAccent(accent: LauncherAccent): Color = when (accent) {
     LauncherAccent.TEAL -> Color(0xFF73DFD1)
     LauncherAccent.LAVENDER -> Color(0xFFD6BAFF)
     LauncherAccent.AMBER -> Color(0xFFFFC784)
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+private suspend fun PagerState.moveForTheme(page: Int, motion: LauncherMotion) {
+    when (motion) {
+        LauncherMotion.REDUCED -> requestScrollToPage(page)
+        LauncherMotion.STANDARD -> animateScrollToPage(page)
+        LauncherMotion.SMOOTH -> animateScrollToPage(page, animationSpec = tween(motion.milliseconds))
+    }
 }

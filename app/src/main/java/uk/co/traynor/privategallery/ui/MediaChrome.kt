@@ -24,6 +24,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -173,13 +174,21 @@ fun GalleryLoadingState(label: String) {
 }
 
 @Composable
+internal fun mediaMenuMaxHeight(): androidx.compose.ui.unit.Dp {
+    val insets = WindowInsets.safeDrawing.union(WindowInsets.ime).asPaddingValues()
+    val available = LocalConfiguration.current.screenHeightDp.dp -
+        insets.calculateTopPadding() - insets.calculateBottomPadding()
+    return available.coerceAtLeast(0.dp)
+}
+
+@Composable
 fun MediaSortButton(selected:uk.co.traynor.privategallery.core.ui.MediaSort,onSelect:(uk.co.traynor.privategallery.core.ui.MediaSort)->Unit) {
     var open by remember { mutableStateOf(false) }
     Box {
         IconButton(onClick={open=true},modifier=Modifier.heightIn(min=48.dp).widthIn(min=48.dp).semantics {stateDescription=selected.label}) {
             Icon(androidx.compose.material.icons.Icons.Default.Sort,"Sort media")
         }
-        DropdownMenu(expanded=open,onDismissRequest={open=false},modifier=Modifier.testTag("media-sort-menu")) {
+        DropdownMenu(expanded=open,onDismissRequest={open=false},modifier=Modifier.heightIn(max = mediaMenuMaxHeight()).testTag("media-sort-menu")) {
             uk.co.traynor.privategallery.core.ui.MediaSort.entries.forEach {value->
                 DropdownMenuItem(modifier=Modifier.heightIn(min=48.dp),text={Text(value.label)},onClick={onSelect(value);open=false},leadingIcon={RadioButton(selected==value,null)})
             }

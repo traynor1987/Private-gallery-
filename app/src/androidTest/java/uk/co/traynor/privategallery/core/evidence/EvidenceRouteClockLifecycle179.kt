@@ -81,7 +81,7 @@ exit "${'$'}e179_status"
   fun retired():Boolean=clock.observation().let{!it.getBoolean("registered")&&!it.getBoolean("thread_alive")}
   suspend fun close(cleanup:suspend ()->Unit={}) {
    check(!retired())
-   try{retireRouteClock179(clock,cleanup);closeSucceeded=true}catch(failure:Throwable){closeFailure=failure}
+   try{retireRouteClock179(clock, cleanup = cleanup);closeSucceeded=true}catch(failure:Throwable){closeFailure=failure}
    check(retired())
   }
   try {

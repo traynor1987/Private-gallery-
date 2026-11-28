@@ -42,7 +42,7 @@ class AndroidVaultRepository @JvmOverloads constructor(
 
     private val presentation get() = VaultPresentationStore(root,"primary",vaultKey,publish)
     fun presentationSort():String? = synchronized(METADATA_LOCK){presentation.sort()}
-    fun presentationSort(value:String) = synchronized(METADATA_LOCK){presentation.sort(value)}
+    fun presentationSort(value:String) = synchronized(METADATA_LOCK){ensurePresentationIndex(); presentation.sort(value)}
 
     fun storageSummary() = synchronized(METADATA_LOCK) {
         uk.co.traynor.privategallery.core.media.VaultStorageStats.calculate(root,presentation.decorate(snapshot().items),File(context.noBackupFilesDir,"camera-primary-v1")) {File(root,"payloads/${it.id}.vault")}
@@ -56,7 +56,11 @@ class AndroidVaultRepository @JvmOverloads constructor(
         .sortedByDescending { it.addedAtEpochMillis ?: it.importedAtEpochMillis }
 
     fun retentionDays(): Int = synchronized(METADATA_LOCK) { presentation.retentionDays() }
-    fun retentionDays(days: Int) = synchronized(METADATA_LOCK) { presentation.retentionDays(days) }
+    fun retentionDays(days: Int) = synchronized(METADATA_LOCK) {
+        RecentlyDeletedPolicy.validate(days)
+        ensurePresentationIndex()
+        presentation.retentionDays(days)
+    }
 
     fun recentlyDeleted(): List<VaultItem> = presentation.decorate(snapshot().items.filter { it.state == VaultItemState.TRASHED })
         .sortedByDescending { it.deletedAtEpochMillis }
@@ -632,6 +636,13 @@ class AndroidVaultRepository @JvmOverloads constructor(
     }
 
     private fun snapshot(): VaultIndexSnapshot {check(authorized()) {"Vault operation revoked"};return index.loadSnapshot(vaultKey)}
+
+    // Presentation metadata must never become the first file in an unindexed vault.
+    // snapshot() authenticates the current index or verifies an empty, accessible root.
+    private fun ensurePresentationIndex() {
+        val current = snapshot()
+        if (!File(root, "vault-index.enc").exists()) saveSnapshot(current)
+    }
 
     private fun saveSnapshot(snapshot: VaultIndexSnapshot) = publish { index.saveSnapshot(snapshot, vaultKey) }
 

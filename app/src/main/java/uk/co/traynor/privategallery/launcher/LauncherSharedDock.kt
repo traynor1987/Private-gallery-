@@ -36,16 +36,18 @@ internal fun LauncherSharedDock(
     if (canEdit) {
         DisposableEffect(gestures) { onDispose { gestures.clearDock() } }
     }
+    val floating = appearance.studio.look == LauncherLook.FLOATING
+    val width = if (floating) Modifier.widthIn(max = 470.dp).padding(horizontal = 9.dp) else Modifier
     Surface(
-        Modifier.fillMaxWidth().padding(top = 1.dp).testTag("launcher-shared-dock")
+        width.fillMaxWidth().padding(top = 1.dp).testTag("launcher-shared-dock")
             .then(if (canEdit) Modifier.onGloballyPositioned(gestures::setDock) else Modifier),
         color = when (appearance.dock) {
-            LauncherDock.GLASS -> Color.White.copy(alpha = .14f)
+            LauncherDock.GLASS -> Color.White.copy(alpha = if (floating) .21f else .14f)
             LauncherDock.SOLID -> Color(0xFF273550)
             LauncherDock.TRANSPARENT, LauncherDock.HIDDEN -> Color.Transparent
         },
         contentColor = Color.White,
-        shape = RoundedCornerShape(27.dp),
+        shape = RoundedCornerShape(if (floating) 34.dp else 27.dp),
     ) {
         BoxWithConstraints(Modifier.fillMaxWidth()) {
             val scroll = maxWidth < (items.size * 48 + 12).dp

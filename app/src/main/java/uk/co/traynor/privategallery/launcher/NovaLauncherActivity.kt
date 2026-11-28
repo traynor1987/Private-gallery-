@@ -76,10 +76,11 @@ import uk.co.traynor.privategallery.core.sanctuary.SanctuaryMode
 import uk.co.traynor.privategallery.core.sanctuary.SanctuarySession
 import uk.co.traynor.privategallery.core.sanctuary.SanctuaryStore
 import uk.co.traynor.privategallery.core.sanctuary.panicSanctuaryPersonalApps
-import uk.co.traynor.privategallery.core.ui.AppTheme
 import uk.co.traynor.privategallery.privateCoreAppEntryIntent
+import uk.co.traynor.privategallery.privateNovaUpdatesIntent
 import uk.co.traynor.privategallery.privateWorkspaceEntryIntent
-import uk.co.traynor.privategallery.ui.PrivateGalleryTheme
+import uk.co.traynor.privategallery.novaos2.LauncherNovaSystemsActions
+import uk.co.traynor.privategallery.novaos2.novaSystemSettingsIntent
 
 /** Android Home task. Protected launcher changes verify the Primary PIN without starting a vault session. */
 class NovaLauncherActivity : ComponentActivity() {
@@ -266,7 +267,7 @@ class NovaLauncherActivity : ComponentActivity() {
                 save(next.copy(launchCounts = model.launchCounts)).also { if (it) offerSmartTemplate() }
             },
             reloadWorkspaceLayout = ::reloadWorkspaceLayout,
-            launchApp = ::launchApp,
+            launchApp = { launchApp(it) },
             launchShortcut = ::launchShortcut,
             openWorkspace = ::openWorkspace,
             selectHome = ::openHomeSettings,
@@ -308,6 +309,18 @@ class NovaLauncherActivity : ComponentActivity() {
             openDestination = ::openIntelligenceDestination,
             openEvidence = { id -> openIntelligenceEvidence(id) },
         )
+        val systems = LauncherNovaSystemsActions(
+            foregroundAllowed = ::novaSystemForegroundAllowed,
+            launch = { app -> novaSystemForegroundAllowed() && launchApp(app.component) },
+            openCoreApp = { app ->
+                val entry = LauncherBuiltIn.entries.firstOrNull { it.coreApp == app }
+                novaSystemForegroundAllowed() && entry != null && launchApp(entry.app(packageName).component)
+            },
+            openSystemSettings = ::openNovaSystemSettings,
+            openUpdates = {
+                novaSystemForegroundAllowed() && runCatching { startActivity(privateNovaUpdatesIntent(this)) }.isSuccess
+            },
+        )
         setContent {
             val smart by tracking.state.collectAsState()
             LaunchedEffect(smart.excluded) {
@@ -320,6 +333,7 @@ class NovaLauncherActivity : ComponentActivity() {
                 NovaLauncherScreen(model, apps, if (launcherProtected) emptyList() else shortcuts, decisions,
                     defaultHome == true, outsideProtection, actions, homeGeneration, launcherProtected, sanctuaryStatus,
                     intelligence = intelligence,
+                    novaSystems = systems,
                     defaultHomeUi = LauncherDefaultHomeUi(defaultHome, askDefaultHome,
                         canShowDefaultHomePrompt(), homeWindowFocused, defaultHomeOpening),
                     showNotificationBar = showNotificationBar,
@@ -340,12 +354,7 @@ class NovaLauncherActivity : ComponentActivity() {
                         }, onRequestUsageAccess = ::openUsageAccess)
                     })
             }
-            val theme = when (model.appearance.theme) {
-                LauncherTheme.SYSTEM -> AppTheme.SYSTEM
-                LauncherTheme.LIGHT -> AppTheme.LIGHT
-                LauncherTheme.DARK -> AppTheme.DARK
-            }
-            PrivateGalleryTheme(theme) {
+            LauncherStudioTheme(model.appearance) {
                 if (utilityAllowed && utility != null) {
                     LauncherUtilityScreen(
                         checkNotNull(utility.utility),
@@ -631,8 +640,8 @@ class NovaLauncherActivity : ComponentActivity() {
         return true
     }
 
-    private fun launchApp(component: String) {
-        val target = apps.firstOrNull { it.component == component } ?: return
+    private fun launchApp(component: String): Boolean {
+        val target = apps.firstOrNull { it.component == component } ?: return false
         val builtIn = LauncherBuiltIn.find(packageName, component)
         val allowed = runCatching {
             builtIn?.decision(sanctuary.refresh())?.canLaunch
@@ -640,11 +649,11 @@ class NovaLauncherActivity : ComponentActivity() {
         }.getOrNull()
         if (allowed == null) {
             message("Sanctuary could not verify this app. Use Android Settings for recovery.")
-            return
+            return false
         }
         if (!allowed) {
             blocked = target
-            return
+            return false
         }
         if (builtIn != null) {
             when (builtIn) {
@@ -657,11 +666,26 @@ class NovaLauncherActivity : ComponentActivity() {
                     else activeUtility = builtIn
                 }
             }
-        } else if (directory.start(target)) recordLauncherSuccess(target)
+            return true
+        } else if (directory.start(target)) {
+            recordLauncherSuccess(target)
+            return true
+        }
         else {
             message("This app is no longer available.")
             refreshCatalogue()
+            return false
         }
+    }
+
+    private fun novaSystemForegroundAllowed() = homeTopResumed && intelligenceResumed() &&
+        !isFinishing && !isDestroyed && intelligencePrivateAllowed(this)
+
+    private fun openNovaSystemSettings(action: String): Boolean {
+        if (!novaSystemForegroundAllowed()) return false
+        val intent = novaSystemSettingsIntent(this, action) ?: return false
+        val target = packageManager.resolveActivity(intent, PackageManager.MATCH_SYSTEM_ONLY)?.activityInfo ?: return false
+        return runCatching { startActivity(intent.setComponent(ComponentName(target.packageName, target.name))) }.isSuccess
     }
 
     private fun launchShortcut(shortcut: LauncherShortcut) {
@@ -733,7 +757,7 @@ class NovaLauncherActivity : ComponentActivity() {
             val layout = model.layout(inner)
             val next = if (model.widgets.any { it.wide == inner && it.page == 1 }) layout else
                 layout.withSmartFolderTemplate(onlyIfEmpty = true,
-                    capacity = model.appearance.grid.columns(inner) * model.appearance.grid.rows)
+                    capacity = model.appearance.gridFor(inner).let { it.columns(inner) * it.rows })
             if (next == layout || save(model.withLayout(inner, next))) identitySettings.markTemplateHandled(inner)
         }
     }

@@ -26,7 +26,7 @@ class PrivateAppScreenshot49Test {
  }
  @Test fun review_cancel_save_and_view_read_the_committed_primary_item() {
   val base=InstrumentationRegistry.getInstrumentation().targetContext
-  val root=File(base.noBackupFilesDir,"screenshot-review-${UUID.randomUUID()}")
+  val root=File(base.noBackupFilesDir,"screenshot-review-${UUID.randomUUID()}").apply { check(mkdirs()) }
   val context=object:ContextWrapper(base){override fun getFilesDir()=root}
   val key=ByteArray(32){49}
   val bitmap=Bitmap.createBitmap(12,8,Bitmap.Config.ARGB_8888).apply{eraseColor(android.graphics.Color.BLUE)}
@@ -46,7 +46,13 @@ class PrivateAppScreenshot49Test {
   try {
    compose.setContent{PrivateGalleryTheme{request?.let{owned ->PrivateAppScreenshotReview(owned){if(request===owned)request=null}}}}
    compose.runOnIdle{request=capture()}
+   try {
    compose.waitUntil(5000){compose.onAllNodesWithContentDescription("Protected screenshot preview").fetchSemanticsNodes().isNotEmpty()}
+  } catch (timeout: androidx.compose.ui.test.ComposeTimeoutException) {
+   val mounted = compose.onAllNodesWithText("Review screenshot").fetchSemanticsNodes().size
+   val invalid = compose.onAllNodesWithText("The captured image could not be validated. Cancel and try again.").fetchSemanticsNodes().size
+   throw AssertionError("Missing synthetic preview: mounted=$mounted invalidImage=$invalid consumed=$consumed", timeout)
+  }
    compose.onNodeWithText("Review screenshot").assertIsDisplayed()
    assertProtectedDialog()
    assertEquals(listOf(original.id),repo.items().map{it.id})
