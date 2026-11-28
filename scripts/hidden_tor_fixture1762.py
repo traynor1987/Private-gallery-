@@ -99,7 +99,7 @@ def handler_class(base, root, payload):
                     self.send_header('Content-Length', '1048576')
                     self.send_header('Connection', 'close')
                     self.end_headers()
-                    for _ in range(1024):
+                    for chunk in range(1024):
                         # Tor can close its backend socket before a buffered write fails.
                         if select.select([self.connection], [], [], 0)[0]:
                             if self.connection.recv(1) == b'':
@@ -109,6 +109,8 @@ def handler_class(base, root, payload):
                             return
                         self.wfile.write(b'x' * 1024)
                         self.wfile.flush()
+                        if case and chunk % 32 == 0:
+                            slow_event('slow-write-progress', backend_bytes_written=(chunk + 1) * 1024)
                         time.sleep(.1)
                     slow_event('slow-complete')
                 except OSError as error:

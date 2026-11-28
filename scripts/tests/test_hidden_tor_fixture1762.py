@@ -84,6 +84,30 @@ class TorFixtureTest(unittest.TestCase):
             self.assertIn({'kind': 'slow-start'}, events)
             self.assertIn({'kind': 'slow-closed', 'close_evidence': 'peer_eof'}, events)
 
+    def test_tagged_write_progress_precedes_independent_peer_eof(self):
+        case = 'loss-00000000-0000-0000-0000-000000000001'
+        with socket.create_connection(self.server.server_address, timeout=3) as connection:
+            connection.sendall(f'GET /slow?case={case} HTTP/1.1\r\nHost: fixture\r\n\r\n'.encode())
+            def events():
+                return [event for event in json.loads(self.request('GET', '/evidence')[2])['events']
+                        if event.get('case') == case]
+            def wait_for(kind):
+                deadline = time.monotonic() + 3
+                while time.monotonic() < deadline:
+                    for event in events():
+                        if event.get('kind') == kind:
+                            return event
+                    time.sleep(.05)
+                self.fail(f'Missing {kind}')
+
+            progress = wait_for('slow-write-progress')
+            self.assertEqual(progress['backend_bytes_written'], 1024)
+            self.assertFalse(any(event['kind'] == 'slow-closed' for event in events()))
+            connection.shutdown(socket.SHUT_WR)
+            closure = wait_for('slow-closed')
+            self.assertEqual(closure['close_evidence'], 'peer_eof')
+            self.assertGreater(closure['monotonic_ns'], progress['monotonic_ns'])
+
     def test_real_post_bytes_and_download_are_recorded(self):
         body = b'value=fixture-form-body'
         self.assertEqual(self.request('POST', '/form-result', body)[0], 200)

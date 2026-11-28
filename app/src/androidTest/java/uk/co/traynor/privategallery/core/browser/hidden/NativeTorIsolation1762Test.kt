@@ -417,9 +417,11 @@ class NativeTorIsolation1762Test {
                 val lossElapsedNs = SystemClock.elapsedRealtimeNanos()
                 Process.killProcess(native.pid)
                 waitFor("Abrupt Tor process death is observed",10){tor?.alive()!=true}
+                val deathObservedNs = SystemClock.elapsedRealtimeNanos()
                 assertEquals("Sink remains owned until explicit lifetime retirement",network,isolation!!.network())
                 isolation!!.close()
                 waitFor("No Tor/native browser remains before sink retirement",15){ended.get() && HiddenTorIsolationService.released() && !HiddenTorIsolationService.hasTorProcess(context) && !HiddenVpnBrowserBroker.hasDedicatedProcess(context)}
+                val retirementObservedNs = SystemClock.elapsedRealtimeNanos()
                 assertFalse(broker!!.valid());session.lock();allowed.set(false);broker!!.close();tor!!.close()
                 val probe=ByteArray(1)
                 val readWorker=java.util.concurrent.Executors.newSingleThreadExecutor()
@@ -434,7 +436,8 @@ class NativeTorIsolation1762Test {
                     }
                     assertTrue("An independently duplicated open upload FD rejects actual rereads after revocation",denied.get(3,java.util.concurrent.TimeUnit.SECONDS))
                 } finally {probe.fill(0);retainedUpload?.close();retainedUpload=null;readWorker.shutdownNow()}
-                writeEvidence("native-tor1762-result.json", JSONObject().put("case",lossCase).put("trigger_at_ms",lossAtMs).put("trigger_elapsed_ns",lossElapsedNs).put("mode","TOR_ONLY").put("pid",Process.myPid()).put("javascript",false).put("form",true).put("multipart",true).put("download_verified",true).put("discard_v4",true).put("discard_v6",true).put("discard_dns_udp",true).put("session_revoked",true).put("tor_process_death",true))
+                writeEvidence("native-tor1762-result.json", JSONObject().put("case",lossCase).put("trigger_at_ms",lossAtMs).put("trigger_elapsed_ns",lossElapsedNs).put("tor_pid",native.pid).put("tor_death_observed_ns",deathObservedNs)
+                    .put("retirement_observed_ns",retirementObservedNs).put("mode","TOR_ONLY").put("pid",Process.myPid()).put("javascript",false).put("form",true).put("multipart",true).put("download_verified",true).put("discard_v4",true).put("discard_v6",true).put("discard_dns_udp",true).put("session_revoked",true).put("tor_process_death",true))
             }
         } finally {allowed.set(false);broker?.close();retainedUpload?.close();tor?.close();isolation?.close();session.lock();waitFor("Tor sink release",15){HiddenTorIsolationService.released()};storage.deleteRecursively()}
     }
