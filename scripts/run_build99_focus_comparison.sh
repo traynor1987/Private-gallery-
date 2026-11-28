@@ -42,7 +42,11 @@ if [[ ${VERIFY_FRESH_FIXTURES:-false} == true ]]; then
     run_cases browser_repair "$ns.HomeOwnedWindowPanicTest#browserMenuReturnsToAuthenticatedNovaHome,$ns.ui.BrowserProfessionalUiTest" || exit 1
     run_cases route_reporting "$ns.core.evidence.EvidenceRouteCleanupReportingTest" || exit 1
     run_cases notices "$ns.ui.BrowserV2ModernWebTest#nativeConfirmDialogCompletesWithoutReplacingParentPage,$ns.ui.BrowserBetaNoticeTest,$ns.ui.HiddenBrowser17LayoutTest,$ns.ui.HiddenRestoreDialogTest,$ns.ui.BrowserV2HomeRenderTest,$ns.ui.BrowserV2InitialPresentationTest,$ns.ui.BrowserPolishTest,$ns.ui.BrowserConsent1752Test,$ns.core.media.BrowserVideoAssistantTest" || failed=1
-    run_cases hidden_vault "$ns.ui.HiddenVaultIntegrationTest#hiddenBottomNavigationFitsActualActivityWindowNotItsOwnLayoutBounds,$ns.ui.HiddenVaultIntegrationTest#normalVaultGridViewerAndFavouriteUsePersistedHiddenData,$ns.ui.HiddenVaultIntegrationTest#pickerResultSurvivesPrimaryLockButImportRequiresFreshHiddenPin" || failed=1
+    run_cases hidden_vault "$ns.ui.HiddenVaultIntegrationTest" || failed=1
+    run_cases screenshot_review "$ns.ui.PrivateAppScreenshot49Test#review_cancel_save_and_view_read_the_committed_primary_item" || failed=1
+    run_cases drawer "$ns.ui.PrivateAppsDrawer50Test" || failed=1
+    run_cases professional_ui "$ns.ui.ProfessionalUiTest" || failed=1
+    run_cases landscape_modals "$ns.ui.RemainingMediaModals1762Test#shortLandscapeLightTwoTimesText,$ns.ui.RemainingMediaModals1762Test#shortLandscapeDarkTwoTimesText" || failed=1
     run_cases diagnostics "$ns.ui.BrowserRuntimeDiagnosticsTest#clearingCurrentTraceRetainsClearlySeparatedPreviousFatalEvidence" || failed=1
     run_cases launcher "$ns.LauncherWorkspace70Test#directPrimaryVaultHidesOnlyInternalNavigationUntilReturningHome" || failed=1
     run_cases gallery "$ns.PrimaryGalleryDeviceRepair1762Test" || failed=1

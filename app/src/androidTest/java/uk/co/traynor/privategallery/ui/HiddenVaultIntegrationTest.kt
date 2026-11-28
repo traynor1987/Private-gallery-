@@ -27,9 +27,11 @@ class HiddenVaultIntegrationTest {
     private val base=InstrumentationRegistry.getInstrumentation().targetContext
     private val id=UUID.randomUUID().toString()
     private val root=File(base.noBackupFilesDir,"hidden-integration-$id")
+    private val primaryFiles=File(root,"files").apply { check(mkdirs()) }
     private val preferences=mutableSetOf<String>()
     private val context=object:ContextWrapper(base) {
         override fun getPackageName()="${base.packageName}.test.$id"
+        override fun getFilesDir()=primaryFiles
         override fun getNoBackupFilesDir()=root
         override fun getSharedPreferences(name:String,mode:Int):android.content.SharedPreferences {
             val qualified="hidden-integration-$id-$name";preferences.add(qualified);return base.getSharedPreferences(qualified,mode)
